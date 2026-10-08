@@ -23,31 +23,28 @@ import { rolledMutations } from "./catalogs";
 import { CompanionChat } from "./chat";
 import { weatherDisplayName, weatherMessage } from "./dialogueLines";
 import { gardenFeed } from "./feeds";
+import { holidayOf } from "./dialogueTime";
+import { badLuckReactions, type LuckCounters } from "./reactions/badLuck";
 import {
   abilityReaction,
-  anniversaryReaction,
-  badLuckReactions,
-  clockReaction,
   eggsReadyReaction,
-  greetingReaction,
-  holidayOf,
-  initialGateState,
-  newRareCrops,
-  newlyReadyEggs,
-  offerReaction,
   rareCropReaction,
   restockedFollowed,
+  shopReaction,
+  weatherChangeReaction,
+} from "./reactions/events";
+import { newRareCrops, newlyReadyEggs } from "./reactions/garden";
+import { initialGateState, offerReaction, takeReaction, type Reaction } from "./reactions/gate";
+import { statReactions } from "./reactions/milestones";
+import {
+  anniversaryReaction,
+  clockReaction,
+  greetingReaction,
   resumeSession,
   sessionHourReaction,
   sessionHours,
-  shopReaction,
-  statReactions,
-  takeReaction,
-  weatherChangeReaction,
-  type LuckCounters,
-  type Reaction,
   type StoredSession,
-} from "./reactions";
+} from "./reactions/session";
 import { defineWatcher } from "./watch";
 
 /**

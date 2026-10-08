@@ -1,22 +1,20 @@
-// src/services/companion/dialogueLines.ts
-// Ce que le companion dit, et ce qu'il compte pour le dire.
+// What the companion says, and what he counts to say it.
 //
-// Module PUR, comme `dialogue.ts` : il n'importe que d'autres modules purs, et
-// le hasard est injecté. La lecture de
-// l'état du jeu reste dans `dialogueContext.ts` ; ici on ne fait que transformer
-// ce qu'elle a lu en une phrase, ce qui se vérifie hors navigateur
-// (scripts/checkCompanionDialogue.ts).
+// Pure, like `dialogue.ts`, with the chance passed in. Reading the game stays
+// in `dialogueContext.ts`; this only turns what it read into a sentence, which
+// is checked outside the browser (scripts/checkCompanionDialogue.ts).
 
-import { spaceWords } from "../../lib/format";
+import { formatInteger, spaceWords } from "../../lib/format";
+import { pickOne, type Random } from "../../lib/random";
+import { TIME_LINE_EMOTES } from "./dialogueTime";
 import { EmoteType } from "./emoteTypes";
-import { TIME_LINE_EMOTES } from "./reactions";
 
 /**
- * Les quatre répliques livrées avant la 3.2.219.
+ * The four lines shipped before 3.2.219.
  *
- * Aucune UI ne permet de les modifier, mais elles ont été écrites sur disque
- * avec le reste des réglages : un joueur qui les porte encore n'a donc jamais
- * rien choisi, et doit recevoir la liste actuelle. Voir `coerceSettings`.
+ * No UI edits them, but they were written to disk with the rest of the
+ * settings: a player still carrying them never chose anything and must get
+ * the current list. See `coerceSettings`.
  */
 export const LEGACY_DEFAULT_LINES: readonly string[] = [
   "Right behind you, boss.",
@@ -66,8 +64,8 @@ export const DEFAULT_CUSTOM_LINES: string[] = [
 ];
 
 /**
- * Pose jouée avec une phrase libre. Une phrase absente d'ici n'en a pas : se
- * taire vaut mieux qu'une pose qui tombe à côté.
+ * The pose played with a free line. A line missing here gets none: no pose
+ * beats a pose that misses.
  */
 const LINE_EMOTES: Record<string, EmoteType> = {
   "Nice patch you've got here.": EmoteType.Clapping,
@@ -102,23 +100,22 @@ export function lineEmote(line: string): EmoteType | null {
   return LINE_EMOTES[line] ?? null;
 }
 
-/** Fenêtre dans laquelle on compte les Talk rapprochés. */
+/** The window in which close Talks are counted. */
 export const POKE_WINDOW_MS = 10_000;
-/** À partir d'autant de Talk dans la fenêtre, il remarque qu'on insiste. */
+/** From this many Talks in the window, he notices being poked. */
 const POKE_THRESHOLD = 5;
 
 /**
- * Réponse à un joueur qui clique sur lui en boucle, ou `null`.
+ * The answer to a player clicking on him over and over, or `null`.
  *
- * `talkTimes` contient le Talk en cours. Plus on insiste, plus il s'agace :
- * amusé, puis intrigué, puis franchement vexé. Prime sur tout le reste, parce
- * que répondre « Nice patch you've got here » au dixième clic d'affilée
- * sonnerait faux.
+ * `talkTimes` includes the current Talk. The more it goes on, the more he
+ * minds: amused, then puzzled, then properly put out. Beats everything else,
+ * since "Nice patch you've got here" on the tenth click in a row would ring false.
  */
 export function pokeLine(
   talkTimes: readonly number[],
   now: number,
-  random: () => number
+  random: Random
 ): { message: string; emote: EmoteType } | null {
   const recent = talkTimes.filter((t) => now - t <= POKE_WINDOW_MS && t <= now).length;
   if (recent < POKE_THRESHOLD) return null;
@@ -141,16 +138,14 @@ export function pokeLine(
 }
 
 /**
- * Sous-slots mûrs du jardin qu'il vaut la peine de signaler.
+ * Ripe garden slots worth mentioning.
  *
- * Un crop préservé est mûr pour toujours, par définition : le joueur a payé
- * pour le figer tel quel et ne compte pas le cueillir. Le signaler comme « à
- * récolter » répéterait la même alerte à vie. `workflowScan` et `gardenRead`
- * lisent déjà ce drapeau ; ce compte-ci l'avait oublié.
+ * A preserved crop is ripe forever by definition: the player paid to freeze
+ * it as is and does not mean to pick it. Calling it "ready to harvest" would
+ * repeat the same alert for good.
  *
- * On veut un effectif pour décider s'il y a de quoi en parler, pas les
- * identifiants. La récolte, elle, passe par `workflowScan`, qui résout les vrais
- * `slotId` (les plantes sparse en ont des non contigus).
+ * This is a count, to decide whether there is anything to say; harvesting
+ * goes through `chat/gardenScan.ts`, which resolves the real `slotId`s.
  */
 export function ripeCropCount(tileObjects: unknown, now: number): number {
   if (!tileObjects || typeof tileObjects !== "object") return 0;
@@ -168,14 +163,10 @@ export function ripeCropCount(tileObjects: unknown, now: number): number {
   return count;
 }
 
-function pickOne<T>(options: readonly T[], random: () => number): T {
-  return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
-}
-
 const plural = (count: number, singular: string, pluralForm: string) =>
   count === 1 ? singular : pluralForm;
 
-export function harvestMessage(ready: number, random: () => number): string {
+export function harvestMessage(ready: number, random: Random): string {
   const crops = `${ready} ${plural(ready, "crop", "crops")}`;
   const isAre = plural(ready, "is", "are");
   return pickOne(
@@ -191,7 +182,7 @@ export function harvestMessage(ready: number, random: () => number): string {
   );
 }
 
-export function hungryPetMessage(hungry: number, random: () => number): string {
+export function hungryPetMessage(hungry: number, random: Random): string {
   const pets = `${hungry} ${plural(hungry, "pet", "pets")}`;
   const isAre = plural(hungry, "is", "are");
   return pickOne(
@@ -206,8 +197,8 @@ export function hungryPetMessage(hungry: number, random: () => number): string {
   );
 }
 
-export function sellMessage(coins: number, random: () => number): string {
-  const amount = `${Math.round(coins).toLocaleString("en-US")} coins`;
+export function sellMessage(coins: number, random: Random): string {
+  const amount = `${formatInteger(coins, "round")} coins`;
   return pickOne(
     [
       `You're carrying ${amount} worth of crops.`,
@@ -221,13 +212,13 @@ export function sellMessage(coins: number, random: () => number): string {
 }
 
 /**
- * Répliques propres à une météo, indexées par l'ID que porte `weatherAtom`.
+ * Lines for each weather, keyed by the id `weatherAtom` carries.
  *
- * Ce sont les valeurs de l'enum du jeu (vérifié sur le bundle 1299 :
- * `weatherAtom` lit `state.weather`, qui vaut Rain, Frost, Thunderstorm, Dawn
- * ou AmberMoon, et `null` par beau temps). Ce n'est que de la couleur : aucun
- * nom de mutation ni aucune règle du jeu n'y figure, et une météo absente de
- * cette table retombe sur `GENERIC_WEATHER_TEMPLATES` avec son nom affiché.
+ * Those are the game's enum values (checked on bundle 1299: `weatherAtom`
+ * reads `state.weather`, which is Rain, Frost, Thunderstorm, Dawn or AmberMoon,
+ * and `null` in fine weather). Only flavour: no mutation name or game rule in
+ * here, and a weather missing from the table falls back on
+ * `GENERIC_WEATHER_TEMPLATES` with its display name.
  */
 const WEATHER_LINES: Record<string, readonly string[]> = {
   Rain: [
@@ -272,7 +263,7 @@ const WEATHER_LINES: Record<string, readonly string[]> = {
   ],
 };
 
-/** Tournures pour une météo que la table ne connaît pas encore. */
+/** Phrasings for a weather the table does not know yet. */
 export const GENERIC_WEATHER_TEMPLATES: ReadonlyArray<(name: string) => string> = [
   (name) => `We're getting ${name} right now.`,
   (name) => `Ooh, ${name}! Good time to be outside.`,
@@ -282,11 +273,11 @@ export const GENERIC_WEATHER_TEMPLATES: ReadonlyArray<(name: string) => string> 
 ];
 
 /**
- * Nom à afficher pour un ID de météo.
+ * The display name of a weather id.
  *
- * Le catalogue live porte `name` (« Snow » pour Frost), l'ancien catalogue
- * embarqué `displayName`. Sans l'un ni l'autre, on découpe l'ID (« AmberMoon »
- * devient « Amber Moon ») plutôt que de montrer l'identifiant brut.
+ * The live catalog carries `name` ("Snow" for Frost), the old bundled one
+ * `displayName`. With neither, the id is split ("AmberMoon" reads "Amber
+ * Moon") rather than shown raw.
  */
 export function weatherDisplayName(weatherId: string, catalog: unknown): string {
   const entry = catalog && typeof catalog === "object"
@@ -299,8 +290,21 @@ export function weatherDisplayName(weatherId: string, catalog: unknown): string 
   return spaceWords(weatherId);
 }
 
-export function weatherMessage(weatherId: string, displayName: string, random: () => number): string {
+export function weatherMessage(weatherId: string, displayName: string, random: Random): string {
   const own = WEATHER_LINES[weatherId];
   if (own && own.length > 0) return pickOne(own, random);
   return pickOne(GENERIC_WEATHER_TEMPLATES, random)(displayName);
+}
+
+/** The pose that goes with each weather. An unknown weather simply wonders. */
+const WEATHER_EMOTES: Record<string, EmoteType> = {
+  Rain: EmoteType.Laughing,
+  Frost: EmoteType.Clapping,
+  Thunderstorm: EmoteType.Crying,
+  Dawn: EmoteType.Love,
+  AmberMoon: EmoteType.Questioning,
+};
+
+export function weatherEmote(weatherId: string): EmoteType {
+  return WEATHER_EMOTES[weatherId] ?? EmoteType.Questioning;
 }

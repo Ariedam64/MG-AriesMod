@@ -20,10 +20,10 @@ import {
   ripeCropCount,
   sellMessage,
   weatherDisplayName,
+  weatherEmote,
   weatherMessage,
 } from "./dialogueLines";
 import { EmoteType } from "./emoteTypes";
-import { weatherEmote } from "./reactions";
 
 /** Seuil de faim en dessous duquel un pet est signalé. */
 const HUNGRY_PET_THRESHOLD_PCT = 25;

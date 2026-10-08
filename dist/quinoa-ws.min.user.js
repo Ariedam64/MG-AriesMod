@@ -224,7 +224,7 @@
     const listeners8 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
-    const tick2 = (now2) => {
+    const tick = (now2) => {
       const delta = last ? (now2 - last) / (1e3 / 60) : 1;
       last = now2;
       for (const fn of listeners8) {
@@ -233,12 +233,12 @@
         } catch {
         }
       }
-      rafId = requestAnimationFrame(tick2);
+      rafId = requestAnimationFrame(tick);
     };
     const ticker = {
       add(fn) {
         if (!listeners8.size) {
-          rafId = requestAnimationFrame(tick2);
+          rafId = requestAnimationFrame(tick);
         }
         listeners8.add(fn);
       },
@@ -2274,11 +2274,11 @@
     if (list) list.push(handler);
     else map2.set(type, [handler]);
     return () => {
-      const current = map2.get(type);
-      if (!current) return;
-      const index = current.indexOf(handler);
-      if (index !== -1) current.splice(index, 1);
-      if (current.length === 0) map2.delete(type);
+      const current2 = map2.get(type);
+      if (!current2) return;
+      const index = current2.indexOf(handler);
+      if (index !== -1) current2.splice(index, 1);
+      if (current2.length === 0) map2.delete(type);
     };
   }
   function interceptOutgoing(type, rule) {
@@ -2290,22 +2290,22 @@
   function runOutgoing(message) {
     const type = message?.type;
     if (typeof type !== "string" || !type) return message;
-    let current = message;
+    let current2 = message;
     for (const rule of [...rules.get(type) ?? []]) {
       try {
-        const verdict2 = rule(current);
+        const verdict2 = rule(current2);
         if (verdict2 === "drop") return null;
-        if (verdict2 && typeof verdict2 === "object") current = verdict2.replace;
+        if (verdict2 && typeof verdict2 === "object") current2 = verdict2.replace;
       } catch {
       }
     }
     for (const observer2 of [...observers.get(type) ?? []]) {
       try {
-        observer2(current);
+        observer2(current2);
       } catch {
       }
     }
-    return current;
+    return current2;
   }
   var rules, observers;
   var init_outgoing = __esm({
@@ -2329,18 +2329,18 @@
     const original = resolveSendMessage(conn);
     if (!original) return false;
     original.owner.sendMessage = function(message, ...rest2) {
-      let current = message;
+      let current2 = message;
       try {
         const isEnvelope = message?.type === "QuinoaCommand" && message?.command && typeof message.command === "object";
         if (!isEnvelope && message?.type) {
-          current = runOutgoing(message);
-          if (current === null) return;
+          current2 = runOutgoing(message);
+          if (current2 === null) return;
         }
       } catch (error) {
         console.error("[MG-mod] sendMessage hook failed:", error);
-        current = message;
+        current2 = message;
       }
-      return original.fn.call(this, current, ...rest2);
+      return original.fn.call(this, current2, ...rest2);
     };
     status = "installed";
     shareGlobal(INSTALLED_FLAG, true);
@@ -2556,8 +2556,8 @@
     if (existing) return existing.promise;
     const promise = capture().then((store) => {
       if (store.__polyfill) {
-        const current = getBridge();
-        if (current && current.promise === promise) {
+        const current2 = getBridge();
+        if (current2 && current2.promise === promise) {
           delete pageWindow[STORE_BRIDGE_GLOBAL];
         }
       }
@@ -2842,8 +2842,8 @@
       attachedUnsub = unsub;
       if (!immediate) return;
       try {
-        const current = await jGet(atom2);
-        if (!cancelled && current !== void 0) cb(current);
+        const current2 = await jGet(atom2);
+        if (!cancelled && current2 !== void 0) cb(current2);
       } catch {
       }
     };
@@ -3457,8 +3457,8 @@
         },
         /** Locks or unlocks an item to match `shouldBeFavorite`, and returns the state it ends in. */
         async ensureFavoriteItem(itemId, shouldBeFavorite) {
-          const current = (await this.getFavoriteIdSet()).has(itemId);
-          if (current === shouldBeFavorite) return current;
+          const current2 = (await this.getFavoriteIdSet()).has(itemId);
+          if (current2 === shouldBeFavorite) return current2;
           await this.toggleFavoriteItem(itemId);
           return shouldBeFavorite;
         },
@@ -7637,11 +7637,12 @@
     if (abs >= 1e3) return `${fmt2(n / 1e3)}k`;
     return String(n);
   }
-  var INTEGER_FORMAT, spaceWords;
+  var INTEGER_FORMAT, formatInteger, spaceWords;
   var init_format = __esm({
     "src/lib/format.ts"() {
       "use strict";
       INTEGER_FORMAT = new Intl.NumberFormat("en-US");
+      formatInteger = (value, rounding = "floor") => INTEGER_FORMAT.format(Math.max(0, Math[rounding](Number.isFinite(value) ? value : 0)));
       spaceWords = (id) => id.replace(/([a-z])([A-Z])/g, "$1 $2");
     }
   });
@@ -7697,11 +7698,11 @@
     };
   }
   function unwrapNestedSnapshot(raw) {
-    let current = raw;
-    for (let depth = 0; depth < 10 && isRecord(current) && isRecord(current.snapshot); depth++) {
-      current = current.snapshot;
+    let current2 = raw;
+    for (let depth = 0; depth < 10 && isRecord(current2) && isRecord(current2.snapshot); depth++) {
+      current2 = current2.snapshot;
     }
-    return current ?? raw;
+    return current2 ?? raw;
   }
   function normalizeAriesStorage(raw) {
     const out = createDefaultAriesStorage();
@@ -7818,23 +7819,23 @@
     }, FLUSH_DELAY_MS);
   }
   function getValueAtPath(obj, path) {
-    let current = obj;
+    let current2 = obj;
     for (const segment of path) {
-      if (!current || typeof current !== "object") return void 0;
-      current = current[segment];
+      if (!current2 || typeof current2 !== "object") return void 0;
+      current2 = current2[segment];
     }
-    return current;
+    return current2;
   }
   function setValueAtPath(obj, path, value) {
     if (!path.length) return;
-    let current = obj;
+    let current2 = obj;
     for (const key2 of path.slice(0, -1)) {
-      if (!current[key2] || typeof current[key2] !== "object") current[key2] = {};
-      current = current[key2];
+      if (!current2[key2] || typeof current2[key2] !== "object") current2[key2] = {};
+      current2 = current2[key2];
     }
     const last = path[path.length - 1];
-    if (value === void 0) delete current[last];
-    else current[last] = value;
+    if (value === void 0) delete current2[last];
+    else current2[last] = value;
   }
   function getAriesStorage() {
     return load();
@@ -7843,11 +7844,11 @@
     persist(data);
   }
   function updateAriesStorage(mutator) {
-    const current = load();
-    mutator(current);
-    current.version = ARIES_STORAGE_VERSION;
-    persist(current);
-    return current;
+    const current2 = load();
+    mutator(current2);
+    current2.version = ARIES_STORAGE_VERSION;
+    persist(current2);
+    return current2;
   }
   function readAriesPath(path, fallback) {
     const value = getValueAtPath(load(), splitPath(path));
@@ -8436,8 +8437,8 @@
   // src/game/fakeModal.ts
   async function openModal(modalId) {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current && current !== modalId) {
+      const current2 = await Atoms.ui.activeModal.get();
+      if (current2 && current2 !== modalId) {
         await Atoms.ui.activeModal.set(null);
         await Atoms.ui.inventoryModalIsActive.set(false);
         await new Promise((r) => requestAnimationFrame(r));
@@ -8450,8 +8451,8 @@
   async function closeModal(modalId) {
     try {
       if (modalId) {
-        const current = await Atoms.ui.activeModal.get();
-        if (current !== modalId) return;
+        const current2 = await Atoms.ui.activeModal.get();
+        if (current2 !== modalId) return;
       }
       await Atoms.ui.activeModal.set(null);
       if (modalId === INVENTORY_MODAL_ID || !modalId) {
@@ -11495,7 +11496,7 @@
     const entry = { raf: 0, baseline: /* @__PURE__ */ new WeakMap(), touched: /* @__PURE__ */ new Set() };
     activeFlashes.set(gidx, entry);
     const start2 = performance.now();
-    const tick2 = (now2) => {
+    const tick = (now2) => {
       const progress = Math.min(1, (now2 - start2) / durationMs);
       const mix = startMix * (1 - progress);
       const parent = resolveParent();
@@ -11514,9 +11515,9 @@
         stopFlashTile(gidx);
         return;
       }
-      entry.raf = requestAnimationFrame(tick2);
+      entry.raf = requestAnimationFrame(tick);
     };
-    entry.raf = requestAnimationFrame(tick2);
+    entry.raf = requestAnimationFrame(tick);
     return true;
   }
   var activeFlashes, FLASH_DEFAULT_COLOR, FLASH_DEFAULT_MIX, FLASH_DEFAULT_DURATION_MS;
@@ -13407,8 +13408,8 @@
         });
         btnAdd.onclick = () => {
           const state3 = ensureEditorStateForSpecies(selId);
-          const current = state3.slots;
-          if (current.length >= maxSlots) return;
+          const current2 = state3.slots;
+          if (current2.length >= maxSlots) return;
           const defaultScale = computeTargetScaleFromPercent(
             selId,
             DEFAULT_SIZE_PERCENT
@@ -13417,7 +13418,7 @@
             ...state3,
             species: selId,
             slots: [
-              ...current,
+              ...current2,
               {
                 enabled: true,
                 sizePercent: DEFAULT_SIZE_PERCENT,
@@ -13445,12 +13446,12 @@
         });
         btnRemove.onclick = () => {
           const state3 = ensureEditorStateForSpecies(selId);
-          const current = state3.slots;
-          if (current.length <= 1) return;
+          const current2 = state3.slots;
+          if (current2.length <= 1) return;
           editorPlantSlotsState = {
             ...state3,
             species: selId,
-            slots: current.slice(0, current.length - 1)
+            slots: current2.slice(0, current2.length - 1)
           };
           renderSideDetails();
         };
@@ -15189,8 +15190,8 @@
   async function editGameToasts(edit) {
     const atom = getAtomByLabel(TOASTS_ATOM);
     if (!atom) return false;
-    const current = await jGet(atom).catch(() => []);
-    const list = Array.isArray(current) ? current : [];
+    const current2 = await jGet(atom).catch(() => []);
+    const list = Array.isArray(current2) ? current2 : [];
     const next = edit(list.slice());
     const unchanged = next.length === list.length && next.every((toast3, i) => toast3 === list[i]);
     if (!unchanged) await jSet(atom, next);
@@ -15843,12 +15844,12 @@
           return cloneState(this.state);
         }
         setGlobalState(next) {
-          const current = this.state;
+          const current2 = this.state;
           const sanitized = sanitizeSettings(next.settings);
           const updated = {
             enabled: !!next.enabled,
             settings: sanitized,
-            overrides: { ...current.overrides }
+            overrides: { ...current2.overrides }
           };
           this.setState(updated);
         }
@@ -16291,8 +16292,8 @@
           return { ...this.state.sellAllPets ?? DEFAULT_SELL_ALL_PETS_RULES };
         }
         setSellAllPetsRules(next) {
-          const current = this.getSellAllPetsRules();
-          const merged = { ...current, ...next };
+          const current2 = this.getSellAllPetsRules();
+          const merged = { ...current2, ...next };
           const sanitized = sanitizeSellAllPetsRules(merged);
           const prev = this.state.sellAllPets;
           const same = prev?.enabled === sanitized.enabled && prev?.protectGold === sanitized.protectGold && prev?.protectRainbow === sanitized.protectRainbow && prev?.protectMaxStr === sanitized.protectMaxStr && prev?.maxStrThreshold === sanitized.maxStrThreshold && JSON.stringify((prev?.protectedRarities ?? []).slice().sort()) === JSON.stringify(sanitized.protectedRarities.slice().sort());
@@ -16329,8 +16330,8 @@
           const required = requiredPercentFromPlayers(this.state.minRequiredPlayers);
           if (required <= 0) return true;
           if (!Number.isFinite(currentFriendBonusPercent)) return false;
-          const current = clampPercent(Number(currentFriendBonusPercent));
-          return current + 1e-4 >= required;
+          const current2 = clampPercent(Number(currentFriendBonusPercent));
+          return current2 + 1e-4 >= required;
         }
         getRequiredPercent() {
           return requiredPercentFromPlayers(this.state.minRequiredPlayers);
@@ -16637,8 +16638,8 @@
     writeAriesPath("stats", snapshot2);
     return snapshot2;
   }
-  function adjustValue(current, delta, integer) {
-    const a = Number(current);
+  function adjustValue(current2, delta, integer) {
+    const a = Number(current2);
     const b = Number(delta);
     const sum = Number.isFinite(a) ? a : 0;
     const next = sum + (Number.isFinite(b) ? b : 0);
@@ -16646,12 +16647,12 @@
     return integer ? Math.floor(clamped) : clamped;
   }
   function updateStats(mutator) {
-    const current = readFromStorage();
-    const before = JSON.stringify(current);
-    const draft = cloneStats(current);
+    const current2 = readFromStorage();
+    const before = JSON.stringify(current2);
+    const draft = cloneStats(current2);
     mutator(draft);
     const after = JSON.stringify(draft);
-    if (before === after) return current;
+    if (before === after) return current2;
     const stored = writeToStorage(draft);
     emitUpdate(stored);
     return stored;
@@ -17548,7 +17549,7 @@
         }
         startLoop(doc, s) {
           this.stopLoop(doc, s);
-          const tick2 = () => {
+          const tick = () => {
             if (!s.pressed) return;
             this.dispatchKey(doc, s.lastTarget || doc, "keydown", s.emit, true);
             if (s.mode === "tap") {
@@ -17558,8 +17559,8 @@
               }, s.keyupDelayMs);
             }
           };
-          tick2();
-          s.tickTimer = this.win.setInterval(tick2, s.rateMs);
+          tick();
+          s.tickTimer = this.win.setInterval(tick, s.rateMs);
         }
         stopLoop(doc, s) {
           if (s.tickTimer) {
@@ -17865,8 +17866,8 @@
   }
   function writeStored(id, hk) {
     if (typeof window === "undefined") return;
-    updateAriesPath(KEYBINDS_BINDINGS_PATH, (current) => {
-      const base = current && typeof current === "object" ? { ...current } : {};
+    updateAriesPath(KEYBINDS_BINDINGS_PATH, (current2) => {
+      const base = current2 && typeof current2 === "object" ? { ...current2 } : {};
       if (hk) {
         base[id] = hotkeyToString(hk);
       } else {
@@ -17877,8 +17878,8 @@
   }
   function removeStored(id) {
     if (typeof window === "undefined") return;
-    updateAriesPath(KEYBINDS_BINDINGS_PATH, (current) => {
-      const base = current && typeof current === "object" ? { ...current } : {};
+    updateAriesPath(KEYBINDS_BINDINGS_PATH, (current2) => {
+      const base = current2 && typeof current2 === "object" ? { ...current2 } : {};
       delete base[id];
       return base;
     });
@@ -17895,8 +17896,8 @@
   }
   function writeHoldStored(id, enabled2) {
     if (typeof window === "undefined") return;
-    updateAriesPath(KEYBINDS_HOLD_PATH, (current) => {
-      const base = current && typeof current === "object" ? { ...current } : {};
+    updateAriesPath(KEYBINDS_HOLD_PATH, (current2) => {
+      const base = current2 && typeof current2 === "object" ? { ...current2 } : {};
       base[id] = !!enabled2;
       return base;
     });
@@ -17904,14 +17905,14 @@
   function emitHoldChange(id) {
     const set2 = holdListeners.get(id);
     if (!set2 || set2.size === 0) return;
-    const current = getKeybindHoldDetection(id);
-    for (const cb of set2) cb(current);
+    const current2 = getKeybindHoldDetection(id);
+    for (const cb of set2) cb(current2);
   }
   function emitChange(id) {
     const set2 = listeners3.get(id);
     if (!set2 || set2.size === 0) return;
-    const current = cloneHotkey(getKeybind(id));
-    for (const cb of set2) cb(current);
+    const current2 = cloneHotkey(getKeybind(id));
+    for (const cb of set2) cb(current2);
   }
   function ensureCache(id) {
     if (cache.has(id)) {
@@ -17939,8 +17940,8 @@
     return cloneHotkey(defaultMap.get(id) ?? null);
   }
   function setKeybind(id, hk) {
-    const current = getKeybind(id);
-    if (hotkeysEqual(current, hk)) return;
+    const current2 = getKeybind(id);
+    if (hotkeysEqual(current2, hk)) return;
     const next = cloneHotkey(hk);
     if (next) {
       const asString = hotkeyToString(next);
@@ -17968,8 +17969,8 @@
   }
   function setKeybindHoldDetection(id, enabled2) {
     if (!holdDefaultMap.has(id)) return;
-    const current = ensureHoldCache(id);
-    if (current === enabled2) return;
+    const current2 = ensureHoldCache(id);
+    if (current2 === enabled2) return;
     holdCache.set(id, enabled2);
     writeHoldStored(id, enabled2);
     emitHoldChange(id);
@@ -20543,8 +20544,8 @@
   // src/features/shops/purchases.ts
   function isCurrentRestock(entry, shop) {
     if (!("restockId" in entry)) return true;
-    const current = shop?.restockId;
-    return current != null && entry.restockId === current;
+    const current2 = shop?.restockId;
+    return current2 != null && entry.restockId === current2;
   }
   function purchasesForCurrentRestock(shops2, shopPurchases, kindOf) {
     const out = { seed: {}, egg: {}, tool: {}, decor: {} };
@@ -22195,8 +22196,8 @@
   // src/features/keybinds/modalToggles/petHutch.ts
   async function togglePetHutchModal() {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === PET_HUTCH_MODAL_ID) {
+      const current2 = await Atoms.ui.activeModal.get();
+      if (current2 === PET_HUTCH_MODAL_ID) {
         await closeModal(PET_HUTCH_MODAL_ID);
         return;
       }
@@ -22236,8 +22237,8 @@
   // src/features/keybinds/modalToggles/journal.ts
   async function toggleJournalModal() {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === JOURNAL_MODAL_ID) {
+      const current2 = await Atoms.ui.activeModal.get();
+      if (current2 === JOURNAL_MODAL_ID) {
         await closeModal(JOURNAL_MODAL_ID);
         return;
       }
@@ -22276,8 +22277,8 @@
   // src/features/keybinds/modalToggles/decorShed.ts
   async function toggleDecorShedModal() {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === DECOR_SHED_MODAL_ID) {
+      const current2 = await Atoms.ui.activeModal.get();
+      if (current2 === DECOR_SHED_MODAL_ID) {
         await closeModal(DECOR_SHED_MODAL_ID);
         return;
       }
@@ -22317,8 +22318,8 @@
   // src/features/keybinds/modalToggles/toolShack.ts
   async function toggleToolShackModal() {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === TOOL_SHACK_MODAL_ID) {
+      const current2 = await Atoms.ui.activeModal.get();
+      if (current2 === TOOL_SHACK_MODAL_ID) {
         await closeModal(TOOL_SHACK_MODAL_ID);
         return;
       }
@@ -22358,8 +22359,8 @@
   // src/features/keybinds/modalToggles/seedSilo.ts
   async function toggleSeedSiloModal() {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === SEED_SILO_MODAL_ID) {
+      const current2 = await Atoms.ui.activeModal.get();
+      if (current2 === SEED_SILO_MODAL_ID) {
         await closeModal(SEED_SILO_MODAL_ID);
         return;
       }
@@ -22399,8 +22400,8 @@
   // src/features/keybinds/modalToggles/feedingTrough.ts
   async function toggleFeedingTroughModal() {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === FEEDING_TROUGH_MODAL_ID) {
+      const current2 = await Atoms.ui.activeModal.get();
+      if (current2 === FEEDING_TROUGH_MODAL_ID) {
         await closeModal(FEEDING_TROUGH_MODAL_ID);
         return;
       }
@@ -22440,8 +22441,8 @@
   // src/features/keybinds/modalToggles/weatherStation.ts
   async function toggleWeatherStationModal() {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === WEATHER_STATION_MODAL_ID) {
+      const current2 = await Atoms.ui.activeModal.get();
+      if (current2 === WEATHER_STATION_MODAL_ID) {
         await closeModal(WEATHER_STATION_MODAL_ID);
         return;
       }
@@ -22572,8 +22573,8 @@
             const first = this.library.keys().next();
             return first.done ? null : first.value;
           };
-          const ensureName = (current, prefer) => {
-            if (current && this.library.has(current)) return current;
+          const ensureName = (current2, prefer) => {
+            if (current2 && this.library.has(current2)) return current2;
             if (prefer && this.library.has(prefer)) return prefer;
             return fallback();
           };
@@ -24737,9 +24738,9 @@
         setContextStopDefaults(context, conf) {
           if (context !== "shops" && context !== "weather") return;
           _ensureContextDefaultsLoaded();
-          const current = _getContextStopDefaultsInternal(context);
+          const current2 = _getContextStopDefaultsInternal(context);
           const loopRaw = Number(conf?.loopIntervalMs);
-          const loopIntervalMs = Number.isFinite(loopRaw) ? Math.max(150, Math.floor(loopRaw)) : current.loopIntervalMs;
+          const loopIntervalMs = Number.isFinite(loopRaw) ? Math.max(150, Math.floor(loopRaw)) : current2.loopIntervalMs;
           const normalizedMode = conf.stopMode === "purchase" ? "purchase" : "manual";
           const normalized = {
             stopMode: context === "weather" ? "manual" : normalizedMode,
@@ -28339,8 +28340,8 @@
     const recompute = () => {
       if (!running) return;
       const requiredPct = lockerRestrictionsService.getRequiredPercent();
-      const current = resolveCurrentBonus();
-      const locked = requiredPct > 0 && !(Number.isFinite(current) && current + 1e-4 >= requiredPct);
+      const current2 = resolveCurrentBonus();
+      const locked = requiredPct > 0 && !(Number.isFinite(current2) && current2 + 1e-4 >= requiredPct);
       applyLockState(locked);
     };
     const observeDom = () => {
@@ -29478,8 +29479,8 @@
       if (!sets.length) return null;
       let intersection = new Set(sets[0]);
       for (let i = 1; i < sets.length; i++) {
-        const current = sets[i];
-        intersection = new Set([...intersection].filter((value) => current.has(value)));
+        const current2 = sets[i];
+        intersection = new Set([...intersection].filter((value) => current2.has(value)));
       }
       return intersection;
     };
@@ -30024,9 +30025,9 @@
       if (!hasCurrent && grid) {
         setGrid(null);
       }
-      const current = hasCurrent ? grid : null;
+      const current2 = hasCurrent ? grid : null;
       const next = document.querySelector(cfg.gridSelector);
-      if (next !== current) {
+      if (next !== current2) {
         setGrid(next);
         if (next) {
           update();
@@ -30911,10 +30912,10 @@
         }
       };
       findAncestorWithDescendant = (start2, selector) => {
-        let current = start2;
-        while (current) {
-          if (current.querySelector(selector)) return current;
-          current = current.parentElement;
+        let current2 = start2;
+        while (current2) {
+          if (current2.querySelector(selector)) return current2;
+          current2 = current2.parentElement;
         }
         return null;
       };
@@ -31081,19 +31082,19 @@
       };
       ensureStrengthTextParts = (textEl) => {
         let label2 = textEl.querySelector(`.${TM_STRENGTH_LABEL_CLASS}`);
-        let current = textEl.querySelector(`.${TM_STRENGTH_CURRENT_CLASS}`);
+        let current2 = textEl.querySelector(`.${TM_STRENGTH_CURRENT_CLASS}`);
         let max = textEl.querySelector(`.${TM_STRENGTH_MAX_CLASS}`);
-        if (!label2 || !current || !max) {
+        if (!label2 || !current2 || !max) {
           textEl.textContent = "";
           label2 = document.createElement("span");
           label2.className = TM_STRENGTH_LABEL_CLASS;
-          current = document.createElement("span");
-          current.className = TM_STRENGTH_CURRENT_CLASS;
+          current2 = document.createElement("span");
+          current2.className = TM_STRENGTH_CURRENT_CLASS;
           max = document.createElement("span");
           max.className = TM_STRENGTH_MAX_CLASS;
-          textEl.append(label2, current, max);
+          textEl.append(label2, current2, max);
         }
-        return { label: label2, current, max };
+        return { label: label2, current: current2, max };
       };
       getValueSummaryElement = (wrap) => {
         if (!wrap) return null;
@@ -31153,14 +31154,14 @@
       };
       stringOrEmpty = (value) => typeof value === "string" ? value.trim() : "";
       pickNestedString = (source, path) => {
-        let current = source;
+        let current2 = source;
         for (const key2 of path) {
-          if (!current || typeof current !== "object") {
+          if (!current2 || typeof current2 !== "object") {
             return "";
           }
-          current = current[key2];
+          current2 = current2[key2];
         }
-        return stringOrEmpty(current);
+        return stringOrEmpty(current2);
       };
       pickFirstNestedString = (source, paths) => {
         for (const path of paths) {
@@ -31318,13 +31319,13 @@
         const headers = Array.from(document.querySelectorAll("p.chakra-text"));
         const header = headers.find((el) => (el.textContent ?? "").trim() === headerText) ?? null;
         if (!header) return null;
-        let current = header;
-        while (current && current !== document.body) {
-          const next = current.nextElementSibling;
+        let current2 = header;
+        while (current2 && current2 !== document.body) {
+          const next = current2.nextElementSibling;
           if (next && next.querySelector(INVENTORY_ITEM_CARD_SELECTOR)) {
             return next;
           }
-          current = current.parentElement;
+          current2 = current2.parentElement;
         }
         return null;
       };
@@ -32272,8 +32273,8 @@
   function startActivityLogFilterPixi() {
     void (async () => {
       try {
-        const current = await Atoms.ui.activeModal.get();
-        modalOpen2 = current === ACTIVITY_LOG_MODAL_ID;
+        const current2 = await Atoms.ui.activeModal.get();
+        modalOpen2 = current2 === ACTIVITY_LOG_MODAL_ID;
       } catch {
       }
       try {
@@ -32691,10 +32692,10 @@
       state3.trackingStartedAt = Date.now();
       saveState(state3);
     }
-    const current = loadState();
-    if (current.bootstrapped && current.trackingStartedAt <= 0) {
-      current.trackingStartedAt = current.lastHatchAt > 0 ? current.lastHatchAt : Date.now();
-      saveState(current);
+    const current2 = loadState();
+    if (current2.bootstrapped && current2.trackingStartedAt <= 0) {
+      current2.trackingStartedAt = current2.lastHatchAt > 0 ? current2.lastHatchAt : Date.now();
+      saveState(current2);
     }
     let unsubscribe2 = null;
     try {
@@ -34593,7 +34594,7 @@
     const reduceMotion = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
     const canAnimate = typeof rail.animate === "function";
     if (canAnimate) rail.style.transition = "none";
-    let current = null;
+    let current2 = null;
     let animation = null;
     const apply = (left, width) => {
       rail.style.transform = `translate3d(${left}px,0,0)`;
@@ -34629,8 +34630,8 @@
         const dpr = window.devicePixelRatio || 1;
         const snap = (x) => Math.round(x * dpr) / dpr;
         const target = { left: snap(left), width: snap(width) };
-        const previous = current;
-        current = target;
+        const previous = current2;
+        current2 = target;
         animation?.cancel();
         animation = null;
         const shouldAnimate = animate && canAnimate && !reduceMotion?.matches && previous != null && previous.width > 0 && target.width > 0;
@@ -37767,7 +37768,7 @@ next: ${next}`;
     const refreshAllSoundSelects = () => {
       const names = audio.listSounds();
       const applyOptions = (sel, context) => {
-        const current = sel.value;
+        const current2 = sel.value;
         sel.innerHTML = "";
         for (const n of names) {
           const option = document.createElement("option");
@@ -37776,7 +37777,7 @@ next: ${next}`;
           sel.appendChild(option);
         }
         const preferred = audio.getDefaultSoundName(context);
-        if (names.includes(current)) sel.value = current;
+        if (names.includes(current2)) sel.value = current2;
         else if (preferred && names.includes(preferred)) sel.value = preferred;
         else if (names.length) sel.value = names[0];
       };
@@ -39368,7 +39369,7 @@ next: ${next}`;
           stopDrag();
         };
         pop.appendChild(header);
-        const current = NotifierService.getRule(row.id);
+        const current2 = NotifierService.getRule(row.id);
         const defaults = audio.getPlaybackSettings(row.context);
         const contextDefaults = row.context === "shops" || row.context === "weather" ? NotifierService.getContextStopDefaults(row.context) : { stopMode: "manual", stopRepeats: null, loopIntervalMs: defaults.loopIntervalMs };
         const allowPurchase = row.context === "shops";
@@ -39389,7 +39390,7 @@ next: ${next}`;
         soundSelect.className = "qmm-input";
         soundSelect.style.width = "100%";
         const populateSoundOptions = () => {
-          const selected = current?.sound ?? "";
+          const selected = current2?.sound ?? "";
           soundSelect.innerHTML = "";
           const optDefault = document.createElement("option");
           optDefault.value = "";
@@ -39439,7 +39440,7 @@ next: ${next}`;
           volumeRange.value = String(clamped);
           volumeValue.textContent = `${clamped}%`;
         };
-        const initialVolume = current?.volume != null ? current.volume : baseVolume;
+        const initialVolume = current2?.volume != null ? current2.volume : baseVolume;
         applyVolumeDisplay(Math.round(Math.max(0, Math.min(1, initialVolume)) * 100));
         volumeRange.addEventListener("input", () => {
           const raw = Number(volumeRange.value);
@@ -39467,7 +39468,7 @@ next: ${next}`;
           opt.textContent = formatModeLabel(value);
           modeSelect.appendChild(opt);
         });
-        const initialMode = allowPurchase ? current?.playbackMode ?? defaults.mode : "oneshot";
+        const initialMode = allowPurchase ? current2?.playbackMode ?? defaults.mode : "oneshot";
         modeSelect.value = initialMode === "loop" && !allowPurchase ? "oneshot" : initialMode;
         if (!allowPurchase) modeSelect.disabled = true;
         modeField.append(modeLabel, modeSelect);
@@ -39484,7 +39485,7 @@ next: ${next}`;
           stopOption.value = "purchase";
           stopOption.textContent = "Until purchase";
           stopSelect.appendChild(stopOption);
-          const initialStopMode = current?.stopMode ?? contextDefaults.stopMode;
+          const initialStopMode = current2?.stopMode ?? contextDefaults.stopMode;
           stopSelect.value = initialStopMode === "purchase" ? "purchase" : "purchase";
           stopField.append(stopLabel, stopSelect);
           pop.appendChild(stopField);
@@ -39499,7 +39500,7 @@ next: ${next}`;
         intervalInput.min = "150";
         intervalInput.step = "50";
         intervalInput.placeholder = String(defaultIntervalMs);
-        intervalInput.value = current?.loopIntervalMs != null ? String(current.loopIntervalMs) : "";
+        intervalInput.value = current2?.loopIntervalMs != null ? String(current2.loopIntervalMs) : "";
         intervalInput.inputMode = "numeric";
         intervalField.append(intervalLabel, intervalInput);
         if (allowPurchase) pop.appendChild(intervalField);
@@ -39567,7 +39568,7 @@ next: ${next}`;
           NotifierService.clearRule(row.id);
           closeRuleEditor();
         });
-        if (!current) ui.setButtonEnabled(clearBtn, false);
+        if (!current2) ui.setButtonEnabled(clearBtn, false);
         const saveBtn = ui.btn("Save", { variant: "primary", size: "sm" });
         saveBtn.addEventListener("click", (ev) => {
           ev.preventDefault();
@@ -40169,8 +40170,8 @@ next: ${next}`;
     lockModeRow.append(lockModeSegmented, lockModeHint, lockWarning);
     const updateLockModeUI = () => {
       const value = fromLockMode(state3.lockMode);
-      const current = lockModeSegmented.get?.();
-      if (current !== value) {
+      const current2 = lockModeSegmented.get?.();
+      if (current2 !== value) {
         isProgrammaticLockMode = true;
         try {
           lockModeSegmented.set?.(value);
@@ -41136,9 +41137,9 @@ next: ${next}`;
           xBtn.type = "button";
           xBtn.textContent = "\xD7";
           xBtn.addEventListener("click", () => {
-            const current = lockerRestrictionsService.getSellAllPetsRules().protectedRarities ?? [];
+            const current2 = lockerRestrictionsService.getSellAllPetsRules().protectedRarities ?? [];
             lockerRestrictionsService.setSellAllPetsRules({
-              protectedRarities: current.filter((x) => x !== r)
+              protectedRarities: current2.filter((x) => x !== r)
             });
             refreshRarityRow();
           });
@@ -41155,9 +41156,9 @@ next: ${next}`;
           badge2.style.margin = "0";
           badge2.style.cursor = "pointer";
           badge2.addEventListener("click", () => {
-            const current = lockerRestrictionsService.getSellAllPetsRules().protectedRarities ?? [];
+            const current2 = lockerRestrictionsService.getSellAllPetsRules().protectedRarities ?? [];
             lockerRestrictionsService.setSellAllPetsRules({
-              protectedRarities: [...current, r]
+              protectedRarities: [...current2, r]
             });
             refreshRarityRow();
           });
@@ -41618,13 +41619,13 @@ next: ${next}`;
       return target;
     };
     const updateDetailScrollMemory = (key2) => {
-      const current = detailScrollMemory.get(key2) ?? { detail: 0, card: 0 };
-      current.detail = getClampedScrollTop(detail);
+      const current2 = detailScrollMemory.get(key2) ?? { detail: 0, card: 0 };
+      current2.detail = getClampedScrollTop(detail);
       const currentCard2 = detail.querySelector('[data-locker-settings-card="1"]');
       if (currentCard2) {
-        current.card = getClampedScrollTop(currentCard2);
+        current2.card = getClampedScrollTop(currentCard2);
       }
-      detailScrollMemory.set(key2, current);
+      detailScrollMemory.set(key2, current2);
     };
     detail.addEventListener("scroll", () => {
       if (!renderedDetailKey) return;
@@ -41788,9 +41789,9 @@ next: ${next}`;
         const activeKey = selectedKey;
         form.root.addEventListener("scroll", () => {
           if (renderedDetailKey !== activeKey) return;
-          const current = detailScrollMemory.get(activeKey) ?? { detail: getClampedScrollTop(detail), card: 0 };
-          current.card = getClampedScrollTop(form.root);
-          detailScrollMemory.set(activeKey, current);
+          const current2 = detailScrollMemory.get(activeKey) ?? { detail: getClampedScrollTop(detail), card: 0 };
+          current2.card = getClampedScrollTop(form.root);
+          detailScrollMemory.set(activeKey, current2);
         });
         renderedDetailKey = activeKey;
       }
@@ -43597,8 +43598,8 @@ next: ${next}`;
     return getAriesStorage().hatch?.expanded?.[sectionId] !== true;
   }
   function setCollapsed(sectionId, collapsed) {
-    updateAriesStorage((current) => {
-      const hatch = current.hatch ?? (current.hatch = {});
+    updateAriesStorage((current2) => {
+      const hatch = current2.hatch ?? (current2.hatch = {});
       const map2 = hatch.expanded ?? (hatch.expanded = {});
       if (collapsed) delete map2[sectionId];
       else map2[sectionId] = true;
@@ -44238,16 +44239,16 @@ next: ${next}`;
   function combinations(items, size) {
     if (size <= 0 || size > items.length) return [];
     const out = [];
-    const current = [];
+    const current2 = [];
     const walk = (start2) => {
-      if (current.length === size) {
-        out.push([...current]);
+      if (current2.length === size) {
+        out.push([...current2]);
         return;
       }
       for (let i = start2; i < items.length; i += 1) {
-        current.push(items[i]);
+        current2.push(items[i]);
         walk(i + 1);
-        current.pop();
+        current2.pop();
       }
     };
     walk(0);
@@ -45084,8 +45085,8 @@ next: ${next}`;
     if (ratio >= 0.75) return "#fbbf24";
     return "#f87171";
   }
-  function mkBar(current, atMax) {
-    const ratio = atMax > 0 ? Math.max(0, Math.min(1, current / atMax)) : 0;
+  function mkBar(current2, atMax) {
+    const ratio = atMax > 0 ? Math.max(0, Math.min(1, current2 / atMax)) : 0;
     const track = document.createElement("div");
     Object.assign(track.style, {
       height: "3px",
@@ -46123,7 +46124,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return result;
     }
     function rebuildAbilityOptions() {
-      const current = selAbility.value;
+      const current2 = selAbility.value;
       const options = [
         ["", "All abilities"],
         ...PetsService.getSeenAbilityIds().map((id) => [id, id])
@@ -46135,7 +46136,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         option.textContent = label2;
         selAbility.appendChild(option);
       }
-      selAbility.value = options.some(([value]) => value === current) ? current : "";
+      selAbility.value = options.some(([value]) => value === current2) ? current2 : "";
     }
     function repaint() {
       const visible = applyFilters();
@@ -49171,8 +49172,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return getAriesStorage().misc?.collapsed?.[sectionId] === true;
   }
   function setSectionCollapsed(sectionId, collapsed) {
-    updateAriesStorage((current) => {
-      const misc = current.misc ?? (current.misc = {});
+    updateAriesStorage((current2) => {
+      const misc = current2.misc ?? (current2.misc = {});
       const map2 = misc.collapsed ?? (misc.collapsed = {});
       if (collapsed) map2[sectionId] = true;
       else delete map2[sectionId];
@@ -49612,12 +49613,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function saveBackup(name) {
     const normalizedName = name.trim() || `Backup ${(/* @__PURE__ */ new Date()).toLocaleString()}`;
-    const current = ensureVersion(getAriesStorage());
+    const current2 = ensureVersion(getAriesStorage());
     const entry = {
       id: generateId(),
       name: normalizedName,
       timestamp: Date.now(),
-      data: current
+      data: current2
     };
     const next = [entry, ...readBackups()].slice(0, MAX_BACKUPS);
     persistBackups(next);
@@ -49647,8 +49648,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { success: true, message: "Backup deleted." };
   }
   function exportAllSettings() {
-    const current = ensureVersion(getAriesStorage());
-    return JSON.stringify(current, null, 2);
+    const current2 = ensureVersion(getAriesStorage());
+    return JSON.stringify(current2, null, 2);
   }
   function tryDecodePercentEncodedJson(text2) {
     if (!/^%(?:7B|5B)/i.test(text2)) return null;
@@ -51861,8 +51862,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return getAriesStorage().keybinds?.collapsed?.[sectionId] === true;
   }
   function setSectionCollapsed2(sectionId, collapsed) {
-    updateAriesStorage((current) => {
-      const keybinds = current.keybinds ?? (current.keybinds = {});
+    updateAriesStorage((current2) => {
+      const keybinds = current2.keybinds ?? (current2.keybinds = {});
       const map2 = keybinds.collapsed ?? (keybinds.collapsed = {});
       if (collapsed) map2[sectionId] = true;
       else delete map2[sectionId];
@@ -51959,9 +51960,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     function setEnabled(btn, enabled2) {
       if (btn) setButtonEnabled2(btn, enabled2);
     }
-    function updateButtons2(current) {
-      setEnabled(clearBtn, hotkeyToString(current).length > 0);
-      setEnabled(resetBtn, hotkeyToString(current) !== defaultString);
+    function updateButtons2(current2) {
+      setEnabled(clearBtn, hotkeyToString(current2).length > 0);
+      setEnabled(resetBtn, hotkeyToString(current2) !== defaultString);
     }
     updateButtons2(getKeybind(action2.id));
     const stop2 = onKeybindChange(action2.id, (hk) => {
@@ -53989,8 +53990,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function setSkinsEnabled(enabled2) {
     snapshot.enabled = enabled2;
-    updateAriesStorage((current) => {
-      current.skins = { ...current.skins || {}, enabled: enabled2 };
+    updateAriesStorage((current2) => {
+      current2.skins = { ...current2.skins || {}, enabled: enabled2 };
     });
     await reapply();
   }
@@ -54103,9 +54104,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (watchId === null) {
       lastRenderer = getSpriteState().renderer;
       watchId = pageWin.setInterval(() => {
-        const current = getSpriteState().renderer;
-        if (!current || current === lastRenderer) return;
-        lastRenderer = current;
+        const current2 = getSpriteState().renderer;
+        if (!current2 || current2 === lastRenderer) return;
+        lastRenderer = current2;
         if (!snapshot.entries.size) return;
         console.info("[MG Skins] renderer recreated, re-applying skins");
         forgetAppliedState();
@@ -54631,6 +54632,381 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/features/companion/diagnostics.ts
+  function median(values) {
+    if (values.length === 0) return null;
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0 ? Math.round((sorted[mid - 1] + sorted[mid]) / 2) : sorted[mid];
+  }
+  async function diagnoseCompanion(npcId, sampleMs = DEFAULT_SAMPLE_MS) {
+    const seen = [];
+    const record = (entries) => {
+      const entry = Array.isArray(entries) ? entries.find((e) => e?.playerId === npcId) : null;
+      const pos = entry?.position;
+      if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return;
+      const last = seen[seen.length - 1];
+      if (last && last.x === pos.x && last.y === pos.y) return;
+      seen.push({ atMs: performance.now(), x: pos.x, y: pos.y });
+    };
+    let unsub = null;
+    try {
+      unsub = await npcQuinoaUsers.onChangeNow((next) => record(next));
+    } catch {
+      return {
+        observations: 0,
+        medianIntervalMs: null,
+        maxDelta: 0,
+        snapCount: 0,
+        snapRatio: 0,
+        verdict: "Impossible de s'abonner \xE0 npcQuinoaUsersAtom."
+      };
+    }
+    await new Promise((resolve) => setTimeout(resolve, sampleMs));
+    try {
+      unsub?.();
+    } catch {
+    }
+    const intervals = [];
+    let maxDelta = 0;
+    let snapCount = 0;
+    for (let i = 1; i < seen.length; i++) {
+      const prev = seen[i - 1];
+      const curr = seen[i];
+      intervals.push(curr.atMs - prev.atMs);
+      const delta = Math.abs(curr.x - prev.x) + Math.abs(curr.y - prev.y);
+      if (delta > maxDelta) maxDelta = delta;
+      if (delta > 1) snapCount++;
+    }
+    const transitions = Math.max(0, seen.length - 1);
+    const snapRatio = transitions === 0 ? 0 : snapCount / transitions;
+    return {
+      observations: seen.length,
+      medianIntervalMs: median(intervals),
+      maxDelta,
+      snapCount,
+      snapRatio: Number(snapRatio.toFixed(2)),
+      verdict: buildVerdict(seen.length, snapCount, maxDelta)
+    };
+  }
+  function buildVerdict(observations, snapCount, maxDelta) {
+    if (observations < 2) {
+      return "Aucune position observ\xE9e : le companion ne bouge pas, ou l'atom n'est pas relu. V\xE9rifie qu'il marche pendant la mesure.";
+    }
+    if (snapCount === 0) {
+      return "Le jeu ne voit que des pas d'une tuile. La cadence n'est pas en cause : le snap vient d'ailleurs (forceSnap).";
+    }
+    return `Le jeu observe des sauts jusqu'\xE0 ${maxDelta} tuiles : la cadence de recalcul est plus lente que notre pas. C'est la cause du snap.`;
+  }
+  var DEFAULT_SAMPLE_MS, npcQuinoaUsers;
+  var init_diagnostics = __esm({
+    "src/features/companion/diagnostics.ts"() {
+      "use strict";
+      init_hub();
+      DEFAULT_SAMPLE_MS = 6e3;
+      npcQuinoaUsers = makeAtom(
+        "npcQuinoaUsersAtom"
+      );
+    }
+  });
+
+  // src/features/companion/tick.ts
+  function createTickAtom() {
+    const atom = {};
+    atom.init = 0;
+    atom.read = (get) => get(atom);
+    atom.write = (get, set2, update) => set2(atom, typeof update === "function" ? update(get(atom)) : update);
+    atom.debugLabel = COMPANION_TICK_LABEL;
+    atom.toString = () => COMPANION_TICK_LABEL;
+    return atom;
+  }
+  function ensureTickAtom() {
+    if (tickAtom) return tickAtom;
+    const cache2 = pageWindow.jotaiAtomCache;
+    if (!cache2 || typeof cache2.get !== "function") return null;
+    tickAtom = cache2.get(CACHE_KEY, createTickAtom());
+    return tickAtom;
+  }
+  function isTickAvailable() {
+    return ensureTickAtom() !== null;
+  }
+  async function bumpTick() {
+    const atom = ensureTickAtom();
+    if (!atom) return;
+    counter++;
+    try {
+      await jSet(atom, counter);
+    } catch {
+    }
+  }
+  var COMPANION_TICK_LABEL, CACHE_KEY, tickAtom, counter;
+  var init_tick = __esm({
+    "src/features/companion/tick.ts"() {
+      "use strict";
+      init_pageContext();
+      init_jotai();
+      COMPANION_TICK_LABEL = "ariesCompanionTickAtom";
+      CACHE_KEY = `aries/companion/${COMPANION_TICK_LABEL}`;
+      tickAtom = null;
+      counter = 0;
+    }
+  });
+
+  // src/features/companion/emoteTypes.ts
+  function companionEmoteEntry(playerId2, emote, now2) {
+    return { kind: "emote", playerId: playerId2, emoteType: emote, lastTimestampMs: now2 + ENTRY_LEAD_MS };
+  }
+  function mergeEmoteSource(real, fake) {
+    const base = real && typeof real === "object" ? real : {};
+    const entries = Array.isArray(base.entries) ? base.entries : [];
+    const ours = Array.isArray(fake?.entries) ? fake.entries : [];
+    return { ...base, entries: ours.length ? [...entries, ...ours] : entries };
+  }
+  function cutTalking(avatarSystem2, playerId2) {
+    const system = avatarSystem2;
+    if (!system || typeof system.views?.get !== "function") return false;
+    const view = system.views.get(playerId2);
+    if (!view) return false;
+    try {
+      if (typeof system.stopNpcTalking === "function") {
+        system.stopNpcTalking(playerId2, view);
+        return true;
+      }
+      if (typeof view.setTalking === "function") {
+        view.setTalking(false);
+        return true;
+      }
+    } catch {
+    }
+    return false;
+  }
+  function emoteStartDelay(lastSpokeAt2, now2, canCutTalking = false) {
+    if (canCutTalking) return 0;
+    if (lastSpokeAt2 === null) return 0;
+    return Math.max(0, lastSpokeAt2 + NPC_TALKING_MS + TALKING_MARGIN_MS - now2);
+  }
+  var EmoteType, ENTRY_LEAD_MS, NPC_TALKING_MS, TALKING_MARGIN_MS;
+  var init_emoteTypes = __esm({
+    "src/features/companion/emoteTypes.ts"() {
+      "use strict";
+      EmoteType = {
+        Idle: -1,
+        Clapping: 0,
+        Laughing: 1,
+        Angered: 2,
+        Crying: 3,
+        Questioning: 4,
+        Love: 5
+      };
+      ENTRY_LEAD_MS = 6e4;
+      NPC_TALKING_MS = 3e3;
+      TALKING_MARGIN_MS = 150;
+    }
+  });
+
+  // src/features/companion/emote.ts
+  function avatarSystem() {
+    try {
+      return getWorldSystem("avatar");
+    } catch {
+      return null;
+    }
+  }
+  function markSpoke(playerId2, at = Date.now()) {
+    if (playerId2) lastSpokeAt.set(playerId2, at);
+  }
+  async function writeEntries(entries) {
+    const payload = { entries };
+    try {
+      if (!installed2) {
+        ensureTickAtom();
+        await fakeShow(EMOTE_PATCH, payload);
+        installed2 = true;
+      } else {
+        await fakeUpdate(EMOTE_SOURCE_LABEL, payload);
+      }
+      await bumpTick();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  async function rest() {
+    if (!installed2) return;
+    await writeEntries([]);
+  }
+  function cancelPending() {
+    if (releaseTimer === null) return;
+    window.clearTimeout(releaseTimer);
+    releaseTimer = null;
+  }
+  function cancelStart() {
+    if (startTimer === null) return;
+    window.clearTimeout(startTimer);
+    startTimer = null;
+  }
+  async function playEmote(playerId2, emote, durationMs = EMOTE_DURATION_MS) {
+    if (!playerId2 || emote === EmoteType.Idle) return;
+    cancelStart();
+    const avatar3 = avatarSystem();
+    const canCut = !!avatar3?.views?.has?.(playerId2);
+    const delay = emoteStartDelay(lastSpokeAt.get(playerId2) ?? null, Date.now(), canCut);
+    if (delay > 0) {
+      startTimer = window.setTimeout(() => {
+        startTimer = null;
+        void playEmote(playerId2, emote, durationMs);
+      }, delay);
+      return;
+    }
+    if (releaseTimer !== null && posing === playerId2) {
+      cancelPending();
+      await rest();
+      await new Promise((resolve) => setTimeout(resolve, 60));
+    }
+    cancelPending();
+    posing = playerId2;
+    if (canCut) {
+      cutTalking(avatar3, playerId2);
+      window.setTimeout(() => {
+        if (posing === playerId2) cutTalking(avatarSystem(), playerId2);
+      }, 80);
+    }
+    if (!await writeEntries([companionEmoteEntry(playerId2, emote, Date.now())])) {
+      posing = null;
+      return;
+    }
+    releaseTimer = window.setTimeout(() => {
+      releaseTimer = null;
+      posing = null;
+      void rest();
+    }, durationMs);
+  }
+  async function stopEmote() {
+    cancelStart();
+    cancelPending();
+    posing = null;
+    if (!installed2) return;
+    try {
+      await fakeHide(EMOTE_SOURCE_LABEL);
+      await bumpTick();
+    } catch {
+    }
+    installed2 = false;
+  }
+  var EMOTE_SOURCE_LABEL, EMOTE_PATCH, EMOTE_DURATION_MS, installed2, releaseTimer, posing, startTimer, lastSpokeAt;
+  var init_emote = __esm({
+    "src/features/companion/emote.ts"() {
+      "use strict";
+      init_fakeAtoms();
+      init_tick();
+      init_tileCapture();
+      init_emoteTypes();
+      EMOTE_SOURCE_LABEL = "emoteSourceAtom";
+      EMOTE_PATCH = {
+        label: EMOTE_SOURCE_LABEL,
+        // Sans elle, le recalcul n'aurait lieu qu'au prochain changement de l'état
+        // de room : la pose partirait en retard, et le retour au repos aussi.
+        extraDeps: [COMPANION_TICK_LABEL],
+        merge: (real, fake) => mergeEmoteSource(real, fake)
+      };
+      EMOTE_DURATION_MS = 1500;
+      installed2 = false;
+      releaseTimer = null;
+      posing = null;
+      startTimer = null;
+      lastSpokeAt = /* @__PURE__ */ new Map();
+    }
+  });
+
+  // src/features/companion/injection.ts
+  async function listNpcIdentities() {
+    const map2 = await readCompanionMap();
+    const presentIds = new Set(await readPresentNpcIds());
+    const byId = /* @__PURE__ */ new Map();
+    for (const name of map2?.npcSpawnLayers ?? []) {
+      const playerId2 = NPC_ID_PREFIX + name;
+      byId.set(playerId2, {
+        playerId: playerId2,
+        name,
+        spawnLayer: name,
+        present: presentIds.has(playerId2),
+        spawnTile: map2?.npcSpawnTile(name) ?? null
+      });
+    }
+    for (const playerId2 of presentIds) {
+      if (byId.has(playerId2)) continue;
+      const name = playerId2.startsWith(NPC_ID_PREFIX) ? playerId2.slice(NPC_ID_PREFIX.length) : playerId2;
+      byId.set(playerId2, { playerId: playerId2, name, spawnLayer: name, present: true, spawnTile: null });
+    }
+    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }
+  async function readPresentNpcIds() {
+    try {
+      const data = await quinoaData.get();
+      const npcs = data?.npcs;
+      if (!npcs || typeof npcs !== "object") return [];
+      return Object.keys(npcs).filter((id) => !(id in currentPayload.npcs));
+    } catch {
+      return [];
+    }
+  }
+  async function installInjection() {
+    if (active) return;
+    ensureTickAtom();
+    await fakeShow(COMPANION_PATCH, currentPayload);
+    active = true;
+  }
+  async function setCompanionTile(playerId2, tileIndex) {
+    if (!Number.isInteger(tileIndex) || tileIndex < 0) return;
+    currentPayload = { npcs: { [playerId2]: tileIndex } };
+    if (!active) {
+      ensureTickAtom();
+      await fakeShow(COMPANION_PATCH, currentPayload);
+      active = true;
+      return;
+    }
+    await fakeUpdate(QUINOA_DATA_LABEL, currentPayload);
+    await bumpTick();
+  }
+  async function hideCompanion() {
+    if (!active) return;
+    currentPayload = { npcs: {} };
+    active = false;
+    await fakeHide(QUINOA_DATA_LABEL);
+  }
+  async function disposeInjection() {
+    currentPayload = { npcs: {} };
+    active = false;
+    await fakeDispose(QUINOA_DATA_LABEL);
+  }
+  var NPC_ID_PREFIX, QUINOA_DATA_LABEL, quinoaData, COMPANION_PATCH, active, currentPayload;
+  var init_injection = __esm({
+    "src/features/companion/injection.ts"() {
+      "use strict";
+      init_fakeAtoms();
+      init_hub();
+      init_map();
+      init_tick();
+      NPC_ID_PREFIX = "NPC_";
+      QUINOA_DATA_LABEL = "quinoaDataAtom";
+      quinoaData = makeAtom(QUINOA_DATA_LABEL);
+      COMPANION_PATCH = {
+        label: QUINOA_DATA_LABEL,
+        // Dépendance artificielle : sans elle, le recalcul ne suit que l'état de room
+        // (~420 ms mesuré), trop lent pour les 130 ms d'interpolation d'un pas.
+        extraDeps: [COMPANION_TICK_LABEL],
+        merge: (real, fake) => {
+          const base = real && typeof real === "object" ? real : {};
+          const realNpcs = base.npcs && typeof base.npcs === "object" ? base.npcs : {};
+          const fakeNpcs = fake?.npcs && typeof fake.npcs === "object" ? fake.npcs : {};
+          return { ...base, npcs: { ...realNpcs, ...fakeNpcs } };
+        }
+      };
+      active = false;
+      currentPayload = { npcs: {} };
+    }
+  });
+
   // src/lib/emitter.ts
   var Emitter, Subscriptions;
   var init_emitter = __esm({
@@ -54676,6 +55052,48 @@ Restore figures are averages; unlucky streaks do worse.`;
           }
         }
       };
+    }
+  });
+
+  // src/features/companion/dialogue.ts
+  function nextBubbleTimestamp(last, proposed) {
+    if (!Number.isFinite(proposed) || last === null || !Number.isFinite(last)) return proposed;
+    return Math.max(proposed, last + 1);
+  }
+  function initialDialogueState() {
+    return { lastCustomIndex: -1, mutedUntil: {} };
+  }
+  function pickDialogueLine(input) {
+    const { contextual, customLines, nowMs, random, cooldownMs } = input;
+    const state3 = {
+      lastCustomIndex: input.state.lastCustomIndex,
+      mutedUntil: { ...input.state.mutedUntil }
+    };
+    const lines = customLines.filter((line) => typeof line === "string" && line.trim().length > 0);
+    const available = contextual.filter(
+      (candidate) => candidate?.message && nowMs >= (state3.mutedUntil[candidate.key] ?? 0)
+    );
+    if (available.length > 0 && (lines.length === 0 || random() < CONTEXTUAL_CHANCE)) {
+      const candidate = available[Math.min(available.length - 1, Math.floor(random() * available.length))];
+      state3.mutedUntil[candidate.key] = nowMs + cooldownMs;
+      return { message: candidate.message, emote: candidate.emote ?? null, custom: false, state: state3 };
+    }
+    if (lines.length === 0) return { message: null, emote: null, custom: false, state: state3 };
+    if (lines.length === 1) {
+      state3.lastCustomIndex = 0;
+      return { message: lines[0], emote: null, custom: true, state: state3 };
+    }
+    let index = Math.min(lines.length - 1, Math.floor(random() * lines.length));
+    if (index === state3.lastCustomIndex) index = (index + 1) % lines.length;
+    state3.lastCustomIndex = index;
+    return { message: lines[index], emote: null, custom: true, state: state3 };
+  }
+  var CONTEXTUAL_CHANCE, DEFAULT_CONTEXTUAL_COOLDOWN_MS;
+  var init_dialogue = __esm({
+    "src/features/companion/dialogue.ts"() {
+      "use strict";
+      CONTEXTUAL_CHANCE = 0.25;
+      DEFAULT_CONTEXTUAL_COOLDOWN_MS = 12e4;
     }
   });
 
@@ -54961,422 +55379,32 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/companion/tick.ts
-  function createTickAtom() {
-    const atom = {};
-    atom.init = 0;
-    atom.read = (get) => get(atom);
-    atom.write = (get, set2, update) => set2(atom, typeof update === "function" ? update(get(atom)) : update);
-    atom.debugLabel = COMPANION_TICK_LABEL;
-    atom.toString = () => COMPANION_TICK_LABEL;
-    return atom;
+  // src/features/companion/runtime.ts
+  function currentRuntime() {
+    return current;
   }
-  function ensureTickAtom() {
-    if (tickAtom) return tickAtom;
-    const cache2 = pageWindow.jotaiAtomCache;
-    if (!cache2 || typeof cache2.get !== "function") return null;
-    tickAtom = cache2.get(CACHE_KEY, createTickAtom());
-    return tickAtom;
+  function setRuntime(next) {
+    current = next;
   }
-  function isTickAvailable() {
-    return ensureTickAtom() !== null;
-  }
-  async function bumpTick() {
-    const atom = ensureTickAtom();
-    if (!atom) return;
-    counter++;
-    try {
-      await jSet(atom, counter);
-    } catch {
-    }
-  }
-  var COMPANION_TICK_LABEL, CACHE_KEY, tickAtom, counter;
-  var init_tick = __esm({
-    "src/features/companion/tick.ts"() {
+  var current;
+  var init_runtime = __esm({
+    "src/features/companion/runtime.ts"() {
       "use strict";
-      init_pageContext();
-      init_jotai();
-      COMPANION_TICK_LABEL = "ariesCompanionTickAtom";
-      CACHE_KEY = `aries/companion/${COMPANION_TICK_LABEL}`;
-      tickAtom = null;
-      counter = 0;
+      current = null;
     }
   });
 
-  // src/features/companion/injection.ts
-  async function listNpcIdentities() {
-    const map2 = await readCompanionMap();
-    const presentIds = new Set(await readPresentNpcIds());
-    const byId = /* @__PURE__ */ new Map();
-    for (const name of map2?.npcSpawnLayers ?? []) {
-      const playerId2 = NPC_ID_PREFIX + name;
-      byId.set(playerId2, {
-        playerId: playerId2,
-        name,
-        spawnLayer: name,
-        present: presentIds.has(playerId2),
-        spawnTile: map2?.npcSpawnTile(name) ?? null
-      });
-    }
-    for (const playerId2 of presentIds) {
-      if (byId.has(playerId2)) continue;
-      const name = playerId2.startsWith(NPC_ID_PREFIX) ? playerId2.slice(NPC_ID_PREFIX.length) : playerId2;
-      byId.set(playerId2, { playerId: playerId2, name, spawnLayer: name, present: true, spawnTile: null });
-    }
-    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }
-  async function readPresentNpcIds() {
-    try {
-      const data = await quinoaData.get();
-      const npcs = data?.npcs;
-      if (!npcs || typeof npcs !== "object") return [];
-      return Object.keys(npcs).filter((id) => !(id in currentPayload.npcs));
-    } catch {
-      return [];
-    }
-  }
-  async function installInjection() {
-    if (active) return;
-    ensureTickAtom();
-    await fakeShow(COMPANION_PATCH, currentPayload);
-    active = true;
-  }
-  async function setCompanionTile(playerId2, tileIndex) {
-    if (!Number.isInteger(tileIndex) || tileIndex < 0) return;
-    currentPayload = { npcs: { [playerId2]: tileIndex } };
-    if (!active) {
-      ensureTickAtom();
-      await fakeShow(COMPANION_PATCH, currentPayload);
-      active = true;
-      return;
-    }
-    await fakeUpdate(QUINOA_DATA_LABEL, currentPayload);
-    await bumpTick();
-  }
-  async function hideCompanion() {
-    if (!active) return;
-    currentPayload = { npcs: {} };
-    active = false;
-    await fakeHide(QUINOA_DATA_LABEL);
-  }
-  async function disposeInjection() {
-    currentPayload = { npcs: {} };
-    active = false;
-    await fakeDispose(QUINOA_DATA_LABEL);
-  }
-  var NPC_ID_PREFIX, QUINOA_DATA_LABEL, quinoaData, COMPANION_PATCH, active, currentPayload;
-  var init_injection = __esm({
-    "src/features/companion/injection.ts"() {
-      "use strict";
-      init_fakeAtoms();
-      init_hub();
-      init_map();
-      init_tick();
-      NPC_ID_PREFIX = "NPC_";
-      QUINOA_DATA_LABEL = "quinoaDataAtom";
-      quinoaData = makeAtom(QUINOA_DATA_LABEL);
-      COMPANION_PATCH = {
-        label: QUINOA_DATA_LABEL,
-        // Dépendance artificielle : sans elle, le recalcul ne suit que l'état de room
-        // (~420 ms mesuré), trop lent pour les 130 ms d'interpolation d'un pas.
-        extraDeps: [COMPANION_TICK_LABEL],
-        merge: (real, fake) => {
-          const base = real && typeof real === "object" ? real : {};
-          const realNpcs = base.npcs && typeof base.npcs === "object" ? base.npcs : {};
-          const fakeNpcs = fake?.npcs && typeof fake.npcs === "object" ? fake.npcs : {};
-          return { ...base, npcs: { ...realNpcs, ...fakeNpcs } };
-        }
-      };
-      active = false;
-      currentPayload = { npcs: {} };
-    }
-  });
-
-  // src/features/companion/emoteTypes.ts
-  function companionEmoteEntry(playerId2, emote, now2) {
-    return { kind: "emote", playerId: playerId2, emoteType: emote, lastTimestampMs: now2 + ENTRY_LEAD_MS };
-  }
-  function mergeEmoteSource(real, fake) {
-    const base = real && typeof real === "object" ? real : {};
-    const entries = Array.isArray(base.entries) ? base.entries : [];
-    const ours = Array.isArray(fake?.entries) ? fake.entries : [];
-    return { ...base, entries: ours.length ? [...entries, ...ours] : entries };
-  }
-  function cutTalking(avatarSystem2, playerId2) {
-    const system = avatarSystem2;
-    if (!system || typeof system.views?.get !== "function") return false;
-    const view = system.views.get(playerId2);
-    if (!view) return false;
-    try {
-      if (typeof system.stopNpcTalking === "function") {
-        system.stopNpcTalking(playerId2, view);
-        return true;
-      }
-      if (typeof view.setTalking === "function") {
-        view.setTalking(false);
-        return true;
-      }
-    } catch {
-    }
-    return false;
-  }
-  function emoteStartDelay(lastSpokeAt2, now2, canCutTalking = false) {
-    if (canCutTalking) return 0;
-    if (lastSpokeAt2 === null) return 0;
-    return Math.max(0, lastSpokeAt2 + NPC_TALKING_MS + TALKING_MARGIN_MS - now2);
-  }
-  var EmoteType, ENTRY_LEAD_MS, NPC_TALKING_MS, TALKING_MARGIN_MS;
-  var init_emoteTypes = __esm({
-    "src/features/companion/emoteTypes.ts"() {
-      "use strict";
-      EmoteType = {
-        Idle: -1,
-        Clapping: 0,
-        Laughing: 1,
-        Angered: 2,
-        Crying: 3,
-        Questioning: 4,
-        Love: 5
-      };
-      ENTRY_LEAD_MS = 6e4;
-      NPC_TALKING_MS = 3e3;
-      TALKING_MARGIN_MS = 150;
-    }
-  });
-
-  // src/features/companion/reactions.ts
-  function pickOne(options, random) {
+  // src/lib/random.ts
+  function pickOne(options, random = Math.random) {
     return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
   }
-  function crossedMilestone(prev, next) {
-    if (!Number.isFinite(prev) || !Number.isFinite(next) || next <= prev) return null;
-    let crossed = null;
-    for (const m of MILESTONES) {
-      if (prev < m && next >= m) crossed = m;
+  var init_random = __esm({
+    "src/lib/random.ts"() {
+      "use strict";
     }
-    return crossed;
-  }
-  function formatMilestone(n) {
-    const units = [
-      [1e15, "quadrillion"],
-      [1e12, "trillion"],
-      [1e9, "billion"],
-      [1e6, "million"]
-    ];
-    for (const [size, word] of units) {
-      if (n >= size) return `${fmt(n / size)} ${word}`;
-    }
-    return fmt(n);
-  }
-  function statReactions(prev, next, random) {
-    const out = [];
-    for (const def of STAT_DEFS) {
-      const m = crossedMilestone(def.read(prev), def.read(next));
-      if (m === null) continue;
-      out.push({
-        key: `milestone:${def.id}`,
-        message: pickOne(def.lines, random)(formatMilestone(m)),
-        emote: m >= 1e6 ? EmoteType.Love : EmoteType.Clapping,
-        priority: "high"
-      });
-    }
-    if (sumHatched(next, "rainbow") > sumHatched(prev, "rainbow")) {
-      out.push({
-        key: "hatch:rainbow",
-        message: pickOne(["A RAINBOW pet?! No way!", "Rainbow! I've never seen one up close!", "Look at those colours! A Rainbow pet!"], random),
-        emote: EmoteType.Love,
-        priority: "high"
-      });
-    } else if (sumHatched(next, "gold") > sumHatched(prev, "gold")) {
-      out.push({
-        key: "hatch:gold",
-        message: pickOne(["A Gold pet! Look at it shine!", "Gold! That one's a keeper.", "Shiny! A Gold pet!"], random),
-        emote: EmoteType.Love,
-        priority: "high"
-      });
-    } else if (sumHatched(next) > sumHatched(prev)) {
-      out.push({
-        key: "hatch:normal",
-        message: pickOne(["Welcome to the family, little one!", "A new friend! Hi there!", "Aww, look at the new pet."], random),
-        emote: EmoteType.Clapping,
-        priority: "low"
-      });
-    }
-    const earned = num(next?.shops?.cropsSoldValue) - num(prev?.shops?.cropsSoldValue);
-    if (earned > 0) {
-      const coins = fmt(earned);
-      out.push({
-        key: "sale:crops",
-        message: pickOne(
-          [`Ka-ching! +${coins} coins.`, `Sold! ${coins} coins richer.`, `Nice sale, ${coins} coins!`, `${coins} coins in the bank. Love it.`],
-          random
-        ),
-        emote: EmoteType.Clapping,
-        priority: "low"
-      });
-    }
-    return out;
-  }
-  function weatherEmote(weatherId) {
-    return WEATHER_EMOTES[weatherId] ?? EmoteType.Questioning;
-  }
-  function weatherChangeReaction(prevId, nextId, prevName, startLine, random) {
-    if (prevId === nextId) return null;
-    if (nextId) {
-      return { key: `weather:${nextId}`, message: startLine, emote: weatherEmote(nextId), priority: "high" };
-    }
-    if (!prevId) return null;
-    return {
-      key: "weather:end",
-      message: pickOne([`The ${prevName} is over. Sunshine's back!`, `And just like that, the ${prevName} is gone.`, `Bye bye, ${prevName}.`], random),
-      emote: null,
-      priority: "low"
-    };
-  }
-  function abilityReaction(event, random) {
-    const who = event.name?.trim() || (event.species ? `your ${event.species}` : "your pet");
-    const Who = who.charAt(0).toUpperCase() + who.slice(1);
-    return {
-      key: "ability",
-      message: pickOne(
-        [`${Who} just used ${event.abilityName}!`, `Go ${who}! ${event.abilityName}!`, `Did you see that? ${Who} used ${event.abilityName}.`],
-        random
-      ),
-      emote: EmoteType.Clapping,
-      priority: "low"
-    };
-  }
-  function eggsReadyReaction(count, random) {
-    if (count <= 0) return null;
-    return {
-      key: "egg",
-      message: count === 1 ? pickOne(["An egg is ready to hatch!", "Ooh, one of your eggs is ready!", "Something's wiggling in that egg. It's ready!"], random) : pickOne([`${count} eggs are ready to hatch!`, `${count} eggs ready! Hatching time?`], random),
-      emote: EmoteType.Clapping,
-      priority: "high"
-    };
-  }
-  function shopReaction(names, random) {
-    const list = names.filter((n) => typeof n === "string" && n.trim());
-    if (list.length === 0) return null;
-    const what = list.length === 1 ? list[0] : list.length === 2 ? `${list[0]} and ${list[1]}` : `${list[0]}, ${list[1]} and more`;
-    const isAre = list.length === 1 ? "is" : "are";
-    return {
-      key: "shop",
-      message: pickOne([`${what} ${isAre} in the shop! Go go go!`, `Ooh, ${what} just showed up in the shop!`, `Quick, ${what} ${isAre} in stock!`], random),
-      emote: EmoteType.Clapping,
-      priority: "high"
-    };
-  }
-  function restockedFollowed(prev, next, isFollowed) {
-    if (!prev || !next) return [];
-    const out = [];
-    for (const kind of Object.keys(SHOP_ID)) {
-      const before = Number(prev[kind]?.secondsUntilRestock) || 0;
-      const after = Number(next[kind]?.secondsUntilRestock) || 0;
-      if (after <= before) continue;
-      const inventory = next[kind]?.inventory;
-      if (!Array.isArray(inventory)) continue;
-      const [prefix, field] = SHOP_ID[kind];
-      for (const item of inventory) {
-        const key2 = item?.[field];
-        const stock = Number(item?.initialStock);
-        if (typeof key2 !== "string" || !key2 || !(stock > 0)) continue;
-        const id = `${prefix}:${key2}`;
-        if (isFollowed(id)) out.push(id);
-      }
-    }
-    return out;
-  }
-  function rareCropReaction(crops, random) {
-    if (crops.length === 0) return null;
-    const first = crops[0];
-    const message = crops.length === 1 ? pickOne([`A ${first.mutation} ${first.species}! Look at that!`, `Whoa, a ${first.mutation} ${first.species} just showed up!`, `${first.mutation}! Your ${first.species} is special.`], random) : pickOne([`${crops.length} rare crops just appeared! Look!`, `Whoa, ${crops.length} special crops at once!`], random);
-    return { key: "rarecrop", message, emote: EmoteType.Love, priority: "high" };
-  }
-  function badLuckReactions(prev, next, eggName3, random) {
-    const out = [];
-    for (const [eggId, after] of Object.entries(next ?? {})) {
-      const before = prev?.[eggId];
-      if (!before || !after) continue;
-      const egg = eggName3(eggId);
-      for (const kind of ["rainbow", "gold"]) {
-        const was = Number(before[kind]) || 0;
-        const now2 = Number(after[kind]) || 0;
-        const label2 = RARITY_LABEL[kind];
-        if (now2 < was) {
-          if (was < RELIEF_MIN[kind]) continue;
-          const tries = was + 1;
-          out.push({
-            key: `hatch:${kind}`,
-            message: pickOne(
-              [`FINALLY! A ${label2} pet after ${tries} tries!`, `${tries} hatches of waiting, and there it is. ${label2}!`, `I told you it was coming! ${label2}, at last!`],
-              random
-            ),
-            emote: EmoteType.Love,
-            priority: "high",
-            weight: 1
-          });
-          continue;
-        }
-        let step = null;
-        for (const s of DROUGHT_STEPS[kind]) if (was < s && now2 >= s) step = s;
-        if (step === null) continue;
-        out.push({
-          key: `badluck:${kind}`,
-          message: pickOne(
-            [
-              `${step} ${egg} hatches without a ${label2}... it's coming, I can feel it.`,
-              `Still no ${label2} after ${step} tries. The game owes you one.`,
-              `${step} in a row with no ${label2}. Hang in there, boss.`
-            ],
-            random
-          ),
-          emote: EmoteType.Crying,
-          priority: "high"
-        });
-      }
-    }
-    return out;
-  }
-  function newRareCrops(prev, next, rare) {
-    if (!prev || typeof prev !== "object" || !next || typeof next !== "object" || rare.size === 0) return [];
-    const seen = /* @__PURE__ */ new Map();
-    const index = (tiles, visit) => {
-      for (const [tileIdx, obj] of Object.entries(tiles)) {
-        const o = obj;
-        if (!o || o.objectType !== "plant" || !Array.isArray(o.slots)) continue;
-        o.slots.forEach((raw, i) => {
-          const s = raw;
-          if (!s) return;
-          const muts = Array.isArray(s.mutations) ? s.mutations.filter((m) => typeof m === "string") : [];
-          const species = typeof s.species === "string" ? s.species : typeof o.species === "string" ? o.species : "crop";
-          visit(`${tileIdx}|${s.slotId ?? i}|${s.startTime ?? ""}`, species, muts);
-        });
-      }
-    };
-    index(prev, (id, _species, muts) => seen.set(id, new Set(muts)));
-    const out = [];
-    index(next, (id, species, muts) => {
-      const before = seen.get(id) ?? /* @__PURE__ */ new Set();
-      for (const m of muts) {
-        if (rare.has(m) && !before.has(m)) out.push({ mutation: m, species });
-      }
-    });
-    return out;
-  }
-  function newlyReadyEggs(tiles, now2, announced) {
-    if (!tiles || typeof tiles !== "object") return [];
-    const out = [];
-    for (const [tileIdx, obj] of Object.entries(tiles)) {
-      const o = obj;
-      if (!o || o.objectType !== "egg") continue;
-      const matured = Number(o.maturedAt);
-      if (!Number.isFinite(matured) || matured <= 0 || matured > now2) continue;
-      const key2 = `${tileIdx}|${o.plantedAt ?? ""}`;
-      if (!announced.has(key2)) out.push(key2);
-    }
-    return out;
-  }
+  });
+
+  // src/features/companion/dialogueTime.ts
   function dayPart(hour) {
     if (hour < 5) return "night";
     if (hour < 8) return "early";
@@ -55408,246 +55436,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (holiday) out.push(...HOLIDAY_LINES[holiday]);
     return out;
   }
-  function resumeSession(stored, now2) {
-    const s = stored;
-    const lastSeenAt = Number(s?.lastSeenAt);
-    const startedAt = Number(s?.startedAt);
-    const valid = Number.isFinite(lastSeenAt) && lastSeenAt > 0 && Number.isFinite(startedAt) && startedAt > 0 && startedAt <= now2;
-    const storedMet = Number(s?.firstMetAt);
-    const firstMetAt = Number.isFinite(storedMet) && storedMet > 0 && storedMet <= now2 ? storedMet : now2;
-    const celebratedDays = Math.max(0, Math.floor(Number(s?.celebratedDays) || 0));
-    if (valid && now2 - lastSeenAt < SESSION_GAP_MS) {
-      const announcedHours = Math.max(0, Math.floor(Number(s?.announcedHours) || 0));
-      return { session: { startedAt, lastSeenAt: now2, announcedHours, firstMetAt, celebratedDays }, greeting: null };
-    }
-    return {
-      session: { startedAt: now2, lastSeenAt: now2, announcedHours: 0, firstMetAt, celebratedDays },
-      greeting: { first: !valid, awayMs: valid ? now2 - lastSeenAt : 0 }
-    };
-  }
-  function greetingReaction(greeting, hour, random, holiday = null) {
-    let lines;
-    if (greeting.first) {
-      lines = ["Hi there! I'll be sticking around.", "Nice to meet you! Let's grow something great."];
-    } else if (greeting.awayMs >= 3 * DAY_MS) {
-      lines = ["Where have you been? I missed you!", "You're back! It's been ages.", "Finally! I was starting to talk to the plants."];
-    } else if (holiday) {
-      lines = HOLIDAY_GREETINGS[holiday];
-    } else if (greeting.awayMs >= DAY_MS) {
-      lines = ["Welcome back! The garden missed you.", "Hey, you're back! Good to see you."];
-    } else {
-      const byPart = {
-        night: ["Hey, night owl! Couldn't sleep?", "Gardening at this hour? I like your style."],
-        early: ["Up with the sun, I see!", "Good morning! You're up early."],
-        morning: ["Good morning! Let's grow something.", "Morning! Ready when you are."],
-        afternoon: ["Good afternoon! Ready to garden?", "Hey! Perfect timing, the plants were asking for you."],
-        evening: ["Good evening! Glad you're here.", "Evening! Let's make it a good one."],
-        late: ["Evening, boss. Late session tonight?", "Hey! Quick one before bed?"]
-      };
-      lines = byPart[dayPart(hour)];
-    }
-    return { key: "session:greeting", message: pickOne(lines, random), emote: EmoteType.Love, priority: "high" };
-  }
-  function anniversarySteps(days) {
-    const steps = [7, 30, 100];
-    for (let year = 1; year * 365 <= days; year++) steps.push(year * 365);
-    return steps;
-  }
-  function anniversaryReaction(firstMetAt, now2, celebratedDays, random) {
-    const days = Math.floor((now2 - firstMetAt) / DAY_MS);
-    let due = null;
-    for (const step of anniversarySteps(days)) if (step <= days && step > celebratedDays) due = step;
-    if (due === null) return { reaction: null, celebratedDays };
-    let lines;
-    if (due === 7) lines = ["One week together already! Thanks for having me.", "A whole week of gardening together!"];
-    else if (due === 30) lines = ["We've been gardening together for a whole month!", "One month together! Time flies."];
-    else if (due === 100) lines = ["100 days together! That's a lot of crops.", "Day 100! Best garden buddy ever."];
-    else {
-      const years = due / 365;
-      lines = years === 1 ? ["Happy anniversary! One year together!", "One year already! Thanks for keeping me around."] : [`Happy anniversary! ${years} years together!`, `${years} years of gardening together. Wow.`];
-    }
-    return {
-      reaction: { key: "anniversary", message: pickOne(lines, random), emote: EmoteType.Love, priority: "high" },
-      celebratedDays: due
-    };
-  }
-  function sessionHours(session, now2) {
-    return Math.max(0, Math.floor((now2 - session.startedAt) / 36e5));
-  }
-  function sessionHourReaction(hours, random) {
-    if (hours < 1) return null;
-    let lines;
-    let emote = EmoteType.Clapping;
-    if (hours === 1) {
-      lines = ["We've been at it for an hour already.", "One hour in! Time flies when you're gardening."];
-    } else if (hours === 2) {
-      lines = ["Two hours in! Look at this place.", "Two hours already? Where did the time go?"];
-    } else if (hours < 6) {
-      lines = [`${hours} hours straight. Maybe stretch your legs?`, `${hours} hours! Don't forget to drink some water.`, `${hours} hours already. You're dedicated!`];
-      emote = EmoteType.Questioning;
-    } else {
-      lines = [`${hours} hours?! Are you okay?`, `${hours} hours. I think the plants need a break. And you too.`];
-      emote = EmoteType.Crying;
-    }
-    return { key: `session:hours`, message: pickOne(lines, random), emote, priority: "high" };
-  }
-  function clockReaction(prevHour, hour, sessionMs, random, holiday = null) {
-    if (prevHour === hour) return null;
-    if (hour === 0) {
-      if (holiday) {
-        return { key: "clock:holiday", message: pickOne(HOLIDAY_GREETINGS[holiday], random), emote: EmoteType.Love, priority: "high" };
-      }
-      return {
-        key: "clock:midnight",
-        message: pickOne(["It's midnight! Still going?", "Midnight already. The garden never sleeps, huh?"], random),
-        emote: EmoteType.Questioning,
-        priority: "high"
-      };
-    }
-    if (hour === 6 && sessionMs >= 3 * 36e5) {
-      return {
-        key: "clock:sunrise",
-        message: pickOne(["The sun's coming up. Did we just pull an all-nighter?", "Is that... sunrise? We've been up all night!"], random),
-        emote: EmoteType.Laughing,
-        priority: "high"
-      };
-    }
-    return null;
-  }
-  function initialGateState() {
-    return { lastSpokeAt: 0, mutedUntil: {}, queue: [] };
-  }
-  function offerReaction(state3, reaction, now2) {
-    if (now2 < (state3.mutedUntil[familyOf(reaction.key)] ?? 0)) return state3;
-    const existing = state3.queue.find((q) => q.key === reaction.key);
-    if (existing && (existing.weight ?? 0) > (reaction.weight ?? 0)) return state3;
-    const queue = state3.queue.filter((q) => q.key !== reaction.key);
-    queue.push({ ...reaction, at: now2 });
-    return { ...state3, queue };
-  }
-  function takeReaction(state3, now2, busy) {
-    const queue = state3.queue.filter((q) => now2 - q.at <= REACTION_TTL_MS[q.priority]);
-    const kept = { ...state3, queue };
-    if (busy || queue.length === 0 || now2 - state3.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
-    const chosen = queue.find((q) => q.priority === "high") ?? queue[0];
-    const family = familyOf(chosen.key);
-    const { at: _at, ...reaction } = chosen;
-    return {
-      reaction,
-      state: {
-        lastSpokeAt: now2,
-        mutedUntil: { ...state3.mutedUntil, [family]: now2 + (FAMILY_COOLDOWN_MS[family] ?? 0) },
-        // Le reste de la famille qui vient de parler se tait aussi.
-        queue: queue.filter((q) => q !== chosen && (FAMILY_COOLDOWN_MS[family] ? familyOf(q.key) !== family : true))
-      }
-    };
-  }
-  var fmt, MILESTONES, sumHatched, sumAbilityTriggers, num, STAT_DEFS, WEATHER_EMOTES, SHOP_ID, DROUGHT_STEPS, RELIEF_MIN, RARITY_LABEL, DAY_PART_LINES, HOLIDAY_LINES, HOLIDAY_GREETINGS, WEEKEND_LINES, SUNDAY_LINES, TIME_LINE_EMOTES, SESSION_GAP_MS, DAY_MS, REACTION_GAP_MS, REACTION_TTL_MS, FAMILY_COOLDOWN_MS, familyOf;
-  var init_reactions = __esm({
-    "src/features/companion/reactions.ts"() {
+  var DAY_PART_LINES, HOLIDAY_LINES, HOLIDAY_GREETINGS, WEEKEND_LINES, SUNDAY_LINES, TIME_LINE_EMOTES;
+  var init_dialogueTime = __esm({
+    "src/features/companion/dialogueTime.ts"() {
       "use strict";
       init_emoteTypes();
-      fmt = (n) => Math.round(n).toLocaleString("en-US");
-      MILESTONES = Array.from({ length: 14 }, (_, i) => 10 ** (i + 2));
-      sumHatched = (s, key2) => {
-        let total = 0;
-        for (const counts of Object.values(s?.pets?.hatchedByType ?? {})) {
-          if (!counts) continue;
-          total += key2 ? Number(counts[key2]) || 0 : (Number(counts.normal) || 0) + (Number(counts.gold) || 0) + (Number(counts.rainbow) || 0);
-        }
-        return total;
-      };
-      sumAbilityTriggers = (s) => {
-        let total = 0;
-        for (const stat of Object.values(s?.abilities ?? {})) total += Number(stat?.triggers) || 0;
-        return total;
-      };
-      num = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
-      STAT_DEFS = [
-        {
-          id: "harvested",
-          read: (s) => num(s?.garden?.totalHarvested),
-          lines: [
-            (n) => `That's ${n} crops harvested! Incredible.`,
-            (n) => `${n} harvests! You're a natural.`,
-            (n) => `Crop number ${n}! We should celebrate.`
-          ]
-        },
-        {
-          id: "planted",
-          read: (s) => num(s?.garden?.totalPlanted),
-          lines: [
-            (n) => `${n} seeds planted! This garden keeps growing.`,
-            (n) => `That's seed number ${n}. Green thumb confirmed.`
-          ]
-        },
-        {
-          id: "watered",
-          read: (s) => num(s?.garden?.watercanUsed),
-          lines: [(n) => `${n} waterings! You really care about these plants.`]
-        },
-        {
-          id: "cropsSold",
-          read: (s) => num(s?.shops?.cropsSoldCount),
-          lines: [
-            (n) => `${n} crops sold! The shop loves you.`,
-            (n) => `That's ${n} crops sold. Business is booming.`
-          ]
-        },
-        {
-          id: "coins",
-          read: (s) => num(s?.shops?.cropsSoldValue) + num(s?.shops?.petsSoldValue),
-          lines: [
-            (n) => `You've earned ${n} coins from sales! So rich.`,
-            (n) => `${n} coins earned. Buy me something nice?`
-          ]
-        },
-        {
-          id: "seedsBought",
-          read: (s) => num(s?.shops?.seedsBought),
-          lines: [(n) => `${n} seeds bought! The shopkeeper knows your name by now.`]
-        },
-        {
-          id: "petsSold",
-          read: (s) => num(s?.shops?.petsSoldCount),
-          lines: [(n) => `${n} pets sold. Hope they found good homes!`]
-        },
-        {
-          id: "hatched",
-          read: (s) => sumHatched(s),
-          lines: [
-            (n) => `${n} pets hatched! That's a whole zoo.`,
-            (n) => `Pet number ${n}! Welcome to the family.`
-          ]
-        },
-        {
-          id: "abilities",
-          read: (s) => sumAbilityTriggers(s),
-          lines: [
-            (n) => `Your pets have used their abilities ${n} times!`,
-            (n) => `${n} pet abilities triggered. Hard workers!`
-          ]
-        }
-      ];
-      WEATHER_EMOTES = {
-        Rain: EmoteType.Laughing,
-        Frost: EmoteType.Clapping,
-        Thunderstorm: EmoteType.Crying,
-        Dawn: EmoteType.Love,
-        AmberMoon: EmoteType.Questioning
-      };
-      SHOP_ID = {
-        seed: ["Seed", "species"],
-        egg: ["Egg", "eggId"],
-        tool: ["Tool", "toolId"],
-        decor: ["Decor", "decorId"]
-      };
-      DROUGHT_STEPS = {
-        gold: [25, 50, 100, 200, 400],
-        rainbow: [100, 250, 500, 1e3, 2e3]
-      };
-      RELIEF_MIN = { gold: 25, rainbow: 100 };
-      RARITY_LABEL = { gold: "Gold", rainbow: "Rainbow" };
       DAY_PART_LINES = {
         night: [
           "Shouldn't you be asleep?",
@@ -55708,22 +55501,6 @@ Restore figures are averages; unlucky streaks do worse.`;
         "Last day of the year! Let's end it with a big harvest.": EmoteType.Clapping,
         "Any resolutions? Mine is more gardening.": EmoteType.Questioning
       };
-      SESSION_GAP_MS = 20 * 6e4;
-      DAY_MS = 24 * 36e5;
-      REACTION_GAP_MS = 15e3;
-      REACTION_TTL_MS = {
-        high: 3 * 6e4,
-        low: 1e4
-      };
-      FAMILY_COOLDOWN_MS = {
-        ability: 5 * 6e4,
-        sale: 6e4,
-        hatch: 6e4,
-        egg: 5 * 6e4,
-        shop: 3e4,
-        rarecrop: 3e4
-      };
-      familyOf = (key2) => key2.split(":")[0];
     }
   });
 
@@ -55736,18 +55513,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (recent < POKE_THRESHOLD) return null;
     if (recent < 7) {
       return {
-        message: pickOne2(["Okay okay, I'm listening!", "Yes? I'm right here.", "One at a time, boss!"], random),
+        message: pickOne(["Okay okay, I'm listening!", "Yes? I'm right here.", "One at a time, boss!"], random),
         emote: EmoteType.Laughing
       };
     }
     if (recent < 10) {
       return {
-        message: pickOne2(["Are you poking me on purpose?", "Is this a game? I like games.", "Hey, that tickles!"], random),
+        message: pickOne(["Are you poking me on purpose?", "Is this a game? I like games.", "Hey, that tickles!"], random),
         emote: EmoteType.Questioning
       };
     }
     return {
-      message: pickOne2(["Stop poking me!", "Okay, I'm ignoring you now.", "I'm going to start charging for this."], random),
+      message: pickOne(["Stop poking me!", "Okay, I'm ignoring you now.", "I'm going to start charging for this."], random),
       emote: EmoteType.Angered
     };
   }
@@ -55766,13 +55543,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return count;
   }
-  function pickOne2(options, random) {
-    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
-  }
   function harvestMessage(ready, random) {
     const crops = `${ready} ${plural(ready, "crop", "crops")}`;
     const isAre = plural(ready, "is", "are");
-    return pickOne2(
+    return pickOne(
       [
         `${crops} ${isAre} ready to harvest, by the way.`,
         `Psst, ${crops} ${isAre} ripe and waiting for you.`,
@@ -55787,7 +55561,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function hungryPetMessage(hungry, random) {
     const pets = `${hungry} ${plural(hungry, "pet", "pets")}`;
     const isAre = plural(hungry, "is", "are");
-    return pickOne2(
+    return pickOne(
       [
         `${pets} ${isAre} getting hungry.`,
         `I think ${pets} could use a snack.`,
@@ -55799,8 +55573,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     );
   }
   function sellMessage(coins, random) {
-    const amount = `${Math.round(coins).toLocaleString("en-US")} coins`;
-    return pickOne2(
+    const amount = `${formatInteger(coins, "round")} coins`;
+    return pickOne(
       [
         `You're carrying ${amount} worth of crops.`,
         `Your bag's worth ${amount} right now. Shop trip?`,
@@ -55821,16 +55595,20 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function weatherMessage(weatherId, displayName, random) {
     const own = WEATHER_LINES[weatherId];
-    if (own && own.length > 0) return pickOne2(own, random);
-    return pickOne2(GENERIC_WEATHER_TEMPLATES, random)(displayName);
+    if (own && own.length > 0) return pickOne(own, random);
+    return pickOne(GENERIC_WEATHER_TEMPLATES, random)(displayName);
   }
-  var LEGACY_DEFAULT_LINES, DEFAULT_CUSTOM_LINES, LINE_EMOTES, POKE_WINDOW_MS, POKE_THRESHOLD, plural, WEATHER_LINES, GENERIC_WEATHER_TEMPLATES;
+  function weatherEmote(weatherId) {
+    return WEATHER_EMOTES[weatherId] ?? EmoteType.Questioning;
+  }
+  var LEGACY_DEFAULT_LINES, DEFAULT_CUSTOM_LINES, LINE_EMOTES, POKE_WINDOW_MS, POKE_THRESHOLD, plural, WEATHER_LINES, GENERIC_WEATHER_TEMPLATES, WEATHER_EMOTES;
   var init_dialogueLines = __esm({
     "src/features/companion/dialogueLines.ts"() {
       "use strict";
       init_format();
+      init_random();
+      init_dialogueTime();
       init_emoteTypes();
-      init_reactions();
       LEGACY_DEFAULT_LINES = [
         "Right behind you, boss.",
         "Nice patch you've got here.",
@@ -55956,6 +55734,13 @@ Restore figures are averages; unlucky streaks do worse.`;
         (name) => `${name} today. The crops might like that.`,
         (name) => `Did you notice? ${name} is here.`
       ];
+      WEATHER_EMOTES = {
+        Rain: EmoteType.Laughing,
+        Frost: EmoteType.Clapping,
+        Thunderstorm: EmoteType.Crying,
+        Dawn: EmoteType.Love,
+        AmberMoon: EmoteType.Questioning
+      };
     }
   });
 
@@ -56154,9 +55939,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     return !loadCompanionSettings().reviewedSettings.includes(group2);
   }
   function markReviewed(group2) {
-    const current = loadCompanionSettings().reviewedSettings;
-    if (current.includes(group2)) return;
-    patchCompanionSettings({ reviewedSettings: [...current, group2] });
+    const current2 = loadCompanionSettings().reviewedSettings;
+    if (current2.includes(group2)) return;
+    patchCompanionSettings({ reviewedSettings: [...current2, group2] });
   }
   var STORAGE_PATH;
   var init_state3 = __esm({
@@ -56169,295 +55954,67 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/companion/diagnostics.ts
-  function median(values) {
-    if (values.length === 0) return null;
-    const sorted = [...values].sort((a, b) => a - b);
-    const mid = Math.floor(sorted.length / 2);
-    return sorted.length % 2 === 0 ? Math.round((sorted[mid - 1] + sorted[mid]) / 2) : sorted[mid];
+  // src/features/companion/motion.ts
+  function setWanderHooks(hooks2) {
+    wanderHooks = hooks2;
   }
-  async function diagnoseCompanion(npcId, sampleMs = DEFAULT_SAMPLE_MS) {
-    const seen = [];
-    const record = (entries) => {
-      const entry = Array.isArray(entries) ? entries.find((e) => e?.playerId === npcId) : null;
-      const pos = entry?.position;
-      if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return;
-      const last = seen[seen.length - 1];
-      if (last && last.x === pos.x && last.y === pos.y) return;
-      seen.push({ atMs: performance.now(), x: pos.x, y: pos.y });
-    };
-    let unsub = null;
-    try {
-      unsub = await npcQuinoaUsers.onChangeNow((next) => record(next));
-    } catch {
-      return {
-        observations: 0,
-        medianIntervalMs: null,
-        maxDelta: 0,
-        snapCount: 0,
-        snapRatio: 0,
-        verdict: "Impossible de s'abonner \xE0 npcQuinoaUsersAtom."
-      };
+  async function stepCompanion() {
+    const rt = currentRuntime();
+    if (!rt || !rt.map || !rt.player) return;
+    if (!hasGameCaughtUp(rt.movement.tile, rt.observedTile)) {
+      const now2 = Date.now();
+      if (rt.waitingSinceMs === null) rt.waitingSinceMs = now2;
+      if (now2 - rt.waitingSinceMs < RENDER_WAIT_TIMEOUT_MS) return;
     }
-    await new Promise((resolve) => setTimeout(resolve, sampleMs));
-    try {
-      unsub?.();
-    } catch {
+    rt.waitingSinceMs = null;
+    let anchor;
+    let isWalkable;
+    if (rt.task) {
+      anchor = { tile: rt.task, onArrival: "hold", tracksPlayer: false };
+      isWalkable = rt.map.isWalkable;
+    } else {
+      const resolved = await resolveAnchor({
+        mode: rt.attention ? "follow" : loadCompanionSettings().mode,
+        map: rt.map,
+        player: rt.player
+      });
+      if (resolved.effectiveMode !== rt.effectiveMode) {
+        rt.effectiveMode = resolved.effectiveMode;
+        rt.movement.wanderTarget = null;
+      }
+      anchor = resolved.anchor;
+      isWalkable = resolved.isWalkable;
     }
-    const intervals = [];
-    let maxDelta = 0;
-    let snapCount = 0;
-    for (let i = 1; i < seen.length; i++) {
-      const prev = seen[i - 1];
-      const curr = seen[i];
-      intervals.push(curr.atMs - prev.atMs);
-      const delta = Math.abs(curr.x - prev.x) + Math.abs(curr.y - prev.y);
-      if (delta > maxDelta) maxDelta = delta;
-      if (delta > 1) snapCount++;
-    }
-    const transitions = Math.max(0, seen.length - 1);
-    const snapRatio = transitions === 0 ? 0 : snapCount / transitions;
-    return {
-      observations: seen.length,
-      medianIntervalMs: median(intervals),
-      maxDelta,
-      snapCount,
-      snapRatio: Number(snapRatio.toFixed(2)),
-      verdict: buildVerdict(seen.length, snapCount, maxDelta)
-    };
-  }
-  function buildVerdict(observations, snapCount, maxDelta) {
-    if (observations < 2) {
-      return "Aucune position observ\xE9e : le companion ne bouge pas, ou l'atom n'est pas relu. V\xE9rifie qu'il marche pendant la mesure.";
-    }
-    if (snapCount === 0) {
-      return "Le jeu ne voit que des pas d'une tuile. La cadence n'est pas en cause : le snap vient d'ailleurs (forceSnap).";
-    }
-    return `Le jeu observe des sauts jusqu'\xE0 ${maxDelta} tuiles : la cadence de recalcul est plus lente que notre pas. C'est la cause du snap.`;
-  }
-  var DEFAULT_SAMPLE_MS, npcQuinoaUsers;
-  var init_diagnostics = __esm({
-    "src/features/companion/diagnostics.ts"() {
-      "use strict";
-      init_hub();
-      DEFAULT_SAMPLE_MS = 6e3;
-      npcQuinoaUsers = makeAtom(
-        "npcQuinoaUsersAtom"
-      );
-    }
-  });
-
-  // src/features/companion/dialogue.ts
-  function nextBubbleTimestamp(last, proposed) {
-    if (!Number.isFinite(proposed) || last === null || !Number.isFinite(last)) return proposed;
-    return Math.max(proposed, last + 1);
-  }
-  function initialDialogueState() {
-    return { lastCustomIndex: -1, mutedUntil: {} };
-  }
-  function pickDialogueLine(input) {
-    const { contextual, customLines, nowMs, random, cooldownMs } = input;
-    const state3 = {
-      lastCustomIndex: input.state.lastCustomIndex,
-      mutedUntil: { ...input.state.mutedUntil }
-    };
-    const lines = customLines.filter((line) => typeof line === "string" && line.trim().length > 0);
-    const available = contextual.filter(
-      (candidate) => candidate?.message && nowMs >= (state3.mutedUntil[candidate.key] ?? 0)
-    );
-    if (available.length > 0 && (lines.length === 0 || random() < CONTEXTUAL_CHANCE)) {
-      const candidate = available[Math.min(available.length - 1, Math.floor(random() * available.length))];
-      state3.mutedUntil[candidate.key] = nowMs + cooldownMs;
-      return { message: candidate.message, emote: candidate.emote ?? null, custom: false, state: state3 };
-    }
-    if (lines.length === 0) return { message: null, emote: null, custom: false, state: state3 };
-    if (lines.length === 1) {
-      state3.lastCustomIndex = 0;
-      return { message: lines[0], emote: null, custom: true, state: state3 };
-    }
-    let index = Math.min(lines.length - 1, Math.floor(random() * lines.length));
-    if (index === state3.lastCustomIndex) index = (index + 1) % lines.length;
-    state3.lastCustomIndex = index;
-    return { message: lines[index], emote: null, custom: true, state: state3 };
-  }
-  var CONTEXTUAL_CHANCE, DEFAULT_CONTEXTUAL_COOLDOWN_MS;
-  var init_dialogue = __esm({
-    "src/features/companion/dialogue.ts"() {
-      "use strict";
-      CONTEXTUAL_CHANCE = 0.25;
-      DEFAULT_CONTEXTUAL_COOLDOWN_MS = 12e4;
-    }
-  });
-
-  // src/features/companion/dialogueContext.ts
-  async function collectContextualLines() {
-    const providers = [
-      readyHarvestLine,
-      hungryPetLine,
-      cropsToSellLine,
-      weatherLine
-    ];
-    const lines = [];
-    for (const provider of providers) {
+    const decision = stepMovement({
+      anchor,
+      state: rt.movement,
+      isWalkable,
+      random: Math.random,
+      config: rt.task ? TASK_MOVEMENT_CONFIG : rt.attention ? ATTENTION_MOVEMENT_CONFIG : DEFAULT_MOVEMENT_CONFIG,
+      // No purposeful wandering during a task or while waiting on an answer.
+      pickInterest: rt.task || rt.attention ? null : wanderHooks?.pickInterest ?? null
+    });
+    rt.movement = decision.state;
+    if (decision.interestReached && wanderHooks) {
       try {
-        const line = await provider();
-        if (line) lines.push(line);
+        wanderHooks.onInterestReached(decision.interestReached);
       } catch {
       }
     }
-    return lines;
+    if (!decision.tile) return;
+    await setCompanionTile(rt.npcId, rt.map.toIndex(decision.tile.x, decision.tile.y));
   }
-  async function readyHarvestLine() {
-    const ready = ripeCropCount(await Atoms.data.gardenTileObjects.get(), Date.now());
-    if (ready === 0) return null;
-    return { key: "harvest", message: harvestMessage(ready, Math.random), emote: EmoteType.Clapping };
-  }
-  async function hungryPetLine() {
-    const pets = await PetsService.getPets();
-    if (!Array.isArray(pets) || pets.length === 0) return null;
-    const hungry = pets.filter((pet) => {
-      const pct = PetsService.getHungerPctFor(pet);
-      return Number.isFinite(pct) && pct < HUNGRY_PET_THRESHOLD_PCT;
-    });
-    if (hungry.length === 0) return null;
-    return { key: "pets", message: hungryPetMessage(hungry.length, Math.random), emote: EmoteType.Crying };
-  }
-  async function cropsToSellLine() {
-    const total = Number(await Atoms.shop.totalCropSellPrice.get());
-    if (!Number.isFinite(total) || total <= 0) return null;
-    return { key: "sell", message: sellMessage(total, Math.random), emote: EmoteType.Clapping };
-  }
-  async function weatherLine() {
-    const weather2 = await Atoms.data.weather.get();
-    if (!weather2 || typeof weather2 !== "string") return null;
-    const name = weatherDisplayName(weather2, weatherCatalog2);
-    return { key: "weather", message: weatherMessage(weather2, name, Math.random), emote: weatherEmote(weather2) };
-  }
-  var HUNGRY_PET_THRESHOLD_PCT;
-  var init_dialogueContext = __esm({
-    "src/features/companion/dialogueContext.ts"() {
+  var RENDER_WAIT_TIMEOUT_MS, wanderHooks;
+  var init_motion = __esm({
+    "src/features/companion/motion.ts"() {
       "use strict";
-      init_data();
-      init_atoms();
-      init_pets();
-      init_dialogueLines();
-      init_emoteTypes();
-      init_reactions();
-      HUNGRY_PET_THRESHOLD_PCT = 25;
-    }
-  });
-
-  // src/features/companion/emote.ts
-  function avatarSystem() {
-    try {
-      return getWorldSystem("avatar");
-    } catch {
-      return null;
-    }
-  }
-  function markSpoke(playerId2, at = Date.now()) {
-    if (playerId2) lastSpokeAt.set(playerId2, at);
-  }
-  async function writeEntries(entries) {
-    const payload = { entries };
-    try {
-      if (!installed2) {
-        ensureTickAtom();
-        await fakeShow(EMOTE_PATCH, payload);
-        installed2 = true;
-      } else {
-        await fakeUpdate(EMOTE_SOURCE_LABEL, payload);
-      }
-      await bumpTick();
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  async function rest() {
-    if (!installed2) return;
-    await writeEntries([]);
-  }
-  function cancelPending() {
-    if (releaseTimer === null) return;
-    window.clearTimeout(releaseTimer);
-    releaseTimer = null;
-  }
-  function cancelStart() {
-    if (startTimer === null) return;
-    window.clearTimeout(startTimer);
-    startTimer = null;
-  }
-  async function playEmote(playerId2, emote, durationMs = EMOTE_DURATION_MS) {
-    if (!playerId2 || emote === EmoteType.Idle) return;
-    cancelStart();
-    const avatar3 = avatarSystem();
-    const canCut = !!avatar3?.views?.has?.(playerId2);
-    const delay = emoteStartDelay(lastSpokeAt.get(playerId2) ?? null, Date.now(), canCut);
-    if (delay > 0) {
-      startTimer = window.setTimeout(() => {
-        startTimer = null;
-        void playEmote(playerId2, emote, durationMs);
-      }, delay);
-      return;
-    }
-    if (releaseTimer !== null && posing === playerId2) {
-      cancelPending();
-      await rest();
-      await new Promise((resolve) => setTimeout(resolve, 60));
-    }
-    cancelPending();
-    posing = playerId2;
-    if (canCut) {
-      cutTalking(avatar3, playerId2);
-      window.setTimeout(() => {
-        if (posing === playerId2) cutTalking(avatarSystem(), playerId2);
-      }, 80);
-    }
-    if (!await writeEntries([companionEmoteEntry(playerId2, emote, Date.now())])) {
-      posing = null;
-      return;
-    }
-    releaseTimer = window.setTimeout(() => {
-      releaseTimer = null;
-      posing = null;
-      void rest();
-    }, durationMs);
-  }
-  async function stopEmote() {
-    cancelStart();
-    cancelPending();
-    posing = null;
-    if (!installed2) return;
-    try {
-      await fakeHide(EMOTE_SOURCE_LABEL);
-      await bumpTick();
-    } catch {
-    }
-    installed2 = false;
-  }
-  var EMOTE_SOURCE_LABEL, EMOTE_PATCH, EMOTE_DURATION_MS, installed2, releaseTimer, posing, startTimer, lastSpokeAt;
-  var init_emote = __esm({
-    "src/features/companion/emote.ts"() {
-      "use strict";
-      init_fakeAtoms();
-      init_tick();
-      init_tileCapture();
-      init_emoteTypes();
-      EMOTE_SOURCE_LABEL = "emoteSourceAtom";
-      EMOTE_PATCH = {
-        label: EMOTE_SOURCE_LABEL,
-        // Sans elle, le recalcul n'aurait lieu qu'au prochain changement de l'état
-        // de room : la pose partirait en retard, et le retour au repos aussi.
-        extraDeps: [COMPANION_TICK_LABEL],
-        merge: (real, fake) => mergeEmoteSource(real, fake)
-      };
-      EMOTE_DURATION_MS = 1500;
-      installed2 = false;
-      releaseTimer = null;
-      posing = null;
-      startTimer = null;
-      lastSpokeAt = /* @__PURE__ */ new Map();
+      init_anchors();
+      init_injection();
+      init_movement();
+      init_runtime();
+      init_state3();
+      RENDER_WAIT_TIMEOUT_MS = 1500;
+      wanderHooks = null;
     }
   });
 
@@ -56529,61 +56086,73 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/companion/index.ts
-  async function resolveNpcId(preferred) {
-    const roster = await listNpcIdentities();
-    if (roster.length === 0) return preferred;
-    if (preferred && roster.some((n) => n.playerId === preferred)) return preferred;
-    return (roster.find((n) => !n.present) ?? roster[0]).playerId;
-  }
-  async function tick() {
-    const rt = runtime;
-    if (!rt || !rt.map || !rt.player) return;
-    if (!hasGameCaughtUp(rt.movement.tile, rt.observedTile)) {
-      const now2 = Date.now();
-      if (rt.waitingSinceMs === null) rt.waitingSinceMs = now2;
-      if (now2 - rt.waitingSinceMs < RENDER_WAIT_TIMEOUT_MS) return;
-    }
-    rt.waitingSinceMs = null;
-    let anchor;
-    let isWalkable;
-    if (rt.task) {
-      anchor = { tile: rt.task, onArrival: "hold", tracksPlayer: false };
-      isWalkable = rt.map.isWalkable;
-    } else {
-      const resolved = await resolveAnchor({
-        mode: rt.attention ? "follow" : rt.settings.mode,
-        map: rt.map,
-        player: rt.player
-      });
-      if (resolved.effectiveMode !== rt.effectiveMode) {
-        rt.effectiveMode = resolved.effectiveMode;
-        rt.movement.wanderTarget = null;
-      }
-      anchor = resolved.anchor;
-      isWalkable = resolved.isWalkable;
-    }
-    const decision = stepMovement({
-      anchor,
-      state: rt.movement,
-      isWalkable,
-      random: Math.random,
-      config: rt.task ? TASK_MOVEMENT_CONFIG : rt.attention ? ATTENTION_MOVEMENT_CONFIG : DEFAULT_MOVEMENT_CONFIG,
-      // Pas de flânerie à but pendant une tâche ou une attente de réponse.
-      pickInterest: rt.task || rt.attention ? null : wanderHooks?.pickInterest ?? null
-    });
-    rt.movement = decision.state;
-    if (decision.interestReached && wanderHooks) {
+  // src/features/companion/dialogueContext.ts
+  async function collectContextualLines() {
+    const providers = [
+      readyHarvestLine,
+      hungryPetLine,
+      cropsToSellLine,
+      weatherLine
+    ];
+    const lines = [];
+    for (const provider of providers) {
       try {
-        wanderHooks.onInterestReached(decision.interestReached);
+        const line = await provider();
+        if (line) lines.push(line);
       } catch {
       }
     }
-    if (!decision.tile) return;
-    await setCompanionTile(rt.npcId, rt.map.toIndex(decision.tile.x, decision.tile.y));
+    return lines;
+  }
+  async function readyHarvestLine() {
+    const ready = ripeCropCount(await Atoms.data.gardenTileObjects.get(), Date.now());
+    if (ready === 0) return null;
+    return { key: "harvest", message: harvestMessage(ready, Math.random), emote: EmoteType.Clapping };
+  }
+  async function hungryPetLine() {
+    const pets = await PetsService.getPets();
+    if (!Array.isArray(pets) || pets.length === 0) return null;
+    const hungry = pets.filter((pet) => {
+      const pct = PetsService.getHungerPctFor(pet);
+      return Number.isFinite(pct) && pct < HUNGRY_PET_THRESHOLD_PCT;
+    });
+    if (hungry.length === 0) return null;
+    return { key: "pets", message: hungryPetMessage(hungry.length, Math.random), emote: EmoteType.Crying };
+  }
+  async function cropsToSellLine() {
+    const total = Number(await Atoms.shop.totalCropSellPrice.get());
+    if (!Number.isFinite(total) || total <= 0) return null;
+    return { key: "sell", message: sellMessage(total, Math.random), emote: EmoteType.Clapping };
+  }
+  async function weatherLine() {
+    const weather2 = await Atoms.data.weather.get();
+    if (!weather2 || typeof weather2 !== "string") return null;
+    const name = weatherDisplayName(weather2, weatherCatalog2);
+    return { key: "weather", message: weatherMessage(weather2, name, Math.random), emote: weatherEmote(weather2) };
+  }
+  var HUNGRY_PET_THRESHOLD_PCT;
+  var init_dialogueContext = __esm({
+    "src/features/companion/dialogueContext.ts"() {
+      "use strict";
+      init_data();
+      init_atoms();
+      init_pets();
+      init_dialogueLines();
+      init_emoteTypes();
+      HUNGRY_PET_THRESHOLD_PCT = 25;
+    }
+  });
+
+  // src/features/companion/talk.ts
+  function playEmoteSoon(rt, emote) {
+    const npcId = rt.npcId;
+    setTimeout(() => {
+      if (currentRuntime() === rt) void playEmote(npcId, emote).catch(() => {
+      });
+    }, 0);
   }
   function resolveSpeech() {
-    const rt = runtime;
+    const rt = currentRuntime();
     if (!rt) return null;
     const now2 = Date.now();
     rt.talkTimes = [...rt.talkTimes.filter((t) => now2 - t <= POKE_WINDOW_MS), now2];
@@ -56592,12 +56161,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       playEmoteSoon(rt, poke.emote);
       return poke.message;
     }
-    const customLines = rt.settings.lines.length > 0 ? [...rt.settings.lines, ...timeLines(new Date(now2))] : [];
+    const settings = loadCompanionSettings();
+    const customLines = settings.lines.length > 0 ? [...settings.lines, ...timeLines(new Date(now2))] : [];
     const picked = pickDialogueLine({
-      contextual: rt.settings.contextualEnabled ? rt.contextualCache : [],
+      contextual: settings.contextualEnabled ? rt.contextualCache : [],
       customLines,
       state: rt.dialogue,
-      nowMs: Date.now(),
+      nowMs: now2,
       random: Math.random,
       cooldownMs: DEFAULT_CONTEXTUAL_COOLDOWN_MS
     });
@@ -56606,51 +56176,69 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (emote !== null) playEmoteSoon(rt, emote);
     return picked.message;
   }
-  function playEmoteSoon(rt, emote) {
-    const npcId = rt.npcId;
-    setTimeout(() => {
-      if (runtime === rt) void playEmote(npcId, emote).catch(() => {
-      });
-    }, 0);
-  }
   async function refreshContextual() {
-    const rt = runtime;
+    const rt = currentRuntime();
     if (!rt) return;
-    rt.contextualCache = rt.settings.contextualEnabled ? await collectContextualLines() : [];
+    rt.contextualCache = loadCompanionSettings().contextualEnabled ? await collectContextualLines() : [];
   }
-  function clearContextualTimer(rt) {
-    if (rt.contextualTimer !== null) {
-      clearInterval(rt.contextualTimer);
-      rt.contextualTimer = null;
-    }
-  }
-  function clearTimer(rt) {
-    if (rt.timer !== null) {
-      clearInterval(rt.timer);
-      rt.timer = null;
-    }
-  }
-  function startTimer2(rt) {
-    clearTimer(rt);
-    rt.timer = window.setInterval(() => {
-      void tick().catch(() => {
+  async function say(message, opts = {}) {
+    const rt = currentRuntime();
+    if (!rt || !message.trim()) return;
+    const now2 = Date.now();
+    if (!opts.force && now2 - rt.lastBubbleAt < CHAT_BUBBLE_MIN_INTERVAL_MS) return;
+    rt.lastBubbleAt = now2;
+    const tagged = opts.tags && Object.keys(opts.tags).length > 0 ? { tags: opts.tags } : {};
+    try {
+      await npcChatBubbles.set({
+        // Marked as written by the mod: otherwise the bubble hook would replace
+        // our own message with a random line.
+        [rt.npcId]: { seq: 0, playerId: rt.npcId, message, timestamp: now2, ...tagged, [AUTHORED_BY_MOD]: true }
       });
-    }, STEP_INTERVAL_MS);
+    } catch {
+    }
+  }
+  var CHAT_BUBBLE_MIN_INTERVAL_MS, npcChatBubbles;
+  var init_talk = __esm({
+    "src/features/companion/talk.ts"() {
+      "use strict";
+      init_hub();
+      init_dialogue();
+      init_dialogueContext();
+      init_dialogueLines();
+      init_dialogueTime();
+      init_emote();
+      init_runtime();
+      init_speech();
+      init_state3();
+      CHAT_BUBBLE_MIN_INTERVAL_MS = 250;
+      npcChatBubbles = makeAtom("npcChatBubblesAtom");
+    }
+  });
+
+  // src/features/companion/lifecycle.ts
+  async function resolveNpcId(preferred) {
+    const roster = await listNpcIdentities();
+    if (roster.length === 0) return preferred;
+    if (preferred && roster.some((n) => n.playerId === preferred)) return preferred;
+    return (roster.find((n) => !n.present) ?? roster[0]).playerId;
+  }
+  function every(subscriptions, ms, run) {
+    const id = window.setInterval(() => void run().catch(() => {
+    }), ms);
+    subscriptions.add(() => clearInterval(id));
   }
   async function startInternal() {
-    if (runtime) return true;
+    if (currentRuntime()) return true;
     const settings = loadCompanionSettings();
     const npcId = await resolveNpcId(settings.npcId);
     if (!npcId) return false;
     const map2 = await readCompanionMap();
     const player2 = roundTile(await Atoms.player.position.get().catch(() => null));
     const rt = {
-      settings,
       npcId,
       map: map2,
       movement: initialMovementState(),
       player: player2,
-      timer: null,
       subscriptions: new Subscriptions(),
       lastBubbleAt: 0,
       observedTile: null,
@@ -56658,20 +56246,16 @@ Restore figures are averages; unlucky streaks do worse.`;
       effectiveMode: settings.mode,
       dialogue: initialDialogueState(),
       contextualCache: [],
-      contextualTimer: null,
       task: null,
       attention: false,
       talkTimes: []
     };
-    runtime = rt;
+    setRuntime(rt);
     await installInjection();
     installSpeechRewriter(npcId, resolveSpeech);
     void refreshContextual().catch(() => {
     });
-    rt.contextualTimer = window.setInterval(() => {
-      void refreshContextual().catch(() => {
-      });
-    }, CONTEXTUAL_REFRESH_MS);
+    every(rt.subscriptions, CONTEXTUAL_REFRESH_MS, refreshContextual);
     rt.subscriptions.add(
       playerTileFeed.on((tile) => {
         rt.player = tile;
@@ -56692,302 +56276,255 @@ Restore figures are averages; unlucky streaks do worse.`;
         rt.waitingSinceMs = null;
       })
     );
-    startTimer2(rt);
+    every(rt.subscriptions, STEP_INTERVAL_MS, stepCompanion);
     return true;
   }
-  var CHAT_BUBBLE_MIN_INTERVAL_MS, RENDER_WAIT_TIMEOUT_MS, CONTEXTUAL_REFRESH_MS, npcChatBubbles, npcQuinoaUsers2, runtime, starting, wanderHooks, WALK_TIMEOUT_MS, ARRIVAL_POLL_MS, NEARBY_DISTANCE, STILL_POLL_MS, STILL_TIMEOUT_MS, stillToken, CompanionService;
-  var init_companion = __esm({
-    "src/features/companion/index.ts"() {
+  function startRuntime() {
+    if (currentRuntime()) return Promise.resolve(true);
+    if (!starting) {
+      starting = startInternal().finally(() => {
+        starting = null;
+      });
+    }
+    return starting;
+  }
+  async function stopRuntime() {
+    const rt = currentRuntime();
+    setRuntime(null);
+    uninstallSpeechRewriter();
+    await stopEmote();
+    if (rt) {
+      rt.subscriptions.dispose();
+      await hideCompanion();
+    }
+    await disposeInjection();
+  }
+  var CONTEXTUAL_REFRESH_MS, npcQuinoaUsers2, starting;
+  var init_lifecycle = __esm({
+    "src/features/companion/lifecycle.ts"() {
       "use strict";
       init_emitter();
       init_atoms();
       init_hub();
-      init_feeds();
-      init_movement();
-      init_map();
-      init_anchors();
-      init_injection();
-      init_state3();
-      init_diagnostics();
-      init_tick();
       init_dialogue();
-      init_dialogueContext();
-      init_dialogueLines();
-      init_reactions();
-      init_speech();
       init_emote();
-      CHAT_BUBBLE_MIN_INTERVAL_MS = 250;
-      RENDER_WAIT_TIMEOUT_MS = 1500;
+      init_feeds();
+      init_injection();
+      init_map();
+      init_motion();
+      init_movement();
+      init_runtime();
+      init_speech();
+      init_state3();
+      init_talk();
       CONTEXTUAL_REFRESH_MS = 1e4;
-      npcChatBubbles = makeAtom("npcChatBubblesAtom");
       npcQuinoaUsers2 = makeAtom("npcQuinoaUsersAtom");
-      runtime = null;
       starting = null;
-      wanderHooks = null;
+    }
+  });
+
+  // src/features/companion/tasks.ts
+  async function walkTo(target) {
+    const rt = currentRuntime();
+    if (!rt || !rt.map) return false;
+    const reachable = rt.map.isWalkable(target.x, target.y) ? target : findNearbyWalkable(target, rt.map.isWalkable, true, 2);
+    if (!reachable) return false;
+    rt.task = reachable;
+    rt.movement = { ...rt.movement, activity: "pursue", wanderTarget: null, wanderCooldown: 0 };
+    const deadline = Date.now() + WALK_TIMEOUT_MS;
+    while (Date.now() < deadline) {
+      const now2 = currentRuntime();
+      if (!now2 || now2.task !== reachable) return false;
+      const here = now2.movement.tile;
+      if (here && manhattan(here, reachable) === 0) return true;
+      await sleep2(ARRIVAL_POLL_MS);
+    }
+    return false;
+  }
+  async function comeToPlayer() {
+    const rt = currentRuntime();
+    if (!rt || !rt.map || !rt.player) return false;
+    const here = rt.movement.tile;
+    if (here && manhattan(here, rt.player) <= NEARBY_DISTANCE) return true;
+    const spot = findNearbyWalkable(rt.player, rt.map.isWalkable, true, 3);
+    return spot ? walkTo(spot) : false;
+  }
+  function releaseTask() {
+    const rt = currentRuntime();
+    if (rt) rt.task = null;
+  }
+  function holdAttention() {
+    const rt = currentRuntime();
+    if (rt) rt.attention = true;
+  }
+  function releaseAttention() {
+    const rt = currentRuntime();
+    if (rt) rt.attention = false;
+  }
+  function distanceToPlayer() {
+    const rt = currentRuntime();
+    const here = rt?.movement.tile;
+    if (!rt || !here || !rt.player) return null;
+    return manhattan(here, rt.player);
+  }
+  async function emoteWhenStill(emote, timeoutMs = STILL_TIMEOUT_MS) {
+    const rt = currentRuntime();
+    if (!rt) return;
+    const token = ++stillToken;
+    const deadline = Date.now() + timeoutMs;
+    let previous = null;
+    while (Date.now() < deadline) {
+      await sleep2(STILL_POLL_MS);
+      if (token !== stillToken || currentRuntime() !== rt) return;
+      const here = rt.movement.tile;
+      const still = rt.task === null && here !== null && previous !== null && manhattan(here, previous) === 0;
+      previous = here;
+      if (still) {
+        await playEmote(rt.npcId, emote);
+        return;
+      }
+    }
+  }
+  var WALK_TIMEOUT_MS, ARRIVAL_POLL_MS, NEARBY_DISTANCE, STILL_POLL_MS, STILL_TIMEOUT_MS, stillToken;
+  var init_tasks = __esm({
+    "src/features/companion/tasks.ts"() {
+      "use strict";
+      init_emote();
+      init_movement();
+      init_runtime();
+      init_async2();
       WALK_TIMEOUT_MS = 5e3;
       ARRIVAL_POLL_MS = 50;
       NEARBY_DISTANCE = 3;
       STILL_POLL_MS = 150;
       STILL_TIMEOUT_MS = 1e4;
       stillToken = 0;
+    }
+  });
+
+  // src/features/companion/index.ts
+  var CompanionService;
+  var init_companion = __esm({
+    "src/features/companion/index.ts"() {
+      "use strict";
+      init_diagnostics();
+      init_emote();
+      init_injection();
+      init_lifecycle();
+      init_motion();
+      init_runtime();
+      init_state3();
+      init_talk();
+      init_tasks();
+      init_tick();
       CompanionService = {
         isRunning() {
-          return runtime !== null;
+          return currentRuntime() !== null;
         },
-        /** Branche (ou débranche, avec `null`) le pilote de flânerie à but. */
+        /** Plugs in (or, with `null`, unplugs) the purposeful wandering driver. */
         setWanderHooks(hooks2) {
-          wanderHooks = hooks2;
+          setWanderHooks(hooks2);
         },
         /**
-         * Position de la tuile de terre d'un crop, dans la parcelle du joueur.
+         * Position of a crop's dirt tile in the player's plot.
          *
-         * `dirtTileIdx` est le `slot` du protocole de récolte. Rend `null` quand la
-         * map n'est pas encore lue ou que l'index ne correspond à aucune tuile.
+         * `dirtTileIdx` is the `slot` of the harvest protocol. `null` while the map
+         * is not read yet or when the index matches no tile.
          */
         gardenTileXY(userSlotIdx, dirtTileIdx) {
-          const map2 = runtime?.map;
+          const map2 = currentRuntime()?.map;
           if (!map2) return null;
           const global = map2.gardenTileToGlobal(userSlotIdx, dirtTileIdx);
           return global === null ? null : map2.toXY(global);
         },
-        /**
-         * Envoie le companion sur une tuile et attend qu'il y soit.
-         *
-         * Rend `false` s'il n'y arrive pas dans le temps imparti — l'appelant décide
-         * alors s'il poursuit sans lui. La tâche reste posée : c'est `releaseTask`
-         * qui rend le companion à son mode, une fois toute la série terminée, sinon
-         * il repartirait vers le joueur entre deux crops.
-         *
-         * Une tuile occupée par une plante peut être infranchissable : on vise alors
-         * la case marchable la plus proche, ce qui suffit à « être devant ».
-         */
-        async walkTo(target) {
-          const rt = runtime;
-          if (!rt || !rt.map) return false;
-          const reachable = rt.map.isWalkable(target.x, target.y) ? target : findNearbyWalkable(target, rt.map.isWalkable, true, 2);
-          if (!reachable) return false;
-          rt.task = reachable;
-          rt.movement = { ...rt.movement, activity: "pursue", wanderTarget: null, wanderCooldown: 0 };
-          const deadline = Date.now() + WALK_TIMEOUT_MS;
-          while (Date.now() < deadline) {
-            const here = runtime?.movement.tile;
-            if (!runtime || runtime.task !== reachable) return false;
-            if (here && manhattan(here, reachable) === 0) return true;
-            await new Promise((resolve) => setTimeout(resolve, ARRIVAL_POLL_MS));
-          }
-          return false;
-        },
-        /**
-         * Fait venir le companion auprès du joueur, pour lui parler en face.
-         *
-         * Une bulle apparaît au-dessus du PNJ : lancée depuis l'autre bout de la
-         * carte, elle s'afficherait hors écran et personne ne la verrait. Il faut
-         * donc être là avant d'ouvrir la bouche.
-         *
-         * On vise une case *voisine* : la tuile du joueur est occupée, et se planter
-         * dessus n'aurait aucun sens. Déjà à portée de vue, on ne bouge pas.
-         *
-         * Comme `walkTo`, la tâche reste posée jusqu'à `releaseTask`.
-         */
-        async comeToPlayer() {
-          const rt = runtime;
-          if (!rt || !rt.map || !rt.player) return false;
-          const here = rt.movement.tile;
-          if (here && manhattan(here, rt.player) <= NEARBY_DISTANCE) return true;
-          const spot = findNearbyWalkable(rt.player, rt.map.isWalkable, true, 3);
-          return spot ? CompanionService.walkTo(spot) : false;
-        },
-        /** Rend le companion à son mode après une série de déplacements. */
-        releaseTask() {
-          if (runtime) runtime.task = null;
-        },
-        /** Le fait rester auprès du joueur, quel que soit son mode. */
-        holdAttention() {
-          if (runtime) runtime.attention = true;
-        },
-        /** Le rend à son mode : suivi ou jardin, selon ce qui était réglé. */
-        releaseAttention() {
-          if (runtime) runtime.attention = false;
-        },
-        /** Vrai tant qu'il attend une réponse auprès du joueur. */
+        walkTo,
+        comeToPlayer,
+        releaseTask,
+        holdAttention,
+        releaseAttention,
+        /** True while he waits on an answer by the player. */
         isHoldingAttention() {
-          return runtime?.attention === true;
+          return currentRuntime()?.attention === true;
         },
-        /** Occupé : en route pour une tâche, ou en attente d'une réponse. */
+        /** Busy: walking for a task, or waiting on an answer. */
         isBusy() {
-          return runtime !== null && (runtime.task !== null || runtime.attention);
+          const rt = currentRuntime();
+          return rt !== null && (rt.task !== null || rt.attention);
         },
-        /** Distance en tuiles jusqu'au joueur, `null` tant qu'on ne sait pas où ils sont. */
-        distanceToPlayer() {
-          const rt = runtime;
-          const here = rt?.movement.tile;
-          if (!rt || !here || !rt.player) return null;
-          return manhattan(here, rt.player);
-        },
+        distanceToPlayer,
         getNpcId() {
-          return runtime?.npcId ?? null;
+          return currentRuntime()?.npcId ?? null;
         },
         /**
-         * Fait jouer une emote au PNJ, le temps que le jeu s'accorde lui-même.
+         * Plays an emote on the NPC while the game catches up.
          *
-         * Sans effet quand le companion n'est pas incarné : il n'y a alors aucune vue
-         * à animer. C'est du décor local — rien ne part sur le réseau, et l'appelant
-         * n'a donc pas à demander de confirmation pour ça.
-         *
-         * `holdMs` prolonge la pose au-delà de la durée par défaut, pour un moment
-         * qui mérite qu'on s'y arrête.
+         * Does nothing while he is not out: there is no view to animate. Purely
+         * local decoration, nothing goes over the network, so no confirmation is
+         * needed. `holdMs` holds the pose past the default for a moment worth it.
          */
         async emote(emote, holdMs) {
-          const rt = runtime;
+          const rt = currentRuntime();
           if (!rt) return;
           await playEmote(rt.npcId, emote, holdMs);
         },
-        /**
-         * Emote une fois qu'il est arrivé et qu'il ne bouge plus.
-         *
-         * Une pose jouée en pleine marche passe inaperçue : elle se déroule pendant
-         * qu'il glisse d'une case à l'autre, et le joueur ne voit qu'un avatar qui
-         * traverse. On attend donc qu'il soit posé.
-         *
-         * Deux conditions, et il faut les deux. Plus aucune tâche en cours, ce qui
-         * couvre le trajet qu'on vient de lui donner — une question posée juste avant
-         * qu'il parte rejoindre le joueur attend ainsi son arrivée. Et la même tuile
-         * sur deux relevés consécutifs, parce que l'avatar interpole entre deux cases
-         * et qu'il glisse encore un instant après avoir atteint la dernière.
-         *
-         * Le premier relevé ne peut donc jamais déclencher : c'est voulu, ce délai de
-         * grâce laisse le temps à un ordre de déplacement imminent d'être enregistré.
-         *
-         * Abandonne en silence s'il ne se pose jamais. Un joueur qui marche sans
-         * s'arrêter entraîne le companion avec lui, et la question reste de toute
-         * façon lisible dans la bulle comme dans le fil.
-         */
-        async emoteWhenStill(emote, timeoutMs = STILL_TIMEOUT_MS) {
-          const rt = runtime;
-          if (!rt) return;
-          const token = ++stillToken;
-          const deadline = Date.now() + timeoutMs;
-          let previous = null;
-          while (Date.now() < deadline) {
-            await new Promise((resolve) => setTimeout(resolve, STILL_POLL_MS));
-            if (token !== stillToken || runtime !== rt) return;
-            const here = rt.movement.tile;
-            const still = rt.task === null && here !== null && previous !== null && manhattan(here, previous) === 0;
-            previous = here;
-            if (still) {
-              await playEmote(rt.npcId, emote);
-              return;
-            }
-          }
-        },
+        emoteWhenStill,
         getSettings() {
-          return runtime?.settings ?? loadCompanionSettings();
+          return loadCompanionSettings();
         },
         listNpcs() {
           return listNpcIdentities();
         },
-        /** Mode réellement appliqué : diffère du réglage quand un repli a joué. */
+        /** The mode really applied: differs from the setting when it fell back. */
         getEffectiveMode() {
-          return runtime?.effectiveMode ?? null;
+          return currentRuntime()?.effectiveMode ?? null;
         },
-        /** Redémarre le companion au boot s'il était actif à la session précédente. */
+        /** Brings him back at boot if he was out last session. */
         autoStart() {
           try {
             if (!loadCompanionSettings().enabled) return;
-            void CompanionService.start().catch(() => {
+            void startRuntime().catch(() => {
             });
           } catch {
           }
         },
-        /** Démarre le companion. Idempotent, y compris sur appels concurrents. */
-        async start() {
-          if (runtime) return true;
-          if (!starting) {
-            starting = startInternal().finally(() => {
-              starting = null;
-            });
-          }
-          return starting;
-        },
-        /** Arrête tout et restaure l'atom du jeu. Sûr à appeler plusieurs fois. */
-        async stop() {
-          const rt = runtime;
-          runtime = null;
-          uninstallSpeechRewriter();
-          await stopEmote();
-          if (!rt) {
-            await disposeInjection();
-            return;
-          }
-          clearTimer(rt);
-          clearContextualTimer(rt);
-          rt.subscriptions.dispose();
-          await hideCompanion();
-          await disposeInjection();
-        },
-        /** Applique une modification de config, en redémarrant si nécessaire. */
+        start: startRuntime,
+        stop: stopRuntime,
+        /** Saves a settings change, starting or restarting him when it needs to. */
         async applySettings(patch) {
           const next = patchCompanionSettings(patch);
-          const rt = runtime;
+          const rt = currentRuntime();
           if (!rt) {
-            if (next.enabled) await CompanionService.start();
+            if (next.enabled) await startRuntime();
             return next;
           }
           if (!next.enabled) {
-            await CompanionService.stop();
+            await stopRuntime();
             return next;
           }
-          const npcChanged = patch.npcId !== void 0 && patch.npcId !== rt.npcId;
-          if (npcChanged) {
-            await CompanionService.stop();
-            await CompanionService.start();
+          if (patch.npcId !== void 0 && patch.npcId !== rt.npcId) {
+            await stopRuntime();
+            await startRuntime();
             return next;
           }
-          rt.settings = next;
-          startTimer2(rt);
           void refreshContextual().catch(() => {
           });
           return next;
         },
-        /** Remplace la liste de répliques perso. Utilisable depuis la console. */
+        /** Replaces the custom lines. Usable from the console. */
         async setLines(lines) {
           return CompanionService.applySettings({ lines: sanitizeLines(lines) });
         },
         /**
-         * Mesure ce que le jeu observe réellement comme positions, pour distinguer un
-         * snap dû à la cadence de recalcul d'un snap dû à autre chose.
-         * À lancer pendant que le companion marche.
+         * Measures what positions the game really sees, to tell a snap caused by
+         * the recompute rate from a snap caused by something else. Run it while he
+         * walks.
          */
         async diagnose(sampleMs) {
-          const npcId = runtime?.npcId;
-          if (!npcId) return { error: "Companion inactif : lance d'abord window.Companion.start()." };
+          const npcId = currentRuntime()?.npcId;
+          if (!npcId) return { error: "Companion inactive: run window.Companion.start() first." };
           return { tickAvailable: isTickAvailable(), ...await diagnoseCompanion(npcId, sampleMs) };
         },
-        /**
-         * Fait parler le companion. Point d'entrée du dialogue (phase 3) : le jeu lit
-         * les bulles NPC dans un atom local, aucun envoi réseau n'est impliqué.
-         *
-         * L'anti-rafale protège des séries de messages de progression. `force` est
-         * pour la réplique qu'on tient absolument à faire entendre : sans lui, une
-         * annonce venant juste après le message qui l'a déclenchée se faisait jeter,
-         * et le companion restait muet au moment précis où il avait à parler.
-         */
-        async say(message, opts = {}) {
-          const rt = runtime;
-          if (!rt || !message.trim()) return;
-          const now2 = Date.now();
-          if (!opts.force && now2 - rt.lastBubbleAt < CHAT_BUBBLE_MIN_INTERVAL_MS) return;
-          rt.lastBubbleAt = now2;
-          const tagged = opts.tags && Object.keys(opts.tags).length > 0 ? { tags: opts.tags } : {};
-          try {
-            await npcChatBubbles.set({
-              // Marqué comme écrit par le mod : sans ça, l'interception réécrirait
-              // notre propre message avec une réplique tirée au hasard.
-              [rt.npcId]: { seq: 0, playerId: rt.npcId, message, timestamp: now2, ...tagged, [AUTHORED_BY_MOD]: true }
-            });
-          } catch {
-          }
-        }
+        say
       };
     }
   });
@@ -58179,20 +57716,20 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/watch.ts
   function defineWatcher(name, setup) {
-    let current = null;
+    let current2 = null;
     return {
       start() {
-        if (current) return;
+        if (current2) return;
         const run = { subscriptions: new Subscriptions(), alive: true };
-        current = run;
+        current2 = run;
         const scope = {
           // A subscription that fails is simply absent: the watcher works without it.
           add: (unsubscribe2) => run.subscriptions.add(unsubscribe2 instanceof Promise ? unsubscribe2.catch(() => void 0) : unsubscribe2),
-          every(ms, tick2) {
+          every(ms, tick) {
             const id = setInterval(() => {
               if (!run.alive) return;
               try {
-                tick2();
+                tick();
               } catch (error) {
                 console.warn(`[companion] ${name} tick failed`, error);
               }
@@ -58213,14 +57750,14 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
       },
       stop() {
-        const run = current;
+        const run = current2;
         if (!run) return;
-        current = null;
+        current2 = null;
         run.alive = false;
         run.subscriptions.dispose();
       },
       get running() {
-        return current !== null;
+        return current2 !== null;
       }
     };
   }
@@ -58689,10 +58226,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   function isCentered(message) {
     return message.kind === "system";
   }
-  function isSameGroup(previous, current) {
-    if (isCentered(previous) || isCentered(current)) return false;
-    if (previous.from !== current.from) return false;
-    return current.atMs - previous.atMs < GROUP_WINDOW_MS;
+  function isSameGroup(previous, current2) {
+    if (isCentered(previous) || isCentered(current2)) return false;
+    if (previous.from !== current2.from) return false;
+    return current2.atMs - previous.atMs < GROUP_WINDOW_MS;
   }
   function formatMessageTime(atMs) {
     try {
@@ -59244,8 +58781,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     row.append(text2, control);
     return row;
   }
-  function toggleIn(current, value) {
-    const next = new Set(current ?? []);
+  function toggleIn(current2, value) {
+    const next = new Set(current2 ?? []);
     if (next.has(value)) next.delete(value);
     else next.add(value);
     return next.size === 0 ? null : [...next];
@@ -59399,7 +58936,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/menu/teamSelect.ts
-  function teamSelect(current, onPick) {
+  function teamSelect(current2, onPick) {
     const el = document.createElement("select");
     el.className = "qws-pnl-select";
     css(el, { fontSize: "12px", color: TEXT, minWidth: "150px" });
@@ -59419,7 +58956,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       option.textContent = team.name;
       el.append(option);
     }
-    el.value = current && teams.some((team) => team.id === current) ? current : NO_TEAM;
+    el.value = current2 && teams.some((team) => team.id === current2) ? current2 : NO_TEAM;
     el.addEventListener("change", () => onPick(el.value === NO_TEAM ? null : el.value));
     return { el, empty: teams.length === 0 };
   }
@@ -60272,11 +59809,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       if (!held) return;
       if (!owned2.has(tileIndex) || scope.occupied.has(tileIndex)) return;
-      const current = plan.get(tileIndex);
-      if (current && itemKey(current) === itemKey(held)) return;
-      if (current) plan.delete(tileIndex);
+      const current2 = plan.get(tileIndex);
+      if (current2 && itemKey(current2) === itemKey(held)) return;
+      if (current2) plan.delete(tileIndex);
       if (remainingFor(held) <= 0) {
-        if (current) plan.set(tileIndex, current);
+        if (current2) plan.set(tileIndex, current2);
         return;
       }
       plan.set(tileIndex, { tileIndex, kind: held.kind, id: held.id, name: held.name });
@@ -61530,7 +61067,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/afk.ts
-  function pickOne3(options, random) {
+  function pickOne2(options, random) {
     return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
   }
   function initialAfkState(now2) {
@@ -61546,7 +61083,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function snoreLine(last, random) {
     const pool = random() < DREAM_CHANCE ? DREAM_LINES : SNORE_LINES;
     const options = pool.filter((line) => line !== last);
-    return pickOne3(options.length > 0 ? options : pool, random);
+    return pickOne2(options.length > 0 ? options : pool, random);
   }
   function wakeSilently(state3, now2) {
     const effects = state3.phase === "asleep" ? [{ kind: "release" }] : [];
@@ -61563,14 +61100,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       const message = snoreLine(state3.lastSnore, random);
       return {
         state: { ...state3, nextSnoreAt, lastSnore: message },
-        effects: [say({ message, emote: null }, false)]
+        effects: [say2({ message, emote: null }, false)]
       };
     }
     if (busy) return { state: state3, effects: [] };
     if (state3.phase === "active") {
       if (now2 - state3.quietSince < AFK_IDLE_AFTER_MS) return { state: state3, effects: [] };
       const next2 = { ...state3, phase: "idle", phaseSince: now2, asked: !hidden };
-      return { state: next2, effects: hidden ? [] : [say(pickOne3(IDLE_LINES, random), true)] };
+      return { state: next2, effects: hidden ? [] : [say2(pickOne2(IDLE_LINES, random), true)] };
     }
     if (now2 - state3.phaseSince < AFK_ASLEEP_AFTER_MS) return { state: state3, effects: [] };
     const next = {
@@ -61580,7 +61117,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       nextSnoreAt: now2 + snoreDelay(0, random),
       lastSnore: null
     };
-    const effects = hidden ? [] : [say(pickOne3(FALL_ASLEEP_LINES, random), true)];
+    const effects = hidden ? [] : [say2(pickOne2(FALL_ASLEEP_LINES, random), true)];
     effects.push({ kind: "hold" });
     return { state: next, effects };
   }
@@ -61591,14 +61128,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     if (state3.phase === "idle") {
       const effects2 = [];
-      if (state3.asked && !busy && random() < RETURN_LINE_CHANCE) effects2.push(say(pickOne3(RETURN_LINES, random), false));
+      if (state3.asked && !busy && random() < RETURN_LINE_CHANCE) effects2.push(say2(pickOne2(RETURN_LINES, random), false));
       return { state: initialAfkState(now2), effects: effects2 };
     }
     const asleepFor = now2 - state3.phaseSince;
     const effects = [];
     if (!busy && asleepFor >= WAKE_LINE_MIN_ASLEEP_MS) {
       const pool = asleepFor >= SNORE_SLOW_AFTER_MS ? LONG_WAKE_LINES : WAKE_LINES;
-      effects.push(say(pickOne3(pool, random), false));
+      effects.push(say2(pickOne2(pool, random), false));
     }
     effects.push({ kind: "release" });
     return { state: initialAfkState(now2), effects };
@@ -61606,7 +61143,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function afkReset(state3, now2) {
     return wakeSilently(state3, now2);
   }
-  var AFK_IDLE_AFTER_MS, AFK_ASLEEP_AFTER_MS, SNORE_MIN_MS, SNORE_MAX_MS, SNORE_SLOW_AFTER_MS, SNORE_SLOW_MIN_MS, SNORE_SLOW_MAX_MS, WAKE_LINE_MIN_ASLEEP_MS, RETURN_LINE_CHANCE, DREAM_CHANCE, IDLE_LINES, RETURN_LINES, FALL_ASLEEP_LINES, SNORE_LINES, DREAM_LINES, WAKE_LINES, LONG_WAKE_LINES, say;
+  var AFK_IDLE_AFTER_MS, AFK_ASLEEP_AFTER_MS, SNORE_MIN_MS, SNORE_MAX_MS, SNORE_SLOW_AFTER_MS, SNORE_SLOW_MIN_MS, SNORE_SLOW_MAX_MS, WAKE_LINE_MIN_ASLEEP_MS, RETURN_LINE_CHANCE, DREAM_CHANCE, IDLE_LINES, RETURN_LINES, FALL_ASLEEP_LINES, SNORE_LINES, DREAM_LINES, WAKE_LINES, LONG_WAKE_LINES, say2;
   var init_afk = __esm({
     "src/features/companion/afk.ts"() {
       "use strict";
@@ -61664,7 +61201,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         { message: "Oh! You're back! I kept the garden safe. Mostly by sleeping.", emote: EmoteType.Laughing },
         { message: "Huh? What time is it? Welcome back!", emote: EmoteType.Questioning }
       ];
-      say = (line, approach) => ({
+      say2 = (line, approach) => ({
         kind: "say",
         message: line.message,
         emote: line.emote,
@@ -61783,7 +61320,7 @@ Restore figures are averages; unlucky streaks do worse.`;
             });
           }
         }
-        function tick2() {
+        function tick() {
           const now2 = Date.now();
           if (!reactionsEnabled() || !CompanionService.isRunning()) {
             apply(afkReset(state3, now2));
@@ -61823,7 +61360,7 @@ Restore figures are averages; unlucky streaks do worse.`;
             })
           )
         );
-        scope.every(TICK_MS, tick2);
+        scope.every(TICK_MS, tick);
         scope.add(releaseOwnHold);
       });
     }
@@ -62058,6 +61595,544 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/features/companion/reactions/badLuck.ts
+  function badLuckReactions(prev, next, eggName3, random) {
+    const out = [];
+    for (const [eggId, after] of Object.entries(next ?? {})) {
+      const before = prev?.[eggId];
+      if (!before || !after) continue;
+      const egg = eggName3(eggId);
+      for (const kind of ["rainbow", "gold"]) {
+        const was = Number(before[kind]) || 0;
+        const now2 = Number(after[kind]) || 0;
+        const label2 = RARITY_LABEL[kind];
+        if (now2 < was) {
+          if (was < RELIEF_MIN[kind]) continue;
+          const tries = was + 1;
+          out.push({
+            key: `hatch:${kind}`,
+            message: pickOne(
+              [
+                `FINALLY! A ${label2} pet after ${tries} tries!`,
+                `${tries} hatches of waiting, and there it is. ${label2}!`,
+                `I told you it was coming! ${label2}, at last!`
+              ],
+              random
+            ),
+            emote: EmoteType.Love,
+            priority: "high",
+            weight: 1
+          });
+          continue;
+        }
+        let step = null;
+        for (const s of DROUGHT_STEPS[kind]) if (was < s && now2 >= s) step = s;
+        if (step === null) continue;
+        out.push({
+          key: `badluck:${kind}`,
+          message: pickOne(
+            [
+              `${step} ${egg} hatches without a ${label2}... it's coming, I can feel it.`,
+              `Still no ${label2} after ${step} tries. The game owes you one.`,
+              `${step} in a row with no ${label2}. Hang in there, boss.`
+            ],
+            random
+          ),
+          emote: EmoteType.Crying,
+          priority: "high"
+        });
+      }
+    }
+    return out;
+  }
+  var DROUGHT_STEPS, RELIEF_MIN, RARITY_LABEL;
+  var init_badLuck = __esm({
+    "src/features/companion/reactions/badLuck.ts"() {
+      "use strict";
+      init_random();
+      init_emoteTypes();
+      DROUGHT_STEPS = {
+        gold: [25, 50, 100, 200, 400],
+        rainbow: [100, 250, 500, 1e3, 2e3]
+      };
+      RELIEF_MIN = { gold: 25, rainbow: 100 };
+      RARITY_LABEL = { gold: "Gold", rainbow: "Rainbow" };
+    }
+  });
+
+  // src/features/companion/reactions/events.ts
+  function weatherChangeReaction(prevId, nextId, prevName, startLine, random) {
+    if (prevId === nextId) return null;
+    if (nextId) {
+      return { key: `weather:${nextId}`, message: startLine, emote: weatherEmote(nextId), priority: "high" };
+    }
+    if (!prevId) return null;
+    return {
+      key: "weather:end",
+      message: pickOne(
+        [`The ${prevName} is over. Sunshine's back!`, `And just like that, the ${prevName} is gone.`, `Bye bye, ${prevName}.`],
+        random
+      ),
+      emote: null,
+      priority: "low"
+    };
+  }
+  function abilityReaction(event, random) {
+    const who = event.name?.trim() || (event.species ? `your ${event.species}` : "your pet");
+    const Who = who.charAt(0).toUpperCase() + who.slice(1);
+    return {
+      key: "ability",
+      message: pickOne(
+        [`${Who} just used ${event.abilityName}!`, `Go ${who}! ${event.abilityName}!`, `Did you see that? ${Who} used ${event.abilityName}.`],
+        random
+      ),
+      emote: EmoteType.Clapping,
+      priority: "low"
+    };
+  }
+  function eggsReadyReaction(count, random) {
+    if (count <= 0) return null;
+    return {
+      key: "egg",
+      message: count === 1 ? pickOne(["An egg is ready to hatch!", "Ooh, one of your eggs is ready!", "Something's wiggling in that egg. It's ready!"], random) : pickOne([`${count} eggs are ready to hatch!`, `${count} eggs ready! Hatching time?`], random),
+      emote: EmoteType.Clapping,
+      priority: "high"
+    };
+  }
+  function shopReaction(names, random) {
+    const list = names.filter((n) => typeof n === "string" && n.trim());
+    if (list.length === 0) return null;
+    const what = list.length === 1 ? list[0] : list.length === 2 ? `${list[0]} and ${list[1]}` : `${list[0]}, ${list[1]} and more`;
+    const isAre = list.length === 1 ? "is" : "are";
+    return {
+      key: "shop",
+      message: pickOne(
+        [`${what} ${isAre} in the shop! Go go go!`, `Ooh, ${what} just showed up in the shop!`, `Quick, ${what} ${isAre} in stock!`],
+        random
+      ),
+      emote: EmoteType.Clapping,
+      priority: "high"
+    };
+  }
+  function restockedFollowed(prev, next, isFollowed) {
+    if (!prev || !next) return [];
+    const out = [];
+    for (const kind of Object.keys(SHOP_ID)) {
+      const before = Number(prev[kind]?.secondsUntilRestock) || 0;
+      const after = Number(next[kind]?.secondsUntilRestock) || 0;
+      if (after <= before) continue;
+      const inventory = next[kind]?.inventory;
+      if (!Array.isArray(inventory)) continue;
+      const [prefix, field] = SHOP_ID[kind];
+      for (const item of inventory) {
+        const key2 = item?.[field];
+        const stock = Number(item?.initialStock);
+        if (typeof key2 !== "string" || !key2 || !(stock > 0)) continue;
+        const id = `${prefix}:${key2}`;
+        if (isFollowed(id)) out.push(id);
+      }
+    }
+    return out;
+  }
+  function rareCropReaction(crops, random) {
+    if (crops.length === 0) return null;
+    const first = crops[0];
+    const message = crops.length === 1 ? pickOne(
+      [
+        `A ${first.mutation} ${first.species}! Look at that!`,
+        `Whoa, a ${first.mutation} ${first.species} just showed up!`,
+        `${first.mutation}! Your ${first.species} is special.`
+      ],
+      random
+    ) : pickOne([`${crops.length} rare crops just appeared! Look!`, `Whoa, ${crops.length} special crops at once!`], random);
+    return { key: "rarecrop", message, emote: EmoteType.Love, priority: "high" };
+  }
+  var SHOP_ID;
+  var init_events = __esm({
+    "src/features/companion/reactions/events.ts"() {
+      "use strict";
+      init_random();
+      init_dialogueLines();
+      init_emoteTypes();
+      SHOP_ID = {
+        seed: ["Seed", "species"],
+        egg: ["Egg", "eggId"],
+        tool: ["Tool", "toolId"],
+        decor: ["Decor", "decorId"]
+      };
+    }
+  });
+
+  // src/features/companion/reactions/garden.ts
+  function newRareCrops(prev, next, rare) {
+    if (!prev || typeof prev !== "object" || !next || typeof next !== "object" || rare.size === 0) return [];
+    const seen = /* @__PURE__ */ new Map();
+    const index = (tiles, visit) => {
+      for (const [tileIdx, obj] of Object.entries(tiles)) {
+        const o = obj;
+        if (!o || o.objectType !== "plant" || !Array.isArray(o.slots)) continue;
+        o.slots.forEach((raw, i) => {
+          const s = raw;
+          if (!s) return;
+          const muts = Array.isArray(s.mutations) ? s.mutations.filter((m) => typeof m === "string") : [];
+          const species = typeof s.species === "string" ? s.species : typeof o.species === "string" ? o.species : "crop";
+          visit(`${tileIdx}|${s.slotId ?? i}|${s.startTime ?? ""}`, species, muts);
+        });
+      }
+    };
+    index(prev, (id, _species, muts) => seen.set(id, new Set(muts)));
+    const out = [];
+    index(next, (id, species, muts) => {
+      const before = seen.get(id) ?? /* @__PURE__ */ new Set();
+      for (const m of muts) {
+        if (rare.has(m) && !before.has(m)) out.push({ mutation: m, species });
+      }
+    });
+    return out;
+  }
+  function newlyReadyEggs(tiles, now2, announced) {
+    if (!tiles || typeof tiles !== "object") return [];
+    const out = [];
+    for (const [tileIdx, obj] of Object.entries(tiles)) {
+      const o = obj;
+      if (!o || o.objectType !== "egg") continue;
+      const matured = Number(o.maturedAt);
+      if (!Number.isFinite(matured) || matured <= 0 || matured > now2) continue;
+      const key2 = `${tileIdx}|${o.plantedAt ?? ""}`;
+      if (!announced.has(key2)) out.push(key2);
+    }
+    return out;
+  }
+  var init_garden = __esm({
+    "src/features/companion/reactions/garden.ts"() {
+      "use strict";
+    }
+  });
+
+  // src/features/companion/reactions/gate.ts
+  function initialGateState() {
+    return { lastSpokeAt: 0, mutedUntil: {}, queue: [] };
+  }
+  function offerReaction(state3, reaction, now2) {
+    if (now2 < (state3.mutedUntil[familyOf(reaction.key)] ?? 0)) return state3;
+    const existing = state3.queue.find((q) => q.key === reaction.key);
+    if (existing && (existing.weight ?? 0) > (reaction.weight ?? 0)) return state3;
+    const queue = state3.queue.filter((q) => q.key !== reaction.key);
+    queue.push({ ...reaction, at: now2 });
+    return { ...state3, queue };
+  }
+  function takeReaction(state3, now2, busy) {
+    const queue = state3.queue.filter((q) => now2 - q.at <= REACTION_TTL_MS[q.priority]);
+    const kept = { ...state3, queue };
+    if (busy || queue.length === 0 || now2 - state3.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
+    const chosen = queue.find((q) => q.priority === "high") ?? queue[0];
+    const family = familyOf(chosen.key);
+    const { at: _at, ...reaction } = chosen;
+    return {
+      reaction,
+      state: {
+        lastSpokeAt: now2,
+        mutedUntil: { ...state3.mutedUntil, [family]: now2 + (FAMILY_COOLDOWN_MS[family] ?? 0) },
+        // The rest of the family that just spoke goes quiet too.
+        queue: queue.filter((q) => q !== chosen && (FAMILY_COOLDOWN_MS[family] ? familyOf(q.key) !== family : true))
+      }
+    };
+  }
+  var REACTION_GAP_MS, REACTION_TTL_MS, FAMILY_COOLDOWN_MS, familyOf;
+  var init_gate = __esm({
+    "src/features/companion/reactions/gate.ts"() {
+      "use strict";
+      REACTION_GAP_MS = 15e3;
+      REACTION_TTL_MS = {
+        high: 3 * 6e4,
+        low: 1e4
+      };
+      FAMILY_COOLDOWN_MS = {
+        ability: 5 * 6e4,
+        sale: 6e4,
+        hatch: 6e4,
+        egg: 5 * 6e4,
+        shop: 3e4,
+        rarecrop: 3e4
+      };
+      familyOf = (key2) => key2.split(":")[0];
+    }
+  });
+
+  // src/features/companion/reactions/milestones.ts
+  function crossedMilestone(prev, next) {
+    if (!Number.isFinite(prev) || !Number.isFinite(next) || next <= prev) return null;
+    let crossed = null;
+    for (const m of MILESTONES) {
+      if (prev < m && next >= m) crossed = m;
+    }
+    return crossed;
+  }
+  function formatMilestone(n) {
+    const units = [
+      [1e15, "quadrillion"],
+      [1e12, "trillion"],
+      [1e9, "billion"],
+      [1e6, "million"]
+    ];
+    for (const [size, word] of units) {
+      if (n >= size) return `${fmt(n / size)} ${word}`;
+    }
+    return fmt(n);
+  }
+  function statReactions(prev, next, random) {
+    const out = [];
+    for (const def of STAT_DEFS) {
+      const m = crossedMilestone(def.read(prev), def.read(next));
+      if (m === null) continue;
+      out.push({
+        key: `milestone:${def.id}`,
+        message: pickOne(def.lines, random)(formatMilestone(m)),
+        emote: m >= 1e6 ? EmoteType.Love : EmoteType.Clapping,
+        priority: "high"
+      });
+    }
+    if (sumHatched(next, "rainbow") > sumHatched(prev, "rainbow")) {
+      out.push({
+        key: "hatch:rainbow",
+        message: pickOne(
+          ["A RAINBOW pet?! No way!", "Rainbow! I've never seen one up close!", "Look at those colours! A Rainbow pet!"],
+          random
+        ),
+        emote: EmoteType.Love,
+        priority: "high"
+      });
+    } else if (sumHatched(next, "gold") > sumHatched(prev, "gold")) {
+      out.push({
+        key: "hatch:gold",
+        message: pickOne(["A Gold pet! Look at it shine!", "Gold! That one's a keeper.", "Shiny! A Gold pet!"], random),
+        emote: EmoteType.Love,
+        priority: "high"
+      });
+    } else if (sumHatched(next) > sumHatched(prev)) {
+      out.push({
+        key: "hatch:normal",
+        message: pickOne(["Welcome to the family, little one!", "A new friend! Hi there!", "Aww, look at the new pet."], random),
+        emote: EmoteType.Clapping,
+        priority: "low"
+      });
+    }
+    const earned = num(next?.shops?.cropsSoldValue) - num(prev?.shops?.cropsSoldValue);
+    if (earned > 0) {
+      const coins = fmt(earned);
+      out.push({
+        key: "sale:crops",
+        message: pickOne(
+          [`Ka-ching! +${coins} coins.`, `Sold! ${coins} coins richer.`, `Nice sale, ${coins} coins!`, `${coins} coins in the bank. Love it.`],
+          random
+        ),
+        emote: EmoteType.Clapping,
+        priority: "low"
+      });
+    }
+    return out;
+  }
+  var fmt, MILESTONES, sumHatched, sumAbilityTriggers, num, STAT_DEFS;
+  var init_milestones = __esm({
+    "src/features/companion/reactions/milestones.ts"() {
+      "use strict";
+      init_random();
+      init_format();
+      init_emoteTypes();
+      fmt = (n) => formatInteger(n, "round");
+      MILESTONES = Array.from({ length: 14 }, (_, i) => 10 ** (i + 2));
+      sumHatched = (s, key2) => {
+        let total = 0;
+        for (const counts of Object.values(s?.pets?.hatchedByType ?? {})) {
+          if (!counts) continue;
+          total += key2 ? Number(counts[key2]) || 0 : (Number(counts.normal) || 0) + (Number(counts.gold) || 0) + (Number(counts.rainbow) || 0);
+        }
+        return total;
+      };
+      sumAbilityTriggers = (s) => {
+        let total = 0;
+        for (const stat of Object.values(s?.abilities ?? {})) total += Number(stat?.triggers) || 0;
+        return total;
+      };
+      num = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
+      STAT_DEFS = [
+        {
+          id: "harvested",
+          read: (s) => num(s?.garden?.totalHarvested),
+          lines: [
+            (n) => `That's ${n} crops harvested! Incredible.`,
+            (n) => `${n} harvests! You're a natural.`,
+            (n) => `Crop number ${n}! We should celebrate.`
+          ]
+        },
+        {
+          id: "planted",
+          read: (s) => num(s?.garden?.totalPlanted),
+          lines: [(n) => `${n} seeds planted! This garden keeps growing.`, (n) => `That's seed number ${n}. Green thumb confirmed.`]
+        },
+        {
+          id: "watered",
+          read: (s) => num(s?.garden?.watercanUsed),
+          lines: [(n) => `${n} waterings! You really care about these plants.`]
+        },
+        {
+          id: "cropsSold",
+          read: (s) => num(s?.shops?.cropsSoldCount),
+          lines: [(n) => `${n} crops sold! The shop loves you.`, (n) => `That's ${n} crops sold. Business is booming.`]
+        },
+        {
+          id: "coins",
+          read: (s) => num(s?.shops?.cropsSoldValue) + num(s?.shops?.petsSoldValue),
+          lines: [(n) => `You've earned ${n} coins from sales! So rich.`, (n) => `${n} coins earned. Buy me something nice?`]
+        },
+        {
+          id: "seedsBought",
+          read: (s) => num(s?.shops?.seedsBought),
+          lines: [(n) => `${n} seeds bought! The shopkeeper knows your name by now.`]
+        },
+        {
+          id: "petsSold",
+          read: (s) => num(s?.shops?.petsSoldCount),
+          lines: [(n) => `${n} pets sold. Hope they found good homes!`]
+        },
+        {
+          id: "hatched",
+          read: (s) => sumHatched(s),
+          lines: [(n) => `${n} pets hatched! That's a whole zoo.`, (n) => `Pet number ${n}! Welcome to the family.`]
+        },
+        {
+          id: "abilities",
+          read: (s) => sumAbilityTriggers(s),
+          lines: [(n) => `Your pets have used their abilities ${n} times!`, (n) => `${n} pet abilities triggered. Hard workers!`]
+        }
+      ];
+    }
+  });
+
+  // src/features/companion/reactions/session.ts
+  function resumeSession(stored, now2) {
+    const s = stored;
+    const lastSeenAt = Number(s?.lastSeenAt);
+    const startedAt = Number(s?.startedAt);
+    const valid = Number.isFinite(lastSeenAt) && lastSeenAt > 0 && Number.isFinite(startedAt) && startedAt > 0 && startedAt <= now2;
+    const storedMet = Number(s?.firstMetAt);
+    const firstMetAt = Number.isFinite(storedMet) && storedMet > 0 && storedMet <= now2 ? storedMet : now2;
+    const celebratedDays = Math.max(0, Math.floor(Number(s?.celebratedDays) || 0));
+    if (valid && now2 - lastSeenAt < SESSION_GAP_MS) {
+      const announcedHours = Math.max(0, Math.floor(Number(s?.announcedHours) || 0));
+      return { session: { startedAt, lastSeenAt: now2, announcedHours, firstMetAt, celebratedDays }, greeting: null };
+    }
+    return {
+      session: { startedAt: now2, lastSeenAt: now2, announcedHours: 0, firstMetAt, celebratedDays },
+      greeting: { first: !valid, awayMs: valid ? now2 - lastSeenAt : 0 }
+    };
+  }
+  function greetingReaction(greeting, hour, random, holiday = null) {
+    let lines;
+    if (greeting.first) {
+      lines = ["Hi there! I'll be sticking around.", "Nice to meet you! Let's grow something great."];
+    } else if (greeting.awayMs >= 3 * DAY_MS) {
+      lines = ["Where have you been? I missed you!", "You're back! It's been ages.", "Finally! I was starting to talk to the plants."];
+    } else if (holiday) {
+      lines = HOLIDAY_GREETINGS[holiday];
+    } else if (greeting.awayMs >= DAY_MS) {
+      lines = ["Welcome back! The garden missed you.", "Hey, you're back! Good to see you."];
+    } else {
+      lines = GREETING_BY_DAY_PART[dayPart(hour)];
+    }
+    return { key: "session:greeting", message: pickOne(lines, random), emote: EmoteType.Love, priority: "high" };
+  }
+  function anniversarySteps(days) {
+    const steps = [7, 30, 100];
+    for (let year = 1; year * 365 <= days; year++) steps.push(year * 365);
+    return steps;
+  }
+  function anniversaryReaction(firstMetAt, now2, celebratedDays, random) {
+    const days = Math.floor((now2 - firstMetAt) / DAY_MS);
+    let due = null;
+    for (const step of anniversarySteps(days)) if (step <= days && step > celebratedDays) due = step;
+    if (due === null) return { reaction: null, celebratedDays };
+    let lines;
+    if (due === 7) lines = ["One week together already! Thanks for having me.", "A whole week of gardening together!"];
+    else if (due === 30) lines = ["We've been gardening together for a whole month!", "One month together! Time flies."];
+    else if (due === 100) lines = ["100 days together! That's a lot of crops.", "Day 100! Best garden buddy ever."];
+    else {
+      const years = due / 365;
+      lines = years === 1 ? ["Happy anniversary! One year together!", "One year already! Thanks for keeping me around."] : [`Happy anniversary! ${years} years together!`, `${years} years of gardening together. Wow.`];
+    }
+    return {
+      reaction: { key: "anniversary", message: pickOne(lines, random), emote: EmoteType.Love, priority: "high" },
+      celebratedDays: due
+    };
+  }
+  function sessionHours(session, now2) {
+    return Math.max(0, Math.floor((now2 - session.startedAt) / HOUR_MS));
+  }
+  function sessionHourReaction(hours, random) {
+    if (hours < 1) return null;
+    let lines;
+    let emote = EmoteType.Clapping;
+    if (hours === 1) {
+      lines = ["We've been at it for an hour already.", "One hour in! Time flies when you're gardening."];
+    } else if (hours === 2) {
+      lines = ["Two hours in! Look at this place.", "Two hours already? Where did the time go?"];
+    } else if (hours < 6) {
+      lines = [
+        `${hours} hours straight. Maybe stretch your legs?`,
+        `${hours} hours! Don't forget to drink some water.`,
+        `${hours} hours already. You're dedicated!`
+      ];
+      emote = EmoteType.Questioning;
+    } else {
+      lines = [`${hours} hours?! Are you okay?`, `${hours} hours. I think the plants need a break. And you too.`];
+      emote = EmoteType.Crying;
+    }
+    return { key: `session:hours`, message: pickOne(lines, random), emote, priority: "high" };
+  }
+  function clockReaction(prevHour, hour, sessionMs, random, holiday = null) {
+    if (prevHour === hour) return null;
+    if (hour === 0) {
+      if (holiday) {
+        return { key: "clock:holiday", message: pickOne(HOLIDAY_GREETINGS[holiday], random), emote: EmoteType.Love, priority: "high" };
+      }
+      return {
+        key: "clock:midnight",
+        message: pickOne(["It's midnight! Still going?", "Midnight already. The garden never sleeps, huh?"], random),
+        emote: EmoteType.Questioning,
+        priority: "high"
+      };
+    }
+    if (hour === 6 && sessionMs >= 3 * HOUR_MS) {
+      return {
+        key: "clock:sunrise",
+        message: pickOne(["The sun's coming up. Did we just pull an all-nighter?", "Is that... sunrise? We've been up all night!"], random),
+        emote: EmoteType.Laughing,
+        priority: "high"
+      };
+    }
+    return null;
+  }
+  var SESSION_GAP_MS, HOUR_MS, DAY_MS, GREETING_BY_DAY_PART;
+  var init_session = __esm({
+    "src/features/companion/reactions/session.ts"() {
+      "use strict";
+      init_random();
+      init_dialogueTime();
+      init_emoteTypes();
+      SESSION_GAP_MS = 20 * 6e4;
+      HOUR_MS = 36e5;
+      DAY_MS = 24 * HOUR_MS;
+      GREETING_BY_DAY_PART = {
+        night: ["Hey, night owl! Couldn't sleep?", "Gardening at this hour? I like your style."],
+        early: ["Up with the sun, I see!", "Good morning! You're up early."],
+        morning: ["Good morning! Let's grow something.", "Morning! Ready when you are."],
+        afternoon: ["Good afternoon! Ready to garden?", "Hey! Perfect timing, the plants were asking for you."],
+        evening: ["Good evening! Glad you're here.", "Evening! Let's make it a good one."],
+        late: ["Evening, boss. Late session tonight?", "Hey! Quick one before bed?"]
+      };
+    }
+  });
+
   // src/features/companion/reactionWatch.ts
   function luckOf(state3) {
     const out = {};
@@ -62099,7 +62174,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_chat();
       init_dialogueLines();
       init_feeds();
-      init_reactions();
+      init_dialogueTime();
+      init_badLuck();
+      init_events();
+      init_garden();
+      init_gate();
+      init_milestones();
+      init_session();
       init_watch();
       SESSION_PATH = "companionSession";
       DRAIN_MS = 2e3;
@@ -62294,7 +62375,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/wander.ts
-  function pickOne4(options, random) {
+  function pickOne3(options, random) {
     return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
   }
   function normalizeTs2(value) {
@@ -62303,7 +62384,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return raw < 1e11 ? raw * 1e3 : raw;
   }
   function interestLine(kind, label2, random) {
-    return pickOne4(LINES[kind], random)(label2);
+    return pickOne3(LINES[kind], random)(label2);
   }
   function plantInterest(plant, dirtIdx, input) {
     const slots = Array.isArray(plant.slots) ? plant.slots : [];
@@ -62395,12 +62476,12 @@ Restore figures are averages; unlucky streaks do worse.`;
         break;
       }
     }
-    const chosen = pickOne4(
+    const chosen = pickOne3(
       all.filter((i) => i.kind === kind),
       input.random
     );
     return {
-      tile: { ...pickOne4(chosen.spots, input.random) },
+      tile: { ...pickOne3(chosen.spots, input.random) },
       target: chosen.target,
       dirtTileIdx: chosen.dirtTileIdx,
       kind: chosen.kind,
@@ -62531,10 +62612,10 @@ Restore figures are averages; unlucky streaks do worse.`;
           return interest.tile;
         }
         function onInterestReached(tile) {
-          const current = pending3;
+          const current2 = pending3;
           pending3 = null;
-          if (!current || !scope.active) return;
-          const { interest, at } = current;
+          if (!current2 || !scope.active) return;
+          const { interest, at } = current2;
           const now2 = Date.now();
           if (now2 - at > PENDING_TTL_MS) return;
           if (interest.tile.x !== tile.x || interest.tile.y !== tile.y) return;
