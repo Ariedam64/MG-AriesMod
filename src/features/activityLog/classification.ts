@@ -1,9 +1,7 @@
-// src/utils/activityLogClassification.ts
-// Pure classification of activity-log entries into filter categories, keyed
-// off the entry's own `.action` field (the game's own action-dispatch
-// identifier, e.g. "harvest", "sellPet", "EggGrowthBoostII"). No DOM, no
-// Pixi, no text/sprite parsing — every entry already carries this field, so
-// classification is always exact.
+// Sorts activity log entries into filter categories by their `.action` field,
+// the game's own action id ("harvest", "sellPet", "EggGrowthBoostII"). Every
+// entry carries it, so there is no text or sprite parsing and the result is
+// exact.
 
 import { spaceWords } from "../../lib/format";
 

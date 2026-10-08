@@ -528,49 +528,49 @@
     const pageWin = pageWindow;
     let staleStreak = 0;
     let needsCtorsRederive = false;
-    const debugState4 = {
+    const debugState3 = {
       checks: 0,
       staleStreak: 0,
       swaps: [],
       ctorsRederiveAttempts: 0,
       lastCtorsRederiveError: null
     };
-    pageWin.__MG_RENDERER_HEALTH_DEBUG__ = debugState4;
+    pageWin.__MG_RENDERER_HEALTH_DEBUG__ = debugState3;
     pageWin.setInterval(() => {
       try {
-        debugState4.checks += 1;
+        debugState3.checks += 1;
         if (needsCtorsRederive) {
-          debugState4.ctorsRederiveAttempts += 1;
+          debugState3.ctorsRederiveAttempts += 1;
           try {
             state5.ctors = getCtors(state5.app ?? state5.renderer);
             needsCtorsRederive = false;
-            debugState4.lastCtorsRederiveError = null;
+            debugState3.lastCtorsRederiveError = null;
             console.info("[MG SpriteCatalog] re-derived ctors from the new renderer");
           } catch (error) {
-            debugState4.lastCtorsRederiveError = String(error?.message ?? error);
+            debugState3.lastCtorsRederiveError = String(error?.message ?? error);
           }
         }
         const canvas = canvasOf(state5.renderer);
         const canvasHealthy = !!canvas && typeof document !== "undefined" && document.contains(canvas);
         if (canvasHealthy) {
           staleStreak = 0;
-          debugState4.staleStreak = 0;
+          debugState3.staleStreak = 0;
           return;
         }
         staleStreak += 1;
-        debugState4.staleStreak = staleStreak;
+        debugState3.staleStreak = staleStreak;
         if (staleStreak < REQUIRED_STALE_STREAK) return;
         const freshRenderer = hooks3.renderer;
         if (!freshRenderer || freshRenderer === state5.renderer) return;
         const freshCanvas = canvasOf(freshRenderer);
         if (!freshCanvas || typeof document === "undefined" || !document.contains(freshCanvas)) return;
         console.info("[MG SpriteCatalog] renderer canvas went stale, re-resolved a fresh one");
-        debugState4.swaps.push({ at: Date.now(), fromCanvasInDoc: canvasHealthy });
+        debugState3.swaps.push({ at: Date.now(), fromCanvasInDoc: canvasHealthy });
         state5.renderer = freshRenderer;
         if (hooks3.app) state5.app = hooks3.app;
         needsCtorsRederive = true;
         staleStreak = 0;
-        debugState4.staleStreak = 0;
+        debugState3.staleStreak = 0;
       } catch (error) {
         console.warn("[MG SpriteCatalog] renderer health check failed", error);
       }
@@ -25060,7 +25060,7 @@
     let canvasEl = null;
     let canvasListenersAttached = false;
     let weSetPointerCursor = false;
-    const debugState4 = {
+    const debugState3 = {
       attached: false,
       findAttempts: 0,
       hasButton: false,
@@ -25069,13 +25069,13 @@
       screenScaleX: null,
       screenScaleY: null
     };
-    shareGlobal("__MG_NOTIFICATION_BELL_PIXI_DEBUG__", debugState4);
+    shareGlobal("__MG_NOTIFICATION_BELL_PIXI_DEBUG__", debugState3);
     const raf3 = pageWindow.requestAnimationFrame.bind(pageWindow);
     const cancelRaf = pageWindow.cancelAnimationFrame.bind(pageWindow);
     const forgetButtonRefs = () => {
       bellContainer = null;
       bellText = null;
-      debugState4.hasButton = false;
+      debugState3.hasButton = false;
     };
     const removeButton = () => {
       if (bellContainer) {
@@ -25105,8 +25105,8 @@
         const stageHeight = Number(state5?.renderer?.screen?.height) || (Number(canvas.height) || 0) / renderResolution;
         const scaleX = stageWidth > 0 ? rect.width / stageWidth : 1;
         const scaleY = stageHeight > 0 ? rect.height / stageHeight : 1;
-        debugState4.screenScaleX = scaleX;
-        debugState4.screenScaleY = scaleY;
+        debugState3.screenScaleX = scaleX;
+        debugState3.screenScaleY = scaleY;
         const topLeft = bellContainer.toGlobal({ x: 0, y: 0 });
         const bottomRight = bellContainer.toGlobal({ x: lastSize, y: lastSize });
         return {
@@ -25211,7 +25211,7 @@
     const syncGeometry = () => {
       const { size, nextY } = computeSlot();
       lastSize = size;
-      debugState4.slotY = nextY;
+      debugState3.slotY = nextY;
       bellContainer.position.set(0, nextY);
       if (bellText) {
         bellText.style.fontSize = Math.round(size * 0.6);
@@ -25243,14 +25243,14 @@
       }
       ensureCanvasListeners(state5);
       syncGeometry();
-      debugState4.hasButton = true;
+      debugState3.hasButton = true;
     };
     const sync2 = () => {
       try {
         syncUnsafe();
-        debugState4.lastError = null;
+        debugState3.lastError = null;
       } catch (error) {
-        debugState4.lastError = String(error?.message ?? error);
+        debugState3.lastError = String(error?.message ?? error);
         console.warn("[notificationBellPixi] sync failed, clearing button", error);
         try {
           removeButton();
@@ -25262,7 +25262,7 @@
     const restartSearchIfNeeded2 = () => {
       if (!running6 || rail) return;
       tryFindRail();
-      if (!rail && findRafId3 == null) findRafId3 = raf3(scheduleFind3);
+      if (!rail && findRafId3 == null) findRafId3 = raf3(scheduleFind2);
     };
     const attachToRail = (node) => {
       rail = node;
@@ -25271,12 +25271,12 @@
       rail.once("destroyed", () => {
         if (rail === node) {
           rail = null;
-          debugState4.attached = false;
+          debugState3.attached = false;
           removeButton();
           restartSearchIfNeeded2();
         }
       });
-      debugState4.attached = true;
+      debugState3.attached = true;
       console.info(`[notificationBellPixi] attached to ${RAIL_LABEL} after ${findAttempts2} attempt(s)`);
       sync2();
     };
@@ -25291,12 +25291,12 @@
         return;
       }
       findAttempts2 += 1;
-      debugState4.findAttempts = findAttempts2;
+      debugState3.findAttempts = findAttempts2;
       if (findAttempts2 % RAIL_FIND_LOG_EVERY === 0) {
         console.info(`[notificationBellPixi] still searching for ${RAIL_LABEL} (${findAttempts2} attempts so far)`);
       }
     };
-    const scheduleFind3 = (now2) => {
+    const scheduleFind2 = (now2) => {
       findRafId3 = null;
       if (!running6 || rail) return;
       if (now2 - lastFindCheckAt3 >= RAIL_FIND_RETRY_MS) {
@@ -25304,7 +25304,7 @@
         tryFindRail();
       }
       if (!running6 || rail) return;
-      findRafId3 = raf3(scheduleFind3);
+      findRafId3 = raf3(scheduleFind2);
     };
     const isReachableFromLiveStage = (node) => {
       const state5 = getReadySpriteState();
@@ -25324,7 +25324,7 @@
       if (!isReachableFromLiveStage(rail)) {
         console.warn("[notificationBellPixi] rail orphaned from the live stage (no destroyed event fired), resetting");
         rail = null;
-        debugState4.attached = false;
+        debugState3.attached = false;
         removeButton();
         restartSearchIfNeeded2();
         return;
@@ -25360,7 +25360,7 @@
       wiggleRafId = raf3(wiggleTick);
     };
     tryFindRail();
-    if (!rail) findRafId3 = raf3(scheduleFind3);
+    if (!rail) findRafId3 = raf3(scheduleFind2);
     return {
       stop() {
         if (!running6) return;
@@ -27620,7 +27620,7 @@
     let graphicsCtor = null;
     let iconRetryScheduled = false;
     let currentGardenObject2 = null;
-    const debugState4 = {
+    const debugState3 = {
       attached: false,
       lastSyncAt: null,
       lastError: null,
@@ -27628,7 +27628,7 @@
       hasCoinTexture: false,
       objectType: null
     };
-    shareGlobal("__MG_CROP_VALUE_PIXI_DEBUG__", debugState4);
+    shareGlobal("__MG_CROP_VALUE_PIXI_DEBUG__", debugState3);
     const priceWatcher = startCropPriceWatcherViaGardenObject();
     const detachValueText = () => {
       if (valueBadge) {
@@ -27658,7 +27658,7 @@
       }
     };
     const syncValueNodeUnsafe = () => {
-      debugState4.objectType = currentGardenObject2?.objectType ?? null;
+      debugState3.objectType = currentGardenObject2?.objectType ?? null;
       if (!running6 || !currentCard2 || currentCard2.destroyed || !geometry || !isPlantObject3(currentGardenObject2) || // Coupé depuis le menu Misc : le badge disparaît, la carte reste celle du jeu.
       !readShowCropPrice()) {
         detachValueText();
@@ -27724,12 +27724,12 @@
     const syncValueNode = () => {
       try {
         syncValueNodeUnsafe();
-        debugState4.lastSyncAt = Date.now();
-        debugState4.lastError = null;
-        debugState4.hasValueText = !!valueText;
-        debugState4.hasCoinTexture = !!coinTexture;
+        debugState3.lastSyncAt = Date.now();
+        debugState3.lastError = null;
+        debugState3.hasValueText = !!valueText;
+        debugState3.hasCoinTexture = !!coinTexture;
       } catch (error) {
-        debugState4.lastError = String(error?.message ?? error);
+        debugState3.lastError = String(error?.message ?? error);
         console.warn("[cropValuePixi] syncValueNode failed, clearing overlay", error);
         try {
           detachValueText();
@@ -27742,7 +27742,7 @@
       geometry = geom;
       hitAreaBaseHeight = card5?.hitArea?.height ?? 0;
       detachValueText();
-      debugState4.attached = !!card5;
+      debugState3.attached = !!card5;
       if (card5) syncValueNode();
     });
     const offPrice = priceWatcher.onChange(syncValueNode);
@@ -27825,8 +27825,8 @@
     let lockIcon = null;
     let graphicsCtor = null;
     let currentGardenObject2 = null;
-    const debugState4 = { lastError: null, hasBorder: false, objectType: null };
-    shareGlobal("__MG_LOCKER_INDICATOR_PIXI_DEBUG__", debugState4);
+    const debugState3 = { lastError: null, hasBorder: false, objectType: null };
+    shareGlobal("__MG_LOCKER_INDICATOR_PIXI_DEBUG__", debugState3);
     const isLocked = () => {
       const eggId = extractEggId(currentGardenObject2);
       if (eggId) return lockerRestrictionsService.isEggLocked(eggId);
@@ -27848,10 +27848,10 @@
         }
         lockIcon = null;
       }
-      debugState4.hasBorder = false;
+      debugState3.hasBorder = false;
     };
     const syncUnsafe = () => {
-      debugState4.objectType = currentGardenObject2?.objectType ?? null;
+      debugState3.objectType = currentGardenObject2?.objectType ?? null;
       if (!running6 || !currentCard2 || currentCard2.destroyed || !geometry || !isLocked()) {
         removeBorder();
         return;
@@ -27872,7 +27872,7 @@
       const inset = BORDER_WIDTH / 2;
       border.clear();
       border.roundRect(left + inset, top + inset, Math.max(0, width - BORDER_WIDTH), Math.max(0, height - BORDER_WIDTH), BORDER_RADIUS).stroke({ width: BORDER_WIDTH, color: BORDER_COLOR, alpha: 1 });
-      debugState4.hasBorder = true;
+      debugState3.hasBorder = true;
       if (!lockIcon && state5?.ctors?.Text) {
         lockIcon = new state5.ctors.Text({ text: LOCK_ICON_TEXT, style: LOCK_ICON_STYLE });
         currentCard2.addChild(lockIcon);
@@ -27885,9 +27885,9 @@
     const sync2 = () => {
       try {
         syncUnsafe();
-        debugState4.lastError = null;
+        debugState3.lastError = null;
       } catch (error) {
-        debugState4.lastError = String(error?.message ?? error);
+        debugState3.lastError = String(error?.message ?? error);
         console.warn("[lockerIndicatorPixi] sync failed, clearing border", error);
         try {
           removeBorder();
@@ -28011,14 +28011,14 @@
     let hovering = false;
     let currentScale = 1;
     let scaleRafId = null;
-    const debugState4 = {
+    const debugState3 = {
       attached: false,
       findAttempts: 0,
       hasButton: false,
       lastError: null,
       currentAction: null
     };
-    shareGlobal("__MG_SELL_ALL_PETS_PIXI_DEBUG__", debugState4);
+    shareGlobal("__MG_SELL_ALL_PETS_PIXI_DEBUG__", debugState3);
     const raf3 = pageWindow.requestAnimationFrame.bind(pageWindow);
     const cancelRaf = pageWindow.cancelAnimationFrame.bind(pageWindow);
     const stopScaleAnimation = () => {
@@ -28048,7 +28048,7 @@
       buttonContainer = null;
       buttonBg = null;
       buttonText = null;
-      debugState4.hasButton = false;
+      debugState3.hasButton = false;
     };
     const removeButton = () => {
       if (buttonContainer) {
@@ -28113,7 +28113,7 @@
       canvasListenersAttached = true;
     };
     const syncUnsafe = () => {
-      debugState4.currentAction = actionLabel(currentAction);
+      debugState3.currentAction = actionLabel(currentAction);
       if (!running6 || !actionHud || actionHud.destroyed || !isSellPetAction(currentAction)) {
         removeButton();
         return;
@@ -28175,14 +28175,14 @@
         localAnchor.x + BUTTON_GAP + badgeWidth / 2,
         localAnchor.y
       );
-      debugState4.hasButton = true;
+      debugState3.hasButton = true;
     };
     const sync2 = () => {
       try {
         syncUnsafe();
-        debugState4.lastError = null;
+        debugState3.lastError = null;
       } catch (error) {
-        debugState4.lastError = String(error?.message ?? error);
+        debugState3.lastError = String(error?.message ?? error);
         console.warn("[sellAllPetsPixi] sync failed, clearing button", error);
         try {
           removeButton();
@@ -28197,12 +28197,12 @@
       actionHud.once("destroyed", () => {
         if (actionHud === hud) {
           actionHud = null;
-          debugState4.attached = false;
+          debugState3.attached = false;
           removeButton();
           restartSearchIfNeeded2();
         }
       });
-      debugState4.attached = true;
+      debugState3.attached = true;
       console.info(`[sellAllPetsPixi] attached to ${ACTION_HUD_LABEL} after ${findAttempts2} attempt(s)`);
       sync2();
     };
@@ -28217,12 +28217,12 @@
         return;
       }
       findAttempts2 += 1;
-      debugState4.findAttempts = findAttempts2;
+      debugState3.findAttempts = findAttempts2;
       if (findAttempts2 % ACTION_HUD_FIND_LOG_EVERY === 0) {
         console.info(`[sellAllPetsPixi] still searching for ${ACTION_HUD_LABEL} (${findAttempts2} attempts so far)`);
       }
     };
-    const scheduleFind3 = (now2) => {
+    const scheduleFind2 = (now2) => {
       findRafId3 = null;
       if (!running6 || actionHud) return;
       if (now2 - lastFindCheckAt3 >= ACTION_HUD_FIND_RETRY_MS) {
@@ -28230,18 +28230,18 @@
         tryFindActionHud();
       }
       if (!running6 || actionHud) return;
-      findRafId3 = raf3(scheduleFind3);
+      findRafId3 = raf3(scheduleFind2);
     };
     const restartSearchIfNeeded2 = () => {
       if (!running6 || actionHud) return;
       tryFindActionHud();
       if (!actionHud && findRafId3 == null) {
-        findRafId3 = raf3(scheduleFind3);
+        findRafId3 = raf3(scheduleFind2);
       }
     };
     tryFindActionHud();
     if (!actionHud) {
-      findRafId3 = raf3(scheduleFind3);
+      findRafId3 = raf3(scheduleFind2);
     }
     let unsubAction = null;
     void (async () => {
@@ -31714,51 +31714,37 @@
   });
 
   // src/features/activityLog/history.ts
-  function skipNextActivityLogHistoryReopen() {
-    skipNextHistoryReopen = true;
-  }
   function normalizeEntry(raw) {
     if (!raw || typeof raw !== "object") return null;
     const ts = Number(raw.timestamp);
     if (!Number.isFinite(ts)) return null;
-    const parameters = (() => {
-      const p = raw.parameters;
-      if (!p || typeof p !== "object") return p;
-      const petId = typeof p?.pet?.id === "string" ? p.pet.id : null;
-      if (petId && !p.petId) {
-        return { ...p, petId };
-      }
-      return p;
-    })();
-    const action2 = typeof raw.action === "string" && raw.action.trim() ? String(raw.action) : null;
-    const entry = {
-      ...raw,
-      timestamp: ts,
-      parameters
-    };
-    if (action2 !== null) entry.action = action2;
+    let parameters = raw.parameters;
+    if (parameters && typeof parameters === "object") {
+      const petId = typeof parameters.pet?.id === "string" ? parameters.pet.id : null;
+      if (petId && !parameters.petId) parameters = { ...parameters, petId };
+    }
+    const entry = { ...raw, timestamp: ts, parameters };
+    if (typeof raw.action === "string" && raw.action.trim()) entry.action = String(raw.action);
     return entry;
   }
-  function normalizeList(logs) {
+  function normalizeEntries(logs) {
+    if (!Array.isArray(logs)) return [];
     const out = [];
-    if (!Array.isArray(logs)) return out;
     for (const raw of logs) {
-      const norm3 = normalizeEntry(raw);
-      if (norm3) out.push(norm3);
+      const entry = normalizeEntry(raw);
+      if (entry) out.push(entry);
     }
     return out;
   }
   function stableStringify(value) {
     const seen = /* @__PURE__ */ new WeakSet();
     const walk = (val) => {
-      if (val === null) return null;
-      if (typeof val !== "object") return val;
+      if (val === null || typeof val !== "object") return val;
       if (seen.has(val)) return "__CYCLE__";
       seen.add(val);
       if (Array.isArray(val)) return val.map(walk);
       const obj = {};
-      const keys = Object.keys(val).sort();
-      for (const k of keys) obj[k] = walk(val[k]);
+      for (const k of Object.keys(val).sort()) obj[k] = walk(val[k]);
       return obj;
     };
     try {
@@ -31769,56 +31755,30 @@
   }
   function entryIdentity(entry) {
     const p = entry?.parameters;
-    const candidates = [
-      p?.id,
-      p?.pet?.id,
-      p?.petId,
-      p?.playerId,
-      p?.userId,
-      p?.objectId,
-      p?.slotId,
-      p?.itemId,
-      p?.cropId,
-      p?.seedId,
-      p?.decorId,
-      p?.toolId,
-      p?.targetId,
-      p?.abilityId
-    ];
-    for (const c of candidates) {
-      if (typeof c === "string" && c.trim()) return c;
+    if (!p) return null;
+    const pick2 = (c) => typeof c === "string" && c.trim() ? c : null;
+    const direct = pick2(p.id) ?? pick2(p.pet?.id);
+    if (direct) return direct;
+    for (const field of IDENTITY_FIELDS) {
+      const value = pick2(p[field]);
+      if (value) return value;
     }
     return null;
   }
   function entryKey(entry) {
-    const ts = Number(entry.timestamp);
     const action2 = typeof entry.action === "string" ? entry.action : "";
-    const identity = entryIdentity(entry) ?? "__noid__";
-    const tsPart = Number.isFinite(ts) ? String(ts) : `t:${stableStringify({ timestamp: entry.timestamp ?? null })}`;
-    return `${tsPart}|${action2}|${identity}`;
+    return `${entry.timestamp}|${action2}|${entryIdentity(entry) ?? "__noid__"}`;
   }
-  function entriesEqual(a, b) {
-    return stableStringify(a) === stableStringify(b);
-  }
-  function loadHistory() {
+  function getActivityLogHistory() {
     try {
-      const parsed = readAriesPath(HISTORY_STORAGE_KEY);
-      if (!Array.isArray(parsed)) return [];
-      const out = [];
-      for (const item of parsed) {
-        const norm3 = normalizeEntry(item);
-        if (norm3) out.push(norm3);
-      }
-      return out;
+      return normalizeEntries(readAriesPath(HISTORY_STORAGE_KEY));
     } catch {
       return [];
     }
   }
   function saveHistory(entries2) {
     const sorted = entries2.slice().sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
-    if (sorted.length > HISTORY_LIMIT) {
-      sorted.splice(0, sorted.length - HISTORY_LIMIT);
-    }
+    if (sorted.length > HISTORY_LIMIT) sorted.splice(0, sorted.length - HISTORY_LIMIT);
     try {
       writeAriesPath(HISTORY_STORAGE_KEY, sorted);
     } catch {
@@ -31826,159 +31786,71 @@
   }
   function diffSnapshots(prev, next) {
     const prevBuckets = /* @__PURE__ */ new Map();
-    const bucketPush = (k, entry) => {
-      const arr = prevBuckets.get(k);
-      if (arr) arr.push(entry);
-      else prevBuckets.set(k, [entry]);
-    };
-    for (const entry of prev) bucketPush(entryKey(entry), entry);
+    for (const entry of prev) {
+      const key2 = entryKey(entry);
+      const bucket = prevBuckets.get(key2);
+      if (bucket) bucket.push(entry);
+      else prevBuckets.set(key2, [entry]);
+    }
     const added = [];
     const updated = [];
     for (const entry of next) {
       const key2 = entryKey(entry);
       const bucket = prevBuckets.get(key2);
       const prevEntry = bucket?.shift();
-      if (!prevEntry) {
-        added.push(entry);
-      } else if (!entriesEqual(prevEntry, entry)) {
-        updated.push(entry);
-      }
+      if (!prevEntry) added.push(entry);
+      else if (!entriesEqual(prevEntry, entry)) updated.push(entry);
       if (bucket && bucket.length === 0) prevBuckets.delete(key2);
     }
     return { added, updated };
   }
   function syncHistory(prevSnapshot, nextSnapshot) {
-    const history2 = loadHistory();
     const { added, updated } = diffSnapshots(prevSnapshot, nextSnapshot);
-    if (!added.length && !updated.length) return history2;
-    const map2 = /* @__PURE__ */ new Map();
-    for (const h2 of history2) map2.set(entryKey(h2), h2);
+    if (!added.length && !updated.length) return;
+    const byKey = /* @__PURE__ */ new Map();
+    for (const entry of getActivityLogHistory()) byKey.set(entryKey(entry), entry);
     let changed = false;
-    const upsert = (entry) => {
+    for (const entry of [...updated, ...added]) {
       const key2 = entryKey(entry);
-      const cur = map2.get(key2);
+      const cur = byKey.get(key2);
       if (!cur || !entriesEqual(cur, entry)) {
-        map2.set(key2, entry);
+        byKey.set(key2, entry);
         changed = true;
       }
-    };
-    updated.forEach(upsert);
-    added.forEach(upsert);
-    if (!changed) return history2;
-    const merged = Array.from(map2.values());
-    saveHistory(merged);
-    return merged;
+    }
+    if (changed) saveHistory(Array.from(byKey.values()));
   }
-  async function reopenFakeActivityLogFromHistory() {
-    try {
-      const filtered = getFilteredHistoryForReopen();
-      await fakeActivityLog.show(filtered, { open: false });
-    } catch {
-    }
-  }
-  function getActivityLogHistory() {
-    return loadHistory();
-  }
-  async function startActivityLogHistoryWatcher() {
-    const stops = [];
-    let lastSnapshot = [];
-    const ingest2 = async (logs, prev) => {
-      try {
-        const prevSnapshot = typeof prev !== "undefined" ? normalizeList(prev) : lastSnapshot;
-        const nextSnapshot = normalizeList(logs);
-        syncHistory(prevSnapshot, nextSnapshot);
-        lastSnapshot = nextSnapshot;
-      } catch {
-      }
-    };
-    try {
-      const initial = normalizeList(await myActivityLog.get());
-      await ingest2(initial);
-    } catch {
-    }
-    try {
-      const unsub = await myActivityLog.onChange((next, prev) => {
-        void ingest2(next, prev);
-      });
-      stops.push(() => {
-        try {
-          unsub();
-        } catch {
-        }
-      });
-    } catch {
-    }
-    let lastModal = null;
-    try {
-      const cur = await Atoms.ui.activeModal.get();
-      lastModal = cur ?? null;
-    } catch {
-    }
-    const consumeHistoryReopenSkip = () => {
-      const w = pageWindow;
-      const sharedSkip = w[SKIP_NEXT_ACTIVITY_LOG_REOPEN_GLOBAL] === true;
-      if (!skipNextHistoryReopen && !sharedSkip) return false;
-      skipNextHistoryReopen = false;
-      if (sharedSkip) delete w[SKIP_NEXT_ACTIVITY_LOG_REOPEN_GLOBAL];
-      return true;
-    };
-    const onModalChange = async (modalId) => {
-      const cur = modalId ?? null;
-      if (cur === ACTIVITY_LOG_MODAL_ID && lastModal !== ACTIVITY_LOG_MODAL_ID) {
-        if (!consumeHistoryReopenSkip()) {
-          await reopenFakeActivityLogFromHistory();
-        }
-      }
-      lastModal = cur;
-    };
-    try {
-      const unsubModal = await Atoms.ui.activeModal.onChange(onModalChange);
-      stops.push(() => {
-        try {
-          unsubModal();
-        } catch {
-        }
-      });
-    } catch {
-    }
-    return async () => {
-      for (const stop2 of stops) {
-        try {
-          await stop2();
-        } catch {
-        }
-      }
-    };
-  }
-  var SKIP_NEXT_ACTIVITY_LOG_REOPEN_GLOBAL, HISTORY_STORAGE_KEY, HISTORY_LIMIT, skipNextHistoryReopen;
+  var HISTORY_STORAGE_KEY, HISTORY_LIMIT, IDENTITY_FIELDS, entriesEqual;
   var init_history = __esm({
     "src/features/activityLog/history.ts"() {
       "use strict";
-      init_fakeModal();
-      init_atoms();
       init_storage();
-      init_pageContext();
-      init_filterBar();
-      SKIP_NEXT_ACTIVITY_LOG_REOPEN_GLOBAL = "__MG_SKIP_NEXT_ACTIVITY_LOG_REOPEN__";
       HISTORY_STORAGE_KEY = "activityLog.history";
       HISTORY_LIMIT = 500;
-      skipNextHistoryReopen = false;
+      IDENTITY_FIELDS = [
+        "petId",
+        "playerId",
+        "userId",
+        "objectId",
+        "slotId",
+        "itemId",
+        "cropId",
+        "seedId",
+        "decorId",
+        "toolId",
+        "targetId",
+        "abilityId"
+      ];
+      entriesEqual = (a, b) => stableStringify(a) === stableStringify(b);
     }
   });
 
-  // src/features/activityLog/filterBar.ts
+  // src/features/activityLog/filter.ts
   function loadPersistedFilter() {
     try {
-      const stored = readAriesPath(FILTER_STORAGE_KEY);
-      return stored || "all";
+      return readAriesPath(FILTER_STORAGE_KEY) || "all";
     } catch {
       return "all";
-    }
-  }
-  function persistFilter(filter) {
-    try {
-      writeAriesPath(FILTER_STORAGE_KEY, String(filter));
-    } catch {
     }
   }
   function getActiveFilter() {
@@ -31989,32 +31861,54 @@
     if (filter === "all") return history2;
     return history2.filter((entry) => classifyEntryAction(entry.action) === filter);
   }
-  function getFilteredHistoryForReopen() {
+  function filteredHistory() {
     return computeFilteredHistory(activeFilter);
   }
-  async function applyActiveFilter() {
-    if (!modalOpen2) return;
-    try {
-      await fakeActivityLog.show(computeFilteredHistory(activeFilter), { open: false });
-    } catch {
-    }
+  function setActivityLogModalOpen(open) {
+    modalOpen2 = open;
+  }
+  function isActivityLogModalOpen() {
+    return modalOpen2;
   }
   function setActiveFilter(filter) {
     if (filter === activeFilter) return;
     activeFilter = filter;
-    debugState2.activeFilter = filter;
-    persistFilter(filter);
-    void applyActiveFilter();
-  }
-  function safeWidth(node, fallback) {
     try {
-      const value = node?.width;
-      return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
+      writeAriesPath(FILTER_STORAGE_KEY, String(filter));
     } catch {
-      return fallback;
     }
+    if (!modalOpen2) return;
+    fakeActivityLog.show(filteredHistory(), { open: false }).catch(() => {
+    });
   }
-  function computeActionCounts(history2) {
+  var FILTER_STORAGE_KEY, activeFilter, modalOpen2;
+  var init_filter = __esm({
+    "src/features/activityLog/filter.ts"() {
+      "use strict";
+      init_storage();
+      init_pageContext();
+      init_fakeModal();
+      init_classification();
+      init_history();
+      FILTER_STORAGE_KEY = "activityLog.filter";
+      activeFilter = loadPersistedFilter();
+      modalOpen2 = false;
+      shareGlobal("__MG_ACTIVITY_LOG_FILTER_DEBUG__", {
+        get activeFilter() {
+          return activeFilter;
+        },
+        get modalOpen() {
+          return modalOpen2;
+        },
+        getActiveFilter,
+        setActiveFilter,
+        computeFilteredHistory
+      });
+    }
+  });
+
+  // src/features/activityLog/filterToolbar.ts
+  function countActions(history2) {
     const counts = /* @__PURE__ */ new Map();
     for (const entry of history2) {
       const key2 = classifyEntryAction(entry.action);
@@ -32022,122 +31916,142 @@
     }
     return counts;
   }
-  function countFor(key2, counts, total) {
-    return key2 === "all" ? total : counts.get(key2) ?? 0;
+  function labelFor(key2, counts, total) {
+    const count = key2 === "all" ? total : counts.get(key2) ?? 0;
+    return `${getActionLabel(key2)}${count ? ` (${count})` : ""}`;
   }
-  function closedButtonLabel(counts, total) {
-    const active2 = getActiveFilter();
-    const count = countFor(active2, counts, total);
-    return `${CLOSED_LABEL_PREFIX}${getActionLabel(active2)}${count ? ` (${count})` : ""}`;
+  function drawButtonBg(bg, width, active2) {
+    bg.roundRect(0, 0, width, BUTTON_HEIGHT, BUTTON_RADIUS2).fill({
+      color: active2 ? BUTTON_FILL_ACTIVE : BUTTON_FILL_INACTIVE,
+      alpha: active2 ? BUTTON_ALPHA_ACTIVE : BUTTON_ALPHA_INACTIVE
+    });
   }
-  function buildClosedButton(graphicsCtor, textCtor, containerCtor, counts, total) {
-    const text2 = new textCtor({ text: closedButtonLabel(counts, total), style: BUTTON_TEXT_STYLE2 });
-    const caret = new textCtor({ text: CARET_CLOSED, style: CARET_TEXT_STYLE });
-    const bg = new graphicsCtor();
-    const container = new containerCtor();
+  function layoutClosedButton(button3) {
+    const width = button3.text.width + BUTTON_PADDING_X2 * 2 + CARET_GAP + button3.caret.width;
+    button3.bg.clear();
+    drawButtonBg(button3.bg, width, true);
+    button3.text.position.set(BUTTON_PADDING_X2, (BUTTON_HEIGHT - button3.text.height) / 2);
+    button3.caret.position.set(width - BUTTON_PADDING_X2 - button3.caret.width, (BUTTON_HEIGHT - button3.caret.height) / 2);
+  }
+  function buildClosedButton(ctors, label2) {
+    const text2 = new ctors.Text({ text: label2, style: TEXT_STYLE });
+    const caret = new ctors.Text({ text: CARET_CLOSED, style: TEXT_STYLE });
+    const bg = new ctors.Graphics();
+    const container = new ctors.Container();
     container.addChild(bg);
     container.addChild(text2);
     container.addChild(caret);
     container.eventMode = "static";
     container.cursor = "pointer";
-    const closedButton = { container, bg, text: text2, caret };
-    layoutClosedButton(closedButton);
-    return closedButton;
+    const button3 = { container, bg, text: text2, caret };
+    layoutClosedButton(button3);
+    return button3;
   }
-  function layoutClosedButton(closedButton) {
-    const width = closedButton.text.width + BUTTON_PADDING_X2 * 2 + CARET_GAP + closedButton.caret.width;
-    closedButton.bg.clear();
-    closedButton.bg.roundRect(0, 0, width, BUTTON_HEIGHT, BUTTON_RADIUS2).fill({ color: BUTTON_FILL_ACTIVE, alpha: BUTTON_ALPHA_ACTIVE });
-    closedButton.text.position.set(BUTTON_PADDING_X2, (BUTTON_HEIGHT - closedButton.text.height) / 2);
-    closedButton.caret.position.set(width - BUTTON_PADDING_X2 - closedButton.caret.width, (BUTTON_HEIGHT - closedButton.caret.height) / 2);
-  }
-  function buildOptionsPanel(graphicsCtor, textCtor, containerCtor, maxWidth, counts, total) {
+  function buildOptions(ctors, maxWidth, counts, total) {
     const keys = ["all", ...mergeActions(Array.from(counts.keys()))];
-    const panel = new containerCtor();
+    const container = new ctors.Container();
     const buttons = [];
+    const active2 = getActiveFilter();
     let x = 0;
     let y = 0;
-    const active2 = getActiveFilter();
     for (const key2 of keys) {
-      const count = countFor(key2, counts, total);
-      const label2 = `${getActionLabel(key2)}${count ? ` (${count})` : ""}`;
-      const text2 = new textCtor({ text: label2, style: BUTTON_TEXT_STYLE2 });
+      const text2 = new ctors.Text({ text: labelFor(key2, counts, total), style: TEXT_STYLE });
       const width = text2.width + BUTTON_PADDING_X2 * 2;
       if (x > 0 && x + width > maxWidth) {
         x = 0;
         y += BUTTON_HEIGHT + BUTTON_GAP2;
       }
-      const bg = new graphicsCtor();
-      bg.roundRect(0, 0, width, BUTTON_HEIGHT, BUTTON_RADIUS2).fill({ color: key2 === active2 ? BUTTON_FILL_ACTIVE : BUTTON_FILL_INACTIVE, alpha: key2 === active2 ? BUTTON_ALPHA_ACTIVE : BUTTON_ALPHA_INACTIVE });
+      const bg = new ctors.Graphics();
+      drawButtonBg(bg, width, key2 === active2);
       text2.position.set(BUTTON_PADDING_X2, (BUTTON_HEIGHT - text2.height) / 2);
-      const button3 = new containerCtor();
+      const button3 = new ctors.Container();
       button3.addChild(bg);
       button3.addChild(text2);
       button3.position.set(x, y);
       button3.eventMode = "static";
       button3.cursor = "pointer";
-      panel.addChild(button3);
+      container.addChild(button3);
       buttons.push({ container: button3, bg, key: key2 });
       x += width + BUTTON_GAP2;
     }
-    return { container: panel, buttons, height: y + BUTTON_HEIGHT };
+    return { container, buttons, height: y + BUTTON_HEIGHT };
   }
-  function collapsedHeight() {
-    return BUTTON_HEIGHT;
+  function setExpanded(toolbar2, expanded) {
+    if (toolbar2.isExpanded === expanded) return;
+    toolbar2.isExpanded = expanded;
+    toolbar2.options.container.visible = expanded;
+    toolbar2.closedButton.caret.text = expanded ? CARET_OPEN : CARET_CLOSED;
   }
-  function expandedHeight(panel) {
-    return BUTTON_HEIGHT + PANEL_GAP + panel.height;
-  }
-  function setExpanded(toolbarState2, expanded) {
-    if (toolbarState2.isExpanded === expanded) return;
-    toolbarState2.isExpanded = expanded;
-    toolbarState2.panel.container.visible = expanded;
-    toolbarState2.height = expanded ? expandedHeight(toolbarState2.panel) : collapsedHeight();
-    toolbarState2.closedButton.caret.text = expanded ? CARET_OPEN : CARET_CLOSED;
-  }
-  function buildToolbar(graphicsCtor, textCtor, containerCtor, maxWidth) {
+  function buildFilterToolbar(ctors, maxWidth) {
     const history2 = getActivityLogHistory();
-    const counts = computeActionCounts(history2);
+    const counts = countActions(history2);
     const total = history2.length;
-    const container = new containerCtor();
+    const container = new ctors.Container();
     container.label = FILTER_TOOLBAR_LABEL;
-    const closedButton = buildClosedButton(graphicsCtor, textCtor, containerCtor, counts, total);
+    const closedButton = buildClosedButton(ctors, closedLabel({ counts, total }));
     container.addChild(closedButton.container);
-    const panel = buildOptionsPanel(graphicsCtor, textCtor, containerCtor, maxWidth, counts, total);
-    panel.container.position.set(0, BUTTON_HEIGHT + PANEL_GAP);
-    panel.container.visible = false;
-    container.addChild(panel.container);
-    const toolbarState2 = {
-      container,
-      closedButton,
-      panel,
-      counts,
-      total,
-      isExpanded: false,
-      height: collapsedHeight()
-    };
-    closedButton.container.on("pointertap", () => setExpanded(toolbarState2, !toolbarState2.isExpanded));
-    for (const button3 of panel.buttons) {
+    const options = buildOptions(ctors, maxWidth, counts, total);
+    options.container.position.set(0, BUTTON_HEIGHT + PANEL_GAP);
+    options.container.visible = false;
+    container.addChild(options.container);
+    const toolbar2 = { container, closedButton, options, counts, total, isExpanded: false };
+    closedButton.container.on("pointertap", () => setExpanded(toolbar2, !toolbar2.isExpanded));
+    for (const button3 of options.buttons) {
       button3.container.on("pointertap", () => {
         setActiveFilter(button3.key);
-        setExpanded(toolbarState2, false);
+        setExpanded(toolbar2, false);
       });
     }
-    return toolbarState2;
+    return toolbar2;
   }
-  function refreshToolbarHighlight(toolbarState2) {
+  function refreshToolbarHighlight(toolbar2) {
     const active2 = getActiveFilter();
-    for (const button3 of toolbarState2.panel.buttons) {
+    for (const button3 of toolbar2.options.buttons) {
       if (button3.bg.destroyed) continue;
-      const isActive = button3.key === active2;
-      const bounds = button3.bg.getLocalBounds();
+      const width = button3.bg.getLocalBounds().width;
       button3.bg.clear();
-      button3.bg.roundRect(0, 0, bounds.width, BUTTON_HEIGHT, BUTTON_RADIUS2).fill({ color: isActive ? BUTTON_FILL_ACTIVE : BUTTON_FILL_INACTIVE, alpha: isActive ? BUTTON_ALPHA_ACTIVE : BUTTON_ALPHA_INACTIVE });
+      drawButtonBg(button3.bg, width, button3.key === active2);
     }
-    const label2 = closedButtonLabel(toolbarState2.counts, toolbarState2.total);
-    if (toolbarState2.closedButton.text.text !== label2) {
-      toolbarState2.closedButton.text.text = label2;
-      layoutClosedButton(toolbarState2.closedButton);
+    const label2 = closedLabel(toolbar2);
+    if (toolbar2.closedButton.text.text !== label2) {
+      toolbar2.closedButton.text.text = label2;
+      layoutClosedButton(toolbar2.closedButton);
+    }
+  }
+  var BUTTON_HEIGHT, BUTTON_PADDING_X2, BUTTON_GAP2, BUTTON_RADIUS2, BUTTON_FILL_INACTIVE, BUTTON_FILL_ACTIVE, BUTTON_ALPHA_INACTIVE, BUTTON_ALPHA_ACTIVE, TEXT_STYLE, CLOSED_LABEL_PREFIX, CARET_GAP, CARET_CLOSED, CARET_OPEN, PANEL_GAP, COLLAPSED_HEIGHT, closedLabel;
+  var init_filterToolbar = __esm({
+    "src/features/activityLog/filterToolbar.ts"() {
+      "use strict";
+      init_classification();
+      init_filter();
+      init_history();
+      init_activityLogModalLayout();
+      BUTTON_HEIGHT = 26;
+      BUTTON_PADDING_X2 = 10;
+      BUTTON_GAP2 = 6;
+      BUTTON_RADIUS2 = 8;
+      BUTTON_FILL_INACTIVE = 8084024;
+      BUTTON_FILL_ACTIVE = 14918205;
+      BUTTON_ALPHA_INACTIVE = 0.55;
+      BUTTON_ALPHA_ACTIVE = 0.95;
+      TEXT_STYLE = { fontFamily: "Arial", fontSize: 12, fontWeight: "700", fill: "#FFFFFF" };
+      CLOSED_LABEL_PREFIX = "Filter: ";
+      CARET_GAP = 8;
+      CARET_CLOSED = "\u25BE";
+      CARET_OPEN = "\u25B4";
+      PANEL_GAP = 6;
+      COLLAPSED_HEIGHT = BUTTON_HEIGHT;
+      closedLabel = (toolbar2) => CLOSED_LABEL_PREFIX + labelFor(getActiveFilter(), toolbar2.counts, toolbar2.total);
+    }
+  });
+
+  // src/features/activityLog/filterBar.ts
+  function safeWidth(node, fallback) {
+    try {
+      const value = node?.width;
+      return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
+    } catch {
+      return fallback;
     }
   }
   function restoreScroll() {
@@ -32158,25 +32072,14 @@
   }
   function teardownToolbar() {
     restoreScroll();
-    if (toolbarState) {
-      try {
-        toolbarState.container.destroy({ children: true });
-      } catch {
-      }
+    try {
+      toolbar?.container.destroy({ children: true });
+    } catch {
     }
-    toolbarState = null;
+    toolbar = null;
     shiftedRows = /* @__PURE__ */ new WeakSet();
     plannedFirst = null;
     plannedShift = 0;
-  }
-  function syncToolbar() {
-    try {
-      syncToolbarUnsafe();
-      debugSyncState.lastError = null;
-    } catch (error) {
-      debugSyncState.lastError = String(error?.message ?? error);
-      console.warn("[activityLogFilterPixi] syncToolbar failed", error);
-    }
   }
   function shiftLogRows(content, toolbarSpace) {
     const children = content.children;
@@ -32197,6 +32100,21 @@
       child.position.y += plannedShift;
     }
   }
+  function buildToolbarInto(anchors) {
+    const state5 = getReadySpriteState();
+    if (!state5?.ctors?.Text) return null;
+    const graphicsCtor = findGraphicsCtor(getStage(state5));
+    if (!graphicsCtor) return null;
+    const maxWidth = safeWidth(anchors.backgroundSprite, 0) - 2 * (anchors.scrollViewContainer.position?.x ?? 0);
+    if (maxWidth <= 0) return null;
+    const built = buildFilterToolbar(
+      { Graphics: graphicsCtor, Text: state5.ctors.Text, Container: anchors.modalContainer.constructor },
+      maxWidth
+    );
+    anchors.modalContainer.addChild(built.container);
+    syncDebug.toolbarBuilt = true;
+    return built;
+  }
   function syncToolbarUnsafe() {
     if (!modalNode || modalNode.destroyed) {
       teardownToolbar();
@@ -32204,49 +32122,46 @@
       return;
     }
     const anchors = locateActivityLogAnchors(modalNode);
-    debugSyncState.anchorsFound = !!anchors;
+    syncDebug.anchorsFound = !!anchors;
     if (!anchors) return;
-    if (!toolbarState) {
-      const state5 = getReadySpriteState();
-      if (!state5?.ctors?.Text) return;
-      const stage = getStage(state5);
-      const graphicsCtor = findGraphicsCtor(stage);
-      if (!graphicsCtor) return;
-      const maxWidth = safeWidth(anchors.backgroundSprite, 0) - 2 * (anchors.scrollViewContainer.position?.x ?? 0);
-      if (maxWidth <= 0) return;
-      const containerCtor = anchors.modalContainer.constructor;
-      toolbarState = buildToolbar(graphicsCtor, state5.ctors.Text, containerCtor, maxWidth);
-      anchors.modalContainer.addChild(toolbarState.container);
-      debugSyncState.toolbarBuilt = true;
-    }
+    toolbar ?? (toolbar = buildToolbarInto(anchors));
+    if (!toolbar) return;
     const scrollContainer = anchors.scrollViewContainer;
     const parts = locateScrollParts(scrollContainer);
-    debugSyncState.scrollPartsFound = !!parts;
+    syncDebug.scrollPartsFound = !!parts;
     const kind = parts ? logsContentKind(parts.content.children) : "unknown";
     const onLogs = kind === "unknown" ? activeTab === "logs" : kind === "logs";
-    toolbarState.container.visible = onLogs;
-    if (!onLogs && toolbarState.isExpanded) setExpanded(toolbarState, false);
-    toolbarState.container.position.set(scrollContainer.position.x, scrollContainer.position.y);
-    refreshToolbarHighlight(toolbarState);
+    toolbar.container.visible = onLogs;
+    if (!onLogs && toolbar.isExpanded) setExpanded(toolbar, false);
+    toolbar.container.position.set(scrollContainer.position.x, scrollContainer.position.y);
+    refreshToolbarHighlight(toolbar);
     if (!onLogs || !parts) {
       restoreScroll();
       return;
     }
     touchedScroll = { container: scrollContainer, mask: parts.mask };
-    scrollContainer.visible = !toolbarState.isExpanded;
-    const toolbarSpace = collapsedHeight() + TOOLBAR_GAP_BELOW;
+    scrollContainer.visible = !toolbar.isExpanded;
+    const toolbarSpace = COLLAPSED_HEIGHT + TOOLBAR_GAP_BELOW;
     const maskHeight = parts.mask.getLocalBounds?.().height ?? 0;
     const transform = maskTransformFor(maskHeight, toolbarSpace);
     parts.mask.position.y = transform.y;
     parts.mask.scale.y = transform.scaleY;
     shiftLogRows(parts.content, toolbarSpace);
   }
+  function syncToolbar() {
+    try {
+      syncToolbarUnsafe();
+      syncDebug.lastError = null;
+    } catch (error) {
+      syncDebug.lastError = String(error?.message ?? error);
+      console.warn("[activityLogFilter] syncToolbar failed", error);
+    }
+  }
   function tryFindModal() {
-    if (!modalOpen2 || modalNode) return;
+    if (!isActivityLogModalOpen() || modalNode) return;
     const state5 = getReadySpriteState();
     if (!state5) return;
-    const stage = getStage(state5);
-    const found = findAcrossBranches(stage, (node) => node?.label === ACTIVITY_LOG_MODAL_LABEL);
+    const found = findAcrossBranches(getStage(state5), (node) => node?.label === ACTIVITY_LOG_MODAL_LABEL);
     if (!found) return;
     modalNode = found;
     found.once("destroyed", () => {
@@ -32256,29 +32171,29 @@
       }
     });
   }
-  function scheduleFind2(now2) {
+  function onFrame(now2) {
     findRafId2 = null;
-    if (modalOpen2 && !modalNode && now2 - lastFindCheckAt2 >= FIND_RETRY_MS) {
+    const open = isActivityLogModalOpen();
+    if (open && !modalNode && now2 - lastFindCheckAt2 >= FIND_RETRY_MS) {
       lastFindCheckAt2 = now2;
       tryFindModal();
     }
     if (modalNode) syncToolbar();
-    if (!modalOpen2 && modalNode) {
+    if (!open && modalNode) {
       modalNode = null;
       teardownToolbar();
     }
-    findRafId2 = raf2(scheduleFind2);
+    findRafId2 = raf2(onFrame);
   }
   function startActivityLogFilterPixi() {
     void (async () => {
       try {
-        const current = await Atoms.ui.activeModal.get();
-        modalOpen2 = current === ACTIVITY_LOG_MODAL_ID;
+        setActivityLogModalOpen(await Atoms.ui.activeModal.get() === ACTIVITY_LOG_MODAL_ID);
       } catch {
       }
       try {
         await Atoms.ui.activeModal.onChange((next) => {
-          modalOpen2 = next === ACTIVITY_LOG_MODAL_ID;
+          setActivityLogModalOpen(next === ACTIVITY_LOG_MODAL_ID);
         });
       } catch {
       }
@@ -32289,63 +32204,33 @@
         });
       } catch {
       }
-      if (findRafId2 == null) findRafId2 = raf2(scheduleFind2);
+      if (findRafId2 == null) findRafId2 = raf2(onFrame);
     })();
   }
-  var FILTER_STORAGE_KEY, FIND_RETRY_MS, BUTTON_HEIGHT, BUTTON_PADDING_X2, BUTTON_GAP2, TOOLBAR_GAP_BELOW, BUTTON_FILL_INACTIVE, BUTTON_FILL_ACTIVE, BUTTON_ALPHA_INACTIVE, BUTTON_ALPHA_ACTIVE, BUTTON_TEXT_STYLE2, BUTTON_RADIUS2, CLOSED_LABEL_PREFIX, CARET_GAP, CARET_CLOSED, CARET_OPEN, CARET_TEXT_STYLE, PANEL_GAP, raf2, activeFilter, modalOpen2, activeTab, debugState2, modalNode, toolbarState, findRafId2, lastFindCheckAt2, touchedScroll, shiftedRows, plannedFirst, plannedShift, debugSyncState;
+  var FIND_RETRY_MS, TOOLBAR_GAP_BELOW, raf2, activeTab, modalNode, toolbar, findRafId2, lastFindCheckAt2, touchedScroll, shiftedRows, plannedFirst, plannedShift, syncDebug;
   var init_filterBar = __esm({
     "src/features/activityLog/filterBar.ts"() {
       "use strict";
-      init_storage();
       init_pageContext();
-      init_classification();
-      init_history();
-      init_fakeModal();
       init_atoms();
       init_gardenInfoCard();
       init_context();
       init_activityLogModalLayout();
-      FILTER_STORAGE_KEY = "activityLog.filter";
+      init_filter();
+      init_filterToolbar();
       FIND_RETRY_MS = 1e3;
-      BUTTON_HEIGHT = 26;
-      BUTTON_PADDING_X2 = 10;
-      BUTTON_GAP2 = 6;
       TOOLBAR_GAP_BELOW = 6;
-      BUTTON_FILL_INACTIVE = 8084024;
-      BUTTON_FILL_ACTIVE = 14918205;
-      BUTTON_ALPHA_INACTIVE = 0.55;
-      BUTTON_ALPHA_ACTIVE = 0.95;
-      BUTTON_TEXT_STYLE2 = { fontFamily: "Arial", fontSize: 12, fontWeight: "700", fill: "#FFFFFF" };
-      BUTTON_RADIUS2 = 8;
-      CLOSED_LABEL_PREFIX = "Filter: ";
-      CARET_GAP = 8;
-      CARET_CLOSED = "\u25BE";
-      CARET_OPEN = "\u25B4";
-      CARET_TEXT_STYLE = { fontFamily: "Arial", fontSize: 12, fontWeight: "700", fill: "#FFFFFF" };
-      PANEL_GAP = 6;
       raf2 = pageWindow.requestAnimationFrame.bind(pageWindow);
-      activeFilter = loadPersistedFilter();
-      modalOpen2 = false;
       activeTab = "logs";
-      debugState2 = {
-        activeFilter,
-        get modalOpen() {
-          return modalOpen2;
-        },
-        getActiveFilter,
-        setActiveFilter,
-        computeFilteredHistory
-      };
-      shareGlobal("__MG_ACTIVITY_LOG_FILTER_DEBUG__", debugState2);
       modalNode = null;
-      toolbarState = null;
+      toolbar = null;
       findRafId2 = null;
       lastFindCheckAt2 = 0;
       touchedScroll = null;
       shiftedRows = /* @__PURE__ */ new WeakSet();
       plannedFirst = null;
       plannedShift = 0;
-      debugSyncState = {
+      syncDebug = {
         lastError: null,
         anchorsFound: false,
         toolbarBuilt: false,
@@ -32353,19 +32238,19 @@
       };
       shareGlobal("__MG_ACTIVITY_LOG_TOOLBAR_DEBUG__", {
         get modalOpen() {
-          return modalOpen2;
+          return isActivityLogModalOpen();
         },
         get modalFound() {
           return !!modalNode;
         },
         get toolbarBuilt() {
-          return debugSyncState.toolbarBuilt;
+          return syncDebug.toolbarBuilt;
         },
         get anchorsFound() {
-          return debugSyncState.anchorsFound;
+          return syncDebug.anchorsFound;
         },
         get lastError() {
-          return debugSyncState.lastError;
+          return syncDebug.lastError;
         },
         get modalNode() {
           return modalNode;
@@ -32377,9 +32262,102 @@
           return activeTab;
         },
         get scrollPartsFound() {
-          return debugSyncState.scrollPartsFound;
+          return syncDebug.scrollPartsFound;
         }
       });
+    }
+  });
+
+  // src/lib/emitter.ts
+  var Subscriptions;
+  var init_emitter = __esm({
+    "src/lib/emitter.ts"() {
+      "use strict";
+      Subscriptions = class {
+        constructor() {
+          this.pending = [];
+        }
+        add(unsubscribe2) {
+          this.pending.push(unsubscribe2);
+        }
+        dispose() {
+          for (const entry of this.pending.splice(0)) {
+            Promise.resolve(entry).then((off) => off?.()).catch(() => {
+            });
+          }
+        }
+      };
+    }
+  });
+
+  // src/features/activityLog/historyWatcher.ts
+  function skipNextActivityLogHistoryReopen() {
+    skipNextReopen = true;
+  }
+  function consumeReopenSkip() {
+    const w = pageWindow;
+    const sharedSkip = w[SKIP_NEXT_REOPEN_GLOBAL] === true;
+    if (!skipNextReopen && !sharedSkip) return false;
+    skipNextReopen = false;
+    if (sharedSkip) delete w[SKIP_NEXT_REOPEN_GLOBAL];
+    return true;
+  }
+  async function showStoredHistory() {
+    try {
+      await fakeActivityLog.show(filteredHistory(), { open: false });
+    } catch {
+    }
+  }
+  async function startActivityLogHistoryWatcher() {
+    const subs = new Subscriptions();
+    let lastSnapshot = [];
+    const ingest2 = (logs, prev) => {
+      try {
+        const prevSnapshot = typeof prev !== "undefined" ? normalizeEntries(prev) : lastSnapshot;
+        const nextSnapshot = normalizeEntries(logs);
+        syncHistory(prevSnapshot, nextSnapshot);
+        lastSnapshot = nextSnapshot;
+      } catch {
+      }
+    };
+    try {
+      ingest2(await myActivityLog.get());
+    } catch {
+    }
+    try {
+      subs.add(await myActivityLog.onChange((next, prev) => ingest2(next, prev)));
+    } catch {
+    }
+    let lastModal = null;
+    try {
+      lastModal = await Atoms.ui.activeModal.get() ?? null;
+    } catch {
+    }
+    try {
+      subs.add(
+        await Atoms.ui.activeModal.onChange(async (modalId) => {
+          const cur = modalId ?? null;
+          const justOpened = cur === ACTIVITY_LOG_MODAL_ID && lastModal !== ACTIVITY_LOG_MODAL_ID;
+          lastModal = cur;
+          if (justOpened && !consumeReopenSkip()) await showStoredHistory();
+        })
+      );
+    } catch {
+    }
+    return () => subs.dispose();
+  }
+  var SKIP_NEXT_REOPEN_GLOBAL, skipNextReopen;
+  var init_historyWatcher = __esm({
+    "src/features/activityLog/historyWatcher.ts"() {
+      "use strict";
+      init_fakeModal();
+      init_atoms();
+      init_pageContext();
+      init_emitter();
+      init_filter();
+      init_history();
+      SKIP_NEXT_REOPEN_GLOBAL = "__MG_SKIP_NEXT_ACTIVITY_LOG_REOPEN__";
+      skipNextReopen = false;
     }
   });
 
@@ -34046,7 +34024,7 @@
       init_sorting();
       init_filterBar();
       init_storage();
-      init_history();
+      init_historyWatcher();
       init_tracker();
       init_badges();
       init_button();
@@ -35714,14 +35692,14 @@
     const viaW = workerFound ? "worker" : "page/auto";
     return `status: ${anyOpen ? "OPEN" : "none"} \u2022 mode: ${viaW}`;
   }
-  function installWSHookIfNeeded(onFrame) {
+  function installWSHookIfNeeded(onFrame2) {
     const Ctor = window.WebSocket;
     if (!Ctor[HOOKED_CTOR_FLAG]) {
       const ProxyCtor = new Proxy(Ctor, {
         construct(target, args, newTarget) {
           const ws = Reflect.construct(target, args, newTarget);
           try {
-            trackSocket(ws, "new", onFrame);
+            trackSocket(ws, "new", onFrame2);
           } catch (err) {
           }
           return ws;
@@ -35732,7 +35710,7 @@
     }
     sockets.forEach((ws) => {
       try {
-        trackSocket(ws, "existing", onFrame);
+        trackSocket(ws, "existing", onFrame2);
       } catch (err) {
       }
     });
@@ -35741,7 +35719,7 @@
     } else {
     }
   }
-  function trackSocket(ws, why, onFrame) {
+  function trackSocket(ws, why, onFrame2) {
     if (registry.has(ws)) {
       return;
     }
@@ -35756,7 +35734,7 @@
       } catch {
         text2 = String(ev.data);
       }
-      onFrame({ t: Date.now(), dir: "in", text: text2, ws });
+      onFrame2({ t: Date.now(), dir: "in", text: text2, ws });
     };
     ws.addEventListener("message", onMsg);
     info.listeners.push(() => ws.removeEventListener("message", onMsg));
@@ -35777,9 +35755,9 @@
       ws.send = (data) => {
         try {
           const text2 = typeof data === "string" ? data : JSON.stringify(data);
-          onFrame({ t: Date.now(), dir: "out", text: text2, ws });
+          onFrame2({ t: Date.now(), dir: "out", text: text2, ws });
         } catch {
-          onFrame({ t: Date.now(), dir: "out", text: String(data), ws });
+          onFrame2({ t: Date.now(), dir: "out", text: String(data), ws });
         }
         return orig(data);
       };
@@ -45909,8 +45887,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     css(count, { fontSize: "11px", color: TEXT_DIM, whiteSpace: "nowrap" });
     head.appendChild(count);
     panel.appendChild(head);
-    const toolbar = document.createElement("div");
-    css(toolbar, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
+    const toolbar2 = document.createElement("div");
+    css(toolbar2, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
     const selAbility = selectField([["", "All abilities"]]);
     css(selAbility, { minWidth: "170px" });
     const selSort = selectField([["desc", "Newest first"], ["asc", "Oldest first"]]);
@@ -45924,8 +45902,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     });
     btnClear.title = "Clear all recorded logs";
-    toolbar.append(selAbility, selSort, inputSearch, btnClear);
-    panel.appendChild(toolbar);
+    toolbar2.append(selAbility, selSort, inputSearch, btnClear);
+    panel.appendChild(toolbar2);
     const columns = document.createElement("div");
     css(columns, {
       display: "grid",
@@ -48717,13 +48695,13 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
       }
     });
-    const toolbar = document.createElement("div");
-    css(toolbar, { display: "flex", alignItems: "center", gap: "10px" });
+    const toolbar2 = document.createElement("div");
+    css(toolbar2, { display: "flex", alignItems: "center", gap: "10px" });
     const search2 = textField("Find a plant\u2026");
     css(search2, { flex: "1" });
     const summary = document.createElement("div");
     css(summary, { fontSize: "11px", color: TEXT_DIM, whiteSpace: "nowrap" });
-    toolbar.append(search2, summary);
+    toolbar2.append(search2, summary);
     const grid = document.createElement("div");
     css(grid, {
       display: "grid",
@@ -48741,7 +48719,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const hint = document.createElement("div");
     css(hint, { fontSize: "10.5px", color: TEXT_DIM, lineHeight: "1.45" });
     hint.textContent = "Every tile gets the same space here, so nothing hides behind a taller plant. Hover a tile for its name.";
-    modal.body.append(toolbar, grid, hint);
+    modal.body.append(toolbar2, grid, hint);
     const cells = /* @__PURE__ */ new Map();
     for (let row2 = 0; row2 < GARDEN_ROWS; row2++) {
       for (let col = 0; col < GARDEN_COLS; col++) {
@@ -52412,7 +52390,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_toast();
       init_fakeModal();
-      init_history();
+      init_historyWatcher();
       init_roomState();
       init_players();
       errorText = (error, fallback) => error?.message || fallback;
@@ -52753,9 +52731,9 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
       }
     }
-    debugState3.lastWalkNodes = visited;
-    debugState3.lastLabelCount = byLabel.size;
-    debugState3.lastRectCount = byRect.size;
+    debugState2.lastWalkNodes = visited;
+    debugState2.lastLabelCount = byLabel.size;
+    debugState2.lastRectCount = byRect.size;
     return { byLabel, byRect };
   }
   function lookupCachedTexture(frameKey) {
@@ -52885,7 +52863,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const viaRect = consider(rectMatch, true);
     const failures = [];
     const record = (retargeted, nodesPoked2) => {
-      debugState3.lastApply[frameKey] = { viaLabel, viaRect, retargeted, nodesPoked: nodesPoked2, failures };
+      debugState2.lastApply[frameKey] = { viaLabel, viaRect, retargeted, nodesPoked: nodesPoked2, failures };
     };
     if (!textures.length) {
       failures.push("no texture found");
@@ -52955,7 +52933,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function forgetAppliedState() {
     applied.clear();
   }
-  var MAX_WALK_NODES, applied, rectKey, debugState3, frameRectOf, sourceOf;
+  var MAX_WALK_NODES, applied, rectKey, debugState2, frameRectOf, sourceOf;
   var init_applier = __esm({
     "src/features/skins/applier.ts"() {
       "use strict";
@@ -52963,7 +52941,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       MAX_WALK_NODES = 4e4;
       applied = /* @__PURE__ */ new Map();
       rectKey = (x, y, w, h2) => `${x}|${y}|${w}|${h2}`;
-      debugState3 = {
+      debugState2 = {
         lastWalkNodes: 0,
         lastLabelCount: 0,
         lastRectCount: 0,
@@ -52971,7 +52949,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       };
       {
         const root = globalThis.unsafeWindow || globalThis;
-        root.__MG_SKINS_DEBUG__ = debugState3;
+        root.__MG_SKINS_DEBUG__ = debugState2;
       }
       frameRectOf = (texture) => texture?.frame ?? texture?._frame ?? null;
       sourceOf = (texture) => texture?.source ?? texture?._source ?? texture?.baseTexture ?? null;
@@ -59959,12 +59937,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     function toggled(list, value) {
       return list.includes(value) ? list.filter((entry) => entry !== value) : [...list, value];
     }
-    function chipRow(values, selected, labelFor, iconFor, onPick, named = false) {
+    function chipRow(values, selected, labelFor2, iconFor, onPick, named = false) {
       const row2 = tileRow();
       for (const value of values) {
         const shared = { icon: iconFor(value), selected: selected.includes(value), onClick: () => onPick(value) };
         row2.append(
-          named ? labelledTile({ ...shared, label: labelFor(value) }) : spriteTile({ ...shared, title: labelFor(value) })
+          named ? labelledTile({ ...shared, label: labelFor2(value) }) : spriteTile({ ...shared, title: labelFor2(value) })
         );
       }
       return row2;

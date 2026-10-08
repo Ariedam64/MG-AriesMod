@@ -3,7 +3,7 @@
 
 import { toastSimple } from "../../ui/toast";
 import { fakeActivityLog, fakeInventory, fakeJournal, fakeStats } from "../../game/fakeModal";
-import { skipNextActivityLogHistoryReopen } from "../activityLog/history";
+import { skipNextActivityLogHistoryReopen } from "../activityLog/historyWatcher";
 import { activityLogsOfSlot, hasJournalData, inventoryOfSlot, journalOfSlot, statsOfSlot } from "./roomState";
 import { playerSlot } from "./players";
 
