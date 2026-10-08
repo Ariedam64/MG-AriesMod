@@ -1,9 +1,12 @@
-// src/ui/menus/panel-layout.ts
-// Composite layout built from the panel-ui atoms: a labelled setting row and a
-// collapsible section card. Split out so panel-ui stays tokens + controls.
+// Layout pieces: the labelled setting row, the collapsible section card, and
+// the generic form and flex rows.
 
-import { BORDER, CARD_BG, ROW_ICON_PX, TEXT, TEXT_DIM, card, css, sectionLabel } from "./panel";
+import { plainCard, sectionLabel } from "./card";
+import { h } from "./dom";
 import { iconBox } from "./icons";
+
+/** Icon size at the start of a setting row, matching the Keybinds rows. */
+const ROW_ICON_PX = 26;
 
 export interface SettingRowOptions {
   /** Atlas frame key or image URL shown at the start of the row. */
@@ -12,54 +15,24 @@ export interface SettingRowOptions {
   iconTag?: string;
 }
 
-/** One labelled setting: title (+ optional hint) on the left, controls on the right. */
+/** One labelled setting: title (and an optional hint) on the left, controls on the right. */
 export function settingRow(
   title: string,
   hint: string | null,
   control: HTMLElement,
   opts: SettingRowOptions = {},
 ): { row: HTMLElement; controls: HTMLElement } {
-  const row = document.createElement('div');
-  css(row, {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    padding: '8px 10px',
-    borderRadius: '10px',
-    background: CARD_BG,
-    border: `1px solid ${BORDER}`,
-    flexShrink: '0',
-  });
+  const row = h("div", "qmm-setting-row");
+  if (opts.icon) row.appendChild(iconBox(opts.icon, ROW_ICON_PX, opts.iconTag ?? "panel"));
 
-  if (opts.icon) row.appendChild(iconBox(opts.icon, ROW_ICON_PX, opts.iconTag ?? 'panel'));
+  const text = h("div", "qmm-setting-row__text");
+  text.appendChild(h("div", "qmm-setting-row__title", title));
+  if (hint) text.appendChild(h("div", "qmm-setting-row__hint", hint));
 
-  const labelCol = document.createElement('div');
-  css(labelCol, { display: 'flex', flexDirection: 'column', gap: '2px', flex: '1 1 auto', minWidth: '0' });
-
-  const name = document.createElement('div');
-  css(name, { fontSize: '12px', color: TEXT });
-  name.textContent = title;
-  labelCol.appendChild(name);
-
-  if (hint) {
-    const desc = document.createElement('div');
-    css(desc, { fontSize: '10px', color: TEXT_DIM, lineHeight: '1.4' });
-    desc.textContent = hint;
-    labelCol.appendChild(desc);
-  }
-
-  const controls = document.createElement('div');
-  css(controls, {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: '8px',
-    flex: '0 0 auto',
-    flexWrap: 'wrap',
-  });
+  const controls = h("div", "qmm-setting-row__controls");
   controls.appendChild(control);
 
-  row.append(labelCol, controls);
+  row.append(text, controls);
   return { row, controls };
 }
 
@@ -67,7 +40,7 @@ export interface CollapsibleCardOptions {
   icon?: string;
   title?: string;
   description?: string;
-  /** Custom header content, used instead of the icon/title/description trio. */
+  /** Custom header content, used instead of the icon, title and description. */
   header?: HTMLElement;
   collapsed: boolean;
   onToggle: (collapsed: boolean) => void;
@@ -76,70 +49,35 @@ export interface CollapsibleCardOptions {
 /**
  * Section card whose header doubles as the collapse control.
  *
- * `flexShrink:0` / `minHeight:auto` opt out of the shared card()'s shrinking:
- * inside a scrolling list, shrinking makes every card collapse under its own
- * content and the rows overlap.
+ * It never shrinks below its content: inside a scrolling list, a shrinking
+ * card collapses under its own rows and they overlap.
  */
 export function collapsibleCard(opts: CollapsibleCardOptions): { root: HTMLElement; body: HTMLElement } {
-  const root = card();
-  css(root, { flexShrink: '0', minHeight: 'auto' });
+  const root = plainCard();
+  root.classList.add("qmm-collapse");
 
-  const head = document.createElement('button');
-  head.type = 'button';
-  head.className = 'qws-pnl-head';
-  css(head, {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '0',
-    border: 'none',
-    background: 'none',
-    cursor: 'pointer',
-    textAlign: 'left',
-    font: 'inherit',
-    color: 'inherit',
-  });
+  const head = h("button", "qmm-collapse__head");
+  head.type = "button";
 
-  const titles = document.createElement('div');
-  css(titles, { display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '0', flex: '1 1 auto' });
+  const titles = h("div", "qmm-collapse__titles");
   if (opts.header) {
     titles.appendChild(opts.header);
   } else {
-    const title = opts.title ?? '';
+    const title = opts.title ?? "";
     titles.appendChild(sectionLabel(opts.icon ? `${opts.icon} ${title}` : title));
-    if (opts.description) {
-      const desc = document.createElement('div');
-      css(desc, { fontSize: '11px', color: TEXT_DIM, lineHeight: '1.45' });
-      desc.textContent = opts.description;
-      titles.appendChild(desc);
-    }
+    if (opts.description) titles.appendChild(h("div", "qmm-collapse__desc", opts.description));
   }
+  head.append(titles, h("span", "qmm-collapse__chevron", "▶"));
 
-  const chevron = document.createElement('span');
-  chevron.className = 'qws-pnl-chevron';
-  css(chevron, {
-    color: TEXT_DIM,
-    fontSize: '10px',
-    transition: 'transform 140ms ease, color 120ms ease',
-    flex: '0 0 auto',
-    marginLeft: 'auto',
-  });
-  chevron.textContent = '▶';
-
-  head.append(titles, chevron);
-
-  const body = document.createElement('div');
-  css(body, { display: 'flex', flexDirection: 'column', gap: '8px' });
+  const body = h("div", "qmm-collapse__body");
 
   let collapsed = opts.collapsed;
   const apply = () => {
-    body.style.display = collapsed ? 'none' : 'flex';
-    chevron.style.transform = collapsed ? 'rotate(0deg)' : 'rotate(90deg)';
-    head.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    root.classList.toggle("is-collapsed", collapsed);
+    head.setAttribute("aria-expanded", collapsed ? "false" : "true");
   };
   apply();
-
-  head.addEventListener('click', () => {
+  head.addEventListener("click", () => {
     collapsed = !collapsed;
     apply();
     opts.onToggle(collapsed);
@@ -147,4 +85,47 @@ export function collapsibleCard(opts: CollapsibleCardOptions): { root: HTMLEleme
 
   root.append(head, body);
   return { root, body };
+}
+
+export type FormRowOptions = {
+  alignTop?: boolean;
+  labelWidth?: string;
+  gap?: number;
+};
+
+/** A label column and a control column. */
+export function formRow(
+  labelText: string,
+  control: HTMLElement,
+  opts: FormRowOptions = {},
+): { root: HTMLDivElement; label: HTMLLabelElement } {
+  const root = h("div", opts.alignTop ? "qmm-form-row is-top" : "qmm-form-row");
+  root.style.gridTemplateColumns = `${opts.labelWidth || "160px"} 1fr`;
+  root.style.columnGap = `${opts.gap ?? 10}px`;
+  const label = h("label", "qmm-label qmm-form-row__label", labelText);
+  root.append(label, control);
+  return { root, label };
+}
+
+export type FlexRowOptions = {
+  gap?: number;
+  justify?: "start" | "center" | "end" | "between" | "around";
+  align?: "start" | "center" | "end" | "stretch";
+  wrap?: boolean;
+  fullWidth?: boolean;
+  className?: string;
+};
+
+const JUSTIFY = { start: "flex-start", center: "center", end: "flex-end", between: "space-between", around: "space-around" };
+const ALIGN = { start: "flex-start", center: "center", end: "flex-end", stretch: "stretch" };
+
+/** A wrapping flex row; gap 8, centred by default. */
+export function flexRow(opts: FlexRowOptions = {}): HTMLDivElement {
+  const row = h("div", ["qmm-flex", opts.className].filter(Boolean).join(" "));
+  row.style.alignItems = ALIGN[opts.align ?? "center"];
+  row.style.justifyContent = JUSTIFY[opts.justify ?? "start"];
+  row.style.gap = `${opts.gap ?? 8}px`;
+  row.style.flexWrap = opts.wrap === false ? "nowrap" : "wrap";
+  if (opts.fullWidth) row.style.width = "100%";
+  return row;
 }

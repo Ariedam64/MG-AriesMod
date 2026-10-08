@@ -1,4 +1,3 @@
-// src/ui/toast.ts
 import { getAtomByLabel, jGet, jSet } from "../game/store/jotai";
 
 export type ToastVariant = "success" | "error" | "info" | "warn";
@@ -26,7 +25,7 @@ async function sendToast(toast: AnyToast): Promise<void> {
   if (sendAtom) { await jSet(sendAtom, toast); return; }
 
   const listAtom = getAtomByLabel("quinoaToastsAtom");
-  if (!listAtom) throw new Error("Aucun atom de toast trouvé");
+  if (!listAtom) throw new Error("No toast atom found");
 
   const prev = await jGet<any[]>(listAtom).catch(() => []) as any[];
   const isAnnouncement = "toastType" in toast && toast.toastType === "shopAnnouncement";
@@ -37,7 +36,7 @@ async function sendToast(toast: AnyToast): Promise<void> {
 
   // Every toast needs a distinct id: the game's toast list keys/removes
   // entries by id, so any two toasts sharing "quinoa-game-toast" become
-  // indistinguishable to it — closing one either closes both or fails to
+  // indistinguishable to it: closing one either closes both or fails to
   // remove either, which is exactly the "won't dismiss" symptom this fixes.
   t.id = t.id ?? `quinoa-game-toast-${Date.now()}-${Math.random()}`;
 
@@ -49,5 +48,3 @@ export async function toastSimple(
 ) {
   await sendToast({ title, description, variant, duration });
 }
-
-

@@ -3,7 +3,9 @@
 // The Menu instance stays: `hotkeyButton` owns the key-capture behaviour and
 // `ui.on('unmounted')` owns listener cleanup. Only the presentation is ours.
 
-import { Menu, hotkeyToString, type HotkeyButtonElement } from "../../ui/kit/menu";
+import { Menu } from "../../ui/kit/menu";
+import { hotkeyToString } from "../../lib/hotkey";
+import type { HotkeyButtonElement } from "../../ui/kit/hotkey";
 import { getAriesStorage, updateAriesStorage } from "../../platform/storage";
 
 const ICON_BOX_PX = 26;

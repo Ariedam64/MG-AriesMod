@@ -1,84 +1,51 @@
-// src/ui/menus/companion/modal.ts
-// Coquille commune des popups du companion.
+// The shared popup shell, and the clickable entry popups list.
 //
-// Les fenêtres du HUD remontent leur z-index au focus, et une popup vit hors de
-// la fenêtre qui l'ouvre : les deux détails ci-dessous sont la raison d'être de
-// ce fichier, et les dupliquer dans chaque popup revenait à les oublier une
-// fois sur deux.
+// HUD windows raise their z-index on focus, and a popup lives outside the
+// window that opens it. Getting both of those right is why this file exists:
+// copied into each popup, they were forgotten every other time.
 
-import { BORDER, CARD_BG, TEAL, TEXT, TEXT_DIM, css } from "./panel";
+import { h } from "./dom";
+import { layer } from "./theme";
 
 export type MenuCardOptions = {
   name: string;
-  /** Une ligne : ce que l'entrée fait, ou pourquoi elle ne peut rien faire. */
+  /** One line: what the entry does, or why it cannot do anything. */
   detail: string;
-  /** Rendue grisée, et le détail passe en teal pour se lire comme une raison. */
+  /** Rendered greyed out, with the detail in the accent so it reads as a reason. */
   disabled?: boolean;
   onClick(): void;
 };
 
 /**
- * Entrée cliquable d'une liste : un nom, une ligne d'explication.
+ * A clickable list entry: a name and a line of explanation.
  *
- * Une entrée indisponible reste visible mais grisée : la faire disparaître
- * laisserait croire qu'elle n'existe pas.
+ * An unavailable entry stays visible but greyed out: hiding it would suggest
+ * it does not exist.
  */
 export function menuCard(options: MenuCardOptions): HTMLButtonElement {
-  const disabled = options.disabled === true;
-
-  const card = document.createElement("button");
+  const card = h("button", "qmm-menu-card");
   card.type = "button";
-  card.disabled = disabled;
-  css(card, {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: "3px",
-    padding: "11px 12px",
-    borderRadius: "12px",
-    border: `1px solid ${BORDER}`,
-    background: CARD_BG,
-    cursor: disabled ? "default" : "pointer",
-    textAlign: "left",
-    font: "inherit",
-    opacity: disabled ? "0.55" : "1",
-    transition: "background 120ms ease, border-color 120ms ease",
-  });
-
-  const name = document.createElement("div");
-  css(name, { fontSize: "13px", fontWeight: "600", color: disabled ? TEXT_DIM : TEXT });
-  name.textContent = options.name;
-
-  const detail = document.createElement("div");
-  css(detail, { fontSize: "11.5px", lineHeight: "1.45", color: disabled ? TEAL : TEXT_DIM });
-  detail.textContent = options.detail;
-
-  card.append(name, detail);
-
-  if (!disabled) {
-    card.addEventListener("mouseenter", () => css(card, { background: "rgba(255,255,255,0.06)" }));
-    card.addEventListener("mouseleave", () => css(card, { background: CARD_BG }));
-    card.addEventListener("click", options.onClick);
-  }
-
+  card.disabled = options.disabled === true;
+  card.append(h("div", "qmm-menu-card__name", options.name), h("div", "qmm-menu-card__detail", options.detail));
+  if (!card.disabled) card.addEventListener("click", options.onClick);
   return card;
 }
 
 export type ModalOptions = {
-  /** Fenêtre du HUD d'où vient l'appel : sert au placement et à la fermeture. */
+  /** The HUD window that opened the popup: used for stacking and closing. */
   host: HTMLElement;
   title: string;
-  /** Largeur maximale du panneau. */
+  /** Maximum panel width. */
   widthPx?: number;
-  /** Hauteur maximale du panneau, bornée de toute façon à 88vh. */
+  /** Maximum panel height, capped at 88vh in any case. */
   maxHeightPx?: number;
   onClose?: () => void;
 };
 
 export type Modal = {
-  /** Corps défilant : c'est là que le contenu va. */
+  /** The scrolling body: content goes here. */
   body: HTMLElement;
-  /** Barre du bas, vide tant qu'on n'y met rien. */
+  /** The bottom bar, hidden while it is empty. */
   footer: HTMLElement;
   close(): void;
   isOpen(): boolean;
@@ -87,98 +54,27 @@ export type Modal = {
 export function openModal(options: ModalOptions): Modal {
   let closed = false;
 
-  const scrim = document.createElement("div");
-  // Le z-index se déduit de la fenêtre appelante : les fenêtres du HUD montent
-  // d'un cran à chaque focus, une constante finirait par passer dessous.
+  const scrim = h("div", "qmm-modal-scrim");
+  // Stack just above the calling window: HUD windows climb one step on every
+  // focus, so a fixed value would end up underneath.
   const hostZ = Number.parseInt(getComputedStyle(options.host).zIndex, 10);
-  css(scrim, {
-    position: "fixed",
-    inset: "0",
-    zIndex: String((Number.isFinite(hostZ) ? hostZ : 2_000_001) + 1),
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "16px",
-    background: "rgba(0,0,0,0.55)",
-    backdropFilter: "blur(4px)",
-  });
+  scrim.style.zIndex = String((Number.isFinite(hostZ) ? hostZ : layer.window) + 1);
 
-  const panel = document.createElement("div");
-  css(panel, {
-    display: "flex",
-    flexDirection: "column",
-    width: `min(${options.widthPx ?? 420}px, 100%)`,
-    maxHeight: `min(${options.maxHeightPx ?? 520}px, 88vh)`,
-    borderRadius: "16px",
-    border: `1px solid ${BORDER}`,
-    background: "#101620",
-    boxShadow: "0 24px 64px rgba(0,0,0,0.55)",
-    overflow: "hidden",
-  });
-  // Un clic dans la popup ne doit pas la refermer.
+  const panel = h("div", "qmm-modal");
+  panel.style.width = `min(${options.widthPx ?? 420}px, 100%)`;
+  panel.style.maxHeight = `min(${options.maxHeightPx ?? 520}px, 88vh)`;
+  // A click inside the popup must not close it.
   panel.addEventListener("click", (event) => event.stopPropagation());
 
-  const header = document.createElement("div");
-  css(header, {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    padding: "12px 14px",
-    borderBottom: `1px solid ${BORDER}`,
-    flex: "0 0 auto",
-  });
-
-  const title = document.createElement("div");
-  css(title, { fontSize: "14px", fontWeight: "600", color: TEXT, flex: "1", minWidth: "0" });
-  title.textContent = options.title;
-
-  const closeButton = document.createElement("button");
+  const closeButton = h("button", "qmm-modal__close", "✕");
   closeButton.type = "button";
-  closeButton.textContent = "✕";
   closeButton.title = "Close";
-  css(closeButton, {
-    width: "28px",
-    height: "28px",
-    flex: "0 0 auto",
-    borderRadius: "8px",
-    border: `1px solid ${BORDER}`,
-    background: "rgba(255,255,255,0.03)",
-    color: TEXT_DIM,
-    cursor: "pointer",
-    fontSize: "12px",
-    lineHeight: "1",
-  });
   closeButton.addEventListener("click", () => close());
-  header.append(title, closeButton);
 
-  const body = document.createElement("div");
-  body.className = "qws-pnl-scroll";
-  css(body, {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-    padding: "12px 14px",
-    overflowY: "auto",
-    // Sans cette paire, un enfant de colonne flex refuse de descendre sous sa
-    // hauteur de contenu : le corps déborderait au lieu de défiler.
-    flex: "1 1 auto",
-    minHeight: "0",
-  });
-
-  const footer = document.createElement("div");
-  css(footer, {
-    display: "none",
-    alignItems: "center",
-    gap: "10px",
-    padding: "12px 14px",
-    borderTop: `1px solid ${BORDER}`,
-    flex: "0 0 auto",
-  });
-  // La barre n'existe que si on lui donne quelque chose à porter.
-  const showFooterWhenFilled = new MutationObserver(() => {
-    footer.style.display = footer.childElementCount > 0 ? "flex" : "none";
-  });
-  showFooterWhenFilled.observe(footer, { childList: true });
+  const header = h("div", "qmm-modal__head");
+  header.append(h("div", "qmm-modal__title", options.title), closeButton);
+  const body = h("div", "qmm-modal__body qmm-scroll");
+  const footer = h("div", "qmm-modal__foot");
 
   panel.append(header, body, footer);
   scrim.append(panel);
@@ -194,14 +90,13 @@ export function openModal(options: ModalOptions): Modal {
     if (closed) return;
     closed = true;
     clearInterval(hostWatch);
-    showFooterWhenFilled.disconnect();
     document.removeEventListener("keydown", onKeyDown, true);
     scrim.remove();
     options.onClose?.();
   }
 
-  // La popup survit à la fermeture de sa fenêtre : sans cette veille, elle
-  // resterait seule à l'écran, sans rien pour la faire disparaître.
+  // The popup outlives its window otherwise, left alone on screen with nothing
+  // to dismiss it.
   const hostWatch = window.setInterval(() => {
     if (!options.host.isConnected) close();
   }, 1000);
@@ -210,10 +105,5 @@ export function openModal(options: ModalOptions): Modal {
   document.addEventListener("keydown", onKeyDown, true);
   (document.documentElement || document.body).appendChild(scrim);
 
-  return {
-    body,
-    footer,
-    close,
-    isOpen: () => !closed,
-  };
+  return { body, footer, close, isOpen: () => !closed };
 }
