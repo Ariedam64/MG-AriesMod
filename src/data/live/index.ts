@@ -1,47 +1,20 @@
-// src/data/dynamic/index.ts
-// MGData - Game data module (fetched from mg-api.ariedam.fr)
+import { startColorPolling } from "./abilityColors";
+import { fetchAllData } from "./capture";
+import { captureState } from "./state";
+import type { DataBag, DataKey } from "./types";
 
-import { startColorPolling, stopColorPolling } from "./abilityColors";
-import { getData, getAllData, hasData, waitForData, waitForAnyData } from "./accessors";
-import { isAllDataCaptured, fetchAllData } from "./capture";
-
-;
-;
-;
 export { formatAbilityLog, isPetAbilityAction } from "./abilityFormatter";
 
+/** Live game data from the public Magic Garden API, shared on the page as `window.MGData`. */
 export const MGData = {
-  /** Initialize module: fetch all data from API, start ability color polling */
+  /** Starts the API fetch and the ability colour enrichment. */
   init(): void {
-    fetchAllData();
+    void fetchAllData();
     startColorPolling();
   },
 
-  /** Check if all data has been loaded */
-  isReady: isAllDataCaptured,
-
-  /** Get data for a specific key */
-  get: getData,
-
-  /** Get all data */
-  getAll: getAllData,
-
-  /** Check if data exists for a specific key */
-  has: hasData,
-
-  /** Wait for specific data to be available */
-  waitFor: waitForData,
-
-  /** Wait for any data to be available */
-  waitForAny: waitForAnyData,
-
-  /** No-op (sprites now come from the API with URLs included) */
-  resolveSprites(): void {
-    /* no-op — API data already includes sprite URLs */
-  },
-
-  /** Cleanup */
-  cleanup(): void {
-    stopColorPolling();
+  /** Live data for a key, or null until the API has answered. */
+  get<K extends DataKey>(key: K): DataBag[K] {
+    return captureState.data[key];
   },
 };

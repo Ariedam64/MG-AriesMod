@@ -1,71 +1,35 @@
-// src/utils/catalogIndex.ts
-import { plantCatalog, eggCatalog, toolCatalog, decorCatalog } from "./";
+import { spaceWords } from "../lib/format";
+import { decorCatalog, eggCatalog, mutationCatalog, plantCatalog, toolCatalog } from "./index";
 
+const entryOf = (catalog: unknown, id: string): any => (catalog as Record<string, any>)?.[id];
 
-// Normalisation (clé/label)
-
-// tileRef (objet/chaîne/nombre) → dernier segment normalisé
-
-// DataURI
-
-
-/* ========================= Index plantes (singleton) ======================== */
-
-
-
-/* ============================== Helpers exports ============================= */
-
-
-
-
-
-
-
-// --- add near the other helper exports ---
-
-export function seedNameFromSpecies(
-  species: string,
-  cat: any = plantCatalog as any
-): string | undefined {
-  const e = cat?.[species];
-  return e?.seed?.name ?? e?.plant?.name ?? e?.crop?.name ?? undefined;
+function text(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
-export function eggNameFromId(
-  eggId: string,
-  cat: any = eggCatalog as any
-): string | undefined {
-  return cat?.[eggId]?.name ?? undefined;
+// The catalog's own names, undefined when the catalog does not know the id.
+
+export function seedCatalogName(species: string): string | undefined {
+  const entry = entryOf(plantCatalog, species);
+  return text(entry?.seed?.name) ?? text(entry?.plant?.name) ?? text(entry?.crop?.name);
 }
 
-export function toolNameFromId(
-  toolId: string,
-  cat: any = toolCatalog as any
-): string | undefined {
-  return cat?.[toolId]?.name ?? undefined;
+export const eggCatalogName = (eggId: string) => text(entryOf(eggCatalog, eggId)?.name);
+export const toolCatalogName = (toolId: string) => text(entryOf(toolCatalog, toolId)?.name);
+export const decorCatalogName = (decorId: string) => text(entryOf(decorCatalog, decorId)?.name);
+
+// Display names, each with the fallback its lists have always shown.
+
+export function cropName(species: string): string {
+  const entry = entryOf(plantCatalog, species);
+  return text(entry?.crop?.name) ?? text(entry?.name) ?? spaceWords(species);
 }
 
-export function decorNameFromId(
-  decorId: string,
-  cat: any = decorCatalog as any
-): string | undefined {
-  return cat?.[decorId]?.name ?? undefined;
-}
+export const eggName = (eggId: string): string => eggCatalogName(eggId) ?? spaceWords(eggId);
 
+export const mutationName = (mutation: string): string =>
+  text(entryOf(mutationCatalog, mutation)?.name) ?? spaceWords(mutation);
 
+export const seedLabel = (species: string): string => seedCatalogName(species) ?? `${species} Seed`;
 
-
-
-
-// Caches
-
-
-
-
-
-/* ---------------------------------- TOOLS --------------------------------- */
-
-
-
-/* --------------------------------- DECOR ---------------------------------- */
-
+export const decorLabel = (decorId: string): string => decorCatalogName(decorId) ?? (decorId || "Decor");

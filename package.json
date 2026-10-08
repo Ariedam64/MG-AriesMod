@@ -37,7 +37,9 @@
     "serve": "npx http-server dist -p 5174 --cors",
     "check:lib": "esbuild scripts/checkLib.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkLib.cjs --log-level=error && node node_modules/.cache/checkLib.cjs",
     "check:environment": "esbuild scripts/checkEnvironment.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkEnvironment.cjs --log-level=error && node node_modules/.cache/checkEnvironment.cjs",
-    "check:storagesections": "esbuild scripts/checkStorageSections.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkStorageSections.cjs --log-level=error && node node_modules/.cache/checkStorageSections.cjs"
+    "check:storagesections": "esbuild scripts/checkStorageSections.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkStorageSections.cjs --log-level=error && node node_modules/.cache/checkStorageSections.cjs",
+    "check:cataloglive": "esbuild scripts/checkCatalogLive.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkCatalogLive.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkCatalogLive.cjs",
+    "check:abilitycolors": "esbuild scripts/checkAbilityChipColors.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkAbilityChipColors.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkAbilityChipColors.cjs"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",

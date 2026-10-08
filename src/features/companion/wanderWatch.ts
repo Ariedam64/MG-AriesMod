@@ -13,7 +13,8 @@
 // Aucun effet à l'import : rien ne tourne tant que `startWanderWatch()` n'est
 // pas appelé.
 
-import { eggCatalog, mutationCatalog, plantCatalog } from "../../data";
+import { mutationCatalog } from "../../data";
+import { cropName, eggName, mutationName } from "../../data/names";
 import { Atoms } from "../../game/store/atoms";
 import { CompanionService } from ".";
 import { readMySlotIdx } from "./anchors";
@@ -61,33 +62,6 @@ function rareMutations(): Set<string> {
     }
   } catch {}
   return out;
-}
-
-const spaced = (id: string) => id.replace(/([a-z])([A-Z])/g, "$1 $2");
-
-function cropName(species: string): string {
-  try {
-    const entry = (plantCatalog as Record<string, any>)?.[species];
-    const name = entry?.crop?.name ?? entry?.name;
-    if (typeof name === "string" && name.trim()) return name.trim();
-  } catch {}
-  return spaced(species);
-}
-
-function mutationName(mutation: string): string {
-  try {
-    const name = (mutationCatalog as Record<string, any>)?.[mutation]?.name;
-    if (typeof name === "string" && name.trim()) return name.trim();
-  } catch {}
-  return spaced(mutation);
-}
-
-function eggName(eggId: string): string {
-  try {
-    const name = (eggCatalog as Record<string, any>)?.[eggId]?.name;
-    if (typeof name === "string" && name.trim()) return name.trim();
-  } catch {}
-  return spaced(eggId);
 }
 
 /* ------------------------------ crochets ------------------------------ */

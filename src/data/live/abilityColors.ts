@@ -1,13 +1,15 @@
-// src/data/dynamic/logic/abilityColors.ts
-
 import { captureState } from "./state";
-import { ABILITY_COLOR_ANCHOR, MAX_COLOR_POLL_ATTEMPTS, COLOR_POLL_INTERVAL_MS } from "./constants";
 import {
   fetchMainBundle,
   fetchQuinoaViewBundle,
   findAllIndices,
   extractBalancedBlock,
 } from "./bundleParser";
+
+const MAX_COLOR_POLL_ATTEMPTS = 10;
+const COLOR_POLL_INTERVAL_MS = 1000;
+/** An ability every colour switch in the game bundle has handled so far. */
+const ABILITY_COLOR_ANCHOR = "ProduceScaleBoost";
 
 interface AbilityColor {
   bg: string;
@@ -19,13 +21,10 @@ const DEFAULT_COLOR: AbilityColor = {
   hover: "rgba(150, 150, 150, 1)",
 };
 
-// Fallback color per ability id, sourced from https://mg-api.ariedam.fr/data/abilities
-// (fetched 2026-07-31). Used when the bundle's own color switch doesn't cover
-// an ability (e.g. rarer celestial abilities like DawnCapture aren't in
-// whatever switch findAbilityColorSwitchBlock locates) — without this, those
-// abilities fell straight to flat gray instead of their real color. Most
-// values are hex; GoldGranter/RainbowGranter are linear-gradient strings and
-// are used as-is (see resolveStaticColor below).
+// Fallback colour per ability id, taken from https://mg-api.ariedam.fr/data/abilities
+// on 2026-07-31, for an ability that comes without a colour and that the
+// game bundle's colour switch does not cover either. Most values are hex;
+// GoldGranter and RainbowGranter are linear-gradient strings, used as they are.
 const STATIC_ABILITY_COLORS: Record<string, string> = {
   CoinFinderI: "#B49600", CoinFinderII: "#B49600", CoinFinderIII: "#B49600",
   SnowyCoinFinder: "#B49600", DawnCoinFinder: "#B49600", ThunderCoinFinder: "#B49600",
@@ -220,54 +219,46 @@ async function loadAbilityColorsFromBundle(): Promise<Record<string, AbilityColo
   return null;
 }
 
+/** True once the colours are `{ bg, hover }` pairs, the shape the chips read. */
 function isAlreadyEnriched(abilities: Record<string, unknown>): boolean {
-  const sample = abilities[ABILITY_COLOR_ANCHOR];
-  return sample != null && typeof sample === "object" && "color" in sample;
+  const color = (abilities[ABILITY_COLOR_ANCHOR] as { color?: { bg?: unknown } } | undefined)?.color;
+  return typeof color?.bg === "string";
 }
 
-// Hex → {bg, hover}; non-hex values (e.g. GoldGranter/RainbowGranter's
-// linear-gradient strings) are already valid CSS and are used as-is.
+// Hex to {bg, hover}; non-hex values (GoldGranter and RainbowGranter's
+// linear-gradient strings) are already valid CSS and are used as they are.
 function toAbilityColor(raw: string): AbilityColor {
   if (!raw.startsWith("#")) return { bg: raw, hover: raw };
   const bg = hexToRgba(raw, 0.9) ?? raw;
   return { bg, hover: hexToRgba(raw, 1) ?? bg };
 }
 
-// Abilities the bundle's color switch doesn't cover (e.g. rarer celestial
-// abilities like DawnCapture live in a different code path than whatever
-// switch findAbilityColorSwitchBlock locates) used to fall straight to flat
-// gray DEFAULT_COLOR. Try the ability's own raw `color` field already
-// sitting in the captured data first, then STATIC_ABILITY_COLORS (sourced
-// from the API), before giving up and guessing gray.
-function resolveFallbackColor(abilityId: string, abilityData: unknown): AbilityColor | null {
-  const raw = (abilityData as { color?: unknown } | null)?.color;
-  if (typeof raw === "string") return toAbilityColor(raw);
+const colorOf = (abilityData: unknown): unknown => (abilityData as { color?: unknown } | null)?.color;
 
-  const staticColor = STATIC_ABILITY_COLORS[abilityId];
-  if (staticColor) return toAbilityColor(staticColor);
-
-  return null;
-}
-
+/**
+ * Turns every ability's colour into the `{ bg, hover }` pair the chips read.
+ * The live API gives each ability its colour as a hex string. The game
+ * bundle's colour switch is only read for abilities that come without one,
+ * then STATIC_ABILITY_COLORS, then grey.
+ */
 async function enrichAbilitiesWithColors(): Promise<boolean> {
-  if (!captureState.data.abilities) return false;
-
-  const abilities = captureState.data.abilities as Record<string, unknown>;
+  const abilities = captureState.data.abilities as Record<string, unknown> | null;
+  if (!abilities) return false;
   if (isAlreadyEnriched(abilities)) return true;
 
-  const map = await loadAbilityColorsFromBundle();
-  if (!map) return false;
+  const needsBundle = Object.values(abilities).some((data) => typeof colorOf(data) !== "string");
+  const bundleColors = needsBundle ? await loadAbilityColorsFromBundle() : {};
+  if (!bundleColors) return false;
 
   const enriched: Record<string, unknown> = {};
   for (const [abilityId, abilityData] of Object.entries(abilities)) {
-    const colors = map[abilityId] || resolveFallbackColor(abilityId, abilityData) || DEFAULT_COLOR;
-    enriched[abilityId] = {
-      ...(abilityData as object),
-      color: {
-        bg: colors.bg,
-        hover: colors.hover,
-      },
-    };
+    const raw = colorOf(abilityData);
+    const staticColor = STATIC_ABILITY_COLORS[abilityId];
+    const color =
+      (typeof raw === "string" ? toAbilityColor(raw) : null) ??
+      bundleColors[abilityId] ??
+      (staticColor ? toAbilityColor(staticColor) : DEFAULT_COLOR);
+    enriched[abilityId] = { ...(abilityData as object), color: { bg: color.bg, hover: color.hover } };
   }
 
   captureState.data.abilities = enriched;
@@ -287,11 +278,4 @@ export function startColorPolling(): void {
   }, COLOR_POLL_INTERVAL_MS);
 
   captureState.colorPollingTimer = timer;
-}
-
-export function stopColorPolling(): void {
-  if (captureState.colorPollingTimer) {
-    clearInterval(captureState.colorPollingTimer);
-    captureState.colorPollingTimer = null;
-  }
 }

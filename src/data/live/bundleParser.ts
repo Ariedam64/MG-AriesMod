@@ -1,14 +1,16 @@
-// src/data/dynamic/logic/bundleParser.ts
-
+import { sleep } from "../../lib/async";
 import { pageWindow } from "../../platform/pageContext";
-import { MAIN_BUNDLE_PATTERN, QUINOA_VIEW_PATTERN } from "./constants";
 
-const pageContext = pageWindow as Window & typeof globalThis;
+// Reads the game's own JavaScript, for the ability colour switch when the live
+// API leaves a colour out.
+
+const MAIN_BUNDLE_PATTERN = /main-[^/]+\.js(\?|$)/;
+const QUINOA_VIEW_PATTERN = /QuinoaView-[^/]+\.js(\?|$)/;
 
 function findBundleUrl(pattern: RegExp): string | null {
   // Try multiple document references (sandbox vs page context)
   const docs = [
-    pageContext.document,
+    pageWindow.document,
     typeof document !== "undefined" ? document : null,
   ].filter(Boolean) as Document[];
 
@@ -34,7 +36,7 @@ function findBundleUrl(pattern: RegExp): string | null {
 
   // 3) Performance entries (works cross-context; catches dynamically imported chunks too)
   const perfs = [
-    pageContext.performance,
+    pageWindow.performance,
     typeof performance !== "undefined" ? performance : null,
   ].filter(Boolean) as Performance[];
 
@@ -100,7 +102,6 @@ export function extractBalancedBlock(text: string, openBraceIndex: number): stri
   return null;
 }
 
-
 async function fetchBundleByFinder(
   findUrl: () => string | null,
   cache: { value: string | null; inFlight: Promise<string | null> | null },
@@ -118,7 +119,7 @@ async function fetchBundleByFinder(
     for (let i = 0; i < MAX_RETRIES; i++) {
       url = findUrl();
       if (url) break;
-      await new Promise((r) => setTimeout(r, RETRY_INTERVAL));
+      await sleep(RETRY_INTERVAL);
     }
 
     if (!url) {
@@ -150,9 +151,9 @@ export function fetchMainBundle(): Promise<string | null> {
 }
 
 /**
- * Fetch QuinoaView chunk text (cached).
- * This chunk is lazily loaded by the game — it appears in performance resource
- * entries once the game view has rendered. Retries for up to 15 s.
+ * The QuinoaView chunk's text, cached. The game loads this chunk lazily, so it
+ * only appears in the performance entries once the game view has rendered.
+ * Retries for up to 15 s.
  */
 export function fetchQuinoaViewBundle(): Promise<string | null> {
   return fetchBundleByFinder(findQuinoaViewUrl, quinoaViewCache, "QuinoaView bundle");

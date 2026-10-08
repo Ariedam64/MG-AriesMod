@@ -6,7 +6,7 @@ import {
   type CropItem,
   type CropInventoryState,
 } from "../../game/player";
-import { petCatalog, petAbilities, formatAbilityLog, isPetAbilityAction } from "../../data";
+import { petCatalog, petAbilities, formatAbilityLog, isPetAbilityAction, memoOnCatalogs } from "../../data";
 import { fakeInventoryShow, fakeInventoryDisable, closeInventoryPanel, isInventoryOpen } from "../../game/fakeModal";
 import { Atoms, myPetHutchPetItems, myNumPetHutchItems, myPetHutchCapacitySlots, isMyInventoryAtMaxLength, stateUserSlots, playerId, player as playerAtom, myActivityLog } from "../../game/store/atoms";
 import { readAccountId, findSlotIndex } from "../../game/playerIdentity";
@@ -428,14 +428,14 @@ const _n    = (v: unknown) => (Number.isFinite(v as number) ? (v as number) : 0)
 const _sArr = (v: unknown) => (Array.isArray(v) ? v.filter((x) => typeof x === "string") : []);
 
 // Normalise une espèce pour matcher les clés du catalog (case-insensitive, support CamelCase)
-const _petCatalogKeyByLc = new Map<string, string>(
+const _petCatalogKeyByLc = memoOnCatalogs(() => new Map<string, string>(
   Object.keys(petCatalog as any).map(k => [k.toLowerCase(), k])
-);
+));
 function _canonicalSpecies(s: string): string {
   if (!s) return s;
   if ((petCatalog as any)[s]) return s;
   const lc = s.toLowerCase();
-  const found = _petCatalogKeyByLc.get(lc);
+  const found = _petCatalogKeyByLc().get(lc);
   if (found) return found;
   const t = s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
   return (petCatalog as any)[t] ? t : s;

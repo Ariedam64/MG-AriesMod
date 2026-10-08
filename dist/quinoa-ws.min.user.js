@@ -1395,8 +1395,8 @@
       setCategory(cat) {
         state6.cat = cat || "__all__";
       },
-      setFilterText(text) {
-        state6.q = String(text || "").trim();
+      setFilterText(text2) {
+        state6.q = String(text2 || "").trim();
       },
       setSpriteFilter(name) {
         state6.f = name;
@@ -1507,40 +1507,25 @@
         enums: null
       },
       fetchStarted: false,
-      fetchComplete: false,
       colorPollingTimer: null,
       colorPollAttempts: 0
     };
   }
-  var STATE_GLOBAL_KEY, globals, captureState;
+  var STATE_GLOBAL_KEY, captureState;
   var init_state2 = __esm({
     "src/data/live/state.ts"() {
       "use strict";
       init_pageContext();
       STATE_GLOBAL_KEY = "__MG_DATA_STATE__";
-      globals = pageWindow;
-      captureState = globals[STATE_GLOBAL_KEY] ?? createInitialState2();
-      globals[STATE_GLOBAL_KEY] = captureState;
-    }
-  });
-
-  // src/data/live/constants.ts
-  var MAIN_BUNDLE_PATTERN, QUINOA_VIEW_PATTERN, MAX_COLOR_POLL_ATTEMPTS, COLOR_POLL_INTERVAL_MS, ABILITY_COLOR_ANCHOR;
-  var init_constants = __esm({
-    "src/data/live/constants.ts"() {
-      "use strict";
-      MAIN_BUNDLE_PATTERN = /main-[^/]+\.js(\?|$)/;
-      QUINOA_VIEW_PATTERN = /QuinoaView-[^/]+\.js(\?|$)/;
-      MAX_COLOR_POLL_ATTEMPTS = 10;
-      COLOR_POLL_INTERVAL_MS = 1e3;
-      ABILITY_COLOR_ANCHOR = "ProduceScaleBoost";
+      captureState = pageWindow[STATE_GLOBAL_KEY] ?? createInitialState2();
+      pageWindow[STATE_GLOBAL_KEY] = captureState;
     }
   });
 
   // src/data/live/bundleParser.ts
   function findBundleUrl(pattern) {
     const docs = [
-      pageContext.document,
+      pageWindow.document,
       typeof document !== "undefined" ? document : null
     ].filter(Boolean);
     for (const doc of docs) {
@@ -1562,7 +1547,7 @@
       }
     }
     const perfs = [
-      pageContext.performance,
+      pageWindow.performance,
       typeof performance !== "undefined" ? performance : null
     ].filter(Boolean);
     for (const perf of perfs) {
@@ -1591,12 +1576,12 @@
     }
     return out;
   }
-  function extractBalancedBlock(text, openBraceIndex) {
+  function extractBalancedBlock(text2, openBraceIndex) {
     let depth = 0;
     let quote = "";
     let escaped = false;
-    for (let i = openBraceIndex; i < text.length; i++) {
-      const ch = text[i];
+    for (let i = openBraceIndex; i < text2.length; i++) {
+      const ch = text2[i];
       if (quote) {
         if (escaped) {
           escaped = false;
@@ -1614,7 +1599,7 @@
         continue;
       }
       if (ch === "{") depth++;
-      else if (ch === "}" && --depth === 0) return text.slice(openBraceIndex, i + 1);
+      else if (ch === "}" && --depth === 0) return text2.slice(openBraceIndex, i + 1);
     }
     return null;
   }
@@ -1628,7 +1613,7 @@
       for (let i = 0; i < MAX_RETRIES; i++) {
         url = findUrl();
         if (url) break;
-        await new Promise((r) => setTimeout(r, RETRY_INTERVAL));
+        await sleep2(RETRY_INTERVAL);
       }
       if (!url) {
         console.warn(`[MGData] Could not find ${label2} URL after retries`);
@@ -1637,9 +1622,9 @@
       try {
         const res = await fetch(url, { credentials: "include" });
         if (!res.ok) return null;
-        const text = await res.text();
-        cache2.value = text;
-        return text;
+        const text2 = await res.text();
+        cache2.value = text2;
+        return text2;
       } catch {
         return null;
       } finally {
@@ -1654,13 +1639,14 @@
   function fetchQuinoaViewBundle() {
     return fetchBundleByFinder(findQuinoaViewUrl, quinoaViewCache, "QuinoaView bundle");
   }
-  var pageContext, mainBundleCache, quinoaViewCache;
+  var MAIN_BUNDLE_PATTERN, QUINOA_VIEW_PATTERN, mainBundleCache, quinoaViewCache;
   var init_bundleParser = __esm({
     "src/data/live/bundleParser.ts"() {
       "use strict";
+      init_async2();
       init_pageContext();
-      init_constants();
-      pageContext = pageWindow;
+      MAIN_BUNDLE_PATTERN = /main-[^/]+\.js(\?|$)/;
+      QUINOA_VIEW_PATTERN = /QuinoaView-[^/]+\.js(\?|$)/;
       mainBundleCache = { value: null, inFlight: null };
       quinoaViewCache = { value: null, inFlight: null };
     }
@@ -1783,37 +1769,27 @@
     return null;
   }
   function isAlreadyEnriched(abilities) {
-    const sample = abilities[ABILITY_COLOR_ANCHOR];
-    return sample != null && typeof sample === "object" && "color" in sample;
+    const color = abilities[ABILITY_COLOR_ANCHOR]?.color;
+    return typeof color?.bg === "string";
   }
   function toAbilityColor(raw) {
     if (!raw.startsWith("#")) return { bg: raw, hover: raw };
     const bg = hexToRgba(raw, 0.9) ?? raw;
     return { bg, hover: hexToRgba(raw, 1) ?? bg };
   }
-  function resolveFallbackColor(abilityId, abilityData) {
-    const raw = abilityData?.color;
-    if (typeof raw === "string") return toAbilityColor(raw);
-    const staticColor = STATIC_ABILITY_COLORS[abilityId];
-    if (staticColor) return toAbilityColor(staticColor);
-    return null;
-  }
   async function enrichAbilitiesWithColors() {
-    if (!captureState.data.abilities) return false;
     const abilities = captureState.data.abilities;
+    if (!abilities) return false;
     if (isAlreadyEnriched(abilities)) return true;
-    const map2 = await loadAbilityColorsFromBundle();
-    if (!map2) return false;
+    const needsBundle = Object.values(abilities).some((data) => typeof colorOf(data) !== "string");
+    const bundleColors = needsBundle ? await loadAbilityColorsFromBundle() : {};
+    if (!bundleColors) return false;
     const enriched = {};
     for (const [abilityId, abilityData] of Object.entries(abilities)) {
-      const colors = map2[abilityId] || resolveFallbackColor(abilityId, abilityData) || DEFAULT_COLOR;
-      enriched[abilityId] = {
-        ...abilityData,
-        color: {
-          bg: colors.bg,
-          hover: colors.hover
-        }
-      };
+      const raw = colorOf(abilityData);
+      const staticColor = STATIC_ABILITY_COLORS[abilityId];
+      const color = (typeof raw === "string" ? toAbilityColor(raw) : null) ?? bundleColors[abilityId] ?? (staticColor ? toAbilityColor(staticColor) : DEFAULT_COLOR);
+      enriched[abilityId] = { ...abilityData, color: { bg: color.bg, hover: color.hover } };
     }
     captureState.data.abilities = enriched;
     return true;
@@ -1830,19 +1806,15 @@
     }, COLOR_POLL_INTERVAL_MS);
     captureState.colorPollingTimer = timer2;
   }
-  function stopColorPolling() {
-    if (captureState.colorPollingTimer) {
-      clearInterval(captureState.colorPollingTimer);
-      captureState.colorPollingTimer = null;
-    }
-  }
-  var DEFAULT_COLOR, STATIC_ABILITY_COLORS;
+  var MAX_COLOR_POLL_ATTEMPTS, COLOR_POLL_INTERVAL_MS, ABILITY_COLOR_ANCHOR, DEFAULT_COLOR, STATIC_ABILITY_COLORS, colorOf;
   var init_abilityColors = __esm({
     "src/data/live/abilityColors.ts"() {
       "use strict";
       init_state2();
-      init_constants();
       init_bundleParser();
+      MAX_COLOR_POLL_ATTEMPTS = 10;
+      COLOR_POLL_INTERVAL_MS = 1e3;
+      ABILITY_COLOR_ANCHOR = "ProduceScaleBoost";
       DEFAULT_COLOR = {
         bg: "rgba(100, 100, 100, 0.9)",
         hover: "rgba(150, 150, 150, 1)"
@@ -1930,48 +1902,7 @@
         DawnKisser: "#A25CF2",
         Thunderbloom: "#70F6CB"
       };
-    }
-  });
-
-  // src/data/live/accessors.ts
-  function sleep3(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-  function getData(key2) {
-    return captureState.data[key2];
-  }
-  function getAllData() {
-    return { ...captureState.data };
-  }
-  function hasData(key2) {
-    return captureState.data[key2] != null;
-  }
-  async function waitForData(key2, timeoutMs = DEFAULT_WAIT_TIMEOUT_MS, intervalMs = WAIT_POLL_INTERVAL_MS) {
-    const start2 = Date.now();
-    while (Date.now() - start2 < timeoutMs) {
-      const value = captureState.data[key2];
-      if (value != null) return value;
-      await sleep3(intervalMs);
-    }
-    throw new Error(`MGData.waitFor: timeout waiting for "${key2}"`);
-  }
-  async function waitForAnyData(timeoutMs = DEFAULT_WAIT_TIMEOUT_MS, intervalMs = WAIT_POLL_INTERVAL_MS) {
-    const start2 = Date.now();
-    while (Date.now() - start2 < timeoutMs) {
-      if (Object.values(captureState.data).some((v) => v != null)) {
-        return { ...captureState.data };
-      }
-      await sleep3(intervalMs);
-    }
-    throw new Error("MGData.waitForAnyData: timeout");
-  }
-  var DEFAULT_WAIT_TIMEOUT_MS, WAIT_POLL_INTERVAL_MS;
-  var init_accessors = __esm({
-    "src/data/live/accessors.ts"() {
-      "use strict";
-      init_state2();
-      DEFAULT_WAIT_TIMEOUT_MS = 5e3;
-      WAIT_POLL_INTERVAL_MS = 50;
+      colorOf = (abilityData) => abilityData?.color;
     }
   });
 
@@ -2017,9 +1948,6 @@
     } catch {
     }
   }
-  function isAllDataCaptured() {
-    return Object.values(captureState.data).every((v) => v != null);
-  }
   async function fetchAllData() {
     if (captureState.fetchStarted) return;
     captureState.fetchStarted = true;
@@ -2034,7 +1962,6 @@
       if (data.abilities) setCapturedData("abilities", data.abilities);
       if (data.weathers) setCapturedData("weather", data.weathers);
       if (data.enums) setCapturedData("enums", data.enums);
-      captureState.fetchComplete = true;
       console.log("[MGData] all data loaded from API", {
         plants: Object.keys(data.plants || {}).length,
         pets: Object.keys(data.pets || {}).length,
@@ -2281,33 +2208,18 @@
     "src/data/live/index.ts"() {
       "use strict";
       init_abilityColors();
-      init_accessors();
       init_capture();
+      init_state2();
       init_abilityFormatter();
       MGData = {
-        /** Initialize module: fetch all data from API, start ability color polling */
+        /** Starts the API fetch and the ability colour enrichment. */
         init() {
-          fetchAllData();
+          void fetchAllData();
           startColorPolling();
         },
-        /** Check if all data has been loaded */
-        isReady: isAllDataCaptured,
-        /** Get data for a specific key */
-        get: getData,
-        /** Get all data */
-        getAll: getAllData,
-        /** Check if data exists for a specific key */
-        has: hasData,
-        /** Wait for specific data to be available */
-        waitFor: waitForData,
-        /** Wait for any data to be available */
-        waitForAny: waitForAnyData,
-        /** No-op (sprites now come from the API with URLs included) */
-        resolveSprites() {
-        },
-        /** Cleanup */
-        cleanup() {
-          stopColorPolling();
+        /** Live data for a key, or null until the API has answered. */
+        get(key2) {
+          return captureState.data[key2];
         }
       };
     }
@@ -4871,7 +4783,7 @@
         Watermelon: "sprite/seed/Watermelon"
       };
       tileRefsItems = {
-        // UI / système (pas dans V.Item)
+        // UI / system (not in V.Item)
         Coin: 1,
         InventoryBag: 7,
         MoneyBag: 11,
@@ -4931,7 +4843,7 @@
         WhiteCaribou: "sprite/pet/WhiteCaribou",
         WinterEgg: "sprite/pet/WinterEgg",
         Worm: "sprite/pet/Worm",
-        // Pas dans V.Pet (garder pour compatibilité)
+        // Not in V.Pet (kept for compatibility)
         DivineEgg: 16,
         CelestialEgg: 17
       };
@@ -7023,7 +6935,7 @@
           baseProbability: 21,
           baseParameters: { eggGrowthTimeReductionMinutes: 7 }
         },
-        // utilisé par la dinde: EggGrowthBoostII_NEW
+        // used by the Turkey: EggGrowthBoostII_NEW
         EggGrowthBoostII_NEW: {
           name: "Egg Growth Boost II",
           description: "Reduces the time for eggs to hatch",
@@ -7031,7 +6943,7 @@
           baseProbability: 24,
           baseParameters: { eggGrowthTimeReductionMinutes: 9 }
         },
-        // ancien EggGrowthBoostIII remplacé par ce bloc
+        // the old EggGrowthBoostIII, replaced by this block
         EggGrowthBoostII: {
           name: "Egg Growth Boost III",
           description: "Reduces the time for eggs to hatch",
@@ -7655,7 +7567,7 @@
           isOneTimePurchase: false,
           nudgeY: -0.3
         },
-        // Spéciaux
+        // Specials
         MiniFairyCottage: {
           tileRef: tileRefsDecor.MiniFairyCottage,
           name: "Mini Fairy Cottage",
@@ -7919,9 +7831,9 @@
           type: "weather",
           cycle: { kind: "weather", startWindowMin: 20, startWindowMax: 35, durationMinutes: 5 },
           weightInCycle: 0.75,
-          // 75% des events météo
+          // 75% of weather events
           appliesRandomCropPercent: 30,
-          // ~30% des cultures applicables
+          // ~30% of eligible crops
           conditions: { requiresMature: true, requiresNoExistingModifier: true },
           mutations: [
             { name: "Wet", multiplier: 2 },
@@ -7941,7 +7853,7 @@
           displayName: "Snow",
           cycle: { kind: "weather", startWindowMin: 20, startWindowMax: 35, durationMinutes: 5 },
           weightInCycle: 0.25,
-          // 25% des events météo
+          // 25% of weather events
           appliesRandomCropPercent: 30,
           conditions: { requiresMature: true, requiresNoExistingModifier: true },
           mutations: [
@@ -7977,7 +7889,7 @@
           displayName: "Harvest Moon",
           cycle: { kind: "lunar", periodMinutes: 240, durationMinutes: 10 },
           weightInCycle: 0.33,
-          // 33% des events lunaires
+          // 33% of lunar events
           appliesRandomCropPercent: 30,
           conditions: { requiresMature: true, requiresNoExistingModifier: true },
           mutations: [
@@ -7994,7 +7906,7 @@
           type: "lunar",
           cycle: { kind: "lunar", periodMinutes: 240, durationMinutes: 10 },
           weightInCycle: 0.67,
-          // 67% des events lunaires
+          // 67% of lunar events
           appliesRandomCropPercent: 30,
           conditions: { requiresMature: true, requiresNoExistingModifier: true },
           mutations: [
@@ -8047,40 +7959,48 @@
   });
 
   // src/data/index.ts
-  function makeCatalogProxy(dynamicKey, staticObj) {
+  function makeCatalogProxy(liveKey, fallback) {
+    const live = () => MGData.get(liveKey);
     return new Proxy(/* @__PURE__ */ Object.create(null), {
-      get(_target, prop, receiver) {
+      get(_target, prop) {
         if (typeof prop === "symbol") return void 0;
-        const dynamic = MGData.get(dynamicKey);
-        if (dynamic && prop in dynamic) return dynamic[prop];
-        if (prop in staticObj) return staticObj[prop];
-        return void 0;
+        const data = live();
+        if (data && prop in data) return data[prop];
+        return prop in fallback ? fallback[prop] : void 0;
       },
       has(_target, prop) {
         if (typeof prop === "symbol") return false;
-        const dynamic = MGData.get(dynamicKey);
-        if (dynamic && prop in dynamic) return true;
-        return prop in staticObj;
+        const data = live();
+        return !!data && prop in data || prop in fallback;
       },
       ownKeys() {
-        const dynamic = MGData.get(dynamicKey);
-        const staticKeys = Object.keys(staticObj);
-        if (!dynamic) return staticKeys;
-        const merged = /* @__PURE__ */ new Set([...Object.keys(dynamic), ...staticKeys]);
-        return Array.from(merged);
+        const data = live();
+        const fallbackKeys = Object.keys(fallback);
+        return data ? Array.from(/* @__PURE__ */ new Set([...Object.keys(data), ...fallbackKeys])) : fallbackKeys;
       },
       getOwnPropertyDescriptor(_target, prop) {
         if (typeof prop === "symbol") return void 0;
-        const dynamic = MGData.get(dynamicKey);
-        if (dynamic && prop in dynamic) {
-          return { configurable: true, enumerable: true, value: dynamic[prop] };
-        }
-        if (prop in staticObj) {
-          return { configurable: true, enumerable: true, value: staticObj[prop] };
-        }
+        const data = live();
+        if (data && prop in data) return { configurable: true, enumerable: true, value: data[prop] };
+        if (prop in fallback) return { configurable: true, enumerable: true, value: fallback[prop] };
         return void 0;
       }
     });
+  }
+  function memoOnCatalogs(derive) {
+    let seen = null;
+    let value;
+    return () => {
+      let stale = seen === null;
+      for (let i = 0; !stale && i < LIVE_KEYS.length; i++) {
+        stale = MGData.get(LIVE_KEYS[i]) !== seen[i];
+      }
+      if (stale) {
+        seen = LIVE_KEYS.map((key2) => MGData.get(key2));
+        value = derive();
+      }
+      return value;
+    };
   }
   function rarityOrder() {
     const list = MGData.get("enums")?.rarity;
@@ -8092,17 +8012,16 @@
   }
   function raritySprite(value) {
     if (typeof value !== "string" || !value) return null;
-    const normalized = value === "Mythic" ? rarity.Mythic : value;
+    const normalized = normalizeRarity(value);
     if (!rarityOrder().includes(normalized)) return null;
     return `sprite/ui/Rarity${RARITY_SPRITE_NAMES[normalized] ?? normalized}`;
   }
   function rarityRank(value) {
     if (typeof value !== "string") return Number.MAX_SAFE_INTEGER;
-    const normalized = value === "Mythic" ? rarity.Mythic : value;
-    const index = rarityOrder().indexOf(normalized);
+    const index = rarityOrder().indexOf(normalizeRarity(value));
     return index < 0 ? Number.MAX_SAFE_INTEGER : index;
   }
-  var plantCatalog2, petCatalog2, petAbilities2, mutationCatalog2, eggCatalog2, toolCatalog2, decorCatalog2, weatherCatalog2, rarity2, coin2, RARITY_SPRITE_NAMES, petHungerDepletionMinutes2, tileRefsMutations2, tileRefsMutationLabels2;
+  var plantCatalog2, petCatalog2, petAbilities2, mutationCatalog2, eggCatalog2, toolCatalog2, decorCatalog2, weatherCatalog2, LIVE_KEYS, rarity2, coin2, petHungerDepletionMinutes2, tileRefsMutations2, tileRefsMutationLabels2, normalizeRarity, RARITY_SPRITE_NAMES;
   var init_data = __esm({
     "src/data/index.ts"() {
       "use strict";
@@ -8117,12 +8036,14 @@
       toolCatalog2 = makeCatalogProxy("items", toolCatalog);
       decorCatalog2 = makeCatalogProxy("decor", decorCatalog);
       weatherCatalog2 = makeCatalogProxy("weather", weatherCatalog);
+      LIVE_KEYS = ["plants", "pets", "abilities", "mutations", "eggs", "items", "decor", "weather", "enums"];
       rarity2 = rarity;
       coin2 = coin;
-      RARITY_SPRITE_NAMES = { Mythical: "Mythic" };
       petHungerDepletionMinutes2 = petHungerDepletionMinutes;
       tileRefsMutations2 = tileRefsMutations;
       tileRefsMutationLabels2 = tileRefsMutationLabels;
+      normalizeRarity = (value) => value === "Mythic" ? rarity.Mythic : value;
+      RARITY_SPRITE_NAMES = { Mythical: "Mythic" };
     }
   });
 
@@ -11206,7 +11127,7 @@
           }
         }
         /** Ajoute/retire un badge à droite du titre (ex: “3”, “NEW”, “!”) */
-        setTabBadge(id, text) {
+        setTabBadge(id, text2) {
           const def = this.tabs.get(id);
           if (!def || !def.btn) return;
           if (!def.badge) {
@@ -11214,10 +11135,10 @@
             def.badge.className = "badge";
             def.btn.appendChild(def.badge);
           }
-          if (text == null || text === "") {
+          if (text2 == null || text2 === "") {
             def.badge.style.display = "none";
           } else {
-            def.badge.textContent = text;
+            def.badge.textContent = text2;
             def.badge.style.display = "";
           }
         }
@@ -11544,9 +11465,9 @@
           if (j === "around") return "space-around";
           return "flex-start";
         }
-        label(text) {
+        label(text2) {
           const l = el("label", "qmm-label");
-          l.textContent = text;
+          l.textContent = text2;
           return l;
         }
         row(...children) {
@@ -12977,18 +12898,18 @@
         onSelect(cb) {
           this.onSelectCb = cb;
         }
-        setBadge(id, text) {
+        setBadge(id, text2) {
           const btn = this.list.querySelector(`button[data-id="${cssq(id)}"]`);
           if (!btn) return;
           let tag = btn.querySelector(".qmm-tag");
-          if (!tag && text != null) {
+          if (!tag && text2 != null) {
             tag = el("span", "qmm-tag");
             btn.appendChild(tag);
           }
           if (!tag) return;
-          if (text == null || text === "") tag.style.display = "none";
+          if (text2 == null || text2 === "") tag.style.display = "none";
           else {
-            tag.textContent = text;
+            tag.textContent = text2;
             tag.style.display = "";
           }
         }
@@ -14737,6 +14658,56 @@
     }
   });
 
+  // src/lib/format.ts
+  function formatPrice(val) {
+    const n = typeof val === "number" ? val : Number(val);
+    if (!Number.isFinite(n)) return n === Infinity ? "\u221E" : null;
+    const abs = Math.abs(n);
+    const fmt2 = (x) => Number.isInteger(x) ? String(x) : x.toFixed(2);
+    if (abs >= 1e12) return `${fmt2(n / 1e12)}T`;
+    if (abs >= 1e9) return `${fmt2(n / 1e9)}B`;
+    if (abs >= 1e6) return `${fmt2(n / 1e6)}M`;
+    if (abs >= 1e3) return `${fmt2(n / 1e3)}k`;
+    return String(n);
+  }
+  var INTEGER_FORMAT, spaceWords;
+  var init_format = __esm({
+    "src/lib/format.ts"() {
+      "use strict";
+      INTEGER_FORMAT = new Intl.NumberFormat("en-US");
+      spaceWords = (id) => id.replace(/([a-z])([A-Z])/g, "$1 $2");
+    }
+  });
+
+  // src/data/names.ts
+  function text(value) {
+    return typeof value === "string" && value.trim() ? value.trim() : void 0;
+  }
+  function seedCatalogName(species) {
+    const entry = entryOf(plantCatalog2, species);
+    return text(entry?.seed?.name) ?? text(entry?.plant?.name) ?? text(entry?.crop?.name);
+  }
+  function cropName(species) {
+    const entry = entryOf(plantCatalog2, species);
+    return text(entry?.crop?.name) ?? text(entry?.name) ?? spaceWords(species);
+  }
+  var entryOf, eggCatalogName, toolCatalogName, decorCatalogName, eggName, mutationName, seedLabel, decorLabel;
+  var init_names = __esm({
+    "src/data/names.ts"() {
+      "use strict";
+      init_format();
+      init_data();
+      entryOf = (catalog, id) => catalog?.[id];
+      eggCatalogName = (eggId) => text(entryOf(eggCatalog2, eggId)?.name);
+      toolCatalogName = (toolId) => text(entryOf(toolCatalog2, toolId)?.name);
+      decorCatalogName = (decorId) => text(entryOf(decorCatalog2, decorId)?.name);
+      eggName = (eggId) => eggCatalogName(eggId) ?? spaceWords(eggId);
+      mutationName = (mutation) => text(entryOf(mutationCatalog2, mutation)?.name) ?? spaceWords(mutation);
+      seedLabel = (species) => seedCatalogName(species) ?? `${species} Seed`;
+      decorLabel = (decorId) => decorCatalogName(decorId) ?? (decorId || "Decor");
+    }
+  });
+
   // src/features/autoStore/autoStore.ts
   async function waitForAtoms(storage, inventory, keepGoing) {
     const startedAt = Date.now();
@@ -15152,7 +15123,7 @@
     } catch {
     }
   }
-  function sleep4(ms) {
+  function sleep3(ms) {
     return new Promise((r) => setTimeout(r, ms));
   }
   function buildDisplayNameToSpeciesFromCatalog() {
@@ -15276,7 +15247,7 @@
             }));
           } catch {
           }
-          if (delayMs > 0 && remaining > 0) await sleep4(delayMs);
+          if (delayMs > 0 && remaining > 0) await sleep3(delayMs);
         }
       }
       if (!opts.keepSelection) selectedMap.clear();
@@ -15337,15 +15308,6 @@
   function isSeedDeletionPaused() {
     return _seedDeletePaused;
   }
-  function seedDisplayNameFromSpecies(species) {
-    try {
-      const node = plantCatalog2?.[species];
-      const n = node?.seed?.name;
-      if (typeof n === "string" && n) return n;
-    } catch {
-    }
-    return `${species} Seed`;
-  }
   function normalizeSeedItem(x, _idx) {
     if (!x || typeof x !== "object") return null;
     const species = typeof x.species === "string" ? x.species.trim() : "";
@@ -15370,15 +15332,6 @@
   }
   function buildInventoryShapeFrom(items) {
     return { items, favoritedItemIds: [] };
-  }
-  function decorDisplayNameFromId(decorId) {
-    try {
-      const node = decorCatalog2?.[decorId];
-      const n = node?.name;
-      if (typeof n === "string" && n) return n;
-    } catch {
-    }
-    return decorId || "Decor";
   }
   function normalizeDecorItem(x) {
     if (!x || typeof x !== "object") return null;
@@ -15681,7 +15634,7 @@
     const src = Array.isArray(seedSourceCache) ? seedSourceCache : [];
     const remainingByName = /* @__PURE__ */ new Map();
     for (const s of src) {
-      const disp = seedDisplayNameFromSpecies(s.species);
+      const disp = seedLabel(s.species);
       const qty = Math.max(0, Math.floor(s.quantity || 0));
       remainingByName.set(disp, (remainingByName.get(disp) ?? 0) + qty);
     }
@@ -15692,7 +15645,7 @@
     }
     const patched = [];
     for (const s of src) {
-      const disp = seedDisplayNameFromSpecies(s.species);
+      const disp = seedLabel(s.species);
       const remaining = remainingByName.get(disp) ?? 0;
       if (remaining <= 0) continue;
       const take = Math.min(remaining, Math.max(0, Math.floor(s.quantity || 0)));
@@ -15752,7 +15705,7 @@
       seedSourceCache = await getMySeedInventory();
       seedStockByName = /* @__PURE__ */ new Map();
       for (const s of seedSourceCache) {
-        const display = seedDisplayNameFromSpecies(s.species);
+        const display = seedLabel(s.species);
         seedStockByName.set(display, Math.max(1, Math.floor(s.quantity || 0)));
       }
       selectedMap.clear();
@@ -15948,7 +15901,7 @@
     const src = Array.isArray(decorSourceCache) ? decorSourceCache : [];
     const remainingByName = /* @__PURE__ */ new Map();
     for (const s of src) {
-      const disp = decorDisplayNameFromId(s.decorId);
+      const disp = decorLabel(s.decorId);
       const qty = Math.max(0, Math.floor(s.quantity || 0));
       remainingByName.set(disp, (remainingByName.get(disp) ?? 0) + qty);
     }
@@ -15959,7 +15912,7 @@
     }
     const patched = [];
     for (const s of src) {
-      const disp = decorDisplayNameFromId(s.decorId);
+      const disp = decorLabel(s.decorId);
       const remaining = remainingByName.get(disp) ?? 0;
       if (remaining <= 0) continue;
       const take = Math.min(remaining, Math.max(0, Math.floor(s.quantity || 0)));
@@ -15978,7 +15931,7 @@
       const n = (name || "").trim();
       if (!n) return;
       const max = Math.max(1, decorStockByName.get(n) ?? 1);
-      const decorId = Array.from(decorSourceCache || []).find((d) => decorDisplayNameFromId(d.decorId) === n)?.decorId || n;
+      const decorId = Array.from(decorSourceCache || []).find((d) => decorLabel(d.decorId) === n)?.decorId || n;
       const existing = selectedDecorMap.get(n);
       if (existing) {
         existing.qty = max;
@@ -16070,12 +16023,12 @@
             await PlayerService.placeDecor(emptySlot.tileType, emptySlot.index, t.decorId, 0);
           } catch {
           }
-          if (delayMs > 0) await sleep4(delayMs);
+          if (delayMs > 0) await sleep3(delayMs);
           try {
             await PlayerService.removeGardenObject(emptySlot.index, emptySlot.tileType);
           } catch {
           }
-          if (delayMs > 0) await sleep4(delayMs);
+          if (delayMs > 0) await sleep3(delayMs);
           done += 1;
           remaining -= 1;
           try {
@@ -16147,7 +16100,7 @@
       decorSourceCache = await getMyDecorInventory();
       decorStockByName = /* @__PURE__ */ new Map();
       for (const d of decorSourceCache) {
-        const display = decorDisplayNameFromId(d.decorId);
+        const display = decorLabel(d.decorId);
         decorStockByName.set(display, Math.max(1, Math.floor(d.quantity || 0)));
       }
       selectedDecorMap.clear();
@@ -16173,6 +16126,7 @@
       "use strict";
       init_player();
       init_data();
+      init_names();
       init_atoms();
       init_autoStore();
       init_fakeModal();
@@ -16502,9 +16456,9 @@
     const angle = Math.abs(value) % FULL_TURN_DEGREES;
     return value < 0 ? `${angle}\xB0 mirrored` : `${angle}\xB0`;
   }
-  function createLabel(text) {
+  function createLabel(text2) {
     const label2 = document.createElement("div");
-    label2.textContent = text;
+    label2.textContent = text2;
     label2.style.fontSize = "12px";
     label2.style.opacity = "0.8";
     label2.style.textAlign = "center";
@@ -16553,7 +16507,7 @@
     root.style.width = "100%";
     root.style.height = "20px";
     const lastIndex = Math.max(1, labels.length - 1);
-    const cells = labels.map((text, index) => {
+    const cells = labels.map((text2, index) => {
       const fraction = index / lastIndex;
       const cell = document.createElement("div");
       cell.style.position = "absolute";
@@ -16568,7 +16522,7 @@
       mark.style.height = "5px";
       mark.style.background = "#2b3441";
       const caption = document.createElement("div");
-      caption.textContent = text;
+      caption.textContent = text2;
       caption.style.fontSize = "10px";
       caption.style.whiteSpace = "nowrap";
       caption.style.color = "#8b97a8";
@@ -16805,12 +16759,12 @@
             return "";
           }
         }
-        extractMp3s(text) {
-          if (!text) return [];
+        extractMp3s(text2) {
+          if (!text2) return [];
           const re = /["'`](\/?[^"'`)\s]+?\.mp3(?:\?[^"'`\s]*)?)["'`]/ig;
           const out = [];
           let m;
-          while (m = re.exec(text)) out.push(m[1]);
+          while (m = re.exec(text2)) out.push(m[1]);
           return out;
         }
         async scanResourcesForRefs() {
@@ -19037,10 +18991,10 @@
       slotBtnWrap.style.display = "flex";
       slotBtnWrap.style.gap = "6px";
       slotBtnWrap.style.alignItems = "center";
-      const makeCircleBtn = (text) => {
+      const makeCircleBtn = (text2) => {
         const b = document.createElement("button");
         b.type = "button";
-        b.textContent = text;
+        b.textContent = text2;
         Object.assign(b.style, {
           width: "28px",
           height: "28px",
@@ -22299,8 +22253,8 @@
     }
     if (isPetAbilityAction(abilityId)) {
       try {
-        const text = formatAbilityLog({ action: abilityId, timestamp: 0, parameters: params });
-        if (text) return text;
+        const text2 = formatAbilityLog({ action: abilityId, timestamp: 0, parameters: params });
+        if (text2) return text2;
       } catch {
       }
     }
@@ -22334,7 +22288,7 @@
     if (!s) return s;
     if (petCatalog2[s]) return s;
     const lc = s.toLowerCase();
-    const found = _petCatalogKeyByLc.get(lc);
+    const found = _petCatalogKeyByLc().get(lc);
     if (found) return found;
     const t = s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
     return petCatalog2[t] ? t : s;
@@ -23345,9 +23299,9 @@
       _sOpt = (v) => typeof v === "string" ? v : null;
       _n = (v) => Number.isFinite(v) ? v : 0;
       _sArr = (v) => Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
-      _petCatalogKeyByLc = new Map(
+      _petCatalogKeyByLc = memoOnCatalogs(() => new Map(
         Object.keys(petCatalog2).map((k) => [k.toLowerCase(), k])
-      );
+      ));
       _teamSearch = _loadTeamSearchMap();
       _teamSyncEnabled = readAriesPath(PATH_PETS_TEAM_SYNC, true) !== false;
       _localTeamIdByServerId = /* @__PURE__ */ new Map();
@@ -24326,7 +24280,7 @@
   function mutationMultiplier(name) {
     const k = lowerKey(name);
     if (!k) return null;
-    const mult = MUTATION_MULTIPLIER_BY_KEY[k];
+    const mult = mutationMultipliers()[k];
     return Number.isFinite(mult) ? mult : null;
   }
   function isColor(m) {
@@ -24512,7 +24466,7 @@
     }
     return sum;
   }
-  var key, lowerKey, MUTATION_MULTIPLIER_BY_KEY, DefaultPricing;
+  var key, lowerKey, mutationMultipliers, DefaultPricing;
   var init_cropValue = __esm({
     "src/data/rules/cropValue.ts"() {
       "use strict";
@@ -24520,7 +24474,7 @@
       init_cropSize();
       key = (s) => String(s ?? "").trim();
       lowerKey = (s) => key(s).toLowerCase();
-      MUTATION_MULTIPLIER_BY_KEY = (() => {
+      mutationMultipliers = memoOnCatalogs(() => {
         const map2 = {};
         if (!mutationCatalog2 || typeof mutationCatalog2 !== "object") return map2;
         for (const [rawKey, rawValue] of Object.entries(mutationCatalog2)) {
@@ -24533,7 +24487,7 @@
           if (lowerRawKey) map2[lowerRawKey] = mult;
         }
         return map2;
-      })();
+      });
       DefaultPricing = Object.freeze({
         getBasePrice: defaultGetBasePrice,
         rounding: "round"
@@ -27220,7 +27174,7 @@
   }
   function _recomputeWeatherState() {
     _ensureWeatherPrefsLoaded();
-    const rows = WEATHER_DEFS.map((def) => {
+    const rows = weatherIndex().defs.map((def) => {
       const pref = _getWeatherPref(def.id);
       const notify3 = !!pref.notify;
       const lastSeen = typeof pref.lastSeen === "number" && Number.isFinite(pref.lastSeen) ? pref.lastSeen : null;
@@ -27257,7 +27211,7 @@
     return overrides;
   }
   function _triggerWeatherNotification(id) {
-    const def = WEATHER_BY_ID.get(id);
+    const def = weatherIndex().byId.get(id);
     if (!def) return;
     const overrides = _buildWeatherOverrides(id);
     audio.trigger(id, overrides, "weather").catch(() => {
@@ -27272,10 +27226,11 @@
     const nextValue = normalize2(raw);
     if (!opts.force && _currentWeatherValue === nextValue) return;
     const lookupKey = nextValue.toLowerCase();
-    let def = WEATHER_BY_ATOM.get(lookupKey) || WEATHER_BY_NAME.get(lookupKey);
+    const { byAtom, byName } = weatherIndex();
+    let def = byAtom.get(lookupKey) || byName.get(lookupKey);
     if (!def && lookupKey) {
       const noSpace = lookupKey.replace(/\s+/g, "");
-      def = WEATHER_BY_NAME.get(noSpace);
+      def = byName.get(noSpace);
     }
     const prevId = _currentWeatherId;
     const now2 = Date.now();
@@ -27802,13 +27757,14 @@
     _currentWeatherValue = null;
     _started = false;
   }
-  var PATH_NOTIFIER_PREFS, PATH_NOTIFIER_RULES, PATH_NOTIFIER_WEATHER, PATH_NOTIFIER_DEFAULTS, DISPLAY_RARITY, norm2, formatRuleSummary, formatLastSeen, weatherStateSignature, formatWeatherMutation, normalizeNumber, normalizeCycle, normalizeMutations2, WEATHER_DEFS, WEATHER_BY_ID, WEATHER_BY_ATOM, WEATHER_BY_NAME, _prefs, _weatherPrefs, _weatherPrefsLoaded, _contextDefaults, _contextDefaultsLoaded, _rules, _rulesLoaded, _rulesSubs, _hasOwn, _weatherState, _weatherSig, _weatherSubs, _currentWeatherId, _currentWeatherValue, _unsubWeather, _getPrefBits, _setPrefBits, _rowsById, _lastSig, _state, _unsubShops, _unsubPurchases, _watchGeneration, _subs, _toolInv, _decorInv, _unsubToolInv, _unsubDecorInv, _purchasesSubs, _itemKind, _rawShops, _rawSlot, _viewOf, _sameShopParts, _shopsSubs, BASE_SHOPS_SET, _onDataUpdated, ATOM_WAIT_POLL_MS, ATOM_WAIT_TIMEOUT_MS2, STATE_ATOM_LABEL, MY_USER_SLOT_ATOM_LABEL, _started, NotifierService;
+  var PATH_NOTIFIER_PREFS, PATH_NOTIFIER_RULES, PATH_NOTIFIER_WEATHER, PATH_NOTIFIER_DEFAULTS, DISPLAY_RARITY, norm2, formatRuleSummary, formatLastSeen, weatherStateSignature, formatWeatherMutation, normalizeNumber, normalizeCycle, normalizeMutations2, mutatorMutations, trimmedString, weatherIndex, _prefs, _weatherPrefs, _weatherPrefsLoaded, _contextDefaults, _contextDefaultsLoaded, _rules, _rulesLoaded, _rulesSubs, _hasOwn, _weatherState, _weatherSig, _weatherSubs, _currentWeatherId, _currentWeatherValue, _unsubWeather, _getPrefBits, _setPrefBits, _rowsById, _lastSig, _state, _unsubShops, _unsubPurchases, _watchGeneration, _subs, _toolInv, _decorInv, _unsubToolInv, _unsubDecorInv, _purchasesSubs, _itemKind, _rawShops, _rawSlot, _viewOf, _sameShopParts, _shopsSubs, BASE_SHOPS_SET, _onDataUpdated, ATOM_WAIT_POLL_MS, ATOM_WAIT_TIMEOUT_MS2, STATE_ATOM_LABEL, MY_USER_SLOT_ATOM_LABEL, _started, NotifierService;
   var init_notifier = __esm({
     "src/features/notifier/notifier.ts"() {
       "use strict";
       init_atoms();
       init_api();
       init_data();
+      init_format();
       init_audio();
       init_stats();
       init_storage();
@@ -27930,20 +27886,31 @@
         }
         return items;
       };
-      WEATHER_DEFS = (() => {
-        const entries2 = [];
+      mutatorMutations = (mutator) => {
+        const id = typeof mutator?.mutation === "string" ? mutator.mutation : "";
+        if (!id) return [];
+        const entry = mutationCatalog2[id];
+        const mutation = { name: typeof entry?.name === "string" && entry.name ? entry.name : id };
+        const multiplier = normalizeNumber(entry?.coinMultiplier);
+        if (multiplier !== void 0) mutation.multiplier = multiplier;
+        return [mutation];
+      };
+      trimmedString = (value) => typeof value === "string" ? value.trim() : "";
+      weatherIndex = memoOnCatalogs(() => {
+        const defs = [];
         for (const [rawName, rawValue] of Object.entries(weatherCatalog2 ?? {})) {
+          const entry = rawValue ?? {};
           const safeName = String(rawName || "").trim();
           if (!safeName) continue;
-          const rawDisplayName = typeof rawValue?.displayName === "string" ? String(rawValue.displayName).trim() : "";
-          const displayName = (rawDisplayName || safeName).replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/\s+/g, " ").trim();
-          const atomValue = typeof rawValue?.atomValue === "string" ? String(rawValue.atomValue).trim() : "";
+          const rawDisplayName = trimmedString(entry.displayName) || trimmedString(entry.name);
+          const displayName = spaceWords(rawDisplayName || safeName).replace(/_/g, " ").replace(/\s+/g, " ").trim();
+          const atomValue = "atomValue" in entry ? trimmedString(entry.atomValue) : entry.mutator ? safeName : "";
           const type = atomValue || displayName;
-          const description = typeof rawValue?.description === "string" ? String(rawValue.description).trim() : null;
-          const weightInCycle = normalizeNumber(rawValue?.weightInCycle);
-          const cycle = normalizeCycle(rawValue?.cycle);
-          const mutations = normalizeMutations2(rawValue?.mutations);
-          entries2.push({
+          const description = trimmedString(entry.description) || null;
+          const weightInCycle = normalizeNumber(entry.weightInCycle);
+          const cycle = normalizeCycle(entry.cycle);
+          const mutations = Array.isArray(entry.mutations) ? normalizeMutations2(entry.mutations) : mutatorMutations(entry.mutator);
+          defs.push({
             id: `Weather:${safeName}`,
             name: displayName || safeName,
             atomValue,
@@ -27954,17 +27921,17 @@
             mutations
           });
         }
-        return entries2;
-      })();
-      WEATHER_BY_ID = /* @__PURE__ */ new Map();
-      WEATHER_BY_ATOM = /* @__PURE__ */ new Map();
-      WEATHER_BY_NAME = /* @__PURE__ */ new Map();
-      for (const def of WEATHER_DEFS) {
-        WEATHER_BY_ID.set(def.id, def);
-        WEATHER_BY_NAME.set(def.name.toLowerCase(), def);
-        WEATHER_BY_ATOM.set(def.atomValue.toLowerCase(), def);
-        WEATHER_BY_NAME.set(def.id.slice("Weather:".length).toLowerCase(), def);
-      }
+        const byId = /* @__PURE__ */ new Map();
+        const byAtom = /* @__PURE__ */ new Map();
+        const byName = /* @__PURE__ */ new Map();
+        for (const def of defs) {
+          byId.set(def.id, def);
+          byName.set(def.name.toLowerCase(), def);
+          byAtom.set(def.atomValue.toLowerCase(), def);
+          byName.set(def.id.slice("Weather:".length).toLowerCase(), def);
+        }
+        return { defs, byId, byAtom, byName };
+      });
       _prefs = /* @__PURE__ */ new Map();
       _weatherPrefs = /* @__PURE__ */ new Map();
       _weatherPrefsLoaded = false;
@@ -28238,27 +28205,6 @@
           return this.onRulesChange(cb);
         }
       };
-    }
-  });
-
-  // src/data/names.ts
-  function seedNameFromSpecies(species, cat = plantCatalog2) {
-    const e = cat?.[species];
-    return e?.seed?.name ?? e?.plant?.name ?? e?.crop?.name ?? void 0;
-  }
-  function eggNameFromId(eggId, cat = eggCatalog2) {
-    return cat?.[eggId]?.name ?? void 0;
-  }
-  function toolNameFromId(toolId, cat = toolCatalog2) {
-    return cat?.[toolId]?.name ?? void 0;
-  }
-  function decorNameFromId(decorId, cat = decorCatalog2) {
-    return cat?.[decorId]?.name ?? void 0;
-  }
-  var init_names = __esm({
-    "src/data/names.ts"() {
-      "use strict";
-      init_data();
     }
   });
 
@@ -29163,13 +29109,13 @@
     const [type, raw] = id.split(":");
     switch (type) {
       case "Seed":
-        return seedNameFromSpecies(raw) ?? raw;
+        return seedCatalogName(raw) ?? raw;
       case "Egg":
-        return eggNameFromId(raw) ?? raw;
+        return eggCatalogName(raw) ?? raw;
       case "Tool":
-        return toolNameFromId(raw) ?? raw;
+        return toolCatalogName(raw) ?? raw;
       case "Decor":
-        return decorNameFromId(raw) ?? raw;
+        return decorCatalogName(raw) ?? raw;
       default:
         return raw;
     }
@@ -30526,7 +30472,7 @@
       queryAll(rootEl, selectors.innerSelector).forEach(callback);
     });
   }
-  function updatePanels(root, selectors, markerClass, text, locked, showPrice = true) {
+  function updatePanels(root, selectors, markerClass, text2, locked, showPrice = true) {
     forEachInner(root, selectors, (inner) => {
       if (!showPrice || shouldSkipInner(inner, markerClass)) {
         removeMarker(inner, markerClass);
@@ -30534,7 +30480,7 @@
         return;
       }
       updateLockEmoji(inner, locked);
-      ensureSpanAtEnd(inner, text, markerClass);
+      ensureSpanAtEnd(inner, text2, markerClass);
     });
   }
   function getLockerHarvestAllowed() {
@@ -30911,7 +30857,7 @@
   function stripLockPrefix(content) {
     return content.replace(LOCK_PREFIX_REGEX, "");
   }
-  function ensureSpanAtEnd(inner, text, markerClass) {
+  function ensureSpanAtEnd(inner, text2, markerClass) {
     const spans = Array.from(
       inner.querySelectorAll(`:scope > span.${CSS.escape(markerClass)}`)
     );
@@ -30954,8 +30900,8 @@
       label2.style.display = "inline";
       span.appendChild(label2);
     }
-    if (label2.textContent !== text) {
-      label2.textContent = text;
+    if (label2.textContent !== text2) {
+      label2.textContent = text2;
     }
     const sizeSpan = getQpmSizeSpan(inner);
     if (sizeSpan) {
@@ -31094,17 +31040,17 @@
         detachValueText();
         return;
       }
-      const text = formatCoins2(value);
+      const text2 = formatCoins2(value);
       if (!valueText) {
         graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state6)));
         if (graphicsCtor) {
           valueBadge = new graphicsCtor();
           currentCard2.addChild(valueBadge);
         }
-        valueText = new ctors.Text({ text, style: VALUE_TEXT_STYLE });
+        valueText = new ctors.Text({ text: text2, style: VALUE_TEXT_STYLE });
         currentCard2.addChild(valueText);
-      } else if (valueText.text !== text) {
-        valueText.text = text;
+      } else if (valueText.text !== text2) {
+        valueText.text = text2;
       }
       if (!valueIcon && ctors.Sprite) {
         if (coinTexture) {
@@ -31894,8 +31840,8 @@
   function findSellButton(container) {
     const btn = container.querySelector("button");
     if (!btn) return null;
-    const text = (btn.textContent || "").trim();
-    return /sell\s*crops/i.test(text) ? btn : null;
+    const text2 = (btn.textContent || "").trim();
+    return /sell\s*crops/i.test(text2) ? btn : null;
   }
   var CONTAINER_SELECTOR, LOCK_ICON_CLASS2, DATA_BORDER, DATA_RADIUS, DATA_POSITION, DATA_PADDING, DATA_BOX, DATA_SHADOW, DATA_OVERFLOW;
   var init_sellCropsLock = __esm({
@@ -31977,8 +31923,8 @@
     };
   }
   function containsEggLabel(el2) {
-    const text = (el2.textContent || "").toLowerCase();
-    return text.includes("egg");
+    const text2 = (el2.textContent || "").toLowerCase();
+    return text2.includes("egg");
   }
   function setLocked(el2, locked) {
     if (!locked) {
@@ -32112,10 +32058,10 @@
     };
   }
   function looksLikeDecorItem(el2) {
-    const text = (el2.textContent || "").toLowerCase();
-    if (!text) return false;
+    const text2 = (el2.textContent || "").toLowerCase();
+    if (!text2) return false;
     if (!el2.querySelector("canvas")) return false;
-    return DECOR_LABELS.some((label2) => label2 && text.includes(label2));
+    return decorLabels().some((label2) => label2 && text2.includes(label2));
   }
   function setLocked2(el2, locked) {
     if (!locked) {
@@ -32179,7 +32125,7 @@
   function removeLockIcon4(el2) {
     el2.querySelectorAll(`span.${LOCK_CLASS2}`).forEach((node) => node.remove());
   }
-  var CONTAINER_SELECTOR3, LOCK_CLASS2, BORDER_COLOR3, DATA_BORDER3, DATA_RADIUS3, DATA_POSITION3, DATA_OVERFLOW3, DECOR_LABELS;
+  var CONTAINER_SELECTOR3, LOCK_CLASS2, BORDER_COLOR3, DATA_BORDER3, DATA_RADIUS3, DATA_POSITION3, DATA_OVERFLOW3, decorLabels;
   var init_decorPickupLockIndicator = __esm({
     "src/features/locker/decorPickupLockIndicator.ts"() {
       "use strict";
@@ -32192,7 +32138,7 @@
       DATA_RADIUS3 = "tmDecorLockRadius";
       DATA_POSITION3 = "tmDecorLockPosition";
       DATA_OVERFLOW3 = "tmDecorLockOverflow";
-      DECOR_LABELS = (() => {
+      decorLabels = memoOnCatalogs(() => {
         const labels = /* @__PURE__ */ new Set();
         try {
           Object.entries(decorCatalog2).forEach(([decorId, entry]) => {
@@ -32205,7 +32151,7 @@
         } catch {
         }
         return Array.from(labels).filter(Boolean);
-      })();
+      });
     }
   });
 
@@ -33877,7 +33823,7 @@
       }
     };
   }
-  var DEFAULTS3, INVENTORY_SEARCH_INPUT_SELECTOR, BASE_SORT, ORDER, SORT_KEY_PATH, SORT_KEY_SET, SORT_DIRECTION_PATH, SORT_DIRECTION_SET, DEFAULT_DIRECTION_LABEL, DIRECTION_LABELS_DEFAULT, getPetAbilityDisplayName, INVENTORY_VALUE_VISIBILITY_PATH, resolveVisibilityFromStoredValue, loadPersistedInventoryValueVisibility, persistInventoryValueVisibility, shouldDisplayInventoryValues, setShouldDisplayInventoryValues, getShouldDisplayInventoryValues, DEFAULT_DIRECTION_BY_SORT_KEY, DIRECTION_ORDER, isPersistedSortKey, isPersistedSortDirection, loadPersistedSortKey, persistSortKey, loadPersistedSortDirection, persistSortDirection, MAP_EXTRA_BY_FILTER_DEFAULT, FILTER_CONTEXT_ITEM_TYPES_CACHE, FILTER_CONTEXT_LISTENERS, addFilterContextListener, notifyFilterContextListeners, LABEL_BY_VALUE_DEFAULT, INVENTORY_BASE_INDEX_DATASET_KEY, INVENTORY_ITEM_CARD_SELECTORS, INVENTORY_ITEMS_CONTAINER_SELECTOR, INVENTORY_NOISE_SELECTOR, INVENTORY_STRENGTH_WRAPPER_SELECTOR, INVENTORY_STRENGTH_TEXT_SELECTOR, INVENTORY_FAVORITE_BUTTON_SELECTOR, INVENTORY_ITEM_CARD_SELECTOR, INVENTORY_VALUE_CONTAINER_SELECTOR, INVENTORY_VALUE_ELEMENT_CLASS, INVENTORY_VALUE_TEXT_CLASS, INVENTORY_VALUE_DATASET_KEY, FILTERED_VALUE_LOADING, FILTERED_VALUE_UNKNOWN, VALUE_SUMMARY_ICON_CLASS, VALUE_SUMMARY_TEXT_CLASS, VALUE_SUMMARY_ICON_SRC, VALUE_SUMMARY_ICON_BACKGROUND, debounce, labelIsChecked, normalize, createFilterContextKey, areSetsEqual, getCachedItemTypesForKey, getCachedItemTypesForContext, setCachedItemTypesForKey, getInventorySearchInput, getInventorySearchQuery, getNormalizedInventorySearchQuery, logFilteredInventorySearchResults, RARITY_ORDER, RARITY_RANK, getRarityRank, SPECIES_FIELDS, normalizeSpeciesKey, clampNumber2, collectSpeciesCandidates, getInventoryItemSizePercent, collectMutations, getInventoryItemMutations, FILTER_LABEL_TO_ITEM_TYPES, ITEM_TYPE_TO_FILTER_KEYS, getExtrasForFilterKey, getExtrasForItemType, getInventoryCardElement, clearInventoryNoiseText, findAncestorWithDescendant, alignInventoryStrengthText, INVENTORY_COMPACT_VALUE_UNITS, INVENTORY_FULL_VALUE_FORMATTER, formatInventoryItemCompactValue, formatInventoryItemFullValue, getInventoryItemValue, parseStrengthValue, TM_STRENGTH_LABEL_CLASS, TM_STRENGTH_CURRENT_CLASS, TM_STRENGTH_MAX_CLASS, TM_STRENGTH_BADGE_CLASS, TM_STRENGTH_IS_MAX_DATASET_KEY, PET_HUTCH_HEADER_TEXT, PET_INVENTORY_HEADER_TEXT, PET_NAME_SELECTOR, PET_HUTCH_ROOT_SELECTOR, PET_HUTCH_LIST_SELECTOR, PET_HUTCH_INVENTORY_LIST_SELECTOR, PET_HUTCH_VISIBILITY_STYLE, RAINBOW_BADGE_TEXT_GRADIENT, getPetMutationTone, applyStrengthBadgeTone, ensureStrengthBadge, ensureStrengthTextParts, getValueSummaryElement, ensureValueSummaryContent, setValueSummaryText, stringOrEmpty, pickNestedString, pickFirstNestedString, plantCatalogEntry, petCatalogEntry, eggCatalogEntry, toolCatalogEntry, decorCatalogEntry, SEED_NAME_PATHS, SEED_RARITY_PATHS, CROP_NAME_PATHS, CROP_RARITY_PATHS, PLANT_NAME_PATHS, PLANT_RARITY_PATHS, createPlantLookup, CATALOG_LOOKUPS, getCatalogLookup, getInventoryItemName, QUANTITY_ONE_TYPES, getInventoryItemQuantity, getInventoryItemRarity, readNestedValue, readNestedStringField, readNestedNumberField, findSectionContainerByHeaderText, getPetCardName, getPetNameCandidates, isPetItem, applyPetItemsToContainer, setPetHutchContainersHidden, updatePetHutchSections, PET_STATS_BY_SPECIES, lookupPetStats, getPetStrengthInfo, getPetStrength2, compareByNameThenTypeThenId;
+  var DEFAULTS3, INVENTORY_SEARCH_INPUT_SELECTOR, BASE_SORT, ORDER, SORT_KEY_PATH, SORT_KEY_SET, SORT_DIRECTION_PATH, SORT_DIRECTION_SET, DEFAULT_DIRECTION_LABEL, DIRECTION_LABELS_DEFAULT, getPetAbilityDisplayName, INVENTORY_VALUE_VISIBILITY_PATH, resolveVisibilityFromStoredValue, loadPersistedInventoryValueVisibility, persistInventoryValueVisibility, shouldDisplayInventoryValues, setShouldDisplayInventoryValues, getShouldDisplayInventoryValues, DEFAULT_DIRECTION_BY_SORT_KEY, DIRECTION_ORDER, isPersistedSortKey, isPersistedSortDirection, loadPersistedSortKey, persistSortKey, loadPersistedSortDirection, persistSortDirection, MAP_EXTRA_BY_FILTER_DEFAULT, FILTER_CONTEXT_ITEM_TYPES_CACHE, FILTER_CONTEXT_LISTENERS, addFilterContextListener, notifyFilterContextListeners, LABEL_BY_VALUE_DEFAULT, INVENTORY_BASE_INDEX_DATASET_KEY, INVENTORY_ITEM_CARD_SELECTORS, INVENTORY_ITEMS_CONTAINER_SELECTOR, INVENTORY_NOISE_SELECTOR, INVENTORY_STRENGTH_WRAPPER_SELECTOR, INVENTORY_STRENGTH_TEXT_SELECTOR, INVENTORY_FAVORITE_BUTTON_SELECTOR, INVENTORY_ITEM_CARD_SELECTOR, INVENTORY_VALUE_CONTAINER_SELECTOR, INVENTORY_VALUE_ELEMENT_CLASS, INVENTORY_VALUE_TEXT_CLASS, INVENTORY_VALUE_DATASET_KEY, FILTERED_VALUE_LOADING, FILTERED_VALUE_UNKNOWN, VALUE_SUMMARY_ICON_CLASS, VALUE_SUMMARY_TEXT_CLASS, VALUE_SUMMARY_ICON_SRC, VALUE_SUMMARY_ICON_BACKGROUND, debounce, labelIsChecked, normalize, createFilterContextKey, areSetsEqual, getCachedItemTypesForKey, getCachedItemTypesForContext, setCachedItemTypesForKey, getInventorySearchInput, getInventorySearchQuery, getNormalizedInventorySearchQuery, logFilteredInventorySearchResults, RARITY_ORDER, RARITY_RANK, getRarityRank, SPECIES_FIELDS, normalizeSpeciesKey, clampNumber2, collectSpeciesCandidates, getInventoryItemSizePercent, collectMutations, getInventoryItemMutations, FILTER_LABEL_TO_ITEM_TYPES, ITEM_TYPE_TO_FILTER_KEYS, getExtrasForFilterKey, getExtrasForItemType, getInventoryCardElement, clearInventoryNoiseText, findAncestorWithDescendant, alignInventoryStrengthText, INVENTORY_COMPACT_VALUE_UNITS, INVENTORY_FULL_VALUE_FORMATTER, formatInventoryItemCompactValue, formatInventoryItemFullValue, getInventoryItemValue, parseStrengthValue, TM_STRENGTH_LABEL_CLASS, TM_STRENGTH_CURRENT_CLASS, TM_STRENGTH_MAX_CLASS, TM_STRENGTH_BADGE_CLASS, TM_STRENGTH_IS_MAX_DATASET_KEY, PET_HUTCH_HEADER_TEXT, PET_INVENTORY_HEADER_TEXT, PET_NAME_SELECTOR, PET_HUTCH_ROOT_SELECTOR, PET_HUTCH_LIST_SELECTOR, PET_HUTCH_INVENTORY_LIST_SELECTOR, PET_HUTCH_VISIBILITY_STYLE, RAINBOW_BADGE_TEXT_GRADIENT, getPetMutationTone, applyStrengthBadgeTone, ensureStrengthBadge, ensureStrengthTextParts, getValueSummaryElement, ensureValueSummaryContent, setValueSummaryText, stringOrEmpty, pickNestedString, pickFirstNestedString, plantCatalogEntry, petCatalogEntry, eggCatalogEntry, toolCatalogEntry, decorCatalogEntry, SEED_NAME_PATHS, SEED_RARITY_PATHS, CROP_NAME_PATHS, CROP_RARITY_PATHS, PLANT_NAME_PATHS, PLANT_RARITY_PATHS, createPlantLookup, CATALOG_LOOKUPS, getCatalogLookup, getInventoryItemName, QUANTITY_ONE_TYPES, getInventoryItemQuantity, getInventoryItemRarity, readNestedValue, readNestedStringField, readNestedNumberField, findSectionContainerByHeaderText, getPetCardName, getPetNameCandidates, isPetItem, applyPetItemsToContainer, setPetHutchContainersHidden, updatePetHutchSections, petStatsBySpecies, lookupPetStats, getPetStrengthInfo, getPetStrength2, compareByNameThenTypeThenId;
   var init_sorting = __esm({
     "src/features/inventory/sorting.ts"() {
       "use strict";
@@ -34560,10 +34506,10 @@
         }
         return textEl;
       };
-      setValueSummaryText = (summary, text, title) => {
+      setValueSummaryText = (summary, text2, title) => {
         if (!summary) return;
         const textEl = ensureValueSummaryContent(summary);
-        textEl.textContent = text;
+        textEl.textContent = text2;
         if (title) {
           summary.title = title;
         } else {
@@ -34848,7 +34794,7 @@
           }
         }
       };
-      PET_STATS_BY_SPECIES = (() => {
+      petStatsBySpecies = memoOnCatalogs(() => {
         const map2 = /* @__PURE__ */ new Map();
         const register = (key2, maxScale, hoursToMature) => {
           if (typeof key2 !== "string") return;
@@ -34865,12 +34811,12 @@
           register(entry?.name, maxScale, hoursToMature);
         }
         return map2;
-      })();
+      });
       lookupPetStats = (species) => {
         if (typeof species !== "string") return null;
         const normalized = normalizeSpeciesKey(species);
         if (!normalized) return null;
-        return PET_STATS_BY_SPECIES.get(normalized) ?? null;
+        return petStatsBySpecies().get(normalized) ?? null;
       };
       getPetStrengthInfo = (item) => {
         if (!item || typeof item !== "object") return null;
@@ -34958,9 +34904,9 @@
   function getActionLabel(action2) {
     const preset = ACTION_LABELS[action2];
     if (preset) return preset;
-    const spaced3 = String(action2 || "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
-    if (!spaced3) return String(action2 || "");
-    return spaced3.split(" ").map((word) => word ? word.charAt(0).toUpperCase() + word.slice(1) : word).join(" ");
+    const spaced2 = spaceWords(String(action2 || "")).replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!spaced2) return String(action2 || "");
+    return spaced2.split(" ").map((word) => word ? word.charAt(0).toUpperCase() + word.slice(1) : word).join(" ");
   }
   function mergeActions(actions) {
     const seen = /* @__PURE__ */ new Set();
@@ -34985,6 +34931,7 @@
   var init_classification = __esm({
     "src/features/activityLog/classification.ts"() {
       "use strict";
+      init_format();
       ACTION_ORDER = [
         "all",
         "found",
@@ -35449,16 +35396,16 @@
     return `${CLOSED_LABEL_PREFIX}${getActionLabel(active2)}${count ? ` (${count})` : ""}`;
   }
   function buildClosedButton(graphicsCtor, textCtor, containerCtor, counts, total) {
-    const text = new textCtor({ text: closedButtonLabel(counts, total), style: BUTTON_TEXT_STYLE2 });
+    const text2 = new textCtor({ text: closedButtonLabel(counts, total), style: BUTTON_TEXT_STYLE2 });
     const caret = new textCtor({ text: CARET_CLOSED, style: CARET_TEXT_STYLE });
     const bg = new graphicsCtor();
     const container = new containerCtor();
     container.addChild(bg);
-    container.addChild(text);
+    container.addChild(text2);
     container.addChild(caret);
     container.eventMode = "static";
     container.cursor = "pointer";
-    const closedButton = { container, bg, text, caret };
+    const closedButton = { container, bg, text: text2, caret };
     layoutClosedButton(closedButton);
     return closedButton;
   }
@@ -35479,18 +35426,18 @@
     for (const key2 of keys) {
       const count = countFor(key2, counts, total);
       const label2 = `${getActionLabel(key2)}${count ? ` (${count})` : ""}`;
-      const text = new textCtor({ text: label2, style: BUTTON_TEXT_STYLE2 });
-      const width = text.width + BUTTON_PADDING_X2 * 2;
+      const text2 = new textCtor({ text: label2, style: BUTTON_TEXT_STYLE2 });
+      const width = text2.width + BUTTON_PADDING_X2 * 2;
       if (x > 0 && x + width > maxWidth) {
         x = 0;
         y += BUTTON_HEIGHT + BUTTON_GAP2;
       }
       const bg = new graphicsCtor();
       bg.roundRect(0, 0, width, BUTTON_HEIGHT, BUTTON_RADIUS2).fill({ color: key2 === active2 ? BUTTON_FILL_ACTIVE : BUTTON_FILL_INACTIVE, alpha: key2 === active2 ? BUTTON_ALPHA_ACTIVE : BUTTON_ALPHA_INACTIVE });
-      text.position.set(BUTTON_PADDING_X2, (BUTTON_HEIGHT - text.height) / 2);
+      text2.position.set(BUTTON_PADDING_X2, (BUTTON_HEIGHT - text2.height) / 2);
       const button2 = new containerCtor();
       button2.addChild(bg);
-      button2.addChild(text);
+      button2.addChild(text2);
       button2.position.set(x, y);
       button2.eventMode = "static";
       button2.cursor = "pointer";
@@ -36904,8 +36851,8 @@
     patchInputsKeyTrap(box);
     enableAltDragAnywhere();
     (function initVersionBadge() {
-      const setBadge = (text, cls) => {
-        sVersion.textContent = text;
+      const setBadge = (text2, cls) => {
+        sVersion.textContent = text2;
         tag(sVersion, cls);
       };
       const setDownloadTarget = (url) => {
@@ -37194,10 +37141,10 @@
   });
 
   // src/features/debug/shared.ts
-  function setBtnLabel(btn, text) {
+  function setBtnLabel(btn, text2) {
     const label2 = btn.querySelector(".label");
-    if (label2) label2.textContent = text;
-    else btn.textContent = text;
+    if (label2) label2.textContent = text2;
+    else btn.textContent = text2;
   }
   function toast(msg, type = "warn") {
     try {
@@ -37216,8 +37163,8 @@
     columns.append(leftCol, rightCol);
     return { columns, leftCol, rightCol };
   }
-  function copy(text) {
-    const str = String(text ?? "");
+  function copy(text2) {
+    const str = String(text2 ?? "");
     if (!str.length) return;
     const fallback = () => {
       const ta = document.createElement("textarea");
@@ -37907,13 +37854,13 @@
     if (!sockets.includes(ws)) sockets.push(ws);
     setQWS?.(ws, why);
     const onMsg = (ev) => {
-      let text = "";
+      let text2 = "";
       try {
-        text = typeof ev.data === "string" ? ev.data : JSON.stringify(ev.data);
+        text2 = typeof ev.data === "string" ? ev.data : JSON.stringify(ev.data);
       } catch {
-        text = String(ev.data);
+        text2 = String(ev.data);
       }
-      onFrame({ t: Date.now(), dir: "in", text, ws });
+      onFrame({ t: Date.now(), dir: "in", text: text2, ws });
     };
     ws.addEventListener("message", onMsg);
     info.listeners.push(() => ws.removeEventListener("message", onMsg));
@@ -37933,8 +37880,8 @@
       ws[WS_PATCHED_SEND] = true;
       ws.send = (data) => {
         try {
-          const text = typeof data === "string" ? data : JSON.stringify(data);
-          onFrame({ t: Date.now(), dir: "out", text, ws });
+          const text2 = typeof data === "string" ? data : JSON.stringify(data);
+          onFrame({ t: Date.now(), dir: "out", text: text2, ws });
         } catch {
           onFrame({ t: Date.now(), dir: "out", text: String(data), ws });
         }
@@ -38111,10 +38058,10 @@
         checkbox.type = "checkbox";
         checkbox.checked = entries2.has(label2);
         checkbox.className = "dd-atom-list__checkbox";
-        const text = document.createElement("span");
-        text.className = "dd-atom-list__label";
-        text.textContent = label2;
-        row.append(checkbox, text);
+        const text2 = document.createElement("span");
+        text2.className = "dd-atom-list__label";
+        text2.textContent = label2;
+        row.append(checkbox, text2);
         checkbox.addEventListener("change", async () => {
           if (checkbox.checked) {
             const existing = entries2.get(label2);
@@ -38421,7 +38368,7 @@
     }
     function copyLog() {
       if (!records.length) return;
-      const text = records.map((rec) => {
+      const text2 = records.map((rec) => {
         const prev = rec.previous == null ? "(no previous snapshot)" : stringify(rec.previous);
         const next = stringify(rec.next);
         const type = rec.type === "initial" ? "initial" : "update";
@@ -38429,7 +38376,7 @@
 previous: ${prev}
 next: ${next}`;
       }).join("\n\n");
-      copy(text);
+      copy(text2);
     }
     function snapshot2(value) {
       if (value == null) return value;
@@ -38513,7 +38460,7 @@ next: ${next}`;
         if (f) ta.value = f.text;
       }
     };
-    const matchesMutes = (text) => mutePatterns.some((rx) => rx.test(text));
+    const matchesMutes = (text2) => mutePatterns.some((rx) => rx.test(text2));
     const statusCard = ui.card("\u{1F4E1} Live traffic", {
       tone: "muted",
       subtitle: "Monitor, filter, and replay WebSocket frames."
@@ -38546,10 +38493,10 @@ next: ${next}`;
         btnPause.title = paused ? "Resume live updates" : "Pause live updates";
       }
     });
-    const setPauseLabel = (text) => {
+    const setPauseLabel = (text2) => {
       const label2 = btnPause.querySelector(".label");
-      if (label2) label2.textContent = text;
-      else btnPause.textContent = text;
+      if (label2) label2.textContent = text2;
+      else btnPause.textContent = text2;
     };
     setPauseLabel("Pause");
     btnPause.title = "Suspend live updates";
@@ -38684,9 +38631,9 @@ next: ${next}`;
       return Number.isFinite(idx) ? vals[idx]?.ws ?? null : null;
     }
     function updateStatus() {
-      const text = getWSStatusText();
-      lblConn.textContent = text;
-      const low = text.toLowerCase();
+      const text2 = getWSStatusText();
+      lblConn.textContent = text2;
+      const low = text2.toLowerCase();
       lblConn.classList.toggle("is-ok", /open|connected|ready/.test(low));
       lblConn.classList.toggle("is-warn", /closing|connecting|pending/.test(low));
     }
@@ -39522,8 +39469,8 @@ next: ${next}`;
       label2.style.fontWeight = "600";
       return r;
     };
-    const radio = (name, value, text) => {
-      const chip2 = ui.toggleChip(text, { type: "radio", name, value });
+    const radio = (name, value, text2) => {
+      const chip2 = ui.toggleChip(text2, { type: "radio", name, value });
       chip2.root.classList.add("qmm-radio-chip");
       return { label: chip2.root, input: chip2.input };
     };
@@ -41839,9 +41786,9 @@ next: ${next}`;
     return { options: _lockerOptionsCache, byKey: _lockerEmojiByKey, bySeedName: _lockerEmojisBySeedName };
   }
   function formatMutationLabel(key2) {
-    const spaced3 = key2.replace(/_/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/\s+/g, " ").trim();
-    if (!spaced3) return key2;
-    return spaced3.charAt(0).toUpperCase() + spaced3.slice(1);
+    const spaced2 = key2.replace(/_/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/\s+/g, " ").trim();
+    if (!spaced2) return key2;
+    return spaced2.charAt(0).toUpperCase() + spaced2.slice(1);
   }
   function normalizeWeatherSelection(selection) {
     selection.forEach((tag) => {
@@ -41853,7 +41800,7 @@ next: ${next}`;
   function normalizeRecipeSelection(selection) {
     normalizeWeatherSelection(selection);
     const seen = /* @__PURE__ */ new Set();
-    WEATHER_MUTATIONS.forEach((info) => {
+    weatherMutations().forEach((info) => {
       if (!selection.has(info.key)) return;
       const group = WEATHER_RECIPE_GROUPS[info.key];
       if (!group) return;
@@ -41942,7 +41889,7 @@ next: ${next}`;
       color: "#e7eef7",
       lineHeight: "1"
     });
-    const label2 = WEATHER_MUTATION_LABELS[tag] ?? formatMutationLabel(tag);
+    const label2 = weatherMutationLabel(tag);
     const fallback = options.fallback ?? label2.charAt(0);
     wrap.textContent = fallback || "?";
     wrap.title = label2;
@@ -42179,8 +42126,8 @@ next: ${next}`;
     updateState();
     return { key: key2, wrap, input, setChecked, setDisabled };
   }
-  function styleBtnFullWidth(button2, text) {
-    button2.textContent = text;
+  function styleBtnFullWidth(button2, text2) {
+    button2.textContent = text2;
     button2.style.flex = "1";
     button2.style.margin = "0";
     button2.style.padding = "6px 10px";
@@ -42201,8 +42148,8 @@ next: ${next}`;
       button2.style.background = "rgba(255,255,255,0.04)";
     };
   }
-  function styleBtnCompact(button2, text) {
-    button2.textContent = text;
+  function styleBtnCompact(button2, text2) {
+    button2.textContent = text2;
     button2.style.margin = "0";
     button2.style.padding = "4px 8px";
     button2.style.borderRadius = "8px";
@@ -42575,10 +42522,10 @@ next: ${next}`;
         minWidth: "92px",
         cursor: "pointer"
       });
-      const text = document.createElement("span");
-      text.textContent = label2;
+      const text2 = document.createElement("span");
+      text2.textContent = label2;
       if (gradient) {
-        applyStyles(text, {
+        applyStyles(text2, {
           backgroundImage: gradient,
           backgroundClip: "text",
           WebkitBackgroundClip: "text",
@@ -42587,7 +42534,7 @@ next: ${next}`;
           textShadow: "0 0 6px rgba(0, 0, 0, 0.35)"
         });
       }
-      button2.appendChild(text);
+      button2.appendChild(text2);
       button2.addEventListener("mouseenter", () => {
         if (button2.disabled || button2.dataset.active === "1") return;
         button2.style.borderColor = "rgba(94,234,212,0.35)";
@@ -42656,7 +42603,7 @@ next: ${next}`;
       opts.onChange?.();
     };
     const updateMainWeatherSelection = applyWeatherSelection(state6.weatherSelected);
-    const weatherToggles = WEATHER_MUTATIONS.map((info) => {
+    const weatherToggles = weatherMutations().map((info) => {
       const toggle2 = createWeatherMutationToggle({
         key: info.key,
         label: info.label,
@@ -42807,9 +42754,9 @@ next: ${next}`;
       });
       iconWrap.appendChild(fallbackIcon);
       attachWeatherSpriteIcon(iconWrap, tag, 20);
-      const text = document.createElement("span");
-      text.textContent = label2;
-      badge.append(iconWrap, text);
+      const text2 = document.createElement("span");
+      text2.textContent = label2;
+      badge.append(iconWrap, text2);
       return badge;
     };
     const renderRecipeSummary = (container, selection) => {
@@ -42822,7 +42769,7 @@ next: ${next}`;
         justifyContent: "flex-start"
       });
       let count = 0;
-      WEATHER_MUTATIONS.forEach((info) => {
+      weatherMutations().forEach((info) => {
         if (!selection.has(info.key)) return;
         count += 1;
         badges.appendChild(buildRecipeBadge(info));
@@ -42861,7 +42808,7 @@ next: ${next}`;
         justifyItems: "center"
       });
       const toggles = /* @__PURE__ */ new Map();
-      WEATHER_MUTATIONS.forEach((info) => {
+      weatherMutations().forEach((info) => {
         const toggle2 = createWeatherMutationToggle({
           key: info.key,
           label: info.label,
@@ -43170,7 +43117,7 @@ next: ${next}`;
         borderRadius: "10px",
         background: "rgba(255,255,255,0.02)"
       });
-      const text = applyStyles(document.createElement("div"), {
+      const text2 = applyStyles(document.createElement("div"), {
         display: "grid",
         gap: "2px"
       });
@@ -43178,20 +43125,20 @@ next: ${next}`;
       titleEl.textContent = title;
       titleEl.style.fontWeight = "600";
       titleEl.style.fontSize = "13px";
-      text.appendChild(titleEl);
+      text2.appendChild(titleEl);
       if (subtitle) {
         const sub = document.createElement("div");
         sub.textContent = subtitle;
         sub.style.fontSize = "12px";
         sub.style.opacity = "0.75";
-        text.appendChild(sub);
+        text2.appendChild(sub);
       }
       const controls = applyStyles(document.createElement("div"), {
         display: "flex",
         alignItems: "center",
         gap: "8px"
       });
-      row.append(text, controls);
+      row.append(text2, controls);
       return { row, controls };
     };
     const sellRulesInitial = lockerRestrictionsService.getSellAllPetsRules();
@@ -44006,7 +43953,7 @@ next: ${next}`;
     };
     ui.on("unmounted", cleanup2);
   }
-  var NO_WEATHER_TAG, SEED_EMOJIS, _lockerOptionsCache, _lockerEmojiByKey, _lockerEmojisBySeedName, getLockerSeedOptions, getLockerSeedEmojiForKey, getLockerSeedEmojiForSeedName, WEATHER_MUTATION_LABELS, WEATHER_MUTATIONS, createNoWeatherIcon, isWeatherMutationAvailable, WEATHER_RECIPE_GROUPS, WEATHER_RECIPE_GROUP_MEMBERS, applyStyles, weatherModeNameSeq, LockerMenuStore;
+  var NO_WEATHER_TAG, SEED_EMOJIS, _lockerOptionsCache, _lockerEmojiByKey, _lockerEmojisBySeedName, getLockerSeedOptions, getLockerSeedEmojiForKey, getLockerSeedEmojiForSeedName, weatherMutationLabel, weatherMutations, createNoWeatherIcon, isWeatherMutationAvailable, WEATHER_RECIPE_GROUPS, WEATHER_RECIPE_GROUP_MEMBERS, applyStyles, weatherModeNameSeq, LockerMenuStore;
   var init_menu4 = __esm({
     "src/features/locker/menu.ts"() {
       "use strict";
@@ -44061,21 +44008,27 @@ next: ${next}`;
         if (!name) return void 0;
         return getLockerCache().bySeedName.get(name) ?? "\u2022";
       };
-      WEATHER_MUTATION_LABELS = tileRefsMutationLabels2 ?? {};
-      WEATHER_MUTATIONS = Object.entries(
-        tileRefsMutations2
-      ).filter((entry) => {
-        const [key2, value] = entry;
-        if (key2 === "Puddle" || key2 === "ThunderstruckGround") {
-          return false;
-        }
-        return typeof value === "number" || typeof value === "string";
-      }).map(([key2, value]) => ({
-        key: key2,
-        label: WEATHER_MUTATION_LABELS[key2] ?? formatMutationLabel(key2),
-        tileRef: value,
-        iconFactory: (options) => createWeatherBadge(key2, options)
-      }));
+      weatherMutationLabel = (key2) => (tileRefsMutationLabels2 ?? {})[key2] ?? formatMutationLabel(key2);
+      weatherMutations = memoOnCatalogs(() => [
+        {
+          key: NO_WEATHER_TAG,
+          label: "No weather effect",
+          tileRef: null,
+          iconFactory: createNoWeatherIcon
+        },
+        ...Object.entries(tileRefsMutations2).filter((entry) => {
+          const [key2, value] = entry;
+          if (key2 === "Puddle" || key2 === "ThunderstruckGround") {
+            return false;
+          }
+          return typeof value === "number" || typeof value === "string";
+        }).map(([key2, value]) => ({
+          key: key2,
+          label: weatherMutationLabel(key2),
+          tileRef: value,
+          iconFactory: (options) => createWeatherBadge(key2, options)
+        }))
+      ]);
       createNoWeatherIcon = (options) => {
         const size = Math.max(24, options?.size ?? 48);
         const wrap = applyStyles(document.createElement("div"), {
@@ -44095,13 +44048,7 @@ next: ${next}`;
         wrap.appendChild(glyph);
         return wrap;
       };
-      WEATHER_MUTATIONS.unshift({
-        key: NO_WEATHER_TAG,
-        label: "No weather effect",
-        tileRef: null,
-        iconFactory: createNoWeatherIcon
-      });
-      isWeatherMutationAvailable = (tag) => WEATHER_MUTATIONS.some((info) => info.key === tag);
+      isWeatherMutationAvailable = (tag) => weatherMutations().some((info) => info.key === tag);
       WEATHER_RECIPE_GROUPS = {
         Wet: "condition",
         Chilled: "condition",
@@ -45497,7 +45444,7 @@ next: ${next}`;
 `;
     document.head.appendChild(st);
   }
-  function sectionLabel(text) {
+  function sectionLabel(text2) {
     const el2 = document.createElement("div");
     css2(el2, {
       fontSize: "10px",
@@ -45506,7 +45453,7 @@ next: ${next}`;
       color: TEXT_DIM,
       textTransform: "uppercase"
     });
-    el2.textContent = text;
+    el2.textContent = text2;
     return el2;
   }
   function card() {
@@ -45578,7 +45525,7 @@ next: ${next}`;
     };
     return wrap;
   }
-  function chip(text, tone) {
+  function chip(text2, tone) {
     const el2 = document.createElement("span");
     const color = tone === "ok" ? TEAL : WARN;
     css2(el2, {
@@ -45590,10 +45537,10 @@ next: ${next}`;
       color,
       background: tone === "ok" ? TEAL_DIM : "rgba(251,191,36,0.12)"
     });
-    el2.textContent = text;
+    el2.textContent = text2;
     return el2;
   }
-  function pill(text) {
+  function pill(text2) {
     const el2 = document.createElement("span");
     css2(el2, {
       fontSize: "11px",
@@ -45605,7 +45552,7 @@ next: ${next}`;
       color: TEXT,
       whiteSpace: "nowrap"
     });
-    el2.textContent = text;
+    el2.textContent = text2;
     return el2;
   }
   function meter() {
@@ -46469,8 +46416,8 @@ next: ${next}`;
   });
 
   // src/features/pets/teamStats.ts
-  function stripTierSuffix(text) {
-    return text.replace(/\s*(?:_NEW)?(?:IV|I{1,3})$/, "").trim() || text;
+  function stripTierSuffix(text2) {
+    return text2.replace(/\s*(?:_NEW)?(?:IV|I{1,3})$/, "").trim() || text2;
   }
   function getMaxHunger(species) {
     const entry = petCatalog2[species];
@@ -47665,11 +47612,11 @@ next: ${next}`;
   }
   function formatAmount(value, unit) {
     const decimals = Math.abs(value) >= 10 ? 0 : 1;
-    const text = value.toLocaleString("en-US", {
+    const text2 = value.toLocaleString("en-US", {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals
     });
-    return unit ? `${text}${unit === "%" ? "%" : ` ${unit}`}` : text;
+    return unit ? `${text2}${unit === "%" ? "%" : ` ${unit}`}` : text2;
   }
   function formatDuration(minutes) {
     const total = Math.max(0, Math.round(minutes));
@@ -47904,7 +47851,7 @@ Not a sum \u2014 it is 1 minus the product of every pet missing.${perHour}
   }
   function renderFeedRow(stats) {
     const autonomy = stats.autonomy;
-    let text;
+    let text2;
     let color;
     let title;
     const boostLine = autonomy.drainReductionPercent > 0 ? `
@@ -47914,21 +47861,21 @@ Hunger Restore fires ~${autonomy.restoreActivationsPerMinute.toFixed(2)}\xD7/min
     const weatherLine2 = autonomy.weatherGatedHungerAbilities.length ? `
 Not counted (needs a specific weather): ${autonomy.weatherGatedHungerAbilities.join(", ")}.` : "";
     if (autonomy.status === "sustained") {
-      text = "indefinitely";
+      text2 = "indefinitely";
       color = ACCENT;
       title = `Expected hunger restore covers the drain for every pet, so the team
 feeds itself.${boostLine}${restoreLine}${weatherLine2}
 
 This is an average \u2014 a bad run of Restore luck can still empty a pet.`;
     } else if (autonomy.status === "runs-out" && autonomy.minutesFromFull !== null) {
-      text = `~${formatDuration(autonomy.minutesFromFull)}`;
+      text2 = `~${formatDuration(autonomy.minutesFromFull)}`;
       color = autonomy.minutesFromFull < 60 ? "#fbbf24" : ACCENT;
       title = `Starting from full, ${autonomy.limitingPetName ?? "the first pet"} empties first.
 Rates the team itself \u2014 current hunger is not taken into account.${boostLine}${restoreLine}${weatherLine2}
 
 Restore figures are averages; unlucky streaks do worse.`;
     } else {
-      text = "unknown";
+      text2 = "unknown";
       color = MUTED;
       title = `No known hunger data for: ${autonomy.speciesMissingDepletion.join(", ")}.`;
     }
@@ -47952,7 +47899,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     label2.style.textOverflow = "ellipsis";
     label2.style.whiteSpace = "nowrap";
     const valueSpan = document.createElement("span");
-    valueSpan.textContent = text;
+    valueSpan.textContent = text2;
     valueSpan.style.color = color;
     valueSpan.style.fontWeight = "600";
     valueSpan.style.flex = "0 0 auto";
@@ -48143,12 +48090,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return chip2;
   }
-  function charLength(text) {
-    return Array.from(text).length;
+  function charLength(text2) {
+    return Array.from(text2).length;
   }
-  function truncateChars(text, maxLength) {
-    const chars = Array.from(text);
-    if (chars.length <= maxLength) return text;
+  function truncateChars(text2, maxLength) {
+    const chars = Array.from(text2);
+    if (chars.length <= maxLength) return text2;
     if (maxLength <= 1) return chars.slice(0, Math.max(0, maxLength)).join("");
     return `${chars.slice(0, maxLength - 1).join("")}\u2026`;
   }
@@ -48595,10 +48542,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     function abilityCell(log2) {
       const cell = document.createElement("div");
       css2(cell, { display: "flex", minWidth: "0" });
-      const text = log2.abilityName || log2.abilityId || "\u2014";
+      const text2 = log2.abilityName || log2.abilityId || "\u2014";
       const chip2 = document.createElement("span");
-      chip2.textContent = text;
-      chip2.title = text;
+      chip2.textContent = text2;
+      chip2.title = text2;
       const { bg, hover } = getAbilityChipColors(log2.abilityId);
       css2(chip2, {
         display: "inline-block",
@@ -48628,7 +48575,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     function detailsCell(log2) {
       const cell = document.createElement("div");
-      const text = detailsOf(log2);
+      const text2 = detailsOf(log2);
       css2(cell, {
         fontSize: "11.5px",
         color: TEXT_DIM,
@@ -48637,8 +48584,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         textOverflow: "ellipsis",
         minWidth: "0"
       });
-      cell.textContent = text;
-      cell.title = text;
+      cell.textContent = text2;
+      cell.title = text2;
       return cell;
     }
     function logRow(log2) {
@@ -50969,16 +50916,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return occupied;
   }
-  function seedName(species) {
-    const entry = plantCatalog2[species];
-    const name = entry?.seed?.name;
-    return typeof name === "string" && name ? name : species;
-  }
-  function eggName(eggId) {
-    const entry = eggCatalog2[eggId];
-    const name = entry?.name;
-    return typeof name === "string" && name ? name : eggId;
-  }
   function accumulate(rows, kind, idOf, nameOf2) {
     const totals = /* @__PURE__ */ new Map();
     for (const raw of Array.isArray(rows) ? rows : []) {
@@ -50999,21 +50936,24 @@ Restore figures are averages; unlucky streaks do worse.`;
     ]);
     return [
       ...accumulate(seeds, "seed", (row) => String(row.species ?? ""), seedName),
-      ...accumulate(eggs, "egg", (row) => String(row.eggId ?? row.id ?? row.species ?? ""), eggName)
+      ...accumulate(eggs, "egg", (row) => String(row.eggId ?? row.id ?? row.species ?? ""), eggName2)
     ];
   }
   async function readPlantScope() {
     const [tiles, occupied, items] = await Promise.all([readOwnedTiles(), readOccupied(), readItems()]);
     return { tiles, occupied, items };
   }
+  var seedName, eggName2;
   var init_plantRead = __esm({
     "src/features/companion/chat/plantRead.ts"() {
       "use strict";
       init_atoms();
-      init_data();
+      init_names();
       init_anchors();
       init_map();
       init_plant();
+      seedName = (species) => seedCatalogName(species) ?? species;
+      eggName2 = (eggId) => eggCatalogName(eggId) ?? eggId;
     }
   });
 
@@ -51258,15 +51198,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     return [...out];
   }
   function seedCandidates(species, name) {
-    const entry = plantCatalog2[species];
-    const catalogName = typeof entry?.seed?.name === "string" ? entry.seed.name : null;
-    return spellings2(species, catalogName, name);
+    return spellings2(species, seedCatalogName(species), name);
   }
   function eggCandidates(eggId, name) {
-    const entry = eggCatalog2[eggId];
-    const tileRef = typeof entry?.tileRef === "string" ? entry.tileRef : null;
-    const catalogName = typeof entry?.name === "string" ? entry.name : null;
-    return spellings2(eggId, tileRef, catalogName, name);
+    const tileRef = eggCatalog2[eggId]?.tileRef;
+    return spellings2(eggId, typeof tileRef === "string" ? tileRef : null, eggCatalogName(eggId), name);
   }
   function plantItemIcon(item, sizePx = ICON_PX2) {
     const box = iconHolder2(sizePx);
@@ -51318,6 +51254,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/features/companion/menu/plantChips.ts"() {
       "use strict";
       init_data();
+      init_names();
       init_iconCache();
       init_panel();
       SPRITE_LOG_TAG3 = "companion-plant";
@@ -51592,12 +51529,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     const items = inventory?.items;
     return Array.isArray(items) ? items.length : 0;
   }
-  var SEED_STORAGE_ID, DECOR_STORAGE_ID, INVENTORY_ENTRY_LIMIT, INVENTORY_ENTRY_LIMIT_GUARDED, toQty, toId, seedLabel, decorLabel;
+  var SEED_STORAGE_ID, DECOR_STORAGE_ID, INVENTORY_ENTRY_LIMIT, INVENTORY_ENTRY_LIMIT_GUARDED, toQty, toId;
   var init_sources = __esm({
     "src/features/deleters/sources.ts"() {
       "use strict";
       init_atoms();
-      init_data();
+      init_names();
       SEED_STORAGE_ID = "SeedSilo";
       DECOR_STORAGE_ID = "DecorShed";
       INVENTORY_ENTRY_LIMIT = 100;
@@ -51607,22 +51544,6 @@ Restore figures are averages; unlucky streaks do worse.`;
         return Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : 0;
       };
       toId = (value) => typeof value === "string" ? value.trim() : "";
-      seedLabel = (species) => {
-        try {
-          const name = plantCatalog2?.[species]?.seed?.name;
-          if (typeof name === "string" && name) return name;
-        } catch {
-        }
-        return `${species} Seed`;
-      };
-      decorLabel = (decorId) => {
-        try {
-          const name = decorCatalog2?.[decorId]?.name;
-          if (typeof name === "string" && name) return name;
-        } catch {
-        }
-        return decorId || "Decor";
-      };
     }
   });
 
@@ -51708,7 +51629,7 @@ Restore figures are averages; unlucky streaks do worse.`;
               break;
             }
             await kind.withdraw(task.entry.id, kind.storageId, plan.fromStorage);
-            await sleep5(WITHDRAW_SETTLE_MS);
+            await sleep4(WITHDRAW_SETTLE_MS);
           }
           for (let i = 0; i < task.qty; i++) {
             await gate2();
@@ -51721,7 +51642,7 @@ Restore figures are averages; unlucky streaks do worse.`;
               label: task.entry.label,
               remainingForCategory: task.qty - i - 1
             });
-            if (delayMs > 0 && i < task.qty - 1) await sleep5(delayMs);
+            if (delayMs > 0 && i < task.qty - 1) await sleep4(delayMs);
           }
         }
         selection.clear();
@@ -51773,19 +51694,19 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
   }
-  var WITHDRAW_SETTLE_MS, sleep5, formatNum4;
+  var WITHDRAW_SETTLE_MS, sleep4, formatNum4;
   var init_run = __esm({
     "src/features/deleters/run.ts"() {
       "use strict";
       init_sources();
       WITHDRAW_SETTLE_MS = 180;
-      sleep5 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      sleep4 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       formatNum4 = (n) => new Intl.NumberFormat("en-US").format(Math.max(0, Math.floor(n || 0)));
     }
   });
 
   // src/features/deleters/deleters.ts
-  var sleep6, toast2, guardEnabled, withdraw, seedDeleter, decorDeleter;
+  var sleep5, toast2, guardEnabled, withdraw, seedDeleter, decorDeleter;
   var init_deleters = __esm({
     "src/features/deleters/deleters.ts"() {
       "use strict";
@@ -51794,7 +51715,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_misc();
       init_player();
       init_toast();
-      sleep6 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      sleep5 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       toast2 = (title, message, kind) => {
         void toastSimple(title, message, kind);
       };
@@ -51835,7 +51756,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           const slot = await findFirstEmptySlot();
           if (!slot) throw new Error("No empty garden tile to delete decor on.");
           await PlayerService.placeDecor(slot.tileType, slot.index, decorId, 0);
-          if (delayMs > 0) await sleep6(delayMs);
+          if (delayMs > 0) await sleep5(delayMs);
           await PlayerService.removeGardenObject(slot.index, slot.tileType);
         },
         withdraw
@@ -52327,10 +52248,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     const current = ensureVersion(getAriesStorage());
     return JSON.stringify(current, null, 2);
   }
-  function tryDecodePercentEncodedJson(text) {
-    if (!/^%(?:7B|5B)/i.test(text)) return null;
+  function tryDecodePercentEncodedJson(text2) {
+    if (!/^%(?:7B|5B)/i.test(text2)) return null;
     try {
-      return decodeURIComponent(text);
+      return decodeURIComponent(text2);
     } catch {
       return null;
     }
@@ -52386,13 +52307,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/lib/download.ts
-  function copyTextToClipboard(text) {
+  function copyTextToClipboard(text2) {
     if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(text);
+      navigator.clipboard.writeText(text2);
       return;
     }
     const textarea = document.createElement("textarea");
-    textarea.value = text;
+    textarea.value = text2;
     textarea.style.position = "fixed";
     textarea.style.left = "-9999px";
     document.body.appendChild(textarea);
@@ -52400,8 +52321,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     document.execCommand("copy");
     textarea.remove();
   }
-  function toBase64Utf8(text) {
-    const bytes = new TextEncoder().encode(text);
+  function toBase64Utf8(text2) {
+    const bytes = new TextEncoder().encode(text2);
     let binary = "";
     const CHUNK_SIZE = 32768;
     for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
@@ -52666,8 +52587,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (!files || !files.length) return;
       const file = files[0];
       try {
-        const text = await file.text();
-        const result = importSettings(text);
+        const text2 = await file.text();
+        const result = importSettings(text2);
         showStatus(ioStatus, result);
       } catch (error) {
         showStatus(ioStatus, {
@@ -52996,8 +52917,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function fetchTools() {
     const url = `${RAW_BASE_URL2}/refs/heads/${REPO_BRANCH2}/${TOOLS_FILE_PATH}?t=${Date.now()}`;
     try {
-      const text = await getText(url, { noCache: true });
-      const raw = JSON.parse(text);
+      const text2 = await getText(url, { noCache: true });
+      const raw = JSON.parse(text2);
       return parseToolsPayload(raw);
     } catch (error) {
       console.error("[Tools] Failed to fetch tools:", error);
@@ -53040,13 +52961,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/lib/markdown.ts
-  function escapeHtml2(text) {
+  function escapeHtml2(text2) {
     const div = document.createElement("div");
-    div.textContent = text;
+    div.textContent = text2;
     return div.innerHTML;
   }
-  function renderInlineMarkdown(text) {
-    let html = text;
+  function renderInlineMarkdown(text2) {
+    let html = text2;
     html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label2, url) => {
       const trimmed = url.trim();
@@ -53201,10 +53122,10 @@ Restore figures are averages; unlucky streaks do worse.`;
         const empty = document.createElement("div");
         empty.className = "mgt-state";
         empty.style.gridColumn = "1 / -1";
-        const text = document.createElement("p");
-        text.className = "mgt-state__text";
-        text.textContent = "No tools match the selected tags.";
-        empty.appendChild(text);
+        const text2 = document.createElement("p");
+        text2.className = "mgt-state__text";
+        text2.textContent = "No tools match the selected tags.";
+        empty.appendChild(text2);
         grid.appendChild(empty);
         return;
       }
@@ -53956,10 +53877,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       state6.className = "mgt-state";
       const spinner = document.createElement("div");
       spinner.className = "mgt-spinner";
-      const text = document.createElement("p");
-      text.className = "mgt-state__text";
-      text.textContent = "Fetching the latest tools...";
-      state6.append(spinner, text);
+      const text2 = document.createElement("p");
+      text2.className = "mgt-state__text";
+      text2.textContent = "Fetching the latest tools...";
+      state6.append(spinner, text2);
       viewContainer.appendChild(state6);
     };
     const showError = (message) => {
@@ -53969,15 +53890,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       const title = document.createElement("span");
       title.className = "mgt-state__title";
       title.textContent = "Couldn't load the tools";
-      const text = document.createElement("p");
-      text.className = "mgt-state__text";
-      text.textContent = message;
+      const text2 = document.createElement("p");
+      text2.className = "mgt-state__text";
+      text2.textContent = message;
       const retry = document.createElement("button");
       retry.type = "button";
       retry.className = "mgt-action is-primary";
       retry.textContent = "Retry";
       retry.onclick = () => void init2();
-      state6.append(title, text, retry);
+      state6.append(title, text2, retry);
       viewContainer.appendChild(state6);
     };
     let tools = [];
@@ -54067,7 +53988,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 `;
     document.head.appendChild(st);
   }
-  function sectionLabel2(text) {
+  function sectionLabel2(text2) {
     const el2 = document.createElement("div");
     css3(el2, {
       fontSize: "10px",
@@ -54077,7 +53998,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       textTransform: "uppercase",
       paddingBottom: "7px"
     });
-    el2.textContent = text;
+    el2.textContent = text2;
     return el2;
   }
   function card2(children) {
@@ -54367,9 +54288,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       let lastName = "";
       for (const file of list) {
         try {
-          const text = await file.text();
+          const text2 = await file.text();
           const fallbackName = file.name.replace(/\.[^.]+$/, "").trim() || "Imported garden";
-          const saved = await fn(nameInput.value.trim() || fallbackName, text);
+          const saved = await fn(nameInput.value.trim() || fallbackName, text2);
           if (saved) {
             importedCount++;
             lastName = saved.name;
@@ -55427,26 +55348,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/lib/format.ts
-  function formatPrice(val) {
-    const n = typeof val === "number" ? val : Number(val);
-    if (!Number.isFinite(n)) return n === Infinity ? "\u221E" : null;
-    const abs = Math.abs(n);
-    const fmt2 = (x) => Number.isInteger(x) ? String(x) : x.toFixed(2);
-    if (abs >= 1e12) return `${fmt2(n / 1e12)}T`;
-    if (abs >= 1e9) return `${fmt2(n / 1e9)}B`;
-    if (abs >= 1e6) return `${fmt2(n / 1e6)}M`;
-    if (abs >= 1e3) return `${fmt2(n / 1e3)}k`;
-    return String(n);
-  }
-  var INTEGER_FORMAT;
-  var init_format = __esm({
-    "src/lib/format.ts"() {
-      "use strict";
-      INTEGER_FORMAT = new Intl.NumberFormat("en-US");
-    }
-  });
-
   // src/features/room/menu.ts
   function ensureStyles3() {
     if (document.getElementById(STYLE_ID5)) return;
@@ -55462,7 +55363,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 `;
     document.head.appendChild(st);
   }
-  function sectionLabel3(text) {
+  function sectionLabel3(text2) {
     const el2 = document.createElement("div");
     css4(el2, {
       fontSize: "10px",
@@ -55472,7 +55373,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       textTransform: "uppercase",
       paddingBottom: "6px"
     });
-    el2.textContent = text;
+    el2.textContent = text2;
     return el2;
   }
   function avatar(player2, size) {
@@ -57887,12 +57788,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     const message = crops.length === 1 ? pickOne([`A ${first.mutation} ${first.species}! Look at that!`, `Whoa, a ${first.mutation} ${first.species} just showed up!`, `${first.mutation}! Your ${first.species} is special.`], random) : pickOne([`${crops.length} rare crops just appeared! Look!`, `Whoa, ${crops.length} special crops at once!`], random);
     return { key: "rarecrop", message, emote: EmoteType.Love, priority: "high" };
   }
-  function badLuckReactions(prev, next, eggName4, random) {
+  function badLuckReactions(prev, next, eggName3, random) {
     const out = [];
     for (const [eggId, after] of Object.entries(next ?? {})) {
       const before = prev?.[eggId];
       if (!before || !after) continue;
-      const egg = eggName4(eggId);
+      const egg = eggName3(eggId);
       for (const kind of ["rainbow", "gold"]) {
         const was = Number(before[kind]) || 0;
         const now2 = Number(after[kind]) || 0;
@@ -58411,7 +58312,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const value = entry?.[field];
       if (typeof value === "string" && value.trim()) return value.trim();
     }
-    return weatherId.replace(/([a-z])([A-Z])/g, "$1 $2");
+    return spaceWords(weatherId);
   }
   function weatherMessage(weatherId, displayName, random) {
     const own = WEATHER_LINES[weatherId];
@@ -58422,6 +58323,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_dialogueLines = __esm({
     "src/features/companion/dialogueLines.ts"() {
       "use strict";
+      init_format();
       init_emoteTypes();
       init_reactions();
       LEGACY_DEFAULT_LINES = [
@@ -59798,18 +59700,18 @@ Restore figures are averages; unlucky streaks do worse.`;
       /** Attend ce qui manque pour respecter l'écart. À appeler juste avant un envoi. */
       async wait() {
         const missing = minGapMs - (Date.now() - lastAt);
-        if (missing > 0) await sleep7(missing);
+        if (missing > 0) await sleep6(missing);
       }
     };
   }
-  var ACTION_DELAY_MS, SETTLE_MS, PROGRESS_EVERY, sleep7;
+  var ACTION_DELAY_MS, SETTLE_MS, PROGRESS_EVERY, sleep6;
   var init_batch = __esm({
     "src/features/companion/chat/batch.ts"() {
       "use strict";
       ACTION_DELAY_MS = 400;
       SETTLE_MS = 700;
       PROGRESS_EVERY = 10;
-      sleep7 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      sleep6 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     }
   });
 
@@ -59838,7 +59740,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     try {
       await PetsService.useTeam(teamId2, { markUsed: false });
-      await sleep7(AFTER_TEAM_SWAP_MS);
+      await sleep6(AFTER_TEAM_SWAP_MS);
     } catch {
       reporter2.say("system", "The team switch failed, working as I am.");
       return NOT_SWAPPED;
@@ -59850,7 +59752,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         if (!previous || previous.length === 0) return;
         try {
           await PetsService.usePetIds(previous);
-          await sleep7(AFTER_TEAM_SWAP_MS);
+          await sleep6(AFTER_TEAM_SWAP_MS);
           reporter2.say("system", "Your team is back the way it was.");
         } catch {
           reporter2.say("system", "Could not put your team back, sorry.");
@@ -59994,8 +59896,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         const weatherMuts = [];
         const timeMuts = [];
         for (const m of mutations) {
-          if (COLOR_MUTATIONS.has(m)) colorMuts.push(m);
-          else if (WEATHER_MUTATIONS2.has(m)) weatherMuts.push(m);
+          if (colorMutations().has(m)) colorMuts.push(m);
+          else if (WEATHER_MUTATIONS.has(m)) weatherMuts.push(m);
           else if (TIME_MUTATIONS.has(m)) timeMuts.push(m);
         }
         const crop = {
@@ -60028,7 +59930,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const cropsWithColor = allCrops.filter((c) => c.colorMutations.length > 0).length;
     const colorMutationPct = cropsWithColor / total * 100;
     const weatherMutationPcts = {};
-    for (const wm of WEATHER_MUTATIONS2) {
+    for (const wm of WEATHER_MUTATIONS) {
       const count = allCrops.filter((c) => c.weatherMutations.includes(wm)).length;
       weatherMutationPcts[wm] = count / total * 100;
     }
@@ -60074,19 +59976,19 @@ Restore figures are averages; unlucky streaks do worse.`;
       harvestTargets: []
     };
   }
-  var COLOR_MUTATIONS, WEATHER_MUTATIONS2, TIME_MUTATIONS;
+  var colorMutations, WEATHER_MUTATIONS, TIME_MUTATIONS;
   var init_gardenScan = __esm({
     "src/features/companion/chat/gardenScan.ts"() {
       "use strict";
       init_data();
       init_cropSize();
-      COLOR_MUTATIONS = new Set(
+      colorMutations = memoOnCatalogs(() => new Set(
         Object.keys(mutationCatalog2).filter((k) => {
           const entry = mutationCatalog2[k];
-          return !entry.tileRef;
+          return entry.group !== void 0 ? entry.group === "Growth" : !entry.tileRef;
         })
-      );
-      WEATHER_MUTATIONS2 = /* @__PURE__ */ new Set(["Wet", "Chilled", "Frozen", "Thunderstruck"]);
+      ));
+      WEATHER_MUTATIONS = /* @__PURE__ */ new Set(["Wet", "Chilled", "Frozen", "Thunderstruck"]);
       TIME_MUTATIONS = /* @__PURE__ */ new Set(["Dawnlit", "Amberlit", "Dawncharged", "Ambercharged"]);
     }
   });
@@ -60168,7 +60070,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       reporter2.say("report", "Stopped before I picked anything.");
       return;
     }
-    await sleep7(SETTLE_MS);
+    await sleep6(SETTLE_MS);
     let fresh = null;
     try {
       fresh = (await readHarvestRows()).filter((row) => row.ready);
@@ -60447,7 +60349,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         return { ok: false, reason: "could not pick it" };
       }
       StatsService.incrementGardenStat("totalHarvested", 1);
-      await sleep8(AFTER_HARVEST_MS);
+      await sleep7(AFTER_HARVEST_MS);
     }
     await walker.toPosition(await petPosition(candidate.petId));
     try {
@@ -60455,7 +60357,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
       return { ok: false, reason: "the feed did not go through" };
     }
-    await sleep8(AFTER_FEED_MS);
+    await sleep7(AFTER_FEED_MS);
     return { ok: true };
   }
   async function executeFeedBatch(picks, reporter2) {
@@ -60489,7 +60391,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const done = `${cancelled ? "Stopped there. " : ""}Fed ${names}.${tail}`;
     reporter2.say("report", done, compose(...spaced(petIcons(fed)), " ", done));
   }
-  var AFTER_HARVEST_MS, AFTER_FEED_MS, sleep8;
+  var AFTER_HARVEST_MS, AFTER_FEED_MS, sleep7;
   var init_feedRun = __esm({
     "src/features/companion/chat/feedRun.ts"() {
       "use strict";
@@ -60502,7 +60404,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_bubbleIcons();
       AFTER_HARVEST_MS = 700;
       AFTER_FEED_MS = 400;
-      sleep8 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      sleep7 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     }
   });
 
@@ -60531,7 +60433,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       reporter2.say("report", "Stopped before I planted anything.");
       return;
     }
-    await sleep7(SETTLE_MS);
+    await sleep6(SETTLE_MS);
     const planted = await countPlanted(attempted);
     const stopped = cancelled ? " before you stopped me" : "";
     if (planted === null) {
@@ -60760,7 +60662,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       );
       return;
     }
-    await sleep7(SETTLE_MS);
+    await sleep6(SETTLE_MS);
     const hatched = await countHatched(attempted);
     if (hatched === null) {
       reporter2.say("report", `Opened all ${attempted.length}, but I could not check.`);
@@ -60797,7 +60699,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     reporter2.say("system", line, compose(petThing(star.item, ""), " ", line, ...spaced(mutationChips(shown))), true);
     if (!timing || !lines) return;
-    await sleep7(timing.pauseMs);
+    await sleep6(timing.pauseMs);
     if (!reporter2.stopped()) reporter2.say("system", lines.resume);
   }
   async function executeHatchBatch(slots, reporter2) {
@@ -60915,7 +60817,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       reporter2.say("report", skipped.length > 0 ? "None of them went through." : "Nothing sold.");
       return;
     }
-    await sleep7(SETTLE_MS);
+    await sleep6(SETTLE_MS);
     let sold = null;
     try {
       const left = new Set((await readHatchScope()).pets.map((pet) => pet.petId));
@@ -61037,14 +60939,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     }
   }
-  function post(from, kind, text, proposalId, extra = {}) {
+  function post(from, kind, text2, proposalId, extra = {}) {
     const shown = extra.thread ?? extra.bubble;
     state3 = {
       ...state3,
       log: append(state3.log, {
         from,
         kind,
-        text: shown?.message ?? text,
+        text: shown?.message ?? text2,
         atMs: Date.now(),
         proposalId,
         icons: shown?.tags ? Object.values(shown.tags) : void 0,
@@ -61054,7 +60956,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     const insist = extra.force ?? proposalId !== void 0;
     if (from === "companion") {
-      speak(extra.bubble ?? { message: text }, insist);
+      speak(extra.bubble ?? { message: text2 }, insist);
       if (proposalId !== void 0) {
         void attendToQuestion(proposalId).catch(() => {
         });
@@ -61194,7 +61096,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function reporter() {
     return {
-      say: (kind, text, spoken, force) => post("companion", kind, text, void 0, { bubble: spoken, force }),
+      say: (kind, text2, spoken, force) => post("companion", kind, text2, void 0, { bubble: spoken, force }),
       stopped: () => state3.cancelRequested,
       progress: (done, total) => {
         state3 = { ...state3, run: { done, total } };
@@ -61370,10 +61272,10 @@ Restore figures are averages; unlucky streaks do worse.`;
           return () => listeners8.delete(listener);
         },
         /** Alerte poussée par une source ; ignorée si identique et récente. */
-        alert(text) {
+        alert(text2) {
           state3 = {
             ...state3,
-            log: appendAlertOnce(state3.log, { from: "companion", kind: "alert", text, atMs: Date.now() }, ALERT_DEDUPE_MS)
+            log: appendAlertOnce(state3.log, { from: "companion", kind: "alert", text: text2, atMs: Date.now() }, ALERT_DEDUPE_MS)
           };
           notify2();
         },
@@ -61882,19 +61784,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!tags || tags.length === 0) return [];
     return tags.map((tag) => tagIcon(tag, sizePx)).filter((icon) => icon !== null);
   }
-  function renderTagged(text, tags, sizePx) {
-    if (!tags || tags.length === 0) return [document.createTextNode(text)];
+  function renderTagged(text2, tags, sizePx) {
+    if (!tags || tags.length === 0) return [document.createTextNode(text2)];
     const out = [];
     let cursor = 0;
-    for (const match of text.matchAll(TAG_MARKER)) {
+    for (const match of text2.matchAll(TAG_MARKER)) {
       const at = match.index ?? 0;
-      if (at > cursor) out.push(document.createTextNode(text.slice(cursor, at)));
+      if (at > cursor) out.push(document.createTextNode(text2.slice(cursor, at)));
       cursor = at + match[0].length;
       const tag = tags[Number(match[1])];
       const icon = tag ? tagIcon(tag, sizePx) : null;
       if (icon) out.push(icon);
     }
-    if (cursor < text.length) out.push(document.createTextNode(text.slice(cursor)));
+    if (cursor < text2.length) out.push(document.createTextNode(text2.slice(cursor)));
     return out;
   }
   var SPRITE_LOG_TAG4, TAG_MARKER;
@@ -61909,10 +61811,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/menu/chatView.ts
-  function contentOf(text, icons, positioned2, sizePx) {
-    if (positioned2) return renderTagged(text, icons, sizePx);
+  function contentOf(text2, icons, positioned2, sizePx) {
+    if (positioned2) return renderTagged(text2, icons, sizePx);
     const label2 = document.createElement("span");
-    label2.textContent = text;
+    label2.textContent = text2;
     return [...tagIcons(icons, sizePx), label2];
   }
   function isCentered(message) {
@@ -61953,8 +61855,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       css2(el2, { flex: "1", height: "1px", background: BORDER });
       return el2;
     };
-    const text = document.createElement("div");
-    css2(text, {
+    const text2 = document.createElement("div");
+    css2(text2, {
       fontSize: "10px",
       fontWeight: "600",
       color: TEXT_DIM,
@@ -61962,11 +61864,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       textTransform: "uppercase",
       letterSpacing: "0.5px"
     });
-    text.textContent = label2;
-    wrap.append(line(), text, line());
+    text2.textContent = label2;
+    wrap.append(line(), text2, line());
     return wrap;
   }
-  function systemLine(text, icons, positioned2 = false) {
+  function systemLine(text2, icons, positioned2 = false) {
     const line = document.createElement("div");
     css2(line, {
       alignSelf: "center",
@@ -61976,7 +61878,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       padding: "2px 8px",
       maxWidth: "90%"
     });
-    line.append(...contentOf(text, icons, positioned2, SYSTEM_ICON_PX));
+    line.append(...contentOf(text2, icons, positioned2, SYSTEM_ICON_PX));
     return line;
   }
   function avatar2(identity, sizePx = AVATAR_PX) {
@@ -62073,8 +61975,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     let shownIdentity = null;
     return {
       root,
-      setStatus(text, busy4) {
-        status.textContent = text;
+      setStatus(text2, busy4) {
+        status.textContent = text2;
         css2(status, { color: busy4 ? TEAL : TEXT_DIM });
       },
       setIdentity(identity) {
@@ -62098,7 +62000,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     return body;
   }
-  function emptyThread(text) {
+  function emptyThread(text2) {
     const wrap = document.createElement("div");
     css2(wrap, {
       margin: "auto",
@@ -62111,7 +62013,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const label2 = document.createElement("div");
     css2(label2, { fontSize: "12px", maxWidth: "220px", lineHeight: "1.5" });
-    label2.textContent = text;
+    label2.textContent = text2;
     wrap.append(label2);
     return wrap;
   }
@@ -62127,10 +62029,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     return bar;
   }
-  function barHint(text, tone = "dim") {
+  function barHint(text2, tone = "dim") {
     const hint = document.createElement("div");
     css2(hint, { fontSize: "11px", color: tone === "warn" ? WARN : TEXT_DIM, marginLeft: "auto" });
-    hint.textContent = text;
+    hint.textContent = text2;
     return hint;
   }
   var GROUP_WINDOW_MS, AVATAR_PX, BUBBLE_ICON_PX2, SYSTEM_ICON_PX, OUTGOING_BG, OUTGOING_BORDER, OUTGOING_TEXT, INCOMING_BG, ALERT_BG, ALERT_BORDER;
@@ -62175,8 +62077,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return {
       root,
       body,
-      setSummary(text, active2) {
-        summary.textContent = text;
+      setSummary(text2, active2) {
+        summary.textContent = text2;
         css2(summary, { color: active2 ? TEAL : TEXT_DIM });
       }
     };
@@ -62184,10 +62086,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   function fieldRow(label2, control) {
     const row = document.createElement("div");
     css2(row, { display: "flex", alignItems: "center", gap: "10px", justifyContent: "space-between" });
-    const text = document.createElement("div");
-    css2(text, { fontSize: "11.5px", color: TEXT });
-    text.textContent = label2;
-    row.append(text, control);
+    const text2 = document.createElement("div");
+    css2(text2, { fontSize: "11.5px", color: TEXT });
+    text2.textContent = label2;
+    row.append(text2, control);
     return row;
   }
   function toggleIn(current, value) {
@@ -62315,9 +62217,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       border: `1px solid ${BORDER}`,
       flex: "0 0 auto"
     });
-    const text = document.createElement("div");
-    css2(text, { fontSize: "11.5px", lineHeight: "1.5", color: TEXT, flex: "1", minWidth: "0" });
-    text.textContent = what;
+    const text2 = document.createElement("div");
+    css2(text2, { fontSize: "11.5px", lineHeight: "1.5", color: TEXT, flex: "1", minWidth: "0" });
+    text2.textContent = what;
     const open = document.createElement("button");
     open.type = "button";
     open.textContent = "Set up";
@@ -62333,7 +62235,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       lineHeight: "1"
     });
     open.addEventListener("click", onOpen);
-    root.append(text, open);
+    root.append(text2, open);
     return { root };
   }
   var init_settingsNotice = __esm({
@@ -62838,18 +62740,18 @@ Restore figures are averages; unlucky streaks do worse.`;
         border: `1px solid ${BORDER}`,
         background: CARD_BG
       });
-      const text = document.createElement("div");
-      css2(text, { display: "flex", flexDirection: "column", gap: "2px", flex: "1", minWidth: "0" });
+      const text2 = document.createElement("div");
+      css2(text2, { display: "flex", flexDirection: "column", gap: "2px", flex: "1", minWidth: "0" });
       const name = document.createElement("div");
       css2(name, { fontSize: "12.5px", color: TEXT });
       name.textContent = candidate.petName;
       const meta = document.createElement("div");
       css2(meta, { fontSize: "11px", color: candidate.hungerPct <= 5 ? WARN : TEXT_DIM });
       meta.textContent = candidate.source.kind === "garden" ? `${candidate.hungerPct}% left, I would pick a ${candidate.source.species}` : `${candidate.hungerPct}% left, I have a ${candidate.source.species} in the bag`;
-      text.append(name, meta);
+      text2.append(name, meta);
       const icon = speciesIcon(candidate.source.species, CROP_ICON_PX);
       icon.title = candidate.source.species;
-      line.append(text, icon);
+      line.append(text2, icon);
       return line;
     }
     function render() {
@@ -64104,15 +64006,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return out;
   }
-  function cropName(species) {
-    try {
-      const entry = plantCatalog2?.[species];
-      const name = entry?.crop?.name ?? entry?.name;
-      if (typeof name === "string" && name.trim()) return name.trim();
-    } catch {
-    }
-    return species.replace(/([a-z])([A-Z])/g, "$1 $2");
-  }
   function checkGarden() {
     const next = latestGarden;
     if (!next || next === prevGarden) return;
@@ -64156,14 +64049,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (first) return;
     offer(abilityReaction({ name: newest.name, species: newest.species, abilityName: newest.abilityName }, Math.random));
   }
-  function eggName2(eggId) {
-    try {
-      const name = eggCatalog2?.[eggId]?.name;
-      if (typeof name === "string" && name.trim()) return name.trim();
-    } catch {
-    }
-    return eggId.replace(/([a-z])([A-Z])/g, "$1 $2");
-  }
   function luckOf(state6) {
     const out = {};
     for (const [eggId, counters] of Object.entries(state6?.counters ?? {})) {
@@ -64176,7 +64061,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const prev = prevLuck;
     prevLuck = next;
     if (!prev) return;
-    for (const reaction of badLuckReactions(prev, next, eggName2, Math.random)) offer(reaction);
+    for (const reaction of badLuckReactions(prev, next, eggName, Math.random)) offer(reaction);
   }
   async function onShops(next) {
     const prev = prevShops;
@@ -64262,6 +64147,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/features/companion/reactionWatch.ts"() {
       "use strict";
       init_data();
+      init_names();
       init_atoms();
       init_storage();
       init_tracker();
@@ -64513,31 +64399,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return out;
   }
-  function cropName2(species) {
-    try {
-      const entry = plantCatalog2?.[species];
-      const name = entry?.crop?.name ?? entry?.name;
-      if (typeof name === "string" && name.trim()) return name.trim();
-    } catch {
-    }
-    return spaced2(species);
-  }
-  function mutationName(mutation) {
-    try {
-      const name = mutationCatalog2?.[mutation]?.name;
-      if (typeof name === "string" && name.trim()) return name.trim();
-    } catch {
-    }
-    return spaced2(mutation);
-  }
-  function eggName3(eggId) {
-    try {
-      const name = eggCatalog2?.[eggId]?.name;
-      if (typeof name === "string" && name.trim()) return name.trim();
-    } catch {
-    }
-    return spaced2(eggId);
-  }
   function pickInterest(area) {
     pending3 = null;
     if (!running3 || busy2()) return null;
@@ -64550,9 +64411,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       area,
       random: Math.random,
       rareMutations: rareMutations2(),
-      cropName: cropName2,
+      cropName,
       mutationName,
-      eggName: eggName3
+      eggName
     });
     if (!interest) return null;
     pending3 = { interest, at: Date.now() };
@@ -64617,11 +64478,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       }, SLOT_REFRESH_MS)
     );
   }
-  var SLOT_REFRESH_MS, PENDING_TTL_MS, running3, unsubscribers3, timers2, latestGarden2, slotIdx, pending3, lastCommentAt, spaced2, hooks2;
+  var SLOT_REFRESH_MS, PENDING_TTL_MS, running3, unsubscribers3, timers2, latestGarden2, slotIdx, pending3, lastCommentAt, hooks2;
   var init_wanderWatch = __esm({
     "src/features/companion/wanderWatch.ts"() {
       "use strict";
       init_data();
+      init_names();
       init_atoms();
       init_companion();
       init_anchors();
@@ -64637,7 +64499,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       slotIdx = null;
       pending3 = null;
       lastCommentAt = 0;
-      spaced2 = (id) => id.replace(/([a-z])([A-Z])/g, "$1 $2");
       hooks2 = { pickInterest, onInterestReached };
     }
   });
@@ -65207,9 +65068,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     const who = document.createElement("div");
     who.className = "mgask-who";
     who.textContent = "Companion";
-    const text = document.createElement("div");
-    text.className = "mgask-text";
-    text.append(...questionOf(proposal));
+    const text2 = document.createElement("div");
+    text2.className = "mgask-text";
+    text2.append(...questionOf(proposal));
     const yes = document.createElement("button");
     yes.className = "mgask-yes";
     yes.textContent = "Yes, go ahead";
@@ -65230,7 +65091,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     buttons.append(yes, no);
     const right = document.createElement("div");
     right.className = "mgask-right";
-    right.append(who, text, buttons);
+    right.append(who, text2, buttons);
     const body = document.createElement("div");
     body.className = "mgask-body";
     body.append(face, right);
@@ -65612,8 +65473,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function fetchChangelog() {
     const url = `${RAW_BASE_URL3}/refs/heads/${REPO_BRANCH3}/${CHANGELOG_FILE_PATH}?t=${Date.now()}`;
-    const text = await getText(url, { noCache: true });
-    const raw = JSON.parse(text);
+    const text2 = await getText(url, { noCache: true });
+    const raw = JSON.parse(text2);
     return parseChangelogPayload(raw);
   }
   async function fetchChangelogEntryForVersion(version) {

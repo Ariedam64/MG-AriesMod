@@ -3,8 +3,7 @@ import { captureState } from "./state";
 import { getJSON } from "../../platform/http";
 import { buildMgApiUrl } from "../../platform/mgApi/http";
 
-/** Live catalogs from the public Magic Garden API, which `data/index.ts` serves over the bundled copy. */
-
+/** The payload of the API's /data endpoint. */
 interface ApiData {
   plants: Record<string, unknown>;
   pets: Record<string, unknown>;
@@ -24,14 +23,11 @@ function setCapturedData(key: DataKey, value: Record<string, unknown>): void {
   try {
     window.dispatchEvent(new CustomEvent("gemini:data-updated", { detail: { key } }));
   } catch {
-    /* ignore in non-browser contexts */
+    // Not in a browser.
   }
 }
 
-export function isAllDataCaptured(): boolean {
-  return Object.values(captureState.data).every((v) => v != null);
-}
-
+/** Fetches every catalog in one request. A failure leaves the bundled copy in use and allows a retry. */
 export async function fetchAllData(): Promise<void> {
   if (captureState.fetchStarted) return;
   captureState.fetchStarted = true;
@@ -49,7 +45,6 @@ export async function fetchAllData(): Promise<void> {
     if (data.weathers) setCapturedData("weather", data.weathers);
     if (data.enums) setCapturedData("enums", data.enums);
 
-    captureState.fetchComplete = true;
     console.log("[MGData] all data loaded from API", {
       plants: Object.keys(data.plants || {}).length,
       pets: Object.keys(data.pets || {}).length,
@@ -62,7 +57,6 @@ export async function fetchAllData(): Promise<void> {
     });
   } catch (err) {
     console.error("[MGData] failed to fetch data from API", err);
-    // Allow retry
     captureState.fetchStarted = false;
   }
 }

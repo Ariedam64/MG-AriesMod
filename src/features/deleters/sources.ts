@@ -15,7 +15,7 @@
 // and only when that id has no stack in the inventory yet.
 
 import { Atoms } from "../../game/store/atoms";
-import { decorCatalog, plantCatalog } from "../../data";
+import { decorLabel, seedLabel } from "../../data/names";
 
 export const SEED_STORAGE_ID = "SeedSilo";
 export const DECOR_STORAGE_ID = "DecorShed";
@@ -138,21 +138,6 @@ export function planWithdrawal(entry: DeleterEntry, wantQty: number): WithdrawPl
 /*  Live sources                                                       */
 /* ------------------------------------------------------------------ */
 
-const seedLabel = (species: string): string => {
-  try {
-    const name = (plantCatalog as Record<string, any>)?.[species]?.seed?.name;
-    if (typeof name === "string" && name) return name;
-  } catch {}
-  return `${species} Seed`;
-};
-
-const decorLabel = (decorId: string): string => {
-  try {
-    const name = (decorCatalog as Record<string, any>)?.[decorId]?.name;
-    if (typeof name === "string" && name) return name;
-  } catch {}
-  return decorId || "Decor";
-};
 
 async function readAtom<T>(read: () => Promise<T>): Promise<T | null> {
   try {

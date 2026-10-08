@@ -1,8 +1,7 @@
-// src/utils/cropSize.ts
 // Crop Size math, mirroring the game runtime.
 //
 // A produce item / grow slot carries an integer `size` in [50, 100], and every
-// figure derived from it — coins, weight, sprite scale — goes through the same
+// figure derived from it (coins, weight, sprite scale) goes through the same
 // multiplier:
 //
 //   multiplier = 1 + (maxSizeMultiplier - 1) * (size - 50) / 50

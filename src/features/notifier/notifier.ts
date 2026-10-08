@@ -15,7 +15,10 @@ import {
   decorCatalog,
   rarity as rarityMap,
   weatherCatalog,
+  mutationCatalog,
+  memoOnCatalogs,
 } from "../../data";
+import { spaceWords } from "../../lib/format";
 import { audio, type PlaybackMode, type TriggerOverrides } from "./audio";
 import { StatsService } from "../stats/stats";
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
@@ -271,30 +274,45 @@ const normalizeMutations = (raw: unknown): WeatherMutation[] => {
   return items;
 };
 
-const WEATHER_DEFS: WeatherDef[] = (() => {
-  const entries: WeatherDef[] = [];
+/** The live catalog gives a weather one `mutator`; its multiplier comes from the mutation catalog. */
+const mutatorMutations = (mutator: unknown): WeatherMutation[] => {
+  const id = typeof (mutator as any)?.mutation === "string" ? (mutator as any).mutation : "";
+  if (!id) return [];
+  const entry = (mutationCatalog as Record<string, any>)[id];
+  const mutation: WeatherMutation = { name: typeof entry?.name === "string" && entry.name ? entry.name : id };
+  const multiplier = normalizeNumber(entry?.coinMultiplier);
+  if (multiplier !== undefined) mutation.multiplier = multiplier;
+  return [mutation];
+};
+
+const trimmedString = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
+
+// Built on demand: the live catalog replaces the bundled entries a moment
+// after boot. Live entries carry `name` and a single `mutator` where bundled
+// ones carry `displayName`, `atomValue` and a `mutations` list.
+const weatherIndex = memoOnCatalogs(() => {
+  const defs: WeatherDef[] = [];
   for (const [rawName, rawValue] of Object.entries(weatherCatalog ?? {})) {
+    const entry = (rawValue ?? {}) as Record<string, unknown>;
     const safeName = String(rawName || "").trim();
     if (!safeName) continue;
-    const rawDisplayName = typeof (rawValue as any)?.displayName === "string"
-      ? String((rawValue as any).displayName).trim()
-      : "";
-    const displayName = (rawDisplayName || safeName)
-      .replace(/([a-z])([A-Z])/g, "$1 $2")
+    const rawDisplayName = trimmedString(entry.displayName) || trimmedString(entry.name);
+    const displayName = spaceWords(rawDisplayName || safeName)
       .replace(/_/g, " ")
       .replace(/\s+/g, " ")
       .trim();
-    const atomValue = typeof (rawValue as any)?.atomValue === "string"
-      ? String((rawValue as any).atomValue).trim()
-      : "";
+    // The base weather (Sunny) has no atom value: the game reports no weather.
+    const atomValue = "atomValue" in entry
+      ? trimmedString(entry.atomValue)
+      : entry.mutator ? safeName : "";
     const type = atomValue || displayName;
-    const description = typeof (rawValue as any)?.description === "string"
-      ? String((rawValue as any).description).trim()
-      : null;
-    const weightInCycle = normalizeNumber((rawValue as any)?.weightInCycle);
-    const cycle = normalizeCycle((rawValue as any)?.cycle);
-    const mutations = normalizeMutations((rawValue as any)?.mutations);
-    entries.push({
+    const description = trimmedString(entry.description) || null;
+    const weightInCycle = normalizeNumber(entry.weightInCycle);
+    const cycle = normalizeCycle(entry.cycle);
+    const mutations = Array.isArray(entry.mutations)
+      ? normalizeMutations(entry.mutations)
+      : mutatorMutations(entry.mutator);
+    defs.push({
       id: `Weather:${safeName}`,
       name: displayName || safeName,
       atomValue,
@@ -305,18 +323,18 @@ const WEATHER_DEFS: WeatherDef[] = (() => {
       mutations,
     });
   }
-  return entries;
-})();
 
-const WEATHER_BY_ID = new Map<string, WeatherDef>();
-const WEATHER_BY_ATOM = new Map<string, WeatherDef>();
-const WEATHER_BY_NAME = new Map<string, WeatherDef>();
-for (const def of WEATHER_DEFS) {
-  WEATHER_BY_ID.set(def.id, def);
-  WEATHER_BY_NAME.set(def.name.toLowerCase(), def);
-  WEATHER_BY_ATOM.set(def.atomValue.toLowerCase(), def);
-  WEATHER_BY_NAME.set(def.id.slice("Weather:".length).toLowerCase(), def);
-}
+  const byId = new Map<string, WeatherDef>();
+  const byAtom = new Map<string, WeatherDef>();
+  const byName = new Map<string, WeatherDef>();
+  for (const def of defs) {
+    byId.set(def.id, def);
+    byName.set(def.name.toLowerCase(), def);
+    byAtom.set(def.atomValue.toLowerCase(), def);
+    byName.set(def.id.slice("Weather:".length).toLowerCase(), def);
+  }
+  return { defs, byId, byAtom, byName };
+});
 
 // ---------- prefs (LS) ----------
 let _prefs = new Map<string, number>();
@@ -512,7 +530,7 @@ function _notifyWeather() {
 
 function _recomputeWeatherState() {
   _ensureWeatherPrefsLoaded();
-  const rows: WeatherRow[] = WEATHER_DEFS.map((def) => {
+  const rows: WeatherRow[] = weatherIndex().defs.map((def) => {
     const pref = _getWeatherPref(def.id);
     const notify = !!pref.notify;
     const lastSeen = typeof pref.lastSeen === "number" && Number.isFinite(pref.lastSeen)
@@ -553,7 +571,7 @@ function _buildWeatherOverrides(id: string): TriggerOverrides {
 }
 
 function _triggerWeatherNotification(id: string) {
-  const def = WEATHER_BY_ID.get(id);
+  const def = weatherIndex().byId.get(id);
   if (!def) return;
   const overrides = _buildWeatherOverrides(id);
   audio.trigger(id, overrides, "weather").catch(() => {});
@@ -570,10 +588,11 @@ function _handleWeatherUpdate(raw: any, opts: { force?: boolean } = {}) {
   if (!opts.force && _currentWeatherValue === nextValue) return;
 
   const lookupKey = nextValue.toLowerCase();
-  let def = WEATHER_BY_ATOM.get(lookupKey) || WEATHER_BY_NAME.get(lookupKey);
+  const { byAtom, byName } = weatherIndex();
+  let def = byAtom.get(lookupKey) || byName.get(lookupKey);
   if (!def && lookupKey) {
     const noSpace = lookupKey.replace(/\s+/g, "");
-    def = WEATHER_BY_NAME.get(noSpace);
+    def = byName.get(noSpace);
   }
 
   const prevId = _currentWeatherId;

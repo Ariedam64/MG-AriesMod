@@ -13,7 +13,8 @@
 // Aucun effet à l'import : rien ne tourne tant que `startReactionWatch()` n'est
 // pas appelé.
 
-import { eggCatalog, mutationCatalog, plantCatalog, weatherCatalog } from "../../data";
+import { mutationCatalog, weatherCatalog } from "../../data";
+import { cropName, eggName } from "../../data/names";
 import { Atoms } from "../../game/store/atoms";
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
 import { HatchTracker, type HatchTrackerState } from "../hatch/tracker";
@@ -212,15 +213,6 @@ function rareMutations(): Set<string> {
   return out;
 }
 
-function cropName(species: string): string {
-  try {
-    const entry = (plantCatalog as Record<string, any>)?.[species];
-    const name = entry?.crop?.name ?? entry?.name;
-    if (typeof name === "string" && name.trim()) return name.trim();
-  } catch {}
-  return species.replace(/([a-z])([A-Z])/g, "$1 $2");
-}
-
 function checkGarden(): void {
   const next = latestGarden;
   if (!next || next === prevGarden) return;
@@ -269,14 +261,6 @@ function onAbilityLogs(all: Array<{ performedAt: number; name?: string; species?
   lastAbilityAt = newest.performedAt;
   if (first) return;
   offer(abilityReaction({ name: newest.name, species: newest.species, abilityName: newest.abilityName }, Math.random));
-}
-
-function eggName(eggId: string): string {
-  try {
-    const name = (eggCatalog as Record<string, any>)?.[eggId]?.name;
-    if (typeof name === "string" && name.trim()) return name.trim();
-  } catch {}
-  return eggId.replace(/([a-z])([A-Z])/g, "$1 $2");
 }
 
 /** Compteurs de malchance observés, par œuf. */

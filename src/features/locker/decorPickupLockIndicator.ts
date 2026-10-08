@@ -1,4 +1,4 @@
-import { decorCatalog } from "../../data";
+import { decorCatalog, memoOnCatalogs } from "../../data";
 import { lockerRestrictionsService } from "./restrictions";
 
 const CONTAINER_SELECTOR = ".css-502lyi";
@@ -11,7 +11,7 @@ const DATA_OVERFLOW = "tmDecorLockOverflow";
 
 type Controller = { stop(): void };
 
-const DECOR_LABELS = (() => {
+const decorLabels = memoOnCatalogs(() => {
   const labels = new Set<string>();
   try {
     Object.entries(decorCatalog as Record<string, any>).forEach(([decorId, entry]) => {
@@ -25,7 +25,7 @@ const DECOR_LABELS = (() => {
     /* ignore */
   }
   return Array.from(labels).filter(Boolean);
-})();
+});
 
 export function startDecorPickupLockIndicator(): Controller {
   if (typeof window === "undefined" || typeof document === "undefined") {
@@ -83,7 +83,7 @@ function looksLikeDecorItem(el: HTMLElement): boolean {
   const text = (el.textContent || "").toLowerCase();
   if (!text) return false;
   if (!el.querySelector("canvas")) return false;
-  return DECOR_LABELS.some((label) => label && text.includes(label));
+  return decorLabels().some((label) => label && text.includes(label));
 }
 
 function setLocked(el: HTMLElement, locked: boolean) {

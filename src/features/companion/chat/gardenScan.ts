@@ -1,7 +1,7 @@
 // src/services/workflowScan.ts
 // Garden tile scan for the auto-workflow feature.
 
-import { mutationCatalog } from "../../../data";
+import { memoOnCatalogs, mutationCatalog } from "../../../data";
 import { CROP_SIZE_MAX, CROP_SIZE_MIN, readCropSize } from "../../../data/rules/cropSize";
 
 /* ─── Types ─── */
@@ -75,12 +75,14 @@ export interface GardenScanResult {
 
 /* ─── Mutation classification ─── */
 
-const COLOR_MUTATIONS = new Set(
+// Color mutations are the "Growth" group in the live catalog. The bundled copy
+// has no groups and tells them apart by their missing tileRef instead.
+const colorMutations = memoOnCatalogs(() => new Set(
   Object.keys(mutationCatalog as Record<string, unknown>).filter((k) => {
     const entry = (mutationCatalog as Record<string, Record<string, unknown>>)[k];
-    return !entry.tileRef; // Gold & Rainbow have no tileRef
+    return entry.group !== undefined ? entry.group === "Growth" : !entry.tileRef;
   }),
-);
+));
 
 const WEATHER_MUTATIONS = new Set(["Wet", "Chilled", "Frozen", "Thunderstruck"]);
 const TIME_MUTATIONS = new Set(["Dawnlit", "Amberlit", "Dawncharged", "Ambercharged"]);
@@ -168,7 +170,7 @@ export function scanGarden(
       const weatherMuts: string[] = [];
       const timeMuts: string[] = [];
       for (const m of mutations) {
-        if (COLOR_MUTATIONS.has(m)) colorMuts.push(m);
+        if (colorMutations().has(m)) colorMuts.push(m);
         else if (WEATHER_MUTATIONS.has(m)) weatherMuts.push(m);
         else if (TIME_MUTATIONS.has(m)) timeMuts.push(m);
       }

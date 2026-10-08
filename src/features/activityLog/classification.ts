@@ -5,6 +5,8 @@
 // Pixi, no text/sprite parsing — every entry already carries this field, so
 // classification is always exact.
 
+import { spaceWords } from "../../lib/format";
+
 export type ActionKey =
   | "all"
   | "found"
@@ -205,8 +207,7 @@ export function classifyEntryAction(action: string | null | undefined): ActionKe
 export function getActionLabel(action: ActionKey): string {
   const preset = ACTION_LABELS[action];
   if (preset) return preset;
-  const spaced = String(action || "")
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
+  const spaced = spaceWords(String(action || ""))
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();

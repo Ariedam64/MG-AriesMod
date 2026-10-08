@@ -1,5 +1,4 @@
-// src/utils/calculators.ts
-import { plantCatalog, mutationCatalog } from "..";
+import { plantCatalog, mutationCatalog, memoOnCatalogs } from "..";
 import { cropSizeMultiplier, readCropSize } from "./cropSize";
 
 type ColorMutation = "Gold" | "Rainbow";
@@ -122,7 +121,8 @@ function friendBonusMultiplier(playersInRoom?: number): number {
   return 1 + (n - 1) * 0.1;
 }
 
-const MUTATION_MULTIPLIER_BY_KEY: Record<string, number> = (() => {
+/** Coin multiplier by mutation, keyed by both its id and its name, lowercased. */
+const mutationMultipliers = memoOnCatalogs(() => {
   const map: Record<string, number> = {};
   if (!mutationCatalog || typeof mutationCatalog !== "object") return map;
   for (const [rawKey, rawValue] of Object.entries(mutationCatalog as Record<string, any>)) {
@@ -135,12 +135,12 @@ const MUTATION_MULTIPLIER_BY_KEY: Record<string, number> = (() => {
     if (lowerRawKey) map[lowerRawKey] = mult;
   }
   return map;
-})();
+});
 
 function mutationMultiplier(name: MutationName): number | null {
   const k = lowerKey(name);
   if (!k) return null;
-  const mult = MUTATION_MULTIPLIER_BY_KEY[k];
+  const mult = mutationMultipliers()[k];
   return Number.isFinite(mult) ? mult : null;
 }
 

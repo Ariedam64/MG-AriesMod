@@ -1,10 +1,9 @@
-// src/utils/growSlot.ts
 // Which grow slot the game is showing, mirroring the game's own resolution.
 //
 // `mySelectedSlotIdAtom` is a raw selection cursor, not a slotId that is
 // guaranteed to exist: it starts at 0, and harvesting a fruit leaves it
 // pointing at an id that is gone. The game resolves it as "exact match, else
-// the next id upwards, else the lowest id" — matching on equality alone
+// the next id upwards, else the lowest id". Matching on equality alone
 // strands the selection on `slots[0]`, so nothing derived from the selected
 // fruit (price, size, lock state) follows what the player picked.
 //

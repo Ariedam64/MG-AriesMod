@@ -18,3 +18,6 @@ export function formatPrice(val: unknown): string | null {
 }
 
 export const pad2 = (n: number): string => String(Math.floor(n)).padStart(2, "0");
+
+/** "AmberMoon" reads "Amber Moon": splits a camelCase id into words. */
+export const spaceWords = (id: string): string => id.replace(/([a-z])([A-Z])/g, "$1 $2");

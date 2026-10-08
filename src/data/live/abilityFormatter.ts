@@ -1,5 +1,3 @@
-// src/data/dynamic/logic/abilityFormatter.ts
-
 export interface ActivityLogEntry {
   action: string;
   timestamp: number;
@@ -32,7 +30,6 @@ export type PetAbilityAction = (typeof PET_ABILITY_ACTIONS)[number];
 export function isPetAbilityAction(action: string): action is PetAbilityAction {
   return PET_ABILITY_ACTIONS.includes(action as PetAbilityAction);
 }
-
 
 function formatTime(seconds: number): string {
   const hours = Math.floor(seconds / 3600);

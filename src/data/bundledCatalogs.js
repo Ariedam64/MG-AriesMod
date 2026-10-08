@@ -171,7 +171,7 @@ export const tileRefsSeeds = {
 };
 
 export const tileRefsItems = {
-  // UI / système (pas dans V.Item)
+  // UI / system (not in V.Item)
   Coin: 1,
   InventoryBag: 7,
   MoneyBag: 11,
@@ -203,7 +203,7 @@ export const tileRefsItems = {
 };
 
 export const tileRefsAnimations = {
-  // Météo (pas dans V.Animation)
+  // Weather (not in V.Animation)
   Rain: 10,
   Frost: 20,
   Sunny: 30,
@@ -246,7 +246,7 @@ export const tileRefsPets = {
   WhiteCaribou: "sprite/pet/WhiteCaribou",
   WinterEgg: "sprite/pet/WinterEgg",
   Worm: "sprite/pet/Worm",
-  // Pas dans V.Pet (garder pour compatibilité)
+  // Not in V.Pet (kept for compatibility)
   DivineEgg: 16,
   CelestialEgg: 17,
 }
@@ -2317,7 +2317,7 @@ export const petAbilities = {
     baseProbability: 21,
     baseParameters: { eggGrowthTimeReductionMinutes: 7 }
   },
-  // utilisé par la dinde: EggGrowthBoostII_NEW
+  // used by the Turkey: EggGrowthBoostII_NEW
   EggGrowthBoostII_NEW: {
     name: "Egg Growth Boost II",
     description: "Reduces the time for eggs to hatch",
@@ -2325,7 +2325,7 @@ export const petAbilities = {
     baseProbability: 24,
     baseParameters: { eggGrowthTimeReductionMinutes: 9 }
   },
-  // ancien EggGrowthBoostIII remplacé par ce bloc
+  // the old EggGrowthBoostIII, replaced by this block
   EggGrowthBoostII: {
     name: "Egg Growth Boost III",
     description: "Reduces the time for eggs to hatch",
@@ -2888,7 +2888,7 @@ export const decorCatalog = {
     baseTileScale: 1.5, isOneTimePurchase: false, nudgeY: -0.30
   },
 
-  // Spéciaux
+  // Specials
   MiniFairyCottage: {
     tileRef: tileRefsDecor.MiniFairyCottage,
     name: "Mini Fairy Cottage",
@@ -3105,8 +3105,8 @@ export const weatherCatalog = {
     description:'Gives the Wet mutation to mature garden crops',
     type: 'weather',
     cycle: { kind: 'weather', startWindowMin: 20, startWindowMax: 35, durationMinutes: 5 },
-    weightInCycle: 0.75,                           // 75% des events météo
-    appliesRandomCropPercent: 30,                  // ~30% des cultures applicables
+    weightInCycle: 0.75,                           // 75% of weather events
+    appliesRandomCropPercent: 30,                  // ~30% of eligible crops
     conditions: { requiresMature: true, requiresNoExistingModifier: true },
     mutations: [
       { name: 'Wet',    multiplier: 2 },
@@ -3123,7 +3123,7 @@ export const weatherCatalog = {
     type: 'weather',
     displayName: 'Snow',
     cycle: { kind: 'weather', startWindowMin: 20, startWindowMax: 35, durationMinutes: 5 },
-    weightInCycle: 0.25,                           // 25% des events météo
+    weightInCycle: 0.25,                           // 25% of weather events
     appliesRandomCropPercent: 30,
     conditions: { requiresMature: true, requiresNoExistingModifier: true },
     mutations: [
@@ -3154,7 +3154,7 @@ export const weatherCatalog = {
     type: 'lunar',
     displayName: 'Harvest Moon',
     cycle: { kind: 'lunar', periodMinutes: 240, durationMinutes: 10 },
-    weightInCycle: 0.33,                           // 33% des events lunaires
+    weightInCycle: 0.33,                           // 33% of lunar events
     appliesRandomCropPercent: 30,
     conditions: { requiresMature: true, requiresNoExistingModifier: true },
     mutations: [
@@ -3169,7 +3169,7 @@ export const weatherCatalog = {
     description:'Gives the Dawnlit mutation to mature garden crops',
     type: 'lunar',
     cycle: { kind: 'lunar', periodMinutes: 240, durationMinutes: 10 },
-    weightInCycle: 0.67,                           // 67% des events lunaires
+    weightInCycle: 0.67,                           // 67% of lunar events
     appliesRandomCropPercent: 30,
     conditions: { requiresMature: true, requiresNoExistingModifier: true },
     mutations: [
@@ -3191,13 +3191,13 @@ export const weatherCatalog = {
 // Minutes for a pet's hunger to drain from full to empty, per species.
 //
 // Source: the game wiki. This value exists NOWHERE in the runtime bundle and
-// is not served by MGData either — unlike max hunger, which IS dynamic and
+// is not served by MGData either, unlike max hunger, which IS dynamic and
 // must be read from petCatalog's `coinsToFullyReplenishHunger`. Only the
 // depletion time is hardcoded here.
 //
 // Deliberately a standalone export rather than extra fields on petCatalog:
 // makeCatalogProxy() in src/data/index.ts resolves per species, not per
-// field, so it returns MGData's whole entry whenever the species is known —
+// field, so it returns MGData's whole entry whenever the species is known:
 // a field added to the hardcoded petCatalog would be silently shadowed
 // in-game and never read.
 //

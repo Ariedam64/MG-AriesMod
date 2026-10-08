@@ -2,12 +2,7 @@
 import { NotifierService, type NotifierRule } from "./notifier";
 import { ShopsService, type Kind as ShopKind } from "../shops/shops";
 import { audio, type PlaybackMode, type TriggerOverrides } from "./audio"; // ← utilise le singleton unifié
-import {
-  eggNameFromId,          // NEW
-  toolNameFromId,         // NEW
-  decorNameFromId,
-  seedNameFromSpecies
-} from "../../data/names";
+import { decorCatalogName, eggCatalogName, seedCatalogName, toolCatalogName } from "../../data/names";
 import { attachSpriteIcon } from "../../ui/kit/sprites/iconCache";
 import { startNotificationBellPixi, type NotificationBellPixiController } from "./bellPixi";
 import {
@@ -116,10 +111,10 @@ function iconOf(id: string, size = 24): HTMLElement {
 function labelOf(id: string): string {
   const [type, raw] = id.split(":") as ["Seed"|"Egg"|"Tool"|"Decor", string];
   switch (type) {
-    case "Seed":  return seedNameFromSpecies(raw) ?? raw;
-    case "Egg":   return eggNameFromId(raw) ?? raw;
-    case "Tool":  return toolNameFromId(raw) ?? raw;
-    case "Decor": return decorNameFromId(raw) ?? raw;
+    case "Seed":  return seedCatalogName(raw) ?? raw;
+    case "Egg":   return eggCatalogName(raw) ?? raw;
+    case "Tool":  return toolCatalogName(raw) ?? raw;
+    case "Decor": return decorCatalogName(raw) ?? raw;
     default:      return raw;
   }
 }

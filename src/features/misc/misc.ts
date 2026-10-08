@@ -1,6 +1,7 @@
 // src/services/misc.ts
 import { PlayerService } from "../../game/player";
-import { decorCatalog, plantCatalog } from "../../data";
+import { plantCatalog } from "../../data";
+import { decorLabel, seedLabel } from "../../data/names";
 import { Atoms, myDecorShedItems, mySeedSiloItems, myToolShackItems } from "../../game/store/atoms";
 import {
   createAutoStore,
@@ -614,15 +615,6 @@ try {
   });
 } catch {}
 
-function seedDisplayNameFromSpecies(species: string): string {
-  try {
-    const node = (plantCatalog as any)?.[species];
-    const n = node?.seed?.name;
-    if (typeof n === "string" && n) return n;
-  } catch {}
-  return `${species} Seed`;
-}
-
 function normalizeSeedItem(x: any, _idx: number): SeedItem | null {
   if (!x || typeof x !== "object") return null;
   const species = typeof x.species === "string" ? x.species.trim() : "";
@@ -644,15 +636,6 @@ async function getMySeedInventory(): Promise<SeedItem[]> {
 
 function buildInventoryShapeFrom(items: SeedItem[]): InventoryShape {
   return { items, favoritedItemIds: [] };
-}
-
-function decorDisplayNameFromId(decorId: string): string {
-  try {
-    const node = (decorCatalog as any)?.[decorId];
-    const n = node?.name;
-    if (typeof n === "string" && n) return n;
-  } catch {}
-  return decorId || "Decor";
 }
 
 function normalizeDecorItem(x: any): DecorItem | null {
@@ -1003,7 +986,7 @@ async function repatchFakeSeedInventoryWithSelection() {
   // Reste par nom d'affichage = stock initial - quantités sélectionnées
   const remainingByName = new Map<string, number>();
   for (const s of src) {
-    const disp = seedDisplayNameFromSpecies(s.species);
+    const disp = seedLabel(s.species);
     const qty = Math.max(0, Math.floor(s.quantity || 0));
     remainingByName.set(disp, (remainingByName.get(disp) ?? 0) + qty);
   }
@@ -1016,7 +999,7 @@ async function repatchFakeSeedInventoryWithSelection() {
   // Reconstruit la liste en tronquant chaque entrée avec ce qu'il reste
   const patched: SeedItem[] = [];
   for (const s of src) {
-    const disp = seedDisplayNameFromSpecies(s.species);
+    const disp = seedLabel(s.species);
     const remaining = remainingByName.get(disp) ?? 0;
     if (remaining <= 0) continue;
     const take = Math.min(remaining, Math.max(0, Math.floor(s.quantity || 0)));
@@ -1095,7 +1078,7 @@ async function openSeedSelectorFlow(setWindowVisible?: (v: boolean) => void) {
     seedSourceCache = await getMySeedInventory();
     seedStockByName = new Map<string, number>();
     for (const s of seedSourceCache) {
-      const display = seedDisplayNameFromSpecies(s.species);
+      const display = seedLabel(s.species);
       seedStockByName.set(display, Math.max(1, Math.floor(s.quantity || 0)));
     }
 
@@ -1317,7 +1300,7 @@ async function repatchFakeDecorInventoryWithSelection() {
   const src = Array.isArray(decorSourceCache) ? decorSourceCache : [];
   const remainingByName = new Map<string, number>();
   for (const s of src) {
-    const disp = decorDisplayNameFromId(s.decorId);
+    const disp = decorLabel(s.decorId);
     const qty = Math.max(0, Math.floor(s.quantity || 0));
     remainingByName.set(disp, (remainingByName.get(disp) ?? 0) + qty);
   }
@@ -1329,7 +1312,7 @@ async function repatchFakeDecorInventoryWithSelection() {
 
   const patched: DecorItem[] = [];
   for (const s of src) {
-    const disp = decorDisplayNameFromId(s.decorId);
+    const disp = decorLabel(s.decorId);
     const remaining = remainingByName.get(disp) ?? 0;
     if (remaining <= 0) continue;
     const take = Math.min(remaining, Math.max(0, Math.floor(s.quantity || 0)));
@@ -1351,7 +1334,7 @@ async function beginSelectedDecorNameListener() {
     if (!n) return;
 
     const max = Math.max(1, decorStockByName.get(n) ?? 1);
-    const decorId = Array.from(decorSourceCache || []).find((d) => decorDisplayNameFromId(d.decorId) === n)?.decorId || n;
+    const decorId = Array.from(decorSourceCache || []).find((d) => decorLabel(d.decorId) === n)?.decorId || n;
     const existing = selectedDecorMap.get(n);
     if (existing) {
       existing.qty = max;
@@ -1544,7 +1527,7 @@ async function openDecorSelectorFlow(setWindowVisible?: (v: boolean) => void) {
     decorSourceCache = await getMyDecorInventory();
     decorStockByName = new Map<string, number>();
     for (const d of decorSourceCache) {
-      const display = decorDisplayNameFromId(d.decorId);
+      const display = decorLabel(d.decorId);
       decorStockByName.set(display, Math.max(1, Math.floor(d.quantity || 0)));
     }
 

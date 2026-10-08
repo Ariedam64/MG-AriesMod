@@ -9,7 +9,7 @@
 // protègent ce qui pousse, pas les cases vides. Planter n'enlève rien.
 
 import { Atoms } from "../../../game/store/atoms";
-import { eggCatalog, plantCatalog } from "../../../data";
+import { eggCatalogName, seedCatalogName } from "../../../data/names";
 import { readMySlotIdx } from "../anchors";
 import { readCompanionMap } from "../map";
 import { GARDEN_TILE_COUNT, type PlantItem, type PlantScope } from "./plant";
@@ -57,18 +57,9 @@ async function readOccupied(): Promise<Set<number>> {
   return occupied;
 }
 
-/** Nom affichable d'une graine : celui du catalogue, à défaut l'espèce brute. */
-function seedName(species: string): string {
-  const entry = (plantCatalog as Record<string, { seed?: { name?: unknown } } | undefined>)[species];
-  const name = entry?.seed?.name;
-  return typeof name === "string" && name ? name : species;
-}
-
-function eggName(eggId: string): string {
-  const entry = (eggCatalog as Record<string, { name?: unknown } | undefined>)[eggId];
-  const name = entry?.name;
-  return typeof name === "string" && name ? name : eggId;
-}
+/** Display names: the catalog's, or the raw id when it has none. */
+const seedName = (species: string) => seedCatalogName(species) ?? species;
+const eggName = (eggId: string) => eggCatalogName(eggId) ?? eggId;
 
 /** Somme les quantités par identifiant : l'inventaire peut lister deux piles. */
 function accumulate(

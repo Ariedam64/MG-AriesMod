@@ -7,6 +7,7 @@
 // ce qu'elle a lu en une phrase, ce qui se vérifie hors navigateur
 // (scripts/checkCompanionDialogue.ts).
 
+import { spaceWords } from "../../lib/format";
 import { EmoteType } from "./emoteTypes";
 import { TIME_LINE_EMOTES } from "./reactions";
 
@@ -295,7 +296,7 @@ export function weatherDisplayName(weatherId: string, catalog: unknown): string 
     const value = (entry as Record<string, unknown> | undefined)?.[field];
     if (typeof value === "string" && value.trim()) return value.trim();
   }
-  return weatherId.replace(/([a-z])([A-Z])/g, "$1 $2");
+  return spaceWords(weatherId);
 }
 
 export function weatherMessage(weatherId: string, displayName: string, random: () => number): string {

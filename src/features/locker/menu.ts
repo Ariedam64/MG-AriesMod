@@ -5,6 +5,7 @@ import {
   eggCatalog,
   tileRefsMutations,
   tileRefsMutationLabels,
+  memoOnCatalogs,
 } from "../../data";
 import {
   lockerService,
@@ -168,25 +169,31 @@ function formatMutationLabel(key: string): string {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
-const WEATHER_MUTATION_LABELS =
-  (tileRefsMutationLabels as Record<string, string> | undefined) ?? {};
+const weatherMutationLabel = (key: string): string =>
+  ((tileRefsMutationLabels as Record<string, string> | undefined) ?? {})[key] ?? formatMutationLabel(key);
 
-const WEATHER_MUTATIONS: WeatherMutationInfo[] = Object.entries(
-  tileRefsMutations as Record<string, number | string>,
-)
-  .filter((entry): entry is [WeatherTag, number | string] => {
-    const [key, value] = entry;
-    if (key === "Puddle" || key === "ThunderstruckGround") {
-      return false;
-    }
-    return typeof value === "number" || typeof value === "string";
-  })
-  .map(([key, value]) => ({
-    key,
-    label: WEATHER_MUTATION_LABELS[key] ?? formatMutationLabel(key),
-    tileRef: value,
-    iconFactory: options => createWeatherBadge(key, options),
-  }));
+const weatherMutations = memoOnCatalogs((): WeatherMutationInfo[] => [
+  {
+    key: NO_WEATHER_TAG,
+    label: "No weather effect",
+    tileRef: null,
+    iconFactory: createNoWeatherIcon,
+  },
+  ...Object.entries(tileRefsMutations as Record<string, number | string>)
+    .filter((entry): entry is [WeatherTag, number | string] => {
+      const [key, value] = entry;
+      if (key === "Puddle" || key === "ThunderstruckGround") {
+        return false;
+      }
+      return typeof value === "number" || typeof value === "string";
+    })
+    .map(([key, value]) => ({
+      key,
+      label: weatherMutationLabel(key),
+      tileRef: value,
+      iconFactory: (options?: IconOptions) => createWeatherBadge(key, options),
+    })),
+]);
 
 const createNoWeatherIcon: WeatherIconFactory = options => {
   const size = Math.max(24, options?.size ?? 48);
@@ -210,15 +217,8 @@ const createNoWeatherIcon: WeatherIconFactory = options => {
   return wrap;
 };
 
-WEATHER_MUTATIONS.unshift({
-  key: NO_WEATHER_TAG,
-  label: "No weather effect",
-  tileRef: null,
-  iconFactory: createNoWeatherIcon,
-});
-
 const isWeatherMutationAvailable = (tag: WeatherTag): boolean =>
-  WEATHER_MUTATIONS.some(info => info.key === tag);
+  weatherMutations().some(info => info.key === tag);
 
 const WEATHER_RECIPE_GROUPS: Partial<Record<WeatherTag, WeatherRecipeGroup>> = {
   Wet: "condition",
@@ -248,7 +248,7 @@ function normalizeWeatherSelection(selection: Set<WeatherTag>): void {
 function normalizeRecipeSelection(selection: Set<WeatherTag>): void {
   normalizeWeatherSelection(selection);
   const seen = new Set<WeatherRecipeGroup>();
-  WEATHER_MUTATIONS.forEach(info => {
+  weatherMutations().forEach(info => {
     if (!selection.has(info.key)) return;
     const group = WEATHER_RECIPE_GROUPS[info.key];
     if (!group) return;
@@ -359,7 +359,7 @@ function createWeatherBadge(tag: WeatherTag, options: IconOptions = {}): HTMLEle
     color: "#e7eef7",
     lineHeight: "1",
   });
-  const label = WEATHER_MUTATION_LABELS[tag] ?? formatMutationLabel(tag);
+  const label = weatherMutationLabel(tag);
   const fallback = options.fallback ?? label.charAt(0);
   wrap.textContent = fallback || "?";
   wrap.title = label;
@@ -1306,7 +1306,7 @@ function createLockerSettingsCard(
     };
 
   const updateMainWeatherSelection = applyWeatherSelection(state.weatherSelected);
-  const weatherToggles = WEATHER_MUTATIONS.map(info => {
+  const weatherToggles = weatherMutations().map(info => {
     const toggle = createWeatherMutationToggle({
       key: info.key,
       label: info.label,
@@ -1492,7 +1492,7 @@ function createLockerSettingsCard(
     });
 
     let count = 0;
-    WEATHER_MUTATIONS.forEach(info => {
+    weatherMutations().forEach(info => {
       if (!selection.has(info.key)) return;
       count += 1;
       badges.appendChild(buildRecipeBadge(info));
@@ -1537,7 +1537,7 @@ function createLockerSettingsCard(
 
     const toggles = new Map<WeatherTag, WeatherMutationToggle>();
 
-    WEATHER_MUTATIONS.forEach(info => {
+    weatherMutations().forEach(info => {
       const toggle = createWeatherMutationToggle({
         key: info.key,
         label: info.label,

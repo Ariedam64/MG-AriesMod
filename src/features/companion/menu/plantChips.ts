@@ -6,7 +6,8 @@
 // part de l'identifiant de l'objet et des catalogues, en proposant au résolveur
 // les graphies plausibles plutôt qu'en pariant sur une seule.
 
-import { eggCatalog, plantCatalog } from "../../../data";
+import { eggCatalog } from "../../../data";
+import { eggCatalogName, seedCatalogName } from "../../../data/names";
 import { attachSpriteIcon } from "../../../ui/kit/sprites/iconCache";
 import { BORDER, CARD_BG, TEAL, TEAL_BORDER, TEAL_DIM, TEXT_DIM, WARN, css } from "../../../ui/kit/panel";
 import type { PlantItem, PlantKind } from "../chat/plant";
@@ -49,16 +50,12 @@ function spellings(...names: Array<string | null | undefined>): string[] {
 }
 
 function seedCandidates(species: string, name: string): string[] {
-  const entry = (plantCatalog as Record<string, { seed?: { name?: unknown } } | undefined>)[species];
-  const catalogName = typeof entry?.seed?.name === "string" ? entry.seed.name : null;
-  return spellings(species, catalogName, name);
+  return spellings(species, seedCatalogName(species), name);
 }
 
 function eggCandidates(eggId: string, name: string): string[] {
-  const entry = (eggCatalog as Record<string, { tileRef?: unknown; name?: unknown } | undefined>)[eggId];
-  const tileRef = typeof entry?.tileRef === "string" ? entry.tileRef : null;
-  const catalogName = typeof entry?.name === "string" ? entry.name : null;
-  return spellings(eggId, tileRef, catalogName, name);
+  const tileRef = (eggCatalog as Record<string, { tileRef?: unknown } | undefined>)[eggId]?.tileRef;
+  return spellings(eggId, typeof tileRef === "string" ? tileRef : null, eggCatalogName(eggId), name);
 }
 
 /** Le sprite d'un posable, graine ou œuf, sans son nom. */

@@ -6,6 +6,7 @@ import {
   coin,
   decorCatalog,
   eggCatalog,
+  memoOnCatalogs,
   petAbilities,
   petCatalog,
   plantCatalog,
@@ -1780,7 +1781,7 @@ const updatePetHutchSections = async (
   }
 };
 
-const PET_STATS_BY_SPECIES = (() => {
+const petStatsBySpecies = memoOnCatalogs(() => {
   const map = new Map<string, { maxScale: number; hoursToMature: number }>();
   const register = (key: unknown, maxScale: number, hoursToMature: number) => {
     if (typeof key !== "string") return;
@@ -1799,7 +1800,7 @@ const PET_STATS_BY_SPECIES = (() => {
   }
 
   return map;
-})();
+});
 
 const lookupPetStats = (
   species: unknown
@@ -1807,7 +1808,7 @@ const lookupPetStats = (
   if (typeof species !== "string") return null;
   const normalized = normalizeSpeciesKey(species);
   if (!normalized) return null;
-  return PET_STATS_BY_SPECIES.get(normalized) ?? null;
+  return petStatsBySpecies().get(normalized) ?? null;
 };
 
 const getPetStrengthInfo = (
