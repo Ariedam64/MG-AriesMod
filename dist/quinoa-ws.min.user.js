@@ -2632,8 +2632,8 @@
         // Keys here are the *internal* category, which comes from the frame key and
         // is always singular (`sprite/object/…`). These three were written plural on
         // both sides, so they never matched and their sprites fell through to the
-        // singular URL — which the API serves only in plural, hence a 404 for every
-        // object/tile/animation icon in the mod.
+        // singular URL, which the API serves only in plural: a 404 for every
+        // object, tile and animation icon in the mod.
         object: "objects",
         tile: "tiles",
         animation: "animations",
@@ -2663,8 +2663,8 @@
         item: ["item"],
         decor: ["decor"],
         // A few mutation icons live in the `ui` sheet (MutationGold, MutationRainbow)
-        // while the rest sit in `mutations`, so both have to be searched — same
-        // reason `weather` already spans three.
+        // while the rest sit in `mutations`, so both have to be searched, for the
+        // same reason `weather` spans three.
         mutation: ["mutation", "mutation-overlay", "ui"],
         "mutation-overlay": ["mutation-overlay", "mutation"],
         ui: ["ui"],
@@ -2675,7 +2675,7 @@
       CATALOG_SOURCES = [
         // `crop` before `plant`: both land in the `plants` sheet, and the bare species
         // name must resolve to the harvested crop (Carrot), not the seedling
-        // (BabyCarrot) — which is what the index used to return.
+        // (BabyCarrot) the index used to return.
         { key: "plants", paths: ["seed", "crop", "plant"] },
         { key: "pets", paths: [null] },
         { key: "eggs", paths: [null] },
@@ -2932,43 +2932,31 @@
         return;
       }
       const entry = selectedEntry;
-      const url = entry.url;
       const spriteKey = `${entry.internalCat}:${entry.name}${mutKey}`;
       const existing = target.querySelector("img[data-sprite-key]");
       if (existing && existing.dataset.spriteKey === spriteKey) return;
+      const place = (src, onlyIfConnected) => {
+        const img = createSpriteImg(src, size, spriteKey, entry.internalCat, entry.name);
+        requestAnimationFrame(() => {
+          if (onlyIfConnected && !target.isConnected) return;
+          target.replaceChildren(img);
+          options?.onSpriteApplied?.(img, { category: entry.internalCat, spriteId: entry.name, candidate: selectedCandidate });
+        });
+      };
       if (!hasMutations) {
-        getSpriteObjectUrl(url).then((objectUrl) => {
-          const img = createSpriteImg(objectUrl, size, spriteKey, entry.internalCat, entry.name);
-          requestAnimationFrame(() => {
-            if (!target.isConnected) return;
-            target.replaceChildren(img);
-            options?.onSpriteApplied?.(img, {
-              category: entry.internalCat,
-              spriteId: entry.name,
-              candidate: selectedCandidate
-            });
-          });
-        }).catch(() => {
+        getSpriteObjectUrl(entry.url).then((objectUrl) => place(objectUrl, true)).catch(() => {
         });
         return;
       }
       const ck = cacheKeyFor(entry.internalCat, entry.name, mutKey);
       const cached = spriteDataUrlResolved.get(ck);
       if (cached) {
-        const img = createSpriteImg(cached, size, spriteKey, entry.internalCat, entry.name);
-        requestAnimationFrame(() => {
-          target.replaceChildren(img);
-          options?.onSpriteApplied?.(img, {
-            category: entry.internalCat,
-            spriteId: entry.name,
-            candidate: selectedCandidate
-          });
-        });
+        place(cached, false);
         return;
       }
       let promise = spriteDataUrlCache.get(ck);
       if (!promise) {
-        promise = loadImage(url).then(async (imgEl) => {
+        promise = loadImage(entry.url).then(async (imgEl) => {
           const dataUrl = await applyMutationFilters(imgEl, mutations);
           spriteDataUrlResolved.set(ck, dataUrl);
           return dataUrl;
@@ -2976,16 +2964,7 @@
         spriteDataUrlCache.set(ck, promise);
       }
       promise.then((dataUrl) => {
-        if (!dataUrl) return;
-        const img = createSpriteImg(dataUrl, size, spriteKey, entry.internalCat, entry.name);
-        requestAnimationFrame(() => {
-          target.replaceChildren(img);
-          options?.onSpriteApplied?.(img, {
-            category: entry.internalCat,
-            spriteId: entry.name,
-            candidate: selectedCandidate
-          });
-        });
+        if (dataUrl) place(dataUrl, false);
       });
     });
   }
@@ -3016,13 +2995,13 @@
       setCatalogReader((key2) => MGData.get(key2));
       fetchIndex();
       MUTATION_ICONS = {
-        // Ground-level icons (anchor.y ≈ 0.5 — drawn at plant base)
+        // Ground-level icons (anchor.y about 0.5), drawn at the plant's base.
         Wet: { url: `${API_BASE2}/assets/sprites/mutations/Wet.png`, anchor: { x: 0.5, y: 0.487 } },
         Chilled: { url: `${API_BASE2}/assets/sprites/mutations/Chilled.png`, anchor: { x: 0.502, y: 0.543 } },
         Frozen: { url: `${API_BASE2}/assets/sprites/mutations/Frozen.png`, anchor: { x: 0.5, y: 0.474 } },
         Thunderstruck: { url: `${API_BASE2}/assets/sprites/mutations/Thunderstruck.png`, anchor: { x: 0.495, y: 0.525 } },
         Thundercharged: { url: `${API_BASE2}/assets/sprites/mutations/Thundercharged.png`, anchor: { x: 0.495, y: 0.525 } },
-        // Floating icons (anchor.y ≈ 0.8 — drawn above the plant)
+        // Floating icons (anchor.y about 0.8), drawn above the plant.
         Dawnlit: { url: `${API_BASE2}/assets/sprites/mutations/Dawnlit.png`, anchor: { x: 0.506, y: 0.809 } },
         Ambershine: { url: `${API_BASE2}/assets/sprites/mutations/Amberlit.png`, anchor: { x: 0.5, y: 0.82 } },
         Dawncharged: { url: `${API_BASE2}/assets/sprites/mutations/Dawncharged.png`, anchor: { x: 0.519, y: 0.796 } },
@@ -10214,7 +10193,7 @@
       return;
     }
     const listAtom = getAtomByLabel("quinoaToastsAtom");
-    if (!listAtom) throw new Error("Aucun atom de toast trouv\xE9");
+    if (!listAtom) throw new Error("No toast atom found");
     const prev = await jGet(listAtom).catch(() => []);
     const isAnnouncement = "toastType" in toast3 && toast3.toastType === "shopAnnouncement";
     const t = isAnnouncement ? { isClosable: true, presentByServerMs: Date.now(), ...toast3 } : { isClosable: true, duration: 1e4, ...toast3 };

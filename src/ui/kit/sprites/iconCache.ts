@@ -1,7 +1,7 @@
-// spriteIconCache.ts — API-backed sprite icons (mg-api.ariedam.fr)
-// Replaces the old PIXI/canvas-based sprite service with direct API image URLs.
-// Mutation color filters are applied client-side via Canvas 2D.
-// Uses GM_xmlhttpRequest (via mgCommon helpers) to bypass CORS restrictions.
+// Sprite icons for the DOM, served by the mod's API (mg-api.ariedam.fr).
+//
+// Images are fetched through GM requests, which get past CORS, and kept as
+// object URLs. Mutation colours are painted on a canvas client-side.
 
 import { getJSON, getBlob } from "../../../platform/gm";
 import { withDiscordPollPause } from "../../../platform/ariesApi/discordPolls";
@@ -18,9 +18,8 @@ import {
 
 const API_BASE = "https://mg-api.ariedam.fr";
 
-// ─── Sprite Index ──────────────────────────────────────────────────────────────
-// Name lookup itself lives in ./spriteResolver; this module owns the fetching,
-// the blob/object-URL caches and the DOM side.
+// Name lookup lives in ./resolver; this module owns the fetching, the blob and
+// object URL caches, and the DOM side.
 
 let indexReady: Promise<void> | null = null;
 
@@ -49,36 +48,33 @@ function fetchIndex(): Promise<void> {
   return indexReady;
 }
 
-// Start fetching the sprite index immediately at module load time.
-// This ensures it's ready before any menu opens, avoiding race conditions
-// where DOM elements get replaced before async sprite loading completes.
+// Fetched at load so the index is ready before any menu opens: otherwise a
+// menu can replace its elements before their sprites arrive.
 fetchIndex();
 
-// ─── Mutation Icon Sprites ──────────────────────────────────────────────────────
-// Mutations that have an icon sprite overlay (from the API /data/mutations)
+// Mutations drawn as an icon over the sprite (from the API's /data/mutations).
 
 type MutationIconDef = {
   url: string;
-  /** Anchor from sprite-data — determines how the icon is drawn relative to its placement point */
+  /** Anchor from sprite-data: where the icon sits relative to its placement point. */
   anchor: { x: number; y: number };
 };
 
 const MUTATION_ICONS: Record<string, MutationIconDef> = {
-  // Ground-level icons (anchor.y ≈ 0.5 — drawn at plant base)
+  // Ground-level icons (anchor.y about 0.5), drawn at the plant's base.
   Wet:           { url: `${API_BASE}/assets/sprites/mutations/Wet.png`,           anchor: { x: 0.5, y: 0.487 } },
   Chilled:       { url: `${API_BASE}/assets/sprites/mutations/Chilled.png`,       anchor: { x: 0.502, y: 0.543 } },
   Frozen:        { url: `${API_BASE}/assets/sprites/mutations/Frozen.png`,        anchor: { x: 0.5, y: 0.474 } },
   Thunderstruck: { url: `${API_BASE}/assets/sprites/mutations/Thunderstruck.png`, anchor: { x: 0.495, y: 0.525 } },
   Thundercharged: { url: `${API_BASE}/assets/sprites/mutations/Thundercharged.png`, anchor: { x: 0.495, y: 0.525 } },
-  // Floating icons (anchor.y ≈ 0.8 — drawn above the plant)
+  // Floating icons (anchor.y about 0.8), drawn above the plant.
   Dawnlit:       { url: `${API_BASE}/assets/sprites/mutations/Dawnlit.png`,       anchor: { x: 0.506, y: 0.809 } },
   Ambershine:    { url: `${API_BASE}/assets/sprites/mutations/Amberlit.png`,      anchor: { x: 0.5, y: 0.820 } },
   Dawncharged:   { url: `${API_BASE}/assets/sprites/mutations/Dawncharged.png`,   anchor: { x: 0.519, y: 0.796 } },
   Ambercharged:  { url: `${API_BASE}/assets/sprites/mutations/Ambercharged.png`,  anchor: { x: 0.501, y: 0.795 } },
 };
 
-// ─── Mutation Color Filters ────────────────────────────────────────────────────
-// Ported from src/sprite/mutations/variantBuilder.ts
+// Mutation colour filters, matching the game's own tinting.
 
 type FilterDef = {
   op: string;
@@ -262,22 +258,19 @@ async function applyMutationFilters(img: HTMLImageElement, mutations: string[]):
       ctx.drawImage(iconImg, drawX, drawY, drawW, drawH);
       ctx.restore();
     } catch {
-      /* icon load failed — skip silently */
+      /* the overlay is decoration: a failed load just leaves it out */
     }
   }
 
   return canvas.toDataURL("image/png");
 }
 
-// ─── Image Loading (via mgCommon GM helpers) ───────────────────────────────────
-
 const imageCache = new Map<string, Promise<HTMLImageElement>>();
 
 /**
- * Load an image via GM blob fetch, backed by the long-lived object URL cache.
- * Note: we deliberately do NOT use mgCommon's blobToImage here — it revokes the
- * object URL on load, so the resolved image's `src` is already dead and copying it
- * into a fresh <img> yields a broken icon.
+ * Loads an image through the long-lived object URL cache. The URL is never
+ * revoked: images copy this `src` into fresh <img> elements later, and a
+ * revoked URL there shows as a broken icon.
  */
 function loadImage(url: string): Promise<HTMLImageElement> {
   let promise = imageCache.get(url);
@@ -293,8 +286,6 @@ function loadImage(url: string): Promise<HTMLImageElement> {
   return promise;
 }
 
-// ─── Object URL cache for non-mutated sprites ─────────────────────────────────
-
 const objectUrlCache = new Map<string, Promise<string>>();
 
 function getSpriteObjectUrl(apiUrl: string): Promise<string> {
@@ -305,7 +296,7 @@ function getSpriteObjectUrl(apiUrl: string): Promise<string> {
   return promise;
 }
 
-// ─── Caches ────────────────────────────────────────────────────────────────────
+// Mutated sprites, rendered to data URLs once per sprite and mutation set.
 
 const spriteDataUrlCache = new Map<string, Promise<string | null>>();
 const spriteDataUrlResolved = new Map<string, string>();
@@ -320,7 +311,7 @@ function mutationKeyStr(mutations?: string[]): string {
   return "|m=" + list.map(normalize).filter(Boolean).sort().join(",");
 }
 
-// ─── Warmup State ──────────────────────────────────────────────────────────────
+// Warm-up progress, shown by the HUD until the sprite index is in.
 
 type SpriteWarmupState = { total: number; done: number; completed: boolean };
 let warmupState: SpriteWarmupState = { total: 0, done: 0, completed: false };
@@ -345,14 +336,11 @@ export function onSpriteWarmupProgress(
   return () => { warmupListeners.delete(listener); };
 }
 
-// Legacy exports kept for backward compatibility (sprite/index.ts calls these)
-export function primeSpriteData(_category: string, _spriteId: string, _dataUrl: string): void {
-  /* no-op — sprites now come from the API */
-}
+// No-ops left for game/sprites, which still calls them. Sprites come from the
+// API now, and warm-up is the index fetch. Delete with those calls.
+export function primeSpriteData(_category: string, _spriteId: string, _dataUrl: string): void {}
 
-export function primeWarmupKeys(_keys: string[]): void {
-  /* no-op — warmup is handled by fetching the sprite index */
-}
+export function primeWarmupKeys(_keys: string[]): void {}
 
 export function warmupSpriteCache(): void {
   fetchIndex().then(() => {
@@ -360,8 +348,6 @@ export function warmupSpriteCache(): void {
     notifyWarmup({ total, done: total, completed: true });
   });
 }
-
-// ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function createSpriteImg(
   src: string,
@@ -388,8 +374,6 @@ function createSpriteImg(
   img.dataset.spriteId = spriteId;
   return img;
 }
-
-// ─── Public API ────────────────────────────────────────────────────────────────
 
 type AttachSpriteIconOptions = {
   mutations?: string[];
@@ -438,47 +422,37 @@ export function attachSpriteIcon(
     }
 
     const entry = selectedEntry;
-    const url = entry.url;
     const spriteKey = `${entry.internalCat}:${entry.name}${mutKey}`;
-
     const existing = target.querySelector<HTMLImageElement>("img[data-sprite-key]");
     if (existing && existing.dataset.spriteKey === spriteKey) return;
 
+    const place = (src: string, onlyIfConnected: boolean) => {
+      const img = createSpriteImg(src, size, spriteKey, entry.internalCat, entry.name);
+      requestAnimationFrame(() => {
+        if (onlyIfConnected && !target.isConnected) return;
+        target.replaceChildren(img);
+        options?.onSpriteApplied?.(img, { category: entry.internalCat, spriteId: entry.name, candidate: selectedCandidate });
+      });
+    };
+
     if (!hasMutations) {
-      getSpriteObjectUrl(url).then(objectUrl => {
-        const img = createSpriteImg(objectUrl, size, spriteKey, entry.internalCat, entry.name);
-        requestAnimationFrame(() => {
-          if (!target.isConnected) return;
-          target.replaceChildren(img);
-          options?.onSpriteApplied?.(img, {
-            category: entry.internalCat,
-            spriteId: entry.name,
-            candidate: selectedCandidate,
-          });
-        });
-      }).catch(() => { /* silent fail */ });
+      getSpriteObjectUrl(entry.url)
+        .then((objectUrl) => place(objectUrl, true))
+        .catch(() => { /* no icon: the holder keeps its fallback content */ });
       return;
     }
 
     const ck = cacheKeyFor(entry.internalCat, entry.name, mutKey);
     const cached = spriteDataUrlResolved.get(ck);
     if (cached) {
-      const img = createSpriteImg(cached, size, spriteKey, entry.internalCat, entry.name);
-      requestAnimationFrame(() => {
-        target.replaceChildren(img);
-        options?.onSpriteApplied?.(img, {
-          category: entry.internalCat,
-          spriteId: entry.name,
-          candidate: selectedCandidate,
-        });
-      });
+      place(cached, false);
       return;
     }
 
     let promise = spriteDataUrlCache.get(ck);
     if (!promise) {
-      promise = loadImage(url)
-        .then(async imgEl => {
+      promise = loadImage(entry.url)
+        .then(async (imgEl) => {
           const dataUrl = await applyMutationFilters(imgEl, mutations);
           spriteDataUrlResolved.set(ck, dataUrl);
           return dataUrl;
@@ -486,18 +460,8 @@ export function attachSpriteIcon(
         .catch(() => null);
       spriteDataUrlCache.set(ck, promise);
     }
-
-    promise.then(dataUrl => {
-      if (!dataUrl) return;
-      const img = createSpriteImg(dataUrl, size, spriteKey, entry.internalCat, entry.name);
-      requestAnimationFrame(() => {
-        target.replaceChildren(img);
-        options?.onSpriteApplied?.(img, {
-          category: entry.internalCat,
-          spriteId: entry.name,
-          candidate: selectedCandidate,
-        });
-      });
+    promise.then((dataUrl) => {
+      if (dataUrl) place(dataUrl, false);
     });
   });
 }
@@ -507,11 +471,7 @@ export function attachWeatherSpriteIcon(target: HTMLElement, tag: string, size: 
   attachSpriteIcon(target, ["ui", "mutation", "weather"], [`Mutation${tag}`, tag], size, "weather");
 }
 
-/**
- * Get an object URL for a sprite by name and categories.
- * Waits for the sprite index to load, finds the entry, fetches the PNG via GM.
- * Returns null if the sprite is not found.
- */
+/** An object URL for a sprite by name, once the index is in; null when there is none. */
 export async function getSpriteObjectUrlByName(
   categories: string[],
   name: string,

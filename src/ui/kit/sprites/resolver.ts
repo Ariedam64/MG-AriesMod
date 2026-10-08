@@ -1,6 +1,4 @@
-// src/ui/spriteResolver.ts
-//
-// Name → sprite-URL resolution, split out of spriteIconCache so it can be
+// Sprite name to URL resolution, split out of the icon cache so it can be
 // exercised without a DOM or a network (see scripts/checkSpriteResolver.ts).
 //
 // Two sources, catalog first:
@@ -13,7 +11,7 @@
 
 export type SpriteEntry = {
   id: string;          // e.g. "sprite/plant/Bamboo"
-  name: string;        // e.g. "Bamboo" — the PNG basename
+  name: string;        // e.g. "Bamboo", the PNG basename
   internalCat: string; // e.g. "plant"
   apiCat: string;      // e.g. "plants" (URL path segment)
   url: string;         // ready-to-fetch PNG URL
@@ -33,7 +31,7 @@ export type SpriteCatalogReader = (
   key: SpriteCatalogKey,
 ) => Record<string, unknown> | null;
 
-/** Map from internal sprite-id category → API URL path segment */
+/** Internal sprite-id category to API URL path segment. */
 export const INTERNAL_TO_API: Record<string, string> = {
   plant: "plants",
   tallplant: "tallPlants",
@@ -48,15 +46,15 @@ export const INTERNAL_TO_API: Record<string, string> = {
   // Keys here are the *internal* category, which comes from the frame key and
   // is always singular (`sprite/object/…`). These three were written plural on
   // both sides, so they never matched and their sprites fell through to the
-  // singular URL — which the API serves only in plural, hence a 404 for every
-  // object/tile/animation icon in the mod.
+  // singular URL, which the API serves only in plural: a 404 for every
+  // object, tile and animation icon in the mod.
   object: "objects",
   tile: "tiles",
   animation: "animations",
   winter: "winter",
 };
 
-/** URL path segment → internal category. Inverse of INTERNAL_TO_API. */
+/** URL path segment to internal category. Inverse of INTERNAL_TO_API. */
 export const API_TO_INTERNAL: Record<string, string> = {
   plants: "plant",
   tallplants: "tallplant",
@@ -73,7 +71,7 @@ export const API_TO_INTERNAL: Record<string, string> = {
   winter: "winter",
 };
 
-/** Map from the categories used in attachSpriteIcon calls → internal cats to search */
+/** Categories callers pass to attachSpriteIcon, and the internal ones each searches. */
 const SEARCH_CATS: Record<string, string[]> = {
   plant: ["plant", "tallplant"],
   tallplant: ["tallplant", "plant"],
@@ -83,8 +81,8 @@ const SEARCH_CATS: Record<string, string[]> = {
   item: ["item"],
   decor: ["decor"],
   // A few mutation icons live in the `ui` sheet (MutationGold, MutationRainbow)
-  // while the rest sit in `mutations`, so both have to be searched — same
-  // reason `weather` already spans three.
+  // while the rest sit in `mutations`, so both have to be searched, for the
+  // same reason `weather` spans three.
   mutation: ["mutation", "mutation-overlay", "ui"],
   "mutation-overlay": ["mutation-overlay", "mutation"],
   ui: ["ui"],
@@ -97,7 +95,7 @@ export function normalizeSpriteName(value: string): string {
   if (str.includes("/")) {
     str = str.split("/").pop() || str;
   }
-  // Strip file extensions and query params (e.g. "Carrot.png?v=163" → "Carrot")
+  // Strip file extensions and query params ("Carrot.png?v=163" gives "Carrot")
   str = str.replace(/\.[a-z0-9]+(\?.*)?$/i, "");
   return str.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -150,7 +148,7 @@ export function spriteIndexSize(): number {
 /* ----------------------------- Catalog sprites ---------------------------- */
 //
 // Every catalog entry MGData serves already carries its own sprite URL, so the
-// catalog can answer on its own — that is what keeps the icons alive when the
+// catalog can answer on its own. That is what keeps the icons alive when the
 // index loses a category.
 
 /** Where the sprite URL sits inside an entry of each catalog. */
@@ -163,7 +161,7 @@ type CatalogSource = {
 const CATALOG_SOURCES: readonly CatalogSource[] = [
   // `crop` before `plant`: both land in the `plants` sheet, and the bare species
   // name must resolve to the harvested crop (Carrot), not the seedling
-  // (BabyCarrot) — which is what the index used to return.
+  // (BabyCarrot) the index used to return.
   { key: "plants", paths: ["seed", "crop", "plant"] },
   { key: "pets", paths: [null] },
   { key: "eggs", paths: [null] },
@@ -191,7 +189,7 @@ function addCatalogAlias(alias: string, entry: SpriteEntry): void {
   catalogIndex.set(key, entries);
 }
 
-/** `https://…/assets/sprites/seeds/Carrot.png?v=1029` → `{ apiCat: "seeds", name: "Carrot" }` */
+/** `https://.../assets/sprites/seeds/Carrot.png?v=1029` gives `{ apiCat: "seeds", name: "Carrot" }`. */
 function readSpriteUrl(url: string): { apiCat: string; name: string } | null {
   const match = /\/assets\/sprites\/([^/]+)\/([^/?#]+)\.[a-z0-9]+(?:[?#]|$)/i.exec(url);
   if (!match) return null;
@@ -281,7 +279,7 @@ export function findSprite(categories: string[], candidateId: string): SpriteEnt
     if (internalCats.has(entry.internalCat)) return entry;
   }
 
-  // No category match — try fuzzy search instead of returning wrong category
+  // No match in the right category: try fuzzy rather than return a wrong one.
   return findSpriteFuzzy(categories, norm);
 }
 
