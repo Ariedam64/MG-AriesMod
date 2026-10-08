@@ -1,10 +1,11 @@
+import { pageWindow } from '../../../platform/pageContext';
 // Timers must be bound to the real page window, not Tampermonkey's isolated
 // sandbox global — the sandbox realm isn't tied to the page's own rendering
 // and its setTimeout/setInterval/requestAnimationFrame can be throttled far
 // more aggressively (observed: retry loops silently getting almost no real
 // attempts without DevTools open, even though a 10s wall-clock deadline
 // looked like it should allow plenty).
-const pageWin: any = (globalThis as any).unsafeWindow || globalThis;
+const pageWin: any = pageWindow;
 
 export const sleep = (ms: number) => new Promise(resolve => pageWin.setTimeout(resolve, ms));
 

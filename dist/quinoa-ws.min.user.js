@@ -53,6 +53,37 @@
   };
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
+  // src/platform/pageContext.ts
+  function shareGlobal(name, value) {
+    try {
+      pageWin[name] = value;
+    } catch {
+    }
+    if (isIsolatedContext) {
+      try {
+        sandboxWin[name] = value;
+      } catch {
+      }
+    }
+  }
+  function readSharedGlobal(name) {
+    if (isIsolatedContext) {
+      const sandboxValue = sandboxWin[name];
+      if (sandboxValue !== void 0) return sandboxValue;
+    }
+    return pageWin[name];
+  }
+  var sandboxWin, pageWin, pageWindow, isIsolatedContext;
+  var init_pageContext = __esm({
+    "src/platform/pageContext.ts"() {
+      "use strict";
+      sandboxWin = window;
+      pageWin = typeof unsafeWindow !== "undefined" && unsafeWindow ? unsafeWindow : sandboxWin;
+      pageWindow = pageWin;
+      isIsolatedContext = pageWin !== sandboxWin;
+    }
+  });
+
   // src/game/sprites/settings.ts
   var DEFAULT_CFG, MUT_META, MUT_G1, MUT_G2, MUT_G3;
   var init_settings = __esm({
@@ -147,6 +178,30 @@
     }
   });
 
+  // src/game/sprites/context.ts
+  function setPixiHooks(hooks3) {
+    pixiHooks = hooks3;
+  }
+  function getSpriteState() {
+    return spriteContext.state;
+  }
+  function getReadySpriteState() {
+    const state6 = spriteContext.state;
+    return state6.renderer && state6.ctors?.Text ? state6 : null;
+  }
+  function getPixiApp() {
+    return pixiHooks?.app ?? spriteContext.state.app;
+  }
+  var spriteContext, pixiHooks;
+  var init_context = __esm({
+    "src/game/sprites/context.ts"() {
+      "use strict";
+      init_state();
+      spriteContext = createSpriteContext();
+      pixiHooks = null;
+    }
+  });
+
   // src/game/sprites/utils/async.ts
   async function waitWithTimeout(p, ms, label2) {
     const t0 = performance.now();
@@ -156,12 +211,13 @@
     }
     throw new Error(`${label2} timeout`);
   }
-  var pageWin, sleep;
+  var pageWin2, sleep;
   var init_async = __esm({
     "src/game/sprites/utils/async.ts"() {
       "use strict";
-      pageWin = globalThis.unsafeWindow || globalThis;
-      sleep = (ms) => new Promise((resolve) => pageWin.setTimeout(resolve, ms));
+      init_pageContext();
+      pageWin2 = pageWindow;
+      sleep = (ms) => new Promise((resolve) => pageWin2.setTimeout(resolve, ms));
     }
   });
 
@@ -218,7 +274,7 @@
       resolveApp(APP ?? mkSyntheticApp(r));
     };
     const hook = (name, cb) => {
-      const root = globalThis.unsafeWindow || globalThis;
+      const root = pageWindow;
       const prev = root[name];
       root[name] = function() {
         try {
@@ -239,7 +295,7 @@
     });
     hook("__PIXI_RENDERER_INIT__", (r, v) => resolveRdr(r, v));
     const tryResolveExisting = () => {
-      const root = globalThis.unsafeWindow || globalThis;
+      const root = pageWindow;
       const devtools = root.__PIXI_DEVTOOLS__;
       if (devtools?.renderers?.size > 0) {
         const rdr = [...devtools.renderers][0];
@@ -255,7 +311,7 @@
       }
     };
     tryResolveExisting();
-    const pageWin3 = globalThis.unsafeWindow || globalThis;
+    const pageWin3 = pageWindow;
     let fallbackPolls = 0;
     const fallbackInterval = pageWin3.setInterval(() => {
       if (APP && RDR) {
@@ -291,6 +347,7 @@
     "src/game/sprites/pixi/hooks.ts"() {
       "use strict";
       init_async();
+      init_pageContext();
     }
   });
 
@@ -339,7 +396,7 @@
     };
   }
   function getCtors(app) {
-    const root = globalThis.unsafeWindow || globalThis;
+    const root = pageWindow;
     const P = root.PIXI;
     if (P?.Texture && P?.Sprite && P?.Container && P?.Rectangle) {
       return { Container: P.Container, Sprite: P.Sprite, Texture: P.Texture, Rectangle: P.Rectangle, Text: P.Text || null };
@@ -359,7 +416,177 @@
   var init_pixi = __esm({
     "src/game/sprites/utils/pixi.ts"() {
       "use strict";
+      init_pageContext();
       baseTexOf = (tex) => tex?.baseTexture ?? tex?.source?.baseTexture ?? tex?.source ?? tex?._baseTexture ?? null;
+    }
+  });
+
+  // src/game/sprites/pixi/resolvePixi.ts
+  async function resolvePixiFast(hooks3) {
+    const root = pageWindow;
+    const debugInfo = {
+      startedAt: Date.now(),
+      resolvedVia: null,
+      resolvedAt: null
+    };
+    root.__MG_RESOLVE_PIXI_DEBUG__ = debugInfo;
+    const resolved = (via, bundle) => {
+      debugInfo.resolvedVia = via;
+      debugInfo.resolvedAt = Date.now();
+      return bundle;
+    };
+    const check = () => {
+      const app = root.__PIXI_APP__ || root.PIXI_APP || root.app || null;
+      const renderer = root.__PIXI_RENDERER__ || root.PIXI_RENDERER__ || root.renderer || app?.renderer || null;
+      return app && renderer ? { app, renderer, version: root.__PIXI_VERSION__ || null } : null;
+    };
+    const hit = check();
+    if (hit) return resolved("fast-check-immediate", hit);
+    const start2 = performance.now();
+    while (performance.now() - start2 < 5e3) {
+      await sleep(50);
+      const retry = check();
+      if (retry) return resolved("fast-check-retry", retry);
+    }
+    const waited = await waitForPixi(hooks3);
+    return resolved("waitForPixi-fallback", { app: waited.app, renderer: waited.renderer, version: waited.version });
+  }
+  function inspectStage(root) {
+    const stack = [root];
+    const seen = /* @__PURE__ */ new Set();
+    let totalNodes = 0;
+    let spriteLikeCount = 0;
+    let textLikeCount = 0;
+    let n = 0;
+    while (stack.length && n++ < 25e3) {
+      const cur = stack.pop();
+      if (!cur || seen.has(cur)) continue;
+      seen.add(cur);
+      totalNodes++;
+      if (cur?.texture?.frame && cur?.constructor && cur?.texture?.constructor && cur?.texture?.frame?.constructor) spriteLikeCount++;
+      if ((typeof cur?.text === "string" || typeof cur?.text === "number") && cur?.style) textLikeCount++;
+      const children = cur.children;
+      if (Array.isArray(children)) {
+        for (let i = children.length - 1; i >= 0; i -= 1) stack.push(children[i]);
+      }
+    }
+    const topChildLabels = Array.isArray(root?.children) ? root.children.map((c) => c?.label || c?.constructor?.name || typeof c) : [];
+    return { totalNodes, spriteLikeCount, textLikeCount, topChildLabels };
+  }
+  async function waitForCtors(app, renderer) {
+    const attempts = [];
+    pageWindow.__MG_CTORS_DEBUG__ = attempts;
+    let iteration = 0;
+    const snapshot2 = () => {
+      const stage = app?.stage;
+      const lor = renderer?.lastObjectRendered;
+      const rStage = renderer?.stage;
+      const walkRoot = stage || lor || rStage || null;
+      attempts.push({
+        at: Date.now(),
+        hasAppStage: !!stage,
+        appStageChildren: Array.isArray(stage?.children) ? stage.children.length : -1,
+        hasLastObjectRendered: !!lor,
+        lastObjectRenderedChildren: Array.isArray(lor?.children) ? lor.children.length : -1,
+        hasRendererStage: !!rStage,
+        rendererStageChildren: Array.isArray(rStage?.children) ? rStage.children.length : -1,
+        documentHidden: typeof document !== "undefined" ? document.hidden : false,
+        visibilityState: typeof document !== "undefined" ? document.visibilityState : "unknown",
+        hasFocus: typeof document !== "undefined" ? document.hasFocus() : false,
+        // The deep walk is costly: about once a second, not every 100 ms.
+        inspect: walkRoot && iteration % 10 === 0 ? inspectStage(walkRoot) : null
+      });
+      iteration += 1;
+    };
+    const deadline = Date.now() + 1e4;
+    while (Date.now() < deadline) {
+      snapshot2();
+      try {
+        return getCtors(app);
+      } catch {
+      }
+      if (app && !app.stage && renderer?.lastObjectRendered) {
+        app.stage = renderer.lastObjectRendered;
+      }
+      await sleep(100);
+    }
+    snapshot2();
+    return getCtors(app);
+  }
+  var init_resolvePixi = __esm({
+    "src/game/sprites/pixi/resolvePixi.ts"() {
+      "use strict";
+      init_pageContext();
+      init_hooks();
+      init_pixi();
+      init_async();
+    }
+  });
+
+  // src/game/sprites/pixi/rendererHealth.ts
+  function canvasOf(renderer) {
+    return renderer?.canvas || renderer?.view?.canvas || renderer?.view || null;
+  }
+  function watchRendererHealth(state6, hooks3) {
+    const pageWin3 = pageWindow;
+    let staleStreak = 0;
+    let needsCtorsRederive = false;
+    const debugState4 = {
+      checks: 0,
+      staleStreak: 0,
+      swaps: [],
+      ctorsRederiveAttempts: 0,
+      lastCtorsRederiveError: null
+    };
+    pageWin3.__MG_RENDERER_HEALTH_DEBUG__ = debugState4;
+    pageWin3.setInterval(() => {
+      try {
+        debugState4.checks += 1;
+        if (needsCtorsRederive) {
+          debugState4.ctorsRederiveAttempts += 1;
+          try {
+            state6.ctors = getCtors(state6.app ?? state6.renderer);
+            needsCtorsRederive = false;
+            debugState4.lastCtorsRederiveError = null;
+            console.info("[MG SpriteCatalog] re-derived ctors from the new renderer");
+          } catch (error) {
+            debugState4.lastCtorsRederiveError = String(error?.message ?? error);
+          }
+        }
+        const canvas = canvasOf(state6.renderer);
+        const canvasHealthy = !!canvas && typeof document !== "undefined" && document.contains(canvas);
+        if (canvasHealthy) {
+          staleStreak = 0;
+          debugState4.staleStreak = 0;
+          return;
+        }
+        staleStreak += 1;
+        debugState4.staleStreak = staleStreak;
+        if (staleStreak < REQUIRED_STALE_STREAK) return;
+        const freshRenderer = hooks3.renderer;
+        if (!freshRenderer || freshRenderer === state6.renderer) return;
+        const freshCanvas = canvasOf(freshRenderer);
+        if (!freshCanvas || typeof document === "undefined" || !document.contains(freshCanvas)) return;
+        console.info("[MG SpriteCatalog] renderer canvas went stale, re-resolved a fresh one");
+        debugState4.swaps.push({ at: Date.now(), fromCanvasInDoc: canvasHealthy });
+        state6.renderer = freshRenderer;
+        if (hooks3.app) state6.app = hooks3.app;
+        needsCtorsRederive = true;
+        staleStreak = 0;
+        debugState4.staleStreak = 0;
+      } catch (error) {
+        console.warn("[MG SpriteCatalog] renderer health check failed", error);
+      }
+    }, RENDERER_HEALTH_CHECK_MS);
+  }
+  var RENDERER_HEALTH_CHECK_MS, REQUIRED_STALE_STREAK;
+  var init_rendererHealth = __esm({
+    "src/game/sprites/pixi/rendererHealth.ts"() {
+      "use strict";
+      init_pageContext();
+      init_pixi();
+      RENDERER_HEALTH_CHECK_MS = 1e3;
+      REQUIRED_STALE_STREAK = 3;
     }
   });
 
@@ -435,7 +662,7 @@
     );
   }
   async function gm(url, type = "text") {
-    const root = globalThis.unsafeWindow || globalThis;
+    const root = pageWindow;
     if (typeof GM_xmlhttpRequest !== "function") {
       const entry2 = { url, path: "fetch-fallback", startedAt: Date.now(), finishedAt: null, ok: null, error: null };
       recordNetDebug(entry2);
@@ -529,7 +756,7 @@
     return [];
   }
   async function loadKtx2AsTexture(imgName, renderer, ctors, timeoutMs = 3e3) {
-    const root = globalThis.unsafeWindow || globalThis;
+    const root = pageWindow;
     const PIXI = root.PIXI;
     if (PIXI?.Assets?.load) {
       try {
@@ -617,10 +844,11 @@
     "src/game/sprites/data/assetFetcher.ts"() {
       "use strict";
       init_path();
+      init_pageContext();
       GM_TIMEOUT_MS = 5e3;
       netDebugLog = [];
       {
-        const root = globalThis.unsafeWindow || globalThis;
+        const root = pageWindow;
         root.__MG_NET_DEBUG__ = netDebugLog;
       }
       getJSON = async (url) => JSON.parse((await gm(url, "text")).responseText);
@@ -1327,7 +1555,7 @@
 
   // src/game/sprites/api/expose.ts
   function exposeApi(state6, hud) {
-    const root = globalThis.unsafeWindow || globalThis;
+    const root = pageWindow;
     const api = {
       open() {
         hud.root?.style && (hud.root.style.display = "block");
@@ -1376,1723 +1604,7 @@
     "src/game/sprites/api/expose.ts"() {
       "use strict";
       init_variantBuilder();
-    }
-  });
-
-  // src/platform/gm.ts
-  function gmGet(url, responseType = "text") {
-    return new Promise((resolve, reject) => {
-      if (typeof GM_xmlhttpRequest !== "function") {
-        reject(new Error("GM_xmlhttpRequest not available"));
-        return;
-      }
-      GM_xmlhttpRequest({
-        method: "GET",
-        url,
-        responseType,
-        onload: (r) => {
-          if (r.status >= 200 && r.status < 300) resolve(r);
-          else reject(new Error(`HTTP ${r.status} for ${url}`));
-        },
-        onerror: () => reject(new Error(`Network error for ${url}`)),
-        ontimeout: () => reject(new Error(`Timeout for ${url}`))
-      });
-    });
-  }
-  var ORIGIN, sleep2, getJSON2, getBlob2;
-  var init_gm = __esm({
-    "src/platform/gm.ts"() {
-      "use strict";
-      ORIGIN = "https://magicgarden.gg";
-      sleep2 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-      getJSON2 = async (url) => JSON.parse((await gmGet(url, "text")).responseText);
-      getBlob2 = async (url) => (await gmGet(url, "blob")).response;
-    }
-  });
-
-  // src/platform/discordCsp.ts
-  function isDiscordActivityContext() {
-    try {
-      return window.location.hostname.endsWith("discordsays.com");
-    } catch {
-      return false;
-    }
-  }
-  function _isImgUrlSafe(url) {
-    if (!url || url.startsWith("blob:") || url.startsWith("data:") || url.startsWith("/")) return true;
-    try {
-      const { hostname } = new URL(url);
-      return _SAFE_IMG_HOSTS.some((h) => hostname === h || hostname.endsWith("." + h));
-    } catch {
-      return true;
-    }
-  }
-  function setImageSafe(img, url) {
-    if (!url) return;
-    if (!isDiscordActivityContext()) {
-      img.src = url;
-      return;
-    }
-    if (_isImgUrlSafe(url)) {
-      img.src = url;
-      return;
-    }
-    const cached = _gmImgCache.get(url);
-    if (cached) {
-      img.src = cached;
-      return;
-    }
-    const pending6 = _gmImgPending.get(url);
-    if (pending6) {
-      pending6.push(img);
-      return;
-    }
-    _gmImgPending.set(url, [img]);
-    GM_xmlhttpRequest({
-      method: "GET",
-      url,
-      headers: {},
-      responseType: "arraybuffer",
-      onload: (res) => {
-        const imgs = _gmImgPending.get(url) ?? [];
-        _gmImgPending.delete(url);
-        if (!res.response) {
-          for (const el2 of imgs) el2.src = url;
-          return;
-        }
-        const ext = url.split(".").pop()?.toLowerCase().split("?")[0] ?? "png";
-        const mime = _extMimeMap[ext] ?? "image/png";
-        const blob = new Blob([res.response], { type: mime });
-        const blobUrl = URL.createObjectURL(blob);
-        _gmImgCache.set(url, blobUrl);
-        for (const el2 of imgs) el2.src = blobUrl;
-      },
-      onerror: () => {
-        const imgs = _gmImgPending.get(url) ?? [];
-        _gmImgPending.delete(url);
-        for (const el2 of imgs) el2.src = url;
-      }
-    });
-  }
-  function getAudioUrlSafe(url) {
-    return new Promise((resolve) => {
-      if (!url) {
-        resolve(url);
-        return;
-      }
-      if (!isDiscordActivityContext()) {
-        resolve(url);
-        return;
-      }
-      const cached = _gmAudioCache.get(url);
-      if (cached) {
-        resolve(cached);
-        return;
-      }
-      const pending6 = _gmAudioPending.get(url);
-      if (pending6) {
-        pending6.push(resolve);
-        return;
-      }
-      _gmAudioPending.set(url, [resolve]);
-      GM_xmlhttpRequest({
-        method: "GET",
-        url,
-        headers: {},
-        responseType: "arraybuffer",
-        onload: (res) => {
-          const callbacks = _gmAudioPending.get(url) ?? [];
-          _gmAudioPending.delete(url);
-          if (!res.response) {
-            for (const cb of callbacks) cb(url);
-            return;
-          }
-          const ext = url.split(".").pop()?.toLowerCase().split("?")[0] ?? "mp3";
-          const audioMimeMap = {
-            mp3: "audio/mpeg",
-            ogg: "audio/ogg",
-            wav: "audio/wav",
-            m4a: "audio/mp4"
-          };
-          const mime = audioMimeMap[ext] ?? "audio/mpeg";
-          const blob = new Blob([res.response], { type: mime });
-          const blobUrl = URL.createObjectURL(blob);
-          _gmAudioCache.set(url, blobUrl);
-          for (const cb of callbacks) cb(blobUrl);
-        },
-        onerror: () => {
-          const callbacks = _gmAudioPending.get(url) ?? [];
-          _gmAudioPending.delete(url);
-          for (const cb of callbacks) cb(url);
-        }
-      });
-    });
-  }
-  function _emojiMakeResponse(json, method) {
-    if (method === "HEAD") {
-      return new Response(null, {
-        status: 200,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
-    return new Response(json, {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
-  }
-  function installEmojiDataFetchInterceptor() {
-    if (_emojiInterceptorInstalled) return;
-    _emojiInterceptorInstalled = true;
-    const _origFetch = window.fetch.bind(window);
-    window.fetch = function(input, init2) {
-      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-      if (!url.startsWith(EMOJI_DATA_CDN_PREFIX)) {
-        return _origFetch(input, init2);
-      }
-      const method = (init2?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
-      if (_emojiJson) {
-        return Promise.resolve(_emojiMakeResponse(_emojiJson, method));
-      }
-      return new Promise((resolve) => {
-        _emojiPending.push((json) => {
-          resolve(
-            json ? _emojiMakeResponse(json, method) : new Response(null, { status: 503 })
-          );
-        });
-      });
-    };
-    void withDiscordPollPause(async () => {
-      return new Promise((resolve) => {
-        GM_xmlhttpRequest({
-          method: "GET",
-          url: `${EMOJI_DATA_CDN_PREFIX}@^1/en/emojibase/data.json`,
-          headers: {},
-          onload: (res) => {
-            if (res.status >= 200 && res.status < 300 && res.responseText) {
-              _emojiJson = res.responseText;
-              for (const cb of _emojiPending) cb(_emojiJson);
-            } else {
-              console.error("[discordCsp] emoji fetch failed:", res.status);
-              for (const cb of _emojiPending) cb(null);
-            }
-            _emojiPending = [];
-            resolve();
-          },
-          onerror: (err) => {
-            console.error("[discordCsp] emoji fetch error:", err);
-            for (const cb of _emojiPending) cb(null);
-            _emojiPending = [];
-            resolve();
-          }
-        });
-      });
-    });
-  }
-  var _SAFE_IMG_HOSTS, _gmImgCache, _gmImgPending, _extMimeMap, _gmAudioCache, _gmAudioPending, EMOJI_DATA_CDN_PREFIX, _emojiJson, _emojiPending, _emojiInterceptorInstalled;
-  var init_discordCsp = __esm({
-    "src/platform/discordCsp.ts"() {
-      "use strict";
-      init_discordPolls();
-      _SAFE_IMG_HOSTS = ["cdn.discordapp.com", "media.discordapp.net"];
-      _gmImgCache = /* @__PURE__ */ new Map();
-      _gmImgPending = /* @__PURE__ */ new Map();
-      _extMimeMap = {
-        png: "image/png",
-        jpg: "image/jpeg",
-        jpeg: "image/jpeg",
-        gif: "image/gif",
-        webp: "image/webp",
-        svg: "image/svg+xml"
-      };
-      _gmAudioCache = /* @__PURE__ */ new Map();
-      _gmAudioPending = /* @__PURE__ */ new Map();
-      EMOJI_DATA_CDN_PREFIX = "https://cdn.jsdelivr.net/npm/emoji-picker-element-data";
-      _emojiJson = null;
-      _emojiPending = [];
-      _emojiInterceptorInstalled = false;
-    }
-  });
-
-  // src/platform/ariesApi/discordPolls.ts
-  function pauseDiscordLongPolls() {
-    if (!isDiscordActivityContext()) return;
-    _pollPauseDepth += 1;
-    for (const conn of _unifiedConnections.values()) {
-      if (conn.mode !== "poll") continue;
-      conn.pollPaused = true;
-      conn.pollToken += 1;
-      conn.pollRunning = false;
-      conn.pollAbort?.();
-    }
-  }
-  function resumeDiscordLongPolls() {
-    if (!isDiscordActivityContext()) return;
-    _pollPauseDepth = Math.max(0, _pollPauseDepth - 1);
-    if (_pollPauseDepth > 0) return;
-    for (const conn of _unifiedConnections.values()) {
-      if (conn.mode !== "poll") continue;
-      conn.pollPaused = false;
-      conn.pollKick?.();
-    }
-  }
-  async function withDiscordPollPause(fn) {
-    if (!isDiscordActivityContext()) return await fn();
-    pauseDiscordLongPolls();
-    try {
-      return await fn();
-    } finally {
-      resumeDiscordLongPolls();
-    }
-  }
-  var _unifiedConnections, _pollPauseDepth;
-  var init_discordPolls = __esm({
-    "src/platform/ariesApi/discordPolls.ts"() {
-      "use strict";
-      init_discordCsp();
-      _unifiedConnections = /* @__PURE__ */ new Map();
-      _pollPauseDepth = 0;
-    }
-  });
-
-  // src/platform/pageContext.ts
-  function shareGlobal(name, value) {
-    try {
-      pageWin2[name] = value;
-    } catch {
-    }
-    if (isIsolatedContext) {
-      try {
-        sandboxWin[name] = value;
-      } catch {
-      }
-    }
-  }
-  function readSharedGlobal(name) {
-    if (isIsolatedContext) {
-      const sandboxValue = sandboxWin[name];
-      if (sandboxValue !== void 0) return sandboxValue;
-    }
-    return pageWin2[name];
-  }
-  var sandboxWin, pageWin2, pageWindow, isIsolatedContext;
-  var init_pageContext = __esm({
-    "src/platform/pageContext.ts"() {
-      "use strict";
-      sandboxWin = window;
-      pageWin2 = typeof unsafeWindow !== "undefined" && unsafeWindow ? unsafeWindow : sandboxWin;
-      pageWindow = pageWin2;
-      isIsolatedContext = pageWin2 !== sandboxWin;
-    }
-  });
-
-  // src/data/live/state.ts
-  function createInitialState2() {
-    return {
-      data: {
-        items: null,
-        decor: null,
-        mutations: null,
-        eggs: null,
-        pets: null,
-        abilities: null,
-        plants: null,
-        weather: null,
-        enums: null
-      },
-      fetchStarted: false,
-      fetchComplete: false,
-      colorPollingTimer: null,
-      colorPollAttempts: 0
-    };
-  }
-  var STATE_GLOBAL_KEY, globals, captureState;
-  var init_state2 = __esm({
-    "src/data/live/state.ts"() {
-      "use strict";
       init_pageContext();
-      STATE_GLOBAL_KEY = "__MG_DATA_STATE__";
-      globals = pageWindow;
-      captureState = globals[STATE_GLOBAL_KEY] ?? createInitialState2();
-      globals[STATE_GLOBAL_KEY] = captureState;
-    }
-  });
-
-  // src/data/live/constants.ts
-  var MAIN_BUNDLE_PATTERN, QUINOA_VIEW_PATTERN, MAX_COLOR_POLL_ATTEMPTS, COLOR_POLL_INTERVAL_MS, ABILITY_COLOR_ANCHOR;
-  var init_constants = __esm({
-    "src/data/live/constants.ts"() {
-      "use strict";
-      MAIN_BUNDLE_PATTERN = /main-[^/]+\.js(\?|$)/;
-      QUINOA_VIEW_PATTERN = /QuinoaView-[^/]+\.js(\?|$)/;
-      MAX_COLOR_POLL_ATTEMPTS = 10;
-      COLOR_POLL_INTERVAL_MS = 1e3;
-      ABILITY_COLOR_ANCHOR = "ProduceScaleBoost";
-    }
-  });
-
-  // src/data/live/bundleParser.ts
-  function findBundleUrl(pattern) {
-    const docs = [
-      pageContext.document,
-      typeof document !== "undefined" ? document : null
-    ].filter(Boolean);
-    for (const doc of docs) {
-      try {
-        const scripts = doc.querySelectorAll("script[src]");
-        for (const script of scripts) {
-          const src = script.src || "";
-          if (pattern.test(src)) return src;
-        }
-      } catch {
-      }
-      try {
-        const links = doc.querySelectorAll('link[rel="modulepreload"]');
-        for (const link of links) {
-          const href = link.href || "";
-          if (pattern.test(href)) return href;
-        }
-      } catch {
-      }
-    }
-    const perfs = [
-      pageContext.performance,
-      typeof performance !== "undefined" ? performance : null
-    ].filter(Boolean);
-    for (const perf of perfs) {
-      try {
-        for (const entry of perf.getEntriesByType?.("resource") || []) {
-          const name = entry?.name ? String(entry.name) : "";
-          if (pattern.test(name)) return name;
-        }
-      } catch {
-      }
-    }
-    return null;
-  }
-  function findMainBundleUrl() {
-    return findBundleUrl(MAIN_BUNDLE_PATTERN);
-  }
-  function findQuinoaViewUrl() {
-    return findBundleUrl(QUINOA_VIEW_PATTERN);
-  }
-  function findAllIndices(haystack, needle) {
-    const out = [];
-    let idx = haystack.indexOf(needle);
-    while (idx !== -1) {
-      out.push(idx);
-      idx = haystack.indexOf(needle, idx + needle.length);
-    }
-    return out;
-  }
-  function extractBalancedBlock(text, openBraceIndex) {
-    let depth = 0;
-    let quote = "";
-    let escaped = false;
-    for (let i = openBraceIndex; i < text.length; i++) {
-      const ch = text[i];
-      if (quote) {
-        if (escaped) {
-          escaped = false;
-          continue;
-        }
-        if (ch === "\\") {
-          escaped = true;
-          continue;
-        }
-        if (ch === quote) quote = "";
-        continue;
-      }
-      if (ch === '"' || ch === "'" || ch === "`") {
-        quote = ch;
-        continue;
-      }
-      if (ch === "{") depth++;
-      else if (ch === "}" && --depth === 0) return text.slice(openBraceIndex, i + 1);
-    }
-    return null;
-  }
-  async function fetchBundleByFinder(findUrl, cache2, label2) {
-    if (cache2.value) return cache2.value;
-    if (cache2.inFlight) return cache2.inFlight;
-    cache2.inFlight = (async () => {
-      const MAX_RETRIES = 30;
-      const RETRY_INTERVAL = 500;
-      let url = null;
-      for (let i = 0; i < MAX_RETRIES; i++) {
-        url = findUrl();
-        if (url) break;
-        await new Promise((r) => setTimeout(r, RETRY_INTERVAL));
-      }
-      if (!url) {
-        console.warn(`[MGData] Could not find ${label2} URL after retries`);
-        return null;
-      }
-      try {
-        const res = await fetch(url, { credentials: "include" });
-        if (!res.ok) return null;
-        const text = await res.text();
-        cache2.value = text;
-        return text;
-      } catch {
-        return null;
-      } finally {
-        cache2.inFlight = null;
-      }
-    })();
-    return cache2.inFlight;
-  }
-  function fetchMainBundle() {
-    return fetchBundleByFinder(findMainBundleUrl, mainBundleCache, "main bundle");
-  }
-  function fetchQuinoaViewBundle() {
-    return fetchBundleByFinder(findQuinoaViewUrl, quinoaViewCache, "QuinoaView bundle");
-  }
-  var pageContext, mainBundleCache, quinoaViewCache;
-  var init_bundleParser = __esm({
-    "src/data/live/bundleParser.ts"() {
-      "use strict";
-      init_pageContext();
-      init_constants();
-      pageContext = pageWindow;
-      mainBundleCache = { value: null, inFlight: null };
-      quinoaViewCache = { value: null, inFlight: null };
-    }
-  });
-
-  // src/data/live/abilityColors.ts
-  function findAbilityColorSwitchBlock(bundleText) {
-    const indices = findAllIndices(bundleText, ABILITY_COLOR_ANCHOR);
-    if (!indices.length) return null;
-    for (const pos of indices) {
-      const winStart = Math.max(0, pos - 4e3);
-      const winEnd = Math.min(bundleText.length, pos + 4e3);
-      const windowText = bundleText.slice(winStart, winEnd);
-      const relSwitch = windowText.lastIndexOf("switch(");
-      if (relSwitch === -1) continue;
-      const absSwitch = winStart + relSwitch;
-      const braceAfterSwitch = bundleText.indexOf("{", absSwitch);
-      if (braceAfterSwitch === -1) continue;
-      const block = extractBalancedBlock(bundleText, braceAfterSwitch);
-      if (!block) continue;
-      const hasObjectColors = block.includes('bg:"') || block.includes("bg:'");
-      const hasHexColors = /return\s*[`'"](?:#|linear-gradient)/.test(block);
-      if (block.includes(ABILITY_COLOR_ANCHOR) && (hasObjectColors || hasHexColors)) {
-        return block;
-      }
-    }
-    return null;
-  }
-  function parseAbilityColorsFromSwitch(switchBlock) {
-    const colors = {};
-    const pending6 = [];
-    const tokenRe = /case\s*(['"])([^'"]+)\1\s*:|default\s*:|return\s*\{/g;
-    const findProp = (segment, prop) => {
-      const propRe = new RegExp(`${prop}\\s*:\\s*(['"])([\\s\\S]*?)\\1`);
-      const propMatch = segment.match(propRe);
-      return propMatch ? propMatch[2] : null;
-    };
-    let match;
-    while ((match = tokenRe.exec(switchBlock)) !== null) {
-      if (match[2]) {
-        pending6.push(match[2]);
-        continue;
-      }
-      const token = match[0];
-      if (token.startsWith("default")) {
-        pending6.length = 0;
-        continue;
-      }
-      if (!token.startsWith("return")) continue;
-      const braceIndex = switchBlock.indexOf("{", match.index);
-      if (braceIndex === -1) {
-        pending6.length = 0;
-        continue;
-      }
-      const literal = extractBalancedBlock(switchBlock, braceIndex);
-      if (!literal) {
-        pending6.length = 0;
-        continue;
-      }
-      const bg = findProp(literal, "bg");
-      if (!bg) {
-        pending6.length = 0;
-        continue;
-      }
-      const hover = findProp(literal, "hover") || bg;
-      for (const id of pending6) {
-        if (!colors[id]) colors[id] = { bg, hover };
-      }
-      pending6.length = 0;
-    }
-    return Object.keys(colors).length ? colors : null;
-  }
-  function hexToRgba(hex, alpha) {
-    const match = hex.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
-    if (!match) return null;
-    let h = match[1];
-    if (h.length === 3) h = h.split("").map((c) => c + c).join("");
-    const r = parseInt(h.slice(0, 2), 16);
-    const g = parseInt(h.slice(2, 4), 16);
-    const b = parseInt(h.slice(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  }
-  function parseAbilityColorsFromHexSwitch(switchBlock) {
-    const colors = {};
-    const pending6 = [];
-    const tokenRe = /case\s*([`'"])([^`'"]+)\1\s*:|default\s*:|return\s*([`'"])((?:#|linear-gradient)[^`'"]*)\3/g;
-    let match;
-    while ((match = tokenRe.exec(switchBlock)) !== null) {
-      if (match[2]) {
-        pending6.push(match[2]);
-        continue;
-      }
-      if (match[0].startsWith("default")) {
-        pending6.length = 0;
-        continue;
-      }
-      const value = match[4];
-      if (!value) {
-        pending6.length = 0;
-        continue;
-      }
-      const bg = value.startsWith("#") ? hexToRgba(value, 0.9) ?? value : value;
-      const hover = value.startsWith("#") ? hexToRgba(value, 1) ?? value : value;
-      for (const id of pending6) {
-        if (!colors[id]) colors[id] = { bg, hover };
-      }
-      pending6.length = 0;
-    }
-    return Object.keys(colors).length ? colors : null;
-  }
-  async function loadAbilityColorsFromBundle() {
-    for (const fetchBundle of [fetchMainBundle, fetchQuinoaViewBundle]) {
-      const bundleText = await fetchBundle();
-      if (!bundleText) continue;
-      const switchBlock = findAbilityColorSwitchBlock(bundleText);
-      if (!switchBlock) continue;
-      const parsed = parseAbilityColorsFromSwitch(switchBlock) ?? parseAbilityColorsFromHexSwitch(switchBlock);
-      if (parsed) return parsed;
-    }
-    return null;
-  }
-  function isAlreadyEnriched(abilities) {
-    const sample = abilities[ABILITY_COLOR_ANCHOR];
-    return sample != null && typeof sample === "object" && "color" in sample;
-  }
-  function toAbilityColor(raw) {
-    if (!raw.startsWith("#")) return { bg: raw, hover: raw };
-    const bg = hexToRgba(raw, 0.9) ?? raw;
-    return { bg, hover: hexToRgba(raw, 1) ?? bg };
-  }
-  function resolveFallbackColor(abilityId, abilityData) {
-    const raw = abilityData?.color;
-    if (typeof raw === "string") return toAbilityColor(raw);
-    const staticColor = STATIC_ABILITY_COLORS[abilityId];
-    if (staticColor) return toAbilityColor(staticColor);
-    return null;
-  }
-  async function enrichAbilitiesWithColors() {
-    if (!captureState.data.abilities) return false;
-    const abilities = captureState.data.abilities;
-    if (isAlreadyEnriched(abilities)) return true;
-    const map2 = await loadAbilityColorsFromBundle();
-    if (!map2) return false;
-    const enriched = {};
-    for (const [abilityId, abilityData] of Object.entries(abilities)) {
-      const colors = map2[abilityId] || resolveFallbackColor(abilityId, abilityData) || DEFAULT_COLOR;
-      enriched[abilityId] = {
-        ...abilityData,
-        color: {
-          bg: colors.bg,
-          hover: colors.hover
-        }
-      };
-    }
-    captureState.data.abilities = enriched;
-    return true;
-  }
-  function startColorPolling() {
-    if (captureState.colorPollingTimer) return;
-    captureState.colorPollAttempts = 0;
-    const timer2 = setInterval(async () => {
-      const success = await enrichAbilitiesWithColors();
-      if (success || ++captureState.colorPollAttempts > MAX_COLOR_POLL_ATTEMPTS) {
-        clearInterval(timer2);
-        captureState.colorPollingTimer = null;
-      }
-    }, COLOR_POLL_INTERVAL_MS);
-    captureState.colorPollingTimer = timer2;
-  }
-  function stopColorPolling() {
-    if (captureState.colorPollingTimer) {
-      clearInterval(captureState.colorPollingTimer);
-      captureState.colorPollingTimer = null;
-    }
-  }
-  var DEFAULT_COLOR, STATIC_ABILITY_COLORS;
-  var init_abilityColors = __esm({
-    "src/data/live/abilityColors.ts"() {
-      "use strict";
-      init_state2();
-      init_constants();
-      init_bundleParser();
-      DEFAULT_COLOR = {
-        bg: "rgba(100, 100, 100, 0.9)",
-        hover: "rgba(150, 150, 150, 1)"
-      };
-      STATIC_ABILITY_COLORS = {
-        CoinFinderI: "#B49600",
-        CoinFinderII: "#B49600",
-        CoinFinderIII: "#B49600",
-        SnowyCoinFinder: "#B49600",
-        DawnCoinFinder: "#B49600",
-        ThunderCoinFinder: "#B49600",
-        SeedFinderI: "#A86626",
-        SeedFinderII: "#A86626",
-        SeedFinderIII: "#A86626",
-        SeedFinderIV: "#A86626",
-        PlantGrowthBoost: "#008080",
-        PlantGrowthBoostII: "#008080",
-        PlantGrowthBoostIII: "#969696",
-        SnowyPlantGrowthBoost: "#008080",
-        DawnPlantGrowthBoost: "#008080",
-        AmberPlantGrowthBoost: "#008080",
-        ThunderPlantGrowthBoost: "#008080",
-        ProduceEater: "#FF4500",
-        ProduceScaleBoost: "#228B22",
-        ProduceScaleBoostII: "#228B22",
-        ProduceScaleBoostIII: "#969696",
-        SnowyCropSizeBoost: "#228B22",
-        ProduceMutationBoost: "#8C0F46",
-        ProduceMutationBoostII: "#8C0F46",
-        ProduceMutationBoostIII: "#969696",
-        SnowyCropMutationBoost: "#8C0F46",
-        DawnBoost: "#8C0F46",
-        AmberMoonBoost: "#8C0F46",
-        ThunderBoost: "#8C0F46",
-        EggGrowthBoost: "#B45AF0",
-        EggGrowthBoostII_NEW: "#B45AF0",
-        EggGrowthBoostII: "#B45AF0",
-        SnowyEggGrowthBoost: "#B45AF0",
-        ThunderEggGrowthBoost: "#B45AF0",
-        PetXpBoost: "#1E90FF",
-        PetXpBoostII: "#1E90FF",
-        PetXpBoostIII: "#969696",
-        SnowyPetXpBoost: "#1E90FF",
-        DawnXpBoost: "#1E90FF",
-        ThunderXpBoost: "#1E90FF",
-        HungerBoost: "#FF1493",
-        HungerBoostII: "#FF1493",
-        HungerBoostIII: "#969696",
-        SnowyHungerBoost: "#FF1493",
-        HungerRestore: "#FF69B4",
-        HungerRestoreII: "#FF69B4",
-        HungerRestoreIII: "#969696",
-        SnowyHungerRestore: "#FF69B4",
-        PetMutationBoost: "#A03264",
-        PetMutationBoostII: "#A03264",
-        PetMutationBoostIII: "#969696",
-        SellBoostI: "#DC143C",
-        SellBoostII: "#DC143C",
-        SellBoostIII: "#DC143C",
-        SellBoostIV: "#DC143C",
-        ProduceRefund: "#FF6347",
-        DoubleHarvest: "#0078B4",
-        PetAgeBoost: "#9370DB",
-        PetAgeBoostII: "#9370DB",
-        PetAgeBoostIII: "#969696",
-        PetHatchSizeBoost: "#800080",
-        PetHatchSizeBoostII: "#800080",
-        PetHatchSizeBoostIII: "#969696",
-        DoubleHatch: "#3C5AB4",
-        PetRefund: "#005078",
-        PetRefundII: "#005078",
-        RainDance: "#4CCCCC",
-        SnowGranter: "#90B8CC",
-        FrostGranter: "#94A0CC",
-        DawnlitGranter: "#C47CB4",
-        AmberlitGranter: "#CC9060",
-        GoldGranter: "linear-gradient(135deg, #DCC846 0%, #D2AF05 40%, #D2B937 70%, #C8AF1E 100%)",
-        RainbowGranter: "linear-gradient(45deg, #C80000, #C87800, #A0AA1E, #3CAA3C, #32AAAA, #2896B4, #145AB4, #461E96)",
-        DawnbinderBoost: "#B468A0",
-        Copycat: "#FF8C00",
-        DawnCapture: "#B25A9E",
-        ThunderstruckGranter: "#C2B83C",
-        Thundercharger: "#1FA382",
-        MoonKisser: "#FAA623",
-        DawnKisser: "#A25CF2",
-        Thunderbloom: "#70F6CB"
-      };
-    }
-  });
-
-  // src/data/live/accessors.ts
-  function sleep3(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-  function getData(key2) {
-    return captureState.data[key2];
-  }
-  function getAllData() {
-    return { ...captureState.data };
-  }
-  function hasData(key2) {
-    return captureState.data[key2] != null;
-  }
-  async function waitForData(key2, timeoutMs = DEFAULT_WAIT_TIMEOUT_MS, intervalMs = WAIT_POLL_INTERVAL_MS) {
-    const start2 = Date.now();
-    while (Date.now() - start2 < timeoutMs) {
-      const value = captureState.data[key2];
-      if (value != null) return value;
-      await sleep3(intervalMs);
-    }
-    throw new Error(`MGData.waitFor: timeout waiting for "${key2}"`);
-  }
-  async function waitForAnyData(timeoutMs = DEFAULT_WAIT_TIMEOUT_MS, intervalMs = WAIT_POLL_INTERVAL_MS) {
-    const start2 = Date.now();
-    while (Date.now() - start2 < timeoutMs) {
-      if (Object.values(captureState.data).some((v) => v != null)) {
-        return { ...captureState.data };
-      }
-      await sleep3(intervalMs);
-    }
-    throw new Error("MGData.waitForAnyData: timeout");
-  }
-  var DEFAULT_WAIT_TIMEOUT_MS, WAIT_POLL_INTERVAL_MS;
-  var init_accessors = __esm({
-    "src/data/live/accessors.ts"() {
-      "use strict";
-      init_state2();
-      DEFAULT_WAIT_TIMEOUT_MS = 5e3;
-      WAIT_POLL_INTERVAL_MS = 50;
-    }
-  });
-
-  // src/data/live/capture.ts
-  function setCapturedData(key2, value) {
-    if (captureState.data[key2] != null) return;
-    captureState.data[key2] = value;
-    try {
-      window.dispatchEvent(new CustomEvent("gemini:data-updated", { detail: { key: key2 } }));
-    } catch {
-    }
-  }
-  function isAllDataCaptured() {
-    return Object.values(captureState.data).every((v) => v != null);
-  }
-  async function fetchAllData() {
-    if (captureState.fetchStarted) return;
-    captureState.fetchStarted = true;
-    try {
-      const data = await withDiscordPollPause(() => getJSON2(`${API_BASE}/data`));
-      if (data.plants) setCapturedData("plants", data.plants);
-      if (data.pets) setCapturedData("pets", data.pets);
-      if (data.items) setCapturedData("items", data.items);
-      if (data.decor) setCapturedData("decor", data.decor);
-      if (data.eggs) setCapturedData("eggs", data.eggs);
-      if (data.mutations) setCapturedData("mutations", data.mutations);
-      if (data.abilities) setCapturedData("abilities", data.abilities);
-      if (data.weathers) setCapturedData("weather", data.weathers);
-      if (data.enums) setCapturedData("enums", data.enums);
-      captureState.fetchComplete = true;
-      console.log("[MGData] all data loaded from API", {
-        plants: Object.keys(data.plants || {}).length,
-        pets: Object.keys(data.pets || {}).length,
-        items: Object.keys(data.items || {}).length,
-        decor: Object.keys(data.decor || {}).length,
-        eggs: Object.keys(data.eggs || {}).length,
-        mutations: Object.keys(data.mutations || {}).length,
-        abilities: Object.keys(data.abilities || {}).length,
-        weathers: Object.keys(data.weathers || {}).length
-      });
-    } catch (err) {
-      console.error("[MGData] failed to fetch data from API", err);
-      captureState.fetchStarted = false;
-    }
-  }
-  var API_BASE;
-  var init_capture = __esm({
-    "src/data/live/capture.ts"() {
-      "use strict";
-      init_state2();
-      init_gm();
-      init_discordPolls();
-      API_BASE = "https://mg-api.ariedam.fr";
-    }
-  });
-
-  // src/data/live/abilityFormatter.ts
-  function isPetAbilityAction(action2) {
-    return PET_ABILITY_ACTIONS.includes(action2);
-  }
-  function formatTime(seconds) {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor(seconds % 3600 / 60);
-    const secs = Math.floor(seconds % 60);
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    if (minutes > 0) return `${minutes}m ${secs}s`;
-    return `${secs}s`;
-  }
-  function getPetName(pet) {
-    return pet?.name || pet?.petSpecies || "Unknown Pet";
-  }
-  function formatAbilityLog(log2) {
-    const { action: action2, parameters } = log2;
-    const params = parameters;
-    switch (action2) {
-      case "CoinFinderI":
-      case "CoinFinderII":
-      case "CoinFinderIII":
-      case "SnowyCoinFinder":
-      case "DawnCoinFinder":
-      case "ThunderCoinFinder":
-        return `Found ${params.coinsFound || 0} coins`;
-      case "SeedFinderI":
-      case "SeedFinderII":
-      case "SeedFinderIII":
-      case "SeedFinderIV":
-        return `Found 1x ${params.speciesId || "Unknown"} seed`;
-      case "HungerRestore":
-      case "HungerRestoreII":
-      case "HungerRestoreIII":
-      case "SnowyHungerRestore": {
-        const targetName = getPetName(params.targetPet);
-        const amount = params.hungerRestoreAmount || 0;
-        const pet = params.pet;
-        const targetPet = params.targetPet;
-        const isSelf = pet?.id === targetPet?.id;
-        return `Restored ${amount} hunger to ${isSelf ? "itself" : targetName}`;
-      }
-      case "DoubleHarvest": {
-        const crop = params.harvestedCrop;
-        return `Double harvested ${crop?.species || "Unknown"}`;
-      }
-      // Double Hatch I sits on Turkey, II on Rooster. Both log the same way.
-      case "DoubleHatch":
-      case "DoubleHatchII": {
-        const extra = params.extraPet;
-        return `Double hatched ${extra?.petSpecies || "Unknown"}`;
-      }
-      case "ProduceEater": {
-        const slot = params.growSlot;
-        return `Ate ${slot?.species || "Unknown"} for ${params.sellPrice || 0} coins`;
-      }
-      case "PetHatchSizeBoost":
-      case "PetHatchSizeBoostII":
-      case "PetHatchSizeBoostIII": {
-        const targetName = getPetName(params.targetPet);
-        const increase = Number(params.strengthIncrease) || 0;
-        return `Boosted ${targetName}'s size by +${increase.toFixed(0)}`;
-      }
-      case "PetAgeBoost":
-      case "PetAgeBoostII":
-      case "PetAgeBoostIII": {
-        const targetName = getPetName(params.targetPet);
-        return `Gave +${params.bonusXp || 0} XP to ${targetName}`;
-      }
-      case "PetRefund":
-      case "PetRefundII":
-        return `Refunded 1x ${params.eggId || "Unknown Egg"}`;
-      case "ProduceRefund": {
-        const crops = params.cropsRefunded;
-        const num2 = Array.isArray(crops) ? crops.length : 0;
-        return `Refunded ${num2} ${num2 === 1 ? "crop" : "crops"}`;
-      }
-      case "SellBoostI":
-      case "SellBoostII":
-      case "SellBoostIII":
-      case "SellBoostIV":
-        return `Gave +${params.bonusCoins || 0} bonus coins`;
-      case "GoldGranter":
-      case "RainbowGranter":
-      case "RainDance":
-      case "SnowGranter":
-      case "FrostGranter":
-      case "DawnlitGranter":
-      case "AmberlitGranter":
-      case "ThunderstruckGranter": {
-        const slot = params.growSlot;
-        return `Made ${slot?.species || "Unknown"} turn ${params.mutation || "Unknown"}`;
-      }
-      case "PetXpBoost":
-      case "PetXpBoostII":
-      case "PetXpBoostIII":
-      case "SnowyPetXpBoost":
-      case "DawnXpBoost":
-      case "ThunderXpBoost": {
-        const affected = params.petsAffected;
-        const num2 = Array.isArray(affected) ? affected.length : 0;
-        return `Gave +${params.bonusXp || 0} XP to ${num2} ${num2 === 1 ? "pet" : "pets"}`;
-      }
-      case "EggGrowthBoost":
-      case "EggGrowthBoostII_NEW":
-      case "EggGrowthBoostII":
-      case "SnowyEggGrowthBoost":
-      case "ThunderEggGrowthBoost": {
-        const eggs = params.eggsAffected;
-        const num2 = Array.isArray(eggs) ? eggs.length : 0;
-        const time = formatTime(Number(params.secondsReduced) || 0);
-        return `Reduced ${num2} ${num2 === 1 ? "egg" : "eggs"} growth by ${time}`;
-      }
-      case "PlantGrowthBoost":
-      case "PlantGrowthBoostII":
-      case "PlantGrowthBoostIII":
-      case "SnowyPlantGrowthBoost":
-      case "DawnPlantGrowthBoost":
-      case "AmberPlantGrowthBoost":
-      case "ThunderPlantGrowthBoost": {
-        const num2 = Number(params.numPlantsAffected) || 0;
-        const time = formatTime(Number(params.secondsReduced) || 0);
-        return `Reduced ${num2} ${num2 === 1 ? "plant" : "plants"} growth by ${time}`;
-      }
-      case "ProduceScaleBoost":
-      case "ProduceScaleBoostII":
-      case "ProduceScaleBoostIII":
-      case "SnowyCropSizeBoost": {
-        const points = Number(params.sizeIncrease ?? params.scaleIncreasePercentage) || 0;
-        const num2 = Number(params.numPlantsAffected) || 0;
-        return `Boosted ${num2} ${num2 === 1 ? "crop" : "crops"} size by +${points.toFixed(0)}`;
-      }
-      case "MoonKisser":
-      case "DawnKisser": {
-        const affected = params.growSlotsAffected;
-        const num2 = Array.isArray(affected) ? affected.length : 0;
-        const source = params.sourceMutation || "Unknown";
-        const target = params.targetMutation || "Unknown";
-        return `Turned ${source} into ${target} on ${num2} ${num2 === 1 ? "crop" : "crops"}`;
-      }
-      default:
-        return `Unknown ability: ${action2}`;
-    }
-  }
-  var PET_ABILITY_ACTIONS;
-  var init_abilityFormatter = __esm({
-    "src/data/live/abilityFormatter.ts"() {
-      "use strict";
-      PET_ABILITY_ACTIONS = [
-        "CoinFinderI",
-        "CoinFinderII",
-        "CoinFinderIII",
-        "SnowyCoinFinder",
-        "DawnCoinFinder",
-        "ThunderCoinFinder",
-        "SeedFinderI",
-        "SeedFinderII",
-        "SeedFinderIII",
-        "SeedFinderIV",
-        "HungerRestore",
-        "HungerRestoreII",
-        "HungerRestoreIII",
-        "SnowyHungerRestore",
-        "DoubleHarvest",
-        "DoubleHatch",
-        "DoubleHatchII",
-        "ProduceEater",
-        "PetHatchSizeBoost",
-        "PetHatchSizeBoostII",
-        "PetHatchSizeBoostIII",
-        "PetAgeBoost",
-        "PetAgeBoostII",
-        "PetAgeBoostIII",
-        "PetRefund",
-        "PetRefundII",
-        "ProduceRefund",
-        "SellBoostI",
-        "SellBoostII",
-        "SellBoostIII",
-        "SellBoostIV",
-        "GoldGranter",
-        "RainbowGranter",
-        "RainDance",
-        "SnowGranter",
-        "FrostGranter",
-        "DawnlitGranter",
-        "AmberlitGranter",
-        "ThunderstruckGranter",
-        "PetXpBoost",
-        "PetXpBoostII",
-        "PetXpBoostIII",
-        "SnowyPetXpBoost",
-        "DawnXpBoost",
-        "ThunderXpBoost",
-        "EggGrowthBoost",
-        "EggGrowthBoostII_NEW",
-        "EggGrowthBoostII",
-        "SnowyEggGrowthBoost",
-        "ThunderEggGrowthBoost",
-        "PlantGrowthBoost",
-        "PlantGrowthBoostII",
-        "PlantGrowthBoostIII",
-        "SnowyPlantGrowthBoost",
-        "DawnPlantGrowthBoost",
-        "AmberPlantGrowthBoost",
-        "ThunderPlantGrowthBoost",
-        "ProduceScaleBoost",
-        "ProduceScaleBoostII",
-        "ProduceScaleBoostIII",
-        "SnowyCropSizeBoost",
-        "MoonKisser",
-        "DawnKisser"
-      ];
-    }
-  });
-
-  // src/data/live/index.ts
-  var MGData;
-  var init_live = __esm({
-    "src/data/live/index.ts"() {
-      "use strict";
-      init_abilityColors();
-      init_accessors();
-      init_capture();
-      init_abilityFormatter();
-      MGData = {
-        /** Initialize module: fetch all data from API, start ability color polling */
-        init() {
-          fetchAllData();
-          startColorPolling();
-        },
-        /** Check if all data has been loaded */
-        isReady: isAllDataCaptured,
-        /** Get data for a specific key */
-        get: getData,
-        /** Get all data */
-        getAll: getAllData,
-        /** Check if data exists for a specific key */
-        has: hasData,
-        /** Wait for specific data to be available */
-        waitFor: waitForData,
-        /** Wait for any data to be available */
-        waitForAny: waitForAnyData,
-        /** No-op (sprites now come from the API with URLs included) */
-        resolveSprites() {
-        },
-        /** Cleanup */
-        cleanup() {
-          stopColorPolling();
-        }
-      };
-    }
-  });
-
-  // src/ui/kit/sprites/resolver.ts
-  function normalizeSpriteName(value) {
-    let str = String(value || "").trim();
-    if (str.includes("/")) {
-      str = str.split("/").pop() || str;
-    }
-    str = str.replace(/\.[a-z0-9]+(\?.*)?$/i, "");
-    return str.toLowerCase().replace(/[^a-z0-9]/g, "");
-  }
-  function expandCategories(categories) {
-    const internalCats = /* @__PURE__ */ new Set();
-    for (const cat of categories) {
-      const expanded = SEARCH_CATS[cat] || [cat];
-      for (const catName of expanded) internalCats.add(catName);
-    }
-    return internalCats;
-  }
-  function setSpriteIndex(items, apiBase) {
-    indexEntries.length = 0;
-    nameIndex.clear();
-    for (const item of items) {
-      const parts = item.id.split("/").filter(Boolean);
-      const start2 = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
-      const internalCat = parts[start2] || "";
-      const apiCat = INTERNAL_TO_API[internalCat] || internalCat;
-      const entry = {
-        id: item.id,
-        name: item.name,
-        internalCat,
-        apiCat,
-        url: `${apiBase}/assets/sprites/${apiCat}/${item.name}.png`
-      };
-      indexEntries.push(entry);
-      const norm3 = normalizeSpriteName(item.name);
-      const arr = nameIndex.get(norm3) || [];
-      arr.push(entry);
-      nameIndex.set(norm3, arr);
-    }
-  }
-  function spriteIndexSize() {
-    return indexEntries.length;
-  }
-  function setCatalogReader(reader) {
-    catalogReader = reader;
-    catalogSourcesIndexed = -1;
-  }
-  function addCatalogAlias(alias, entry) {
-    const key2 = normalizeSpriteName(alias);
-    if (!key2) return;
-    const entries2 = catalogIndex.get(key2) || [];
-    if (entries2.some((known) => known.internalCat === entry.internalCat)) return;
-    entries2.push(entry);
-    catalogIndex.set(key2, entries2);
-  }
-  function readSpriteUrl(url) {
-    const match = /\/assets\/sprites\/([^/]+)\/([^/?#]+)\.[a-z0-9]+(?:[?#]|$)/i.exec(url);
-    if (!match) return null;
-    return { apiCat: match[1], name: match[2] };
-  }
-  function catalogEntryFor(url) {
-    const parsed = readSpriteUrl(url);
-    if (!parsed) return null;
-    const internalCat = API_TO_INTERNAL[parsed.apiCat.toLowerCase()] || parsed.apiCat.toLowerCase();
-    return {
-      id: `sprite/${internalCat}/${parsed.name}`,
-      name: parsed.name,
-      internalCat,
-      apiCat: parsed.apiCat,
-      url
-    };
-  }
-  function buildCatalogIndex() {
-    const read = catalogReader;
-    if (!read) return;
-    const loaded = CATALOG_SOURCES.filter((source) => read(source.key)).length;
-    if (loaded === catalogSourcesIndexed) return;
-    catalogSourcesIndexed = loaded;
-    catalogIndex.clear();
-    for (const source of CATALOG_SOURCES) {
-      const catalog = read(source.key);
-      if (!catalog) continue;
-      for (const [id, raw] of Object.entries(catalog)) {
-        const record = raw;
-        if (!record || typeof record !== "object") continue;
-        for (const path of source.paths) {
-          const holder2 = path === null ? record : record[path];
-          if (!holder2 || typeof holder2 !== "object") continue;
-          const url = typeof holder2.sprite === "string" ? holder2.sprite : "";
-          if (!url) continue;
-          const entry = catalogEntryFor(url);
-          if (!entry) continue;
-          addCatalogAlias(entry.name, entry);
-          addCatalogAlias(id, entry);
-          if (typeof holder2.name === "string") addCatalogAlias(holder2.name, entry);
-        }
-      }
-    }
-  }
-  function findCatalogSprite(internalCats, normTarget) {
-    if (!normTarget) return null;
-    buildCatalogIndex();
-    const entries2 = catalogIndex.get(normTarget);
-    if (!entries2?.length) return null;
-    for (const entry of entries2) {
-      if (internalCats.has(entry.internalCat)) return entry;
-    }
-    return null;
-  }
-  function findSprite(categories, candidateId) {
-    const norm3 = normalizeSpriteName(candidateId);
-    const internalCats = expandCategories(categories);
-    const fromCatalog = findCatalogSprite(internalCats, norm3);
-    if (fromCatalog) return fromCatalog;
-    const entries2 = nameIndex.get(norm3);
-    if (!entries2?.length) {
-      return findSpriteFuzzy(categories, norm3);
-    }
-    for (const entry of entries2) {
-      if (internalCats.has(entry.internalCat)) return entry;
-    }
-    return findSpriteFuzzy(categories, norm3);
-  }
-  function findSpriteFuzzy(categories, normTarget) {
-    if (!normTarget) return null;
-    const internalCats = expandCategories(categories);
-    for (const [norm3, entries2] of nameIndex) {
-      if (norm3.includes(normTarget) || normTarget.includes(norm3)) {
-        for (const entry of entries2) {
-          if (internalCats.has(entry.internalCat)) return entry;
-        }
-      }
-    }
-    for (const [norm3, entries2] of nameIndex) {
-      if (norm3.includes(normTarget) || normTarget.includes(norm3)) {
-        return entries2[0];
-      }
-    }
-    return null;
-  }
-  var INTERNAL_TO_API, API_TO_INTERNAL, SEARCH_CATS, indexEntries, nameIndex, CATALOG_SOURCES, catalogIndex, catalogSourcesIndexed, catalogReader;
-  var init_resolver = __esm({
-    "src/ui/kit/sprites/resolver.ts"() {
-      "use strict";
-      INTERNAL_TO_API = {
-        plant: "plants",
-        tallplant: "tallPlants",
-        seed: "seeds",
-        pet: "pets",
-        item: "items",
-        decor: "decor",
-        mutation: "mutations",
-        "mutation-overlay": "mutations",
-        ui: "ui",
-        weather: "weather",
-        // Keys here are the *internal* category, which comes from the frame key and
-        // is always singular (`sprite/object/…`). These three were written plural on
-        // both sides, so they never matched and their sprites fell through to the
-        // singular URL — which the API serves only in plural, hence a 404 for every
-        // object/tile/animation icon in the mod.
-        object: "objects",
-        tile: "tiles",
-        animation: "animations",
-        winter: "winter"
-      };
-      API_TO_INTERNAL = {
-        plants: "plant",
-        tallplants: "tallplant",
-        seeds: "seed",
-        pets: "pet",
-        items: "item",
-        decor: "decor",
-        mutations: "mutation",
-        ui: "ui",
-        weather: "weather",
-        objects: "object",
-        tiles: "tile",
-        animations: "animation",
-        winter: "winter"
-      };
-      SEARCH_CATS = {
-        plant: ["plant", "tallplant"],
-        tallplant: ["tallplant", "plant"],
-        crop: ["plant", "tallplant"],
-        seed: ["seed"],
-        pet: ["pet"],
-        item: ["item"],
-        decor: ["decor"],
-        // A few mutation icons live in the `ui` sheet (MutationGold, MutationRainbow)
-        // while the rest sit in `mutations`, so both have to be searched — same
-        // reason `weather` already spans three.
-        mutation: ["mutation", "mutation-overlay", "ui"],
-        "mutation-overlay": ["mutation-overlay", "mutation"],
-        ui: ["ui"],
-        weather: ["ui", "weather", "mutation"]
-      };
-      indexEntries = [];
-      nameIndex = /* @__PURE__ */ new Map();
-      CATALOG_SOURCES = [
-        // `crop` before `plant`: both land in the `plants` sheet, and the bare species
-        // name must resolve to the harvested crop (Carrot), not the seedling
-        // (BabyCarrot) — which is what the index used to return.
-        { key: "plants", paths: ["seed", "crop", "plant"] },
-        { key: "pets", paths: [null] },
-        { key: "eggs", paths: [null] },
-        { key: "items", paths: [null] },
-        { key: "decor", paths: [null] },
-        { key: "mutations", paths: [null] },
-        { key: "weather", paths: [null] }
-      ];
-      catalogIndex = /* @__PURE__ */ new Map();
-      catalogSourcesIndexed = -1;
-      catalogReader = null;
-    }
-  });
-
-  // src/ui/kit/sprites/iconCache.ts
-  function fetchIndex() {
-    if (indexReady) return indexReady;
-    indexReady = withDiscordPollPause(
-      () => getJSON2(
-        `${API_BASE2}/assets/sprite-data?flat=1`
-      )
-    ).then((data) => {
-      setSpriteIndex(data.items || [], API_BASE2);
-      console.log("[SpriteIconCache] sprite index loaded", { count: spriteIndexSize() });
-    }).catch((err) => {
-      console.error("[SpriteIconCache] failed to fetch sprite index", err);
-      indexReady = null;
-    });
-    return indexReady;
-  }
-  function knownMutations(list) {
-    if (!Array.isArray(list)) return [];
-    const names = list.map((value) => typeof value === "string" ? value.trim() : "").filter((name) => !!name && (!!MUTATION_FILTERS[name] || !!MUTATION_ICONS[name]));
-    return [...new Set(names)];
-  }
-  function normalizeMutations(list) {
-    const names = [...new Set(list.filter((mutName) => MUTATION_FILTERS[mutName]))];
-    if (!names.length) return [];
-    if (names.includes("Gold")) return ["Gold"];
-    if (names.includes("Rainbow")) return ["Rainbow"];
-    const warm = ["Ambershine", "Dawnlit", "Dawncharged", "Ambercharged"];
-    if (names.some((name) => warm.includes(name))) {
-      return names.filter((name) => !["Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged"].includes(name));
-    }
-    return names;
-  }
-  function pickBlendOp2(desired) {
-    if (SUPPORTED_BLEND_OPS2.has(desired)) return desired;
-    if (SUPPORTED_BLEND_OPS2.has("overlay")) return "overlay";
-    if (SUPPORTED_BLEND_OPS2.has("screen")) return "screen";
-    if (SUPPORTED_BLEND_OPS2.has("lighter")) return "lighter";
-    return "source-atop";
-  }
-  function fillGrad2(ctx2, width, height, filter) {
-    const cols = filter.colors?.length ? filter.colors : ["#fff"];
-    let gradient;
-    if (filter.ang != null) {
-      const rad = (filter.ang - 90) * Math.PI / 180;
-      const cx = width / 2;
-      const cy = height / 2;
-      const radius = Math.min(width, height) / 2;
-      gradient = ctx2.createLinearGradient(
-        cx - Math.cos(rad) * radius,
-        cy - Math.sin(rad) * radius,
-        cx + Math.cos(rad) * radius,
-        cy + Math.sin(rad) * radius
-      );
-    } else {
-      gradient = ctx2.createLinearGradient(0, 0, 0, height);
-    }
-    if (cols.length === 1) {
-      gradient.addColorStop(0, cols[0]);
-      gradient.addColorStop(1, cols[0]);
-    } else {
-      cols.forEach((color, idx) => gradient.addColorStop(idx / (cols.length - 1), color));
-    }
-    ctx2.fillStyle = gradient;
-    ctx2.fillRect(0, 0, width, height);
-  }
-  async function applyMutationFilters(img, mutations) {
-    const allMuts = [...new Set(mutations.filter((m) => MUTATION_FILTERS[m]))];
-    const colorMuts = normalizeMutations(mutations);
-    if (!colorMuts.length && !allMuts.length) return img.src;
-    const width = img.naturalWidth || img.width;
-    const height = img.naturalHeight || img.height;
-    if (!width || !height) return img.src;
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx2 = canvas.getContext("2d");
-    if (!ctx2) return img.src;
-    ctx2.imageSmoothingEnabled = false;
-    ctx2.drawImage(img, 0, 0);
-    for (const name of colorMuts) {
-      const filter = MUTATION_FILTERS[name];
-      if (!filter) continue;
-      if (filter.masked) {
-        const gradCanvas = document.createElement("canvas");
-        gradCanvas.width = width;
-        gradCanvas.height = height;
-        const gctx = gradCanvas.getContext("2d");
-        if (!gctx) continue;
-        gctx.imageSmoothingEnabled = false;
-        fillGrad2(gctx, width, height, filter);
-        gctx.globalCompositeOperation = "destination-in";
-        gctx.drawImage(img, 0, 0);
-        ctx2.save();
-        ctx2.globalCompositeOperation = pickBlendOp2(filter.op);
-        if (filter.a != null) ctx2.globalAlpha = filter.a;
-        ctx2.drawImage(gradCanvas, 0, 0);
-        ctx2.restore();
-      } else {
-        const colorCanvas = document.createElement("canvas");
-        colorCanvas.width = width;
-        colorCanvas.height = height;
-        const cctx = colorCanvas.getContext("2d");
-        if (!cctx) continue;
-        cctx.imageSmoothingEnabled = false;
-        cctx.drawImage(img, 0, 0);
-        cctx.globalCompositeOperation = "source-in";
-        fillGrad2(cctx, width, height, filter);
-        ctx2.save();
-        ctx2.globalCompositeOperation = "source-over";
-        if (filter.a != null) ctx2.globalAlpha = filter.a;
-        ctx2.drawImage(colorCanvas, 0, 0);
-        ctx2.restore();
-      }
-    }
-    const plantAnchorX = 0.5;
-    const plantAnchorY = 0.85;
-    const baseX = width * plantAnchorX;
-    const baseY = height * plantAnchorY;
-    for (const name of allMuts) {
-      const iconDef = MUTATION_ICONS[name];
-      if (!iconDef) continue;
-      try {
-        const iconImg = await loadImage(iconDef.url);
-        const iconW = iconImg.naturalWidth || iconImg.width;
-        const iconH = iconImg.naturalHeight || iconImg.height;
-        if (!iconW || !iconH) continue;
-        const iconScale = width * 0.5 / iconW;
-        const drawW = iconW * iconScale;
-        const drawH = iconH * iconScale;
-        const drawX = baseX - drawW * iconDef.anchor.x;
-        const drawY = baseY - drawH * iconDef.anchor.y;
-        ctx2.save();
-        ctx2.globalAlpha = 1;
-        ctx2.globalCompositeOperation = "source-over";
-        ctx2.drawImage(iconImg, drawX, drawY, drawW, drawH);
-        ctx2.restore();
-      } catch {
-      }
-    }
-    return canvas.toDataURL("image/png");
-  }
-  function loadImage(url) {
-    let promise = imageCache.get(url);
-    if (promise) return promise;
-    promise = getSpriteObjectUrl(url).then((objectUrl) => new Promise((resolve, reject) => {
-      const img = new Image();
-      img.decoding = "async";
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("Image decode failed"));
-      img.src = objectUrl;
-    }));
-    imageCache.set(url, promise);
-    return promise;
-  }
-  function getSpriteObjectUrl(apiUrl) {
-    let promise = objectUrlCache.get(apiUrl);
-    if (promise) return promise;
-    promise = withDiscordPollPause(() => getBlob2(apiUrl)).then((blob) => URL.createObjectURL(blob));
-    objectUrlCache.set(apiUrl, promise);
-    return promise;
-  }
-  function cacheKeyFor(category, spriteId, mutationKey) {
-    return `${category}:${normalizeSpriteName(spriteId)}${mutationKey ?? ""}`;
-  }
-  function mutationKeyStr(mutations) {
-    const list = [...new Set((mutations ?? []).map((val) => String(val ?? "").trim()).filter(Boolean))];
-    if (!list.length) return "";
-    return "|m=" + list.map(normalizeSpriteName).filter(Boolean).sort().join(",");
-  }
-  function notifyWarmup(state6) {
-    warmupState = state6;
-    warmupListeners.forEach((listener) => {
-      try {
-        listener(warmupState);
-      } catch {
-      }
-    });
-  }
-  function getSpriteWarmupState() {
-    return warmupState;
-  }
-  function onSpriteWarmupProgress(listener) {
-    warmupListeners.add(listener);
-    try {
-      listener(warmupState);
-    } catch {
-    }
-    return () => {
-      warmupListeners.delete(listener);
-    };
-  }
-  function primeSpriteData(_category, _spriteId, _dataUrl) {
-  }
-  function primeWarmupKeys(_keys) {
-  }
-  function warmupSpriteCache() {
-    fetchIndex().then(() => {
-      const total = spriteIndexSize();
-      notifyWarmup({ total, done: total, completed: true });
-    });
-  }
-  function createSpriteImg(src, size, spriteKey, category, spriteId) {
-    const img = document.createElement("img");
-    img.src = src;
-    img.width = size;
-    img.height = size;
-    img.alt = "";
-    img.decoding = "async";
-    img.loading = "lazy";
-    img.draggable = false;
-    img.style.width = `${size}px`;
-    img.style.height = `${size}px`;
-    img.style.objectFit = "contain";
-    img.style.imageRendering = "auto";
-    img.style.display = "block";
-    img.dataset.spriteKey = spriteKey;
-    img.dataset.spriteCategory = category;
-    img.dataset.spriteId = spriteId;
-    return img;
-  }
-  function attachSpriteIcon(target, categories, id, size, _logTag, options) {
-    const candidateIds = Array.isArray(id) ? id.map((value) => String(value ?? "").trim()).filter(Boolean) : [String(id ?? "").trim()].filter(Boolean);
-    if (!candidateIds.length) return;
-    const mutations = knownMutations(options?.mutations);
-    const mutKey = mutationKeyStr(mutations);
-    const hasMutations = mutations.length > 0;
-    fetchIndex().then(() => {
-      let selectedEntry = null;
-      let selectedCandidate = "";
-      for (const candidate of candidateIds) {
-        const entry2 = findSprite(categories, candidate);
-        if (entry2) {
-          selectedEntry = entry2;
-          selectedCandidate = candidate;
-          break;
-        }
-      }
-      if (!selectedEntry) {
-        options?.onNoSpriteFound?.({ categories, candidates: candidateIds });
-        return;
-      }
-      const entry = selectedEntry;
-      const url = entry.url;
-      const spriteKey = `${entry.internalCat}:${entry.name}${mutKey}`;
-      const existing = target.querySelector("img[data-sprite-key]");
-      if (existing && existing.dataset.spriteKey === spriteKey) return;
-      if (!hasMutations) {
-        getSpriteObjectUrl(url).then((objectUrl) => {
-          const img = createSpriteImg(objectUrl, size, spriteKey, entry.internalCat, entry.name);
-          requestAnimationFrame(() => {
-            if (!target.isConnected) return;
-            target.replaceChildren(img);
-            options?.onSpriteApplied?.(img, {
-              category: entry.internalCat,
-              spriteId: entry.name,
-              candidate: selectedCandidate
-            });
-          });
-        }).catch(() => {
-        });
-        return;
-      }
-      const ck = cacheKeyFor(entry.internalCat, entry.name, mutKey);
-      const cached = spriteDataUrlResolved.get(ck);
-      if (cached) {
-        const img = createSpriteImg(cached, size, spriteKey, entry.internalCat, entry.name);
-        requestAnimationFrame(() => {
-          target.replaceChildren(img);
-          options?.onSpriteApplied?.(img, {
-            category: entry.internalCat,
-            spriteId: entry.name,
-            candidate: selectedCandidate
-          });
-        });
-        return;
-      }
-      let promise = spriteDataUrlCache.get(ck);
-      if (!promise) {
-        promise = loadImage(url).then(async (imgEl) => {
-          const dataUrl = await applyMutationFilters(imgEl, mutations);
-          spriteDataUrlResolved.set(ck, dataUrl);
-          return dataUrl;
-        }).catch(() => null);
-        spriteDataUrlCache.set(ck, promise);
-      }
-      promise.then((dataUrl) => {
-        if (!dataUrl) return;
-        const img = createSpriteImg(dataUrl, size, spriteKey, entry.internalCat, entry.name);
-        requestAnimationFrame(() => {
-          target.replaceChildren(img);
-          options?.onSpriteApplied?.(img, {
-            category: entry.internalCat,
-            spriteId: entry.name,
-            candidate: selectedCandidate
-          });
-        });
-      });
-    });
-  }
-  function attachWeatherSpriteIcon(target, tag, size) {
-    if (tag === "NoWeatherEffect") return;
-    attachSpriteIcon(target, ["ui", "mutation", "weather"], [`Mutation${tag}`, tag], size, "weather");
-  }
-  async function getSpriteObjectUrlByName(categories, name) {
-    await fetchIndex();
-    const entry = findSprite(categories, name);
-    if (!entry) return null;
-    try {
-      return await getSpriteObjectUrl(entry.url);
-    } catch {
-      return null;
-    }
-  }
-  var API_BASE2, indexReady, MUTATION_ICONS, MUTATION_FILTERS, SUPPORTED_BLEND_OPS2, imageCache, objectUrlCache, spriteDataUrlCache, spriteDataUrlResolved, warmupState, warmupListeners;
-  var init_iconCache = __esm({
-    "src/ui/kit/sprites/iconCache.ts"() {
-      "use strict";
-      init_gm();
-      init_discordPolls();
-      init_live();
-      init_resolver();
-      API_BASE2 = "https://mg-api.ariedam.fr";
-      indexReady = null;
-      setCatalogReader((key2) => MGData.get(key2));
-      fetchIndex();
-      MUTATION_ICONS = {
-        // Ground-level icons (anchor.y ≈ 0.5 — drawn at plant base)
-        Wet: { url: `${API_BASE2}/assets/sprites/mutations/Wet.png`, anchor: { x: 0.5, y: 0.487 } },
-        Chilled: { url: `${API_BASE2}/assets/sprites/mutations/Chilled.png`, anchor: { x: 0.502, y: 0.543 } },
-        Frozen: { url: `${API_BASE2}/assets/sprites/mutations/Frozen.png`, anchor: { x: 0.5, y: 0.474 } },
-        Thunderstruck: { url: `${API_BASE2}/assets/sprites/mutations/Thunderstruck.png`, anchor: { x: 0.495, y: 0.525 } },
-        Thundercharged: { url: `${API_BASE2}/assets/sprites/mutations/Thundercharged.png`, anchor: { x: 0.495, y: 0.525 } },
-        // Floating icons (anchor.y ≈ 0.8 — drawn above the plant)
-        Dawnlit: { url: `${API_BASE2}/assets/sprites/mutations/Dawnlit.png`, anchor: { x: 0.506, y: 0.809 } },
-        Ambershine: { url: `${API_BASE2}/assets/sprites/mutations/Amberlit.png`, anchor: { x: 0.5, y: 0.82 } },
-        Dawncharged: { url: `${API_BASE2}/assets/sprites/mutations/Dawncharged.png`, anchor: { x: 0.519, y: 0.796 } },
-        Ambercharged: { url: `${API_BASE2}/assets/sprites/mutations/Ambercharged.png`, anchor: { x: 0.501, y: 0.795 } }
-      };
-      MUTATION_FILTERS = {
-        Gold: { op: "source-atop", colors: ["rgb(235,200,0)"], a: 0.7 },
-        Rainbow: { op: "color", colors: ["#FF1744", "#FF9100", "#FFEA00", "#00E676", "#2979FF", "#D500F9"], ang: 130, masked: true },
-        Wet: { op: "source-atop", colors: ["rgb(50,180,200)"], a: 0.25 },
-        Chilled: { op: "source-atop", colors: ["rgb(100,160,210)"], a: 0.45 },
-        Frozen: { op: "source-atop", colors: ["rgb(100,130,220)"], a: 0.5 },
-        Thunderstruck: { op: "source-atop", colors: ["rgb(16, 141, 163)"], a: 0.45 },
-        Thundercharged: { op: "source-atop", colors: ["rgb(10, 100, 190)"], a: 0.5 },
-        Dawnlit: { op: "source-atop", colors: ["rgb(209,70,231)"], a: 0.5 },
-        Ambershine: { op: "source-atop", colors: ["rgb(190,100,40)"], a: 0.5 },
-        Dawncharged: { op: "source-atop", colors: ["rgb(140,80,200)"], a: 0.5 },
-        Ambercharged: { op: "source-atop", colors: ["rgb(170,60,25)"], a: 0.5 }
-      };
-      SUPPORTED_BLEND_OPS2 = (() => {
-        try {
-          const canvas = document.createElement("canvas");
-          const ctx2 = canvas.getContext("2d");
-          if (!ctx2) return /* @__PURE__ */ new Set();
-          const ops = ["color", "hue", "saturation", "luminosity", "overlay", "screen", "lighter", "source-atop"];
-          const ok = /* @__PURE__ */ new Set();
-          for (const op of ops) {
-            ctx2.globalCompositeOperation = op;
-            if (ctx2.globalCompositeOperation === op) ok.add(op);
-          }
-          return ok;
-        } catch {
-          return /* @__PURE__ */ new Set();
-        }
-      })();
-      imageCache = /* @__PURE__ */ new Map();
-      objectUrlCache = /* @__PURE__ */ new Map();
-      spriteDataUrlCache = /* @__PURE__ */ new Map();
-      spriteDataUrlResolved = /* @__PURE__ */ new Map();
-      warmupState = { total: 0, done: 0, completed: false };
-      warmupListeners = /* @__PURE__ */ new Set();
-    }
-  });
-
-  // src/game/gameVersion.ts
-  function initGameVersion(doc) {
-    if (gameVersion !== null) {
-      return;
-    }
-    const d = doc ?? (typeof document !== "undefined" ? document : null);
-    if (!d) {
-      return;
-    }
-    const scripts = d.scripts;
-    for (let i = 0; i < scripts.length; i++) {
-      const script = scripts.item(i);
-      if (!script) continue;
-      const src = script.src;
-      if (!src) continue;
-      const match = src.match(/\/(?:r\/\d+\/)?version\/([^/]+)/);
-      if (match && match[1]) {
-        gameVersion = match[1];
-        return;
-      }
-    }
-  }
-  var gameVersion;
-  var init_gameVersion = __esm({
-    "src/game/gameVersion.ts"() {
-      "use strict";
-      gameVersion = null;
     }
   });
 
@@ -3169,503 +1681,50 @@
     }
   });
 
-  // src/game/sprites/index.ts
-  async function warmupSpritesFromAtlases(atlasJsons, blobs) {
-    const FRAME_YIELD_EVERY = 6;
-    const MAX_CHUNK_MS = 10;
-    let framesSinceYield = 0;
-    let chunkStart = typeof performance !== "undefined" ? performance.now() : Date.now();
-    const resetChunk = () => {
-      chunkStart = typeof performance !== "undefined" ? performance.now() : Date.now();
-    };
-    const yieldIfNeeded = async () => {
-      const now2 = typeof performance !== "undefined" ? performance.now() : Date.now();
-      const elapsed = now2 - chunkStart;
-      if (framesSinceYield >= FRAME_YIELD_EVERY || elapsed >= MAX_CHUNK_MS) {
-        framesSinceYield = 0;
-        await yieldToBrowser();
-        resetChunk();
-      }
-    };
-    for (const [path, data] of Object.entries(atlasJsons)) {
-      if (!isAtlas(data)) continue;
-      const frames = data.frames || {};
-      if (!frames || !Object.keys(frames).length) continue;
-      const imgPath = relPath(path, data.meta.image);
-      if (isKtx2Path(imgPath)) continue;
-      const blob = blobs.get(imgPath);
-      if (!blob) continue;
-      let img;
-      try {
-        img = await blobToImage(blob);
-      } catch (error) {
-        console.warn("[MG SpriteCatalog] warmup decode failed", { imgPath, error });
-        continue;
-      }
-      for (const [frameKey, frameData] of Object.entries(frames)) {
-        const parsed = parseFrameCategory(frameKey);
-        if (!parsed) continue;
-        try {
-          const dataUrl = drawFrameToDataURL(img, frameKey, frameData);
-          if (!dataUrl) continue;
-          primeSpriteData(parsed.category, parsed.id, dataUrl);
-        } catch (error) {
-          console.warn("[MG SpriteCatalog] warmup frame failed", { frameKey, error });
-        }
-        framesSinceYield += 1;
-        await yieldIfNeeded();
-      }
-      framesSinceYield = 0;
-      await yieldToBrowser();
-      resetChunk();
+  // src/game/sprites/api/consoleService.ts
+  function ensureOverlayHost() {
+    let host = document.getElementById(OVERLAY_ID);
+    if (!host) {
+      host = document.createElement("div");
+      host.id = OVERLAY_ID;
+      host.style.cssText = "position:fixed;top:8px;left:8px;z-index:2147480000;display:flex;flex-wrap:wrap;gap:8px;pointer-events:auto;background:transparent;align-items:flex-start;";
+      document.body.appendChild(host);
     }
+    return host;
   }
-  function whenAtlasBundleReady() {
-    return atlasBundleReady;
-  }
-  function getAtlasBundle() {
-    return atlasBundle;
-  }
-  function getSpriteState() {
-    return ctx.state;
-  }
-  function getPixiApp() {
-    return hooks.app ?? ctx.state.app;
-  }
-  function detectGameVersion() {
-    try {
-      initGameVersion();
-      if (gameVersion) return gameVersion;
-    } catch {
+  function getSpriteDim(tex, key2) {
+    for (const src of [tex?.orig, tex?._orig, tex?.frame, tex?._frame, tex]) {
+      const value = src?.[key2];
+      if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
     }
-    const root = globalThis.unsafeWindow || globalThis;
-    const gv = root.gameVersion || root.MG_gameVersion || root.__MG_GAME_VERSION__;
-    if (gv) {
-      if (typeof gv.getVersion === "function") return gv.getVersion();
-      if (typeof gv.get === "function") return gv.get();
-      if (typeof gv === "string") return gv;
-    }
-    const scriptUrls = Array.from(document.scripts || []).map((s) => s.src).filter(Boolean);
-    const linkUrls = Array.from(document.querySelectorAll("link[href]") || []).map(
-      (l) => l.href
-    );
-    const urls = [...scriptUrls, ...linkUrls];
-    for (const u of urls) {
-      const m = u.match(/\/version\/([^/]+)\//);
-      if (m?.[1]) return m[1];
-    }
-    throw new Error("Version not found.");
+    return null;
   }
-  async function resolveGameVersionWithRetry(timeoutMs = 6e3) {
-    const deadline = Date.now() + timeoutMs;
-    let lastError = null;
-    while (Date.now() < deadline) {
-      try {
-        const v = detectGameVersion();
-        if (v) return v;
-      } catch (err) {
-        lastError = err;
-      }
-      await sleep(120);
-    }
-    throw lastError ?? new Error("Version not found.");
+  function padCanvasToSpriteBounds(source, tex) {
+    const rawW = source.width || 1;
+    const rawH = source.height || 1;
+    const baseW = Math.max(rawW, Math.round(getSpriteDim(tex, "width") ?? rawW) || rawW);
+    const baseH = Math.max(rawH, Math.round(getSpriteDim(tex, "height") ?? rawH) || rawH);
+    const trim = tex?.trim ?? tex?._trim ?? null;
+    let offsetX = trim && typeof trim.x === "number" ? Math.round(trim.x) : Math.round((baseW - rawW) / 2);
+    let offsetY = trim && typeof trim.y === "number" ? Math.round(trim.y) : Math.round((baseH - rawH) / 2);
+    offsetX = Math.max(0, Math.min(baseW - rawW, offsetX));
+    offsetY = Math.max(0, Math.min(baseH - rawH, offsetY));
+    if (baseW === rawW && baseH === rawH && offsetX === 0 && offsetY === 0) return source;
+    const canvas = document.createElement("canvas");
+    canvas.width = baseW;
+    canvas.height = baseH;
+    const ctx2 = canvas.getContext("2d");
+    if (!ctx2) return source;
+    ctx2.imageSmoothingEnabled = false;
+    ctx2.clearRect(0, 0, baseW, baseH);
+    ctx2.drawImage(source, offsetX, offsetY);
+    return canvas;
   }
-  function drawFrameToDataURL(img, frameKey, data) {
-    try {
-      const fr = data.frame;
-      const trimmed = data.trimmed && data.spriteSourceSize;
-      const sourceSize = data.sourceSize || { w: fr.w, h: fr.h };
-      const canvas = document.createElement("canvas");
-      canvas.width = sourceSize.w;
-      canvas.height = sourceSize.h;
-      const ctx2 = canvas.getContext("2d");
-      if (!ctx2) return null;
-      ctx2.imageSmoothingEnabled = false;
-      if (data.rotated) {
-        ctx2.save();
-        ctx2.translate(sourceSize.w / 2, sourceSize.h / 2);
-        ctx2.rotate(-Math.PI / 2);
-        ctx2.drawImage(
-          img,
-          fr.x,
-          fr.y,
-          fr.h,
-          fr.w,
-          -fr.h / 2,
-          -fr.w / 2,
-          fr.h,
-          fr.w
-        );
-        ctx2.restore();
-      } else {
-        const dx = trimmed ? data.spriteSourceSize.x : 0;
-        const dy = trimmed ? data.spriteSourceSize.y : 0;
-        ctx2.drawImage(img, fr.x, fr.y, fr.w, fr.h, dx, dy, fr.w, fr.h);
-      }
-      return canvas.toDataURL("image/png");
-    } catch {
-      return null;
-    }
-  }
-  async function prefetchAtlas(base) {
-    try {
-      const manifest = await getJSON(joinPath(base, "manifest.json"));
-      const atlasJsons = await loadAtlasJsons(base, manifest);
-      const blobs = /* @__PURE__ */ new Map();
-      for (const [path, data] of Object.entries(atlasJsons)) {
-        if (!isAtlas(data)) continue;
-        const imgPath = relPath(path, data.meta.image);
-        if (isKtx2Path(imgPath)) continue;
-        try {
-          const blob = await getBlob(joinPath(base, imgPath));
-          blobs.set(imgPath, blob);
-        } catch {
-        }
-      }
-      const warmupKeys = [];
-      Object.entries(atlasJsons).forEach(([, data]) => {
-        if (!isAtlas(data)) return;
-        Object.keys(data.frames || {}).forEach((frameKey) => warmupKeys.push(frameKey));
-      });
-      if (warmupKeys.length) {
-        try {
-          primeWarmupKeys(warmupKeys);
-        } catch {
-        }
-      }
-      try {
-        warmupSpriteCache();
-      } catch {
-      }
-      if (warmupKeys.length) {
-        warmupSpritesFromAtlases(atlasJsons, blobs).catch(() => {
-        });
-      }
-      return { base, atlasJsons, blobs };
-    } catch {
-      return null;
-    }
-  }
-  async function loadTextures(base, prefetched) {
-    const usePrefetched = prefetched && prefetched.base === base ? prefetched : null;
-    const atlasJsons = usePrefetched?.atlasJsons ?? await loadAtlasJsons(base, await getJSON(joinPath(base, "manifest.json")));
-    atlasBundle = usePrefetched ?? { base, atlasJsons, blobs: /* @__PURE__ */ new Map() };
-    atlasBundleResolve?.(atlasBundle);
-    atlasBundleResolve = null;
-    const ctors = ctx.state.ctors;
-    if (!ctors?.Texture || !ctors?.Rectangle) throw new Error("PIXI constructors missing");
-    for (const [path, data] of Object.entries(atlasJsons)) {
-      if (!isAtlas(data)) continue;
-      if (SKIPPED_ATLAS_PATTERNS.some((re) => re.test(path))) continue;
-      const imgPath = relPath(path, data.meta.image);
-      try {
-        let baseTex;
-        if (isKtx2Path(imgPath)) {
-          const loaded = await loadKtx2AsTexture(imgPath, ctx.state.renderer, ctors);
-          baseTex = loaded;
-        } else {
-          const blob = usePrefetched?.blobs.get(imgPath) ?? await getBlob(joinPath(base, imgPath));
-          const img = await blobToImage(blob);
-          baseTex = ctors.Texture.from(img);
-        }
-        buildAtlasTextures(data, baseTex, ctx.state.tex, ctx.state.atlasBases, {
-          Texture: ctors.Texture,
-          Rectangle: ctors.Rectangle
-        });
-      } catch (error) {
-        console.warn("[MG SpriteCatalog] skipping atlas (texture load failed)", { path, imgPath, error });
-      }
-    }
-    const { items, cats } = buildItemsFromTextures(ctx.state.tex);
-    ctx.state.items = items;
-    ctx.state.filtered = items.slice();
-    ctx.state.cats = cats;
-    ctx.state.loaded = true;
-  }
-  function ensureDocumentReady() {
-    if (document.readyState !== "loading") return Promise.resolve();
-    return new Promise((resolve) => {
-      const onReady = () => {
-        document.removeEventListener("DOMContentLoaded", onReady);
-        resolve();
-      };
-      document.addEventListener("DOMContentLoaded", onReady);
-    });
-  }
-  async function resolvePixiFast() {
-    const root = globalThis.unsafeWindow || globalThis;
-    const debugInfo = {
-      startedAt: Date.now(),
-      resolvedVia: null,
-      resolvedAt: null
-    };
-    root.__MG_RESOLVE_PIXI_DEBUG__ = debugInfo;
-    const check = () => {
-      const app = root.__PIXI_APP__ || root.PIXI_APP || root.app || null;
-      const renderer = root.__PIXI_RENDERER__ || root.PIXI_RENDERER__ || root.renderer || app?.renderer || null;
-      if (app && renderer) {
-        return { app, renderer, version: root.__PIXI_VERSION__ || null };
-      }
-      return null;
-    };
-    const hit = check();
-    if (hit) {
-      debugInfo.resolvedVia = "fast-check-immediate";
-      debugInfo.resolvedAt = Date.now();
-      return hit;
-    }
-    const maxMs = 5e3;
-    const start2 = performance.now();
-    while (performance.now() - start2 < maxMs) {
-      await sleep(50);
-      const retry = check();
-      if (retry) {
-        debugInfo.resolvedVia = "fast-check-retry";
-        debugInfo.resolvedAt = Date.now();
-        return retry;
-      }
-    }
-    const waited = await waitForPixi(hooks);
-    debugInfo.resolvedVia = "waitForPixi-fallback";
-    debugInfo.resolvedAt = Date.now();
-    return { app: waited.app, renderer: waited.renderer, version: waited.version };
-  }
-  function canvasOf(renderer) {
-    return renderer?.canvas || renderer?.view?.canvas || renderer?.view || null;
-  }
-  function watchRendererHealth() {
-    const pageWin3 = globalThis.unsafeWindow || globalThis;
-    const RENDERER_HEALTH_CHECK_MS = 1e3;
-    const REQUIRED_STALE_STREAK = 3;
-    let staleStreak = 0;
-    let needsCtorsRederive = false;
-    const debugState4 = {
-      checks: 0,
-      staleStreak: 0,
-      swaps: [],
-      ctorsRederiveAttempts: 0,
-      lastCtorsRederiveError: null
-    };
-    const debugRoot = pageWin3;
-    debugRoot.__MG_RENDERER_HEALTH_DEBUG__ = debugState4;
-    pageWin3.setInterval(() => {
-      try {
-        debugState4.checks += 1;
-        if (needsCtorsRederive) {
-          debugState4.ctorsRederiveAttempts += 1;
-          try {
-            ctx.state.ctors = getCtors(ctx.state.app ?? ctx.state.renderer);
-            needsCtorsRederive = false;
-            debugState4.lastCtorsRederiveError = null;
-            console.info("[MG SpriteCatalog] re-derived ctors from the new renderer");
-          } catch (error) {
-            debugState4.lastCtorsRederiveError = String(error?.message ?? error);
-          }
-        }
-        const canvas = canvasOf(ctx.state.renderer);
-        const canvasHealthy = !!canvas && typeof document !== "undefined" && document.contains(canvas);
-        if (canvasHealthy) {
-          staleStreak = 0;
-          debugState4.staleStreak = 0;
-          return;
-        }
-        staleStreak += 1;
-        debugState4.staleStreak = staleStreak;
-        if (staleStreak < REQUIRED_STALE_STREAK) return;
-        const freshRenderer = hooks.renderer;
-        if (!freshRenderer || freshRenderer === ctx.state.renderer) return;
-        const freshCanvas = canvasOf(freshRenderer);
-        if (!freshCanvas || typeof document === "undefined" || !document.contains(freshCanvas)) return;
-        console.info("[MG SpriteCatalog] renderer canvas went stale, re-resolved a fresh one");
-        debugState4.swaps.push({ at: Date.now(), fromCanvasInDoc: canvasHealthy });
-        ctx.state.renderer = freshRenderer;
-        if (hooks.app) ctx.state.app = hooks.app;
-        needsCtorsRederive = true;
-        staleStreak = 0;
-        debugState4.staleStreak = 0;
-      } catch (error) {
-        console.warn("[MG SpriteCatalog] renderer health check failed", error);
-      }
-    }, RENDERER_HEALTH_CHECK_MS);
-  }
-  async function start() {
-    if (ctx.state.started) return;
-    ctx.state.started = true;
-    let version;
-    const retryDeadline = typeof performance !== "undefined" ? performance.now() + 8e3 : Date.now() + 8e3;
-    for (; ; ) {
-      try {
-        version = await resolveGameVersionWithRetry();
-        console.info("[MG SpriteCatalog] game version resolved", version);
-        break;
-      } catch (err) {
-        const now2 = typeof performance !== "undefined" ? performance.now() : Date.now();
-        if (now2 >= retryDeadline) {
-          console.error("[MG SpriteCatalog] failed to resolve game version", err);
-          throw err;
-        }
-        console.warn("[MG SpriteCatalog] retrying game version detection...");
-        await sleep(200);
-      }
-    }
-    const base = `${ctx.cfg.origin.replace(/\/$/, "")}/version/${version}/assets/`;
-    if (!prefetchPromise) {
-      prefetchPromise = prefetchAtlas(base);
-    }
-    const { app, renderer: _renderer, version: pixiVersion } = await resolvePixiFast();
-    await ensureDocumentReady();
-    const renderer = _renderer || app?.renderer || app?.render || null;
-    ctx.state.ctors = await (async () => {
-      const debugRoot = globalThis.unsafeWindow || globalThis;
-      const inspectStage = (root) => {
-        const stack = [root];
-        const seen = /* @__PURE__ */ new Set();
-        let totalNodes = 0;
-        let spriteLikeCount = 0;
-        let textLikeCount = 0;
-        let n = 0;
-        while (stack.length && n++ < 25e3) {
-          const cur = stack.pop();
-          if (!cur || seen.has(cur)) continue;
-          seen.add(cur);
-          totalNodes++;
-          if (cur?.texture?.frame && cur?.constructor && cur?.texture?.constructor && cur?.texture?.frame?.constructor) spriteLikeCount++;
-          if ((typeof cur?.text === "string" || typeof cur?.text === "number") && cur?.style) textLikeCount++;
-          const children = cur.children;
-          if (Array.isArray(children)) {
-            for (let i = children.length - 1; i >= 0; i -= 1) stack.push(children[i]);
-          }
-        }
-        const topChildLabels = Array.isArray(root?.children) ? root.children.map((c) => c?.label || c?.constructor?.name || typeof c) : [];
-        return { totalNodes, spriteLikeCount, textLikeCount, topChildLabels };
-      };
-      const attempts = [];
-      debugRoot.__MG_CTORS_DEBUG__ = attempts;
-      let iteration = 0;
-      const snapshot2 = () => {
-        const stage = app?.stage;
-        const lor = renderer?.lastObjectRendered;
-        const rStage = renderer?.stage;
-        const walkRoot = stage || lor || rStage || null;
-        attempts.push({
-          at: Date.now(),
-          hasAppStage: !!stage,
-          appStageChildren: Array.isArray(stage?.children) ? stage.children.length : -1,
-          hasLastObjectRendered: !!lor,
-          lastObjectRenderedChildren: Array.isArray(lor?.children) ? lor.children.length : -1,
-          hasRendererStage: !!rStage,
-          rendererStageChildren: Array.isArray(rStage?.children) ? rStage.children.length : -1,
-          documentHidden: typeof document !== "undefined" ? document.hidden : false,
-          visibilityState: typeof document !== "undefined" ? document.visibilityState : "unknown",
-          hasFocus: typeof document !== "undefined" ? document.hasFocus() : false,
-          // Deep walk is relatively expensive — only do it every ~1s, not every 100ms.
-          inspect: walkRoot && iteration % 10 === 0 ? inspectStage(walkRoot) : null
-        });
-        iteration += 1;
-      };
-      const deadline = Date.now() + 1e4;
-      while (Date.now() < deadline) {
-        snapshot2();
-        try {
-          return getCtors(app);
-        } catch {
-        }
-        if (app && !app.stage && renderer?.lastObjectRendered) {
-          app.stage = renderer.lastObjectRendered;
-        }
-        await sleep(100);
-      }
-      snapshot2();
-      return getCtors(app);
-    })();
-    ctx.state.app = app;
-    ctx.state.renderer = renderer;
-    ctx.state.version = pixiVersion || version || version === "" ? pixiVersion ?? version : detectGameVersion();
-    ctx.state.base = base;
-    ctx.state.sig = curVariant(ctx.state).sig;
-    watchRendererHealth();
-    {
-      const root = globalThis.unsafeWindow || globalThis;
-      root.__MG_SPRITE_STATE__ = ctx.state;
-    }
-    const prefetched = await (prefetchPromise ?? Promise.resolve(null));
-    await loadTextures(ctx.state.base, prefetched);
-    const hud = {
-      open() {
-        ctx.state.open = true;
-      },
-      close() {
-        ctx.state.open = false;
-      },
-      toggle() {
-        ctx.state.open ? this.close() : this.open();
-      },
-      layout() {
-      },
-      root: void 0
-    };
-    ctx.state.open = true;
-    app.ticker?.add?.(() => {
-      processJobs(ctx.state, ctx.cfg);
-    });
-    exposeApi(ctx.state, hud);
-    const g = globalThis;
-    const uw = g.unsafeWindow || g;
-    const spriteApi = await Promise.resolve().then(() => (init_spriteApi(), spriteApi_exports));
-    const ensureOverlayHost = () => {
-      const id = "mg-sprite-overlay";
-      let host = document.getElementById(id);
-      if (!host) {
-        host = document.createElement("div");
-        host.id = id;
-        host.style.cssText = "position:fixed;top:8px;left:8px;z-index:2147480000;display:flex;flex-wrap:wrap;gap:8px;pointer-events:auto;background:transparent;align-items:flex-start;";
-        document.body.appendChild(host);
-      }
-      return host;
-    };
-    const getSpriteDim = (tex, key2) => {
-      const sources = [
-        tex?.orig,
-        tex?._orig,
-        tex?.frame,
-        tex?._frame,
-        tex
-      ];
-      for (const src of sources) {
-        const value = src?.[key2];
-        if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-          return value;
-        }
-      }
-      return null;
-    };
-    const padCanvasToSpriteBounds = (source, tex) => {
-      const rawW = source.width || 1;
-      const rawH = source.height || 1;
-      const baseW = Math.max(rawW, Math.round(getSpriteDim(tex, "width") ?? rawW) || rawW);
-      const baseH = Math.max(rawH, Math.round(getSpriteDim(tex, "height") ?? rawH) || rawH);
-      const trim = tex?.trim ?? tex?._trim ?? null;
-      let offsetX = trim && typeof trim.x === "number" ? Math.round(trim.x) : Math.round((baseW - rawW) / 2);
-      let offsetY = trim && typeof trim.y === "number" ? Math.round(trim.y) : Math.round((baseH - rawH) / 2);
-      offsetX = Math.max(0, Math.min(baseW - rawW, offsetX));
-      offsetY = Math.max(0, Math.min(baseH - rawH, offsetY));
-      if (baseW === rawW && baseH === rawH && offsetX === 0 && offsetY === 0) {
-        return source;
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = baseW;
-      canvas.height = baseH;
-      const ctx2 = canvas.getContext("2d");
-      if (!ctx2) return source;
-      ctx2.imageSmoothingEnabled = false;
-      ctx2.clearRect(0, 0, baseW, baseH);
-      ctx2.drawImage(source, offsetX, offsetY);
-      return canvas;
-    };
+  function exposeSpriteService(ctx2) {
     const renderTextureToCanvas = (tex) => {
       try {
-        const spr = new ctx.state.ctors.Sprite(tex);
-        const extracted = ctx.state.renderer.extract.canvas(spr, { resolution: 1 });
+        const spr = new ctx2.state.ctors.Sprite(tex);
+        const extracted = ctx2.state.renderer.extract.canvas(spr, { resolution: 1 });
         spr.destroy?.({ children: true, texture: false, baseTexture: false });
         return padCanvasToSpriteBounds(extracted, tex);
       } catch {
@@ -3674,20 +1733,19 @@
     };
     const service = {
       ready: Promise.resolve(),
-      // overwritten below
-      state: ctx.state,
-      cfg: ctx.cfg,
+      state: ctx2.state,
+      cfg: ctx2.cfg,
       list(category = "any") {
-        return spriteApi.listItemsByCategory(ctx.state, category);
+        return listItemsByCategory(ctx2.state, category);
       },
       getBaseSprite(params) {
-        return spriteApi.getBaseSprite(params, ctx.state);
+        return getBaseSprite(params, ctx2.state);
       },
       getSpriteWithMutations(params) {
-        return spriteApi.getSpriteWithMutations(params, ctx.state, ctx.cfg);
+        return getSpriteWithMutations(params, ctx2.state, ctx2.cfg);
       },
       buildVariant(mutations) {
-        return spriteApi.buildVariant(mutations);
+        return buildVariant(mutations);
       },
       renderToCanvas(arg) {
         const tex = arg?.isTexture || arg?.frame ? arg : service.getSpriteWithMutations(arg);
@@ -3699,14 +1757,14 @@
         if (!c) return null;
         return c.toDataURL(type, quality);
       },
-      // Render and append to a fixed overlay; each sprite gets its own wrapper.
+      /** Renders into a fixed overlay, each sprite in its own wrapper. */
       renderOnCanvas(arg, opts = {}) {
         const c = service.renderToCanvas(arg);
         if (!c) return null;
         c.style.background = "transparent";
         c.style.display = "block";
-        let mutW = c.width || c.clientWidth;
-        let mutH = c.height || c.clientHeight;
+        const mutW = c.width || c.clientWidth;
+        const mutH = c.height || c.clientHeight;
         let baseW = mutW;
         let baseH = mutH;
         if (arg && !arg.isTexture && !arg.frame) {
@@ -3737,11 +1795,10 @@
         return { wrap, canvas: c };
       },
       clearOverlay() {
-        const host = document.getElementById("mg-sprite-overlay");
-        if (host) host.remove();
+        document.getElementById(OVERLAY_ID)?.remove();
       },
       renderAnimToCanvases(params) {
-        const item = ctx.state.items.find((it) => it.key === `sprite/${params.category}/${params.id}` || it.key === params.id);
+        const item = ctx2.state.items.find((it) => it.key === `sprite/${params.category}/${params.id}` || it.key === params.id);
         if (!item) return [];
         if (item.isAnim && item.frames?.length) {
           const texes = params?.mutations?.length ? [service.getSpriteWithMutations(params)] : item.frames;
@@ -3751,10 +1808,10 @@
         return t ? [renderTextureToCanvas(t)] : [];
       }
     };
-    service.ready = Promise.resolve();
-    uw.__MG_SPRITE_STATE__ = ctx.state;
-    uw.__MG_SPRITE_CFG__ = ctx.cfg;
-    uw.__MG_SPRITE_API__ = spriteApi;
+    const uw = pageWindow;
+    uw.__MG_SPRITE_STATE__ = ctx2.state;
+    uw.__MG_SPRITE_CFG__ = ctx2.cfg;
+    uw.__MG_SPRITE_API__ = spriteApi_exports;
     uw.__MG_SPRITE_SERVICE__ = service;
     uw.getSpriteWithMutations = service.getSpriteWithMutations;
     uw.getBaseSprite = service.getBaseSprite;
@@ -3763,6 +1820,176 @@
     uw.renderSpriteToCanvas = service.renderToCanvas;
     uw.renderSpriteToDataURL = service.renderToDataURL;
     uw.MG_SPRITE_HELPERS = service;
+  }
+  var OVERLAY_ID;
+  var init_consoleService = __esm({
+    "src/game/sprites/api/consoleService.ts"() {
+      "use strict";
+      init_pageContext();
+      init_spriteApi();
+      OVERLAY_ID = "mg-sprite-overlay";
+    }
+  });
+
+  // src/game/gameVersion.ts
+  function fromUrls(urls) {
+    for (const url of urls) {
+      const match = url && url.match(VERSION_IN_URL);
+      if (match?.[1]) return match[1];
+    }
+    return null;
+  }
+  function fromGlobals() {
+    const root = pageWindow;
+    const gv = root.gameVersion || root.MG_gameVersion || root.__MG_GAME_VERSION__;
+    if (!gv) return null;
+    try {
+      if (typeof gv.getVersion === "function") return gv.getVersion() ? String(gv.getVersion()) : null;
+      if (typeof gv.get === "function") return gv.get() ? String(gv.get()) : null;
+      if (typeof gv === "string") return gv;
+    } catch {
+    }
+    return null;
+  }
+  function detectGameVersion(doc) {
+    if (gameVersion) return gameVersion;
+    const d = doc ?? (typeof document !== "undefined" ? document : null);
+    const scripts = d ? Array.from(d.scripts, (s) => s.src) : [];
+    const links = d ? Array.from(d.querySelectorAll("link[href]"), (l) => l.href) : [];
+    const found = fromUrls(scripts) ?? fromGlobals() ?? fromUrls(links);
+    if (found) gameVersion = found;
+    return found;
+  }
+  var gameVersion, VERSION_IN_URL;
+  var init_gameVersion = __esm({
+    "src/game/gameVersion.ts"() {
+      "use strict";
+      init_pageContext();
+      gameVersion = null;
+      VERSION_IN_URL = /\/(?:r\/\d+\/)?version\/([^/]+)/;
+    }
+  });
+
+  // src/game/sprites/index.ts
+  function whenAtlasBundleReady() {
+    return atlasBundleReady;
+  }
+  function getAtlasBundle() {
+    return atlasBundle;
+  }
+  async function waitForGameVersion(timeoutMs = 12e3) {
+    const deadline = Date.now() + timeoutMs;
+    for (; ; ) {
+      const version = detectGameVersion();
+      if (version) return version;
+      if (Date.now() >= deadline) throw new Error("Game version not found.");
+      await sleep(120);
+    }
+  }
+  async function prefetchAtlas(base) {
+    try {
+      const manifest = await getJSON(joinPath(base, "manifest.json"));
+      const atlasJsons = await loadAtlasJsons(base, manifest);
+      const blobs = /* @__PURE__ */ new Map();
+      for (const [path, data] of Object.entries(atlasJsons)) {
+        if (!isAtlas(data)) continue;
+        const imgPath = relPath(path, data.meta.image);
+        if (isKtx2Path(imgPath)) continue;
+        try {
+          blobs.set(imgPath, await getBlob(joinPath(base, imgPath)));
+        } catch {
+        }
+      }
+      return { base, atlasJsons, blobs };
+    } catch {
+      return null;
+    }
+  }
+  async function loadTextures(base, prefetched) {
+    const usePrefetched = prefetched && prefetched.base === base ? prefetched : null;
+    const atlasJsons = usePrefetched?.atlasJsons ?? await loadAtlasJsons(base, await getJSON(joinPath(base, "manifest.json")));
+    atlasBundle = usePrefetched ?? { base, atlasJsons, blobs: /* @__PURE__ */ new Map() };
+    atlasBundleResolve?.(atlasBundle);
+    atlasBundleResolve = null;
+    const ctors = ctx.state.ctors;
+    if (!ctors?.Texture || !ctors?.Rectangle) throw new Error("PIXI constructors missing");
+    for (const [path, data] of Object.entries(atlasJsons)) {
+      if (!isAtlas(data)) continue;
+      if (SKIPPED_ATLAS_PATTERNS.some((re) => re.test(path))) continue;
+      const imgPath = relPath(path, data.meta.image);
+      try {
+        let baseTex;
+        if (isKtx2Path(imgPath)) {
+          baseTex = await loadKtx2AsTexture(imgPath, ctx.state.renderer, ctors);
+        } else {
+          const blob = usePrefetched?.blobs.get(imgPath) ?? await getBlob(joinPath(base, imgPath));
+          baseTex = ctors.Texture.from(await blobToImage(blob));
+        }
+        buildAtlasTextures(data, baseTex, ctx.state.tex, ctx.state.atlasBases, {
+          Texture: ctors.Texture,
+          Rectangle: ctors.Rectangle
+        });
+      } catch (error) {
+        console.warn("[MG SpriteCatalog] skipping atlas (texture load failed)", { path, imgPath, error });
+      }
+    }
+    const { items, cats } = buildItemsFromTextures(ctx.state.tex);
+    ctx.state.items = items;
+    ctx.state.filtered = items.slice();
+    ctx.state.cats = cats;
+    ctx.state.loaded = true;
+  }
+  function ensureDocumentReady() {
+    if (document.readyState !== "loading") return Promise.resolve();
+    return new Promise((resolve) => {
+      document.addEventListener("DOMContentLoaded", () => resolve(), { once: true });
+    });
+  }
+  async function start() {
+    if (ctx.state.started) return;
+    ctx.state.started = true;
+    let version;
+    try {
+      version = await waitForGameVersion();
+      console.info("[MG SpriteCatalog] game version resolved", version);
+    } catch (err) {
+      console.error("[MG SpriteCatalog] failed to resolve game version", err);
+      throw err;
+    }
+    const base = `${ctx.cfg.origin.replace(/\/$/, "")}/version/${version}/assets/`;
+    if (!prefetchPromise) prefetchPromise = prefetchAtlas(base);
+    const { app, renderer: resolvedRenderer, version: pixiVersion } = await resolvePixiFast(hooks);
+    await ensureDocumentReady();
+    const renderer = resolvedRenderer || app?.renderer || app?.render || null;
+    ctx.state.ctors = await waitForCtors(app, renderer);
+    ctx.state.app = app;
+    ctx.state.renderer = renderer;
+    ctx.state.version = pixiVersion ?? version;
+    ctx.state.base = base;
+    ctx.state.sig = curVariant(ctx.state).sig;
+    watchRendererHealth(ctx.state, hooks);
+    pageWindow.__MG_SPRITE_STATE__ = ctx.state;
+    await loadTextures(ctx.state.base, await prefetchPromise);
+    const hud = {
+      open() {
+        ctx.state.open = true;
+      },
+      close() {
+        ctx.state.open = false;
+      },
+      toggle() {
+        ctx.state.open ? this.close() : this.open();
+      },
+      layout() {
+      },
+      root: void 0
+    };
+    ctx.state.open = true;
+    app.ticker?.add?.(() => {
+      processJobs(ctx.state, ctx.cfg);
+    });
+    exposeApi(ctx.state, hud);
+    exposeSpriteService(ctx);
     console.log("[MG SpriteCatalog] ready", {
       version: ctx.state.version,
       pixi: version,
@@ -3784,45 +2011,27 @@
       }
     }
   }
-  var ctx, hooks, parseFrameCategory, yieldToBrowser, prefetchPromise, atlasBundle, atlasBundleResolve, atlasBundleReady, SKIPPED_ATLAS_PATTERNS;
+  var ctx, hooks, prefetchPromise, atlasBundle, atlasBundleResolve, atlasBundleReady, SKIPPED_ATLAS_PATTERNS;
   var init_sprites = __esm({
     "src/game/sprites/index.ts"() {
       "use strict";
-      init_state();
+      init_pageContext();
+      init_context();
       init_hooks();
-      init_pixi();
+      init_resolvePixi();
+      init_rendererHealth();
       init_async();
       init_assetFetcher();
       init_atlasToTextures();
       init_catalogIndexer();
       init_path();
       init_expose();
+      init_consoleService();
       init_variantBuilder();
-      init_iconCache();
       init_gameVersion();
-      ctx = createSpriteContext();
+      ctx = spriteContext;
       hooks = createPixiHooks();
-      parseFrameCategory = (key2) => {
-        const parts = String(key2 || "").split("/").filter(Boolean);
-        if (!parts.length) return null;
-        const start2 = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
-        const category = parts[start2] ?? "";
-        const id = parts.slice(start2 + 1).join("/") || parts[parts.length - 1] || "";
-        if (!category || !id) return null;
-        return { category, id };
-      };
-      yieldToBrowser = () => {
-        return new Promise((resolve) => {
-          const win = typeof window !== "undefined" ? window : null;
-          if (win?.requestIdleCallback) {
-            win.requestIdleCallback(() => resolve(), { timeout: 32 });
-          } else if (typeof requestAnimationFrame === "function") {
-            requestAnimationFrame(() => resolve());
-          } else {
-            setTimeout(resolve, 0);
-          }
-        });
-      };
+      setPixiHooks(hooks);
       prefetchPromise = null;
       atlasBundle = null;
       atlasBundleResolve = null;
@@ -4313,14 +2522,14 @@
       } catch {
       }
       if (Date.now() >= deadline) return null;
-      await sleep4(intervalMs);
+      await sleep2(intervalMs);
     }
   }
-  var sleep4;
+  var sleep2;
   var init_async2 = __esm({
     "src/lib/async.ts"() {
       "use strict";
-      sleep4 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      sleep2 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     }
   });
 
@@ -4429,13 +2638,13 @@
       if (!atom || typeof atom.write !== "function" || atom.__origWrite) continue;
       const orig = atom.write;
       atom.__origWrite = orig;
-      atom.write = function(get2, set2, ...args) {
+      atom.write = function(get, set2, ...args) {
         if (!capturedSet) {
-          capturedGet = get2;
+          capturedGet = get;
           capturedSet = set2;
           restorePatched();
         }
-        return orig.call(this, get2, set2, ...args);
+        return orig.call(this, get, set2, ...args);
       };
       patched.push(atom);
     }
@@ -4445,7 +2654,7 @@
     }
     const t0 = Date.now();
     while (!capturedSet && Date.now() - t0 < WRITE_ONCE_MS) {
-      await sleep4(50);
+      await sleep2(50);
     }
     if (!capturedSet) {
       restorePatched();
@@ -5262,6 +3471,1069 @@
         },
         async getCropInventoryState() {
           return Atoms.inventory.myCropInventory.get();
+        }
+      };
+    }
+  });
+
+  // src/data/live/state.ts
+  function createInitialState2() {
+    return {
+      data: {
+        items: null,
+        decor: null,
+        mutations: null,
+        eggs: null,
+        pets: null,
+        abilities: null,
+        plants: null,
+        weather: null,
+        enums: null
+      },
+      fetchStarted: false,
+      fetchComplete: false,
+      colorPollingTimer: null,
+      colorPollAttempts: 0
+    };
+  }
+  var STATE_GLOBAL_KEY, globals, captureState;
+  var init_state2 = __esm({
+    "src/data/live/state.ts"() {
+      "use strict";
+      init_pageContext();
+      STATE_GLOBAL_KEY = "__MG_DATA_STATE__";
+      globals = pageWindow;
+      captureState = globals[STATE_GLOBAL_KEY] ?? createInitialState2();
+      globals[STATE_GLOBAL_KEY] = captureState;
+    }
+  });
+
+  // src/data/live/constants.ts
+  var MAIN_BUNDLE_PATTERN, QUINOA_VIEW_PATTERN, MAX_COLOR_POLL_ATTEMPTS, COLOR_POLL_INTERVAL_MS, ABILITY_COLOR_ANCHOR;
+  var init_constants = __esm({
+    "src/data/live/constants.ts"() {
+      "use strict";
+      MAIN_BUNDLE_PATTERN = /main-[^/]+\.js(\?|$)/;
+      QUINOA_VIEW_PATTERN = /QuinoaView-[^/]+\.js(\?|$)/;
+      MAX_COLOR_POLL_ATTEMPTS = 10;
+      COLOR_POLL_INTERVAL_MS = 1e3;
+      ABILITY_COLOR_ANCHOR = "ProduceScaleBoost";
+    }
+  });
+
+  // src/data/live/bundleParser.ts
+  function findBundleUrl(pattern) {
+    const docs = [
+      pageContext.document,
+      typeof document !== "undefined" ? document : null
+    ].filter(Boolean);
+    for (const doc of docs) {
+      try {
+        const scripts = doc.querySelectorAll("script[src]");
+        for (const script of scripts) {
+          const src = script.src || "";
+          if (pattern.test(src)) return src;
+        }
+      } catch {
+      }
+      try {
+        const links = doc.querySelectorAll('link[rel="modulepreload"]');
+        for (const link of links) {
+          const href = link.href || "";
+          if (pattern.test(href)) return href;
+        }
+      } catch {
+      }
+    }
+    const perfs = [
+      pageContext.performance,
+      typeof performance !== "undefined" ? performance : null
+    ].filter(Boolean);
+    for (const perf of perfs) {
+      try {
+        for (const entry of perf.getEntriesByType?.("resource") || []) {
+          const name = entry?.name ? String(entry.name) : "";
+          if (pattern.test(name)) return name;
+        }
+      } catch {
+      }
+    }
+    return null;
+  }
+  function findMainBundleUrl() {
+    return findBundleUrl(MAIN_BUNDLE_PATTERN);
+  }
+  function findQuinoaViewUrl() {
+    return findBundleUrl(QUINOA_VIEW_PATTERN);
+  }
+  function findAllIndices(haystack, needle) {
+    const out = [];
+    let idx = haystack.indexOf(needle);
+    while (idx !== -1) {
+      out.push(idx);
+      idx = haystack.indexOf(needle, idx + needle.length);
+    }
+    return out;
+  }
+  function extractBalancedBlock(text, openBraceIndex) {
+    let depth = 0;
+    let quote = "";
+    let escaped = false;
+    for (let i = openBraceIndex; i < text.length; i++) {
+      const ch = text[i];
+      if (quote) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (ch === "\\") {
+          escaped = true;
+          continue;
+        }
+        if (ch === quote) quote = "";
+        continue;
+      }
+      if (ch === '"' || ch === "'" || ch === "`") {
+        quote = ch;
+        continue;
+      }
+      if (ch === "{") depth++;
+      else if (ch === "}" && --depth === 0) return text.slice(openBraceIndex, i + 1);
+    }
+    return null;
+  }
+  async function fetchBundleByFinder(findUrl, cache2, label2) {
+    if (cache2.value) return cache2.value;
+    if (cache2.inFlight) return cache2.inFlight;
+    cache2.inFlight = (async () => {
+      const MAX_RETRIES = 30;
+      const RETRY_INTERVAL = 500;
+      let url = null;
+      for (let i = 0; i < MAX_RETRIES; i++) {
+        url = findUrl();
+        if (url) break;
+        await new Promise((r) => setTimeout(r, RETRY_INTERVAL));
+      }
+      if (!url) {
+        console.warn(`[MGData] Could not find ${label2} URL after retries`);
+        return null;
+      }
+      try {
+        const res = await fetch(url, { credentials: "include" });
+        if (!res.ok) return null;
+        const text = await res.text();
+        cache2.value = text;
+        return text;
+      } catch {
+        return null;
+      } finally {
+        cache2.inFlight = null;
+      }
+    })();
+    return cache2.inFlight;
+  }
+  function fetchMainBundle() {
+    return fetchBundleByFinder(findMainBundleUrl, mainBundleCache, "main bundle");
+  }
+  function fetchQuinoaViewBundle() {
+    return fetchBundleByFinder(findQuinoaViewUrl, quinoaViewCache, "QuinoaView bundle");
+  }
+  var pageContext, mainBundleCache, quinoaViewCache;
+  var init_bundleParser = __esm({
+    "src/data/live/bundleParser.ts"() {
+      "use strict";
+      init_pageContext();
+      init_constants();
+      pageContext = pageWindow;
+      mainBundleCache = { value: null, inFlight: null };
+      quinoaViewCache = { value: null, inFlight: null };
+    }
+  });
+
+  // src/data/live/abilityColors.ts
+  function findAbilityColorSwitchBlock(bundleText) {
+    const indices = findAllIndices(bundleText, ABILITY_COLOR_ANCHOR);
+    if (!indices.length) return null;
+    for (const pos of indices) {
+      const winStart = Math.max(0, pos - 4e3);
+      const winEnd = Math.min(bundleText.length, pos + 4e3);
+      const windowText = bundleText.slice(winStart, winEnd);
+      const relSwitch = windowText.lastIndexOf("switch(");
+      if (relSwitch === -1) continue;
+      const absSwitch = winStart + relSwitch;
+      const braceAfterSwitch = bundleText.indexOf("{", absSwitch);
+      if (braceAfterSwitch === -1) continue;
+      const block = extractBalancedBlock(bundleText, braceAfterSwitch);
+      if (!block) continue;
+      const hasObjectColors = block.includes('bg:"') || block.includes("bg:'");
+      const hasHexColors = /return\s*[`'"](?:#|linear-gradient)/.test(block);
+      if (block.includes(ABILITY_COLOR_ANCHOR) && (hasObjectColors || hasHexColors)) {
+        return block;
+      }
+    }
+    return null;
+  }
+  function parseAbilityColorsFromSwitch(switchBlock) {
+    const colors = {};
+    const pending6 = [];
+    const tokenRe = /case\s*(['"])([^'"]+)\1\s*:|default\s*:|return\s*\{/g;
+    const findProp = (segment, prop) => {
+      const propRe = new RegExp(`${prop}\\s*:\\s*(['"])([\\s\\S]*?)\\1`);
+      const propMatch = segment.match(propRe);
+      return propMatch ? propMatch[2] : null;
+    };
+    let match;
+    while ((match = tokenRe.exec(switchBlock)) !== null) {
+      if (match[2]) {
+        pending6.push(match[2]);
+        continue;
+      }
+      const token = match[0];
+      if (token.startsWith("default")) {
+        pending6.length = 0;
+        continue;
+      }
+      if (!token.startsWith("return")) continue;
+      const braceIndex = switchBlock.indexOf("{", match.index);
+      if (braceIndex === -1) {
+        pending6.length = 0;
+        continue;
+      }
+      const literal = extractBalancedBlock(switchBlock, braceIndex);
+      if (!literal) {
+        pending6.length = 0;
+        continue;
+      }
+      const bg = findProp(literal, "bg");
+      if (!bg) {
+        pending6.length = 0;
+        continue;
+      }
+      const hover = findProp(literal, "hover") || bg;
+      for (const id of pending6) {
+        if (!colors[id]) colors[id] = { bg, hover };
+      }
+      pending6.length = 0;
+    }
+    return Object.keys(colors).length ? colors : null;
+  }
+  function hexToRgba(hex, alpha) {
+    const match = hex.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (!match) return null;
+    let h = match[1];
+    if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  function parseAbilityColorsFromHexSwitch(switchBlock) {
+    const colors = {};
+    const pending6 = [];
+    const tokenRe = /case\s*([`'"])([^`'"]+)\1\s*:|default\s*:|return\s*([`'"])((?:#|linear-gradient)[^`'"]*)\3/g;
+    let match;
+    while ((match = tokenRe.exec(switchBlock)) !== null) {
+      if (match[2]) {
+        pending6.push(match[2]);
+        continue;
+      }
+      if (match[0].startsWith("default")) {
+        pending6.length = 0;
+        continue;
+      }
+      const value = match[4];
+      if (!value) {
+        pending6.length = 0;
+        continue;
+      }
+      const bg = value.startsWith("#") ? hexToRgba(value, 0.9) ?? value : value;
+      const hover = value.startsWith("#") ? hexToRgba(value, 1) ?? value : value;
+      for (const id of pending6) {
+        if (!colors[id]) colors[id] = { bg, hover };
+      }
+      pending6.length = 0;
+    }
+    return Object.keys(colors).length ? colors : null;
+  }
+  async function loadAbilityColorsFromBundle() {
+    for (const fetchBundle of [fetchMainBundle, fetchQuinoaViewBundle]) {
+      const bundleText = await fetchBundle();
+      if (!bundleText) continue;
+      const switchBlock = findAbilityColorSwitchBlock(bundleText);
+      if (!switchBlock) continue;
+      const parsed = parseAbilityColorsFromSwitch(switchBlock) ?? parseAbilityColorsFromHexSwitch(switchBlock);
+      if (parsed) return parsed;
+    }
+    return null;
+  }
+  function isAlreadyEnriched(abilities) {
+    const sample = abilities[ABILITY_COLOR_ANCHOR];
+    return sample != null && typeof sample === "object" && "color" in sample;
+  }
+  function toAbilityColor(raw) {
+    if (!raw.startsWith("#")) return { bg: raw, hover: raw };
+    const bg = hexToRgba(raw, 0.9) ?? raw;
+    return { bg, hover: hexToRgba(raw, 1) ?? bg };
+  }
+  function resolveFallbackColor(abilityId, abilityData) {
+    const raw = abilityData?.color;
+    if (typeof raw === "string") return toAbilityColor(raw);
+    const staticColor = STATIC_ABILITY_COLORS[abilityId];
+    if (staticColor) return toAbilityColor(staticColor);
+    return null;
+  }
+  async function enrichAbilitiesWithColors() {
+    if (!captureState.data.abilities) return false;
+    const abilities = captureState.data.abilities;
+    if (isAlreadyEnriched(abilities)) return true;
+    const map2 = await loadAbilityColorsFromBundle();
+    if (!map2) return false;
+    const enriched = {};
+    for (const [abilityId, abilityData] of Object.entries(abilities)) {
+      const colors = map2[abilityId] || resolveFallbackColor(abilityId, abilityData) || DEFAULT_COLOR;
+      enriched[abilityId] = {
+        ...abilityData,
+        color: {
+          bg: colors.bg,
+          hover: colors.hover
+        }
+      };
+    }
+    captureState.data.abilities = enriched;
+    return true;
+  }
+  function startColorPolling() {
+    if (captureState.colorPollingTimer) return;
+    captureState.colorPollAttempts = 0;
+    const timer2 = setInterval(async () => {
+      const success = await enrichAbilitiesWithColors();
+      if (success || ++captureState.colorPollAttempts > MAX_COLOR_POLL_ATTEMPTS) {
+        clearInterval(timer2);
+        captureState.colorPollingTimer = null;
+      }
+    }, COLOR_POLL_INTERVAL_MS);
+    captureState.colorPollingTimer = timer2;
+  }
+  function stopColorPolling() {
+    if (captureState.colorPollingTimer) {
+      clearInterval(captureState.colorPollingTimer);
+      captureState.colorPollingTimer = null;
+    }
+  }
+  var DEFAULT_COLOR, STATIC_ABILITY_COLORS;
+  var init_abilityColors = __esm({
+    "src/data/live/abilityColors.ts"() {
+      "use strict";
+      init_state2();
+      init_constants();
+      init_bundleParser();
+      DEFAULT_COLOR = {
+        bg: "rgba(100, 100, 100, 0.9)",
+        hover: "rgba(150, 150, 150, 1)"
+      };
+      STATIC_ABILITY_COLORS = {
+        CoinFinderI: "#B49600",
+        CoinFinderII: "#B49600",
+        CoinFinderIII: "#B49600",
+        SnowyCoinFinder: "#B49600",
+        DawnCoinFinder: "#B49600",
+        ThunderCoinFinder: "#B49600",
+        SeedFinderI: "#A86626",
+        SeedFinderII: "#A86626",
+        SeedFinderIII: "#A86626",
+        SeedFinderIV: "#A86626",
+        PlantGrowthBoost: "#008080",
+        PlantGrowthBoostII: "#008080",
+        PlantGrowthBoostIII: "#969696",
+        SnowyPlantGrowthBoost: "#008080",
+        DawnPlantGrowthBoost: "#008080",
+        AmberPlantGrowthBoost: "#008080",
+        ThunderPlantGrowthBoost: "#008080",
+        ProduceEater: "#FF4500",
+        ProduceScaleBoost: "#228B22",
+        ProduceScaleBoostII: "#228B22",
+        ProduceScaleBoostIII: "#969696",
+        SnowyCropSizeBoost: "#228B22",
+        ProduceMutationBoost: "#8C0F46",
+        ProduceMutationBoostII: "#8C0F46",
+        ProduceMutationBoostIII: "#969696",
+        SnowyCropMutationBoost: "#8C0F46",
+        DawnBoost: "#8C0F46",
+        AmberMoonBoost: "#8C0F46",
+        ThunderBoost: "#8C0F46",
+        EggGrowthBoost: "#B45AF0",
+        EggGrowthBoostII_NEW: "#B45AF0",
+        EggGrowthBoostII: "#B45AF0",
+        SnowyEggGrowthBoost: "#B45AF0",
+        ThunderEggGrowthBoost: "#B45AF0",
+        PetXpBoost: "#1E90FF",
+        PetXpBoostII: "#1E90FF",
+        PetXpBoostIII: "#969696",
+        SnowyPetXpBoost: "#1E90FF",
+        DawnXpBoost: "#1E90FF",
+        ThunderXpBoost: "#1E90FF",
+        HungerBoost: "#FF1493",
+        HungerBoostII: "#FF1493",
+        HungerBoostIII: "#969696",
+        SnowyHungerBoost: "#FF1493",
+        HungerRestore: "#FF69B4",
+        HungerRestoreII: "#FF69B4",
+        HungerRestoreIII: "#969696",
+        SnowyHungerRestore: "#FF69B4",
+        PetMutationBoost: "#A03264",
+        PetMutationBoostII: "#A03264",
+        PetMutationBoostIII: "#969696",
+        SellBoostI: "#DC143C",
+        SellBoostII: "#DC143C",
+        SellBoostIII: "#DC143C",
+        SellBoostIV: "#DC143C",
+        ProduceRefund: "#FF6347",
+        DoubleHarvest: "#0078B4",
+        PetAgeBoost: "#9370DB",
+        PetAgeBoostII: "#9370DB",
+        PetAgeBoostIII: "#969696",
+        PetHatchSizeBoost: "#800080",
+        PetHatchSizeBoostII: "#800080",
+        PetHatchSizeBoostIII: "#969696",
+        DoubleHatch: "#3C5AB4",
+        PetRefund: "#005078",
+        PetRefundII: "#005078",
+        RainDance: "#4CCCCC",
+        SnowGranter: "#90B8CC",
+        FrostGranter: "#94A0CC",
+        DawnlitGranter: "#C47CB4",
+        AmberlitGranter: "#CC9060",
+        GoldGranter: "linear-gradient(135deg, #DCC846 0%, #D2AF05 40%, #D2B937 70%, #C8AF1E 100%)",
+        RainbowGranter: "linear-gradient(45deg, #C80000, #C87800, #A0AA1E, #3CAA3C, #32AAAA, #2896B4, #145AB4, #461E96)",
+        DawnbinderBoost: "#B468A0",
+        Copycat: "#FF8C00",
+        DawnCapture: "#B25A9E",
+        ThunderstruckGranter: "#C2B83C",
+        Thundercharger: "#1FA382",
+        MoonKisser: "#FAA623",
+        DawnKisser: "#A25CF2",
+        Thunderbloom: "#70F6CB"
+      };
+    }
+  });
+
+  // src/data/live/accessors.ts
+  function sleep3(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+  function getData(key2) {
+    return captureState.data[key2];
+  }
+  function getAllData() {
+    return { ...captureState.data };
+  }
+  function hasData(key2) {
+    return captureState.data[key2] != null;
+  }
+  async function waitForData(key2, timeoutMs = DEFAULT_WAIT_TIMEOUT_MS, intervalMs = WAIT_POLL_INTERVAL_MS) {
+    const start2 = Date.now();
+    while (Date.now() - start2 < timeoutMs) {
+      const value = captureState.data[key2];
+      if (value != null) return value;
+      await sleep3(intervalMs);
+    }
+    throw new Error(`MGData.waitFor: timeout waiting for "${key2}"`);
+  }
+  async function waitForAnyData(timeoutMs = DEFAULT_WAIT_TIMEOUT_MS, intervalMs = WAIT_POLL_INTERVAL_MS) {
+    const start2 = Date.now();
+    while (Date.now() - start2 < timeoutMs) {
+      if (Object.values(captureState.data).some((v) => v != null)) {
+        return { ...captureState.data };
+      }
+      await sleep3(intervalMs);
+    }
+    throw new Error("MGData.waitForAnyData: timeout");
+  }
+  var DEFAULT_WAIT_TIMEOUT_MS, WAIT_POLL_INTERVAL_MS;
+  var init_accessors = __esm({
+    "src/data/live/accessors.ts"() {
+      "use strict";
+      init_state2();
+      DEFAULT_WAIT_TIMEOUT_MS = 5e3;
+      WAIT_POLL_INTERVAL_MS = 50;
+    }
+  });
+
+  // src/platform/gm.ts
+  function gmGet(url, responseType = "text") {
+    return new Promise((resolve, reject) => {
+      if (typeof GM_xmlhttpRequest !== "function") {
+        reject(new Error("GM_xmlhttpRequest not available"));
+        return;
+      }
+      GM_xmlhttpRequest({
+        method: "GET",
+        url,
+        responseType,
+        onload: (r) => {
+          if (r.status >= 200 && r.status < 300) resolve(r);
+          else reject(new Error(`HTTP ${r.status} for ${url}`));
+        },
+        onerror: () => reject(new Error(`Network error for ${url}`)),
+        ontimeout: () => reject(new Error(`Timeout for ${url}`))
+      });
+    });
+  }
+  var getJSON2, getBlob2;
+  var init_gm = __esm({
+    "src/platform/gm.ts"() {
+      "use strict";
+      getJSON2 = async (url) => JSON.parse((await gmGet(url, "text")).responseText);
+      getBlob2 = async (url) => (await gmGet(url, "blob")).response;
+    }
+  });
+
+  // src/platform/discordCsp.ts
+  function isDiscordActivityContext() {
+    try {
+      return window.location.hostname.endsWith("discordsays.com");
+    } catch {
+      return false;
+    }
+  }
+  function _isImgUrlSafe(url) {
+    if (!url || url.startsWith("blob:") || url.startsWith("data:") || url.startsWith("/")) return true;
+    try {
+      const { hostname } = new URL(url);
+      return _SAFE_IMG_HOSTS.some((h) => hostname === h || hostname.endsWith("." + h));
+    } catch {
+      return true;
+    }
+  }
+  function setImageSafe(img, url) {
+    if (!url) return;
+    if (!isDiscordActivityContext()) {
+      img.src = url;
+      return;
+    }
+    if (_isImgUrlSafe(url)) {
+      img.src = url;
+      return;
+    }
+    const cached = _gmImgCache.get(url);
+    if (cached) {
+      img.src = cached;
+      return;
+    }
+    const pending6 = _gmImgPending.get(url);
+    if (pending6) {
+      pending6.push(img);
+      return;
+    }
+    _gmImgPending.set(url, [img]);
+    GM_xmlhttpRequest({
+      method: "GET",
+      url,
+      headers: {},
+      responseType: "arraybuffer",
+      onload: (res) => {
+        const imgs = _gmImgPending.get(url) ?? [];
+        _gmImgPending.delete(url);
+        if (!res.response) {
+          for (const el2 of imgs) el2.src = url;
+          return;
+        }
+        const ext = url.split(".").pop()?.toLowerCase().split("?")[0] ?? "png";
+        const mime = _extMimeMap[ext] ?? "image/png";
+        const blob = new Blob([res.response], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        _gmImgCache.set(url, blobUrl);
+        for (const el2 of imgs) el2.src = blobUrl;
+      },
+      onerror: () => {
+        const imgs = _gmImgPending.get(url) ?? [];
+        _gmImgPending.delete(url);
+        for (const el2 of imgs) el2.src = url;
+      }
+    });
+  }
+  function getAudioUrlSafe(url) {
+    return new Promise((resolve) => {
+      if (!url) {
+        resolve(url);
+        return;
+      }
+      if (!isDiscordActivityContext()) {
+        resolve(url);
+        return;
+      }
+      const cached = _gmAudioCache.get(url);
+      if (cached) {
+        resolve(cached);
+        return;
+      }
+      const pending6 = _gmAudioPending.get(url);
+      if (pending6) {
+        pending6.push(resolve);
+        return;
+      }
+      _gmAudioPending.set(url, [resolve]);
+      GM_xmlhttpRequest({
+        method: "GET",
+        url,
+        headers: {},
+        responseType: "arraybuffer",
+        onload: (res) => {
+          const callbacks = _gmAudioPending.get(url) ?? [];
+          _gmAudioPending.delete(url);
+          if (!res.response) {
+            for (const cb of callbacks) cb(url);
+            return;
+          }
+          const ext = url.split(".").pop()?.toLowerCase().split("?")[0] ?? "mp3";
+          const audioMimeMap = {
+            mp3: "audio/mpeg",
+            ogg: "audio/ogg",
+            wav: "audio/wav",
+            m4a: "audio/mp4"
+          };
+          const mime = audioMimeMap[ext] ?? "audio/mpeg";
+          const blob = new Blob([res.response], { type: mime });
+          const blobUrl = URL.createObjectURL(blob);
+          _gmAudioCache.set(url, blobUrl);
+          for (const cb of callbacks) cb(blobUrl);
+        },
+        onerror: () => {
+          const callbacks = _gmAudioPending.get(url) ?? [];
+          _gmAudioPending.delete(url);
+          for (const cb of callbacks) cb(url);
+        }
+      });
+    });
+  }
+  function _emojiMakeResponse(json, method) {
+    if (method === "HEAD") {
+      return new Response(null, {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    return new Response(json, {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+  function installEmojiDataFetchInterceptor() {
+    if (_emojiInterceptorInstalled) return;
+    _emojiInterceptorInstalled = true;
+    const _origFetch = window.fetch.bind(window);
+    window.fetch = function(input, init) {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (!url.startsWith(EMOJI_DATA_CDN_PREFIX)) {
+        return _origFetch(input, init);
+      }
+      const method = (init?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
+      if (_emojiJson) {
+        return Promise.resolve(_emojiMakeResponse(_emojiJson, method));
+      }
+      return new Promise((resolve) => {
+        _emojiPending.push((json) => {
+          resolve(
+            json ? _emojiMakeResponse(json, method) : new Response(null, { status: 503 })
+          );
+        });
+      });
+    };
+    void withDiscordPollPause(async () => {
+      return new Promise((resolve) => {
+        GM_xmlhttpRequest({
+          method: "GET",
+          url: `${EMOJI_DATA_CDN_PREFIX}@^1/en/emojibase/data.json`,
+          headers: {},
+          onload: (res) => {
+            if (res.status >= 200 && res.status < 300 && res.responseText) {
+              _emojiJson = res.responseText;
+              for (const cb of _emojiPending) cb(_emojiJson);
+            } else {
+              console.error("[discordCsp] emoji fetch failed:", res.status);
+              for (const cb of _emojiPending) cb(null);
+            }
+            _emojiPending = [];
+            resolve();
+          },
+          onerror: (err) => {
+            console.error("[discordCsp] emoji fetch error:", err);
+            for (const cb of _emojiPending) cb(null);
+            _emojiPending = [];
+            resolve();
+          }
+        });
+      });
+    });
+  }
+  var _SAFE_IMG_HOSTS, _gmImgCache, _gmImgPending, _extMimeMap, _gmAudioCache, _gmAudioPending, EMOJI_DATA_CDN_PREFIX, _emojiJson, _emojiPending, _emojiInterceptorInstalled;
+  var init_discordCsp = __esm({
+    "src/platform/discordCsp.ts"() {
+      "use strict";
+      init_discordPolls();
+      _SAFE_IMG_HOSTS = ["cdn.discordapp.com", "media.discordapp.net"];
+      _gmImgCache = /* @__PURE__ */ new Map();
+      _gmImgPending = /* @__PURE__ */ new Map();
+      _extMimeMap = {
+        png: "image/png",
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        gif: "image/gif",
+        webp: "image/webp",
+        svg: "image/svg+xml"
+      };
+      _gmAudioCache = /* @__PURE__ */ new Map();
+      _gmAudioPending = /* @__PURE__ */ new Map();
+      EMOJI_DATA_CDN_PREFIX = "https://cdn.jsdelivr.net/npm/emoji-picker-element-data";
+      _emojiJson = null;
+      _emojiPending = [];
+      _emojiInterceptorInstalled = false;
+    }
+  });
+
+  // src/platform/ariesApi/discordPolls.ts
+  function pauseDiscordLongPolls() {
+    if (!isDiscordActivityContext()) return;
+    _pollPauseDepth += 1;
+    for (const conn of _unifiedConnections.values()) {
+      if (conn.mode !== "poll") continue;
+      conn.pollPaused = true;
+      conn.pollToken += 1;
+      conn.pollRunning = false;
+      conn.pollAbort?.();
+    }
+  }
+  function resumeDiscordLongPolls() {
+    if (!isDiscordActivityContext()) return;
+    _pollPauseDepth = Math.max(0, _pollPauseDepth - 1);
+    if (_pollPauseDepth > 0) return;
+    for (const conn of _unifiedConnections.values()) {
+      if (conn.mode !== "poll") continue;
+      conn.pollPaused = false;
+      conn.pollKick?.();
+    }
+  }
+  async function withDiscordPollPause(fn) {
+    if (!isDiscordActivityContext()) return await fn();
+    pauseDiscordLongPolls();
+    try {
+      return await fn();
+    } finally {
+      resumeDiscordLongPolls();
+    }
+  }
+  var _unifiedConnections, _pollPauseDepth;
+  var init_discordPolls = __esm({
+    "src/platform/ariesApi/discordPolls.ts"() {
+      "use strict";
+      init_discordCsp();
+      _unifiedConnections = /* @__PURE__ */ new Map();
+      _pollPauseDepth = 0;
+    }
+  });
+
+  // src/data/live/capture.ts
+  function setCapturedData(key2, value) {
+    if (captureState.data[key2] != null) return;
+    captureState.data[key2] = value;
+    try {
+      window.dispatchEvent(new CustomEvent("gemini:data-updated", { detail: { key: key2 } }));
+    } catch {
+    }
+  }
+  function isAllDataCaptured() {
+    return Object.values(captureState.data).every((v) => v != null);
+  }
+  async function fetchAllData() {
+    if (captureState.fetchStarted) return;
+    captureState.fetchStarted = true;
+    try {
+      const data = await withDiscordPollPause(() => getJSON2(`${API_BASE}/data`));
+      if (data.plants) setCapturedData("plants", data.plants);
+      if (data.pets) setCapturedData("pets", data.pets);
+      if (data.items) setCapturedData("items", data.items);
+      if (data.decor) setCapturedData("decor", data.decor);
+      if (data.eggs) setCapturedData("eggs", data.eggs);
+      if (data.mutations) setCapturedData("mutations", data.mutations);
+      if (data.abilities) setCapturedData("abilities", data.abilities);
+      if (data.weathers) setCapturedData("weather", data.weathers);
+      if (data.enums) setCapturedData("enums", data.enums);
+      captureState.fetchComplete = true;
+      console.log("[MGData] all data loaded from API", {
+        plants: Object.keys(data.plants || {}).length,
+        pets: Object.keys(data.pets || {}).length,
+        items: Object.keys(data.items || {}).length,
+        decor: Object.keys(data.decor || {}).length,
+        eggs: Object.keys(data.eggs || {}).length,
+        mutations: Object.keys(data.mutations || {}).length,
+        abilities: Object.keys(data.abilities || {}).length,
+        weathers: Object.keys(data.weathers || {}).length
+      });
+    } catch (err) {
+      console.error("[MGData] failed to fetch data from API", err);
+      captureState.fetchStarted = false;
+    }
+  }
+  var API_BASE;
+  var init_capture = __esm({
+    "src/data/live/capture.ts"() {
+      "use strict";
+      init_state2();
+      init_gm();
+      init_discordPolls();
+      API_BASE = "https://mg-api.ariedam.fr";
+    }
+  });
+
+  // src/data/live/abilityFormatter.ts
+  function isPetAbilityAction(action2) {
+    return PET_ABILITY_ACTIONS.includes(action2);
+  }
+  function formatTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor(seconds % 3600 / 60);
+    const secs = Math.floor(seconds % 60);
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${secs}s`;
+    return `${secs}s`;
+  }
+  function getPetName(pet) {
+    return pet?.name || pet?.petSpecies || "Unknown Pet";
+  }
+  function formatAbilityLog(log2) {
+    const { action: action2, parameters } = log2;
+    const params = parameters;
+    switch (action2) {
+      case "CoinFinderI":
+      case "CoinFinderII":
+      case "CoinFinderIII":
+      case "SnowyCoinFinder":
+      case "DawnCoinFinder":
+      case "ThunderCoinFinder":
+        return `Found ${params.coinsFound || 0} coins`;
+      case "SeedFinderI":
+      case "SeedFinderII":
+      case "SeedFinderIII":
+      case "SeedFinderIV":
+        return `Found 1x ${params.speciesId || "Unknown"} seed`;
+      case "HungerRestore":
+      case "HungerRestoreII":
+      case "HungerRestoreIII":
+      case "SnowyHungerRestore": {
+        const targetName = getPetName(params.targetPet);
+        const amount = params.hungerRestoreAmount || 0;
+        const pet = params.pet;
+        const targetPet = params.targetPet;
+        const isSelf = pet?.id === targetPet?.id;
+        return `Restored ${amount} hunger to ${isSelf ? "itself" : targetName}`;
+      }
+      case "DoubleHarvest": {
+        const crop = params.harvestedCrop;
+        return `Double harvested ${crop?.species || "Unknown"}`;
+      }
+      // Double Hatch I sits on Turkey, II on Rooster. Both log the same way.
+      case "DoubleHatch":
+      case "DoubleHatchII": {
+        const extra = params.extraPet;
+        return `Double hatched ${extra?.petSpecies || "Unknown"}`;
+      }
+      case "ProduceEater": {
+        const slot = params.growSlot;
+        return `Ate ${slot?.species || "Unknown"} for ${params.sellPrice || 0} coins`;
+      }
+      case "PetHatchSizeBoost":
+      case "PetHatchSizeBoostII":
+      case "PetHatchSizeBoostIII": {
+        const targetName = getPetName(params.targetPet);
+        const increase = Number(params.strengthIncrease) || 0;
+        return `Boosted ${targetName}'s size by +${increase.toFixed(0)}`;
+      }
+      case "PetAgeBoost":
+      case "PetAgeBoostII":
+      case "PetAgeBoostIII": {
+        const targetName = getPetName(params.targetPet);
+        return `Gave +${params.bonusXp || 0} XP to ${targetName}`;
+      }
+      case "PetRefund":
+      case "PetRefundII":
+        return `Refunded 1x ${params.eggId || "Unknown Egg"}`;
+      case "ProduceRefund": {
+        const crops = params.cropsRefunded;
+        const num2 = Array.isArray(crops) ? crops.length : 0;
+        return `Refunded ${num2} ${num2 === 1 ? "crop" : "crops"}`;
+      }
+      case "SellBoostI":
+      case "SellBoostII":
+      case "SellBoostIII":
+      case "SellBoostIV":
+        return `Gave +${params.bonusCoins || 0} bonus coins`;
+      case "GoldGranter":
+      case "RainbowGranter":
+      case "RainDance":
+      case "SnowGranter":
+      case "FrostGranter":
+      case "DawnlitGranter":
+      case "AmberlitGranter":
+      case "ThunderstruckGranter": {
+        const slot = params.growSlot;
+        return `Made ${slot?.species || "Unknown"} turn ${params.mutation || "Unknown"}`;
+      }
+      case "PetXpBoost":
+      case "PetXpBoostII":
+      case "PetXpBoostIII":
+      case "SnowyPetXpBoost":
+      case "DawnXpBoost":
+      case "ThunderXpBoost": {
+        const affected = params.petsAffected;
+        const num2 = Array.isArray(affected) ? affected.length : 0;
+        return `Gave +${params.bonusXp || 0} XP to ${num2} ${num2 === 1 ? "pet" : "pets"}`;
+      }
+      case "EggGrowthBoost":
+      case "EggGrowthBoostII_NEW":
+      case "EggGrowthBoostII":
+      case "SnowyEggGrowthBoost":
+      case "ThunderEggGrowthBoost": {
+        const eggs = params.eggsAffected;
+        const num2 = Array.isArray(eggs) ? eggs.length : 0;
+        const time = formatTime(Number(params.secondsReduced) || 0);
+        return `Reduced ${num2} ${num2 === 1 ? "egg" : "eggs"} growth by ${time}`;
+      }
+      case "PlantGrowthBoost":
+      case "PlantGrowthBoostII":
+      case "PlantGrowthBoostIII":
+      case "SnowyPlantGrowthBoost":
+      case "DawnPlantGrowthBoost":
+      case "AmberPlantGrowthBoost":
+      case "ThunderPlantGrowthBoost": {
+        const num2 = Number(params.numPlantsAffected) || 0;
+        const time = formatTime(Number(params.secondsReduced) || 0);
+        return `Reduced ${num2} ${num2 === 1 ? "plant" : "plants"} growth by ${time}`;
+      }
+      case "ProduceScaleBoost":
+      case "ProduceScaleBoostII":
+      case "ProduceScaleBoostIII":
+      case "SnowyCropSizeBoost": {
+        const points = Number(params.sizeIncrease ?? params.scaleIncreasePercentage) || 0;
+        const num2 = Number(params.numPlantsAffected) || 0;
+        return `Boosted ${num2} ${num2 === 1 ? "crop" : "crops"} size by +${points.toFixed(0)}`;
+      }
+      case "MoonKisser":
+      case "DawnKisser": {
+        const affected = params.growSlotsAffected;
+        const num2 = Array.isArray(affected) ? affected.length : 0;
+        const source = params.sourceMutation || "Unknown";
+        const target = params.targetMutation || "Unknown";
+        return `Turned ${source} into ${target} on ${num2} ${num2 === 1 ? "crop" : "crops"}`;
+      }
+      default:
+        return `Unknown ability: ${action2}`;
+    }
+  }
+  var PET_ABILITY_ACTIONS;
+  var init_abilityFormatter = __esm({
+    "src/data/live/abilityFormatter.ts"() {
+      "use strict";
+      PET_ABILITY_ACTIONS = [
+        "CoinFinderI",
+        "CoinFinderII",
+        "CoinFinderIII",
+        "SnowyCoinFinder",
+        "DawnCoinFinder",
+        "ThunderCoinFinder",
+        "SeedFinderI",
+        "SeedFinderII",
+        "SeedFinderIII",
+        "SeedFinderIV",
+        "HungerRestore",
+        "HungerRestoreII",
+        "HungerRestoreIII",
+        "SnowyHungerRestore",
+        "DoubleHarvest",
+        "DoubleHatch",
+        "DoubleHatchII",
+        "ProduceEater",
+        "PetHatchSizeBoost",
+        "PetHatchSizeBoostII",
+        "PetHatchSizeBoostIII",
+        "PetAgeBoost",
+        "PetAgeBoostII",
+        "PetAgeBoostIII",
+        "PetRefund",
+        "PetRefundII",
+        "ProduceRefund",
+        "SellBoostI",
+        "SellBoostII",
+        "SellBoostIII",
+        "SellBoostIV",
+        "GoldGranter",
+        "RainbowGranter",
+        "RainDance",
+        "SnowGranter",
+        "FrostGranter",
+        "DawnlitGranter",
+        "AmberlitGranter",
+        "ThunderstruckGranter",
+        "PetXpBoost",
+        "PetXpBoostII",
+        "PetXpBoostIII",
+        "SnowyPetXpBoost",
+        "DawnXpBoost",
+        "ThunderXpBoost",
+        "EggGrowthBoost",
+        "EggGrowthBoostII_NEW",
+        "EggGrowthBoostII",
+        "SnowyEggGrowthBoost",
+        "ThunderEggGrowthBoost",
+        "PlantGrowthBoost",
+        "PlantGrowthBoostII",
+        "PlantGrowthBoostIII",
+        "SnowyPlantGrowthBoost",
+        "DawnPlantGrowthBoost",
+        "AmberPlantGrowthBoost",
+        "ThunderPlantGrowthBoost",
+        "ProduceScaleBoost",
+        "ProduceScaleBoostII",
+        "ProduceScaleBoostIII",
+        "SnowyCropSizeBoost",
+        "MoonKisser",
+        "DawnKisser"
+      ];
+    }
+  });
+
+  // src/data/live/index.ts
+  var MGData;
+  var init_live = __esm({
+    "src/data/live/index.ts"() {
+      "use strict";
+      init_abilityColors();
+      init_accessors();
+      init_capture();
+      init_abilityFormatter();
+      MGData = {
+        /** Initialize module: fetch all data from API, start ability color polling */
+        init() {
+          fetchAllData();
+          startColorPolling();
+        },
+        /** Check if all data has been loaded */
+        isReady: isAllDataCaptured,
+        /** Get data for a specific key */
+        get: getData,
+        /** Get all data */
+        getAll: getAllData,
+        /** Check if data exists for a specific key */
+        has: hasData,
+        /** Wait for specific data to be available */
+        waitFor: waitForData,
+        /** Wait for any data to be available */
+        waitForAny: waitForAnyData,
+        /** No-op (sprites now come from the API with URLs included) */
+        resolveSprites() {
+        },
+        /** Cleanup */
+        cleanup() {
+          stopColorPolling();
         }
       };
     }
@@ -9389,19 +8661,19 @@
     for (const a of atoms) {
       const readKey = _findReadKey(a);
       const orig = a[readKey];
-      a[readKey] = (get2) => {
+      a[readKey] = (get) => {
         try {
-          if (gateAtom) get2(gateAtom);
+          if (gateAtom) get(gateAtom);
         } catch (err) {
         }
         for (const dep of config.extraDeps || []) {
           try {
             const d = getAtomByLabel(dep);
-            d && get2(d);
+            d && get(d);
           } catch (err) {
           }
         }
-        const real = orig(get2);
+        const real = orig(get);
         if (!state6.enabled || state6.payload == null) return real;
         return config.merge ? config.merge(real, state6.payload) : state6.payload;
       };
@@ -9882,7 +9154,7 @@
     } catch {
     }
   }
-  function sleep5(ms) {
+  function sleep4(ms) {
     return new Promise((r) => setTimeout(r, ms));
   }
   function buildDisplayNameToSpeciesFromCatalog() {
@@ -10006,7 +9278,7 @@
             }));
           } catch {
           }
-          if (delayMs > 0 && remaining > 0) await sleep5(delayMs);
+          if (delayMs > 0 && remaining > 0) await sleep4(delayMs);
         }
       }
       if (!opts.keepSelection) selectedMap.clear();
@@ -10207,7 +9479,7 @@
     return b;
   }
   function isInsideOverlay(el2) {
-    return !!(el2 && (el2.closest?.(`#${OVERLAY_ID}`) || el2.closest?.(`#${OVERLAY_DECOR_ID}`)));
+    return !!(el2 && (el2.closest?.(`#${OVERLAY_ID2}`) || el2.closest?.(`#${OVERLAY_DECOR_ID}`)));
   }
   function keyGuardCapture(e) {
     const ae = document.activeElement;
@@ -10241,7 +9513,7 @@
   }
   function createSeedOverlay() {
     const box = document.createElement("div");
-    styleOverlayBox(box, OVERLAY_ID);
+    styleOverlayBox(box, OVERLAY_ID2);
     const header = document.createElement("div");
     setStyles(header, { display: "flex", alignItems: "center", gap: "4px", cursor: "move" });
     const title = document.createElement("div");
@@ -10291,7 +9563,7 @@
     return box;
   }
   function showSeedOverlay() {
-    if (document.getElementById(OVERLAY_ID)) return;
+    if (document.getElementById(OVERLAY_ID2)) return;
     const el2 = createSeedOverlay();
     document.body.appendChild(el2);
     installOverlayKeyGuards();
@@ -10299,7 +9571,7 @@
     updateSummary();
   }
   function hideSeedOverlay() {
-    const el2 = document.getElementById(OVERLAY_ID);
+    const el2 = document.getElementById(OVERLAY_ID2);
     if (el2) el2.remove();
     if (!document.getElementById(OVERLAY_DECOR_ID)) removeOverlayKeyGuards();
   }
@@ -10565,7 +9837,7 @@
   function hideDecorOverlay() {
     const el2 = document.getElementById(OVERLAY_DECOR_ID);
     if (el2) el2.remove();
-    if (!document.getElementById(OVERLAY_ID)) removeOverlayKeyGuards();
+    if (!document.getElementById(OVERLAY_ID2)) removeOverlayKeyGuards();
   }
   function renderDecorListRow(item) {
     const row = document.createElement("div");
@@ -10800,12 +10072,12 @@
             await PlayerService.placeDecor(emptySlot.tileType, emptySlot.index, t.decorId, 0);
           } catch {
           }
-          if (delayMs > 0) await sleep5(delayMs);
+          if (delayMs > 0) await sleep4(delayMs);
           try {
             await PlayerService.removeGardenObject(emptySlot.index, emptySlot.tileType);
           } catch {
           }
-          if (delayMs > 0) await sleep5(delayMs);
+          if (delayMs > 0) await sleep4(delayMs);
           done += 1;
           remaining -= 1;
           try {
@@ -10897,7 +10169,7 @@
       setWindowVisible?.(true);
     }
   }
-  var PATH_GHOST_MODE, PATH_GHOST_DELAY, DEFAULT_DELAY_MS, PATH_AUTO_RECO_ENABLED, PATH_AUTO_RECO_DELAY, AUTO_RECO_MIN_MS, AUTO_RECO_MAX_MS, AUTO_RECO_DEFAULT_MS, AUTO_RECO_TEMPORARILY_DISABLED, PATH_KEEP_INVENTORY_SLOT_FREE, PATH_AUTO_STORE_SEED_SILO_ENABLED, PATH_AUTO_STORE_DECOR_SHED_ENABLED, PATH_AUTO_STORE_TOOL_SHACK_ENABLED, readGhostEnabled, writeGhostEnabled, getGhostDelayMs, setGhostDelayMs, clampAutoRecoDelay, readAutoRecoEnabled, writeAutoRecoEnabled, getAutoRecoDelayMs, setAutoRecoDelayMs, readInventorySlotReserveEnabled, writeInventorySlotReserveEnabled, readAutoStoreSeedSiloEnabled, readAutoStoreDecorShedEnabled, readAutoStoreToolShackEnabled, seedSiloAutoStore, decorShedAutoStore, toolShackAutoStore, selectedMap, seedStockByName, seedSourceCache, selectedDecorMap, decorStockByName, decorSourceCache, _decorDeleteAbort, _decorDeleteBusy, _decorDeletePaused, _decorDeletePauseResolver, NF_US, formatNum, OVERLAY_ID, LIST_ID, SUMMARY_ID, OVERLAY_DECOR_ID, LIST_DECOR_ID, SUMMARY_DECOR_ID, _seedDeleteAbort, _seedDeleteBusy, _seedDeletePaused, _seedDeletePauseResolver, DEFAULT_SEED_DELETE_DELAY_MS, overlayKeyGuardsOn, _btnConfirm, unsubSelectedName, unsubDecorSelectedName, DEFAULT_DECOR_DELETE_DELAY_MS, MiscService;
+  var PATH_GHOST_MODE, PATH_GHOST_DELAY, DEFAULT_DELAY_MS, PATH_AUTO_RECO_ENABLED, PATH_AUTO_RECO_DELAY, AUTO_RECO_MIN_MS, AUTO_RECO_MAX_MS, AUTO_RECO_DEFAULT_MS, AUTO_RECO_TEMPORARILY_DISABLED, PATH_KEEP_INVENTORY_SLOT_FREE, PATH_AUTO_STORE_SEED_SILO_ENABLED, PATH_AUTO_STORE_DECOR_SHED_ENABLED, PATH_AUTO_STORE_TOOL_SHACK_ENABLED, readGhostEnabled, writeGhostEnabled, getGhostDelayMs, setGhostDelayMs, clampAutoRecoDelay, readAutoRecoEnabled, writeAutoRecoEnabled, getAutoRecoDelayMs, setAutoRecoDelayMs, readInventorySlotReserveEnabled, writeInventorySlotReserveEnabled, readAutoStoreSeedSiloEnabled, readAutoStoreDecorShedEnabled, readAutoStoreToolShackEnabled, seedSiloAutoStore, decorShedAutoStore, toolShackAutoStore, selectedMap, seedStockByName, seedSourceCache, selectedDecorMap, decorStockByName, decorSourceCache, _decorDeleteAbort, _decorDeleteBusy, _decorDeletePaused, _decorDeletePauseResolver, NF_US, formatNum, OVERLAY_ID2, LIST_ID, SUMMARY_ID, OVERLAY_DECOR_ID, LIST_DECOR_ID, SUMMARY_DECOR_ID, _seedDeleteAbort, _seedDeleteBusy, _seedDeletePaused, _seedDeletePauseResolver, DEFAULT_SEED_DELETE_DELAY_MS, overlayKeyGuardsOn, _btnConfirm, unsubSelectedName, unsubDecorSelectedName, DEFAULT_DECOR_DELETE_DELAY_MS, MiscService;
   var init_misc = __esm({
     "src/features/misc/misc.ts"() {
       "use strict";
@@ -11079,7 +10351,7 @@
       _decorDeletePauseResolver = null;
       NF_US = new Intl.NumberFormat("en-US");
       formatNum = (n) => NF_US.format(Math.max(0, Math.floor(n || 0)));
-      OVERLAY_ID = "qws-seeddeleter-overlay";
+      OVERLAY_ID2 = "qws-seeddeleter-overlay";
       LIST_ID = "qws-seeddeleter-list";
       SUMMARY_ID = "qws-seeddeleter-summary";
       OVERLAY_DECOR_ID = "qws-decordeleter-overlay";
@@ -11167,20 +10439,20 @@
     const style2 = document.createElement("style");
     style2.id = STYLE_ID;
     style2.textContent = `
-    #${OVERLAY_ID2} { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    #${OVERLAY_ID2} .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; border: 1px solid rgba(255,255,255,.15); }
-    #${OVERLAY_ID2} .title { font-size: 24px; font-weight: 900; letter-spacing: .02em; margin: 0 0 8px 0; }
-    #${OVERLAY_ID2} .subtitle { font-size: 14px; opacity: .85; margin: 0 0 14px 0; }
-    #${OVERLAY_ID2} .btn { margin-top: 6px; padding: 10px 16px; border-radius: 999px; border: 1px solid #7aa2ff; background: #1a2644; color: #fff; font-weight: 700; cursor: pointer; }
-    #${OVERLAY_ID2} .btn:focus { outline: 2px solid #7aa2ff; outline-offset: 2px; }
+    #${OVERLAY_ID3} { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    #${OVERLAY_ID3} .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; border: 1px solid rgba(255,255,255,.15); }
+    #${OVERLAY_ID3} .title { font-size: 24px; font-weight: 900; letter-spacing: .02em; margin: 0 0 8px 0; }
+    #${OVERLAY_ID3} .subtitle { font-size: 14px; opacity: .85; margin: 0 0 14px 0; }
+    #${OVERLAY_ID3} .btn { margin-top: 6px; padding: 10px 16px; border-radius: 999px; border: 1px solid #7aa2ff; background: #1a2644; color: #fff; font-weight: 700; cursor: pointer; }
+    #${OVERLAY_ID3} .btn:focus { outline: 2px solid #7aa2ff; outline-offset: 2px; }
   `;
     document.documentElement.appendChild(style2);
   }
   function createAutoRecoOverlay(initialMs, onReconnectNow) {
     ensureStyle();
-    document.getElementById(OVERLAY_ID2)?.remove();
+    document.getElementById(OVERLAY_ID3)?.remove();
     const overlay2 = document.createElement("div");
-    overlay2.id = OVERLAY_ID2;
+    overlay2.id = OVERLAY_ID3;
     overlay2.innerHTML = `
     <div class="box" role="dialog" aria-label="Auto reconnect status">
       <div class="title">Auto reconnect</div>
@@ -11212,11 +10484,11 @@
       }
     };
   }
-  var OVERLAY_ID2, STYLE_ID;
+  var OVERLAY_ID3, STYLE_ID;
   var init_overlay = __esm({
     "src/features/autoReco/overlay.ts"() {
       "use strict";
-      OVERLAY_ID2 = "mgAutoRecoOverlay";
+      OVERLAY_ID3 = "mgAutoRecoOverlay";
       STYLE_ID = "mgAutoRecoOverlayStyle";
     }
   });
@@ -11331,6 +10603,593 @@
       reconnectTimer = null;
       countdownInterval = null;
       overlay = null;
+    }
+  });
+
+  // src/ui/kit/sprites/resolver.ts
+  function normalizeSpriteName(value) {
+    let str = String(value || "").trim();
+    if (str.includes("/")) {
+      str = str.split("/").pop() || str;
+    }
+    str = str.replace(/\.[a-z0-9]+(\?.*)?$/i, "");
+    return str.toLowerCase().replace(/[^a-z0-9]/g, "");
+  }
+  function expandCategories(categories) {
+    const internalCats = /* @__PURE__ */ new Set();
+    for (const cat of categories) {
+      const expanded = SEARCH_CATS[cat] || [cat];
+      for (const catName of expanded) internalCats.add(catName);
+    }
+    return internalCats;
+  }
+  function setSpriteIndex(items, apiBase) {
+    indexEntries.length = 0;
+    nameIndex.clear();
+    for (const item of items) {
+      const parts = item.id.split("/").filter(Boolean);
+      const start2 = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
+      const internalCat = parts[start2] || "";
+      const apiCat = INTERNAL_TO_API[internalCat] || internalCat;
+      const entry = {
+        id: item.id,
+        name: item.name,
+        internalCat,
+        apiCat,
+        url: `${apiBase}/assets/sprites/${apiCat}/${item.name}.png`
+      };
+      indexEntries.push(entry);
+      const norm3 = normalizeSpriteName(item.name);
+      const arr = nameIndex.get(norm3) || [];
+      arr.push(entry);
+      nameIndex.set(norm3, arr);
+    }
+  }
+  function spriteIndexSize() {
+    return indexEntries.length;
+  }
+  function setCatalogReader(reader) {
+    catalogReader = reader;
+    catalogSourcesIndexed = -1;
+  }
+  function addCatalogAlias(alias, entry) {
+    const key2 = normalizeSpriteName(alias);
+    if (!key2) return;
+    const entries2 = catalogIndex.get(key2) || [];
+    if (entries2.some((known) => known.internalCat === entry.internalCat)) return;
+    entries2.push(entry);
+    catalogIndex.set(key2, entries2);
+  }
+  function readSpriteUrl(url) {
+    const match = /\/assets\/sprites\/([^/]+)\/([^/?#]+)\.[a-z0-9]+(?:[?#]|$)/i.exec(url);
+    if (!match) return null;
+    return { apiCat: match[1], name: match[2] };
+  }
+  function catalogEntryFor(url) {
+    const parsed = readSpriteUrl(url);
+    if (!parsed) return null;
+    const internalCat = API_TO_INTERNAL[parsed.apiCat.toLowerCase()] || parsed.apiCat.toLowerCase();
+    return {
+      id: `sprite/${internalCat}/${parsed.name}`,
+      name: parsed.name,
+      internalCat,
+      apiCat: parsed.apiCat,
+      url
+    };
+  }
+  function buildCatalogIndex() {
+    const read = catalogReader;
+    if (!read) return;
+    const loaded = CATALOG_SOURCES.filter((source) => read(source.key)).length;
+    if (loaded === catalogSourcesIndexed) return;
+    catalogSourcesIndexed = loaded;
+    catalogIndex.clear();
+    for (const source of CATALOG_SOURCES) {
+      const catalog = read(source.key);
+      if (!catalog) continue;
+      for (const [id, raw] of Object.entries(catalog)) {
+        const record = raw;
+        if (!record || typeof record !== "object") continue;
+        for (const path of source.paths) {
+          const holder2 = path === null ? record : record[path];
+          if (!holder2 || typeof holder2 !== "object") continue;
+          const url = typeof holder2.sprite === "string" ? holder2.sprite : "";
+          if (!url) continue;
+          const entry = catalogEntryFor(url);
+          if (!entry) continue;
+          addCatalogAlias(entry.name, entry);
+          addCatalogAlias(id, entry);
+          if (typeof holder2.name === "string") addCatalogAlias(holder2.name, entry);
+        }
+      }
+    }
+  }
+  function findCatalogSprite(internalCats, normTarget) {
+    if (!normTarget) return null;
+    buildCatalogIndex();
+    const entries2 = catalogIndex.get(normTarget);
+    if (!entries2?.length) return null;
+    for (const entry of entries2) {
+      if (internalCats.has(entry.internalCat)) return entry;
+    }
+    return null;
+  }
+  function findSprite(categories, candidateId) {
+    const norm3 = normalizeSpriteName(candidateId);
+    const internalCats = expandCategories(categories);
+    const fromCatalog = findCatalogSprite(internalCats, norm3);
+    if (fromCatalog) return fromCatalog;
+    const entries2 = nameIndex.get(norm3);
+    if (!entries2?.length) {
+      return findSpriteFuzzy(categories, norm3);
+    }
+    for (const entry of entries2) {
+      if (internalCats.has(entry.internalCat)) return entry;
+    }
+    return findSpriteFuzzy(categories, norm3);
+  }
+  function findSpriteFuzzy(categories, normTarget) {
+    if (!normTarget) return null;
+    const internalCats = expandCategories(categories);
+    for (const [norm3, entries2] of nameIndex) {
+      if (norm3.includes(normTarget) || normTarget.includes(norm3)) {
+        for (const entry of entries2) {
+          if (internalCats.has(entry.internalCat)) return entry;
+        }
+      }
+    }
+    for (const [norm3, entries2] of nameIndex) {
+      if (norm3.includes(normTarget) || normTarget.includes(norm3)) {
+        return entries2[0];
+      }
+    }
+    return null;
+  }
+  var INTERNAL_TO_API, API_TO_INTERNAL, SEARCH_CATS, indexEntries, nameIndex, CATALOG_SOURCES, catalogIndex, catalogSourcesIndexed, catalogReader;
+  var init_resolver = __esm({
+    "src/ui/kit/sprites/resolver.ts"() {
+      "use strict";
+      INTERNAL_TO_API = {
+        plant: "plants",
+        tallplant: "tallPlants",
+        seed: "seeds",
+        pet: "pets",
+        item: "items",
+        decor: "decor",
+        mutation: "mutations",
+        "mutation-overlay": "mutations",
+        ui: "ui",
+        weather: "weather",
+        // Keys here are the *internal* category, which comes from the frame key and
+        // is always singular (`sprite/object/…`). These three were written plural on
+        // both sides, so they never matched and their sprites fell through to the
+        // singular URL — which the API serves only in plural, hence a 404 for every
+        // object/tile/animation icon in the mod.
+        object: "objects",
+        tile: "tiles",
+        animation: "animations",
+        winter: "winter"
+      };
+      API_TO_INTERNAL = {
+        plants: "plant",
+        tallplants: "tallplant",
+        seeds: "seed",
+        pets: "pet",
+        items: "item",
+        decor: "decor",
+        mutations: "mutation",
+        ui: "ui",
+        weather: "weather",
+        objects: "object",
+        tiles: "tile",
+        animations: "animation",
+        winter: "winter"
+      };
+      SEARCH_CATS = {
+        plant: ["plant", "tallplant"],
+        tallplant: ["tallplant", "plant"],
+        crop: ["plant", "tallplant"],
+        seed: ["seed"],
+        pet: ["pet"],
+        item: ["item"],
+        decor: ["decor"],
+        // A few mutation icons live in the `ui` sheet (MutationGold, MutationRainbow)
+        // while the rest sit in `mutations`, so both have to be searched — same
+        // reason `weather` already spans three.
+        mutation: ["mutation", "mutation-overlay", "ui"],
+        "mutation-overlay": ["mutation-overlay", "mutation"],
+        ui: ["ui"],
+        weather: ["ui", "weather", "mutation"]
+      };
+      indexEntries = [];
+      nameIndex = /* @__PURE__ */ new Map();
+      CATALOG_SOURCES = [
+        // `crop` before `plant`: both land in the `plants` sheet, and the bare species
+        // name must resolve to the harvested crop (Carrot), not the seedling
+        // (BabyCarrot) — which is what the index used to return.
+        { key: "plants", paths: ["seed", "crop", "plant"] },
+        { key: "pets", paths: [null] },
+        { key: "eggs", paths: [null] },
+        { key: "items", paths: [null] },
+        { key: "decor", paths: [null] },
+        { key: "mutations", paths: [null] },
+        { key: "weather", paths: [null] }
+      ];
+      catalogIndex = /* @__PURE__ */ new Map();
+      catalogSourcesIndexed = -1;
+      catalogReader = null;
+    }
+  });
+
+  // src/ui/kit/sprites/iconCache.ts
+  function fetchIndex() {
+    if (indexReady) return indexReady;
+    indexReady = withDiscordPollPause(
+      () => getJSON2(
+        `${API_BASE2}/assets/sprite-data?flat=1`
+      )
+    ).then((data) => {
+      setSpriteIndex(data.items || [], API_BASE2);
+      console.log("[SpriteIconCache] sprite index loaded", { count: spriteIndexSize() });
+    }).catch((err) => {
+      console.error("[SpriteIconCache] failed to fetch sprite index", err);
+      indexReady = null;
+    });
+    return indexReady;
+  }
+  function knownMutations(list) {
+    if (!Array.isArray(list)) return [];
+    const names = list.map((value) => typeof value === "string" ? value.trim() : "").filter((name) => !!name && (!!MUTATION_FILTERS[name] || !!MUTATION_ICONS[name]));
+    return [...new Set(names)];
+  }
+  function normalizeMutations(list) {
+    const names = [...new Set(list.filter((mutName) => MUTATION_FILTERS[mutName]))];
+    if (!names.length) return [];
+    if (names.includes("Gold")) return ["Gold"];
+    if (names.includes("Rainbow")) return ["Rainbow"];
+    const warm = ["Ambershine", "Dawnlit", "Dawncharged", "Ambercharged"];
+    if (names.some((name) => warm.includes(name))) {
+      return names.filter((name) => !["Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged"].includes(name));
+    }
+    return names;
+  }
+  function pickBlendOp2(desired) {
+    if (SUPPORTED_BLEND_OPS2.has(desired)) return desired;
+    if (SUPPORTED_BLEND_OPS2.has("overlay")) return "overlay";
+    if (SUPPORTED_BLEND_OPS2.has("screen")) return "screen";
+    if (SUPPORTED_BLEND_OPS2.has("lighter")) return "lighter";
+    return "source-atop";
+  }
+  function fillGrad2(ctx2, width, height, filter) {
+    const cols = filter.colors?.length ? filter.colors : ["#fff"];
+    let gradient;
+    if (filter.ang != null) {
+      const rad = (filter.ang - 90) * Math.PI / 180;
+      const cx = width / 2;
+      const cy = height / 2;
+      const radius = Math.min(width, height) / 2;
+      gradient = ctx2.createLinearGradient(
+        cx - Math.cos(rad) * radius,
+        cy - Math.sin(rad) * radius,
+        cx + Math.cos(rad) * radius,
+        cy + Math.sin(rad) * radius
+      );
+    } else {
+      gradient = ctx2.createLinearGradient(0, 0, 0, height);
+    }
+    if (cols.length === 1) {
+      gradient.addColorStop(0, cols[0]);
+      gradient.addColorStop(1, cols[0]);
+    } else {
+      cols.forEach((color, idx) => gradient.addColorStop(idx / (cols.length - 1), color));
+    }
+    ctx2.fillStyle = gradient;
+    ctx2.fillRect(0, 0, width, height);
+  }
+  async function applyMutationFilters(img, mutations) {
+    const allMuts = [...new Set(mutations.filter((m) => MUTATION_FILTERS[m]))];
+    const colorMuts = normalizeMutations(mutations);
+    if (!colorMuts.length && !allMuts.length) return img.src;
+    const width = img.naturalWidth || img.width;
+    const height = img.naturalHeight || img.height;
+    if (!width || !height) return img.src;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx2 = canvas.getContext("2d");
+    if (!ctx2) return img.src;
+    ctx2.imageSmoothingEnabled = false;
+    ctx2.drawImage(img, 0, 0);
+    for (const name of colorMuts) {
+      const filter = MUTATION_FILTERS[name];
+      if (!filter) continue;
+      if (filter.masked) {
+        const gradCanvas = document.createElement("canvas");
+        gradCanvas.width = width;
+        gradCanvas.height = height;
+        const gctx = gradCanvas.getContext("2d");
+        if (!gctx) continue;
+        gctx.imageSmoothingEnabled = false;
+        fillGrad2(gctx, width, height, filter);
+        gctx.globalCompositeOperation = "destination-in";
+        gctx.drawImage(img, 0, 0);
+        ctx2.save();
+        ctx2.globalCompositeOperation = pickBlendOp2(filter.op);
+        if (filter.a != null) ctx2.globalAlpha = filter.a;
+        ctx2.drawImage(gradCanvas, 0, 0);
+        ctx2.restore();
+      } else {
+        const colorCanvas = document.createElement("canvas");
+        colorCanvas.width = width;
+        colorCanvas.height = height;
+        const cctx = colorCanvas.getContext("2d");
+        if (!cctx) continue;
+        cctx.imageSmoothingEnabled = false;
+        cctx.drawImage(img, 0, 0);
+        cctx.globalCompositeOperation = "source-in";
+        fillGrad2(cctx, width, height, filter);
+        ctx2.save();
+        ctx2.globalCompositeOperation = "source-over";
+        if (filter.a != null) ctx2.globalAlpha = filter.a;
+        ctx2.drawImage(colorCanvas, 0, 0);
+        ctx2.restore();
+      }
+    }
+    const plantAnchorX = 0.5;
+    const plantAnchorY = 0.85;
+    const baseX = width * plantAnchorX;
+    const baseY = height * plantAnchorY;
+    for (const name of allMuts) {
+      const iconDef = MUTATION_ICONS[name];
+      if (!iconDef) continue;
+      try {
+        const iconImg = await loadImage(iconDef.url);
+        const iconW = iconImg.naturalWidth || iconImg.width;
+        const iconH = iconImg.naturalHeight || iconImg.height;
+        if (!iconW || !iconH) continue;
+        const iconScale = width * 0.5 / iconW;
+        const drawW = iconW * iconScale;
+        const drawH = iconH * iconScale;
+        const drawX = baseX - drawW * iconDef.anchor.x;
+        const drawY = baseY - drawH * iconDef.anchor.y;
+        ctx2.save();
+        ctx2.globalAlpha = 1;
+        ctx2.globalCompositeOperation = "source-over";
+        ctx2.drawImage(iconImg, drawX, drawY, drawW, drawH);
+        ctx2.restore();
+      } catch {
+      }
+    }
+    return canvas.toDataURL("image/png");
+  }
+  function loadImage(url) {
+    let promise = imageCache.get(url);
+    if (promise) return promise;
+    promise = getSpriteObjectUrl(url).then((objectUrl) => new Promise((resolve, reject) => {
+      const img = new Image();
+      img.decoding = "async";
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Image decode failed"));
+      img.src = objectUrl;
+    }));
+    imageCache.set(url, promise);
+    return promise;
+  }
+  function getSpriteObjectUrl(apiUrl) {
+    let promise = objectUrlCache.get(apiUrl);
+    if (promise) return promise;
+    promise = withDiscordPollPause(() => getBlob2(apiUrl)).then((blob) => URL.createObjectURL(blob));
+    objectUrlCache.set(apiUrl, promise);
+    return promise;
+  }
+  function cacheKeyFor(category, spriteId, mutationKey) {
+    return `${category}:${normalizeSpriteName(spriteId)}${mutationKey ?? ""}`;
+  }
+  function mutationKeyStr(mutations) {
+    const list = [...new Set((mutations ?? []).map((val) => String(val ?? "").trim()).filter(Boolean))];
+    if (!list.length) return "";
+    return "|m=" + list.map(normalizeSpriteName).filter(Boolean).sort().join(",");
+  }
+  function notifyWarmup(state6) {
+    warmupState = state6;
+    warmupListeners.forEach((listener) => {
+      try {
+        listener(warmupState);
+      } catch {
+      }
+    });
+  }
+  function getSpriteWarmupState() {
+    return warmupState;
+  }
+  function onSpriteWarmupProgress(listener) {
+    warmupListeners.add(listener);
+    try {
+      listener(warmupState);
+    } catch {
+    }
+    return () => {
+      warmupListeners.delete(listener);
+    };
+  }
+  function warmupSpriteCache() {
+    fetchIndex().then(() => {
+      const total = spriteIndexSize();
+      notifyWarmup({ total, done: total, completed: true });
+    });
+  }
+  function createSpriteImg(src, size, spriteKey, category, spriteId) {
+    const img = document.createElement("img");
+    img.src = src;
+    img.width = size;
+    img.height = size;
+    img.alt = "";
+    img.decoding = "async";
+    img.loading = "lazy";
+    img.draggable = false;
+    img.style.width = `${size}px`;
+    img.style.height = `${size}px`;
+    img.style.objectFit = "contain";
+    img.style.imageRendering = "auto";
+    img.style.display = "block";
+    img.dataset.spriteKey = spriteKey;
+    img.dataset.spriteCategory = category;
+    img.dataset.spriteId = spriteId;
+    return img;
+  }
+  function attachSpriteIcon(target, categories, id, size, _logTag, options) {
+    const candidateIds = Array.isArray(id) ? id.map((value) => String(value ?? "").trim()).filter(Boolean) : [String(id ?? "").trim()].filter(Boolean);
+    if (!candidateIds.length) return;
+    const mutations = knownMutations(options?.mutations);
+    const mutKey = mutationKeyStr(mutations);
+    const hasMutations = mutations.length > 0;
+    fetchIndex().then(() => {
+      let selectedEntry = null;
+      let selectedCandidate = "";
+      for (const candidate of candidateIds) {
+        const entry2 = findSprite(categories, candidate);
+        if (entry2) {
+          selectedEntry = entry2;
+          selectedCandidate = candidate;
+          break;
+        }
+      }
+      if (!selectedEntry) {
+        options?.onNoSpriteFound?.({ categories, candidates: candidateIds });
+        return;
+      }
+      const entry = selectedEntry;
+      const url = entry.url;
+      const spriteKey = `${entry.internalCat}:${entry.name}${mutKey}`;
+      const existing = target.querySelector("img[data-sprite-key]");
+      if (existing && existing.dataset.spriteKey === spriteKey) return;
+      if (!hasMutations) {
+        getSpriteObjectUrl(url).then((objectUrl) => {
+          const img = createSpriteImg(objectUrl, size, spriteKey, entry.internalCat, entry.name);
+          requestAnimationFrame(() => {
+            if (!target.isConnected) return;
+            target.replaceChildren(img);
+            options?.onSpriteApplied?.(img, {
+              category: entry.internalCat,
+              spriteId: entry.name,
+              candidate: selectedCandidate
+            });
+          });
+        }).catch(() => {
+        });
+        return;
+      }
+      const ck = cacheKeyFor(entry.internalCat, entry.name, mutKey);
+      const cached = spriteDataUrlResolved.get(ck);
+      if (cached) {
+        const img = createSpriteImg(cached, size, spriteKey, entry.internalCat, entry.name);
+        requestAnimationFrame(() => {
+          target.replaceChildren(img);
+          options?.onSpriteApplied?.(img, {
+            category: entry.internalCat,
+            spriteId: entry.name,
+            candidate: selectedCandidate
+          });
+        });
+        return;
+      }
+      let promise = spriteDataUrlCache.get(ck);
+      if (!promise) {
+        promise = loadImage(url).then(async (imgEl) => {
+          const dataUrl = await applyMutationFilters(imgEl, mutations);
+          spriteDataUrlResolved.set(ck, dataUrl);
+          return dataUrl;
+        }).catch(() => null);
+        spriteDataUrlCache.set(ck, promise);
+      }
+      promise.then((dataUrl) => {
+        if (!dataUrl) return;
+        const img = createSpriteImg(dataUrl, size, spriteKey, entry.internalCat, entry.name);
+        requestAnimationFrame(() => {
+          target.replaceChildren(img);
+          options?.onSpriteApplied?.(img, {
+            category: entry.internalCat,
+            spriteId: entry.name,
+            candidate: selectedCandidate
+          });
+        });
+      });
+    });
+  }
+  function attachWeatherSpriteIcon(target, tag, size) {
+    if (tag === "NoWeatherEffect") return;
+    attachSpriteIcon(target, ["ui", "mutation", "weather"], [`Mutation${tag}`, tag], size, "weather");
+  }
+  async function getSpriteObjectUrlByName(categories, name) {
+    await fetchIndex();
+    const entry = findSprite(categories, name);
+    if (!entry) return null;
+    try {
+      return await getSpriteObjectUrl(entry.url);
+    } catch {
+      return null;
+    }
+  }
+  var API_BASE2, indexReady, MUTATION_ICONS, MUTATION_FILTERS, SUPPORTED_BLEND_OPS2, imageCache, objectUrlCache, spriteDataUrlCache, spriteDataUrlResolved, warmupState, warmupListeners;
+  var init_iconCache = __esm({
+    "src/ui/kit/sprites/iconCache.ts"() {
+      "use strict";
+      init_gm();
+      init_discordPolls();
+      init_live();
+      init_resolver();
+      API_BASE2 = "https://mg-api.ariedam.fr";
+      indexReady = null;
+      setCatalogReader((key2) => MGData.get(key2));
+      fetchIndex();
+      MUTATION_ICONS = {
+        // Ground-level icons (anchor.y ≈ 0.5 — drawn at plant base)
+        Wet: { url: `${API_BASE2}/assets/sprites/mutations/Wet.png`, anchor: { x: 0.5, y: 0.487 } },
+        Chilled: { url: `${API_BASE2}/assets/sprites/mutations/Chilled.png`, anchor: { x: 0.502, y: 0.543 } },
+        Frozen: { url: `${API_BASE2}/assets/sprites/mutations/Frozen.png`, anchor: { x: 0.5, y: 0.474 } },
+        Thunderstruck: { url: `${API_BASE2}/assets/sprites/mutations/Thunderstruck.png`, anchor: { x: 0.495, y: 0.525 } },
+        Thundercharged: { url: `${API_BASE2}/assets/sprites/mutations/Thundercharged.png`, anchor: { x: 0.495, y: 0.525 } },
+        // Floating icons (anchor.y ≈ 0.8 — drawn above the plant)
+        Dawnlit: { url: `${API_BASE2}/assets/sprites/mutations/Dawnlit.png`, anchor: { x: 0.506, y: 0.809 } },
+        Ambershine: { url: `${API_BASE2}/assets/sprites/mutations/Amberlit.png`, anchor: { x: 0.5, y: 0.82 } },
+        Dawncharged: { url: `${API_BASE2}/assets/sprites/mutations/Dawncharged.png`, anchor: { x: 0.519, y: 0.796 } },
+        Ambercharged: { url: `${API_BASE2}/assets/sprites/mutations/Ambercharged.png`, anchor: { x: 0.501, y: 0.795 } }
+      };
+      MUTATION_FILTERS = {
+        Gold: { op: "source-atop", colors: ["rgb(235,200,0)"], a: 0.7 },
+        Rainbow: { op: "color", colors: ["#FF1744", "#FF9100", "#FFEA00", "#00E676", "#2979FF", "#D500F9"], ang: 130, masked: true },
+        Wet: { op: "source-atop", colors: ["rgb(50,180,200)"], a: 0.25 },
+        Chilled: { op: "source-atop", colors: ["rgb(100,160,210)"], a: 0.45 },
+        Frozen: { op: "source-atop", colors: ["rgb(100,130,220)"], a: 0.5 },
+        Thunderstruck: { op: "source-atop", colors: ["rgb(16, 141, 163)"], a: 0.45 },
+        Thundercharged: { op: "source-atop", colors: ["rgb(10, 100, 190)"], a: 0.5 },
+        Dawnlit: { op: "source-atop", colors: ["rgb(209,70,231)"], a: 0.5 },
+        Ambershine: { op: "source-atop", colors: ["rgb(190,100,40)"], a: 0.5 },
+        Dawncharged: { op: "source-atop", colors: ["rgb(140,80,200)"], a: 0.5 },
+        Ambercharged: { op: "source-atop", colors: ["rgb(170,60,25)"], a: 0.5 }
+      };
+      SUPPORTED_BLEND_OPS2 = (() => {
+        try {
+          const canvas = document.createElement("canvas");
+          const ctx2 = canvas.getContext("2d");
+          if (!ctx2) return /* @__PURE__ */ new Set();
+          const ops = ["color", "hue", "saturation", "luminosity", "overlay", "screen", "lighter", "source-atop"];
+          const ok = /* @__PURE__ */ new Set();
+          for (const op of ops) {
+            ctx2.globalCompositeOperation = op;
+            if (ctx2.globalCompositeOperation === op) ok.add(op);
+          }
+          return ok;
+        } catch {
+          return /* @__PURE__ */ new Set();
+        }
+      })();
+      imageCache = /* @__PURE__ */ new Map();
+      objectUrlCache = /* @__PURE__ */ new Map();
+      spriteDataUrlCache = /* @__PURE__ */ new Map();
+      spriteDataUrlResolved = /* @__PURE__ */ new Map();
+      warmupState = { total: 0, done: 0, completed: false };
+      warmupListeners = /* @__PURE__ */ new Set();
     }
   });
 
@@ -12238,24 +12097,22 @@
       slot.mutations = p.mutations.slice();
     }
   }
-  function getPixiApp2() {
+  function getApp() {
     try {
-      const w = pageWindow;
-      return state2.engine?.app ?? readSharedGlobal("__MG_SPRITE_STATE__")?.app ?? w?.__PIXI_APP__ ?? null;
+      return state2.engine?.app ?? getPixiApp() ?? pageWindow?.__PIXI_APP__ ?? null;
     } catch {
       return null;
     }
   }
   function getRenderer() {
     try {
-      const w = pageWindow;
-      return state2.engine?.app?.renderer ?? readSharedGlobal("__MG_SPRITE_STATE__")?.renderer ?? w?.__PIXI_RENDERER__ ?? getPixiApp2()?.renderer ?? null;
+      return state2.engine?.app?.renderer ?? getSpriteState().renderer ?? pageWindow?.__PIXI_RENDERER__ ?? getApp()?.renderer ?? null;
     } catch {
       return null;
     }
   }
   function getCanvas() {
-    const app = getPixiApp2();
+    const app = getApp();
     const renderer = getRenderer();
     return renderer?.canvas || renderer?.view?.canvas || renderer?.view || app?.view || app?.canvas || null;
   }
@@ -12351,7 +12208,7 @@
     if (!tv) throw new Error("TileView not available");
     const parent = tv.displayObject || tv.root || tv.container || tv;
     if (!parent?.addChild) throw new Error("TileView is not a display container");
-    const Graphics = readSharedGlobal("__MG_SPRITE_STATE__")?.ctors?.Graphics ?? pageWindow?.PIXI?.Graphics ?? getRenderer()?.PIXI?.Graphics;
+    const Graphics = getSpriteState().ctors?.Graphics ?? pageWindow?.PIXI?.Graphics ?? getRenderer()?.PIXI?.Graphics;
     if (!Graphics) throw new Error("PIXI.Graphics not available");
     const gfx = state2.highlight.gfx ?? new Graphics();
     const alpha = opts.alpha ?? 0.8;
@@ -12488,6 +12345,7 @@
     "src/game/pixi/tileObjects.ts"() {
       "use strict";
       init_pageContext();
+      init_context();
       state2 = {
         /**
          * The old monolithic engine. Current builds have none, so this stays null
@@ -26304,12 +26162,12 @@
           if (!this.oneshotQueue.length) return;
           if (this.oneshotQueueTimer != null) return;
           const delta = Date.now() - this.lastPlayTs;
-          const wait2 = Math.max(0, this.minPlayGapMs - delta);
+          const wait = Math.max(0, this.minPlayGapMs - delta);
           this.oneshotQueueTimer = window.setTimeout(() => {
             this.oneshotQueueTimer = null;
             if (this.oneshotProcessing) return;
             this.processOneshotQueue();
-          }, wait2);
+          }, wait);
         }
         processOneshotQueue() {
           if (this.oneshotProcessing) return;
@@ -27794,11 +27652,6 @@
   });
 
   // src/game/pixi/gardenInfoCard.ts
-  function getSpriteState2() {
-    const state6 = readSharedGlobal("__MG_SPRITE_STATE__");
-    if (!state6?.renderer || !state6.ctors?.Text) return null;
-    return state6;
-  }
   function getStage(state6) {
     return state6.renderer.lastObjectRendered ?? state6.renderer.stage ?? state6.app?.stage ?? null;
   }
@@ -27905,7 +27758,7 @@
   }
   function tryFindCardSystem() {
     if (cardSystem) return;
-    const state6 = getSpriteState2();
+    const state6 = getReadySpriteState();
     if (!state6) return;
     const stage = getStage(state6);
     const found = findAcrossBranches(stage, (node) => node?.label === CARD_SYSTEM_LABEL);
@@ -27958,6 +27811,7 @@
     "src/game/pixi/gardenInfoCard.ts"() {
       "use strict";
       init_pageContext();
+      init_context();
       CARD_SYSTEM_LABEL = "GardenInfoCardSystem";
       CARD_ROW_LABEL = "GardenInfoCardRow";
       OBJECT_CARD_LABEL = "GardenInfoObjectCard";
@@ -28049,7 +27903,7 @@
     };
     const computeScreenRect = () => {
       if (!bellContainer || bellContainer.destroyed) return null;
-      const state6 = getSpriteState2();
+      const state6 = getReadySpriteState();
       const canvas = state6?.renderer?.canvas || state6?.renderer?.view?.canvas || state6?.renderer?.view;
       if (!canvas) return null;
       try {
@@ -28123,7 +27977,7 @@
       return null;
     };
     const railLocalScreenBounds = () => {
-      const state6 = getSpriteState2();
+      const state6 = getReadySpriteState();
       const screenHeight = Number(state6?.renderer?.screen?.height);
       if (!Number.isFinite(screenHeight) || screenHeight <= 0) return null;
       try {
@@ -28179,7 +28033,7 @@
         removeButton();
         return;
       }
-      const state6 = getSpriteState2();
+      const state6 = getReadySpriteState();
       if (!state6?.ctors?.Text) return;
       if (!bellContainer) {
         const ContainerCtor = state6.ctors.Container ?? rail.constructor;
@@ -28236,7 +28090,7 @@
     };
     const tryFindRail = () => {
       if (!running6 || rail) return;
-      const state6 = getSpriteState2();
+      const state6 = getReadySpriteState();
       if (!state6) return;
       const stage = getStage(state6);
       const found = findAcrossBranches(stage, (node) => node?.label === RAIL_LABEL);
@@ -28261,7 +28115,7 @@
       findRafId3 = raf3(scheduleFind3);
     };
     const isReachableFromLiveStage = (node) => {
-      const state6 = getSpriteState2();
+      const state6 = getReadySpriteState();
       if (!state6) return false;
       const stage = getStage(state6);
       if (!stage) return false;
@@ -28368,6 +28222,7 @@
     "src/features/notifier/bellPixi.ts"() {
       "use strict";
       init_gardenInfoCard();
+      init_context();
       init_pageContext();
       RAIL_LABEL = "RightSideRail";
       RAIL_FIND_RETRY_MS = 1e3;
@@ -30617,7 +30472,7 @@
         detachValueText();
         return;
       }
-      const state6 = getSpriteState2();
+      const state6 = getReadySpriteState();
       const ctors = state6?.ctors;
       if (!state6 || !ctors) return;
       const value = priceWatcher.get();
@@ -30743,6 +30598,7 @@
       init_data();
       init_atoms();
       init_gardenInfoCard();
+      init_context();
       VALUE_TEXT_STYLE = { fontFamily: "Arial", fontSize: 14, fontWeight: "700", fill: "#FFD84D" };
       VALUE_BADGE_GAP = 20;
       VALUE_ICON_SIZE = 16;
@@ -30808,7 +30664,7 @@
         removeBorder();
         return;
       }
-      const state6 = getSpriteState2();
+      const state6 = getReadySpriteState();
       if (!graphicsCtor) {
         graphicsCtor = state6 ? findGraphicsCtor(getStage(state6)) : null;
         if (!graphicsCtor) return;
@@ -30896,6 +30752,7 @@
       init_atoms();
       init_pageContext();
       init_gardenInfoCard();
+      init_context();
       BORDER_COLOR = 12334551;
       BORDER_WIDTH = 3;
       BORDER_RADIUS = 12;
@@ -31074,7 +30931,7 @@
         removeButton();
         return;
       }
-      const state6 = getSpriteState2();
+      const state6 = getReadySpriteState();
       if (!state6?.ctors?.Text) return;
       const graphicsCtor = findGraphicsCtor(getStage(state6));
       if (!graphicsCtor) return;
@@ -31159,7 +31016,7 @@
     };
     const tryFindActionHud = () => {
       if (!running6 || actionHud) return;
-      const state6 = getSpriteState2();
+      const state6 = getReadySpriteState();
       if (!state6) return;
       const stage = getStage(state6);
       const found = findAcrossBranches(stage, (node) => node?.label === ACTION_HUD_LABEL);
@@ -31247,6 +31104,7 @@
     "src/features/sellAllPets/pixiButton.ts"() {
       "use strict";
       init_gardenInfoCard();
+      init_context();
       init_pageContext();
       init_domButton();
       init_atoms();
@@ -33651,11 +33509,11 @@
         return src.startsWith("data:") ? src : `data:image/png;base64,${src}`;
       })();
       VALUE_SUMMARY_ICON_BACKGROUND = VALUE_SUMMARY_ICON_SRC ? `url("${VALUE_SUMMARY_ICON_SRC}")` : "";
-      debounce = (fn, wait2 = 120) => {
+      debounce = (fn, wait = 120) => {
         let t;
         return (...args) => {
           if (t) window.clearTimeout(t);
-          t = window.setTimeout(() => fn(...args), wait2);
+          t = window.setTimeout(() => fn(...args), wait);
         };
       };
       labelIsChecked = (el2) => el2.matches("[data-checked]") || !!el2.querySelector("[data-checked]");
@@ -35208,7 +35066,7 @@
     debugSyncState.anchorsFound = !!anchors;
     if (!anchors) return;
     if (!toolbarState) {
-      const state6 = getSpriteState2();
+      const state6 = getReadySpriteState();
       if (!state6?.ctors?.Text) return;
       const stage = getStage(state6);
       const graphicsCtor = findGraphicsCtor(stage);
@@ -35244,7 +35102,7 @@
   }
   function tryFindModal() {
     if (!modalOpen2 || modalNode) return;
-    const state6 = getSpriteState2();
+    const state6 = getReadySpriteState();
     if (!state6) return;
     const stage = getStage(state6);
     const found = findAcrossBranches(stage, (node) => node?.label === ACTIVITY_LOG_MODAL_LABEL);
@@ -35304,6 +35162,7 @@
       init_fakeModal();
       init_atoms();
       init_gardenInfoCard();
+      init_context();
       init_activityLogModalLayout();
       FILTER_STORAGE_KEY = "activityLog.filter";
       FIND_RETRY_MS = 1e3;
@@ -51321,7 +51180,7 @@ Restore figures are averages; unlucky streaks do worse.`;
               break;
             }
             await kind.withdraw(task.entry.id, kind.storageId, plan.fromStorage);
-            await sleep6(WITHDRAW_SETTLE_MS);
+            await sleep5(WITHDRAW_SETTLE_MS);
           }
           for (let i = 0; i < task.qty; i++) {
             await gate2();
@@ -51334,7 +51193,7 @@ Restore figures are averages; unlucky streaks do worse.`;
               label: task.entry.label,
               remainingForCategory: task.qty - i - 1
             });
-            if (delayMs > 0 && i < task.qty - 1) await sleep6(delayMs);
+            if (delayMs > 0 && i < task.qty - 1) await sleep5(delayMs);
           }
         }
         selection.clear();
@@ -51386,19 +51245,19 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
   }
-  var WITHDRAW_SETTLE_MS, sleep6, formatNum4;
+  var WITHDRAW_SETTLE_MS, sleep5, formatNum4;
   var init_run = __esm({
     "src/features/deleters/run.ts"() {
       "use strict";
       init_sources();
       WITHDRAW_SETTLE_MS = 180;
-      sleep6 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      sleep5 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       formatNum4 = (n) => new Intl.NumberFormat("en-US").format(Math.max(0, Math.floor(n || 0)));
     }
   });
 
   // src/features/deleters/deleters.ts
-  var sleep7, toast2, guardEnabled, withdraw, seedDeleter, decorDeleter;
+  var sleep6, toast2, guardEnabled, withdraw, seedDeleter, decorDeleter;
   var init_deleters = __esm({
     "src/features/deleters/deleters.ts"() {
       "use strict";
@@ -51407,7 +51266,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_misc();
       init_player();
       init_toast();
-      sleep7 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      sleep6 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       toast2 = (title, message, kind) => {
         void toastSimple(title, message, kind);
       };
@@ -51448,7 +51307,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           const slot = await findFirstEmptySlot();
           if (!slot) throw new Error("No empty garden tile to delete decor on.");
           await PlayerService.placeDecor(slot.tileType, slot.index, decorId, 0);
-          if (delayMs > 0) await sleep7(delayMs);
+          if (delayMs > 0) await sleep6(delayMs);
           await PlayerService.removeGardenObject(slot.index, slot.tileType);
         },
         withdraw
@@ -53598,7 +53457,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       retry.type = "button";
       retry.className = "mgt-action is-primary";
       retry.textContent = "Retry";
-      retry.onclick = () => void init2();
+      retry.onclick = () => void init();
       state6.append(title, text, retry);
       viewContainer.appendChild(state6);
     };
@@ -53622,7 +53481,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         await swapViews(viewContainer, listViewRoot, detailViewRoot, "forward");
       }
     };
-    const init2 = async () => {
+    const init = async () => {
       showLoading();
       try {
         tools = await fetchTools();
@@ -53638,7 +53497,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         showError(error instanceof Error ? error.message : "Unknown error.");
       }
     };
-    await init2();
+    await init();
   }
   var WRAPPER_WIDTH_PX;
   var init_menu9 = __esm({
@@ -55906,7 +55765,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_applier = __esm({
     "src/features/skins/applier.ts"() {
       "use strict";
-      init_sprites();
+      init_context();
       MAX_WALK_NODES = 4e4;
       applied = /* @__PURE__ */ new Map();
       rectKey = (x, y, w, h) => `${x}|${y}|${w}|${h}`;
@@ -55956,7 +55815,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_frameCanvas = __esm({
     "src/game/sprites/api/frameCanvas.ts"() {
       "use strict";
-      init_sprites();
+      init_context();
       canvasCache = /* @__PURE__ */ new Map();
       CACHE_MAX = 600;
     }
@@ -56055,7 +55914,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_gameCaches = __esm({
     "src/features/skins/gameCaches.ts"() {
       "use strict";
-      init_sprites();
+      init_context();
       hasRebake = (value) => !!value && typeof value.rebakeAll === "function";
     }
   });
@@ -56147,7 +56006,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_debug = __esm({
     "src/features/skins/debug.ts"() {
       "use strict";
-      init_sprites();
+      init_context();
       init_applier();
       init_gameCaches();
       frameRectOf2 = (texture) => texture?.frame ?? texture?._frame ?? null;
@@ -56462,7 +56321,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_skins = __esm({
     "src/features/skins/index.ts"() {
       "use strict";
-      init_sprites();
+      init_context();
       init_storage();
       init_applier();
       init_compositor();
@@ -57181,8 +57040,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   function createTickAtom() {
     const atom = {};
     atom.init = 0;
-    atom.read = (get2) => get2(atom);
-    atom.write = (get2, set2, update) => set2(atom, typeof update === "function" ? update(get2(atom)) : update);
+    atom.read = (get) => get(atom);
+    atom.write = (get, set2, update) => set2(atom, typeof update === "function" ? update(get(atom)) : update);
     atom.debugLabel = COMPANION_TICK_LABEL;
     atom.toString = () => COMPANION_TICK_LABEL;
     return atom;
@@ -58463,18 +58322,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { lastCustomIndex: -1, mutedUntil: {} };
   }
   function pickDialogueLine(input) {
-    const { contextual, customLines, nowMs: nowMs2, random, cooldownMs } = input;
+    const { contextual, customLines, nowMs, random, cooldownMs } = input;
     const state6 = {
       lastCustomIndex: input.state.lastCustomIndex,
       mutedUntil: { ...input.state.mutedUntil }
     };
     const lines = customLines.filter((line) => typeof line === "string" && line.trim().length > 0);
     const available = contextual.filter(
-      (candidate) => candidate?.message && nowMs2 >= (state6.mutedUntil[candidate.key] ?? 0)
+      (candidate) => candidate?.message && nowMs >= (state6.mutedUntil[candidate.key] ?? 0)
     );
     if (available.length > 0 && (lines.length === 0 || random() < CONTEXTUAL_CHANCE)) {
       const candidate = available[Math.min(available.length - 1, Math.floor(random() * available.length))];
-      state6.mutedUntil[candidate.key] = nowMs2 + cooldownMs;
+      state6.mutedUntil[candidate.key] = nowMs + cooldownMs;
       return { message: candidate.message, emote: candidate.emote ?? null, custom: false, state: state6 };
     }
     if (lines.length === 0) return { message: null, emote: null, custom: false, state: state6 };
@@ -58702,9 +58561,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     const atom = getAtomByLabel(CHAT_BUBBLES_LABEL);
     if (!atom || typeof atom.write !== "function") return false;
     const original = atom.write;
-    atom.write = function(get2, set2, update, ...rest2) {
+    atom.write = function(get, set2, update, ...rest2) {
       const next = typeof update === "function" ? update : rewritePayload(update);
-      return original.call(this, get2, set2, next, ...rest2);
+      return original.call(this, get, set2, next, ...rest2);
     };
     wrapped = { atom, original };
     return true;
@@ -59420,18 +59279,18 @@ Restore figures are averages; unlucky streaks do worse.`;
       /** Attend ce qui manque pour respecter l'écart. À appeler juste avant un envoi. */
       async wait() {
         const missing = minGapMs - (Date.now() - lastAt);
-        if (missing > 0) await sleep8(missing);
+        if (missing > 0) await sleep7(missing);
       }
     };
   }
-  var ACTION_DELAY_MS, SETTLE_MS, PROGRESS_EVERY, sleep8;
+  var ACTION_DELAY_MS, SETTLE_MS, PROGRESS_EVERY, sleep7;
   var init_batch = __esm({
     "src/features/companion/chat/batch.ts"() {
       "use strict";
       ACTION_DELAY_MS = 400;
       SETTLE_MS = 700;
       PROGRESS_EVERY = 10;
-      sleep8 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      sleep7 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     }
   });
 
@@ -59460,7 +59319,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     try {
       await PetsService.useTeam(teamId2, { markUsed: false });
-      await sleep8(AFTER_TEAM_SWAP_MS);
+      await sleep7(AFTER_TEAM_SWAP_MS);
     } catch {
       reporter2.say("system", "The team switch failed, working as I am.");
       return NOT_SWAPPED;
@@ -59472,7 +59331,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         if (!previous || previous.length === 0) return;
         try {
           await PetsService.usePetIds(previous);
-          await sleep8(AFTER_TEAM_SWAP_MS);
+          await sleep7(AFTER_TEAM_SWAP_MS);
           reporter2.say("system", "Your team is back the way it was.");
         } catch {
           reporter2.say("system", "Could not put your team back, sorry.");
@@ -59790,7 +59649,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       reporter2.say("report", "Stopped before I picked anything.");
       return;
     }
-    await sleep8(SETTLE_MS);
+    await sleep7(SETTLE_MS);
     let fresh = null;
     try {
       fresh = (await readHarvestRows()).filter((row) => row.ready);
@@ -60069,7 +59928,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         return { ok: false, reason: "could not pick it" };
       }
       StatsService.incrementGardenStat("totalHarvested", 1);
-      await sleep9(AFTER_HARVEST_MS);
+      await sleep8(AFTER_HARVEST_MS);
     }
     await walker.toPosition(await petPosition(candidate.petId));
     try {
@@ -60077,7 +59936,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
       return { ok: false, reason: "the feed did not go through" };
     }
-    await sleep9(AFTER_FEED_MS);
+    await sleep8(AFTER_FEED_MS);
     return { ok: true };
   }
   async function executeFeedBatch(picks, reporter2) {
@@ -60111,7 +59970,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const done = `${cancelled ? "Stopped there. " : ""}Fed ${names}.${tail}`;
     reporter2.say("report", done, compose(...spaced(petIcons(fed)), " ", done));
   }
-  var AFTER_HARVEST_MS, AFTER_FEED_MS, sleep9;
+  var AFTER_HARVEST_MS, AFTER_FEED_MS, sleep8;
   var init_feedRun = __esm({
     "src/features/companion/chat/feedRun.ts"() {
       "use strict";
@@ -60124,7 +59983,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_bubbleIcons();
       AFTER_HARVEST_MS = 700;
       AFTER_FEED_MS = 400;
-      sleep9 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      sleep8 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     }
   });
 
@@ -60153,7 +60012,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       reporter2.say("report", "Stopped before I planted anything.");
       return;
     }
-    await sleep8(SETTLE_MS);
+    await sleep7(SETTLE_MS);
     const planted = await countPlanted(attempted);
     const stopped = cancelled ? " before you stopped me" : "";
     if (planted === null) {
@@ -60382,7 +60241,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       );
       return;
     }
-    await sleep8(SETTLE_MS);
+    await sleep7(SETTLE_MS);
     const hatched = await countHatched(attempted);
     if (hatched === null) {
       reporter2.say("report", `Opened all ${attempted.length}, but I could not check.`);
@@ -60419,7 +60278,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     reporter2.say("system", line, compose(petThing(star.item, ""), " ", line, ...spaced(mutationChips(shown))), true);
     if (!timing || !lines) return;
-    await sleep8(timing.pauseMs);
+    await sleep7(timing.pauseMs);
     if (!reporter2.stopped()) reporter2.say("system", lines.resume);
   }
   async function executeHatchBatch(slots, reporter2) {
@@ -60537,7 +60396,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       reporter2.say("report", skipped.length > 0 ? "None of them went through." : "Nothing sold.");
       return;
     }
-    await sleep8(SETTLE_MS);
+    await sleep7(SETTLE_MS);
     let sold = null;
     try {
       const left = new Set((await readHatchScope()).pets.map((pet) => pet.petId));
@@ -60620,12 +60479,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/chat/proposals.ts
-  function isExpired(proposal, nowMs2, ttlMs = PROPOSAL_TTL_MS) {
-    return nowMs2 - proposal.createdAtMs >= ttlMs;
+  function isExpired(proposal, nowMs, ttlMs = PROPOSAL_TTL_MS) {
+    return nowMs - proposal.createdAtMs >= ttlMs;
   }
-  function verdict(proposal, currentSignature2, nowMs2, ttlMs = PROPOSAL_TTL_MS) {
+  function verdict(proposal, currentSignature2, nowMs, ttlMs = PROPOSAL_TTL_MS) {
     if (!proposal) return { ok: false, reason: "unknown" };
-    if (isExpired(proposal, nowMs2, ttlMs)) return { ok: false, reason: "expired" };
+    if (isExpired(proposal, nowMs, ttlMs)) return { ok: false, reason: "expired" };
     if (!currentSignature2 || proposal.size === 0) return { ok: false, reason: "empty" };
     if (currentSignature2 !== proposal.signature) return { ok: false, reason: "changed" };
     return { ok: true };
@@ -61552,13 +61411,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       return "";
     }
   }
-  function formatDayLabel(atMs, nowMs2) {
+  function formatDayLabel(atMs, nowMs) {
     const startOfDay = (ms) => {
       const date = new Date(ms);
       date.setHours(0, 0, 0, 0);
       return date.getTime();
     };
-    const days = Math.round((startOfDay(nowMs2) - startOfDay(atMs)) / 864e5);
+    const days = Math.round((startOfDay(nowMs) - startOfDay(atMs)) / 864e5);
     if (days <= 0) return "Today";
     if (days === 1) return "Yesterday";
     try {
@@ -64920,164 +64779,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/game/mgVersion.ts
-  function nowMs() {
-    return Date.now();
-  }
-  function setCachedVersion(version) {
-    cachedVersion = version;
-    cachedAt = nowMs();
-  }
-  function getCachedVersion() {
-    if (!cachedVersion) return null;
-    if (nowMs() - cachedAt < VERSION_CACHE_TTL) return cachedVersion;
-    return null;
-  }
-  function readVersionFromGlobals() {
-    const root = globalThis.unsafeWindow || globalThis;
-    const gv = root?.gameVersion || root?.MG_gameVersion || root?.__MG_GAME_VERSION__;
-    if (!gv) return null;
-    try {
-      if (typeof gv.getVersion === "function") {
-        const v = gv.getVersion();
-        return v ? String(v) : null;
-      }
-      if (typeof gv.get === "function") {
-        const v = gv.get();
-        return v ? String(v) : null;
-      }
-      if (typeof gv === "string") return gv;
-    } catch {
-      return null;
-    }
-    return null;
-  }
-  function readVersionFromDom(doc) {
-    const d = doc ?? (typeof document !== "undefined" ? document : null);
-    if (!d) return null;
-    const scripts = d.scripts;
-    for (let i = 0; i < scripts.length; i++) {
-      const s = scripts.item(i);
-      const src = s?.src;
-      if (!src) continue;
-      const m = src.match(/\/(?:r\/\d+\/)?version\/([^/]+)/);
-      if (m && m[1]) return m[1];
-    }
-    const links = Array.from(d.querySelectorAll("link[href]"));
-    for (const link of links) {
-      const href = link.href;
-      if (!href) continue;
-      const m = href.match(/\/(?:r\/\d+\/)?version\/([^/]+)/);
-      if (m && m[1]) return m[1];
-    }
-    return null;
-  }
-  function init(doc) {
-    const cached = getCachedVersion();
-    if (cached) return;
-    const fromGlobals = readVersionFromGlobals();
-    if (fromGlobals) {
-      setCachedVersion(fromGlobals);
-      return;
-    }
-    const fromDom = readVersionFromDom(doc);
-    if (fromDom) {
-      setCachedVersion(fromDom);
-    }
-  }
-  function get() {
-    init(document);
-    return getCachedVersion() ?? cachedVersion ?? null;
-  }
-  async function fetchGameVersion(options) {
-    const cached = getCachedVersion();
-    if (cached) return cached;
-    if (pendingPromise) return pendingPromise;
-    const origin = options?.origin || (typeof location !== "undefined" && location.origin ? location.origin : ORIGIN);
-    pendingPromise = (async () => {
-      try {
-        const url = new URL(VERSION_PATH, origin).toString();
-        const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-        const timeoutId = controller ? setTimeout(() => controller.abort(), 8e3) : null;
-        const res = await fetch(url, {
-          headers: { "User-Agent": "MG-API/1.0" },
-          signal: controller?.signal
-        });
-        if (timeoutId) clearTimeout(timeoutId);
-        if (!res.ok) {
-          throw new Error(`Version fetch failed (${res.status})`);
-        }
-        const data = await res.json();
-        const version = typeof data?.version === "string" ? data.version.trim() : "";
-        if (!version) {
-          throw new Error("Version not found in response");
-        }
-        setCachedVersion(version);
-        return version;
-      } finally {
-        pendingPromise = null;
-      }
-    })();
-    return pendingPromise;
-  }
-  async function wait(timeoutMs = 15e3) {
-    init(document);
-    const cached = getCachedVersion();
-    if (cached) return cached;
-    const startedAt = nowMs();
-    try {
-      return await fetchGameVersion();
-    } catch {
-    }
-    while (nowMs() - startedAt < timeoutMs) {
-      init(document);
-      const v = getCachedVersion() ?? cachedVersion;
-      if (v) return v;
-      await sleep2(50);
-    }
-    throw new Error("MGVersion timeout (gameVersion not found)");
-  }
-  function invalidateVersionCache() {
-    cachedVersion = null;
-    cachedAt = 0;
-  }
-  function prefetch() {
-    void fetchGameVersion().catch(() => {
-    });
-  }
-  var VERSION_PATH, VERSION_CACHE_TTL, pendingPromise, cachedVersion, cachedAt, MGVersion;
-  var init_mgVersion = __esm({
-    "src/game/mgVersion.ts"() {
-      "use strict";
-      init_gm();
-      VERSION_PATH = "/platform/v1/version";
-      VERSION_CACHE_TTL = 60 * 1e3;
-      pendingPromise = null;
-      cachedVersion = null;
-      cachedAt = 0;
-      MGVersion = {
-        init,
-        get,
-        wait,
-        fetchGameVersion,
-        invalidateVersionCache,
-        prefetch
-      };
-    }
-  });
-
   // src/features/autoReco/disabledNotice.ts
   function ensureStyle4() {
     if (document.getElementById(STYLE_ID8)) return;
     const style2 = document.createElement("style");
     style2.id = STYLE_ID8;
     style2.textContent = `
-    #${OVERLAY_ID3} { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    #${OVERLAY_ID3} .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; width: 420px; border: 1px solid rgba(255,255,255,.15); }
-    #${OVERLAY_ID3} .title { font-size: 20px; font-weight: 900; letter-spacing: .02em; margin: 0 0 10px 0; }
-    #${OVERLAY_ID3} .body { font-size: 14px; line-height: 1.5; opacity: .9; margin: 0 0 18px 0; }
-    #${OVERLAY_ID3} .btn { padding: 10px 18px; border-radius: 999px; border: 1px solid #7aa2ff; background: #1a2644; color: #fff; font-weight: 700; cursor: pointer; }
-    #${OVERLAY_ID3} .btn:focus { outline: 2px solid #7aa2ff; outline-offset: 2px; }
+    #${OVERLAY_ID4} { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    #${OVERLAY_ID4} .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; width: 420px; border: 1px solid rgba(255,255,255,.15); }
+    #${OVERLAY_ID4} .title { font-size: 20px; font-weight: 900; letter-spacing: .02em; margin: 0 0 10px 0; }
+    #${OVERLAY_ID4} .body { font-size: 14px; line-height: 1.5; opacity: .9; margin: 0 0 18px 0; }
+    #${OVERLAY_ID4} .btn { padding: 10px 18px; border-radius: 999px; border: 1px solid #7aa2ff; background: #1a2644; color: #fff; font-weight: 700; cursor: pointer; }
+    #${OVERLAY_ID4} .btn:focus { outline: 2px solid #7aa2ff; outline-offset: 2px; }
   `;
     document.head.appendChild(style2);
   }
@@ -65091,10 +64804,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   function showAutoRecoDisabledNoticeOnce() {
     if (typeof document === "undefined" || !document.body) return;
     if (hasSeenAutoRecoDisabledNotice()) return;
-    if (document.getElementById(OVERLAY_ID3)) return;
+    if (document.getElementById(OVERLAY_ID4)) return;
     ensureStyle4();
     const overlay2 = document.createElement("div");
-    overlay2.id = OVERLAY_ID3;
+    overlay2.id = OVERLAY_ID4;
     overlay2.innerHTML = `
     <div class="box" role="dialog" aria-label="Auto reconnect disabled">
       <div class="title">Auto reconnect disabled</div>
@@ -65114,12 +64827,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     document.body.appendChild(overlay2);
     button2?.focus();
   }
-  var OVERLAY_ID3, STYLE_ID8;
+  var OVERLAY_ID4, STYLE_ID8;
   var init_disabledNotice = __esm({
     "src/features/autoReco/disabledNotice.ts"() {
       "use strict";
       init_storage();
-      OVERLAY_ID3 = "mgAutoRecoDisabledNotice";
+      OVERLAY_ID4 = "mgAutoRecoDisabledNotice";
       STYLE_ID8 = "mgAutoRecoDisabledNoticeStyle";
     }
   });
@@ -65130,13 +64843,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     const style2 = document.createElement("style");
     style2.id = STYLE_ID9;
     style2.textContent = `
-    #${OVERLAY_ID4} { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    #${OVERLAY_ID4} .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; width: 440px; border: 1px solid rgba(255,255,255,.15); }
-    #${OVERLAY_ID4} .title { font-size: 20px; font-weight: 900; letter-spacing: .02em; margin: 0 0 10px 0; }
-    #${OVERLAY_ID4} .body { font-size: 14px; line-height: 1.5; opacity: .9; margin: 0 0 18px 0; }
-    #${OVERLAY_ID4} .btn { padding: 10px 18px; border-radius: 999px; border: 1px solid #7aa2ff; background: #1a2644; color: #fff; font-weight: 700; cursor: pointer; margin: 0 6px; }
-    #${OVERLAY_ID4} .btn:focus { outline: 2px solid #7aa2ff; outline-offset: 2px; }
-    #${OVERLAY_ID4} .btn.primary { background: #2a59ff; border-color: #2a59ff; }
+    #${OVERLAY_ID5} { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    #${OVERLAY_ID5} .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; width: 440px; border: 1px solid rgba(255,255,255,.15); }
+    #${OVERLAY_ID5} .title { font-size: 20px; font-weight: 900; letter-spacing: .02em; margin: 0 0 10px 0; }
+    #${OVERLAY_ID5} .body { font-size: 14px; line-height: 1.5; opacity: .9; margin: 0 0 18px 0; }
+    #${OVERLAY_ID5} .btn { padding: 10px 18px; border-radius: 999px; border: 1px solid #7aa2ff; background: #1a2644; color: #fff; font-weight: 700; cursor: pointer; margin: 0 6px; }
+    #${OVERLAY_ID5} .btn:focus { outline: 2px solid #7aa2ff; outline-offset: 2px; }
+    #${OVERLAY_ID5} .btn.primary { background: #2a59ff; border-color: #2a59ff; }
   `;
     document.head.appendChild(style2);
   }
@@ -65150,10 +64863,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   function showRoomPrivacyNoticeOnce() {
     if (typeof document === "undefined" || !document.body) return;
     if (hasSeenRoomPrivacyNotice()) return;
-    if (document.getElementById(OVERLAY_ID4)) return;
+    if (document.getElementById(OVERLAY_ID5)) return;
     ensureStyle5();
     const overlay2 = document.createElement("div");
-    overlay2.id = OVERLAY_ID4;
+    overlay2.id = OVERLAY_ID5;
     overlay2.innerHTML = `
     <div class="box" role="dialog" aria-label="Room privacy notice">
       <div class="title">Your room code is shared with other players</div>
@@ -65182,12 +64895,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     document.body.appendChild(overlay2);
   }
-  var OVERLAY_ID4, STYLE_ID9, HUB_INSTALL_URL;
+  var OVERLAY_ID5, STYLE_ID9, HUB_INSTALL_URL;
   var init_privacyNotice = __esm({
     "src/features/room/privacyNotice.ts"() {
       "use strict";
       init_storage();
-      OVERLAY_ID4 = "mgRoomPrivacyNotice";
+      OVERLAY_ID5 = "mgRoomPrivacyNotice";
       STYLE_ID9 = "mgRoomPrivacyNoticeStyle";
       HUB_INSTALL_URL = "https://github.com/Ariedam64/MG-CommunityHub/raw/refs/heads/main/dist/mg-community-hub.user.js";
     }
@@ -65261,13 +64974,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     const style2 = document.createElement("style");
     style2.id = STYLE_ID10;
     style2.textContent = `
-#${OVERLAY_ID5} {
+#${OVERLAY_ID6} {
   position: fixed; inset: 0; z-index: ${OVERLAY_Z_INDEX2};
   display: grid; place-items: center; padding: 20px;
   background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
-#${OVERLAY_ID5} .mgcl-box {
+#${OVERLAY_ID6} .mgcl-box {
   width: 440px; max-width: 92vw; max-height: 85vh; overflow-y: auto;
   padding: 22px 24px; border-radius: 16px;
   border: 1px solid rgba(94,234,212,0.20);
@@ -65277,37 +64990,37 @@ Restore figures are averages; unlucky streaks do worse.`;
   box-shadow: 0 24px 60px rgba(0,0,0,0.55);
   color: ${TEXT6};
 }
-#${OVERLAY_ID5} .mgcl-eyebrow {
+#${OVERLAY_ID6} .mgcl-eyebrow {
   font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
   color: ${ACCENT4}; margin: 0 0 6px;
 }
-#${OVERLAY_ID5} .mgcl-title { font-size: 18px; font-weight: 750; margin: 0 0 4px; }
-#${OVERLAY_ID5} .mgcl-version { font-size: 11.5px; color: ${TEXT_DIM6}; margin: 0 0 16px; }
-#${OVERLAY_ID5} .mgcl-body { font-size: 12.5px; line-height: 1.65; color: rgba(231,238,247,0.85); }
-#${OVERLAY_ID5} .mgcl-body > :first-child { margin-top: 0; }
-#${OVERLAY_ID5} .mgcl-body > :last-child { margin-bottom: 0; }
-#${OVERLAY_ID5} .mgcl-body p { margin: 0 0 10px; }
-#${OVERLAY_ID5} .mgcl-body ul { margin: 0 0 10px; padding-left: 18px; list-style: disc; }
-#${OVERLAY_ID5} .mgcl-body li { margin: 3px 0; }
-#${OVERLAY_ID5} .mgcl-body strong { color: ${TEXT6}; font-weight: 700; }
-#${OVERLAY_ID5} .mgcl-body code {
+#${OVERLAY_ID6} .mgcl-title { font-size: 18px; font-weight: 750; margin: 0 0 4px; }
+#${OVERLAY_ID6} .mgcl-version { font-size: 11.5px; color: ${TEXT_DIM6}; margin: 0 0 16px; }
+#${OVERLAY_ID6} .mgcl-body { font-size: 12.5px; line-height: 1.65; color: rgba(231,238,247,0.85); }
+#${OVERLAY_ID6} .mgcl-body > :first-child { margin-top: 0; }
+#${OVERLAY_ID6} .mgcl-body > :last-child { margin-bottom: 0; }
+#${OVERLAY_ID6} .mgcl-body p { margin: 0 0 10px; }
+#${OVERLAY_ID6} .mgcl-body ul { margin: 0 0 10px; padding-left: 18px; list-style: disc; }
+#${OVERLAY_ID6} .mgcl-body li { margin: 3px 0; }
+#${OVERLAY_ID6} .mgcl-body strong { color: ${TEXT6}; font-weight: 700; }
+#${OVERLAY_ID6} .mgcl-body code {
   padding: 1px 5px; border-radius: 5px; font-size: 0.9em;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   color: ${ACCENT4}; background: rgba(94,234,212,0.08); border: 1px solid rgba(94,234,212,0.16);
 }
-#${OVERLAY_ID5} .mgcl-body a {
+#${OVERLAY_ID6} .mgcl-body a {
   color: ${ACCENT4}; text-decoration: none; border-bottom: 1px solid rgba(94,234,212,0.35);
 }
-#${OVERLAY_ID5} .mgcl-body a:hover { color: ${ACCENT_22}; border-bottom-color: ${ACCENT_22}; }
-#${OVERLAY_ID5} .mgcl-media { margin-top: 14px; }
-#${OVERLAY_ID5} .mgcl-close {
+#${OVERLAY_ID6} .mgcl-body a:hover { color: ${ACCENT_22}; border-bottom-color: ${ACCENT_22}; }
+#${OVERLAY_ID6} .mgcl-media { margin-top: 14px; }
+#${OVERLAY_ID6} .mgcl-close {
   margin-top: 18px; width: 100%; padding: 10px 16px; border-radius: 10px; cursor: pointer;
   border: none; color: #06181c; font-size: 13px; font-weight: 700;
   background: linear-gradient(135deg, ${ACCENT4}, ${ACCENT_22});
   box-shadow: 0 4px 16px rgba(94,234,212,0.20);
 }
-#${OVERLAY_ID5} .mgcl-close:hover { filter: brightness(1.08); }
-#${OVERLAY_ID5} .mgcl-close:focus-visible { outline: 2px solid ${ACCENT4}; outline-offset: 2px; }
+#${OVERLAY_ID6} .mgcl-close:hover { filter: brightness(1.08); }
+#${OVERLAY_ID6} .mgcl-close:focus-visible { outline: 2px solid ${ACCENT4}; outline-offset: 2px; }
   `;
     document.head.appendChild(style2);
   }
@@ -65317,7 +65030,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function buildOverlay(entry) {
     const overlay2 = document.createElement("div");
-    overlay2.id = OVERLAY_ID5;
+    overlay2.id = OVERLAY_ID6;
     const box = document.createElement("div");
     box.className = "mgcl-box";
     box.setAttribute("role", "dialog");
@@ -65359,7 +65072,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const version = getLocalVersion();
     if (!version) return;
     if (getSeenChangelogVersion() === version) return;
-    if (document.getElementById(OVERLAY_ID5)) return;
+    if (document.getElementById(OVERLAY_ID6)) return;
     let entry;
     try {
       entry = await fetchChangelogEntryForVersion(version);
@@ -65371,7 +65084,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     ensureStyle6();
     document.body.appendChild(buildOverlay(entry));
   }
-  var OVERLAY_ID5, STYLE_ID10, OVERLAY_Z_INDEX2, ACCENT4, ACCENT_22, TEXT6, TEXT_DIM6;
+  var OVERLAY_ID6, STYLE_ID10, OVERLAY_Z_INDEX2, ACCENT4, ACCENT_22, TEXT6, TEXT_DIM6;
   var init_notice = __esm({
     "src/features/changelog/notice.ts"() {
       "use strict";
@@ -65381,7 +65094,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_markdown();
       init_carousel();
       init_styles();
-      OVERLAY_ID5 = "mgChangelogNotice";
+      OVERLAY_ID6 = "mgChangelogNotice";
       STYLE_ID10 = "mgChangelogNoticeStyle";
       OVERLAY_Z_INDEX2 = "2147483647";
       ACCENT4 = "#5eead4";
@@ -65927,7 +65640,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_afkWatch();
       init_askBanner();
       init_gameVersion();
-      init_mgVersion();
       init_live();
       init_pageContext();
       init_iconCache();
@@ -65952,8 +65664,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         installStatsCounters();
         MGData.init();
         shareGlobal("MGData", MGData);
-        initGameVersion();
-        MGVersion.prefetch();
+        detectGameVersion();
         try {
           warmupSpriteCache();
         } catch {

@@ -1,4 +1,5 @@
 import { waitWithTimeout } from '../utils/async';
+import { pageWindow } from '../../../platform/pageContext';
 
 export interface PixiHandles {
   app: any | null;
@@ -58,7 +59,7 @@ export function createPixiHooks(): PixiHandles {
   };
 
   const hook = (name: string, cb: (...args: any[]) => void) => {
-    const root: any = (globalThis as any).unsafeWindow || globalThis;
+    const root: any = pageWindow;
     const prev = root[name];
     root[name] = function () {
       try {
@@ -83,7 +84,7 @@ export function createPixiHooks(): PixiHandles {
 
   // Fallback: if PIXI is already initialized before we hook, try to detect it.
   const tryResolveExisting = () => {
-    const root: any = (globalThis as any).unsafeWindow || globalThis;
+    const root: any = pageWindow;
 
     // PIXI v8 always populates __PIXI_DEVTOOLS__ when a renderer is created.
     const devtools = root.__PIXI_DEVTOOLS__;
@@ -105,7 +106,7 @@ export function createPixiHooks(): PixiHandles {
   // Poll until both are found. Bound to the real page window's timers, not
   // the isolated userscript sandbox's own — the sandbox realm isn't tied to
   // the page's rendering and can throttle setInterval far more aggressively.
-  const pageWin: any = (globalThis as any).unsafeWindow || globalThis;
+  const pageWin: any = pageWindow;
   let fallbackPolls = 0;
   const fallbackInterval = pageWin.setInterval(() => {
     if (APP && RDR) {

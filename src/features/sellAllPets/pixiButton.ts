@@ -14,12 +14,12 @@
 // action's own type identifier is what the game itself dispatches on, so
 // it's the more stable signal.
 import {
-  getSpriteState,
   getStage,
   findByLabel,
   findAcrossBranches,
   findGraphicsCtor,
 } from "../../game/pixi/gardenInfoCard";
+import { getReadySpriteState } from "../../game/sprites/context";
 import { pageWindow, shareGlobal } from "../../platform/pageContext";
 import { runSellAllPetsFlow } from "./domButton";
 import { Atoms } from "../../game/store/atoms";
@@ -270,7 +270,7 @@ export function startSellAllPetsPixi(): SellAllPetsPixiController {
       return;
     }
 
-    const state = getSpriteState();
+    const state = getReadySpriteState();
     if (!state?.ctors?.Text) return;
     const graphicsCtor = findGraphicsCtor(getStage(state));
     if (!graphicsCtor) return;
@@ -394,7 +394,7 @@ export function startSellAllPetsPixi(): SellAllPetsPixiController {
   // retrying forever costs nothing once found.
   const tryFindActionHud = () => {
     if (!running || actionHud) return;
-    const state = getSpriteState();
+    const state = getReadySpriteState();
     if (!state) return;
     const stage = getStage(state);
     const found = findAcrossBranches(stage, (node: any) => node?.label === ACTION_HUD_LABEL);

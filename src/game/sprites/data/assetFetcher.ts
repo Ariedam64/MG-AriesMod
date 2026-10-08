@@ -1,6 +1,7 @@
 // Networking helpers (ported from userscript GM_xmlhttpRequest flow)
 import { joinPath, relPath } from '../utils/path';
 import type { ManifestBundle, ManifestSrc } from '../types';
+import { pageWindow } from '../../../platform/pageContext';
 
 declare const GM_xmlhttpRequest:
   | ((
@@ -37,7 +38,7 @@ interface NetDebugEntry {
 
 const netDebugLog: NetDebugEntry[] = [];
 {
-  const root: any = (globalThis as any).unsafeWindow || (globalThis as any);
+  const root: any = pageWindow;
   root.__MG_NET_DEBUG__ = netDebugLog;
 }
 
@@ -81,7 +82,7 @@ function gmRequest(url: string, type: 'text' | 'blob' | 'json'): Promise<any> {
 }
 
 async function gm(url: string, type: 'text' | 'blob' | 'json' = 'text') {
-  const root: any = (globalThis as any).unsafeWindow || (globalThis as any);
+  const root: any = pageWindow;
 
   if (typeof GM_xmlhttpRequest !== 'function') {
     const entry: NetDebugEntry = { url, path: 'fetch-fallback', startedAt: Date.now(), finishedAt: null, ok: null, error: null };
@@ -218,7 +219,7 @@ export async function loadKtx2AsTexture(
   ctors: any,
   timeoutMs = 3_000,
 ): Promise<unknown> {
-  const root: any = (globalThis as any).unsafeWindow || (globalThis as any);
+  const root: any = pageWindow;
 
   // Strategy 1: Global PIXI.Assets (available when game exposes PIXI).
   const PIXI = root.PIXI;

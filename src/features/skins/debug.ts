@@ -5,7 +5,7 @@
 // object that is simply not on screen, a derived texture instance carrying no
 // label, or a baked composite. Each probe separates those cases.
 
-import { getSpriteState } from '../../game/sprites/index';
+import { getSpriteState } from '../../game/sprites/context';
 import { collectGameMatches, type LabelMatch } from './applier';
 import { findRenderTextureCache, rebakeStats } from './gameCaches';
 

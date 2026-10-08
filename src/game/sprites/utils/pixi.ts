@@ -1,3 +1,4 @@
+import { pageWindow } from '../../../platform/pageContext';
 // Generic PIXI helpers (lightly typed)
 
 export interface PixiCtors {
@@ -80,7 +81,7 @@ function ctorsFromStage(stage: any): PixiCtors | null {
 }
 
 export function getCtors(app: any): PixiCtors {
-  const root: any = (globalThis as any).unsafeWindow || (globalThis as any);
+  const root: any = pageWindow;
   const P = root.PIXI;
   if (P?.Texture && P?.Sprite && P?.Container && P?.Rectangle) {
     return { Container: P.Container, Sprite: P.Sprite, Texture: P.Texture, Rectangle: P.Rectangle, Text: P.Text || null };

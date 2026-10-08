@@ -13,13 +13,9 @@
 // Multiple features need this same card (the crop coin-value badge and the
 // locker purple-border indicator) — they share this one card-system search
 // via `watchGardenInfoCard` instead of each running their own copy of it.
-import { readSharedGlobal, shareGlobal, pageWindow } from "../../platform/pageContext";
-
-export interface SpriteStateLike {
-  renderer: any;
-  app: any;
-  ctors: { Text: any; Sprite: any; Texture: any; Rectangle?: any; Container?: any } | null;
-}
+import { shareGlobal, pageWindow } from "../../platform/pageContext";
+import { getReadySpriteState } from "../sprites/context";
+import type { SpriteState } from "../sprites/types";
 
 export interface GardenInfoCardGeometry {
   /** Local-space y of the card's own content top (title row), used to place things above it. */
@@ -52,13 +48,7 @@ interface GardenInfoCardDebugState {
   listenerCount: number;
 }
 
-export function getSpriteState(): SpriteStateLike | null {
-  const state = readSharedGlobal<SpriteStateLike>("__MG_SPRITE_STATE__");
-  if (!state?.renderer || !state.ctors?.Text) return null;
-  return state;
-}
-
-export function getStage(state: SpriteStateLike): any {
+export function getStage(state: SpriteState): any {
   return state.renderer.lastObjectRendered ?? state.renderer.stage ?? state.app?.stage ?? null;
 }
 
@@ -229,7 +219,7 @@ function attachToCardSystem(system: any) {
 // (scheduling stops immediately below).
 function tryFindCardSystem() {
   if (cardSystem) return;
-  const state = getSpriteState();
+  const state = getReadySpriteState();
   if (!state) return;
   const stage = getStage(state);
   const found = findAcrossBranches(stage, (node: any) => node?.label === CARD_SYSTEM_LABEL);

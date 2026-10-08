@@ -35,8 +35,7 @@ import { startEmoteMirror } from "./features/companion/emoteMirrorWatch";
 import { startAfkWatch } from "./features/companion/afkWatch";
 import { mountCompanionAsk } from "./features/companion/menu/askBanner";
 
-import { initGameVersion } from "./game/gameVersion";
-import { MGVersion } from "./game/mgVersion";
+import { detectGameVersion } from "./game/gameVersion";
 import { MGData } from "./data/live";
 import { shareGlobal } from "./platform/pageContext";
 
@@ -78,8 +77,7 @@ import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/play
   installStatsCounters();
   MGData.init();
   shareGlobal("MGData", MGData);
-  initGameVersion();
-  MGVersion.prefetch();
+  detectGameVersion();
 
   try {warmupSpriteCache();} catch {}
     tos.init()

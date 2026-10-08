@@ -29,6 +29,7 @@
 // `__PIXI_APP_INIT__` hook.
 
 import { pageWindow, readSharedGlobal, shareGlobal } from "../../platform/pageContext";
+import { getPixiApp, getSpriteState } from "../sprites/context";
 
 export type PlantSlotPatch = {
   startTime?: number;
@@ -421,19 +422,13 @@ type HighlightOpts = {
 };
 
 /**
- * The Pixi app, wherever it lives.
- *
- * The engine used to own it. Now it is read from the sprite catalog's shared
- * state, which resolves it through Pixi's own `__PIXI_APP_INIT__` hook, with the
- * raw Pixi globals as a last resort.
+ * The Pixi app, wherever it lives: the engine used to own it; now it comes from
+ * the sprite catalog, which resolves it through Pixi's own `__PIXI_APP_INIT__`
+ * hook, with the raw Pixi global as a last resort.
  */
-function getPixiApp(): any {
+function getApp(): any {
   try {
-    const w = pageWindow as any;
-    return state.engine?.app
-      ?? readSharedGlobal<any>("__MG_SPRITE_STATE__")?.app
-      ?? w?.__PIXI_APP__
-      ?? null;
+    return state.engine?.app ?? getPixiApp() ?? (pageWindow as any)?.__PIXI_APP__ ?? null;
   } catch {
     return null;
   }
@@ -441,11 +436,10 @@ function getPixiApp(): any {
 
 function getRenderer(): any {
   try {
-    const w = pageWindow as any;
     return state.engine?.app?.renderer
-      ?? readSharedGlobal<any>("__MG_SPRITE_STATE__")?.renderer
-      ?? w?.__PIXI_RENDERER__
-      ?? getPixiApp()?.renderer
+      ?? getSpriteState().renderer
+      ?? (pageWindow as any)?.__PIXI_RENDERER__
+      ?? getApp()?.renderer
       ?? null;
   } catch {
     return null;
@@ -453,7 +447,7 @@ function getRenderer(): any {
 }
 
 function getCanvas(): HTMLCanvasElement | null {
-  const app = getPixiApp();
+  const app = getApp();
   const renderer = getRenderer();
   // Pixi v8 exposes the canvas at renderer.canvas; .view is the v7 name (sometimes
   // a wrapper with its own .canvas). Check canvas first, same order proven to work
@@ -581,7 +575,7 @@ function highlightTile(tx: number, ty: number, color = 0x00ff00, opts: Highlight
   if (!parent?.addChild) throw new Error("TileView is not a display container");
 
   const Graphics =
-    readSharedGlobal<any>("__MG_SPRITE_STATE__")?.ctors?.Graphics
+    getSpriteState().ctors?.Graphics
     ?? (pageWindow as any)?.PIXI?.Graphics
     ?? getRenderer()?.PIXI?.Graphics;
   if (!Graphics) throw new Error("PIXI.Graphics not available");

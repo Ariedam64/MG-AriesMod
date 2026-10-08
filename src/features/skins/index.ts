@@ -1,7 +1,7 @@
 // Skin system entrypoint: loads stored skins and keeps the game's textures
 // pointed at them.
 
-import { getSpriteState } from '../../game/sprites/index';
+import { getSpriteState } from '../../game/sprites/context';
 import { getAriesStorage, updateAriesStorage } from '../../platform/storage';
 import {
   applySkinTexture,
