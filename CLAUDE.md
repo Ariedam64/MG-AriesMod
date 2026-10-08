@@ -26,6 +26,19 @@ Fixes land here first, then get ported. The fork is **not** a mirror: it has fea
 
 `lib/`, `platform/`, `game/` and `data/` never import from `features/` or `ui/`. Features build on them and on `ui/kit/`, and `main.ts` with `ui/hud.ts` puts the features together.
 
+## Code style
+
+- Comments, identifiers and log messages in English. Text shown to players stays as it is.
+- No path banner at the top of a file (`// src/utils/x.ts`): it goes stale on the first move.
+- One responsibility per file, and a file past about 400 lines is a sign it holds two.
+- Reuse `lib/` before writing a helper: `sleep`, `waitUntil`, `debounce` (`lib/async`), `clamp` (`lib/math`), `pickOne`, `chance`, `Random` (`lib/random`), `Emitter`, `Subscriptions` (`lib/emitter`), `formatInteger`, `formatPrice`, `pad2` (`lib/format`).
+- Settings go through `platform/storage` (`readAriesPath`/`writeAriesPath`), never raw `localStorage`.
+- Read catalogs inside functions, never into a module-level constant (see below).
+- A watcher keeps its unsubscribers in a `Subscriptions` and undoes them in its `stop`.
+- Strings the game owns (atom labels, message types, field names) are never renamed, even when they read badly.
+- `any` is fine at the boundary with the minified game; inside the mod, give things types.
+- Menus use the components in `ui/kit/` and its colour tokens, not hand-rolled buttons or literal colours.
+
 ## Commands
 
 ```bash

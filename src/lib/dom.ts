@@ -1,28 +1,7 @@
-
-
-
-
-
-/** Injecte du CSS dans <head>. */
+/** Appends a `<style>` element with `css` to the document head. */
 export function addStyle(css: string): HTMLStyleElement {
-  const s = document.createElement("style");
-  s.textContent = css;
-  document.head.appendChild(s);
-  return s;
+  const style = document.createElement("style");
+  style.textContent = css;
+  document.head.appendChild(style);
+  return style;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-/* ===========================
-   Helpers bonus (optionnels)
-   =========================== */
-

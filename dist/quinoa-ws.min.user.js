@@ -44667,10 +44667,10 @@ next: ${next}`;
 
   // src/lib/dom.ts
   function addStyle(css5) {
-    const s = document.createElement("style");
-    s.textContent = css5;
-    document.head.appendChild(s);
-    return s;
+    const style2 = document.createElement("style");
+    style2.textContent = css5;
+    document.head.appendChild(style2);
+    return style2;
   }
   var init_dom = __esm({
     "src/lib/dom.ts"() {
@@ -55874,9 +55874,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (abs >= 1e3) return `${fmt2(n / 1e3)}k`;
     return String(n);
   }
+  var INTEGER_FORMAT;
   var init_format = __esm({
     "src/lib/format.ts"() {
       "use strict";
+      INTEGER_FORMAT = new Intl.NumberFormat("en-US");
     }
   });
 
