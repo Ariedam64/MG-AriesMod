@@ -27026,125 +27026,165 @@
     }
   });
 
-  // src/ui/kit/hotkey.ts
-  function hotkeyButton(initial, onChange, opts = {}) {
-    const emptyLabel = opts.emptyLabel ?? "None";
-    const listeningLabel = opts.listeningLabel ?? "Press a key\u2026";
-    const clearable = opts.clearable ?? true;
-    let hk = initial ?? null;
-    let recording = false;
-    let recordingTimeout = null;
-    const btn = h("button", "qmm-hotkey");
-    btn.type = "button";
-    btn.setAttribute("aria-live", "polite");
-    const render = () => {
-      btn.classList.toggle("is-recording", recording);
-      btn.classList.toggle("is-empty", !hk);
-      btn.classList.toggle("is-assigned", !recording && !!hk);
-      if (recording) {
-        btn.textContent = listeningLabel;
-        btn.title = "Listening\u2026 press a key (Esc to cancel, Backspace to clear)";
-      } else if (!hk) {
-        btn.textContent = emptyLabel;
-        btn.title = "No key assigned";
-      } else {
-        btn.textContent = hotkeyToPretty(hk);
-        btn.title = "Click to rebind \u2022 Right-click to clear";
-      }
-    };
-    const setHotkey = (value) => {
-      hk = value ? { ...value } : null;
-    };
-    const commit = (value) => {
-      setHotkey(value);
-      onChange?.(hk);
-    };
-    btn.refreshHotkey = (value) => {
-      setHotkey(value);
-      render();
-    };
-    const stopRecording = () => {
-      if (!recording) return;
-      recording = false;
-      if (activeRecorder === stopRecording) activeRecorder = null;
-      window.removeEventListener("keydown", onKeyDown2, true);
-      document.removeEventListener("pointerdown", onPointerDown, true);
-      window.removeEventListener("blur", onWindowBlur);
-      if (recordingTimeout !== null) clearTimeout(recordingTimeout);
-      recordingTimeout = null;
-      endKeybindCapture();
-      render();
-    };
-    const startRecording = () => {
-      if (recording) return;
-      activeRecorder?.();
-      recording = true;
-      activeRecorder = stopRecording;
-      beginKeybindCapture();
-      window.addEventListener("keydown", onKeyDown2, true);
-      document.addEventListener("pointerdown", onPointerDown, true);
-      window.addEventListener("blur", onWindowBlur);
-      recordingTimeout = window.setTimeout(stopRecording, RECORDING_TIMEOUT_MS);
-      render();
-    };
-    const onPointerDown = (e) => {
-      if (e.target instanceof Node && btn.contains(e.target)) return;
-      stopRecording();
-    };
-    const onWindowBlur = (e) => {
-      if (e.target === window) stopRecording();
-    };
-    function onKeyDown2(e) {
-      if (!recording) return;
-      if (!btn.isConnected) {
-        stopRecording();
-        return;
-      }
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      if (e.key === "Escape") {
-        stopRecording();
-        return;
-      }
-      if ((e.key === "Backspace" || e.key === "Delete") && clearable) {
-        commit(null);
-        stopRecording();
-        return;
-      }
-      const next = eventToHotkey(e, opts.allowModifierOnly ?? false);
-      if (!next) return;
-      commit(next);
-      stopRecording();
+  // src/ui/kit/menu.ts
+  function readSavedTab(menuId) {
+    const path = `menu.activeTabs.${menuId}`;
+    const saved = readAriesPath(path);
+    if (typeof saved === "string" && saved) return saved;
+    const legacyKey = `menu:${menuId}:activeTab`;
+    let legacy = null;
+    try {
+      legacy = localStorage.getItem(legacyKey);
+      if (legacy !== null) localStorage.removeItem(legacyKey);
+    } catch {
     }
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      if (recording) {
-        stopRecording();
-        return;
-      }
-      startRecording();
-      btn.focus();
-    });
-    if (clearable) {
-      btn.addEventListener("contextmenu", (e) => {
-        e.preventDefault();
-        if (!hk) return;
-        commit(null);
-        render();
-      });
-    }
-    render();
-    return btn;
+    if (!legacy) return null;
+    writeAriesPath(path, legacy);
+    return legacy;
   }
-  var activeRecorder, RECORDING_TIMEOUT_MS;
-  var init_hotkey2 = __esm({
-    "src/ui/kit/hotkey.ts"() {
+  var Menu;
+  var init_menu = __esm({
+    "src/ui/kit/menu.ts"() {
       "use strict";
-      init_keyboard();
-      init_hotkey();
+      init_storage();
       init_dom2();
-      activeRecorder = null;
-      RECORDING_TIMEOUT_MS = 8e3;
+      Menu = class {
+        constructor(opts = {}) {
+          this.opts = opts;
+          this.tabs = /* @__PURE__ */ new Map();
+          this.events = /* @__PURE__ */ new Map();
+          this.currentId = null;
+          // Holding Alt (or Insert) over a menu shows the grab cursor: windows can be
+          // dragged from anywhere while it is held.
+          this.altDown = false;
+          this.insertDown = false;
+          this.hovering = false;
+          this.onKey = (e) => {
+            if (e.code === "Insert" || e.key === "Insert") this.insertDown = e.type === "keydown";
+            const alt = e.altKey || this.insertDown;
+            if (alt !== this.altDown) {
+              this.altDown = alt;
+              this.updateAltCursor();
+            }
+          };
+          this.onBlur = () => {
+            this.altDown = false;
+            this.insertDown = false;
+            this.updateAltCursor();
+          };
+          this.onEnter = () => {
+            this.hovering = true;
+            this.updateAltCursor();
+          };
+          this.onLeave = () => {
+            this.hovering = false;
+            this.updateAltCursor();
+          };
+          this.menuId = opts.id || "default";
+          this.wantedId = readSavedTab(this.menuId);
+        }
+        mount(container) {
+          container.innerHTML = "";
+          this.root = h("div", this.opts.compact ? "qmm qmm-compact" : "qmm");
+          this.tabBar = h("div", "qmm-tabs");
+          this.views = h("div", "qmm-views");
+          this.root.append(this.tabBar, this.views);
+          container.appendChild(this.root);
+          for (const [id, def] of this.tabs) this.createTabView(id, def);
+          this.updateTabBar();
+          this.root.addEventListener("pointerenter", this.onEnter);
+          this.root.addEventListener("pointerleave", this.onLeave);
+          window.addEventListener("keydown", this.onKey, true);
+          window.addEventListener("keyup", this.onKey, true);
+          window.addEventListener("blur", this.onBlur);
+          document.addEventListener("visibilitychange", this.onBlur);
+        }
+        /** Shows or hides the HUD window around the menu, title bar included. */
+        setWindowVisible(visible) {
+          const win = this.root?.closest(this.opts.windowSelector || ".qws-win");
+          if (!win) return;
+          win.classList.toggle("is-hidden", !visible);
+        }
+        /** Adds a tab, before or after `mount`. */
+        addTab(id, title, render) {
+          const def = { title, render };
+          this.tabs.set(id, def);
+          if (this.root) {
+            this.createTabView(id, def);
+            this.updateTabBar();
+          }
+          return this;
+        }
+        addTabs(defs) {
+          defs.forEach((d) => this.addTab(d.id, d.title, d.render));
+          return this;
+        }
+        /** Shows a tab and remembers it as the one to reopen. `null` shows every view. */
+        switchTo(id) {
+          if (id) writeAriesPath(`menu.activeTabs.${this.menuId}`, id);
+          if (!this.root) {
+            this.wantedId = id;
+            return;
+          }
+          this.wantedId = null;
+          this.show(id);
+        }
+        on(event, handler) {
+          if (!this.events.has(event)) this.events.set(event, /* @__PURE__ */ new Set());
+          this.events.get(event).add(handler);
+          return () => this.off(event, handler);
+        }
+        off(event, handler) {
+          this.events.get(event)?.delete(handler);
+        }
+        emit(event, ...args) {
+          this.events.get(event)?.forEach((handler) => {
+            try {
+              handler(...args);
+            } catch {
+            }
+          });
+        }
+        show(id) {
+          this.currentId = id;
+          const isShown = (el) => id === null || el.dataset.id === id;
+          for (const tab of Array.from(this.tabBar.children)) tab.classList.toggle("active", isShown(tab));
+          for (const view of Array.from(this.views.children)) view.classList.toggle("active", isShown(view));
+          this.emit("tab:change", id);
+        }
+        createTabView(id, def) {
+          const tab = h("button", "qmm-tab");
+          tab.dataset.id = id;
+          tab.appendChild(h("span", "label", def.title));
+          tab.onclick = () => this.switchTo(id);
+          this.tabBar.appendChild(tab);
+          const view = h("div", "qmm-view");
+          view.dataset.id = id;
+          this.views.appendChild(view);
+          try {
+            def.render(view, this);
+          } catch (e) {
+            view.textContent = String(e);
+          }
+          if (id === this.wantedId) {
+            this.wantedId = null;
+            this.show(id);
+          } else if (!this.currentId) {
+            this.show(id);
+          }
+        }
+        /** A menu without tabs drops the bar so its panel starts at the top. */
+        updateTabBar() {
+          if (this.tabs.size > 0) {
+            if (!this.tabBar.parentElement) this.root.insertBefore(this.tabBar, this.views);
+          } else {
+            this.tabBar.remove();
+          }
+        }
+        updateAltCursor() {
+          this.root?.classList.toggle("qmm-alt-drag", this.altDown && this.hovering);
+        }
+      };
     }
   });
 
@@ -27319,354 +27359,6 @@
       ROW_ICON_PX = 26;
       JUSTIFY = { start: "flex-start", center: "center", end: "flex-end", between: "space-between", around: "space-around" };
       ALIGN = { start: "flex-start", center: "center", end: "flex-end", stretch: "stretch" };
-    }
-  });
-
-  // src/ui/kit/vtabs.ts
-  var VTabs;
-  var init_vtabs = __esm({
-    "src/ui/kit/vtabs.ts"() {
-      "use strict";
-      init_dom2();
-      VTabs = class {
-        constructor(opts = {}) {
-          this.filterInput = null;
-          this.items = [];
-          this.root = h("div", "qmm-vtabs");
-          this.emptyText = opts.emptyText || "No items.";
-          this.renderItemCustom = opts.renderItem;
-          this.selectedId = opts.initialId ?? null;
-          this.onSelectCb = opts.onSelect;
-          if (opts.filterPlaceholder) {
-            const filter = h("div", "filter");
-            this.filterInput = h("input", "qmm-input");
-            this.filterInput.type = "search";
-            this.filterInput.placeholder = opts.filterPlaceholder;
-            this.filterInput.oninput = () => this.renderList();
-            filter.appendChild(this.filterInput);
-            this.root.appendChild(filter);
-          }
-          this.list = h("div", "qmm-vlist");
-          if (opts.maxHeightPx || opts.fillAvailableHeight) this.list.classList.add("is-scroll");
-          if (opts.maxHeightPx) this.list.style.maxHeight = `${opts.maxHeightPx}px`;
-          if (opts.fillAvailableHeight) {
-            const wrap = h("div", "qmm-vlist-wrap");
-            wrap.appendChild(this.list);
-            this.root.appendChild(wrap);
-          } else {
-            this.root.appendChild(this.list);
-          }
-        }
-        setItems(items) {
-          this.items = Array.isArray(items) ? items.slice() : [];
-          if (this.selectedId && !this.items.some((i) => i.id === this.selectedId)) {
-            this.selectedId = this.items[0]?.id ?? null;
-          }
-          this.renderList();
-        }
-        getSelected() {
-          return this.items.find((i) => i.id === this.selectedId) ?? null;
-        }
-        select(id) {
-          this.selectedId = id;
-          this.renderList();
-          this.onSelectCb?.(this.selectedId, this.getSelected());
-        }
-        onSelect(cb) {
-          this.onSelectCb = cb;
-        }
-        filterText() {
-          return (this.filterInput?.value || "").trim().toLowerCase();
-        }
-        renderList() {
-          const keepScroll = this.list.scrollTop;
-          this.list.replaceChildren();
-          const q = this.filterText();
-          const shown = q ? this.items.filter((it) => (it.title || "").toLowerCase().includes(q) || (it.subtitle || "").toLowerCase().includes(q)) : this.items;
-          if (!shown.length) {
-            this.list.appendChild(h("div", "qmm-vlist__empty", this.emptyText));
-            return;
-          }
-          const ul = h("ul", "qmm-vlist__items");
-          for (const it of shown) {
-            const btn = h("button", "qmm-vtab");
-            btn.dataset.id = it.id;
-            btn.disabled = !!it.disabled;
-            if (this.renderItemCustom) this.renderItemCustom(it, btn);
-            else this.renderDefaultItem(it, btn);
-            btn.classList.toggle("active", it.id === this.selectedId);
-            btn.onclick = () => this.select(it.id);
-            const li = h("li");
-            li.appendChild(btn);
-            ul.appendChild(li);
-          }
-          this.list.appendChild(ul);
-          this.list.scrollTop = keepScroll;
-        }
-        renderDefaultItem(it, btn) {
-          const dot = h("div", "qmm-dot");
-          dot.style.background = it.statusColor || "#999a";
-          const img = h("img");
-          img.src = it.avatarUrl || "";
-          img.alt = it.title;
-          const text2 = h("div", "qmm-chip__text");
-          text2.appendChild(h("div", "t", it.title));
-          if (it.subtitle) text2.appendChild(h("div", "qmm-chip__sub", it.subtitle));
-          const chip = h("div", "qmm-chip");
-          chip.append(img, text2);
-          btn.append(dot, chip, it.badge != null ? h("span", "qmm-tag", String(it.badge)) : h("div"));
-        }
-      };
-    }
-  });
-
-  // src/ui/kit/menu.ts
-  function readSavedTab(menuId) {
-    const path = `menu.activeTabs.${menuId}`;
-    const saved = readAriesPath(path);
-    if (typeof saved === "string" && saved) return saved;
-    const legacyKey = `menu:${menuId}:activeTab`;
-    let legacy = null;
-    try {
-      legacy = localStorage.getItem(legacyKey);
-      if (legacy !== null) localStorage.removeItem(legacyKey);
-    } catch {
-    }
-    if (!legacy) return null;
-    writeAriesPath(path, legacy);
-    return legacy;
-  }
-  var Menu;
-  var init_menu = __esm({
-    "src/ui/kit/menu.ts"() {
-      "use strict";
-      init_storage();
-      init_button();
-      init_card();
-      init_dom2();
-      init_fields();
-      init_hotkey2();
-      init_layout();
-      init_segmented();
-      init_sliders();
-      init_toggles();
-      init_vtabs();
-      Menu = class {
-        constructor(opts = {}) {
-          this.opts = opts;
-          this.tabs = /* @__PURE__ */ new Map();
-          this.events = /* @__PURE__ */ new Map();
-          this.currentId = null;
-          // Holding Alt (or Insert) over a menu shows the grab cursor: windows can be
-          // dragged from anywhere while it is held.
-          this.altDown = false;
-          this.insertDown = false;
-          this.hovering = false;
-          this.onKey = (e) => {
-            if (e.code === "Insert" || e.key === "Insert") this.insertDown = e.type === "keydown";
-            const alt = e.altKey || this.insertDown;
-            if (alt !== this.altDown) {
-              this.altDown = alt;
-              this.updateAltCursor();
-            }
-          };
-          this.onBlur = () => {
-            this.altDown = false;
-            this.insertDown = false;
-            this.updateAltCursor();
-          };
-          this.onEnter = () => {
-            this.hovering = true;
-            this.updateAltCursor();
-          };
-          this.onLeave = () => {
-            this.hovering = false;
-            this.updateAltCursor();
-          };
-          this.menuId = opts.id || "default";
-          this.wantedId = readSavedTab(this.menuId);
-        }
-        mount(container) {
-          container.innerHTML = "";
-          this.root = h("div", this.opts.compact ? "qmm qmm-compact" : "qmm");
-          this.tabBar = h("div", "qmm-tabs");
-          this.views = h("div", "qmm-views");
-          this.root.append(this.tabBar, this.views);
-          container.appendChild(this.root);
-          for (const [id, def] of this.tabs) this.createTabView(id, def);
-          this.updateTabBar();
-          this.root.addEventListener("pointerenter", this.onEnter);
-          this.root.addEventListener("pointerleave", this.onLeave);
-          window.addEventListener("keydown", this.onKey, true);
-          window.addEventListener("keyup", this.onKey, true);
-          window.addEventListener("blur", this.onBlur);
-          document.addEventListener("visibilitychange", this.onBlur);
-        }
-        /** Shows or hides the HUD window around the menu, title bar included. */
-        setWindowVisible(visible) {
-          const win = this.root?.closest(this.opts.windowSelector || ".qws-win");
-          if (!win) return;
-          win.classList.toggle("is-hidden", !visible);
-        }
-        /** Adds a tab, before or after `mount`. */
-        addTab(id, title, render) {
-          const def = { title, render };
-          this.tabs.set(id, def);
-          if (this.root) {
-            this.createTabView(id, def);
-            this.updateTabBar();
-          }
-          return this;
-        }
-        addTabs(defs) {
-          defs.forEach((d) => this.addTab(d.id, d.title, d.render));
-          return this;
-        }
-        /** Shows a tab and remembers it as the one to reopen. `null` shows every view. */
-        switchTo(id) {
-          if (id) writeAriesPath(`menu.activeTabs.${this.menuId}`, id);
-          if (!this.root) {
-            this.wantedId = id;
-            return;
-          }
-          this.wantedId = null;
-          this.show(id);
-        }
-        on(event, handler) {
-          if (!this.events.has(event)) this.events.set(event, /* @__PURE__ */ new Set());
-          this.events.get(event).add(handler);
-          return () => this.off(event, handler);
-        }
-        off(event, handler) {
-          this.events.get(event)?.delete(handler);
-        }
-        emit(event, ...args) {
-          this.events.get(event)?.forEach((handler) => {
-            try {
-              handler(...args);
-            } catch {
-            }
-          });
-        }
-        show(id) {
-          this.currentId = id;
-          const isShown = (el) => id === null || el.dataset.id === id;
-          for (const tab of Array.from(this.tabBar.children)) tab.classList.toggle("active", isShown(tab));
-          for (const view of Array.from(this.views.children)) view.classList.toggle("active", isShown(view));
-          this.emit("tab:change", id);
-        }
-        createTabView(id, def) {
-          const tab = h("button", "qmm-tab");
-          tab.dataset.id = id;
-          tab.appendChild(h("span", "label", def.title));
-          tab.onclick = () => this.switchTo(id);
-          this.tabBar.appendChild(tab);
-          const view = h("div", "qmm-view");
-          view.dataset.id = id;
-          this.views.appendChild(view);
-          try {
-            def.render(view, this);
-          } catch (e) {
-            view.textContent = String(e);
-          }
-          if (id === this.wantedId) {
-            this.wantedId = null;
-            this.show(id);
-          } else if (!this.currentId) {
-            this.show(id);
-          }
-        }
-        /** A menu without tabs drops the bar so its panel starts at the top. */
-        updateTabBar() {
-          if (this.tabs.size > 0) {
-            if (!this.tabBar.parentElement) this.root.insertBefore(this.tabBar, this.views);
-          } else {
-            this.tabBar.remove();
-          }
-        }
-        updateAltCursor() {
-          this.root?.classList.toggle("qmm-alt-drag", this.altDown && this.hovering);
-        }
-        // ---------------------------------------------------------------------------
-        // Compatibility helpers: each forwards to a kit component. Call the component
-        // instead in new code; the replacement is named on each line.
-        /** Compat: use `button()` from ./button. */
-        btn(label2, onClickOrOpts) {
-          return button(label2, typeof onClickOrOpts === "function" ? { onClick: onClickOrOpts } : onClickOrOpts);
-        }
-        /** Compat: use `setButtonEnabled()` from ./button. */
-        setButtonEnabled(btn, enabled2) {
-          setButtonEnabled(btn, enabled2);
-        }
-        /** Compat: use `flexRow()` from ./layout. */
-        flexRow(opts) {
-          return flexRow(opts);
-        }
-        /** Compat: use `formRow()` from ./layout. */
-        formRow(labelText, control, opts) {
-          return formRow(labelText, control, opts);
-        }
-        /** Compat: use `card()` from ./card. */
-        card(title, opts) {
-          return card(title, opts);
-        }
-        /** Compat: use `toggleChip()` from ./toggles. */
-        toggleChip(labelText, opts) {
-          return toggleChip(labelText, opts);
-        }
-        /** Compat: use `select()` from ./fields. */
-        select(opts) {
-          return select2(opts);
-        }
-        /** Compat: use `errorBar()` from ./card. */
-        errorBar() {
-          return errorBar();
-        }
-        /** Compat: use `h("label", "qmm-label", text)` from ./dom. */
-        label(text2) {
-          return h("label", "qmm-label", text2);
-        }
-        /** Compat: use `numberInput()` from ./fields. */
-        inputNumber(min, max, step, value) {
-          return numberInput(min, max, step, value);
-        }
-        /** Compat: use `textInput()` from ./fields. */
-        inputText(placeholder, value) {
-          return textInput(placeholder, value);
-        }
-        /** Compat: use `radio()` from ./fields. */
-        radio(name, value, checked) {
-          return radio(name, value, checked);
-        }
-        /** Compat: use `radioGroup()` from ./fields. */
-        radioGroup(name, options2, selected, onChange) {
-          return radioGroup(name, options2, selected, onChange);
-        }
-        /** Compat: use `segmented()` from ./segmented. */
-        segmented(items, selected, onChange, opts) {
-          return segmented(items, selected, onChange, opts);
-        }
-        /** Compat: use `slider()` from ./sliders. */
-        slider(min, max, step, value) {
-          return slider(min, max, step, value);
-        }
-        /** Compat: use `rangeDual()` from ./sliders. */
-        rangeDual(min, max, step, valueMin, valueMax) {
-          return rangeDual(min, max, step, valueMin, valueMax);
-        }
-        /** Compat: use `switchInput()` from ./toggles. */
-        switch(checked) {
-          return switchInput(checked);
-        }
-        /** Compat: use `new VTabs()` from ./vtabs. */
-        vtabs(options2) {
-          return new VTabs(options2);
-        }
-        /** Compat: use `hotkeyButton()` from ./hotkey. */
-        hotkeyButton(initial, onChange, opts) {
-          return hotkeyButton(initial, onChange, opts);
-        }
-      };
     }
   });
 
@@ -29821,6 +29513,104 @@ next: ${next}`;
 .lk-dim { opacity: .6; }
 `;
       installed4 = false;
+    }
+  });
+
+  // src/ui/kit/vtabs.ts
+  var VTabs;
+  var init_vtabs = __esm({
+    "src/ui/kit/vtabs.ts"() {
+      "use strict";
+      init_dom2();
+      VTabs = class {
+        constructor(opts = {}) {
+          this.filterInput = null;
+          this.items = [];
+          this.root = h("div", "qmm-vtabs");
+          this.emptyText = opts.emptyText || "No items.";
+          this.renderItemCustom = opts.renderItem;
+          this.selectedId = opts.initialId ?? null;
+          this.onSelectCb = opts.onSelect;
+          if (opts.filterPlaceholder) {
+            const filter = h("div", "filter");
+            this.filterInput = h("input", "qmm-input");
+            this.filterInput.type = "search";
+            this.filterInput.placeholder = opts.filterPlaceholder;
+            this.filterInput.oninput = () => this.renderList();
+            filter.appendChild(this.filterInput);
+            this.root.appendChild(filter);
+          }
+          this.list = h("div", "qmm-vlist");
+          if (opts.maxHeightPx || opts.fillAvailableHeight) this.list.classList.add("is-scroll");
+          if (opts.maxHeightPx) this.list.style.maxHeight = `${opts.maxHeightPx}px`;
+          if (opts.fillAvailableHeight) {
+            const wrap = h("div", "qmm-vlist-wrap");
+            wrap.appendChild(this.list);
+            this.root.appendChild(wrap);
+          } else {
+            this.root.appendChild(this.list);
+          }
+        }
+        setItems(items) {
+          this.items = Array.isArray(items) ? items.slice() : [];
+          if (this.selectedId && !this.items.some((i) => i.id === this.selectedId)) {
+            this.selectedId = this.items[0]?.id ?? null;
+          }
+          this.renderList();
+        }
+        getSelected() {
+          return this.items.find((i) => i.id === this.selectedId) ?? null;
+        }
+        select(id) {
+          this.selectedId = id;
+          this.renderList();
+          this.onSelectCb?.(this.selectedId, this.getSelected());
+        }
+        onSelect(cb) {
+          this.onSelectCb = cb;
+        }
+        filterText() {
+          return (this.filterInput?.value || "").trim().toLowerCase();
+        }
+        renderList() {
+          const keepScroll = this.list.scrollTop;
+          this.list.replaceChildren();
+          const q = this.filterText();
+          const shown = q ? this.items.filter((it) => (it.title || "").toLowerCase().includes(q) || (it.subtitle || "").toLowerCase().includes(q)) : this.items;
+          if (!shown.length) {
+            this.list.appendChild(h("div", "qmm-vlist__empty", this.emptyText));
+            return;
+          }
+          const ul = h("ul", "qmm-vlist__items");
+          for (const it of shown) {
+            const btn = h("button", "qmm-vtab");
+            btn.dataset.id = it.id;
+            btn.disabled = !!it.disabled;
+            if (this.renderItemCustom) this.renderItemCustom(it, btn);
+            else this.renderDefaultItem(it, btn);
+            btn.classList.toggle("active", it.id === this.selectedId);
+            btn.onclick = () => this.select(it.id);
+            const li = h("li");
+            li.appendChild(btn);
+            ul.appendChild(li);
+          }
+          this.list.appendChild(ul);
+          this.list.scrollTop = keepScroll;
+        }
+        renderDefaultItem(it, btn) {
+          const dot = h("div", "qmm-dot");
+          dot.style.background = it.statusColor || "#999a";
+          const img = h("img");
+          img.src = it.avatarUrl || "";
+          img.alt = it.title;
+          const text2 = h("div", "qmm-chip__text");
+          text2.appendChild(h("div", "t", it.title));
+          if (it.subtitle) text2.appendChild(h("div", "qmm-chip__sub", it.subtitle));
+          const chip = h("div", "qmm-chip");
+          chip.append(img, text2);
+          btn.append(dot, chip, it.badge != null ? h("span", "qmm-tag", String(it.badge)) : h("div"));
+        }
+      };
     }
   });
 
@@ -40384,6 +40174,128 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/ui/kit/hotkey.ts
+  function hotkeyButton(initial, onChange, opts = {}) {
+    const emptyLabel = opts.emptyLabel ?? "None";
+    const listeningLabel = opts.listeningLabel ?? "Press a key\u2026";
+    const clearable = opts.clearable ?? true;
+    let hk = initial ?? null;
+    let recording = false;
+    let recordingTimeout = null;
+    const btn = h("button", "qmm-hotkey");
+    btn.type = "button";
+    btn.setAttribute("aria-live", "polite");
+    const render = () => {
+      btn.classList.toggle("is-recording", recording);
+      btn.classList.toggle("is-empty", !hk);
+      btn.classList.toggle("is-assigned", !recording && !!hk);
+      if (recording) {
+        btn.textContent = listeningLabel;
+        btn.title = "Listening\u2026 press a key (Esc to cancel, Backspace to clear)";
+      } else if (!hk) {
+        btn.textContent = emptyLabel;
+        btn.title = "No key assigned";
+      } else {
+        btn.textContent = hotkeyToPretty(hk);
+        btn.title = "Click to rebind \u2022 Right-click to clear";
+      }
+    };
+    const setHotkey = (value) => {
+      hk = value ? { ...value } : null;
+    };
+    const commit = (value) => {
+      setHotkey(value);
+      onChange?.(hk);
+    };
+    btn.refreshHotkey = (value) => {
+      setHotkey(value);
+      render();
+    };
+    const stopRecording = () => {
+      if (!recording) return;
+      recording = false;
+      if (activeRecorder === stopRecording) activeRecorder = null;
+      window.removeEventListener("keydown", onKeyDown2, true);
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      window.removeEventListener("blur", onWindowBlur);
+      if (recordingTimeout !== null) clearTimeout(recordingTimeout);
+      recordingTimeout = null;
+      endKeybindCapture();
+      render();
+    };
+    const startRecording = () => {
+      if (recording) return;
+      activeRecorder?.();
+      recording = true;
+      activeRecorder = stopRecording;
+      beginKeybindCapture();
+      window.addEventListener("keydown", onKeyDown2, true);
+      document.addEventListener("pointerdown", onPointerDown, true);
+      window.addEventListener("blur", onWindowBlur);
+      recordingTimeout = window.setTimeout(stopRecording, RECORDING_TIMEOUT_MS);
+      render();
+    };
+    const onPointerDown = (e) => {
+      if (e.target instanceof Node && btn.contains(e.target)) return;
+      stopRecording();
+    };
+    const onWindowBlur = (e) => {
+      if (e.target === window) stopRecording();
+    };
+    function onKeyDown2(e) {
+      if (!recording) return;
+      if (!btn.isConnected) {
+        stopRecording();
+        return;
+      }
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (e.key === "Escape") {
+        stopRecording();
+        return;
+      }
+      if ((e.key === "Backspace" || e.key === "Delete") && clearable) {
+        commit(null);
+        stopRecording();
+        return;
+      }
+      const next = eventToHotkey(e, opts.allowModifierOnly ?? false);
+      if (!next) return;
+      commit(next);
+      stopRecording();
+    }
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (recording) {
+        stopRecording();
+        return;
+      }
+      startRecording();
+      btn.focus();
+    });
+    if (clearable) {
+      btn.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        if (!hk) return;
+        commit(null);
+        render();
+      });
+    }
+    render();
+    return btn;
+  }
+  var activeRecorder, RECORDING_TIMEOUT_MS;
+  var init_hotkey2 = __esm({
+    "src/ui/kit/hotkey.ts"() {
+      "use strict";
+      init_keyboard();
+      init_hotkey();
+      init_dom2();
+      activeRecorder = null;
+      RECORDING_TIMEOUT_MS = 8e3;
+    }
+  });
+
   // src/features/keybinds/menu.ts
   function isSectionCollapsed2(sectionId) {
     return getAriesStorage().keybinds?.collapsed?.[sectionId] === true;
@@ -45496,7 +45408,6 @@ Restore figures are averages; unlucky streaks do worse.`;
   function renderBehaviorTab(view) {
     view.innerHTML = "";
     const settings = CompanionService.getSettings();
-    let disposed = false;
     const card4 = collapsibleCard({
       icon: "\u{1F9ED}",
       title: "Behavior",
@@ -45525,7 +45436,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
     });
     void CompanionService.listNpcs().then((roster) => {
-      if (disposed) return;
       npcSelect.innerHTML = "";
       if (roster.length === 0) {
         npcSelect.append(new Option("No NPC detected", ""));
@@ -45538,13 +45448,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       npcSelect.value = CompanionService.getNpcId() ?? settings.npcId ?? "";
       npcSelect.disabled = false;
     }).catch(() => {
-      if (disposed) return;
       npcSelect.innerHTML = "";
       npcSelect.append(new Option("Unavailable", ""));
     });
     const status2 = styled("div", { fontSize: "12px", color: color.textDim, padding: "2px 2px 0" });
     function refresh() {
-      if (disposed) return;
       if (!CompanionService.isRunning()) {
         status2.textContent = "Inactive.";
         return;
@@ -45571,12 +45479,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       status2
     );
     refresh();
-    const timer2 = window.setInterval(refresh, STATUS_REFRESH_MS);
+    window.setInterval(refresh, STATUS_REFRESH_MS);
     view.append(card4.root);
-    view.__cleanup__ = () => {
-      disposed = true;
-      clearInterval(timer2);
-    };
   }
   var STATUS_REFRESH_MS, MODE_LABELS;
   var init_behaviorTab = __esm({
@@ -48216,10 +48120,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       renderStatus();
     }, IDENTITY_REFRESH_MS);
-    view.__cleanup__ = () => {
-      clearInterval(identityTimer);
-      unsubscribe2();
-    };
   }
   var EMPTY_HINT, IDENTITY_REFRESH_MS, SMALL;
   var init_chatTab = __esm({

@@ -29,7 +29,6 @@ function selectWith(options: Array<[value: string, label: string]>): HTMLSelectE
 export function renderBehaviorTab(view: HTMLElement): void {
   view.innerHTML = "";
   const settings = CompanionService.getSettings();
-  let disposed = false;
 
   const card = collapsibleCard({
     icon: "🧭",
@@ -68,7 +67,6 @@ export function renderBehaviorTab(view: HTMLElement): void {
 
   void CompanionService.listNpcs()
     .then((roster) => {
-      if (disposed) return;
       npcSelect.innerHTML = "";
       if (roster.length === 0) {
         npcSelect.append(new Option("No NPC detected", ""));
@@ -83,7 +81,6 @@ export function renderBehaviorTab(view: HTMLElement): void {
       npcSelect.disabled = false;
     })
     .catch(() => {
-      if (disposed) return;
       npcSelect.innerHTML = "";
       npcSelect.append(new Option("Unavailable", ""));
     });
@@ -91,7 +88,6 @@ export function renderBehaviorTab(view: HTMLElement): void {
   const status = styled("div", { fontSize: "12px", color: color.textDim, padding: "2px 2px 0" });
 
   function refresh(): void {
-    if (disposed) return;
     if (!CompanionService.isRunning()) {
       status.textContent = "Inactive.";
       return;
@@ -123,11 +119,7 @@ export function renderBehaviorTab(view: HTMLElement): void {
   );
 
   refresh();
-  const timer = window.setInterval(refresh, STATUS_REFRESH_MS);
+  window.setInterval(refresh, STATUS_REFRESH_MS);
 
   view.append(card.root);
-  (view as unknown as { __cleanup__?: () => void }).__cleanup__ = () => {
-    disposed = true;
-    clearInterval(timer);
-  };
 }

@@ -93,7 +93,7 @@ export function select(opts: { id?: string; width?: string; placeholder?: string
   return sel;
 }
 
-export function radio(name: string, value: string, checked = false): HTMLInputElement {
+function radio(name: string, value: string, checked = false): HTMLInputElement {
   const input = h("input", "qmm-radio");
   input.type = "radio";
   input.name = name;

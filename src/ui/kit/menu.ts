@@ -7,17 +7,7 @@
 // directly, and each helper can go once nothing calls it.
 
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
-import type { Hotkey } from "../../lib/hotkey";
-import { button, setButtonEnabled, type ButtonOptions, type KitButton } from "./button";
-import { card, errorBar, type CardHandle, type CardOptions, type ErrorBarHandle } from "./card";
 import { h } from "./dom";
-import { numberInput, radio, radioGroup, select, textInput, type NumberInput } from "./fields";
-import { hotkeyButton, type HotkeyButtonElement, type HotkeyButtonOptions } from "./hotkey";
-import { flexRow, formRow, type FlexRowOptions, type FormRowOptions } from "./layout";
-import { segmented, type SegmentedControl, type SegmentedItem } from "./segmented";
-import { rangeDual, slider, type RangeDualHandle } from "./sliders";
-import { switchInput, toggleChip, type ToggleChipOptions } from "./toggles";
-import { VTabs, type VTabsOptions } from "./vtabs";
 
 type TabRender = (root: HTMLElement, api: Menu) => void;
 type Handler = (...args: any[]) => void;
@@ -197,101 +187,6 @@ export class Menu {
   };
   private updateAltCursor(): void {
     this.root?.classList.toggle("qmm-alt-drag", this.altDown && this.hovering);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Compatibility helpers: each forwards to a kit component. Call the component
-  // instead in new code; the replacement is named on each line.
-
-  /** Compat: use `button()` from ./button. */
-  btn(label: string, onClickOrOpts?: (() => void) | ButtonOptions): KitButton {
-    return button(label, typeof onClickOrOpts === "function" ? { onClick: onClickOrOpts } : onClickOrOpts);
-  }
-  /** Compat: use `setButtonEnabled()` from ./button. */
-  setButtonEnabled(btn: HTMLButtonElement, enabled: boolean): void {
-    setButtonEnabled(btn, enabled);
-  }
-  /** Compat: use `flexRow()` from ./layout. */
-  flexRow(opts?: FlexRowOptions): HTMLDivElement {
-    return flexRow(opts);
-  }
-  /** Compat: use `formRow()` from ./layout. */
-  formRow(labelText: string, control: HTMLElement, opts?: FormRowOptions) {
-    return formRow(labelText, control, opts);
-  }
-  /** Compat: use `card()` from ./card. */
-  card(title: string, opts?: CardOptions): CardHandle {
-    return card(title, opts);
-  }
-  /** Compat: use `toggleChip()` from ./toggles. */
-  toggleChip(labelText: string, opts?: ToggleChipOptions) {
-    return toggleChip(labelText, opts);
-  }
-  /** Compat: use `select()` from ./fields. */
-  select(opts?: { id?: string; width?: string; placeholder?: string }): HTMLSelectElement {
-    return select(opts);
-  }
-  /** Compat: use `errorBar()` from ./card. */
-  errorBar(): ErrorBarHandle {
-    return errorBar();
-  }
-  /** Compat: use `h("label", "qmm-label", text)` from ./dom. */
-  label(text: string): HTMLLabelElement {
-    return h("label", "qmm-label", text);
-  }
-  /** Compat: use `numberInput()` from ./fields. */
-  inputNumber(min?: number, max?: number, step?: number, value?: number): NumberInput {
-    return numberInput(min, max, step, value);
-  }
-  /** Compat: use `textInput()` from ./fields. */
-  inputText(placeholder?: string, value?: string): HTMLInputElement {
-    return textInput(placeholder, value);
-  }
-  /** Compat: use `radio()` from ./fields. */
-  radio(name: string, value: string, checked?: boolean): HTMLInputElement {
-    return radio(name, value, checked);
-  }
-  /** Compat: use `radioGroup()` from ./fields. */
-  radioGroup<T extends string>(
-    name: string,
-    options: Array<{ value: T; label: string }>,
-    selected: T | null,
-    onChange: (value: T) => void,
-  ): HTMLDivElement {
-    return radioGroup(name, options, selected, onChange);
-  }
-  /** Compat: use `segmented()` from ./segmented. */
-  segmented<T extends string>(
-    items: Array<SegmentedItem<T>>,
-    selected: T,
-    onChange?: (value: T) => void,
-    opts?: { fullWidth?: boolean; id?: string; ariaLabel?: string },
-  ): SegmentedControl<T> {
-    return segmented(items, selected, onChange, opts);
-  }
-  /** Compat: use `slider()` from ./sliders. */
-  slider(min?: number, max?: number, step?: number, value?: number): HTMLInputElement {
-    return slider(min, max, step, value);
-  }
-  /** Compat: use `rangeDual()` from ./sliders. */
-  rangeDual(min?: number, max?: number, step?: number, valueMin?: number, valueMax?: number): RangeDualHandle {
-    return rangeDual(min, max, step, valueMin, valueMax);
-  }
-  /** Compat: use `switchInput()` from ./toggles. */
-  switch(checked?: boolean): HTMLInputElement {
-    return switchInput(checked);
-  }
-  /** Compat: use `new VTabs()` from ./vtabs. */
-  vtabs(options?: VTabsOptions): VTabs {
-    return new VTabs(options);
-  }
-  /** Compat: use `hotkeyButton()` from ./hotkey. */
-  hotkeyButton(
-    initial: Hotkey | null,
-    onChange?: (hk: Hotkey | null) => void,
-    opts?: HotkeyButtonOptions,
-  ): HotkeyButtonElement {
-    return hotkeyButton(initial, onChange, opts);
   }
 }
 

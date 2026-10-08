@@ -188,9 +188,4 @@ export function renderChatTab(view: HTMLElement): void {
     }
     renderStatus();
   }, IDENTITY_REFRESH_MS);
-
-  (view as unknown as { __cleanup__?: () => void }).__cleanup__ = () => {
-    clearInterval(identityTimer);
-    unsubscribe();
-  };
 }
