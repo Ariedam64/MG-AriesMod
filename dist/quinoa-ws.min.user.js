@@ -40832,7 +40832,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (cachedSpawnTiles) return cachedSpawnTiles;
     if (!loading) {
       loading = loadSpawnTiles().then((tiles) => {
-        cachedSpawnTiles = tiles;
+        if (tiles.length) cachedSpawnTiles = tiles;
         loading = null;
         return tiles;
       });

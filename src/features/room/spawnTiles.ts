@@ -36,12 +36,16 @@ async function loadSpawnTiles(): Promise<number[]> {
   return [];
 }
 
-/** The spawn tiles in ascending order, read once per session. */
+/**
+ * The spawn tiles in ascending order, read once per session. An empty answer
+ * means the map was not there yet, so it is not kept and the next call reads
+ * again.
+ */
 export async function sortedSpawnTiles(): Promise<number[]> {
   if (cachedSpawnTiles) return cachedSpawnTiles;
   if (!loading) {
     loading = loadSpawnTiles().then((tiles) => {
-      cachedSpawnTiles = tiles;
+      if (tiles.length) cachedSpawnTiles = tiles;
       loading = null;
       return tiles;
     });
