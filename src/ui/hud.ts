@@ -38,7 +38,7 @@ import { isDiscordSurface } from "../platform/environment";
 import { startInventorySortingObserver } from "../features/inventory/sorting";
 import { startActivityLogFilterPixi } from "../features/activityLog/filterBar";
 import { readAriesPath, writeAriesPath } from "../platform/storage";
-import { startActivityLogHistoryWatcher } from "../features/activityLog/history";
+import { startActivityLogHistoryWatcher } from "../features/activityLog/historyWatcher";
 import { startHatchTracker } from "../features/hatch/tracker";
 import { pill, setTone, type StatusTone } from "./kit/badges";
 import { button } from "./kit/button";
