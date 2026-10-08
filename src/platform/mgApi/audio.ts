@@ -1,5 +1,3 @@
-// mgApi/endpoints/audio.ts
-
 import { mgApiGetJson } from "./http";
 
 type AudioTheme = { name: string; ambience?: string; music?: string };

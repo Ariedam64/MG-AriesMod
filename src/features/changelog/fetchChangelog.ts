@@ -2,7 +2,7 @@
 // Release notes fetched from remote JSON on GitHub, one entry per notable
 // version. Mirrors services/tools.ts: same repo, same fetch/parse shape.
 
-import { fetchText } from "../../platform/modVersion";
+import { getText } from "../../platform/http";
 
 export type ChangelogEntry = {
   version: string;
@@ -73,7 +73,7 @@ function parseChangelogPayload(raw: unknown): ChangelogEntry[] {
 async function fetchChangelog(): Promise<ChangelogEntry[]> {
   const url = `${RAW_BASE_URL}/refs/heads/${REPO_BRANCH}/${CHANGELOG_FILE_PATH}?t=${Date.now()}`;
 
-  const text = await fetchText(url);
+  const text = await getText(url, { noCache: true });
   const raw = JSON.parse(text) as unknown;
   return parseChangelogPayload(raw);
 }

@@ -1,7 +1,7 @@
 // src/services/tools.ts
 // External community tools fetched from remote JSON on GitHub
 
-import { fetchText } from "../../platform/modVersion";
+import { getText } from "../../platform/http";
 
 export type ExternalToolCreator = {
   name: string;
@@ -121,7 +121,7 @@ export async function fetchTools(): Promise<ExternalTool[]> {
   const url = `${RAW_BASE_URL}/refs/heads/${REPO_BRANCH}/${TOOLS_FILE_PATH}?t=${Date.now()}`;
 
   try {
-    const text = await fetchText(url);
+    const text = await getText(url, { noCache: true });
     const raw = JSON.parse(text) as unknown;
     return parseToolsPayload(raw);
   } catch (error) {

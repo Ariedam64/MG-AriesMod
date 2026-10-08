@@ -1,39 +1,32 @@
-// src/utils/page-context.ts
+const sandboxWindow = window;
 
-declare const unsafeWindow:
-  | (Window & typeof globalThis & { [key: string]: any })
-  | undefined;
+/**
+ * The page's own window, where the game's globals live. Under `@inject-into
+ * page` it is `window` itself; `unsafeWindow` covers a manager that runs the
+ * script in a sandbox anyway.
+ */
+export const pageWindow: Window & typeof globalThis & Record<string, any> =
+  typeof unsafeWindow !== "undefined" && unsafeWindow ? (unsafeWindow as any) : (sandboxWindow as any);
 
-const sandboxWin = window;
-const pageWin =
-  typeof unsafeWindow !== "undefined" && unsafeWindow
-    ? unsafeWindow
-    : sandboxWin;
+const isSandboxed = pageWindow !== sandboxWindow;
 
-/** Reference to the actual page window (falls back to the current window). */
-export const pageWindow = pageWin;
-
-/** Whether the userscript is running in an isolated sandbox. */
-const isIsolatedContext = pageWin !== sandboxWin;
-
-
-/** Mirror a global value onto both the page window and sandbox window. */
-export function shareGlobal(name: string, value: any) {
+/** Sets a global on the page window, and on the sandbox window too when they differ. */
+export function shareGlobal(name: string, value: any): void {
   try {
-    (pageWin as any)[name] = value;
+    pageWindow[name] = value;
   } catch {}
-  if (isIsolatedContext) {
+  if (isSandboxed) {
     try {
-      (sandboxWin as any)[name] = value;
+      (sandboxWindow as any)[name] = value;
     } catch {}
   }
 }
 
-/** Read a global value from the page (preferring sandbox if available). */
+/** Reads a global, from the sandbox window first when there is one. */
 export function readSharedGlobal<T = any>(name: string): T | undefined {
-  if (isIsolatedContext) {
-    const sandboxValue = (sandboxWin as any)[name];
+  if (isSandboxed) {
+    const sandboxValue = (sandboxWindow as any)[name];
     if (sandboxValue !== undefined) return sandboxValue as T;
   }
-  return (pageWin as any)[name] as T | undefined;
+  return pageWindow[name] as T | undefined;
 }

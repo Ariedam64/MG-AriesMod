@@ -40,14 +40,9 @@ import { showAutoRecoDisabledNoticeOnce } from "./features/autoReco/disabledNoti
 import { showRoomPrivacyNoticeOnce } from "./features/room/privacyNotice";
 import { showChangelogNoticeOnce } from "./features/changelog/notice";
 import { tos } from "./game/pixi/tileObjects";
-import { installEmojiDataFetchInterceptor, isDiscordActivityContext } from "./platform/discordCsp";
 
-
-
-// Import from the modules directly (not the ariesModAPI barrel): the barrel
-// re-exports the whole API layer (streams, endpoints) which would drag that
-// dead code into the bundle. The standalone Community Hub owns everything
-// except the collect-state heartbeat, which stays here.
+// The standalone Community Hub owns the rest of the mod's API. Only the
+// sign-in bridge and the collect-state heartbeat stay here.
 import { initAuthBridgeIfNeeded } from "./platform/ariesApi/authBridge";
 import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/playerStateReport";
 
@@ -57,10 +52,6 @@ import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/play
   "use strict";
 
   if (initAuthBridgeIfNeeded()) return;
-
-    if (isDiscordActivityContext()) {
-    installEmojiDataFetchInterceptor();
-  }
 
   installPageWebSocketHook();
   MGData.init();

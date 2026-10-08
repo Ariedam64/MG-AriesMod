@@ -1,5 +1,3 @@
-// mgApi/endpoints/sprites.ts
-
 import { buildMgApiUrl, mgApiGetJson } from "./http";
 
 type SpriteCatalogEntry = { name: string; url: string };

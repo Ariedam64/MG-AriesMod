@@ -255,17 +255,17 @@
       }
     };
     tryResolveExisting();
-    const pageWin3 = globalThis.unsafeWindow || globalThis;
+    const pageWin2 = globalThis.unsafeWindow || globalThis;
     let fallbackPolls = 0;
-    const fallbackInterval = pageWin3.setInterval(() => {
+    const fallbackInterval = pageWin2.setInterval(() => {
       if (APP && RDR) {
-        pageWin3.clearInterval(fallbackInterval);
+        pageWin2.clearInterval(fallbackInterval);
         return;
       }
       tryResolveExisting();
       fallbackPolls += 1;
       if (fallbackPolls >= 50) {
-        pageWin3.clearInterval(fallbackInterval);
+        pageWin2.clearInterval(fallbackInterval);
       }
     }, 100);
     return {
@@ -402,87 +402,143 @@
     }
   });
 
-  // src/game/sprites/data/assetFetcher.ts
-  function recordNetDebug(entry) {
-    netDebugLog.push(entry);
-    if (netDebugLog.length > 200) netDebugLog.shift();
-  }
-  function fetchFallback(url, type) {
-    return fetch(url).then(async (res) => {
-      if (!res.ok) throw new Error(`HTTP ${res.status} (${url})`);
-      if (type === "blob") return { status: res.status, response: await res.blob(), responseText: "" };
-      const text = await res.text();
-      return {
-        status: res.status,
-        response: type === "json" ? JSON.parse(text) : text,
-        responseText: text
-      };
-    }).catch((err) => {
-      throw new Error(`Network (${url}): ${err instanceof Error ? err.message : String(err)}`);
-    });
-  }
-  function gmRequest(url, type) {
-    return new Promise(
-      (resolve, reject) => GM_xmlhttpRequest({
-        method: "GET",
-        url,
-        responseType: type,
-        timeout: GM_TIMEOUT_MS,
-        onload: (r) => r.status >= 200 && r.status < 300 ? resolve(r) : reject(new Error(`HTTP ${r.status} (${url})`)),
-        onerror: () => reject(new Error(`Network (${url})`)),
-        ontimeout: () => reject(new Error(`Timeout (${url})`))
-      })
-    );
-  }
-  async function gm(url, type = "text") {
-    const root = globalThis.unsafeWindow || globalThis;
-    if (typeof GM_xmlhttpRequest !== "function") {
-      const entry2 = { url, path: "fetch-fallback", startedAt: Date.now(), finishedAt: null, ok: null, error: null };
-      recordNetDebug(entry2);
-      try {
-        const result = await fetchFallback(url, type);
-        entry2.finishedAt = Date.now();
-        entry2.ok = true;
-        return result;
-      } catch (error) {
-        entry2.finishedAt = Date.now();
-        entry2.ok = false;
-        entry2.error = error instanceof Error ? error.message : String(error);
-        throw error;
-      }
-    }
-    const entry = { url, path: "gm", startedAt: Date.now(), finishedAt: null, ok: null, error: null };
-    recordNetDebug(entry);
-    let hardTimeoutId = null;
-    const hardTimeout = new Promise((_, reject) => {
-      hardTimeoutId = root.setTimeout(() => reject(new Error(`Hard timeout (${url})`)), GM_TIMEOUT_MS + 2e3);
-    });
+  // src/platform/environment.ts
+  function isDiscordActivityContext() {
     try {
-      const result = await Promise.race([gmRequest(url, type), hardTimeout]);
-      root.clearTimeout(hardTimeoutId);
-      entry.finishedAt = Date.now();
-      entry.ok = true;
-      return result;
-    } catch (error) {
-      root.clearTimeout(hardTimeoutId);
-      entry.finishedAt = Date.now();
-      entry.ok = false;
-      entry.error = error instanceof Error ? error.message : String(error);
-      const fallbackEntry = { url, path: "gm-timeout-fallback", startedAt: Date.now(), finishedAt: null, ok: null, error: null };
-      recordNetDebug(fallbackEntry);
-      try {
-        const result = await fetchFallback(url, type);
-        fallbackEntry.finishedAt = Date.now();
-        fallbackEntry.ok = true;
-        return result;
-      } catch (fallbackError) {
-        fallbackEntry.finishedAt = Date.now();
-        fallbackEntry.ok = false;
-        fallbackEntry.error = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-        throw fallbackError;
-      }
+      return window.location.hostname.endsWith("discordsays.com");
+    } catch {
+      return false;
     }
   }
+  function isInIframe() {
+    try {
+      return window.top !== window.self;
+    } catch {
+      return true;
+    }
+  }
+  function hostOf(url) {
+    if (!url) return null;
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return null;
+    }
+  }
+  function detectEnvironment() {
+    const framed = isInIframe();
+    const referrerHost = hostOf(document.referrer);
+    const embeddedInDiscord = framed && !!referrerHost && /(^|\.)discord(app)?\.com$/i.test(referrerHost);
+    return {
+      surface: isDiscordActivityContext() || embeddedInDiscord ? "discord" : "web",
+      host: location.hostname,
+      origin: location.origin,
+      isInIframe: framed,
+      platform: /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) ? "mobile" : "desktop"
+    };
+  }
+  function isDiscordSurface() {
+    return detectEnvironment().surface === "discord";
+  }
+  var init_environment = __esm({
+    "src/platform/environment.ts"() {
+      "use strict";
+    }
+  });
+
+  // src/platform/http.ts
+  function hasGm() {
+    return typeof GM_xmlhttpRequest === "function";
+  }
+  function gmRequest(req, kind) {
+    return new Promise((resolve, reject) => {
+      if (!hasGm()) {
+        reject(new Error("GM_xmlhttpRequest not available"));
+        return;
+      }
+      let deadline;
+      if (req.timeoutMs) {
+        deadline = setTimeout(
+          () => reject(new Error(`Hard timeout for ${req.url}`)),
+          req.timeoutMs + HARD_DEADLINE_GRACE_MS
+        );
+      }
+      const settle = () => clearTimeout(deadline);
+      const details = {
+        method: req.method ?? "GET",
+        url: req.url,
+        onload: (res) => {
+          settle();
+          const body = kind === "text" ? res.responseText : res.response;
+          resolve({ status: res.status, ok: isOk(res.status), body: body ?? null });
+        },
+        onerror: () => {
+          settle();
+          reject(new Error(`Network error for ${req.url}`));
+        },
+        ontimeout: () => {
+          settle();
+          reject(new Error(`Timeout for ${req.url}`));
+        }
+      };
+      if (kind !== "text") details.responseType = kind;
+      if (req.headers) details.headers = req.headers;
+      if (req.body !== void 0) details.data = req.body;
+      if (req.noCache) details.nocache = true;
+      if (req.timeoutMs) details.timeout = req.timeoutMs;
+      GM_xmlhttpRequest(details);
+    });
+  }
+  async function fetchRequest(req, kind) {
+    const res = await fetch(req.url, {
+      method: req.method ?? "GET",
+      headers: req.headers,
+      body: req.body,
+      cache: req.noCache ? "no-store" : void 0
+    });
+    const body = kind === "blob" ? await res.blob() : kind === "arraybuffer" ? await res.arrayBuffer() : await res.text();
+    return { status: res.status, ok: res.ok, body };
+  }
+  async function request(req, kind) {
+    if (req.preferGm) {
+      if (hasGm()) {
+        try {
+          const res = await gmRequest(req, kind);
+          if (res.ok) return res;
+        } catch {
+        }
+      }
+      return fetchRequest(req, kind);
+    }
+    if (isDiscordActivityContext()) return gmRequest(req, kind);
+    try {
+      return await fetchRequest(req, kind);
+    } catch (error) {
+      if (!hasGm()) throw error;
+      return gmRequest(req, kind);
+    }
+  }
+  async function getOk(url, kind, options) {
+    const res = await request({ ...options, url }, kind);
+    if (!res.ok || res.body == null) throw new Error(`HTTP ${res.status} for ${url}`);
+    return res.body;
+  }
+  async function getJSON(url, options) {
+    return JSON.parse(await getText(url, options));
+  }
+  var HARD_DEADLINE_GRACE_MS, isOk, getText, getBlob;
+  var init_http = __esm({
+    "src/platform/http.ts"() {
+      "use strict";
+      init_environment();
+      HARD_DEADLINE_GRACE_MS = 2e3;
+      isOk = (status) => status >= 200 && status < 300;
+      getText = (url, options) => getOk(url, "text", options);
+      getBlob = (url, options) => getOk(url, "blob", options);
+    }
+  });
+
+  // src/game/sprites/data/assetFetcher.ts
   function blobToImage(blob) {
     return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(blob);
@@ -556,8 +612,8 @@
     if (ctors?.Texture?.from) {
       for (const alias of [imgName, imgName.replace(/^.*\//, "")]) {
         try {
-          const cached = ctors.Texture.from(alias);
-          if (cached && cached !== ctors.Texture.EMPTY) return cached;
+          const cached2 = ctors.Texture.from(alias);
+          if (cached2 && cached2 !== ctors.Texture.EMPTY) return cached2;
         } catch {
         }
       }
@@ -599,7 +655,7 @@
     const loadOne = async (path) => {
       if (seen.has(path)) return;
       seen.add(path);
-      const json = await getJSON(joinPath(base, path));
+      const json = await getJSON2(joinPath(base, path));
       data[path] = json;
       if (json?.meta?.related_multi_packs) {
         for (const rel of json.meta.related_multi_packs) {
@@ -612,19 +668,15 @@
     }
     return data;
   }
-  var GM_TIMEOUT_MS, netDebugLog, getJSON, getBlob;
+  var ASSET_REQUEST, getJSON2, getBlob2;
   var init_assetFetcher = __esm({
     "src/game/sprites/data/assetFetcher.ts"() {
       "use strict";
       init_path();
-      GM_TIMEOUT_MS = 5e3;
-      netDebugLog = [];
-      {
-        const root = globalThis.unsafeWindow || globalThis;
-        root.__MG_NET_DEBUG__ = netDebugLog;
-      }
-      getJSON = async (url) => JSON.parse((await gm(url, "text")).responseText);
-      getBlob = async (url) => (await gm(url, "blob")).response;
+      init_http();
+      ASSET_REQUEST = { preferGm: true, timeoutMs: 5e3 };
+      getJSON2 = (url) => getJSON(url, ASSET_REQUEST);
+      getBlob2 = (url) => getBlob(url, ASSET_REQUEST);
     }
   });
 
@@ -1379,309 +1431,64 @@
     }
   });
 
-  // src/platform/gm.ts
-  function gmGet(url, responseType = "text") {
-    return new Promise((resolve, reject) => {
-      if (typeof GM_xmlhttpRequest !== "function") {
-        reject(new Error("GM_xmlhttpRequest not available"));
-        return;
-      }
-      GM_xmlhttpRequest({
-        method: "GET",
-        url,
-        responseType,
-        onload: (r) => {
-          if (r.status >= 200 && r.status < 300) resolve(r);
-          else reject(new Error(`HTTP ${r.status} for ${url}`));
-        },
-        onerror: () => reject(new Error(`Network error for ${url}`)),
-        ontimeout: () => reject(new Error(`Timeout for ${url}`))
-      });
-    });
-  }
-  var ORIGIN, sleep2, getJSON2, getBlob2;
-  var init_gm = __esm({
-    "src/platform/gm.ts"() {
+  // src/lib/async.ts
+  var sleep2;
+  var init_async2 = __esm({
+    "src/lib/async.ts"() {
       "use strict";
-      ORIGIN = "https://magicgarden.gg";
       sleep2 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-      getJSON2 = async (url) => JSON.parse((await gmGet(url, "text")).responseText);
-      getBlob2 = async (url) => (await gmGet(url, "blob")).response;
     }
   });
 
-  // src/platform/discordCsp.ts
-  function isDiscordActivityContext() {
-    try {
-      return window.location.hostname.endsWith("discordsays.com");
-    } catch {
-      return false;
-    }
-  }
-  function _isImgUrlSafe(url) {
-    if (!url || url.startsWith("blob:") || url.startsWith("data:") || url.startsWith("/")) return true;
-    try {
-      const { hostname } = new URL(url);
-      return _SAFE_IMG_HOSTS.some((h) => hostname === h || hostname.endsWith("." + h));
-    } catch {
-      return true;
-    }
-  }
-  function setImageSafe(img, url) {
-    if (!url) return;
-    if (!isDiscordActivityContext()) {
-      img.src = url;
-      return;
-    }
-    if (_isImgUrlSafe(url)) {
-      img.src = url;
-      return;
-    }
-    const cached = _gmImgCache.get(url);
-    if (cached) {
-      img.src = cached;
-      return;
-    }
-    const pending6 = _gmImgPending.get(url);
-    if (pending6) {
-      pending6.push(img);
-      return;
-    }
-    _gmImgPending.set(url, [img]);
-    GM_xmlhttpRequest({
-      method: "GET",
-      url,
-      headers: {},
-      responseType: "arraybuffer",
-      onload: (res) => {
-        const imgs = _gmImgPending.get(url) ?? [];
-        _gmImgPending.delete(url);
-        if (!res.response) {
-          for (const el2 of imgs) el2.src = url;
-          return;
-        }
-        const ext = url.split(".").pop()?.toLowerCase().split("?")[0] ?? "png";
-        const mime = _extMimeMap[ext] ?? "image/png";
-        const blob = new Blob([res.response], { type: mime });
-        const blobUrl = URL.createObjectURL(blob);
-        _gmImgCache.set(url, blobUrl);
-        for (const el2 of imgs) el2.src = blobUrl;
-      },
-      onerror: () => {
-        const imgs = _gmImgPending.get(url) ?? [];
-        _gmImgPending.delete(url);
-        for (const el2 of imgs) el2.src = url;
-      }
-    });
-  }
-  function getAudioUrlSafe(url) {
-    return new Promise((resolve) => {
-      if (!url) {
-        resolve(url);
-        return;
-      }
-      if (!isDiscordActivityContext()) {
-        resolve(url);
-        return;
-      }
-      const cached = _gmAudioCache.get(url);
-      if (cached) {
-        resolve(cached);
-        return;
-      }
-      const pending6 = _gmAudioPending.get(url);
-      if (pending6) {
-        pending6.push(resolve);
-        return;
-      }
-      _gmAudioPending.set(url, [resolve]);
-      GM_xmlhttpRequest({
-        method: "GET",
-        url,
-        headers: {},
-        responseType: "arraybuffer",
-        onload: (res) => {
-          const callbacks = _gmAudioPending.get(url) ?? [];
-          _gmAudioPending.delete(url);
-          if (!res.response) {
-            for (const cb of callbacks) cb(url);
-            return;
-          }
-          const ext = url.split(".").pop()?.toLowerCase().split("?")[0] ?? "mp3";
-          const audioMimeMap = {
-            mp3: "audio/mpeg",
-            ogg: "audio/ogg",
-            wav: "audio/wav",
-            m4a: "audio/mp4"
-          };
-          const mime = audioMimeMap[ext] ?? "audio/mpeg";
-          const blob = new Blob([res.response], { type: mime });
-          const blobUrl = URL.createObjectURL(blob);
-          _gmAudioCache.set(url, blobUrl);
-          for (const cb of callbacks) cb(blobUrl);
-        },
-        onerror: () => {
-          const callbacks = _gmAudioPending.get(url) ?? [];
-          _gmAudioPending.delete(url);
-          for (const cb of callbacks) cb(url);
-        }
-      });
-    });
-  }
-  function _emojiMakeResponse(json, method) {
-    if (method === "HEAD") {
-      return new Response(null, {
-        status: 200,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
-    return new Response(json, {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
-  }
-  function installEmojiDataFetchInterceptor() {
-    if (_emojiInterceptorInstalled) return;
-    _emojiInterceptorInstalled = true;
-    const _origFetch = window.fetch.bind(window);
-    window.fetch = function(input, init2) {
-      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-      if (!url.startsWith(EMOJI_DATA_CDN_PREFIX)) {
-        return _origFetch(input, init2);
-      }
-      const method = (init2?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
-      if (_emojiJson) {
-        return Promise.resolve(_emojiMakeResponse(_emojiJson, method));
-      }
-      return new Promise((resolve) => {
-        _emojiPending.push((json) => {
-          resolve(
-            json ? _emojiMakeResponse(json, method) : new Response(null, { status: 503 })
-          );
-        });
-      });
-    };
-    void withDiscordPollPause(async () => {
-      return new Promise((resolve) => {
-        GM_xmlhttpRequest({
-          method: "GET",
-          url: `${EMOJI_DATA_CDN_PREFIX}@^1/en/emojibase/data.json`,
-          headers: {},
-          onload: (res) => {
-            if (res.status >= 200 && res.status < 300 && res.responseText) {
-              _emojiJson = res.responseText;
-              for (const cb of _emojiPending) cb(_emojiJson);
-            } else {
-              console.error("[discordCsp] emoji fetch failed:", res.status);
-              for (const cb of _emojiPending) cb(null);
-            }
-            _emojiPending = [];
-            resolve();
-          },
-          onerror: (err) => {
-            console.error("[discordCsp] emoji fetch error:", err);
-            for (const cb of _emojiPending) cb(null);
-            _emojiPending = [];
-            resolve();
-          }
-        });
-      });
-    });
-  }
-  var _SAFE_IMG_HOSTS, _gmImgCache, _gmImgPending, _extMimeMap, _gmAudioCache, _gmAudioPending, EMOJI_DATA_CDN_PREFIX, _emojiJson, _emojiPending, _emojiInterceptorInstalled;
-  var init_discordCsp = __esm({
-    "src/platform/discordCsp.ts"() {
+  // src/platform/gm.ts
+  var ORIGIN, getJSON3, getBlob3;
+  var init_gm = __esm({
+    "src/platform/gm.ts"() {
       "use strict";
-      init_discordPolls();
-      _SAFE_IMG_HOSTS = ["cdn.discordapp.com", "media.discordapp.net"];
-      _gmImgCache = /* @__PURE__ */ new Map();
-      _gmImgPending = /* @__PURE__ */ new Map();
-      _extMimeMap = {
-        png: "image/png",
-        jpg: "image/jpeg",
-        jpeg: "image/jpeg",
-        gif: "image/gif",
-        webp: "image/webp",
-        svg: "image/svg+xml"
-      };
-      _gmAudioCache = /* @__PURE__ */ new Map();
-      _gmAudioPending = /* @__PURE__ */ new Map();
-      EMOJI_DATA_CDN_PREFIX = "https://cdn.jsdelivr.net/npm/emoji-picker-element-data";
-      _emojiJson = null;
-      _emojiPending = [];
-      _emojiInterceptorInstalled = false;
+      init_http();
+      init_async2();
+      ORIGIN = "https://magicgarden.gg";
+      getJSON3 = (url) => getJSON(url, { preferGm: true });
+      getBlob3 = (url) => getBlob(url, { preferGm: true });
     }
   });
 
   // src/platform/ariesApi/discordPolls.ts
-  function pauseDiscordLongPolls() {
-    if (!isDiscordActivityContext()) return;
-    _pollPauseDepth += 1;
-    for (const conn of _unifiedConnections.values()) {
-      if (conn.mode !== "poll") continue;
-      conn.pollPaused = true;
-      conn.pollToken += 1;
-      conn.pollRunning = false;
-      conn.pollAbort?.();
-    }
-  }
-  function resumeDiscordLongPolls() {
-    if (!isDiscordActivityContext()) return;
-    _pollPauseDepth = Math.max(0, _pollPauseDepth - 1);
-    if (_pollPauseDepth > 0) return;
-    for (const conn of _unifiedConnections.values()) {
-      if (conn.mode !== "poll") continue;
-      conn.pollPaused = false;
-      conn.pollKick?.();
-    }
-  }
-  async function withDiscordPollPause(fn) {
-    if (!isDiscordActivityContext()) return await fn();
-    pauseDiscordLongPolls();
-    try {
-      return await fn();
-    } finally {
-      resumeDiscordLongPolls();
-    }
-  }
-  var _unifiedConnections, _pollPauseDepth;
+  var withDiscordPollPause;
   var init_discordPolls = __esm({
     "src/platform/ariesApi/discordPolls.ts"() {
       "use strict";
-      init_discordCsp();
-      _unifiedConnections = /* @__PURE__ */ new Map();
-      _pollPauseDepth = 0;
+      withDiscordPollPause = (fn) => fn();
     }
   });
 
   // src/platform/pageContext.ts
   function shareGlobal(name, value) {
     try {
-      pageWin2[name] = value;
+      pageWindow[name] = value;
     } catch {
     }
-    if (isIsolatedContext) {
+    if (isSandboxed) {
       try {
-        sandboxWin[name] = value;
+        sandboxWindow[name] = value;
       } catch {
       }
     }
   }
   function readSharedGlobal(name) {
-    if (isIsolatedContext) {
-      const sandboxValue = sandboxWin[name];
+    if (isSandboxed) {
+      const sandboxValue = sandboxWindow[name];
       if (sandboxValue !== void 0) return sandboxValue;
     }
-    return pageWin2[name];
+    return pageWindow[name];
   }
-  var sandboxWin, pageWin2, pageWindow, isIsolatedContext;
+  var sandboxWindow, pageWindow, isSandboxed;
   var init_pageContext = __esm({
     "src/platform/pageContext.ts"() {
       "use strict";
-      sandboxWin = window;
-      pageWin2 = typeof unsafeWindow !== "undefined" && unsafeWindow ? unsafeWindow : sandboxWin;
-      pageWindow = pageWin2;
-      isIsolatedContext = pageWin2 !== sandboxWin;
+      sandboxWindow = window;
+      pageWindow = typeof unsafeWindow !== "undefined" && unsafeWindow ? unsafeWindow : sandboxWindow;
+      isSandboxed = pageWindow !== sandboxWindow;
     }
   });
 
@@ -2168,6 +1975,39 @@
     }
   });
 
+  // src/platform/mgApi/http.ts
+  function buildMgApiUrl(path, query) {
+    const url = new URL(path, MG_API_BASE_URL);
+    for (const [key2, value] of Object.entries(query ?? {})) {
+      if (value !== void 0) url.searchParams.set(key2, String(value));
+    }
+    return url.toString();
+  }
+  async function mgApiGetJson(path, query) {
+    try {
+      const res = await request({ url: buildMgApiUrl(path, query) }, "text");
+      return res.ok && res.body ? JSON.parse(res.body) : null;
+    } catch {
+      return null;
+    }
+  }
+  async function mgApiGetBinary(url) {
+    try {
+      const res = await request({ url }, "arraybuffer");
+      return res.ok ? res.body : null;
+    } catch {
+      return null;
+    }
+  }
+  var MG_API_BASE_URL;
+  var init_http2 = __esm({
+    "src/platform/mgApi/http.ts"() {
+      "use strict";
+      init_http();
+      MG_API_BASE_URL = "https://mg-api.ariedam.fr";
+    }
+  });
+
   // src/data/live/capture.ts
   function setCapturedData(key2, value) {
     if (captureState.data[key2] != null) return;
@@ -2184,7 +2024,7 @@
     if (captureState.fetchStarted) return;
     captureState.fetchStarted = true;
     try {
-      const data = await withDiscordPollPause(() => getJSON2(`${API_BASE}/data`));
+      const data = await getJSON(buildMgApiUrl("/data"), { preferGm: true });
       if (data.plants) setCapturedData("plants", data.plants);
       if (data.pets) setCapturedData("pets", data.pets);
       if (data.items) setCapturedData("items", data.items);
@@ -2210,14 +2050,12 @@
       captureState.fetchStarted = false;
     }
   }
-  var API_BASE;
   var init_capture = __esm({
     "src/data/live/capture.ts"() {
       "use strict";
       init_state2();
-      init_gm();
-      init_discordPolls();
-      API_BASE = "https://mg-api.ariedam.fr";
+      init_http();
+      init_http2();
     }
   });
 
@@ -2694,11 +2532,11 @@
   function fetchIndex() {
     if (indexReady) return indexReady;
     indexReady = withDiscordPollPause(
-      () => getJSON2(
-        `${API_BASE2}/assets/sprite-data?flat=1`
+      () => getJSON3(
+        `${API_BASE}/assets/sprite-data?flat=1`
       )
     ).then((data) => {
-      setSpriteIndex(data.items || [], API_BASE2);
+      setSpriteIndex(data.items || [], API_BASE);
       console.log("[SpriteIconCache] sprite index loaded", { count: spriteIndexSize() });
     }).catch((err) => {
       console.error("[SpriteIconCache] failed to fetch sprite index", err);
@@ -2847,7 +2685,7 @@
   function getSpriteObjectUrl(apiUrl) {
     let promise = objectUrlCache.get(apiUrl);
     if (promise) return promise;
-    promise = withDiscordPollPause(() => getBlob2(apiUrl)).then((blob) => URL.createObjectURL(blob));
+    promise = withDiscordPollPause(() => getBlob3(apiUrl)).then((blob) => URL.createObjectURL(blob));
     objectUrlCache.set(apiUrl, promise);
     return promise;
   }
@@ -2953,9 +2791,9 @@
         return;
       }
       const ck = cacheKeyFor(entry.internalCat, entry.name, mutKey);
-      const cached = spriteDataUrlResolved.get(ck);
-      if (cached) {
-        const img = createSpriteImg(cached, size, spriteKey, entry.internalCat, entry.name);
+      const cached2 = spriteDataUrlResolved.get(ck);
+      if (cached2) {
+        const img = createSpriteImg(cached2, size, spriteKey, entry.internalCat, entry.name);
         requestAnimationFrame(() => {
           target.replaceChildren(img);
           options?.onSpriteApplied?.(img, {
@@ -3003,7 +2841,7 @@
       return null;
     }
   }
-  var API_BASE2, indexReady, MUTATION_ICONS, MUTATION_FILTERS, SUPPORTED_BLEND_OPS2, imageCache, objectUrlCache, spriteDataUrlCache, spriteDataUrlResolved, warmupState, warmupListeners;
+  var API_BASE, indexReady, MUTATION_ICONS, MUTATION_FILTERS, SUPPORTED_BLEND_OPS2, imageCache, objectUrlCache, spriteDataUrlCache, spriteDataUrlResolved, warmupState, warmupListeners;
   var init_iconCache = __esm({
     "src/ui/kit/sprites/iconCache.ts"() {
       "use strict";
@@ -3011,22 +2849,22 @@
       init_discordPolls();
       init_live();
       init_resolver();
-      API_BASE2 = "https://mg-api.ariedam.fr";
+      API_BASE = "https://mg-api.ariedam.fr";
       indexReady = null;
       setCatalogReader((key2) => MGData.get(key2));
       fetchIndex();
       MUTATION_ICONS = {
         // Ground-level icons (anchor.y ≈ 0.5 — drawn at plant base)
-        Wet: { url: `${API_BASE2}/assets/sprites/mutations/Wet.png`, anchor: { x: 0.5, y: 0.487 } },
-        Chilled: { url: `${API_BASE2}/assets/sprites/mutations/Chilled.png`, anchor: { x: 0.502, y: 0.543 } },
-        Frozen: { url: `${API_BASE2}/assets/sprites/mutations/Frozen.png`, anchor: { x: 0.5, y: 0.474 } },
-        Thunderstruck: { url: `${API_BASE2}/assets/sprites/mutations/Thunderstruck.png`, anchor: { x: 0.495, y: 0.525 } },
-        Thundercharged: { url: `${API_BASE2}/assets/sprites/mutations/Thundercharged.png`, anchor: { x: 0.495, y: 0.525 } },
+        Wet: { url: `${API_BASE}/assets/sprites/mutations/Wet.png`, anchor: { x: 0.5, y: 0.487 } },
+        Chilled: { url: `${API_BASE}/assets/sprites/mutations/Chilled.png`, anchor: { x: 0.502, y: 0.543 } },
+        Frozen: { url: `${API_BASE}/assets/sprites/mutations/Frozen.png`, anchor: { x: 0.5, y: 0.474 } },
+        Thunderstruck: { url: `${API_BASE}/assets/sprites/mutations/Thunderstruck.png`, anchor: { x: 0.495, y: 0.525 } },
+        Thundercharged: { url: `${API_BASE}/assets/sprites/mutations/Thundercharged.png`, anchor: { x: 0.495, y: 0.525 } },
         // Floating icons (anchor.y ≈ 0.8 — drawn above the plant)
-        Dawnlit: { url: `${API_BASE2}/assets/sprites/mutations/Dawnlit.png`, anchor: { x: 0.506, y: 0.809 } },
-        Ambershine: { url: `${API_BASE2}/assets/sprites/mutations/Amberlit.png`, anchor: { x: 0.5, y: 0.82 } },
-        Dawncharged: { url: `${API_BASE2}/assets/sprites/mutations/Dawncharged.png`, anchor: { x: 0.519, y: 0.796 } },
-        Ambercharged: { url: `${API_BASE2}/assets/sprites/mutations/Ambercharged.png`, anchor: { x: 0.501, y: 0.795 } }
+        Dawnlit: { url: `${API_BASE}/assets/sprites/mutations/Dawnlit.png`, anchor: { x: 0.506, y: 0.809 } },
+        Ambershine: { url: `${API_BASE}/assets/sprites/mutations/Amberlit.png`, anchor: { x: 0.5, y: 0.82 } },
+        Dawncharged: { url: `${API_BASE}/assets/sprites/mutations/Dawncharged.png`, anchor: { x: 0.519, y: 0.796 } },
+        Ambercharged: { url: `${API_BASE}/assets/sprites/mutations/Ambercharged.png`, anchor: { x: 0.501, y: 0.795 } }
       };
       MUTATION_FILTERS = {
         Gold: { op: "source-atop", colors: ["rgb(235,200,0)"], a: 0.7 },
@@ -3309,7 +3147,7 @@
   }
   async function prefetchAtlas(base) {
     try {
-      const manifest = await getJSON(joinPath(base, "manifest.json"));
+      const manifest = await getJSON2(joinPath(base, "manifest.json"));
       const atlasJsons = await loadAtlasJsons(base, manifest);
       const blobs = /* @__PURE__ */ new Map();
       for (const [path, data] of Object.entries(atlasJsons)) {
@@ -3317,7 +3155,7 @@
         const imgPath = relPath(path, data.meta.image);
         if (isKtx2Path(imgPath)) continue;
         try {
-          const blob = await getBlob(joinPath(base, imgPath));
+          const blob = await getBlob2(joinPath(base, imgPath));
           blobs.set(imgPath, blob);
         } catch {
         }
@@ -3348,7 +3186,7 @@
   }
   async function loadTextures(base, prefetched) {
     const usePrefetched = prefetched && prefetched.base === base ? prefetched : null;
-    const atlasJsons = usePrefetched?.atlasJsons ?? await loadAtlasJsons(base, await getJSON(joinPath(base, "manifest.json")));
+    const atlasJsons = usePrefetched?.atlasJsons ?? await loadAtlasJsons(base, await getJSON2(joinPath(base, "manifest.json")));
     atlasBundle = usePrefetched ?? { base, atlasJsons, blobs: /* @__PURE__ */ new Map() };
     atlasBundleResolve?.(atlasBundle);
     atlasBundleResolve = null;
@@ -3364,7 +3202,7 @@
           const loaded = await loadKtx2AsTexture(imgPath, ctx.state.renderer, ctors);
           baseTex = loaded;
         } else {
-          const blob = usePrefetched?.blobs.get(imgPath) ?? await getBlob(joinPath(base, imgPath));
+          const blob = usePrefetched?.blobs.get(imgPath) ?? await getBlob2(joinPath(base, imgPath));
           const img = await blobToImage(blob);
           baseTex = ctors.Texture.from(img);
         }
@@ -3434,7 +3272,7 @@
     return renderer?.canvas || renderer?.view?.canvas || renderer?.view || null;
   }
   function watchRendererHealth() {
-    const pageWin3 = globalThis.unsafeWindow || globalThis;
+    const pageWin2 = globalThis.unsafeWindow || globalThis;
     const RENDERER_HEALTH_CHECK_MS = 1e3;
     const REQUIRED_STALE_STREAK = 3;
     let staleStreak = 0;
@@ -3446,9 +3284,9 @@
       ctorsRederiveAttempts: 0,
       lastCtorsRederiveError: null
     };
-    const debugRoot = pageWin3;
+    const debugRoot = pageWin2;
     debugRoot.__MG_RENDERER_HEALTH_DEBUG__ = debugState4;
-    pageWin3.setInterval(() => {
+    pageWin2.setInterval(() => {
       try {
         debugState4.checks += 1;
         if (needsCtorsRederive) {
@@ -8359,23 +8197,86 @@
     }
   });
 
-  // src/platform/friendSettingsSchema.ts
-  var DEFAULT_FRIEND_SETTINGS;
-  var init_friendSettingsSchema = __esm({
-    "src/platform/friendSettingsSchema.ts"() {
+  // src/platform/storageShape.ts
+  function createDefaultAriesStorage() {
+    return {
+      version: ARIES_STORAGE_VERSION,
+      friends: {
+        settings: {
+          showOnlineFriendsOnly: false,
+          hideRoomFromPublicList: false,
+          messageSoundEnabled: true,
+          friendRequestSoundEnabled: true,
+          showGarden: true,
+          showInventory: true,
+          showCoins: true,
+          showActivityLog: true,
+          showJournal: true,
+          showStats: true
+        }
+      },
+      notifications: { soundEnabled: true }
+    };
+  }
+  function unwrapNestedSnapshot(raw) {
+    let current = raw;
+    for (let depth = 0; depth < 10 && isRecord(current) && isRecord(current.snapshot); depth++) {
+      current = current.snapshot;
+    }
+    return current ?? raw;
+  }
+  function normalizeAriesStorage(raw) {
+    const out = createDefaultAriesStorage();
+    if (!isRecord(raw)) return out;
+    for (const [key2, value] of Object.entries(raw)) {
+      if (key2 in LEGACY_ROOT_KEYS) continue;
+      if (key2 === "version" && typeof value !== "number") continue;
+      if (key2 === "stats") {
+        out.stats = unwrapNestedSnapshot(value);
+        continue;
+      }
+      const defaults = out[key2];
+      out[key2] = isRecord(defaults) && isRecord(value) ? { ...defaults, ...value } : value;
+    }
+    for (const [legacyKey, [section2, field]] of Object.entries(LEGACY_ROOT_KEYS)) {
+      if (!(legacyKey in raw)) continue;
+      const target = isRecord(out[section2]) ? out[section2] : {};
+      out[section2] = target;
+      if (target[field] === void 0) target[field] = raw[legacyKey];
+    }
+    return out;
+  }
+  var ARIES_STORAGE_VERSION, LEGACY_ROOT_KEYS, isRecord;
+  var init_storageShape = __esm({
+    "src/platform/storageShape.ts"() {
       "use strict";
-      DEFAULT_FRIEND_SETTINGS = {
-        showOnlineFriendsOnly: false,
-        hideRoomFromPublicList: false,
-        messageSoundEnabled: true,
-        friendRequestSoundEnabled: true,
-        showGarden: true,
-        showInventory: true,
-        showCoins: true,
-        showActivityLog: true,
-        showJournal: true,
-        showStats: true
+      ARIES_STORAGE_VERSION = 1;
+      LEGACY_ROOT_KEYS = {
+        customRooms: ["room", "customRooms"],
+        petsOverrides: ["pets", "overrides"],
+        petsUI: ["pets", "ui"],
+        petTeams: ["pets", "teams"],
+        petTeamSearch: ["pets", "teamSearch"],
+        petTeamHotkeys: ["pets", "hotkeys"],
+        petAlerts: ["pets", "alerts"],
+        notifierPrefs: ["notifier", "prefs"],
+        notifierRules: ["notifier", "rules"],
+        weatherNotifierPrefs: ["notifier", "weatherPrefs"],
+        notifierLoopDefaults: ["notifier", "loopDefaults"],
+        ghostMode: ["misc", "ghostMode"],
+        ghostDelayMs: ["misc", "ghostDelayMs"],
+        autoRecoEnabled: ["misc", "autoRecoEnabled"],
+        autoRecoDelayMs: ["misc", "autoRecoDelayMs"],
+        lockerRestrictions: ["locker", "restrictions"],
+        lockerState: ["locker", "state"],
+        editorSavedGardens: ["editor", "savedGardens"],
+        activityLogHistory: ["activityLog", "history"],
+        activityLogFilter: ["activityLog", "filter"],
+        audioSettings: ["audio", "settings"],
+        audioLibrary: ["audio", "library"],
+        soundEffectsVolumeAtom: ["audio", "sfxVolumeAtom"]
       };
+      isRecord = (value) => !!value && typeof value === "object" && !Array.isArray(value);
     }
   });
 
@@ -8383,378 +8284,172 @@
   function getHostStorage() {
     if (typeof window === "undefined") return null;
     try {
-      if (typeof window.localStorage === "undefined") return null;
-      return window.localStorage;
+      return window.localStorage ?? null;
     } catch {
       return null;
     }
   }
-  function parseSafe(raw) {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return raw;
-    }
-  }
-  function mergeSection(existing, next) {
-    const base = { ...existing ?? {} };
-    for (const [k, v] of Object.entries(next)) {
-      if (base[k] === void 0) {
-        base[k] = v;
-      }
-    }
-    return base;
-  }
-  function unwrapNestedSnapshot(raw) {
-    let cur = raw;
-    let guard = 0;
-    while (guard++ < 10 && cur && typeof cur === "object" && "snapshot" in cur && typeof cur.snapshot === "object") {
-      cur = cur.snapshot;
-    }
-    return cur ?? raw;
-  }
-  function coerceLegacyAggregate(raw) {
-    const out = { ...DEFAULT_ARIES_STORAGE };
-    if (!raw || typeof raw !== "object") return out;
-    const data = raw;
-    if (typeof data.version === "number") out.version = data.version;
-    if (typeof data.migratedAt === "number") out.migratedAt = data.migratedAt;
-    if ("stats" in data) out.stats = unwrapNestedSnapshot(data.stats);
-    if ("customRooms" in data) out.room = mergeSection(out.room, { customRooms: data.customRooms });
-    if ("pets" in data && typeof data.pets === "object") {
-      out.pets = mergeSection(out.pets, data.pets);
-    }
-    if ("petsOverrides" in data) out.pets = mergeSection(out.pets, { overrides: data.petsOverrides });
-    if ("petsUI" in data) out.pets = mergeSection(out.pets, { ui: data.petsUI });
-    if ("petTeams" in data) out.pets = mergeSection(out.pets, { teams: data.petTeams });
-    if ("petTeamSearch" in data) out.pets = mergeSection(out.pets, { teamSearch: data.petTeamSearch });
-    if ("petTeamHotkeys" in data) out.pets = mergeSection(out.pets, { hotkeys: data.petTeamHotkeys });
-    if ("petAlerts" in data) out.pets = mergeSection(out.pets, { alerts: data.petAlerts });
-    if ("notifier" in data && typeof data.notifier === "object") {
-      out.notifier = mergeSection(out.notifier, data.notifier);
-    }
-    if ("notifierPrefs" in data) out.notifier = mergeSection(out.notifier, { prefs: data.notifierPrefs });
-    if ("notifierRules" in data) out.notifier = mergeSection(out.notifier, { rules: data.notifierRules });
-    if ("weatherNotifierPrefs" in data) out.notifier = mergeSection(out.notifier, { weatherPrefs: data.weatherNotifierPrefs });
-    if ("notifierLoopDefaults" in data) out.notifier = mergeSection(out.notifier, { loopDefaults: data.notifierLoopDefaults });
-    if ("misc" in data && typeof data.misc === "object") {
-      out.misc = mergeSection(out.misc, data.misc);
-    }
-    if ("ghostMode" in data) out.misc = mergeSection(out.misc, { ghostMode: data.ghostMode });
-    if ("ghostDelayMs" in data) out.misc = mergeSection(out.misc, { ghostDelayMs: data.ghostDelayMs });
-    if ("autoRecoEnabled" in data) out.misc = mergeSection(out.misc, { autoRecoEnabled: data.autoRecoEnabled });
-    if ("autoRecoDelayMs" in data) out.misc = mergeSection(out.misc, { autoRecoDelayMs: data.autoRecoDelayMs });
-    if ("locker" in data && typeof data.locker === "object") {
-      out.locker = mergeSection(out.locker, data.locker);
-    }
-    if ("lockerRestrictions" in data) out.locker = mergeSection(out.locker, { restrictions: data.lockerRestrictions });
-    if ("lockerState" in data) out.locker = mergeSection(out.locker, { state: data.lockerState });
-    if ("keybinds" in data && typeof data.keybinds === "object") {
-      out.keybinds = mergeSection(out.keybinds, data.keybinds);
-    }
-    if ("editorSavedGardens" in data) out.editor = mergeSection(out.editor, { savedGardens: data.editorSavedGardens });
-    if ("editor" in data && typeof data.editor === "object") {
-      out.editor = mergeSection(out.editor, data.editor);
-    }
-    if ("activityLog" in data && typeof data.activityLog === "object") {
-      out.activityLog = mergeSection(out.activityLog, data.activityLog);
-    }
-    if ("companion" in data && typeof data.companion === "object") {
-      out.companion = mergeSection(out.companion, data.companion);
-    }
-    if ("companionSession" in data && typeof data.companionSession === "object") {
-      out.companionSession = mergeSection(out.companionSession, data.companionSession);
-    }
-    if ("activityLogHistory" in data) out.activityLog = mergeSection(out.activityLog, { history: data.activityLogHistory });
-    if ("activityLogFilter" in data) out.activityLog = mergeSection(out.activityLog, { filter: data.activityLogFilter });
-    if ("hud" in data && typeof data.hud === "object") {
-      out.hud = mergeSection(out.hud, data.hud);
-    }
-    if ("menu" in data && typeof data.menu === "object") {
-      out.menu = mergeSection(out.menu, data.menu);
-    }
-    if ("inventory" in data && typeof data.inventory === "object") {
-      out.inventory = mergeSection(out.inventory, data.inventory);
-    }
-    if ("audio" in data && typeof data.audio === "object") {
-      out.audio = mergeSection(out.audio, data.audio);
-    }
-    if ("audioSettings" in data) out.audio = mergeSection(out.audio, { settings: data.audioSettings });
-    if ("audioLibrary" in data) out.audio = mergeSection(out.audio, { library: data.audioLibrary });
-    if ("soundEffectsVolumeAtom" in data) out.audio = mergeSection(out.audio, { sfxVolumeAtom: data.soundEffectsVolumeAtom });
-    if ("friends" in data && typeof data.friends === "object") {
-      out.friends = {
-        ...out.friends ?? {},
-        ...data.friends
-      };
-    }
-    if ("eggAutomation" in data && typeof data.eggAutomation === "object") {
-      out.eggAutomation = mergeSection(out.eggAutomation, data.eggAutomation);
-    }
-    if ("weatherTeams" in data && typeof data.weatherTeams === "object") {
-      out.weatherTeams = mergeSection(out.weatherTeams, data.weatherTeams);
-    }
-    if ("workflowStudio" in data) {
-      out.workflowStudio = data.workflowStudio;
-    }
-    if ("workflow" in data && typeof data.workflow === "object") {
-      out.workflow = mergeSection(out.workflow, data.workflow);
-    }
-    return out;
-  }
-  function installAriesLifecycleHooksOnce() {
-    if (ariesLifecycleHooksInstalled || typeof window === "undefined") return;
-    ariesLifecycleHooksInstalled = true;
-    const flush = () => flushAriesStorageNow();
-    window.addEventListener("pagehide", flush);
-    window.addEventListener("beforeunload", flush);
+  function installLifecycleHooksOnce() {
+    if (lifecycleHooksInstalled || typeof window === "undefined") return;
+    lifecycleHooksInstalled = true;
+    window.addEventListener("pagehide", flushNow);
+    window.addEventListener("beforeunload", flushNow);
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") flush();
+      if (document.visibilityState === "hidden") flushNow();
     });
     window.addEventListener("storage", (event) => {
       if (event.key !== ARIES_STORAGE_KEY) return;
-      if (ariesFlushPending) return;
-      cachedAriesStorage = null;
+      if (flushPending) return;
+      cached = null;
     });
   }
-  function flushAriesStorageNow() {
-    if (ariesFlushTimer !== null) {
-      clearTimeout(ariesFlushTimer);
-      ariesFlushTimer = null;
+  function flushNow() {
+    if (flushTimer !== null) {
+      clearTimeout(flushTimer);
+      flushTimer = null;
     }
-    if (!ariesFlushPending || !cachedAriesStorage) return;
-    ariesFlushPending = false;
-    const storage = getHostStorage();
-    if (!storage) return;
+    if (!flushPending || !cached) return;
+    flushPending = false;
     try {
-      storage.setItem(ARIES_STORAGE_KEY, JSON.stringify(cachedAriesStorage));
+      getHostStorage()?.setItem(ARIES_STORAGE_KEY, JSON.stringify(cached));
     } catch {
     }
   }
-  function scheduleAriesFlush() {
-    installAriesLifecycleHooksOnce();
-    ariesFlushPending = true;
-    if (ariesFlushTimer !== null) return;
-    ariesFlushTimer = window.setTimeout(() => {
-      ariesFlushTimer = null;
-      flushAriesStorageNow();
-    }, ARIES_FLUSH_DELAY_MS);
-  }
-  function loadAriesStorage() {
-    if (cachedAriesStorage) return cachedAriesStorage;
-    installAriesLifecycleHooksOnce();
-    const storage = getHostStorage();
-    const raw = storage?.getItem(ARIES_STORAGE_KEY);
+  function load() {
+    if (cached) return cached;
+    installLifecycleHooksOnce();
+    const raw = getHostStorage()?.getItem(ARIES_STORAGE_KEY);
+    let parsed = null;
     if (raw) {
-      const parsed = parseSafe(raw);
-      if (parsed && typeof parsed === "object") {
-        cachedAriesStorage = coerceLegacyAggregate(parsed);
-        return cachedAriesStorage;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
       }
     }
-    cachedAriesStorage = { ...DEFAULT_ARIES_STORAGE };
-    return cachedAriesStorage;
+    cached = parsed && typeof parsed === "object" ? normalizeAriesStorage(parsed) : createDefaultAriesStorage();
+    return cached;
   }
-  function persistAriesStorage(data) {
-    cachedAriesStorage = data;
-    scheduleAriesFlush();
+  function persist(data) {
+    cached = data;
+    installLifecycleHooksOnce();
+    flushPending = true;
+    if (flushTimer !== null) return;
+    flushTimer = window.setTimeout(() => {
+      flushTimer = null;
+      flushNow();
+    }, FLUSH_DELAY_MS);
   }
   function getValueAtPath(obj, path) {
-    let cur = obj;
+    let current = obj;
     for (const segment of path) {
-      if (!cur || typeof cur !== "object") return void 0;
-      cur = cur[segment];
+      if (!current || typeof current !== "object") return void 0;
+      current = current[segment];
     }
-    return cur;
+    return current;
   }
   function setValueAtPath(obj, path, value) {
     if (!path.length) return;
-    let cur = obj;
-    for (let i = 0; i < path.length - 1; i++) {
-      const key2 = path[i];
-      if (!cur[key2] || typeof cur[key2] !== "object") {
-        cur[key2] = {};
-      }
-      cur = cur[key2];
+    let current = obj;
+    for (const key2 of path.slice(0, -1)) {
+      if (!current[key2] || typeof current[key2] !== "object") current[key2] = {};
+      current = current[key2];
     }
     const last = path[path.length - 1];
-    if (value === void 0) {
-      if (cur && typeof cur === "object") {
-        delete cur[last];
-      }
-    } else {
-      cur[last] = value;
-    }
+    if (value === void 0) delete current[last];
+    else current[last] = value;
   }
   function getAriesStorage() {
-    return loadAriesStorage();
+    return load();
   }
   function saveAriesStorage(data) {
-    persistAriesStorage(data);
+    persist(data);
   }
   function updateAriesStorage(mutator) {
-    const current = loadAriesStorage();
+    const current = load();
     mutator(current);
     current.version = ARIES_STORAGE_VERSION;
-    persistAriesStorage(current);
+    persist(current);
     return current;
   }
   function readAriesPath(path, fallback) {
-    const parts = path.split(".").filter(Boolean);
-    const value = getValueAtPath(loadAriesStorage(), parts);
-    if (value === void 0) return fallback;
-    return value;
+    const value = getValueAtPath(load(), splitPath(path));
+    return value === void 0 ? fallback : value;
   }
   function writeAriesPath(path, value) {
-    return updateAriesStorage((state6) => {
-      setValueAtPath(state6, path.split(".").filter(Boolean), value);
-    });
+    return updateAriesStorage((state6) => setValueAtPath(state6, splitPath(path), value));
   }
   function updateAriesPath(path, updater) {
     return updateAriesStorage((state6) => {
-      const parts = path.split(".").filter(Boolean);
-      const currentValue = getValueAtPath(state6, parts);
-      const next = updater(currentValue);
-      setValueAtPath(state6, parts, next);
+      const parts = splitPath(path);
+      setValueAtPath(state6, parts, updater(getValueAtPath(state6, parts)));
     });
   }
-  function setApiKey(apiKey) {
+  function readLocalValue(key2) {
     try {
-      if (typeof GM_setValue === "function") {
-        GM_setValue(API_KEY_STORAGE_KEY, apiKey);
-        return;
-      }
-      getHostStorage()?.setItem(API_KEY_STORAGE_KEY, apiKey);
-    } catch (e) {
-      console.error("Failed to store API key:", e);
+      if (typeof GM_getValue === "function") return GM_getValue(key2, null);
+      return getHostStorage()?.getItem(key2) ?? null;
+    } catch {
+      return null;
     }
+  }
+  function writeLocalValue(key2, value) {
+    try {
+      if (typeof GM_setValue === "function") GM_setValue(key2, value);
+      else getHostStorage()?.setItem(key2, value);
+    } catch {
+    }
+  }
+  function setApiKey(apiKey) {
+    writeLocalValue(API_KEY_STORAGE_KEY, apiKey);
   }
   function getApiKey() {
-    try {
-      if (typeof GM_getValue === "function") {
-        return GM_getValue(API_KEY_STORAGE_KEY, null) ?? null;
-      }
-      return getHostStorage()?.getItem(API_KEY_STORAGE_KEY) ?? null;
-    } catch (e) {
-      console.error("Failed to retrieve API key:", e);
-      return null;
-    }
+    return readLocalString(API_KEY_STORAGE_KEY);
   }
   function hasApiKey() {
-    const key2 = getApiKey();
-    return key2 !== null && key2.length > 0;
+    return getApiKey() !== null;
   }
   function hasSeenRoomPrivacyNotice() {
-    try {
-      if (typeof GM_getValue === "function") {
-        const raw = GM_getValue(SEEN_ROOM_PRIVACY_NOTICE_KEY, null);
-        if (raw == null) return false;
-        if (typeof raw === "boolean") return raw;
-        return String(raw).trim() === "1";
-      }
-      return getHostStorage()?.getItem(SEEN_ROOM_PRIVACY_NOTICE_KEY) === "1";
-    } catch {
-      return false;
-    }
+    return readLocalFlag(SEEN_ROOM_PRIVACY_NOTICE_KEY);
   }
   function markRoomPrivacyNoticeSeen() {
-    try {
-      if (typeof GM_setValue === "function") {
-        GM_setValue(SEEN_ROOM_PRIVACY_NOTICE_KEY, "1");
-        return;
-      }
-      getHostStorage()?.setItem(SEEN_ROOM_PRIVACY_NOTICE_KEY, "1");
-    } catch {
-    }
+    writeLocalValue(SEEN_ROOM_PRIVACY_NOTICE_KEY, "1");
   }
   function hasSeenAutoRecoDisabledNotice() {
-    try {
-      if (typeof GM_getValue === "function") {
-        const raw = GM_getValue(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, null);
-        if (raw == null) return false;
-        if (typeof raw === "boolean") return raw;
-        return String(raw).trim() === "1";
-      }
-      return getHostStorage()?.getItem(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY) === "1";
-    } catch {
-      return false;
-    }
+    return readLocalFlag(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY);
   }
   function markAutoRecoDisabledNoticeSeen() {
-    try {
-      if (typeof GM_setValue === "function") {
-        GM_setValue(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, "1");
-        return;
-      }
-      getHostStorage()?.setItem(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, "1");
-    } catch {
-    }
+    writeLocalValue(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, "1");
   }
   function getSeenChangelogVersion() {
-    try {
-      if (typeof GM_getValue === "function") {
-        const raw = GM_getValue(SEEN_CHANGELOG_VERSION_KEY, null);
-        return typeof raw === "string" && raw ? raw : null;
-      }
-      return getHostStorage()?.getItem(SEEN_CHANGELOG_VERSION_KEY) ?? null;
-    } catch {
-      return null;
-    }
+    return readLocalString(SEEN_CHANGELOG_VERSION_KEY);
   }
   function markChangelogVersionSeen(version) {
-    try {
-      if (typeof GM_setValue === "function") {
-        GM_setValue(SEEN_CHANGELOG_VERSION_KEY, version);
-        return;
-      }
-      getHostStorage()?.setItem(SEEN_CHANGELOG_VERSION_KEY, version);
-    } catch {
-    }
+    writeLocalValue(SEEN_CHANGELOG_VERSION_KEY, version);
   }
-  function setDeclinedApiAuth(declined) {
-    try {
-      if (declined) {
-        if (typeof GM_setValue === "function") {
-          GM_setValue(AUTH_DECLINED_STORAGE_KEY, "1");
-          return;
-        }
-        getHostStorage()?.setItem(AUTH_DECLINED_STORAGE_KEY, "1");
-        return;
-      }
-      if (typeof GM_deleteValue === "function") {
-        GM_deleteValue(AUTH_DECLINED_STORAGE_KEY);
-        return;
-      }
-      getHostStorage()?.removeItem(AUTH_DECLINED_STORAGE_KEY);
-    } catch {
-    }
-  }
-  var ARIES_STORAGE_KEY, ARIES_STORAGE_VERSION, API_KEY_STORAGE_KEY, AUTH_DECLINED_STORAGE_KEY, SEEN_ROOM_PRIVACY_NOTICE_KEY, SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, SEEN_CHANGELOG_VERSION_KEY, DEFAULT_ARIES_STORAGE, ARIES_FLUSH_DELAY_MS, cachedAriesStorage, ariesFlushTimer, ariesFlushPending, ariesLifecycleHooksInstalled;
+  var ARIES_STORAGE_KEY, API_KEY_STORAGE_KEY, SEEN_ROOM_PRIVACY_NOTICE_KEY, SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, SEEN_CHANGELOG_VERSION_KEY, FLUSH_DELAY_MS, cached, flushTimer, flushPending, lifecycleHooksInstalled, splitPath, readLocalString, readLocalFlag;
   var init_storage = __esm({
     "src/platform/storage.ts"() {
       "use strict";
-      init_friendSettingsSchema();
+      init_storageShape();
       ARIES_STORAGE_KEY = "aries_mod";
-      ARIES_STORAGE_VERSION = 1;
       API_KEY_STORAGE_KEY = "aries_api_key";
-      AUTH_DECLINED_STORAGE_KEY = "aries_auth_declined";
       SEEN_ROOM_PRIVACY_NOTICE_KEY = "aries_seen_room_privacy_notice_v2";
       SEEN_AUTO_RECO_DISABLED_NOTICE_KEY = "aries_seen_autoreco_disabled_notice";
       SEEN_CHANGELOG_VERSION_KEY = "aries_seen_changelog_version";
-      DEFAULT_ARIES_STORAGE = {
-        version: ARIES_STORAGE_VERSION,
-        friends: {
-          settings: DEFAULT_FRIEND_SETTINGS
-        },
-        notifications: {
-          soundEnabled: true
-        }
+      FLUSH_DELAY_MS = 500;
+      cached = null;
+      flushTimer = null;
+      flushPending = false;
+      lifecycleHooksInstalled = false;
+      splitPath = (path) => path.split(".").filter(Boolean);
+      readLocalString = (key2) => {
+        const raw = readLocalValue(key2);
+        return typeof raw === "string" && raw ? raw : null;
       };
-      ARIES_FLUSH_DELAY_MS = 500;
-      cachedAriesStorage = null;
-      ariesFlushTimer = null;
-      ariesFlushPending = false;
-      ariesLifecycleHooksInstalled = false;
+      readLocalFlag = (key2) => {
+        const raw = readLocalValue(key2);
+        return raw === true || String(raw ?? "").trim() === "1";
+      };
     }
   });
 
@@ -9756,7 +9451,7 @@
     };
   }
   function normalizeHatchedCounts(value, fallback) {
-    if (!isRecord(value)) return { ...fallback };
+    if (!isRecord2(value)) return { ...fallback };
     return {
       normal: toPositiveInt(value.normal, fallback.normal),
       gold: toPositiveInt(value.gold, fallback.gold),
@@ -9766,11 +9461,11 @@
   function normalizeStats(raw) {
     const fallbackCreatedAt = Date.now();
     const base = createDefaultStats(fallbackCreatedAt);
-    if (!isRecord(raw)) return base;
+    if (!isRecord2(raw)) return base;
     if (Object.prototype.hasOwnProperty.call(raw, "createdAt")) {
       base.createdAt = toPositiveTimestamp(raw.createdAt, fallbackCreatedAt);
     }
-    if (isRecord(raw.garden)) {
+    if (isRecord2(raw.garden)) {
       base.garden = {
         totalPlanted: toPositiveInt(raw.garden.totalPlanted, base.garden.totalPlanted),
         totalHarvested: toPositiveInt(raw.garden.totalHarvested, base.garden.totalHarvested),
@@ -9779,7 +9474,7 @@
         waterTimeSavedMs: toPositiveInt(raw.garden.waterTimeSavedMs, base.garden.waterTimeSavedMs)
       };
     }
-    if (isRecord(raw.shops)) {
+    if (isRecord2(raw.shops)) {
       base.shops = {
         seedsBought: toPositiveInt(raw.shops.seedsBought, base.shops.seedsBought),
         decorBought: toPositiveInt(raw.shops.decorBought, base.shops.decorBought),
@@ -9791,7 +9486,7 @@
         petsSoldValue: toPositiveNumber(raw.shops.petsSoldValue, base.shops.petsSoldValue)
       };
     }
-    if (isRecord(raw.pets) && isRecord(raw.pets.hatchedByType)) {
+    if (isRecord2(raw.pets) && isRecord2(raw.pets.hatchedByType)) {
       for (const [key2, counts] of Object.entries(raw.pets.hatchedByType)) {
         if (typeof key2 !== "string") continue;
         const normalizedKey = key2.toLowerCase();
@@ -9799,18 +9494,18 @@
         base.pets.hatchedByType[normalizedKey] = normalizeHatchedCounts(counts, fallback);
       }
     }
-    if (isRecord(raw.abilities)) {
+    if (isRecord2(raw.abilities)) {
       for (const [key2, value] of Object.entries(raw.abilities)) {
-        if (typeof key2 !== "string" || !isRecord(value)) continue;
+        if (typeof key2 !== "string" || !isRecord2(value)) continue;
         base.abilities[key2] = {
           triggers: toPositiveInt(value.triggers, base.abilities[key2]?.triggers ?? 0),
           totalValue: toPositiveNumber(value.totalValue, base.abilities[key2]?.totalValue ?? 0)
         };
       }
     }
-    if (isRecord(raw.weather)) {
+    if (isRecord2(raw.weather)) {
       for (const [key2, value] of Object.entries(raw.weather)) {
-        if (typeof key2 !== "string" || !isRecord(value)) continue;
+        if (typeof key2 !== "string" || !isRecord2(value)) continue;
         const normalizedKey = key2.toLowerCase();
         const fallback = base.weather[normalizedKey] ?? { triggers: 0 };
         base.weather[normalizedKey] = {
@@ -9892,7 +9587,7 @@
     }
     return stats.pets.hatchedByType[key2];
   }
-  var GARDEN_INT_KEYS, SHOP_INT_KEYS, ABILITY_INT_KEYS, WEATHER_INT_KEYS, memoryStore, listeners, isRecord, toNumber, toPositiveNumber, toPositiveInt, toPositiveTimestamp, cloneStats, unwrapMaybeNestedSnapshot, StatsService;
+  var GARDEN_INT_KEYS, SHOP_INT_KEYS, ABILITY_INT_KEYS, WEATHER_INT_KEYS, memoryStore, listeners, isRecord2, toNumber, toPositiveNumber, toPositiveInt, toPositiveTimestamp, cloneStats, unwrapMaybeNestedSnapshot, StatsService;
   var init_stats = __esm({
     "src/features/stats/stats.ts"() {
       "use strict";
@@ -9924,7 +9619,7 @@
       };
       memoryStore = null;
       listeners = /* @__PURE__ */ new Set();
-      isRecord = (value) => typeof value === "object" && value !== null;
+      isRecord2 = (value) => typeof value === "object" && value !== null;
       toNumber = (value, fallback = 0) => {
         const num2 = Number(value);
         if (!Number.isFinite(num2)) return fallback;
@@ -9962,7 +9657,7 @@
       unwrapMaybeNestedSnapshot = (raw) => {
         let cur = raw;
         let guard = 0;
-        while (guard++ < 10 && isRecord(cur) && "snapshot" in cur && isRecord(cur.snapshot)) {
+        while (guard++ < 10 && isRecord2(cur) && "snapshot" in cur && isRecord2(cur.snapshot)) {
           cur = cur.snapshot;
         }
         return cur;
@@ -10228,45 +9923,6 @@
     "src/ui/toast.ts"() {
       "use strict";
       init_jotai();
-    }
-  });
-
-  // src/platform/environment.ts
-  function detectEnvironment() {
-    const isInIframe = (() => {
-      try {
-        return window.top !== window.self;
-      } catch {
-        return true;
-      }
-    })();
-    const refHost = safeHost(document.referrer);
-    const parentLooksDiscord = isInIframe && !!refHost && /(^|\.)discord(app)?\.com$/i.test(refHost);
-    const host = location.hostname;
-    const surface = parentLooksDiscord ? "discord" : "web";
-    const platform = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) ? "mobile" : "desktop";
-    return {
-      surface,
-      host,
-      origin: location.origin,
-      isInIframe,
-      platform
-    };
-  }
-  function isDiscordSurface() {
-    return detectEnvironment().surface === "discord";
-  }
-  function safeHost(url) {
-    if (!url) return null;
-    try {
-      return new URL(url).hostname;
-    } catch {
-      return null;
-    }
-  }
-  var init_environment = __esm({
-    "src/platform/environment.ts"() {
-      "use strict";
     }
   });
 
@@ -18377,7 +18033,7 @@
     }
     return wrap;
   }
-  function persist(enabled5) {
+  function persist2(enabled5) {
   }
   function editorToolbarButtonStyle() {
     return {
@@ -20218,7 +19874,7 @@
       void stopPlannedGardenLifecycle();
     }
     currentEnabled = next;
-    if (opts.persist !== false) persist(next);
+    if (opts.persist !== false) persist2(next);
     if (changed && opts.emit !== false) notify(next);
   }
   function makeEmptyGarden() {
@@ -32554,102 +32210,6 @@
   });
 
   // src/platform/modVersion.ts
-  async function fetchTextWithFetch(url, options) {
-    const response = await fetch(url, { cache: "no-store", ...options });
-    if (!response.ok) {
-      throw new Error(`Failed to load remote resource: ${response.status} ${response.statusText}`);
-    }
-    return await response.text();
-  }
-  async function fetchTextWithGM(url, options) {
-    return new Promise((resolve, reject) => {
-      const xhr = typeof GM_xmlhttpRequest === "function" ? GM_xmlhttpRequest : typeof GM !== "undefined" && typeof GM.xmlHttpRequest === "function" ? GM.xmlHttpRequest : null;
-      if (!xhr) return reject(new Error("GM_xmlhttpRequest not available"));
-      xhr({
-        method: "GET",
-        url,
-        headers: options?.headers,
-        onload: (res) => {
-          if (res.status >= 200 && res.status < 300) resolve(res.responseText);
-          else reject(new Error(`GM_xhr failed: ${res.status}`));
-        },
-        onerror: (e) => reject(e)
-      });
-    });
-  }
-  async function fetchText(url, options) {
-    const preferGM = isDiscordSurface();
-    const hasGM = typeof GM_xmlhttpRequest === "function" || typeof GM !== "undefined" && typeof GM.xmlHttpRequest === "function";
-    if (preferGM && hasGM) {
-      return await fetchTextWithGM(url, options);
-    }
-    try {
-      return await fetchTextWithFetch(url, options);
-    } catch (error) {
-      if (hasGM) {
-        return await fetchTextWithGM(url, options);
-      }
-      throw error;
-    }
-  }
-  async function fetchLatestCommitSha() {
-    try {
-      const responseText = await fetchText(COMMITS_API_URL, {
-        headers: { Accept: "application/vnd.github+json" }
-      });
-      const data = JSON.parse(responseText);
-      if (data && typeof data.sha === "string" && data.sha.trim().length > 0) {
-        return data.sha.trim();
-      }
-    } catch (error) {
-      console.warn("[MagicGarden] Failed to resolve latest commit SHA:", error);
-    }
-    return null;
-  }
-  async function fetchScriptSource() {
-    const commitSha = await fetchLatestCommitSha();
-    const scriptUrl = commitSha ? `${RAW_BASE_URL}/${commitSha}/dist/${SCRIPT_FILE_PATH}` : `${RAW_BASE_URL}/refs/heads/${REPO_BRANCH}/dist/${SCRIPT_FILE_PATH}?t=${Date.now()}`;
-    return await fetchText(scriptUrl);
-  }
-  async function fetchRemoteVersion() {
-    try {
-      const scriptSource = await fetchScriptSource();
-      const meta = extractUserscriptMetadata(scriptSource);
-      if (!meta) {
-        throw new Error("Metadata block not found in remote script");
-      }
-      const version = meta.get("version")?.[0];
-      const download = meta.get("downloadurl")?.[0] ?? meta.get("updateurl")?.[0];
-      return {
-        version,
-        download
-      };
-    } catch (error) {
-      console.error("Unable to retrieve remote version:", error);
-      return null;
-    }
-  }
-  function extractUserscriptMetadata(source) {
-    const headerMatch = source.match(/\/\/ ==UserScript==([\s\S]*?)\/\/ ==\/UserScript==/);
-    if (!headerMatch) {
-      return null;
-    }
-    const metaBlock = headerMatch[1];
-    const entries2 = metaBlock.matchAll(/^\/\/\s*@([^\s]+)\s+(.+)$/gm);
-    const meta = /* @__PURE__ */ new Map();
-    for (const [, rawKey, rawValue] of entries2) {
-      const key2 = rawKey.trim().toLowerCase();
-      const value = rawValue.trim();
-      if (!key2) continue;
-      const current = meta.get(key2);
-      if (current) {
-        current.push(value);
-      } else {
-        meta.set(key2, [value]);
-      }
-    }
-    return meta;
-  }
   function getLocalVersion() {
     if (true) {
       return "3.2.233";
@@ -32659,11 +32219,55 @@
     }
     return void 0;
   }
+  async function fetchRemoteVersion() {
+    try {
+      const meta = extractUserscriptMetadata(await fetchScriptSource());
+      if (!meta) throw new Error("Metadata block not found in remote script");
+      return {
+        version: meta.get("version")?.[0],
+        download: meta.get("downloadurl")?.[0] ?? meta.get("updateurl")?.[0]
+      };
+    } catch (error) {
+      console.error("Unable to retrieve remote version:", error);
+      return null;
+    }
+  }
+  async function fetchScriptSource() {
+    const commitSha = await fetchLatestCommitSha();
+    const scriptUrl = commitSha ? `${RAW_BASE_URL}/${commitSha}/dist/${SCRIPT_FILE_PATH}` : `${RAW_BASE_URL}/refs/heads/${REPO_BRANCH}/dist/${SCRIPT_FILE_PATH}?t=${Date.now()}`;
+    return getText(scriptUrl, { noCache: true });
+  }
+  async function fetchLatestCommitSha() {
+    try {
+      const data = await getJSON(COMMITS_API_URL, {
+        noCache: true,
+        headers: { Accept: "application/vnd.github+json" }
+      });
+      const sha = typeof data?.sha === "string" ? data.sha.trim() : "";
+      if (sha) return sha;
+    } catch (error) {
+      console.warn("[MagicGarden] Failed to resolve latest commit SHA:", error);
+    }
+    return null;
+  }
+  function extractUserscriptMetadata(source) {
+    const header = source.match(/\/\/ ==UserScript==([\s\S]*?)\/\/ ==\/UserScript==/);
+    if (!header) return null;
+    const meta = /* @__PURE__ */ new Map();
+    for (const [, rawKey, rawValue] of header[1].matchAll(/^\/\/\s*@([^\s]+)\s+(.+)$/gm)) {
+      const key2 = rawKey.trim().toLowerCase();
+      if (!key2) continue;
+      const values = meta.get(key2) ?? [];
+      values.push(rawValue.trim());
+      meta.set(key2, values);
+    }
+    return meta;
+  }
   var REPO_OWNER, REPO_NAME, REPO_BRANCH, SCRIPT_FILE_PATH, RAW_BASE_URL, COMMITS_API_URL;
   var init_modVersion = __esm({
     "src/platform/modVersion.ts"() {
       "use strict";
-      init_environment();
+      init_http();
       REPO_OWNER = "Ariedam64";
       REPO_NAME = "MG-AriesMod";
       REPO_BRANCH = "main";
@@ -36197,7 +35801,7 @@
   });
 
   // src/features/hatch/pity.ts
-  function isRecord2(value) {
+  function isRecord3(value) {
     return typeof value === "object" && value !== null;
   }
   function toPositiveNumber2(value) {
@@ -36210,7 +35814,7 @@
   }
   function mutationEntry(mutationId) {
     const entry = mutationCatalog2[mutationId];
-    return isRecord2(entry) ? entry : null;
+    return isRecord3(entry) ? entry : null;
   }
   function mutationIcon(mutationId) {
     const sprite = mutationEntry(mutationId)?.sprite;
@@ -36250,9 +35854,9 @@
     return out;
   }
   function speciesTargets(entry) {
-    const weights = isRecord2(entry.faunaSpawnWeights) ? entry.faunaSpawnWeights : {};
+    const weights = isRecord3(entry.faunaSpawnWeights) ? entry.faunaSpawnWeights : {};
     const chances = speciesChances(weights);
-    const declared = isRecord2(entry.speciesPityThresholdPulls) ? entry.speciesPityThresholdPulls : null;
+    const declared = isRecord3(entry.speciesPityThresholdPulls) ? entry.speciesPityThresholdPulls : null;
     const targets = [];
     const species = declared ? Object.keys(declared) : Array.from(chances.keys());
     for (const id of species) {
@@ -36276,7 +35880,7 @@
   function buildEggPity(eggId, entry) {
     const targets = [...speciesTargets(entry), ...mutationTargets()];
     if (!targets.length) return null;
-    const weights = isRecord2(entry.faunaSpawnWeights) ? entry.faunaSpawnWeights : {};
+    const weights = isRecord3(entry.faunaSpawnWeights) ? entry.faunaSpawnWeights : {};
     const fauna = Array.from(speciesChances(weights)).map(([species, share]) => ({ species, share })).sort((a, b) => b.share - a.share || a.species.localeCompare(b.species));
     return {
       eggId,
@@ -36290,7 +35894,7 @@
     const out = [];
     for (const eggId of Object.keys(eggCatalog2)) {
       const entry = eggCatalog2[eggId];
-      if (!isRecord2(entry)) continue;
+      if (!isRecord3(entry)) continue;
       const pity = buildEggPity(eggId, entry);
       if (pity) out.push(pity);
     }
@@ -36302,7 +35906,7 @@
   }
   function getEggPity(eggId) {
     const entry = eggCatalog2[eggId];
-    return isRecord2(entry) ? buildEggPity(eggId, entry) : null;
+    return isRecord3(entry) ? buildEggPity(eggId, entry) : null;
   }
   function protectedSpecies(eggId) {
     const pity = getEggPity(eggId);
@@ -36325,7 +35929,7 @@
   function emptyCounters() {
     return { species: {}, gold: 0, rainbow: 0, pulls: 0 };
   }
-  function isRecord3(value) {
+  function isRecord4(value) {
     return typeof value === "object" && value !== null;
   }
   function toCount(value) {
@@ -36334,8 +35938,8 @@
   }
   function normalizeCounters(raw) {
     const out = emptyCounters();
-    if (!isRecord3(raw)) return out;
-    if (isRecord3(raw.species)) {
+    if (!isRecord4(raw)) return out;
+    if (isRecord4(raw.species)) {
       for (const [species, value] of Object.entries(raw.species)) {
         const count = toCount(value);
         if (count > 0) out.species[species] = count;
@@ -36348,7 +35952,7 @@
   }
   function normalizeCounterMap(raw) {
     const out = {};
-    if (!isRecord3(raw)) return out;
+    if (!isRecord4(raw)) return out;
     for (const [eggId, value] of Object.entries(raw)) {
       out[eggId] = normalizeCounters(value);
     }
@@ -36362,18 +35966,18 @@
     } catch {
     }
     const seenPetIds = [];
-    if (isRecord3(raw) && Array.isArray(raw.seenPetIds)) {
+    if (isRecord4(raw) && Array.isArray(raw.seenPetIds)) {
       for (const id of raw.seenPetIds) {
         if (typeof id === "string" && id) seenPetIds.push(id);
       }
     }
     cachedState = {
       seenPetIds,
-      counters: normalizeCounterMap(isRecord3(raw) ? raw.counters : null),
-      offsets: normalizeCounterMap(isRecord3(raw) ? raw.offsets : null),
-      lastHatchAt: isRecord3(raw) ? toCount(raw.lastHatchAt) : 0,
-      trackingStartedAt: isRecord3(raw) ? toCount(raw.trackingStartedAt) : 0,
-      bootstrapped: isRecord3(raw) ? raw.bootstrapped === true : false
+      counters: normalizeCounterMap(isRecord4(raw) ? raw.counters : null),
+      offsets: normalizeCounterMap(isRecord4(raw) ? raw.offsets : null),
+      lastHatchAt: isRecord4(raw) ? toCount(raw.lastHatchAt) : 0,
+      trackingStartedAt: isRecord4(raw) ? toCount(raw.trackingStartedAt) : 0,
+      bootstrapped: isRecord4(raw) ? raw.bootstrapped === true : false
     };
     return cachedState;
   }
@@ -36394,7 +35998,7 @@
     }
   }
   function readPet(raw, eggIdFallback, timestamp, isPull) {
-    if (!isRecord3(raw)) return null;
+    if (!isRecord4(raw)) return null;
     const petId = typeof raw.id === "string" ? raw.id.trim() : "";
     const species = typeof raw.petSpecies === "string" ? raw.petSpecies.trim() : "";
     if (!petId || !species) return null;
@@ -36426,7 +36030,7 @@
       if (!action2) continue;
       const timestamp = Number(entry.timestamp) || 0;
       const parameters = entry.parameters;
-      if (!isRecord3(parameters)) continue;
+      if (!isRecord4(parameters)) continue;
       if (action2 === HATCH_ACTION) {
         const eggId = typeof parameters.eggId === "string" && parameters.eggId.trim() ? parameters.eggId : null;
         const event = readPet(parameters.pet, eggId, timestamp, true);
@@ -37673,102 +37277,72 @@
     }
   });
 
-  // src/platform/mgApi/config.ts
-  var API_BASE_URL;
-  var init_config = __esm({
-    "src/platform/mgApi/config.ts"() {
-      "use strict";
-      API_BASE_URL = "https://mg-api.ariedam.fr";
+  // src/platform/discordCsp.ts
+  function isImgUrlSafe(url) {
+    if (url.startsWith("blob:") || url.startsWith("data:") || url.startsWith("/")) return true;
+    try {
+      const { hostname } = new URL(url);
+      return SAFE_IMG_HOSTS.some((host) => hostname === host || hostname.endsWith("." + host));
+    } catch {
+      return true;
     }
-  });
-
-  // src/platform/mgApi/http.ts
-  function buildMgApiUrl(path, query) {
-    const url = new URL(path, API_BASE_URL);
-    if (query) {
-      for (const [key2, value] of Object.entries(query)) {
-        if (value === void 0) continue;
-        url.searchParams.set(key2, String(value));
-      }
-    }
-    return url.toString();
   }
-  function gmGetJson(url) {
-    return new Promise((resolve) => {
-      GM_xmlhttpRequest({
-        method: "GET",
-        url,
-        onload: (res) => {
-          if (res.status < 200 || res.status >= 300 || !res.responseText) {
-            resolve(null);
-            return;
+  function toBlobUrl(url, defaultMime) {
+    let pending6 = blobUrls.get(url);
+    if (!pending6) {
+      pending6 = gmRequest({ url }, "arraybuffer").then(
+        (res) => {
+          if (!res.body) {
+            blobUrls.delete(url);
+            return url;
           }
-          try {
-            resolve(JSON.parse(res.responseText));
-          } catch {
-            resolve(null);
-          }
+          const extension = url.split(".").pop()?.toLowerCase().split("?")[0] ?? "";
+          const blob = new Blob([res.body], { type: MIME_BY_EXTENSION[extension] ?? defaultMime });
+          return URL.createObjectURL(blob);
         },
-        onerror: () => resolve(null)
-      });
+        () => {
+          blobUrls.delete(url);
+          return url;
+        }
+      );
+      blobUrls.set(url, pending6);
+    }
+    return pending6;
+  }
+  function setImageSafe(img, url) {
+    if (!url) return;
+    if (!isDiscordActivityContext() || isImgUrlSafe(url)) {
+      img.src = url;
+      return;
+    }
+    void toBlobUrl(url, "image/png").then((src) => {
+      img.src = src;
     });
   }
-  async function fetchGetJson(url) {
-    const res = await fetch(url, { credentials: "omit" });
-    if (!res.ok) return null;
-    const text = await res.text();
-    if (!text) return null;
-    try {
-      return JSON.parse(text);
-    } catch {
-      return null;
-    }
+  function getAudioUrlSafe(url) {
+    if (!url || !isDiscordActivityContext()) return Promise.resolve(url);
+    return toBlobUrl(url, "audio/mpeg");
   }
-  async function mgApiGetJson(path, query) {
-    const url = buildMgApiUrl(path, query);
-    if (isDiscordActivityContext()) {
-      return gmGetJson(url);
-    }
-    try {
-      return await fetchGetJson(url);
-    } catch {
-      return gmGetJson(url);
-    }
-  }
-  function gmGetBinary(url) {
-    return new Promise((resolve) => {
-      GM_xmlhttpRequest({
-        method: "GET",
-        url,
-        responseType: "arraybuffer",
-        onload: (res) => {
-          if (res.status < 200 || res.status >= 300 || !res.response) {
-            resolve(null);
-            return;
-          }
-          resolve(res.response);
-        },
-        onerror: () => resolve(null)
-      });
-    });
-  }
-  async function mgApiGetBinary(url) {
-    if (isDiscordActivityContext()) {
-      return gmGetBinary(url);
-    }
-    try {
-      const res = await fetch(url, { credentials: "omit" });
-      if (!res.ok) return null;
-      return await res.arrayBuffer();
-    } catch {
-      return gmGetBinary(url);
-    }
-  }
-  var init_http = __esm({
-    "src/platform/mgApi/http.ts"() {
+  var SAFE_IMG_HOSTS, MIME_BY_EXTENSION, blobUrls;
+  var init_discordCsp = __esm({
+    "src/platform/discordCsp.ts"() {
       "use strict";
-      init_discordCsp();
-      init_config();
+      init_environment();
+      init_http();
+      SAFE_IMG_HOSTS = ["cdn.discordapp.com", "media.discordapp.net"];
+      MIME_BY_EXTENSION = {
+        png: "image/png",
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        gif: "image/gif",
+        webp: "image/webp",
+        svg: "image/svg+xml",
+        mp3: "audio/mpeg",
+        ogg: "audio/ogg",
+        wav: "audio/wav",
+        m4a: "audio/mp4"
+      };
+      blobUrls = /* @__PURE__ */ new Map();
     }
   });
 
@@ -37790,7 +37364,7 @@
   var init_sprites2 = __esm({
     "src/platform/mgApi/sprites.ts"() {
       "use strict";
-      init_http();
+      init_http2();
       COMPOSE_KEY_PREFIX = {
         seeds: "sprite/seed",
         plants: "sprite/plant",
@@ -37815,7 +37389,7 @@
   var init_audio2 = __esm({
     "src/platform/mgApi/audio.ts"() {
       "use strict";
-      init_http();
+      init_http2();
     }
   });
 
@@ -37823,7 +37397,7 @@
   var init_mgApi = __esm({
     "src/platform/mgApi/index.ts"() {
       "use strict";
-      init_http();
+      init_http2();
       init_sprites2();
       init_audio2();
     }
@@ -46583,12 +46157,12 @@ next: ${next}`;
       else map2[sectionId] = true;
     });
   }
-  function isRecord4(value) {
+  function isRecord5(value) {
     return typeof value === "object" && value !== null;
   }
   function inventoryItems(raw) {
     if (Array.isArray(raw)) return raw;
-    if (isRecord4(raw) && Array.isArray(raw.items)) return raw.items;
+    if (isRecord5(raw) && Array.isArray(raw.items)) return raw.items;
     return [];
   }
   function mutationTypeOf(mutations) {
@@ -46631,13 +46205,13 @@ next: ${next}`;
     }
     const counts = /* @__PURE__ */ new Map();
     for (const item of inventoryItems(inventory)) {
-      if (!isRecord4(item)) continue;
+      if (!isRecord5(item)) continue;
       const itemType = typeof item.itemType === "string" ? item.itemType.toLowerCase() : "";
       if (itemType !== "pet") continue;
       addSpecies(counts, item.petSpecies, item.mutations);
     }
     for (const entry of Array.isArray(activePets2) ? activePets2 : []) {
-      if (!isRecord4(entry) || !isRecord4(entry.slot)) continue;
+      if (!isRecord5(entry) || !isRecord5(entry.slot)) continue;
       addSpecies(counts, entry.slot.petSpecies, entry.slot.mutations);
     }
     if (!counts.size) return;
@@ -48478,9 +48052,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       img.style.objectFit = "contain";
       holder2.replaceChildren(img);
     };
-    const cached = miniSpriteCache.get(cacheKey);
-    if (cached) {
-      applyImg(cached);
+    const cached2 = miniSpriteCache.get(cacheKey);
+    if (cached2) {
+      applyImg(cached2);
       return holder2;
     }
     attachSpriteIcon(holder2, ["pet"], species, size, "pet-teambuilder-mini", {
@@ -48965,9 +48539,9 @@ Restore figures are averages; unlucky streaks do worse.`;
         });
         holder2.replaceChildren(img);
       };
-      const cached = cacheKey ? petSpriteCache.get(cacheKey) : void 0;
-      if (cached) {
-        applyImg(cached);
+      const cached2 = cacheKey ? petSpriteCache.get(cacheKey) : void 0;
+      if (cached2) {
+        applyImg(cached2);
         return holder2;
       }
       holder2.textContent = (log2.petName || species || "pet").charAt(0).toUpperCase() || "\u{1F43E}";
@@ -49286,9 +48860,9 @@ Restore figures are averages; unlucky streaks do worse.`;
         img.style.imageRendering = "auto";
         holder2.replaceChildren(img);
       };
-      const cached = miniSpriteCache2.get(cacheKey);
-      if (cached) {
-        applyImg(cached);
+      const cached2 = miniSpriteCache2.get(cacheKey);
+      if (cached2) {
+        applyImg(cached2);
         return holder2;
       }
       attachSpriteIcon(holder2, ["pet"], species, size, "pet-team-mini", {
@@ -52335,11 +51909,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       syncEnabled(MiscService.readAutoRecoEnabled(false));
     }
     const clampSeconds = (value) => Math.max(0, Math.min(AUTO_RECO_MAX_SECONDS, Math.round(value / AUTO_RECO_STEP_SECONDS) * AUTO_RECO_STEP_SECONDS));
-    const applySeconds = (raw, persist2) => {
+    const applySeconds = (raw, persist3) => {
       const seconds = clampSeconds(raw);
       slider.value = String(seconds);
       sliderValue.textContent = formatShortDuration(seconds);
-      if (persist2) MiscService.setAutoRecoDelayMs(seconds * 1e3);
+      if (persist3) MiscService.setAutoRecoDelayMs(seconds * 1e3);
     };
     slider.addEventListener("input", () => applySeconds(Number(slider.value), false));
     slider.addEventListener("change", () => applySeconds(Number(slider.value), true));
@@ -53422,7 +52996,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function fetchTools() {
     const url = `${RAW_BASE_URL2}/refs/heads/${REPO_BRANCH2}/${TOOLS_FILE_PATH}?t=${Date.now()}`;
     try {
-      const text = await fetchText(url);
+      const text = await getText(url, { noCache: true });
       const raw = JSON.parse(text);
       return parseToolsPayload(raw);
     } catch (error) {
@@ -53456,7 +53030,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_fetchTools = __esm({
     "src/features/tools/fetchTools.ts"() {
       "use strict";
-      init_modVersion();
+      init_http();
       REPO_OWNER2 = "Ariedam64";
       REPO_NAME2 = "MG-AriesMod";
       REPO_BRANCH2 = "main";
@@ -53508,17 +53082,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/tools/image.ts
-  async function fetchImageBlob(url) {
-    try {
-      return await getBlob2(url);
-    } catch (gmError) {
-      console.warn("[Tools] GM_xmlhttpRequest failed, trying fetch:", gmError);
-      const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status} while loading ${url}`);
-      }
-      return await res.blob();
-    }
+  function fetchImageBlob(url) {
+    return getBlob(url, { preferGm: true, noCache: true });
   }
   function isDataImageUrl(value) {
     return /^data:image\//i.test(value.trim());
@@ -53560,7 +53125,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_image = __esm({
     "src/features/tools/image.ts"() {
       "use strict";
-      init_gm();
+      init_http();
     }
   });
 
@@ -53731,8 +53296,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     let transitioning = false;
     const cachedUrls = /* @__PURE__ */ new Map();
     const resolveImageUrl = async (imageUrl) => {
-      const cached = cachedUrls.get(imageUrl);
-      if (cached) return cached;
+      const cached2 = cachedUrls.get(imageUrl);
+      if (cached2) return cached2;
       const blob = await fetchImageBlob(imageUrl);
       const objectUrl = URL.createObjectURL(blob);
       cachedUrls.set(imageUrl, objectUrl);
@@ -56625,8 +56190,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     const atlasSource = sourceOf(state6.tex.get(frameKey));
     const textures = [];
     const nodes = [];
-    const cached = lookupCachedTexture(frameKey);
-    if (cached) textures.push(cached);
+    const cached2 = lookupCachedTexture(frameKey);
+    if (cached2) textures.push(cached2);
     const consider = (match, checkSource) => {
       if (!match) return 0;
       let kept = 0;
@@ -56740,8 +56305,8 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/game/sprites/api/frameCanvas.ts
   function renderFrameToCanvas(frameKey) {
-    const cached = canvasCache.get(frameKey);
-    if (cached) return cached;
+    const cached2 = canvasCache.get(frameKey);
+    if (cached2) return cached2;
     const state6 = getSpriteState();
     const texture = state6.tex.get(frameKey);
     const ctors = state6.ctors;
@@ -57133,8 +56698,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return applyChain;
   }
   function sharedStageIndex() {
-    let cached = null;
-    return () => cached ?? (cached = collectGameMatches());
+    let cached2 = null;
+    return () => cached2 ?? (cached2 = collectGameMatches());
   }
   async function runApply() {
     const targets = await loadTargets();
@@ -57230,10 +56795,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     await reapply();
   }
   function startTimers() {
-    const pageWin3 = globalThis.unsafeWindow || globalThis;
+    const pageWin2 = globalThis.unsafeWindow || globalThis;
     if (watchId === null) {
       lastRenderer = getSpriteState().renderer;
-      watchId = pageWin3.setInterval(() => {
+      watchId = pageWin2.setInterval(() => {
         const current = getSpriteState().renderer;
         if (!current || current === lastRenderer) return;
         lastRenderer = current;
@@ -57244,7 +56809,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }, RENDERER_WATCH_MS);
     }
     if (retryId === null) {
-      retryId = pageWin3.setInterval(() => {
+      retryId = pageWin2.setInterval(() => {
         void retryPending().catch((error) => {
           console.warn("[MG Skins] retry pass failed", error);
         });
@@ -65786,8 +65351,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return null;
   }
   function init(doc) {
-    const cached = getCachedVersion();
-    if (cached) return;
+    const cached2 = getCachedVersion();
+    if (cached2) return;
     const fromGlobals = readVersionFromGlobals();
     if (fromGlobals) {
       setCachedVersion(fromGlobals);
@@ -65803,8 +65368,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return getCachedVersion() ?? cachedVersion ?? null;
   }
   async function fetchGameVersion(options) {
-    const cached = getCachedVersion();
-    if (cached) return cached;
+    const cached2 = getCachedVersion();
+    if (cached2) return cached2;
     if (pendingPromise) return pendingPromise;
     const origin = options?.origin || (typeof location !== "undefined" && location.origin ? location.origin : ORIGIN);
     pendingPromise = (async () => {
@@ -65835,8 +65400,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function wait(timeoutMs = 15e3) {
     init(document);
-    const cached = getCachedVersion();
-    if (cached) return cached;
+    const cached2 = getCachedVersion();
+    if (cached2) return cached2;
     const startedAt = nowMs();
     try {
       return await fetchGameVersion();
@@ -66047,7 +65612,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function fetchChangelog() {
     const url = `${RAW_BASE_URL3}/refs/heads/${REPO_BRANCH3}/${CHANGELOG_FILE_PATH}?t=${Date.now()}`;
-    const text = await fetchText(url);
+    const text = await getText(url, { noCache: true });
     const raw = JSON.parse(text);
     return parseChangelogPayload(raw);
   }
@@ -66059,7 +65624,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_fetchChangelog = __esm({
     "src/features/changelog/fetchChangelog.ts"() {
       "use strict";
-      init_modVersion();
+      init_http();
       REPO_OWNER3 = "Ariedam64";
       REPO_NAME3 = "MG-AriesMod";
       REPO_BRANCH3 = "main";
@@ -66204,35 +65769,44 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/platform/ariesApi/config.ts
-  var API_BASE_URL2, API_ORIGIN, MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND, DEFAULT_HEARTBEAT_INTERVAL;
-  var init_config2 = __esm({
-    "src/platform/ariesApi/config.ts"() {
+  // src/platform/ariesApi/http.ts
+  async function postToAriesApi(path, body) {
+    const headers = { "Content-Type": "application/json" };
+    const apiKey = getApiKey();
+    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+    try {
+      const res = await request(
+        { url: new URL(path, API_BASE_URL).toString(), method: "POST", headers, body: JSON.stringify(body) },
+        "text"
+      );
+      return res.status;
+    } catch {
+      return 0;
+    }
+  }
+  var API_BASE_URL, API_ORIGIN;
+  var init_http3 = __esm({
+    "src/platform/ariesApi/http.ts"() {
       "use strict";
-      API_BASE_URL2 = "https://ariesmod-api.ariedam.fr/";
-      API_ORIGIN = API_BASE_URL2.replace(/\/$/, "");
-      MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND = 5;
-      DEFAULT_HEARTBEAT_INTERVAL = 6e4;
+      init_storage();
+      init_http();
+      API_BASE_URL = "https://ariesmod-api.ariedam.fr/";
+      API_ORIGIN = API_BASE_URL.replace(/\/$/, "");
     }
   });
 
   // src/platform/ariesApi/authBridge.ts
-  function normalizeAuthPayload(data) {
+  function readApiKey(data) {
     if (!data || data.type !== "aries_discord_auth" || !data.apiKey) return null;
-    return {
-      apiKey: String(data.apiKey),
-      discordId: data.discordId ? String(data.discordId) : void 0,
-      discordUsername: data.discordUsername ? String(data.discordUsername) : void 0
-    };
+    return String(data.apiKey);
   }
   function initAuthBridgeIfNeeded() {
     if (typeof window === "undefined") return false;
     if (window.location.origin !== API_ORIGIN) return false;
     const capture = (data) => {
-      const payload = normalizeAuthPayload(data);
-      if (!payload) return;
-      setApiKey(payload.apiKey);
-      setDeclinedApiAuth(false);
+      const apiKey = readApiKey(data);
+      if (!apiKey) return;
+      setApiKey(apiKey);
       try {
         window.close();
       } catch {
@@ -66242,10 +65816,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (!window.opener) {
         const fakeOpener = { postMessage: (data) => capture(data) };
         try {
-          Object.defineProperty(window, "opener", {
-            configurable: true,
-            get: () => fakeOpener
-          });
+          Object.defineProperty(window, "opener", { configurable: true, get: () => fakeOpener });
         } catch {
           try {
             window.opener = fakeOpener;
@@ -66260,10 +65831,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       capture(event.data);
     });
     try {
-      const fromQuery = new URLSearchParams(window.location.search).get("apiKey");
-      const fromHash = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("apiKey");
-      if (fromQuery) capture({ type: "aries_discord_auth", apiKey: fromQuery });
-      if (fromHash) capture({ type: "aries_discord_auth", apiKey: fromHash });
+      for (const params of [window.location.search, window.location.hash.replace(/^#/, "")]) {
+        const apiKey = new URLSearchParams(params).get("apiKey");
+        if (apiKey) capture({ type: "aries_discord_auth", apiKey });
+      }
     } catch {
     }
     return true;
@@ -66272,107 +65843,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/platform/ariesApi/authBridge.ts"() {
       "use strict";
       init_storage();
-      init_config2();
-    }
-  });
-
-  // src/platform/ariesApi/http.ts
-  function buildUrl(path, query) {
-    const url = new URL(path, API_BASE_URL2);
-    if (query) {
-      for (const [key2, value] of Object.entries(query)) {
-        if (value === void 0) continue;
-        url.searchParams.set(key2, String(value));
-      }
-    }
-    return url.toString();
-  }
-  function gmRequest2(method, url, body) {
-    return new Promise((resolve) => {
-      const apiKey = getApiKey();
-      const headers = {};
-      if (apiKey) {
-        headers["Authorization"] = `Bearer ${apiKey}`;
-      }
-      if (body !== void 0) {
-        headers["Content-Type"] = "application/json";
-      }
-      GM_xmlhttpRequest({
-        method,
-        url,
-        headers,
-        data: body !== void 0 ? JSON.stringify(body) : void 0,
-        onload: (res) => {
-          if (res.status >= 200 && res.status < 300) {
-            try {
-              const parsed = res.responseText ? JSON.parse(res.responseText) : null;
-              resolve({ status: res.status, data: parsed });
-            } catch {
-              resolve({ status: res.status, data: null });
-            }
-          } else {
-            resolve({ status: res.status, data: null });
-          }
-        },
-        onerror: () => {
-          resolve({ status: 0, data: null });
-        }
-      });
-    });
-  }
-  async function fetchRequest(method, url, body) {
-    try {
-      const apiKey = getApiKey();
-      const headers = {};
-      if (apiKey) {
-        headers["Authorization"] = `Bearer ${apiKey}`;
-      }
-      const options = {
-        method,
-        headers,
-        credentials: "omit"
-      };
-      if (body !== void 0) {
-        headers["Content-Type"] = "application/json";
-        options.body = JSON.stringify(body);
-      }
-      const res = await fetch(url, options);
-      const text = await res.text();
-      let parsed = null;
-      if (text) {
-        try {
-          parsed = JSON.parse(text);
-        } catch {
-        }
-      }
-      return { status: res.status, data: parsed };
-    } catch {
-      return { status: 0, data: null };
-    }
-  }
-  async function request(method, path, options) {
-    return withDiscordPollPause(async () => {
-      const url = buildUrl(path, options?.query);
-      if (isDiscordActivityContext()) {
-        return gmRequest2(method, url, options?.body);
-      }
-      try {
-        return await fetchRequest(method, url, options?.body);
-      } catch {
-        return gmRequest2(method, url, options?.body);
-      }
-    });
-  }
-  async function httpPost(path, body) {
-    return request("POST", path, { body });
-  }
-  var init_http2 = __esm({
-    "src/platform/ariesApi/http.ts"() {
-      "use strict";
-      init_discordCsp();
-      init_storage();
-      init_config2();
-      init_discordPolls();
+      init_http3();
     }
   });
 
@@ -66539,31 +66010,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       return null;
     }
   }
-  async function logPlayerStatePayload(options) {
-    return buildPlayerStatePayload(options);
-  }
-  function sanitizeActivityLogForCompare(log2) {
-    if (!Array.isArray(log2)) return null;
-    return log2.filter((entry) => entry?.action !== "feedPet");
-  }
-  function sanitizeStateForComparison(state6) {
-    const sanitizedActivityLog = sanitizeActivityLogForCompare(state6.activityLog ?? null);
-    if (sanitizedActivityLog === state6.activityLog) {
-      return state6;
-    }
-    return {
-      ...state6,
-      activityLog: sanitizedActivityLog
-    };
-  }
   function snapshotPayloadForComparison(payload) {
     try {
-      const sanitizedState = sanitizeStateForComparison(payload.state);
-      const clone2 = {
-        ...payload,
-        state: sanitizedState
-      };
-      return JSON.stringify(clone2);
+      const log2 = payload.state.activityLog;
+      const activityLog = Array.isArray(log2) ? log2.filter((entry) => entry?.action !== "feedPet") : null;
+      return JSON.stringify({ ...payload, state: { ...payload.state, activityLog } });
     } catch (error) {
       console.error("[PlayerPayload] Failed to snapshot payload for comparison", error);
       return null;
@@ -66580,7 +66031,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       cleanPayload.playerId = myAccountId;
     }
-    const { status } = await httpPost("collect-state", cleanPayload);
+    const status = await postToAriesApi("collect-state", cleanPayload);
     if (status === 204) return true;
     if (status === 429) {
       console.error("[api] sendPlayerState rate-limited");
@@ -66657,22 +66108,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       isPayloadReporting = false;
     }
   }
-  function startPlayerStateReporting(intervalMs = DEFAULT_HEARTBEAT_INTERVAL) {
+  function startPlayerStateReporting(intervalMs = DEFAULT_HEARTBEAT_INTERVAL_MS) {
     if (payloadReportingTimer !== null) return;
-    const normalizedMs = Number.isFinite(intervalMs) && intervalMs > 0 ? intervalMs : DEFAULT_HEARTBEAT_INTERVAL;
+    const normalizedMs = Number.isFinite(intervalMs) && intervalMs > 0 ? intervalMs : DEFAULT_HEARTBEAT_INTERVAL_MS;
     void buildAndSendPlayerState();
     payloadReportingTimer = setInterval(() => {
       void buildAndSendPlayerState();
     }, normalizedMs);
   }
-  async function triggerPlayerStateSyncNow(options = {}) {
-    if (options.force) {
-      lastSentPayloadSnapshot = null;
-      unchangedSnapshotCount = 0;
-    }
-    await buildAndSendPlayerState();
-  }
-  var gameReadyWatcherInitialized, gameReadyTriggered, preferredReportingIntervalMs, payloadReportingTimer, isPayloadReporting, lastSentPayloadSnapshot, unchangedSnapshotCount, initialSendRetries, MAX_INITIAL_RETRIES;
+  var DEFAULT_HEARTBEAT_INTERVAL_MS, MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND, MAX_INITIAL_RETRIES, gameReadyWatcherInitialized, gameReadyTriggered, preferredReportingIntervalMs, payloadReportingTimer, isPayloadReporting, lastSentPayloadSnapshot, unchangedSnapshotCount, initialSendRetries;
   var init_playerStateReport = __esm({
     "src/platform/ariesApi/playerStateReport.ts"() {
       "use strict";
@@ -66681,10 +66125,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_storage();
       init_modVersion();
       init_playerIdentity();
-      init_http2();
-      init_config2();
+      init_http3();
+      DEFAULT_HEARTBEAT_INTERVAL_MS = 6e4;
+      MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND = 5;
+      MAX_INITIAL_RETRIES = 3;
       shareGlobal("buildPlayerStatePayload", buildPlayerStatePayload);
-      shareGlobal("logPlayerStatePayload", logPlayerStatePayload);
+      shareGlobal("logPlayerStatePayload", buildPlayerStatePayload);
       gameReadyWatcherInitialized = false;
       gameReadyTriggered = false;
       payloadReportingTimer = null;
@@ -66692,11 +66138,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       lastSentPayloadSnapshot = null;
       unchangedSnapshotCount = 0;
       initialSendRetries = 0;
-      MAX_INITIAL_RETRIES = 3;
       window.addEventListener("qws-friend-overlay-auth-update", () => {
-        if (hasApiKey()) {
-          void triggerPlayerStateSyncNow({ force: true });
-        }
+        if (!hasApiKey()) return;
+        lastSentPayloadSnapshot = null;
+        unchangedSnapshotCount = 0;
+        void buildAndSendPlayerState();
       });
     }
   });
@@ -66743,15 +66189,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_privacyNotice();
       init_notice();
       init_tileObjects();
-      init_discordCsp();
       init_authBridge();
       init_playerStateReport();
       (async function() {
         "use strict";
         if (initAuthBridgeIfNeeded()) return;
-        if (isDiscordActivityContext()) {
-          installEmojiDataFetchInterceptor();
-        }
         installPageWebSocketHook();
         MGData.init();
         shareGlobal("MGData", MGData);

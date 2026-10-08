@@ -1,12 +1,9 @@
-// src/data/dynamic/logic/capture.ts
-// Fetches all game data from the mg-api.ariedam.fr API.
-
 import type { DataKey } from "./types";
 import { captureState } from "./state";
-import { getJSON } from "../../platform/gm";
-import { withDiscordPollPause } from "../../platform/ariesApi/discordPolls";
+import { getJSON } from "../../platform/http";
+import { buildMgApiUrl } from "../../platform/mgApi/http";
 
-const API_BASE = "https://mg-api.ariedam.fr";
+/** Live catalogs from the public Magic Garden API, which `data/index.ts` serves over the bundled copy. */
 
 interface ApiData {
   plants: Record<string, unknown>;
@@ -40,7 +37,7 @@ export async function fetchAllData(): Promise<void> {
   captureState.fetchStarted = true;
 
   try {
-    const data = await withDiscordPollPause(() => getJSON<ApiData>(`${API_BASE}/data`));
+    const data = await getJSON<ApiData>(buildMgApiUrl("/data"), { preferGm: true });
 
     if (data.plants) setCapturedData("plants", data.plants);
     if (data.pets) setCapturedData("pets", data.pets);

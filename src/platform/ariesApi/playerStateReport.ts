@@ -1,6 +1,3 @@
-// ariesModAPI/endpoints/state.ts
-// Endpoint collect-state + logique de payload (déplacé depuis utils/payload.ts)
-
 import { Atoms, player as playerAtom } from "../../game/store/atoms";
 import type { GardenState } from "../../game/store/atoms";
 import { shareGlobal, pageWindow } from "../pageContext";
@@ -13,10 +10,14 @@ import {
   selectSlotForAccount,
   findPlayerByAccountId,
 } from "../../game/playerIdentity";
-import { httpPost } from "./http";
-import { MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND, DEFAULT_HEARTBEAT_INTERVAL } from "./config";
+import { postToAriesApi } from "./http";
 
-// ========== Types ==========
+// The heartbeat: the player's state goes to POST /collect-state once a minute,
+// skipped while nothing changed, but at least every fifth tick so an AFK
+// player still shows as online.
+const DEFAULT_HEARTBEAT_INTERVAL_MS = 60_000;
+const MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND = 5;
+const MAX_INITIAL_RETRIES = 3;
 
 type PlayerStatePayload = {
   playerName: string | null;
@@ -48,8 +49,6 @@ type BuildPlayerStatePayloadOptions = {
   slotIndex?: number;
   roomIsPrivate?: boolean | null;
 };
-
-// ========== Helper Functions ==========
 
 function clampPlayers(n: unknown): number {
   const value = Math.floor(Number(n));
@@ -122,9 +121,9 @@ function getSlotsArray(state: any): any[] {
 }
 
 /**
- * Notre id de compte, résolu depuis le player atom avec la liste des joueurs en
- * repli. Renvoie null tant que l'identité n'est pas connue : tout ce qui
- * remonte au serveur doit s'arrêter là plutôt que de deviner.
+ * Our account id, from the player atom with the player list as a fallback.
+ * Null while the identity is unknown: anything sent to the server must stop
+ * there rather than guess.
  */
 async function getMyAccountId(state?: any): Promise<string | null> {
   try {
@@ -136,7 +135,7 @@ async function getMyAccountId(state?: any): Promise<string | null> {
   }
 }
 
-/** Le joueur d'un slot : d'abord par compte, puis par id de room du slot. */
+/** The player of a slot: by account first, then by the slot's room id. */
 function resolvePlayer(players: any[], slot: any, accountId: string | null): any | null {
   const byAccount = findPlayerByAccountId(players, accountId ?? readSlotId(slot));
   if (byAccount) return byAccount;
@@ -151,8 +150,8 @@ function resolvePlayer(players: any[], slot: any, accountId: string | null): any
     }
   }
 
-  // Pas de repli sur players[0] : cela mettait le nom d'un autre joueur sur
-  // notre propre ligne de leaderboard.
+  // No fallback to players[0]: that put another player's name on our own
+  // leaderboard row.
   return null;
 }
 
@@ -162,13 +161,7 @@ function normalizeActivityLog(slotData: any): any[] | null {
   return Array.isArray(logs) ? logs : null;
 }
 
-// ========== Build Payload ==========
-
-/**
- * Construit le payload d'état du joueur pour l'envoyer à l'API
- * @param options - Options de construction
- * @returns Payload d'état ou null
- */
+/** The player's state as the API expects it, or null when it cannot be read yet. */
 async function buildPlayerStatePayload(
   options: BuildPlayerStatePayloadOptions = {},
 ): Promise<PlayerStatePayload | null> {
@@ -198,8 +191,8 @@ async function buildPlayerStatePayload(
     }
 
     const userSlots = normalizedPlayers.map((player) => {
-      // Uniquement l'id de compte : `player.id` est un id de room éphémère, et
-      // le remonter comme playerId crée un compte fantôme à chaque join.
+      // Account id only: `player.id` is a short-lived room id, and sending it
+      // as playerId created a ghost account on every join.
       const slotId = readAccountId(player);
       const coins = slotId ? coinsById.get(slotId) ?? null : null;
       return {
@@ -257,7 +250,7 @@ async function buildPlayerStatePayload(
       const atomValue = await Atoms.server.numPlayers.get();
       playersCount = clampPlayers(atomValue);
     } catch {
-      // fallback sur derived count
+      // Keep the count derived from the players list.
     }
 
     const persistedActivityLog = readAriesPath<any[]>("activityLog.history");
@@ -278,7 +271,7 @@ async function buildPlayerStatePayload(
     const payload: PlayerStatePayload = {
       playerName: playerName ?? null,
       avatar: avatar ?? null,
-      modVersion: modVersion,
+      modVersion,
       coins: coinsRaw,
       room: {
         id: roomId,
@@ -305,58 +298,23 @@ async function buildPlayerStatePayload(
   }
 }
 
-async function logPlayerStatePayload(
-  options?: BuildPlayerStatePayloadOptions,
-): Promise<PlayerStatePayload | null> {
-  return buildPlayerStatePayload(options);
-}
-
+// Exposed for diagnosis from the console.
 shareGlobal("buildPlayerStatePayload", buildPlayerStatePayload);
-shareGlobal("logPlayerStatePayload", logPlayerStatePayload);
+shareGlobal("logPlayerStatePayload", buildPlayerStatePayload);
 
-// ========== Payload Comparison ==========
-
-function sanitizeActivityLogForCompare(
-  log: PlayerStatePayload["state"]["activityLog"] | undefined | null,
-): PlayerStatePayload["state"]["activityLog"] | null {
-  if (!Array.isArray(log)) return null;
-  return log.filter((entry) => entry?.action !== "feedPet");
-}
-
-function sanitizeStateForComparison(
-  state: PlayerStatePayload["state"],
-): PlayerStatePayload["state"] {
-  const sanitizedActivityLog = sanitizeActivityLogForCompare(state.activityLog ?? null);
-  if (sanitizedActivityLog === state.activityLog) {
-    return state;
-  }
-  return {
-    ...state,
-    activityLog: sanitizedActivityLog,
-  };
-}
-
+/** The payload as compared between ticks. Feeding a pet alone does not count as a change. */
 function snapshotPayloadForComparison(payload: PlayerStatePayload): string | null {
   try {
-    const sanitizedState = sanitizeStateForComparison(payload.state);
-    const clone: PlayerStatePayload = {
-      ...payload,
-      state: sanitizedState,
-    };
-    return JSON.stringify(clone);
+    const log = payload.state.activityLog;
+    const activityLog = Array.isArray(log) ? log.filter((entry) => entry?.action !== "feedPet") : null;
+    return JSON.stringify({ ...payload, state: { ...payload.state, activityLog } });
   } catch (error) {
     console.error("[PlayerPayload] Failed to snapshot payload for comparison", error);
     return null;
   }
 }
 
-// ========== Send Player State ==========
-
-/**
- * Envoie l'état du joueur à l'API (POST /collect-state)
- * @param payload - Payload d'état du joueur
- * @returns true si l'envoi a réussi
- */
+/** POSTs the state to /collect-state. True when the server took it. */
 async function sendPlayerState(
   payload: PlayerStatePayload | null,
 ): Promise<boolean> {
@@ -368,15 +326,15 @@ async function sendPlayerState(
   if (!hasApiKey()) {
     const myAccountId = await getMyAccountId();
     if (!myAccountId) {
-      // Sans identité, le serveur ne peut rattacher ce payload à personne. Ne
-      // rien envoyer plutôt que de le laisser atterrir sur un autre compte.
+      // Without an identity the server cannot attach this payload to anyone.
+      // Send nothing rather than let it land on another account.
       console.error("[api] sendPlayerState skipped - player identity unknown");
       return false;
     }
     (cleanPayload as any).playerId = myAccountId;
   }
 
-  const { status } = await httpPost<null>("collect-state", cleanPayload);
+  const status = await postToAriesApi("collect-state", cleanPayload);
   if (status === 204) return true;
   if (status === 429) {
     console.error("[api] sendPlayerState rate-limited");
@@ -385,8 +343,6 @@ async function sendPlayerState(
   }
   return false;
 }
-
-// ========== Heartbeat & Reporting ==========
 
 let gameReadyWatcherInitialized = false;
 let gameReadyTriggered = false;
@@ -399,9 +355,9 @@ async function tryInitializeReporting(state?: any): Promise<void> {
   const players = Array.isArray(snapshot?.data?.players) ? snapshot.data.players : [];
   if (players.length === 0) return;
 
-  // Vérifier que notre slot est présent avant de démarrer. Le garde-fou était
-  // conditionné à l'identité, donc une identité nulle le désactivait au lieu de
-  // bloquer : maintenant une identité inconnue empêche simplement le démarrage.
+  // Our slot must be there before starting. The guard used to depend on the
+  // identity, so a null identity switched it off instead of blocking; an
+  // unknown identity now simply prevents the start.
   const myAccountId = await getMyAccountId(snapshot);
   if (!myAccountId) return;
 
@@ -431,13 +387,11 @@ export function startPlayerStateReportingWhenGameReady(intervalMs?: number): voi
   });
 }
 
-// Heartbeat state
 let payloadReportingTimer: ReturnType<typeof setInterval> | null = null;
 let isPayloadReporting = false;
 let lastSentPayloadSnapshot: string | null = null;
 let unchangedSnapshotCount = 0;
 let initialSendRetries = 0;
-const MAX_INITIAL_RETRIES = 3;
 
 async function buildAndSendPlayerState(): Promise<void> {
   if (isPayloadReporting) return;
@@ -463,7 +417,7 @@ async function buildAndSendPlayerState(): Promise<void> {
     } else if (snapshot !== lastSentPayloadSnapshot) {
       mustSend = true;
     } else if (unchangedSnapshotCount + 1 >= MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND) {
-      // 5ème tick identique → keep-alive AFK
+      // Keep-alive for an AFK player.
       mustSend = true;
     }
 
@@ -489,10 +443,10 @@ async function buildAndSendPlayerState(): Promise<void> {
 }
 
 function startPlayerStateReporting(
-  intervalMs: number = DEFAULT_HEARTBEAT_INTERVAL,
+  intervalMs: number = DEFAULT_HEARTBEAT_INTERVAL_MS,
 ): void {
   if (payloadReportingTimer !== null) return;
-  const normalizedMs = Number.isFinite(intervalMs) && intervalMs > 0 ? intervalMs : DEFAULT_HEARTBEAT_INTERVAL;
+  const normalizedMs = Number.isFinite(intervalMs) && intervalMs > 0 ? intervalMs : DEFAULT_HEARTBEAT_INTERVAL_MS;
 
   void buildAndSendPlayerState();
   payloadReportingTimer = setInterval(() => {
@@ -500,26 +454,12 @@ function startPlayerStateReporting(
   }, normalizedMs);
 }
 
-
-type TriggerPlayerStateSyncOptions = {
-  force?: boolean;
-};
-
-async function triggerPlayerStateSyncNow(
-  options: TriggerPlayerStateSyncOptions = {},
-): Promise<void> {
-  if (options.force) {
-    lastSentPayloadSnapshot = null;
-    unchangedSnapshotCount = 0;
-  }
-  await buildAndSendPlayerState();
-}
-
-// Force an immediate re-sync when auth is gained (e.g. the user authenticates
-// through the Community Hub) so the next send includes the auth token. Safe:
+// Force an immediate send when auth is gained (the player signs in through the
+// standalone Community Hub) so the server sees the API key at once. Safe:
 // Arie's Mod owns the heartbeat (see startPlayerStateReportingWhenGameReady).
 window.addEventListener("qws-friend-overlay-auth-update", () => {
-  if (hasApiKey()) {
-    void triggerPlayerStateSyncNow({ force: true });
-  }
+  if (!hasApiKey()) return;
+  lastSentPayloadSnapshot = null;
+  unchangedSnapshotCount = 0;
+  void buildAndSendPlayerState();
 });

@@ -1,148 +1,16 @@
-// Networking helpers (ported from userscript GM_xmlhttpRequest flow)
 import { joinPath, relPath } from '../utils/path';
 import type { ManifestBundle, ManifestSrc } from '../types';
+import { getBlob as httpGetBlob, getJSON as httpGetJSON } from '../../../platform/http';
 
-declare const GM_xmlhttpRequest:
-  | ((
-      options: {
-        method: 'GET';
-        url: string;
-        responseType: 'text' | 'blob' | 'json';
-        timeout?: number;
-        onload: (resp: { status: number; responseText: string; response: any }) => void;
-        onerror: () => void;
-        ontimeout: () => void;
-      },
-    ) => void)
-  | undefined;
+// Assets go through GM_xmlhttpRequest first, which crosses into the
+// extension's content-script bridge. That bridge can be slow to attach at
+// document-start, so the GM call is bounded and falls back to fetch: the
+// sprite catalog boot must never hang on it.
+const ASSET_REQUEST = { preferGm: true, timeoutMs: 5_000 };
 
-// GM_xmlhttpRequest is the one call in this codebase that genuinely crosses
-// into the extension's isolated content-script bridge (everything else runs
-// directly in page context via @inject-into page). That bridge can be slow
-// to attach at document-start; without an explicit `timeout`, GM never calls
-// `ontimeout`, so a slow/never-attached bridge hangs the call forever with
-// no error and no console output. Both the GM-level timeout and an
-// independent page-context deadline below exist so this can never hang
-// silently, regardless of which layer is slow.
-const GM_TIMEOUT_MS = 5_000;
+export const getJSON = <T = any>(url: string): Promise<T> => httpGetJSON<T>(url, ASSET_REQUEST);
 
-interface NetDebugEntry {
-  url: string;
-  path: 'gm' | 'fetch-fallback' | 'gm-timeout-fallback';
-  startedAt: number;
-  finishedAt: number | null;
-  ok: boolean | null;
-  error: string | null;
-}
-
-const netDebugLog: NetDebugEntry[] = [];
-{
-  const root: any = (globalThis as any).unsafeWindow || (globalThis as any);
-  root.__MG_NET_DEBUG__ = netDebugLog;
-}
-
-function recordNetDebug(entry: NetDebugEntry) {
-  netDebugLog.push(entry);
-  if (netDebugLog.length > 200) netDebugLog.shift();
-}
-
-function fetchFallback(url: string, type: 'text' | 'blob' | 'json') {
-  return fetch(url)
-    .then(async res => {
-      if (!res.ok) throw new Error(`HTTP ${res.status} (${url})`);
-      if (type === 'blob') return { status: res.status, response: await res.blob(), responseText: '' };
-      const text = await res.text();
-      return {
-        status: res.status,
-        response: type === 'json' ? JSON.parse(text) : text,
-        responseText: text,
-      };
-    })
-    .catch(err => {
-      throw new Error(`Network (${url}): ${err instanceof Error ? err.message : String(err)}`);
-    });
-}
-
-function gmRequest(url: string, type: 'text' | 'blob' | 'json'): Promise<any> {
-  return new Promise<any>((resolve, reject) =>
-    GM_xmlhttpRequest!({
-      method: 'GET',
-      url,
-      responseType: type,
-      timeout: GM_TIMEOUT_MS,
-      onload: r =>
-        r.status >= 200 && r.status < 300
-          ? resolve(r)
-          : reject(new Error(`HTTP ${r.status} (${url})`)),
-      onerror: () => reject(new Error(`Network (${url})`)),
-      ontimeout: () => reject(new Error(`Timeout (${url})`)),
-    })
-  );
-}
-
-async function gm(url: string, type: 'text' | 'blob' | 'json' = 'text') {
-  const root: any = (globalThis as any).unsafeWindow || (globalThis as any);
-
-  if (typeof GM_xmlhttpRequest !== 'function') {
-    const entry: NetDebugEntry = { url, path: 'fetch-fallback', startedAt: Date.now(), finishedAt: null, ok: null, error: null };
-    recordNetDebug(entry);
-    try {
-      const result = await fetchFallback(url, type);
-      entry.finishedAt = Date.now();
-      entry.ok = true;
-      return result;
-    } catch (error) {
-      entry.finishedAt = Date.now();
-      entry.ok = false;
-      entry.error = error instanceof Error ? error.message : String(error);
-      throw error;
-    }
-  }
-
-  const entry: NetDebugEntry = { url, path: 'gm', startedAt: Date.now(), finishedAt: null, ok: null, error: null };
-  recordNetDebug(entry);
-
-  // GM's own `timeout` still depends on the bridge being alive to enforce
-  // it — if the bridge never attaches at all, add a hard ceiling on top.
-  let hardTimeoutId: any = null;
-  const hardTimeout = new Promise<never>((_, reject) => {
-    hardTimeoutId = root.setTimeout(() => reject(new Error(`Hard timeout (${url})`)), GM_TIMEOUT_MS + 2_000);
-  });
-
-  try {
-    const result = await Promise.race([gmRequest(url, type), hardTimeout]);
-    root.clearTimeout(hardTimeoutId);
-    entry.finishedAt = Date.now();
-    entry.ok = true;
-    return result;
-  } catch (error) {
-    root.clearTimeout(hardTimeoutId);
-    entry.finishedAt = Date.now();
-    entry.ok = false;
-    entry.error = error instanceof Error ? error.message : String(error);
-
-    // GM path failed or hung — fall back to a real fetch so this never ends
-    // up permanently pending and blocking the whole sprite catalog boot.
-    const fallbackEntry: NetDebugEntry = { url, path: 'gm-timeout-fallback', startedAt: Date.now(), finishedAt: null, ok: null, error: null };
-    recordNetDebug(fallbackEntry);
-    try {
-      const result = await fetchFallback(url, type);
-      fallbackEntry.finishedAt = Date.now();
-      fallbackEntry.ok = true;
-      return result;
-    } catch (fallbackError) {
-      fallbackEntry.finishedAt = Date.now();
-      fallbackEntry.ok = false;
-      fallbackEntry.error = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-      throw fallbackError;
-    }
-  }
-}
-
-export const getJSON = async <T = any>(url: string): Promise<T> =>
-  JSON.parse((await gm(url, 'text')).responseText);
-
-export const getBlob = async (url: string) => (await gm(url, 'blob')).response;
+export const getBlob = (url: string): Promise<Blob> => httpGetBlob(url, ASSET_REQUEST);
 
 export function blobToImage(blob: Blob): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {

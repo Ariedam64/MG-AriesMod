@@ -1,19 +1,10 @@
 // Shared image helpers for the Tools menu: blob loading (GM first, fetch
 // fallback) and the icon tile, which accepts either an emoji or a remote URL.
 // Styling lives in styles.ts (`.mgt-tile`).
-import { getBlob } from "../../platform/gm";
+import { getBlob } from "../../platform/http";
 
-export async function fetchImageBlob(url: string): Promise<Blob> {
-  try {
-    return await getBlob(url);
-  } catch (gmError) {
-    console.warn("[Tools] GM_xmlhttpRequest failed, trying fetch:", gmError);
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status} while loading ${url}`);
-    }
-    return await res.blob();
-  }
+export function fetchImageBlob(url: string): Promise<Blob> {
+  return getBlob(url, { preferGm: true, noCache: true });
 }
 
 /** Inline images (`data:image/svg+xml,...`) need no network round trip. */

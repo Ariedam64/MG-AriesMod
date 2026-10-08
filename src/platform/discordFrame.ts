@@ -1,5 +1,3 @@
-// src/utils/discordFrame.ts
-//
 // Since build 1396, launching the Discord activity serves a host page
 // (`installDiscordFrameHost`) that never runs the game. It creates a
 // same-origin child frame at the same URL plus `mc_shell_frame=1`, runs the

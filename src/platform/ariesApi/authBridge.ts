@@ -1,46 +1,36 @@
-// ariesModAPI/auth/bridge.ts
-// Bridge pour capturer l'API key dans la fenêtre d'auth Discord
+import { setApiKey } from "../storage";
+import { API_ORIGIN } from "./http";
 
-import { setApiKey, setDeclinedApiAuth } from "../storage";
-import { API_ORIGIN } from "./config";
-
-function normalizeAuthPayload(data: any): { apiKey: string; discordId?: string; discordUsername?: string } | null {
+function readApiKey(data: any): string | null {
   if (!data || data.type !== "aries_discord_auth" || !data.apiKey) return null;
-  return {
-    apiKey: String(data.apiKey),
-    discordId: data.discordId ? String(data.discordId) : undefined,
-    discordUsername: data.discordUsername ? String(data.discordUsername) : undefined,
-  };
+  return String(data.apiKey);
 }
 
 /**
- * Initialise le bridge d'authentification si on est sur la page d'auth
- * @returns true si le bridge a été initialisé, false sinon
+ * On the API's Discord sign-in page, captures the API key it hands back and
+ * stores it, then closes the tab. Returns true when this page is that sign-in
+ * page, in which case the mod itself must not start.
  */
 export function initAuthBridgeIfNeeded(): boolean {
   if (typeof window === "undefined") return false;
   if (window.location.origin !== API_ORIGIN) return false;
 
-  const capture = (data: any) => {
-    const payload = normalizeAuthPayload(data);
-    if (!payload) return;
-    setApiKey(payload.apiKey);
-    setDeclinedApiAuth(false);
+  const capture = (data: unknown) => {
+    const apiKey = readApiKey(data);
+    if (!apiKey) return;
+    setApiKey(apiKey);
     try {
       window.close();
     } catch {}
   };
 
-  // If the auth page tries to postMessage to a missing opener (GM_openInTab),
-  // fake an opener to capture the payload and store it in GM storage.
+  // The page posts the key to its opener. A tab opened with GM_openInTab has
+  // none, so give it a fake one that captures the message.
   try {
     if (!window.opener) {
-      const fakeOpener = { postMessage: (data: any) => capture(data) };
+      const fakeOpener = { postMessage: (data: unknown) => capture(data) };
       try {
-        Object.defineProperty(window, "opener", {
-          configurable: true,
-          get: () => fakeOpener,
-        });
+        Object.defineProperty(window, "opener", { configurable: true, get: () => fakeOpener });
       } catch {
         try {
           (window as any).opener = fakeOpener;
@@ -49,18 +39,18 @@ export function initAuthBridgeIfNeeded(): boolean {
     }
   } catch {}
 
-  // Also capture if the auth page emits a message locally for any reason.
+  // Also capture the message if the page posts it to itself.
   window.addEventListener("message", (event) => {
     if (event.origin !== API_ORIGIN) return;
     capture(event.data);
   });
 
-  // Fallback: parse apiKey from URL query/hash if present.
+  // Last resort: the key in the query string or the hash.
   try {
-    const fromQuery = new URLSearchParams(window.location.search).get("apiKey");
-    const fromHash = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("apiKey");
-    if (fromQuery) capture({ type: "aries_discord_auth", apiKey: fromQuery });
-    if (fromHash) capture({ type: "aries_discord_auth", apiKey: fromHash });
+    for (const params of [window.location.search, window.location.hash.replace(/^#/, "")]) {
+      const apiKey = new URLSearchParams(params).get("apiKey");
+      if (apiKey) capture({ type: "aries_discord_auth", apiKey });
+    }
   } catch {}
 
   return true;
