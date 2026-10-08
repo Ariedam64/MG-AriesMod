@@ -58,7 +58,8 @@
     "check:toastcalls": "esbuild scripts/checkToastCalls.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkToastCalls.cjs --log-level=error && node node_modules/.cache/checkToastCalls.cjs",
     "check:spawntiles": "esbuild scripts/checkSpawnTiles.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkSpawnTiles.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkSpawnTiles.cjs",
     "check:inventoryfriends": "esbuild scripts/checkInventoryFriendBonus.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkInventoryFriendBonus.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkInventoryFriendBonus.cjs",
-    "check:debugsockets": "esbuild scripts/checkDebugSocketCapture.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkDebugSocketCapture.cjs --log-level=error && node node_modules/.cache/checkDebugSocketCapture.cjs"
+    "check:debugsockets": "esbuild scripts/checkDebugSocketCapture.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkDebugSocketCapture.cjs --log-level=error && node node_modules/.cache/checkDebugSocketCapture.cjs",
+    "check:ghostmode": "esbuild scripts/checkGhostMode.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkGhostMode.cjs --log-level=error && node node_modules/.cache/checkGhostMode.cjs"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",

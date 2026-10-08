@@ -13585,6 +13585,147 @@
     }
   });
 
+  // src/features/misc/ghost.ts
+  function readGhostDelayMs() {
+    try {
+      return normalizeDelay2(readAriesPath(PATH_GHOST_DELAY));
+    } catch {
+      return DEFAULT_DELAY_MS2;
+    }
+  }
+  function writeGhostDelayMs(ms) {
+    try {
+      writeAriesPath(PATH_GHOST_DELAY, normalizeDelay2(ms));
+    } catch {
+    }
+  }
+  function startGhostMode() {
+    if (readGhostEnabled()) ghost().start();
+  }
+  function setGhostEnabled(on) {
+    writeStoredFlag(PATH_GHOST_MODE, on);
+    if (on) ghost().start();
+    else ghost().stop();
+  }
+  function setGhostDelayMs(ms) {
+    ghost().setSpeed(ms);
+  }
+  function createGhostController() {
+    let delayMs = readGhostDelayMs();
+    const held = /* @__PURE__ */ new Set();
+    const onKeyDown2 = (e) => {
+      const key2 = e.key.toLowerCase();
+      if (!MOVE_KEYS.has(key2)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (e.repeat) return;
+      held.add(key2);
+    };
+    const onKeyUp = (e) => {
+      const key2 = e.key.toLowerCase();
+      if (!MOVE_KEYS.has(key2)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      held.delete(key2);
+    };
+    const onBlur = () => held.clear();
+    const onVisibility2 = () => {
+      if (document.hidden) held.clear();
+    };
+    const anyHeld = (keys) => keys.some((key2) => held.has(key2));
+    function direction() {
+      const dx = (anyHeld(RIGHT) ? 1 : 0) - (anyHeld(LEFT) ? 1 : 0);
+      const dy = (anyHeld(DOWN) ? 1 : 0) - (anyHeld(UP) ? 1 : 0);
+      return { dx, dy };
+    }
+    async function step(dx, dy) {
+      let current2;
+      try {
+        current2 = await PlayerService.getPosition();
+      } catch {
+      }
+      const x = Math.round(current2?.x ?? 0);
+      const y = Math.round(current2?.y ?? 0);
+      try {
+        await PlayerService.move(x + dx, y + dy);
+      } catch {
+      }
+    }
+    let rafId = null;
+    let lastTs = 0;
+    let budgetMs = 0;
+    let stepping = false;
+    function frame(ts) {
+      if (!lastTs) lastTs = ts;
+      budgetMs += ts - lastTs;
+      lastTs = ts;
+      const { dx, dy } = direction();
+      if ((dx !== 0 || dy !== 0) && budgetMs >= delayMs && !stepping) {
+        budgetMs -= delayMs;
+        stepping = true;
+        void step(dx, dy).finally(() => {
+          stepping = false;
+        });
+      }
+      budgetMs = Math.min(budgetMs, delayMs * 4);
+      rafId = requestAnimationFrame(frame);
+    }
+    const CAPTURE2 = { capture: true };
+    return {
+      start() {
+        if (rafId !== null) return;
+        lastTs = 0;
+        budgetMs = 0;
+        stepping = false;
+        window.addEventListener("keydown", onKeyDown2, CAPTURE2);
+        window.addEventListener("keyup", onKeyUp, CAPTURE2);
+        window.addEventListener("blur", onBlur);
+        document.addEventListener("visibilitychange", onVisibility2);
+        rafId = requestAnimationFrame(frame);
+      },
+      stop() {
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
+        held.clear();
+        window.removeEventListener("keydown", onKeyDown2, CAPTURE2);
+        window.removeEventListener("keyup", onKeyUp, CAPTURE2);
+        window.removeEventListener("blur", onBlur);
+        document.removeEventListener("visibilitychange", onVisibility2);
+      },
+      setSpeed(ms) {
+        delayMs = normalizeDelay2(ms);
+        writeGhostDelayMs(delayMs);
+      }
+    };
+  }
+  var PATH_GHOST_MODE, PATH_GHOST_DELAY, DEFAULT_DELAY_MS2, MIN_DELAY_MS, readGhostEnabled, normalizeDelay2, controller, ghost, UP, DOWN, LEFT, RIGHT, MOVE_KEYS;
+  var init_ghost = __esm({
+    "src/features/misc/ghost.ts"() {
+      "use strict";
+      init_player();
+      init_storage();
+      init_storedFlag();
+      PATH_GHOST_MODE = "misc.ghostMode";
+      PATH_GHOST_DELAY = "misc.ghostDelayMs";
+      DEFAULT_DELAY_MS2 = 50;
+      MIN_DELAY_MS = 5;
+      readGhostEnabled = () => readStoredFlag(PATH_GHOST_MODE);
+      normalizeDelay2 = (value) => {
+        const n = Math.floor(Number(value || DEFAULT_DELAY_MS2));
+        return Number.isFinite(n) ? Math.max(MIN_DELAY_MS, n) : DEFAULT_DELAY_MS2;
+      };
+      controller = null;
+      ghost = () => controller ?? (controller = createGhostController());
+      UP = ["z", "w", "arrowup"];
+      DOWN = ["s", "arrowdown"];
+      LEFT = ["q", "a", "arrowleft"];
+      RIGHT = ["d", "arrowright"];
+      MOVE_KEYS = /* @__PURE__ */ new Set([...UP, ...DOWN, ...LEFT, ...RIGHT]);
+    }
+  });
+
   // src/game/toasts.ts
   async function editGameToasts(edit) {
     const atom = getAtomByLabel(TOASTS_ATOM);
@@ -33815,11 +33956,11 @@ Restore figures are averages; unlucky streaks do worse.`;
         ev.dataTransfer?.setData("text/plain", String(index));
         if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "move";
         try {
-          const ghost = row4.cloneNode(true);
-          Object.assign(ghost.style, { width: `${row4.getBoundingClientRect().width}px`, position: "absolute", top: "-9999px" });
-          document.body.appendChild(ghost);
-          ev.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
-          setTimeout(() => ghost.remove(), 0);
+          const ghost2 = row4.cloneNode(true);
+          Object.assign(ghost2.style, { width: `${row4.getBoundingClientRect().width}px`, position: "absolute", top: "-9999px" });
+          document.body.appendChild(ghost2);
+          ev.dataTransfer.setDragImage(ghost2, ghost2.offsetWidth / 2, ghost2.offsetHeight / 2);
+          setTimeout(() => ghost2.remove(), 0);
         } catch {
         }
       });
@@ -35721,7 +35862,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function createDeleterSection(config) {
     ensureDeleterStyles();
-    const { controller } = config;
+    const { controller: controller2 } = config;
     const headerText = h("div", "qws-del-head__text");
     headerText.append(sectionLabel(config.title), h("div", "qws-del-head__desc", config.description));
     const header = h("div", "qws-del-head");
@@ -35755,7 +35896,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const btnClear = button(config.clearLabel, {
       size: "sm",
       onClick: () => {
-        controller.clearSelection();
+        controller2.clearSelection();
         updateSummary();
       }
     });
@@ -35766,15 +35907,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       onClick: () => runDelete()
     });
     const btnPause = button("Pause", { size: "sm", onClick: () => {
-      controller.pause();
+      controller2.pause();
       updateControls();
     } });
     const btnPlay = button("Resume", { size: "sm", onClick: () => {
-      controller.resume();
+      controller2.resume();
       updateControls();
     } });
     const btnStop = button("Stop", { variant: "danger", size: "sm", onClick: () => {
-      controller.cancel();
+      controller2.cancel();
       updateControls();
     } });
     const actions2 = h("div", "qws-del-actions");
@@ -35793,7 +35934,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return chip;
     }
     function readSelection() {
-      const selection = controller.getSelection();
+      const selection = controller2.getSelection();
       let totalQty = 0;
       let fromStorage = 0;
       for (const item of selection) {
@@ -35828,7 +35969,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           chips.append(h("div", "qws-del-chip qws-del-chip--more", `+${sorted.length - MAX_VISIBLE_CHIPS} more`));
         }
       }
-      const running6 = controller.isRunning();
+      const running6 = controller2.isRunning();
       const estimateMs = estimateMsFor(totalQty);
       const finishTimestamp = running6 ? estimatedFinish : estimateMs > 0 ? Date.now() + estimateMs : null;
       estimate.textContent = totalQty <= 0 ? "" : finishTimestamp ? `About ${formatDurationShort(estimateMs)} \xB7 done around ${formatFinishTime(finishTimestamp)}` : `About ${formatDurationShort(estimateMs)}`;
@@ -35842,8 +35983,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     }
     function updateControls() {
-      const running6 = controller.isRunning();
-      const paused = controller.isPaused();
+      const running6 = controller2.isRunning();
+      const paused = controller2.isPaused();
       section5.root.classList.toggle("is-running", running6);
       btnPause.hidden = !running6 || paused;
       btnPlay.hidden = !running6 || !paused;
@@ -35869,7 +36010,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const estimateMs = estimateMsFor(readSelection().totalQty);
       estimatedFinish = estimateMs > 0 ? Date.now() + estimateMs : null;
       clearSummaryTimer();
-      const pending6 = controller.run(config.runDelayMs);
+      const pending6 = controller2.run(config.runDelayMs);
       updateControls();
       updateSummary();
       await pending6;
@@ -35899,7 +36040,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
     const subscriptions = new Subscriptions();
-    subscriptions.add(controller.events.on(onEvent));
+    subscriptions.add(controller2.events.on(onEvent));
     updateSummary();
     updateControls();
     return {
@@ -35937,135 +36078,6 @@ Restore figures are averages; unlucky streaks do worse.`;
         return rest2 === 0 ? `${minutes} min` : `${minutes} min ${rest2} s`;
       };
       formatFinishTime = (timestamp) => new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    }
-  });
-
-  // src/features/misc/ghost.ts
-  function readGhostDelayMs() {
-    try {
-      return normalizeDelay2(readAriesPath(PATH_GHOST_DELAY));
-    } catch {
-      return DEFAULT_DELAY_MS2;
-    }
-  }
-  function writeGhostDelayMs(ms) {
-    try {
-      writeAriesPath(PATH_GHOST_DELAY, normalizeDelay2(ms));
-    } catch {
-    }
-  }
-  function createGhostController() {
-    let delayMs = readGhostDelayMs();
-    const held = /* @__PURE__ */ new Set();
-    const onKeyDown2 = (e) => {
-      const key2 = e.key.toLowerCase();
-      if (!MOVE_KEYS.has(key2)) return;
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      if (e.repeat) return;
-      held.add(key2);
-    };
-    const onKeyUp = (e) => {
-      const key2 = e.key.toLowerCase();
-      if (!MOVE_KEYS.has(key2)) return;
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      held.delete(key2);
-    };
-    const onBlur = () => held.clear();
-    const onVisibility2 = () => {
-      if (document.hidden) held.clear();
-    };
-    const anyHeld = (keys) => keys.some((key2) => held.has(key2));
-    function direction() {
-      const dx = (anyHeld(RIGHT) ? 1 : 0) - (anyHeld(LEFT) ? 1 : 0);
-      const dy = (anyHeld(DOWN) ? 1 : 0) - (anyHeld(UP) ? 1 : 0);
-      return { dx, dy };
-    }
-    async function step(dx, dy) {
-      let current2;
-      try {
-        current2 = await PlayerService.getPosition();
-      } catch {
-      }
-      const x = Math.round(current2?.x ?? 0);
-      const y = Math.round(current2?.y ?? 0);
-      try {
-        await PlayerService.move(x + dx, y + dy);
-      } catch {
-      }
-    }
-    let rafId = null;
-    let lastTs = 0;
-    let budgetMs = 0;
-    let stepping = false;
-    function frame(ts) {
-      if (!lastTs) lastTs = ts;
-      budgetMs += ts - lastTs;
-      lastTs = ts;
-      const { dx, dy } = direction();
-      if ((dx !== 0 || dy !== 0) && budgetMs >= delayMs && !stepping) {
-        budgetMs -= delayMs;
-        stepping = true;
-        void step(dx, dy).finally(() => {
-          stepping = false;
-        });
-      }
-      budgetMs = Math.min(budgetMs, delayMs * 4);
-      rafId = requestAnimationFrame(frame);
-    }
-    const CAPTURE2 = { capture: true };
-    return {
-      start() {
-        if (rafId !== null) return;
-        lastTs = 0;
-        budgetMs = 0;
-        stepping = false;
-        window.addEventListener("keydown", onKeyDown2, CAPTURE2);
-        window.addEventListener("keyup", onKeyUp, CAPTURE2);
-        window.addEventListener("blur", onBlur);
-        document.addEventListener("visibilitychange", onVisibility2);
-        rafId = requestAnimationFrame(frame);
-      },
-      stop() {
-        if (rafId !== null) {
-          cancelAnimationFrame(rafId);
-          rafId = null;
-        }
-        held.clear();
-        window.removeEventListener("keydown", onKeyDown2, CAPTURE2);
-        window.removeEventListener("keyup", onKeyUp, CAPTURE2);
-        window.removeEventListener("blur", onBlur);
-        document.removeEventListener("visibilitychange", onVisibility2);
-      },
-      setSpeed(ms) {
-        delayMs = normalizeDelay2(ms);
-        writeGhostDelayMs(delayMs);
-      }
-    };
-  }
-  var PATH_GHOST_MODE, PATH_GHOST_DELAY, DEFAULT_DELAY_MS2, MIN_DELAY_MS, readGhostEnabled, writeGhostEnabled, normalizeDelay2, UP, DOWN, LEFT, RIGHT, MOVE_KEYS;
-  var init_ghost = __esm({
-    "src/features/misc/ghost.ts"() {
-      "use strict";
-      init_player();
-      init_storage();
-      init_storedFlag();
-      PATH_GHOST_MODE = "misc.ghostMode";
-      PATH_GHOST_DELAY = "misc.ghostDelayMs";
-      DEFAULT_DELAY_MS2 = 50;
-      MIN_DELAY_MS = 5;
-      readGhostEnabled = () => readStoredFlag(PATH_GHOST_MODE);
-      writeGhostEnabled = (on) => writeStoredFlag(PATH_GHOST_MODE, on);
-      normalizeDelay2 = (value) => {
-        const n = Math.floor(Number(value || DEFAULT_DELAY_MS2));
-        return Number.isFinite(n) ? Math.max(MIN_DELAY_MS, n) : DEFAULT_DELAY_MS2;
-      };
-      UP = ["z", "w", "arrowup"];
-      DOWN = ["s", "arrowdown"];
-      LEFT = ["q", "a", "arrowleft"];
-      RIGHT = ["d", "arrowright"];
-      MOVE_KEYS = /* @__PURE__ */ new Set([...UP, ...DOWN, ...LEFT, ...RIGHT]);
     }
   });
 
@@ -37138,13 +37150,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       "Player controls",
       "Movement helpers for walking and testing."
     );
-    const ghost = createGhostController();
-    const ghostToggle = switchInput(readGhostEnabled(), (on) => {
-      writeGhostEnabled(on);
-      if (on) ghost.start();
-      else ghost.stop();
-    });
-    if (readGhostEnabled()) ghost.start();
+    const ghostToggle = switchInput(readGhostEnabled(), setGhostEnabled);
     const delayInput = numberInput(MOVE_DELAY_MIN_MS, MOVE_DELAY_MAX_MS, 5, readGhostDelayMs());
     delayInput.addEventListener("change", () => {
       const value = Math.max(
@@ -37152,16 +37158,13 @@ Restore figures are averages; unlucky streaks do worse.`;
         Math.min(MOVE_DELAY_MAX_MS, Math.floor(Number(delayInput.value) || MOVE_DELAY_DEFAULT_MS))
       );
       delayInput.value = String(value);
-      ghost.setSpeed(value);
+      setGhostDelayMs(value);
     });
     card4.body.append(
       settingRow("Ghost mode", "Ignores collisions while you move.", ghostToggle).row,
       settingRow("Move delay (ms)", "Lower values feel faster.", delayInput.wrap).row
     );
-    return {
-      root: card4.root,
-      cleanup: () => ghost.stop()
-    };
+    return card4.root;
   }
   function buildInventoryGuardSection() {
     const card4 = section3(
@@ -37258,20 +37261,19 @@ Restore figures are averages; unlucky streaks do worse.`;
       overflowY: "auto",
       boxSizing: "border-box"
     });
-    const player2 = buildPlayerSection();
     const modalHost = () => ui.root.closest(".qws-win") ?? ui.root;
-    const pickFor = (controller, opts) => new Promise((resolve) => {
+    const pickFor = (controller2, opts) => new Promise((resolve) => {
       let loaded2 = [];
       openDeleterPicker({
         ...opts,
         host: modalHost(),
-        initial: new Map(controller.getSelection().map((entry) => [entry.id, entry.qty])),
+        initial: new Map(controller2.getSelection().map((entry) => [entry.id, entry.qty])),
         loadEntries: async () => {
           loaded2 = await opts.loadEntries();
           return loaded2;
         },
         onConfirm: (picked) => {
-          controller.setSelection(
+          controller2.setSelection(
             Array.from(picked, ([id, qty]) => {
               const entry = loaded2.find((candidate) => candidate.id === id);
               return {
@@ -37341,7 +37343,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     root4.append(
       panelHeader(),
       buildAutoRecoSection(),
-      player2.root,
+      buildPlayerSection(),
       buildDisplaySection(modalHost),
       buildInventoryGuardSection(),
       buildStorageSection(),
@@ -37349,10 +37351,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       decorDeleterSection.root
     );
     root4.__cleanup__ = () => {
-      try {
-        player2.cleanup();
-      } catch {
-      }
       try {
         seedDeleterSection.cleanup();
       } catch {
@@ -51148,6 +51146,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_stores();
       init_outgoingRules();
       init_inventoryReserve();
+      init_ghost();
       init_outgoingRules2();
       init_outgoingCounters();
       init_hud();
@@ -51196,6 +51195,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         installLockerOutgoingRules();
         installStatsCounters();
         startAutoStores();
+        startGhostMode();
         MGData.init();
         shareGlobal("MGData", MGData);
         detectGameVersion();
