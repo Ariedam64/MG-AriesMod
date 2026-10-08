@@ -21382,8 +21382,8 @@
     root.querySelectorAll(`.${injectedClass}`).forEach((n) => n.remove());
   }
   function ensureStyle(injectedClass, theme) {
-    const STYLE_ID9 = `${injectedClass}-style`;
-    if (document.getElementById(STYLE_ID9)) return;
+    const STYLE_ID8 = `${injectedClass}-style`;
+    if (document.getElementById(STYLE_ID8)) return;
     const css4 = `
 .${injectedClass}{
   font-synthesis: none;
@@ -21438,7 +21438,7 @@
 }
 `.trim();
     const s = document.createElement("style");
-    s.id = STYLE_ID9;
+    s.id = STYLE_ID8;
     s.textContent = css4;
     document.head.appendChild(s);
   }
@@ -49071,110 +49071,81 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/tools/fetchTools.ts
-  function parseToolsPayload(raw) {
+  // src/features/tools/repoJson.ts
+  async function fetchRepoList(path, listKey, label2) {
+    const raw = await getJSON(`${RAW_BASE_URL2}/${path}?t=${Date.now()}`, { noCache: true });
     if (!raw || typeof raw !== "object") {
-      throw new Error("Invalid tools payload: not an object");
+      throw new Error(`Invalid ${label2.toLowerCase()} payload: not an object`);
     }
-    const payload = raw;
-    if (!Array.isArray(payload.tools)) {
-      throw new Error("Invalid tools payload: 'tools' is not an array");
+    const list = raw[listKey];
+    if (!Array.isArray(list)) {
+      throw new Error(`Invalid ${label2.toLowerCase()} payload: '${listKey}' is not an array`);
     }
-    const tools = [];
-    for (const entry of payload.tools) {
-      if (!entry || typeof entry !== "object") {
-        console.warn("[Tools] Skipping invalid entry:", entry);
-        continue;
-      }
-      const e = entry;
-      const id = e.id;
-      const title = e.title;
-      const description = e.description;
-      if (!id || typeof id !== "string" || !id.trim()) {
-        console.warn("[Tools] Skipping entry with missing/invalid id");
-        continue;
-      }
-      if (!title || typeof title !== "string" || !title.trim()) {
-        console.warn("[Tools] Skipping entry with missing/invalid title:", id);
-        continue;
-      }
-      if (!description || typeof description !== "string" || !description.trim()) {
-        console.warn("[Tools] Skipping entry with missing/invalid description:", id);
-        continue;
-      }
-      const tags = Array.isArray(e.tags) ? e.tags.filter((t) => typeof t === "string").map((t) => t) : void 0;
-      const images = Array.isArray(e.images) ? e.images.filter((img) => typeof img === "string").map((img) => img) : void 0;
-      const icon = typeof e.icon === "string" ? e.icon : void 0;
-      const actions = Array.isArray(e.actions) ? e.actions.filter((a) => a && typeof a === "object").map((a) => {
-        const action2 = a;
-        return {
-          label: typeof action2.label === "string" ? action2.label : "Open",
-          url: typeof action2.url === "string" ? action2.url : ""
-        };
-      }).filter((a) => a.url) : void 0;
-      const creators = Array.isArray(e.creators) ? e.creators.filter((c) => c && typeof c === "object").map((c) => {
-        const creator = c;
-        return {
-          name: typeof creator.name === "string" ? creator.name : "Unknown",
-          avatar: typeof creator.avatar === "string" ? creator.avatar : void 0
-        };
-      }) : void 0;
-      tools.push({
-        id,
-        title,
-        description,
-        tags,
-        images,
-        icon,
-        actions,
-        creators
-      });
+    const entries2 = [];
+    for (const entry of list) {
+      if (entry && typeof entry === "object") entries2.push(entry);
+      else console.warn(`[${label2}] Skipping invalid entry:`, entry);
     }
-    return tools;
+    return entries2;
+  }
+  var RAW_BASE_URL2, isNonEmptyString, stringList;
+  var init_repoJson = __esm({
+    "src/features/tools/repoJson.ts"() {
+      "use strict";
+      init_http();
+      RAW_BASE_URL2 = "https://raw.githubusercontent.com/Ariedam64/MG-AriesMod/refs/heads/main";
+      isNonEmptyString = (value) => typeof value === "string" && value.trim().length > 0;
+      stringList = (value) => Array.isArray(value) ? value.filter((item) => typeof item === "string") : void 0;
+    }
+  });
+
+  // src/features/tools/fetchTools.ts
+  function parseTool(e) {
+    const { id, title, description } = e;
+    if (!isNonEmptyString(id)) {
+      console.warn("[Tools] Skipping entry with missing/invalid id");
+      return null;
+    }
+    if (!isNonEmptyString(title)) {
+      console.warn("[Tools] Skipping entry with missing/invalid title:", id);
+      return null;
+    }
+    if (!isNonEmptyString(description)) {
+      console.warn("[Tools] Skipping entry with missing/invalid description:", id);
+      return null;
+    }
+    return {
+      id,
+      title,
+      description,
+      tags: stringList(e.tags),
+      images: stringList(e.images),
+      icon: typeof e.icon === "string" ? e.icon : void 0,
+      actions: objectList(e.actions)?.map((action2) => ({
+        label: typeof action2.label === "string" ? action2.label : "Open",
+        url: typeof action2.url === "string" ? action2.url : ""
+      })).filter((action2) => action2.url),
+      creators: objectList(e.creators)?.map((creator) => ({
+        name: typeof creator.name === "string" ? creator.name : "Unknown",
+        avatar: typeof creator.avatar === "string" ? creator.avatar : void 0
+      }))
+    };
   }
   async function fetchTools() {
-    const url = `${RAW_BASE_URL2}/refs/heads/${REPO_BRANCH2}/${TOOLS_FILE_PATH}?t=${Date.now()}`;
     try {
-      const text2 = await getText(url, { noCache: true });
-      const raw = JSON.parse(text2);
-      return parseToolsPayload(raw);
+      const entries2 = await fetchRepoList("tools/tools.json", "tools", "Tools");
+      return entries2.map(parseTool).filter((tool) => tool !== null);
     } catch (error) {
       console.error("[Tools] Failed to fetch tools:", error);
       throw error;
     }
   }
-  function openUrl(url) {
-    if (typeof GM_openInTab === "function") {
-      GM_openInTab(url, { active: true, insert: true });
-      return true;
-    }
-    if (typeof window === "undefined") return false;
-    try {
-      const a = document.createElement("a");
-      a.href = url;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  function openLink(url) {
-    return openUrl(url);
-  }
-  var REPO_OWNER2, REPO_NAME2, REPO_BRANCH2, TOOLS_FILE_PATH, RAW_BASE_URL2;
+  var objectList;
   var init_fetchTools = __esm({
     "src/features/tools/fetchTools.ts"() {
       "use strict";
-      init_http();
-      REPO_OWNER2 = "Ariedam64";
-      REPO_NAME2 = "MG-AriesMod";
-      REPO_BRANCH2 = "main";
-      TOOLS_FILE_PATH = "tools/tools.json";
-      RAW_BASE_URL2 = `https://raw.githubusercontent.com/${REPO_OWNER2}/${REPO_NAME2}`;
+      init_repoJson();
+      objectList = (value) => Array.isArray(value) ? value.filter((item) => !!item && typeof item === "object") : void 0;
     }
   });
 
@@ -49269,21 +49240,15 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/tools/tag.ts
-  function createTagChip(tag) {
-    const chip2 = document.createElement("span");
-    chip2.className = "mgt-tag";
-    chip2.textContent = tag;
-    return chip2;
-  }
   function createTagRow(tags) {
-    const row = document.createElement("div");
-    row.className = "mgt-tags";
-    tags.forEach((tag) => row.appendChild(createTagChip(tag)));
+    const row = h("div", "mgt-tags");
+    for (const tag of tags) row.appendChild(h("span", "mgt-tag", tag));
     return row;
   }
   var init_tag = __esm({
     "src/features/tools/tag.ts"() {
       "use strict";
+      init_dom2();
     }
   });
 
@@ -49334,7 +49299,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const grid = document.createElement("div");
     grid.className = "mgt-grid";
     const renderCards = () => {
-      grid.innerHTML = "";
+      grid.replaceChildren();
       const filtered = selectedTags.size ? tools.filter((tool) => tool.tags?.some((tag) => selectedTags.has(tag))) : tools;
       if (!filtered.length) {
         const empty = document.createElement("div");
@@ -49359,40 +49324,33 @@ Restore figures are averages; unlucky streaks do worse.`;
       label2.textContent = "Filter";
       filters.appendChild(label2);
       const tagButtons = /* @__PURE__ */ new Map();
-      const allButton = document.createElement("button");
-      allButton.type = "button";
-      allButton.className = "mgt-chip";
-      allButton.textContent = ALL_FILTER_LABEL;
       const refreshStates = () => {
-        allButton.classList.toggle("is-active", selectedTags.size === 0);
-        tagButtons.forEach((button3, tag) => {
-          button3.classList.toggle("is-active", selectedTags.has(tag));
-        });
+        allButton.setActive(selectedTags.size === 0);
+        tagButtons.forEach((tagButton, tag) => tagButton.setActive(selectedTags.has(tag)));
       };
-      allButton.onclick = () => {
-        if (selectedTags.size === 0) return;
-        selectedTags.clear();
-        refreshStates();
-        renderCards();
-      };
-      filters.appendChild(allButton);
-      allTags.forEach((tag) => {
-        const button3 = document.createElement("button");
-        button3.type = "button";
-        button3.className = "mgt-chip";
-        button3.textContent = tag;
-        button3.onclick = () => {
-          if (selectedTags.has(tag)) {
-            selectedTags.delete(tag);
-          } else {
-            selectedTags.add(tag);
-          }
+      const allButton = button(ALL_FILTER_LABEL, {
+        size: "xs",
+        onClick: () => {
+          if (selectedTags.size === 0) return;
+          selectedTags.clear();
           refreshStates();
           renderCards();
-        };
-        filters.appendChild(button3);
-        tagButtons.set(tag, button3);
+        }
       });
+      filters.appendChild(allButton);
+      for (const tag of allTags) {
+        const tagButton = button(tag, {
+          size: "xs",
+          onClick: () => {
+            if (selectedTags.has(tag)) selectedTags.delete(tag);
+            else selectedTags.add(tag);
+            refreshStates();
+            renderCards();
+          }
+        });
+        filters.appendChild(tagButton);
+        tagButtons.set(tag, tagButton);
+      }
       refreshStates();
       root.appendChild(filters);
     }
@@ -49405,9 +49363,36 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/features/tools/listView.ts"() {
       "use strict";
       init_markdown();
+      init_button();
       init_image();
       init_tag();
       ALL_FILTER_LABEL = "All";
+    }
+  });
+
+  // src/features/tools/openLink.ts
+  function openLink(url) {
+    if (typeof GM_openInTab === "function") {
+      GM_openInTab(url, { active: true, insert: true });
+      return true;
+    }
+    if (typeof window === "undefined") return false;
+    try {
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  var init_openLink = __esm({
+    "src/features/tools/openLink.ts"() {
+      "use strict";
     }
   });
 
@@ -49444,59 +49429,25 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     const openImageZoom = (imageUrl) => {
       let closed = false;
-      const overlay2 = document.createElement("div");
-      overlay2.style.position = "fixed";
-      overlay2.style.inset = "0";
-      overlay2.style.background = "rgba(0,0,0,0.85)";
-      overlay2.style.backdropFilter = "blur(4px)";
-      overlay2.style.zIndex = OVERLAY_Z_INDEX;
-      overlay2.style.display = "grid";
-      overlay2.style.placeItems = "center";
-      overlay2.style.padding = "20px";
-      const box = document.createElement("div");
-      box.style.position = "relative";
-      box.style.maxWidth = "90vw";
-      box.style.maxHeight = "90vh";
-      box.style.background = "#0a0e14";
-      box.style.border = "1px solid rgba(94,234,212,0.20)";
-      box.style.borderRadius = "14px";
-      box.style.boxShadow = "0 24px 60px rgba(0,0,0,0.55)";
-      box.style.overflow = "hidden";
-      const dismiss3 = () => {
+      const overlay2 = h("div", "mgt-zoom");
+      const box = h("div", "mgt-zoom__box");
+      const dismiss2 = () => {
         if (closed) return;
         closed = true;
         document.removeEventListener("keydown", onKeyDown);
         overlay2.remove();
       };
       const onKeyDown = (event) => {
-        if (event.key === "Escape") dismiss3();
+        if (event.key === "Escape") dismiss2();
       };
       document.addEventListener("keydown", onKeyDown);
-      const close = document.createElement("button");
+      const close = h("button", "mgt-nav mgt-zoom__close", "\u2715");
       close.type = "button";
-      close.className = "mgt-nav";
-      close.textContent = "\u2715";
       close.title = "Close";
-      close.style.position = "absolute";
-      close.style.top = "10px";
-      close.style.right = "10px";
-      close.style.transform = "none";
-      close.style.fontSize = "14px";
-      close.style.padding = "0";
-      close.style.zIndex = "2";
-      close.onclick = dismiss3;
-      const status2 = document.createElement("p");
-      status2.className = "mgt-state__text";
-      status2.textContent = "Loading image...";
-      status2.style.padding = "18px 22px";
-      const zoomImg = document.createElement("img");
+      close.onclick = dismiss2;
+      const status2 = h("p", "mgt-state__text mgt-zoom__status", "Loading image...");
+      const zoomImg = h("img", "mgt-zoom__img");
       zoomImg.alt = "Zoomed image";
-      zoomImg.style.maxWidth = "100%";
-      zoomImg.style.maxHeight = "90vh";
-      zoomImg.style.objectFit = "contain";
-      zoomImg.style.transition = "transform 200ms ease";
-      zoomImg.style.cursor = "zoom-in";
-      zoomImg.style.display = "none";
       let zoomedState = false;
       zoomImg.onclick = (event) => {
         event.stopPropagation();
@@ -49508,12 +49459,12 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
         zoomedState = !zoomedState;
         zoomImg.style.transform = zoomedState ? `scale(${ZOOM_SCALE})` : "scale(1)";
-        zoomImg.style.cursor = zoomedState ? "zoom-out" : "zoom-in";
+        zoomImg.classList.toggle("is-zoomed", zoomedState);
       };
       box.append(close, status2, zoomImg);
       overlay2.appendChild(box);
       overlay2.onclick = (event) => {
-        if (event.target === overlay2) dismiss3();
+        if (event.target === overlay2) dismiss2();
       };
       document.body.appendChild(overlay2);
       void (async () => {
@@ -49522,12 +49473,12 @@ Restore figures are averages; unlucky streaks do worse.`;
           if (closed) return;
           zoomImg.src = blobUrl;
           status2.remove();
-          zoomImg.style.display = "block";
+          zoomImg.classList.add("is-loaded");
         } catch (error) {
           if (closed) return;
           console.warn("[Carousel] Failed to load zoom image:", error);
           status2.textContent = "Unable to load image.";
-          status2.style.color = "#ffb3b3";
+          status2.classList.add("is-error");
         }
       })();
     };
@@ -49636,12 +49587,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     })();
     return { root };
   }
-  var OVERLAY_Z_INDEX, SWAP_DURATION_MS, SWAP_EASING, SWAP_OFFSET_PX, ZOOM_SCALE;
+  var SWAP_DURATION_MS, SWAP_EASING, SWAP_OFFSET_PX, ZOOM_SCALE;
   var init_carousel = __esm({
     "src/features/tools/carousel.ts"() {
       "use strict";
+      init_dom2();
       init_image();
-      OVERLAY_Z_INDEX = "2147483647";
       SWAP_DURATION_MS = 320;
       SWAP_EASING = "cubic-bezier(.22,.7,.28,1)";
       SWAP_OFFSET_PX = 40;
@@ -49707,32 +49658,24 @@ Restore figures are averages; unlucky streaks do worse.`;
     const row = document.createElement("div");
     row.className = "mgt-actions";
     actions.forEach((action2, index) => {
-      const button3 = document.createElement("button");
-      button3.type = "button";
-      button3.className = index === 0 ? "mgt-action is-primary" : "mgt-action";
-      button3.textContent = action2.label;
-      button3.title = `Open ${action2.label}`;
-      button3.onclick = () => {
-        if (!openLink(action2.url)) {
-          console.warn("[Tools] Failed to open link:", action2.url);
-        }
-      };
-      row.appendChild(button3);
+      row.appendChild(
+        button(action2.label, {
+          // The first link is the main one; the rest stay secondary.
+          variant: index === 0 ? "primary" : "default",
+          title: `Open ${action2.label}`,
+          onClick: () => {
+            if (!openLink(action2.url)) console.warn("[Tools] Failed to open link:", action2.url);
+          }
+        })
+      );
     });
     return row;
   }
   function renderDetailView(tool, onBack) {
     const root = document.createElement("div");
     root.className = "mgt-detail";
-    const back = document.createElement("button");
-    back.type = "button";
-    back.className = "mgt-back";
-    back.onclick = onBack;
-    const backArrow = document.createElement("span");
-    backArrow.className = "mgt-back__arrow";
-    backArrow.textContent = "\u2190";
-    backArrow.setAttribute("aria-hidden", "true");
-    back.append(backArrow, document.createTextNode("All tools"));
+    const back = button("All tools", { icon: "\u2190", size: "sm", onClick: onBack });
+    back.classList.add("mgt-back");
     root.appendChild(back);
     root.appendChild(createHero(tool));
     if (tool.images?.length) {
@@ -49745,8 +49688,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_detailView = __esm({
     "src/features/tools/detailView.ts"() {
       "use strict";
-      init_fetchTools();
       init_markdown();
+      init_button();
+      init_openLink();
       init_carousel();
       init_image();
       init_tag();
@@ -49759,18 +49703,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     const style2 = document.createElement("style");
     style2.id = STYLE_ID3;
     style2.textContent = `
-/* \u2500\u2500 reset for the interactive elements \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
-.mgt-chip, .mgt-back, .mgt-action, .mgt-nav, .mgt-dot {
-  font-family: inherit;
-  -webkit-appearance: none;
-  appearance: none;
-  margin: 0;
-}
-.mgt-card:focus-visible, .mgt-chip:focus-visible, .mgt-back:focus-visible,
-.mgt-action:focus-visible, .mgt-nav:focus-visible, .mgt-dot:focus-visible {
-  outline: 2px solid ${ACCENT2};
+.mgt-card:focus-visible, .mgt-nav:focus-visible, .mgt-dot:focus-visible {
+  outline: 2px solid var(--qmm-accent);
   outline-offset: 2px;
 }
+.mgt-nav, .mgt-dot { font-family: inherit; -webkit-appearance: none; appearance: none; margin: 0; }
 
 /* \u2500\u2500 shell \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 .mgt-wrap { display: flex; flex-direction: column; gap: 14px; width: 100%; }
@@ -49780,26 +49717,10 @@ Restore figures are averages; unlucky streaks do worse.`;
 .mgt-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
 .mgt-label {
   font-size: 9.5px; font-weight: 700; letter-spacing: 0.09em;
-  text-transform: uppercase; color: ${TEXT_DIM2};
+  text-transform: uppercase; color: var(--qmm-text-soft);
 }
 .mgt-filters .mgt-label { margin-right: 3px; }
-.mgt-chip {
-  padding: 5px 11px; border-radius: 999px; cursor: pointer;
-  border: 1px solid ${BORDER2}; background: ${SURFACE}; color: ${TEXT_DIM2};
-  font-size: 11px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap;
-  transition: color 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
-}
-.mgt-chip:hover {
-  color: ${TEXT2};
-  border-color: rgba(94,234,212,0.30);
-  background: rgba(94,234,212,0.07);
-}
-.mgt-chip.is-active {
-  color: #06181c;
-  background: linear-gradient(135deg, ${ACCENT2}, ${ACCENT_2});
-  border-color: transparent;
-  box-shadow: 0 2px 12px rgba(94,234,212,0.22);
-}
+.mgt-filters .qmm-btn { border-radius: var(--qmm-radius-pill); }
 
 /* \u2500\u2500 icon tile (no frame: the artwork stands on its own) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 .mgt-tile {
@@ -49815,9 +49736,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   display: inline-flex; align-items: center; white-space: nowrap;
   padding: 2px 8px; border-radius: 6px;
   font-size: 9.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
-  color: rgba(94,234,212,0.88);
-  background: rgba(94,234,212,0.07);
-  border: 1px solid rgba(94,234,212,0.16);
+  color: var(--qmm-accent);
+  background: var(--qmm-accent-soft);
+  border: 1px solid var(--qmm-accent-soft);
 }
 
 /* \u2500\u2500 list view \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
@@ -49826,22 +49747,22 @@ Restore figures are averages; unlucky streaks do worse.`;
 .mgt-card {
   display: flex; flex-direction: column; gap: 10px; text-align: left;
   padding: 14px; border-radius: 14px; cursor: pointer;
-  border: 1px solid ${BORDER2};
+  border: 1px solid var(--qmm-border);
   background: linear-gradient(160deg, rgba(18,24,34,0.70), rgba(12,17,26,0.86));
   transition: transform 170ms ease, border-color 170ms ease, box-shadow 170ms ease;
 }
 .mgt-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(94,234,212,0.32);
+  border-color: var(--qmm-accent-border);
   box-shadow: 0 12px 28px rgba(0,0,0,0.38);
 }
 .mgt-card__head { display: flex; align-items: center; gap: 11px; }
 .mgt-card__title {
-  font-size: 13.5px; font-weight: 700; color: ${TEXT2}; line-height: 1.25;
+  font-size: 13.5px; font-weight: 700; color: var(--qmm-text); line-height: 1.25;
   overflow: hidden; text-overflow: ellipsis;
 }
 .mgt-card__arrow {
-  margin-left: auto; flex-shrink: 0; font-size: 15px; color: ${ACCENT2};
+  margin-left: auto; flex-shrink: 0; font-size: 15px; color: var(--qmm-accent);
   opacity: 0; transform: translateX(-5px);
   transition: opacity 170ms ease, transform 170ms ease;
 }
@@ -49849,30 +49770,18 @@ Restore figures are averages; unlucky streaks do worse.`;
   opacity: 1; transform: translateX(0);
 }
 .mgt-card__desc {
-  margin: 0; font-size: 12px; line-height: 1.55; color: ${TEXT_DIM2};
+  margin: 0; font-size: 12px; line-height: 1.55; color: var(--qmm-text-soft);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .mgt-card__foot { margin-top: auto; }
 
 /* \u2500\u2500 detail view \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 .mgt-detail { display: flex; flex-direction: column; gap: 14px; width: 100%; }
-.mgt-back {
-  align-self: flex-start; display: inline-flex; align-items: center; gap: 7px;
-  padding: 6px 13px 6px 10px; border-radius: 999px; cursor: pointer;
-  border: 1px solid ${BORDER2}; background: ${SURFACE}; color: ${TEXT_DIM2};
-  font-size: 11.5px; font-weight: 600;
-  transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
-}
-.mgt-back:hover {
-  color: ${TEXT2}; border-color: rgba(94,234,212,0.30); background: rgba(94,234,212,0.07);
-}
-.mgt-back__arrow { font-size: 13px; transition: transform 150ms ease; }
-.mgt-back:hover .mgt-back__arrow { transform: translateX(-2px); }
-
+.mgt-back { align-self: flex-start; }
 .mgt-hero {
   display: flex; flex-direction: column; gap: 14px;
   padding: 18px; border-radius: 16px;
-  border: 1px solid rgba(94,234,212,0.20);
+  border: 1px solid var(--qmm-accent-border);
   background:
     radial-gradient(130% 150% at 0% 0%, rgba(94,234,212,0.10), transparent 55%),
     linear-gradient(160deg, rgba(18,24,34,0.95), rgba(12,17,26,0.96));
@@ -49880,73 +49789,57 @@ Restore figures are averages; unlucky streaks do worse.`;
 .mgt-hero__top { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
 /* Grows to fill the row so the creators get pushed to the far right. */
 .mgt-hero__titles { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1 1 240px; }
-.mgt-hero__title { margin: 0; font-size: 19px; font-weight: 750; line-height: 1.2; color: ${TEXT2}; }
-.mgt-divider { height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.10), transparent); }
+.mgt-hero__title { margin: 0; font-size: 19px; font-weight: 750; line-height: 1.2; color: var(--qmm-text); }
+.mgt-divider { height: 1px; background: linear-gradient(90deg, var(--qmm-border-strong), transparent); }
 
 .mgt-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
 .mgt-hero__top .mgt-meta { margin-left: auto; }
 .mgt-creator {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 3px 11px 3px 3px; border-radius: 999px;
-  background: rgba(255,255,255,0.04); border: 1px solid ${BORDER2};
-  font-size: 11.5px; font-weight: 600; color: ${TEXT2};
+  background: var(--qmm-card-bg); border: 1px solid var(--qmm-border);
+  font-size: 11.5px; font-weight: 600; color: var(--qmm-text);
 }
 .mgt-creator--plain { padding: 5px 11px; }
 .mgt-creator img {
   width: 22px; height: 22px; border-radius: 999px; object-fit: cover;
-  border: 1px solid rgba(255,255,255,0.14); flex-shrink: 0;
+  border: 1px solid var(--qmm-border-strong); flex-shrink: 0;
 }
 
 /* \u2500\u2500 markdown body \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
-.mgt-md { font-size: 12.5px; line-height: 1.65; color: rgba(231,238,247,0.85); }
+.mgt-md { font-size: 12.5px; line-height: 1.65; color: var(--qmm-text-soft); }
 .mgt-md > :first-child { margin-top: 0; }
 .mgt-md > :last-child { margin-bottom: 0; }
 .mgt-md p { margin: 0 0 10px; }
 .mgt-md ul { margin: 0 0 10px; padding-left: 18px; list-style: disc; }
 .mgt-md li { margin: 3px 0; }
-.mgt-md strong { color: ${TEXT2}; font-weight: 700; }
+.mgt-md strong { color: var(--qmm-text); font-weight: 700; }
 .mgt-md em { font-style: italic; }
 .mgt-md code {
   padding: 1px 5px; border-radius: 5px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em;
-  color: ${ACCENT2};
-  background: rgba(94,234,212,0.08);
-  border: 1px solid rgba(94,234,212,0.16);
+  font-family: var(--qmm-font-mono); font-size: 0.9em;
+  color: var(--qmm-accent);
+  background: var(--qmm-accent-soft);
+  border: 1px solid var(--qmm-accent-soft);
 }
 .mgt-md a {
-  color: ${ACCENT2}; text-decoration: none;
-  border-bottom: 1px solid rgba(94,234,212,0.35);
+  color: var(--qmm-accent); text-decoration: none;
+  border-bottom: 1px solid var(--qmm-accent-border);
   transition: color 140ms ease, border-color 140ms ease;
 }
-.mgt-md a:hover { color: ${ACCENT_2}; border-bottom-color: ${ACCENT_2}; }
+.mgt-md a:hover { border-bottom-color: var(--qmm-accent); }
 
 /* \u2500\u2500 actions \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 .mgt-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
-.mgt-action {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 9px 14px; border-radius: 10px; cursor: pointer;
-  border: 1px solid ${BORDER2}; background: rgba(255,255,255,0.04); color: ${TEXT2};
-  font-size: 12px; font-weight: 650; letter-spacing: 0.01em;
-  transition: color 150ms ease, background 150ms ease, border-color 150ms ease, filter 150ms ease;
-}
-.mgt-action:hover {
-  color: ${ACCENT2}; border-color: rgba(94,234,212,0.32); background: rgba(94,234,212,0.08);
-}
-.mgt-action.is-primary {
-  color: #06181c; border-color: transparent;
-  background: linear-gradient(135deg, ${ACCENT2}, ${ACCENT_2});
-  box-shadow: 0 4px 16px rgba(94,234,212,0.20);
-}
-.mgt-action.is-primary:hover { color: #06181c; filter: brightness(1.08); }
 
 /* \u2500\u2500 carousel \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 .mgt-carousel { display: flex; flex-direction: column; gap: 10px; width: 100%; }
 .mgt-carousel__stage {
   position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden;
-  border-radius: 14px; border: 1px solid ${BORDER2}; background: rgba(0,0,0,0.28);
+  border-radius: 14px; border: 1px solid var(--qmm-border); background: var(--qmm-field-bg);
   cursor: zoom-in;
 }
-.mgt-carousel__stage:focus-visible { outline: 2px solid ${ACCENT2}; outline-offset: 2px; }
+.mgt-carousel__stage:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
 /* The slides stack on top of each other, so they must never take the clicks
    meant for the stage. Only the nav buttons opt back in. */
 .mgt-carousel__slide {
@@ -49959,12 +49852,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   display: grid; place-items: center; width: 36px; height: 36px;
   border-radius: 50%; cursor: pointer; z-index: 1;
   border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(6,10,16,0.72); color: ${TEXT2};
+  background: rgba(6,10,16,0.72); color: var(--qmm-text);
   font-size: 20px; line-height: 1; padding: 0 0 2px;
   backdrop-filter: blur(6px);
   transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
 }
-.mgt-nav:hover { background: rgba(6,10,16,0.92); border-color: rgba(94,234,212,0.40); color: ${ACCENT2}; }
+.mgt-nav:hover { background: rgba(6,10,16,0.92); border-color: var(--qmm-accent-border-hover); color: var(--qmm-accent); }
 .mgt-nav--prev { left: 10px; }
 .mgt-nav--next { right: 10px; }
 .mgt-dots { display: flex; justify-content: center; gap: 6px; }
@@ -49974,42 +49867,58 @@ Restore figures are averages; unlucky streaks do worse.`;
   transition: background 160ms ease, width 160ms ease;
 }
 .mgt-dot:hover { background: rgba(255,255,255,0.5); }
-.mgt-dot.is-active { width: 18px; border-radius: 999px; background: ${ACCENT2}; }
+.mgt-dot.is-active { width: 18px; border-radius: 999px; background: var(--qmm-accent); }
+
+/* \u2500\u2500 full-screen image zoom \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.mgt-zoom {
+  position: fixed; inset: 0; z-index: 2147483647; display: grid; place-items: center; padding: 20px;
+  background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);
+}
+.mgt-zoom__box {
+  position: relative; max-width: 90vw; max-height: 90vh; overflow: hidden;
+  background: var(--qmm-sunken); border: 1px solid var(--qmm-accent-border); border-radius: 14px;
+  box-shadow: var(--qmm-shadow-modal);
+}
+.mgt-zoom__close {
+  top: 10px; right: 10px; left: auto; transform: none; z-index: 2; padding: 0; font-size: 14px;
+}
+.mgt-zoom__status { padding: 18px 22px; }
+.mgt-zoom__status.is-error { color: var(--qmm-danger); }
+.mgt-zoom__img {
+  display: none; max-width: 100%; max-height: 90vh; object-fit: contain; cursor: zoom-in;
+  transition: transform 200ms ease;
+}
+.mgt-zoom__img.is-loaded { display: block; }
+.mgt-zoom__img.is-zoomed { cursor: zoom-out; }
 
 /* \u2500\u2500 loading / error / empty states \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 .mgt-state {
   display: flex; flex-direction: column; align-items: center; gap: 11px;
   padding: 30px 20px; border-radius: 14px; text-align: center;
-  border: 1px dashed ${BORDER2}; background: rgba(255,255,255,0.02);
+  border: 1px dashed var(--qmm-border); background: var(--qmm-card-bg);
 }
-.mgt-state__text { margin: 0; font-size: 12.5px; line-height: 1.55; color: ${TEXT_DIM2}; }
-.mgt-state__title { font-size: 13.5px; font-weight: 700; color: ${TEXT2}; }
+.mgt-state__text { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--qmm-text-soft); }
+.mgt-state__title { font-size: 13.5px; font-weight: 700; color: var(--qmm-text); }
 .mgt-spinner {
   width: 22px; height: 22px; border-radius: 50%;
-  border: 2px solid rgba(94,234,212,0.16); border-top-color: ${ACCENT2};
+  border: 2px solid var(--qmm-accent-soft); border-top-color: var(--qmm-accent);
   animation: mgt-spin 700ms linear infinite;
 }
 @keyframes mgt-spin { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .mgt-card, .mgt-card__arrow, .mgt-back__arrow, .mgt-dot { transition: none; }
+  .mgt-card, .mgt-card__arrow, .mgt-dot { transition: none; }
   .mgt-card:hover { transform: none; }
   .mgt-spinner { animation-duration: 2s; }
 }
 `;
     document.head.appendChild(style2);
   }
-  var STYLE_ID3, ACCENT2, ACCENT_2, TEXT2, TEXT_DIM2, BORDER2, SURFACE;
+  var STYLE_ID3;
   var init_styles3 = __esm({
     "src/features/tools/styles.ts"() {
       "use strict";
       STYLE_ID3 = "gemini-tools-styles";
-      ACCENT2 = "#5eead4";
-      ACCENT_2 = "#2dd4bf";
-      TEXT2 = "#e7eef7";
-      TEXT_DIM2 = "rgba(231,238,247,0.62)";
-      BORDER2 = "rgba(255,255,255,0.10)";
-      SURFACE = "rgba(255,255,255,0.03)";
     }
   });
 
@@ -50071,53 +49980,39 @@ Restore figures are averages; unlucky streaks do worse.`;
     const ui = new Menu({ id: "tools", compact: true });
     ui.mount(container);
     const view = ui.root.querySelector(".qmm-views");
-    view.innerHTML = "";
-    view.style.display = "flex";
-    view.style.flexDirection = "column";
-    view.style.alignItems = "center";
-    view.style.padding = "8px";
-    view.style.width = "100%";
-    view.style.maxHeight = "70vh";
-    view.style.overflowY = "auto";
-    const wrapper = document.createElement("div");
-    wrapper.className = "mgt-wrap";
-    wrapper.style.width = `${WRAPPER_WIDTH_PX}px`;
-    wrapper.style.minWidth = `${WRAPPER_WIDTH_PX}px`;
-    wrapper.style.maxWidth = "100%";
-    wrapper.style.boxSizing = "border-box";
-    const viewContainer = document.createElement("div");
-    viewContainer.className = "mgt-views";
+    view.replaceChildren();
+    Object.assign(view.style, {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      padding: "8px",
+      width: "100%",
+      maxHeight: "70vh",
+      overflowY: "auto"
+    });
+    const wrapper = h("div", "mgt-wrap");
+    Object.assign(wrapper.style, {
+      width: `${WRAPPER_WIDTH_PX}px`,
+      minWidth: `${WRAPPER_WIDTH_PX}px`,
+      maxWidth: "100%",
+      boxSizing: "border-box"
+    });
+    const viewContainer = h("div", "mgt-views");
     wrapper.appendChild(viewContainer);
     view.appendChild(wrapper);
     const showLoading = () => {
-      viewContainer.innerHTML = "";
-      const state5 = document.createElement("div");
-      state5.className = "mgt-state";
-      const spinner = document.createElement("div");
-      spinner.className = "mgt-spinner";
-      const text2 = document.createElement("p");
-      text2.className = "mgt-state__text";
-      text2.textContent = "Fetching the latest tools...";
-      state5.append(spinner, text2);
-      viewContainer.appendChild(state5);
+      const state5 = h("div", "mgt-state");
+      state5.append(h("div", "mgt-spinner"), h("p", "mgt-state__text", "Fetching the latest tools..."));
+      viewContainer.replaceChildren(state5);
     };
     const showError = (message) => {
-      viewContainer.innerHTML = "";
-      const state5 = document.createElement("div");
-      state5.className = "mgt-state";
-      const title = document.createElement("span");
-      title.className = "mgt-state__title";
-      title.textContent = "Couldn't load the tools";
-      const text2 = document.createElement("p");
-      text2.className = "mgt-state__text";
-      text2.textContent = message;
-      const retry = document.createElement("button");
-      retry.type = "button";
-      retry.className = "mgt-action is-primary";
-      retry.textContent = "Retry";
-      retry.onclick = () => void init();
-      state5.append(title, text2, retry);
-      viewContainer.appendChild(state5);
+      const state5 = h("div", "mgt-state");
+      state5.append(
+        h("span", "mgt-state__title", "Couldn't load the tools"),
+        h("p", "mgt-state__text", message),
+        button("Retry", { variant: "primary", onClick: () => init() })
+      );
+      viewContainer.replaceChildren(state5);
     };
     let tools = [];
     let listViewRoot = null;
@@ -50147,7 +50042,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           showError("No tools are available right now.");
           return;
         }
-        viewContainer.innerHTML = "";
+        viewContainer.replaceChildren();
         listViewRoot = null;
         detailViewRoot = null;
         await showListView();
@@ -50161,6 +50056,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_menu9 = __esm({
     "src/features/tools/menu.ts"() {
       "use strict";
+      init_button();
+      init_dom2();
       init_menu();
       init_fetchTools();
       init_listView();
@@ -50212,7 +50109,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       fontSize: "10px",
       fontWeight: "700",
       letterSpacing: "0.08em",
-      color: TEXT_DIM3,
+      color: TEXT_DIM2,
       textTransform: "uppercase",
       paddingBottom: "7px"
     });
@@ -50225,7 +50122,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       padding: "14px",
       background: CARD_BG2,
       borderRadius: "12px",
-      border: `1px solid ${BORDER3}`,
+      border: `1px solid ${BORDER2}`,
       display: "flex",
       flexDirection: "column",
       gap: "10px"
@@ -50271,10 +50168,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       alignItems: "center",
       justifyContent: "center",
       padding: "10px 14px",
-      border: `1px solid ${BORDER3}`,
+      border: `1px solid ${BORDER2}`,
       borderRadius: "10px",
       background: CARD_BG2,
-      color: TEXT3,
+      color: TEXT2,
       fontSize: "12px",
       fontWeight: "500",
       cursor: "pointer",
@@ -50283,7 +50180,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     btn.textContent = label2;
     btn.onmouseenter = () => css2(btn, { background: CARD_BG_HI, borderColor: BORDER_HI });
-    btn.onmouseleave = () => css2(btn, { background: CARD_BG2, borderColor: BORDER3 });
+    btn.onmouseleave = () => css2(btn, { background: CARD_BG2, borderColor: BORDER2 });
     btn.onclick = async () => {
       css2(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
@@ -50331,10 +50228,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       alignItems: "center",
       justifyContent: "center",
       padding: "7px 11px",
-      border: `1px solid ${teal ? TEAL_BORDER2 : BORDER3}`,
+      border: `1px solid ${teal ? TEAL_BORDER2 : BORDER2}`,
       borderRadius: "8px",
       background: teal ? TEAL_DIM2 : CARD_BG2,
-      color: teal ? TEAL2 : TEXT3,
+      color: teal ? TEAL2 : TEXT2,
       fontSize: "11px",
       fontWeight: "600",
       cursor: "pointer",
@@ -50343,7 +50240,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     btn.textContent = label2;
     btn.onmouseenter = () => css2(btn, { background: teal ? TEAL_MID : CARD_BG_HI, borderColor: teal ? TEAL_BRD_HI : BORDER_HI });
-    btn.onmouseleave = () => css2(btn, { background: teal ? TEAL_DIM2 : CARD_BG2, borderColor: teal ? TEAL_BORDER2 : BORDER3 });
+    btn.onmouseleave = () => css2(btn, { background: teal ? TEAL_DIM2 : CARD_BG2, borderColor: teal ? TEAL_BORDER2 : BORDER2 });
     btn.onclick = async () => {
       css2(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
@@ -50361,17 +50258,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     css2(input, {
       width: "100%",
       padding: "9px 12px",
-      border: `1px solid ${BORDER3}`,
+      border: `1px solid ${BORDER2}`,
       borderRadius: "10px",
       background: "rgba(255,255,255,0.06)",
-      color: TEXT3,
+      color: TEXT2,
       fontSize: "12px",
       outline: "none",
       transition: "border-color 150ms ease",
       boxSizing: "border-box"
     });
     input.addEventListener("focus", () => css2(input, { borderColor: TEAL_BORDER2 }));
-    input.addEventListener("blur", () => css2(input, { borderColor: BORDER3 }));
+    input.addEventListener("blur", () => css2(input, { borderColor: BORDER2 }));
     return input;
   }
   function createToggle(checked, onChange) {
@@ -50409,7 +50306,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const statusEl = document.createElement("div");
     css2(statusEl, {
       fontSize: "11px",
-      color: TEXT_DIM3,
+      color: TEXT_DIM2,
       minHeight: "16px",
       paddingLeft: "2px",
       transition: "opacity 200ms ease"
@@ -50420,20 +50317,20 @@ Restore figures are averages; unlucky streaks do worse.`;
       clearTimeout(statusEl.__t);
       statusEl.__t = setTimeout(() => {
         statusEl.textContent = "";
-        statusEl.style.color = TEXT_DIM3;
+        statusEl.style.color = TEXT_DIM2;
       }, 4e3);
     }
     const toggleRow = document.createElement("div");
     css2(toggleRow, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" });
     const toggleLabel = document.createElement("div");
-    css2(toggleLabel, { fontSize: "13px", fontWeight: "600", color: TEXT3 });
+    css2(toggleLabel, { fontSize: "13px", fontWeight: "600", color: TEXT2 });
     toggleLabel.textContent = "Editor mode";
     const toggle2 = createToggle(EditorService.isEnabled(), (on) => {
       EditorService.setEnabled(on);
     });
     toggleRow.append(toggleLabel, toggle2);
     const desc = document.createElement("div");
-    css2(desc, { fontSize: "11px", color: TEXT_DIM3, lineHeight: "1.5" });
+    css2(desc, { fontSize: "11px", color: TEXT_DIM2, lineHeight: "1.5" });
     desc.textContent = "Sandbox garden with every plant and decor unlocked. Left click to place, right click to remove, drag to paint.";
     wrap.appendChild(card3([toggleRow, desc]));
     const nameInput = styledInput("Garden name\u2026");
@@ -50471,14 +50368,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       border: `2px dashed ${BORDER_HI}`,
       borderRadius: "10px",
       background: "rgba(255,255,255,0.03)",
-      color: TEXT_DIM3,
+      color: TEXT_DIM2,
       fontSize: "11px",
       textAlign: "center",
       cursor: "pointer",
       transition: "border-color 150ms ease, background 150ms ease"
     });
     const dropTitle = document.createElement("div");
-    css2(dropTitle, { fontWeight: "600", fontSize: "12px", color: TEXT3 });
+    css2(dropTitle, { fontWeight: "600", fontSize: "12px", color: TEXT2 });
     dropTitle.textContent = "Drop a garden JSON file here";
     const dropHint = document.createElement("div");
     dropHint.textContent = "\u2026or click to browse";
@@ -50553,7 +50450,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const items = typeof listFn === "function" ? listFn() : [];
       if (!items.length) {
         const empty = document.createElement("div");
-        css2(empty, { fontSize: "12px", color: TEXT_DIM3, padding: "4px 0" });
+        css2(empty, { fontSize: "12px", color: TEXT_DIM2, padding: "4px 0" });
         empty.textContent = "No saved gardens yet.";
         listWrap.appendChild(empty);
         return;
@@ -50568,17 +50465,17 @@ Restore figures are averages; unlucky streaks do worse.`;
           padding: "10px 12px",
           background: CARD_BG2,
           borderRadius: "10px",
-          border: `1px solid ${BORDER3}`,
+          border: `1px solid ${BORDER2}`,
           transition: "border-color 120ms ease"
         });
         row.onmouseenter = () => css2(row, { borderColor: BORDER_HI });
-        row.onmouseleave = () => css2(row, { borderColor: BORDER3 });
+        row.onmouseleave = () => css2(row, { borderColor: BORDER2 });
         const nameEl = document.createElement("div");
         css2(nameEl, {
           flex: "1",
           fontSize: "12px",
           fontWeight: "600",
-          color: TEXT3,
+          color: TEXT2,
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
@@ -50644,7 +50541,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
   }
-  var STYLE_ID4, TEAL2, TEAL_DIM2, TEAL_MID, TEAL_BORDER2, TEAL_BRD_HI, BORDER3, BORDER_HI, CARD_BG2, CARD_BG_HI, TEXT3, TEXT_DIM3, DANGER2, DANGER_DIM, DANGER_BRD, DANGER_HI, DANGER_BRD_HI, css2;
+  var STYLE_ID4, TEAL2, TEAL_DIM2, TEAL_MID, TEAL_BORDER2, TEAL_BRD_HI, BORDER2, BORDER_HI, CARD_BG2, CARD_BG_HI, TEXT2, TEXT_DIM2, DANGER2, DANGER_DIM, DANGER_BRD, DANGER_HI, DANGER_BRD_HI, css2;
   var init_menu10 = __esm({
     "src/features/editor/menu.ts"() {
       "use strict";
@@ -50657,12 +50554,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       TEAL_MID = "rgba(94,234,212,0.22)";
       TEAL_BORDER2 = "rgba(94,234,212,0.3)";
       TEAL_BRD_HI = "rgba(94,234,212,0.55)";
-      BORDER3 = "rgba(255,255,255,0.08)";
+      BORDER2 = "rgba(255,255,255,0.08)";
       BORDER_HI = "rgba(255,255,255,0.16)";
       CARD_BG2 = "rgba(255,255,255,0.03)";
       CARD_BG_HI = "rgba(255,255,255,0.06)";
-      TEXT3 = "#e7eef7";
-      TEXT_DIM3 = "rgba(226,232,240,0.45)";
+      TEXT2 = "#e7eef7";
+      TEXT_DIM2 = "rgba(226,232,240,0.45)";
       DANGER2 = "#ef4444";
       DANGER_DIM = "rgba(239,68,68,0.12)";
       DANGER_BRD = "rgba(239,68,68,0.3)";
@@ -51588,7 +51485,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       fontSize: "10px",
       fontWeight: "700",
       letterSpacing: "0.08em",
-      color: TEXT_DIM4,
+      color: TEXT_DIM3,
       textTransform: "uppercase",
       paddingBottom: "6px"
     });
@@ -51633,7 +51530,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       alignItems: "center",
       gap: "4px",
       fontSize: "11px",
-      color: online ? GREEN : TEXT_DIM4
+      color: online ? GREEN : TEXT_DIM3
     });
     const dot = document.createElement("span");
     css3(dot, {
@@ -51686,9 +51583,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     const btn = document.createElement("button");
     const applyState2 = () => {
       css3(btn, {
-        border: `1px solid ${isActive ? TEAL_BORDER_HI : BORDER4}`,
+        border: `1px solid ${isActive ? TEAL_BORDER_HI : BORDER3}`,
         background: isActive ? TEAL_MID2 : CARD_BG3,
-        color: isActive ? TEAL3 : TEXT4
+        color: isActive ? TEAL3 : TEXT3
       });
     };
     css3(btn, {
@@ -51737,9 +51634,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       opacity: "0.45",
       cursor: "not-allowed",
       filter: "grayscale(1)",
-      border: `1px solid ${BORDER4}`,
+      border: `1px solid ${BORDER3}`,
       background: CARD_BG3,
-      color: TEXT_DIM4
+      color: TEXT_DIM3
     });
     btn.onmouseenter = null;
     btn.onmouseleave = null;
@@ -51755,10 +51652,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       alignItems: "center",
       gap: "7px",
       padding: "9px 12px",
-      border: `1px solid ${BORDER4}`,
+      border: `1px solid ${BORDER3}`,
       borderRadius: "10px",
       background: CARD_BG3,
-      color: TEXT4,
+      color: TEXT3,
       fontSize: "12px",
       fontWeight: "500",
       cursor: "pointer",
@@ -51771,7 +51668,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     css3(icon, { display: "flex", alignItems: "center", flexShrink: "0", opacity: "0.7" });
     btn.append(icon, document.createTextNode(label2));
     btn.onmouseenter = () => css3(btn, { background: CARD_BG_HI2, borderColor: BORDER_HI2 });
-    btn.onmouseleave = () => css3(btn, { background: CARD_BG3, borderColor: BORDER4 });
+    btn.onmouseleave = () => css3(btn, { background: CARD_BG3, borderColor: BORDER3 });
     btn.onclick = async () => {
       css3(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
@@ -51803,7 +51700,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       gap: "5px",
       overflowY: "auto",
       padding: "14px 8px 14px 12px",
-      borderRight: `1px solid ${BORDER4}`
+      borderRight: `1px solid ${BORDER3}`
     });
     const rightPane = document.createElement("div");
     rightPane.className = "qws-rm-scroll";
@@ -51838,7 +51735,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           justifyContent: "center",
           height: "100%",
           gap: "10px",
-          color: TEXT_DIM4,
+          color: TEXT_DIM3,
           fontSize: "12px",
           paddingTop: "60px"
         });
@@ -51859,7 +51756,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         padding: "14px",
         background: CARD_BG3,
         borderRadius: "12px",
-        border: `1px solid ${BORDER4}`
+        border: `1px solid ${BORDER3}`
       });
       const av = avatar(player2, 46);
       const infoBlock = document.createElement("div");
@@ -51868,7 +51765,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       css3(nameEl, {
         fontSize: "15px",
         fontWeight: "700",
-        color: TEXT4,
+        color: TEXT3,
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap"
@@ -51988,13 +51885,13 @@ Restore figures are averages; unlucky streaks do worse.`;
           padding: "11px 14px",
           background: CARD_BG3,
           borderRadius: "10px",
-          border: `1px solid ${BORDER4}`,
+          border: `1px solid ${BORDER3}`,
           display: "flex",
           flexDirection: "column",
           gap: "4px"
         });
         const lbl = document.createElement("div");
-        css3(lbl, { fontSize: "10px", color: TEXT_DIM4, fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" });
+        css3(lbl, { fontSize: "10px", color: TEXT_DIM3, fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" });
         lbl.textContent = label2;
         const val = document.createElement("div");
         css3(val, { fontSize: "15px", fontWeight: "700", color: "#FFD84D" });
@@ -52030,14 +51927,14 @@ Restore figures are averages; unlucky streaks do worse.`;
         gap: "10px",
         padding: "9px 10px",
         borderRadius: "10px",
-        border: isSelected ? `1px solid ${TEAL_BORDER3}` : `1px solid ${BORDER4}`,
+        border: isSelected ? `1px solid ${TEAL_BORDER3}` : `1px solid ${BORDER3}`,
         background: isSelected ? TEAL_DIM3 : "rgba(255,255,255,0.02)",
         cursor: "pointer",
         transition: "all 120ms ease"
       });
       if (!isSelected) {
         card5.onmouseenter = () => css3(card5, { background: CARD_BG_HI2, borderColor: "rgba(94,234,212,0.18)" });
-        card5.onmouseleave = () => css3(card5, { background: "rgba(255,255,255,0.02)", borderColor: BORDER4 });
+        card5.onmouseleave = () => css3(card5, { background: "rgba(255,255,255,0.02)", borderColor: BORDER3 });
       }
       card5.onclick = () => {
         selectedId = player2.id;
@@ -52051,7 +51948,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       css3(nameEl, {
         fontSize: "12px",
         fontWeight: "600",
-        color: TEXT4,
+        color: TEXT3,
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap"
@@ -52064,7 +51961,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         gap: "4px",
         marginTop: "2px",
         fontSize: "10px",
-        color: player2.isConnected ? GREEN : TEXT_DIM4
+        color: player2.isConnected ? GREEN : TEXT_DIM3
       });
       const dot = document.createElement("span");
       css3(dot, { width: "5px", height: "5px", borderRadius: "50%", background: player2.isConnected ? GREEN : "rgba(226,232,240,0.3)", flexShrink: "0" });
@@ -52083,13 +51980,13 @@ Restore figures are averages; unlucky streaks do worse.`;
         marginBottom: "6px"
       });
       const countEl = document.createElement("div");
-      css3(countEl, { fontSize: "10px", fontWeight: "700", letterSpacing: "0.07em", color: TEXT_DIM4, textTransform: "uppercase" });
+      css3(countEl, { fontSize: "10px", fontWeight: "700", letterSpacing: "0.07em", color: TEXT_DIM3, textTransform: "uppercase" });
       countEl.textContent = `${players.length} player${players.length !== 1 ? "s" : ""}`;
       header.appendChild(countEl);
       leftPane.appendChild(header);
       if (players.length === 0) {
         const empty = document.createElement("div");
-        css3(empty, { paddingTop: "16px", textAlign: "center", color: TEXT_DIM4, fontSize: "12px" });
+        css3(empty, { paddingTop: "16px", textAlign: "center", color: TEXT_DIM3, fontSize: "12px" });
         empty.textContent = "No players in room";
         leftPane.appendChild(empty);
         return;
@@ -52119,7 +52016,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     await refresh(true);
   }
-  var STYLE_ID5, TEAL3, TEAL_DIM3, TEAL_MID2, TEAL_BORDER3, TEAL_BORDER_HI, BORDER4, BORDER_HI2, CARD_BG3, CARD_BG_HI2, TEXT4, TEXT_DIM4, GREEN, PLAYER_POSITION_AVAILABLE, PLAYER_POSITION_UNAVAILABLE_HINT, css3, ICO, ICONS;
+  var STYLE_ID5, TEAL3, TEAL_DIM3, TEAL_MID2, TEAL_BORDER3, TEAL_BORDER_HI, BORDER3, BORDER_HI2, CARD_BG3, CARD_BG_HI2, TEXT3, TEXT_DIM3, GREEN, PLAYER_POSITION_AVAILABLE, PLAYER_POSITION_UNAVAILABLE_HINT, css3, ICO, ICONS;
   var init_menu12 = __esm({
     "src/features/room/menu.ts"() {
       "use strict";
@@ -52134,12 +52031,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       TEAL_MID2 = "rgba(94,234,212,0.22)";
       TEAL_BORDER3 = "rgba(94,234,212,0.3)";
       TEAL_BORDER_HI = "rgba(94,234,212,0.55)";
-      BORDER4 = "rgba(255,255,255,0.08)";
+      BORDER3 = "rgba(255,255,255,0.08)";
       BORDER_HI2 = "rgba(255,255,255,0.16)";
       CARD_BG3 = "rgba(255,255,255,0.03)";
       CARD_BG_HI2 = "rgba(255,255,255,0.06)";
-      TEXT4 = "#e7eef7";
-      TEXT_DIM4 = "rgba(226,232,240,0.45)";
+      TEXT3 = "#e7eef7";
+      TEXT_DIM3 = "rgba(226,232,240,0.45)";
       GREEN = "#10b981";
       PLAYER_POSITION_AVAILABLE = false;
       PLAYER_POSITION_UNAVAILABLE_HINT = "Temporarily unavailable: the game no longer exposes player positions.";
@@ -61219,7 +61116,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   backdrop-filter: blur(8px);
   box-shadow: 0 12px 38px rgba(0,0,0,0.48);
   font: 12.5px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  color: ${TEXT5};
+  color: ${TEXT4};
   animation: mgAskIn 160ms ease-out;
 }
 @keyframes mgAskIn {
@@ -61236,7 +61133,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   font-size: 22px; line-height: 1;
 }
 #${CARD_ID} .mgask-right { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
-#${CARD_ID} .mgask-who { font-size: 11px; font-weight: 700; color: ${ACCENT3}; letter-spacing: 0.02em; }
+#${CARD_ID} .mgask-who { font-size: 11px; font-weight: 700; color: ${ACCENT2}; letter-spacing: 0.02em; }
 #${CARD_ID} .mgask-text { display: block; overflow-wrap: anywhere; }
 #${CARD_ID} .mgask-text img, #${CARD_ID} .mgask-text canvas { vertical-align: -3px; }
 #${CARD_ID} .mgask-buttons { display: flex; gap: 8px; }
@@ -61246,17 +61143,17 @@ Restore figures are averages; unlucky streaks do worse.`;
   transition: background 120ms ease, border-color 120ms ease;
 }
 #${CARD_ID} button.mgask-yes {
-  border: 1px solid rgba(94,234,212,0.45); background: rgba(94,234,212,0.16); color: ${ACCENT3};
+  border: 1px solid rgba(94,234,212,0.45); background: rgba(94,234,212,0.16); color: ${ACCENT2};
 }
 #${CARD_ID} button.mgask-yes:hover { background: rgba(94,234,212,0.26); }
 #${CARD_ID} button.mgask-no {
-  border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.05); color: ${TEXT_DIM5};
+  border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.05); color: ${TEXT_DIM4};
 }
 #${CARD_ID} button.mgask-no:hover { background: rgba(255,255,255,0.10); }
 #${CARD_ID} .mgask-clock { height: 3px; background: rgba(255,255,255,0.07); }
 #${CARD_ID} .mgask-clock > i {
   display: block; height: 100%; width: 100%;
-  background: linear-gradient(90deg, ${ACCENT3}, rgba(94,234,212,0.45));
+  background: linear-gradient(90deg, ${ACCENT2}, rgba(94,234,212,0.45));
 }
 `;
     document.head.appendChild(style2);
@@ -61352,7 +61249,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     unsubscribe = CompanionChat.subscribe(sync);
     sync();
   }
-  var CARD_ID, STYLE_ID6, Z_INDEX, ICON_PX4, TICK_MS, ACCENT3, TEXT5, TEXT_DIM5, card4, clockBar, timer, shownId, unsubscribe;
+  var CARD_ID, STYLE_ID6, Z_INDEX, ICON_PX4, TICK_MS, ACCENT2, TEXT4, TEXT_DIM4, card4, clockBar, timer, shownId, unsubscribe;
   var init_askBanner = __esm({
     "src/features/companion/menu/askBanner.ts"() {
       "use strict";
@@ -61367,9 +61264,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       Z_INDEX = "2000050";
       ICON_PX4 = 17;
       TICK_MS = 100;
-      ACCENT3 = "#5eead4";
-      TEXT5 = "#e7eef7";
-      TEXT_DIM5 = "rgba(231,238,247,0.68)";
+      ACCENT2 = "#5eead4";
+      TEXT4 = "#e7eef7";
+      TEXT_DIM4 = "rgba(231,238,247,0.68)";
       card4 = null;
       clockBar = null;
       timer = null;
@@ -61383,7 +61280,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (typeof document === "undefined" || !document.body) return;
     if (hasSeenAutoRecoDisabledNotice()) return;
     if (document.getElementById(NOTICE_ID)) return;
-    const dismiss3 = () => {
+    const dismiss2 = () => {
       markAutoRecoDisabledNoticeSeen();
       dialog.close();
     };
@@ -61392,10 +61289,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       title: "Auto reconnect disabled",
       body: "The auto-reconnect option has been temporarily disabled at the request of the game developers. It will most likely come back later.",
       buttonLabel: "Got it",
-      onButton: dismiss3
+      onButton: dismiss2
     });
     dialog.root.addEventListener("click", (event) => {
-      if (event.target === dialog.root) dismiss3();
+      if (event.target === dialog.root) dismiss2();
     });
   }
   var NOTICE_ID;
@@ -61478,163 +61375,77 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/changelog/fetchChangelog.ts
-  function parseChangelogPayload(raw) {
-    if (!raw || typeof raw !== "object") {
-      throw new Error("Invalid changelog payload: not an object");
+  function parseEntry(e) {
+    const { version, notes } = e;
+    if (!isNonEmptyString(version)) {
+      console.warn("[Changelog] Skipping entry with missing/invalid version");
+      return null;
     }
-    const payload = raw;
-    if (!Array.isArray(payload.entries)) {
-      throw new Error("Invalid changelog payload: 'entries' is not an array");
+    if (!isNonEmptyString(notes)) {
+      console.warn("[Changelog] Skipping entry with missing/invalid notes:", version);
+      return null;
     }
-    const entries2 = [];
-    for (const entry of payload.entries) {
-      if (!entry || typeof entry !== "object") {
-        console.warn("[Changelog] Skipping invalid entry:", entry);
-        continue;
-      }
-      const e = entry;
-      const version = e.version;
-      const notes = e.notes;
-      if (!version || typeof version !== "string" || !version.trim()) {
-        console.warn("[Changelog] Skipping entry with missing/invalid version");
-        continue;
-      }
-      if (!notes || typeof notes !== "string" || !notes.trim()) {
-        console.warn("[Changelog] Skipping entry with missing/invalid notes:", version);
-        continue;
-      }
-      const images = Array.isArray(e.images) ? e.images.filter(
-        (img) => typeof img === "string" && img.trim().length > 0
-      ) : [];
-      entries2.push({
-        version,
-        notes,
-        date: typeof e.date === "string" ? e.date : void 0,
-        title: typeof e.title === "string" ? e.title : void 0,
-        images
-      });
-    }
-    return entries2;
-  }
-  async function fetchChangelog() {
-    const url = `${RAW_BASE_URL3}/refs/heads/${REPO_BRANCH3}/${CHANGELOG_FILE_PATH}?t=${Date.now()}`;
-    const text2 = await getText(url, { noCache: true });
-    const raw = JSON.parse(text2);
-    return parseChangelogPayload(raw);
+    return {
+      version,
+      notes,
+      date: typeof e.date === "string" ? e.date : void 0,
+      title: typeof e.title === "string" ? e.title : void 0,
+      // A blank image URL is dropped rather than failing the whole entry.
+      images: (stringList(e.images) ?? []).filter(isNonEmptyString)
+    };
   }
   async function fetchChangelogEntryForVersion(version) {
-    const entries2 = await fetchChangelog();
-    return entries2.find((entry) => entry.version === version) ?? null;
+    const entries2 = await fetchRepoList("changelog/changelog.json", "entries", "Changelog");
+    for (const raw of entries2) {
+      const entry = parseEntry(raw);
+      if (entry?.version === version) return entry;
+    }
+    return null;
   }
-  var REPO_OWNER3, REPO_NAME3, REPO_BRANCH3, CHANGELOG_FILE_PATH, RAW_BASE_URL3;
   var init_fetchChangelog = __esm({
     "src/features/changelog/fetchChangelog.ts"() {
       "use strict";
-      init_http();
-      REPO_OWNER3 = "Ariedam64";
-      REPO_NAME3 = "MG-AriesMod";
-      REPO_BRANCH3 = "main";
-      CHANGELOG_FILE_PATH = "changelog/changelog.json";
-      RAW_BASE_URL3 = `https://raw.githubusercontent.com/${REPO_OWNER3}/${REPO_NAME3}`;
+      init_repoJson();
     }
   });
 
   // src/features/changelog/notice.ts
-  function ensureStyle4() {
-    if (document.getElementById(STYLE_ID8)) return;
-    const style2 = document.createElement("style");
-    style2.id = STYLE_ID8;
-    style2.textContent = `
-#${OVERLAY_ID3} {
-  position: fixed; inset: 0; z-index: ${OVERLAY_Z_INDEX2};
-  display: grid; place-items: center; padding: 20px;
-  background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-}
-#${OVERLAY_ID3} .mgcl-box {
-  width: 440px; max-width: 92vw; max-height: 85vh; overflow-y: auto;
-  padding: 22px 24px; border-radius: 16px;
-  border: 1px solid rgba(94,234,212,0.20);
-  background:
-    radial-gradient(130% 150% at 0% 0%, rgba(94,234,212,0.10), transparent 55%),
-    linear-gradient(160deg, rgba(18,24,34,0.97), rgba(10,14,20,0.98));
-  box-shadow: 0 24px 60px rgba(0,0,0,0.55);
-  color: ${TEXT6};
-}
-#${OVERLAY_ID3} .mgcl-eyebrow {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-  color: ${ACCENT4}; margin: 0 0 6px;
-}
-#${OVERLAY_ID3} .mgcl-title { font-size: 18px; font-weight: 750; margin: 0 0 4px; }
-#${OVERLAY_ID3} .mgcl-version { font-size: 11.5px; color: ${TEXT_DIM6}; margin: 0 0 16px; }
-#${OVERLAY_ID3} .mgcl-body { font-size: 12.5px; line-height: 1.65; color: rgba(231,238,247,0.85); }
-#${OVERLAY_ID3} .mgcl-body > :first-child { margin-top: 0; }
-#${OVERLAY_ID3} .mgcl-body > :last-child { margin-bottom: 0; }
-#${OVERLAY_ID3} .mgcl-body p { margin: 0 0 10px; }
-#${OVERLAY_ID3} .mgcl-body ul { margin: 0 0 10px; padding-left: 18px; list-style: disc; }
-#${OVERLAY_ID3} .mgcl-body li { margin: 3px 0; }
-#${OVERLAY_ID3} .mgcl-body strong { color: ${TEXT6}; font-weight: 700; }
-#${OVERLAY_ID3} .mgcl-body code {
-  padding: 1px 5px; border-radius: 5px; font-size: 0.9em;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: ${ACCENT4}; background: rgba(94,234,212,0.08); border: 1px solid rgba(94,234,212,0.16);
-}
-#${OVERLAY_ID3} .mgcl-body a {
-  color: ${ACCENT4}; text-decoration: none; border-bottom: 1px solid rgba(94,234,212,0.35);
-}
-#${OVERLAY_ID3} .mgcl-body a:hover { color: ${ACCENT_22}; border-bottom-color: ${ACCENT_22}; }
-#${OVERLAY_ID3} .mgcl-media { margin-top: 14px; }
-#${OVERLAY_ID3} .mgcl-close {
-  margin-top: 18px; width: 100%; padding: 10px 16px; border-radius: 10px; cursor: pointer;
-  border: none; color: #06181c; font-size: 13px; font-weight: 700;
-  background: linear-gradient(135deg, ${ACCENT4}, ${ACCENT_22});
-  box-shadow: 0 4px 16px rgba(94,234,212,0.20);
-}
-#${OVERLAY_ID3} .mgcl-close:hover { filter: brightness(1.08); }
-#${OVERLAY_ID3} .mgcl-close:focus-visible { outline: 2px solid ${ACCENT4}; outline-offset: 2px; }
-  `;
-    document.head.appendChild(style2);
-  }
-  function dismiss2(overlay2, version) {
-    markChangelogVersionSeen(version);
-    overlay2.remove();
+  function ensureStyles5() {
+    ensureToolsStyles();
+    if (stylesInjected4) return;
+    stylesInjected4 = true;
+    addStyle(NOTICE_CSS);
   }
   function buildOverlay(entry) {
-    const overlay2 = document.createElement("div");
+    const overlay2 = h("div");
     overlay2.id = OVERLAY_ID3;
-    const box = document.createElement("div");
-    box.className = "mgcl-box";
+    const dismiss2 = () => {
+      markChangelogVersionSeen(entry.version);
+      overlay2.remove();
+    };
+    const box = h("div", "mgcl-box");
     box.setAttribute("role", "dialog");
     box.setAttribute("aria-label", "What's new");
-    const eyebrow = document.createElement("p");
-    eyebrow.className = "mgcl-eyebrow";
-    eyebrow.textContent = "What's new";
-    const title = document.createElement("h2");
-    title.className = "mgcl-title";
-    title.textContent = entry.title?.trim() || "This update brings:";
-    const versionLine = document.createElement("p");
-    versionLine.className = "mgcl-version";
-    versionLine.textContent = entry.date ? `v${entry.version} \xB7 ${entry.date}` : `v${entry.version}`;
-    const body = document.createElement("div");
-    body.className = "mgcl-body";
+    const body = h("div", "mgt-md");
     body.innerHTML = renderMarkdown(entry.notes);
-    const close = document.createElement("button");
-    close.type = "button";
-    close.className = "mgcl-close";
-    close.textContent = "Got it";
-    close.onclick = () => dismiss2(overlay2, entry.version);
-    box.append(eyebrow, title, versionLine, body);
+    box.append(
+      h("p", "mgcl-eyebrow", "What's new"),
+      h("h2", "mgcl-title", entry.title?.trim() || "This update brings:"),
+      h("p", "mgcl-version", entry.date ? `v${entry.version} \xB7 ${entry.date}` : `v${entry.version}`),
+      body
+    );
     const images = entry.images ?? [];
     if (images.length) {
-      ensureToolsStyles();
       const carousel = renderCarousel(images);
       carousel.root.classList.add("mgcl-media");
       box.appendChild(carousel.root);
     }
+    const close = button("Got it", { variant: "primary", fullWidth: true, onClick: dismiss2 });
+    close.classList.add("mgcl-close");
     box.appendChild(close);
     overlay2.appendChild(box);
     overlay2.onclick = (event) => {
-      if (event.target === overlay2) dismiss2(overlay2, entry.version);
+      if (event.target === overlay2) dismiss2();
     };
     return overlay2;
   }
@@ -61652,26 +61463,50 @@ Restore figures are averages; unlucky streaks do worse.`;
       return;
     }
     if (!entry) return;
-    ensureStyle4();
+    ensureStyles5();
     document.body.appendChild(buildOverlay(entry));
   }
-  var OVERLAY_ID3, STYLE_ID8, OVERLAY_Z_INDEX2, ACCENT4, ACCENT_22, TEXT6, TEXT_DIM6;
+  var OVERLAY_ID3, NOTICE_CSS, stylesInjected4;
   var init_notice = __esm({
     "src/features/changelog/notice.ts"() {
       "use strict";
+      init_dom();
+      init_markdown();
       init_modVersion();
       init_storage();
-      init_fetchChangelog();
-      init_markdown();
+      init_button();
+      init_dom2();
       init_carousel();
       init_styles3();
+      init_fetchChangelog();
       OVERLAY_ID3 = "mgChangelogNotice";
-      STYLE_ID8 = "mgChangelogNoticeStyle";
-      OVERLAY_Z_INDEX2 = "2147483647";
-      ACCENT4 = "#5eead4";
-      ACCENT_22 = "#2dd4bf";
-      TEXT6 = "#e7eef7";
-      TEXT_DIM6 = "rgba(231,238,247,0.68)";
+      NOTICE_CSS = `
+#${OVERLAY_ID3} {
+  position: fixed; inset: 0; z-index: 2147483647;
+  display: grid; place-items: center; padding: 20px;
+  background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+#${OVERLAY_ID3} .mgcl-box {
+  width: 440px; max-width: 92vw; max-height: 85vh; overflow-y: auto;
+  padding: 22px 24px; border-radius: 16px;
+  border: 1px solid var(--qmm-accent-border);
+  background:
+    radial-gradient(130% 150% at 0% 0%, var(--qmm-accent-soft), transparent 55%),
+    linear-gradient(160deg, rgba(18,24,34,0.97), rgba(10,14,20,0.98));
+  box-shadow: var(--qmm-shadow-modal);
+  color: var(--qmm-text);
+}
+#${OVERLAY_ID3} .mgcl-eyebrow {
+  margin: 0 0 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--qmm-accent);
+}
+#${OVERLAY_ID3} .mgcl-title { margin: 0 0 4px; font-size: 18px; font-weight: 750; }
+#${OVERLAY_ID3} .mgcl-version { margin: 0 0 16px; font-size: 11.5px; color: var(--qmm-text-soft); }
+#${OVERLAY_ID3} .mgcl-media { margin-top: 14px; }
+#${OVERLAY_ID3} .mgcl-close { margin-top: 18px; }
+`;
+      stylesInjected4 = false;
     }
   });
 

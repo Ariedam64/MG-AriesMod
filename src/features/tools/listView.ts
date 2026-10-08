@@ -1,7 +1,8 @@
-// List view: tag filter bar + clickable tool cards.
-// Styling lives in styles.ts (`.mgt-list`, `.mgt-grid`, `.mgt-card`, ...).
-import type { ExternalTool } from "./fetchTools";
+// List view: the tag filter bar and one clickable card per tool.
+
 import { markdownToPlainText } from "../../lib/markdown";
+import { button, type KitButton } from "../../ui/kit/button";
+import type { ExternalTool } from "./fetchTools";
 import { createIconTile } from "./image";
 import { createTagRow } from "./tag";
 
@@ -71,7 +72,7 @@ export function renderListView(
   grid.className = "mgt-grid";
 
   const renderCards = () => {
-    grid.innerHTML = "";
+    grid.replaceChildren();
 
     const filtered = selectedTags.size
       ? tools.filter((tool) => tool.tags?.some((tag) => selectedTags.has(tag)))
@@ -94,7 +95,7 @@ export function renderListView(
     });
   };
 
-  // Filter bar — only worth showing when there is something to filter on.
+  // The filter bar is only worth showing when there is something to filter on.
   if (allTags.length) {
     const filters = document.createElement("div");
     filters.className = "mgt-filters";
@@ -104,45 +105,37 @@ export function renderListView(
     label.textContent = "Filter";
     filters.appendChild(label);
 
-    const tagButtons = new Map<string, HTMLButtonElement>();
-
-    const allButton = document.createElement("button");
-    allButton.type = "button";
-    allButton.className = "mgt-chip";
-    allButton.textContent = ALL_FILTER_LABEL;
+    const tagButtons = new Map<string, KitButton>();
 
     const refreshStates = () => {
-      allButton.classList.toggle("is-active", selectedTags.size === 0);
-      tagButtons.forEach((button, tag) => {
-        button.classList.toggle("is-active", selectedTags.has(tag));
-      });
+      allButton.setActive(selectedTags.size === 0);
+      tagButtons.forEach((tagButton, tag) => tagButton.setActive(selectedTags.has(tag)));
     };
 
-    allButton.onclick = () => {
-      if (selectedTags.size === 0) return;
-      selectedTags.clear();
-      refreshStates();
-      renderCards();
-    };
-    filters.appendChild(allButton);
-
-    allTags.forEach((tag) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "mgt-chip";
-      button.textContent = tag;
-      button.onclick = () => {
-        if (selectedTags.has(tag)) {
-          selectedTags.delete(tag);
-        } else {
-          selectedTags.add(tag);
-        }
+    const allButton = button(ALL_FILTER_LABEL, {
+      size: "xs",
+      onClick: () => {
+        if (selectedTags.size === 0) return;
+        selectedTags.clear();
         refreshStates();
         renderCards();
-      };
-      filters.appendChild(button);
-      tagButtons.set(tag, button);
+      },
     });
+    filters.appendChild(allButton);
+
+    for (const tag of allTags) {
+      const tagButton = button(tag, {
+        size: "xs",
+        onClick: () => {
+          if (selectedTags.has(tag)) selectedTags.delete(tag);
+          else selectedTags.add(tag);
+          refreshStates();
+          renderCards();
+        },
+      });
+      filters.appendChild(tagButton);
+      tagButtons.set(tag, tagButton);
+    }
 
     refreshStates();
     root.appendChild(filters);

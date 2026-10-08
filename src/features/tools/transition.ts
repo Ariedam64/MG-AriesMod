@@ -1,5 +1,5 @@
-// View transition animation with Web Animations API
-// Follows the same easing/duration convention as .qmm-seg__indicator in menu.ts
+// Slides one view out and the next one in, with the same easing as the kit's
+// segmented control.
 
 export async function swapViews(
   container: HTMLElement,
@@ -10,24 +10,21 @@ export async function swapViews(
   const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   if (prefersReduced) {
-    // Skip animation if user prefers reduced motion
     from.style.display = "none";
     to.style.display = "block";
     return;
   }
 
-  // Ensure wrapper has proper styles for animation
   container.style.position = "relative";
   container.style.overflow = "hidden";
 
-  // Restore incoming view display (both views use flex)
+  // Both views lay out as flex.
   to.style.display = "flex";
 
   // Position the outgoing panel absolutely so the incoming one can be laid out below
   from.style.position = "absolute";
   from.style.inset = "0";
 
-  // Setup animations based on direction
   const fromTranslate = direction === "forward" ? -24 : 24;
   const toTranslate = direction === "forward" ? 24 : -24;
 
@@ -55,10 +52,8 @@ export async function swapViews(
     }
   );
 
-  // Wait for both animations to complete
   await Promise.all([fromAnim.finished, toAnim.finished]);
 
-  // Cleanup after animation
   from.style.display = "none";
   from.style.position = "";
   from.style.inset = "";

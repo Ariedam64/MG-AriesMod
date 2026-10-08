@@ -1,6 +1,8 @@
-// src/ui/menus/tools.ts - Community Tools menu orchestrator
-// Fetches tools from remote JSON and renders list/detail views with animations
+// The Community Tools menu: fetches the tool list from the repo and slides
+// between the list and one tool's detail page.
 
+import { button } from "../../ui/kit/button";
+import { h } from "../../ui/kit/dom";
 import { Menu } from "../../ui/kit/menu";
 import { fetchTools, type ExternalTool } from "./fetchTools";
 import { renderListView } from "./listView";
@@ -17,64 +19,43 @@ export async function renderToolsMenu(container: HTMLElement) {
   ui.mount(container);
 
   const view = ui.root.querySelector(".qmm-views") as HTMLElement;
-  view.innerHTML = "";
-  view.style.display = "flex";
-  view.style.flexDirection = "column";
-  view.style.alignItems = "center";
-  view.style.padding = "8px";
-  view.style.width = "100%";
-  view.style.maxHeight = "70vh";
-  view.style.overflowY = "auto";
+  view.replaceChildren();
+  Object.assign(view.style, {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    padding: "8px",
+    width: "100%",
+    maxHeight: "70vh",
+    overflowY: "auto",
+  });
 
-  const wrapper = document.createElement("div");
-  wrapper.className = "mgt-wrap";
-  wrapper.style.width = `${WRAPPER_WIDTH_PX}px`;
-  wrapper.style.minWidth = `${WRAPPER_WIDTH_PX}px`;
-  wrapper.style.maxWidth = "100%";
-  wrapper.style.boxSizing = "border-box";
+  const wrapper = h("div", "mgt-wrap");
+  Object.assign(wrapper.style, {
+    width: `${WRAPPER_WIDTH_PX}px`,
+    minWidth: `${WRAPPER_WIDTH_PX}px`,
+    maxWidth: "100%",
+    boxSizing: "border-box",
+  });
 
-  const viewContainer = document.createElement("div");
-  viewContainer.className = "mgt-views";
+  const viewContainer = h("div", "mgt-views");
   wrapper.appendChild(viewContainer);
   view.appendChild(wrapper);
 
   const showLoading = () => {
-    viewContainer.innerHTML = "";
-    const state = document.createElement("div");
-    state.className = "mgt-state";
-
-    const spinner = document.createElement("div");
-    spinner.className = "mgt-spinner";
-
-    const text = document.createElement("p");
-    text.className = "mgt-state__text";
-    text.textContent = "Fetching the latest tools...";
-
-    state.append(spinner, text);
-    viewContainer.appendChild(state);
+    const state = h("div", "mgt-state");
+    state.append(h("div", "mgt-spinner"), h("p", "mgt-state__text", "Fetching the latest tools..."));
+    viewContainer.replaceChildren(state);
   };
 
   const showError = (message: string) => {
-    viewContainer.innerHTML = "";
-    const state = document.createElement("div");
-    state.className = "mgt-state";
-
-    const title = document.createElement("span");
-    title.className = "mgt-state__title";
-    title.textContent = "Couldn't load the tools";
-
-    const text = document.createElement("p");
-    text.className = "mgt-state__text";
-    text.textContent = message;
-
-    const retry = document.createElement("button");
-    retry.type = "button";
-    retry.className = "mgt-action is-primary";
-    retry.textContent = "Retry";
-    retry.onclick = () => void init();
-
-    state.append(title, text, retry);
-    viewContainer.appendChild(state);
+    const state = h("div", "mgt-state");
+    state.append(
+      h("span", "mgt-state__title", "Couldn't load the tools"),
+      h("p", "mgt-state__text", message),
+      button("Retry", { variant: "primary", onClick: () => init() }),
+    );
+    viewContainer.replaceChildren(state);
   };
 
   let tools: ExternalTool[] = [];
@@ -114,7 +95,7 @@ export async function renderToolsMenu(container: HTMLElement) {
         return;
       }
 
-      viewContainer.innerHTML = "";
+      viewContainer.replaceChildren();
       listViewRoot = null;
       detailViewRoot = null;
 
