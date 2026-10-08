@@ -1,53 +1,39 @@
-// Floating, draggable DOM variant of the notification bell.
-// The default bell lives inside the game's Pixi RightSideRail
-// (notificationBellPixi.ts), which keeps breaking for a subset of players
-// (rail layout variants, short screens, scaled canvases). This widget is the
-// opt-in escape hatch: a plain fixed-position DOM button, same pattern as
-// instantFeedWidget.ts, that cannot be affected by the game's Pixi tree at
-// all — so it always shows up.
-//
-// It implements the same controller surface as the Pixi bell
-// (stop / getScreenRect / setWiggle), so notificationOverlay.ts can swap
-// between the two implementations without caring which one is active.
-import {
-  BELL_RING_DURATION_MS,
-  BELL_RING_SEQUENCE,
-  type ScreenRect,
-} from "./bellPixi";
-import { readAriesPath, writeAriesPath } from "../../platform/storage";
+// The floating, draggable notification bell. The default bell lives in the
+// game's Pixi RightSideRail, which breaks for some players (rail layout
+// variants, short screens, scaled canvases). This opt-in widget is a plain
+// fixed-position DOM button the game's Pixi tree cannot affect, so it always
+// shows up. It offers the same controller as the Pixi bell, so the overlay
+// swaps between the two without caring which one is active.
+import { BELL_GLYPH, BELL_RING_DURATION_MS, BELL_RING_SEQUENCE, type BellController, type ScreenRect } from "./ring";
+import { readAriesPath, writeAriesPath } from "../../../platform/storage";
+import { h } from "../../../ui/kit/dom";
 
-// Stored under the `notifier` section: it's one of the top-level sections
-// coerceLegacyAggregate (localStorage.ts) preserves when reloading the
-// aries_mod blob — an unknown top-level key would be silently dropped on
-// the next session, losing the toggle and the saved position.
+// Stored under the `notifier` section, one of the top-level sections the
+// storage keeps when it reloads the aries_mod blob: an unknown top-level key
+// would be dropped on the next session, losing the toggle and the position.
 const ENABLED_PATH = "notifier.floatingBell.enabled";
 const POS_PATH = "notifier.floatingBell.pos";
 
 /** Fired on `window` whenever the floating-bell setting is toggled. */
 export const BELL_MODE_EVENT = "qws:alerts-bell-mode-changed";
 
-const BELL_GLYPH = "\u{1F514}"; // 🔔
 const BUTTON_SIZE = 44;
 const ICON_FONT_SIZE = 24;
-// Exported so the overlay can stack the DOM badge/panel above the widget
-// when floating mode is active (they live in a separate fixed-position
-// stacking context).
-export const BELL_WIDGET_Z_INDEX = 1_999_900; // above game UI, below HUD windows (2_000_000+)
+/** Above the game's UI, below the HUD windows. The overlay stacks its badge just above it. */
+export const BELL_WIDGET_Z_INDEX = 1_999_900;
 const SCREEN_MARGIN = 8;
-// Default spot: right edge, roughly a third down — near where the game's
+// Default spot: right edge, a third of the way down, near where the game's
 // own icon rail sits, without assuming anything about it.
 const DEFAULT_RIGHT_GAP = 16;
 const DEFAULT_TOP_RATIO = 0.35;
-// Instants (ms après le montage) où la position voulue est ré-appliquée, le
-// temps que la fenêtre atteigne sa taille définitive.
+// When (ms after mounting) the wanted position is applied again, while the
+// window reaches its final size.
 const SETTLE_REAPPLY_DELAYS_MS = [0, 250, 1000];
 // Pointer travel below this stays a click; beyond it the gesture is a drag
 // and releasing does not open the panel.
 const DRAG_THRESHOLD_PX = 4;
 
-// Same "bell ring" motion as the Pixi bell — the sequence lives in
-// notificationBellPixi.ts and is rendered here through the Web Animations
-// API instead of a rAF loop.
+// The same ring as the Pixi bell, played through the Web Animations API.
 const RING_KEYFRAMES: Keyframe[] = BELL_RING_SEQUENCE.map(({ offset, deg }) => ({
   transform: `rotate(${deg}deg)`,
   offset,
@@ -55,16 +41,10 @@ const RING_KEYFRAMES: Keyframe[] = BELL_RING_SEQUENCE.map(({ offset, deg }) => (
 
 type WidgetPosition = { left: number; top: number };
 
-export interface NotificationBellFloatingOptions {
+export interface FloatingBellOptions {
   onClick: () => void;
   /** Called whenever the widget moves (drag, viewport clamp). */
   onMoved?: () => void;
-}
-
-export interface NotificationBellFloatingController {
-  stop(): void;
-  getScreenRect(): ScreenRect | null;
-  setWiggle(active: boolean): void;
 }
 
 export function isFloatingBellEnabled(): boolean {
@@ -97,13 +77,11 @@ function clampCoord(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-export function startNotificationBellFloating(
-  opts: NotificationBellFloatingOptions,
-): NotificationBellFloatingController {
+export function startFloatingBell(opts: FloatingBellOptions): BellController {
   let running = true;
   let wiggleAnimation: Animation | null = null;
 
-  const button = document.createElement("button");
+  const button = h("button");
   button.type = "button";
   button.setAttribute("data-notification-bell-widget", "1");
   button.title = "Notifications";
@@ -120,9 +98,9 @@ export function startNotificationBellFloating(
     justifyContent: "center",
     padding: "0",
     borderRadius: "50%",
-    border: "1px solid #32404e",
-    background: "linear-gradient(180deg, #111923, #0b131c)",
-    boxShadow: "0 10px 28px rgba(0,0,0,0.45)",
+    border: "1px solid var(--qmm-border-strong)",
+    background: "var(--qmm-gradient-panel)",
+    boxShadow: "var(--qmm-shadow-window)",
     cursor: "grab",
     userSelect: "none",
     touchAction: "none",
@@ -154,13 +132,13 @@ export function startNotificationBellFloating(
     top: window.innerHeight * DEFAULT_TOP_RATIO,
   });
 
-  // Position voulue par l'utilisateur, gardée NON clampée : le clamp ne sert
-  // qu'à l'affichage. Sinon un viewport provisoire (iframe Discord pas encore
-  // redimensionnée, canvas du jeu en cours de mise en place) écrase la position
-  // restaurée par sa version rétrécie, et plus rien ne la retrouve ensuite.
+  // The position the player chose, kept unclamped: clamping is for display
+  // only. Otherwise a provisional viewport (a Discord iframe not resized yet,
+  // the game canvas still settling) would overwrite the restored position
+  // with its shrunk version, and nothing would find it again.
   let desiredPosition: WidgetPosition | null = null;
-  // Tant que l'utilisateur n'a rien déplacé, le défaut est recalculé à chaque
-  // changement de viewport — il dépend lui aussi de la taille de la fenêtre.
+  // Until the player moves the bell, the default is recomputed on every
+  // viewport change, since it depends on the window size too.
   let usingDefaultPosition = true;
 
   const applyDesiredPosition = () => {
@@ -215,7 +193,7 @@ export function startNotificationBellFloating(
     button.style.cursor = "grab";
     if (!wasDrag && ev?.type === "pointerup") {
       try { opts.onClick(); } catch (error) {
-        console.error("[notificationBellFloating] onClick error:", error);
+        console.error("[FloatingBell] onClick error:", error);
       }
     }
   };
@@ -247,10 +225,9 @@ export function startNotificationBellFloating(
   document.body.appendChild(button);
   applyInitialPosition();
 
-  // Le widget est monté très tôt, avant que la fenêtre ait sa taille finale, et
-  // un viewport qui grandit ne déclenche pas toujours `resize` (iframe Discord).
-  // On ré-applique donc la position voulue quelques fois pendant que la mise en
-  // page se stabilise.
+  // The widget mounts early, before the window has its final size, and a
+  // growing viewport does not always fire `resize` (Discord's iframe), so the
+  // wanted position is applied again a few times while the layout settles.
   const settleTimers = SETTLE_REAPPLY_DELAYS_MS.map((delay) =>
     window.setTimeout(() => { if (running) applyDesiredPosition(); }, delay),
   );

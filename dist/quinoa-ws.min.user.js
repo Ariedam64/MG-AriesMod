@@ -184,8 +184,8 @@
     return spriteContext.state;
   }
   function getReadySpriteState() {
-    const state5 = spriteContext.state;
-    return state5.renderer && state5.ctors?.Text ? state5 : null;
+    const state7 = spriteContext.state;
+    return state7.renderer && state7.ctors?.Text ? state7 : null;
   }
   function getPixiApp() {
     return pixiHooks?.app ?? spriteContext.state.app;
@@ -524,7 +524,7 @@
   function canvasOf(renderer) {
     return renderer?.canvas || renderer?.view?.canvas || renderer?.view || null;
   }
-  function watchRendererHealth(state5, hooks3) {
+  function watchRendererHealth(state7, hooks3) {
     const pageWin = pageWindow;
     let staleStreak = 0;
     let needsCtorsRederive = false;
@@ -542,7 +542,7 @@
         if (needsCtorsRederive) {
           debugState4.ctorsRederiveAttempts += 1;
           try {
-            state5.ctors = getCtors(state5.app ?? state5.renderer);
+            state7.ctors = getCtors(state7.app ?? state7.renderer);
             needsCtorsRederive = false;
             debugState4.lastCtorsRederiveError = null;
             console.info("[MG SpriteCatalog] re-derived ctors from the new renderer");
@@ -550,7 +550,7 @@
             debugState4.lastCtorsRederiveError = String(error?.message ?? error);
           }
         }
-        const canvas = canvasOf(state5.renderer);
+        const canvas = canvasOf(state7.renderer);
         const canvasHealthy = !!canvas && typeof document !== "undefined" && document.contains(canvas);
         if (canvasHealthy) {
           staleStreak = 0;
@@ -561,13 +561,13 @@
         debugState4.staleStreak = staleStreak;
         if (staleStreak < REQUIRED_STALE_STREAK) return;
         const freshRenderer = hooks3.renderer;
-        if (!freshRenderer || freshRenderer === state5.renderer) return;
+        if (!freshRenderer || freshRenderer === state7.renderer) return;
         const freshCanvas = canvasOf(freshRenderer);
         if (!freshCanvas || typeof document === "undefined" || !document.contains(freshCanvas)) return;
         console.info("[MG SpriteCatalog] renderer canvas went stale, re-resolved a fresh one");
         debugState4.swaps.push({ at: Date.now(), fromCanvasInDoc: canvasHealthy });
-        state5.renderer = freshRenderer;
-        if (hooks3.app) state5.app = hooks3.app;
+        state7.renderer = freshRenderer;
+        if (hooks3.app) state7.app = hooks3.app;
         needsCtorsRederive = true;
         staleStreak = 0;
         debugState4.staleStreak = 0;
@@ -1097,20 +1097,20 @@
     }
     ctx2.restore();
   }
-  function tallOverlayFromSheet(mutName, state5) {
+  function tallOverlayFromSheet(mutName, state7) {
     const target = String(mutName || "").toLowerCase();
-    for (const k of state5.tex.keys()) {
+    for (const k of state7.tex.keys()) {
       const m = /sprite\/mutation-overlay\/([A-Za-z0-9]+)TallPlant/i.exec(String(k));
       if (!m || !m[1]) continue;
       const prefix = m[1].toLowerCase();
       if (prefix === target) {
-        const t = state5.tex.get(k);
+        const t = state7.tex.get(k);
         if (t) return { tex: t, key: k };
       }
     }
     return null;
   }
-  function findOverlayTexture(itKey, mutName, state5, preferTall) {
+  function findOverlayTexture(itKey, mutName, state7, preferTall) {
     if (!mutName) return null;
     const base = baseNameOf(itKey);
     const aliases = mutationAliases(mutName);
@@ -1123,27 +1123,27 @@
         `sprite/mutation/${name}`
       ];
       for (const k of tries) {
-        const t = state5.tex.get(k);
+        const t = state7.tex.get(k);
         if (t) return { tex: t, key: k };
       }
       if (preferTall) {
-        const hit = state5.tex.get(`sprite/mutation-overlay/${name}TallPlant`) && {
-          tex: state5.tex.get(`sprite/mutation-overlay/${name}TallPlant`),
+        const hit = state7.tex.get(`sprite/mutation-overlay/${name}TallPlant`) && {
+          tex: state7.tex.get(`sprite/mutation-overlay/${name}TallPlant`),
           key: `sprite/mutation-overlay/${name}TallPlant`
-        } || state5.tex.get(`sprite/mutation-overlay/${name}`) && {
-          tex: state5.tex.get(`sprite/mutation-overlay/${name}`),
+        } || state7.tex.get(`sprite/mutation-overlay/${name}`) && {
+          tex: state7.tex.get(`sprite/mutation-overlay/${name}`),
           key: `sprite/mutation-overlay/${name}`
-        } || tallOverlayFromSheet(mutName, state5);
+        } || tallOverlayFromSheet(mutName, state7);
         if (hit) return hit;
       }
     }
     return null;
   }
-  function findIconTexture(itKey, mutName, isTall, state5) {
+  function findIconTexture(itKey, mutName, isTall, state7) {
     if (!mutName) return null;
     const meta = MUT_META[mutName];
     if (isTall && meta?.tallIconOverride) {
-      const t = state5.tex.get(meta.tallIconOverride);
+      const t = state7.tex.get(meta.tallIconOverride);
       if (t) return t;
     }
     const base = baseNameOf(itKey);
@@ -1158,11 +1158,11 @@
         `sprite/mutation/${name}/${base}`
       ];
       for (const k of tries) {
-        const t = state5.tex.get(k);
+        const t = state7.tex.get(k);
         if (t) return t;
       }
       if (isTall) {
-        const t = state5.tex.get(`sprite/mutation-overlay/${name}TallPlantIcon`) || state5.tex.get(`sprite/mutation-overlay/${name}TallPlant`);
+        const t = state7.tex.get(`sprite/mutation-overlay/${name}TallPlantIcon`) || state7.tex.get(`sprite/mutation-overlay/${name}TallPlant`);
         if (t) return t;
       }
     }
@@ -1202,14 +1202,14 @@
       }
     };
   }
-  function textureToCanvas(tex, state5, cfg) {
-    const hit = state5.srcCan.get(tex);
+  function textureToCanvas(tex, state7, cfg) {
+    const hit = state7.srcCan.get(tex);
     if (hit) return hit;
     let c = null;
-    const RDR = state5.renderer;
+    const RDR = state7.renderer;
     try {
       if (RDR?.extract?.canvas && (RDR?.resolution ?? 1) === 1) {
-        const s = new state5.ctors.Sprite(tex);
+        const s = new state7.ctors.Sprite(tex);
         c = RDR.extract.canvas(s);
         s.destroy?.({ children: true, texture: false, baseTexture: false });
       }
@@ -1242,18 +1242,18 @@
         ctx2.drawImage(src, fr.x, fr.y, fr.width, fr.height, offX, offY, fr.width, fr.height);
       }
     }
-    state5.srcCan.set(tex, c);
-    if (state5.srcCan.size > cfg.srcCanvasMax) {
-      const k = state5.srcCan.keys().next().value;
-      if (k !== void 0) state5.srcCan.delete(k);
+    state7.srcCan.set(tex, c);
+    if (state7.srcCan.size > cfg.srcCanvasMax) {
+      const k = state7.srcCan.keys().next().value;
+      if (k !== void 0) state7.srcCan.delete(k);
     }
     return c;
   }
-  function buildColorLayerSprites(tex, dims, pipeline, state5, cfg, disposables, TextureCtor) {
+  function buildColorLayerSprites(tex, dims, pipeline, state7, cfg, disposables, TextureCtor) {
     const { w, h: h2, aX, aY, basePos } = dims;
     const layers = [];
     for (const step of pipeline) {
-      const clone2 = new state5.ctors.Sprite(tex);
+      const clone2 = new state7.ctors.Sprite(tex);
       clone2.anchor?.set?.(aX, aY);
       clone2.position.set(basePos.x, basePos.y);
       clone2.zIndex = 1;
@@ -1264,7 +1264,7 @@
       lctx.imageSmoothingEnabled = false;
       lctx.save();
       lctx.translate(w * aX, h2 * aY);
-      lctx.drawImage(textureToCanvas(tex, state5, cfg), -w * aX, -h2 * aY);
+      lctx.drawImage(textureToCanvas(tex, state7, cfg), -w * aX, -h2 * aY);
       lctx.restore();
       applyFilterOnto(lctx, layerCanvas, step.name, step.isTall);
       const filteredTex = TextureCtor.from(layerCanvas);
@@ -1274,14 +1274,14 @@
     }
     return layers;
   }
-  function buildTallOverlaySprites(itKey, dims, overlayPipeline, state5, cfg, baseCanvas, TextureCtor, disposables) {
+  function buildTallOverlaySprites(itKey, dims, overlayPipeline, state7, cfg, baseCanvas, TextureCtor, disposables) {
     const { aX, basePos } = dims;
     if (!baseCanvas) return [];
     const overlays = [];
     for (const step of overlayPipeline) {
-      const hit = step.overlayTall && state5.tex.get(step.overlayTall) && { tex: state5.tex.get(step.overlayTall), key: step.overlayTall } || findOverlayTexture(itKey, step.name, state5, true);
+      const hit = step.overlayTall && state7.tex.get(step.overlayTall) && { tex: state7.tex.get(step.overlayTall), key: step.overlayTall } || findOverlayTexture(itKey, step.name, state7, true);
       if (!hit?.tex) continue;
-      const oCan = textureToCanvas(hit.tex, state5, cfg);
+      const oCan = textureToCanvas(hit.tex, state7, cfg);
       if (!oCan) continue;
       const ow = oCan.width;
       const overlayAnchor = { x: 0, y: 0 };
@@ -1302,7 +1302,7 @@
       mctx.drawImage(baseCanvas, -overlayPos.x, -overlayPos.y);
       const maskedTex = TextureCtor.from(maskedCanvas);
       disposables.push(maskedTex);
-      const ov = new state5.ctors.Sprite(maskedTex);
+      const ov = new state7.ctors.Sprite(maskedTex);
       ov.anchor?.set?.(overlayAnchor.x, overlayAnchor.y);
       ov.position.set(overlayPos.x, overlayPos.y);
       ov.scale.set(1);
@@ -1312,14 +1312,14 @@
     }
     return overlays;
   }
-  function buildIconSprites(itKey, dims, iconPipeline, state5, iconLayout) {
+  function buildIconSprites(itKey, dims, iconPipeline, state7, iconLayout) {
     const { basePos } = dims;
     const icons = [];
     for (const step of iconPipeline) {
       if (step.name === "Gold" || step.name === "Rainbow") continue;
-      const itex = findIconTexture(itKey, step.name, step.isTall, state5);
+      const itex = findIconTexture(itKey, step.name, step.isTall, state7);
       if (!itex) continue;
-      const icon = new state5.ctors.Sprite(itex);
+      const icon = new state7.ctors.Sprite(itex);
       const iconAnchorX = itex?.defaultAnchor?.x ?? 0.5;
       const iconAnchorY = itex?.defaultAnchor?.y ?? 0.5;
       icon.anchor?.set?.(iconAnchorX, iconAnchorY);
@@ -1332,31 +1332,31 @@
     }
     return icons;
   }
-  function lruEvict(state5, cfg) {
+  function lruEvict(state7, cfg) {
     if (!cfg.cacheOn) return;
-    while (state5.lru.size > cfg.cacheMaxEntries || state5.cost > cfg.cacheMaxCost) {
-      const k = state5.lru.keys().next().value;
+    while (state7.lru.size > cfg.cacheMaxEntries || state7.cost > cfg.cacheMaxCost) {
+      const k = state7.lru.keys().next().value;
       if (k === void 0) break;
-      const e = state5.lru.get(k);
-      state5.lru.delete(k);
-      state5.cost = Math.max(0, state5.cost - entryCost(e));
+      const e = state7.lru.get(k);
+      state7.lru.delete(k);
+      state7.cost = Math.max(0, state7.cost - entryCost(e));
     }
   }
-  function clearVariantCache(state5) {
-    state5.lru.clear();
-    state5.cost = 0;
-    state5.srcCan.clear();
+  function clearVariantCache(state7) {
+    state7.lru.clear();
+    state7.cost = 0;
+    state7.srcCan.clear();
   }
-  function renderMutatedTexture(tex, itKey, V, state5, cfg) {
+  function renderMutatedTexture(tex, itKey, V, state7, cfg) {
     try {
-      if (!tex || !state5.renderer || !state5.ctors?.Container || !state5.ctors?.Sprite || !state5.ctors?.Texture) return null;
-      const { Container, Sprite, Texture } = state5.ctors;
+      if (!tex || !state7.renderer || !state7.ctors?.Container || !state7.ctors?.Sprite || !state7.ctors?.Texture) return null;
+      const { Container, Sprite, Texture } = state7.ctors;
       const w = tex?.orig?.width ?? tex?.frame?.width ?? tex?.width ?? 1;
       const h2 = tex?.orig?.height ?? tex?.frame?.height ?? tex?.height ?? 1;
       const aX = tex?.defaultAnchor?.x ?? 0.5;
       const aY = tex?.defaultAnchor?.y ?? 0.5;
       const basePos = { x: w * aX, y: h2 * aY };
-      const baseCanvas = textureToCanvas(tex, state5, cfg);
+      const baseCanvas = textureToCanvas(tex, state7, cfg);
       const root = new Container();
       root.sortableChildren = true;
       try {
@@ -1383,14 +1383,14 @@
       const baseName = baseNameOf(itKey);
       const iconLayout = computeIconLayout(tex, baseName, isTall);
       const dims = { w, h: h2, aX, aY, basePos };
-      buildColorLayerSprites(tex, dims, pipeline, state5, cfg, disposables, Texture).forEach((layer2) => root.addChild(layer2));
+      buildColorLayerSprites(tex, dims, pipeline, state7, cfg, disposables, Texture).forEach((layer2) => root.addChild(layer2));
       if (isTall) {
-        buildTallOverlaySprites(itKey, dims, overlayPipeline, state5, cfg, baseCanvas, Texture, disposables).forEach((ov) => root.addChild(ov));
+        buildTallOverlaySprites(itKey, dims, overlayPipeline, state7, cfg, baseCanvas, Texture, disposables).forEach((ov) => root.addChild(ov));
       }
-      buildIconSprites(itKey, dims, iconPipeline, state5, iconLayout).forEach((icon) => root.addChild(icon));
-      const RDR = state5.renderer;
+      buildIconSprites(itKey, dims, iconPipeline, state7, iconLayout).forEach((icon) => root.addChild(icon));
+      const RDR = state7.renderer;
       let rt = null;
-      const RectCtor = state5.ctors?.Rectangle;
+      const RectCtor = state7.ctors?.Rectangle;
       const crop = RectCtor ? new RectCtor(0, 0, w, h2) : null;
       if (typeof RDR?.generateTexture === "function")
         rt = RDR.generateTexture(root, { resolution: 1, region: crop ?? void 0 });
@@ -1412,36 +1412,36 @@
       return null;
     }
   }
-  function processVariantJobs(state5, cfg) {
-    if (!cfg.jobOn || !state5.open || !state5.jobs.length) return false;
+  function processVariantJobs(state7, cfg) {
+    if (!cfg.jobOn || !state7.open || !state7.jobs.length) return false;
     const now2 = performance.now();
-    const burst = now2 - state5.changedAt <= cfg.jobBurstWindowMs;
+    const burst = now2 - state7.changedAt <= cfg.jobBurstWindowMs;
     const budget = burst ? cfg.jobBurstMs : cfg.jobBudgetMs;
     const t0 = performance.now();
     let done = 0;
     let needsLayout = false;
-    while (state5.jobs.length) {
+    while (state7.jobs.length) {
       if (performance.now() - t0 >= budget) break;
       if (done >= cfg.jobCapPerTick) break;
-      const job = state5.jobs[0];
-      if (job.sig !== state5.sig) {
-        state5.jobs.shift();
-        state5.jobMap.delete(job.k);
+      const job = state7.jobs[0];
+      if (job.sig !== state7.sig) {
+        state7.jobs.shift();
+        state7.jobMap.delete(job.k);
         continue;
       }
       const tex = job.src[job.i];
       if (!tex) {
-        state5.jobs.shift();
-        state5.jobMap.delete(job.k);
+        state7.jobs.shift();
+        state7.jobMap.delete(job.k);
         continue;
       }
-      const ft = renderMutatedTexture(tex, job.itKey, job.V, state5, cfg);
+      const ft = renderMutatedTexture(tex, job.itKey, job.V, state7, cfg);
       if (ft) job.out.push(ft);
       job.i++;
       done++;
       if (job.i >= job.src.length) {
-        state5.jobs.shift();
-        state5.jobMap.delete(job.k);
+        state7.jobs.shift();
+        state7.jobMap.delete(job.k);
         let entry = null;
         if (job.isAnim) {
           if (job.out.length >= 2) entry = { isAnim: true, frames: job.out };
@@ -1451,9 +1451,9 @@
           if (job.out[0]) entry = { isAnim: false, tex: job.out[0] };
         }
         if (entry) {
-          state5.lru.set(job.k, entry);
-          state5.cost += entryCost(entry);
-          lruEvict(state5, cfg);
+          state7.lru.set(job.k, entry);
+          state7.cost += entryCost(entry);
+          lruEvict(state7, cfg);
           needsLayout = true;
         }
       }
@@ -1534,13 +1534,13 @@
       };
       hasMutationFilter = (value) => Boolean(value && FILTERS[value]);
       isTallKey = (k) => /tallplant/i.test(k);
-      computeVariantSignature = (state5) => {
-        if (!state5.mutOn) {
-          const f = hasMutationFilter(state5.f) ? state5.f : null;
+      computeVariantSignature = (state7) => {
+        if (!state7.mutOn) {
+          const f = hasMutationFilter(state7.f) ? state7.f : null;
           const baseMuts = f ? [f] : [];
           return { mode: "F", muts: baseMuts, overlayMuts: baseMuts, selectedMuts: baseMuts, sig: `F:${f ?? ""}` };
         }
-        const raw = state5.mutations.filter((value) => hasMutationFilter(value));
+        const raw = state7.mutations.filter((value) => hasMutationFilter(value));
         const selected = sortMutations(raw);
         const muts = normalizeMutListColor(raw);
         const overlayMuts = normalizeMutListOverlay(raw);
@@ -1603,48 +1603,48 @@
   });
 
   // src/game/sprites/api/expose.ts
-  function exposeApi(state5, hud) {
+  function exposeApi(state7, hud) {
     const root = pageWindow;
     const api = {
       open() {
         hud.root?.style && (hud.root.style.display = "block");
-        state5.open = true;
+        state7.open = true;
       },
       close() {
         hud.root?.style && (hud.root.style.display = "none");
-        state5.open = false;
+        state7.open = false;
       },
       toggle() {
-        state5.open ? api.close() : api.open();
+        state7.open ? api.close() : api.open();
       },
       setCategory(cat) {
-        state5.cat = cat || "__all__";
+        state7.cat = cat || "__all__";
       },
       setFilterText(text2) {
-        state5.q = String(text2 || "").trim();
+        state7.q = String(text2 || "").trim();
       },
       setSpriteFilter(name) {
-        state5.f = name;
-        state5.mutOn = false;
+        state7.f = name;
+        state7.mutOn = false;
       },
       setMutation(on, ...muts) {
-        state5.mutOn = !!on;
-        state5.f = "";
-        state5.mutations = state5.mutOn ? muts.filter(Boolean).map((name) => name) : [];
+        state7.mutOn = !!on;
+        state7.f = "";
+        state7.mutations = state7.mutOn ? muts.filter(Boolean).map((name) => name) : [];
       },
       filters() {
         return [];
       },
       categories() {
-        return [...state5.cats.keys()].sort((a, b) => a.localeCompare(b));
+        return [...state7.cats.keys()].sort((a, b) => a.localeCompare(b));
       },
       cacheStats() {
-        return { entries: state5.lru.size, cost: state5.cost };
+        return { entries: state7.lru.size, cost: state7.cost };
       },
       clearCache() {
-        clearVariantCache(state5);
+        clearVariantCache(state7);
       },
-      curVariant: () => curVariant(state5)
+      curVariant: () => curVariant(state7)
     };
     root.MGSpriteCatalog = api;
     return api;
@@ -1665,9 +1665,9 @@
     getSpriteWithMutations: () => getSpriteWithMutations,
     listItemsByCategory: () => listItemsByCategory
   });
-  function findItem(state5, category, id) {
+  function findItem(state7, category, id) {
     const normId = normalizeKey(id);
-    for (const it of state5.items) {
+    for (const it of state7.items) {
       const keyCat = keyCategoryOf(it.key);
       if (!matchesCategory(keyCat, category)) continue;
       const base = normalizeKey(baseNameOf2(it.key));
@@ -1675,22 +1675,22 @@
     }
     return null;
   }
-  function listItemsByCategory(state5, category = "any") {
-    return state5.items.filter((it) => matchesCategory(keyCategoryOf(it.key), category));
+  function listItemsByCategory(state7, category = "any") {
+    return state7.items.filter((it) => matchesCategory(keyCategoryOf(it.key), category));
   }
   function buildVariant(mutations) {
     return buildVariantFromMutations(mutations);
   }
-  function getSpriteWithMutations(params, state5, cfg) {
-    const it = findItem(state5, params.category, params.id);
+  function getSpriteWithMutations(params, state7, cfg) {
+    const it = findItem(state7, params.category, params.id);
     if (!it) return null;
     const tex = it.isAnim ? it.frames?.[0] : it.first;
     if (!tex) return null;
     const V = buildVariantFromMutations(params.mutations);
-    return renderMutatedTexture(tex, it.key, V, state5, cfg);
+    return renderMutatedTexture(tex, it.key, V, state7, cfg);
   }
-  function getBaseSprite(params, state5) {
-    const it = findItem(state5, params.category, params.id);
+  function getBaseSprite(params, state7) {
+    const it = findItem(state7, params.category, params.id);
     if (!it) return null;
     return it.isAnim ? it.frames?.[0] ?? null : it.first;
   }
@@ -2469,9 +2469,9 @@
     patchSocketSend();
     const wrapped2 = WrappedWebSocket;
     wrapped2.prototype = NativeWS.prototype;
-    for (const state5 of ["OPEN", "CLOSED", "CLOSING", "CONNECTING"]) {
+    for (const state7 of ["OPEN", "CLOSED", "CLOSING", "CONNECTING"]) {
       try {
-        wrapped2[state5] = NativeWS[state5];
+        wrapped2[state7] = NativeWS[state7];
       } catch {
       }
     }
@@ -3218,31 +3218,31 @@
     }
     return infos;
   }
-  function petsStateSig(state5) {
-    if (!Array.isArray(state5)) return "null";
-    if (!state5.length) return "empty";
-    return state5.map((p) => `${String(p?.slot?.id ?? "")}:${petSig(p)}`).join("|");
+  function petsStateSig(state7) {
+    if (!Array.isArray(state7)) return "null";
+    if (!state7.length) return "empty";
+    return state7.map((p) => `${String(p?.slot?.id ?? "")}:${petSig(p)}`).join("|");
   }
   function watchPets(cb, seed) {
     let lastInfos = seed?.infos ?? null;
     let lastPrimitives = seed?.primitives ?? null;
     let prevSig = null;
-    const emit = () => {
+    const emit2 = () => {
       const next = normalizePetsState(lastInfos, lastPrimitives);
       const sig = petsStateSig(next);
       if (sig === prevSig) return;
       prevSig = sig;
       cb(next);
     };
-    if (seed) emit();
+    if (seed) emit2();
     const subs = [
       Atoms.pets.myPetInfos.onChange((next) => {
         lastInfos = next;
-        emit();
+        emit2();
       }),
       Atoms.pets.myPrimitivePetSlots.onChange((next) => {
         lastPrimitives = next;
-        emit();
+        emit2();
       })
     ];
     return () => {
@@ -7854,12 +7854,12 @@
     return value === void 0 ? fallback : value;
   }
   function writeAriesPath(path, value) {
-    return updateAriesStorage((state5) => setValueAtPath(state5, splitPath(path), value));
+    return updateAriesStorage((state7) => setValueAtPath(state7, splitPath(path), value));
   }
   function updateAriesPath(path, updater) {
-    return updateAriesStorage((state5) => {
+    return updateAriesStorage((state7) => {
       const parts = splitPath(path);
-      setValueAtPath(state5, parts, updater(getValueAtPath(state5, parts)));
+      setValueAtPath(state7, parts, updater(getValueAtPath(state7, parts)));
     });
   }
   function readLocalValue(key2) {
@@ -8245,7 +8245,7 @@
     if (!atoms.length) {
       throw new Error(`${config.label} not found`);
     }
-    const state5 = existing ?? {
+    const state7 = existing ?? {
       config,
       enabled: false,
       payload: null,
@@ -8270,13 +8270,13 @@
           }
         }
         const real = orig(get);
-        if (!state5.enabled || state5.payload == null) return real;
-        return config.merge ? config.merge(real, state5.payload) : state5.payload;
+        if (!state7.enabled || state7.payload == null) return real;
+        return config.merge ? config.merge(real, state7.payload) : state7.payload;
       };
-      state5.patched.set(a, { readKey, orig });
+      state7.patched.set(a, { readKey, orig });
     }
     if (gateAtom && config.gate?.autoDisableOnClose) {
-      state5.unsubGate = await jSub(gateAtom, async () => {
+      state7.unsubGate = await jSub(gateAtom, async () => {
         let v;
         try {
           v = await jGet(gateAtom);
@@ -8284,12 +8284,12 @@
           v = null;
         }
         const isOpen = config.gate?.isOpen ? config.gate.isOpen(v) : !!v;
-        if (!isOpen && state5.enabled) state5.enabled = false;
+        if (!isOpen && state7.enabled) state7.enabled = false;
       });
     }
-    state5.installed = true;
-    _fakeRegistry.set(key2, state5);
-    return state5;
+    state7.installed = true;
+    _fakeRegistry.set(key2, state7);
+    return state7;
   }
   async function _primePatched(st) {
     const store = await ensureStore();
@@ -9583,9 +9583,9 @@
     }
   }
   async function findFirstEmptySlot() {
-    const state5 = await PlayerService.getGardenState();
-    const dirt = state5?.tileObjects || {};
-    const boardwalk = state5?.boardwalkTileObjects || {};
+    const state7 = await PlayerService.getGardenState();
+    const dirt = state7?.tileObjects || {};
+    const boardwalk = state7?.boardwalkTileObjects || {};
     for (let i = 0; i < 200; i++) {
       const key2 = String(i);
       const has = Object.prototype.hasOwnProperty.call(dirt, key2) && dirt[key2] != null;
@@ -10015,9 +10015,9 @@
   // src/features/autoReco/overlay.ts
   function ensureStyle() {
     if (document.getElementById(STYLE_ID)) return;
-    const style2 = document.createElement("style");
-    style2.id = STYLE_ID;
-    style2.textContent = `
+    const style = document.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent = `
     #${OVERLAY_ID3} { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #${OVERLAY_ID3} .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; border: 1px solid rgba(255,255,255,.15); }
     #${OVERLAY_ID3} .title { font-size: 24px; font-weight: 900; letter-spacing: .02em; margin: 0 0 8px 0; }
@@ -10025,7 +10025,7 @@
     #${OVERLAY_ID3} .btn { margin-top: 6px; padding: 10px 16px; border-radius: 999px; border: 1px solid #7aa2ff; background: #1a2644; color: #fff; font-weight: 700; cursor: pointer; }
     #${OVERLAY_ID3} .btn:focus { outline: 2px solid #7aa2ff; outline-offset: 2px; }
   `;
-    document.documentElement.appendChild(style2);
+    document.documentElement.appendChild(style);
   }
   function createAutoRecoOverlay(initialMs, onReconnectNow) {
     ensureStyle();
@@ -10218,10 +10218,10 @@
         url: `${apiBase}/assets/sprites/${apiCat}/${item.name}.png`
       };
       indexEntries.push(entry);
-      const norm3 = normalizeSpriteName(item.name);
-      const arr = nameIndex.get(norm3) || [];
+      const norm2 = normalizeSpriteName(item.name);
+      const arr = nameIndex.get(norm2) || [];
       arr.push(entry);
-      nameIndex.set(norm3, arr);
+      nameIndex.set(norm2, arr);
     }
   }
   function spriteIndexSize() {
@@ -10294,31 +10294,31 @@
     return null;
   }
   function findSprite(categories, candidateId) {
-    const norm3 = normalizeSpriteName(candidateId);
+    const norm2 = normalizeSpriteName(candidateId);
     const internalCats = expandCategories(categories);
-    const fromCatalog = findCatalogSprite(internalCats, norm3);
+    const fromCatalog = findCatalogSprite(internalCats, norm2);
     if (fromCatalog) return fromCatalog;
-    const entries2 = nameIndex.get(norm3);
+    const entries2 = nameIndex.get(norm2);
     if (!entries2?.length) {
-      return findSpriteFuzzy(categories, norm3);
+      return findSpriteFuzzy(categories, norm2);
     }
     for (const entry of entries2) {
       if (internalCats.has(entry.internalCat)) return entry;
     }
-    return findSpriteFuzzy(categories, norm3);
+    return findSpriteFuzzy(categories, norm2);
   }
   function findSpriteFuzzy(categories, normTarget) {
     if (!normTarget) return null;
     const internalCats = expandCategories(categories);
-    for (const [norm3, entries2] of nameIndex) {
-      if (norm3.includes(normTarget) || normTarget.includes(norm3)) {
+    for (const [norm2, entries2] of nameIndex) {
+      if (norm2.includes(normTarget) || normTarget.includes(norm2)) {
         for (const entry of entries2) {
           if (internalCats.has(entry.internalCat)) return entry;
         }
       }
     }
-    for (const [norm3, entries2] of nameIndex) {
-      if (norm3.includes(normTarget) || normTarget.includes(norm3)) {
+    for (const [norm2, entries2] of nameIndex) {
+      if (norm2.includes(normTarget) || normTarget.includes(norm2)) {
         return entries2[0];
       }
     }
@@ -10568,8 +10568,8 @@
     if (!list.length) return "";
     return "|m=" + list.map(normalizeSpriteName).filter(Boolean).sort().join(",");
   }
-  function notifyWarmup(state5) {
-    warmupState = state5;
+  function notifyWarmup(state7) {
+    warmupState = state7;
     warmupListeners.forEach((listener) => {
       try {
         listener(warmupState);
@@ -10753,9 +10753,9 @@
   // src/features/editor/decorRotation.ts
   function ensureSliderStyle() {
     if (document.getElementById(STYLE_ID2)) return;
-    const style2 = document.createElement("style");
-    style2.id = STYLE_ID2;
-    style2.textContent = `
+    const style = document.createElement("style");
+    style.id = STYLE_ID2;
+    style.textContent = `
 .${SLIDER_CLASS} {
   -webkit-appearance: none; appearance: none;
   width: 100%; height: ${THUMB_SIZE_PX}px;
@@ -10780,7 +10780,7 @@
 }
 .${SLIDER_CLASS}:focus-visible { outline: 2px solid #5eead4; outline-offset: 2px; }
   `;
-    document.head.appendChild(style2);
+    document.head.appendChild(style);
   }
   function getEntry(decorId) {
     if (!decorId) return null;
@@ -11748,9 +11748,9 @@
   // src/features/editor/editor.ts
   function ensureItemPanelStyles() {
     if (document.getElementById(ITEM_PANEL_STYLE_ID)) return;
-    const style2 = document.createElement("style");
-    style2.id = ITEM_PANEL_STYLE_ID;
-    style2.textContent = `
+    const style = document.createElement("style");
+    style.id = ITEM_PANEL_STYLE_ID;
+    style.textContent = `
 .qws-item-box {
   border: 1px solid rgba(94,234,212,0.14);
   border-radius: 10px;
@@ -11824,7 +11824,7 @@
   transform: scale(1.05);
 }
 `;
-    document.head.appendChild(style2);
+    document.head.appendChild(style);
   }
   function buildSpriteCandidates(rawId, label2) {
     const set2 = /* @__PURE__ */ new Set();
@@ -13406,15 +13406,15 @@
           fontWeight: "600"
         });
         btnAdd.onclick = () => {
-          const state5 = ensureEditorStateForSpecies(selId);
-          const current = state5.slots;
+          const state7 = ensureEditorStateForSpecies(selId);
+          const current = state7.slots;
           if (current.length >= maxSlots) return;
           const defaultScale = computeTargetScaleFromPercent(
             selId,
             DEFAULT_SIZE_PERCENT
           );
           editorPlantSlotsState = {
-            ...state5,
+            ...state7,
             species: selId,
             slots: [
               ...current,
@@ -13444,11 +13444,11 @@
           fontWeight: "600"
         });
         btnRemove.onclick = () => {
-          const state5 = ensureEditorStateForSpecies(selId);
-          const current = state5.slots;
+          const state7 = ensureEditorStateForSpecies(selId);
+          const current = state7.slots;
           if (current.length <= 1) return;
           editorPlantSlotsState = {
-            ...state5,
+            ...state7,
             species: selId,
             slots: current.slice(0, current.length - 1)
           };
@@ -13934,7 +13934,7 @@
   }
   function applyState(enabled5, opts = {}) {
     const next = !!enabled5;
-    const changed = next !== currentEnabled;
+    const changed4 = next !== currentEnabled;
     if (next) showOverlay();
     else hideOverlay();
     if (next && overlaysVisible) showSideOverlay();
@@ -13950,7 +13950,7 @@
     }
     currentEnabled = next;
     if (opts.persist !== false) persist2(next);
-    if (changed && opts.emit !== false) notify(next);
+    if (changed4 && opts.emit !== false) notify(next);
   }
   function makeEmptyGarden() {
     return { ...EMPTY_GARDEN };
@@ -15440,13 +15440,13 @@
         run();
       };
       myCurrentSortedGrowSlotIndices.onChange((v) => {
-        const changed = refreshSorted(v);
-        if (!changed) return;
+        const changed4 = refreshSorted(v);
+        if (!changed4) return;
         deferUntilIndexChanges();
       });
       myCurrentGardenObject.onChange((v) => {
-        const changed = refreshGarden(v);
-        if (!changed) return;
+        const changed4 = refreshGarden(v);
+        if (!changed4) return;
         deferUntilIndexChanges();
       });
       myCurrentGrowSlotIndex.onChange((idx) => {
@@ -15559,21 +15559,21 @@
     return base;
   }
   function sanitizeState(raw) {
-    const state5 = defaultState();
-    if (!raw || typeof raw !== "object") return state5;
-    state5.enabled = raw.enabled === true;
-    state5.settings = sanitizeSettings(raw.settings);
-    state5.overrides = {};
+    const state7 = defaultState();
+    if (!raw || typeof raw !== "object") return state7;
+    state7.enabled = raw.enabled === true;
+    state7.settings = sanitizeSettings(raw.settings);
+    state7.overrides = {};
     if (raw.overrides && typeof raw.overrides === "object") {
       for (const [key2, value] of Object.entries(raw.overrides)) {
         if (!key2) continue;
-        state5.overrides[key2] = {
+        state7.overrides[key2] = {
           enabled: value?.enabled === true,
           settings: sanitizeSettings(value?.settings)
         };
       }
     }
-    return state5;
+    return state7;
   }
   function cloneSettings(settings) {
     return {
@@ -15591,14 +15591,14 @@
       weatherRecipes: settings.weatherRecipes.map((recipe) => recipe.slice())
     };
   }
-  function cloneState(state5) {
+  function cloneState(state7) {
     const overrides = {};
-    for (const [key2, value] of Object.entries(state5.overrides)) {
+    for (const [key2, value] of Object.entries(state7.overrides)) {
       overrides[key2] = { enabled: value.enabled, settings: cloneSettings(value.settings) };
     }
     return {
-      enabled: state5.enabled,
-      settings: cloneSettings(state5.settings),
+      enabled: state7.enabled,
+      settings: cloneSettings(state7.settings),
       overrides
     };
   }
@@ -17389,13 +17389,13 @@
         /* --------- rapid-fire (API) --------- */
         startRapidFire(opts) {
           const trigger = normalizeCombo(opts.trigger);
-          const emit = normalizeCombo(opts.emit ?? opts.trigger);
+          const emit2 = normalizeCombo(opts.emit ?? opts.trigger);
           const rateMs = 1e3 / Math.max(1, opts.rateHz ?? 12);
           const mode = opts.mode ?? "tap";
           const keyupDelayMs = opts.keyupDelayMs ?? 20;
           this.sessions.set(trigger, {
             trigger: parseComboSpec(trigger),
-            emit: parseComboSpec(emit),
+            emit: parseComboSpec(emit2),
             rateMs,
             mode,
             keyupDelayMs,
@@ -17691,9 +17691,9 @@
     });
   }
   function getCombosForGameAction() {
-    const state5 = gameActiveStates.get(GAME_ACTION_ID);
-    if (!state5) return [];
-    const combo = state5.combo;
+    const state7 = gameActiveStates.get(GAME_ACTION_ID);
+    if (!state7) return [];
+    const combo = state7.combo;
     return typeof combo === "string" && combo.length ? [combo] : [];
   }
   function applyGameActionBlockers() {
@@ -19407,9 +19407,9 @@
         }
         resolve(ok);
       };
-      const check = async (state5) => {
+      const check = async (state7) => {
         const set2 = new Set(
-          (Array.isArray(state5) ? state5 : []).map((p) => String(p?.id || "")).filter(Boolean)
+          (Array.isArray(state7) ? state7 : []).map((p) => String(p?.id || "")).filter(Boolean)
         );
         if (predicate(set2)) {
           stop2(true);
@@ -19418,8 +19418,8 @@
         }
       };
       try {
-        const res = myPetHutchPetItems.onChange((state5) => {
-          void check(state5);
+        const res = myPetHutchPetItems.onChange((state7) => {
+          void check(state7);
         });
         if (typeof res === "function") {
           unsub = res;
@@ -19562,32 +19562,32 @@
     let placementOffset = 0;
     for (let slot = 0; slot < MAX_TEAM_SLOTS; slot++) {
       const targetId = aligned[slot];
-      const currentId = String(activeSlots[slot] ?? "");
-      if (targetId && targetId === currentId) {
+      const currentId2 = String(activeSlots[slot] ?? "");
+      if (targetId && targetId === currentId2) {
         skipped++;
         continue;
       }
-      if (!targetId && currentId) {
+      if (!targetId && currentId2) {
         try {
-          await PlayerService.storePet(currentId);
+          await PlayerService.storePet(currentId2);
           activeSlots[slot] = "";
           if (freeHutch > 0) {
-            await PlayerService.putItemInStorage(currentId, "PetHutch");
+            await PlayerService.putItemInStorage(currentId2, "PetHutch");
             freeHutch--;
-            void _waitForHutchState((set2) => set2.has(currentId), 3e3);
+            void _waitForHutchState((set2) => set2.has(currentId2), 3e3);
           }
         } catch {
         }
         continue;
       }
       if (!targetId) continue;
-      if (currentId && hutchItemsSet.has(targetId)) {
+      if (currentId2 && hutchItemsSet.has(targetId)) {
         try {
-          await PlayerService.swapPetFromStorage(currentId, targetId, "PetHutch");
+          await PlayerService.swapPetFromStorage(currentId2, targetId, "PetHutch");
           swapped++;
           activeSlots[slot] = targetId;
           hutchItemsSet.delete(targetId);
-          hutchItemsSet.add(currentId);
+          hutchItemsSet.add(currentId2);
         } catch {
           try {
             await _placePetInMyGarden(targetId, placementOffset++);
@@ -19621,7 +19621,7 @@
           continue;
         }
       }
-      if (!currentId) {
+      if (!currentId2) {
         try {
           await _placePetInMyGarden(targetId, placementOffset++);
           placed++;
@@ -19631,14 +19631,14 @@
         continue;
       }
       try {
-        await PlayerService.swapPet(currentId, targetId);
+        await PlayerService.swapPet(currentId2, targetId);
         swapped++;
         activeSlots[slot] = targetId;
         if (freeHutch > 0) {
           try {
-            await PlayerService.putItemInStorage(currentId, "PetHutch");
+            await PlayerService.putItemInStorage(currentId2, "PetHutch");
             freeHutch--;
-            void _waitForHutchState((set2) => set2.has(currentId), 3e3);
+            void _waitForHutchState((set2) => set2.has(currentId2), 3e3);
           } catch {
           }
         }
@@ -20614,65 +20614,46 @@
       "keydown",
       (event) => {
         if (shouldIgnoreKeydown(event)) return;
-        for (const { id, modal } of SHOP_KEYBINDS) {
-          if (!eventMatchesKeybind(id, event)) continue;
-          event.preventDefault();
-          event.stopPropagation();
-          void openModal(modal);
-          break;
-        }
+        const bind = SHOP_KEYBINDS.find(({ id }) => eventMatchesKeybind(id, event));
+        if (!bind) return;
+        event.preventDefault();
+        event.stopPropagation();
+        void openModal(bind.modal);
       },
       true
     );
   }
-  function _fallbackShopFor(kind) {
-    return kind === "seeds" ? "seed" : kind === "tools" ? "tool" : kind === "eggs" ? "egg" : "decor";
+  function itemIdOf(kind, it) {
+    if (kind === "seeds") return it.species ?? it.name;
+    if (kind === "tools") return it.toolId ?? it.id;
+    if (kind === "eggs") return it.eggId ?? it.id;
+    return it.decorId ?? it.id;
   }
-  function _buildPurchasePayload(kind, it) {
-    if (kind === "seeds") {
-      const species = it.species ?? it.name;
-      return species ? { item: { itemType: "Seed", species: String(species) }, stat: "seedsBought" } : null;
-    }
-    if (kind === "tools") {
-      const toolId = it.toolId ?? it.id;
-      return toolId ? { item: { itemType: "Tool", toolId: String(toolId) }, stat: "toolsBought" } : null;
-    }
-    if (kind === "eggs") {
-      const eggId = it.eggId ?? it.id;
-      return eggId ? { item: { itemType: "Egg", eggId: String(eggId) }, stat: "eggsBought" } : null;
-    }
-    if (kind === "decor") {
-      const decorId = it.decorId ?? it.id;
-      return decorId ? { item: { itemType: "Decor", decorId: String(decorId) }, stat: "decorBought" } : null;
+  function buildPurchasePayload(kind, it) {
+    const id = itemIdOf(kind, it);
+    if (!id) return null;
+    const value = String(id);
+    if (kind === "seeds") return { item: { itemType: "Seed", species: value }, stat: "seedsBought" };
+    if (kind === "tools") return { item: { itemType: "Tool", toolId: value }, stat: "toolsBought" };
+    if (kind === "eggs") return { item: { itemType: "Egg", eggId: value }, stat: "eggsBought" };
+    return { item: { itemType: "Decor", decorId: value }, stat: "decorBought" };
+  }
+  function findShopForItem(shops2, kind, it) {
+    if (!shops2 || typeof shops2 !== "object") return null;
+    const keys = Object.keys(shops2);
+    const ordered = [...keys.filter((k) => !BASE_SHOP_KEYS.includes(k)), ...keys.filter((k) => BASE_SHOP_KEYS.includes(k))];
+    const target = itemIdOf(kind, it);
+    if (target == null) return null;
+    const field = ITEM_FIELD[kind];
+    for (const key2 of ordered) {
+      const inv = shops2[key2]?.inventory;
+      if (Array.isArray(inv) && inv.some((entry) => entry && typeof entry === "object" && entry[field] === target)) {
+        return key2;
+      }
     }
     return null;
   }
-  function _findShopForItem(snap, kind, it) {
-    if (!snap || typeof snap !== "object") return null;
-    const keys = Object.keys(snap);
-    const weatherKeys = keys.filter((k) => !BASE_SHOP_KEYS.includes(k));
-    const baseKeys = keys.filter((k) => BASE_SHOP_KEYS.includes(k));
-    const ordered = [...weatherKeys, ...baseKeys];
-    const targetSpecies = it.species ?? it.name;
-    const targetToolId = it.toolId ?? it.id;
-    const targetEggId = it.eggId ?? it.id;
-    const targetDecorId = it.decorId ?? it.id;
-    const matches = (entry) => {
-      if (!entry || typeof entry !== "object") return false;
-      if (kind === "seeds") return targetSpecies != null && entry.species === targetSpecies;
-      if (kind === "tools") return targetToolId != null && entry.toolId === targetToolId;
-      if (kind === "eggs") return targetEggId != null && entry.eggId === targetEggId;
-      if (kind === "decor") return targetDecorId != null && entry.decorId === targetDecorId;
-      return false;
-    };
-    for (const k of ordered) {
-      const inv = snap[k]?.inventory;
-      if (!Array.isArray(inv)) continue;
-      if (inv.some(matches)) return k;
-    }
-    return null;
-  }
-  var SHOP_KEYBINDS, shopKeybindsInstalled, BASE_SHOP_KEYS, ShopsService;
+  var SHOP_KEYBINDS, shopKeybindsInstalled, BASE_SHOP_KEYS, BASE_SHOP_OF, ITEM_FIELD, ShopsService;
   var init_shops = __esm({
     "src/features/shops/shops.ts"() {
       "use strict";
@@ -20693,22 +20674,33 @@
       ];
       shopKeybindsInstalled = false;
       BASE_SHOP_KEYS = ["seed", "egg", "tool", "decor"];
+      BASE_SHOP_OF = { seeds: "seed", tools: "tool", eggs: "egg", decor: "decor" };
+      ITEM_FIELD = { seeds: "species", tools: "toolId", eggs: "eggId", decor: "decorId" };
       ShopsService = {
-        /** Achat unitaire : envoie le bon message au jeu. */
+        /** Buys one of the item. */
         async buyOne(kind, it) {
           return ShopsService.buy(kind, it, 1);
         },
-        /** Achete `quantity` exemplaires en une seule commande, comme le Buy All du jeu. */
+        /**
+         * Buys `count` of the item, one purchase at a time. The server takes a
+         * `quantity` since v1292, but the game only sends it when the player can pay
+         * for the whole stack and has room for it, and the mod knows neither. Unit
+         * purchases still buy what the player can afford.
+         */
+        async buyEach(kind, it, count) {
+          for (let i = 0; i < count; i++) await ShopsService.buyOne(kind, it);
+        },
+        /** Buys `quantity` of the item in one command, like the game's own Buy All. */
         async buy(kind, it, quantity) {
-          const built = _buildPurchasePayload(kind, it);
+          const built = buildPurchasePayload(kind, it);
           if (!built) return;
           let shop = null;
           try {
             const [shops2, slot] = await Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
-            shop = _findShopForItem(playerShopView(shops2, slot, () => null).shops, kind, it);
+            shop = findShopForItem(playerShopView(shops2, slot, () => null).shops, kind, it);
           } catch {
           }
-          if (!shop) shop = _fallbackShopFor(kind);
+          if (!shop) shop = BASE_SHOP_OF[kind];
           try {
             let storage = null;
             try {
@@ -21719,15 +21711,15 @@
     return total.toLocaleString("en-US");
   }
   async function confirmHighValuePetSale(pets, logger) {
-    const rules2 = lockerRestrictionsService.getSellAllPetsRules();
-    if (!rules2?.enabled) return true;
+    const rules3 = lockerRestrictionsService.getSellAllPetsRules();
+    if (!rules3?.enabled) return true;
     const mutationProtect = /* @__PURE__ */ new Set();
-    if (rules2.protectGold) mutationProtect.add("gold");
-    if (rules2.protectRainbow) mutationProtect.add("rainbow");
-    const maxStrThreshold = Number.isFinite(rules2.maxStrThreshold) ? Math.max(0, Math.min(100, Math.round(rules2.maxStrThreshold))) : 0;
-    const checkMaxStr = !!rules2.protectMaxStr;
+    if (rules3.protectGold) mutationProtect.add("gold");
+    if (rules3.protectRainbow) mutationProtect.add("rainbow");
+    const maxStrThreshold = Number.isFinite(rules3.maxStrThreshold) ? Math.max(0, Math.min(100, Math.round(rules3.maxStrThreshold))) : 0;
+    const checkMaxStr = !!rules3.protectMaxStr;
     const protectedRarities = new Set(
-      Array.isArray(rules2.protectedRarities) ? rules2.protectedRarities : []
+      Array.isArray(rules3.protectedRarities) ? rules3.protectedRarities : []
     );
     if (mutationProtect.size === 0 && !checkMaxStr && protectedRarities.size === 0) return true;
     const flagged = [];
@@ -22564,7 +22556,7 @@
           }
         }
         ensureDefaultSoundValidity() {
-          let changed = false;
+          let changed4 = false;
           const fallback = () => {
             if (this.builtinDefault && this.library.has(this.builtinDefault.name)) {
               return this.builtinDefault.name;
@@ -22580,19 +22572,19 @@
           const nextShops = ensureName(this.defaultSoundName);
           if (nextShops !== this.defaultSoundName) {
             this.defaultSoundName = nextShops;
-            changed = true;
+            changed4 = true;
           }
           const nextWeather = ensureName(this.weatherDefaultSoundName, nextShops);
           if (nextWeather !== this.weatherDefaultSoundName) {
             this.weatherDefaultSoundName = nextWeather;
-            changed = true;
+            changed4 = true;
           }
           const nextPets = ensureName(this.petDefaultSoundName, nextShops);
           if (nextPets !== this.petDefaultSoundName) {
             this.petDefaultSoundName = nextPets;
-            changed = true;
+            changed4 = true;
           }
-          return changed;
+          return changed4;
         }
         persistSettings() {
           if (this.suppressPersist > 0) return;
@@ -22838,9 +22830,9 @@
           if (prevDefault === name) this.defaultSoundName = null;
           if (prevWeatherDefault === name) this.weatherDefaultSoundName = null;
           if (prevPetDefault === name) this.petDefaultSoundName = null;
-          const changed = prevDefault === name || prevWeatherDefault === name || prevPetDefault === name || this.ensureDefaultSoundValidity();
+          const changed4 = prevDefault === name || prevWeatherDefault === name || prevPetDefault === name || this.ensureDefaultSoundValidity();
           this.persistLibrary();
-          if (changed) this.persistSettings();
+          if (changed4) this.persistSettings();
         }
         listSounds() {
           return Array.from(this.library.keys());
@@ -22882,9 +22874,9 @@
           } finally {
             this.suppressPersist--;
           }
-          const changed = this.ensureDefaultSoundValidity() || prevDefault !== this.defaultSoundName || prevWeatherDefault !== this.weatherDefaultSoundName;
+          const changed4 = this.ensureDefaultSoundValidity() || prevDefault !== this.defaultSoundName || prevWeatherDefault !== this.weatherDefaultSoundName;
           this.persistLibrary();
-          if (changed) this.persistSettings();
+          if (changed4) this.persistSettings();
         }
         setNotificationBase64(dataUriOrBase64) {
           const du = dataUriOrBase64 && dataUriOrBase64.trim() ? looksLikeDataURL(dataUriOrBase64) ? dataUriOrBase64 : toDataUrl(dataUriOrBase64) : "";
@@ -23121,7 +23113,7 @@
           this.stopLoop(key2);
           const stopOverride = normalizeStop(overrides.stop ?? null);
           const loopIntervalOverride = overrides.loopIntervalMs != null && Number.isFinite(overrides.loopIntervalMs) ? Math.max(150, Math.round(overrides.loopIntervalMs)) : null;
-          const state5 = {
+          const state7 = {
             key: key2,
             timer: null,
             plays: 0,
@@ -23136,8 +23128,8 @@
             volumeOverride,
             volume: effectiveVolume2
           };
-          this.loops.set(key2, state5);
-          this.scheduleNext(state5, 0);
+          this.loops.set(key2, state7);
+          this.scheduleNext(state7, 0);
         }
         forEachLoop(context, fn) {
           for (const st of this.loops.values()) {
@@ -23312,39 +23304,39 @@
           }
           return true;
         }
-        scheduleNext(state5, delayMs) {
+        scheduleNext(state7, delayMs) {
           const run = async () => {
-            if (state5.stopped) return;
-            const stopConf = state5.stopOverride ?? state5.baseStop;
+            if (state7.stopped) return;
+            const stopConf = state7.stopOverride ?? state7.baseStop;
             if (stopConf.mode === "purchase" && this.purchaseChecker) {
               try {
-                if (this.purchaseChecker(state5.key)) {
-                  this.stopLoop(state5.key);
+                if (this.purchaseChecker(state7.key)) {
+                  this.stopLoop(state7.key);
                   return;
                 }
               } catch {
               }
             }
-            const du = this.resolveToDataUrl(state5.soundOverride, state5.context);
+            const du = this.resolveToDataUrl(state7.soundOverride, state7.context);
             const played = await this.playOnce(
               du,
-              state5.volume,
-              state5.context,
+              state7.volume,
+              state7.context,
               { awaitEnd: true }
             );
-            if (played) state5.plays++;
+            if (played) state7.plays++;
             if (stopConf.mode === "repeat") {
               const max = Math.max(1, stopConf.repeats | 0);
-              if (state5.plays >= max) {
-                this.stopLoop(state5.key);
+              if (state7.plays >= max) {
+                this.stopLoop(state7.key);
                 return;
               }
             }
-            const intervalBase = state5.loopIntervalOverride ?? state5.baseLoopInterval;
+            const intervalBase = state7.loopIntervalOverride ?? state7.baseLoopInterval;
             const gap = Math.max(150, intervalBase | 0);
-            state5.timer = setTimeout(() => this.scheduleNext(state5, 0), gap);
+            state7.timer = setTimeout(() => this.scheduleNext(state7, 0), gap);
           };
-          if (delayMs > 0) state5.timer = setTimeout(run, delayMs);
+          if (delayMs > 0) state7.timer = setTimeout(run, delayMs);
           else run().catch(() => {
           });
         }
@@ -23480,108 +23472,62 @@
 
   // src/features/notifier/petAlerts.ts
   function loadPrefs() {
-    try {
-      const parsed = readAriesPath("pets.alerts");
-      if (parsed && typeof parsed === "object") {
-        prefs = {
-          globalEnabled: parsed.globalEnabled !== false,
-          generalEnabled: !!parsed.generalEnabled,
-          defaultThresholdPct: clampPct2(parsed.defaultThresholdPct ?? prefs.defaultThresholdPct),
-          pets: typeof parsed.pets === "object" && parsed.pets ? parsed.pets : {}
-        };
-      }
-    } catch {
-    }
-    return prefs;
+    const stored = readAriesPath(PREFS_PATH);
+    if (!stored || typeof stored !== "object") return;
+    prefs = {
+      globalEnabled: stored.globalEnabled !== false,
+      generalEnabled: !!stored.generalEnabled,
+      defaultThresholdPct: clampPct2(stored.defaultThresholdPct ?? prefs.defaultThresholdPct),
+      pets: typeof stored.pets === "object" && stored.pets ? stored.pets : {}
+    };
   }
   function savePrefs() {
-    try {
-      writeAriesPath("pets.alerts", prefs);
-    } catch {
-    }
+    writeAriesPath(PREFS_PATH, prefs);
   }
   function prefFor(petId) {
     const baseThreshold = clampPct2(prefs.defaultThresholdPct);
-    if (prefs.generalEnabled) {
-      return { enabled: prefs.globalEnabled !== false, thresholdPct: baseThreshold };
-    }
+    if (prefs.generalEnabled) return { enabled: prefs.globalEnabled !== false, thresholdPct: baseThreshold };
     if (!petId) return { enabled: false, thresholdPct: baseThreshold };
     const entry = prefs.pets[petId] ?? {};
-    const enabled5 = entry.enabled ?? false;
-    const thresholdPct = clampPct2(entry.thresholdPct ?? baseThreshold);
-    return { enabled: enabled5, thresholdPct };
-  }
-  async function triggerAlert(key2) {
-    try {
-      await audio.trigger(key2, {}, "pets");
-    } catch {
-    }
+    return { enabled: entry.enabled ?? false, thresholdPct: clampPct2(entry.thresholdPct ?? baseThreshold) };
   }
   function evaluatePet(pet) {
     const petId = String(pet?.slot?.id || "");
     if (!petId || !prefs.globalEnabled) {
-      seenBelow.set(petId, false);
+      wasBelow.set(petId, false);
       return;
     }
     const { enabled: enabled5, thresholdPct } = prefFor(petId);
     const hungerPct = PetsService.getHungerPctFor(pet);
     const below = enabled5 && Number.isFinite(hungerPct) && hungerPct < thresholdPct;
-    const wasBelow = seenBelow.get(petId) === true;
     const loopKey = prefs.generalEnabled ? "pets:general" : `pet:${petId}`;
-    const mode = audio.getPlaybackMode?.("pets") ?? "oneshot";
-    if (below) {
-      if (mode === "loop") {
-        void triggerAlert(loopKey);
-      } else if (!wasBelow) {
-        void triggerAlert(loopKey);
-      }
-    } else {
-      try {
-        audio.stopLoop(loopKey);
-      } catch {
-      }
+    if (!below) {
+      audio.stopLoop(loopKey);
+    } else if (audio.getPlaybackMode("pets") === "loop" || !wasBelow.get(petId)) {
+      audio.trigger(loopKey, {}, "pets").catch(() => {
+      });
     }
-    seenBelow.set(petId, below);
+    wasBelow.set(petId, below);
   }
-  async function evaluateAll(pets = null) {
-    const list = pets ?? lastPets;
-    for (const pet of Array.isArray(list) ? list : []) {
+  function evaluateAll() {
+    for (const pet of lastPets) {
       try {
         evaluatePet(pet);
       } catch {
       }
     }
   }
-  async function ensureStarted() {
-    if (started) return;
-    loadPrefs();
-    try {
-      unsubPets = await PetsService.onPetsChangeNow((arr) => {
-        lastPets = Array.isArray(arr) ? arr.slice(0, 3) : [];
-        void evaluateAll(lastPets);
-      });
-    } catch {
-      unsubPets = null;
-    }
-    started = true;
-  }
-  function stop() {
-    try {
-      unsubPets?.();
-    } catch {
-    }
-    unsubPets = null;
-    started = false;
-    seenBelow.clear();
-  }
-  var clampPct2, prefs, started, unsubPets, lastPets, seenBelow, PetAlertService;
+  var PREFS_PATH, ACTIVE_PET_SLOTS, clampPct2, prefs, started, lastPets, wasBelow, PetAlertService;
   var init_petAlerts = __esm({
     "src/features/notifier/petAlerts.ts"() {
       "use strict";
       init_pets();
-      init_audio();
+      init_math();
       init_storage();
-      clampPct2 = (v) => Math.max(1, Math.min(100, Math.round(v)));
+      init_audio();
+      PREFS_PATH = "pets.alerts";
+      ACTIVE_PET_SLOTS = 3;
+      clampPct2 = (v) => clamp(Math.round(v), 1, 100);
       prefs = {
         globalEnabled: true,
         generalEnabled: false,
@@ -23589,1263 +23535,674 @@
         pets: {}
       };
       started = false;
-      unsubPets = null;
       lastPets = [];
-      seenBelow = /* @__PURE__ */ new Map();
+      wasBelow = /* @__PURE__ */ new Map();
       PetAlertService = {
         async start() {
-          await ensureStarted();
-          return () => stop();
-        },
-        isGlobalEnabled() {
-          return prefs.globalEnabled !== false;
-        },
-        setGlobalEnabled(on) {
-          prefs.globalEnabled = !!on;
-          if (!on) seenBelow.clear();
-          savePrefs();
+          if (started) return;
+          loadPrefs();
+          try {
+            await PetsService.onPetsChangeNow((pets) => {
+              lastPets = Array.isArray(pets) ? pets.slice(0, ACTIVE_PET_SLOTS) : [];
+              evaluateAll();
+            });
+          } catch {
+          }
+          started = true;
         },
         isGeneralEnabled() {
           return !!prefs.generalEnabled;
         },
         setGeneralEnabled(on) {
-          prefs.generalEnabled = !!on;
+          prefs.generalEnabled = on;
           savePrefs();
-          void this.refreshNow();
+          evaluateAll();
         },
         getGeneralThresholdPct() {
           return clampPct2(prefs.defaultThresholdPct);
         },
+        /** Sets the shared threshold and returns it as stored (whole percent, 1 to 100). */
         setGeneralThresholdPct(pct) {
-          const next = clampPct2(pct);
-          prefs.defaultThresholdPct = next;
+          prefs.defaultThresholdPct = clampPct2(pct);
           savePrefs();
-          void this.refreshNow();
-          return next;
-        },
-        getDefaultThresholdPct() {
-          return clampPct2(prefs.defaultThresholdPct);
-        },
-        setDefaultThresholdPct(pct) {
-          const next = clampPct2(pct);
-          prefs.defaultThresholdPct = next;
-          savePrefs();
-          return next;
-        },
-        isPetEnabled(petId) {
-          return prefFor(petId).enabled;
-        },
-        setPetEnabled(petId, on) {
-          if (!petId) return;
-          prefs.pets[petId] = { ...prefs.pets[petId] || {}, enabled: !!on };
-          savePrefs();
-          void evaluateAll();
-        },
-        getPetThresholdPct(petId) {
-          return prefFor(petId).thresholdPct;
-        },
-        setPetThresholdPct(petId, pct) {
-          if (!petId) return this.getDefaultThresholdPct();
-          const next = clampPct2(pct);
-          prefs.pets[petId] = { ...prefs.pets[petId] || {}, thresholdPct: next };
-          savePrefs();
-          void evaluateAll();
-          return next;
-        },
-        async refreshNow() {
-          await evaluateAll();
+          evaluateAll();
+          return prefs.defaultThresholdPct;
         }
       };
     }
   });
 
-  // src/features/notifier/notifier.ts
-  function _ensureRulesLoaded() {
-    if (_rulesLoaded) return;
-    _rulesLoaded = true;
-    _rules = /* @__PURE__ */ new Map();
-    try {
-      const obj = readAriesPath(PATH_NOTIFIER_RULES);
-      if (obj && typeof obj === "object") {
-        for (const [id, value] of Object.entries(obj)) {
-          const norm3 = _normalizeRule(value);
-          if (norm3) _rules.set(String(id), norm3);
-        }
-      }
-    } catch {
-      _rules = /* @__PURE__ */ new Map();
-    }
+  // src/ui/kit/theme.ts
+  function group(prefix, values, unit = "") {
+    return Object.entries(values).map(([key2, value]) => `--qmm-${prefix}${kebab(key2)}:${value}${unit};`);
   }
-  function _normalizeRule(raw) {
-    const patch = {};
-    if (_hasOwn.call(raw ?? {}, "sound")) patch.sound = raw?.sound ?? null;
-    if (_hasOwn.call(raw ?? {}, "volume")) patch.volume = raw?.volume ?? null;
-    if (_hasOwn.call(raw ?? {}, "playbackMode")) patch.playbackMode = raw?.playbackMode ?? null;
-    if (_hasOwn.call(raw ?? {}, "stopMode")) patch.stopMode = raw?.stopMode ?? null;
-    if (_hasOwn.call(raw ?? {}, "stopRepeats")) patch.stopRepeats = raw?.stopRepeats ?? null;
-    if (_hasOwn.call(raw ?? {}, "loopIntervalMs")) patch.loopIntervalMs = raw?.loopIntervalMs ?? null;
-    return _mergeRule(void 0, patch);
+  function themeVariables() {
+    return [
+      ":root{",
+      ...group("", color),
+      ...group("gradient-", gradient),
+      ...group("shadow-", shadow),
+      ...group("radius-", radius, "px"),
+      ...group("space-", space, "px"),
+      ...group("fs-", fontSize, "px"),
+      `--qmm-font-mono:${fontMono};`,
+      // Compatibility names read by feature code that predates the tokens.
+      // Remove each once nothing outside the kit references it.
+      "--qmm-border-2:var(--qmm-border);",
+      "--qws-text:var(--qmm-text);",
+      "--qws-text-dim:var(--qmm-text-soft);",
+      "--qws-border:var(--qmm-border-strong);",
+      "--qws-border-2:var(--qmm-border);",
+      "--qws-panel:var(--qmm-panel-bg);",
+      "--qws-accent:var(--qmm-accent);",
+      "--qws-shadow:var(--qmm-shadow-window);",
+      "--qws-blur:8px;",
+      "}"
+    ].join("\n");
   }
-  function _saveRules() {
-    if (!_rulesLoaded) return;
-    try {
-      const obj = {};
-      for (const [id, rule] of _rules.entries()) {
-        obj[id] = { ...rule };
-      }
-      writeAriesPath(PATH_NOTIFIER_RULES, obj);
-    } catch {
-    }
-  }
-  function _ensureWeatherPrefsLoaded() {
-    if (_weatherPrefsLoaded) return;
-    _weatherPrefsLoaded = true;
-    _weatherPrefs = /* @__PURE__ */ new Map();
-    try {
-      const obj = readAriesPath(PATH_NOTIFIER_WEATHER);
-      if (obj && typeof obj === "object") {
-        for (const [id, value] of Object.entries(obj)) {
-          if (!id) continue;
-          const pref = {};
-          if (typeof value?.notify === "boolean") pref.notify = !!value.notify;
-          if (typeof value?.lastSeen === "number" && Number.isFinite(value.lastSeen)) {
-            pref.lastSeen = Number(value.lastSeen);
-          }
-          _weatherPrefs.set(String(id), pref);
-        }
-      }
-    } catch {
-      _weatherPrefs = /* @__PURE__ */ new Map();
-    }
-  }
-  function _saveWeatherPrefs() {
-    if (!_weatherPrefsLoaded) return;
-    try {
-      const obj = {};
-      for (const [id, pref] of _weatherPrefs.entries()) {
-        const entry = {};
-        if (pref.notify) entry.notify = true;
-        if (typeof pref.lastSeen === "number" && Number.isFinite(pref.lastSeen)) entry.lastSeen = pref.lastSeen;
-        if (entry.notify || entry.lastSeen != null) obj[id] = entry;
-      }
-      writeAriesPath(PATH_NOTIFIER_WEATHER, obj);
-    } catch {
-    }
-  }
-  function _getWeatherPref(id) {
-    _ensureWeatherPrefsLoaded();
-    const existing = _weatherPrefs.get(id);
-    if (existing) return existing;
-    const fresh = {};
-    _weatherPrefs.set(id, fresh);
-    return fresh;
-  }
-  function _ensureContextDefaultsLoaded() {
-    if (_contextDefaultsLoaded) return;
-    _contextDefaultsLoaded = true;
-    _contextDefaults = {};
-    try {
-      const obj = readAriesPath(PATH_NOTIFIER_DEFAULTS);
-      if (obj && typeof obj === "object") {
-        for (const [context, value] of Object.entries(obj)) {
-          const ctx2 = context;
-          if (ctx2 !== "shops" && ctx2 !== "weather") continue;
-          const modeRaw = value?.stopMode;
-          const stopMode = modeRaw === "purchase" ? "purchase" : "manual";
-          const repeatsRaw = Number(value?.stopRepeats);
-          const stopRepeats = Number.isFinite(repeatsRaw) ? Math.max(1, Math.floor(repeatsRaw)) : null;
-          const intervalRaw = Number(value?.loopIntervalMs);
-          const playback = audio.getPlaybackSettings(ctx2);
-          const baseLoop = Number.isFinite(intervalRaw) ? intervalRaw : playback.loopIntervalMs;
-          const loopIntervalMs = Math.max(150, Math.floor(baseLoop || 0));
-          _contextDefaults[ctx2] = { stopMode, stopRepeats, loopIntervalMs };
-        }
-      }
-    } catch {
-      _contextDefaults = {};
-    }
-  }
-  function _saveContextDefaults() {
-    if (!_contextDefaultsLoaded) return;
-    try {
-      const obj = {};
-      for (const [ctx2, value] of Object.entries(_contextDefaults)) {
-        if (!value) continue;
-        const loopIntervalMs = Math.max(150, Math.floor(value.loopIntervalMs | 0));
-        const normalizedRepeats = value.stopRepeats != null ? Math.max(1, Math.floor(value.stopRepeats | 0)) : null;
-        obj[ctx2] = {
-          stopMode: value.stopMode,
-          stopRepeats: normalizedRepeats,
-          loopIntervalMs
-        };
-      }
-      writeAriesPath(PATH_NOTIFIER_DEFAULTS, obj);
-    } catch {
-    }
-  }
-  function _getContextStopDefaultsInternal(context) {
-    _ensureContextDefaultsLoaded();
-    const stored = _contextDefaults[context];
-    const playback = audio.getPlaybackSettings(context);
-    const playbackLoop = Math.max(150, Math.floor(playback.loopIntervalMs || 0));
-    const storedLoop = stored?.loopIntervalMs;
-    const loopIntervalMs = Math.max(150, Math.floor(storedLoop ?? playbackLoop));
-    const storedMode = stored?.stopMode === "purchase" ? "purchase" : null;
-    const playbackMode = playback.stop.mode === "purchase" ? "purchase" : null;
-    if (context === "shops") {
-      const stopMode = storedMode ?? playbackMode ?? "purchase";
-      return { stopMode, stopRepeats: null, loopIntervalMs };
-    }
-    return { stopMode: "manual", stopRepeats: null, loopIntervalMs };
-  }
-  function _notifyWeather() {
-    if (!_weatherState) return;
-    _weatherSubs.forEach((fn) => {
-      try {
-        fn(_weatherState);
-      } catch {
-      }
-    });
-  }
-  function _recomputeWeatherState() {
-    _ensureWeatherPrefsLoaded();
-    const rows = weatherIndex().defs.map((def) => {
-      const pref = _getWeatherPref(def.id);
-      const notify3 = !!pref.notify;
-      const lastSeen = typeof pref.lastSeen === "number" && Number.isFinite(pref.lastSeen) ? pref.lastSeen : null;
-      return {
-        id: def.id,
-        name: def.name,
-        type: def.type,
-        atomValue: def.atomValue,
-        notify: notify3,
-        lastSeen,
-        isCurrent: def.id === _currentWeatherId,
-        description: def.description,
-        cycle: def.cycle ? { ...def.cycle } : null,
-        weightInCycle: def.weightInCycle,
-        mutations: def.mutations.map((mutation) => ({ ...mutation }))
-      };
-    });
-    const sig = JSON.stringify(rows.map((r) => [r.id, r.notify ? 1 : 0, r.lastSeen || 0, r.isCurrent ? 1 : 0]));
-    const changed = sig !== _weatherSig;
-    _weatherSig = sig;
-    _weatherState = {
-      updatedAt: Date.now(),
-      currentId: _currentWeatherId,
-      rows
-    };
-    if (changed) _notifyWeather();
-  }
-  function _buildWeatherOverrides(id) {
-    const overrides = {};
-    const rule = _rules.get(id);
-    if (rule?.sound) overrides.sound = rule.sound;
-    if (rule?.volume != null) overrides.volume = rule.volume;
-    overrides.mode = "oneshot";
-    return overrides;
-  }
-  function _triggerWeatherNotification(id) {
-    const def = weatherIndex().byId.get(id);
-    if (!def) return;
-    const overrides = _buildWeatherOverrides(id);
-    audio.trigger(id, overrides, "weather").catch(() => {
-    });
-  }
-  function _handleWeatherUpdate(raw, opts = {}) {
-    const normalize2 = (value) => {
-      if (value == null) return "";
-      if (typeof value === "string") return value.trim();
-      return String(value || "").trim();
-    };
-    const nextValue = normalize2(raw);
-    if (!opts.force && _currentWeatherValue === nextValue) return;
-    const lookupKey = nextValue.toLowerCase();
-    const { byAtom, byName } = weatherIndex();
-    let def = byAtom.get(lookupKey) || byName.get(lookupKey);
-    if (!def && lookupKey) {
-      const noSpace = lookupKey.replace(/\s+/g, "");
-      def = byName.get(noSpace);
-    }
-    const prevId = _currentWeatherId;
-    const now2 = Date.now();
-    if (def) {
-      const pref = _getWeatherPref(def.id);
-      pref.lastSeen = now2;
-      _weatherPrefs.set(def.id, pref);
-    }
-    _currentWeatherId = def?.id ?? null;
-    _currentWeatherValue = nextValue;
-    if (_currentWeatherId) {
-      StatsService.incrementWeatherStat(_currentWeatherId.replace("Weather:", ""));
-    }
-    if (prevId && prevId !== _currentWeatherId) {
-      audio.stopLoop(prevId);
-    }
-    if (def && _getWeatherPref(def.id).notify) {
-      _triggerWeatherNotification(def.id);
-    }
-    if (def) _saveWeatherPrefs();
-    _recomputeWeatherState();
-  }
-  function _rulesEqual(a, b) {
-    if (!a && !b) return true;
-    if (!a || !b) return false;
-    return a.sound === b.sound && a.volume === b.volume && a.playbackMode === b.playbackMode && a.stopMode === b.stopMode && a.loopIntervalMs === b.loopIntervalMs;
-  }
-  function _sanitizeSound(value) {
-    if (typeof value !== "string") return void 0;
-    const trimmed = value.trim();
-    return trimmed ? trimmed : void 0;
-  }
-  function _sanitizeVolume(value) {
-    if (value == null) return void 0;
-    const num2 = Number(value);
-    if (!Number.isFinite(num2)) return void 0;
-    const normalized = num2 > 1 ? num2 / 100 : num2;
-    const clamped = Math.max(0, Math.min(1, normalized));
-    return clamped;
-  }
-  function _sanitizePlaybackMode(value) {
-    if (value == null) return void 0;
-    const v = String(value);
-    return v === "oneshot" || v === "loop" ? v : void 0;
-  }
-  function _sanitizeStopMode(value) {
-    if (value == null) return void 0;
-    const v = String(value);
-    if (v === "purchase") return "purchase";
-    return void 0;
-  }
-  function _sanitizeLoopInterval(value) {
-    if (value == null) return void 0;
-    const n = Number(value);
-    if (!Number.isFinite(n)) return void 0;
-    const normalized = Math.max(150, Math.floor(n));
-    return normalized >= 150 ? normalized : void 0;
-  }
-  function _mergeRule(prev, patch) {
-    const next = { ...prev ?? {} };
-    if (_hasOwn.call(patch, "sound")) {
-      const s = _sanitizeSound(patch.sound);
-      if (s) next.sound = s;
-      else delete next.sound;
-    }
-    if (_hasOwn.call(patch, "volume")) {
-      const vol = _sanitizeVolume(patch.volume);
-      if (vol != null) next.volume = vol;
-      else delete next.volume;
-    }
-    if (_hasOwn.call(patch, "playbackMode")) {
-      const mode = _sanitizePlaybackMode(patch.playbackMode);
-      if (mode) next.playbackMode = mode;
-      else delete next.playbackMode;
-    }
-    if (_hasOwn.call(patch, "stopMode")) {
-      const mode = _sanitizeStopMode(patch.stopMode);
-      if (mode) next.stopMode = mode;
-      else delete next.stopMode;
-      delete next.stopRepeats;
-    }
-    if (_hasOwn.call(patch, "stopRepeats")) {
-      delete next.stopRepeats;
-    }
-    if (_hasOwn.call(patch, "loopIntervalMs")) {
-      const interval = _sanitizeLoopInterval(patch.loopIntervalMs);
-      if (interval != null) next.loopIntervalMs = interval;
-      else delete next.loopIntervalMs;
-    }
-    return Object.keys(next).length ? next : null;
-  }
-  function _rulesSnapshot() {
-    _ensureRulesLoaded();
-    const out = {};
-    for (const [id, rule] of _rules.entries()) {
-      out[id] = {
-        ...rule.sound ? { sound: rule.sound } : {},
-        ...rule.volume != null ? { volume: rule.volume } : {},
-        ...rule.playbackMode ? { playbackMode: rule.playbackMode } : {},
-        ...rule.stopMode ? { stopMode: rule.stopMode } : {},
-        ...rule.loopIntervalMs != null ? { loopIntervalMs: rule.loopIntervalMs } : {}
-      };
-    }
-    return out;
-  }
-  function _emitRules() {
-    if (!_rulesLoaded) return;
-    const snap = _rulesSnapshot();
-    _rulesSubs.forEach((fn) => {
-      try {
-        fn(snap);
-      } catch {
-      }
-    });
-  }
-  function _loadPrefs() {
-    try {
-      const obj = readAriesPath(PATH_NOTIFIER_PREFS) ?? {};
-      const m = /* @__PURE__ */ new Map();
-      if (obj && typeof obj === "object") {
-        for (const [k, v] of Object.entries(obj)) {
-          const n = Number(v) | 0;
-          const popupBits = n & 1;
-          if (k && popupBits !== void 0) m.set(String(k), popupBits);
-        }
-      }
-      _prefs = m;
-    } catch {
-      _prefs = /* @__PURE__ */ new Map();
-    }
-  }
-  function _savePrefs() {
-    try {
-      const obj = {};
-      for (const [k, v] of _prefs) obj[k] = v & 1;
-      writeAriesPath(PATH_NOTIFIER_PREFS, obj);
-    } catch {
-    }
-  }
-  function _isCapReachedForCatalog(catalog, inv, itemId) {
-    const meta = catalog[itemId];
-    if (!meta) return false;
-    const q = inv.get(itemId) || 0;
-    if (meta.isOneTimePurchase && q >= 1) return true;
-    const max = Number(meta.maxInventoryQuantity);
-    if (Number.isFinite(max) && max > 0 && q >= max) return true;
-    return false;
-  }
-  function _isToolCapReached(toolId) {
-    return _isCapReachedForCatalog(toolCatalog2, _toolInv, toolId);
-  }
-  function _isDecorCapReached(decorId) {
-    return _isCapReachedForCatalog(decorCatalog2, _decorInv, decorId);
-  }
-  function _isRowCapReached(id) {
-    if (id.startsWith("Tool:")) return _isToolCapReached(id.slice(5));
-    if (id.startsWith("Decor:")) return _isDecorCapReached(id.slice(6));
-    return false;
-  }
-  function _updateToolInv(raw) {
-    try {
-      const arr = Array.isArray(raw) ? raw : [];
-      _toolInv = new Map(arr.map((it) => [String(it.toolId), Number(it.quantity) || 0]));
-    } catch {
-      _toolInv = /* @__PURE__ */ new Map();
-    }
-    _recomputeFromCacheAndNotify();
-  }
-  function _updateDecorInv(raw) {
-    try {
-      const arr = Array.isArray(raw) ? raw : [];
-      const next = /* @__PURE__ */ new Map();
-      for (const it of arr) {
-        const id = String(it?.decorId ?? it?.id ?? "");
-        if (!id) continue;
-        next.set(id, Number(it?.quantity) || 0);
-      }
-      _decorInv = next;
-    } catch {
-      _decorInv = /* @__PURE__ */ new Map();
-    }
-    _recomputeFromCacheAndNotify();
-  }
-  function _resolveToolInvAtom() {
-    const a = Atoms;
-    return a.inventory?.myToolInventory ?? a.shop?.myToolInventory ?? a.myToolInventoryAtom ?? null;
-  }
-  function _resolveDecorInvAtom() {
-    const a = Atoms;
-    return a.inventory?.myDecorInventory ?? a.shop?.myDecorInventory ?? a.myDecorInventoryAtom ?? null;
-  }
-  function _computeSig(ids) {
-    return ids.slice().sort().join("|");
-  }
-  function _coercePurchases(view, slot) {
-    const p = view.purchases;
-    const raw = slot?.data?.shopPurchases;
-    const startedAt = (k) => Number(raw?.[k]?.startedAtMs ?? raw?.[k]?.createdAt) || 0;
-    return {
-      seed: { createdAt: startedAt("seed"), purchases: p.seed },
-      egg: { createdAt: startedAt("egg"), purchases: p.egg },
-      tool: { createdAt: startedAt("tool"), purchases: p.tool },
-      decor: { createdAt: startedAt("decor"), purchases: p.decor }
-    };
-  }
-  function _emitPurchases() {
-    const snap = _coercePurchases(_viewOf(_rawShops, _rawSlot), _rawSlot);
-    _purchasesSubs.forEach((fn) => {
-      try {
-        fn(snap);
-      } catch {
-      }
-    });
-  }
-  function _notifySlot(slot) {
-    _rawSlot = slot;
-    if (_rawShops != null) _emitShops();
-    _emitPurchases();
-  }
-  function _coerceSnap(raw) {
-    const seedInv = [];
-    const eggInv = [];
-    const toolInv = [];
-    const decorInv = [];
-    if (raw && typeof raw === "object") {
-      for (const shopKey of Object.keys(raw)) {
-        const shop = raw[shopKey];
-        if (!shop || typeof shop !== "object") continue;
-        const inv = Array.isArray(shop.inventory) ? shop.inventory : [];
-        for (const item of inv) {
-          if (!item || typeof item !== "object") continue;
-          const t = item.itemType;
-          if (t === "Seed") seedInv.push(item);
-          else if (t === "Egg") eggInv.push(item);
-          else if (t === "Tool") toolInv.push(item);
-          else if (t === "Decor") decorInv.push(item);
-        }
-      }
-    }
-    return {
-      seed: { inventory: seedInv, secondsUntilRestock: Number(raw?.seed?.secondsUntilRestock) || 0 },
-      egg: { inventory: eggInv, secondsUntilRestock: Number(raw?.egg?.secondsUntilRestock) || 0 },
-      tool: { inventory: toolInv, secondsUntilRestock: Number(raw?.tool?.secondsUntilRestock) || 0 },
-      decor: { inventory: decorInv, secondsUntilRestock: Number(raw?.decor?.secondsUntilRestock) || 0 }
-    };
-  }
-  function _emitShops() {
-    const snap = _coerceSnap(_viewOf(_rawShops, _rawSlot).shops);
-    _shopsSubs.forEach((fn) => {
-      try {
-        fn(snap);
-      } catch {
-      }
-    });
-  }
-  function _notifyShops(raw) {
-    _rawShops = raw;
-    _emitShops();
-    if (_rawSlot != null) _emitPurchases();
-  }
-  function _splitEligibleShops(shops2) {
-    const arr = Array.isArray(shops2) ? shops2.map((s) => String(s ?? "").trim()).filter(Boolean) : [];
-    let base = null;
-    const weathers = [];
-    for (const s of arr) {
-      if (BASE_SHOPS_SET.has(s)) base = s;
-      else weathers.push(s);
-    }
-    return { base, weathers };
-  }
-  function _buildRowsFromCatalogs() {
-    const out = [];
-    const seen = /* @__PURE__ */ new Set();
-    const addRow = (id, type, name, rarity3, weathers, weatherOnly) => {
-      if (seen.has(id)) return;
-      seen.add(id);
-      const bits = _getPrefBits(id);
-      const popup = !!(bits & 1);
-      out.push({
-        id,
-        type,
-        name,
-        rarity: rarity3,
-        popup,
-        followed: popup,
-        weatherOnly: weatherOnly || void 0,
-        weathers: weathers.length ? weathers : void 0
-      });
-    };
-    const sources = [
-      { catalog: plantCatalog2, naturalSection: "Seed", pickEntry: (raw) => raw?.seed ?? raw },
-      { catalog: eggCatalog2, naturalSection: "Egg", pickEntry: (raw) => raw },
-      { catalog: toolCatalog2, naturalSection: "Tool", pickEntry: (raw) => raw },
-      { catalog: decorCatalog2, naturalSection: "Decor", pickEntry: (raw) => raw }
-    ];
-    for (const { catalog, naturalSection, pickEntry } of sources) {
-      if (!catalog || typeof catalog !== "object") continue;
-      for (const key2 of Object.keys(catalog)) {
-        const entry = pickEntry(catalog[key2]);
-        if (!entry || typeof entry !== "object") continue;
-        const { base, weathers } = _splitEligibleShops(entry.eligibleShops);
-        if (!base && weathers.length === 0) continue;
-        const section2 = base ?? naturalSection;
-        const id = `${section2}:${key2}`;
-        const name = typeof entry.name === "string" && entry.name.trim() ? String(entry.name) : key2;
-        const rawRarity = typeof entry.rarity === "string" ? entry.rarity : void 0;
-        const rarity3 = rawRarity ? DISPLAY_RARITY[rawRarity] ?? rawRarity : void 0;
-        addRow(id, section2, name, rarity3, weathers, !base);
-      }
-    }
-    return out;
-  }
-  function _recomputeRowsFromCatalogs() {
-    const rows = _buildRowsFromCatalogs();
-    _rowsById.clear();
-    for (const row of rows) _rowsById.set(row.id, row);
-    const followed = rows.reduce((n, r) => n + (r.followed ? 1 : 0), 0);
-    const next = {
-      updatedAt: Date.now(),
-      rows,
-      counts: { items: rows.length, followed }
-    };
-    const sig = _computeSig(rows.map((r) => r.id));
-    const changed = sig !== _lastSig;
-    _state = next;
-    if (changed) {
-      _lastSig = sig;
-      _notify();
-    }
-  }
-  function _recomputeFromCacheAndNotify() {
-    if (!_state) return;
-    for (const [id, row] of _rowsById) {
-      const bits = _getPrefBits(id);
-      let popup = !!(bits & 1);
-      if (_isRowCapReached(id)) popup = false;
-      row.popup = popup;
-      row.followed = popup;
-    }
-    const rows = Array.from(_rowsById.values());
-    const followed = rows.reduce((n, r) => n + (r.followed ? 1 : 0), 0);
-    _state = {
-      ..._state,
-      updatedAt: Date.now(),
-      rows,
-      counts: { items: rows.length, followed }
-    };
-    _notify();
-  }
-  function _notify() {
-    if (!_state) return;
-    const snap = { ..._state, rows: _state.rows.slice() };
-    _subs.forEach((fn) => {
-      try {
-        fn(snap);
-      } catch {
-      }
-    });
-  }
-  async function _waitForAtom(label2, keepGoing) {
-    const startedAt = Date.now();
-    while (keepGoing() && Date.now() - startedAt < ATOM_WAIT_TIMEOUT_MS) {
-      try {
-        if (await Store.hasAtom(label2)) return true;
-      } catch {
-      }
-      await new Promise((resolve) => setTimeout(resolve, ATOM_WAIT_POLL_MS));
-    }
-    return false;
-  }
-  async function _watchShops(generation3) {
-    const isCurrent = () => _watchGeneration === generation3;
-    if (!await _waitForAtom(STATE_ATOM_LABEL, isCurrent) || !isCurrent()) return;
-    if (_unsubShops) return;
-    try {
-      _unsubShops = await Atoms.shop.shops.onChange((next) => {
-        try {
-          _notifyShops(next);
-        } catch {
-        }
-      });
-    } catch {
-    }
-    if (!isCurrent()) return;
-    try {
-      _notifyShops(await Atoms.shop.shops.get());
-    } catch {
-    }
-  }
-  async function _watchPurchases(generation3) {
-    const isCurrent = () => _watchGeneration === generation3;
-    if (!await _waitForAtom(MY_USER_SLOT_ATOM_LABEL, isCurrent) || !isCurrent()) return;
-    if (_unsubPurchases) return;
-    try {
-      _unsubPurchases = await Atoms.shop.myUserSlot.onChange((next) => {
-        try {
-          _notifySlot(next);
-        } catch {
-        }
-      }, _sameShopParts);
-    } catch {
-    }
-    if (!isCurrent()) return;
-    try {
-      _notifySlot(await Atoms.shop.myUserSlot.get());
-    } catch {
-    }
-  }
-  async function _ensureStarted() {
-    if (_started) {
-      return;
-    }
-    _started = true;
-    _loadPrefs();
-    _ensureRulesLoaded();
-    try {
-      _recomputeRowsFromCatalogs();
-    } catch {
-    }
-    try {
-      window.addEventListener("gemini:data-updated", _onDataUpdated);
-    } catch {
-    }
-    const generation3 = ++_watchGeneration;
-    void _watchShops(generation3);
-    void _watchPurchases(generation3);
-    try {
-      const invAtom = _resolveToolInvAtom();
-      if (invAtom) {
-        try {
-          _updateToolInv(await invAtom.get());
-        } catch (err) {
-        }
-        try {
-          _unsubToolInv = await invAtom.onChange((next) => {
-            try {
-              _updateToolInv(next);
-            } catch {
-            }
-          });
-        } catch (err) {
-        }
-      }
-    } catch (err) {
-    }
-    try {
-      const decorAtom = _resolveDecorInvAtom();
-      if (decorAtom) {
-        try {
-          _updateDecorInv(await decorAtom.get());
-        } catch {
-        }
-        try {
-          _unsubDecorInv = await decorAtom.onChange((next) => {
-            try {
-              _updateDecorInv(next);
-            } catch {
-            }
-          });
-        } catch {
-        }
-      }
-    } catch {
-    }
-    try {
-      const weatherAtom = Atoms.data?.weather;
-      if (weatherAtom) {
-        try {
-          _handleWeatherUpdate(await weatherAtom.get(), { force: true });
-        } catch (err) {
-        }
-        try {
-          _unsubWeather = await weatherAtom.onChange((next) => {
-            try {
-              _handleWeatherUpdate(next);
-            } catch {
-            }
-          });
-        } catch (err) {
-        }
-      } else {
-      }
-    } catch (err) {
-    }
-  }
-  function _stop() {
-    _watchGeneration++;
-    try {
-      window.removeEventListener("gemini:data-updated", _onDataUpdated);
-    } catch {
-    }
-    try {
-      _unsubShops?.();
-    } catch {
-    }
-    _unsubShops = null;
-    try {
-      _unsubPurchases?.();
-    } catch {
-    }
-    _unsubPurchases = null;
-    try {
-      _unsubToolInv?.();
-    } catch {
-    }
-    _unsubToolInv = null;
-    try {
-      _unsubDecorInv?.();
-    } catch {
-    }
-    _unsubDecorInv = null;
-    try {
-      _unsubWeather?.();
-    } catch {
-    }
-    _unsubWeather = null;
-    if (_currentWeatherId) {
-      try {
-        audio.stopLoop(_currentWeatherId);
-      } catch {
-      }
-    }
-    _currentWeatherId = null;
-    _currentWeatherValue = null;
-    _started = false;
-  }
-  var PATH_NOTIFIER_PREFS, PATH_NOTIFIER_RULES, PATH_NOTIFIER_WEATHER, PATH_NOTIFIER_DEFAULTS, DISPLAY_RARITY, norm2, formatRuleSummary, formatLastSeen, weatherStateSignature, formatWeatherMutation, normalizeNumber, normalizeCycle, normalizeMutations2, mutatorMutations, trimmedString, weatherIndex, _prefs, _weatherPrefs, _weatherPrefsLoaded, _contextDefaults, _contextDefaultsLoaded, _rules, _rulesLoaded, _rulesSubs, _hasOwn, _weatherState, _weatherSig, _weatherSubs, _currentWeatherId, _currentWeatherValue, _unsubWeather, _getPrefBits, _setPrefBits, _rowsById, _lastSig, _state, _unsubShops, _unsubPurchases, _watchGeneration, _subs, _toolInv, _decorInv, _unsubToolInv, _unsubDecorInv, _purchasesSubs, _itemKind, _rawShops, _rawSlot, _viewOf, _sameShopParts, _shopsSubs, BASE_SHOPS_SET, _onDataUpdated, ATOM_WAIT_POLL_MS, ATOM_WAIT_TIMEOUT_MS, STATE_ATOM_LABEL, MY_USER_SLOT_ATOM_LABEL, _started, NotifierService;
-  var init_notifier = __esm({
-    "src/features/notifier/notifier.ts"() {
+  var color, gradient, shadow, radius, space, fontSize, fontMono, layer, kebab;
+  var init_theme = __esm({
+    "src/ui/kit/theme.ts"() {
       "use strict";
-      init_atoms();
-      init_api();
-      init_data();
-      init_format();
-      init_audio();
-      init_stats();
-      init_storage();
-      init_purchases();
-      PATH_NOTIFIER_PREFS = "notifier.prefs";
-      PATH_NOTIFIER_RULES = "notifier.rules";
-      PATH_NOTIFIER_WEATHER = "notifier.weatherPrefs";
-      PATH_NOTIFIER_DEFAULTS = "notifier.loopDefaults";
-      DISPLAY_RARITY = {
-        [rarity2.Common]: "Common",
-        [rarity2.Uncommon]: "Uncommon",
-        [rarity2.Rare]: "Rare",
-        [rarity2.Legendary]: "Legendary",
-        [rarity2.Mythic]: "Mythical",
-        // MGData's API returns "Mythic" while rarityMap.Mythic is "Mythical".
-        Mythic: "Mythical",
-        [rarity2.Divine]: "Divine",
-        [rarity2.Celestial]: "Celestial"
+      color = {
+        accent: "#5eead4",
+        accentSoft: "rgba(94,234,212,0.12)",
+        accentHover: "rgba(94,234,212,0.22)",
+        accentBorder: "rgba(94,234,212,0.3)",
+        accentBorderHover: "rgba(94,234,212,0.55)",
+        text: "#e7eef7",
+        textSoft: "rgba(226,232,240,0.75)",
+        textDim: "rgba(226,232,240,0.45)",
+        border: "rgba(255,255,255,0.08)",
+        borderHover: "rgba(255,255,255,0.16)",
+        borderStrong: "rgba(255,255,255,0.14)",
+        cardBg: "rgba(255,255,255,0.03)",
+        hoverBg: "rgba(255,255,255,0.06)",
+        mutedBg: "rgba(0,0,0,0.18)",
+        fieldBg: "rgba(0,0,0,0.3)",
+        fieldBorder: "rgba(255,255,255,0.12)",
+        track: "rgba(255,255,255,0.1)",
+        sunken: "#080c12",
+        surface: "#101620",
+        panelBg: "rgba(17,24,35,0.8)",
+        scrollbar: "rgba(94,234,212,0.2)",
+        scrim: "rgba(0,0,0,0.55)",
+        danger: "#ef4444",
+        dangerSoft: "rgba(239,68,68,0.12)",
+        dangerHover: "rgba(239,68,68,0.2)",
+        dangerBorder: "rgba(239,68,68,0.3)",
+        dangerBorderHover: "rgba(239,68,68,0.55)",
+        warn: "#fbbf24",
+        warnSoft: "rgba(251,191,36,0.12)",
+        warnBorder: "rgba(251,191,36,0.55)",
+        gold: "#FFC734",
+        rainbow: "#c084fc"
       };
-      norm2 = (s) => String(s ?? "").toLowerCase();
-      formatRuleSummary = (rule) => {
-        if (!rule) return "";
-        const parts = [];
-        if (rule.sound) {
-          const names = audio.listSounds();
-          const label2 = names.includes(rule.sound) ? rule.sound : rule.sound.length > 32 ? `${rule.sound.slice(0, 29)}\u2026` : rule.sound;
-          parts.push(`Sound: ${label2}`);
-        }
-        if (rule.volume != null) {
-          const pct = Math.round(Math.max(0, Math.min(1, Number(rule.volume))) * 100);
-          parts.push(`Volume: ${pct}%`);
-        }
-        if (rule.playbackMode === "oneshot") parts.push("Mode: One-shot");
-        else if (rule.playbackMode === "loop") parts.push("Mode: Loop");
-        if (rule.stopMode === "purchase") parts.push("Stop: Until purchase");
-        else if (rule.stopMode === "manual") parts.push("Stop: Manual");
-        if (rule.loopIntervalMs != null) {
-          const raw = Number(rule.loopIntervalMs);
-          if (Number.isFinite(raw)) {
-            const ms = Math.max(1, Math.round(raw));
-            const seconds = ms / 1e3;
-            const label2 = seconds >= 1 ? `${(seconds >= 10 ? Math.round(seconds) : Math.round(seconds * 10) / 10).toFixed(seconds >= 10 ? 0 : 1)} s` : `${ms} ms`;
-            parts.push(`Interval: ${label2}`);
-          }
-        }
-        return parts.join(" \u2022 ");
+      gradient = {
+        panel: "linear-gradient(160deg, rgba(15,20,30,0.95) 0%, rgba(10,14,20,0.95) 60%, rgba(8,12,18,0.96) 100%)",
+        tabBar: "linear-gradient(120deg, rgba(22,28,40,0.9), rgba(12,17,26,0.92))",
+        head: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))"
       };
-      formatLastSeen = (timestamp, isCurrent) => {
-        if (isCurrent) {
-          const title = timestamp ? new Date(timestamp).toLocaleString() : "Currently active";
-          return { label: "Now", title };
-        }
-        if (!timestamp) return { label: "Never", title: "Never seen" };
-        const now2 = Date.now();
-        const diff = Math.max(0, now2 - timestamp);
-        let label2;
-        if (diff < 45e3) label2 = "Just now";
-        else if (diff < 9e4) label2 = "1 min ago";
-        else if (diff < 60 * 60 * 1e3) {
-          const mins = Math.round(diff / 6e4);
-          label2 = `${mins} min${mins > 1 ? "s" : ""} ago`;
-        } else if (diff < 36 * 60 * 60 * 1e3) {
-          const hours = Math.round(diff / 36e5);
-          label2 = `${hours} hour${hours > 1 ? "s" : ""} ago`;
-        } else {
-          const days = Math.round(diff / 864e5);
-          label2 = `${days} day${days > 1 ? "s" : ""} ago`;
-        }
-        return { label: label2, title: new Date(timestamp).toLocaleString() };
+      shadow = {
+        panel: "0 18px 44px rgba(0,0,0,0.45)",
+        window: "0 10px 36px rgba(0,0,0,0.45)",
+        modal: "0 24px 64px rgba(0,0,0,0.55)"
       };
-      weatherStateSignature = (rows) => JSON.stringify(
-        rows.map((r) => [r.id, r.notify ? 1 : 0, r.lastSeen || 0, r.isCurrent ? 1 : 0])
-      );
-      formatWeatherMutation = (mutation) => {
-        const parts = [mutation.name];
-        if (mutation.multiplier != null) {
-          const raw = Number(mutation.multiplier);
-          if (Number.isFinite(raw)) {
-            const rounded = Math.abs(raw - Math.round(raw)) < 0.01 ? Math.round(raw) : Math.round(raw * 100) / 100;
-            parts[0] = `${parts[0]} \xD7${rounded}`;
-          }
-        }
-        return parts.join(" ");
-      };
-      normalizeNumber = (value) => {
-        const num2 = typeof value === "number" ? value : Number(value);
-        return Number.isFinite(num2) ? num2 : void 0;
-      };
-      normalizeCycle = (raw) => {
-        if (!raw || typeof raw !== "object") return null;
-        const rawKind = typeof raw.kind === "string" ? raw.kind.trim() : "";
-        const kindLc = rawKind.toLowerCase();
-        let kind = "unknown";
-        if (kindLc === "weather" || kindLc === "lunar" || kindLc === "base") kind = kindLc;
-        const meta = { kind, rawKind: rawKind || void 0 };
-        const startWindowMin = normalizeNumber(raw.startWindowMin);
-        if (startWindowMin !== void 0) meta.startWindowMin = startWindowMin;
-        const startWindowMax = normalizeNumber(raw.startWindowMax);
-        if (startWindowMax !== void 0) meta.startWindowMax = startWindowMax;
-        const durationMinutes = normalizeNumber(raw.durationMinutes);
-        if (durationMinutes !== void 0) meta.durationMinutes = durationMinutes;
-        const periodMinutes = normalizeNumber(raw.periodMinutes);
-        if (periodMinutes !== void 0) meta.periodMinutes = periodMinutes;
-        return meta;
-      };
-      normalizeMutations2 = (raw) => {
-        if (!Array.isArray(raw)) return [];
-        const items = [];
-        for (const entry of raw) {
-          if (!entry || typeof entry !== "object") continue;
-          const name = typeof entry.name === "string" ? entry.name.trim() : "";
-          if (!name) continue;
-          const mutation = { name };
-          const multiplier = normalizeNumber(entry.multiplier);
-          if (multiplier !== void 0) mutation.multiplier = multiplier;
-          const conditional = typeof entry.conditional === "string" ? entry.conditional.trim() : "";
-          if (conditional) mutation.conditional = conditional;
-          items.push(mutation);
-        }
-        return items;
-      };
-      mutatorMutations = (mutator) => {
-        const id = typeof mutator?.mutation === "string" ? mutator.mutation : "";
-        if (!id) return [];
-        const entry = mutationCatalog2[id];
-        const mutation = { name: typeof entry?.name === "string" && entry.name ? entry.name : id };
-        const multiplier = normalizeNumber(entry?.coinMultiplier);
-        if (multiplier !== void 0) mutation.multiplier = multiplier;
-        return [mutation];
-      };
-      trimmedString = (value) => typeof value === "string" ? value.trim() : "";
-      weatherIndex = memoOnCatalogs(() => {
-        const defs = [];
-        for (const [rawName, rawValue] of Object.entries(weatherCatalog2 ?? {})) {
-          const entry = rawValue ?? {};
-          const safeName = String(rawName || "").trim();
-          if (!safeName) continue;
-          const rawDisplayName = trimmedString(entry.displayName) || trimmedString(entry.name);
-          const displayName = spaceWords(rawDisplayName || safeName).replace(/_/g, " ").replace(/\s+/g, " ").trim();
-          const atomValue = "atomValue" in entry ? trimmedString(entry.atomValue) : entry.mutator ? safeName : "";
-          const type = atomValue || displayName;
-          const description = trimmedString(entry.description) || null;
-          const weightInCycle = normalizeNumber(entry.weightInCycle);
-          const cycle = normalizeCycle(entry.cycle);
-          const mutations = Array.isArray(entry.mutations) ? normalizeMutations2(entry.mutations) : mutatorMutations(entry.mutator);
-          defs.push({
-            id: `Weather:${safeName}`,
-            name: displayName || safeName,
-            atomValue,
-            type,
-            description,
-            cycle,
-            weightInCycle: weightInCycle ?? null,
-            mutations
-          });
-        }
-        const byId = /* @__PURE__ */ new Map();
-        const byAtom = /* @__PURE__ */ new Map();
-        const byName = /* @__PURE__ */ new Map();
-        for (const def of defs) {
-          byId.set(def.id, def);
-          byName.set(def.name.toLowerCase(), def);
-          byAtom.set(def.atomValue.toLowerCase(), def);
-          byName.set(def.id.slice("Weather:".length).toLowerCase(), def);
-        }
-        return { defs, byId, byAtom, byName };
-      });
-      _prefs = /* @__PURE__ */ new Map();
-      _weatherPrefs = /* @__PURE__ */ new Map();
-      _weatherPrefsLoaded = false;
-      _contextDefaults = {};
-      _contextDefaultsLoaded = false;
-      _rules = /* @__PURE__ */ new Map();
-      _rulesLoaded = false;
-      _rulesSubs = /* @__PURE__ */ new Set();
-      _hasOwn = Object.prototype.hasOwnProperty;
-      _weatherState = null;
-      _weatherSig = null;
-      _weatherSubs = /* @__PURE__ */ new Set();
-      _currentWeatherId = null;
-      _currentWeatherValue = null;
-      _unsubWeather = null;
-      _getPrefBits = (id) => (_prefs.get(id) ?? 0) & 1;
-      _setPrefBits = (id, bits) => {
-        if (!id) return;
-        const masked = bits & 1;
-        if (masked) _prefs.set(id, masked);
-        else _prefs.delete(id);
-        _savePrefs();
-        _recomputeFromCacheAndNotify();
-      };
-      _rowsById = /* @__PURE__ */ new Map();
-      _lastSig = "";
-      _state = null;
-      _unsubShops = null;
-      _unsubPurchases = null;
-      _watchGeneration = 0;
-      _subs = /* @__PURE__ */ new Set();
-      _toolInv = /* @__PURE__ */ new Map();
-      _decorInv = /* @__PURE__ */ new Map();
-      _unsubToolInv = null;
-      _unsubDecorInv = null;
-      _purchasesSubs = /* @__PURE__ */ new Set();
-      _itemKind = (itemId) => {
-        if (itemId in plantCatalog2) return "seed";
-        if (itemId in eggCatalog2) return "egg";
-        if (itemId in toolCatalog2) return "tool";
-        if (itemId in decorCatalog2) return "decor";
-        return null;
-      };
-      _rawShops = null;
-      _rawSlot = null;
-      _viewOf = (shops2, slot) => playerShopView(shops2, slot, _itemKind);
-      _sameShopParts = (a, b) => a?.data?.shopPurchases === b?.data?.shopPurchases && a?.data?.customRestocks === b?.data?.customRestocks && a?.customRestockInventories === b?.customRestockInventories;
-      _shopsSubs = /* @__PURE__ */ new Set();
-      BASE_SHOPS_SET = /* @__PURE__ */ new Set(["Seed", "Egg", "Tool", "Decor"]);
-      _onDataUpdated = (_evt) => {
-        try {
-          _recomputeRowsFromCatalogs();
-        } catch {
-        }
-      };
-      ATOM_WAIT_POLL_MS = 400;
-      ATOM_WAIT_TIMEOUT_MS = 10 * 6e4;
-      STATE_ATOM_LABEL = "stateAtom";
-      MY_USER_SLOT_ATOM_LABEL = "myUserSlotAtom";
-      _started = false;
-      NotifierService = {
-        // lifecycle
-        async start() {
-          await _ensureStarted();
-          return () => _stop();
-        },
-        async get() {
-          await _ensureStarted();
-          if (!_state) {
-            try {
-              _recomputeRowsFromCatalogs();
-            } catch {
-            }
-          }
-          return _state;
-        },
-        onChange(cb) {
-          _subs.add(cb);
-          return () => {
-            _subs.delete(cb);
-          };
-        },
-        async onChangeNow(cb) {
-          await _ensureStarted();
-          if (_state) cb(_state);
-          else {
-            try {
-              _recomputeRowsFromCatalogs();
-            } catch {
-            }
-            if (_state) cb(_state);
-          }
-          return this.onChange(cb);
-        },
-        onShopsChange(cb) {
-          _shopsSubs.add(cb);
-          return () => {
-            _shopsSubs.delete(cb);
-          };
-        },
-        async onShopsChangeNow(cb) {
-          await _ensureStarted();
-          try {
-            const [shops2, slot] = await Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
-            cb(_coerceSnap(_viewOf(shops2, slot).shops));
-          } catch {
-          }
-          return this.onShopsChange(cb);
-        },
-        onPurchasesChange(cb) {
-          _purchasesSubs.add(cb);
-          return () => {
-            _purchasesSubs.delete(cb);
-          };
-        },
-        async onPurchasesChangeNow(cb) {
-          await _ensureStarted();
-          try {
-            const [shops2, slot] = await Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
-            cb(_coercePurchases(_viewOf(shops2, slot), slot));
-          } catch {
-          }
-          return this.onPurchasesChange(cb);
-        },
-        async getWeatherState() {
-          await _ensureStarted();
-          if (!_weatherState) _recomputeWeatherState();
-          return _weatherState;
-        },
-        onWeatherChange(cb) {
-          _weatherSubs.add(cb);
-          return () => {
-            _weatherSubs.delete(cb);
-          };
-        },
-        async onWeatherChangeNow(cb) {
-          await _ensureStarted();
-          if (!_weatherState) _recomputeWeatherState();
-          if (_weatherState) cb(_weatherState);
-          return this.onWeatherChange(cb);
-        },
-        getWeatherNotify(id) {
-          if (!id) return false;
-          return !!_getWeatherPref(id).notify;
-        },
-        setWeatherNotify(id, enabled5) {
-          if (!id) return;
-          _ensureWeatherPrefsLoaded();
-          const pref = _getWeatherPref(id);
-          const next = !!enabled5;
-          if (!!pref.notify === next) return;
-          pref.notify = next;
-          _weatherPrefs.set(id, pref);
-          _saveWeatherPrefs();
-          if (!next) {
-            try {
-              audio.stopLoop(id);
-            } catch {
-            }
-          } else if (_currentWeatherId === id) {
-            _triggerWeatherNotification(id);
-          }
-          _recomputeWeatherState();
-        },
-        getContextStopDefaults(context) {
-          return _getContextStopDefaultsInternal(context);
-        },
-        setContextStopDefaults(context, conf) {
-          if (context !== "shops" && context !== "weather") return;
-          _ensureContextDefaultsLoaded();
-          const current = _getContextStopDefaultsInternal(context);
-          const loopRaw = Number(conf?.loopIntervalMs);
-          const loopIntervalMs = Number.isFinite(loopRaw) ? Math.max(150, Math.floor(loopRaw)) : current.loopIntervalMs;
-          const normalizedMode = conf.stopMode === "purchase" ? "purchase" : "manual";
-          const normalized = {
-            stopMode: context === "weather" ? "manual" : normalizedMode,
-            stopRepeats: null,
-            loopIntervalMs
-          };
-          _contextDefaults[context] = normalized;
-          _saveContextDefaults();
-        },
-        // prefs (popup only)
-        getPref(id) {
-          if (_isRowCapReached(id)) {
-            return { popup: false, followed: false };
-          }
-          const bits = _getPrefBits(id);
-          const popup = !!(bits & 1);
-          return { popup, followed: popup };
-        },
-        setPopup(id, enabled5) {
-          if (enabled5 && _isRowCapReached(id)) {
-            return;
-          }
-          const bits = _getPrefBits(id);
-          const next = enabled5 ? bits | 1 : bits & ~1;
-          _setPrefBits(id, next);
-        },
-        setPrefs(id, prefs2) {
-          const bits = _getPrefBits(id);
-          let next = bits;
-          if (typeof prefs2.popup === "boolean") next = prefs2.popup ? next | 1 : next & ~1;
-          _setPrefBits(id, next);
-        },
-        clearPrefs(id) {
-          _setPrefBits(id, 0);
-        },
-        isIdCapped(id) {
-          return _isRowCapReached(id);
-        },
-        // pure filter util (no side-effects)
-        filterRows(rows, f) {
-          let arr = rows.slice();
-          const ft = f.type ?? "all";
-          if (ft && ft !== "all") {
-            arr = arr.filter((r) => r.type.toLowerCase() === ft);
-          }
-          const fr = f.rarity ?? "all";
-          if (fr !== "all") {
-            arr = arr.filter((r) => norm2(r.rarity) === fr);
-          }
-          return arr;
-        },
-        getRule(id) {
-          if (!id) return null;
-          _ensureRulesLoaded();
-          const rule = _rules.get(id);
-          if (!rule) return null;
-          return {
-            ...rule.sound ? { sound: rule.sound } : {},
-            ...rule.volume != null ? { volume: rule.volume } : {},
-            ...rule.playbackMode ? { playbackMode: rule.playbackMode } : {},
-            ...rule.stopMode ? { stopMode: rule.stopMode } : {},
-            ...rule.loopIntervalMs != null ? { loopIntervalMs: rule.loopIntervalMs } : {}
-          };
-        },
-        getAllRules() {
-          return _rulesSnapshot();
-        },
-        setRule(id, patch) {
-          if (!id || !patch || typeof patch !== "object") return;
-          _ensureRulesLoaded();
-          const prev = _rules.get(id);
-          const next = _mergeRule(prev, patch);
-          if (_rulesEqual(prev, next)) return;
-          if (next) _rules.set(id, next);
-          else _rules.delete(id);
-          _saveRules();
-          _emitRules();
-        },
-        clearRule(id) {
-          if (!id) return;
-          _ensureRulesLoaded();
-          const existed = _rules.delete(id);
-          if (existed) {
-            _saveRules();
-            _emitRules();
-          }
-        },
-        onRulesChange(cb) {
-          _ensureRulesLoaded();
-          _rulesSubs.add(cb);
-          return () => {
-            _rulesSubs.delete(cb);
-          };
-        },
-        async onRulesChangeNow(cb) {
-          await _ensureStarted();
-          cb(_rulesSnapshot());
-          return this.onRulesChange(cb);
-        }
-      };
+      radius = { sm: 6, md: 9, lg: 12, xl: 16, pill: 999 };
+      space = { xs: 4, sm: 6, md: 8, lg: 10, xl: 12 };
+      fontSize = { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 };
+      fontMono = "ui-monospace, SFMono-Regular, Consolas, monospace";
+      layer = { hud: 1000010, window: 2000001 };
+      kebab = (key2) => key2.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+    }
+  });
+
+  // src/ui/kit/styles/chrome.ts
+  var chromeCss;
+  var init_chrome = __esm({
+    "src/ui/kit/styles/chrome.ts"() {
+      "use strict";
+      init_theme();
+      chromeCss = `
+.qmm-scroll, .qws-pnl-scroll, .qmm-views {
+  scrollbar-width: thin; scrollbar-color: var(--qmm-scrollbar) transparent;
+}
+.qmm-scroll::-webkit-scrollbar, .qws-pnl-scroll::-webkit-scrollbar, .qmm-views::-webkit-scrollbar { width: 6px; }
+.qmm-scroll::-webkit-scrollbar-track, .qws-pnl-scroll::-webkit-scrollbar-track, .qmm-views::-webkit-scrollbar-track { background: transparent; }
+.qmm-scroll::-webkit-scrollbar-thumb, .qws-pnl-scroll::-webkit-scrollbar-thumb, .qmm-views::-webkit-scrollbar-thumb {
+  background: var(--qmm-scrollbar); border-radius: 3px;
+}
+.qmm-scroll::-webkit-scrollbar-thumb:hover, .qws-pnl-scroll::-webkit-scrollbar-thumb:hover, .qmm-views::-webkit-scrollbar-thumb:hover {
+  background: var(--qmm-accent-border);
+}
+
+.qmm { display: flex; flex-direction: column; gap: var(--qmm-space-lg); color: var(--qmm-text); }
+.qmm-compact { gap: var(--qmm-space-sm); }
+.qmm.qmm-alt-drag { cursor: grab; }
+.qmm.qmm-alt-drag:active { cursor: grabbing; }
+
+.qmm-tabs {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-xs); padding: 8px 10px;
+  border-bottom: 1px solid var(--qmm-border);
+  border-radius: var(--qmm-radius-xl) var(--qmm-radius-xl) 0 0;
+  background: var(--qmm-gradient-tab-bar);
+}
+.qmm-tab {
+  flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: var(--qmm-space-md);
+  margin: 0; padding: 8px 12px; border: 1px solid transparent; border-radius: var(--qmm-radius-lg);
+  background: transparent; color: var(--qmm-text-soft); font-size: var(--qmm-fs-md); cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.qmm-compact .qmm-tab { padding: 6px 10px; }
+.qmm-tab:hover { background: var(--qmm-hover-bg); color: var(--qmm-text); }
+.qmm-tab:active { transform: translateY(1px); }
+.qmm-tab:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
+.qmm-tab.active { background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); color: var(--qmm-accent); }
+
+.qmm-views {
+  display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; padding: 14px;
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-xl);
+  background: var(--qmm-gradient-panel); backdrop-filter: blur(10px); box-shadow: var(--qmm-shadow-panel);
+}
+.qmm-compact .qmm-views { padding: 8px; }
+.qmm-tabs + .qmm-views { border-top: none; border-top-left-radius: 0; border-top-right-radius: 0; }
+.qmm-view { display: none; min-width: 0; min-height: 0; }
+.qmm-view.active { display: block; }
+
+.qmm-spacer { flex: 1; }
+
+.qws-win {
+  position: fixed; z-index: ${layer.window}; min-width: 260px; max-width: 900px; max-height: 90vh; overflow: auto;
+  color: var(--qmm-text); background: var(--qmm-panel-bg);
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-lg);
+  box-shadow: var(--qmm-shadow-window); backdrop-filter: blur(8px);
+}
+.qws-win.is-hidden { display: none !important; }
+.qws-win .w-head {
+  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 10px 12px; cursor: move;
+  border-bottom: 1px solid var(--qmm-border-strong);
+  border-radius: var(--qmm-radius-lg) var(--qmm-radius-lg) 0 0;
+  background: var(--qmm-gradient-head);
+}
+.qws-win .w-title { font-weight: 700; }
+.qws-win .w-body { padding: 12px; }
+
+/* Bare text and number inputs a feature builds inside a window get the field look too. */
+.qws-win input:is([type="text"], [type="number"]):not(.qmm-input, .qws-pnl-input) {
+  padding: 8px 10px; border: 1px solid var(--qmm-field-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-field-bg); color: var(--qmm-text);
+}
+.qws-win input:is([type="text"], [type="number"]):not(.qmm-input, .qws-pnl-input):focus {
+  outline: none; border-color: var(--qmm-accent-border-hover);
+}
+/* Windows give text and number fields one width; an inline width still wins. */
+.qws-win input[type="text"], .qws-win input[type="number"] { width: 120px; }
+
+.qws2 {
+  position: fixed; right: 16px; bottom: 16px; z-index: ${layer.hud};
+  display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 160px; padding: 10px 12px;
+  font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: var(--qmm-text);
+  background: var(--qmm-panel-bg); border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-lg);
+  box-shadow: var(--qmm-shadow-window); backdrop-filter: blur(8px);
+}
+.qws2.hidden { display: none; }
+.qws2 .row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.qws2 .title { font-weight: 700; letter-spacing: .2px; }
+.qws2 .drag { cursor: move; opacity: .9; }
+.qws2 .mini { display: none; }
+.qws2.min .mini { display: inline-flex; }
+.qws2.min .body { display: none; }
+.qws2 .is-link { cursor: pointer; }
+
+.qws-launch { margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--qmm-border-strong); }
+.qws-launch .launch-item { display: flex; align-items: center; gap: var(--qmm-space-md); margin: 4px 0; }
+.qws-launch .launch-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+`;
+    }
+  });
+
+  // src/ui/kit/styles/containers.ts
+  var containersCss;
+  var init_containers = __esm({
+    "src/ui/kit/styles/containers.ts"() {
+      "use strict";
+      containersCss = `
+.qmm-card {
+  display: grid; gap: var(--qmm-space-xl); width: 100%; padding: 14px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
+}
+.qmm-card--plain { display: flex; flex-direction: column; gap: var(--qmm-space-lg); width: auto; min-height: 0; padding: 10px; }
+.qmm-card.is-center { text-align: center; align-items: center; }
+.qmm-card.is-stretch { align-items: stretch; }
+.qmm-card[data-tone="muted"] { background: var(--qmm-muted-bg); }
+.qmm-card[data-tone="accent"] { border-color: var(--qmm-accent-border); }
+.qmm-card__header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--qmm-space-lg); }
+.qmm-card__header.is-compact { gap: var(--qmm-space-sm); }
+.qmm-card__icon { font-size: 18px; }
+.qmm-card__title { font-size: var(--qmm-fs-xl); font-weight: 700; letter-spacing: .01em; }
+.qmm-card__subtitle { flex-basis: 100%; font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
+.qmm-card__actions { display: flex; gap: var(--qmm-space-sm); margin-left: auto; }
+.qmm-card__body { display: grid; gap: var(--qmm-space-lg); }
+
+.qmm-section-label {
+  font-size: var(--qmm-fs-xs); font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--qmm-text-dim);
+}
+
+.qmm-collapse { flex-shrink: 0; min-height: auto; }
+.qmm-collapse__head {
+  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 0; border: none; background: none;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.qmm-collapse__titles { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-width: 0; }
+.qmm-collapse__desc { font-size: var(--qmm-fs-sm); line-height: 1.45; color: var(--qmm-text-dim); }
+.qmm-collapse__chevron {
+  flex: 0 0 auto; margin-left: auto; font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim);
+  transition: transform 140ms ease, color 120ms ease;
+}
+.qmm-collapse__head:hover .qmm-collapse__chevron { color: var(--qmm-accent); }
+.qmm-collapse__head[aria-expanded="true"] .qmm-collapse__chevron { transform: rotate(90deg); }
+.qmm-collapse__body { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
+.qmm-collapse.is-collapsed > .qmm-collapse__body { display: none; }
+
+.qmm-setting-row {
+  display: flex; align-items: center; gap: var(--qmm-space-lg); flex-shrink: 0; padding: 8px 10px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md); background: var(--qmm-card-bg);
+}
+.qmm-setting-row__text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.qmm-setting-row__title { font-size: var(--qmm-fs-md); color: var(--qmm-text); }
+.qmm-setting-row__hint { font-size: var(--qmm-fs-xs); line-height: 1.4; color: var(--qmm-text-dim); }
+.qmm-setting-row__controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--qmm-space-md); flex: 0 0 auto; }
+
+.qmm-label { opacity: .9; }
+.qmm-flex { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.qmm-form-row { display: grid; align-items: center; width: 100%; }
+.qmm-form-row.is-top { align-items: start; }
+.qmm-form-row__label { justify-self: start; margin: 0; font-weight: 600; }
+.qmm-form-row.is-top .qmm-form-row__label { align-self: start; }
+
+.qmm-error {
+  padding: 10px; border: 1px solid var(--qmm-danger-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-danger-soft); color: #fecaca; font-size: var(--qmm-fs-lg); line-height: 1.4;
+}
+.qmm-error[hidden] { display: none; }
+
+.qmm-pill {
+  display: inline-flex; align-items: center; gap: var(--qmm-space-sm); padding: 4px 9px; white-space: nowrap;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-pill);
+  background: var(--qmm-field-bg); color: var(--qmm-text); font-size: var(--qmm-fs-sm); font-weight: 600;
+}
+.qmm-pill.is-ok { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
+.qmm-pill.is-warn { color: var(--qmm-warn); background: var(--qmm-warn-soft); border-color: var(--qmm-warn-border); }
+.qmm-pill.is-bad { color: var(--qmm-danger); background: var(--qmm-danger-soft); border-color: var(--qmm-danger-border); }
+.qmm-badge {
+  align-self: flex-start; padding: 2px 7px; border-radius: var(--qmm-radius-pill);
+  font-size: var(--qmm-fs-xs); font-weight: 600;
+}
+.qmm-badge.is-ok { color: var(--qmm-accent); background: var(--qmm-accent-soft); }
+.qmm-badge.is-warn { color: var(--qmm-warn); background: var(--qmm-warn-soft); }
+.qmm-meter {
+  position: relative; flex: 1 1 auto; min-width: 60px; height: 5px; overflow: hidden;
+  border-radius: var(--qmm-radius-pill); background: var(--qmm-border);
+}
+.qmm-meter__fill {
+  position: absolute; inset: 0 auto 0 0; width: 0%; border-radius: var(--qmm-radius-pill);
+  background: var(--qmm-accent); transition: width 200ms ease, background 200ms ease;
+}
+.qmm-meter__fill.is-warn { background: var(--qmm-warn); }
+
+.qmm-vtabs { display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 0; }
+.qmm-vtabs .filter input { width: 100%; }
+.qmm-vlist-wrap { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; width: 100%; }
+.qmm-vlist {
+  flex: 0 0 auto; min-width: 0; padding: 6px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
+}
+.qmm-vlist.is-scroll { flex: 1 1 auto; overflow: auto; }
+.qmm-vlist__items { display: flex; flex-direction: column; gap: var(--qmm-space-xs); margin: 0; padding: 0; list-style: none; }
+.qmm-vlist__empty { opacity: .75; }
+.qmm-vtab {
+  display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: var(--qmm-space-lg); width: 100%;
+  padding: 8px 10px; border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-card-bg); color: inherit; text-align: left; cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+.qmm-vtab:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); }
+.qmm-vtab:active { transform: translateY(1px); }
+.qmm-vtab.active { background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
+.qmm-dot { width: 10px; height: 10px; justify-self: center; border-radius: 50%; box-shadow: 0 0 0 1px #0006 inset; }
+.qmm-chip { display: flex; align-items: center; gap: var(--qmm-space-md); min-width: 0; }
+.qmm-chip img { width: 20px; height: 20px; object-fit: cover; border: 1px solid var(--qmm-border); border-radius: 50%; }
+.qmm-chip__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.qmm-chip .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qmm-chip__sub { font-size: var(--qmm-fs-md); opacity: .7; }
+.qmm-tag {
+  padding: 3px 7px; font-size: var(--qmm-fs-sm); line-height: 1;
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-hover-bg);
+}
+
+/* Drag handle for reorderable lists. */
+.qmm-grab {
+  display: grid; grid-template-columns: repeat(2, 3px); grid-template-rows: repeat(3, 3px);
+  align-content: center; justify-content: center; gap: 2px; margin-left: auto; padding: 4px 3px;
+  opacity: .8; cursor: grab; user-select: none;
+}
+.qmm-grab:active { cursor: grabbing; }
+.qmm-grab-dot { width: 3px; height: 3px; border-radius: 999px; background: var(--qmm-text-soft); }
+.qmm-dragging { opacity: .6; }
+
+/* Selectable tile of the skins grid. */
+.qws-pnl-cell {
+  position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 1; cursor: pointer;
+  border: 1px solid var(--qmm-border); border-radius: 10px; background: var(--qmm-card-bg);
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+.qws-pnl-cell:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); transform: translateY(-1px); }
+.qws-pnl-cell.is-active { border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft); }
+.qws-pnl-cell.is-skinned::after {
+  content: ''; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--qmm-accent);
+}
+
+.qmm-icon-box { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.qmm-icon-box > img { max-width: 100%; max-height: 100%; image-rendering: auto; }
+
+.qmm-modal-scrim {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: var(--qmm-scrim); backdrop-filter: blur(4px);
+}
+.qmm-modal {
+  display: flex; flex-direction: column; overflow: hidden; color: var(--qmm-text);
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-xl);
+  background: var(--qmm-surface); box-shadow: var(--qmm-shadow-modal);
+}
+.qmm-modal__head {
+  display: flex; align-items: center; gap: var(--qmm-space-lg); flex: 0 0 auto; padding: 12px 14px;
+  border-bottom: 1px solid var(--qmm-border);
+}
+.qmm-modal__title { flex: 1; min-width: 0; font-size: var(--qmm-fs-xl); font-weight: 600; color: var(--qmm-text); }
+.qmm-modal__close {
+  flex: 0 0 auto; width: 28px; height: 28px; cursor: pointer;
+  border: 1px solid var(--qmm-border); border-radius: 8px; background: var(--qmm-card-bg);
+  color: var(--qmm-text-dim); font-size: var(--qmm-fs-md); line-height: 1;
+}
+.qmm-modal__close:hover { color: var(--qmm-text); border-color: var(--qmm-border-hover); }
+.qmm-modal__body {
+  display: flex; flex-direction: column; gap: var(--qmm-space-lg); flex: 1 1 auto; min-height: 0;
+  padding: 12px 14px; overflow-y: auto;
+}
+.qmm-modal__foot {
+  display: flex; align-items: center; gap: var(--qmm-space-lg); flex: 0 0 auto; padding: 12px 14px;
+  border-top: 1px solid var(--qmm-border);
+}
+.qmm-modal__foot:empty { display: none; }
+
+.qmm-menu-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 11px 12px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
+  font: inherit; text-align: left; cursor: pointer; transition: background 120ms ease, border-color 120ms ease;
+}
+.qmm-menu-card:hover:not(:disabled) { background: var(--qmm-hover-bg); }
+.qmm-menu-card:disabled { opacity: .55; cursor: default; }
+.qmm-menu-card__name { font-size: var(--qmm-fs-lg); font-weight: 600; color: var(--qmm-text); }
+.qmm-menu-card__detail { font-size: 11.5px; line-height: 1.45; color: var(--qmm-text-dim); }
+.qmm-menu-card:disabled .qmm-menu-card__name { color: var(--qmm-text-dim); }
+.qmm-menu-card:disabled .qmm-menu-card__detail { color: var(--qmm-accent); }
+`;
+    }
+  });
+
+  // src/ui/kit/styles/controls.ts
+  var controlsCss;
+  var init_controls = __esm({
+    "src/ui/kit/styles/controls.ts"() {
+      "use strict";
+      controlsCss = `
+.qmm-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--qmm-space-sm); padding: 8px 14px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-card-bg); color: var(--qmm-text);
+  font-size: var(--qmm-fs-lg); font-weight: 600; line-height: 1.2; cursor: pointer; user-select: none;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease, opacity 120ms ease, transform 100ms ease;
+}
+.qmm-compact .qmm-btn:where(:not(.qmm-btn--sm, .qmm-btn--xs, .qmm-btn--icon)) { padding: 6px 10px; }
+.qmm-btn:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); }
+.qmm-btn:active { transform: translateY(1px); }
+.qmm-btn:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
+.qmm-btn:disabled, .qmm-btn.is-disabled { opacity: .4; pointer-events: none; }
+.qmm-btn.is-busy { opacity: .6; pointer-events: none; }
+.qmm-btn--sm { padding: 7px 12px; font-size: var(--qmm-fs-sm); white-space: nowrap; }
+.qmm-btn--xs { padding: 4px 8px; font-size: var(--qmm-fs-sm); }
+.qmm-btn--full { width: 100%; }
+.qmm-btn--block { display: flex; }
+.qmm-btn--icon { width: 34px; height: 34px; padding: 6px; gap: 0; border-radius: 50%; }
+.qmm-btn__icon { display: inline-flex; align-items: center; justify-content: center; font-size: 1.1em; }
+.qmm-btn__icon.is-right { order: 2; }
+.qmm-btn--primary { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
+.qmm-btn--primary:hover { background: var(--qmm-accent-hover); border-color: var(--qmm-accent-border-hover); }
+.qmm-btn--danger { color: var(--qmm-danger); background: var(--qmm-danger-soft); border-color: var(--qmm-danger-border); }
+.qmm-btn--danger:hover { background: var(--qmm-danger-hover); border-color: var(--qmm-danger-border-hover); }
+.qmm-btn--ghost { background: transparent; border-color: transparent; }
+.qmm-btn--ghost:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border); }
+.qmm-btn.active { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
+
+.qmm-input, .qws-pnl-input {
+  padding: 8px 10px; border: 1px solid var(--qmm-field-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-field-bg); color: var(--qmm-text); outline: none;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.qmm-input { min-width: 90px; }
+.qws-pnl-input { font-size: var(--qmm-fs-md); }
+.qmm-input::placeholder, .qws-pnl-input::placeholder { color: var(--qmm-text-dim); }
+.qmm-input:focus, .qws-pnl-input:focus { border-color: var(--qmm-accent-border-hover); }
+.qmm-input option, .qws-pnl-input option { background: var(--qmm-surface); color: var(--qmm-text); }
+.qmm-input--sm { min-width: 0; padding: 6px 9px; font-size: 11.5px; }
+.qmm-select { cursor: pointer; }
+
+.qmm-input-number { display: inline-flex; align-items: center; gap: var(--qmm-space-sm); }
+.qmm-input-number-input { width: 70px; text-align: center; }
+.qmm-spin { display: inline-flex; flex-direction: column; gap: 2px; }
+.qmm-step {
+  display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 16px; padding: 0;
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-sm);
+  background: var(--qmm-hover-bg); color: var(--qmm-text); font-size: 11px; line-height: 1;
+  cursor: pointer; user-select: none; transition: border-color 120ms ease, color 120ms ease;
+}
+.qmm-step:hover { border-color: var(--qmm-accent-border); color: var(--qmm-accent); }
+.qmm-step:active { transform: translateY(1px); }
+
+.qmm-radio { transform: scale(1.1); accent-color: var(--qmm-accent); }
+
+.qmm-switch {
+  -webkit-appearance: none; appearance: none; position: relative; flex-shrink: 0;
+  width: 36px; height: 20px; margin: 0; vertical-align: middle; cursor: pointer;
+  border: 1px solid var(--qmm-field-border); border-radius: 10px; background: var(--qmm-track);
+  transition: background 150ms ease, border-color 150ms ease;
+}
+.qmm-switch::before {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--qmm-text-dim); transition: transform 150ms ease, background 150ms ease;
+}
+.qmm-switch:checked { background: var(--qmm-accent-hover); border-color: var(--qmm-accent-border-hover); }
+.qmm-switch:checked::before { transform: translateX(16px); background: var(--qmm-accent); }
+.qmm-switch:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
+.qmm-switch:disabled { opacity: .4; cursor: not-allowed; }
+
+.qmm-chip-toggle {
+  display: inline-flex; align-items: stretch; cursor: pointer;
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-card-bg);
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.qmm-chip-toggle:hover { border-color: var(--qmm-accent-border); }
+.qmm-chip-toggle input { display: none; }
+.qmm-chip-toggle__face { display: flex; align-items: center; gap: var(--qmm-space-md); padding: 6px 12px; border-radius: var(--qmm-radius-pill); }
+.qmm-chip-toggle input:checked + .qmm-chip-toggle__face {
+  color: var(--qmm-accent); background: var(--qmm-accent-soft); box-shadow: inset 0 0 0 1px var(--qmm-accent-border);
+}
+.qmm-chip-toggle__icon { font-size: 14px; }
+.qmm-chip-toggle__label { font-weight: 600; }
+.qmm-chip-toggle__desc { font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
+.qmm-chip-toggle__badge {
+  padding: 2px 6px; font-size: var(--qmm-fs-sm);
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-hover-bg);
+}
+
+.qmm-range, .qws-pnl-range {
+  -webkit-appearance: none; appearance: none; height: 16px; margin: 0; padding: 0;
+  border: none; background: transparent; outline: none; cursor: pointer;
+}
+.qmm-range { width: 180px; }
+.qws-pnl-range { width: 100%; }
+.qmm-range::-webkit-slider-runnable-track, .qws-pnl-range::-webkit-slider-runnable-track {
+  height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
+}
+.qmm-range::-moz-range-track, .qws-pnl-range::-moz-range-track {
+  height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
+}
+.qmm-range::-webkit-slider-thumb, .qws-pnl-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 13px; height: 13px; margin-top: -4.5px;
+  border: none; border-radius: 50%; background: var(--qmm-accent); cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.qmm-range::-moz-range-thumb, .qws-pnl-range::-moz-range-thumb {
+  width: 13px; height: 13px; border: none; border-radius: 50%; background: var(--qmm-accent); cursor: pointer;
+}
+.qmm-range:hover::-webkit-slider-thumb, .qws-pnl-range:hover::-webkit-slider-thumb {
+  transform: scale(1.15); box-shadow: 0 0 0 4px var(--qmm-accent-soft);
+}
+.qmm-range:disabled, .qws-pnl-range:disabled { opacity: .4; cursor: not-allowed; }
+.qmm-range:disabled::-webkit-slider-thumb, .qws-pnl-range:disabled::-webkit-slider-thumb { background: var(--qmm-text-dim); }
+.qmm-range:disabled::-moz-range-thumb, .qws-pnl-range:disabled::-moz-range-thumb { background: var(--qmm-text-dim); }
+
+.qmm-range-dual { position: relative; width: 100%; padding: 18px 0 10px; }
+.qmm-range-dual-track {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  height: 6px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
+}
+.qmm-range-dual-fill {
+  position: absolute; top: 50%; transform: translateY(-50%); height: 6px;
+  border-radius: var(--qmm-radius-pill); background: var(--qmm-accent); transition: left .12s ease, right .12s ease;
+}
+.qmm-range-dual-input {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  width: 100%; height: 28px; pointer-events: none;
+}
+.qmm-range-dual-input::-webkit-slider-runnable-track { background: none; }
+.qmm-range-dual-input::-moz-range-track { background: none; }
+.qmm-range-dual-input::-webkit-slider-thumb {
+  pointer-events: auto; width: 16px; height: 16px; margin-top: -6px;
+  background: var(--qmm-accent); border: 2px solid var(--qmm-surface); box-shadow: 0 2px 8px rgba(0,0,0,.35);
+}
+.qmm-range-dual-input::-moz-range-thumb {
+  pointer-events: auto; width: 16px; height: 16px;
+  background: var(--qmm-accent); border: 2px solid var(--qmm-surface); box-shadow: 0 2px 8px rgba(0,0,0,.35);
+}
+.qmm-range-dual-input--min { z-index: 2; }
+.qmm-range-dual-input--max { z-index: 3; }
+
+/* --seg-pad, --seg-fill and --seg-stroke-color let a caller tint one control (the calculator does). */
+.qmm-seg {
+  position: relative; display: inline-flex; align-items: center; gap: var(--qmm-space-sm); overflow: hidden;
+  padding: var(--seg-pad, 8px); border-radius: var(--qmm-radius-pill);
+  background: var(--qmm-bg-soft, var(--qmm-sunken)); background-clip: padding-box;
+  border: 1px solid var(--qmm-border-2, var(--qmm-border));
+}
+.qmm-seg--full { display: flex; width: 100%; }
+.qmm-seg__btn {
+  position: relative; z-index: 1; padding: 8px 14px; border: 0; border-radius: var(--qmm-radius-pill);
+  appearance: none; background: transparent; color: var(--qmm-text-dim);
+  font: inherit; line-height: 1; white-space: nowrap; cursor: pointer;
+  transition: color .15s ease, transform .06s ease;
+}
+.qmm-seg__btn-label { display: inline-flex; align-items: center; justify-content: center; white-space: inherit; }
+.qmm-compact .qmm-seg__btn { padding: 6px 10px; }
+.qmm-seg__btn:hover { color: var(--qmm-text); }
+.qmm-seg__btn.active { color: var(--qmm-text); font-weight: 600; }
+.qmm-seg__btn:active { transform: translateY(1px); }
+.qmm-seg__btn[disabled] { opacity: .5; cursor: not-allowed; }
+.qmm-seg__indicator {
+  position: absolute; top: 0; left: 0; width: 40px; height: 100%; border-radius: inherit; pointer-events: none;
+  background: var(--seg-fill, var(--qmm-accent-soft));
+  outline: 1.2px solid var(--seg-stroke-color, var(--qmm-accent-border-hover)); outline-offset: -1.2px;
+  transform-origin: left center; will-change: transform, width, opacity;
+  transition: transform .18s cubic-bezier(.2,.8,.2,1), width .18s cubic-bezier(.2,.8,.2,1), opacity .18s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .qmm-seg__indicator, .qmm-seg__btn { transition: none; }
+}
+
+.qmm-hotkey {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: var(--qmm-hotkey-w, 180px); min-width: 104px; padding: 7px 12px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-field-bg); color: var(--qmm-text);
+  font-family: inherit; font-size: var(--qmm-fs-sm); font-weight: 600; white-space: nowrap;
+  cursor: pointer; user-select: none; transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+.qmm-hotkey:hover { border-color: var(--qmm-border-hover); }
+.qmm-hotkey:focus-visible { outline: none; }
+.qmm-hotkey.is-assigned { color: var(--qmm-accent); border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft); }
+.qmm-hotkey.is-empty { color: var(--qmm-text-dim); font-weight: 500; }
+.qmm-hotkey.is-recording {
+  color: var(--qmm-warn); border-color: var(--qmm-warn-border); background: var(--qmm-warn-soft);
+  animation: qmm-hotkey-breathe 1.2s ease-in-out infinite;
+}
+@keyframes qmm-hotkey-breathe {
+  0% { box-shadow: 0 0 0 0 rgba(251,191,36,.45); }
+  60% { box-shadow: 0 0 0 10px rgba(251,191,36,0); }
+  100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
+}
+`;
+    }
+  });
+
+  // src/ui/kit/styles/index.ts
+  function ensureKitStyles() {
+    if (injected) return;
+    if (typeof document === "undefined" || typeof document.getElementById !== "function") return;
+    injected = true;
+    if (document.getElementById(STYLE_ID3)) return;
+    const style = document.createElement("style");
+    style.id = STYLE_ID3;
+    style.textContent = [themeVariables(), chromeCss, controlsCss, containersCss].join("\n");
+    (document.head || document.documentElement).appendChild(style);
+  }
+  var STYLE_ID3, injected;
+  var init_styles = __esm({
+    "src/ui/kit/styles/index.ts"() {
+      "use strict";
+      init_theme();
+      init_chrome();
+      init_containers();
+      init_controls();
+      STYLE_ID3 = "qmm-kit-css";
+      injected = false;
+    }
+  });
+
+  // src/ui/kit/dom.ts
+  function h(tag, className, text2) {
+    ensureKitStyles();
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text2 != null) el.textContent = text2;
+    return el;
+  }
+  function iconNode(icon, className) {
+    const node = typeof icon === "string" ? h("span", void 0, icon) : icon;
+    node.classList.add(className);
+    return node;
+  }
+  var init_dom = __esm({
+    "src/ui/kit/dom.ts"() {
+      "use strict";
+      init_styles();
     }
   });
 
   // src/game/pixi/gardenInfoCard.ts
-  function getStage(state5) {
-    return state5.renderer.lastObjectRendered ?? state5.renderer.stage ?? state5.app?.stage ?? null;
+  function getStage(state7) {
+    return state7.renderer.lastObjectRendered ?? state7.renderer.stage ?? state7.app?.stage ?? null;
   }
   function findByLabel(root, label2, limit = 25e3) {
     if (!root) return null;
@@ -24950,9 +24307,9 @@
   }
   function tryFindCardSystem() {
     if (cardSystem) return;
-    const state5 = getReadySpriteState();
-    if (!state5) return;
-    const stage = getStage(state5);
+    const state7 = getReadySpriteState();
+    if (!state7) return;
+    const stage = getStage(state7);
     const found = findAcrossBranches(stage, (node) => node?.label === CARD_SYSTEM_LABEL);
     if (found) {
       attachToCardSystem(found);
@@ -25031,7 +24388,7 @@
     }
   });
 
-  // src/features/notifier/bellPixi.ts
+  // src/features/notifier/bell/ring.ts
   function bellRingAngleAt(cycleOffset) {
     for (let i = 1; i < BELL_RING_SEQUENCE.length; i++) {
       const next = BELL_RING_SEQUENCE[i];
@@ -25043,8 +24400,32 @@
     }
     return 0;
   }
-  function startNotificationBellPixi(opts) {
-    const iconGlyph = opts.iconGlyph ?? DEFAULT_ICON_GLYPH;
+  var BELL_RING_SEQUENCE, BELL_RING_DURATION_MS, BELL_GLYPH, DEG_TO_RAD;
+  var init_ring = __esm({
+    "src/features/notifier/bell/ring.ts"() {
+      "use strict";
+      BELL_RING_SEQUENCE = [
+        { offset: 0, deg: 0 },
+        { offset: 0.05, deg: 15 },
+        { offset: 0.1, deg: -13 },
+        { offset: 0.15, deg: 11 },
+        { offset: 0.2, deg: -9 },
+        { offset: 0.25, deg: 7 },
+        { offset: 0.3, deg: -5 },
+        { offset: 0.35, deg: 3 },
+        { offset: 0.4, deg: -2 },
+        { offset: 0.45, deg: 1 },
+        { offset: 0.5, deg: 0 },
+        { offset: 1, deg: 0 }
+      ];
+      BELL_RING_DURATION_MS = 1600;
+      BELL_GLYPH = "\u{1F514}";
+      DEG_TO_RAD = Math.PI / 180;
+    }
+  });
+
+  // src/features/notifier/bell/pixiBell.ts
+  function startPixiBell(opts) {
     let running6 = true;
     let rail = null;
     let bellContainer = null;
@@ -25090,19 +24471,19 @@
       try {
         opts.onClick();
       } catch (error) {
-        console.error("[notificationBellPixi] onClick error:", error);
+        console.error("[PixiBell] onClick error:", error);
       }
     };
     const computeScreenRect = () => {
       if (!bellContainer || bellContainer.destroyed) return null;
-      const state5 = getReadySpriteState();
-      const canvas = state5?.renderer?.canvas || state5?.renderer?.view?.canvas || state5?.renderer?.view;
+      const state7 = getReadySpriteState();
+      const canvas = state7?.renderer?.canvas || state7?.renderer?.view?.canvas || state7?.renderer?.view;
       if (!canvas) return null;
       try {
         const rect = canvas.getBoundingClientRect();
-        const renderResolution = Number(state5?.renderer?.resolution) || 1;
-        const stageWidth = Number(state5?.renderer?.screen?.width) || (Number(canvas.width) || 0) / renderResolution;
-        const stageHeight = Number(state5?.renderer?.screen?.height) || (Number(canvas.height) || 0) / renderResolution;
+        const renderResolution = Number(state7?.renderer?.resolution) || 1;
+        const stageWidth = Number(state7?.renderer?.screen?.width) || (Number(canvas.width) || 0) / renderResolution;
+        const stageHeight = Number(state7?.renderer?.screen?.height) || (Number(canvas.height) || 0) / renderResolution;
         const scaleX = stageWidth > 0 ? rect.width / stageWidth : 1;
         const scaleY = stageHeight > 0 ? rect.height / stageHeight : 1;
         debugState4.screenScaleX = scaleX;
@@ -25150,9 +24531,9 @@
         weSetPointerCursor = false;
       }
     };
-    const ensureCanvasListeners = (state5) => {
+    const ensureCanvasListeners = (state7) => {
       if (canvasListenersAttached) return;
-      const canvas = state5.renderer?.canvas || state5.renderer?.view?.canvas || state5.renderer?.view;
+      const canvas = state7.renderer?.canvas || state7.renderer?.view?.canvas || state7.renderer?.view;
       if (!canvas) return;
       canvasEl = canvas;
       pageWindow.addEventListener("pointerdown", onWindowPointerDownCapture, true);
@@ -25169,8 +24550,8 @@
       return null;
     };
     const railLocalScreenBounds = () => {
-      const state5 = getReadySpriteState();
-      const screenHeight = Number(state5?.renderer?.screen?.height);
+      const state7 = getReadySpriteState();
+      const screenHeight = Number(state7?.renderer?.screen?.height);
       if (!Number.isFinite(screenHeight) || screenHeight <= 0) return null;
       try {
         const top = rail.toLocal({ x: 0, y: 0 }).y;
@@ -25225,10 +24606,10 @@
         removeButton();
         return;
       }
-      const state5 = getReadySpriteState();
-      if (!state5?.ctors?.Text) return;
+      const state7 = getReadySpriteState();
+      if (!state7?.ctors?.Text) return;
       if (!bellContainer) {
-        const ContainerCtor = state5.ctors.Container ?? rail.constructor;
+        const ContainerCtor = state7.ctors.Container ?? rail.constructor;
         bellContainer = new ContainerCtor();
         bellContainer.label = "GeminiNotificationBell";
         const thisContainer = bellContainer;
@@ -25238,10 +24619,10 @@
         rail.addChild(bellContainer);
       }
       if (!bellText) {
-        bellText = new state5.ctors.Text({ text: iconGlyph, style: { fontSize: DEFAULT_SLOT_SIZE } });
+        bellText = new state7.ctors.Text({ text: BELL_GLYPH, style: { fontSize: DEFAULT_SLOT_SIZE } });
         bellContainer.addChild(bellText);
       }
-      ensureCanvasListeners(state5);
+      ensureCanvasListeners(state7);
       syncGeometry();
       debugState4.hasButton = true;
     };
@@ -25251,7 +24632,7 @@
         debugState4.lastError = null;
       } catch (error) {
         debugState4.lastError = String(error?.message ?? error);
-        console.warn("[notificationBellPixi] sync failed, clearing button", error);
+        console.warn("[PixiBell] sync failed, clearing button", error);
         try {
           removeButton();
         } catch {
@@ -25277,14 +24658,14 @@
         }
       });
       debugState4.attached = true;
-      console.info(`[notificationBellPixi] attached to ${RAIL_LABEL} after ${findAttempts2} attempt(s)`);
+      console.info(`[PixiBell] attached to ${RAIL_LABEL} after ${findAttempts2} attempt(s)`);
       sync2();
     };
     const tryFindRail = () => {
       if (!running6 || rail) return;
-      const state5 = getReadySpriteState();
-      if (!state5) return;
-      const stage = getStage(state5);
+      const state7 = getReadySpriteState();
+      if (!state7) return;
+      const stage = getStage(state7);
       const found = findAcrossBranches(stage, (node) => node?.label === RAIL_LABEL);
       if (found) {
         attachToRail(found);
@@ -25293,7 +24674,7 @@
       findAttempts2 += 1;
       debugState4.findAttempts = findAttempts2;
       if (findAttempts2 % RAIL_FIND_LOG_EVERY === 0) {
-        console.info(`[notificationBellPixi] still searching for ${RAIL_LABEL} (${findAttempts2} attempts so far)`);
+        console.info(`[PixiBell] still searching for ${RAIL_LABEL} (${findAttempts2} attempts so far)`);
       }
     };
     const scheduleFind3 = (now2) => {
@@ -25307,9 +24688,9 @@
       findRafId3 = raf3(scheduleFind3);
     };
     const isReachableFromLiveStage = (node) => {
-      const state5 = getReadySpriteState();
-      if (!state5) return false;
-      const stage = getStage(state5);
+      const state7 = getReadySpriteState();
+      if (!state7) return false;
+      const stage = getStage(state7);
       if (!stage) return false;
       let cur = node;
       let hops = 0;
@@ -25322,7 +24703,7 @@
     const periodicRailMaintenance = () => {
       if (!running6 || !rail || rail.destroyed) return;
       if (!isReachableFromLiveStage(rail)) {
-        console.warn("[notificationBellPixi] rail orphaned from the live stage (no destroyed event fired), resetting");
+        console.warn("[PixiBell] rail orphaned from the live stage (no destroyed event fired), resetting");
         rail = null;
         debugState4.attached = false;
         removeButton();
@@ -25409,44 +24790,28 @@
       }
     };
   }
-  var RAIL_LABEL, RAIL_FIND_RETRY_MS, RAIL_FIND_LOG_EVERY, RAIL_REACHABILITY_CHECK_MS, RAIL_REACHABILITY_MAX_HOPS, CHAT_SLOT_MARKER_LABEL, DEFAULT_ICON_GLYPH, DEFAULT_SLOT_SIZE, DEFAULT_SLOT_SPACING, SLOT_OCCUPIED_TOLERANCE_RATIO, MAX_SLOT_SEARCH_STEPS, BELL_RING_SEQUENCE, BELL_RING_DURATION_MS, DEG_TO_RAD;
-  var init_bellPixi = __esm({
-    "src/features/notifier/bellPixi.ts"() {
+  var RAIL_LABEL, RAIL_FIND_RETRY_MS, RAIL_FIND_LOG_EVERY, RAIL_REACHABILITY_CHECK_MS, RAIL_REACHABILITY_MAX_HOPS, CHAT_SLOT_MARKER_LABEL, DEFAULT_SLOT_SIZE, DEFAULT_SLOT_SPACING, SLOT_OCCUPIED_TOLERANCE_RATIO, MAX_SLOT_SEARCH_STEPS;
+  var init_pixiBell = __esm({
+    "src/features/notifier/bell/pixiBell.ts"() {
       "use strict";
       init_gardenInfoCard();
       init_context();
       init_pageContext();
+      init_ring();
       RAIL_LABEL = "RightSideRail";
       RAIL_FIND_RETRY_MS = 1e3;
       RAIL_FIND_LOG_EVERY = 30;
       RAIL_REACHABILITY_CHECK_MS = 2e3;
       RAIL_REACHABILITY_MAX_HOPS = 64;
       CHAT_SLOT_MARKER_LABEL = "RightSideRailChatBadge";
-      DEFAULT_ICON_GLYPH = "\u{1F514}";
       DEFAULT_SLOT_SIZE = 45;
       DEFAULT_SLOT_SPACING = 52;
       SLOT_OCCUPIED_TOLERANCE_RATIO = 0.5;
       MAX_SLOT_SEARCH_STEPS = 20;
-      BELL_RING_SEQUENCE = [
-        { offset: 0, deg: 0 },
-        { offset: 0.05, deg: 15 },
-        { offset: 0.1, deg: -13 },
-        { offset: 0.15, deg: 11 },
-        { offset: 0.2, deg: -9 },
-        { offset: 0.25, deg: 7 },
-        { offset: 0.3, deg: -5 },
-        { offset: 0.35, deg: 3 },
-        { offset: 0.4, deg: -2 },
-        { offset: 0.45, deg: 1 },
-        { offset: 0.5, deg: 0 },
-        { offset: 1, deg: 0 }
-      ];
-      BELL_RING_DURATION_MS = 1600;
-      DEG_TO_RAD = Math.PI / 180;
     }
   });
 
-  // src/features/notifier/bellFloating.ts
+  // src/features/notifier/bell/floatingBell.ts
   function isFloatingBellEnabled() {
     return readAriesPath(ENABLED_PATH, false) === true;
   }
@@ -25473,10 +24838,10 @@
     if (max < min) return min;
     return Math.min(Math.max(value, min), max);
   }
-  function startNotificationBellFloating(opts) {
+  function startFloatingBell(opts) {
     let running6 = true;
     let wiggleAnimation = null;
-    const button3 = document.createElement("button");
+    const button3 = h("button");
     button3.type = "button";
     button3.setAttribute("data-notification-bell-widget", "1");
     button3.title = "Notifications";
@@ -25493,9 +24858,9 @@
       justifyContent: "center",
       padding: "0",
       borderRadius: "50%",
-      border: "1px solid #32404e",
-      background: "linear-gradient(180deg, #111923, #0b131c)",
-      boxShadow: "0 10px 28px rgba(0,0,0,0.45)",
+      border: "1px solid var(--qmm-border-strong)",
+      background: "var(--qmm-gradient-panel)",
+      boxShadow: "var(--qmm-shadow-window)",
       cursor: "grab",
       userSelect: "none",
       touchAction: "none"
@@ -25571,7 +24936,7 @@
         try {
           opts.onClick();
         } catch (error) {
-          console.error("[notificationBellFloating] onClick error:", error);
+          console.error("[FloatingBell] onClick error:", error);
         }
       }
     };
@@ -25666,16 +25031,16 @@
       }
     };
   }
-  var ENABLED_PATH, POS_PATH, BELL_MODE_EVENT, BELL_GLYPH, BUTTON_SIZE, ICON_FONT_SIZE, BELL_WIDGET_Z_INDEX, SCREEN_MARGIN, DEFAULT_RIGHT_GAP, DEFAULT_TOP_RATIO, SETTLE_REAPPLY_DELAYS_MS, DRAG_THRESHOLD_PX, RING_KEYFRAMES;
-  var init_bellFloating = __esm({
-    "src/features/notifier/bellFloating.ts"() {
+  var ENABLED_PATH, POS_PATH, BELL_MODE_EVENT, BUTTON_SIZE, ICON_FONT_SIZE, BELL_WIDGET_Z_INDEX, SCREEN_MARGIN, DEFAULT_RIGHT_GAP, DEFAULT_TOP_RATIO, SETTLE_REAPPLY_DELAYS_MS, DRAG_THRESHOLD_PX, RING_KEYFRAMES;
+  var init_floatingBell = __esm({
+    "src/features/notifier/bell/floatingBell.ts"() {
       "use strict";
-      init_bellPixi();
+      init_ring();
       init_storage();
+      init_dom();
       ENABLED_PATH = "notifier.floatingBell.enabled";
       POS_PATH = "notifier.floatingBell.pos";
       BELL_MODE_EVENT = "qws:alerts-bell-mode-changed";
-      BELL_GLYPH = "\u{1F514}";
       BUTTON_SIZE = 44;
       ICON_FONT_SIZE = 24;
       BELL_WIDGET_Z_INDEX = 1999900;
@@ -25691,53 +25056,859 @@
     }
   });
 
-  // src/features/notifier/overlay.ts
-  function iconOf(id, size = 24) {
-    const wrap = document.createElement("div");
+  // src/ui/kit/button.ts
+  function button(label2, opts = {}) {
+    const btn = h("button", "qmm-btn");
+    btn.type = "button";
+    const text2 = (label2 ?? "").trim();
+    const labelEl = !opts.icon || text2 ? h("span", "label", label2) : null;
+    if (opts.icon) {
+      const icon = iconNode(opts.icon, "qmm-btn__icon");
+      if (opts.iconPosition === "right") icon.classList.add("is-right");
+      if (!text2) btn.classList.add("qmm-btn--icon");
+      btn.append(icon);
+    }
+    if (labelEl) btn.append(labelEl);
+    if (opts.variant && opts.variant !== "default" && opts.variant !== "secondary") {
+      btn.classList.add(`qmm-btn--${opts.variant}`);
+    }
+    if (opts.size && opts.size !== "md") btn.classList.add(`qmm-btn--${opts.size}`);
+    if (opts.fullWidth) btn.classList.add("qmm-btn--full");
+    if (opts.block) btn.classList.add("qmm-btn--block");
+    if (opts.active) btn.classList.add("active");
+    if (opts.tooltip || opts.title) btn.title = opts.tooltip || opts.title || "";
+    if (opts.ariaLabel) btn.setAttribute("aria-label", opts.ariaLabel);
+    const onClick = opts.onClick;
+    if (onClick && opts.lockWhilePending) {
+      btn.addEventListener("click", async () => {
+        if (btn.disabled) return;
+        btn.classList.add("is-busy");
+        try {
+          await onClick();
+        } finally {
+          btn.classList.remove("is-busy");
+        }
+      });
+    } else if (onClick) {
+      btn.addEventListener("click", () => void onClick());
+    }
+    btn.setEnabled = (enabled5) => setButtonEnabled(btn, enabled5);
+    btn.setActive = (active2) => btn.classList.toggle("active", !!active2);
+    if (opts.disabled) setButtonEnabled(btn, false);
+    return btn;
+  }
+  function setButtonEnabled(btn, enabled5) {
+    btn.disabled = !enabled5;
+    btn.classList.toggle("is-disabled", !enabled5);
+    btn.setAttribute("aria-disabled", String(!enabled5));
+  }
+  var init_button = __esm({
+    "src/ui/kit/button.ts"() {
+      "use strict";
+      init_dom();
+    }
+  });
+
+  // src/features/notifier/itemIcon.ts
+  function spriteCandidates(type, key2, name) {
+    const out = /* @__PURE__ */ new Set();
+    const add = (value) => {
+      const trimmed = value?.trim();
+      if (!trimmed) return;
+      out.add(trimmed);
+      out.add(trimmed.replace(/\s+/g, ""));
+      if (type === "Seed" || type === "Egg") {
+        const stripped = trimmed.replace(/(?:seed|egg)$/i, "").trim();
+        if (stripped) {
+          out.add(stripped);
+          out.add(stripped.replace(/\s+/g, ""));
+        }
+      }
+    };
+    add(key2);
+    add(name);
+    const names = [...out];
+    for (const value of names) {
+      const base = value.replace(/icon$/i, "");
+      if (base) out.add(`${base}Icon`);
+    }
+    return [...out];
+  }
+  function shopItemIcon(id, name, size, logTag) {
+    const [type = "", key2 = ""] = id.split(":");
+    const wrap = h("div");
     Object.assign(wrap.style, {
       width: `${size}px`,
       height: `${size}px`,
+      flex: `0 0 ${size}px`,
       display: "inline-flex",
       alignItems: "center",
-      justifyContent: "center",
-      flex: `0 0 ${size}px`
+      justifyContent: "center"
     });
-    const [rawType] = id.split(":");
-    const fallback = rawType === "Seed" ? "seed" : rawType === "Egg" ? "egg" : rawType === "Tool" ? "tool" : rawType === "Decor" ? "decor" : "item";
-    const span = document.createElement("span");
-    span.textContent = fallback;
-    span.style.fontSize = `${Math.max(10, size - 2)}px`;
-    span.setAttribute("aria-hidden", "true");
-    wrap.appendChild(span);
-    const categories = rawType === "Seed" ? ["seed"] : rawType === "Egg" ? ["pet"] : rawType === "Tool" ? ["item"] : rawType === "Decor" ? ["decor"] : null;
-    if (categories) {
-      const label2 = labelOf(id);
-      const candidatesSet = /* @__PURE__ */ new Set();
-      const addCandidate = (value) => {
-        if (!value) return;
-        const trimmed = value.trim();
-        if (!trimmed) return;
-        candidatesSet.add(trimmed);
-        candidatesSet.add(trimmed.replace(/\s+/g, ""));
-        const last = trimmed.split(/[./]/).pop();
-        if (last && last !== trimmed) {
-          candidatesSet.add(last);
-          candidatesSet.add(last.replace(/\s+/g, ""));
-        }
-      };
-      addCandidate(id.split(":")[1]);
-      addCandidate(label2);
-      if (rawType) addCandidate(rawType);
-      const originals = Array.from(candidatesSet);
-      const iconized = originals.map((value) => value.replace(/icon$/i, "")).filter(Boolean).map((value) => `${value}Icon`);
-      const candidates = Array.from(/* @__PURE__ */ new Set([...originals, ...iconized])).filter(Boolean);
-      if (candidates.length) {
-        attachSpriteIcon(wrap, categories, candidates, size, "alerts-overlay");
-      }
-    }
+    const glyph = h("span", void 0, FALLBACK_GLYPH[type] ?? "\u{1F3E0}");
+    glyph.style.fontSize = `${Math.max(10, Math.round(size * 0.75))}px`;
+    glyph.setAttribute("aria-hidden", "true");
+    wrap.appendChild(glyph);
+    const categories = SPRITE_CATEGORIES[type];
+    const candidates = spriteCandidates(type, key2 || name, name);
+    if (categories && candidates.length) attachSpriteIcon(wrap, categories, candidates, size, logTag);
     return wrap;
   }
-  function labelOf(id) {
+  var FALLBACK_GLYPH, SPRITE_CATEGORIES;
+  var init_itemIcon = __esm({
+    "src/features/notifier/itemIcon.ts"() {
+      "use strict";
+      init_dom();
+      init_iconCache();
+      FALLBACK_GLYPH = { Seed: "\u{1F331}", Egg: "\u{1F95A}", Tool: "\u{1F9F0}", Decor: "\u{1F3E0}" };
+      SPRITE_CATEGORIES = {
+        Seed: ["seed"],
+        Egg: ["pet"],
+        Tool: ["item"],
+        Decor: ["decor"]
+      };
+    }
+  });
+
+  // src/lib/emitter.ts
+  var Emitter, Subscriptions;
+  var init_emitter = __esm({
+    "src/lib/emitter.ts"() {
+      "use strict";
+      Emitter = class {
+        constructor() {
+          this.listeners = /* @__PURE__ */ new Set();
+        }
+        on(listener) {
+          this.listeners.add(listener);
+          return () => {
+            this.listeners.delete(listener);
+          };
+        }
+        emit(value) {
+          for (const listener of [...this.listeners]) {
+            try {
+              listener(value);
+            } catch (error) {
+              console.error("[Aries] listener failed", error);
+            }
+          }
+        }
+        get size() {
+          return this.listeners.size;
+        }
+        clear() {
+          this.listeners.clear();
+        }
+      };
+      Subscriptions = class {
+        constructor() {
+          this.pending = [];
+        }
+        add(unsubscribe2) {
+          this.pending.push(unsubscribe2);
+        }
+        dispose() {
+          for (const entry of this.pending.splice(0)) {
+            Promise.resolve(entry).then((off) => off?.()).catch(() => {
+            });
+          }
+        }
+      };
+    }
+  });
+
+  // src/features/shops/shopFeed.ts
+  function itemKind(itemId) {
+    if (itemId in plantCatalog2) return "seed";
+    if (itemId in eggCatalog2) return "egg";
+    if (itemId in toolCatalog2) return "tool";
+    if (itemId in decorCatalog2) return "decor";
+    return null;
+  }
+  function toShopsSnapshot(shops2) {
+    const snap = {
+      seed: { inventory: [], secondsUntilRestock: Number(shops2?.seed?.secondsUntilRestock) || 0 },
+      egg: { inventory: [], secondsUntilRestock: Number(shops2?.egg?.secondsUntilRestock) || 0 },
+      tool: { inventory: [], secondsUntilRestock: Number(shops2?.tool?.secondsUntilRestock) || 0 },
+      decor: { inventory: [], secondsUntilRestock: Number(shops2?.decor?.secondsUntilRestock) || 0 }
+    };
+    if (!shops2 || typeof shops2 !== "object") return snap;
+    for (const shop of Object.values(shops2)) {
+      if (!shop || typeof shop !== "object" || !Array.isArray(shop.inventory)) continue;
+      for (const item of shop.inventory) {
+        if (!item || typeof item !== "object") continue;
+        const kind = ITEM_TYPE_KIND[item.itemType];
+        if (kind) snap[kind].inventory.push(item);
+      }
+    }
+    return snap;
+  }
+  function toPurchasesSnapshot(view, slot) {
+    const raw = slot?.data?.shopPurchases;
+    const startedAt = (kind) => Number(raw?.[kind]?.startedAtMs ?? raw?.[kind]?.createdAt) || 0;
+    const section2 = (kind) => ({ createdAt: startedAt(kind), purchases: view.purchases[kind] });
+    return { seed: section2("seed"), egg: section2("egg"), tool: section2("tool"), decor: section2("decor") };
+  }
+  function onShops(shops2) {
+    rawShops = shops2;
+    emitShops();
+    if (rawSlot != null) emitPurchases();
+  }
+  function onSlot(slot) {
+    rawSlot = slot;
+    if (rawShops != null) emitShops();
+    emitPurchases();
+  }
+  async function readBoth() {
+    return Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
+  }
+  function shopItemId(kind, item) {
+    const key2 = kind === "seed" ? item.species : kind === "egg" ? item.eggId : kind === "tool" ? item.toolId : item.decorId;
+    if (key2 == null) return null;
+    return `${ALERT_ID_PREFIX[kind]}:${key2}`;
+  }
+  function purchasedCount(id, purchases) {
+    if (!purchases) return 0;
+    const [type, raw] = String(id).split(":");
+    const kind = type === "Seed" ? "seed" : type === "Egg" ? "egg" : type === "Tool" ? "tool" : "decor";
+    const n = purchases[kind]?.purchases?.[raw];
+    return typeof n === "number" && n > 0 ? n : 0;
+  }
+  var ITEM_TYPE_KIND, viewOf, sameShopParts, rawShops, rawSlot, shopsChanged, purchasesChanged, watchers, watching, emitShops, emitPurchases, ShopFeed, ALERT_ID_PREFIX;
+  var init_shopFeed = __esm({
+    "src/features/shops/shopFeed.ts"() {
+      "use strict";
+      init_atoms();
+      init_emitter();
+      init_data();
+      init_purchases();
+      ITEM_TYPE_KIND = { Seed: "seed", Egg: "egg", Tool: "tool", Decor: "decor" };
+      viewOf = (shops2, slot) => playerShopView(shops2, slot, itemKind);
+      sameShopParts = (a, b) => a?.data?.shopPurchases === b?.data?.shopPurchases && a?.data?.customRestocks === b?.data?.customRestocks && a?.customRestockInventories === b?.customRestockInventories;
+      rawShops = null;
+      rawSlot = null;
+      shopsChanged = new Emitter();
+      purchasesChanged = new Emitter();
+      watchers = new Subscriptions();
+      watching = false;
+      emitShops = () => shopsChanged.emit(toShopsSnapshot(viewOf(rawShops, rawSlot).shops));
+      emitPurchases = () => purchasesChanged.emit(toPurchasesSnapshot(viewOf(rawShops, rawSlot), rawSlot));
+      ShopFeed = {
+        /**
+         * Follows the room's shops and the player's slot. The atoms may not exist
+         * yet (the HUD mounts the overlay at document-start): the subscriptions
+         * attach once the game registers them, and push the current value then.
+         */
+        start() {
+          if (watching) return;
+          watching = true;
+          watchers.add(Atoms.shop.shops.onChangeNow((next) => onShops(next)));
+          watchers.add(Atoms.shop.myUserSlot.onChangeNow((next) => onSlot(next), sameShopParts));
+        },
+        stop() {
+          watchers.dispose();
+          watching = false;
+        },
+        onShopsChange(cb) {
+          return shopsChanged.on(cb);
+        },
+        onPurchasesChange(cb) {
+          return purchasesChanged.on(cb);
+        },
+        /** The shops right now, read from the store rather than the last push. */
+        async readShops() {
+          const [shops2, slot] = await readBoth();
+          return toShopsSnapshot(viewOf(shops2, slot).shops);
+        },
+        /** The purchases right now, read from the store rather than the last push. */
+        async readPurchases() {
+          const [shops2, slot] = await readBoth();
+          return toPurchasesSnapshot(viewOf(shops2, slot), slot);
+        }
+      };
+      ALERT_ID_PREFIX = { seed: "Seed", egg: "Egg", tool: "Tool", decor: "Decor" };
+    }
+  });
+
+  // src/features/notifier/rules.ts
+  function sanitizeVolume(value) {
+    if (value == null) return void 0;
+    const num2 = Number(value);
+    if (!Number.isFinite(num2)) return void 0;
+    return clamp(num2 > 1 ? num2 / 100 : num2, 0, 1);
+  }
+  function sanitizeLoopInterval(value) {
+    if (value == null) return void 0;
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(n)) : void 0;
+  }
+  function mergeRule(prev, patch) {
+    const next = { ...prev ?? {} };
+    const set2 = (key2, value) => {
+      if (value === void 0) delete next[key2];
+      else next[key2] = value;
+    };
+    if (hasOwn(patch, "sound")) {
+      const sound = typeof patch.sound === "string" ? patch.sound.trim() : "";
+      set2("sound", sound || void 0);
+    }
+    if (hasOwn(patch, "volume")) set2("volume", sanitizeVolume(patch.volume));
+    if (hasOwn(patch, "playbackMode")) {
+      const mode = patch.playbackMode;
+      set2("playbackMode", mode === "oneshot" || mode === "loop" ? mode : void 0);
+    }
+    if (hasOwn(patch, "stopMode")) set2("stopMode", patch.stopMode === "purchase" ? "purchase" : void 0);
+    if (hasOwn(patch, "loopIntervalMs")) set2("loopIntervalMs", sanitizeLoopInterval(patch.loopIntervalMs));
+    return Object.keys(next).length ? next : null;
+  }
+  function rulesEqual(a, b) {
+    if (!a || !b) return !a && !b;
+    return a.sound === b.sound && a.volume === b.volume && a.playbackMode === b.playbackMode && a.stopMode === b.stopMode && a.loopIntervalMs === b.loopIntervalMs;
+  }
+  function ensureRulesLoaded() {
+    if (rulesLoaded) return;
+    rulesLoaded = true;
+    rules2 = /* @__PURE__ */ new Map();
+    const stored = readAriesPath(RULES_PATH);
+    if (!stored || typeof stored !== "object") return;
+    for (const [id, raw] of Object.entries(stored)) {
+      const rule = mergeRule(void 0, raw && typeof raw === "object" ? raw : {});
+      if (rule) rules2.set(String(id), rule);
+    }
+  }
+  function saveRules() {
+    const out = {};
+    for (const [id, rule] of rules2) out[id] = { ...rule };
+    writeAriesPath(RULES_PATH, out);
+  }
+  function rulesSnapshot() {
+    ensureRulesLoaded();
+    const out = {};
+    for (const [id, rule] of rules2) out[id] = copyRule(rule);
+    return out;
+  }
+  function commitRules() {
+    saveRules();
+    rulesChanged.emit(rulesSnapshot());
+  }
+  function ruleOverrides(rule) {
+    if (!rule) return null;
+    const overrides = {};
+    if (rule.sound) overrides.sound = rule.sound;
+    if (rule.volume != null && Number.isFinite(rule.volume)) overrides.volume = clamp(Number(rule.volume), 0, 1);
+    if (rule.playbackMode === "loop" || rule.playbackMode === "oneshot") overrides.mode = rule.playbackMode;
+    if (rule.stopMode === "purchase" || rule.stopMode === "manual") overrides.stop = { mode: rule.stopMode };
+    if (rule.loopIntervalMs != null && Number.isFinite(rule.loopIntervalMs)) {
+      overrides.loopIntervalMs = Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(Number(rule.loopIntervalMs)));
+    }
+    return Object.keys(overrides).length ? overrides : null;
+  }
+  function shortSoundName(name) {
+    return name.length > 32 ? `${name.slice(0, 29)}\u2026` : name;
+  }
+  function formatInterval(ms) {
+    const seconds = ms / 1e3;
+    if (seconds < 1) return `${ms} ms`;
+    return seconds >= 10 ? `${Math.round(seconds)} s` : `${(Math.round(seconds * 10) / 10).toFixed(1)} s`;
+  }
+  function formatRuleSummary(rule) {
+    if (!rule) return "";
+    const parts = [];
+    if (rule.sound) {
+      const label2 = audio.listSounds().includes(rule.sound) ? rule.sound : shortSoundName(rule.sound);
+      parts.push(`Sound: ${label2}`);
+    }
+    if (rule.volume != null) parts.push(`Volume: ${Math.round(clamp(Number(rule.volume), 0, 1) * 100)}%`);
+    if (rule.playbackMode === "oneshot") parts.push("Mode: One-shot");
+    else if (rule.playbackMode === "loop") parts.push("Mode: Loop");
+    if (rule.stopMode === "purchase") parts.push("Stop: Until purchase");
+    else if (rule.stopMode === "manual") parts.push("Stop: Manual");
+    if (rule.loopIntervalMs != null) {
+      const raw = Number(rule.loopIntervalMs);
+      if (Number.isFinite(raw)) parts.push(`Interval: ${formatInterval(Math.max(1, Math.round(raw)))}`);
+    }
+    return parts.join(" \u2022 ");
+  }
+  function ensureLoopDefaultsLoaded() {
+    if (loopDefaultsLoaded) return;
+    loopDefaultsLoaded = true;
+    loopIntervals = {};
+    const stored = readAriesPath(LOOP_DEFAULTS_PATH);
+    if (!stored || typeof stored !== "object") return;
+    for (const context of ["shops", "weather"]) {
+      const entry = stored[context];
+      if (!entry) continue;
+      const raw = Number(entry.loopIntervalMs);
+      loopIntervals[context] = normalizeInterval(Number.isFinite(raw) ? raw : audio.getLoopInterval(context));
+    }
+  }
+  function saveLoopDefaults() {
+    const out = {};
+    for (const context of ["shops", "weather"]) {
+      const loopIntervalMs = loopIntervals[context];
+      if (loopIntervalMs == null) continue;
+      out[context] = { stopMode: context === "shops" ? "purchase" : "manual", stopRepeats: null, loopIntervalMs };
+    }
+    writeAriesPath(LOOP_DEFAULTS_PATH, out);
+  }
+  var RULES_PATH, LOOP_DEFAULTS_PATH, MIN_LOOP_INTERVAL_MS, hasOwn, rules2, rulesLoaded, rulesChanged, copyRule, NotifierRules, loopIntervals, loopDefaultsLoaded, normalizeInterval, LoopDefaults;
+  var init_rules = __esm({
+    "src/features/notifier/rules.ts"() {
+      "use strict";
+      init_storage();
+      init_emitter();
+      init_math();
+      init_audio();
+      RULES_PATH = "notifier.rules";
+      LOOP_DEFAULTS_PATH = "notifier.loopDefaults";
+      MIN_LOOP_INTERVAL_MS = 150;
+      hasOwn = (obj, key2) => Object.prototype.hasOwnProperty.call(obj, key2);
+      rules2 = /* @__PURE__ */ new Map();
+      rulesLoaded = false;
+      rulesChanged = new Emitter();
+      copyRule = (rule) => ({ ...rule });
+      NotifierRules = {
+        get(id) {
+          if (!id) return null;
+          ensureRulesLoaded();
+          const rule = rules2.get(id);
+          return rule ? copyRule(rule) : null;
+        },
+        getAll() {
+          return rulesSnapshot();
+        },
+        set(id, patch) {
+          if (!id || !patch || typeof patch !== "object") return;
+          ensureRulesLoaded();
+          const prev = rules2.get(id);
+          const next = mergeRule(prev, patch);
+          if (rulesEqual(prev, next)) return;
+          if (next) rules2.set(id, next);
+          else rules2.delete(id);
+          commitRules();
+        },
+        clear(id) {
+          if (!id) return;
+          ensureRulesLoaded();
+          if (rules2.delete(id)) commitRules();
+        },
+        onChange(cb) {
+          ensureRulesLoaded();
+          return rulesChanged.on(cb);
+        }
+      };
+      loopIntervals = {};
+      loopDefaultsLoaded = false;
+      normalizeInterval = (ms) => Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(ms || 0));
+      LoopDefaults = {
+        get(context) {
+          ensureLoopDefaultsLoaded();
+          const loopIntervalMs = normalizeInterval(loopIntervals[context] ?? audio.getLoopInterval(context));
+          return { stopMode: context === "shops" ? "purchase" : "manual", stopRepeats: null, loopIntervalMs };
+        },
+        /** Remembers a context's loop interval; an invalid one keeps the current value. */
+        setLoopInterval(context, ms) {
+          ensureLoopDefaultsLoaded();
+          const current = LoopDefaults.get(context).loopIntervalMs;
+          loopIntervals[context] = Number.isFinite(ms) ? normalizeInterval(ms) : current;
+          saveLoopDefaults();
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/inventoryCaps.ts
+  function isCapReachedIn(catalog, counts, itemId) {
+    const meta = catalog[itemId];
+    if (!meta) return false;
+    const owned2 = counts.get(itemId) || 0;
+    if (meta.isOneTimePurchase && owned2 >= 1) return true;
+    const max = Number(meta.maxInventoryQuantity);
+    return Number.isFinite(max) && max > 0 && owned2 >= max;
+  }
+  function isCapReached(id) {
+    if (id.startsWith("Tool:")) return isCapReachedIn(toolCatalog2, toolCounts, id.slice(5));
+    if (id.startsWith("Decor:")) return isCapReachedIn(decorCatalog2, decorCounts, id.slice(6));
+    return false;
+  }
+  function countsOf(items, idOf) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const item of Array.isArray(items) ? items : []) {
+      const id = String(idOf(item) ?? "");
+      if (id) counts.set(id, Number(item?.quantity) || 0);
+    }
+    return counts;
+  }
+  async function follow(view, apply2) {
+    const update = (value) => {
+      try {
+        apply2(value);
+      } catch {
+      }
+      changed.emit();
+    };
+    try {
+      update(await view.get());
+    } catch {
+    }
+    try {
+      watchers2.add(await view.onChange(update));
+    } catch {
+    }
+  }
+  var toolCounts, decorCounts, changed, watchers2, InventoryCaps;
+  var init_inventoryCaps = __esm({
+    "src/features/notifier/inventoryCaps.ts"() {
+      "use strict";
+      init_atoms();
+      init_emitter();
+      init_data();
+      toolCounts = /* @__PURE__ */ new Map();
+      decorCounts = /* @__PURE__ */ new Map();
+      changed = new Emitter();
+      watchers2 = new Subscriptions();
+      InventoryCaps = {
+        async start() {
+          await follow(Atoms.inventory.myToolInventory, (items) => {
+            toolCounts = countsOf(items, (it) => it?.toolId);
+          });
+          await follow(Atoms.inventory.myDecorInventory, (items) => {
+            decorCounts = countsOf(items, (it) => it?.decorId ?? it?.id);
+          });
+        },
+        stop() {
+          watchers2.dispose();
+        },
+        /** Fires after every inventory update. */
+        onChange(cb) {
+          return changed.on(cb);
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/shopRows.ts
+  function followedIds() {
+    if (followed) return followed;
+    followed = /* @__PURE__ */ new Set();
+    const stored = readAriesPath(FOLLOWED_PATH);
+    if (stored && typeof stored === "object") {
+      for (const [id, bits] of Object.entries(stored)) {
+        if (id && (Number(bits) | 0) & 1) followed.add(id);
+      }
+    }
+    return followed;
+  }
+  function saveFollowed() {
+    const out = {};
+    for (const id of followedIds()) out[id] = 1;
+    writeAriesPath(FOLLOWED_PATH, out);
+  }
+  function splitEligibleShops(shops2) {
+    const names = Array.isArray(shops2) ? shops2.map((s) => String(s ?? "").trim()).filter(Boolean) : [];
+    let base = null;
+    const weathers = [];
+    for (const name of names) {
+      if (BASE_SHOPS.has(name)) base = name;
+      else weathers.push(name);
+    }
+    return { base, weathers };
+  }
+  function buildRows() {
+    const rows = [];
+    const seen = /* @__PURE__ */ new Set();
+    const sources = [
+      { catalog: plantCatalog2, section: "Seed", entryOf: (raw) => raw?.seed ?? raw },
+      { catalog: eggCatalog2, section: "Egg", entryOf: (raw) => raw },
+      { catalog: toolCatalog2, section: "Tool", entryOf: (raw) => raw },
+      { catalog: decorCatalog2, section: "Decor", entryOf: (raw) => raw }
+    ];
+    for (const { catalog, section: naturalSection, entryOf: entryOf2 } of sources) {
+      if (!catalog || typeof catalog !== "object") continue;
+      for (const key2 of Object.keys(catalog)) {
+        const entry = entryOf2(catalog[key2]);
+        if (!entry || typeof entry !== "object") continue;
+        const { base, weathers } = splitEligibleShops(entry.eligibleShops);
+        if (!base && weathers.length === 0) continue;
+        const section2 = base ?? naturalSection;
+        const id = `${section2}:${key2}`;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        const rawRarity = typeof entry.rarity === "string" ? entry.rarity : void 0;
+        const popup = followedIds().has(id);
+        rows.push({
+          id,
+          type: section2,
+          name: typeof entry.name === "string" && entry.name.trim() ? String(entry.name) : key2,
+          rarity: rawRarity ? DISPLAY_RARITY[rawRarity] ?? rawRarity : void 0,
+          popup,
+          followed: popup,
+          weatherOnly: !base || void 0,
+          weathers: weathers.length ? weathers : void 0
+        });
+      }
+    }
+    return rows;
+  }
+  var FOLLOWED_PATH, followed, DISPLAY_RARITY, BASE_SHOPS, state2, idsSig, changed2, countFollowed, emit, ShopRows;
+  var init_shopRows = __esm({
+    "src/features/notifier/shopRows.ts"() {
+      "use strict";
+      init_data();
+      init_emitter();
+      init_storage();
+      init_inventoryCaps();
+      FOLLOWED_PATH = "notifier.prefs";
+      followed = null;
+      DISPLAY_RARITY = {
+        [rarity2.Common]: "Common",
+        [rarity2.Uncommon]: "Uncommon",
+        [rarity2.Rare]: "Rare",
+        [rarity2.Legendary]: "Legendary",
+        [rarity2.Mythic]: "Mythical",
+        // The live API returns "Mythic" while rarityMap.Mythic is "Mythical".
+        Mythic: "Mythical",
+        [rarity2.Divine]: "Divine",
+        [rarity2.Celestial]: "Celestial"
+      };
+      BASE_SHOPS = /* @__PURE__ */ new Set(["Seed", "Egg", "Tool", "Decor"]);
+      state2 = null;
+      idsSig = "";
+      changed2 = new Emitter();
+      countFollowed = (rows) => rows.reduce((n, r) => n + (r.followed ? 1 : 0), 0);
+      emit = () => {
+        if (state2) changed2.emit({ ...state2, rows: state2.rows.slice() });
+      };
+      ShopRows = {
+        /** Rebuilds the rows from the catalogs. Listeners hear of it only when the set of items changed. */
+        rebuild() {
+          const rows = buildRows();
+          state2 = { updatedAt: Date.now(), rows, counts: { items: rows.length, followed: countFollowed(rows) } };
+          const sig = rows.map((r) => r.id).sort().join("|");
+          if (sig === idsSig) return;
+          idsSig = sig;
+          emit();
+        },
+        /** Re-reads every row's alert (followed, capped) and tells the listeners. */
+        refresh() {
+          if (!state2) return;
+          for (const row of state2.rows) {
+            const popup = followedIds().has(row.id) && !isCapReached(row.id);
+            row.popup = popup;
+            row.followed = popup;
+          }
+          state2 = {
+            ...state2,
+            updatedAt: Date.now(),
+            rows: state2.rows.slice(),
+            counts: { items: state2.rows.length, followed: countFollowed(state2.rows) }
+          };
+          emit();
+        },
+        state() {
+          if (!state2) ShopRows.rebuild();
+          return state2;
+        },
+        onChange(cb) {
+          return changed2.on(cb);
+        },
+        /** Whether an item's alert is on. A capped item reads as off. */
+        isFollowed(id) {
+          return !isCapReached(id) && followedIds().has(id);
+        },
+        /** Turns an item's alert on or off. Turning on a capped item does nothing. */
+        setFollowed(id, enabled5) {
+          if (!id || enabled5 && isCapReached(id)) return;
+          if (enabled5) followedIds().add(id);
+          else followedIds().delete(id);
+          saveFollowed();
+          ShopRows.refresh();
+        },
+        /** Filters rows by type and rarity, as the Shops tab's selects ask. */
+        filter(rows, filters) {
+          const type = filters.type ?? "all";
+          const rarity3 = filters.rarity ?? "all";
+          return rows.filter(
+            (r) => (type === "all" || r.type.toLowerCase() === type) && (rarity3 === "all" || String(r.rarity ?? "").toLowerCase() === rarity3)
+          );
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/shopAlerts.ts
+  function findStockItem(shops2, id) {
+    if (!shops2) return null;
+    const [prefix, raw] = String(id).split(":");
+    const kind = KIND_OF_PREFIX[prefix];
+    if (!kind || !raw) return null;
+    const item = shops2[kind]?.inventory?.find((it) => shopItemId(kind, it) === `${prefix}:${raw}`);
+    return item ? { kind: BUY_KIND[kind], item } : null;
+  }
+  var SHOP_KINDS, BUY_KIND, KIND_OF_PREFIX, SHOP_UPDATES_TO_ARM, PURCHASE_UPDATES_TO_ARM, ShopAlerts;
+  var init_shopAlerts = __esm({
+    "src/features/notifier/shopAlerts.ts"() {
+      "use strict";
+      init_emitter();
+      init_shopFeed();
+      init_audio();
+      init_rules();
+      init_shopRows();
+      SHOP_KINDS = ["seed", "tool", "egg", "decor"];
+      BUY_KIND = { seed: "seeds", egg: "eggs", tool: "tools", decor: "decor" };
+      KIND_OF_PREFIX = { Seed: "seed", Egg: "egg", Tool: "tool", Decor: "decor" };
+      SHOP_UPDATES_TO_ARM = 3;
+      PURCHASE_UPDATES_TO_ARM = 2;
+      ShopAlerts = class {
+        constructor() {
+          this.shops = null;
+          this.purchases = null;
+          this.rules = /* @__PURE__ */ new Map();
+          this.available = [];
+          this.listedIds = /* @__PURE__ */ new Set();
+          this.prevListedIds = /* @__PURE__ */ new Set();
+          this.shopUpdates = 0;
+          this.purchaseUpdates = 0;
+          this.armed = false;
+          this.justRestocked = false;
+          this.changed = new Emitter();
+          audio.setPurchaseChecker((itemId) => {
+            if (!itemId || this.listedIds.has(itemId)) return false;
+            return purchasedCount(itemId, this.purchases) > 0;
+          });
+        }
+        /** Fires with the listed items after every update, before any sound starts. */
+        onChange(cb) {
+          return this.changed.on(cb);
+        }
+        items() {
+          return this.available;
+        }
+        shopsSnapshot() {
+          return this.shops;
+        }
+        setShops(next) {
+          const prev = this.shops;
+          this.shops = next;
+          this.shopUpdates++;
+          this.justRestocked = !!prev && SHOP_KINDS.some((k) => (prev[k]?.secondsUntilRestock ?? 0) < (next[k]?.secondsUntilRestock ?? 0));
+          this.update();
+        }
+        setPurchases(next) {
+          this.purchases = next;
+          this.purchaseUpdates++;
+          this.update();
+        }
+        /** The followed items changed. */
+        refresh() {
+          this.update();
+        }
+        setRules(rules3) {
+          this.rules.clear();
+          for (const [id, rule] of Object.entries(rules3)) {
+            if (id && rule) this.rules.set(id, { ...rule });
+          }
+          this.restartLoops();
+        }
+        /* ================================ Listing ================================ */
+        listAvailable(shops2, purchases) {
+          const out = [];
+          for (const kind of SHOP_KINDS) {
+            for (const item of shops2[kind].inventory) {
+              const id = shopItemId(kind, item);
+              if (!id || !ShopRows.isFollowed(id)) continue;
+              const remaining = Math.max(Number(item.initialStock) - purchasedCount(id, purchases), 0);
+              if (remaining > 0) out.push({ id, qty: remaining });
+            }
+          }
+          return out;
+        }
+        update() {
+          const shops2 = this.shops;
+          const purchases = this.purchases;
+          if (!shops2 || !purchases) return;
+          this.available = this.listAvailable(shops2, purchases);
+          this.changed.emit(this.available);
+          const listed = new Set(this.available.map((r) => r.id));
+          this.listedIds = listed;
+          if (!this.armed) {
+            const shopsEmpty = SHOP_KINDS.every((k) => (shops2[k]?.inventory?.length ?? 0) === 0);
+            const settled = this.shopUpdates >= SHOP_UPDATES_TO_ARM && this.purchaseUpdates >= PURCHASE_UPDATES_TO_ARM && !shopsEmpty;
+            if (settled) {
+              this.armed = true;
+              if (listed.size > 0) this.ring(listed);
+              this.justRestocked = false;
+            }
+            this.prevListedIds = listed;
+            return;
+          }
+          if (listed.size === 0) {
+            audio.stopAllLoops();
+          } else if (this.justRestocked) {
+            this.ring(listed);
+            this.stopLoopsLeaving(listed);
+          } else {
+            const appeared = [...listed].filter((id) => !this.prevListedIds.has(id));
+            if (appeared.length) this.ring(appeared);
+            this.stopLoopsLeaving(listed);
+          }
+          this.prevListedIds = listed;
+          this.justRestocked = false;
+        }
+        stopLoopsLeaving(listed) {
+          for (const id of this.prevListedIds) {
+            if (!listed.has(id)) audio.stopLoop(id);
+          }
+        }
+        /* ================================ Sounds ================================= */
+        playbackModeOf(id) {
+          const rule = this.rules.get(id);
+          const baseMode = audio.getPlaybackMode("shops");
+          if (!rule) return baseMode;
+          if (rule.playbackMode === "loop" || rule.playbackMode === "oneshot") return rule.playbackMode;
+          if ((rule.stopMode || rule.loopIntervalMs != null) && baseMode === "loop") return "loop";
+          return baseMode;
+        }
+        /**
+         * Rings for these items. Items sharing a sound and volume ring once
+         * together: every loop starts, and a one-shot plays only when no loop
+         * shares its sound.
+         */
+        ring(ids) {
+          const groups = /* @__PURE__ */ new Map();
+          for (const id of ids) {
+            const overrides = ruleOverrides(this.rules.get(id)) ?? {};
+            const sound = overrides.sound ? overrides.sound.trim().toLowerCase() : "__default__";
+            const volume = overrides.volume != null ? Math.round(overrides.volume * 1e3) : "__default__";
+            const key2 = `sound:${sound}|vol:${volume}`;
+            const group2 = groups.get(key2) ?? { loops: [], oneshots: [] };
+            if (this.playbackModeOf(id) === "loop") group2.loops.push({ id, overrides });
+            else group2.oneshots.push({ id, overrides });
+            groups.set(key2, group2);
+          }
+          for (const { loops, oneshots } of groups.values()) {
+            if (loops.length) {
+              for (const entry of loops) audio.trigger(entry.id, entry.overrides, "shops").catch(() => {
+              });
+            } else if (oneshots.length) {
+              audio.trigger(oneshots[0].id, oneshots[0].overrides, "shops").catch(() => {
+              });
+            }
+          }
+        }
+        /** Restarts the loops of listed items so a changed rule takes effect. */
+        restartLoops() {
+          const loopIds = [...this.listedIds].filter((id) => this.playbackModeOf(id) === "loop");
+          for (const id of loopIds) audio.stopLoop(id);
+          if (loopIds.length) this.ring(loopIds);
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/buyPanel.ts
+  function itemName(id) {
     const [type, raw] = id.split(":");
     switch (type) {
       case "Seed":
@@ -25752,604 +25923,638 @@
         return raw;
     }
   }
-  function purchasedCountForId(id, purchases) {
-    if (!purchases) return 0;
-    const [type, raw] = String(id).split(":");
-    const sec = type === "Seed" ? purchases.seed : type === "Egg" ? purchases.egg : type === "Tool" ? purchases.tool : purchases.decor;
-    if (!sec || !sec.purchases) return 0;
-    const n = sec.purchases[raw];
-    return typeof n === "number" && n > 0 ? n : 0;
+  async function withBusyButton(btn, label2, purchase) {
+    btn.disabled = true;
+    const labelEl = btn.querySelector(".label");
+    if (labelEl) labelEl.textContent = "Buying...";
+    try {
+      await purchase();
+    } catch {
+    } finally {
+      if (labelEl) labelEl.textContent = label2;
+      btn.disabled = false;
+    }
   }
-  async function renderOverlay() {
-    const overlay2 = new OverlayBarebone();
-    const unsubPurch = await NotifierService.onPurchasesChangeNow((p) => overlay2.setPurchases(p));
-    const unsubShops = await NotifierService.onShopsChangeNow((s) => overlay2.setShops(s));
-    const unsubState = await NotifierService.onChangeNow(() => overlay2.notifyStateUpdated());
-    const unsubRules = await NotifierService.onRulesChangeNow((rules2) => overlay2.setRules(rules2));
-    window.__qws_cleanup_notifier = () => {
-      try {
-        unsubShops();
-      } catch {
-      }
-      try {
-        unsubPurch();
-      } catch {
-      }
-      try {
-        unsubState();
-      } catch {
-      }
-      try {
-        unsubRules();
-      } catch {
-      }
-      try {
-        overlay2.destroy();
-      } catch {
-      }
-    };
-  }
-  var OVERLAY_REPOSITION_INTERVAL_MS, style, setProps, OverlayBarebone;
-  var init_overlay2 = __esm({
-    "src/features/notifier/overlay.ts"() {
+  var ROW_BORDER, BuyPanel;
+  var init_buyPanel = __esm({
+    "src/features/notifier/buyPanel.ts"() {
       "use strict";
-      init_notifier();
-      init_shops();
-      init_audio();
       init_names();
-      init_iconCache();
-      init_bellPixi();
-      init_bellFloating();
-      OVERLAY_REPOSITION_INTERVAL_MS = 1e3;
-      style = (el, s) => Object.assign(el.style, s);
-      setProps = (el, props) => {
-        for (const [k, v] of Object.entries(props)) el.style.setProperty(k, v);
-      };
-      OverlayBarebone = class {
-        constructor() {
-          this.slot = document.createElement("div");
-          this.badge = document.createElement("span");
-          this.panel = document.createElement("div");
-          this.bell = null;
-          this.repositionIntervalId = null;
-          this.onWindowResize = null;
-          this.onBellModeChanged = null;
-          // Prime audio au premier clic utilisateur (une seule fois, tous modes)
-          this.audioPrimedOnce = false;
-          this.lastShops = null;
-          this.lastPurch = null;
-          // Suivi des IDs visibles dans l'overlay (pour loops & diff)
-          this.prevOverlayIds = /* @__PURE__ */ new Set();
-          this.currentOverlayIds = /* @__PURE__ */ new Set();
-          this.rulesById = /* @__PURE__ */ new Map();
-          this.shopUpdates = 0;
-          this.purchasesUpdates = 0;
-          this.bootArmed = false;
-          this.justRestocked = false;
-          // Items à afficher dans l'overlay (déjà filtrés)
-          this.rows = [];
-          this.lastPanelSig = null;
-          // Un seul handler de clic partagé par les deux implémentations de cloche
-          // (Pixi dans le rail du jeu, ou widget DOM flottant).
-          this.handleBellClick = async () => {
-            if (!this.audioPrimedOnce) {
-              this.audioPrimedOnce = true;
-              try {
-                await audio.prime();
-              } catch {
-              }
-            }
-            const on = this.panel.style.display !== "block";
-            this.panel.style.display = on ? "block" : "none";
-            if (on) {
-              this.updatePanelPosition();
-              this.renderPanel();
-              this.updateBadgePosition();
-            }
-            this.updateBellWiggle();
-          };
-          this.slot = this.createSlot();
-          this.slot.id = "qws-notifier-slot";
-          globalThis.__qws_notifier_slot = this.slot;
-          this.badge = this.createBadge();
-          this.panel = this.createPanel();
-          this.installScrollGuards(this.panel);
-          this.startBell();
-          this.onBellModeChanged = () => this.startBell();
-          window.addEventListener(BELL_MODE_EVENT, this.onBellModeChanged);
-          this.slot.append(this.badge, this.panel);
-          document.body.appendChild(this.slot);
-          window.addEventListener("pointerdown", (e) => {
-            if (this.panel.style.display !== "block") return;
-            const t = e.target;
-            if (!this.slot.contains(t) && !this.isClickOnBellButton(e.clientX, e.clientY)) {
-              this.panel.style.display = "none";
-            }
+      init_button();
+      init_dom();
+      init_shops();
+      init_itemIcon();
+      init_shopAlerts();
+      ROW_BORDER = "1px solid var(--qmm-border)";
+      BuyPanel = class {
+        constructor(alerts) {
+          this.alerts = alerts;
+          this.lastSig = null;
+          this.el = h("div");
+          this.el.setAttribute("role", "dialog");
+          this.el.setAttribute("aria-label", "Tracked items available");
+          Object.assign(this.el.style, {
+            position: "fixed",
+            width: "min(340px, 80vw)",
+            maxHeight: "50vh",
+            overflow: "auto",
+            // Keeps the scroll, and touch gestures, from reaching the game.
+            overscrollBehavior: "contain",
+            touchAction: "pan-y",
+            borderRadius: "var(--chakra-radii-card, 12px)",
+            border: "1px solid var(--qmm-border-strong)",
+            background: "var(--qmm-panel-bg)",
+            backdropFilter: "blur(8px)",
+            color: "var(--qmm-text)",
+            boxShadow: "var(--qmm-shadow-window)",
+            padding: "8px",
+            display: "none",
+            zIndex: "var(--chakra-zIndices-DialogModal, 7010)",
+            pointerEvents: "auto"
           });
-          this.onWindowResize = () => this.repositionOverlay();
-          window.addEventListener("resize", this.onWindowResize);
-          this.repositionIntervalId = window.setInterval(
-            () => this.repositionOverlay(),
-            OVERLAY_REPOSITION_INTERVAL_MS
-          );
-          audio.setPurchaseChecker((itemId) => {
-            if (!itemId) return false;
-            if (this.currentOverlayIds.has(itemId)) return false;
-            return purchasedCountForId(itemId, this.lastPurch) > 0;
-          });
+          this.el.style.setProperty("-webkit-backdrop-filter", "blur(8px)");
+          this.stopScrollReachingGame();
         }
-        // (Re)crée la cloche dans le mode courant. Appelé au boot et à chaque
-        // toggle du setting "floating bell" — l'ancienne implémentation est
-        // arrêtée proprement avant d'instancier l'autre.
-        startBell() {
-          if (this.bell) {
-            try {
-              this.bell.stop();
-            } catch {
-            }
-            this.bell = null;
-          }
-          const onClick = () => {
-            void this.handleBellClick();
-          };
-          const floating = isFloatingBellEnabled();
-          this.bell = floating ? startNotificationBellFloating({ onClick, onMoved: () => this.repositionOverlay() }) : startNotificationBellPixi({ onClick });
-          this.slot.style.zIndex = floating ? String(BELL_WIDGET_Z_INDEX + 1) : "9999";
-          this.repositionOverlay();
-          this.updateBellWiggle();
+        get isOpen() {
+          return this.el.style.display === "block";
         }
-        isClickOnBellButton(clientX, clientY) {
-          const rect = this.bell?.getScreenRect();
-          if (!rect) return false;
-          return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+        setOpen(open) {
+          this.el.style.display = open ? "block" : "none";
         }
-        destroy() {
-          if (this.repositionIntervalId != null) {
-            window.clearInterval(this.repositionIntervalId);
-            this.repositionIntervalId = null;
-          }
-          if (this.onWindowResize) {
-            window.removeEventListener("resize", this.onWindowResize);
-            this.onWindowResize = null;
-          }
-          if (this.onBellModeChanged) {
-            window.removeEventListener(BELL_MODE_EVENT, this.onBellModeChanged);
-            this.onBellModeChanged = null;
-          }
-          if (this.bell) {
-            try {
-              this.bell.stop();
-            } catch {
-            }
-            this.bell = null;
-          }
-          try {
-            this.slot.remove();
-          } catch {
-          }
-          try {
-            if (globalThis.__qws_notifier_slot === this.slot) {
-              delete globalThis.__qws_notifier_slot;
-            }
-          } catch {
-          }
-          try {
-            audio.stopAllLoops();
-          } catch {
-          }
-        }
-        /* ========= SETTERS (subs) ========= */
-        setShops(s) {
-          const prev = this.lastShops;
-          this.lastShops = s;
-          this.shopUpdates++;
-          this.justRestocked = !!(prev && ((prev.seed?.secondsUntilRestock ?? 0) < (s.seed?.secondsUntilRestock ?? 0) || (prev.tool?.secondsUntilRestock ?? 0) < (s.tool?.secondsUntilRestock ?? 0) || (prev.egg?.secondsUntilRestock ?? 0) < (s.egg?.secondsUntilRestock ?? 0) || (prev.decor?.secondsUntilRestock ?? 0) < (s.decor?.secondsUntilRestock ?? 0)));
-          this.recompute();
-        }
-        setPurchases(p) {
-          this.lastPurch = p;
-          this.purchasesUpdates++;
-          this.recompute();
-        }
-        notifyStateUpdated() {
-          void this.recompute();
-        }
-        setRules(rules2) {
-          this.rulesById.clear();
-          for (const [id, rule] of Object.entries(rules2)) {
-            if (!id || !rule) continue;
-            this.rulesById.set(id, { ...rule });
-          }
-          this.refreshActiveLoops();
-        }
-        /* ========= Core compute ========= */
-        buildTriggerOverrides(rule) {
-          if (!rule) return null;
-          const overrides = {};
-          if (rule.sound) overrides.sound = rule.sound;
-          if (rule.volume != null && Number.isFinite(rule.volume)) {
-            overrides.volume = Math.max(0, Math.min(1, Number(rule.volume)));
-          }
-          if (rule.playbackMode === "loop" || rule.playbackMode === "oneshot") {
-            overrides.mode = rule.playbackMode;
-          }
-          if (rule.stopMode === "purchase") overrides.stop = { mode: "purchase" };
-          else if (rule.stopMode === "manual") overrides.stop = { mode: "manual" };
-          if (rule.loopIntervalMs != null && Number.isFinite(rule.loopIntervalMs)) {
-            overrides.loopIntervalMs = Math.max(150, Math.floor(Number(rule.loopIntervalMs)));
-          }
-          return Object.keys(overrides).length ? overrides : null;
-        }
-        triggerMany(ids) {
-          const entries2 = [];
-          for (const id of ids) {
-            const overrides = this.buildTriggerOverrides(this.rulesById.get(id)) ?? {};
-            const mode = this.resolvePlaybackMode(id);
-            const soundKeyBase = overrides.sound ? `sound:${overrides.sound.trim().toLowerCase()}` : "sound:__default__";
-            const vol = overrides.volume;
-            const volKey = vol != null ? `vol:${Math.round(Math.max(0, Math.min(1, vol)) * 1e3)}` : "vol:__default__";
-            const soundKey = `${soundKeyBase}|${volKey}`;
-            entries2.push({ id, overrides, mode, soundKey });
-          }
-          if (!entries2.length) return;
-          const grouped = /* @__PURE__ */ new Map();
-          for (const entry of entries2) {
-            const bucket = grouped.get(entry.soundKey) ?? { loops: [], oneshots: [] };
-            if (entry.mode === "loop") bucket.loops.push(entry);
-            else bucket.oneshots.push(entry);
-            grouped.set(entry.soundKey, bucket);
-          }
-          for (const { loops, oneshots } of grouped.values()) {
-            if (loops.length) {
-              for (const entry of loops) {
-                audio.trigger(entry.id, entry.overrides, "shops").catch(() => {
-                });
-              }
-              continue;
-            }
-            if (oneshots.length) {
-              const first = oneshots[0];
-              audio.trigger(first.id, first.overrides, "shops").catch(() => {
-              });
-            }
-          }
-        }
-        resolvePlaybackMode(id) {
-          const rule = this.rulesById.get(id);
-          const baseMode = audio.getPlaybackMode("shops");
-          if (!rule) return baseMode;
-          if (rule.playbackMode === "loop") return "loop";
-          if (rule.playbackMode === "oneshot") return "oneshot";
-          if ((rule.stopMode || rule.loopIntervalMs != null) && baseMode === "loop") return "loop";
-          return baseMode;
-        }
-        refreshActiveLoops() {
-          if (!this.currentOverlayIds.size) return;
-          const loopIds = [];
-          for (const id of this.currentOverlayIds) {
-            if (this.resolvePlaybackMode(id) === "loop") {
-              audio.stopLoop(id);
-              loopIds.push(id);
-            }
-          }
-          if (loopIds.length) this.triggerMany(loopIds);
-        }
-        async recompute() {
-          if (!this.lastShops || !this.lastPurch) return;
-          const out = [];
-          const consider = (id, initialStock) => {
-            const pref = NotifierService.getPref?.(id) || {};
-            if (!pref.popup) return;
-            const bought = purchasedCountForId(id, this.lastPurch);
-            const remaining = Math.max(initialStock - bought, 0);
-            if (remaining > 0) out.push({ id, qty: remaining });
-          };
-          for (const it of this.lastShops.seed.inventory) consider(`Seed:${it.species}`, it.initialStock);
-          for (const it of this.lastShops.tool.inventory) consider(`Tool:${it.toolId}`, it.initialStock);
-          for (const it of this.lastShops.egg.inventory) consider(`Egg:${it.eggId}`, it.initialStock);
-          for (const it of this.lastShops.decor.inventory) consider(`Decor:${it.decorId}`, it.initialStock);
-          this.rows = out;
-          this.renderBadge();
-          if (this.panel.style.display === "block") this.renderPanel();
-          this.updateBellWiggle();
-          const overlayIds = new Set(out.map((r) => r.id));
-          this.currentOverlayIds = overlayIds;
-          const shopEmpty = (this.lastShops.seed?.inventory?.length ?? 0) + (this.lastShops.tool?.inventory?.length ?? 0) + (this.lastShops.egg?.inventory?.length ?? 0) + (this.lastShops.decor?.inventory?.length ?? 0) === 0;
-          const ready = this.shopUpdates >= 3 && this.purchasesUpdates >= 2 && !shopEmpty;
-          if (!this.bootArmed) {
-            if (!ready) {
-              this.prevOverlayIds = overlayIds;
-              return;
-            }
-            this.bootArmed = true;
-            if (overlayIds.size > 0) {
-              this.triggerMany(overlayIds);
-            }
-            this.prevOverlayIds = overlayIds;
-            this.justRestocked = false;
-            return;
-          }
-          if (overlayIds.size === 0) {
-            audio.stopAllLoops();
-            this.prevOverlayIds = overlayIds;
-            this.justRestocked = false;
-            return;
-          }
-          if (this.justRestocked) {
-            this.triggerMany(overlayIds);
-            for (const oldId of this.prevOverlayIds) {
-              if (!overlayIds.has(oldId)) audio.stopLoop(oldId);
-            }
-            this.prevOverlayIds = overlayIds;
-            this.justRestocked = false;
-            return;
-          }
-          const newIds = [];
-          for (const id of overlayIds) {
-            if (!this.prevOverlayIds.has(id)) {
-              newIds.push(id);
-            }
-          }
-          if (newIds.length) this.triggerMany(newIds);
-          for (const oldId of this.prevOverlayIds) {
-            if (!overlayIds.has(oldId)) {
-              audio.stopLoop(oldId);
-            }
-          }
-          this.prevOverlayIds = overlayIds;
-          this.justRestocked = false;
-        }
-        /* ========= Render ========= */
-        renderBadge() {
-          const n = this.rows.length;
-          this.badge.textContent = n ? String(n) : "";
-          style(this.badge, { display: n ? "inline-flex" : "none" });
-          this.updateBadgePosition();
-        }
-        resolveShopItem(id) {
-          if (!this.lastShops) return null;
-          const [type, raw] = String(id).split(":");
-          if (!type || !raw) return null;
-          if (type === "Seed") {
-            const item = this.lastShops.seed?.inventory?.find((it) => String(it.species) === raw);
-            return item ? { kind: "seeds", item } : null;
-          }
-          if (type === "Tool") {
-            const item = this.lastShops.tool?.inventory?.find((it) => String(it.toolId) === raw);
-            return item ? { kind: "tools", item } : null;
-          }
-          if (type === "Egg") {
-            const item = this.lastShops.egg?.inventory?.find((it) => String(it.eggId) === raw);
-            return item ? { kind: "eggs", item } : null;
-          }
-          if (type === "Decor") {
-            const item = this.lastShops.decor?.inventory?.find((it) => String(it.decorId) === raw);
-            return item ? { kind: "decor", item } : null;
-          }
-          return null;
-        }
-        async handleBuyClick(id, btn) {
-          const resolved = this.resolveShopItem(id);
-          if (!resolved) {
-            btn.disabled = true;
-            return;
-          }
-          btn.disabled = true;
-          const prevLabel = btn.textContent;
-          btn.textContent = "Buying...";
-          try {
-            await Promise.resolve(ShopsService.buyOne(resolved.kind, resolved.item));
-          } catch {
-          } finally {
-            btn.textContent = prevLabel || "Buy";
-            btn.disabled = false;
-          }
-        }
-        async handleBuyAllClick(id, btn) {
-          const resolved = this.resolveShopItem(id);
-          if (!resolved) {
-            btn.disabled = true;
-            return;
-          }
-          const available = this.rows.find((r) => r.id === id)?.qty ?? 0;
-          if (available <= 0) {
-            btn.disabled = true;
-            return;
-          }
-          btn.disabled = true;
-          const prevLabel = btn.textContent;
-          btn.textContent = "Buying...";
-          try {
-            for (let i = 0; i < available; i++) {
-              await Promise.resolve(ShopsService.buyOne(resolved.kind, resolved.item));
-            }
-          } catch {
-          } finally {
-            btn.textContent = prevLabel || "Buy all";
-            btn.disabled = false;
-          }
-        }
-        renderPanel() {
-          const sig = JSON.stringify(this.rows.map((r) => [r.id, r.qty]));
-          if (sig === this.lastPanelSig) return;
-          this.lastPanelSig = sig;
-          this.panel.replaceChildren();
-          const head = document.createElement("div");
-          head.textContent = "Tracked items available";
-          style(head, {
+        /** Redraws the list, unless the items and quantities are unchanged. */
+        render(items) {
+          const sig = JSON.stringify(items.map((r) => [r.id, r.qty]));
+          if (sig === this.lastSig) return;
+          this.lastSig = sig;
+          const head = h("div", void 0, "Tracked items available");
+          Object.assign(head.style, {
             fontWeight: "700",
             opacity: "0.9",
             padding: "4px 2px",
-            borderBottom: "1px solid var(--qws-border-2, #ffffff14)",
+            borderBottom: ROW_BORDER,
             marginBottom: "4px"
           });
-          this.panel.appendChild(head);
-          if (!this.rows.length) {
-            const empty = document.createElement("div");
-            empty.textContent = "No tracked items are available.";
-            style(empty, { opacity: "0.75", padding: "8px 2px" });
-            this.panel.appendChild(empty);
+          this.el.replaceChildren(head);
+          if (!items.length) {
+            const empty = h("div", void 0, "No tracked items are available.");
+            Object.assign(empty.style, { opacity: "0.75", padding: "8px 2px" });
+            this.el.appendChild(empty);
             return;
           }
-          for (const r of this.rows) {
-            const row = document.createElement("div");
-            Object.assign(row.style, {
-              display: "grid",
-              gridTemplateColumns: "24px 1fr max-content max-content max-content",
-              alignItems: "center",
-              gap: "8px",
-              padding: "6px 4px",
-              borderBottom: "1px solid var(--qws-border-2, #ffffff14)"
-            });
-            const icon = iconOf(r.id, 24);
-            const title = document.createElement("div");
-            title.textContent = labelOf(r.id);
-            Object.assign(title.style, {
-              fontWeight: "600",
-              fontSize: "12px",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              color: "var(--qws-text, #e7eef7)"
-            });
-            const qty = document.createElement("div");
-            qty.textContent = `\xD7${r.qty}`;
-            Object.assign(qty.style, {
-              fontVariantNumeric: "tabular-nums",
-              opacity: "0.9",
-              color: "var(--qws-text-dim, #b9c3cf)",
-              textAlign: "right"
-            });
-            const buyBtn = document.createElement("button");
-            buyBtn.type = "button";
-            buyBtn.textContent = "Buy";
-            Object.assign(buyBtn.style, {
-              padding: "4px 10px",
-              borderRadius: "10px",
-              border: "1px solid var(--qws-border, #ffffff33)",
-              background: "var(--qws-accent, #7aa2ff)",
-              color: "#0b1017",
-              fontWeight: "700",
-              cursor: "pointer",
-              fontSize: "12px",
-              boxShadow: "var(--qws-shadow, 0 6px 18px rgba(0,0,0,.35))",
-              transition: "filter 120ms ease, transform 120ms ease"
-            });
-            buyBtn.onmouseenter = () => {
-              buyBtn.style.filter = "brightness(1.05)";
-            };
-            buyBtn.onmouseleave = () => {
-              buyBtn.style.filter = "";
-              buyBtn.style.transform = "";
-            };
-            buyBtn.onmousedown = () => {
-              buyBtn.style.transform = "translateY(1px)";
-            };
-            buyBtn.onmouseup = () => {
-              buyBtn.style.transform = "";
-            };
-            buyBtn.onclick = (e) => {
-              e.stopPropagation();
-              void this.handleBuyClick(r.id, buyBtn);
-            };
-            if (!this.resolveShopItem(r.id)) {
-              buyBtn.disabled = true;
-              buyBtn.style.opacity = "0.6";
-              buyBtn.style.cursor = "not-allowed";
-              buyBtn.title = "Unavailable";
-            }
-            const buyAllBtn = document.createElement("button");
-            buyAllBtn.type = "button";
-            buyAllBtn.textContent = "Buy all";
-            Object.assign(buyAllBtn.style, {
-              padding: "4px 10px",
-              borderRadius: "10px",
-              border: "1px solid var(--qws-border, #ffffff33)",
-              background: "var(--qws-panel, #111823cc)",
-              color: "var(--qws-text, #e7eef7)",
-              fontWeight: "700",
-              cursor: "pointer",
-              fontSize: "12px",
-              boxShadow: "var(--qws-shadow, 0 6px 18px rgba(0,0,0,.35))",
-              transition: "filter 120ms ease, transform 120ms ease"
-            });
-            buyAllBtn.onmouseenter = () => {
-              buyAllBtn.style.filter = "brightness(1.08)";
-            };
-            buyAllBtn.onmouseleave = () => {
-              buyAllBtn.style.filter = "";
-              buyAllBtn.style.transform = "";
-            };
-            buyAllBtn.onmousedown = () => {
-              buyAllBtn.style.transform = "translateY(1px)";
-            };
-            buyAllBtn.onmouseup = () => {
-              buyAllBtn.style.transform = "";
-            };
-            buyAllBtn.onclick = (e) => {
-              e.stopPropagation();
-              void this.handleBuyAllClick(r.id, buyAllBtn);
-            };
-            if (!this.resolveShopItem(r.id)) {
+          for (const item of items) this.el.appendChild(this.renderRow(item));
+        }
+        renderRow({ id, qty }) {
+          const row = h("div");
+          Object.assign(row.style, {
+            display: "grid",
+            gridTemplateColumns: "24px 1fr max-content max-content max-content",
+            alignItems: "center",
+            gap: "8px",
+            padding: "6px 4px",
+            borderBottom: ROW_BORDER
+          });
+          const title = h("div", void 0, itemName(id));
+          Object.assign(title.style, {
+            fontWeight: "600",
+            fontSize: "12px",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap"
+          });
+          const count = h("div", void 0, `\xD7${qty}`);
+          Object.assign(count.style, {
+            fontVariantNumeric: "tabular-nums",
+            opacity: "0.9",
+            color: "var(--qmm-text-soft)",
+            textAlign: "right"
+          });
+          const buyBtn = button("Buy", { size: "xs", variant: "primary" });
+          const buyAllBtn = button("Buy all", { size: "xs" });
+          buyBtn.onclick = (e) => {
+            e.stopPropagation();
+            void this.buy(id, buyBtn, "Buy", (stock) => ShopsService.buyOne(stock.kind, stock.item));
+          };
+          buyAllBtn.onclick = (e) => {
+            e.stopPropagation();
+            const available = this.alerts.items().find((r) => r.id === id)?.qty ?? 0;
+            if (available <= 0) {
               buyAllBtn.disabled = true;
-              buyAllBtn.style.opacity = "0.6";
-              buyAllBtn.style.cursor = "not-allowed";
-              buyAllBtn.title = "Unavailable";
+              return;
             }
-            row.append(icon, title, qty, buyBtn, buyAllBtn);
-            this.panel.appendChild(row);
+            void this.buy(id, buyAllBtn, "Buy all", (stock) => ShopsService.buyEach(stock.kind, stock.item, available));
+          };
+          if (!findStockItem(this.alerts.shopsSnapshot(), id)) {
+            for (const btn of [buyBtn, buyAllBtn]) {
+              btn.setEnabled(false);
+              btn.title = "Unavailable";
+            }
+          }
+          row.append(shopItemIcon(id, itemName(id), 24, "alerts-overlay"), title, count, buyBtn, buyAllBtn);
+          return row;
+        }
+        async buy(id, btn, label2, purchase) {
+          const stock = findStockItem(this.alerts.shopsSnapshot(), id);
+          if (!stock) {
+            btn.disabled = true;
+            return;
+          }
+          await withBusyButton(btn, label2, () => purchase(stock));
+        }
+        /** Lets the panel scroll without the wheel or touch reaching the game's canvas. */
+        stopScrollReachingGame() {
+          const stop2 = (e) => e.stopPropagation();
+          const opts = { passive: true, capture: true };
+          for (const type of ["wheel", "mousewheel", "DOMMouseScroll", "touchmove"]) {
+            this.el.addEventListener(type, stop2, opts);
           }
         }
-        /* ========= DOM bits ========= */
-        createSlot() {
-          const d = document.createElement("div");
-          style(d, {
+      };
+    }
+  });
+
+  // src/features/notifier/weather.ts
+  function readCycle(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const entry = raw;
+    const rawKind = trimmedString(entry.kind);
+    const kindLc = rawKind.toLowerCase();
+    const kind = kindLc === "weather" || kindLc === "lunar" || kindLc === "base" ? kindLc : "unknown";
+    const meta = { kind, rawKind: rawKind || void 0 };
+    for (const field of ["startWindowMin", "startWindowMax", "durationMinutes", "periodMinutes"]) {
+      const value = finiteNumber(entry[field]);
+      if (value !== void 0) meta[field] = value;
+    }
+    return meta;
+  }
+  function readMutations(raw) {
+    if (!Array.isArray(raw)) return [];
+    const items = [];
+    for (const entry of raw) {
+      if (!entry || typeof entry !== "object") continue;
+      const name = trimmedString(entry.name);
+      if (!name) continue;
+      const mutation = { name };
+      const multiplier = finiteNumber(entry.multiplier);
+      if (multiplier !== void 0) mutation.multiplier = multiplier;
+      const conditional = trimmedString(entry.conditional);
+      if (conditional) mutation.conditional = conditional;
+      items.push(mutation);
+    }
+    return items;
+  }
+  function readMutator(mutator) {
+    const id = trimmedString(mutator?.mutation);
+    if (!id) return [];
+    const entry = mutationCatalog2[id];
+    const mutation = { name: typeof entry?.name === "string" && entry.name ? entry.name : id };
+    const multiplier = finiteNumber(entry?.coinMultiplier);
+    if (multiplier !== void 0) mutation.multiplier = multiplier;
+    return [mutation];
+  }
+  function readWeather(key2, value) {
+    const entry = value ?? {};
+    const safeName = String(key2 || "").trim();
+    if (!safeName) return null;
+    const rawDisplayName = trimmedString(entry.displayName) || trimmedString(entry.name);
+    const displayName = spaceWords(rawDisplayName || safeName).replace(/_/g, " ").replace(/\s+/g, " ").trim();
+    const atomValue = "atomValue" in entry ? trimmedString(entry.atomValue) : entry.mutator ? safeName : "";
+    return {
+      id: `${WEATHER_ID_PREFIX}${safeName}`,
+      name: displayName || safeName,
+      atomValue,
+      type: atomValue || displayName,
+      description: trimmedString(entry.description) || null,
+      cycle: readCycle(entry.cycle),
+      weightInCycle: finiteNumber(entry.weightInCycle) ?? null,
+      mutations: Array.isArray(entry.mutations) ? readMutations(entry.mutations) : readMutator(entry.mutator)
+    };
+  }
+  function weatherDefs() {
+    return weatherIndex().defs;
+  }
+  function weatherById(id) {
+    return weatherIndex().byId.get(id);
+  }
+  function weatherForAtomValue(value) {
+    const key2 = value.toLowerCase();
+    const { byAtom, byName } = weatherIndex();
+    return byAtom.get(key2) || byName.get(key2) || (key2 ? byName.get(key2.replace(/\s+/g, "")) : void 0);
+  }
+  function formatWeatherMutation(mutation) {
+    const raw = Number(mutation.multiplier);
+    if (mutation.multiplier == null || !Number.isFinite(raw)) return mutation.name;
+    const rounded = Math.abs(raw - Math.round(raw)) < 0.01 ? Math.round(raw) : Math.round(raw * 100) / 100;
+    return `${mutation.name} \xD7${rounded}`;
+  }
+  function formatLastSeen(timestamp, isCurrent) {
+    if (isCurrent) {
+      return { label: "Now", title: timestamp ? new Date(timestamp).toLocaleString() : "Currently active" };
+    }
+    if (!timestamp) return { label: "Never", title: "Never seen" };
+    const diff = Math.max(0, Date.now() - timestamp);
+    const plural2 = (n, unit) => `${n} ${unit}${n > 1 ? "s" : ""} ago`;
+    let label2;
+    if (diff < 45e3) label2 = "Just now";
+    else if (diff < 9e4) label2 = "1 min ago";
+    else if (diff < 36e5) label2 = plural2(Math.round(diff / 6e4), "min");
+    else if (diff < 36 * 36e5) label2 = plural2(Math.round(diff / 36e5), "hour");
+    else label2 = plural2(Math.round(diff / 864e5), "day");
+    return { label: label2, title: new Date(timestamp).toLocaleString() };
+  }
+  var WEATHER_ID_PREFIX, finiteNumber, trimmedString, weatherIndex;
+  var init_weather = __esm({
+    "src/features/notifier/weather.ts"() {
+      "use strict";
+      init_data();
+      init_format();
+      WEATHER_ID_PREFIX = "Weather:";
+      finiteNumber = (value) => {
+        const num2 = typeof value === "number" ? value : Number(value);
+        return Number.isFinite(num2) ? num2 : void 0;
+      };
+      trimmedString = (value) => typeof value === "string" ? value.trim() : "";
+      weatherIndex = memoOnCatalogs(() => {
+        const defs = [];
+        for (const [key2, value] of Object.entries(weatherCatalog2 ?? {})) {
+          const def = readWeather(key2, value);
+          if (def) defs.push(def);
+        }
+        const byId = /* @__PURE__ */ new Map();
+        const byAtom = /* @__PURE__ */ new Map();
+        const byName = /* @__PURE__ */ new Map();
+        for (const def of defs) {
+          byId.set(def.id, def);
+          byName.set(def.name.toLowerCase(), def);
+          byAtom.set(def.atomValue.toLowerCase(), def);
+          byName.set(def.id.slice(WEATHER_ID_PREFIX.length).toLowerCase(), def);
+        }
+        return { defs, byId, byAtom, byName };
+      });
+    }
+  });
+
+  // src/features/notifier/weatherAlerts.ts
+  function ensurePrefsLoaded() {
+    if (prefsLoaded) return;
+    prefsLoaded = true;
+    prefs2 = /* @__PURE__ */ new Map();
+    const stored = readAriesPath(PREFS_PATH2);
+    if (!stored || typeof stored !== "object") return;
+    for (const [id, value] of Object.entries(stored)) {
+      if (!id) continue;
+      const pref = {};
+      if (typeof value?.notify === "boolean") pref.notify = value.notify;
+      if (typeof value?.lastSeen === "number" && Number.isFinite(value.lastSeen)) pref.lastSeen = value.lastSeen;
+      prefs2.set(String(id), pref);
+    }
+  }
+  function savePrefs2() {
+    const out = {};
+    for (const [id, pref] of prefs2) {
+      const entry = {};
+      if (pref.notify) entry.notify = true;
+      if (typeof pref.lastSeen === "number" && Number.isFinite(pref.lastSeen)) entry.lastSeen = pref.lastSeen;
+      if (entry.notify || entry.lastSeen != null) out[id] = entry;
+    }
+    writeAriesPath(PREFS_PATH2, out);
+  }
+  function prefOf(id) {
+    ensurePrefsLoaded();
+    let pref = prefs2.get(id);
+    if (!pref) {
+      pref = {};
+      prefs2.set(id, pref);
+    }
+    return pref;
+  }
+  function recomputeState() {
+    const rows = weatherDefs().map((def) => {
+      const pref = prefOf(def.id);
+      return {
+        ...def,
+        notify: !!pref.notify,
+        lastSeen: typeof pref.lastSeen === "number" && Number.isFinite(pref.lastSeen) ? pref.lastSeen : null,
+        isCurrent: def.id === currentId,
+        cycle: def.cycle ? { ...def.cycle } : null,
+        mutations: def.mutations.map((mutation) => ({ ...mutation }))
+      };
+    });
+    const sig = weatherStateSignature(rows);
+    const isNew = sig !== stateSig;
+    stateSig = sig;
+    state3 = { updatedAt: Date.now(), currentId, rows };
+    if (isNew) changed3.emit(state3);
+  }
+  function ring(id) {
+    if (!weatherById(id)) return;
+    const rule = NotifierRules.get(id);
+    const overrides = { mode: "oneshot" };
+    if (rule?.sound) overrides.sound = rule.sound;
+    if (rule?.volume != null) overrides.volume = rule.volume;
+    audio.trigger(id, overrides, "weather").catch(() => {
+    });
+  }
+  function onWeather(raw, force = false) {
+    const value = raw == null ? "" : String(raw).trim();
+    if (!force && currentValue === value) return;
+    const def = weatherForAtomValue(value);
+    const prevId = currentId;
+    if (def) prefOf(def.id).lastSeen = Date.now();
+    currentId = def?.id ?? null;
+    currentValue = value;
+    if (currentId) StatsService.incrementWeatherStat(currentId.replace(WEATHER_ID_PREFIX, ""));
+    if (prevId && prevId !== currentId) audio.stopLoop(prevId);
+    if (def && prefOf(def.id).notify) ring(def.id);
+    if (def) savePrefs2();
+    recomputeState();
+  }
+  var PREFS_PATH2, prefs2, prefsLoaded, state3, stateSig, currentId, currentValue, changed3, watchers3, weatherStateSignature, WeatherAlerts;
+  var init_weatherAlerts = __esm({
+    "src/features/notifier/weatherAlerts.ts"() {
+      "use strict";
+      init_atoms();
+      init_emitter();
+      init_storage();
+      init_stats();
+      init_audio();
+      init_rules();
+      init_weather();
+      PREFS_PATH2 = "notifier.weatherPrefs";
+      prefs2 = /* @__PURE__ */ new Map();
+      prefsLoaded = false;
+      state3 = null;
+      stateSig = null;
+      currentId = null;
+      currentValue = null;
+      changed3 = new Emitter();
+      watchers3 = new Subscriptions();
+      weatherStateSignature = (rows) => JSON.stringify(rows.map((r) => [r.id, r.notify ? 1 : 0, r.lastSeen || 0, r.isCurrent ? 1 : 0]));
+      WeatherAlerts = {
+        /** Reads the weather once, then follows it. */
+        async start() {
+          const view = Atoms.data.weather;
+          try {
+            onWeather(await view.get(), true);
+          } catch {
+          }
+          try {
+            watchers3.add(
+              await view.onChange((next) => {
+                try {
+                  onWeather(next);
+                } catch {
+                }
+              })
+            );
+          } catch {
+          }
+        },
+        stop() {
+          watchers3.dispose();
+          if (currentId) audio.stopLoop(currentId);
+          currentId = null;
+          currentValue = null;
+        },
+        state() {
+          if (!state3) recomputeState();
+          return state3;
+        },
+        onChange(cb) {
+          return changed3.on(cb);
+        },
+        setNotify(id, enabled5) {
+          if (!id) return;
+          const pref = prefOf(id);
+          if (!!pref.notify === enabled5) return;
+          pref.notify = enabled5;
+          savePrefs2();
+          if (!enabled5) audio.stopLoop(id);
+          else if (currentId === id) ring(id);
+          recomputeState();
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/notifier.ts
+  async function ensureStarted() {
+    if (started2) return;
+    started2 = true;
+    try {
+      ShopRows.rebuild();
+    } catch {
+    }
+    window.addEventListener("gemini:data-updated", onCatalogsUpdated);
+    subscriptions.add(() => window.removeEventListener("gemini:data-updated", onCatalogsUpdated));
+    ShopFeed.start();
+    subscriptions.add(() => ShopFeed.stop());
+    subscriptions.add(InventoryCaps.onChange(() => ShopRows.refresh()));
+    subscriptions.add(() => InventoryCaps.stop());
+    await InventoryCaps.start();
+    subscriptions.add(() => WeatherAlerts.stop());
+    await WeatherAlerts.start();
+  }
+  function stop() {
+    subscriptions.dispose();
+    started2 = false;
+  }
+  var started2, subscriptions, onCatalogsUpdated, NotifierService;
+  var init_notifier = __esm({
+    "src/features/notifier/notifier.ts"() {
+      "use strict";
+      init_emitter();
+      init_shopFeed();
+      init_inventoryCaps();
+      init_rules();
+      init_shopRows();
+      init_weatherAlerts();
+      started2 = false;
+      subscriptions = new Subscriptions();
+      onCatalogsUpdated = () => {
+        try {
+          ShopRows.rebuild();
+        } catch {
+        }
+      };
+      NotifierService = {
+        /** Starts everything; resolves to the function that stops it. */
+        async start() {
+          await ensureStarted();
+          return stop;
+        },
+        async get() {
+          await ensureStarted();
+          return ShopRows.state();
+        },
+        async onChangeNow(cb) {
+          await ensureStarted();
+          cb(ShopRows.state());
+          return ShopRows.onChange(cb);
+        },
+        async onShopsChangeNow(cb) {
+          await ensureStarted();
+          try {
+            cb(await ShopFeed.readShops());
+          } catch {
+          }
+          return ShopFeed.onShopsChange(cb);
+        },
+        async onPurchasesChangeNow(cb) {
+          await ensureStarted();
+          try {
+            cb(await ShopFeed.readPurchases());
+          } catch {
+          }
+          return ShopFeed.onPurchasesChange(cb);
+        },
+        async getWeatherState() {
+          await ensureStarted();
+          return WeatherAlerts.state();
+        },
+        async onWeatherChangeNow(cb) {
+          await ensureStarted();
+          cb(WeatherAlerts.state());
+          return WeatherAlerts.onChange(cb);
+        },
+        async onRulesChangeNow(cb) {
+          await ensureStarted();
+          cb(NotifierRules.getAll());
+          return NotifierRules.onChange(cb);
+        },
+        /** Whether an item's alert is on. A capped item reads as off. */
+        getPref(id) {
+          const on = ShopRows.isFollowed(id);
+          return { popup: on, followed: on };
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/overlay.ts
+  async function renderOverlay() {
+    const alerts = new ShopAlerts();
+    new Overlay(alerts);
+    await NotifierService.onPurchasesChangeNow((p) => alerts.setPurchases(p));
+    await NotifierService.onShopsChangeNow((s) => alerts.setShops(s));
+    await NotifierService.onChangeNow(() => alerts.refresh());
+    await NotifierService.onRulesChangeNow((rules3) => alerts.setRules(rules3));
+  }
+  var REPOSITION_INTERVAL_MS, SLOT_Z_INDEX, Overlay;
+  var init_overlay2 = __esm({
+    "src/features/notifier/overlay.ts"() {
+      "use strict";
+      init_dom();
+      init_audio();
+      init_pixiBell();
+      init_floatingBell();
+      init_buyPanel();
+      init_notifier();
+      init_shopAlerts();
+      REPOSITION_INTERVAL_MS = 1e3;
+      SLOT_Z_INDEX = 9999;
+      Overlay = class {
+        constructor(alerts) {
+          /** A fixed stacking context holding the badge and the panel. */
+          this.slot = h("div");
+          this.badge = h("span");
+          this.bell = null;
+          this.items = [];
+          this.audioPrimed = false;
+          this.panel = new BuyPanel(alerts);
+          this.styleSlot();
+          this.styleBadge();
+          this.slot.id = "qws-notifier-slot";
+          this.slot.append(this.badge, this.panel.el);
+          document.body.appendChild(this.slot);
+          this.startBell();
+          window.addEventListener(BELL_MODE_EVENT, () => this.startBell());
+          window.addEventListener("pointerdown", (e) => this.closeOnOutsideClick(e));
+          window.addEventListener("resize", () => this.reposition());
+          window.setInterval(() => this.reposition(), REPOSITION_INTERVAL_MS);
+          alerts.onChange((items) => this.show(items));
+        }
+        show(items) {
+          this.items = items;
+          this.badge.textContent = items.length ? String(items.length) : "";
+          this.badge.style.display = items.length ? "inline-flex" : "none";
+          this.placeBadge();
+          if (this.panel.isOpen) this.panel.render(items);
+          this.updateWiggle();
+        }
+        /** (Re)creates the bell in the current mode, stopping the other one first. */
+        startBell() {
+          this.bell?.stop();
+          const onClick = () => void this.toggleBell();
+          const floating = isFloatingBellEnabled();
+          this.bell = floating ? startFloatingBell({ onClick, onMoved: () => this.reposition() }) : startPixiBell({ onClick });
+          this.slot.style.zIndex = String(floating ? BELL_WIDGET_Z_INDEX + 1 : SLOT_Z_INDEX);
+          this.reposition();
+          this.updateWiggle();
+        }
+        async toggleBell() {
+          if (!this.audioPrimed) {
+            this.audioPrimed = true;
+            try {
+              await audio.prime();
+            } catch {
+            }
+          }
+          const open = !this.panel.isOpen;
+          this.panel.setOpen(open);
+          if (open) {
+            this.placePanel();
+            this.panel.render(this.items);
+            this.placeBadge();
+          }
+          this.updateWiggle();
+        }
+        closeOnOutsideClick(e) {
+          if (!this.panel.isOpen) return;
+          if (this.slot.contains(e.target) || this.isOnBell(e.clientX, e.clientY)) return;
+          this.panel.setOpen(false);
+        }
+        isOnBell(x, y) {
+          const rect = this.bell?.getScreenRect();
+          return !!rect && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+        }
+        reposition() {
+          this.placeBadge();
+          if (this.panel.isOpen) this.placePanel();
+        }
+        placeBadge() {
+          const rect = this.bell?.getScreenRect();
+          if (!rect) return;
+          this.badge.style.top = `${rect.top - 4}px`;
+          this.badge.style.right = `${window.innerWidth - rect.right - 4}px`;
+        }
+        placePanel() {
+          const rect = this.bell?.getScreenRect();
+          if (!rect) return;
+          this.panel.el.style.top = `${rect.bottom + 8}px`;
+          this.panel.el.style.right = `${window.innerWidth - rect.right}px`;
+        }
+        /** The bell rings while items wait and the panel is closed. */
+        updateWiggle() {
+          this.bell?.setWiggle(this.items.length > 0 && !this.panel.isOpen);
+        }
+        styleSlot() {
+          Object.assign(this.slot.style, {
             position: "fixed",
             top: "0",
             right: "0",
             pointerEvents: "none",
-            zIndex: "9999",
+            zIndex: String(SLOT_Z_INDEX),
             fontFamily: "var(--chakra-fonts-body, GreyCliff CF), system-ui, sans-serif",
             color: "var(--chakra-colors-chakra-body-text, #e7eef7)",
             userSelect: "none"
           });
-          setProps(d, {
-            "-webkit-font-smoothing": "antialiased",
-            "-webkit-text-size-adjust": "100%",
-            "text-rendering": "optimizeLegibility"
-          });
-          return d;
+          this.slot.style.setProperty("-webkit-font-smoothing", "antialiased");
+          this.slot.style.setProperty("-webkit-text-size-adjust", "100%");
+          this.slot.style.setProperty("text-rendering", "optimizeLegibility");
         }
-        repositionOverlay() {
-          this.updateBadgePosition();
-          if (this.panel.style.display === "block") this.updatePanelPosition();
-        }
-        updateBadgePosition() {
-          const rect = this.bell?.getScreenRect();
-          if (rect && this.badge) {
-            style(this.badge, {
-              top: `${rect.top - 4}px`,
-              right: `${window.innerWidth - rect.right - 4}px`
-            });
-          }
-        }
-        updatePanelPosition() {
-          const rect = this.bell?.getScreenRect();
-          if (rect && this.panel) {
-            style(this.panel, {
-              position: "fixed",
-              top: `${rect.bottom + 8}px`,
-              right: `${window.innerWidth - rect.right}px`
-            });
-          }
-        }
-        updateBellWiggle() {
-          const shouldWiggle = this.rows.length > 0 && this.panel.style.display !== "block";
-          this.bell?.setWiggle(shouldWiggle);
-        }
-        createBadge() {
-          const badge2 = document.createElement("span");
-          style(badge2, {
+        /** The game's own red notification bubble. */
+        styleBadge() {
+          Object.assign(this.badge.style, {
             position: "fixed",
             minWidth: "18px",
             height: "18px",
@@ -26367,44 +26572,6 @@
             pointerEvents: "none",
             zIndex: "10000"
           });
-          return badge2;
-        }
-        createPanel() {
-          const panel = document.createElement("div");
-          panel.setAttribute("role", "dialog");
-          panel.setAttribute("aria-label", "Tracked items available");
-          style(panel, {
-            position: "fixed",
-            width: "min(340px, 80vw)",
-            // ← largeur réduite (était 360px)
-            maxHeight: "50vh",
-            overflow: "auto",
-            overscrollBehavior: "contain",
-            // ← empêche le scroll de "remonter" au jeu
-            touchAction: "pan-y",
-            // ← gestes tactiles = scroll vertical, pas zoom/pan global
-            borderRadius: "var(--chakra-radii-card, 12px)",
-            border: "1px solid var(--qws-border, #ffffff22)",
-            background: "var(--qws-panel, #111823cc)",
-            backdropFilter: "blur(var(--qws-blur, 8px))",
-            color: "var(--qws-text, #e7eef7)",
-            boxShadow: "var(--qws-shadow, 0 10px 36px rgba(0,0,0,.45))",
-            padding: "8px",
-            display: "none",
-            zIndex: "var(--chakra-zIndices-DialogModal, 7010)",
-            pointerEvents: "auto"
-          });
-          setProps(panel, { "-webkit-backdrop-filter": "blur(var(--qws-blur, 8px))" });
-          return panel;
-        }
-        installScrollGuards(el) {
-          const stop2 = (e) => {
-            e.stopPropagation();
-          };
-          el.addEventListener("wheel", stop2, { passive: true, capture: true });
-          el.addEventListener("mousewheel", stop2, { passive: true, capture: true });
-          el.addEventListener("DOMMouseScroll", stop2, { passive: true, capture: true });
-          el.addEventListener("touchmove", stop2, { passive: true, capture: true });
         }
       };
     }
@@ -26424,8 +26591,8 @@
     const win = globalThis;
     if (win[GLOBAL_START_FLAG]) return;
     win[GLOBAL_START_FLAG] = true;
-    if (started2) return;
-    started2 = true;
+    if (started3) return;
+    started3 = true;
     enabled = isInstantFeedWidgetEnabled();
     savedPos = readSavedPosition2();
     const mount = () => {
@@ -26441,8 +26608,8 @@
       try {
         const warmup = getSpriteWarmupState();
         if (!warmup?.completed) {
-          const unsub = onSpriteWarmupProgress((state5) => {
-            if (state5.completed) {
+          const unsub = onSpriteWarmupProgress((state7) => {
+            if (state7.completed) {
               try {
                 unsub();
               } catch {
@@ -26895,7 +27062,7 @@
       }
     }
   }
-  var DEFAULT_LABEL, MAX_BUTTONS, ICON_SIZE, WIDGET_Z_INDEX, SCREEN_MARGIN2, DEFAULT_TOP, GLOBAL_START_FLAG, INVENTORY_CARD_ATOM, ENABLED_PATH2, POS_PATH2, started2, enabled, modalOpen, inventoryCardOpen, activePets, activePetsSig, widget, widgetButtons, savedPos, positioned;
+  var DEFAULT_LABEL, MAX_BUTTONS, ICON_SIZE, WIDGET_Z_INDEX, SCREEN_MARGIN2, DEFAULT_TOP, GLOBAL_START_FLAG, INVENTORY_CARD_ATOM, ENABLED_PATH2, POS_PATH2, started3, enabled, modalOpen, inventoryCardOpen, activePets, activePetsSig, widget, widgetButtons, savedPos, positioned;
   var init_feedWidget = __esm({
     "src/features/pets/feedWidget.ts"() {
       "use strict";
@@ -26916,7 +27083,7 @@
       INVENTORY_CARD_ATOM = "inventoryCardIsOpenAtom";
       ENABLED_PATH2 = "pets.instantFeedWidget.enabled";
       POS_PATH2 = "pets.instantFeedWidget.pos";
-      started2 = false;
+      started3 = false;
       enabled = true;
       modalOpen = false;
       inventoryCardOpen = false;
@@ -27664,9 +27831,9 @@
         detachValueText();
         return;
       }
-      const state5 = getReadySpriteState();
-      const ctors = state5?.ctors;
-      if (!state5 || !ctors) return;
+      const state7 = getReadySpriteState();
+      const ctors = state7?.ctors;
+      if (!state7 || !ctors) return;
       const value = priceWatcher.get();
       if (value == null) {
         detachValueText();
@@ -27674,7 +27841,7 @@
       }
       const text2 = formatCoins2(value);
       if (!valueText) {
-        graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state5)));
+        graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state7)));
         if (graphicsCtor) {
           valueBadge = new graphicsCtor();
           currentCard2.addChild(valueBadge);
@@ -27856,9 +28023,9 @@
         removeBorder();
         return;
       }
-      const state5 = getReadySpriteState();
+      const state7 = getReadySpriteState();
       if (!graphicsCtor) {
-        graphicsCtor = state5 ? findGraphicsCtor(getStage(state5)) : null;
+        graphicsCtor = state7 ? findGraphicsCtor(getStage(state7)) : null;
         if (!graphicsCtor) return;
       }
       if (!border) {
@@ -27873,8 +28040,8 @@
       border.clear();
       border.roundRect(left + inset, top + inset, Math.max(0, width - BORDER_WIDTH), Math.max(0, height - BORDER_WIDTH), BORDER_RADIUS).stroke({ width: BORDER_WIDTH, color: BORDER_COLOR, alpha: 1 });
       debugState4.hasBorder = true;
-      if (!lockIcon && state5?.ctors?.Text) {
-        lockIcon = new state5.ctors.Text({ text: LOCK_ICON_TEXT, style: LOCK_ICON_STYLE });
+      if (!lockIcon && state7?.ctors?.Text) {
+        lockIcon = new state7.ctors.Text({ text: LOCK_ICON_TEXT, style: LOCK_ICON_STYLE });
         currentCard2.addChild(lockIcon);
       }
       if (lockIcon) {
@@ -28102,9 +28269,9 @@
         weSetPointerCursor = false;
       }
     };
-    const ensureCanvasListeners = (state5) => {
+    const ensureCanvasListeners = (state7) => {
       if (canvasListenersAttached) return;
-      const canvas = state5.renderer?.canvas || state5.renderer?.view?.canvas || state5.renderer?.view;
+      const canvas = state7.renderer?.canvas || state7.renderer?.view?.canvas || state7.renderer?.view;
       if (!canvas) return;
       canvasEl = canvas;
       canvas.addEventListener("pointerdown", onCanvasPointerDown);
@@ -28123,16 +28290,16 @@
         removeButton();
         return;
       }
-      const state5 = getReadySpriteState();
-      if (!state5?.ctors?.Text) return;
-      const graphicsCtor = findGraphicsCtor(getStage(state5));
+      const state7 = getReadySpriteState();
+      if (!state7?.ctors?.Text) return;
+      const graphicsCtor = findGraphicsCtor(getStage(state7));
       if (!graphicsCtor) return;
-      ensureCanvasListeners(state5);
+      ensureCanvasListeners(state7);
       const face = findByLabel(wrapper, BUTTON_FACE_LABEL) ?? wrapper;
       const faceWidth = safeSize(face, "width", 150);
       const faceHeight = safeSize(face, "height", 55);
       if (!buttonContainer) {
-        const ContainerCtor = state5.ctors?.Container ?? actionHud.constructor;
+        const ContainerCtor = state7.ctors?.Container ?? actionHud.constructor;
         buttonContainer = new ContainerCtor();
         const thisContainer = buttonContainer;
         thisContainer.once("destroyed", () => {
@@ -28142,13 +28309,13 @@
       }
       if (!buttonText) {
         const existingTextStyle = findAnyTextStyle(wrapper);
-        const style2 = {
+        const style = {
           ...BUTTON_TEXT_STYLE,
           ...existingTextStyle?.fontFamily ? { fontFamily: existingTextStyle.fontFamily } : {},
           ...existingTextStyle?.fontSize ? { fontSize: existingTextStyle.fontSize } : {},
           ...existingTextStyle?.fontWeight ? { fontWeight: existingTextStyle.fontWeight } : {}
         };
-        buttonText = new state5.ctors.Text({ text: BUTTON_TEXT, style: style2 });
+        buttonText = new state7.ctors.Text({ text: BUTTON_TEXT, style });
         buttonContainer.addChild(buttonText);
       }
       if (!buttonBg) {
@@ -28208,9 +28375,9 @@
     };
     const tryFindActionHud = () => {
       if (!running6 || actionHud) return;
-      const state5 = getReadySpriteState();
-      if (!state5) return;
-      const stage = getStage(state5);
+      const state7 = getReadySpriteState();
+      if (!state7) return;
+      const stage = getStage(state7);
       const found = findAcrossBranches(stage, (node) => node?.label === ACTION_HUD_LABEL);
       if (found) {
         attachToActionHud(found);
@@ -29316,25 +29483,25 @@
     const stateByGrid = /* @__PURE__ */ new WeakMap();
     const ensureState = async (grid, filters, entries2, searchQuery) => {
       const filtersKey = JSON.stringify({ filters });
-      const state5 = stateByGrid.get(grid);
+      const state7 = stateByGrid.get(grid);
       const hasAllBaseIndexes = entries2.every((e) => readBaseIndex(e) != null);
-      const searchChanged = state5 ? state5.searchQuery !== searchQuery : false;
-      const entryCountChanged = state5 ? state5.entryCount !== entries2.length : false;
-      const filtersChanged = state5 ? state5.filtersKey !== filtersKey : false;
-      const baseLengthChanged = state5 ? state5.baseItems.length !== entries2.length : false;
-      const needsRebuild = !state5 || filtersChanged || entryCountChanged || baseLengthChanged || !hasAllBaseIndexes || searchChanged;
-      if (state5 && !needsRebuild) {
-        state5.entryByBaseIndex.clear();
+      const searchChanged = state7 ? state7.searchQuery !== searchQuery : false;
+      const entryCountChanged = state7 ? state7.entryCount !== entries2.length : false;
+      const filtersChanged = state7 ? state7.filtersKey !== filtersKey : false;
+      const baseLengthChanged = state7 ? state7.baseItems.length !== entries2.length : false;
+      const needsRebuild = !state7 || filtersChanged || entryCountChanged || baseLengthChanged || !hasAllBaseIndexes || searchChanged;
+      if (state7 && !needsRebuild) {
+        state7.entryByBaseIndex.clear();
         for (const entry of entries2) {
           const baseIndex = readBaseIndex(entry);
           if (baseIndex != null) {
-            state5.entryByBaseIndex.set(baseIndex, entry);
+            state7.entryByBaseIndex.set(baseIndex, entry);
           }
         }
-        state5.filtersKey = filtersKey;
-        state5.searchQuery = searchQuery;
-        state5.entryCount = entries2.length;
-        return state5;
+        state7.filtersKey = filtersKey;
+        state7.searchQuery = searchQuery;
+        state7.entryCount = entries2.length;
+        return state7;
       }
       try {
         const inventory = await Atoms.inventory.myInventory.get();
@@ -29357,7 +29524,7 @@
           entryCount: entries2.length,
           baseItems: filteredItems.slice(),
           entryByBaseIndex: /* @__PURE__ */ new Map(),
-          lastSortKey: state5?.lastSortKey ?? null
+          lastSortKey: state7?.lastSortKey ?? null
         };
         entries2.forEach((entry, index) => {
           newState.entryByBaseIndex.set(index, entry);
@@ -29369,37 +29536,37 @@
         return null;
       }
     };
-    const rebaseStateToDomOrder = (state5, entries2) => {
-      if (entries2.length !== state5.baseItems.length) return false;
+    const rebaseStateToDomOrder = (state7, entries2) => {
+      if (entries2.length !== state7.baseItems.length) return false;
       const reordered = [];
       const used = /* @__PURE__ */ new Set();
       for (const entry of entries2) {
         const baseIndex = readBaseIndex(entry);
-        if (baseIndex == null || baseIndex < 0 || baseIndex >= state5.baseItems.length) {
+        if (baseIndex == null || baseIndex < 0 || baseIndex >= state7.baseItems.length) {
           return false;
         }
         if (used.has(baseIndex)) {
           return false;
         }
         used.add(baseIndex);
-        reordered.push(state5.baseItems[baseIndex]);
+        reordered.push(state7.baseItems[baseIndex]);
       }
-      if (reordered.length !== state5.baseItems.length) return false;
-      let changed = false;
+      if (reordered.length !== state7.baseItems.length) return false;
+      let changed4 = false;
       for (let i = 0; i < reordered.length; i++) {
-        if (reordered[i] !== state5.baseItems[i]) {
-          changed = true;
+        if (reordered[i] !== state7.baseItems[i]) {
+          changed4 = true;
           break;
         }
       }
-      if (!changed) return false;
-      state5.baseItems = reordered;
+      if (!changed4) return false;
+      state7.baseItems = reordered;
       assignBaseIndexesToEntries(entries2);
-      state5.entryByBaseIndex.clear();
+      state7.entryByBaseIndex.clear();
       entries2.forEach((entry, index) => {
-        state5.entryByBaseIndex.set(index, entry);
+        state7.entryByBaseIndex.set(index, entry);
       });
-      state5.entryCount = entries2.length;
+      state7.entryCount = entries2.length;
       return true;
     };
     return async (grid, sortKey, direction) => {
@@ -29414,24 +29581,24 @@
         cfg.checkboxLabelSelector
       );
       const searchQuery = getNormalizedInventorySearchQuery(grid);
-      const state5 = await ensureState(grid, filters, entries2, searchQuery);
-      if (!state5) return;
-      const previousSortKey = state5.lastSortKey;
+      const state7 = await ensureState(grid, filters, entries2, searchQuery);
+      if (!state7) return;
+      const previousSortKey = state7.lastSortKey;
       if ((!sortKey || sortKey === "none") && previousSortKey === "none") {
-        rebaseStateToDomOrder(state5, entries2);
+        rebaseStateToDomOrder(state7, entries2);
       }
       const baseIndexByItem = /* @__PURE__ */ new Map();
-      state5.baseItems.forEach((item, index) => {
+      state7.baseItems.forEach((item, index) => {
         baseIndexByItem.set(item, index);
       });
       const effectiveDirection = direction && DIRECTION_ORDER.includes(direction) ? direction : DEFAULT_DIRECTION_BY_SORT_KEY[sortKey] ?? "asc";
-      const desiredItems = !sortKey || sortKey === "none" ? state5.baseItems.slice() : sortInventoryItems(state5.baseItems, sortKey, effectiveDirection);
+      const desiredItems = !sortKey || sortKey === "none" ? state7.baseItems.slice() : sortInventoryItems(state7.baseItems, sortKey, effectiveDirection);
       const desiredEntries = [];
       const usedEntries = /* @__PURE__ */ new Set();
       for (const item of desiredItems) {
         const baseIndex = baseIndexByItem.get(item);
         if (baseIndex == null) continue;
-        const entry = state5.entryByBaseIndex.get(baseIndex);
+        const entry = state7.entryByBaseIndex.get(baseIndex);
         if (!entry || usedEntries.has(entry)) continue;
         const value = getInventoryItemValue(item);
         updateInventoryCardValue(entry.card, value);
@@ -29456,14 +29623,14 @@
         });
         container.appendChild(fragment);
       }
-      state5.entryByBaseIndex.clear();
+      state7.entryByBaseIndex.clear();
       desiredEntries.forEach((entry) => {
         const baseIndex = readBaseIndex(entry);
         if (baseIndex != null) {
-          state5.entryByBaseIndex.set(baseIndex, entry);
+          state7.entryByBaseIndex.set(baseIndex, entry);
         }
       });
-      state5.lastSortKey = sortKey;
+      state7.lastSortKey = sortKey;
     };
   }
   function getActiveFiltersFromGrid(grid, checkboxSelector, checkboxLabelSelector) {
@@ -29548,10 +29715,10 @@
     }
     .tm-select-arrow svg { display: block; }
   `;
-    const style2 = document.createElement("style");
-    style2.id = id;
-    style2.textContent = css4;
-    document.head.appendChild(style2);
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent = css4;
+    document.head.appendChild(style);
   }
   function createSortingBar(useCustomSelectStyles) {
     const wrap = document.createElement("div");
@@ -31743,8 +31910,8 @@
     const out = [];
     if (!Array.isArray(logs)) return out;
     for (const raw of logs) {
-      const norm3 = normalizeEntry(raw);
-      if (norm3) out.push(norm3);
+      const norm2 = normalizeEntry(raw);
+      if (norm2) out.push(norm2);
     }
     return out;
   }
@@ -31806,8 +31973,8 @@
       if (!Array.isArray(parsed)) return [];
       const out = [];
       for (const item of parsed) {
-        const norm3 = normalizeEntry(item);
-        if (norm3) out.push(norm3);
+        const norm2 = normalizeEntry(item);
+        if (norm2) out.push(norm2);
       }
       return out;
     } catch {
@@ -31853,18 +32020,18 @@
     if (!added.length && !updated.length) return history2;
     const map2 = /* @__PURE__ */ new Map();
     for (const h2 of history2) map2.set(entryKey(h2), h2);
-    let changed = false;
+    let changed4 = false;
     const upsert = (entry) => {
       const key2 = entryKey(entry);
       const cur = map2.get(key2);
       if (!cur || !entriesEqual(cur, entry)) {
         map2.set(key2, entry);
-        changed = true;
+        changed4 = true;
       }
     };
     updated.forEach(upsert);
     added.forEach(upsert);
-    if (!changed) return history2;
+    if (!changed4) return history2;
     const merged = Array.from(map2.values());
     saveHistory(merged);
     return merged;
@@ -32207,15 +32374,15 @@
     debugSyncState.anchorsFound = !!anchors;
     if (!anchors) return;
     if (!toolbarState) {
-      const state5 = getReadySpriteState();
-      if (!state5?.ctors?.Text) return;
-      const stage = getStage(state5);
+      const state7 = getReadySpriteState();
+      if (!state7?.ctors?.Text) return;
+      const stage = getStage(state7);
       const graphicsCtor = findGraphicsCtor(stage);
       if (!graphicsCtor) return;
       const maxWidth = safeWidth(anchors.backgroundSprite, 0) - 2 * (anchors.scrollViewContainer.position?.x ?? 0);
       if (maxWidth <= 0) return;
       const containerCtor = anchors.modalContainer.constructor;
-      toolbarState = buildToolbar(graphicsCtor, state5.ctors.Text, containerCtor, maxWidth);
+      toolbarState = buildToolbar(graphicsCtor, state7.ctors.Text, containerCtor, maxWidth);
       anchors.modalContainer.addChild(toolbarState.container);
       debugSyncState.toolbarBuilt = true;
     }
@@ -32243,9 +32410,9 @@
   }
   function tryFindModal() {
     if (!modalOpen2 || modalNode) return;
-    const state5 = getReadySpriteState();
-    if (!state5) return;
-    const stage = getStage(state5);
+    const state7 = getReadySpriteState();
+    if (!state7) return;
+    const stage = getStage(state7);
     const found = findAcrossBranches(stage, (node) => node?.label === ACTIVITY_LOG_MODAL_LABEL);
     if (!found) return;
     modalNode = found;
@@ -32564,18 +32731,18 @@
     };
     return cachedState;
   }
-  function saveState(state5) {
-    if (state5.seenPetIds.length > SEEN_LIMIT) {
-      state5.seenPetIds.splice(0, state5.seenPetIds.length - SEEN_LIMIT);
+  function saveState(state7) {
+    if (state7.seenPetIds.length > SEEN_LIMIT) {
+      state7.seenPetIds.splice(0, state7.seenPetIds.length - SEEN_LIMIT);
     }
-    cachedState = state5;
+    cachedState = state7;
     try {
-      writeAriesPath(STATE_PATH, state5);
+      writeAriesPath(STATE_PATH, state7);
     } catch {
     }
     for (const listener of listeners7) {
       try {
-        listener(state5);
+        listener(state7);
       } catch {
       }
     }
@@ -32646,27 +32813,27 @@
     var _a, _b;
     const events = extractHatchEvents(entries2);
     if (!events.length) return false;
-    const state5 = loadState();
-    const seen = new Set(state5.seenPetIds);
-    let changed = false;
+    const state7 = loadState();
+    const seen = new Set(state7.seenPetIds);
+    let changed4 = false;
     for (const event of events) {
       if (seen.has(event.petId)) continue;
       seen.add(event.petId);
-      state5.seenPetIds.push(event.petId);
-      changed = true;
+      state7.seenPetIds.push(event.petId);
+      changed4 = true;
       if (countStats) {
         try {
           StatsService.incrementPetHatched(event.species, rarityOf(event));
         } catch {
         }
       }
-      if (event.timestamp > state5.lastHatchAt) state5.lastHatchAt = event.timestamp;
+      if (event.timestamp > state7.lastHatchAt) state7.lastHatchAt = event.timestamp;
       if (!event.isPull || !event.eggId) continue;
-      const counters = (_a = state5.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
+      const counters = (_a = state7.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
       applyPull(counters, event, protectedSpecies(event.eggId));
     }
-    if (changed) saveState(state5);
-    return changed;
+    if (changed4) saveState(state7);
+    return changed4;
   }
   async function startHatchTracker() {
     const firstRun = !loadState().bootstrapped;
@@ -32686,10 +32853,10 @@
     } catch {
     }
     if (firstRun) {
-      const state5 = loadState();
-      state5.bootstrapped = true;
-      state5.trackingStartedAt = Date.now();
-      saveState(state5);
+      const state7 = loadState();
+      state7.bootstrapped = true;
+      state7.trackingStartedAt = Date.now();
+      saveState(state7);
     }
     const current = loadState();
     if (current.bootstrapped && current.trackingStartedAt <= 0) {
@@ -32740,14 +32907,14 @@
         },
         setOffset(eggId, key2, value) {
           var _a;
-          const state5 = loadState();
-          const offsets = (_a = state5.offsets)[eggId] ?? (_a[eggId] = emptyCounters());
+          const state7 = loadState();
+          const offsets = (_a = state7.offsets)[eggId] ?? (_a[eggId] = emptyCounters());
           const next = toCount(value);
           if (key2 === "gold") offsets.gold = next;
           else if (key2 === "rainbow") offsets.rainbow = next;
           else if (next > 0) offsets.species[key2] = next;
           else delete offsets.species[key2];
-          saveState(state5);
+          saveState(state7);
         },
         // Deliberately no reset: a counter that can be cleared is worse than useless,
         // since the server's own never resets except on the outcome itself. Only
@@ -32759,634 +32926,6 @@
           };
         }
       };
-    }
-  });
-
-  // src/ui/kit/theme.ts
-  function group(prefix, values, unit = "") {
-    return Object.entries(values).map(([key2, value]) => `--qmm-${prefix}${kebab(key2)}:${value}${unit};`);
-  }
-  function themeVariables() {
-    return [
-      ":root{",
-      ...group("", color),
-      ...group("gradient-", gradient),
-      ...group("shadow-", shadow),
-      ...group("radius-", radius, "px"),
-      ...group("space-", space, "px"),
-      ...group("fs-", fontSize, "px"),
-      `--qmm-font-mono:${fontMono};`,
-      // Compatibility names read by feature code that predates the tokens.
-      // Remove each once nothing outside the kit references it.
-      "--qmm-border-2:var(--qmm-border);",
-      "--qws-text:var(--qmm-text);",
-      "--qws-text-dim:var(--qmm-text-soft);",
-      "--qws-border:var(--qmm-border-strong);",
-      "--qws-border-2:var(--qmm-border);",
-      "--qws-panel:var(--qmm-panel-bg);",
-      "--qws-accent:var(--qmm-accent);",
-      "--qws-shadow:var(--qmm-shadow-window);",
-      "--qws-blur:8px;",
-      "}"
-    ].join("\n");
-  }
-  var color, gradient, shadow, radius, space, fontSize, fontMono, layer, kebab;
-  var init_theme = __esm({
-    "src/ui/kit/theme.ts"() {
-      "use strict";
-      color = {
-        accent: "#5eead4",
-        accentSoft: "rgba(94,234,212,0.12)",
-        accentHover: "rgba(94,234,212,0.22)",
-        accentBorder: "rgba(94,234,212,0.3)",
-        accentBorderHover: "rgba(94,234,212,0.55)",
-        text: "#e7eef7",
-        textSoft: "rgba(226,232,240,0.75)",
-        textDim: "rgba(226,232,240,0.45)",
-        border: "rgba(255,255,255,0.08)",
-        borderHover: "rgba(255,255,255,0.16)",
-        borderStrong: "rgba(255,255,255,0.14)",
-        cardBg: "rgba(255,255,255,0.03)",
-        hoverBg: "rgba(255,255,255,0.06)",
-        mutedBg: "rgba(0,0,0,0.18)",
-        fieldBg: "rgba(0,0,0,0.3)",
-        fieldBorder: "rgba(255,255,255,0.12)",
-        track: "rgba(255,255,255,0.1)",
-        sunken: "#080c12",
-        surface: "#101620",
-        panelBg: "rgba(17,24,35,0.8)",
-        scrollbar: "rgba(94,234,212,0.2)",
-        scrim: "rgba(0,0,0,0.55)",
-        danger: "#ef4444",
-        dangerSoft: "rgba(239,68,68,0.12)",
-        dangerHover: "rgba(239,68,68,0.2)",
-        dangerBorder: "rgba(239,68,68,0.3)",
-        dangerBorderHover: "rgba(239,68,68,0.55)",
-        warn: "#fbbf24",
-        warnSoft: "rgba(251,191,36,0.12)",
-        warnBorder: "rgba(251,191,36,0.55)",
-        gold: "#FFC734",
-        rainbow: "#c084fc"
-      };
-      gradient = {
-        panel: "linear-gradient(160deg, rgba(15,20,30,0.95) 0%, rgba(10,14,20,0.95) 60%, rgba(8,12,18,0.96) 100%)",
-        tabBar: "linear-gradient(120deg, rgba(22,28,40,0.9), rgba(12,17,26,0.92))",
-        head: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))"
-      };
-      shadow = {
-        panel: "0 18px 44px rgba(0,0,0,0.45)",
-        window: "0 10px 36px rgba(0,0,0,0.45)",
-        modal: "0 24px 64px rgba(0,0,0,0.55)"
-      };
-      radius = { sm: 6, md: 9, lg: 12, xl: 16, pill: 999 };
-      space = { xs: 4, sm: 6, md: 8, lg: 10, xl: 12 };
-      fontSize = { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 };
-      fontMono = "ui-monospace, SFMono-Regular, Consolas, monospace";
-      layer = { hud: 1000010, window: 2000001 };
-      kebab = (key2) => key2.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
-    }
-  });
-
-  // src/ui/kit/styles/chrome.ts
-  var chromeCss;
-  var init_chrome = __esm({
-    "src/ui/kit/styles/chrome.ts"() {
-      "use strict";
-      init_theme();
-      chromeCss = `
-.qmm-scroll, .qws-pnl-scroll, .qmm-views {
-  scrollbar-width: thin; scrollbar-color: var(--qmm-scrollbar) transparent;
-}
-.qmm-scroll::-webkit-scrollbar, .qws-pnl-scroll::-webkit-scrollbar, .qmm-views::-webkit-scrollbar { width: 6px; }
-.qmm-scroll::-webkit-scrollbar-track, .qws-pnl-scroll::-webkit-scrollbar-track, .qmm-views::-webkit-scrollbar-track { background: transparent; }
-.qmm-scroll::-webkit-scrollbar-thumb, .qws-pnl-scroll::-webkit-scrollbar-thumb, .qmm-views::-webkit-scrollbar-thumb {
-  background: var(--qmm-scrollbar); border-radius: 3px;
-}
-.qmm-scroll::-webkit-scrollbar-thumb:hover, .qws-pnl-scroll::-webkit-scrollbar-thumb:hover, .qmm-views::-webkit-scrollbar-thumb:hover {
-  background: var(--qmm-accent-border);
-}
-
-.qmm { display: flex; flex-direction: column; gap: var(--qmm-space-lg); color: var(--qmm-text); }
-.qmm-compact { gap: var(--qmm-space-sm); }
-.qmm.qmm-alt-drag { cursor: grab; }
-.qmm.qmm-alt-drag:active { cursor: grabbing; }
-
-.qmm-tabs {
-  display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-xs); padding: 8px 10px;
-  border-bottom: 1px solid var(--qmm-border);
-  border-radius: var(--qmm-radius-xl) var(--qmm-radius-xl) 0 0;
-  background: var(--qmm-gradient-tab-bar);
-}
-.qmm-tab {
-  flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: var(--qmm-space-md);
-  margin: 0; padding: 8px 12px; border: 1px solid transparent; border-radius: var(--qmm-radius-lg);
-  background: transparent; color: var(--qmm-text-soft); font-size: var(--qmm-fs-md); cursor: pointer;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
-}
-.qmm-compact .qmm-tab { padding: 6px 10px; }
-.qmm-tab:hover { background: var(--qmm-hover-bg); color: var(--qmm-text); }
-.qmm-tab:active { transform: translateY(1px); }
-.qmm-tab:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
-.qmm-tab.active { background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); color: var(--qmm-accent); }
-
-.qmm-views {
-  display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; padding: 14px;
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-xl);
-  background: var(--qmm-gradient-panel); backdrop-filter: blur(10px); box-shadow: var(--qmm-shadow-panel);
-}
-.qmm-compact .qmm-views { padding: 8px; }
-.qmm-tabs + .qmm-views { border-top: none; border-top-left-radius: 0; border-top-right-radius: 0; }
-.qmm-view { display: none; min-width: 0; min-height: 0; }
-.qmm-view.active { display: block; }
-
-.qmm-spacer { flex: 1; }
-
-.qws-win {
-  position: fixed; z-index: ${layer.window}; min-width: 260px; max-width: 900px; max-height: 90vh; overflow: auto;
-  color: var(--qmm-text); background: var(--qmm-panel-bg);
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-lg);
-  box-shadow: var(--qmm-shadow-window); backdrop-filter: blur(8px);
-}
-.qws-win.is-hidden { display: none !important; }
-.qws-win .w-head {
-  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 10px 12px; cursor: move;
-  border-bottom: 1px solid var(--qmm-border-strong);
-  border-radius: var(--qmm-radius-lg) var(--qmm-radius-lg) 0 0;
-  background: var(--qmm-gradient-head);
-}
-.qws-win .w-title { font-weight: 700; }
-.qws-win .w-body { padding: 12px; }
-
-/* Bare text and number inputs a feature builds inside a window get the field look too. */
-.qws-win input:is([type="text"], [type="number"]):not(.qmm-input, .qws-pnl-input) {
-  padding: 8px 10px; border: 1px solid var(--qmm-field-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-field-bg); color: var(--qmm-text);
-}
-.qws-win input:is([type="text"], [type="number"]):not(.qmm-input, .qws-pnl-input):focus {
-  outline: none; border-color: var(--qmm-accent-border-hover);
-}
-/* Windows give text and number fields one width; an inline width still wins. */
-.qws-win input[type="text"], .qws-win input[type="number"] { width: 120px; }
-
-.qws2 {
-  position: fixed; right: 16px; bottom: 16px; z-index: ${layer.hud};
-  display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 160px; padding: 10px 12px;
-  font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: var(--qmm-text);
-  background: var(--qmm-panel-bg); border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-lg);
-  box-shadow: var(--qmm-shadow-window); backdrop-filter: blur(8px);
-}
-.qws2.hidden { display: none; }
-.qws2 .row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
-.qws2 .title { font-weight: 700; letter-spacing: .2px; }
-.qws2 .drag { cursor: move; opacity: .9; }
-.qws2 .mini { display: none; }
-.qws2.min .mini { display: inline-flex; }
-.qws2.min .body { display: none; }
-.qws2 .is-link { cursor: pointer; }
-
-.qws-launch { margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--qmm-border-strong); }
-.qws-launch .launch-item { display: flex; align-items: center; gap: var(--qmm-space-md); margin: 4px 0; }
-.qws-launch .launch-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-`;
-    }
-  });
-
-  // src/ui/kit/styles/containers.ts
-  var containersCss;
-  var init_containers = __esm({
-    "src/ui/kit/styles/containers.ts"() {
-      "use strict";
-      containersCss = `
-.qmm-card {
-  display: grid; gap: var(--qmm-space-xl); width: 100%; padding: 14px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
-}
-.qmm-card--plain { display: flex; flex-direction: column; gap: var(--qmm-space-lg); width: auto; min-height: 0; padding: 10px; }
-.qmm-card.is-center { text-align: center; align-items: center; }
-.qmm-card.is-stretch { align-items: stretch; }
-.qmm-card[data-tone="muted"] { background: var(--qmm-muted-bg); }
-.qmm-card[data-tone="accent"] { border-color: var(--qmm-accent-border); }
-.qmm-card__header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--qmm-space-lg); }
-.qmm-card__header.is-compact { gap: var(--qmm-space-sm); }
-.qmm-card__icon { font-size: 18px; }
-.qmm-card__title { font-size: var(--qmm-fs-xl); font-weight: 700; letter-spacing: .01em; }
-.qmm-card__subtitle { flex-basis: 100%; font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
-.qmm-card__actions { display: flex; gap: var(--qmm-space-sm); margin-left: auto; }
-.qmm-card__body { display: grid; gap: var(--qmm-space-lg); }
-
-.qmm-section-label {
-  font-size: var(--qmm-fs-xs); font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--qmm-text-dim);
-}
-
-.qmm-collapse { flex-shrink: 0; min-height: auto; }
-.qmm-collapse__head {
-  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 0; border: none; background: none;
-  color: inherit; font: inherit; text-align: left; cursor: pointer;
-}
-.qmm-collapse__titles { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-width: 0; }
-.qmm-collapse__desc { font-size: var(--qmm-fs-sm); line-height: 1.45; color: var(--qmm-text-dim); }
-.qmm-collapse__chevron {
-  flex: 0 0 auto; margin-left: auto; font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim);
-  transition: transform 140ms ease, color 120ms ease;
-}
-.qmm-collapse__head:hover .qmm-collapse__chevron { color: var(--qmm-accent); }
-.qmm-collapse__head[aria-expanded="true"] .qmm-collapse__chevron { transform: rotate(90deg); }
-.qmm-collapse__body { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
-.qmm-collapse.is-collapsed > .qmm-collapse__body { display: none; }
-
-.qmm-setting-row {
-  display: flex; align-items: center; gap: var(--qmm-space-lg); flex-shrink: 0; padding: 8px 10px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md); background: var(--qmm-card-bg);
-}
-.qmm-setting-row__text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
-.qmm-setting-row__title { font-size: var(--qmm-fs-md); color: var(--qmm-text); }
-.qmm-setting-row__hint { font-size: var(--qmm-fs-xs); line-height: 1.4; color: var(--qmm-text-dim); }
-.qmm-setting-row__controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--qmm-space-md); flex: 0 0 auto; }
-
-.qmm-label { opacity: .9; }
-.qmm-flex { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
-.qmm-form-row { display: grid; align-items: center; width: 100%; }
-.qmm-form-row.is-top { align-items: start; }
-.qmm-form-row__label { justify-self: start; margin: 0; font-weight: 600; }
-.qmm-form-row.is-top .qmm-form-row__label { align-self: start; }
-
-.qmm-error {
-  padding: 10px; border: 1px solid var(--qmm-danger-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-danger-soft); color: #fecaca; font-size: var(--qmm-fs-lg); line-height: 1.4;
-}
-.qmm-error[hidden] { display: none; }
-
-.qmm-pill {
-  display: inline-flex; align-items: center; gap: var(--qmm-space-sm); padding: 4px 9px; white-space: nowrap;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-pill);
-  background: var(--qmm-field-bg); color: var(--qmm-text); font-size: var(--qmm-fs-sm); font-weight: 600;
-}
-.qmm-pill.is-ok { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
-.qmm-pill.is-warn { color: var(--qmm-warn); background: var(--qmm-warn-soft); border-color: var(--qmm-warn-border); }
-.qmm-pill.is-bad { color: var(--qmm-danger); background: var(--qmm-danger-soft); border-color: var(--qmm-danger-border); }
-.qmm-badge {
-  align-self: flex-start; padding: 2px 7px; border-radius: var(--qmm-radius-pill);
-  font-size: var(--qmm-fs-xs); font-weight: 600;
-}
-.qmm-badge.is-ok { color: var(--qmm-accent); background: var(--qmm-accent-soft); }
-.qmm-badge.is-warn { color: var(--qmm-warn); background: var(--qmm-warn-soft); }
-.qmm-meter {
-  position: relative; flex: 1 1 auto; min-width: 60px; height: 5px; overflow: hidden;
-  border-radius: var(--qmm-radius-pill); background: var(--qmm-border);
-}
-.qmm-meter__fill {
-  position: absolute; inset: 0 auto 0 0; width: 0%; border-radius: var(--qmm-radius-pill);
-  background: var(--qmm-accent); transition: width 200ms ease, background 200ms ease;
-}
-.qmm-meter__fill.is-warn { background: var(--qmm-warn); }
-
-.qmm-vtabs { display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 0; }
-.qmm-vtabs .filter input { width: 100%; }
-.qmm-vlist-wrap { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; width: 100%; }
-.qmm-vlist {
-  flex: 0 0 auto; min-width: 0; padding: 6px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
-}
-.qmm-vlist.is-scroll { flex: 1 1 auto; overflow: auto; }
-.qmm-vlist__items { display: flex; flex-direction: column; gap: var(--qmm-space-xs); margin: 0; padding: 0; list-style: none; }
-.qmm-vlist__empty { opacity: .75; }
-.qmm-vtab {
-  display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: var(--qmm-space-lg); width: 100%;
-  padding: 8px 10px; border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-card-bg); color: inherit; text-align: left; cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
-}
-.qmm-vtab:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); }
-.qmm-vtab:active { transform: translateY(1px); }
-.qmm-vtab.active { background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
-.qmm-dot { width: 10px; height: 10px; justify-self: center; border-radius: 50%; box-shadow: 0 0 0 1px #0006 inset; }
-.qmm-chip { display: flex; align-items: center; gap: var(--qmm-space-md); min-width: 0; }
-.qmm-chip img { width: 20px; height: 20px; object-fit: cover; border: 1px solid var(--qmm-border); border-radius: 50%; }
-.qmm-chip__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.qmm-chip .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.qmm-chip__sub { font-size: var(--qmm-fs-md); opacity: .7; }
-.qmm-tag {
-  padding: 3px 7px; font-size: var(--qmm-fs-sm); line-height: 1;
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-hover-bg);
-}
-
-/* Drag handle for reorderable lists. */
-.qmm-grab {
-  display: grid; grid-template-columns: repeat(2, 3px); grid-template-rows: repeat(3, 3px);
-  align-content: center; justify-content: center; gap: 2px; margin-left: auto; padding: 4px 3px;
-  opacity: .8; cursor: grab; user-select: none;
-}
-.qmm-grab:active { cursor: grabbing; }
-.qmm-grab-dot { width: 3px; height: 3px; border-radius: 999px; background: var(--qmm-text-soft); }
-.qmm-dragging { opacity: .6; }
-
-/* Selectable tile of the skins grid. */
-.qws-pnl-cell {
-  position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 1; cursor: pointer;
-  border: 1px solid var(--qmm-border); border-radius: 10px; background: var(--qmm-card-bg);
-  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
-}
-.qws-pnl-cell:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); transform: translateY(-1px); }
-.qws-pnl-cell.is-active { border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft); }
-.qws-pnl-cell.is-skinned::after {
-  content: ''; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%;
-  background: var(--qmm-accent);
-}
-
-.qmm-icon-box { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
-.qmm-icon-box > img { max-width: 100%; max-height: 100%; image-rendering: auto; }
-
-.qmm-modal-scrim {
-  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px;
-  background: var(--qmm-scrim); backdrop-filter: blur(4px);
-}
-.qmm-modal {
-  display: flex; flex-direction: column; overflow: hidden; color: var(--qmm-text);
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-xl);
-  background: var(--qmm-surface); box-shadow: var(--qmm-shadow-modal);
-}
-.qmm-modal__head {
-  display: flex; align-items: center; gap: var(--qmm-space-lg); flex: 0 0 auto; padding: 12px 14px;
-  border-bottom: 1px solid var(--qmm-border);
-}
-.qmm-modal__title { flex: 1; min-width: 0; font-size: var(--qmm-fs-xl); font-weight: 600; color: var(--qmm-text); }
-.qmm-modal__close {
-  flex: 0 0 auto; width: 28px; height: 28px; cursor: pointer;
-  border: 1px solid var(--qmm-border); border-radius: 8px; background: var(--qmm-card-bg);
-  color: var(--qmm-text-dim); font-size: var(--qmm-fs-md); line-height: 1;
-}
-.qmm-modal__close:hover { color: var(--qmm-text); border-color: var(--qmm-border-hover); }
-.qmm-modal__body {
-  display: flex; flex-direction: column; gap: var(--qmm-space-lg); flex: 1 1 auto; min-height: 0;
-  padding: 12px 14px; overflow-y: auto;
-}
-.qmm-modal__foot {
-  display: flex; align-items: center; gap: var(--qmm-space-lg); flex: 0 0 auto; padding: 12px 14px;
-  border-top: 1px solid var(--qmm-border);
-}
-.qmm-modal__foot:empty { display: none; }
-
-.qmm-menu-card {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 11px 12px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
-  font: inherit; text-align: left; cursor: pointer; transition: background 120ms ease, border-color 120ms ease;
-}
-.qmm-menu-card:hover:not(:disabled) { background: var(--qmm-hover-bg); }
-.qmm-menu-card:disabled { opacity: .55; cursor: default; }
-.qmm-menu-card__name { font-size: var(--qmm-fs-lg); font-weight: 600; color: var(--qmm-text); }
-.qmm-menu-card__detail { font-size: 11.5px; line-height: 1.45; color: var(--qmm-text-dim); }
-.qmm-menu-card:disabled .qmm-menu-card__name { color: var(--qmm-text-dim); }
-.qmm-menu-card:disabled .qmm-menu-card__detail { color: var(--qmm-accent); }
-`;
-    }
-  });
-
-  // src/ui/kit/styles/controls.ts
-  var controlsCss;
-  var init_controls = __esm({
-    "src/ui/kit/styles/controls.ts"() {
-      "use strict";
-      controlsCss = `
-.qmm-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: var(--qmm-space-sm); padding: 8px 14px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-card-bg); color: var(--qmm-text);
-  font-size: var(--qmm-fs-lg); font-weight: 600; line-height: 1.2; cursor: pointer; user-select: none;
-  transition: background 120ms ease, border-color 120ms ease, color 120ms ease, opacity 120ms ease, transform 100ms ease;
-}
-.qmm-compact .qmm-btn:where(:not(.qmm-btn--sm, .qmm-btn--xs, .qmm-btn--icon)) { padding: 6px 10px; }
-.qmm-btn:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); }
-.qmm-btn:active { transform: translateY(1px); }
-.qmm-btn:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
-.qmm-btn:disabled, .qmm-btn.is-disabled { opacity: .4; pointer-events: none; }
-.qmm-btn.is-busy { opacity: .6; pointer-events: none; }
-.qmm-btn--sm { padding: 7px 12px; font-size: var(--qmm-fs-sm); white-space: nowrap; }
-.qmm-btn--xs { padding: 4px 8px; font-size: var(--qmm-fs-sm); }
-.qmm-btn--full { width: 100%; }
-.qmm-btn--block { display: flex; }
-.qmm-btn--icon { width: 34px; height: 34px; padding: 6px; gap: 0; border-radius: 50%; }
-.qmm-btn__icon { display: inline-flex; align-items: center; justify-content: center; font-size: 1.1em; }
-.qmm-btn__icon.is-right { order: 2; }
-.qmm-btn--primary { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
-.qmm-btn--primary:hover { background: var(--qmm-accent-hover); border-color: var(--qmm-accent-border-hover); }
-.qmm-btn--danger { color: var(--qmm-danger); background: var(--qmm-danger-soft); border-color: var(--qmm-danger-border); }
-.qmm-btn--danger:hover { background: var(--qmm-danger-hover); border-color: var(--qmm-danger-border-hover); }
-.qmm-btn--ghost { background: transparent; border-color: transparent; }
-.qmm-btn--ghost:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border); }
-.qmm-btn.active { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
-
-.qmm-input, .qws-pnl-input {
-  padding: 8px 10px; border: 1px solid var(--qmm-field-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-field-bg); color: var(--qmm-text); outline: none;
-  transition: border-color 120ms ease, background 120ms ease;
-}
-.qmm-input { min-width: 90px; }
-.qws-pnl-input { font-size: var(--qmm-fs-md); }
-.qmm-input::placeholder, .qws-pnl-input::placeholder { color: var(--qmm-text-dim); }
-.qmm-input:focus, .qws-pnl-input:focus { border-color: var(--qmm-accent-border-hover); }
-.qmm-input option, .qws-pnl-input option { background: var(--qmm-surface); color: var(--qmm-text); }
-.qmm-input--sm { min-width: 0; padding: 6px 9px; font-size: 11.5px; }
-.qmm-select { cursor: pointer; }
-
-.qmm-input-number { display: inline-flex; align-items: center; gap: var(--qmm-space-sm); }
-.qmm-input-number-input { width: 70px; text-align: center; }
-.qmm-spin { display: inline-flex; flex-direction: column; gap: 2px; }
-.qmm-step {
-  display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 16px; padding: 0;
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-sm);
-  background: var(--qmm-hover-bg); color: var(--qmm-text); font-size: 11px; line-height: 1;
-  cursor: pointer; user-select: none; transition: border-color 120ms ease, color 120ms ease;
-}
-.qmm-step:hover { border-color: var(--qmm-accent-border); color: var(--qmm-accent); }
-.qmm-step:active { transform: translateY(1px); }
-
-.qmm-radio { transform: scale(1.1); accent-color: var(--qmm-accent); }
-
-.qmm-switch {
-  -webkit-appearance: none; appearance: none; position: relative; flex-shrink: 0;
-  width: 36px; height: 20px; margin: 0; vertical-align: middle; cursor: pointer;
-  border: 1px solid var(--qmm-field-border); border-radius: 10px; background: var(--qmm-track);
-  transition: background 150ms ease, border-color 150ms ease;
-}
-.qmm-switch::before {
-  content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%;
-  background: var(--qmm-text-dim); transition: transform 150ms ease, background 150ms ease;
-}
-.qmm-switch:checked { background: var(--qmm-accent-hover); border-color: var(--qmm-accent-border-hover); }
-.qmm-switch:checked::before { transform: translateX(16px); background: var(--qmm-accent); }
-.qmm-switch:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
-.qmm-switch:disabled { opacity: .4; cursor: not-allowed; }
-
-.qmm-chip-toggle {
-  display: inline-flex; align-items: stretch; cursor: pointer;
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-card-bg);
-  transition: border-color 120ms ease, background 120ms ease;
-}
-.qmm-chip-toggle:hover { border-color: var(--qmm-accent-border); }
-.qmm-chip-toggle input { display: none; }
-.qmm-chip-toggle__face { display: flex; align-items: center; gap: var(--qmm-space-md); padding: 6px 12px; border-radius: var(--qmm-radius-pill); }
-.qmm-chip-toggle input:checked + .qmm-chip-toggle__face {
-  color: var(--qmm-accent); background: var(--qmm-accent-soft); box-shadow: inset 0 0 0 1px var(--qmm-accent-border);
-}
-.qmm-chip-toggle__icon { font-size: 14px; }
-.qmm-chip-toggle__label { font-weight: 600; }
-.qmm-chip-toggle__desc { font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
-.qmm-chip-toggle__badge {
-  padding: 2px 6px; font-size: var(--qmm-fs-sm);
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-hover-bg);
-}
-
-.qmm-range, .qws-pnl-range {
-  -webkit-appearance: none; appearance: none; height: 16px; margin: 0; padding: 0;
-  border: none; background: transparent; outline: none; cursor: pointer;
-}
-.qmm-range { width: 180px; }
-.qws-pnl-range { width: 100%; }
-.qmm-range::-webkit-slider-runnable-track, .qws-pnl-range::-webkit-slider-runnable-track {
-  height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
-}
-.qmm-range::-moz-range-track, .qws-pnl-range::-moz-range-track {
-  height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
-}
-.qmm-range::-webkit-slider-thumb, .qws-pnl-range::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none; width: 13px; height: 13px; margin-top: -4.5px;
-  border: none; border-radius: 50%; background: var(--qmm-accent); cursor: pointer;
-  transition: transform 120ms ease, box-shadow 120ms ease;
-}
-.qmm-range::-moz-range-thumb, .qws-pnl-range::-moz-range-thumb {
-  width: 13px; height: 13px; border: none; border-radius: 50%; background: var(--qmm-accent); cursor: pointer;
-}
-.qmm-range:hover::-webkit-slider-thumb, .qws-pnl-range:hover::-webkit-slider-thumb {
-  transform: scale(1.15); box-shadow: 0 0 0 4px var(--qmm-accent-soft);
-}
-.qmm-range:disabled, .qws-pnl-range:disabled { opacity: .4; cursor: not-allowed; }
-.qmm-range:disabled::-webkit-slider-thumb, .qws-pnl-range:disabled::-webkit-slider-thumb { background: var(--qmm-text-dim); }
-.qmm-range:disabled::-moz-range-thumb, .qws-pnl-range:disabled::-moz-range-thumb { background: var(--qmm-text-dim); }
-
-.qmm-range-dual { position: relative; width: 100%; padding: 18px 0 10px; }
-.qmm-range-dual-track {
-  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
-  height: 6px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
-}
-.qmm-range-dual-fill {
-  position: absolute; top: 50%; transform: translateY(-50%); height: 6px;
-  border-radius: var(--qmm-radius-pill); background: var(--qmm-accent); transition: left .12s ease, right .12s ease;
-}
-.qmm-range-dual-input {
-  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
-  width: 100%; height: 28px; pointer-events: none;
-}
-.qmm-range-dual-input::-webkit-slider-runnable-track { background: none; }
-.qmm-range-dual-input::-moz-range-track { background: none; }
-.qmm-range-dual-input::-webkit-slider-thumb {
-  pointer-events: auto; width: 16px; height: 16px; margin-top: -6px;
-  background: var(--qmm-accent); border: 2px solid var(--qmm-surface); box-shadow: 0 2px 8px rgba(0,0,0,.35);
-}
-.qmm-range-dual-input::-moz-range-thumb {
-  pointer-events: auto; width: 16px; height: 16px;
-  background: var(--qmm-accent); border: 2px solid var(--qmm-surface); box-shadow: 0 2px 8px rgba(0,0,0,.35);
-}
-.qmm-range-dual-input--min { z-index: 2; }
-.qmm-range-dual-input--max { z-index: 3; }
-
-/* --seg-pad, --seg-fill and --seg-stroke-color let a caller tint one control (the calculator does). */
-.qmm-seg {
-  position: relative; display: inline-flex; align-items: center; gap: var(--qmm-space-sm); overflow: hidden;
-  padding: var(--seg-pad, 8px); border-radius: var(--qmm-radius-pill);
-  background: var(--qmm-bg-soft, var(--qmm-sunken)); background-clip: padding-box;
-  border: 1px solid var(--qmm-border-2, var(--qmm-border));
-}
-.qmm-seg--full { display: flex; width: 100%; }
-.qmm-seg__btn {
-  position: relative; z-index: 1; padding: 8px 14px; border: 0; border-radius: var(--qmm-radius-pill);
-  appearance: none; background: transparent; color: var(--qmm-text-dim);
-  font: inherit; line-height: 1; white-space: nowrap; cursor: pointer;
-  transition: color .15s ease, transform .06s ease;
-}
-.qmm-seg__btn-label { display: inline-flex; align-items: center; justify-content: center; white-space: inherit; }
-.qmm-compact .qmm-seg__btn { padding: 6px 10px; }
-.qmm-seg__btn:hover { color: var(--qmm-text); }
-.qmm-seg__btn.active { color: var(--qmm-text); font-weight: 600; }
-.qmm-seg__btn:active { transform: translateY(1px); }
-.qmm-seg__btn[disabled] { opacity: .5; cursor: not-allowed; }
-.qmm-seg__indicator {
-  position: absolute; top: 0; left: 0; width: 40px; height: 100%; border-radius: inherit; pointer-events: none;
-  background: var(--seg-fill, var(--qmm-accent-soft));
-  outline: 1.2px solid var(--seg-stroke-color, var(--qmm-accent-border-hover)); outline-offset: -1.2px;
-  transform-origin: left center; will-change: transform, width, opacity;
-  transition: transform .18s cubic-bezier(.2,.8,.2,1), width .18s cubic-bezier(.2,.8,.2,1), opacity .18s ease-out;
-}
-@media (prefers-reduced-motion: reduce) {
-  .qmm-seg__indicator, .qmm-seg__btn { transition: none; }
-}
-
-.qmm-hotkey {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: var(--qmm-hotkey-w, 180px); min-width: 104px; padding: 7px 12px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-field-bg); color: var(--qmm-text);
-  font-family: inherit; font-size: var(--qmm-fs-sm); font-weight: 600; white-space: nowrap;
-  cursor: pointer; user-select: none; transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
-}
-.qmm-hotkey:hover { border-color: var(--qmm-border-hover); }
-.qmm-hotkey:focus-visible { outline: none; }
-.qmm-hotkey.is-assigned { color: var(--qmm-accent); border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft); }
-.qmm-hotkey.is-empty { color: var(--qmm-text-dim); font-weight: 500; }
-.qmm-hotkey.is-recording {
-  color: var(--qmm-warn); border-color: var(--qmm-warn-border); background: var(--qmm-warn-soft);
-  animation: qmm-hotkey-breathe 1.2s ease-in-out infinite;
-}
-@keyframes qmm-hotkey-breathe {
-  0% { box-shadow: 0 0 0 0 rgba(251,191,36,.45); }
-  60% { box-shadow: 0 0 0 10px rgba(251,191,36,0); }
-  100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
-}
-`;
-    }
-  });
-
-  // src/ui/kit/styles/index.ts
-  function ensureKitStyles() {
-    if (injected) return;
-    if (typeof document === "undefined" || typeof document.getElementById !== "function") return;
-    injected = true;
-    if (document.getElementById(STYLE_ID3)) return;
-    const style2 = document.createElement("style");
-    style2.id = STYLE_ID3;
-    style2.textContent = [themeVariables(), chromeCss, controlsCss, containersCss].join("\n");
-    (document.head || document.documentElement).appendChild(style2);
-  }
-  var STYLE_ID3, injected;
-  var init_styles = __esm({
-    "src/ui/kit/styles/index.ts"() {
-      "use strict";
-      init_theme();
-      init_chrome();
-      init_containers();
-      init_controls();
-      STYLE_ID3 = "qmm-kit-css";
-      injected = false;
-    }
-  });
-
-  // src/ui/kit/dom.ts
-  function h(tag, className, text2) {
-    ensureKitStyles();
-    const el = document.createElement(tag);
-    if (className) el.className = className;
-    if (text2 != null) el.textContent = text2;
-    return el;
-  }
-  function iconNode(icon, className) {
-    const node = typeof icon === "string" ? h("span", void 0, icon) : icon;
-    node.classList.add(className);
-    return node;
-  }
-  var init_dom = __esm({
-    "src/ui/kit/dom.ts"() {
-      "use strict";
-      init_styles();
     }
   });
 
@@ -33419,59 +32958,6 @@
     "src/ui/kit/badges.ts"() {
       "use strict";
       init_math();
-      init_dom();
-    }
-  });
-
-  // src/ui/kit/button.ts
-  function button(label2, opts = {}) {
-    const btn = h("button", "qmm-btn");
-    btn.type = "button";
-    const text2 = (label2 ?? "").trim();
-    const labelEl = !opts.icon || text2 ? h("span", "label", label2) : null;
-    if (opts.icon) {
-      const icon = iconNode(opts.icon, "qmm-btn__icon");
-      if (opts.iconPosition === "right") icon.classList.add("is-right");
-      if (!text2) btn.classList.add("qmm-btn--icon");
-      btn.append(icon);
-    }
-    if (labelEl) btn.append(labelEl);
-    if (opts.variant && opts.variant !== "default" && opts.variant !== "secondary") {
-      btn.classList.add(`qmm-btn--${opts.variant}`);
-    }
-    if (opts.size && opts.size !== "md") btn.classList.add(`qmm-btn--${opts.size}`);
-    if (opts.fullWidth) btn.classList.add("qmm-btn--full");
-    if (opts.block) btn.classList.add("qmm-btn--block");
-    if (opts.active) btn.classList.add("active");
-    if (opts.tooltip || opts.title) btn.title = opts.tooltip || opts.title || "";
-    if (opts.ariaLabel) btn.setAttribute("aria-label", opts.ariaLabel);
-    const onClick = opts.onClick;
-    if (onClick && opts.lockWhilePending) {
-      btn.addEventListener("click", async () => {
-        if (btn.disabled) return;
-        btn.classList.add("is-busy");
-        try {
-          await onClick();
-        } finally {
-          btn.classList.remove("is-busy");
-        }
-      });
-    } else if (onClick) {
-      btn.addEventListener("click", () => void onClick());
-    }
-    btn.setEnabled = (enabled5) => setButtonEnabled(btn, enabled5);
-    btn.setActive = (active2) => btn.classList.toggle("active", !!active2);
-    if (opts.disabled) setButtonEnabled(btn, false);
-    return btn;
-  }
-  function setButtonEnabled(btn, enabled5) {
-    btn.disabled = !enabled5;
-    btn.classList.toggle("is-disabled", !enabled5);
-    btn.setAttribute("aria-disabled", String(!enabled5));
-  }
-  var init_button = __esm({
-    "src/ui/kit/button.ts"() {
-      "use strict";
       init_dom();
     }
   });
@@ -33922,8 +33408,8 @@
       setTone(mini, level);
       mini.style.display = level === "ok" ? "none" : "";
     };
-    onSpriteWarmupProgress((state5) => {
-      warmup = state5;
+    onSpriteWarmupProgress((state7) => {
+      warmup = state7;
       update();
     });
     setInterval(update, 800);
@@ -37164,9 +36650,9 @@ next: ${next}`;
   function ensureStyles() {
     if (stylesInjected) return;
     stylesInjected = true;
-    const style2 = document.createElement("style");
-    style2.id = "mg-debug-data-styles";
-    style2.textContent = `
+    const style = document.createElement("style");
+    style.id = "mg-debug-data-styles";
+    style.textContent = `
   .dd-debug-view{display:flex;flex-direction:column;gap:16px;}
   .dd-debug-columns{display:grid;gap:16px;grid-template-columns:repeat(2,minmax(320px,1fr));align-items:start;}
   @media (max-width:720px){.dd-debug-columns{grid-template-columns:minmax(0,1fr);}}
@@ -37259,7 +36745,7 @@ next: ${next}`;
   .dd-sprite-mutation-btn:hover{border-color:rgba(255,255,255,.35);}
   .dd-sprite-mutation-btn.active{background:rgba(90,118,255,.18);border-color:rgba(90,118,255,.6);color:#9fb4ff;}
   `;
-    document.head.appendChild(style2);
+    document.head.appendChild(style);
   }
   async function renderDebugDataMenu(root) {
     ensureStyles();
@@ -37311,15 +36797,15 @@ next: ${next}`;
   }
   function ensureCelestialKeyframes() {
     if (document.getElementById(CELESTIAL_KEYFRAMES_ID)) return;
-    const style2 = document.createElement("style");
-    style2.id = CELESTIAL_KEYFRAMES_ID;
-    style2.textContent = `
+    const style = document.createElement("style");
+    style.id = CELESTIAL_KEYFRAMES_ID;
+    style.textContent = `
 @keyframes qwsCelestialShift {
   0%   { background-position: 0% 50%; }
   50%  { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }`;
-    document.head.appendChild(style2);
+    document.head.appendChild(style);
   }
   function rarityBadge(raw) {
     const label2 = rarityLabel(raw);
@@ -37594,12 +37080,12 @@ next: ${next}`;
       target.weatherRecipes.push(set2);
     });
   }
-  function serializeSettingsState(state5) {
-    normalizeWeatherSelection(state5.weatherSelected);
-    state5.weatherRecipes.forEach((set2) => normalizeRecipeSelection(set2));
-    const mode = state5.scaleLockMode === "MINIMUM" ? "MINIMUM" : state5.scaleLockMode === "MAXIMUM" ? "MAXIMUM" : state5.scaleLockMode === "NONE" ? "NONE" : "RANGE";
-    let minScale = Math.max(50, Math.min(100, Math.round(state5.minScalePct || 50)));
-    let maxScale = Math.max(50, Math.min(100, Math.round(state5.maxScalePct || 100)));
+  function serializeSettingsState(state7) {
+    normalizeWeatherSelection(state7.weatherSelected);
+    state7.weatherRecipes.forEach((set2) => normalizeRecipeSelection(set2));
+    const mode = state7.scaleLockMode === "MINIMUM" ? "MINIMUM" : state7.scaleLockMode === "MAXIMUM" ? "MAXIMUM" : state7.scaleLockMode === "NONE" ? "NONE" : "RANGE";
+    let minScale = Math.max(50, Math.min(100, Math.round(state7.minScalePct || 50)));
+    let maxScale = Math.max(50, Math.min(100, Math.round(state7.maxScalePct || 100)));
     if (mode === "RANGE") {
       maxScale = Math.max(51, Math.min(100, maxScale));
       if (maxScale <= minScale) {
@@ -37619,14 +37105,14 @@ next: ${next}`;
       minScalePct: minScale,
       maxScalePct: maxScale,
       scaleLockMode: mode,
-      lockMode: state5.lockMode === "ALLOW" ? "ALLOW" : "LOCK",
-      minInventory: Math.max(0, Math.min(999, Math.round(state5.minInventory || 91))),
-      avoidNormal: !!state5.avoidNormal,
-      includeNormal: !state5.avoidNormal,
-      visualMutations: Array.from(state5.visualMutations),
-      weatherMode: state5.weatherMode,
-      weatherSelected: Array.from(state5.weatherSelected),
-      weatherRecipes: state5.weatherRecipes.map((set2) => Array.from(set2))
+      lockMode: state7.lockMode === "ALLOW" ? "ALLOW" : "LOCK",
+      minInventory: Math.max(0, Math.min(999, Math.round(state7.minInventory || 91))),
+      avoidNormal: !!state7.avoidNormal,
+      includeNormal: !state7.avoidNormal,
+      visualMutations: Array.from(state7.visualMutations),
+      weatherMode: state7.weatherMode,
+      weatherSelected: Array.from(state7.weatherSelected),
+      weatherRecipes: state7.weatherRecipes.map((set2) => Array.from(set2))
     };
   }
   function setCheck(input, value) {
@@ -37786,7 +37272,7 @@ next: ${next}`;
       button3.style.background = "rgba(255,255,255,0.04)";
     };
   }
-  function createLockerSettingsCard(ui, state5, opts = {}) {
+  function createLockerSettingsCard(ui, state7, opts = {}) {
     const card5 = document.createElement("div");
     card5.dataset.lockerSettingsCard = "1";
     card5.style.border = "1px solid rgba(255,255,255,0.10)";
@@ -37802,7 +37288,7 @@ next: ${next}`;
     let recipesTitleElement = null;
     const updateRecipeTitleText = () => {
       if (!recipesTitleElement) return;
-      const prefix = state5.lockMode === "ALLOW" ? "Allow" : "Lock";
+      const prefix = state7.lockMode === "ALLOW" ? "Allow" : "Lock";
       recipesTitleElement.textContent = `${prefix} when any recipe row matches (OR between rows)`;
     };
     const makeSection = (titleText, content) => {
@@ -37849,10 +37335,10 @@ next: ${next}`;
         { value: "lock", label: "Lock" },
         { value: "allow", label: "Allow" }
       ],
-      fromLockMode(state5.lockMode),
+      fromLockMode(state7.lockMode),
       (value) => {
         if (isProgrammaticLockMode) return;
-        state5.lockMode = toLockMode(value);
+        state7.lockMode = toLockMode(value);
         updateLockModeUI();
         opts.onChange?.();
       },
@@ -37867,14 +37353,14 @@ next: ${next}`;
       display: "none"
     });
     const locksEverySize = () => {
-      if ((state5.lockMode ?? "LOCK") !== "LOCK") return false;
-      switch (state5.scaleLockMode) {
+      if ((state7.lockMode ?? "LOCK") !== "LOCK") return false;
+      switch (state7.scaleLockMode) {
         case "RANGE":
-          return state5.minScalePct <= 50 && state5.maxScalePct >= 100;
+          return state7.minScalePct <= 50 && state7.maxScalePct >= 100;
         case "MINIMUM":
-          return state5.minScalePct <= 50;
+          return state7.minScalePct <= 50;
         case "MAXIMUM":
-          return state5.maxScalePct >= 100;
+          return state7.maxScalePct >= 100;
         default:
           return false;
       }
@@ -37886,7 +37372,7 @@ next: ${next}`;
     };
     lockModeRow.append(lockModeSegmented, lockModeHint, lockWarning);
     const updateLockModeUI = () => {
-      const value = fromLockMode(state5.lockMode);
+      const value = fromLockMode(state7.lockMode);
       const current = lockModeSegmented.get?.();
       if (current !== value) {
         isProgrammaticLockMode = true;
@@ -37909,9 +37395,9 @@ next: ${next}`;
     scaleModeRow.style.flexWrap = "wrap";
     scaleModeRow.style.justifyContent = "center";
     scaleModeRow.style.gap = "12px";
-    const minSlider = ui.slider(50, 100, 1, state5.minScalePct);
+    const minSlider = ui.slider(50, 100, 1, state7.minScalePct);
     applyStyles(minSlider, { width: "min(420px, 100%)" });
-    const maxSlider = ui.slider(50, 100, 1, state5.maxScalePct);
+    const maxSlider = ui.slider(50, 100, 1, state7.maxScalePct);
     applyStyles(maxSlider, { width: "min(420px, 100%)" });
     const toMode = (value) => {
       switch (value) {
@@ -37938,7 +37424,7 @@ next: ${next}`;
       }
     };
     let isProgrammaticScaleMode = false;
-    const initialScaleMode = fromMode(state5.scaleLockMode);
+    const initialScaleMode = fromMode(state7.scaleLockMode);
     const scaleModeSegmented = ui.segmented(
       [
         { value: "none", label: "None" },
@@ -37954,7 +37440,7 @@ next: ${next}`;
       { ariaLabel: "Scale lock mode" }
     );
     scaleModeRow.append(scaleModeSegmented);
-    const scaleSlider = ui.rangeDual(50, 100, 1, state5.minScalePct, state5.maxScalePct);
+    const scaleSlider = ui.rangeDual(50, 100, 1, state7.minScalePct, state7.maxScalePct);
     applyStyles(scaleSlider.root, {
       width: "min(420px, 100%)",
       marginLeft: "auto",
@@ -38018,8 +37504,8 @@ next: ${next}`;
     const applyScaleRange = (commit, notify3 = commit) => {
       let minValue = parseInt(scaleMinSlider.value, 10);
       let maxValue = parseInt(scaleMaxSlider.value, 10);
-      if (!Number.isFinite(minValue)) minValue = state5.minScalePct;
-      if (!Number.isFinite(maxValue)) maxValue = state5.maxScalePct;
+      if (!Number.isFinite(minValue)) minValue = state7.minScalePct;
+      if (!Number.isFinite(maxValue)) maxValue = state7.maxScalePct;
       minValue = Math.max(50, Math.min(99, minValue));
       maxValue = Math.max(51, Math.min(100, maxValue));
       if (maxValue <= minValue) {
@@ -38034,44 +37520,44 @@ next: ${next}`;
       scaleMinValue.textContent = `${minValue}`;
       scaleMaxValue.textContent = `${maxValue}`;
       if (commit) {
-        state5.minScalePct = minValue;
-        state5.maxScalePct = maxValue;
+        state7.minScalePct = minValue;
+        state7.maxScalePct = maxValue;
         updateLockWarning();
         if (notify3) opts.onChange?.();
       }
     };
     const applyScaleMinimum = (commit, notify3 = commit) => {
       let minValue = parseInt(minSlider.value, 10);
-      if (!Number.isFinite(minValue)) minValue = state5.minScalePct;
+      if (!Number.isFinite(minValue)) minValue = state7.minScalePct;
       minValue = Math.max(50, Math.min(100, minValue));
       minSlider.value = String(minValue);
       scaleMinimumValue.textContent = `${minValue}`;
       if (commit) {
-        state5.minScalePct = minValue;
+        state7.minScalePct = minValue;
         updateLockWarning();
         if (notify3) opts.onChange?.();
       }
     };
     const applyScaleMaximum = (commit, notify3 = commit) => {
       let maxValue = parseInt(maxSlider.value, 10);
-      if (!Number.isFinite(maxValue)) maxValue = state5.maxScalePct;
+      if (!Number.isFinite(maxValue)) maxValue = state7.maxScalePct;
       maxValue = Math.max(50, Math.min(100, maxValue));
       maxSlider.value = String(maxValue);
       scaleMaximumValue.textContent = `${maxValue}`;
       if (commit) {
-        state5.maxScalePct = maxValue;
+        state7.maxScalePct = maxValue;
         updateLockWarning();
         if (notify3) opts.onChange?.();
       }
     };
     const updateScaleModeUI = () => {
-      const isRange = state5.scaleLockMode === "RANGE";
-      const isMin = state5.scaleLockMode === "MINIMUM";
-      const isMax = state5.scaleLockMode === "MAXIMUM";
+      const isRange = state7.scaleLockMode === "RANGE";
+      const isMin = state7.scaleLockMode === "MINIMUM";
+      const isMax = state7.scaleLockMode === "MAXIMUM";
       rangeControls.style.display = isRange ? "" : "none";
       minControls.style.display = isMin ? "" : "none";
       maxControls.style.display = isMax ? "" : "none";
-      const segValue = fromMode(state5.scaleLockMode);
+      const segValue = fromMode(state7.scaleLockMode);
       if (scaleModeSegmented.get?.() !== segValue) {
         isProgrammaticScaleMode = true;
         try {
@@ -38083,16 +37569,16 @@ next: ${next}`;
       updateLockWarning();
     };
     const applyScaleMode = (mode, notify3) => {
-      const prevMode = state5.scaleLockMode;
-      state5.scaleLockMode = mode;
+      const prevMode = state7.scaleLockMode;
+      state7.scaleLockMode = mode;
       if (mode === "RANGE") {
-        scaleSlider.setValues(state5.minScalePct, state5.maxScalePct);
+        scaleSlider.setValues(state7.minScalePct, state7.maxScalePct);
         applyScaleRange(prevMode !== mode, false);
       } else if (mode === "MINIMUM") {
-        minSlider.value = String(state5.minScalePct);
+        minSlider.value = String(state7.minScalePct);
         applyScaleMinimum(prevMode !== mode, false);
       } else if (mode === "MAXIMUM") {
-        maxSlider.value = String(state5.maxScalePct);
+        maxSlider.value = String(state7.maxScalePct);
         applyScaleMaximum(prevMode !== mode, false);
       }
       updateScaleModeUI();
@@ -38111,7 +37597,7 @@ next: ${next}`;
     applyScaleRange(false);
     applyScaleMinimum(false);
     applyScaleMaximum(false);
-    applyScaleMode(state5.scaleLockMode, false);
+    applyScaleMode(state7.scaleLockMode, false);
     const colorsRow = centerRow();
     colorsRow.style.flexWrap = "wrap";
     colorsRow.style.gap = "8px";
@@ -38177,24 +37663,24 @@ next: ${next}`;
       button3.style.cursor = button3.disabled ? "default" : "pointer";
     };
     const updateColorButtons = () => {
-      updateColorButtonVisual(btnNormal, state5.avoidNormal);
-      updateColorButtonVisual(btnGold, state5.visualMutations.has("Gold"));
-      updateColorButtonVisual(btnRainbow, state5.visualMutations.has("Rainbow"));
+      updateColorButtonVisual(btnNormal, state7.avoidNormal);
+      updateColorButtonVisual(btnGold, state7.visualMutations.has("Gold"));
+      updateColorButtonVisual(btnRainbow, state7.visualMutations.has("Rainbow"));
     };
     btnNormal.addEventListener("click", () => {
-      state5.avoidNormal = !state5.avoidNormal;
+      state7.avoidNormal = !state7.avoidNormal;
       updateColorButtons();
       opts.onChange?.();
     });
     btnGold.addEventListener("click", () => {
-      if (state5.visualMutations.has("Gold")) state5.visualMutations.delete("Gold");
-      else state5.visualMutations.add("Gold");
+      if (state7.visualMutations.has("Gold")) state7.visualMutations.delete("Gold");
+      else state7.visualMutations.add("Gold");
       updateColorButtons();
       opts.onChange?.();
     });
     btnRainbow.addEventListener("click", () => {
-      if (state5.visualMutations.has("Rainbow")) state5.visualMutations.delete("Rainbow");
-      else state5.visualMutations.add("Rainbow");
+      if (state7.visualMutations.has("Rainbow")) state7.visualMutations.delete("Rainbow");
+      else state7.visualMutations.add("Rainbow");
       updateColorButtons();
       opts.onChange?.();
     });
@@ -38216,7 +37702,7 @@ next: ${next}`;
       }
       opts.onChange?.();
     };
-    const updateMainWeatherSelection = applyWeatherSelection(state5.weatherSelected);
+    const updateMainWeatherSelection = applyWeatherSelection(state7.weatherSelected);
     const weatherToggles = weatherMutations().map((info) => {
       const toggle2 = createWeatherMutationToggle({
         key: info.key,
@@ -38232,7 +37718,7 @@ next: ${next}`;
       return toggle2;
     });
     const updateWeatherMutationsDisabled = () => {
-      const disabled = card5.dataset.disabled === "1" || state5.weatherMode === "RECIPES";
+      const disabled = card5.dataset.disabled === "1" || state7.weatherMode === "RECIPES";
       weatherGrid.style.opacity = disabled ? "0.55" : "";
       weatherGrid.style.pointerEvents = disabled ? "none" : "";
       weatherToggles.forEach((toggle2) => toggle2.setDisabled(disabled));
@@ -38250,7 +37736,7 @@ next: ${next}`;
       wrap.append(input, span);
       input.addEventListener("change", () => {
         if (!input.checked) return;
-        state5.weatherMode = value;
+        state7.weatherMode = value;
         recipesWrap.style.display = value === "RECIPES" ? "" : "none";
         updateWeatherMutationsDisabled();
         opts.onChange?.();
@@ -38312,10 +37798,10 @@ next: ${next}`;
       if (editingRecipeIndex === null) return;
       const draft = new Set(editingRecipeDraft);
       normalizeRecipeSelection(draft);
-      if (editingRecipeIndex === state5.weatherRecipes.length) {
-        state5.weatherRecipes.push(draft);
-      } else if (editingRecipeIndex >= 0 && editingRecipeIndex < state5.weatherRecipes.length) {
-        state5.weatherRecipes[editingRecipeIndex] = draft;
+      if (editingRecipeIndex === state7.weatherRecipes.length) {
+        state7.weatherRecipes.push(draft);
+      } else if (editingRecipeIndex >= 0 && editingRecipeIndex < state7.weatherRecipes.length) {
+        state7.weatherRecipes[editingRecipeIndex] = draft;
       }
       editingRecipeIndex = null;
       editingRecipeDraft = /* @__PURE__ */ new Set();
@@ -38324,8 +37810,8 @@ next: ${next}`;
     };
     const deleteRecipeAt = (index) => {
       if (index < 0) return;
-      if (index < state5.weatherRecipes.length) {
-        state5.weatherRecipes.splice(index, 1);
+      if (index < state7.weatherRecipes.length) {
+        state7.weatherRecipes.splice(index, 1);
       }
       if (editingRecipeIndex !== null) {
         if (index === editingRecipeIndex) {
@@ -38457,14 +37943,14 @@ next: ${next}`;
     }
     function repaintRecipes() {
       recipesList.innerHTML = "";
-      const hasDraftNew = editingRecipeIndex !== null && editingRecipeIndex === state5.weatherRecipes.length;
-      const totalRows = state5.weatherRecipes.length + (hasDraftNew ? 1 : 0);
+      const hasDraftNew = editingRecipeIndex !== null && editingRecipeIndex === state7.weatherRecipes.length;
+      const totalRows = state7.weatherRecipes.length + (hasDraftNew ? 1 : 0);
       if (totalRows === 0) {
         recipesList.appendChild(emptyRecipes);
         applyDisabled();
         return;
       }
-      state5.weatherRecipes.forEach((set2, index) => {
+      state7.weatherRecipes.forEach((set2, index) => {
         normalizeRecipeSelection(set2);
         const isEditing2 = editingRecipeIndex === index;
         const selection = isEditing2 ? editingRecipeDraft : set2;
@@ -38508,7 +37994,7 @@ next: ${next}`;
           styleBtnFullWidth(btnValidate, "\u2714\uFE0F");
           btnValidate.onclick = commitEditingRecipe;
           actions.append(btnCancel, btnValidate);
-          if (editingRecipeIndex !== null && editingRecipeIndex < state5.weatherRecipes.length) {
+          if (editingRecipeIndex !== null && editingRecipeIndex < state7.weatherRecipes.length) {
             const btnDelete = document.createElement("button");
             styleBtnFullWidth(btnDelete, "\u{1F5D1}\uFE0F");
             btnDelete.title = "Delete";
@@ -38577,7 +38063,7 @@ next: ${next}`;
       applyDisabled();
     }
     btnAddRecipe.onclick = () => {
-      startEditingRecipe(state5.weatherRecipes.length);
+      startEditingRecipe(state7.weatherRecipes.length);
     };
     recipesWrap.append(recipesHeader, recipesList);
     card5.append(
@@ -38590,19 +38076,19 @@ next: ${next}`;
     );
     const refresh = () => {
       updateLockModeUI();
-      scaleSlider.setValues(state5.minScalePct, state5.maxScalePct);
-      minSlider.value = String(state5.minScalePct);
-      maxSlider.value = String(state5.maxScalePct);
+      scaleSlider.setValues(state7.minScalePct, state7.maxScalePct);
+      minSlider.value = String(state7.minScalePct);
+      maxSlider.value = String(state7.maxScalePct);
       applyScaleRange(false);
       applyScaleMinimum(false);
       applyScaleMaximum(false);
-      applyScaleMode(state5.scaleLockMode, false);
+      applyScaleMode(state7.scaleLockMode, false);
       updateColorButtons();
-      weatherToggles.forEach((toggle2) => toggle2.setChecked(state5.weatherSelected.has(toggle2.key)));
-      radioAny.input.checked = state5.weatherMode === "ANY";
-      radioAll.input.checked = state5.weatherMode === "ALL";
-      radioRecipes.input.checked = state5.weatherMode === "RECIPES";
-      recipesWrap.style.display = state5.weatherMode === "RECIPES" ? "" : "none";
+      weatherToggles.forEach((toggle2) => toggle2.setChecked(state7.weatherSelected.has(toggle2.key)));
+      radioAny.input.checked = state7.weatherMode === "ANY";
+      radioAll.input.checked = state7.weatherMode === "ALL";
+      radioRecipes.input.checked = state7.weatherMode === "RECIPES";
+      recipesWrap.style.display = state7.weatherMode === "RECIPES" ? "" : "none";
       updateWeatherMutationsDisabled();
       repaintRecipes();
     };
@@ -38614,7 +38100,7 @@ next: ${next}`;
     return { root: card5, refresh, setDisabled };
   }
   function createRestrictionsTabRenderer(ui) {
-    let state5 = lockerRestrictionsService.getState();
+    let state7 = lockerRestrictionsService.getState();
     let bonusFromMultiplier = null;
     let bonusFromPlayers = friendBonusPercentFromPlayers(1);
     let eggOptions = [];
@@ -38650,7 +38136,7 @@ next: ${next}`;
       textShadow: "0 1px 1px rgba(0, 0, 0, 0.5)"
     });
     sliderHeader.append(sliderTitle, sliderValue);
-    const initialRequiredPct = friendBonusPercentFromPlayers(state5.minRequiredPlayers) ?? 0;
+    const initialRequiredPct = friendBonusPercentFromPlayers(state7.minRequiredPlayers) ?? 0;
     const slider2 = ui.slider(0, FRIEND_BONUS_MAX, FRIEND_BONUS_STEP, initialRequiredPct);
     slider2.style.width = "100%";
     sliderWrap.append(sliderHeader, slider2);
@@ -38691,10 +38177,10 @@ next: ${next}`;
     decorSubtitle.style.fontSize = "12.5px";
     decorSubtitle.style.opacity = "0.85";
     decorText.append(decorSubtitle);
-    const decorToggle = ui.switch(state5.decorPickupLocked);
+    const decorToggle = ui.switch(state7.decorPickupLocked);
     decorToggle.addEventListener("change", () => {
       const locked = !!decorToggle.checked;
-      state5.decorPickupLocked = locked;
+      state7.decorPickupLocked = locked;
       lockerRestrictionsService.setDecorPickupLocked(locked);
     });
     decorRow.append(decorText, decorToggle);
@@ -38821,9 +38307,9 @@ next: ${next}`;
     rarityRow.append(rarityRowHeader, raritySelectedArea, rarityPickerArea);
     let rarityPickerOpen = false;
     const refreshRarityRow = () => {
-      const rules2 = lockerRestrictionsService.getSellAllPetsRules();
-      const selected = Array.isArray(rules2.protectedRarities) ? rules2.protectedRarities : [];
-      const enabled5 = rules2.enabled !== false;
+      const rules3 = lockerRestrictionsService.getSellAllPetsRules();
+      const selected = Array.isArray(rules3.protectedRarities) ? rules3.protectedRarities : [];
+      const enabled5 = rules3.enabled !== false;
       const selectedSet = new Set(selected);
       raritySelectedArea.innerHTML = "";
       if (selected.length === 0) {
@@ -38946,8 +38432,8 @@ next: ${next}`;
       toggle2.style.fontSize = "14px";
       toggle2.style.fontWeight = "700";
       toggle2.addEventListener("click", () => {
-        const next = !Boolean(state5.eggLocks?.[opt.id]);
-        state5.eggLocks = { ...state5.eggLocks || {}, [opt.id]: next };
+        const next = !Boolean(state7.eggLocks?.[opt.id]);
+        state7.eggLocks = { ...state7.eggLocks || {}, [opt.id]: next };
         lockerRestrictionsService.setEggLock(opt.id, next);
         renderEggList();
       });
@@ -38975,7 +38461,7 @@ next: ${next}`;
           eggRowCache.set(id, entry);
         }
         entry.name.textContent = opt.name || id;
-        const locked = !!state5.eggLocks?.[id];
+        const locked = !!state7.eggLocks?.[id];
         updateEggToggleAppearance(entry.toggle, locked);
         fragment.appendChild(entry.row);
       });
@@ -39001,16 +38487,16 @@ next: ${next}`;
       row.style.opacity = disabled ? "0.6" : "1";
     };
     const refreshSellAllPetsControls = () => {
-      const rules2 = lockerRestrictionsService.getSellAllPetsRules();
-      const enabled5 = rules2.enabled !== false;
-      const protectGold = rules2.protectGold !== false;
-      const protectRainbow = rules2.protectRainbow !== false;
-      const protectMaxStr = rules2.protectMaxStr !== false;
+      const rules3 = lockerRestrictionsService.getSellAllPetsRules();
+      const enabled5 = rules3.enabled !== false;
+      const protectGold = rules3.protectGold !== false;
+      const protectRainbow = rules3.protectRainbow !== false;
+      const protectMaxStr = rules3.protectMaxStr !== false;
       setCheck(sellEnableToggle, enabled5);
       setCheck(sellGoldToggle, protectGold);
       setCheck(sellRainbowToggle, protectRainbow);
       setCheck(sellMaxStrToggle, protectMaxStr);
-      sellMaxStrInput.value = String(clampMaxStr(rules2.maxStrThreshold));
+      sellMaxStrInput.value = String(clampMaxStr(rules3.maxStrThreshold));
       sellGoldToggle.disabled = !enabled5;
       sellRainbowToggle.disabled = !enabled5;
       sellMaxStrToggle.disabled = !enabled5;
@@ -39030,9 +38516,9 @@ next: ${next}`;
       statusBadge.style.color = palette.color;
     };
     const updateStatus = () => {
-      const requiredPct = clampPercent2(friendBonusPercentFromPlayers(state5.minRequiredPlayers) ?? 0);
+      const requiredPct = clampPercent2(friendBonusPercentFromPlayers(state7.minRequiredPlayers) ?? 0);
       const currentPct = resolveCurrentBonus();
-      const requiredPlayers = state5.minRequiredPlayers;
+      const requiredPlayers = state7.minRequiredPlayers;
       const currentPlayers = currentPct != null ? percentToRequiredFriendCount(currentPct) : null;
       const allowed = requiredPct <= 0 || currentPct != null && currentPct + 1e-4 >= requiredPct;
       if (requiredPct <= 0) {
@@ -39049,10 +38535,10 @@ next: ${next}`;
       const raw = Number(slider2.value);
       const pct = clampPercent2(Number.isFinite(raw) ? raw : 0);
       updateSliderValue(pct);
-      state5.minRequiredPlayers = percentToRequiredFriendCount(pct);
+      state7.minRequiredPlayers = percentToRequiredFriendCount(pct);
       updateStatus();
       if (commit) {
-        lockerRestrictionsService.setMinRequiredPlayers(state5.minRequiredPlayers);
+        lockerRestrictionsService.setMinRequiredPlayers(state7.minRequiredPlayers);
       }
     };
     slider2.addEventListener("input", () => handleSliderInput(false));
@@ -39078,9 +38564,9 @@ next: ${next}`;
       lockerRestrictionsService.setSellAllPetsRules({ maxStrThreshold: next });
     });
     const syncFromService = (next) => {
-      state5 = { ...next };
-      setCheck(decorToggle, state5.decorPickupLocked);
-      updateSliderValue(friendBonusPercentFromPlayers(state5.minRequiredPlayers) ?? 0);
+      state7 = { ...next };
+      setCheck(decorToggle, state7.decorPickupLocked);
+      updateSliderValue(friendBonusPercentFromPlayers(state7.minRequiredPlayers) ?? 0);
       updateStatus();
       renderEggList();
       refreshSellAllPetsControls();
@@ -39693,12 +39179,12 @@ next: ${next}`;
           this.global = { enabled: false, settings: createDefaultSettings(), hasPersistedSettings: true };
           this.syncFromService(initial);
         }
-        applyPersisted(state5) {
-          this.global.enabled = !!state5.enabled;
-          hydrateSettingsFromPersisted(this.global.settings, state5.settings);
+        applyPersisted(state7) {
+          this.global.enabled = !!state7.enabled;
+          hydrateSettingsFromPersisted(this.global.settings, state7.settings);
           this.global.hasPersistedSettings = true;
           const seen = /* @__PURE__ */ new Set();
-          Object.entries(state5.overrides ?? {}).forEach(([key2, value]) => {
+          Object.entries(state7.overrides ?? {}).forEach(([key2, value]) => {
             const entry = this.ensureOverride(key2, { silent: true });
             entry.enabled = !!value?.enabled;
             hydrateSettingsFromPersisted(entry.settings, value?.settings);
@@ -39723,9 +39209,9 @@ next: ${next}`;
             }
           }
         }
-        syncFromService(state5) {
+        syncFromService(state7) {
           this.syncing = true;
-          this.applyPersisted(state5);
+          this.applyPersisted(state7);
           this.emit();
           this.syncing = false;
         }
@@ -39802,10 +39288,10 @@ next: ${next}`;
 
   // src/lib/dom.ts
   function addStyle(css4) {
-    const style2 = document.createElement("style");
-    style2.textContent = css4;
-    document.head.appendChild(style2);
-    return style2;
+    const style = document.createElement("style");
+    style.textContent = css4;
+    document.head.appendChild(style);
+    return style;
   }
   var init_dom2 = __esm({
     "src/lib/dom.ts"() {
@@ -40077,11 +39563,11 @@ next: ${next}`;
       });
     });
   }
-  function getMutationsForState(state5) {
+  function getMutationsForState(state7) {
     const mutations = [];
-    if (state5.color !== "None") mutations.push(state5.color);
-    if (state5.weatherCondition !== "None") mutations.push(state5.weatherCondition);
-    if (state5.weatherLighting !== "None") mutations.push(state5.weatherLighting);
+    if (state7.color !== "None") mutations.push(state7.color);
+    if (state7.weatherCondition !== "None") mutations.push(state7.weatherCondition);
+    if (state7.weatherLighting !== "None") mutations.push(state7.weatherLighting);
     return mutations.map((label2) => normalizeMutationLabelForSprite(label2));
   }
   function normalizeMutationLabelForSprite(label2) {
@@ -40090,9 +39576,9 @@ next: ${next}`;
     const overridden = MUTATION_SPRITE_OVERRIDES[normalized.toLowerCase()];
     return overridden ?? normalized;
   }
-  function computePrice(speciesKey, state5, size) {
-    const mutations = getMutationsForState(state5);
-    const friendPlayers = clampFriendPlayers(state5.friendPlayers);
+  function computePrice(speciesKey, state7, size) {
+    const mutations = getMutationsForState(state7);
+    const friendPlayers = clampFriendPlayers(state7.friendPlayers);
     const pricingOptions = { ...DefaultPricing, friendPlayers };
     const value = estimateProduceValue(speciesKey, size, mutations, pricingOptions);
     return Number.isFinite(value) && value > 0 ? value : null;
@@ -40278,9 +39764,9 @@ next: ${next}`;
       const getStateForKey = (key2) => {
         const existing = states.get(key2);
         if (existing) return existing;
-        const state5 = { ...DEFAULT_STATE2 };
-        states.set(key2, state5);
-        return state5;
+        const state7 = { ...DEFAULT_STATE2 };
+        states.set(key2, state7);
+        return state7;
       };
       let selectedKey = null;
       let currentBaseWeight = null;
@@ -40293,8 +39779,8 @@ next: ${next}`;
           dot.style.background = isSelected ? "rgba(94,234,212,0.85)" : "rgba(255,255,255,0.20)";
         });
       };
-      function renderColorSegment(state5, interactive) {
-        const active2 = state5?.color ?? COLOR_MUTATION_LABELS[0];
+      function renderColorSegment(state7, interactive) {
+        const active2 = state7?.color ?? COLOR_MUTATION_LABELS[0];
         const segmented3 = createSegmentedControl(
           COLOR_MUTATION_LABELS,
           active2,
@@ -40315,8 +39801,8 @@ next: ${next}`;
         refs.colorMutations.innerHTML = "";
         refs.colorMutations.appendChild(segmented3);
       }
-      function renderWeatherConditions(state5, interactive) {
-        const active2 = state5?.weatherCondition ?? WEATHER_CONDITION_LABELS[0];
+      function renderWeatherConditions(state7, interactive) {
+        const active2 = state7?.weatherCondition ?? WEATHER_CONDITION_LABELS[0];
         const segmented3 = createSegmentedControl(
           WEATHER_CONDITION_LABELS,
           active2,
@@ -40335,8 +39821,8 @@ next: ${next}`;
         refs.weatherConditions.innerHTML = "";
         refs.weatherConditions.appendChild(segmented3);
       }
-      function renderWeatherLighting(state5, interactive) {
-        const active2 = state5?.weatherLighting ?? WEATHER_LIGHTING_LABELS[0];
+      function renderWeatherLighting(state7, interactive) {
+        const active2 = state7?.weatherLighting ?? WEATHER_LIGHTING_LABELS[0];
         const segmented3 = createSegmentedControl(
           WEATHER_LIGHTING_LABELS,
           active2,
@@ -40355,8 +39841,8 @@ next: ${next}`;
         refs.weatherLighting.innerHTML = "";
         refs.weatherLighting.appendChild(segmented3);
       }
-      function renderFriendBonus(state5, interactive) {
-        const active2 = friendPlayersToLabel(state5?.friendPlayers ?? FRIEND_BONUS_MIN_PLAYERS);
+      function renderFriendBonus(state7, interactive) {
+        const active2 = friendPlayersToLabel(state7?.friendPlayers ?? FRIEND_BONUS_MIN_PLAYERS);
         const segmented3 = createSegmentedControl(
           FRIEND_BONUS_LABELS,
           active2,
@@ -40379,8 +39865,8 @@ next: ${next}`;
           refs.priceValue.textContent = "\u2014";
           return;
         }
-        const state5 = getStateForKey(key2);
-        refs.priceValue.textContent = formatCoinValue(computePrice(key2, state5, state5.sizePercent));
+        const state7 = getStateForKey(key2);
+        refs.priceValue.textContent = formatCoinValue(computePrice(key2, state7, state7.sizePercent));
       }
       function updateSprite() {
         const key2 = selectedKey;
@@ -40388,10 +39874,10 @@ next: ${next}`;
           resetCropSimulationSprite(refs.sprite);
           return;
         }
-        const state5 = getStateForKey(key2);
+        const state7 = getStateForKey(key2);
         const option = optionByKey.get(key2);
         const fallbackEmoji = getLockerSeedEmojiForKey(key2) || (option?.seedName ? getLockerSeedEmojiForSeedName(option.seedName) : void 0) || "\u{1F331}";
-        const mutations = getMutationsForState(state5);
+        const mutations = getMutationsForState(state7);
         const candidates = buildSpriteCandidates2(key2, option);
         const categories = getSpriteCategoriesForKey(key2, option?.seedName, option?.cropName);
         applyCropSimulationSprite(refs.sprite, key2, {
@@ -40416,22 +39902,22 @@ next: ${next}`;
           return;
         }
         currentBaseWeight = getBaseWeightForSpecies(key2);
-        const state5 = getStateForKey(key2);
+        const state7 = getStateForKey(key2);
         refs.sizeSlider.disabled = false;
-        applySizePercent(refs, state5.sizePercent, key2, currentBaseWeight);
-        renderColorSegment(state5, true);
-        renderWeatherConditions(state5, true);
-        renderWeatherLighting(state5, true);
-        renderFriendBonus(state5, true);
+        applySizePercent(refs, state7.sizePercent, key2, currentBaseWeight);
+        renderColorSegment(state7, true);
+        renderWeatherConditions(state7, true);
+        renderWeatherLighting(state7, true);
+        renderFriendBonus(state7, true);
         updateSprite();
         updateOutputs();
       }
       slider2.addEventListener("input", () => {
         if (!selectedKey) return;
-        const state5 = getStateForKey(selectedKey);
+        const state7 = getStateForKey(selectedKey);
         const raw = Number(slider2.value);
         const value = clamp2(Math.round(raw), SIZE_MIN, SIZE_MAX);
-        state5.sizePercent = value;
+        state7.sizePercent = value;
         applySizePercent(refs, value, selectedKey, currentBaseWeight);
         updateOutputs();
       });
@@ -40985,7 +40471,7 @@ next: ${next}`;
       WARN = color.warn;
       GOLD = color.gold;
       RAINBOW = color.rainbow;
-      css = (el, style2) => Object.assign(el.style, style2);
+      css = (el, style) => Object.assign(el.style, style);
       ensurePanelStyles = ensureKitStyles;
       sectionLabel2 = sectionLabel;
       card2 = plainCard;
@@ -44302,8 +43788,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         };
         item.onclick = (ev) => {
           if (ev.__byDrag) return;
-          const changed = selectedId !== t.id;
-          if (changed) {
+          const changed4 = selectedId !== t.id;
+          if (changed4) {
             selectedId = t.id;
             refreshTeamList(true);
           }
@@ -44833,10 +44319,10 @@ Restore figures are averages; unlucky streaks do worse.`;
         isApplyingTeam = false;
       }
     };
-    let unsubPets2 = null;
+    let unsubPets = null;
     (async () => {
       try {
-        unsubPets2 = await onActivePetsStructuralChangeNow(async () => {
+        unsubPets = await onActivePetsStructuralChangeNow(async () => {
           if (isApplyingTeam) return;
           await repaintSlots(getSelectedTeam());
           await scheduleTeamListRefresh();
@@ -44871,7 +44357,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         } catch {
         }
         try {
-          unsubPets2?.();
+          unsubPets?.();
         } catch {
         }
         try {
@@ -46674,7 +46160,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     let paused = false;
     let cancelled = false;
     let resumeWaiter = null;
-    const emit = (suffix, detail) => {
+    const emit2 = (suffix, detail) => {
       try {
         window.dispatchEvent(new CustomEvent(`${kind.eventPrefix}:${suffix}`, { detail }));
       } catch {
@@ -46755,7 +46241,7 @@ Restore figures are averages; unlucky streaks do worse.`;
             await gate2();
             await kind.deleteOne(task.entry.id, delayMs);
             done += 1;
-            emit("progress", {
+            emit2("progress", {
               done,
               total,
               [kind.targetKey]: task.entry.id,
@@ -46766,7 +46252,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           }
         }
         selection.clear();
-        emit("done", { total: done, categories: tasks.length });
+        emit2("done", { total: done, categories: tasks.length });
         kind.toast(
           kind.toastTitle,
           done > 0 ? `Deleted ${formatNum4(done)} ${kind.unitNoun} (${tasks.length} categories).` : `No ${kind.unitNoun} were deleted.`,
@@ -46774,7 +46260,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         );
       } catch (error) {
         const message = error?.message === "cancelled" ? `Cancelled after ${formatNum4(done)} ${kind.unitNoun}.` : error?.message || "Deletion failed.";
-        emit("error", { message });
+        emit2("error", { message });
         kind.toast(kind.toastTitle, message, "error");
       } finally {
         running6 = false;
@@ -46798,13 +46284,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       pause() {
         if (!running6 || paused) return;
         paused = true;
-        emit("paused");
+        emit2("paused");
       },
       resume() {
         if (!running6 || !paused) return;
         paused = false;
         resumeWaiter?.();
-        emit("resumed");
+        emit2("resumed");
       },
       cancel() {
         if (!running6) return;
@@ -48351,7 +47837,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         applyMode("shops", "loop");
       }
       audio.setStopPurchase("shops");
-      NotifierService.setContextStopDefaults("shops", { stopMode: "purchase", stopRepeats: null, loopIntervalMs: loopMs });
+      LoopDefaults.setLoopInterval("shops", loopMs);
       return loopMs;
     };
     for (const cfg of contextOrder) {
@@ -48376,7 +47862,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           const loopMs = controls.loopInput ? sanitizeLoopInput(controls.loopInput, audio.getLoopInterval("shops")) : audio.getLoopInterval("shops");
           audio.setLoopInterval(loopMs, "shops");
           audio.setStopManual("shops");
-          NotifierService.setContextStopDefaults("shops", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
+          LoopDefaults.setLoopInterval("shops", loopMs);
         }
       });
       controls.modeLoop?.addEventListener("change", () => {
@@ -48548,7 +48034,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       controls.volumeValue.textContent = `${volPercent}%`;
       if (controls.modeLoop && settings.mode === "loop") controls.modeLoop.checked = true;
       else controls.modeOneshot.checked = true;
-      const defaults = context === "shops" || context === "weather" ? NotifierService.getContextStopDefaults(context) : { stopMode: "manual", stopRepeats: null, loopIntervalMs: settings.loopIntervalMs };
+      const defaults = context === "shops" || context === "weather" ? LoopDefaults.get(context) : { stopMode: "manual", stopRepeats: null, loopIntervalMs: settings.loopIntervalMs };
       const fallbackLoop = Math.max(
         150,
         Math.min(1e4, Math.floor(defaults.loopIntervalMs || settings.loopIntervalMs || 150))
@@ -48558,15 +48044,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (context === "shops") {
         if (controls.modeLoop?.checked) {
           audio.setStopPurchase("shops");
-          NotifierService.setContextStopDefaults("shops", { stopMode: "purchase", stopRepeats: null, loopIntervalMs: loopMs });
+          LoopDefaults.setLoopInterval("shops", loopMs);
         } else {
           audio.setStopManual("shops");
-          NotifierService.setContextStopDefaults("shops", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
+          LoopDefaults.setLoopInterval("shops", loopMs);
         }
       } else if (context === "weather") {
         applyMode("weather", "oneshot");
         audio.setStopManual("weather");
-        NotifierService.setContextStopDefaults("weather", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
+        LoopDefaults.setLoopInterval("weather", loopMs);
       } else if (context === "pets") {
         audio.setLoopInterval(loopMs, "pets");
         audio.setStopManual("pets");
@@ -48642,9 +48128,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     view.innerHTML = "";
     view.style.cssText = "";
     if (!document.getElementById("qws-rule-style")) {
-      const style2 = document.createElement("style");
-      style2.id = "qws-rule-style";
-      style2.textContent = `
+      const style = document.createElement("style");
+      style.id = "qws-rule-style";
+      style.textContent = `
 :root {
   /* PATCH: z-index centralis\xE9 */
   --qws-z-popover: 99999999999999;
@@ -48697,7 +48183,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   min-height: 1.2em;  /* ~1 ligne r\xE9serv\xE9e */
 }
 `;
-      document.head.appendChild(style2);
+      document.head.appendChild(style);
     }
     const wrap = document.createElement("div");
     Object.assign(wrap.style, {
@@ -48816,7 +48302,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         const ruleCell = kids[i + 3];
         const id = itemCell?.dataset?.id;
         if (!id) continue;
-        applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
+        applyRuleState(itemCell, ruleCell ?? null, NotifierRules.get(id));
       }
     };
     const softUpdateRenderedRows = (next) => {
@@ -48832,8 +48318,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         const popupSwitch = popupCell.querySelector("label");
         if (popupSwitch) setSwitchVisual(popupSwitch, !!row.popup);
         itemCell.dataset.follow = row.followed ? "1" : "0";
-        applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
-        const capped = NotifierService.isIdCapped?.(id) ?? false;
+        applyRuleState(itemCell, ruleCell ?? null, NotifierRules.get(id));
+        const capped = isCapReached(id);
         if (popupSwitch) setSwitchCapState(popupSwitch, capped);
       }
     };
@@ -48847,13 +48333,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     resizeObserver.observe(bodyGrid);
     const onResize = () => syncHeaderToScrollbar();
     window.addEventListener("resize", onResize);
-    let state5 = null;
+    let state7 = null;
     let renderedIds = /* @__PURE__ */ new Set();
     const getFilters = () => ({
       type: selType.value || "all",
       rarity: selRarity.value || "all"
     });
-    const passesFilters = (rows) => NotifierService.filterRows(rows, getFilters());
+    const passesFilters = (rows) => ShopRows.filter(rows, getFilters());
     const mkItemCell = (row) => {
       const wrap2 = document.createElement("div");
       Object.assign(wrap2.style, {
@@ -48982,7 +48468,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       rarityCell.appendChild(rarityBadge(String(row.rarity ?? "\u2014")));
       const popupSwitch = createSwitch((on) => {
         try {
-          NotifierService.setPopup(row.id, !!on);
+          ShopRows.setFollowed(row.id, !!on);
         } catch {
         }
         const cur = NotifierService.getPref(row.id);
@@ -48991,7 +48477,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       setSwitchVisual(popupSwitch, !!row.popup);
       popupSwitch.style.padding = "0";
       const popupCell = wrapCell(popupSwitch);
-      const capped = NotifierService.isIdCapped?.(row.id) ?? false;
+      const capped = isCapReached(row.id);
       setSwitchCapState(popupSwitch, capped);
       const gearBtn = ui.btn("", {
         icon: "\u2699",
@@ -49014,7 +48500,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const ruleCell = wrapCell(gearBtn);
       ruleCell.dataset.role = "rule-cell";
       bodyGrid.append(itemCell, rarityCell, popupCell, ruleCell);
-      applyRuleState(itemCell, ruleCell, NotifierService.getRule(row.id));
+      applyRuleState(itemCell, ruleCell, NotifierRules.get(row.id));
     };
     function clearBody() {
       closeRuleEditor();
@@ -49031,11 +48517,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     function rebuildGrid() {
       clearBody();
-      if (!state5) {
+      if (!state7) {
         renderEmpty();
         return;
       }
-      const rows = passesFilters(state5.rows);
+      const rows = passesFilters(state7.rows);
       if (!rows.length) {
         renderEmpty();
       } else {
@@ -49045,7 +48531,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         });
       }
       refreshRulesUI();
-      followedBadge.textContent = `Followed: ${state5.counts.followed}`;
+      followedBadge.textContent = `Followed: ${state7.counts.followed}`;
       syncHeaderToScrollbar();
     }
     function softUpdateBadge(next) {
@@ -49064,11 +48550,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       } catch {
       }
       unsub = await NotifierService.onChangeNow((s) => {
-        const prev = state5;
-        state5 = s;
+        const prev = state7;
+        state7 = s;
         if (!prev) {
           rebuildGrid();
-          softUpdateRenderedRows(state5);
+          softUpdateRenderedRows(state7);
           return;
         }
         const prevIds = renderedIds;
@@ -49094,7 +48580,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     })();
     const onFilterChange = () => {
-      if (state5) rebuildGrid();
+      if (state7) rebuildGrid();
     };
     selType.onchange = onFilterChange;
     selRarity.onchange = onFilterChange;
@@ -49167,7 +48653,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     card5.appendChild(right);
     let pets = [];
-    let unsubPets2 = null;
+    let unsubPets = null;
     let generalEnabled = PetAlertService.isGeneralEnabled();
     const formRow2 = (labelTxt, control) => {
       const { root } = ui.formRow(labelTxt, control, { labelWidth: "180px" });
@@ -49290,7 +48776,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     (async () => {
       try {
-        unsubPets2 = await PetsService.onPetsChangeNow((arr) => {
+        unsubPets = await PetsService.onPetsChangeNow((arr) => {
           pets = Array.isArray(arr) ? arr.slice(0, 3) : [];
           renderPetList();
         });
@@ -49303,7 +48789,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const prev = view.__cleanup__;
       return () => {
         try {
-          unsubPets2?.();
+          unsubPets?.();
         } catch {
         }
         try {
@@ -49373,7 +48859,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         const ruleCell = kids[i + 3];
         const id = itemCell?.dataset?.id;
         if (!id) continue;
-        applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
+        applyRuleState(itemCell, ruleCell ?? null, NotifierRules.get(id));
       }
     };
     const syncHeaderToScrollbar = () => {
@@ -49545,7 +49031,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       weatherLastSeenRefs.set(row.id, lastSeenInfo);
       const notifySwitch = createSwitch((on) => {
         try {
-          NotifierService.setWeatherNotify(row.id, !!on);
+          WeatherAlerts.setNotify(row.id, !!on);
         } catch {
         }
       });
@@ -49573,7 +49059,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const ruleCell = wrapCell(gearBtn);
       ruleCell.dataset.role = "rule-cell";
       bodyGrid.append(itemCell, lastSeenCell, notifyCell, ruleCell);
-      applyRuleState(itemCell, ruleCell, NotifierService.getRule(row.id));
+      applyRuleState(itemCell, ruleCell, NotifierRules.get(row.id));
     };
     const clearGrid = () => {
       closeRuleEditor();
@@ -49588,11 +49074,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       empty.style.padding = "8px";
       bodyGrid.appendChild(empty);
     };
-    let state5 = null;
-    let stateSig = "";
+    let state7 = null;
+    let stateSig2 = "";
     const updateDynamicWeatherStats = () => {
-      if (!state5) return;
-      for (const row of state5.rows) {
+      if (!state7) return;
+      for (const row of state7.rows) {
         const target = weatherLastSeenRefs.get(row.id);
         if (target) {
           const { label: label2, title } = formatLastSeen(row.lastSeen, row.isCurrent);
@@ -49604,10 +49090,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     const rebuildGrid = () => {
       clearGrid();
-      if (!state5 || !state5.rows.length) {
+      if (!state7 || !state7.rows.length) {
         renderEmpty();
       } else {
-        state5.rows.forEach(addRow);
+        state7.rows.forEach(addRow);
         refreshRulesUI();
       }
       syncHeaderToScrollbar();
@@ -49622,8 +49108,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       try {
         unsubWeather = await NotifierService.onWeatherChangeNow((next) => {
-          state5 = next;
-          stateSig = weatherStateSignature(next.rows);
+          state7 = next;
+          stateSig2 = weatherStateSignature(next.rows);
           rebuildGrid();
         });
       } catch {
@@ -49637,10 +49123,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       try {
         const next = await NotifierService.getWeatherState();
         const nextSig = weatherStateSignature(next.rows);
-        const changed = nextSig !== stateSig;
-        state5 = next;
-        stateSig = nextSig;
-        if (changed) rebuildGrid();
+        const changed4 = nextSig !== stateSig2;
+        state7 = next;
+        stateSig2 = nextSig;
+        if (changed4) rebuildGrid();
         else updateDynamicWeatherStats();
       } catch {
       }
@@ -49701,12 +49187,17 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_menu();
       init_notifier();
+      init_rules();
+      init_shopRows();
+      init_weatherAlerts();
+      init_weather();
+      init_inventoryCaps();
       init_audio();
       init_petAlerts();
       init_pets();
       init_iconCache();
       init_rarityBadge();
-      init_bellFloating();
+      init_floatingBell();
       rulePopover = null;
       detachRuleDocHandler = null;
       detachRuleKeyBlocker = null;
@@ -49994,9 +49485,9 @@ Restore figures are averages; unlucky streaks do worse.`;
           stopDrag();
         };
         pop.appendChild(header);
-        const current = NotifierService.getRule(row.id);
+        const current = NotifierRules.get(row.id);
         const defaults = audio.getPlaybackSettings(row.context);
-        const contextDefaults = row.context === "shops" || row.context === "weather" ? NotifierService.getContextStopDefaults(row.context) : { stopMode: "manual", stopRepeats: null, loopIntervalMs: defaults.loopIntervalMs };
+        const contextDefaults = row.context === "shops" || row.context === "weather" ? LoopDefaults.get(row.context) : { stopMode: "manual", stopRepeats: null, loopIntervalMs: defaults.loopIntervalMs };
         const allowPurchase = row.context === "shops";
         const defaultSoundName = (() => {
           const label2 = (defaults.defaultSoundName || "").trim();
@@ -50190,7 +49681,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         clearBtn.addEventListener("click", (ev) => {
           ev.preventDefault();
           ev.stopPropagation();
-          NotifierService.clearRule(row.id);
+          NotifierRules.clear(row.id);
           closeRuleEditor();
         });
         if (!current) ui.setButtonEnabled(clearBtn, false);
@@ -50225,7 +49716,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           if (allowPurchase && !playbackMode && defaults.mode !== "loop" && (stopMode != null || loopIntervalMs != null)) {
             playbackMode = "loop";
           }
-          NotifierService.setRule(row.id, {
+          NotifierRules.set(row.id, {
             sound,
             volume,
             playbackMode,
@@ -50963,9 +50454,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/tools/styles.ts
   function ensureToolsStyles() {
     if (document.getElementById(STYLE_ID4)) return;
-    const style2 = document.createElement("style");
-    style2.id = STYLE_ID4;
-    style2.textContent = `
+    const style = document.createElement("style");
+    style.id = STYLE_ID4;
+    style.textContent = `
 /* \u2500\u2500 reset for the interactive elements \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 .mgt-chip, .mgt-back, .mgt-action, .mgt-nav, .mgt-dot {
   font-family: inherit;
@@ -51204,7 +50695,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   .mgt-spinner { animation-duration: 2s; }
 }
 `;
-    document.head.appendChild(style2);
+    document.head.appendChild(style);
   }
   var STYLE_ID4, ACCENT2, ACCENT_2, TEXT2, TEXT_DIM2, BORDER2, SURFACE;
   var init_styles2 = __esm({
@@ -51298,20 +50789,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     view.appendChild(wrapper);
     const showLoading = () => {
       viewContainer.innerHTML = "";
-      const state5 = document.createElement("div");
-      state5.className = "mgt-state";
+      const state7 = document.createElement("div");
+      state7.className = "mgt-state";
       const spinner = document.createElement("div");
       spinner.className = "mgt-spinner";
       const text2 = document.createElement("p");
       text2.className = "mgt-state__text";
       text2.textContent = "Fetching the latest tools...";
-      state5.append(spinner, text2);
-      viewContainer.appendChild(state5);
+      state7.append(spinner, text2);
+      viewContainer.appendChild(state7);
     };
     const showError = (message) => {
       viewContainer.innerHTML = "";
-      const state5 = document.createElement("div");
-      state5.className = "mgt-state";
+      const state7 = document.createElement("div");
+      state7.className = "mgt-state";
       const title = document.createElement("span");
       title.className = "mgt-state__title";
       title.textContent = "Couldn't load the tools";
@@ -51323,8 +50814,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       retry.className = "mgt-action is-primary";
       retry.textContent = "Retry";
       retry.onclick = () => void init();
-      state5.append(title, text2, retry);
-      viewContainer.appendChild(state5);
+      state7.append(title, text2, retry);
+      viewContainer.appendChild(state7);
     };
     let tools = [];
     let listViewRoot = null;
@@ -52089,11 +51580,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/room/players.ts
-  function findPlayersDeep(state5) {
-    if (!state5 || typeof state5 !== "object") return [];
+  function findPlayersDeep(state7) {
+    if (!state7 || typeof state7 !== "object") return [];
     const out = [];
     const seen = /* @__PURE__ */ new Set();
-    const stack = [state5];
+    const stack = [state7];
     while (stack.length) {
       const cur = stack.pop();
       if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
@@ -53368,13 +52859,13 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/skins/applier.ts
   function collectGameMatches() {
-    const state5 = getSpriteState();
-    const roots = [state5.app?.stage, state5.renderer?.lastObjectRendered, state5.renderer?.stage];
+    const state7 = getSpriteState();
+    const roots = [state7.app?.stage, state7.renderer?.lastObjectRendered, state7.renderer?.stage];
     const byLabel = /* @__PURE__ */ new Map();
     const byRect = /* @__PURE__ */ new Map();
     const seenNodes = /* @__PURE__ */ new Set();
     let visited = 0;
-    const catalogTextures = new Set(state5.tex.values());
+    const catalogTextures = new Set(state7.tex.values());
     const add = (bucket, key2, texture, node) => {
       let match = bucket.get(key2);
       if (!match) {
@@ -53507,14 +52998,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   function applySkinTexture(target, canvas, getIndex = collectGameMatches) {
     const frameKey = target.frameKey;
     revertSkin(frameKey);
-    const state5 = getSpriteState();
-    const Texture = state5.ctors?.Texture;
+    const state7 = getSpriteState();
+    const Texture = state7.ctors?.Texture;
     if (!Texture?.from) return false;
     const stage = getIndex();
     const labelMatch = stage.byLabel.get(frameKey);
     const { x, y, w, h: h2 } = target.occupiedRect;
     const rectMatch = stage.byRect.get(rectKey(x, y, w, h2));
-    const atlasSource = sourceOf(state5.tex.get(frameKey));
+    const atlasSource = sourceOf(state7.tex.get(frameKey));
     const textures = [];
     const nodes = [];
     const cached2 = lookupCachedTexture(frameKey);
@@ -53634,14 +53125,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   function renderFrameToCanvas(frameKey) {
     const cached2 = canvasCache.get(frameKey);
     if (cached2) return cached2;
-    const state5 = getSpriteState();
-    const texture = state5.tex.get(frameKey);
-    const ctors = state5.ctors;
-    if (!texture || !ctors?.Sprite || !state5.renderer?.extract) return null;
+    const state7 = getSpriteState();
+    const texture = state7.tex.get(frameKey);
+    const ctors = state7.ctors;
+    if (!texture || !ctors?.Sprite || !state7.renderer?.extract) return null;
     let sprite = null;
     try {
       sprite = new ctors.Sprite(texture);
-      const canvas = state5.renderer.extract.canvas(sprite, { resolution: 1 });
+      const canvas = state7.renderer.extract.canvas(sprite, { resolution: 1 });
       if (!canvas) return null;
       if (canvasCache.size >= CACHE_MAX) {
         canvasCache.delete(canvasCache.keys().next().value);
@@ -53704,14 +53195,14 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/skins/gameCaches.ts
   function holders() {
-    const state5 = getSpriteState();
+    const state7 = getSpriteState();
     const root = globalThis.unsafeWindow || globalThis;
     return [
       getPixiApp(),
-      state5.app,
-      state5.app?.app,
-      state5.renderer,
-      state5.renderer?.app,
+      state7.app,
+      state7.app?.app,
+      state7.renderer,
+      state7.renderer?.app,
       root.__PIXI_APP__,
       root.app
     ].filter(Boolean);
@@ -53767,9 +53258,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/skins/debug.ts
   function inspectFrame(frameKey, occupiedRect) {
-    const state5 = getSpriteState();
+    const state7 = getSpriteState();
     const stage = collectGameMatches();
-    const catalogTexture = state5.tex.get(frameKey);
+    const catalogTexture = state7.tex.get(frameKey);
     const atlasSource = sourceOf2(catalogTexture);
     const describe = (match) => (match?.nodes ?? []).map((node) => ({
       ctor: node?.constructor?.name,
@@ -53804,7 +53295,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function findOnStage(substring = "") {
-    const state5 = getSpriteState();
+    const state7 = getSpriteState();
     const stage = collectGameMatches();
     const needle = substring.toLowerCase();
     const labels = [...stage.byLabel.keys()].filter((label2) => label2.toLowerCase().includes(needle)).sort();
@@ -53829,7 +53320,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       unlabelledRects: unlabelled.slice(0, 40),
       unlabelledRectCount: unlabelled.length,
       catalogRect: (() => {
-        const rect = frameRectOf2(state5.tex.get(substring));
+        const rect = frameRectOf2(state7.tex.get(substring));
         return rect ? rectKey2(rect.x, rect.y, rect.width, rect.height) : null;
       })()
     };
@@ -54079,16 +53570,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     retriesLeft -= 1;
     const targets = await loadTargets();
     const index = sharedStageIndex();
-    let changed = false;
+    let changed4 = false;
     for (const result of pending6) {
       const canvas = skinCanvases.get(result.frameKey);
       const target = targets.get(result.frameKey);
       if (!canvas || !target) continue;
       if (!applySkinTexture(target, canvas, index)) continue;
       snapshot.results.set(result.frameKey, { frameKey: result.frameKey, applied: true });
-      changed = true;
+      changed4 = true;
     }
-    if (!changed) return;
+    if (!changed4) return;
     snapshot.rebaked = rebakeAll();
     notifyChanged();
   }
@@ -54144,8 +53635,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   }
   async function initSkins() {
-    if (started3) return;
-    started3 = true;
+    if (started4) return;
+    started4 = true;
     snapshot.enabled = getAriesStorage().skins?.enabled !== false;
     installSkinsDebug();
     try {
@@ -54163,7 +53654,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       notifyChanged();
     }
   }
-  var SKINS_CHANGED_EVENT, RENDERER_WATCH_MS, RETRY_PASS_MS, MAX_RETRY_PASSES, snapshot, skinCanvases, started3, watchId, retryId, lastRenderer, applyChain, retriesLeft;
+  var SKINS_CHANGED_EVENT, RENDERER_WATCH_MS, RETRY_PASS_MS, MAX_RETRY_PASSES, snapshot, skinCanvases, started4, watchId, retryId, lastRenderer, applyChain, retriesLeft;
   var init_skins = __esm({
     "src/features/skins/index.ts"() {
       "use strict";
@@ -54189,7 +53680,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         rebaked: null
       };
       skinCanvases = /* @__PURE__ */ new Map();
-      started3 = false;
+      started4 = false;
       watchId = null;
       retryId = null;
       lastRenderer = null;
@@ -54759,89 +54250,89 @@ Restore figures are averages; unlucky streaks do worse.`;
   function stepMovement(input) {
     const { anchor, isWalkable, random, config } = input;
     const pickInterest2 = input.pickInterest ?? null;
-    const state5 = { ...input.state };
+    const state7 = { ...input.state };
     const excludeCenter = anchor.tracksPlayer;
     const blocked = anchor.tracksPlayer ? anchor.tile : null;
     const zone = anchor.zone;
     const zoneWalkable = (x, y) => isWalkable(x, y) && (!zone || zone(x, y));
-    const insideZone = !zone || !state5.tile || zone(state5.tile.x, state5.tile.y);
+    const insideZone = !zone || !state7.tile || zone(state7.tile.x, state7.tile.y);
     const stepWalkable = insideZone ? zoneWalkable : isWalkable;
-    const anchorMoved = !sameTile(state5.lastAnchorTile, anchor.tile);
-    state5.lastAnchorTile = { ...anchor.tile };
+    const anchorMoved = !sameTile(state7.lastAnchorTile, anchor.tile);
+    state7.lastAnchorTile = { ...anchor.tile };
     if (anchorMoved) {
-      state5.idleTicks = 0;
-      if (state5.activity === "wander") {
-        state5.activity = "pursue";
-        state5.wanderTarget = null;
-        state5.wanderTargetIsInterest = false;
-        state5.wanderCooldown = 0;
+      state7.idleTicks = 0;
+      if (state7.activity === "wander") {
+        state7.activity = "pursue";
+        state7.wanderTarget = null;
+        state7.wanderTargetIsInterest = false;
+        state7.wanderCooldown = 0;
       }
     } else {
-      state5.idleTicks++;
+      state7.idleTicks++;
     }
-    if (!state5.tile) {
+    if (!state7.tile) {
       const spawn = findNearbyWalkable(anchor.tile, zoneWalkable, excludeCenter) ?? findNearbyWalkable(anchor.tile, isWalkable, excludeCenter);
-      state5.tile = spawn;
-      return { state: state5, tile: spawn, teleported: spawn !== null };
+      state7.tile = spawn;
+      return { state: state7, tile: spawn, teleported: spawn !== null };
     }
-    const arrived = manhattan(state5.tile, anchor.tile) <= config.followDistance;
-    if (state5.activity === "pursue" && arrived && anchor.onArrival === "wander") {
-      const mayWander = !anchor.tracksPlayer || state5.idleTicks >= config.idleTicksBeforeWander;
+    const arrived = manhattan(state7.tile, anchor.tile) <= config.followDistance;
+    if (state7.activity === "pursue" && arrived && anchor.onArrival === "wander") {
+      const mayWander = !anchor.tracksPlayer || state7.idleTicks >= config.idleTicksBeforeWander;
       if (mayWander) {
-        state5.activity = "wander";
-        state5.wanderTarget = null;
-        state5.wanderTargetIsInterest = false;
-        state5.wanderCooldown = 0;
+        state7.activity = "wander";
+        state7.wanderTarget = null;
+        state7.wanderTargetIsInterest = false;
+        state7.wanderCooldown = 0;
       }
     }
     const passable = (x, y) => stepWalkable(x, y) && !(blocked !== null && x === blocked.x && y === blocked.y);
     let isGoal = null;
     let interestReached = null;
-    if (state5.activity === "pursue") {
+    if (state7.activity === "pursue") {
       if (!arrived) {
         isGoal = (x, y) => manhattan({ x, y }, anchor.tile) <= config.followDistance;
       }
     } else {
-      const wander = resolveWanderTarget(state5, anchor, config, zoneWalkable, random, pickInterest2);
+      const wander = resolveWanderTarget(state7, anchor, config, zoneWalkable, random, pickInterest2);
       interestReached = wander.interestReached;
       const target = wander.target;
       if (target) isGoal = (x, y) => x === target.x && y === target.y;
     }
-    if (!isGoal) return { state: state5, tile: state5.tile, teleported: false, interestReached };
-    const next = findFirstStep(state5.tile, isGoal, passable);
+    if (!isGoal) return { state: state7, tile: state7.tile, teleported: false, interestReached };
+    const next = findFirstStep(state7.tile, isGoal, passable);
     if (!next) {
-      if (state5.activity === "wander") {
-        state5.wanderTarget = null;
-        state5.wanderTargetIsInterest = false;
+      if (state7.activity === "wander") {
+        state7.wanderTarget = null;
+        state7.wanderTargetIsInterest = false;
       }
-      return { state: state5, tile: state5.tile, teleported: false };
+      return { state: state7, tile: state7.tile, teleported: false };
     }
-    state5.tile = next;
-    return { state: state5, tile: next, teleported: false };
+    state7.tile = next;
+    return { state: state7, tile: next, teleported: false };
   }
-  function resolveWanderTarget(state5, anchor, config, isWalkable, random, pickInterest2) {
-    if (state5.wanderCooldown > 0) {
-      state5.wanderCooldown--;
+  function resolveWanderTarget(state7, anchor, config, isWalkable, random, pickInterest2) {
+    if (state7.wanderCooldown > 0) {
+      state7.wanderCooldown--;
       return { target: null, interestReached: null };
     }
-    if (state5.wanderTarget && sameTile(state5.wanderTarget, state5.tile)) {
-      const reached = state5.wanderTargetIsInterest ? { ...state5.wanderTarget } : null;
-      state5.wanderTarget = null;
-      state5.wanderTargetIsInterest = false;
-      state5.wanderCooldown = drawWanderPause(config, random);
+    if (state7.wanderTarget && sameTile(state7.wanderTarget, state7.tile)) {
+      const reached = state7.wanderTargetIsInterest ? { ...state7.wanderTarget } : null;
+      state7.wanderTarget = null;
+      state7.wanderTargetIsInterest = false;
+      state7.wanderCooldown = drawWanderPause(config, random);
       return { target: null, interestReached: reached };
     }
-    if (!state5.wanderTarget) {
+    if (!state7.wanderTarget) {
       const radius2 = wanderRadiusOf(anchor, config);
-      const interest = pickInterest2 && state5.tile ? pickInterestSafely(pickInterest2, anchor.tile, radius2, state5.tile, isWalkable) : null;
-      state5.wanderTargetIsInterest = interest !== null;
-      state5.wanderTarget = interest ?? pickWanderTarget(anchor.tile, radius2, isWalkable, random);
-      if (!state5.wanderTarget) {
-        state5.wanderCooldown = drawWanderPause(config, random);
+      const interest = pickInterest2 && state7.tile ? pickInterestSafely(pickInterest2, anchor.tile, radius2, state7.tile, isWalkable) : null;
+      state7.wanderTargetIsInterest = interest !== null;
+      state7.wanderTarget = interest ?? pickWanderTarget(anchor.tile, radius2, isWalkable, random);
+      if (!state7.wanderTarget) {
+        state7.wanderCooldown = drawWanderPause(config, random);
         return { target: null, interestReached: null };
       }
     }
-    return { target: state5.wanderTarget, interestReached: null };
+    return { target: state7.wanderTarget, interestReached: null };
   }
   function pickInterestSafely(pickInterest2, center, radius2, from, isWalkable) {
     const accepts = (x, y) => Math.max(Math.abs(x - center.x), Math.abs(y - center.y)) <= radius2 && !(x === center.x && y === center.y) && !(x === from.x && y === from.y) && isWalkable(x, y);
@@ -55438,18 +54929,18 @@ Restore figures are averages; unlucky streaks do worse.`;
   function initialGateState() {
     return { lastSpokeAt: 0, mutedUntil: {}, queue: [] };
   }
-  function offerReaction(state5, reaction, now2) {
-    if (now2 < (state5.mutedUntil[familyOf(reaction.key)] ?? 0)) return state5;
-    const existing = state5.queue.find((q) => q.key === reaction.key);
-    if (existing && (existing.weight ?? 0) > (reaction.weight ?? 0)) return state5;
-    const queue = state5.queue.filter((q) => q.key !== reaction.key);
+  function offerReaction(state7, reaction, now2) {
+    if (now2 < (state7.mutedUntil[familyOf(reaction.key)] ?? 0)) return state7;
+    const existing = state7.queue.find((q) => q.key === reaction.key);
+    if (existing && (existing.weight ?? 0) > (reaction.weight ?? 0)) return state7;
+    const queue = state7.queue.filter((q) => q.key !== reaction.key);
     queue.push({ ...reaction, at: now2 });
-    return { ...state5, queue };
+    return { ...state7, queue };
   }
-  function takeReaction(state5, now2, busy4) {
-    const queue = state5.queue.filter((q) => now2 - q.at <= REACTION_TTL_MS[q.priority]);
-    const kept = { ...state5, queue };
-    if (busy4 || queue.length === 0 || now2 - state5.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
+  function takeReaction(state7, now2, busy4) {
+    const queue = state7.queue.filter((q) => now2 - q.at <= REACTION_TTL_MS[q.priority]);
+    const kept = { ...state7, queue };
+    if (busy4 || queue.length === 0 || now2 - state7.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
     const chosen = queue.find((q) => q.priority === "high") ?? queue[0];
     const family = familyOf(chosen.key);
     const { at: _at, ...reaction } = chosen;
@@ -55457,7 +54948,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       reaction,
       state: {
         lastSpokeAt: now2,
-        mutedUntil: { ...state5.mutedUntil, [family]: now2 + (FAMILY_COOLDOWN_MS[family] ?? 0) },
+        mutedUntil: { ...state7.mutedUntil, [family]: now2 + (FAMILY_COOLDOWN_MS[family] ?? 0) },
         // Le reste de la famille qui vient de parler se tait aussi.
         queue: queue.filter((q) => q !== chosen && (FAMILY_COOLDOWN_MS[family] ? familyOf(q.key) !== family : true))
       }
@@ -55881,23 +55372,23 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/chat/hatch.ts
-  function hasAnyRule(rules2) {
-    return rules2.species.length > 0 || rules2.mutations.length > 0 || rules2.abilities.length > 0 || rules2.minMaxStr !== null;
+  function hasAnyRule(rules3) {
+    return rules3.species.length > 0 || rules3.mutations.length > 0 || rules3.abilities.length > 0 || rules3.minMaxStr !== null;
   }
   function hasAny(present, wanted) {
     if (wanted.length === 0) return false;
     const set2 = new Set(present.map((value) => value.toLowerCase()));
     return wanted.some((value) => set2.has(value.toLowerCase()));
   }
-  function matchesKeep(pet, rules2) {
-    if (rules2.species.includes(pet.species)) return true;
-    if (hasAny(pet.mutations, rules2.mutations)) return true;
-    if (rules2.abilities.some((ability) => pet.abilities.includes(ability))) return true;
-    if (rules2.minMaxStr !== null && pet.maxStrength !== null && pet.maxStrength >= rules2.minMaxStr) return true;
+  function matchesKeep(pet, rules3) {
+    if (rules3.species.includes(pet.species)) return true;
+    if (hasAny(pet.mutations, rules3.mutations)) return true;
+    if (rules3.abilities.some((ability) => pet.abilities.includes(ability))) return true;
+    if (rules3.minMaxStr !== null && pet.maxStrength !== null && pet.maxStrength >= rules3.minMaxStr) return true;
     return false;
   }
-  function hatchCheer(pets, rules2) {
-    const kept = pets.filter((pet) => matchesKeep(pet, rules2));
+  function hatchCheer(pets, rules3) {
+    const kept = pets.filter((pet) => matchesKeep(pet, rules3));
     if (kept.length === 0) return null;
     for (const mutation of CHEERED_MUTATIONS) {
       const star = kept.find((pet) => hasAny(pet.mutations, [mutation]));
@@ -55905,15 +55396,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return { emote: EmoteType.Clapping, star: null, mutation: null };
   }
-  function isProtected(pet, rules2) {
-    return pet.favorited || pet.onTeam || matchesKeep(pet, rules2);
+  function isProtected(pet, rules3) {
+    return pet.favorited || pet.onTeam || matchesKeep(pet, rules3);
   }
-  function toFavourite(pets, rules2) {
-    return pets.filter((pet) => !pet.favorited && matchesKeep(pet, rules2));
+  function toFavourite(pets, rules3) {
+    return pets.filter((pet) => !pet.favorited && matchesKeep(pet, rules3));
   }
-  function toSell(pets, rules2) {
-    if (!hasAnyRule(rules2)) return [];
-    return pets.filter((pet) => !isProtected(pet, rules2));
+  function toSell(pets, rules3) {
+    if (!hasAnyRule(rules3)) return [];
+    return pets.filter((pet) => !isProtected(pet, rules3));
   }
   function petSignature(pets) {
     return pets.map((pet) => pet.petId).sort().join("|");
@@ -55926,15 +55417,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     for (const pet of pets) counts.set(pet.species, (counts.get(pet.species) ?? 0) + 1);
     return [...counts.entries()].map(([species, count]) => ({ species, count })).sort((a, b) => b.count - a.count || a.species.localeCompare(b.species));
   }
-  function describeKeep(rules2, abilityNames = /* @__PURE__ */ new Map()) {
-    if (!hasAnyRule(rules2)) return "Nothing set yet";
+  function describeKeep(rules3, abilityNames = /* @__PURE__ */ new Map()) {
+    if (!hasAnyRule(rules3)) return "Nothing set yet";
     const parts = [];
-    if (rules2.species.length) parts.push(listWords(rules2.species));
-    if (rules2.mutations.length) parts.push(listWords(rules2.mutations));
-    if (rules2.abilities.length) {
-      parts.push(listWords(rules2.abilities.map((id) => abilityNames.get(id) ?? id)));
+    if (rules3.species.length) parts.push(listWords(rules3.species));
+    if (rules3.mutations.length) parts.push(listWords(rules3.mutations));
+    if (rules3.abilities.length) {
+      parts.push(listWords(rules3.abilities.map((id) => abilityNames.get(id) ?? id)));
     }
-    if (rules2.minMaxStr !== null) parts.push(`max STR ${rules2.minMaxStr} and up`);
+    if (rules3.minMaxStr !== null) parts.push(`max STR ${rules3.minMaxStr} and up`);
     return parts.join(", ");
   }
   function describeHatchRequest(count) {
@@ -56170,28 +55661,28 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function pickDialogueLine(input) {
     const { contextual, customLines, nowMs, random, cooldownMs } = input;
-    const state5 = {
+    const state7 = {
       lastCustomIndex: input.state.lastCustomIndex,
       mutedUntil: { ...input.state.mutedUntil }
     };
     const lines = customLines.filter((line) => typeof line === "string" && line.trim().length > 0);
     const available = contextual.filter(
-      (candidate) => candidate?.message && nowMs >= (state5.mutedUntil[candidate.key] ?? 0)
+      (candidate) => candidate?.message && nowMs >= (state7.mutedUntil[candidate.key] ?? 0)
     );
     if (available.length > 0 && (lines.length === 0 || random() < CONTEXTUAL_CHANCE)) {
       const candidate = available[Math.min(available.length - 1, Math.floor(random() * available.length))];
-      state5.mutedUntil[candidate.key] = nowMs + cooldownMs;
-      return { message: candidate.message, emote: candidate.emote ?? null, custom: false, state: state5 };
+      state7.mutedUntil[candidate.key] = nowMs + cooldownMs;
+      return { message: candidate.message, emote: candidate.emote ?? null, custom: false, state: state7 };
     }
-    if (lines.length === 0) return { message: null, emote: null, custom: false, state: state5 };
+    if (lines.length === 0) return { message: null, emote: null, custom: false, state: state7 };
     if (lines.length === 1) {
-      state5.lastCustomIndex = 0;
-      return { message: lines[0], emote: null, custom: true, state: state5 };
+      state7.lastCustomIndex = 0;
+      return { message: lines[0], emote: null, custom: true, state: state7 };
     }
     let index = Math.min(lines.length - 1, Math.floor(random() * lines.length));
-    if (index === state5.lastCustomIndex) index = (index + 1) % lines.length;
-    state5.lastCustomIndex = index;
-    return { message: lines[index], emote: null, custom: true, state: state5 };
+    if (index === state7.lastCustomIndex) index = (index + 1) % lines.length;
+    state7.lastCustomIndex = index;
+    return { message: lines[index], emote: null, custom: true, state: state7 };
   }
   var CONTEXTUAL_CHANCE, DEFAULT_CONTEXTUAL_COOLDOWN_MS;
   var init_dialogue = __esm({
@@ -57098,14 +56589,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     return duplicate ? log2 : append(log2, message);
   }
   function clearProposal(log2, proposalId) {
-    let changed = false;
+    let changed4 = false;
     const messages = log2.messages.map((entry) => {
       if (entry.proposalId !== proposalId) return entry;
-      changed = true;
+      changed4 = true;
       const { proposalId: _dropped, ...rest2 } = entry;
       return rest2;
     });
-    return changed ? { ...log2, messages } : log2;
+    return changed4 ? { ...log2, messages } : log2;
   }
   var MAX_MESSAGES;
   var init_log = __esm({
@@ -57621,13 +57112,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function allowedCropsFor(petId, species) {
     const compatibles = PetsService.getCompatibleCropsForSpecies(species);
-    let rules2 = {};
+    let rules3 = {};
     try {
-      rules2 = PetsService.getOverride(petId).crops ?? {};
+      rules3 = PetsService.getOverride(petId).crops ?? {};
     } catch {
-      rules2 = {};
+      rules3 = {};
     }
-    return new Set(compatibles.filter((crop) => rules2[crop] ? rules2[crop].allowed : true));
+    return new Set(compatibles.filter((crop) => rules3[crop] ? rules3[crop].allowed : true));
   }
   async function reviewFeeding(search2) {
     const settings = loadCompanionSettings();
@@ -57704,20 +57195,20 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function findFeedable(search2) {
     return (await reviewFeeding(search2)).candidates;
   }
-  function iconOf2(pick2) {
+  function iconOf(pick2) {
     return petThing(pick2.pet, "") ?? petSpeciesIcon(pick2.petSpecies);
   }
   function feedBubble(picks) {
     const only = picks.length === 1 ? picks[0] : null;
-    if (only) return compose(iconOf2(only), ` ${only.petName} is at ${only.hungerPct}%. Feed it?`);
+    if (only) return compose(iconOf(only), ` ${only.petName} is at ${only.hungerPct}%. Feed it?`);
     const seen = /* @__PURE__ */ new Set();
-    const icons = picks.filter((pick2) => !seen.has(pick2.petSpecies) && seen.add(pick2.petSpecies)).slice(0, 2).map(iconOf2);
+    const icons = picks.filter((pick2) => !seen.has(pick2.petSpecies) && seen.add(pick2.petSpecies)).slice(0, 2).map(iconOf);
     return compose(...spaced(icons.filter((icon) => icon !== null)), ` ${picks.length} pets are hungry. Feed them all?`);
   }
   function feedQuestion(picks) {
     const listed = picks.flatMap((pick2, index) => [
       index === 0 ? "" : ", ",
-      iconOf2(pick2),
+      iconOf(pick2),
       ` ${pick2.petName} (${pick2.hungerPct}%)`
     ]);
     return compose(
@@ -58105,13 +57596,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     reporter2.say("report", `${hatched} of ${attempted.length} hatched.${tail}`);
   }
-  async function announceHatchling(known, rules2, reporter2) {
+  async function announceHatchling(known, rules3, reporter2) {
     const pets = await readPetRows();
     if (pets.length === 0) return;
     const born = pets.filter((pet) => !known.has(pet.petId));
     for (const pet of born) known.add(pet.petId);
     if (born.length === 0) return;
-    const cheer = hatchCheer(born, rules2);
+    const cheer = hatchCheer(born, rules3);
     const mutation = cheer?.mutation ?? null;
     const timing = mutation ? CHEER_TIMING[mutation] : void 0;
     const lines = mutation ? CHEER_LINES[mutation] : void 0;
@@ -58297,22 +57788,22 @@ Restore figures are averages; unlucky streaks do worse.`;
   function hatchProvider() {
     return async () => (await readHatchScope()).readySlots;
   }
-  function sellProvider(rules2) {
+  function sellProvider(rules3) {
     return async () => {
       const scope = await readHatchScope();
       return {
-        favourite: toFavourite(scope.pets, rules2),
-        sell: toSell(scope.pets, rules2),
+        favourite: toFavourite(scope.pets, rules3),
+        sell: toSell(scope.pets, rules3),
         teamId: loadCompanionSettings().hatchSellTeamId
       };
     };
   }
-  function afterHatch(stop2, scope, rules2, sellable) {
+  function afterHatch(stop2, scope, rules3, sellable) {
     const waiting = scope.readySlots.length;
     const eggs = waiting > 0 ? ` ${waiting} egg${waiting === 1 ? "" : "s"} still waiting.` : "";
     if (stop2 === "full") {
       if (sellable.length > 0) return `Your bag is full.${eggs}`;
-      return hasAnyRule(rules2) ? `Your bag is full, nothing in it is up for sale.${eggs}` : `Your bag is full.${eggs} Nothing set to keep, so I am not selling.`;
+      return hasAnyRule(rules3) ? `Your bag is full, nothing in it is up for sale.${eggs}` : `Your bag is full.${eggs} Nothing set to keep, so I am not selling.`;
     }
     return sellable.length > 0 ? "All open. Now the ones you did not want." : null;
   }
@@ -58367,9 +57858,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function post(from, kind, text2, proposalId, extra = {}) {
     const shown = extra.thread ?? extra.bubble;
-    state2 = {
-      ...state2,
-      log: append(state2.log, {
+    state4 = {
+      ...state4,
+      log: append(state4.log, {
         from,
         kind,
         text: shown?.message ?? text2,
@@ -58399,9 +57890,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
   }
   function dropStaleProposal() {
-    const proposal = state2.proposal;
+    const proposal = state4.proposal;
     if (!proposal || !isExpired(proposal, Date.now())) return;
-    state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposal.id) };
+    state4 = { ...state4, proposal: null, captured: null, log: clearProposal(state4.log, proposal.id) };
     notify2();
   }
   function harvestBubble(rows, sentence) {
@@ -58433,7 +57924,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       rows.length,
       withTeam(selectionSignature(rows), team)
     );
-    state2 = { ...state2, proposal, captured: { kind: "harvest", provider, rows } };
+    state4 = { ...state4, proposal, captured: { kind: "harvest", provider, rows } };
     const held = scope.lockedOut > 0 ? ` I am leaving ${scope.lockedOut} locked one${scope.lockedOut === 1 ? "" : "s"} alone.` : "";
     const sentence = `I can see ${proposal.summary}.${held}${teamPromise(team)} Want me to pick them?`;
     post("companion", "reply", sentence, proposal.id, { bubble: harvestBubble(rows, sentence) });
@@ -58451,7 +57942,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return;
     }
     const proposal = openProposal("feed", describeFeed(picks), picks.length, feedSignature(picks));
-    state2 = { ...state2, proposal, captured: { kind: "feed", provider, picks } };
+    state4 = { ...state4, proposal, captured: { kind: "feed", provider, picks } };
     const listed = feedQuestion(picks);
     post("companion", "reply", listed.message, proposal.id, {
       bubble: feedBubble(picks),
@@ -58471,14 +57962,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       return;
     }
     const proposal = openProposal("plant", summarizePlan(plan), plan.length, plantSignature(plan));
-    state2 = { ...state2, proposal, captured: { kind: "plant", provider, plan } };
+    state4 = { ...state4, proposal, captured: { kind: "plant", provider, plan } };
     const most = countByItem(plan)[0];
     const sentence = `That is ${proposal.summary}. Want me to get started?`;
     post("companion", "reply", sentence, proposal.id, {
       bubble: compose(most?.kind === "seed" ? seedIcon(most.id) : null, " ", sentence)
     });
   }
-  async function proposeHatchSlots(provider, rules2) {
+  async function proposeHatchSlots(provider, rules3) {
     let slots;
     try {
       slots = await provider();
@@ -58492,14 +57983,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const team = loadCompanionSettings().hatchTeamId;
     const proposal = openProposal("hatch", summarizeHatch(slots), slots.length, withTeam(slotSignature2(slots), team));
-    state2 = { ...state2, proposal, captured: { kind: "hatch", provider, rules: rules2, slots } };
+    state4 = { ...state4, proposal, captured: { kind: "hatch", provider, rules: rules3, slots } };
     const kinds = await readHatchScope().then((scope) => scope.eggIds).catch(() => []);
     const sentence = `${proposal.summary}.${teamPromise(team)} Want me to open them?`;
     post("companion", "reply", sentence, proposal.id, {
       bubble: compose(kinds.length === 1 ? eggIcon(kinds[0]) : null, " ", sentence)
     });
   }
-  async function proposeSellPlan(provider, rules2) {
+  async function proposeSellPlan(provider, rules3) {
     let plan;
     try {
       plan = await provider();
@@ -58513,7 +58004,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const signature = withTeam(`${petSignature(plan.sell)}/${petSignature(plan.favourite)}`, plan.teamId);
     const proposal = openProposal("sell", summarizeSell(plan.sell), plan.sell.length, signature);
-    state2 = { ...state2, proposal, captured: { kind: "sell", provider, rules: rules2, plan } };
+    state4 = { ...state4, proposal, captured: { kind: "sell", provider, rules: rules3, plan } };
     const keeping = plan.favourite.length > 0 ? ` I would favourite the ${plan.favourite.length} you keep first.` : "";
     const sentence = `That would be ${proposal.summary}.${keeping}${teamPromise(plan.teamId)} Should I?`;
     post("companion", "reply", sentence, proposal.id, {
@@ -58523,9 +58014,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   function reporter() {
     return {
       say: (kind, text2, spoken, force) => post("companion", kind, text2, void 0, { bubble: spoken, force }),
-      stopped: () => state2.cancelRequested,
+      stopped: () => state4.cancelRequested,
       progress: (done, total) => {
-        state2 = { ...state2, run: { done, total } };
+        state4 = { ...state4, run: { done, total } };
         notify2();
       }
     };
@@ -58535,28 +58026,28 @@ Restore figures are averages; unlucky streaks do worse.`;
     try {
       await run(reporter());
     } finally {
-      stopped = state2.cancelRequested;
-      state2 = { ...state2, run: null, cancelRequested: false };
+      stopped = state4.cancelRequested;
+      state4 = { ...state4, run: null, cancelRequested: false };
       notify2();
     }
     return stopped;
   }
-  async function afterHatchBatch(rules2, stop2) {
+  async function afterHatchBatch(rules3, stop2) {
     if (stop2 === "cancelled") return;
     const scope = await readHatchScope().catch(() => null);
     if (!scope) return;
-    const sellable = toSell(scope.pets, rules2);
-    const note = afterHatch(stop2, scope, rules2, sellable);
+    const sellable = toSell(scope.pets, rules3);
+    const note = afterHatch(stop2, scope, rules3, sellable);
     if (note) post("companion", "system", note);
     if (sellable.length === 0) return;
-    await proposeSellPlan(sellProvider(rules2), rules2);
+    await proposeSellPlan(sellProvider(rules3), rules3);
   }
-  async function afterSellBatch(rules2) {
+  async function afterSellBatch(rules3) {
     const provider = hatchProvider();
     const slots = await provider().catch(() => []);
     if (slots.length === 0) return;
     post("companion", "system", "There is room again.");
-    await proposeHatchSlots(provider, rules2);
+    await proposeHatchSlots(provider, rules3);
   }
   function teamPromise(teamId2) {
     const name = teamName(teamId2);
@@ -58599,7 +58090,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (captured.kind === "sell") return captured.plan.sell.length;
     return captured.picks.length;
   }
-  var ALERT_DEDUPE_MS, state2, listeners8, nextProposalSeq, ACCEPTANCE, CompanionChat;
+  var ALERT_DEDUPE_MS, state4, listeners8, nextProposalSeq, ACCEPTANCE, CompanionChat;
   var init_chat = __esm({
     "src/features/companion/chat/index.ts"() {
       "use strict";
@@ -58625,7 +58116,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_state3();
       init_proposals();
       ALERT_DEDUPE_MS = 6e4;
-      state2 = {
+      state4 = {
         log: emptyLog(),
         proposal: null,
         captured: null,
@@ -58644,7 +58135,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       };
       CompanionChat = {
         getLog() {
-          return state2.log;
+          return state4.log;
         },
         /** Retire une question à laquelle il est trop tard pour répondre. */
         dropStaleProposal() {
@@ -58659,9 +58150,9 @@ Restore figures are averages; unlucky streaks do worse.`;
          * le joueur lui-même qui vient de le couper.
          */
         withdrawProposal() {
-          const proposal = state2.proposal;
+          const proposal = state4.proposal;
           if (!proposal) return;
-          state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposal.id) };
+          state4 = { ...state4, proposal: null, captured: null, log: clearProposal(state4.log, proposal.id) };
           notify2();
         },
         /**
@@ -58676,22 +58167,22 @@ Restore figures are averages; unlucky streaks do worse.`;
          * vérification de périmètre à la confirmation qui protège du reste.
          */
         withdrawFeedIfSettled(stillFeedable) {
-          const proposal = state2.proposal;
-          const captured = state2.captured;
+          const proposal = state4.proposal;
+          const captured = state4.captured;
           if (!proposal || captured?.kind !== "feed") return false;
           if (!isSettled(captured.picks, stillFeedable)) return false;
-          state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposal.id) };
+          state4 = { ...state4, proposal: null, captured: null, log: clearProposal(state4.log, proposal.id) };
           post("companion", "system", "Never mind, your pets are sorted.");
           return true;
         },
         getProposal() {
-          return state2.proposal;
+          return state4.proposal;
         },
         getRun() {
-          return state2.run;
+          return state4.run;
         },
         isRunning() {
-          return state2.run !== null;
+          return state4.run !== null;
         },
         subscribe(listener) {
           listeners8.add(listener);
@@ -58699,9 +58190,9 @@ Restore figures are averages; unlucky streaks do worse.`;
         },
         /** Alerte poussée par une source ; ignorée si identique et récente. */
         alert(text2) {
-          state2 = {
-            ...state2,
-            log: appendAlertOnce(state2.log, { from: "companion", kind: "alert", text: text2, atMs: Date.now() }, ALERT_DEDUPE_MS)
+          state4 = {
+            ...state4,
+            log: appendAlertOnce(state4.log, { from: "companion", kind: "alert", text: text2, atMs: Date.now() }, ALERT_DEDUPE_MS)
           };
           notify2();
         },
@@ -58713,7 +58204,7 @@ Restore figures are averages; unlucky streaks do worse.`;
          */
         async proposeHarvest(request2) {
           post("you", "command", request2.label);
-          if (state2.run) {
+          if (state4.run) {
             post("companion", "system", "Hold on, still on the last batch.");
             return;
           }
@@ -58731,14 +58222,14 @@ Restore figures are averages; unlucky streaks do worse.`;
          */
         async offerFeed(provider) {
           dropStaleProposal();
-          if (state2.run || state2.proposal) return false;
+          if (state4.run || state4.proposal) return false;
           await proposeFeedScope(provider);
-          return state2.proposal !== null;
+          return state4.proposal !== null;
         },
         /** Confirme et exécute. C'est le seul chemin qui déclenche une action. */
         async confirm(proposalId) {
-          const proposal = state2.proposal;
-          const captured = state2.captured;
+          const proposal = state4.proposal;
+          const captured = state4.captured;
           if (!proposal || proposal.id !== proposalId || !captured) {
             post("companion", "system", explain("unknown"));
             return;
@@ -58751,18 +58242,18 @@ Restore figures are averages; unlucky streaks do worse.`;
           }
           const decision = verdict(proposal, signature, Date.now());
           if (!decision.ok) {
-            state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposalId) };
+            state4 = { ...state4, proposal: null, captured: null, log: clearProposal(state4.log, proposalId) };
             post("companion", "system", explain(decision.reason));
             if (decision.reason === "changed" || decision.reason === "expired") await reproposeSame(captured);
             return;
           }
-          state2 = {
-            ...state2,
+          state4 = {
+            ...state4,
             proposal: null,
             captured: null,
             run: { done: 0, total: capturedSize(captured) },
             cancelRequested: false,
-            log: clearProposal(state2.log, proposalId)
+            log: clearProposal(state4.log, proposalId)
           };
           if (captured.kind === "harvest") {
             await runBatch((r) => executeHarvestBatch(captured.rows, r));
@@ -58783,15 +58274,15 @@ Restore figures are averages; unlucky streaks do worse.`;
         },
         /** Écarte la proposition en cours sans rien exécuter. */
         decline(proposalId) {
-          if (state2.proposal?.id !== proposalId) return;
-          state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposalId) };
+          if (state4.proposal?.id !== proposalId) return;
+          state4 = { ...state4, proposal: null, captured: null, log: clearProposal(state4.log, proposalId) };
           post("you", "command", "Not now");
           post("companion", "system", "Alright, leaving them be.");
         },
         /** Interrompt un lot en cours. */
         cancelRun() {
-          if (!state2.run) return;
-          state2 = { ...state2, cancelRequested: true };
+          if (!state4.run) return;
+          state4 = { ...state4, cancelRequested: true };
           notify2();
         }
       };
@@ -60583,7 +60074,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/menu/hatchModal.ts
   function openHatchModal(host, onAsk) {
     let scope = EMPTY_HATCH_SCOPE;
-    let rules2 = { ...loadCompanionSettings().hatchKeepRules };
+    let rules3 = { ...loadCompanionSettings().hatchKeepRules };
     const iconCache = /* @__PURE__ */ new Map();
     const cachedIcon = (key2, make) => {
       let known = iconCache.get(key2);
@@ -60604,7 +60095,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const abilityCard = filterCard("", "Keep abilities");
     const strengthCard = filterCard("", "Keep by strength");
     function commit(next) {
-      rules2 = next;
+      rules3 = next;
       patchCompanionSettings({ hatchKeepRules: next });
       render();
     }
@@ -60632,37 +60123,37 @@ Restore figures are averages; unlucky streaks do worse.`;
       return [...all].sort((a, b) => a.localeCompare(b));
     }
     function renderSpecies() {
-      const values = offered(scope.possibleSpecies, rules2.species);
+      const values = offered(scope.possibleSpecies, rules3.species);
       speciesCard.root.style.display = values.length > 0 ? "flex" : "none";
       if (values.length === 0) return;
       speciesCard.body.replaceChildren(
         chipRow(
           values,
-          rules2.species,
+          rules3.species,
           (name) => name,
           (name) => cachedIcon(`species:${name}`, () => petSpeciesIcon2(name, TILE_ICON_PX2)),
-          (name) => commit({ ...rules2, species: toggled(rules2.species, name) })
+          (name) => commit({ ...rules3, species: toggled(rules3.species, name) })
         )
       );
-      speciesCard.setSummary(summarize(rules2.species.length), rules2.species.length > 0);
+      speciesCard.setSummary(summarize(rules3.species.length), rules3.species.length > 0);
     }
     function renderMutations() {
-      const values = offered(scope.presentMutations, rules2.mutations);
+      const values = offered(scope.presentMutations, rules3.mutations);
       mutationCard.root.style.display = values.length > 0 ? "flex" : "none";
       if (values.length === 0) return;
       mutationCard.body.replaceChildren(
         chipRow(
           values,
-          rules2.mutations,
+          rules3.mutations,
           (name) => name,
           (name) => cachedIcon(`mutation:${name}`, () => mutationIconEl(name, TILE_ICON_PX2)),
-          (name) => commit({ ...rules2, mutations: toggled(rules2.mutations, name) })
+          (name) => commit({ ...rules3, mutations: toggled(rules3.mutations, name) })
         )
       );
-      mutationCard.setSummary(summarize(rules2.mutations.length), rules2.mutations.length > 0);
+      mutationCard.setSummary(summarize(rules3.mutations.length), rules3.mutations.length > 0);
     }
     function renderAbilities() {
-      const values = offered(scope.possibleAbilities.map((entry) => entry.id), rules2.abilities);
+      const values = offered(scope.possibleAbilities.map((entry) => entry.id), rules3.abilities);
       abilityCard.root.style.display = values.length > 0 ? "flex" : "none";
       if (values.length === 0) return;
       const names = new Map(scope.possibleAbilities.map((entry) => [entry.id, entry.name]));
@@ -60670,24 +60161,24 @@ Restore figures are averages; unlucky streaks do worse.`;
         scrollable(
           chipRow(
             values,
-            rules2.abilities,
+            rules3.abilities,
             (id) => names.get(id) ?? id,
             (id) => cachedIcon(`ability:${id}`, () => abilityIcon(id, ABILITY_ICON_PX)),
-            (id) => commit({ ...rules2, abilities: toggled(rules2.abilities, id) }),
+            (id) => commit({ ...rules3, abilities: toggled(rules3.abilities, id) }),
             true
           )
         )
       );
-      abilityCard.setSummary(summarize(rules2.abilities.length), rules2.abilities.length > 0);
+      abilityCard.setSummary(summarize(rules3.abilities.length), rules3.abilities.length > 0);
     }
     const strengthField = numberField(MIN_STR, MAX_STR, 1, DEFAULT_STR);
     strengthField.addEventListener("change", () => {
       const value = Math.max(MIN_STR, Math.min(MAX_STR, Math.round(Number(strengthField.value) || DEFAULT_STR)));
       strengthField.value = String(value);
-      commit({ ...rules2, minMaxStr: value });
+      commit({ ...rules3, minMaxStr: value });
     });
-    const strengthToggle = toggle(rules2.minMaxStr !== null, (on) => {
-      commit({ ...rules2, minMaxStr: on ? Number(strengthField.value) || DEFAULT_STR : null });
+    const strengthToggle = toggle(rules3.minMaxStr !== null, (on) => {
+      commit({ ...rules3, minMaxStr: on ? Number(strengthField.value) || DEFAULT_STR : null });
     });
     {
       const control = document.createElement("div");
@@ -60722,7 +60213,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         // Rappelé à la confirmation : c'est ce qui détecte qu'un œuf a éclos ou
         // mûri entre-temps.
         provider: hatchProvider(),
-        rules: rules2
+        rules: rules3
       });
       modal.close();
     });
@@ -60749,16 +60240,16 @@ Restore figures are averages; unlucky streaks do worse.`;
       renderSpecies();
       renderMutations();
       renderAbilities();
-      strengthField.disabled = rules2.minMaxStr === null;
-      if (rules2.minMaxStr !== null) strengthField.value = String(rules2.minMaxStr);
-      css(strengthField, { opacity: rules2.minMaxStr === null ? "0.45" : "1" });
+      strengthField.disabled = rules3.minMaxStr === null;
+      if (rules3.minMaxStr !== null) strengthField.value = String(rules3.minMaxStr);
+      css(strengthField, { opacity: rules3.minMaxStr === null ? "0.45" : "1" });
       strengthCard.setSummary(
-        rules2.minMaxStr === null ? "Off" : `${rules2.minMaxStr} and up`,
-        rules2.minMaxStr !== null
+        rules3.minMaxStr === null ? "Off" : `${rules3.minMaxStr} and up`,
+        rules3.minMaxStr !== null
       );
       const waiting = scope.totalEggs - scope.readySlots.length;
       ready.textContent = scope.readySlots.length === 0 ? "No egg is ready" : `${scope.readySlots.length} egg${scope.readySlots.length === 1 ? "" : "s"} ready`;
-      if (!hasAnyRule(rules2)) {
+      if (!hasAnyRule(rules3)) {
         note.textContent = "Nothing set to keep, so I will not offer to sell. Favourites and your active team are always safe.";
         css(note, { color: WARN });
       } else {
@@ -61441,7 +60932,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const crops = newRareCrops(prev, next, rareMutations()).map((c) => ({ ...c, species: cropName(c.species) }));
     offer(rareCropReaction(crops, Math.random));
   }
-  function onWeather(next) {
+  function onWeather2(next) {
     const id = typeof next === "string" && next ? next : null;
     const prev = prevWeather;
     prevWeather = id;
@@ -61475,21 +60966,21 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (first) return;
     offer(abilityReaction({ name: newest.name, species: newest.species, abilityName: newest.abilityName }, Math.random));
   }
-  function luckOf(state5) {
+  function luckOf(state7) {
     const out = {};
-    for (const [eggId, counters] of Object.entries(state5?.counters ?? {})) {
+    for (const [eggId, counters] of Object.entries(state7?.counters ?? {})) {
       out[eggId] = { gold: Number(counters?.gold) || 0, rainbow: Number(counters?.rainbow) || 0 };
     }
     return out;
   }
-  function onHatchTracker(state5) {
-    const next = luckOf(state5);
+  function onHatchTracker(state7) {
+    const next = luckOf(state7);
     const prev = prevLuck;
     prevLuck = next;
     if (!prev) return;
     for (const reaction of badLuckReactions(prev, next, eggName, Math.random)) offer(reaction);
   }
-  async function onShops(next) {
+  async function onShops2(next) {
     const prev = prevShops;
     prevShops = next;
     const ids = restockedFollowed(prev, next, (id) => {
@@ -61502,8 +60993,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (ids.length === 0) return;
     let names = ids.map((id) => id.split(":").slice(1).join(":"));
     try {
-      const state5 = await NotifierService.get();
-      const byId = new Map(state5.rows.map((row) => [row.id, row.name]));
+      const state7 = await NotifierService.get();
+      const byId = new Map(state7.rows.map((row) => [row.id, row.name]));
       names = ids.map((id, i) => byId.get(id) ?? names[i]);
     } catch {
     }
@@ -61514,7 +61005,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (typeof unsub === "function") unsubscribers2.push(unsub);
     };
     try {
-      add(await Atoms.data.weather.onChangeNow((next) => onWeather(next)));
+      add(await Atoms.data.weather.onChangeNow((next) => onWeather2(next)));
     } catch {
     }
     try {
@@ -61524,7 +61015,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     try {
       prevLuck = luckOf(HatchTracker.getState());
-      add(HatchTracker.subscribe((state5) => onHatchTracker(state5)));
+      add(HatchTracker.subscribe((state7) => onHatchTracker(state7)));
     } catch {
     }
     try {
@@ -61532,7 +61023,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
     }
     try {
-      add(await NotifierService.onShopsChangeNow((next) => void onShops(next).catch(() => {
+      add(await NotifierService.onShopsChangeNow((next) => void onShops2(next).catch(() => {
       })));
     } catch {
     }
@@ -61958,17 +61449,17 @@ Restore figures are averages; unlucky streaks do worse.`;
       lastSpamLineAt: Number.NEGATIVE_INFINITY
     };
   }
-  function observeOwnEmote(state5, read) {
-    if (!read) return { state: state5, fresh: null };
-    if (!state5.primed || state5.scope !== read.scope) {
+  function observeOwnEmote(state7, read) {
+    if (!read) return { state: state7, fresh: null };
+    if (!state7.primed || state7.scope !== read.scope) {
       return {
-        state: { ...state5, primed: true, scope: read.scope, seenAt: read.latest?.at ?? Number.NEGATIVE_INFINITY },
+        state: { ...state7, primed: true, scope: read.scope, seenAt: read.latest?.at ?? Number.NEGATIVE_INFINITY },
         fresh: null
       };
     }
     const latest = read.latest;
-    if (!latest || latest.at <= state5.seenAt) return { state: state5, fresh: null };
-    return { state: { ...state5, seenAt: latest.at }, fresh: latest };
+    if (!latest || latest.at <= state7.seenAt) return { state: state7, fresh: null };
+    return { state: { ...state7, seenAt: latest.at }, fresh: latest };
   }
   function pick(list, random) {
     const i = Math.floor(random() * list.length);
@@ -61989,9 +61480,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     const r = Math.min(1, Math.max(0, random()));
     return Math.round(MIRROR_DELAY_MIN_MS + r * span);
   }
-  function decideMirror(state5, played, ctx2) {
+  function decideMirror(state7, played, ctx2) {
     const { now: now2, random } = ctx2;
-    let next = now2 - state5.streakLastAt > STREAK_GAP_MS ? { ...state5, streakCount: 1, streakAnswers: 0, streakSpamRolled: false, streakLastAt: now2 } : { ...state5, streakCount: state5.streakCount + 1, streakLastAt: now2 };
+    let next = now2 - state7.streakLastAt > STREAK_GAP_MS ? { ...state7, streakCount: 1, streakAnswers: 0, streakSpamRolled: false, streakLastAt: now2 } : { ...state7, streakCount: state7.streakCount + 1, streakLastAt: now2 };
     if (!ctx2.available || ctx2.distance === null || ctx2.distance > MIRROR_MAX_DISTANCE) {
       return { state: next, action: null };
     }
@@ -62104,16 +61595,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function process() {
-    const seen = observeOwnEmote(state3, currentRead());
-    state3 = seen.state;
+    const seen = observeOwnEmote(state5, currentRead());
+    state5 = seen.state;
     if (!seen.fresh) return;
-    const decided = decideMirror(state3, seen.fresh, {
+    const decided = decideMirror(state5, seen.fresh, {
       now: Date.now(),
       available: enabled3() && !busy3(),
       distance: CompanionService.distanceToPlayer(),
       random: Math.random
     });
-    state3 = decided.state;
+    state5 = decided.state;
     if (decided.action) schedule(decided.action);
   }
   function onRoomState(next) {
@@ -62159,14 +61650,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   function startEmoteMirror() {
     if (running4) return;
     running4 = true;
-    state3 = initialMirrorState();
+    state5 = initialMirrorState();
     localId = null;
     roomId = null;
     entries = void 0;
     void subscribe3(++generation).catch(() => {
     });
   }
-  var running4, generation, unsubscribers4, state3, pending4, localId, roomId, entries;
+  var running4, generation, unsubscribers4, state5, pending4, localId, roomId, entries;
   var init_emoteMirrorWatch = __esm({
     "src/features/companion/emoteMirrorWatch.ts"() {
       "use strict";
@@ -62178,7 +61669,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       running4 = false;
       generation = 0;
       unsubscribers4 = [];
-      state3 = initialMirrorState();
+      state5 = initialMirrorState();
       pending4 = null;
       localId = null;
       roomId = null;
@@ -62193,17 +61684,17 @@ Restore figures are averages; unlucky streaks do worse.`;
   function initialAfkState(now2) {
     return { phase: "active", quietSince: now2, phaseSince: now2, asked: false, nextSnoreAt: null, lastSnore: null };
   }
-  function afkActivity(state5, input, random) {
+  function afkActivity(state7, input, random) {
     const { now: now2, busy: busy4 } = input;
-    if (state5.phase === "active") {
-      return { state: { ...state5, quietSince: now2 }, effects: [] };
+    if (state7.phase === "active") {
+      return { state: { ...state7, quietSince: now2 }, effects: [] };
     }
-    if (state5.phase === "idle") {
+    if (state7.phase === "idle") {
       const effects2 = [];
-      if (state5.asked && !busy4 && random() < RETURN_LINE_CHANCE) effects2.push(say(pickOne4(RETURN_LINES, random), false));
+      if (state7.asked && !busy4 && random() < RETURN_LINE_CHANCE) effects2.push(say(pickOne4(RETURN_LINES, random), false));
       return { state: initialAfkState(now2), effects: effects2 };
     }
-    const asleepFor = now2 - state5.phaseSince;
+    const asleepFor = now2 - state7.phaseSince;
     const effects = [];
     if (!busy4 && asleepFor >= WAKE_LINE_MIN_ASLEEP_MS) {
       const pool = asleepFor >= SNORE_SLOW_AFTER_MS ? LONG_WAKE_LINES : WAKE_LINES;
@@ -62323,7 +61814,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     await sayLine(effect);
   }
   function apply(step) {
-    state4 = step.state;
+    state6 = step.state;
     const gen = generation2;
     for (const effect of step.effects) {
       pending5++;
@@ -62336,10 +61827,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   function noteActivity() {
     if (!running5) return;
     const now2 = Date.now();
-    if (state4.phase === "active" && now2 - lastNotedAt < ACTIVITY_THROTTLE_MS) return;
+    if (state6.phase === "active" && now2 - lastNotedAt < ACTIVITY_THROTTLE_MS) return;
     lastNotedAt = now2;
     if (!enabled4() || !CompanionService.isRunning()) return;
-    apply(afkActivity(state4, { now: now2, busy: othersBusy() }, Math.random));
+    apply(afkActivity(state6, { now: now2, busy: othersBusy() }, Math.random));
   }
   function onInput(event) {
     if (!event.isTrusted) return;
@@ -62369,7 +61860,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (running5) return;
     running5 = true;
     const gen = ++generation2;
-    state4 = initialAfkState(Date.now());
+    state6 = initialAfkState(Date.now());
     lastNotedAt = 0;
     lastTile = null;
     try {
@@ -62384,7 +61875,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     void subscribe4(gen).catch(() => {
     });
   }
-  var ACTIVITY_THROTTLE_MS, NEAR_DISTANCE, INPUT_EVENTS, running5, generation2, state4, unsubscribers5, ownHold, pending5, chain, lastNotedAt, lastTile;
+  var ACTIVITY_THROTTLE_MS, NEAR_DISTANCE, INPUT_EVENTS, running5, generation2, state6, unsubscribers5, ownHold, pending5, chain, lastNotedAt, lastTile;
   var init_afkWatch = __esm({
     "src/features/companion/afkWatch.ts"() {
       "use strict";
@@ -62398,7 +61889,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       INPUT_EVENTS = ["keydown", "pointerdown", "pointermove", "wheel", "touchstart"];
       running5 = false;
       generation2 = 0;
-      state4 = initialAfkState(0);
+      state6 = initialAfkState(0);
       unsubscribers5 = [];
       ownHold = false;
       pending5 = 0;
@@ -62411,9 +61902,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/menu/askBanner.ts
   function ensureStyle3() {
     if (document.getElementById(STYLE_ID7)) return;
-    const style2 = document.createElement("style");
-    style2.id = STYLE_ID7;
-    style2.textContent = `
+    const style = document.createElement("style");
+    style.id = STYLE_ID7;
+    style.textContent = `
 #${CARD_ID} {
   position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
   z-index: ${Z_INDEX};
@@ -62466,7 +61957,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   background: linear-gradient(90deg, ${ACCENT3}, rgba(94,234,212,0.45));
 }
 `;
-    document.head.appendChild(style2);
+    document.head.appendChild(style);
   }
   function hide() {
     if (timer !== null) {
@@ -62588,9 +62079,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/autoReco/disabledNotice.ts
   function ensureStyle4() {
     if (document.getElementById(STYLE_ID8)) return;
-    const style2 = document.createElement("style");
-    style2.id = STYLE_ID8;
-    style2.textContent = `
+    const style = document.createElement("style");
+    style.id = STYLE_ID8;
+    style.textContent = `
     #${OVERLAY_ID4} { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #${OVERLAY_ID4} .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; width: 420px; border: 1px solid rgba(255,255,255,.15); }
     #${OVERLAY_ID4} .title { font-size: 20px; font-weight: 900; letter-spacing: .02em; margin: 0 0 10px 0; }
@@ -62598,7 +62089,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     #${OVERLAY_ID4} .btn { padding: 10px 18px; border-radius: 999px; border: 1px solid #7aa2ff; background: #1a2644; color: #fff; font-weight: 700; cursor: pointer; }
     #${OVERLAY_ID4} .btn:focus { outline: 2px solid #7aa2ff; outline-offset: 2px; }
   `;
-    document.head.appendChild(style2);
+    document.head.appendChild(style);
   }
   function dismiss(overlay2) {
     markAutoRecoDisabledNoticeSeen();
@@ -62646,9 +62137,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/room/privacyNotice.ts
   function ensureStyle5() {
     if (document.getElementById(STYLE_ID9)) return;
-    const style2 = document.createElement("style");
-    style2.id = STYLE_ID9;
-    style2.textContent = `
+    const style = document.createElement("style");
+    style.id = STYLE_ID9;
+    style.textContent = `
     #${OVERLAY_ID5} { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #${OVERLAY_ID5} .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; width: 440px; border: 1px solid rgba(255,255,255,.15); }
     #${OVERLAY_ID5} .title { font-size: 20px; font-weight: 900; letter-spacing: .02em; margin: 0 0 10px 0; }
@@ -62657,7 +62148,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     #${OVERLAY_ID5} .btn:focus { outline: 2px solid #7aa2ff; outline-offset: 2px; }
     #${OVERLAY_ID5} .btn.primary { background: #2a59ff; border-color: #2a59ff; }
   `;
-    document.head.appendChild(style2);
+    document.head.appendChild(style);
   }
   function dismiss2(overlay2) {
     markRoomPrivacyNoticeSeen();
@@ -62777,9 +62268,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/changelog/notice.ts
   function ensureStyle6() {
     if (document.getElementById(STYLE_ID10)) return;
-    const style2 = document.createElement("style");
-    style2.id = STYLE_ID10;
-    style2.textContent = `
+    const style = document.createElement("style");
+    style.id = STYLE_ID10;
+    style.textContent = `
 #${OVERLAY_ID6} {
   position: fixed; inset: 0; z-index: ${OVERLAY_Z_INDEX2};
   display: grid; place-items: center; padding: 20px;
@@ -62828,7 +62319,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 #${OVERLAY_ID6} .mgcl-close:hover { filter: brightness(1.08); }
 #${OVERLAY_ID6} .mgcl-close:focus-visible { outline: 2px solid ${ACCENT4}; outline-offset: 2px; }
   `;
-    document.head.appendChild(style2);
+    document.head.appendChild(style);
   }
   function dismiss3(overlay2, version) {
     markChangelogVersionSeen(version);
@@ -62994,11 +62485,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!Number.isFinite(value)) return 1;
     return Math.max(1, Math.min(6, value));
   }
-  function findPlayersDeep2(state5) {
-    if (!state5 || typeof state5 !== "object") return [];
+  function findPlayersDeep2(state7) {
+    if (!state7 || typeof state7 !== "object") return [];
     const out = [];
     const seen = /* @__PURE__ */ new Set();
-    const stack = [state5];
+    const stack = [state7];
     while (stack.length) {
       const cur = stack.pop();
       if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
@@ -63024,12 +62515,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return [...byId.values()];
   }
-  function getPlayersArray2(state5) {
-    const direct = state5?.fullState?.data?.players ?? state5?.data?.players ?? state5?.players;
-    return Array.isArray(direct) ? direct : findPlayersDeep2(state5);
+  function getPlayersArray2(state7) {
+    const direct = state7?.fullState?.data?.players ?? state7?.data?.players ?? state7?.players;
+    return Array.isArray(direct) ? direct : findPlayersDeep2(state7);
   }
-  function getSlotsArray2(state5) {
-    const raw = state5?.child?.data?.userSlots ?? state5?.fullState?.child?.data?.userSlots ?? state5?.data?.userSlots;
+  function getSlotsArray2(state7) {
+    const raw = state7?.child?.data?.userSlots ?? state7?.fullState?.child?.data?.userSlots ?? state7?.data?.userSlots;
     if (Array.isArray(raw)) return raw;
     if (raw && typeof raw === "object") {
       const entries2 = Object.entries(raw);
@@ -63043,10 +62534,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return [];
   }
-  async function getMyAccountId(state5) {
+  async function getMyAccountId(state7) {
     try {
       const me = await player.get();
-      const snapshot2 = state5 ?? await Atoms.root.state.get();
+      const snapshot2 = state7 ?? await Atoms.root.state.get();
       return resolveMyAccountId(me, getPlayersArray2(snapshot2));
     } catch {
       return null;
@@ -63072,11 +62563,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function buildPlayerStatePayload(options = {}) {
     try {
-      const state5 = await Atoms.root.state.get();
-      if (!state5 || typeof state5 !== "object") return null;
-      const players = getPlayersArray2(state5);
+      const state7 = await Atoms.root.state.get();
+      if (!state7 || typeof state7 !== "object") return null;
+      const players = getPlayersArray2(state7);
       const normalizedPlayers = Array.isArray(players) ? players : [];
-      const slots = getSlotsArray2(state5).filter((slot2) => !!slot2);
+      const slots = getSlotsArray2(state7).filter((slot2) => !!slot2);
       const coinsById = /* @__PURE__ */ new Map();
       for (const slot2 of slots) {
         const slotData2 = slot2?.data ?? slot2;
@@ -63097,7 +62588,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         };
       });
       if (slots.length === 0) return null;
-      const myAccountId = options.playerId ?? await getMyAccountId(state5);
+      const myAccountId = options.playerId ?? await getMyAccountId(state7);
       const slot = selectSlotForAccount(slots, {
         slotIndex: options.slotIndex,
         accountId: myAccountId
@@ -63114,7 +62605,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const coinCandidate = slotData?.coinsCount ?? slot?.coinsCount ?? slotData?.coins ?? slot?.coins ?? null;
       const coinValue = Number(coinCandidate);
       const coinsRaw = Number.isFinite(coinValue) ? coinValue : null;
-      const roomId2 = state5?.data?.roomId ?? state5?.fullState?.data?.roomId ?? state5?.roomId ?? null;
+      const roomId2 = state7?.data?.roomId ?? state7?.fullState?.data?.roomId ?? state7?.roomId ?? null;
       let playersCount = normalizedPlayers.length > 0 ? normalizedPlayers.length : slots.length;
       try {
         const atomValue = await Atoms.server.numPlayers.get();
@@ -63181,9 +62672,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return false;
   }
-  async function tryInitializeReporting(state5) {
+  async function tryInitializeReporting(state7) {
     if (gameReadyTriggered) return;
-    const snapshot2 = state5 ?? await Atoms.root.state.get();
+    const snapshot2 = state7 ?? await Atoms.root.state.get();
     const players = Array.isArray(snapshot2?.data?.players) ? snapshot2.data.players : [];
     if (players.length === 0) return;
     const myAccountId = await getMyAccountId(snapshot2);

@@ -1,19 +1,11 @@
 // src/ui/menus/notifier.ts
 import { Menu } from "../../ui/kit/menu";
-import {
-  NotifierService,
-  formatRuleSummary,
-  formatLastSeen,
-  weatherStateSignature,
-  formatWeatherMutation,
-  type NotifierRow,
-  type NotifierState,
-  type NotifierFilters,
-  type NotifierRule,
-  type WeatherRow,
-  type WeatherState,
-  type NotifierContext,
-} from "./notifier";
+import { NotifierService } from "./notifier";
+import { NotifierRules, LoopDefaults, formatRuleSummary, type NotifierRule, type NotifierContext } from "./rules";
+import { ShopRows, type NotifierRow, type NotifierState, type NotifierFilters } from "./shopRows";
+import { WeatherAlerts, weatherStateSignature, type WeatherRow, type WeatherState } from "./weatherAlerts";
+import { formatLastSeen, formatWeatherMutation } from "./weather";
+import { isCapReached } from "./inventoryCaps";
 
 
 import { audio, type AudioContextKey, type PlaybackMode } from "./audio";
@@ -22,7 +14,7 @@ import { PetsService } from "../pets/pets";
 import type { PetInfo } from "../../game/player";
 import { attachSpriteIcon } from "../../ui/kit/sprites/iconCache";
 import { rarityBadge } from "../../ui/kit/rarityBadge";
-import { isFloatingBellEnabled, setFloatingBellEnabled } from "./bellFloating";
+import { isFloatingBellEnabled, setFloatingBellEnabled } from "./bell/floatingBell";
 
 type RuleEditorRow = {
   id: string;
@@ -347,10 +339,10 @@ const openRuleEditor = (ui: Menu, row: RuleEditorRow, anchor: HTMLElement) => {
 
   pop.appendChild(header);
 
-  const current = NotifierService.getRule(row.id);
+  const current = NotifierRules.get(row.id);
   const defaults = audio.getPlaybackSettings(row.context);
   const contextDefaults = (row.context === "shops" || row.context === "weather")
-    ? NotifierService.getContextStopDefaults(row.context)
+    ? LoopDefaults.get(row.context)
     : { stopMode: "manual", stopRepeats: null, loopIntervalMs: defaults.loopIntervalMs };
   const allowPurchase = row.context === "shops";
 
@@ -567,7 +559,7 @@ const openRuleEditor = (ui: Menu, row: RuleEditorRow, anchor: HTMLElement) => {
   clearBtn.addEventListener("click", (ev) => {
     ev.preventDefault();
     ev.stopPropagation();
-    NotifierService.clearRule(row.id);
+    NotifierRules.clear(row.id);
     closeRuleEditor();
   });
   if (!current) ui.setButtonEnabled(clearBtn, false);
@@ -612,7 +604,7 @@ const openRuleEditor = (ui: Menu, row: RuleEditorRow, anchor: HTMLElement) => {
       playbackMode = "loop";
     }
 
-    NotifierService.setRule(row.id, {
+    NotifierRules.set(row.id, {
       sound,
       volume,
       playbackMode,
@@ -1146,7 +1138,7 @@ function renderSettingsTab(view: HTMLElement, ui: Menu) {
       applyMode("shops", "loop");
     }
     audio.setStopPurchase("shops");
-    NotifierService.setContextStopDefaults("shops", { stopMode: "purchase", stopRepeats: null, loopIntervalMs: loopMs });
+    LoopDefaults.setLoopInterval("shops", loopMs);
     return loopMs;
   };
 
@@ -1173,7 +1165,7 @@ function renderSettingsTab(view: HTMLElement, ui: Menu) {
           : audio.getLoopInterval("shops");
         audio.setLoopInterval(loopMs, "shops");
         audio.setStopManual("shops");
-        NotifierService.setContextStopDefaults("shops", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
+        LoopDefaults.setLoopInterval("shops", loopMs);
       }
     });
     controls.modeLoop?.addEventListener("change", () => {
@@ -1368,7 +1360,7 @@ function renderSettingsTab(view: HTMLElement, ui: Menu) {
 
     const defaults =
       context === "shops" || context === "weather"
-        ? NotifierService.getContextStopDefaults(context)
+        ? LoopDefaults.get(context)
         : { stopMode: "manual" as const, stopRepeats: null, loopIntervalMs: settings.loopIntervalMs };
     const fallbackLoop = Math.max(
       150,
@@ -1380,15 +1372,15 @@ function renderSettingsTab(view: HTMLElement, ui: Menu) {
     if (context === "shops") {
       if (controls.modeLoop?.checked) {
         audio.setStopPurchase("shops");
-        NotifierService.setContextStopDefaults("shops", { stopMode: "purchase", stopRepeats: null, loopIntervalMs: loopMs });
+        LoopDefaults.setLoopInterval("shops", loopMs);
       } else {
         audio.setStopManual("shops");
-        NotifierService.setContextStopDefaults("shops", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
+        LoopDefaults.setLoopInterval("shops", loopMs);
       }
     } else if (context === "weather") {
       applyMode("weather", "oneshot");
       audio.setStopManual("weather");
-      NotifierService.setContextStopDefaults("weather", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
+      LoopDefaults.setLoopInterval("weather", loopMs);
     } else if (context === "pets") {
       // Pets: loops are manual stop; inherit mode selection and loop interval
       audio.setLoopInterval(loopMs, "pets");
@@ -1661,7 +1653,7 @@ style.textContent = `
       const ruleCell = kids[i + 3] as HTMLDivElement | undefined;
       const id = itemCell?.dataset?.id;
       if (!id) continue;
-      applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
+      applyRuleState(itemCell, ruleCell ?? null, NotifierRules.get(id));
     }
   };
 
@@ -1682,9 +1674,9 @@ style.textContent = `
 
       if (popupSwitch) setSwitchVisual(popupSwitch, !!row.popup);
       itemCell.dataset.follow = row.followed ? "1" : "0";
-      applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
+      applyRuleState(itemCell, ruleCell ?? null, NotifierRules.get(id));
 
-      const capped = (NotifierService as any).isIdCapped?.(id) ?? false;
+      const capped = isCapReached(id);
       if (popupSwitch) setSwitchCapState(popupSwitch, capped);
     }
   };
@@ -1715,7 +1707,7 @@ style.textContent = `
   });
 
   const passesFilters = (rows: NotifierRow[]) =>
-    NotifierService.filterRows(rows, getFilters());
+    ShopRows.filter(rows, getFilters());
 
   const mkItemCell = (row: NotifierRow) => {
     const wrap = document.createElement("div");
@@ -1872,7 +1864,7 @@ style.textContent = `
     // switch Overlay (branché au service)
     const popupSwitch = createSwitch((on) => {
       try {
-        NotifierService.setPopup(row.id, !!on);
+        ShopRows.setFollowed(row.id, !!on);
       } catch {}
       // dataset.follow mis à jour via onChange; on le reflète tout de suite visuellement
       const cur = NotifierService.getPref(row.id);
@@ -1885,7 +1877,7 @@ style.textContent = `
     (popupSwitch as HTMLLabelElement).style.padding = "0";
     const popupCell = wrapCell(popupSwitch);
 
-    const capped = (NotifierService as any).isIdCapped?.(row.id) ?? false;
+    const capped = isCapReached(row.id);
     setSwitchCapState(popupSwitch, capped);
 
     const gearBtn = ui.btn("", {
@@ -1911,7 +1903,7 @@ style.textContent = `
     ruleCell.dataset.role = "rule-cell";
 
     bodyGrid.append(itemCell, rarityCell, popupCell, ruleCell);
-    applyRuleState(itemCell, ruleCell, NotifierService.getRule(row.id));
+    applyRuleState(itemCell, ruleCell, NotifierRules.get(row.id));
   };
 
   function clearBody() {
@@ -2298,7 +2290,7 @@ function renderWeatherTab(view: HTMLElement, ui: Menu) {
       const ruleCell = kids[i + 3] as HTMLDivElement | undefined;
       const id = itemCell?.dataset?.id;
       if (!id) continue;
-      applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
+      applyRuleState(itemCell, ruleCell ?? null, NotifierRules.get(id));
     }
   };
 
@@ -2492,7 +2484,7 @@ function renderWeatherTab(view: HTMLElement, ui: Menu) {
 
     const notifySwitch = createSwitch((on) => {
       try {
-        NotifierService.setWeatherNotify(row.id, !!on);
+        WeatherAlerts.setNotify(row.id, !!on);
       } catch {}
     });
     setSwitchVisual(notifySwitch, !!row.notify);
@@ -2521,7 +2513,7 @@ function renderWeatherTab(view: HTMLElement, ui: Menu) {
     ruleCell.dataset.role = "rule-cell";
 
     bodyGrid.append(itemCell, lastSeenCell, notifyCell, ruleCell);
-    applyRuleState(itemCell, ruleCell, NotifierService.getRule(row.id));
+    applyRuleState(itemCell, ruleCell, NotifierRules.get(row.id));
   };
 
   const clearGrid = () => {
