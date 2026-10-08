@@ -9,7 +9,7 @@ import {
   type PlantSlotTiming,
 } from "../../game/store/atoms";
 import { CROP_SIZE_MAX, readCropSize } from "../../data/rules/cropSize";
-import { clamp } from "../../lib/math";
+import { resolveGrowSlot } from "../../data/rules/growSlot";
 import { Emitter, Subscriptions } from "../../lib/emitter";
 import { normalizeMutationsList } from "./harvestRules";
 
@@ -62,32 +62,20 @@ type PlantObject = { objectType: "plant"; slots?: unknown[] };
 const isPlantObject = (obj: unknown): obj is PlantObject =>
   !!obj && typeof obj === "object" && (obj as { objectType?: unknown }).objectType === "plant";
 
-/** Which of the plant's fruits the cursor selects, as a position in `slots[]`. */
-function selectedSlotIndex(slots: unknown[], selectedSlotId: number | null): number | null {
-  const available = slots.map((_, i) => i).filter((i) => slots[i] != null);
-  if (!available.length) return null;
-  const bySlotId = Number.isFinite(selectedSlotId as number)
-    ? slots.findIndex((s) => !!s && typeof s === "object" && (s as { slotId?: unknown }).slotId === selectedSlotId)
-    : -1;
-  if (bySlotId >= 0) return bySlotId;
-  const raw = Number.isFinite(selectedSlotId as number) ? (selectedSlotId as number) : 0;
-  const pos = Math.max(0, clamp(raw, 0, slots.length - 1));
-  return available[clamp(pos, 0, available.length - 1)] ?? null;
-}
-
 /** The selected crop of a garden object, given the game's selected slot id. */
-function selectedSlotInfo(gardenObject: unknown, selectedSlotId: number | null): LockerSlotInfo {
+export function selectedSlotInfo(gardenObject: unknown, selectedSlotId: number | null): LockerSlotInfo {
   const objectKey = extractSeedKey(gardenObject);
   if (!isPlantObject(gardenObject)) return { ...emptySlotInfo(), seedKey: objectKey };
 
+  // The fruit the game itself shows for this cursor, the one the price badge prices.
   const slots = Array.isArray(gardenObject.slots) ? gardenObject.slots : [];
-  const slotIndex = selectedSlotIndex(slots, selectedSlotId);
-  const slot = slotIndex == null ? null : (slots[slotIndex] ?? null);
+  const fruits = slots.filter((s): s is { slotId?: number | null } => !!s && typeof s === "object");
+  const slot = resolveGrowSlot(fruits, selectedSlotId);
   if (!slot) return { ...emptySlotInfo(), isPlant: true, seedKey: objectKey };
 
   return {
     isPlant: true,
-    slotIndex,
+    slotIndex: slots.indexOf(slot),
     slot,
     // A fruit can be its own species (a FourLeafClover on a Clover plant), and
     // per-crop overrides are keyed by it.

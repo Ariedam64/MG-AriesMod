@@ -15451,6 +15451,26 @@
     }
   });
 
+  // src/data/rules/growSlot.ts
+  function resolveGrowSlot(slots, selectedSlotId) {
+    if (!Array.isArray(slots) || slots.length === 0) return null;
+    if (selectedSlotId != null && Number.isFinite(selectedSlotId)) {
+      const exact = slots.find((slot) => slot && slot.slotId === selectedSlotId);
+      if (exact) return exact;
+      const sorted = [...slots].sort(bySlotId);
+      return sorted.find((slot) => slotIdOf(slot) >= selectedSlotId) ?? sorted[0] ?? null;
+    }
+    return [...slots].sort(bySlotId)[0] ?? null;
+  }
+  var slotIdOf, bySlotId;
+  var init_growSlot = __esm({
+    "src/data/rules/growSlot.ts"() {
+      "use strict";
+      slotIdOf = (slot) => Number.isFinite(slot?.slotId) ? slot.slotId : 0;
+      bySlotId = (a, b) => slotIdOf(a) - slotIdOf(b);
+    }
+  });
+
   // src/features/locker/slotWatcher.ts
   function extractSeedKey(obj) {
     if (!obj || typeof obj !== "object") return null;
@@ -15467,25 +15487,16 @@
     // older payloads name under another field.
     readCropSize({ ...slot, species: extractSeedKey(slot) }) ?? CROP_SIZE_MAX;
   }
-  function selectedSlotIndex(slots, selectedSlotId) {
-    const available = slots.map((_, i) => i).filter((i) => slots[i] != null);
-    if (!available.length) return null;
-    const bySlotId2 = Number.isFinite(selectedSlotId) ? slots.findIndex((s) => !!s && typeof s === "object" && s.slotId === selectedSlotId) : -1;
-    if (bySlotId2 >= 0) return bySlotId2;
-    const raw = Number.isFinite(selectedSlotId) ? selectedSlotId : 0;
-    const pos = Math.max(0, clamp(raw, 0, slots.length - 1));
-    return available[clamp(pos, 0, available.length - 1)] ?? null;
-  }
   function selectedSlotInfo(gardenObject, selectedSlotId) {
     const objectKey = extractSeedKey(gardenObject);
     if (!isPlantObject(gardenObject)) return { ...emptySlotInfo(), seedKey: objectKey };
     const slots = Array.isArray(gardenObject.slots) ? gardenObject.slots : [];
-    const slotIndex = selectedSlotIndex(slots, selectedSlotId);
-    const slot = slotIndex == null ? null : slots[slotIndex] ?? null;
+    const fruits = slots.filter((s) => !!s && typeof s === "object");
+    const slot = resolveGrowSlot(fruits, selectedSlotId);
     if (!slot) return { ...emptySlotInfo(), isPlant: true, seedKey: objectKey };
     return {
       isPlant: true,
-      slotIndex,
+      slotIndex: slots.indexOf(slot),
       slot,
       // A fruit can be its own species (a FourLeafClover on a Clover plant), and
       // per-crop overrides are keyed by it.
@@ -15595,7 +15606,7 @@
       "use strict";
       init_atoms();
       init_cropSize();
-      init_math();
+      init_growSlot();
       init_emitter();
       init_harvestRules();
       emptySlotInfo = () => ({
@@ -26464,26 +26475,6 @@
       widgetButtons = [];
       savedPos = null;
       positioned = false;
-    }
-  });
-
-  // src/data/rules/growSlot.ts
-  function resolveGrowSlot(slots, selectedSlotId) {
-    if (!Array.isArray(slots) || slots.length === 0) return null;
-    if (selectedSlotId != null && Number.isFinite(selectedSlotId)) {
-      const exact = slots.find((slot) => slot && slot.slotId === selectedSlotId);
-      if (exact) return exact;
-      const sorted = [...slots].sort(bySlotId);
-      return sorted.find((slot) => slotIdOf(slot) >= selectedSlotId) ?? sorted[0] ?? null;
-    }
-    return [...slots].sort(bySlotId)[0] ?? null;
-  }
-  var slotIdOf, bySlotId;
-  var init_growSlot = __esm({
-    "src/data/rules/growSlot.ts"() {
-      "use strict";
-      slotIdOf = (slot) => Number.isFinite(slot?.slotId) ? slot.slotId : 0;
-      bySlotId = (a, b) => slotIdOf(a) - slotIdOf(b);
     }
   });
 
