@@ -14814,6 +14814,9072 @@
     }
   });
 
+  // src/lib/hotkey.ts
+  function codesMatch(expected, actual) {
+    if (expected === actual) return true;
+    return MODIFIER_PAIRS.some((pair) => pair.includes(expected) && pair.includes(actual));
+  }
+  function isMac() {
+    return navigator.platform?.toLowerCase().includes("mac") || /mac|iphone|ipad|ipod/i.test(navigator.userAgent);
+  }
+  function eventToHotkey(e, allowModifierOnly = false) {
+    const isModifier = MODIFIER_CODES.has(e.code) || ["Shift", "Control", "Alt", "Meta"].includes(e.key);
+    if (isModifier && !allowModifierOnly) return null;
+    return { code: e.code, ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey, meta: e.metaKey };
+  }
+  function matchHotkey(e, h2) {
+    if (!h2) return false;
+    if (!!h2.ctrl !== e.ctrlKey) return false;
+    if (!!h2.shift !== e.shiftKey) return false;
+    if (!!h2.alt !== e.altKey) return false;
+    if (!!h2.meta !== e.metaKey) return false;
+    return codesMatch(h2.code, e.code);
+  }
+  function hotkeyToString(hk) {
+    if (!hk) return "";
+    const parts = [];
+    if (hk.ctrl) parts.push("Ctrl");
+    if (hk.shift) parts.push("Shift");
+    if (hk.alt) parts.push("Alt");
+    if (hk.meta) parts.push("Meta");
+    if (hk.code) parts.push(hk.code);
+    return parts.join("+");
+  }
+  function stringToHotkey(s) {
+    if (!s) return null;
+    const parts = s.split("+").map((p) => p.trim()).filter(Boolean);
+    if (!parts.length) return null;
+    const hk = { code: canonicalizeCode(parts.pop() || "") };
+    for (const p of parts) {
+      const mod = p.toLowerCase();
+      if (mod === "ctrl" || mod === "control") hk.ctrl = true;
+      else if (mod === "shift") hk.shift = true;
+      else if (mod === "alt") hk.alt = true;
+      else if (mod === "meta" || mod === "cmd" || mod === "command") hk.meta = true;
+    }
+    return hk.code ? hk : null;
+  }
+  function canonicalizeCode(rawCode) {
+    const trimmed = rawCode.trim();
+    if (!trimmed) return "";
+    const lower2 = trimmed.toLowerCase();
+    const letter = lower2.match(/^key([a-z])$/);
+    if (letter) return `Key${letter[1].toUpperCase()}`;
+    const digit = lower2.match(/^digit([0-9])$/);
+    if (digit) return `Digit${digit[1]}`;
+    const numpadDigit = lower2.match(/^numpad([0-9])$/);
+    if (numpadDigit) return `Numpad${numpadDigit[1]}`;
+    if (lower2.startsWith("numpad")) {
+      const suffix = lower2.slice(6);
+      return suffix ? `Numpad${CANONICAL_CODES[suffix] ?? capitalize(suffix)}` : "Numpad";
+    }
+    const fKey = lower2.match(/^f([0-9]{1,2})$/);
+    if (fKey) return `F${fKey[1]}`;
+    const arrow = lower2.match(/^arrow([a-z]+)$/);
+    if (arrow) return `Arrow${CANONICAL_CODES[arrow[1]] ?? capitalize(arrow[1])}`;
+    return CANONICAL_CODES[lower2] ?? capitalize(trimmed);
+  }
+  function prettyCode(code) {
+    if (code === "AltLeft" || code === "AltRight") return "Alt";
+    if (code === "ControlLeft" || code === "ControlRight") return "Ctrl";
+    if (code === "ShiftLeft" || code === "ShiftRight") return "Shift";
+    if (code === "MetaLeft" || code === "MetaRight") return isMac() ? "\u2318" : "Meta";
+    if (code.startsWith("Key")) return code.slice(3);
+    if (code.startsWith("Digit")) return code.slice(5);
+    if (code.startsWith("Numpad")) return "Numpad " + code.slice(6);
+    const arrows = { ArrowUp: "\u2191", ArrowDown: "\u2193", ArrowLeft: "\u2190", ArrowRight: "\u2192" };
+    return arrows[code] ?? code;
+  }
+  function hotkeyToPretty(h2) {
+    const mac = isMac();
+    const mods = [];
+    if (h2.ctrl) mods.push(mac ? "\u2303" : "Ctrl");
+    if (h2.alt) mods.push(mac ? "\u2325" : "Alt");
+    if (h2.shift) mods.push(mac ? "\u21E7" : "Shift");
+    if (h2.meta) mods.push(mac ? "\u2318" : "Meta");
+    const modifierAlone = h2.alt && (h2.code === "AltLeft" || h2.code === "AltRight") || h2.ctrl && (h2.code === "ControlLeft" || h2.code === "ControlRight") || h2.shift && (h2.code === "ShiftLeft" || h2.code === "ShiftRight") || h2.meta && (h2.code === "MetaLeft" || h2.code === "MetaRight");
+    const parts = mods.slice();
+    if (!modifierAlone || parts.length === 0) parts.push(prettyCode(h2.code));
+    return parts.join(mac ? "" : " + ");
+  }
+  var MODIFIER_CODES, MODIFIER_PAIRS, CANONICAL_CODES, capitalize;
+  var init_hotkey = __esm({
+    "src/lib/hotkey.ts"() {
+      "use strict";
+      MODIFIER_CODES = /* @__PURE__ */ new Set([
+        "ShiftLeft",
+        "ShiftRight",
+        "ControlLeft",
+        "ControlRight",
+        "AltLeft",
+        "AltRight",
+        "MetaLeft",
+        "MetaRight"
+      ]);
+      MODIFIER_PAIRS = [
+        ["AltLeft", "AltRight"],
+        ["ControlLeft", "ControlRight"],
+        ["ShiftLeft", "ShiftRight"],
+        ["MetaLeft", "MetaRight"]
+      ];
+      CANONICAL_CODES = {
+        space: "Space",
+        enter: "Enter",
+        escape: "Escape",
+        tab: "Tab",
+        backspace: "Backspace",
+        delete: "Delete",
+        insert: "Insert",
+        home: "Home",
+        end: "End",
+        pageup: "PageUp",
+        pagedown: "PageDown",
+        arrowup: "ArrowUp",
+        arrowdown: "ArrowDown",
+        arrowleft: "ArrowLeft",
+        arrowright: "ArrowRight",
+        bracketleft: "BracketLeft",
+        bracketright: "BracketRight",
+        backslash: "Backslash",
+        slash: "Slash",
+        minus: "Minus",
+        equal: "Equal",
+        semicolon: "Semicolon",
+        quote: "Quote",
+        backquote: "Backquote",
+        comma: "Comma",
+        period: "Period",
+        dot: "Period",
+        capslock: "CapsLock",
+        numlock: "NumLock",
+        scrolllock: "ScrollLock",
+        pause: "Pause",
+        contextmenu: "ContextMenu",
+        printscreen: "PrintScreen",
+        metaleft: "MetaLeft",
+        metaright: "MetaRight",
+        altleft: "AltLeft",
+        altright: "AltRight",
+        controlleft: "ControlLeft",
+        controlright: "ControlRight",
+        shiftleft: "ShiftLeft",
+        shiftright: "ShiftRight"
+      };
+      capitalize = (word) => word ? word[0].toUpperCase() + word.slice(1) : "";
+    }
+  });
+
+  // src/features/keybinds/catalog.ts
+  var PET_SECTION_ID, SECTION_CONFIG;
+  var init_catalog = __esm({
+    "src/features/keybinds/catalog.ts"() {
+      "use strict";
+      PET_SECTION_ID = "pets";
+      SECTION_CONFIG = [
+        {
+          id: "gui",
+          title: "GUI",
+          icon: "\u{1F5A5}\uFE0F",
+          description: "Choose how you open and move the overlay.",
+          actions: [
+            {
+              id: "gui.toggle",
+              label: "Toggle menu visibility",
+              icon: "sprite/ui/CameraOff",
+              hint: "Opens or closes the Arie's Mod overlay.",
+              defaultHotkey: { alt: true, code: "KeyX" }
+            },
+            {
+              id: "gui.drag",
+              label: "Drag HUD",
+              icon: "sprite/ui/Touchpad",
+              hint: "Hold to drag menus interfaces around the screen.",
+              defaultHotkey: { alt: true, code: "AltLeft" },
+              allowModifierOnly: true
+            }
+          ]
+        },
+        {
+          id: "shops",
+          title: "Shops",
+          icon: "\u{1F6D2}",
+          description: "Quick shortcuts to every shop tab.",
+          actions: [
+            { id: "shops.seeds", label: "Seeds shop", icon: "sprite/ui/SeedIcon", defaultHotkey: { alt: true, code: "KeyS" } },
+            { id: "shops.eggs", label: "Eggs shop", icon: "sprite/ui/EggIcon", defaultHotkey: { alt: true, code: "KeyE" } },
+            { id: "shops.decors", label: "Decors shop", icon: "sprite/ui/DecorIcon", defaultHotkey: { alt: true, code: "KeyD" } },
+            { id: "shops.tools", label: "Tools shop", icon: "sprite/ui/ToolIcon", defaultHotkey: { alt: true, code: "KeyT" } }
+          ]
+        },
+        {
+          id: "game",
+          title: "Game",
+          icon: "\u{1F3AE}",
+          description: "Remap the in-game actions",
+          actions: [
+            {
+              id: "game.action",
+              label: "Action",
+              icon: "sprite/ui/PickupPin",
+              defaultHotkey: { code: "Space" },
+              holdDetection: { label: "Rapid fire", defaultEnabled: false }
+            },
+            { id: "game.inventory", label: "Inventory", icon: "sprite/ui/InventoryBag", defaultHotkey: { code: "KeyE" } },
+            { id: "game.pet-hutch", label: "Pet hutch", icon: "sprite/decor/PetHutch_1", defaultHotkey: null, allowClear: true },
+            { id: "game.decor-shed", label: "Decor shed", icon: "sprite/decor/DecorShed", defaultHotkey: null, allowClear: true },
+            { id: "game.tool-shack", label: "Tool shack", icon: "sprite/decor/ToolShack", defaultHotkey: null, allowClear: true },
+            { id: "game.seed-silo", label: "Seed silo", icon: "sprite/decor/SeedSilo", defaultHotkey: null, allowClear: true },
+            { id: "game.feeding-trough", label: "Feeding trough", icon: "sprite/decor/FeedingTrough", defaultHotkey: null, allowClear: true },
+            { id: "game.weather-station", label: "Weather station", icon: "sprite/object/WeatherStation", defaultHotkey: null, allowClear: true },
+            { id: "game.journal", label: "Journal", icon: "sprite/ui/JournalStamp", defaultHotkey: null, allowClear: true },
+            { id: "game.move-up", label: "Move up", icon: "https://i.imgur.com/EkbKUgi.png", defaultHotkey: { code: "KeyW" } },
+            { id: "game.move-down", label: "Move down", icon: "https://i.imgur.com/tdJ7IGP.png", defaultHotkey: { code: "KeyS" } },
+            { id: "game.move-left", label: "Move left", icon: "https://i.imgur.com/86VbR70.png", defaultHotkey: { code: "KeyA" } },
+            { id: "game.move-right", label: "Move right", icon: "https://i.imgur.com/Ljzz6td.png", defaultHotkey: { code: "KeyD" } }
+          ]
+        },
+        {
+          id: "sell",
+          title: "Sell",
+          icon: "\u{1F4B0}",
+          description: "Streamline selling actions.",
+          actions: [
+            {
+              id: "sell.sell-all",
+              label: "All crops",
+              icon: "sprite/ui/IconSell",
+              hint: "Trigger the sell-all flow for harvested crops.",
+              defaultHotkey: null
+            },
+            {
+              id: "sell.sell-all-pets",
+              label: "All pets",
+              icon: "sprite/ui/IconShop",
+              hint: "Sell every non-favorited pet in your inventory.",
+              defaultHotkey: null
+            }
+          ]
+        },
+        {
+          id: "companion",
+          title: "Companion",
+          icon: "\u{1F916}",
+          description: "Reach your companion without going through the launcher.",
+          actions: [
+            {
+              id: "companion.chat",
+              label: "Open the chat",
+              // No icon: the `ui` atlas has no chat pictogram, and a made-up key
+              // would show an empty box.
+              hint: "Opens the Companion window straight on its Chat tab.",
+              defaultHotkey: { alt: true, code: "KeyC" }
+            }
+          ]
+        },
+        {
+          id: PET_SECTION_ID,
+          title: "Pets",
+          icon: "\u{1F437}",
+          description: "Assign shortcuts to your pet teams and cycle through them instantly.",
+          actions: [
+            { id: "pets.team.prev", label: "Previous team", defaultHotkey: null },
+            { id: "pets.team.next", label: "Next team", defaultHotkey: null }
+          ]
+        }
+      ];
+    }
+  });
+
+  // src/features/keybinds/keybinds.ts
+  function register(section5, config) {
+    const action2 = {
+      ...config,
+      sectionId: section5.id,
+      defaultHotkey: cloneHotkey(config.defaultHotkey),
+      holdDetection: config.holdDetection ? { ...config.holdDetection } : void 0
+    };
+    actions.set(action2.id, action2);
+    if (action2.holdDetection) holdDefaults.set(action2.id, !!action2.holdDetection.defaultEnabled);
+    section5.actions.push(action2);
+  }
+  function setDynamicActions(sectionId, configs) {
+    const index = SECTION_CONFIG.findIndex((s) => s.id === sectionId);
+    if (index < 0) return;
+    const section5 = sections[index];
+    const fixed = new Set(SECTION_CONFIG[index].actions.map((a) => a.id));
+    for (const old of section5.actions) {
+      if (fixed.has(old.id)) continue;
+      actions.delete(old.id);
+      holdDefaults.delete(old.id);
+      cache.delete(old.id);
+      holdCache.delete(old.id);
+    }
+    section5.actions = section5.actions.filter((a) => fixed.has(a.id));
+    for (const config of configs) {
+      if (!fixed.has(config.id)) register(section5, config);
+    }
+  }
+  function getKeybindSections() {
+    return sections.map((section5) => ({
+      ...section5,
+      actions: section5.actions.map((action2) => ({
+        ...action2,
+        defaultHotkey: cloneHotkey(action2.defaultHotkey),
+        holdDetection: action2.holdDetection ? { ...action2.holdDetection } : void 0
+      }))
+    }));
+  }
+  function readStored(id) {
+    const raw = readAriesPath(BINDINGS_PATH)?.[id];
+    if (raw == null) return void 0;
+    if (raw === STORED_NONE || typeof raw !== "string") return null;
+    return stringToHotkey(raw) ?? null;
+  }
+  function writeStored(id, hk) {
+    updateAriesPath(BINDINGS_PATH, (current3) => {
+      const next = current3 && typeof current3 === "object" ? { ...current3 } : {};
+      if (hk === void 0) delete next[id];
+      else next[id] = hk ? hotkeyToString(hk) : STORED_NONE;
+      return next;
+    });
+  }
+  function readHoldStored(id) {
+    const raw = readAriesPath(HOLD_PATH)?.[id];
+    if (typeof raw === "string") return raw === "1";
+    if (typeof raw === "number") return raw === 1;
+    if (typeof raw === "boolean") return raw;
+    return void 0;
+  }
+  function writeHoldStored(id, enabled2) {
+    updateAriesPath(HOLD_PATH, (current3) => {
+      const next = current3 && typeof current3 === "object" ? { ...current3 } : {};
+      next[id] = enabled2;
+      return next;
+    });
+  }
+  function emitterFor(map2, id) {
+    let emitter = map2.get(id);
+    if (!emitter) {
+      emitter = new Emitter();
+      map2.set(id, emitter);
+    }
+    return emitter;
+  }
+  function emitChange(id) {
+    changes2.get(id)?.emit(getKeybind(id));
+  }
+  function emitHoldChange(id) {
+    holdChanges.get(id)?.emit(getKeybindHoldDetection(id));
+  }
+  function onKeybindChange(id, cb) {
+    return emitterFor(changes2, id).on(cb);
+  }
+  function onKeybindHoldDetectionChange(id, cb) {
+    if (!holdDefaults.has(id)) return () => {
+    };
+    return emitterFor(holdChanges, id).on(cb);
+  }
+  function getKeybind(id) {
+    if (!cache.has(id)) {
+      const stored = readStored(id);
+      cache.set(id, stored === void 0 ? cloneHotkey(actions.get(id)?.defaultHotkey) : stored);
+    }
+    return cloneHotkey(cache.get(id));
+  }
+  function getDefaultKeybind(id) {
+    return cloneHotkey(actions.get(id)?.defaultHotkey);
+  }
+  function setKeybind(id, hk) {
+    const next = cloneHotkey(hk);
+    const wanted = hotkeyToString(next);
+    if (hotkeyToString(getKeybind(id)) === wanted) return;
+    if (next) {
+      for (const otherId of actions.keys()) {
+        if (otherId === id || hotkeyToString(getKeybind(otherId)) !== wanted) continue;
+        cache.set(otherId, null);
+        writeStored(otherId, null);
+        emitChange(otherId);
+      }
+    }
+    cache.set(id, next);
+    writeStored(id, next);
+    emitChange(id);
+  }
+  function resetKeybind(id) {
+    cache.delete(id);
+    writeStored(id, void 0);
+    emitChange(id);
+  }
+  function getKeybindHoldDetection(id) {
+    if (!holdDefaults.has(id)) return false;
+    if (!holdCache.has(id)) {
+      const stored = readHoldStored(id);
+      holdCache.set(id, stored === void 0 ? !!holdDefaults.get(id) : stored);
+    }
+    return holdCache.get(id) ?? false;
+  }
+  function setKeybindHoldDetection(id, enabled2) {
+    if (!holdDefaults.has(id) || getKeybindHoldDetection(id) === enabled2) return;
+    holdCache.set(id, enabled2);
+    writeHoldStored(id, enabled2);
+    emitHoldChange(id);
+  }
+  function eventMatchesKeybind(id, e) {
+    return matchHotkey(e, getKeybind(id));
+  }
+  function getKeybindLabel(id) {
+    const hk = getKeybind(id);
+    return hk ? hotkeyToPretty(hk) : UNBOUND_LABEL;
+  }
+  var BINDINGS_PATH, HOLD_PATH, ARIES_ROOT_KEY, STORED_NONE, UNBOUND_LABEL, sections, actions, holdDefaults, cache, holdCache, changes2, holdChanges, cloneHotkey;
+  var init_keybinds = __esm({
+    "src/features/keybinds/keybinds.ts"() {
+      "use strict";
+      init_emitter();
+      init_hotkey();
+      init_storage();
+      init_catalog();
+      BINDINGS_PATH = "keybinds.bindings";
+      HOLD_PATH = "keybinds.hold";
+      ARIES_ROOT_KEY = "aries_mod";
+      STORED_NONE = "__none__";
+      UNBOUND_LABEL = "None";
+      sections = SECTION_CONFIG.map((section5) => ({ ...section5, actions: [] }));
+      actions = /* @__PURE__ */ new Map();
+      holdDefaults = /* @__PURE__ */ new Map();
+      cache = /* @__PURE__ */ new Map();
+      holdCache = /* @__PURE__ */ new Map();
+      changes2 = /* @__PURE__ */ new Map();
+      holdChanges = /* @__PURE__ */ new Map();
+      cloneHotkey = (hk) => hk ? { ...hk } : null;
+      for (let i = 0; i < SECTION_CONFIG.length; i++) {
+        for (const config of SECTION_CONFIG[i].actions) register(sections[i], config);
+      }
+      if (typeof window !== "undefined") {
+        window.addEventListener("storage", (event) => {
+          if (event.key !== ARIES_ROOT_KEY) return;
+          cache.clear();
+          holdCache.clear();
+          for (const id of actions.keys()) emitChange(id);
+          for (const id of holdDefaults.keys()) emitHoldChange(id);
+        });
+      }
+    }
+  });
+
+  // src/lib/keyboard.ts
+  function isKeybindCaptureActive() {
+    return keybindCaptureCount > 0;
+  }
+  function beginKeybindCapture() {
+    keybindCaptureCount++;
+  }
+  function endKeybindCapture() {
+    keybindCaptureCount = Math.max(0, keybindCaptureCount - 1);
+  }
+  function shouldIgnoreKeydown(e) {
+    if (isKeybindCaptureActive()) return true;
+    const el = e.target;
+    if (!el) return false;
+    return el.isContentEditable || el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT";
+  }
+  var keybindCaptureCount;
+  var init_keyboard = __esm({
+    "src/lib/keyboard.ts"() {
+      "use strict";
+      keybindCaptureCount = 0;
+    }
+  });
+
+  // src/platform/modVersion.ts
+  function getLocalVersion() {
+    if (true) {
+      return "3.2.233";
+    }
+    if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
+      return GM_info.script.version;
+    }
+    return void 0;
+  }
+  async function fetchRemoteVersion() {
+    try {
+      const meta = extractUserscriptMetadata(await fetchScriptSource());
+      if (!meta) throw new Error("Metadata block not found in remote script");
+      return {
+        version: meta.get("version")?.[0],
+        download: meta.get("downloadurl")?.[0] ?? meta.get("updateurl")?.[0]
+      };
+    } catch (error) {
+      console.error("Unable to retrieve remote version:", error);
+      return null;
+    }
+  }
+  async function fetchScriptSource() {
+    const commitSha = await fetchLatestCommitSha();
+    const scriptUrl = commitSha ? `${RAW_BASE_URL}/${commitSha}/dist/${SCRIPT_FILE_PATH}` : `${RAW_BASE_URL}/refs/heads/${REPO_BRANCH}/dist/${SCRIPT_FILE_PATH}?t=${Date.now()}`;
+    return getText(scriptUrl, { noCache: true });
+  }
+  async function fetchLatestCommitSha() {
+    try {
+      const data = await getJSON(COMMITS_API_URL, {
+        noCache: true,
+        headers: { Accept: "application/vnd.github+json" }
+      });
+      const sha = typeof data?.sha === "string" ? data.sha.trim() : "";
+      if (sha) return sha;
+    } catch (error) {
+      console.warn("[MagicGarden] Failed to resolve latest commit SHA:", error);
+    }
+    return null;
+  }
+  function extractUserscriptMetadata(source) {
+    const header = source.match(/\/\/ ==UserScript==([\s\S]*?)\/\/ ==\/UserScript==/);
+    if (!header) return null;
+    const meta = /* @__PURE__ */ new Map();
+    for (const [, rawKey, rawValue] of header[1].matchAll(/^\/\/\s*@([^\s]+)\s+(.+)$/gm)) {
+      const key2 = rawKey.trim().toLowerCase();
+      if (!key2) continue;
+      const values = meta.get(key2) ?? [];
+      values.push(rawValue.trim());
+      meta.set(key2, values);
+    }
+    return meta;
+  }
+  var REPO_OWNER, REPO_NAME, REPO_BRANCH, SCRIPT_FILE_PATH, RAW_BASE_URL, COMMITS_API_URL;
+  var init_modVersion = __esm({
+    "src/platform/modVersion.ts"() {
+      "use strict";
+      init_http();
+      REPO_OWNER = "Ariedam64";
+      REPO_NAME = "MG-AriesMod";
+      REPO_BRANCH = "main";
+      SCRIPT_FILE_PATH = "quinoa-ws.min.user.js";
+      RAW_BASE_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}`;
+      COMMITS_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/commits/${REPO_BRANCH}`;
+    }
+  });
+
+  // src/ui/kit/badges.ts
+  function pill(text2, tone) {
+    const el = h("span", "qmm-pill", text2);
+    setTone(el, tone);
+    return el;
+  }
+  function setTone(el, tone) {
+    el.classList.remove("is-ok", "is-warn", "is-bad");
+    if (tone) el.classList.add(`is-${tone}`);
+  }
+  function badge(text2, tone) {
+    return h("span", `qmm-badge is-${tone}`, text2);
+  }
+  function meter() {
+    const root4 = h("div", "qmm-meter");
+    const fill = h("div", "qmm-meter__fill");
+    root4.appendChild(fill);
+    return {
+      root: root4,
+      set(ratio, tone = "accent") {
+        fill.style.width = `${clampFinite(ratio, 0, 1, 0) * 100}%`;
+        fill.classList.toggle("is-warn", tone === "warn");
+      }
+    };
+  }
+  var init_badges = __esm({
+    "src/ui/kit/badges.ts"() {
+      "use strict";
+      init_math();
+      init_dom2();
+    }
+  });
+
+  // src/ui/hud.ts
+  function currentPos(el) {
+    const rect = el.getBoundingClientRect();
+    const cs = getComputedStyle(el);
+    let r = parseFloat(cs.right);
+    let b = parseFloat(cs.bottom);
+    if (Number.isNaN(r)) r = window.innerWidth - rect.right;
+    if (Number.isNaN(b)) b = window.innerHeight - rect.bottom;
+    return { r, b };
+  }
+  function placeClamped(el, r, b) {
+    const rect = el.getBoundingClientRect();
+    const maxRight = Math.max(MARGIN, window.innerWidth - rect.width - MARGIN);
+    const maxBottom = Math.max(MARGIN, window.innerHeight - rect.height - MARGIN);
+    el.style.right = `${Math.min(Math.max(r, MARGIN), maxRight)}px`;
+    el.style.bottom = `${Math.min(Math.max(b, MARGIN), maxBottom)}px`;
+  }
+  function clampRect(el) {
+    const { r, b } = currentPos(el);
+    placeClamped(el, r, b);
+  }
+  function ensureOnScreen(el) {
+    clampRect(el);
+    const rect = el.getBoundingClientRect();
+    const head = el.querySelector(".w-head")?.getBoundingClientRect() ?? rect;
+    let { r, b } = currentPos(el);
+    const maxRight = Math.max(MARGIN, window.innerWidth - rect.width - MARGIN);
+    const maxBottom = Math.max(MARGIN, window.innerHeight - rect.height - MARGIN);
+    if (head.top < MARGIN) b = Math.max(MARGIN, Math.min(maxBottom, b - (MARGIN - head.top)));
+    if (rect.left < MARGIN) r = Math.max(MARGIN, Math.min(maxRight, r - (MARGIN - rect.left)));
+    el.style.right = `${r}px`;
+    el.style.bottom = `${b}px`;
+  }
+  function attachAutoClamp(win) {
+    if (typeof ResizeObserver === "undefined") return;
+    let raf3 = 0;
+    new ResizeObserver(() => {
+      if (raf3) cancelAnimationFrame(raf3);
+      raf3 = requestAnimationFrame(() => ensureOnScreen(win));
+    }).observe(win);
+  }
+  function withTopLocked(el, mutate) {
+    const before = el.getBoundingClientRect();
+    const { b } = currentPos(el);
+    mutate();
+    requestAnimationFrame(() => {
+      const after = el.getBoundingClientRect();
+      const maxBottom = Math.max(MARGIN, window.innerHeight - after.height - MARGIN);
+      el.style.bottom = `${Math.min(Math.max(MARGIN, b + after.top - before.top), maxBottom)}px`;
+      ensureOnScreen(el);
+    });
+  }
+  function makeDraggable(handle, target, opts) {
+    let start2 = null;
+    handle.addEventListener("mousedown", (e) => {
+      if (opts.ignore?.(e.target)) return;
+      start2 = { x: e.clientX, y: e.clientY, pos: currentPos(target) };
+      document.body.style.userSelect = "none";
+      opts.onStart?.();
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!start2) return;
+      placeClamped(target, start2.pos.r - (e.clientX - start2.x), start2.pos.b - (e.clientY - start2.y));
+    });
+    window.addEventListener("mouseup", () => {
+      if (!start2) return;
+      start2 = null;
+      document.body.style.userSelect = "";
+      opts.onEnd();
+    });
+  }
+  function installInputKeyTrap() {
+    const isTextField = (el) => {
+      if (el instanceof HTMLTextAreaElement) return true;
+      if (el instanceof HTMLInputElement) return ["text", "number", "search"].includes((el.type || "").toLowerCase());
+      return el instanceof HTMLElement && el.isContentEditable;
+    };
+    const ours = (el) => !!el?.closest?.(".qws-win, .qws2");
+    const trap = (ev) => {
+      const target = ev.target;
+      const active3 = document.activeElement;
+      if (!(ours(target) && isTextField(target) || ours(active3) && isTextField(active3))) return;
+      ev.stopPropagation();
+      ev.stopImmediatePropagation();
+    };
+    for (const type of ["keydown", "keypress", "keyup"]) window.addEventListener(type, trap, true);
+  }
+  function openDownloadLink(url) {
+    const gmObject = globalThis.GM;
+    const gmOpen = typeof GM_openInTab === "function" ? GM_openInTab : typeof gmObject?.openInTab === "function" ? gmObject.openInTab.bind(gmObject) : null;
+    if (isDiscordSurface() && gmOpen) {
+      try {
+        gmOpen(url, { active: true, setParent: true });
+        return;
+      } catch (error) {
+        console.warn("[MagicGarden] GM_openInTab failed, falling back to window.open", error);
+      }
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+  function mountHUD(opts) {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => mountHUD(opts), { once: true });
+      return;
+    }
+    const statusMini = pill("\u2026", "warn");
+    statusMini.classList.add("mini");
+    const btnMin = button("\u2013", { size: "sm", title: "Minimize/Expand" });
+    const btnHide = button("\u2715", { size: "sm", title: "Hide" });
+    const header = h("div", "row drag");
+    header.append(h("div", "title", "Arie's Mod"), h("div", "qmm-spacer"), statusMini, btnMin, btnHide);
+    const statusFull = pill("status", "warn");
+    const versionPill = pill("\u2026", "warn");
+    const statusRow = h("div", "row");
+    statusRow.append(statusFull, versionPill);
+    const launch = h("div", "qws-launch");
+    const body = h("div", "body");
+    body.appendChild(launch);
+    const box2 = h("div", "qws2");
+    box2.append(header, statusRow, body);
+    (document.documentElement || document.body).appendChild(box2);
+    const setHUDHidden = (hidden) => {
+      box2.classList.toggle("hidden", hidden);
+      writeAriesPath(HUD_HIDDEN_PATH, hidden);
+    };
+    const toggleHUDHidden = () => setHUDHidden(!box2.classList.contains("hidden"));
+    const saveHUDPos = () => {
+      writeAriesPath(HUD_POS_PATH, { r: parseFloat(box2.style.right) || 16, b: parseFloat(box2.style.bottom) || 16 });
+    };
+    const isOn = (v) => v === true || v === "1" || v === 1;
+    const pos = readAriesPath(HUD_POS_PATH);
+    if (pos && typeof pos.r === "number" && typeof pos.b === "number") {
+      box2.style.right = `${pos.r}px`;
+      box2.style.bottom = `${pos.b}px`;
+    }
+    if (isOn(readAriesPath(HUD_COLLAPSED_PATH))) {
+      box2.classList.add("min");
+      btnMin.textContent = "+";
+    }
+    if (isOn(readAriesPath(HUD_HIDDEN_PATH))) box2.classList.add("hidden");
+    requestAnimationFrame(() => clampRect(box2));
+    window.addEventListener("resize", () => clampRect(box2));
+    let insertDown = false;
+    let insertUsedAsModifier = false;
+    const KEY_TOGGLE = "gui.toggle";
+    const KEY_DRAG = "gui.drag";
+    const downCodes = /* @__PURE__ */ new Set();
+    let toggleHotkey = getKeybind(KEY_TOGGLE);
+    let dragHotkey = getKeybind(KEY_DRAG);
+    let dragActive = false;
+    const isCodePressed = (code) => [...downCodes].some((pressed) => codesMatch(code, pressed));
+    const updateDragState = () => {
+      const hk = dragHotkey;
+      dragActive = !!hk && !!hk.alt === isCodePressed("AltLeft") && !!hk.ctrl === isCodePressed("ControlLeft") && !!hk.shift === isCodePressed("ShiftLeft") && !!hk.meta === isCodePressed("MetaLeft") && isCodePressed(hk.code);
+    };
+    updateDragState();
+    const isModifierActive = (e) => {
+      if (dragHotkey && dragActive) return true;
+      const insertModifier = insertDown && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey;
+      if (insertModifier) insertUsedAsModifier = true;
+      return insertModifier;
+    };
+    const onInsertKey = (e) => {
+      if (e.code !== "Insert" && e.key !== "Insert") return;
+      if (e.type === "keydown") {
+        if (!insertDown) insertUsedAsModifier = false;
+        insertDown = true;
+        return;
+      }
+      const usedAsModifier = insertUsedAsModifier;
+      insertDown = false;
+      insertUsedAsModifier = false;
+      if (!usedAsModifier && !isEditing(e.target)) {
+        e.preventDefault();
+        toggleHUDHidden();
+      }
+    };
+    window.addEventListener("keydown", onInsertKey, true);
+    window.addEventListener("keyup", onInsertKey, true);
+    const resetKeys = () => {
+      insertDown = false;
+      insertUsedAsModifier = false;
+      downCodes.clear();
+      updateDragState();
+    };
+    window.addEventListener("blur", resetKeys, true);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible") resetKeys();
+    });
+    window.addEventListener("keydown", (e) => {
+      downCodes.add(e.code);
+      updateDragState();
+      if (isEditing(e.target) || e.repeat) return;
+      if (isKeybindCaptureActive()) return;
+      if (matchHotkey(e, toggleHotkey)) {
+        if (insertDown && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) insertUsedAsModifier = true;
+        e.preventDefault();
+        toggleHUDHidden();
+      }
+    }, true);
+    window.addEventListener("keyup", (e) => {
+      downCodes.delete(e.code);
+      updateDragState();
+    }, true);
+    const updateHideButtonTitle = () => {
+      const keys = [];
+      if (toggleHotkey) keys.push(getKeybindLabel(KEY_TOGGLE));
+      keys.push("Insert");
+      btnHide.title = `Hide (${keys.join(" / ")})`;
+    };
+    updateHideButtonTitle();
+    onKeybindChange(KEY_TOGGLE, (hk) => {
+      toggleHotkey = hk;
+      updateHideButtonTitle();
+    });
+    onKeybindChange(KEY_DRAG, (hk) => {
+      dragHotkey = hk;
+      updateDragState();
+    });
+    makeDraggable(header, box2, { onEnd: saveHUDPos });
+    btnMin.onclick = () => {
+      withTopLocked(box2, () => {
+        box2.classList.toggle("min");
+        btnMin.textContent = box2.classList.contains("min") ? "+" : "\u2013";
+        writeAriesPath(HUD_COLLAPSED_PATH, box2.classList.contains("min"));
+      });
+    };
+    btnHide.onclick = () => setHUDHidden(true);
+    const windows = /* @__PURE__ */ new Map();
+    let cascade = 0;
+    function bumpZ(el) {
+      let maxZ = layer.window;
+      windows.forEach((w) => {
+        const z = parseInt(getComputedStyle(w.el).zIndex || String(layer.window), 10);
+        if (z > maxZ) maxZ = z;
+      });
+      el.style.zIndex = String(maxZ + 1);
+    }
+    function saveWinPos(id, el) {
+      writeAriesPath(HUD_WIN_PATH(id), { r: parseFloat(el.style.right) || 16, b: parseFloat(el.style.bottom) || 16 });
+    }
+    function restoreWinPos(id, el) {
+      const saved = readAriesPath(HUD_WIN_PATH(id));
+      if (typeof saved?.r === "number") el.style.right = `${saved.r}px`;
+      if (typeof saved?.b === "number") el.style.bottom = `${saved.b}px`;
+      ensureOnScreen(el);
+    }
+    function showWindow(id, title, render) {
+      const existing = windows.get(id);
+      if (existing) {
+        existing.el.style.display = "";
+        bumpZ(existing.el);
+        ensureOnScreen(existing.el);
+        setLaunchState(id, true);
+        return;
+      }
+      const win = h("div", "qws-win");
+      const head = h("div", "w-head");
+      const winMin = button("\u2013", { size: "xs", title: "Minimize/Expand" });
+      const winClose = button("\u2715", { size: "xs", title: "Close" });
+      winMin.classList.add("w-btn");
+      winClose.classList.add("w-btn");
+      head.append(h("div", "w-title", title), h("div", "qmm-spacer"), winMin, winClose);
+      const winBody = h("div", "w-body");
+      win.append(head, winBody);
+      (document.documentElement || document.body).appendChild(win);
+      const offset = cascade++ % 5 * 24;
+      win.style.right = `${16 + offset}px`;
+      win.style.bottom = `${16 + offset}px`;
+      clampRect(win);
+      bumpZ(win);
+      makeDraggable(head, win, {
+        ignore: (t) => !!t.closest(".w-btn"),
+        onStart: () => bumpZ(win),
+        onEnd: () => saveWinPos(id, win)
+      });
+      winMin.onclick = () => {
+        withTopLocked(win, () => {
+          const hidden = winBody.style.display === "none";
+          winBody.style.display = hidden ? "" : "none";
+          winMin.textContent = hidden ? "\u2013" : "+";
+        });
+      };
+      winClose.onclick = () => {
+        win.style.display = "none";
+        setLaunchState(id, false);
+      };
+      restoreWinPos(id, win);
+      try {
+        render(winBody);
+      } catch (e) {
+        winBody.textContent = String(e);
+      }
+      attachAutoClamp(win);
+      requestAnimationFrame(() => ensureOnScreen(win));
+      saveWinPos(id, win);
+      windows.set(id, { id, el: win });
+      setLaunchState(id, true);
+    }
+    window.addEventListener("resize", () => windows.forEach((w) => ensureOnScreen(w.el)));
+    (function enableModifierDrag() {
+      let drag = null;
+      window.addEventListener("mousedown", (e) => {
+        if (!isModifierActive(e) || e.button !== 0) return;
+        const root4 = e.target?.closest?.(".qws-win, .qws2");
+        if (!root4 || root4.style.display === "none") return;
+        drag = { el: root4, x: e.clientX, y: e.clientY, pos: currentPos(root4) };
+        document.body.style.userSelect = "none";
+        bumpZ(root4);
+        e.preventDefault();
+        e.stopPropagation();
+      }, true);
+      window.addEventListener("mousemove", (e) => {
+        if (!drag) return;
+        placeClamped(drag.el, drag.pos.r - (e.clientX - drag.x), drag.pos.b - (e.clientY - drag.y));
+      }, true);
+      const stopDrag = () => {
+        if (!drag) return;
+        const el = drag.el;
+        drag = null;
+        document.body.style.userSelect = "";
+        clampRect(el);
+        const win = [...windows.values()].find((w) => w.el === el);
+        if (win) saveWinPos(win.id, el);
+        else if (el === box2) saveHUDPos();
+      };
+      window.addEventListener("mouseup", stopDrag, true);
+      window.addEventListener("keyup", (e) => {
+        if (!dragHotkey || matchHotkey(e, dragHotkey) || !dragActive) stopDrag();
+      }, true);
+    })();
+    installInputKeyTrap();
+    const registry2 = [];
+    const launchButtons = /* @__PURE__ */ new Map();
+    function setLaunchState(id, open) {
+      const btn = launchButtons.get(id);
+      if (!btn) return;
+      btn.textContent = open ? "Close" : "Open";
+      btn.dataset.open = open ? "1" : "0";
+      btn.classList.toggle("active", open);
+    }
+    function register2(id, title, render) {
+      registry2.push({ id, title, render });
+      const openBtn = button("Open", { size: "sm" });
+      openBtn.dataset.open = "0";
+      launchButtons.set(id, openBtn);
+      openBtn.onclick = () => {
+        const w = windows.get(id);
+        if (w && w.el.style.display !== "none") {
+          w.el.style.display = "none";
+          setLaunchState(id, false);
+        } else {
+          showWindow(id, title, render);
+        }
+      };
+      const item = h("div", "launch-item");
+      item.append(h("div", "name", title), openBtn);
+      launch.appendChild(item);
+    }
+    try {
+      opts?.onRegister?.(register2);
+    } catch (error) {
+      console.error("[HUD] panel registration failed:", error);
+    }
+    window.addEventListener("qws:open-panel", (ev) => {
+      const id = String(ev.detail?.id || "");
+      const entry = registry2.find((r) => r.id === id);
+      if (entry) showWindow(id, entry.title, entry.render);
+    });
+    initVersionBadge(versionPill);
+    void ensureStore().catch(() => {
+    });
+    startStatusLoop(statusFull, statusMini);
+  }
+  function initVersionBadge(badge2) {
+    const show = (text2, tone, downloadUrl) => {
+      badge2.textContent = text2;
+      setTone(badge2, tone);
+      badge2.classList.toggle("is-link", !!downloadUrl);
+      if (downloadUrl) {
+        badge2.dataset.download = downloadUrl;
+        badge2.title = "Download the new version";
+      } else {
+        delete badge2.dataset.download;
+        badge2.removeAttribute("title");
+      }
+    };
+    show("checking\u2026", "warn");
+    badge2.addEventListener("click", () => {
+      const url = badge2.dataset.download;
+      if (url) openDownloadLink(url);
+    });
+    void (async () => {
+      const localVersion = getLocalVersion();
+      try {
+        const remoteData = await fetchRemoteVersion();
+        const remoteVersion = remoteData?.version?.trim();
+        if (!remoteVersion) show(localVersion || "Unknown", "warn");
+        else if (!localVersion) show(remoteVersion, "warn", remoteData?.download);
+        else if (localVersion === remoteVersion) show(localVersion, "ok");
+        else show(`${localVersion} \u2192 ${remoteVersion}`, "warn", remoteData?.download);
+      } catch (error) {
+        console.error("[MagicGarden] Failed to check version:", error);
+        show(localVersion || "Unknown", "warn");
+      }
+    })();
+  }
+  function getWSStatus() {
+    if (sockets.some((ws) => ws.readyState === NativeWS.OPEN)) return { level: "ok", message: "ws open" };
+    if (window.__QWS_workerFound || workerFound) return { level: "ok", message: "ws via worker" };
+    return { level: "bad", message: "ws none" };
+  }
+  function getStoreStatus() {
+    try {
+      const info = getCapturedInfo();
+      if (isStoreCaptured()) return { level: "ok", message: `store ${info.via || "ready"}` };
+      if (info.via === "polyfill" || info.polyfill) return { level: "warn", message: "store polyfill" };
+      return { level: "bad", message: "store none" };
+    } catch {
+      return { level: "bad", message: "store error" };
+    }
+  }
+  function startStatusLoop(full, mini) {
+    let warmup = getSpriteWarmupState();
+    const update = () => {
+      if (!warmup.completed) {
+        const progress = warmup.total > 0 ? `${warmup.done}/${warmup.total}` : `${warmup.done}`;
+        const summary = warmup.total > 0 ? `Sprites warming: ${progress}` : "Sprites warming up";
+        full.textContent = `Sprites ${progress}`;
+        mini.textContent = progress;
+        full.title = mini.title = summary;
+        setTone(full, "warn");
+        setTone(mini, "warn");
+        mini.style.display = "";
+        return;
+      }
+      const ws = getWSStatus();
+      const store = getStoreStatus();
+      const level = store.message === "store none" && ws.level === "bad" ? "bad" : ws.level === "ok" && store.level === "ok" ? "ok" : "warn";
+      full.textContent = "status";
+      mini.textContent = level === "ok" ? "OK" : level === "warn" ? "WARN" : "ISSUES";
+      full.title = mini.title = `${ws.message}, ${store.message}`;
+      setTone(full, level);
+      setTone(mini, level);
+      mini.style.display = level === "ok" ? "none" : "";
+    };
+    onSpriteWarmupProgress((state5) => {
+      warmup = state5;
+      update();
+    });
+    setInterval(update, 800);
+  }
+  var HUD_POS_PATH, HUD_COLLAPSED_PATH, HUD_HIDDEN_PATH, HUD_WIN_PATH, MARGIN, isEditing;
+  var init_hud = __esm({
+    "src/ui/hud.ts"() {
+      "use strict";
+      init_sockets();
+      init_jotai();
+      init_keybinds();
+      init_keyboard();
+      init_hotkey();
+      init_iconCache();
+      init_modVersion();
+      init_environment();
+      init_storage();
+      init_badges();
+      init_button();
+      init_dom2();
+      init_theme();
+      HUD_POS_PATH = "hud.pos";
+      HUD_COLLAPSED_PATH = "hud.collapsed";
+      HUD_HIDDEN_PATH = "hud.hidden";
+      HUD_WIN_PATH = (id) => `hud.windows.${id}`;
+      MARGIN = 8;
+      isEditing = (el) => {
+        const t = el;
+        return !!t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName));
+      };
+    }
+  });
+
+  // src/game/pixi/gardenInfoCard.ts
+  function getStage(state5) {
+    return state5.renderer.lastObjectRendered ?? state5.renderer.stage ?? state5.app?.stage ?? null;
+  }
+  function findByLabel(root4, label2, limit = 25e3) {
+    if (!root4) return null;
+    const stack = [root4];
+    const seen = /* @__PURE__ */ new Set();
+    let n = 0;
+    while (stack.length && n++ < limit) {
+      const node = stack.pop();
+      if (!node || seen.has(node)) continue;
+      seen.add(node);
+      if (node.label === label2) return node;
+      const children = node.children;
+      if (Array.isArray(children)) for (const child of children) stack.push(child);
+    }
+    return null;
+  }
+  function findAcrossBranches(root4, pred, limitPerBranch = 25e3) {
+    if (!root4) return null;
+    if (pred(root4)) return root4;
+    const children = root4.children;
+    if (!Array.isArray(children)) return null;
+    for (const child of children) {
+      const stack = [child];
+      const seen = /* @__PURE__ */ new Set();
+      let n = 0;
+      while (stack.length && n++ < limitPerBranch) {
+        const node = stack.pop();
+        if (!node || seen.has(node)) continue;
+        seen.add(node);
+        if (pred(node)) return node;
+        const kids = node.children;
+        if (Array.isArray(kids)) for (const kid of kids) stack.push(kid);
+      }
+    }
+    return null;
+  }
+  function findGraphicsCtor(root4) {
+    if (cachedGraphicsCtor) return cachedGraphicsCtor;
+    const found = findAcrossBranches(
+      root4,
+      (node) => typeof node?.roundRect === "function" && typeof node?.clear === "function"
+    )?.constructor ?? null;
+    if (found) cachedGraphicsCtor = found;
+    return found;
+  }
+  function computeGeometry(card4) {
+    const cardBounds = card4.getLocalBounds();
+    const width = card4.hitArea?.width ?? cardBounds.width;
+    const height = card4.hitArea?.height ?? cardBounds.height;
+    const titleRow = (card4.children ?? []).find((c) => c?.label === TITLE_ROW_LABEL);
+    const contentTop = titleRow ? titleRow.position.y + titleRow.getLocalBounds().minY : cardBounds.minY;
+    const abilitiesSection = (cardSystem?.children ?? []).find((c) => c?.label === ABILITIES_SECTION_LABEL);
+    const extraTopOffset = abilitiesSection ? abilitiesSection.getLocalBounds().height + SECTION_GAP_ESTIMATE : 0;
+    return { top: contentTop - extraTopOffset, width, height };
+  }
+  function notifyListeners(card4, geometry) {
+    for (const listener of listeners) {
+      try {
+        listener(card4, geometry);
+      } catch (error) {
+        console.warn("[gardenInfoCardPixi] listener failed", error);
+      }
+    }
+  }
+  function onChildAddedUnsafe(row5) {
+    if (row5?.label !== CARD_ROW_LABEL) return;
+    const card4 = findByLabel(row5, OBJECT_CARD_LABEL);
+    if (!card4) return;
+    currentCard = card4;
+    const geometry = computeGeometry(card4);
+    card4.once("destroyed", () => {
+      if (currentCard === card4) {
+        currentCard = null;
+        notifyListeners(null, null);
+      }
+    });
+    notifyListeners(card4, geometry);
+  }
+  function onChildAdded(row5) {
+    try {
+      onChildAddedUnsafe(row5);
+    } catch (error) {
+      console.warn("[gardenInfoCardPixi] onChildAdded failed", error);
+    }
+  }
+  function attachToCardSystem(system) {
+    cardSystem = system;
+    cardSystem.on("childAdded", onChildAdded);
+    cardSystem.once("destroyed", () => {
+      if (cardSystem === system) {
+        cardSystem = null;
+        debugState.attached = false;
+        currentCard = null;
+        notifyListeners(null, null);
+        restartSearchIfNeeded();
+      }
+    });
+    debugState.attached = true;
+    console.info(`[gardenInfoCardPixi] attached to ${CARD_SYSTEM_LABEL} after ${findAttempts} attempt(s)`);
+    const existingRow = (system.children ?? []).find((c) => c?.label === CARD_ROW_LABEL);
+    if (existingRow) onChildAdded(existingRow);
+  }
+  function tryFindCardSystem() {
+    if (cardSystem) return;
+    const state5 = getReadySpriteState();
+    if (!state5) return;
+    const stage = getStage(state5);
+    const found = findAcrossBranches(stage, (node) => node?.label === CARD_SYSTEM_LABEL);
+    if (found) {
+      attachToCardSystem(found);
+      return;
+    }
+    findAttempts += 1;
+    debugState.findAttempts = findAttempts;
+    if (findAttempts % CARD_SYSTEM_FIND_LOG_EVERY === 0) {
+      console.info(`[gardenInfoCardPixi] still searching for ${CARD_SYSTEM_LABEL} (${findAttempts} attempts so far)`);
+    }
+  }
+  function scheduleFind(now) {
+    findRafId = null;
+    debugState.rafTicks += 1;
+    if (!listeners.size || cardSystem) return;
+    if (now - lastFindCheckAt >= CARD_SYSTEM_FIND_RETRY_MS) {
+      lastFindCheckAt = now;
+      tryFindCardSystem();
+    }
+    if (!listeners.size || cardSystem) return;
+    findRafId = raf(scheduleFind);
+  }
+  function restartSearchIfNeeded() {
+    if (!listeners.size || cardSystem) return;
+    tryFindCardSystem();
+    if (!cardSystem && findRafId == null) {
+      findRafId = raf(scheduleFind);
+    }
+  }
+  function watchGardenInfoCard(listener) {
+    listeners.add(listener);
+    debugState.listenerCount = listeners.size;
+    restartSearchIfNeeded();
+    if (currentCard) {
+      try {
+        listener(currentCard, computeGeometry(currentCard));
+      } catch (error) {
+        console.warn("[gardenInfoCardPixi] listener failed", error);
+      }
+    }
+    return () => {
+      listeners.delete(listener);
+      debugState.listenerCount = listeners.size;
+    };
+  }
+  var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, CARD_SYSTEM_FIND_RETRY_MS, CARD_SYSTEM_FIND_LOG_EVERY, cachedGraphicsCtor, cardSystem, currentCard, findAttempts, findRafId, lastFindCheckAt, listeners, debugState, raf;
+  var init_gardenInfoCard = __esm({
+    "src/game/pixi/gardenInfoCard.ts"() {
+      "use strict";
+      init_pageContext();
+      init_context();
+      CARD_SYSTEM_LABEL = "GardenInfoCardSystem";
+      CARD_ROW_LABEL = "GardenInfoCardRow";
+      OBJECT_CARD_LABEL = "GardenInfoObjectCard";
+      TITLE_ROW_LABEL = "GardenInfoObjectTitleRow";
+      ABILITIES_SECTION_LABEL = "GardenInfoPlantAbilities";
+      SECTION_GAP_ESTIMATE = 8;
+      CARD_SYSTEM_FIND_RETRY_MS = 1e3;
+      CARD_SYSTEM_FIND_LOG_EVERY = 30;
+      cachedGraphicsCtor = null;
+      cardSystem = null;
+      currentCard = null;
+      findAttempts = 0;
+      findRafId = null;
+      lastFindCheckAt = 0;
+      listeners = /* @__PURE__ */ new Set();
+      debugState = {
+        findAttempts: 0,
+        attached: false,
+        rafTicks: 0,
+        scriptStartedAt: Date.now(),
+        listenerCount: 0
+      };
+      shareGlobal("__MG_GARDEN_INFO_CARD_DEBUG__", debugState);
+      raf = pageWindow.requestAnimationFrame.bind(pageWindow);
+    }
+  });
+
+  // src/game/activityLogModalLayout.ts
+  function locateActivityLogAnchors(modalNode2) {
+    const modalContainer = modalNode2?.children?.[0];
+    if (!modalContainer || modalContainer.destroyed) return null;
+    const children = modalContainer.children;
+    if (!Array.isArray(children) || children.length < 3) return null;
+    const backgroundSprite = children[0];
+    if (!children.some((child) => TAB_BAR_LABELS.has(child?.label))) return null;
+    const scrollViewContainer = children.find(
+      (child, index) => index > 0 && child && !TAB_BAR_LABELS.has(child.label) && child.label !== FILTER_TOOLBAR_LABEL
+    );
+    if (!backgroundSprite || !scrollViewContainer) return null;
+    return { modalContainer, backgroundSprite, scrollViewContainer };
+  }
+  function activityLogOpenTarget(tab) {
+    return { modal: ACTIVITY_LOG_MODAL_ID, tab };
+  }
+  function activityLogTabOf(value) {
+    return value === "stats" ? "stats" : "logs";
+  }
+  function locateScrollParts(scrollViewContainer) {
+    const children = scrollViewContainer?.children;
+    if (!Array.isArray(children)) return null;
+    const viewport = children.find((child) => child?.mask && Array.isArray(child.children));
+    const content2 = viewport?.children?.[0];
+    if (!viewport || !content2 || !Array.isArray(content2.children)) return null;
+    return { mask: viewport.mask, content: content2 };
+  }
+  function logsContentKind(contentChildren2) {
+    let kind = "unknown";
+    for (const child of contentChildren2) {
+      if (child?.label === STAT_CARD_LABEL) return "stats";
+      if (child?.label === LOG_ROW_LABEL) kind = "logs";
+    }
+    return kind;
+  }
+  function planLogRowsShift(contentChildren2, toolbarSpace) {
+    const first = contentChildren2[0];
+    const isNote = !!first && first.label !== LOG_ROW_LABEL && (typeof first.textComponent?.text === "string" || typeof first.text === "string" && !(first.children?.length > 0));
+    if (!isNote) return { hideFirst: false, shift: toolbarSpace };
+    const next = contentChildren2[1];
+    const firstY = first.position?.y ?? first.y ?? 0;
+    const noteSpace = next ? (next.position?.y ?? next.y ?? firstY) - firstY : first.height ?? 0;
+    return { hideFirst: true, shift: toolbarSpace - noteSpace };
+  }
+  function maskTransformFor(maskGeometryHeight, toolbarSpace) {
+    if (!(maskGeometryHeight > toolbarSpace) || toolbarSpace <= 0) return { y: 0, scaleY: 1 };
+    return { y: toolbarSpace, scaleY: (maskGeometryHeight - toolbarSpace) / maskGeometryHeight };
+  }
+  var ACTIVITY_LOG_MODAL_ID, ACTIVITY_LOG_MODAL_LABEL, FILTER_TOOLBAR_LABEL, TAB_BAR_LABELS, LOG_ROW_LABEL, STAT_CARD_LABEL;
+  var init_activityLogModalLayout = __esm({
+    "src/game/activityLogModalLayout.ts"() {
+      "use strict";
+      ACTIVITY_LOG_MODAL_ID = "activityLog";
+      ACTIVITY_LOG_MODAL_LABEL = "ActivityLogModal";
+      FILTER_TOOLBAR_LABEL = "AriesActivityLogFilter";
+      TAB_BAR_LABELS = /* @__PURE__ */ new Set(["JournalTabs", "JournalTabTaps"]);
+      LOG_ROW_LABEL = "ActivityLogRow";
+      STAT_CARD_LABEL = "StatCard";
+    }
+  });
+
+  // src/game/fakeModal.ts
+  async function openModal(modalId) {
+    try {
+      const current3 = await Atoms.ui.activeModal.get();
+      if (current3 && current3 !== modalId) {
+        await Atoms.ui.activeModal.set(null);
+        await Atoms.ui.inventoryModalIsActive.set(false);
+        await new Promise((r) => requestAnimationFrame(r));
+      }
+      await Atoms.ui.activeModal.set(modalId);
+      await Atoms.ui.inventoryModalIsActive.set(modalId === INVENTORY_MODAL_ID);
+    } catch {
+    }
+  }
+  async function closeModal(modalId) {
+    try {
+      if (modalId) {
+        const current3 = await Atoms.ui.activeModal.get();
+        if (current3 !== modalId) return;
+      }
+      await Atoms.ui.activeModal.set(null);
+      if (modalId === INVENTORY_MODAL_ID || !modalId) {
+        await Atoms.ui.inventoryModalIsActive.set(false);
+      }
+    } catch {
+    }
+  }
+  function isModalOpen(value, modalId) {
+    return modalNameOf(value) === modalId;
+  }
+  async function isModalOpenAsync(modalId) {
+    try {
+      return isModalOpen(await Atoms.ui.activeModal.get(), modalId);
+    } catch {
+      return false;
+    }
+  }
+  async function waitModalClosed(modalId, timeoutMs = 12e4) {
+    const t0 = performance.now();
+    while (performance.now() - t0 < timeoutMs) {
+      try {
+        if (!isModalOpen(await Atoms.ui.activeModal.get(), modalId)) return true;
+      } catch {
+        return true;
+      }
+      await new Promise((r) => setTimeout(r, 80));
+    }
+    return false;
+  }
+  function defineFakeModal(spec) {
+    return {
+      async show(payload, opts) {
+        const fakeOpts = { openGate: false, autoRestoreMs: opts?.autoRestoreMs };
+        if (spec.inventoryAtom === "clear") await fakeHide(INVENTORY_ATOM_PATCH.label);
+        await fakeShow(SHARED_MYDATA_PATCH, { [spec.field]: payload ?? spec.empty }, fakeOpts);
+        if (spec.inventoryAtom === "patch") await fakeShow(INVENTORY_ATOM_PATCH, payload, fakeOpts);
+        if (opts?.open !== false) await spec.open();
+      },
+      isOpen: spec.isOpen ?? (() => isModalOpenAsync(spec.modal)),
+      waitClosed: (timeoutMs) => waitModalClosed(spec.modal, timeoutMs)
+    };
+  }
+  async function disableFakeInventory() {
+    await fakeHide(INVENTORY_ATOM_PATCH.label);
+    await fakeHide(SHARED_MYDATA_PATCH.label);
+  }
+  function isInventoryOpen(v) {
+    return isModalOpen(v, INVENTORY_MODAL_ID);
+  }
+  async function openActivityLogTab(tab) {
+    const target = activityLogOpenTarget(tab);
+    try {
+      await Atoms.ui.activityLogTab.set(target.tab);
+    } catch {
+    }
+    return openModal(target.modal);
+  }
+  var JOURNAL_MODAL_ID, INVENTORY_MODAL_ID, SHARED_MYDATA_PATCH, INVENTORY_ATOM_PATCH, closeInventory, fakeInventory, fakeJournal, fakeStats, fakeActivityLog;
+  var init_fakeModal = __esm({
+    "src/game/fakeModal.ts"() {
+      "use strict";
+      init_fakeAtoms();
+      init_atoms();
+      init_modalState();
+      init_activityLogModalLayout();
+      JOURNAL_MODAL_ID = "journal";
+      INVENTORY_MODAL_ID = "inventory";
+      SHARED_MYDATA_PATCH = {
+        label: Atoms.data.myData.label,
+        merge: (real, patch) => ({
+          ...real && typeof real === "object" ? real : {},
+          ...patch && typeof patch === "object" ? patch : {}
+        }),
+        gate: {
+          label: Atoms.ui.activeModal.label,
+          isOpen: (v) => ["inventory", "journal", "activityLog"].includes(modalNameOf(v) ?? ""),
+          autoDisableOnClose: true
+        }
+      };
+      INVENTORY_ATOM_PATCH = {
+        label: Atoms.inventory.myInventory.label,
+        merge: (_real, fake) => fake,
+        gate: {
+          label: Atoms.ui.activeModal.label,
+          isOpen: (v) => modalNameOf(v) === INVENTORY_MODAL_ID,
+          autoDisableOnClose: true
+        }
+      };
+      closeInventory = () => closeModal(INVENTORY_MODAL_ID);
+      fakeInventory = {
+        ...defineFakeModal({
+          field: "inventory",
+          modal: INVENTORY_MODAL_ID,
+          open: () => openModal(INVENTORY_MODAL_ID),
+          inventoryAtom: "patch"
+        }),
+        disable: disableFakeInventory,
+        close: closeInventory,
+        /** Drops the fake and closes the inventory. */
+        async hide() {
+          await disableFakeInventory();
+          await closeInventory();
+        }
+      };
+      fakeJournal = defineFakeModal({
+        field: "journal",
+        empty: {},
+        modal: JOURNAL_MODAL_ID,
+        open: () => openModal(JOURNAL_MODAL_ID),
+        inventoryAtom: "clear"
+      });
+      fakeStats = defineFakeModal({
+        field: "stats",
+        empty: {},
+        // Waits for the modal to close, not for a change of tab.
+        modal: ACTIVITY_LOG_MODAL_ID,
+        open: () => openActivityLogTab("stats"),
+        async isOpen() {
+          if (!await isModalOpenAsync(ACTIVITY_LOG_MODAL_ID)) return false;
+          try {
+            return activityLogTabOf(await Atoms.ui.activityLogTab.get()) === "stats";
+          } catch {
+            return false;
+          }
+        }
+      });
+      fakeActivityLog = defineFakeModal({
+        field: "activityLogs",
+        empty: [],
+        modal: ACTIVITY_LOG_MODAL_ID,
+        open: () => openActivityLogTab("logs")
+      });
+    }
+  });
+
+  // src/features/activityLog/classification.ts
+  function normalizeAbilityAction(raw) {
+    const trimmed = String(raw || "").trim();
+    if (!trimmed) return null;
+    let key2 = trimmed.replace(/^Snowy/i, "");
+    key2 = key2.replace(/_NEW$/i, "");
+    key2 = key2.replace(/(?:[_-]?(?:I|II|III|IV|V|VI|VII|VIII|IX|X)|\d+)$/i, "");
+    key2 = key2.replace(/[_-]+$/g, "");
+    return key2 ? key2 : null;
+  }
+  function classifyEntryAction(action2) {
+    const raw = String(action2 ?? "").trim();
+    if (!raw) return "other";
+    const lowered = raw.toLowerCase();
+    const mapped = ACTION_MAP[raw];
+    const mappedLower = ACTION_MAP_LOWER[lowered];
+    const abilityKey = normalizeAbilityAction(raw);
+    if (mapped) return mapped === "boost" && abilityKey ? abilityKey : mapped;
+    if (mappedLower) return mappedLower === "boost" && abilityKey ? abilityKey : mappedLower;
+    if (abilityKey) return abilityKey;
+    return lowered || "other";
+  }
+  function getActionLabel(action2) {
+    const preset = ACTION_LABELS[action2];
+    if (preset) return preset;
+    const spaced2 = spaceWords(String(action2 || "")).replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!spaced2) return String(action2 || "");
+    return spaced2.split(" ").map((word) => word ? word.charAt(0).toUpperCase() + word.slice(1) : word).join(" ");
+  }
+  function mergeActions(actions2) {
+    const seen = /* @__PURE__ */ new Set();
+    const ordered = [];
+    for (const key2 of ACTION_ORDER) {
+      if (key2 === "all") continue;
+      if (actions2.includes(key2) && !seen.has(key2)) {
+        seen.add(key2);
+        ordered.push(key2);
+      }
+    }
+    for (const action2 of actions2) {
+      if (action2 === "all") continue;
+      if (!seen.has(action2)) {
+        seen.add(action2);
+        ordered.push(action2);
+      }
+    }
+    return ordered;
+  }
+  var ACTION_ORDER, ACTION_LABELS, ACTION_MAP, ACTION_MAP_LOWER;
+  var init_classification = __esm({
+    "src/features/activityLog/classification.ts"() {
+      "use strict";
+      init_format();
+      ACTION_ORDER = [
+        "all",
+        "found",
+        "buy",
+        "sell",
+        "harvest",
+        "plant",
+        "feed",
+        "hatch",
+        "water",
+        "coinFinder",
+        "seedFinder",
+        "double",
+        "eggGrowth",
+        "plantGrowth",
+        "granter",
+        "kisser",
+        "refund",
+        "boost",
+        "remove",
+        "other"
+      ];
+      ACTION_LABELS = {
+        all: "All",
+        found: "Finds",
+        buy: "Purchases",
+        sell: "Sold",
+        harvest: "Harvests",
+        plant: "Planted",
+        feed: "Feed",
+        hatch: "Hatch",
+        water: "Water",
+        coinFinder: "Coin Finder",
+        seedFinder: "Seed Finder",
+        double: "Double",
+        eggGrowth: "Egg Growth",
+        plantGrowth: "Plant Growth",
+        granter: "Granters",
+        kisser: "Kissers",
+        refund: "Refunds",
+        boost: "Boosts",
+        remove: "Remove",
+        other: "Other"
+      };
+      ACTION_MAP = {
+        purchaseDecor: "buy",
+        purchaseSeed: "buy",
+        purchaseEgg: "buy",
+        purchaseTool: "buy",
+        upgradePetHutch: "buy",
+        upgradeDecorShed: "buy",
+        upgradeSeedSilo: "buy",
+        waterPlant: "water",
+        plantSeed: "plant",
+        plantGardenPlant: "plant",
+        potPlant: "plant",
+        removeGardenObject: "remove",
+        preserve: "remove",
+        harvest: "harvest",
+        feedPet: "feed",
+        feedPetFromTrough: "feed",
+        plantEgg: "hatch",
+        hatchEgg: "hatch",
+        instaGrow: "boost",
+        customRestock: "boost",
+        spinSlotMachine: "boost",
+        sellAllCrops: "sell",
+        sellPet: "sell",
+        logItems: "boost",
+        mutationPotion: "boost",
+        cropCleanser: "boost",
+        dawnCapture: "boost",
+        openDawnCapsule: "boost",
+        thundercharge: "boost",
+        replenishPotion: "boost",
+        xpPotion: "boost",
+        ProduceScaleBoost: "boost",
+        ProduceScaleBoostII: "boost",
+        ProduceScaleBoostIII: "boost",
+        DoubleHarvest: "double",
+        DoubleHatch: "double",
+        ProduceEater: "boost",
+        SellBoostI: "boost",
+        SellBoostII: "boost",
+        SellBoostIII: "boost",
+        SellBoostIV: "boost",
+        ProduceRefund: "boost",
+        PlantGrowthBoost: "plantGrowth",
+        PlantGrowthBoostII: "plantGrowth",
+        PlantGrowthBoostIII: "plantGrowth",
+        SnowyPlantGrowthBoost: "plantGrowth",
+        DawnPlantGrowthBoost: "plantGrowth",
+        AmberPlantGrowthBoost: "plantGrowth",
+        ThunderPlantGrowthBoost: "plantGrowth",
+        HungerRestore: "boost",
+        HungerRestoreII: "boost",
+        HungerRestoreIII: "boost",
+        SnowyHungerRestore: "boost",
+        GoldGranter: "granter",
+        RainbowGranter: "granter",
+        RainDance: "granter",
+        SnowGranter: "granter",
+        FrostGranter: "granter",
+        DawnlitGranter: "granter",
+        AmberlitGranter: "granter",
+        ThunderstruckGranter: "granter",
+        PetXpBoost: "boost",
+        PetXpBoostII: "boost",
+        PetXpBoostIII: "boost",
+        SnowyPetXpBoost: "boost",
+        DawnXpBoost: "boost",
+        ThunderXpBoost: "boost",
+        SnowyEggGrowthBoost: "eggGrowth",
+        EggGrowthBoost: "eggGrowth",
+        EggGrowthBoostII_NEW: "eggGrowth",
+        EggGrowthBoostII: "eggGrowth",
+        ThunderEggGrowthBoost: "eggGrowth",
+        PetAgeBoost: "boost",
+        PetAgeBoostII: "boost",
+        PetAgeBoostIII: "boost",
+        CoinFinderI: "coinFinder",
+        CoinFinderII: "coinFinder",
+        CoinFinderIII: "coinFinder",
+        SnowyCoinFinder: "coinFinder",
+        DawnCoinFinder: "coinFinder",
+        ThunderCoinFinder: "coinFinder",
+        SnowyCropSizeBoost: "boost",
+        SnowyHungerBoost: "boost",
+        SeedFinderI: "seedFinder",
+        SeedFinderII: "seedFinder",
+        SeedFinderIII: "seedFinder",
+        SeedFinderIV: "seedFinder",
+        PetHatchSizeBoost: "boost",
+        PetHatchSizeBoostII: "boost",
+        PetHatchSizeBoostIII: "boost",
+        MoonKisser: "kisser",
+        DawnKisser: "kisser",
+        PetRefund: "refund",
+        PetRefundII: "refund"
+      };
+      ACTION_MAP_LOWER = Object.fromEntries(
+        Object.entries(ACTION_MAP).map(([key2, value]) => [key2.toLowerCase(), value])
+      );
+    }
+  });
+
+  // src/features/activityLog/history.ts
+  function normalizeEntry(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const ts = Number(raw.timestamp);
+    if (!Number.isFinite(ts)) return null;
+    let parameters = raw.parameters;
+    if (parameters && typeof parameters === "object") {
+      const petId = typeof parameters.pet?.id === "string" ? parameters.pet.id : null;
+      if (petId && !parameters.petId) parameters = { ...parameters, petId };
+    }
+    const entry = { ...raw, timestamp: ts, parameters };
+    if (typeof raw.action === "string" && raw.action.trim()) entry.action = String(raw.action);
+    return entry;
+  }
+  function normalizeEntries(logs2) {
+    if (!Array.isArray(logs2)) return [];
+    const out = [];
+    for (const raw of logs2) {
+      const entry = normalizeEntry(raw);
+      if (entry) out.push(entry);
+    }
+    return out;
+  }
+  function stableStringify(value) {
+    const seen = /* @__PURE__ */ new WeakSet();
+    const walk = (val) => {
+      if (val === null || typeof val !== "object") return val;
+      if (seen.has(val)) return "__CYCLE__";
+      seen.add(val);
+      if (Array.isArray(val)) return val.map(walk);
+      const obj = {};
+      for (const k of Object.keys(val).sort()) obj[k] = walk(val[k]);
+      return obj;
+    };
+    try {
+      return JSON.stringify(walk(value));
+    } catch {
+      return "";
+    }
+  }
+  function entryIdentity(entry) {
+    const p = entry?.parameters;
+    if (!p) return null;
+    const pick = (c) => typeof c === "string" && c.trim() ? c : null;
+    const direct = pick(p.id) ?? pick(p.pet?.id);
+    if (direct) return direct;
+    for (const field2 of IDENTITY_FIELDS) {
+      const value = pick(p[field2]);
+      if (value) return value;
+    }
+    return null;
+  }
+  function entryKey(entry) {
+    const action2 = typeof entry.action === "string" ? entry.action : "";
+    return `${entry.timestamp}|${action2}|${entryIdentity(entry) ?? "__noid__"}`;
+  }
+  function getActivityLogHistory() {
+    try {
+      return normalizeEntries(readAriesPath(HISTORY_STORAGE_KEY));
+    } catch {
+      return [];
+    }
+  }
+  function saveHistory(entries) {
+    const sorted = entries.slice().sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
+    if (sorted.length > HISTORY_LIMIT) sorted.splice(0, sorted.length - HISTORY_LIMIT);
+    try {
+      writeAriesPath(HISTORY_STORAGE_KEY, sorted);
+    } catch {
+    }
+  }
+  function diffSnapshots(prev, next) {
+    const prevBuckets = /* @__PURE__ */ new Map();
+    for (const entry of prev) {
+      const key2 = entryKey(entry);
+      const bucket = prevBuckets.get(key2);
+      if (bucket) bucket.push(entry);
+      else prevBuckets.set(key2, [entry]);
+    }
+    const added = [];
+    const updated = [];
+    for (const entry of next) {
+      const key2 = entryKey(entry);
+      const bucket = prevBuckets.get(key2);
+      const prevEntry = bucket?.shift();
+      if (!prevEntry) added.push(entry);
+      else if (!entriesEqual(prevEntry, entry)) updated.push(entry);
+      if (bucket && bucket.length === 0) prevBuckets.delete(key2);
+    }
+    return { added, updated };
+  }
+  function syncHistory(prevSnapshot, nextSnapshot) {
+    const { added, updated } = diffSnapshots(prevSnapshot, nextSnapshot);
+    if (!added.length && !updated.length) return;
+    const byKey = /* @__PURE__ */ new Map();
+    for (const entry of getActivityLogHistory()) byKey.set(entryKey(entry), entry);
+    let changed5 = false;
+    for (const entry of [...updated, ...added]) {
+      const key2 = entryKey(entry);
+      const cur = byKey.get(key2);
+      if (!cur || !entriesEqual(cur, entry)) {
+        byKey.set(key2, entry);
+        changed5 = true;
+      }
+    }
+    if (changed5) saveHistory(Array.from(byKey.values()));
+  }
+  var HISTORY_STORAGE_KEY, HISTORY_LIMIT, IDENTITY_FIELDS, entriesEqual;
+  var init_history = __esm({
+    "src/features/activityLog/history.ts"() {
+      "use strict";
+      init_storage();
+      HISTORY_STORAGE_KEY = "activityLog.history";
+      HISTORY_LIMIT = 500;
+      IDENTITY_FIELDS = [
+        "petId",
+        "playerId",
+        "userId",
+        "objectId",
+        "slotId",
+        "itemId",
+        "cropId",
+        "seedId",
+        "decorId",
+        "toolId",
+        "targetId",
+        "abilityId"
+      ];
+      entriesEqual = (a, b) => stableStringify(a) === stableStringify(b);
+    }
+  });
+
+  // src/features/activityLog/filter.ts
+  function loadPersistedFilter() {
+    try {
+      return readAriesPath(FILTER_STORAGE_KEY) || "all";
+    } catch {
+      return "all";
+    }
+  }
+  function getActiveFilter() {
+    return activeFilter;
+  }
+  function computeFilteredHistory(filter) {
+    const history = getActivityLogHistory();
+    if (filter === "all") return history;
+    return history.filter((entry) => classifyEntryAction(entry.action) === filter);
+  }
+  function filteredHistory() {
+    return computeFilteredHistory(activeFilter);
+  }
+  function setActivityLogModalOpen(open) {
+    modalOpen = open;
+  }
+  function isActivityLogModalOpen() {
+    return modalOpen;
+  }
+  function setActiveFilter(filter) {
+    if (filter === activeFilter) return;
+    activeFilter = filter;
+    try {
+      writeAriesPath(FILTER_STORAGE_KEY, String(filter));
+    } catch {
+    }
+    if (!modalOpen) return;
+    fakeActivityLog.show(filteredHistory(), { open: false }).catch(() => {
+    });
+  }
+  var FILTER_STORAGE_KEY, activeFilter, modalOpen;
+  var init_filter = __esm({
+    "src/features/activityLog/filter.ts"() {
+      "use strict";
+      init_storage();
+      init_pageContext();
+      init_fakeModal();
+      init_classification();
+      init_history();
+      FILTER_STORAGE_KEY = "activityLog.filter";
+      activeFilter = loadPersistedFilter();
+      modalOpen = false;
+      shareGlobal("__MG_ACTIVITY_LOG_FILTER_DEBUG__", {
+        get activeFilter() {
+          return activeFilter;
+        },
+        get modalOpen() {
+          return modalOpen;
+        },
+        getActiveFilter,
+        setActiveFilter,
+        computeFilteredHistory
+      });
+    }
+  });
+
+  // src/features/activityLog/filterToolbar.ts
+  function countActions(history) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const entry of history) {
+      const key2 = classifyEntryAction(entry.action);
+      counts.set(key2, (counts.get(key2) ?? 0) + 1);
+    }
+    return counts;
+  }
+  function labelFor(key2, counts, total) {
+    const count = key2 === "all" ? total : counts.get(key2) ?? 0;
+    return `${getActionLabel(key2)}${count ? ` (${count})` : ""}`;
+  }
+  function drawButtonBg(bg, width, active3) {
+    bg.roundRect(0, 0, width, BUTTON_HEIGHT, BUTTON_RADIUS).fill({
+      color: active3 ? BUTTON_FILL_ACTIVE : BUTTON_FILL_INACTIVE,
+      alpha: active3 ? BUTTON_ALPHA_ACTIVE : BUTTON_ALPHA_INACTIVE
+    });
+  }
+  function layoutClosedButton(button2) {
+    const width = button2.text.width + BUTTON_PADDING_X * 2 + CARET_GAP + button2.caret.width;
+    button2.bg.clear();
+    drawButtonBg(button2.bg, width, true);
+    button2.text.position.set(BUTTON_PADDING_X, (BUTTON_HEIGHT - button2.text.height) / 2);
+    button2.caret.position.set(width - BUTTON_PADDING_X - button2.caret.width, (BUTTON_HEIGHT - button2.caret.height) / 2);
+  }
+  function buildClosedButton(ctors, label2) {
+    const text2 = new ctors.Text({ text: label2, style: TEXT_STYLE });
+    const caret = new ctors.Text({ text: CARET_CLOSED, style: TEXT_STYLE });
+    const bg = new ctors.Graphics();
+    const container = new ctors.Container();
+    container.addChild(bg);
+    container.addChild(text2);
+    container.addChild(caret);
+    container.eventMode = "static";
+    container.cursor = "pointer";
+    const button2 = { container, bg, text: text2, caret };
+    layoutClosedButton(button2);
+    return button2;
+  }
+  function buildOptions(ctors, maxWidth, counts, total) {
+    const keys = ["all", ...mergeActions(Array.from(counts.keys()))];
+    const container = new ctors.Container();
+    const buttons = [];
+    const active3 = getActiveFilter();
+    let x = 0;
+    let y = 0;
+    for (const key2 of keys) {
+      const text2 = new ctors.Text({ text: labelFor(key2, counts, total), style: TEXT_STYLE });
+      const width = text2.width + BUTTON_PADDING_X * 2;
+      if (x > 0 && x + width > maxWidth) {
+        x = 0;
+        y += BUTTON_HEIGHT + BUTTON_GAP;
+      }
+      const bg = new ctors.Graphics();
+      drawButtonBg(bg, width, key2 === active3);
+      text2.position.set(BUTTON_PADDING_X, (BUTTON_HEIGHT - text2.height) / 2);
+      const button2 = new ctors.Container();
+      button2.addChild(bg);
+      button2.addChild(text2);
+      button2.position.set(x, y);
+      button2.eventMode = "static";
+      button2.cursor = "pointer";
+      container.addChild(button2);
+      buttons.push({ container: button2, bg, key: key2 });
+      x += width + BUTTON_GAP;
+    }
+    return { container, buttons, height: y + BUTTON_HEIGHT };
+  }
+  function setExpanded(toolbar2, expanded) {
+    if (toolbar2.isExpanded === expanded) return;
+    toolbar2.isExpanded = expanded;
+    toolbar2.options.container.visible = expanded;
+    toolbar2.closedButton.caret.text = expanded ? CARET_OPEN : CARET_CLOSED;
+  }
+  function buildFilterToolbar(ctors, maxWidth) {
+    const history = getActivityLogHistory();
+    const counts = countActions(history);
+    const total = history.length;
+    const container = new ctors.Container();
+    container.label = FILTER_TOOLBAR_LABEL;
+    const closedButton = buildClosedButton(ctors, closedLabel({ counts, total }));
+    container.addChild(closedButton.container);
+    const options2 = buildOptions(ctors, maxWidth, counts, total);
+    options2.container.position.set(0, BUTTON_HEIGHT + PANEL_GAP);
+    options2.container.visible = false;
+    container.addChild(options2.container);
+    const toolbar2 = { container, closedButton, options: options2, counts, total, isExpanded: false };
+    closedButton.container.on("pointertap", () => setExpanded(toolbar2, !toolbar2.isExpanded));
+    for (const button2 of options2.buttons) {
+      button2.container.on("pointertap", () => {
+        setActiveFilter(button2.key);
+        setExpanded(toolbar2, false);
+      });
+    }
+    return toolbar2;
+  }
+  function refreshToolbarHighlight(toolbar2) {
+    const active3 = getActiveFilter();
+    for (const button2 of toolbar2.options.buttons) {
+      if (button2.bg.destroyed) continue;
+      const width = button2.bg.getLocalBounds().width;
+      button2.bg.clear();
+      drawButtonBg(button2.bg, width, button2.key === active3);
+    }
+    const label2 = closedLabel(toolbar2);
+    if (toolbar2.closedButton.text.text !== label2) {
+      toolbar2.closedButton.text.text = label2;
+      layoutClosedButton(toolbar2.closedButton);
+    }
+  }
+  var BUTTON_HEIGHT, BUTTON_PADDING_X, BUTTON_GAP, BUTTON_RADIUS, BUTTON_FILL_INACTIVE, BUTTON_FILL_ACTIVE, BUTTON_ALPHA_INACTIVE, BUTTON_ALPHA_ACTIVE, TEXT_STYLE, CLOSED_LABEL_PREFIX, CARET_GAP, CARET_CLOSED, CARET_OPEN, PANEL_GAP, COLLAPSED_HEIGHT, closedLabel;
+  var init_filterToolbar = __esm({
+    "src/features/activityLog/filterToolbar.ts"() {
+      "use strict";
+      init_classification();
+      init_filter();
+      init_history();
+      init_activityLogModalLayout();
+      BUTTON_HEIGHT = 26;
+      BUTTON_PADDING_X = 10;
+      BUTTON_GAP = 6;
+      BUTTON_RADIUS = 8;
+      BUTTON_FILL_INACTIVE = 8084024;
+      BUTTON_FILL_ACTIVE = 14918205;
+      BUTTON_ALPHA_INACTIVE = 0.55;
+      BUTTON_ALPHA_ACTIVE = 0.95;
+      TEXT_STYLE = { fontFamily: "Arial", fontSize: 12, fontWeight: "700", fill: "#FFFFFF" };
+      CLOSED_LABEL_PREFIX = "Filter: ";
+      CARET_GAP = 8;
+      CARET_CLOSED = "\u25BE";
+      CARET_OPEN = "\u25B4";
+      PANEL_GAP = 6;
+      COLLAPSED_HEIGHT = BUTTON_HEIGHT;
+      closedLabel = (toolbar2) => CLOSED_LABEL_PREFIX + labelFor(getActiveFilter(), toolbar2.counts, toolbar2.total);
+    }
+  });
+
+  // src/features/activityLog/filterBar.ts
+  function safeWidth(node, fallback) {
+    try {
+      const value = node?.width;
+      return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  function restoreScroll() {
+    if (!touchedScroll) return;
+    const { container, mask } = touchedScroll;
+    try {
+      if (!container.destroyed) container.visible = true;
+    } catch {
+    }
+    try {
+      if (mask && !mask.destroyed) {
+        mask.position.y = 0;
+        mask.scale.y = 1;
+      }
+    } catch {
+    }
+    touchedScroll = null;
+  }
+  function teardownToolbar() {
+    restoreScroll();
+    try {
+      toolbar?.container.destroy({ children: true });
+    } catch {
+    }
+    toolbar = null;
+    shiftedRows = /* @__PURE__ */ new WeakSet();
+    plannedFirst = null;
+    plannedShift = 0;
+  }
+  function shiftLogRows(content2, toolbarSpace) {
+    const children = content2.children;
+    const first = children[0];
+    if (!first) return;
+    if (first !== plannedFirst) {
+      const plan = planLogRowsShift(children, toolbarSpace);
+      plannedFirst = first;
+      plannedShift = plan.shift;
+      if (plan.hideFirst) {
+        first.visible = false;
+        shiftedRows.add(first);
+      }
+    }
+    for (const child of children) {
+      if (shiftedRows.has(child)) continue;
+      shiftedRows.add(child);
+      child.position.y += plannedShift;
+    }
+  }
+  function buildToolbarInto(anchors) {
+    const state5 = getReadySpriteState();
+    if (!state5?.ctors?.Text) return null;
+    const graphicsCtor = findGraphicsCtor(getStage(state5));
+    if (!graphicsCtor) return null;
+    const maxWidth = safeWidth(anchors.backgroundSprite, 0) - 2 * (anchors.scrollViewContainer.position?.x ?? 0);
+    if (maxWidth <= 0) return null;
+    const built = buildFilterToolbar(
+      { Graphics: graphicsCtor, Text: state5.ctors.Text, Container: anchors.modalContainer.constructor },
+      maxWidth
+    );
+    anchors.modalContainer.addChild(built.container);
+    syncDebug.toolbarBuilt = true;
+    return built;
+  }
+  function syncToolbarUnsafe() {
+    if (!modalNode || modalNode.destroyed) {
+      teardownToolbar();
+      modalNode = null;
+      return;
+    }
+    const anchors = locateActivityLogAnchors(modalNode);
+    syncDebug.anchorsFound = !!anchors;
+    if (!anchors) return;
+    toolbar ?? (toolbar = buildToolbarInto(anchors));
+    if (!toolbar) return;
+    const scrollContainer = anchors.scrollViewContainer;
+    const parts = locateScrollParts(scrollContainer);
+    syncDebug.scrollPartsFound = !!parts;
+    const kind = parts ? logsContentKind(parts.content.children) : "unknown";
+    const onLogs = kind === "unknown" ? activeTab === "logs" : kind === "logs";
+    toolbar.container.visible = onLogs;
+    if (!onLogs && toolbar.isExpanded) setExpanded(toolbar, false);
+    toolbar.container.position.set(scrollContainer.position.x, scrollContainer.position.y);
+    refreshToolbarHighlight(toolbar);
+    if (!onLogs || !parts) {
+      restoreScroll();
+      return;
+    }
+    touchedScroll = { container: scrollContainer, mask: parts.mask };
+    scrollContainer.visible = !toolbar.isExpanded;
+    const toolbarSpace = COLLAPSED_HEIGHT + TOOLBAR_GAP_BELOW;
+    const maskHeight = parts.mask.getLocalBounds?.().height ?? 0;
+    const transform = maskTransformFor(maskHeight, toolbarSpace);
+    parts.mask.position.y = transform.y;
+    parts.mask.scale.y = transform.scaleY;
+    shiftLogRows(parts.content, toolbarSpace);
+  }
+  function syncToolbar() {
+    try {
+      syncToolbarUnsafe();
+      syncDebug.lastError = null;
+    } catch (error) {
+      syncDebug.lastError = String(error?.message ?? error);
+      console.warn("[activityLogFilter] syncToolbar failed", error);
+    }
+  }
+  function tryFindModal() {
+    if (!isActivityLogModalOpen() || modalNode) return;
+    const state5 = getReadySpriteState();
+    if (!state5) return;
+    const found = findAcrossBranches(getStage(state5), (node) => node?.label === ACTIVITY_LOG_MODAL_LABEL);
+    if (!found) return;
+    modalNode = found;
+    found.once("destroyed", () => {
+      if (modalNode === found) {
+        modalNode = null;
+        teardownToolbar();
+      }
+    });
+  }
+  function onFrame(now) {
+    findRafId2 = null;
+    const open = isActivityLogModalOpen();
+    if (open && !modalNode && now - lastFindCheckAt2 >= FIND_RETRY_MS) {
+      lastFindCheckAt2 = now;
+      tryFindModal();
+    }
+    if (modalNode) syncToolbar();
+    if (!open && modalNode) {
+      modalNode = null;
+      teardownToolbar();
+    }
+    findRafId2 = raf2(onFrame);
+  }
+  function startActivityLogFilterPixi() {
+    void (async () => {
+      try {
+        setActivityLogModalOpen(await Atoms.ui.activeModal.get() === ACTIVITY_LOG_MODAL_ID);
+      } catch {
+      }
+      try {
+        await Atoms.ui.activeModal.onChange((next) => {
+          setActivityLogModalOpen(next === ACTIVITY_LOG_MODAL_ID);
+        });
+      } catch {
+      }
+      try {
+        activeTab = activityLogTabOf(await Atoms.ui.activityLogTab.get());
+        await Atoms.ui.activityLogTab.onChange((next) => {
+          activeTab = activityLogTabOf(next);
+        });
+      } catch {
+      }
+      if (findRafId2 == null) findRafId2 = raf2(onFrame);
+    })();
+  }
+  var FIND_RETRY_MS, TOOLBAR_GAP_BELOW, raf2, activeTab, modalNode, toolbar, findRafId2, lastFindCheckAt2, touchedScroll, shiftedRows, plannedFirst, plannedShift, syncDebug;
+  var init_filterBar = __esm({
+    "src/features/activityLog/filterBar.ts"() {
+      "use strict";
+      init_pageContext();
+      init_atoms();
+      init_gardenInfoCard();
+      init_context();
+      init_activityLogModalLayout();
+      init_filter();
+      init_filterToolbar();
+      FIND_RETRY_MS = 1e3;
+      TOOLBAR_GAP_BELOW = 6;
+      raf2 = pageWindow.requestAnimationFrame.bind(pageWindow);
+      activeTab = "logs";
+      modalNode = null;
+      toolbar = null;
+      findRafId2 = null;
+      lastFindCheckAt2 = 0;
+      touchedScroll = null;
+      shiftedRows = /* @__PURE__ */ new WeakSet();
+      plannedFirst = null;
+      plannedShift = 0;
+      syncDebug = {
+        lastError: null,
+        anchorsFound: false,
+        toolbarBuilt: false,
+        scrollPartsFound: false
+      };
+      shareGlobal("__MG_ACTIVITY_LOG_TOOLBAR_DEBUG__", {
+        get modalOpen() {
+          return isActivityLogModalOpen();
+        },
+        get modalFound() {
+          return !!modalNode;
+        },
+        get toolbarBuilt() {
+          return syncDebug.toolbarBuilt;
+        },
+        get anchorsFound() {
+          return syncDebug.anchorsFound;
+        },
+        get lastError() {
+          return syncDebug.lastError;
+        },
+        get modalNode() {
+          return modalNode;
+        },
+        get anchors() {
+          return modalNode ? locateActivityLogAnchors(modalNode) : null;
+        },
+        get activeTab() {
+          return activeTab;
+        },
+        get scrollPartsFound() {
+          return syncDebug.scrollPartsFound;
+        }
+      });
+    }
+  });
+
+  // src/features/activityLog/historyWatcher.ts
+  function skipNextActivityLogHistoryReopen() {
+    skipNextReopen = true;
+  }
+  function consumeReopenSkip() {
+    const w = pageWindow;
+    const sharedSkip = w[SKIP_NEXT_REOPEN_GLOBAL] === true;
+    if (!skipNextReopen && !sharedSkip) return false;
+    skipNextReopen = false;
+    if (sharedSkip) delete w[SKIP_NEXT_REOPEN_GLOBAL];
+    return true;
+  }
+  async function showStoredHistory() {
+    try {
+      await fakeActivityLog.show(filteredHistory(), { open: false });
+    } catch {
+    }
+  }
+  async function startActivityLogHistoryWatcher() {
+    const subs = new Subscriptions();
+    let lastSnapshot = [];
+    const ingest2 = (logs2, prev) => {
+      try {
+        const prevSnapshot = typeof prev !== "undefined" ? normalizeEntries(prev) : lastSnapshot;
+        const nextSnapshot = normalizeEntries(logs2);
+        syncHistory(prevSnapshot, nextSnapshot);
+        lastSnapshot = nextSnapshot;
+      } catch {
+      }
+    };
+    try {
+      ingest2(await myActivityLog.get());
+    } catch {
+    }
+    try {
+      subs.add(await myActivityLog.onChange((next, prev) => ingest2(next, prev)));
+    } catch {
+    }
+    let lastModal = null;
+    try {
+      lastModal = await Atoms.ui.activeModal.get() ?? null;
+    } catch {
+    }
+    try {
+      subs.add(
+        await Atoms.ui.activeModal.onChange(async (modalId) => {
+          const cur = modalId ?? null;
+          const justOpened = cur === ACTIVITY_LOG_MODAL_ID && lastModal !== ACTIVITY_LOG_MODAL_ID;
+          lastModal = cur;
+          if (justOpened && !consumeReopenSkip()) await showStoredHistory();
+        })
+      );
+    } catch {
+    }
+    return () => subs.dispose();
+  }
+  var SKIP_NEXT_REOPEN_GLOBAL, skipNextReopen;
+  var init_historyWatcher = __esm({
+    "src/features/activityLog/historyWatcher.ts"() {
+      "use strict";
+      init_fakeModal();
+      init_atoms();
+      init_pageContext();
+      init_emitter();
+      init_filter();
+      init_history();
+      SKIP_NEXT_REOPEN_GLOBAL = "__MG_SKIP_NEXT_ACTIVITY_LOG_REOPEN__";
+      skipNextReopen = false;
+    }
+  });
+
+  // src/features/companion/keybind.ts
+  function openCompanionChat() {
+    window.dispatchEvent(new CustomEvent("qws:open-panel", { detail: { id: COMPANION_PANEL_ID } }));
+    window.dispatchEvent(new CustomEvent(COMPANION_TAB_EVENT, { detail: { tab: CHAT_TAB_ID } }));
+  }
+  function installCompanionKeybindsOnce() {
+    if (installed || typeof window === "undefined") return;
+    installed = true;
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (shouldIgnoreKeydown(event)) return;
+        if (!eventMatchesKeybind("companion.chat", event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        openCompanionChat();
+      },
+      true
+    );
+  }
+  var COMPANION_PANEL_ID, CHAT_TAB_ID, COMPANION_TAB_EVENT, installed;
+  var init_keybind = __esm({
+    "src/features/companion/keybind.ts"() {
+      "use strict";
+      init_keybinds();
+      init_keyboard();
+      COMPANION_PANEL_ID = "companion";
+      CHAT_TAB_ID = "chat";
+      COMPANION_TAB_EVENT = "qws:companion-tab";
+      installed = false;
+    }
+  });
+
+  // src/data/rules/cropValue.ts
+  function resolveSpeciesKey(species) {
+    const wanted = key(species).toLowerCase();
+    if (!wanted) return null;
+    for (const k of Object.keys(plantCatalog2)) {
+      if (k.toLowerCase() === wanted) return k;
+    }
+    return null;
+  }
+  function findAnySellPriceNode(obj) {
+    if (!obj || typeof obj !== "object") return null;
+    if (typeof obj.baseSellPrice === "number" && Number.isFinite(obj.baseSellPrice)) {
+      return obj.baseSellPrice;
+    }
+    for (const k of ["produce", "crop", "item", "items", "data"]) {
+      if (obj[k]) {
+        const v = findAnySellPriceNode(obj[k]);
+        if (v != null) return v;
+      }
+    }
+    try {
+      const seen = /* @__PURE__ */ new Set();
+      const stack = [obj];
+      while (stack.length) {
+        const cur = stack.pop();
+        if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
+        seen.add(cur);
+        if (typeof cur.baseSellPrice === "number") {
+          const v = cur.baseSellPrice;
+          if (Number.isFinite(v)) return v;
+        }
+        for (const v of Object.values(cur)) if (v && typeof v === "object") stack.push(v);
+      }
+    } catch {
+    }
+    return null;
+  }
+  function defaultGetBasePrice(species) {
+    const spKey = resolveSpeciesKey(species);
+    if (!spKey) return null;
+    const node = plantCatalog2[spKey];
+    const cands = [
+      node?.produce?.baseSellPrice,
+      node?.crop?.baseSellPrice,
+      node?.item?.baseSellPrice,
+      node?.items?.Produce?.baseSellPrice
+    ].filter((v) => typeof v === "number" && Number.isFinite(v));
+    if (cands.length) return cands[0];
+    return findAnySellPriceNode(node);
+  }
+  function applyRounding(v, mode = "round") {
+    switch (mode) {
+      case "floor":
+        return Math.floor(v);
+      case "ceil":
+        return Math.ceil(v);
+      case "none":
+        return v;
+      case "round":
+      default:
+        return Math.round(v);
+    }
+  }
+  function friendBonusMultiplier2(playersInRoom3) {
+    if (!Number.isFinite(playersInRoom3)) return 1;
+    const n = Math.max(1, Math.min(6, Math.floor(playersInRoom3)));
+    return 1 + (n - 1) * 0.1;
+  }
+  function mutationMultiplier(name) {
+    const k = lowerKey(name);
+    if (!k) return null;
+    const mult = mutationMultipliers()[k];
+    return Number.isFinite(mult) ? mult : null;
+  }
+  function isColor(m) {
+    return m === "Gold" || m === "Rainbow";
+  }
+  function isWeather(m) {
+    return m === "Wet" || m === "Chilled" || m === "Frozen" || m === "Thunderstruck" || m === "Thundercharged";
+  }
+  function isTime(m) {
+    return m === "Dawnlit" || m === "Dawnbound" || m === "Amberlit" || m === "Amberbound";
+  }
+  function normalizeMutationName(m) {
+    const s = lowerKey(m);
+    if (!s) return "";
+    if (s === "amberglow" || s === "ambershine" || s === "amberlight") return "Amberlit";
+    if (s === "dawn" || s === "dawnlight") return "Dawnlit";
+    if (s === "golden") return "Gold";
+    if (s === "gold") return "Gold";
+    if (s === "rainbow") return "Rainbow";
+    if (s === "wet") return "Wet";
+    if (s === "chilled") return "Chilled";
+    if (s === "frozen") return "Frozen";
+    if (s === "thunderstruck" || s === "thunder") return "Thunderstruck";
+    if (s === "thunderstruckground" || s === "thunderstruck_ground") return "Thunderstruck";
+    if (s === "thundercharged" || s === "thunder charged" || s === "thunder-charged") return "Thundercharged";
+    if (s === "dawnlit") return "Dawnlit";
+    if (s === "dawnbound") return "Dawnbound";
+    if (s === "amberlit") return "Amberlit";
+    if (s === "dawncharged" || s === "dawnradiant" || s === "dawn-radiant" || s === "dawn charged") return "Dawnbound";
+    if (s === "amberbound" || s === "ambercharged" || s === "amberradiant" || s === "amber-radiant" || s === "amber charged") return "Amberbound";
+    return m;
+  }
+  function computeColorMultiplier(mutations) {
+    if (!Array.isArray(mutations)) return 1;
+    let best = 1;
+    for (const raw of mutations) {
+      const m = normalizeMutationName(raw);
+      if (isColor(m)) {
+        const mult = mutationMultiplier(m);
+        if (typeof mult === "number" && mult > best) best = mult;
+      }
+    }
+    return best;
+  }
+  function pickWeather(mutations) {
+    if (!Array.isArray(mutations)) return null;
+    const candidates = /* @__PURE__ */ new Set();
+    let hasWet = false;
+    let hasChilled = false;
+    for (const raw of mutations) {
+      const m = normalizeMutationName(raw);
+      if (m === "Wet") {
+        hasWet = true;
+        continue;
+      }
+      if (m === "Chilled") {
+        hasChilled = true;
+        continue;
+      }
+      if (isWeather(m)) candidates.add(m);
+    }
+    if (hasWet && hasChilled) {
+      candidates.add("Frozen");
+    } else if (hasWet) {
+      candidates.add("Wet");
+    } else if (hasChilled) {
+      candidates.add("Chilled");
+    }
+    if (!candidates.size) return null;
+    let pick = null;
+    let best = -Infinity;
+    for (const cand of candidates) {
+      const mult = mutationMultiplier(cand) ?? 1;
+      if (mult > best) {
+        best = mult;
+        pick = cand;
+      }
+    }
+    return pick;
+  }
+  function pickTime(mutations) {
+    if (!Array.isArray(mutations)) return null;
+    const candidates = /* @__PURE__ */ new Set();
+    for (const raw of mutations) {
+      const m = normalizeMutationName(raw);
+      if (isTime(m)) candidates.add(m);
+    }
+    if (!candidates.size) return null;
+    let pick = null;
+    let best = -Infinity;
+    for (const cand of candidates) {
+      const mult = mutationMultiplier(cand) ?? 1;
+      if (mult > best) {
+        best = mult;
+        pick = cand;
+      }
+    }
+    return pick;
+  }
+  function combineWeatherMultipliers(multipliers) {
+    if (!multipliers.length) return 1;
+    const sum = multipliers.reduce((acc, value) => acc + value, 0);
+    return sum - multipliers.length + 1;
+  }
+  function computeWeatherTimeMultiplier(weather2, time) {
+    if (!weather2 && !time) return 1;
+    const multipliers = [];
+    if (weather2) {
+      const mult = mutationMultiplier(weather2);
+      if (typeof mult === "number") multipliers.push(mult);
+    }
+    if (time) {
+      const mult = mutationMultiplier(time);
+      if (typeof mult === "number") multipliers.push(mult);
+    }
+    if (!multipliers.length) return 1;
+    return combineWeatherMultipliers(multipliers);
+  }
+  function mutationsMultiplier(mutations) {
+    const color2 = computeColorMultiplier(mutations);
+    const weather2 = pickWeather(mutations);
+    const time = pickTime(mutations);
+    const wt = computeWeatherTimeMultiplier(weather2, time);
+    return color2 * wt;
+  }
+  function estimateProduceValue(species, size, mutations, opts) {
+    const getBase = opts?.getBasePrice ?? defaultGetBasePrice;
+    const toMultiplier = opts?.sizeMultiplier ?? cropSizeMultiplier;
+    const round = opts?.rounding ?? "round";
+    const base = getBase(species);
+    if (!(Number.isFinite(base) && base > 0)) return 0;
+    const numericSize = Number(size);
+    if (!Number.isFinite(numericSize)) return 0;
+    const sizeMult = toMultiplier(species, numericSize);
+    if (!Number.isFinite(sizeMult) || sizeMult <= 0) return 0;
+    const mutMult = mutationsMultiplier(mutations);
+    const friendsMult = friendBonusMultiplier2(opts?.friendPlayers);
+    const pre = base * sizeMult * mutMult * friendsMult;
+    const out = Math.max(0, applyRounding(pre, round));
+    return out;
+  }
+  function valueFromInventoryProduce(item, opts, playersInRoom3) {
+    if (!item || item.itemType !== "Produce") return 0;
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
+    const size = readCropSize(item);
+    if (size == null) return 0;
+    return estimateProduceValue(item.species, size, item.mutations, merged);
+  }
+  function valueFromGardenSlot(slot, opts, playersInRoom3) {
+    if (!slot) return 0;
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
+    const size = readCropSize(slot);
+    if (size == null) return 0;
+    return estimateProduceValue(slot.species, size, slot.mutations, merged);
+  }
+  function valueFromGardenPlant(plant, opts, playersInRoom3) {
+    if (!plant || plant.objectType !== "plant" || !Array.isArray(plant.slots)) return 0;
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
+    let sum = 0;
+    for (const s of plant.slots) sum += valueFromGardenSlot(s, merged);
+    return sum;
+  }
+  function sumInventoryValue(items, opts, playersInRoom3) {
+    if (!Array.isArray(items)) return 0;
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
+    let sum = 0;
+    for (const it of items) {
+      if (it?.itemType === "Produce") {
+        sum += valueFromInventoryProduce(it, merged);
+      }
+    }
+    return sum;
+  }
+  function sumGardenValue(garden3, opts, playersInRoom3) {
+    if (!garden3 || typeof garden3 !== "object") return 0;
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
+    let sum = 0;
+    for (const k of Object.keys(garden3)) {
+      const p = garden3[k];
+      if (p?.objectType === "plant") {
+        sum += valueFromGardenPlant(p, merged);
+      }
+    }
+    return sum;
+  }
+  var key, lowerKey, mutationMultipliers, DefaultPricing;
+  var init_cropValue = __esm({
+    "src/data/rules/cropValue.ts"() {
+      "use strict";
+      init_data();
+      init_cropSize();
+      key = (s) => String(s ?? "").trim();
+      lowerKey = (s) => key(s).toLowerCase();
+      mutationMultipliers = memoOnCatalogs(() => {
+        const map2 = {};
+        if (!mutationCatalog2 || typeof mutationCatalog2 !== "object") return map2;
+        for (const [rawKey, rawValue] of Object.entries(mutationCatalog2)) {
+          const mult = Number(rawValue?.coinMultiplier);
+          if (!Number.isFinite(mult)) continue;
+          const name = key(rawValue?.name);
+          const lowerName = lowerKey(name);
+          const lowerRawKey = lowerKey(rawKey);
+          if (lowerName) map2[lowerName] = mult;
+          if (lowerRawKey) map2[lowerRawKey] = mult;
+        }
+        return map2;
+      });
+      DefaultPricing = Object.freeze({
+        getBasePrice: defaultGetBasePrice,
+        rounding: "round"
+      });
+    }
+  });
+
+  // src/features/cropPrice/priceWatcher.ts
+  function startCropPriceWatcherViaGardenObject() {
+    let gardenObject = null;
+    let players = void 0;
+    let selectedSlotId = null;
+    let price = null;
+    const changes8 = new Emitter();
+    const subs = new Subscriptions();
+    const computePrice = () => {
+      if (!isPlantObject2(gardenObject)) return null;
+      const slot = resolveGrowSlot(Array.isArray(gardenObject.slots) ? gardenObject.slots : [], selectedSlotId);
+      const slotValue = slot ? positive(valueFromGardenSlot(slot, DefaultPricing, players)) : null;
+      return slotValue ?? positive(valueFromGardenPlant(gardenObject, DefaultPricing, players));
+    };
+    const recompute = () => {
+      const next = computePrice();
+      if (next === price) return;
+      price = next;
+      changes8.emit();
+    };
+    let scheduled = false;
+    const scheduleRecompute = () => {
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(() => {
+        scheduled = false;
+        recompute();
+      });
+    };
+    void (async () => {
+      try {
+        gardenObject = await myCurrentGardenObject.get();
+      } catch {
+      }
+      try {
+        players = await numPlayers.get();
+      } catch {
+      }
+      try {
+        selectedSlotId = await myCurrentGrowSlotIndex.get();
+      } catch {
+      }
+      subs.add(numPlayers.onChange((n) => {
+        players = n;
+      }));
+      subs.add(myCurrentGardenObject.onChange((next) => {
+        gardenObject = next;
+        scheduleRecompute();
+      }));
+      subs.add(
+        myCurrentGrowSlotIndex.onChange((id) => {
+          selectedSlotId = Number.isFinite(id) ? id : null;
+          scheduleRecompute();
+        })
+      );
+      recompute();
+    })();
+    return {
+      get: () => price,
+      onChange: (cb) => changes8.on(cb),
+      stop() {
+        changes8.clear();
+        subs.dispose();
+      }
+    };
+  }
+  var isPlantObject2, positive;
+  var init_priceWatcher = __esm({
+    "src/features/cropPrice/priceWatcher.ts"() {
+      "use strict";
+      init_atoms();
+      init_cropValue();
+      init_growSlot();
+      init_emitter();
+      isPlantObject2 = (obj) => !!obj && obj.objectType === "plant";
+      positive = (value) => Number.isFinite(value) && value > 0 ? value : null;
+    }
+  });
+
+  // src/features/cropPrice/setting.ts
+  function readShowCropPrice() {
+    try {
+      return readAriesPath(PATH_SHOW_CROP_PRICE) !== false;
+    } catch {
+      return true;
+    }
+  }
+  function writeShowCropPrice(on) {
+    const next = !!on;
+    if (readShowCropPrice() === next) return;
+    try {
+      writeAriesPath(PATH_SHOW_CROP_PRICE, next);
+    } catch {
+    }
+    changes3.emit(next);
+  }
+  function onShowCropPriceChange(cb) {
+    return changes3.on(cb);
+  }
+  var PATH_SHOW_CROP_PRICE, changes3;
+  var init_setting = __esm({
+    "src/features/cropPrice/setting.ts"() {
+      "use strict";
+      init_storage();
+      init_emitter();
+      PATH_SHOW_CROP_PRICE = "misc.showCropPrice";
+      changes3 = new Emitter();
+    }
+  });
+
+  // src/features/cropPrice/badge.ts
+  function isPlantObject3(obj) {
+    return !!obj && typeof obj === "object" && obj.objectType === "plant";
+  }
+  function ensureCoinTexture(TextureCtor) {
+    if (coinTexture) return Promise.resolve(coinTexture);
+    if (!coinTexturePromise) {
+      coinTexturePromise = new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            coinTexture = TextureCtor.from(img);
+          } catch {
+            coinTexture = null;
+          }
+          resolve(coinTexture);
+        };
+        img.onerror = () => resolve(null);
+        img.src = coin2.img64;
+      });
+    }
+    return coinTexturePromise;
+  }
+  function startCropValueOverlayInPixi() {
+    let running = true;
+    let currentCard2 = null;
+    let geometry = null;
+    let hitAreaBaseHeight = 0;
+    let valueText = null;
+    let valueIcon = null;
+    let valueBadge = null;
+    let graphicsCtor = null;
+    let iconRetryScheduled = false;
+    let currentGardenObject2 = null;
+    const debugState3 = {
+      attached: false,
+      lastSyncAt: null,
+      lastError: null,
+      hasValueText: false,
+      hasCoinTexture: false,
+      objectType: null
+    };
+    shareGlobal("__MG_CROP_VALUE_PIXI_DEBUG__", debugState3);
+    const priceWatcher = startCropPriceWatcherViaGardenObject();
+    const detachValueText = () => {
+      if (valueBadge) {
+        try {
+          valueBadge.destroy();
+        } catch {
+        }
+        valueBadge = null;
+      }
+      if (valueIcon) {
+        try {
+          valueIcon.destroy();
+        } catch {
+        }
+        valueIcon = null;
+      }
+      if (valueText) {
+        try {
+          valueText.destroy();
+        } catch {
+        }
+        valueText = null;
+      }
+      if (currentCard2?.hitArea) {
+        currentCard2.hitArea.y = 0;
+        currentCard2.hitArea.height = hitAreaBaseHeight;
+      }
+    };
+    const syncValueNodeUnsafe = () => {
+      debugState3.objectType = currentGardenObject2?.objectType ?? null;
+      if (!running || !currentCard2 || currentCard2.destroyed || !geometry || !isPlantObject3(currentGardenObject2) || // Switched off in the Misc menu: the card is left as the game drew it.
+      !readShowCropPrice()) {
+        detachValueText();
+        return;
+      }
+      const state5 = getReadySpriteState();
+      const ctors = state5?.ctors;
+      if (!state5 || !ctors) return;
+      const value = priceWatcher.get();
+      if (value == null) {
+        detachValueText();
+        return;
+      }
+      const text2 = formatInteger(value, "round");
+      if (!valueText) {
+        graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state5)));
+        if (graphicsCtor) {
+          valueBadge = new graphicsCtor();
+          currentCard2.addChild(valueBadge);
+        }
+        valueText = new ctors.Text({ text: text2, style: VALUE_TEXT_STYLE });
+        currentCard2.addChild(valueText);
+      } else if (valueText.text !== text2) {
+        valueText.text = text2;
+      }
+      if (!valueIcon && ctors.Sprite) {
+        if (coinTexture) {
+          valueIcon = new ctors.Sprite(coinTexture);
+          valueIcon.width = VALUE_ICON_SIZE;
+          valueIcon.height = VALUE_ICON_SIZE;
+          currentCard2.addChild(valueIcon);
+        } else if (!iconRetryScheduled) {
+          iconRetryScheduled = true;
+          ensureCoinTexture(ctors.Texture).then(() => {
+            iconRetryScheduled = false;
+            if (running) syncValueNode();
+          });
+        }
+      }
+      const rowHeight = Math.max(valueIcon ? VALUE_ICON_SIZE : 0, valueText.height);
+      const rowWidth = (valueIcon ? VALUE_ICON_SIZE + VALUE_ICON_GAP : 0) + valueText.width;
+      const badgeHeight = rowHeight + BADGE_PADDING_Y * 2;
+      const badgeTop = geometry.top - VALUE_BADGE_GAP - badgeHeight;
+      const rowTop = badgeTop + BADGE_PADDING_Y;
+      const startX = Math.max(0, (geometry.width - rowWidth) / 2);
+      if (valueIcon) {
+        valueIcon.position.set(startX, rowTop + (rowHeight - VALUE_ICON_SIZE) / 2);
+        valueText.position.set(startX + VALUE_ICON_SIZE + VALUE_ICON_GAP, rowTop + (rowHeight - valueText.height) / 2);
+      } else {
+        valueText.position.set(startX, rowTop + (rowHeight - valueText.height) / 2);
+      }
+      if (valueBadge) {
+        const badgeWidth = rowWidth + BADGE_PADDING_X * 2;
+        valueBadge.clear();
+        valueBadge.roundRect(0, 0, badgeWidth, badgeHeight, BADGE_RADIUS).fill({ color: BADGE_COLOR, alpha: BADGE_ALPHA });
+        valueBadge.position.set(startX - BADGE_PADDING_X, badgeTop);
+      }
+      if (currentCard2.hitArea) {
+        currentCard2.hitArea.y = badgeTop;
+        currentCard2.hitArea.height = hitAreaBaseHeight - badgeTop;
+      }
+    };
+    const syncValueNode = () => {
+      try {
+        syncValueNodeUnsafe();
+        debugState3.lastSyncAt = Date.now();
+        debugState3.lastError = null;
+        debugState3.hasValueText = !!valueText;
+        debugState3.hasCoinTexture = !!coinTexture;
+      } catch (error) {
+        debugState3.lastError = String(error?.message ?? error);
+        console.warn("[cropPrice] badge sync failed, clearing overlay", error);
+        try {
+          detachValueText();
+        } catch {
+        }
+      }
+    };
+    const subs = new Subscriptions();
+    subs.add(
+      watchGardenInfoCard((card4, geom) => {
+        currentCard2 = card4;
+        geometry = geom;
+        hitAreaBaseHeight = card4?.hitArea?.height ?? 0;
+        detachValueText();
+        debugState3.attached = !!card4;
+        if (card4) syncValueNode();
+      })
+    );
+    subs.add(priceWatcher.onChange(syncValueNode));
+    subs.add(onShowCropPriceChange(() => syncValueNode()));
+    void Atoms.data.myCurrentGardenObject.get().then((initial) => {
+      currentGardenObject2 = initial;
+      syncValueNode();
+    }).catch(() => {
+    });
+    subs.add(
+      Atoms.data.myCurrentGardenObject.onChange((next) => {
+        currentGardenObject2 = next;
+        syncValueNode();
+      })
+    );
+    return {
+      stop() {
+        if (!running) return;
+        running = false;
+        subs.dispose();
+        priceWatcher.stop();
+        detachValueText();
+        currentCard2 = null;
+      }
+    };
+  }
+  var VALUE_TEXT_STYLE, VALUE_BADGE_GAP, VALUE_ICON_SIZE, VALUE_ICON_GAP, BADGE_PADDING_X, BADGE_PADDING_Y, BADGE_RADIUS, BADGE_COLOR, BADGE_ALPHA, coinTexture, coinTexturePromise;
+  var init_badge = __esm({
+    "src/features/cropPrice/badge.ts"() {
+      "use strict";
+      init_priceWatcher();
+      init_setting();
+      init_pageContext();
+      init_format();
+      init_emitter();
+      init_data();
+      init_atoms();
+      init_gardenInfoCard();
+      init_context();
+      VALUE_TEXT_STYLE = { fontFamily: "Arial", fontSize: 14, fontWeight: "700", fill: "#FFD84D" };
+      VALUE_BADGE_GAP = 20;
+      VALUE_ICON_SIZE = 16;
+      VALUE_ICON_GAP = 4;
+      BADGE_PADDING_X = 8;
+      BADGE_PADDING_Y = 4;
+      BADGE_RADIUS = 6;
+      BADGE_COLOR = 0;
+      BADGE_ALPHA = 0.55;
+      coinTexture = null;
+      coinTexturePromise = null;
+    }
+  });
+
+  // src/features/locker/domLockMarks.ts
+  function markLocked(el, look) {
+    const key2 = datasetKey(look.owner);
+    if (el.dataset[key2] === void 0) {
+      const saved = {};
+      for (const prop of [...Object.keys(look.style), "position"]) saved[prop] = el.style.getPropertyValue(prop);
+      el.dataset[key2] = JSON.stringify(saved);
+    }
+    for (const [prop, value] of Object.entries(look.style)) el.style.setProperty(prop, value);
+    if (getComputedStyle(el).position === "static") el.style.setProperty("position", "relative");
+    const cls = glyphClass(look.owner);
+    if (el.querySelector(`span.${cls}`)) return;
+    const glyph = document.createElement("span");
+    glyph.className = cls;
+    glyph.textContent = LOCK_GLYPH;
+    for (const [prop, value] of Object.entries(look.glyph)) glyph.style.setProperty(prop, value);
+    el.appendChild(glyph);
+  }
+  function unmarkLocked(el, owner2) {
+    const key2 = datasetKey(owner2);
+    const raw = el.dataset[key2];
+    if (raw !== void 0) {
+      let saved = {};
+      try {
+        saved = JSON.parse(raw);
+      } catch {
+      }
+      for (const [prop, value] of Object.entries(saved)) {
+        if (value) el.style.setProperty(prop, value);
+        else el.style.removeProperty(prop);
+      }
+      delete el.dataset[key2];
+    }
+    el.querySelectorAll(`span.${glyphClass(owner2)}`).forEach((node) => node.remove());
+  }
+  function startDomLockIndicator(opts) {
+    const subs = new Subscriptions();
+    let running = true;
+    const elements = () => Array.from(document.querySelectorAll(opts.selector));
+    const refresh = () => {
+      if (!running) return;
+      const locked = opts.isLocked();
+      for (const el of elements()) {
+        if (locked && opts.isTarget(el)) markLocked(el, opts.look);
+        else unmarkLocked(el, opts.look.owner);
+      }
+    };
+    const observer2 = new MutationObserver(refresh);
+    observer2.observe(document.documentElement, { childList: true, subtree: true });
+    subs.add(() => observer2.disconnect());
+    refresh();
+    return {
+      refresh,
+      add: (unsubscribe2) => subs.add(unsubscribe2),
+      stop() {
+        running = false;
+        subs.dispose();
+        for (const el of elements()) unmarkLocked(el, opts.look.owner);
+      }
+    };
+  }
+  var LOCK_GLYPH, cornerGlyph, datasetKey, glyphClass, datasetAttr, markedElements;
+  var init_domLockMarks = __esm({
+    "src/features/locker/domLockMarks.ts"() {
+      "use strict";
+      init_emitter();
+      LOCK_GLYPH = "\u{1F512}";
+      cornerGlyph = (offsetPx) => ({
+        position: "absolute",
+        top: `-${offsetPx}px`,
+        right: `-${offsetPx}px`,
+        "font-size": "16px",
+        "pointer-events": "none",
+        "user-select": "none",
+        "z-index": "2"
+      });
+      datasetKey = (owner2) => `tm${owner2.replace(/(^|-)(\w)/g, (_, _dash, c) => c.toUpperCase())}LockStyles`;
+      glyphClass = (owner2) => `tm-${owner2}-lock`;
+      datasetAttr = (owner2) => `tm-${owner2}-lock-styles`;
+      markedElements = (owner2) => Array.from(document.querySelectorAll(`[data-${datasetAttr(owner2)}]`));
+    }
+  });
+
+  // src/features/cropPrice/domTooltip.ts
+  function startCropValuesObserverFromGardenAtom() {
+    const priceWatcher = startCropPriceWatcherViaGardenObject();
+    let running = true;
+    let harvestAllowed = lockerService.currentHarvestAllowed();
+    let lockerReady = !lockerService.isEnabled();
+    let needsReposition = false;
+    let last = null;
+    const render = () => {
+      if (!running || !lockerReady) return;
+      unmarkStrayTooltips();
+      const next = { value: priceWatcher.get(), locked: harvestAllowed === false, showPrice: readShowCropPrice() };
+      if (!needsReposition && last && last.value === next.value && last.locked === next.locked && last.showPrice === next.showPrice) {
+        return;
+      }
+      last = next;
+      needsReposition = false;
+      const text2 = next.value == null ? "-" : formatInteger(next.value, "round");
+      for (const panel of Array.from(document.querySelectorAll(PANEL_SELECTOR))) {
+        for (const block of Array.from(panel.querySelectorAll(BLOCK_SELECTOR))) {
+          if (!(block instanceof HTMLElement)) continue;
+          updateTooltipLock(block, next.locked);
+          if (!next.showPrice || isWrapperBlock(block)) removePriceLine(block);
+          else ensurePriceLine(block, text2);
+        }
+      }
+    };
+    const readyTimer = lockerReady ? null : setTimeout(() => {
+      lockerReady = true;
+      render();
+    }, LOCKER_FIRST_VERDICT_WAIT_MS);
+    const offLocker = lockerService.onSlotInfoChange((event) => {
+      harvestAllowed = event.harvestAllowed;
+      if (readyTimer != null) clearTimeout(readyTimer);
+      lockerReady = true;
+      render();
+    });
+    const qpmObserver = new MutationObserver((mutations) => {
+      const added = mutations.some(
+        (m) => Array.from(m.addedNodes).some(
+          (node) => node instanceof Element && (node.classList.contains("qpm-crop-size") || !!node.querySelector(".qpm-crop-size"))
+        )
+      );
+      if (!added) return;
+      needsReposition = true;
+      render();
+    });
+    qpmObserver.observe(document.body ?? document.documentElement, { childList: true, subtree: true });
+    render();
+    const offPrice = priceWatcher.onChange(render);
+    const offShowPrice = onShowCropPriceChange(render);
+    return {
+      stop() {
+        if (!running) return;
+        running = false;
+        if (readyTimer != null) clearTimeout(readyTimer);
+        qpmObserver.disconnect();
+        offPrice();
+        offShowPrice();
+        offLocker();
+        priceWatcher.stop();
+      }
+    };
+  }
+  function isWrapperBlock(block) {
+    if (!block.matches(BLOCK_SELECTOR)) return false;
+    const own = BLOCK_SELECTORS.find((selector) => block.matches(selector));
+    if (own) {
+      const inner = Array.from(block.children).find((child) => child.matches(own));
+      if (inner && contentChildren(inner).length > 1) return true;
+    }
+    return contentChildren(block).length === 1;
+  }
+  function removePriceLine(block) {
+    block.querySelectorAll(`:scope > span.${PRICE_CLASS}`).forEach((line) => line.remove());
+  }
+  function ensurePriceLine(block, text2) {
+    const lines = Array.from(block.querySelectorAll(`:scope > span.${PRICE_CLASS}`));
+    lines.slice(1).forEach((extra) => extra.remove());
+    let line = lines[0];
+    if (!line) {
+      line = document.createElement("span");
+      line.className = PRICE_CLASS;
+      Object.assign(line.style, { display: "block", marginTop: "6px", fontWeight: "700", color: "#FFD84D", fontSize: "14px" });
+    }
+    let icon2 = line.querySelector(`:scope > span.${PRICE_ICON_CLASS}`);
+    if (!icon2) {
+      icon2 = document.createElement("span");
+      icon2.className = PRICE_ICON_CLASS;
+      icon2.setAttribute("aria-hidden", "true");
+      Object.assign(icon2.style, {
+        width: "18px",
+        height: "18px",
+        display: "inline-block",
+        verticalAlign: "middle",
+        marginRight: "6px",
+        userSelect: "none",
+        pointerEvents: "none",
+        backgroundSize: "contain",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center"
+      });
+      line.insertBefore(icon2, line.firstChild);
+    }
+    const background = `url("${coin2.img64}")`;
+    if (icon2.style.backgroundImage !== background) icon2.style.backgroundImage = background;
+    let label2 = line.querySelector(`:scope > span.${PRICE_LABEL_CLASS}`);
+    if (!label2) {
+      label2 = document.createElement("span");
+      label2.className = PRICE_LABEL_CLASS;
+      label2.style.display = "inline";
+      line.appendChild(label2);
+    }
+    if (label2.textContent !== text2) label2.textContent = text2;
+    const qpmSize = readSharedGlobal("QPM") ? block.querySelector("span.qpm-crop-size") : null;
+    if (qpmSize) {
+      if (qpmSize.nextElementSibling !== line) block.insertBefore(line, qpmSize.nextElementSibling);
+    } else if (block.lastElementChild !== line) {
+      block.appendChild(line);
+    }
+  }
+  function isTooltipRoot(el) {
+    if (TOOLTIP_ROOT_CLASSES.some((cls) => el.classList.contains(cls))) return true;
+    const children = Array.from(el.children);
+    const grid = children.find((child) => child.classList.contains("McGrid"));
+    return !!grid && children.every((child) => child === grid || child.classList.contains(TOOLTIP_GLYPH_CLASS));
+  }
+  function tooltipRootOf(block) {
+    for (const cls of TOOLTIP_ROOT_CLASSES) {
+      const root5 = block.closest(`.${cls}`);
+      if (root5) return root5;
+    }
+    const grid = block.parentElement;
+    if (!grid?.classList.contains("McGrid")) return null;
+    const root4 = grid.parentElement;
+    return root4 && isTooltipRoot(root4) ? root4 : null;
+  }
+  function unmarkStrayTooltips() {
+    for (const el of markedElements(TOOLTIP_LOCK_LOOK.owner)) {
+      if (!isTooltipRoot(el)) unmarkLocked(el, TOOLTIP_LOCK_LOOK.owner);
+    }
+    document.querySelectorAll(`span.${TOOLTIP_GLYPH_CLASS}`).forEach((glyph) => {
+      const parent = glyph.parentElement;
+      if (!parent || !isTooltipRoot(parent)) glyph.remove();
+    });
+  }
+  function updateTooltipLock(block, locked) {
+    const root4 = tooltipRootOf(block);
+    if (!root4) return;
+    if (locked) markLocked(root4, TOOLTIP_LOCK_LOOK);
+    else unmarkLocked(root4, TOOLTIP_LOCK_LOOK.owner);
+  }
+  var PANEL_SELECTOR, BLOCK_SELECTORS, BLOCK_SELECTOR, PRICE_CLASS, PRICE_ICON_CLASS, PRICE_LABEL_CLASS, TOOLTIP_ROOT_CLASSES, TOOLTIP_LOCK_LOOK, TOOLTIP_GLYPH_CLASS, LOCKER_FIRST_VERDICT_WAIT_MS, contentChildren;
+  var init_domTooltip = __esm({
+    "src/features/cropPrice/domTooltip.ts"() {
+      "use strict";
+      init_priceWatcher();
+      init_setting();
+      init_data();
+      init_format();
+      init_locker();
+      init_domLockMarks();
+      init_pageContext();
+      PANEL_SELECTOR = ".McFlex.css-fsggty, .McFlex.css-6prrn";
+      BLOCK_SELECTORS = [".McFlex.css-1l3zq7", ".McFlex.css-11dqzw"];
+      BLOCK_SELECTOR = BLOCK_SELECTORS.join(", ");
+      PRICE_CLASS = "tm-crop-price";
+      PRICE_ICON_CLASS = "tm-crop-price-icon";
+      PRICE_LABEL_CLASS = "tm-crop-price-label";
+      TOOLTIP_ROOT_CLASSES = ["css-129757o", "css-7cru8u"];
+      TOOLTIP_LOCK_LOOK = {
+        owner: "locker-tooltip",
+        style: { border: "2px solid rgb(188, 53, 215)", "border-radius": "15px", overflow: "visible" },
+        glyph: {
+          position: "absolute",
+          top: "0",
+          right: "0",
+          transform: "translate(50%, -50%)",
+          "font-size": "18px",
+          padding: "2px 8px",
+          "border-radius": "999px",
+          color: "white",
+          "pointer-events": "none",
+          "user-select": "none",
+          "z-index": "1"
+        }
+      };
+      TOOLTIP_GLYPH_CLASS = `tm-${TOOLTIP_LOCK_LOOK.owner}-lock`;
+      LOCKER_FIRST_VERDICT_WAIT_MS = 500;
+      contentChildren = (block) => Array.from(block.children).filter((el) => !(el.tagName === "SPAN" && el.classList.contains(PRICE_CLASS)));
+    }
+  });
+
+  // src/features/hatch/pity.ts
+  function isRecord3(value) {
+    return typeof value === "object" && value !== null;
+  }
+  function toPositiveNumber(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+  function thresholdForChance(chance) {
+    if (!Number.isFinite(chance) || chance <= 0) return 0;
+    return Math.round(PITY_MULTIPLIER / chance);
+  }
+  function mutationEntry(mutationId) {
+    const entry = mutationCatalog2[mutationId];
+    return isRecord3(entry) ? entry : null;
+  }
+  function mutationIcon2(mutationId) {
+    const sprite = mutationEntry(mutationId)?.sprite;
+    return typeof sprite === "string" && sprite ? sprite : `sprite/ui/Mutation${mutationId}`;
+  }
+  function mutationTargets() {
+    const targets = [];
+    for (const [key2, mutationId] of [
+      ["gold", GOLD_MUTATION],
+      ["rainbow", RAINBOW_MUTATION]
+    ]) {
+      const chance = toPositiveNumber(mutationEntry(mutationId)?.baseChance) ?? 0;
+      if (chance <= 0) continue;
+      targets.push({
+        key: key2,
+        label: `${mutationId} pet`,
+        icon: mutationIcon2(mutationId),
+        chance,
+        threshold: thresholdForChance(chance),
+        kind: "mutation"
+      });
+    }
+    return targets;
+  }
+  function speciesChances(weights) {
+    const out = /* @__PURE__ */ new Map();
+    let total = 0;
+    for (const value of Object.values(weights)) {
+      total += toPositiveNumber(value) ?? 0;
+    }
+    if (total <= 0) return out;
+    for (const [species, value] of Object.entries(weights)) {
+      const weight = toPositiveNumber(value);
+      if (weight === null) continue;
+      out.set(species, weight / total);
+    }
+    return out;
+  }
+  function speciesTargets(entry) {
+    const weights = isRecord3(entry.faunaSpawnWeights) ? entry.faunaSpawnWeights : {};
+    const chances = speciesChances(weights);
+    const declared = isRecord3(entry.speciesPityThresholdPulls) ? entry.speciesPityThresholdPulls : null;
+    const targets = [];
+    const species = declared ? Object.keys(declared) : Array.from(chances.keys());
+    for (const id of species) {
+      const chance = chances.get(id) ?? 0;
+      const declaredThreshold = declared ? toPositiveNumber(declared[id]) : null;
+      if (declaredThreshold === null && (chance <= 0 || chance > MAX_PROTECTED_CHANCE)) continue;
+      const threshold = declaredThreshold ?? thresholdForChance(chance);
+      if (threshold <= 0) continue;
+      targets.push({
+        key: id,
+        label: id,
+        icon: `sprite/pet/${id}`,
+        chance,
+        threshold,
+        kind: "species"
+      });
+    }
+    targets.sort((a, b) => b.threshold - a.threshold || a.label.localeCompare(b.label));
+    return targets;
+  }
+  function buildEggPity(eggId, entry) {
+    const targets = [...speciesTargets(entry), ...mutationTargets()];
+    if (!targets.length) return null;
+    const weights = isRecord3(entry.faunaSpawnWeights) ? entry.faunaSpawnWeights : {};
+    const fauna = Array.from(speciesChances(weights)).map(([species, share]) => ({ species, share })).sort((a, b) => b.share - a.share || a.species.localeCompare(b.species));
+    return {
+      eggId,
+      name: typeof entry.name === "string" && entry.name.trim() ? entry.name : eggId,
+      rarity: typeof entry.rarity === "string" ? entry.rarity : "",
+      fauna,
+      targets
+    };
+  }
+  function listEggPity() {
+    const out = [];
+    for (const eggId of Object.keys(eggCatalog2)) {
+      const entry = eggCatalog2[eggId];
+      if (!isRecord3(entry)) continue;
+      const pity = buildEggPity(eggId, entry);
+      if (pity) out.push(pity);
+    }
+    out.sort((a, b) => {
+      const diff = rarityRank(a.rarity) - rarityRank(b.rarity);
+      return diff !== 0 ? diff : a.name.localeCompare(b.name);
+    });
+    return out;
+  }
+  function getEggPity(eggId) {
+    const entry = eggCatalog2[eggId];
+    return isRecord3(entry) ? buildEggPity(eggId, entry) : null;
+  }
+  function protectedSpecies(eggId) {
+    const pity = getEggPity(eggId);
+    if (!pity) return [];
+    return pity.targets.filter((target) => target.kind === "species").map((target) => target.key);
+  }
+  var PITY_MULTIPLIER, MAX_PROTECTED_CHANCE, GOLD_MUTATION, RAINBOW_MUTATION;
+  var init_pity = __esm({
+    "src/features/hatch/pity.ts"() {
+      "use strict";
+      init_data();
+      PITY_MULTIPLIER = 2;
+      MAX_PROTECTED_CHANCE = 0.05;
+      GOLD_MUTATION = "Gold";
+      RAINBOW_MUTATION = "Rainbow";
+    }
+  });
+
+  // src/features/hatch/tracker.ts
+  function emptyCounters() {
+    return { species: {}, gold: 0, rainbow: 0, pulls: 0 };
+  }
+  function isRecord4(value) {
+    return typeof value === "object" && value !== null;
+  }
+  function toCount(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  }
+  function normalizeCounters(raw) {
+    const out = emptyCounters();
+    if (!isRecord4(raw)) return out;
+    if (isRecord4(raw.species)) {
+      for (const [species, value] of Object.entries(raw.species)) {
+        const count = toCount(value);
+        if (count > 0) out.species[species] = count;
+      }
+    }
+    out.gold = toCount(raw.gold);
+    out.rainbow = toCount(raw.rainbow);
+    out.pulls = toCount(raw.pulls);
+    return out;
+  }
+  function normalizeCounterMap(raw) {
+    const out = {};
+    if (!isRecord4(raw)) return out;
+    for (const [eggId, value] of Object.entries(raw)) {
+      out[eggId] = normalizeCounters(value);
+    }
+    return out;
+  }
+  function loadState() {
+    if (cachedState) return cachedState;
+    let raw = null;
+    try {
+      raw = readAriesPath(STATE_PATH2);
+    } catch {
+    }
+    const seenPetIds = [];
+    if (isRecord4(raw) && Array.isArray(raw.seenPetIds)) {
+      for (const id of raw.seenPetIds) {
+        if (typeof id === "string" && id) seenPetIds.push(id);
+      }
+    }
+    cachedState = {
+      seenPetIds,
+      counters: normalizeCounterMap(isRecord4(raw) ? raw.counters : null),
+      offsets: normalizeCounterMap(isRecord4(raw) ? raw.offsets : null),
+      lastHatchAt: isRecord4(raw) ? toCount(raw.lastHatchAt) : 0,
+      trackingStartedAt: isRecord4(raw) ? toCount(raw.trackingStartedAt) : 0,
+      bootstrapped: isRecord4(raw) ? raw.bootstrapped === true : false
+    };
+    return cachedState;
+  }
+  function saveState(state5) {
+    if (state5.seenPetIds.length > SEEN_LIMIT) {
+      state5.seenPetIds.splice(0, state5.seenPetIds.length - SEEN_LIMIT);
+    }
+    cachedState = state5;
+    try {
+      writeAriesPath(STATE_PATH2, state5);
+    } catch {
+    }
+    changes4.emit(state5);
+  }
+  function readPet(raw, eggIdFallback, timestamp, isPull) {
+    if (!isRecord4(raw)) return null;
+    const petId = typeof raw.id === "string" ? raw.id.trim() : "";
+    const species = typeof raw.petSpecies === "string" ? raw.petSpecies.trim() : "";
+    if (!petId || !species) return null;
+    let hasGold = false;
+    let hasRainbow = false;
+    if (Array.isArray(raw.mutations)) {
+      for (const mutation of raw.mutations) {
+        if (typeof mutation !== "string") continue;
+        const normalized = mutation.trim().toLowerCase();
+        if (normalized === GOLD_MUTATION.toLowerCase()) hasGold = true;
+        if (normalized === RAINBOW_MUTATION.toLowerCase()) hasRainbow = true;
+      }
+    }
+    const sourceEggId = typeof raw.sourceEggId === "string" && raw.sourceEggId.trim() ? raw.sourceEggId : null;
+    return {
+      petId,
+      species,
+      eggId: eggIdFallback ?? sourceEggId,
+      hasGold,
+      hasRainbow,
+      timestamp,
+      isPull
+    };
+  }
+  function extractHatchEvents(entries) {
+    const events = [];
+    for (const entry of entries) {
+      const action2 = typeof entry?.action === "string" ? entry.action.trim() : "";
+      if (!action2) continue;
+      const timestamp = Number(entry.timestamp) || 0;
+      const parameters = entry.parameters;
+      if (!isRecord4(parameters)) continue;
+      if (action2 === HATCH_ACTION) {
+        const eggId = typeof parameters.eggId === "string" && parameters.eggId.trim() ? parameters.eggId : null;
+        const event = readPet(parameters.pet, eggId, timestamp, true);
+        if (event) events.push(event);
+        continue;
+      }
+      if (DOUBLE_HATCH_ACTIONS.has(action2.toLowerCase())) {
+        const event = readPet(parameters.extraPet, null, timestamp, false);
+        if (event) events.push(event);
+      }
+    }
+    events.sort((a, b) => a.timestamp - b.timestamp);
+    return events;
+  }
+  function rarityOf(event) {
+    if (event.hasRainbow) return "rainbow";
+    if (event.hasGold) return "gold";
+    return "normal";
+  }
+  function applyPull(counters, event, rareSpecies) {
+    counters.pulls += 1;
+    for (const species of rareSpecies) {
+      if (event.species === species) counters.species[species] = 0;
+      else counters.species[species] = (counters.species[species] ?? 0) + 1;
+    }
+    counters.gold = event.hasGold ? 0 : counters.gold + 1;
+    counters.rainbow = event.hasRainbow ? 0 : counters.rainbow + 1;
+  }
+  function ingest(entries, countStats) {
+    var _a, _b;
+    const events = extractHatchEvents(entries);
+    if (!events.length) return false;
+    const state5 = loadState();
+    const seen = new Set(state5.seenPetIds);
+    let changed5 = false;
+    for (const event of events) {
+      if (seen.has(event.petId)) continue;
+      seen.add(event.petId);
+      state5.seenPetIds.push(event.petId);
+      changed5 = true;
+      if (countStats) {
+        try {
+          StatsService.incrementPetHatched(event.species, rarityOf(event));
+        } catch {
+        }
+      }
+      if (event.timestamp > state5.lastHatchAt) state5.lastHatchAt = event.timestamp;
+      if (!event.isPull || !event.eggId) continue;
+      const counters = (_a = state5.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
+      applyPull(counters, event, protectedSpecies(event.eggId));
+    }
+    if (changed5) saveState(state5);
+    return changed5;
+  }
+  async function startHatchTracker() {
+    const firstRun = !loadState().bootstrapped;
+    const consume = (logs2, countStats) => {
+      if (!Array.isArray(logs2)) return;
+      try {
+        ingest(logs2, countStats);
+      } catch {
+      }
+    };
+    try {
+      ingest(getActivityLogHistory(), false);
+    } catch {
+    }
+    try {
+      consume(await myActivityLog.get(), !firstRun);
+    } catch {
+    }
+    if (firstRun) {
+      const state5 = loadState();
+      state5.bootstrapped = true;
+      state5.trackingStartedAt = Date.now();
+      saveState(state5);
+    }
+    const current3 = loadState();
+    if (current3.bootstrapped && current3.trackingStartedAt <= 0) {
+      current3.trackingStartedAt = current3.lastHatchAt > 0 ? current3.lastHatchAt : Date.now();
+      saveState(current3);
+    }
+    let unsubscribe2 = null;
+    try {
+      unsubscribe2 = await myActivityLog.onChange((next) => consume(next, true));
+    } catch {
+    }
+    return () => {
+      try {
+        unsubscribe2?.();
+      } catch {
+      }
+    };
+  }
+  var STATE_PATH2, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, changes4, cachedState, HatchTracker;
+  var init_tracker = __esm({
+    "src/features/hatch/tracker.ts"() {
+      "use strict";
+      init_history();
+      init_atoms();
+      init_stats();
+      init_pity();
+      init_emitter();
+      init_storage();
+      STATE_PATH2 = "hatch.tracker";
+      HATCH_ACTION = "hatchEgg";
+      DOUBLE_HATCH_ACTIONS = /* @__PURE__ */ new Set(["doublehatch", "doublehatchii"]);
+      SEEN_LIMIT = 4e3;
+      changes4 = new Emitter();
+      cachedState = null;
+      HatchTracker = {
+        getState() {
+          return loadState();
+        },
+        /** Observed misses for one egg, before the manual offset. */
+        getCounters(eggId) {
+          return loadState().counters[eggId] ?? emptyCounters();
+        },
+        getOffsets(eggId) {
+          return loadState().offsets[eggId] ?? emptyCounters();
+        },
+        /** When this install started watching, or 0 before it ever has. */
+        getTrackingStartedAt() {
+          return loadState().trackingStartedAt;
+        },
+        setOffset(eggId, key2, value) {
+          var _a;
+          const state5 = loadState();
+          const offsets = (_a = state5.offsets)[eggId] ?? (_a[eggId] = emptyCounters());
+          const next = toCount(value);
+          if (key2 === "gold") offsets.gold = next;
+          else if (key2 === "rainbow") offsets.rainbow = next;
+          else if (next > 0) offsets.species[key2] = next;
+          else delete offsets.species[key2];
+          saveState(state5);
+        },
+        // Deliberately no reset: a counter that can be cleared is worse than useless,
+        // since the server's own never resets except on the outcome itself. Only
+        // `setOffset` moves a counter by hand.
+        subscribe(listener) {
+          return changes4.on(listener);
+        }
+      };
+    }
+  });
+
+  // src/features/inventory/itemInfo.ts
+  function readNestedValue(item, field2, parse) {
+    if (!item || typeof item !== "object") return null;
+    for (const source of [item, item.item, item.data]) {
+      if (!source || typeof source !== "object") continue;
+      const parsed = parse(source[field2]);
+      if (parsed != null) return parsed;
+    }
+    return null;
+  }
+  function firstNestedString(source, paths) {
+    for (const path of paths) {
+      let current3 = source;
+      for (const key2 of path) current3 = current3 && typeof current3 === "object" ? current3[key2] : void 0;
+      const value = stringOrEmpty(current3);
+      if (value) return value;
+    }
+    return "";
+  }
+  function plantLookup(order) {
+    const namePaths = order.map((part) => [part, "name"]);
+    return {
+      idField: "species",
+      catalog: plantCatalog2,
+      name: (_id, entry) => firstNestedString(entry, namePaths),
+      rarityPaths: order.map((part) => [part, "rarity"])
+    };
+  }
+  function flatLookup(idField, catalog, name) {
+    return { idField, catalog, name: (id) => name(id) ?? "", rarityPaths: [["rarity"]] };
+  }
+  function lookupOf(item) {
+    const lookup = CATALOG_LOOKUPS[itemTypeOf(item)];
+    if (!lookup) return null;
+    const id = readNestedString(item, lookup.idField);
+    if (!id) return null;
+    return { lookup, id, entry: lookup.catalog?.[id] };
+  }
+  function getInventoryItemName(item) {
+    if (!item || typeof item !== "object") return "";
+    const found = lookupOf(item);
+    if (found) return found.lookup.name(found.id, found.entry) || found.id;
+    return stringOrEmpty(item.name) || stringOrEmpty(item.id) || itemTypeOf(item);
+  }
+  function getInventoryItemRarity(item) {
+    if (!item || typeof item !== "object") return "";
+    const found = lookupOf(item);
+    return found ? firstNestedString(found.entry, found.lookup.rarityPaths) : "";
+  }
+  function getInventoryItemQuantity(item) {
+    if (!item || typeof item !== "object") return 0;
+    if (SINGLE_ITEM_TYPES.has(itemTypeOf(item))) return 1;
+    const quantity = Number(item.quantity);
+    return Number.isFinite(quantity) && quantity >= 0 ? quantity : 0;
+  }
+  function collectSpeciesCandidates(source, out) {
+    if (!source || typeof source !== "object") return;
+    for (const field2 of SPECIES_FIELDS) {
+      const value = stringOrEmpty(source[field2]);
+      if (value) out.add(value);
+    }
+  }
+  function getInventoryItemSize(item) {
+    if (!item || typeof item !== "object") return null;
+    const type = itemTypeOf(item);
+    if (type !== "Crop" && type !== "Produce") return null;
+    const direct = readCropSize(item);
+    if (direct != null) return direct;
+    const candidates = /* @__PURE__ */ new Set();
+    collectSpeciesCandidates(item, candidates);
+    collectSpeciesCandidates(item.item, candidates);
+    collectSpeciesCandidates(item.data, candidates);
+    for (const species of candidates) {
+      const size = readCropSize({ ...item, species });
+      if (size != null) return size;
+    }
+    return null;
+  }
+  function collectMutations(source, out) {
+    if (!source || typeof source !== "object") return;
+    const record2 = source;
+    if (Array.isArray(record2.mutations)) {
+      for (const mutation of record2.mutations) {
+        if (typeof mutation === "string" && mutation.trim()) out.push(mutation.trim());
+      }
+    }
+    if (Array.isArray(record2.slots)) {
+      for (const slot of record2.slots) collectMutations(slot, out);
+    }
+  }
+  function getInventoryItemMutations(item) {
+    if (!item || typeof item !== "object") return [];
+    const mutations = [];
+    collectMutations(item, mutations);
+    collectMutations(item.item, mutations);
+    collectMutations(item.data, mutations);
+    return mutations;
+  }
+  function getInventoryItemValue(item) {
+    if (!item || typeof item !== "object") return null;
+    const raw = item.value;
+    if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+    if (typeof raw === "string" && raw.trim()) {
+      const parsed = Number(raw);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  }
+  function petAbilityName(abilityId) {
+    if (typeof abilityId !== "string" || !abilityId.trim()) return null;
+    const name = petAbilities2[abilityId.trim()]?.name;
+    return stringOrEmpty(name) || null;
+  }
+  function itemMatchesSearch(item, normalizedQuery) {
+    if (!normalizedQuery) return true;
+    const visited = /* @__PURE__ */ new Set();
+    const matches = (value) => {
+      if (value == null) return false;
+      if (typeof value === "string") return normalize(value).includes(normalizedQuery);
+      if (typeof value === "number" || typeof value === "boolean") return normalize(String(value)).includes(normalizedQuery);
+      if (Array.isArray(value)) return value.some(matches);
+      if (typeof value === "object") {
+        if (visited.has(value)) return false;
+        visited.add(value);
+        for (const [key2, entry] of Object.entries(value)) {
+          if (key2 === "itemType") continue;
+          if (key2 === "abilities") {
+            if (Array.isArray(entry) && entry.some((id) => matches(petAbilityName(id)))) return true;
+            continue;
+          }
+          if (matches(entry)) return true;
+        }
+      }
+      return false;
+    };
+    const abilityNames = Array.isArray(item?.abilities) ? item.abilities.map(petAbilityName).filter(Boolean) : [];
+    const ownString = (field2) => typeof item?.[field2] === "string" ? item[field2] : null;
+    const candidates = [
+      getInventoryItemName(item),
+      ...["species", "seedSpecies", "plantSpecies", "petSpecies", "eggId", "decorId", "toolId", "id"].map(ownString),
+      ...abilityNames
+    ];
+    return candidates.some(matches) || matches(item);
+  }
+  var normalize, stringOrEmpty, itemTypeOf, readNestedString, readNestedNumber, CROP_ORDER, CATALOG_LOOKUPS, SINGLE_ITEM_TYPES, SPECIES_FIELDS;
+  var init_itemInfo = __esm({
+    "src/features/inventory/itemInfo.ts"() {
+      "use strict";
+      init_data();
+      init_names();
+      init_cropSize();
+      normalize = (s) => (s ?? "").trim().toLowerCase();
+      stringOrEmpty = (value) => typeof value === "string" ? value.trim() : "";
+      itemTypeOf = (item) => stringOrEmpty(item?.itemType);
+      readNestedString = (item, field2) => readNestedValue(item, field2, (value) => stringOrEmpty(value) || null);
+      readNestedNumber = (item, field2) => readNestedValue(item, field2, (value) => {
+        if (typeof value === "number" && Number.isFinite(value)) return value;
+        if (typeof value === "string" && value.trim()) {
+          const parsed = Number(value);
+          return Number.isFinite(parsed) ? parsed : null;
+        }
+        return null;
+      });
+      CROP_ORDER = ["crop", "plant", "seed"];
+      CATALOG_LOOKUPS = {
+        Seed: { ...plantLookup(["seed", "crop", "plant"]), name: (id) => seedCatalogName(id) ?? "" },
+        Crop: plantLookup(CROP_ORDER),
+        Produce: plantLookup(CROP_ORDER),
+        Plant: plantLookup(["plant", "crop", "seed"]),
+        Pet: { idField: "petSpecies", catalog: petCatalog2, name: (_id, entry) => stringOrEmpty(entry?.name), rarityPaths: [["rarity"]] },
+        Egg: flatLookup("eggId", eggCatalog2, eggCatalogName),
+        Tool: flatLookup("toolId", toolCatalog2, toolCatalogName),
+        Decor: flatLookup("decorId", decorCatalog2, decorCatalogName)
+      };
+      SINGLE_ITEM_TYPES = /* @__PURE__ */ new Set(["Produce", "Crop", "Plant", "Pet"]);
+      SPECIES_FIELDS = ["species", "seedSpecies", "plantSpecies", "cropSpecies", "baseSpecies", "seedKey"];
+    }
+  });
+
+  // src/features/inventory/petStrength.ts
+  function statsFor(item) {
+    for (const field2 of ["petSpecies", "species", "name"]) {
+      const candidate = readNestedString(item, field2);
+      if (!candidate) continue;
+      const key2 = speciesKey(candidate);
+      const stats = key2 ? petStatsBySpecies().get(key2) : void 0;
+      if (stats) return stats;
+    }
+    return null;
+  }
+  function getPetStrengthInfo(item) {
+    if (!item || typeof item !== "object" || itemTypeOf(item) !== "Pet") return null;
+    const stats = statsFor(item);
+    if (!stats) return null;
+    const { maxScale, hoursToMature } = stats;
+    const xp = Math.max(0, readNestedNumber(item, "xp") ?? 0);
+    const xpComponent = Math.min(Math.floor(xp / (hoursToMature * 3600) * 30), 30);
+    const scale = clamp(readNestedNumber(item, "targetScale") ?? 1, 1, maxScale);
+    const maxStrength = clamp(Math.floor((scale - 1) / (maxScale - 1) * 20 + 80), 0, 100);
+    const strength = clamp(xpComponent + maxStrength - 30, 0, maxStrength);
+    return { strength, maxStrength };
+  }
+  var speciesKey, petStatsBySpecies, getPetStrength;
+  var init_petStrength = __esm({
+    "src/features/inventory/petStrength.ts"() {
+      "use strict";
+      init_data();
+      init_math();
+      init_itemInfo();
+      speciesKey = (value) => value.toLowerCase().replace(/['’`]/g, "").replace(/\s+/g, "").replace(/-/g, "").replace(/(seed|plant|baby|fruit|crop)$/i, "");
+      petStatsBySpecies = memoOnCatalogs(() => {
+        const map2 = /* @__PURE__ */ new Map();
+        const register2 = (key2, stats) => {
+          if (typeof key2 !== "string") return;
+          const normalized = speciesKey(key2);
+          if (normalized && !map2.has(normalized)) map2.set(normalized, stats);
+        };
+        for (const [species, entry] of Object.entries(petCatalog2)) {
+          const maxScale = Number(entry?.maxScale);
+          const hoursToMature = Number(entry?.hoursToMature);
+          if (!Number.isFinite(maxScale) || maxScale <= 1) continue;
+          if (!Number.isFinite(hoursToMature) || hoursToMature <= 0) continue;
+          register2(species, { maxScale, hoursToMature });
+          register2(entry?.name, { maxScale, hoursToMature });
+        }
+        return map2;
+      });
+      getPetStrength = (item) => getPetStrengthInfo(item)?.strength ?? null;
+    }
+  });
+
+  // src/features/inventory/comparators.ts
+  function compareByNameThenTypeThenId(a, b) {
+    const nameA = getInventoryItemName(a);
+    const nameB = getInventoryItemName(b);
+    if (nameA && nameB) {
+      const cmp = compareText(nameA, nameB);
+      if (cmp !== 0) return cmp;
+    }
+    if (!nameA && nameB) return 1;
+    if (nameA && !nameB) return -1;
+    return compareText(stringField(a, "itemType"), stringField(b, "itemType")) || compareText(stringField(a, "id"), stringField(b, "id"));
+  }
+  function byOptionalNumber(read2, isDesc) {
+    return (a, b) => {
+      const va = read2(a);
+      const vb = read2(b);
+      const hasA = typeof va === "number" && Number.isFinite(va);
+      const hasB = typeof vb === "number" && Number.isFinite(vb);
+      if (hasA && hasB && va !== vb) return isDesc ? vb - va : va - vb;
+      if (hasA && !hasB) return isDesc ? -1 : 1;
+      if (!hasA && hasB) return isDesc ? 1 : -1;
+      return compareByNameThenTypeThenId(a, b);
+    };
+  }
+  function comparatorFor(sortKey, isDesc) {
+    const directed = (cmp) => isDesc ? -cmp : cmp;
+    switch (sortKey) {
+      case "alpha":
+        return (a, b) => directed(compareByNameThenTypeThenId(a, b));
+      case "qty":
+        return (a, b) => {
+          const diff = getInventoryItemQuantity(a) - getInventoryItemQuantity(b);
+          return diff !== 0 ? directed(diff) : compareByNameThenTypeThenId(a, b);
+        };
+      case "rarity":
+        return (a, b) => {
+          const rarityA = getInventoryItemRarity(a);
+          const rarityB = getInventoryItemRarity(b);
+          const rankA = rarityRank(rarityA);
+          const rankB = rarityRank(rarityB);
+          if (rankA !== rankB) return directed(rankA - rankB);
+          return compareText(rarityA, rarityB) || compareByNameThenTypeThenId(a, b);
+        };
+      case "value":
+        return byOptionalNumber(ownValue, isDesc);
+      case "size":
+        return byOptionalNumber(getInventoryItemSize, isDesc);
+      case "strength":
+        return byOptionalNumber(getPetStrength, isDesc);
+      case "mutations":
+        return (a, b) => {
+          const mutationsA = getInventoryItemMutations(a);
+          const mutationsB = getInventoryItemMutations(b);
+          if (mutationsA.length !== mutationsB.length) return directed(mutationsA.length - mutationsB.length);
+          if (mutationsA.length > 0) {
+            const cmp = compareText(sortedMutationLabel(mutationsA), sortedMutationLabel(mutationsB));
+            if (cmp !== 0) return cmp;
+          }
+          return compareByNameThenTypeThenId(a, b);
+        };
+      default:
+        return null;
+    }
+  }
+  function sortInventoryItems(items, sortKey, direction) {
+    const sorted = items.slice();
+    const comparator = comparatorFor(sortKey, direction === "desc");
+    if (comparator) sorted.sort(comparator);
+    return sorted;
+  }
+  var compareText, stringField, ownValue, sortedMutationLabel;
+  var init_comparators = __esm({
+    "src/features/inventory/comparators.ts"() {
+      "use strict";
+      init_data();
+      init_itemInfo();
+      init_petStrength();
+      compareText = (a, b) => a.localeCompare(b, void 0, { sensitivity: "base" });
+      stringField = (item, field2) => typeof item?.[field2] === "string" ? item[field2] : "";
+      ownValue = (item) => typeof item?.value === "number" ? item.value : null;
+      sortedMutationLabel = (mutations) => mutations.slice().sort(compareText).join("\0");
+    }
+  });
+
+  // src/features/inventory/sortOptions.ts
+  function filterKeysByItemType() {
+    const map2 = /* @__PURE__ */ new Map();
+    for (const [filterKey, itemTypes] of Object.entries(FILTER_LABEL_TO_ITEM_TYPES)) {
+      for (const itemType of itemTypes) {
+        const type = normalize(itemType);
+        if (type) map2.set(type, [...map2.get(type) ?? [], filterKey]);
+      }
+    }
+    return map2;
+  }
+  function extrasForFilter(filterKey) {
+    if (!filterKey) return [];
+    const direct = EXTRA_SORTS[filterKey];
+    if (direct?.length) return direct;
+    if (filterKey.endsWith("s")) {
+      const singular = EXTRA_SORTS[filterKey.slice(0, -1)];
+      if (singular?.length) return singular;
+    }
+    return [];
+  }
+  function extrasForItemType(itemType) {
+    const type = normalize(itemType);
+    if (!type) return [];
+    const extras = new Set(EXTRA_SORTS[type] ?? []);
+    for (const filterKey of FILTER_KEYS_BY_ITEM_TYPE.get(type) ?? []) {
+      for (const key2 of EXTRA_SORTS[filterKey] ?? []) extras.add(key2);
+    }
+    return [...extras];
+  }
+  function intersect(sets) {
+    if (!sets.length) return null;
+    return sets.reduce((acc, set2) => new Set([...acc].filter((key2) => set2.has(key2))));
+  }
+  function computeSortOptions(activeFilters, shownItemTypes2) {
+    const filterSets = activeFilters.map((value) => normalize(value)).filter(Boolean).map((key2) => /* @__PURE__ */ new Set([...BASE_SORT, ...extrasForFilter(key2)]));
+    const typeSets = [...shownItemTypes2 ?? []].map((type) => /* @__PURE__ */ new Set([...BASE_SORT, ...extrasForItemType(type)]));
+    const fromFilters = intersect(filterSets);
+    const fromTypes = intersect(typeSets);
+    let allowed = fromFilters && fromTypes ? intersect([fromFilters, fromTypes]) : fromFilters ?? fromTypes;
+    if (!allowed?.size) allowed = new Set(BASE_SORT);
+    return SORT_KEYS.filter((key2) => key2 === "none" || allowed.has(key2)).map((value) => ({ value, label: SORT_LABELS[value] }));
+  }
+  var SORT_KEYS, BASE_SORT, SORT_LABELS, DIRECTIONS, DIRECTION_LABELS, DEFAULT_DIRECTION, isSortKey, isSortDirection, EXTRA_SORTS, FILTER_LABEL_TO_ITEM_TYPES, FILTER_KEYS_BY_ITEM_TYPE;
+  var init_sortOptions = __esm({
+    "src/features/inventory/sortOptions.ts"() {
+      "use strict";
+      init_itemInfo();
+      SORT_KEYS = ["none", "alpha", "qty", "rarity", "value", "size", "mutations", "strength"];
+      BASE_SORT = ["alpha", "qty", "rarity", "value"];
+      SORT_LABELS = {
+        none: "None",
+        alpha: "A\u2013Z",
+        qty: "Quantity",
+        rarity: "Rarity",
+        value: "Values",
+        size: "Size",
+        mutations: "Mutations",
+        strength: "Strength"
+      };
+      DIRECTIONS = ["asc", "desc"];
+      DIRECTION_LABELS = { asc: "Ascending", desc: "Descending" };
+      DEFAULT_DIRECTION = {
+        none: "asc",
+        alpha: "asc",
+        qty: "desc",
+        rarity: "asc",
+        value: "desc",
+        size: "desc",
+        mutations: "desc",
+        strength: "desc"
+      };
+      isSortKey = (value) => typeof value === "string" && SORT_KEYS.includes(value);
+      isSortDirection = (value) => typeof value === "string" && DIRECTIONS.includes(value);
+      EXTRA_SORTS = {
+        seed: [],
+        tool: [],
+        decor: [],
+        crop: ["size", "mutations"],
+        produce: ["size", "mutations"],
+        plant: [],
+        pet: ["mutations", "strength"]
+      };
+      FILTER_LABEL_TO_ITEM_TYPES = {
+        crop: ["Produce"],
+        crops: ["Produce"],
+        produce: ["Produce"],
+        seed: ["Seed"],
+        seeds: ["Seed"],
+        plant: ["Plant"],
+        plants: ["Plant"],
+        pet: ["Pet"],
+        pets: ["Pet"],
+        tool: ["Tool"],
+        tools: ["Tool"],
+        decor: ["Decor"],
+        decors: ["Decor"],
+        decoration: ["Decor"],
+        decorations: ["Decor"],
+        egg: ["Egg"],
+        eggs: ["Egg"]
+      };
+      FILTER_KEYS_BY_ITEM_TYPE = filterKeysByItemType();
+    }
+  });
+
+  // src/data/rules/petValue.ts
+  var SEC_PER_HOUR, XP_STRENGTH_MAX, BASE_STRENGTH_FLOOR, getCatalogEntry, getMutationEntry, getTargetScale, getXp, getPetMaxStrength, getBaseStrength, getPetStrength2, getPetCoinMultiplier, getPetValue, getPetInfo;
+  var init_petValue = __esm({
+    "src/data/rules/petValue.ts"() {
+      "use strict";
+      init_data();
+      SEC_PER_HOUR = 3600;
+      XP_STRENGTH_MAX = 30;
+      BASE_STRENGTH_FLOOR = 30;
+      getCatalogEntry = (species) => {
+        if (!species) return null;
+        const entry = petCatalog2[species];
+        return entry ?? null;
+      };
+      getMutationEntry = (mutation) => {
+        if (!mutation) return null;
+        const entry = mutationCatalog2[mutation];
+        return entry ?? null;
+      };
+      getTargetScale = (pet) => {
+        const raw = pet?.targetScale;
+        return typeof raw === "number" && Number.isFinite(raw) ? raw : 1;
+      };
+      getXp = (pet) => {
+        const raw = pet?.xp;
+        return typeof raw === "number" && Number.isFinite(raw) ? Math.max(0, raw) : 0;
+      };
+      getPetMaxStrength = (pet) => {
+        const entry = getCatalogEntry(pet?.petSpecies ?? "");
+        if (!entry) return 0;
+        const maxScale = typeof entry.maxScale === "number" && entry.maxScale > 1 ? entry.maxScale : 1;
+        const targetScale = getTargetScale(pet);
+        const ratio = maxScale > 1 ? (targetScale - 1) / (maxScale - 1) : 0;
+        const raw = ratio * 20 + 80;
+        const strength = Math.floor(Number.isFinite(raw) ? raw : 0);
+        return Math.max(strength, 0);
+      };
+      getBaseStrength = (maxStrength) => {
+        const base = maxStrength - BASE_STRENGTH_FLOOR;
+        return Math.max(base, 0);
+      };
+      getPetStrength2 = (pet) => {
+        const entry = getCatalogEntry(pet?.petSpecies ?? "");
+        if (!entry) return 0;
+        const hoursToMature = typeof entry.hoursToMature === "number" && entry.hoursToMature > 0 ? entry.hoursToMature : 1;
+        const maxStrength = getPetMaxStrength(pet);
+        if (maxStrength <= 0) return 0;
+        const xpRate = getXp(pet) / (hoursToMature * SEC_PER_HOUR);
+        const xpComponent = Math.min(Math.floor(xpRate * XP_STRENGTH_MAX), XP_STRENGTH_MAX);
+        const baseStrength = getBaseStrength(maxStrength);
+        const strength = Math.min(baseStrength + xpComponent, maxStrength);
+        return Math.max(strength, 0);
+      };
+      getPetCoinMultiplier = (pet) => {
+        const mutations = Array.isArray(pet?.mutations) ? pet.mutations : [];
+        return mutations.reduce((acc, mutation) => {
+          const entry = getMutationEntry(mutation);
+          const multiplier = entry?.coinMultiplier;
+          if (typeof multiplier === "number" && Number.isFinite(multiplier) && multiplier > 0) {
+            return acc * multiplier;
+          }
+          return acc;
+        }, 1);
+      };
+      getPetValue = (pet) => {
+        const entry = getCatalogEntry(pet?.petSpecies ?? "");
+        if (!entry) return 0;
+        const maturitySellPrice = typeof entry.maturitySellPrice === "number" ? entry.maturitySellPrice : 0;
+        const maxStrength = getPetMaxStrength(pet);
+        if (maxStrength <= 0) return 0;
+        const strength = getPetStrength2(pet);
+        const targetScale = getTargetScale(pet);
+        const coinMultiplier = getPetCoinMultiplier(pet);
+        const raw = maturitySellPrice * (strength / maxStrength) * targetScale * coinMultiplier;
+        if (!Number.isFinite(raw)) return 0;
+        return Math.round(Math.max(raw, 0));
+      };
+      getPetInfo = (pet) => ({
+        value: getPetValue(pet),
+        strength: getPetStrength2(pet),
+        maxStrength: getPetMaxStrength(pet),
+        coinMultiplier: getPetCoinMultiplier(pet)
+      });
+    }
+  });
+
+  // src/features/inventory/value.ts
+  function finiteNumber(value) {
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
+    if (typeof value === "string" && value.trim()) {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  }
+  function identifier(raw) {
+    if (typeof raw === "string") return raw.trim() || null;
+    if (typeof raw === "number") return Number.isFinite(raw) ? String(raw) : null;
+    return null;
+  }
+  function computeInventoryItemValue(item, context = {}) {
+    if (!item || typeof item !== "object") return null;
+    const type = typeof item.itemType === "string" ? item.itemType.trim() : "";
+    const playersInRoom3 = context.playersInRoom ?? void 0;
+    switch (type) {
+      case "":
+        return null;
+      case "Pet": {
+        const value = getPetInfo(item).value;
+        return typeof value === "number" && Number.isFinite(value) ? value : null;
+      }
+      case "Plant": {
+        let total = 0;
+        for (const slot of Array.isArray(item.slots) ? item.slots : []) {
+          const species = typeof slot?.species === "string" ? slot.species : null;
+          const size = readCropSize(slot);
+          if (!species || size == null) continue;
+          const value = estimateProduceValue(species, size, stringMutations(slot), { friendPlayers: playersInRoom3 });
+          if (Number.isFinite(value)) total += value;
+        }
+        return total;
+      }
+      case "Produce": {
+        const value = valueFromInventoryProduce(item, void 0, playersInRoom3);
+        return Number.isFinite(value) ? value : null;
+      }
+      default: {
+        const priced = PRICED_BY_QUANTITY[type];
+        if (!priced) return null;
+        const id = identifier(item[priced.idField]);
+        const quantity = finiteNumber(item.quantity);
+        const coinPrice = id ? finiteNumber(priced.coinPrice(id)) : null;
+        if (quantity == null || coinPrice == null) return null;
+        const value = coinPrice * quantity;
+        return Number.isFinite(value) ? value : null;
+      }
+    }
+  }
+  function followInventoryValues() {
+    following2 ?? (following2 = Promise.all([
+      readAndFollow(Atoms.server.numPlayers, (raw) => {
+        playersInRoom = Number.isFinite(raw) ? raw : null;
+        playersInRoomChanges.emit();
+      }),
+      Atoms.inventory.myInventory.onChange(() => itemsChanges.emit()).catch(() => {
+      })
+    ]).then(() => {
+    }));
+    return following2;
+  }
+  var PRICED_BY_QUANTITY, stringMutations, playersInRoom, following2, playersInRoomChanges, itemsChanges, playersInRoomForValues, onPlayersInRoomChange, onInventoryItemsChange;
+  var init_value = __esm({
+    "src/features/inventory/value.ts"() {
+      "use strict";
+      init_atoms();
+      init_hub();
+      init_emitter();
+      init_data();
+      init_petValue();
+      init_cropValue();
+      init_cropSize();
+      PRICED_BY_QUANTITY = {
+        Seed: { idField: "species", coinPrice: (id) => plantCatalog2[id]?.seed?.coinPrice },
+        Tool: { idField: "toolId", coinPrice: (id) => toolCatalog2[id]?.coinPrice },
+        Egg: { idField: "eggId", coinPrice: (id) => eggCatalog2[id]?.coinPrice },
+        Decor: { idField: "decorId", coinPrice: (id) => decorCatalog2[id]?.coinPrice }
+      };
+      stringMutations = (slot) => Array.isArray(slot?.mutations) ? slot.mutations.filter((m) => typeof m === "string") : [];
+      playersInRoom = null;
+      following2 = null;
+      playersInRoomChanges = new Emitter();
+      itemsChanges = new Emitter();
+      playersInRoomForValues = () => playersInRoom;
+      onPlayersInRoomChange = (listener) => playersInRoomChanges.on(listener);
+      onInventoryItemsChange = (listener) => itemsChanges.on(listener);
+    }
+  });
+
+  // src/features/inventory/filters.ts
+  function getActiveFilters(grid) {
+    return Array.from(grid.querySelectorAll(FILTER_CHECKBOX_SELECTOR)).filter(isChecked).map((label2) => (label2.querySelector(FILTER_CHECKBOX_LABEL_SELECTOR)?.textContent ?? "").trim()).filter(Boolean);
+  }
+  function getSearchQuery(grid) {
+    const input = grid?.querySelector(SEARCH_INPUT_SELECTOR);
+    return normalize(typeof input?.value === "string" ? input.value : "");
+  }
+  function filterContextKey(filters, search2) {
+    const keys = filters.map(normalize).filter((value) => value && value !== "all");
+    keys.sort();
+    return `${keys.join("|")}::${normalize(search2)}`;
+  }
+  function rememberShownTypes(contextKey, types) {
+    const next = new Set([...types].map(normalize).filter(Boolean));
+    const previous = shownTypesByContext.get(contextKey);
+    if (previous && previous.size === next.size && [...previous].every((type) => next.has(type))) return;
+    shownTypesByContext.set(contextKey, next);
+    shownTypesChanged.emit(contextKey);
+  }
+  function filterLabelToItemTypes(filter) {
+    const key2 = normalize(filter);
+    if (!key2 || key2 === "all") return [];
+    const mapped = FILTER_LABEL_TO_ITEM_TYPES[key2];
+    if (mapped) return mapped;
+    const singular = key2.endsWith("s") ? key2.slice(0, -1) : key2;
+    return singular ? [singular.charAt(0).toUpperCase() + singular.slice(1)] : [];
+  }
+  function filterInventoryItems(items, filters, searchQuery) {
+    const itemTypes = new Set(filters.flatMap(filterLabelToItemTypes).filter(Boolean));
+    const byType = itemTypes.size ? items.filter((item) => itemTypes.has(itemTypeOf(item))) : items.slice();
+    const search2 = normalize(searchQuery);
+    const shown = search2 ? byType.filter((item) => itemMatchesSearch(item, search2)) : byType;
+    const playersInRoom3 = playersInRoomForValues();
+    for (const item of shown) {
+      if (item && typeof item === "object") item.value = computeInventoryItemValue(item, { playersInRoom: playersInRoom3 }) ?? null;
+    }
+    const types = new Set(shown.map(itemTypeOf).filter(Boolean));
+    rememberShownTypes(filterContextKey(filters, search2), types);
+    return shown;
+  }
+  var FILTER_CHECKBOX_SELECTOR, FILTER_CHECKBOX_LABEL_SELECTOR, SEARCH_INPUT_SELECTOR, isChecked, shownTypesByContext, shownTypesChanged, onShownItemTypesChange, shownItemTypes;
+  var init_filters = __esm({
+    "src/features/inventory/filters.ts"() {
+      "use strict";
+      init_emitter();
+      init_itemInfo();
+      init_sortOptions();
+      init_value();
+      FILTER_CHECKBOX_SELECTOR = "label.chakra-checkbox.css-1v6h4z7";
+      FILTER_CHECKBOX_LABEL_SELECTOR = ".chakra-checkbox__label";
+      SEARCH_INPUT_SELECTOR = "input.chakra-input.css-8e1l1i";
+      isChecked = (el) => el.matches("[data-checked]") || !!el.querySelector("[data-checked]");
+      shownTypesByContext = /* @__PURE__ */ new Map();
+      shownTypesChanged = new Emitter();
+      onShownItemTypesChange = (listener) => shownTypesChanged.on(listener);
+      shownItemTypes = (filters, search2) => shownTypesByContext.get(filterContextKey(filters, search2)) ?? null;
+    }
+  });
+
+  // src/features/inventory/strengthBadge.ts
+  function badgeTone(item) {
+    const mutations = new Set(getInventoryItemMutations(item).map((m) => m.toLowerCase()));
+    if (mutations.has("rainbow")) return "rainbow";
+    if (mutations.has("gold") || mutations.has("golden")) return "gold";
+    return "normal";
+  }
+  function applyBadgeTone(badge2, tone) {
+    if (badge2.dataset.tmStrengthTone === tone) return;
+    badge2.dataset.tmStrengthTone = tone;
+    const style = badge2.style;
+    style.backgroundImage = "";
+    style.backgroundColor = "";
+    style.color = "";
+    style.backgroundClip = "";
+    style.webkitBackgroundClip = "";
+    style.backgroundOrigin = "";
+    style.webkitTextFillColor = "";
+    style.fontWeight = "700";
+    if (tone === "rainbow") {
+      style.color = "transparent";
+      style.backgroundImage = `linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.25)), ${RAINBOW_TEXT}`;
+      style.backgroundClip = "padding-box, text";
+      style.webkitBackgroundClip = "padding-box, text";
+      style.backgroundOrigin = "padding-box, text";
+      style.webkitTextFillColor = "transparent";
+    } else if (tone === "gold") {
+      style.color = GAME_YELLOW;
+      style.backgroundColor = GAME_YELLOW_SOFT;
+    } else {
+      style.color = "#8fd3ff";
+      style.backgroundColor = "rgba(79, 166, 255, 0.28)";
+    }
+  }
+  function ensureBadge(textEl, before) {
+    let badge2 = textEl.querySelector(`.${BADGE_CLASS}`);
+    if (!badge2) {
+      badge2 = document.createElement("span");
+      badge2.className = BADGE_CLASS;
+      badge2.textContent = "MAX";
+      Object.assign(badge2.style, {
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "0 3px",
+        marginRight: "0",
+        borderRadius: "3px",
+        fontSize: "0.5rem",
+        lineHeight: "1",
+        fontWeight: "700",
+        color: GAME_YELLOW,
+        backgroundColor: GAME_YELLOW_SOFT
+      });
+    }
+    if (badge2.parentElement !== textEl) textEl.insertBefore(badge2, before);
+    return badge2;
+  }
+  function ensureParts(textEl) {
+    let label2 = textEl.querySelector(`.${LABEL_CLASS}`);
+    let current3 = textEl.querySelector(`.${CURRENT_CLASS}`);
+    let max = textEl.querySelector(`.${MAX_CLASS}`);
+    if (!label2 || !current3 || !max) {
+      textEl.textContent = "";
+      label2 = Object.assign(document.createElement("span"), { className: LABEL_CLASS });
+      current3 = Object.assign(document.createElement("span"), { className: CURRENT_CLASS });
+      max = Object.assign(document.createElement("span"), { className: MAX_CLASS });
+      textEl.append(label2, current3, max);
+    }
+    return { label: label2, current: current3, max };
+  }
+  function updateStrengthText(card4, item) {
+    const wrap = card4.querySelector(STRENGTH_WRAPPER_SELECTOR);
+    const textEl = wrap?.querySelector(STRENGTH_TEXT_SELECTOR);
+    if (!wrap || !textEl) return;
+    const info = getPetStrengthInfo(item);
+    if (!info || !Number.isFinite(info.maxStrength) || info.maxStrength <= 0) return;
+    const printed = parseFirstInteger(textEl.textContent ?? "");
+    const currentStrength = printed ?? (Number.isFinite(info.strength) ? Math.round(info.strength) : null);
+    if (currentStrength == null) return;
+    const max = Math.round(info.maxStrength);
+    if (!Number.isFinite(max) || max <= 0) return;
+    const current3 = clamp(currentStrength, 0, max);
+    const isMax = current3 >= max;
+    const parts = ensureParts(textEl);
+    setText(parts.label, "STR ");
+    setText(parts.current, String(current3));
+    parts.current.style.setProperty("color", "#ffffff", "important");
+    parts.current.style.setProperty("font-weight", "700", "important");
+    if (isMax) {
+      applyBadgeTone(ensureBadge(textEl, parts.label), badgeTone(item));
+      setText(parts.max, "");
+      parts.max.style.display = "none";
+    } else {
+      textEl.querySelector(`.${BADGE_CLASS}`)?.remove();
+      setText(parts.max, `/${max}`);
+      parts.max.style.display = "";
+      parts.max.style.setProperty("font-weight", "700", "important");
+    }
+    parts.max.style.visibility = "";
+    parts.max.style.setProperty("color", "#ffffff", "important");
+    wrap.dataset[IS_MAX_DATASET_KEY] = isMax ? "1" : "0";
+  }
+  function ancestorContaining(start2, selector) {
+    for (let current3 = start2; current3; current3 = current3.parentElement) {
+      if (current3.querySelector(selector)) return current3;
+    }
+    return null;
+  }
+  function alignStrengthText(card4) {
+    const wrap = card4.querySelector(STRENGTH_WRAPPER_SELECTOR);
+    if (!wrap) return;
+    if (wrap.dataset[BASE_TRANSFORM_DATASET_KEY] == null) {
+      wrap.dataset[BASE_TRANSFORM_DATASET_KEY] = wrap.style.transform ?? "";
+    }
+    const baseTransform = wrap.dataset[BASE_TRANSFORM_DATASET_KEY] ?? "";
+    wrap.style.transform = baseTransform;
+    const textEl = wrap.querySelector(STRENGTH_TEXT_SELECTOR);
+    if (!textEl) return;
+    const isMax = wrap.dataset[IS_MAX_DATASET_KEY];
+    const shouldAlign = isMax === "0" || isMax === "1" || isMax == null && !!textEl.textContent?.includes("/");
+    if (!shouldAlign) {
+      if (wrap.style.pointerEvents) wrap.style.pointerEvents = "";
+      return;
+    }
+    const row5 = ancestorContaining(wrap, FAVORITE_BUTTON_SELECTOR) ?? ancestorContaining(card4, FAVORITE_BUTTON_SELECTOR);
+    const favorite = row5?.querySelector(FAVORITE_BUTTON_SELECTOR);
+    if (!row5 || !favorite) return;
+    const anchor = favorite.querySelector("svg") ?? favorite.querySelector(".chakra-icon") ?? favorite;
+    const rowRect = row5.getBoundingClientRect();
+    if (!rowRect.width) return;
+    const GAP_PX_MAX = 5;
+    const GAP_PX_NON_MAX = 7;
+    let deltaX = null;
+    if (isMax === "1") {
+      const badgeRect = textEl.querySelector(`.${BADGE_CLASS}`)?.getBoundingClientRect();
+      if (badgeRect?.width) deltaX = rowRect.left + GAP_PX_MAX - badgeRect.left;
+    }
+    if (deltaX == null) {
+      const anchorRect = anchor.getBoundingClientRect();
+      const textRect = textEl.getBoundingClientRect();
+      if (!anchorRect.width || !textRect.width) return;
+      deltaX = anchorRect.left - textRect.right - GAP_PX_NON_MAX;
+    }
+    if (!Number.isFinite(deltaX)) return;
+    const shift = `translateX(${Math.round(deltaX)}px)`;
+    wrap.style.transform = baseTransform ? `${baseTransform} ${shift}` : shift;
+    textEl.style.margin = "0";
+    if (wrap.style.pointerEvents) wrap.style.pointerEvents = "";
+  }
+  var STRENGTH_WRAPPER_SELECTOR, STRENGTH_TEXT_SELECTOR, FAVORITE_BUTTON_SELECTOR, LABEL_CLASS, CURRENT_CLASS, MAX_CLASS, BADGE_CLASS, IS_MAX_DATASET_KEY, BASE_TRANSFORM_DATASET_KEY, GAME_YELLOW, GAME_YELLOW_SOFT, RAINBOW_TEXT, parseFirstInteger, setText;
+  var init_strengthBadge = __esm({
+    "src/features/inventory/strengthBadge.ts"() {
+      "use strict";
+      init_math();
+      init_itemInfo();
+      init_petStrength();
+      STRENGTH_WRAPPER_SELECTOR = ".McFlex.css-15lpbqz";
+      STRENGTH_TEXT_SELECTOR = ".chakra-text.css-wqvsdi";
+      FAVORITE_BUTTON_SELECTOR = "button.chakra-button.css-1iytwn1";
+      LABEL_CLASS = "tm-strength__label";
+      CURRENT_CLASS = "tm-strength__current";
+      MAX_CLASS = "tm-strength__max";
+      BADGE_CLASS = "tm-strength__badge";
+      IS_MAX_DATASET_KEY = "tmStrengthIsMax";
+      BASE_TRANSFORM_DATASET_KEY = "tmStrengthBaseTransform";
+      GAME_YELLOW = "var(--chakra-colors-Yellow-Magic, #F3D32B)";
+      GAME_YELLOW_SOFT = "rgba(243, 211, 43, 0.25)";
+      RAINBOW_TEXT = "linear-gradient(90deg, #ff6b6b 0%, #ffd86f 25%, #6bff8f 50%, #6bc7ff 75%, #b86bff 100%)";
+      parseFirstInteger = (text2) => {
+        const match = text2.match(/(\d+)/);
+        const parsed = match ? Number(match[1]) : NaN;
+        return Number.isFinite(parsed) ? parsed : null;
+      };
+      setText = (el, text2) => {
+        if (el.textContent !== text2) el.textContent = text2;
+      };
+    }
+  });
+
+  // src/features/inventory/inventoryDom.ts
+  function isVisible(el) {
+    if (!el || !document.contains(el)) return false;
+    const rect = el.getBoundingClientRect();
+    const cs = getComputedStyle(el);
+    if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") return false;
+    return rect.width > 0 && rect.height > 0;
+  }
+  function getItemsContainer(grid) {
+    return grid.querySelector(ITEMS_CONTAINER_SELECTOR) || document.querySelector(ITEMS_CONTAINER_SELECTOR);
+  }
+  function cardOf(element) {
+    if (ITEM_CARD_SELECTORS.some((selector) => element.matches(selector))) return element;
+    return element.querySelector(ITEM_CARD_SELECTOR);
+  }
+  function clearNoiseText(container) {
+    if (!(container instanceof HTMLElement)) return;
+    for (const node of container.querySelectorAll(NOISE_SELECTOR)) {
+      const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+      for (let text2 = walker.nextNode(); text2; text2 = walker.nextNode()) {
+        if (text2.textContent) text2.textContent = "";
+      }
+    }
+  }
+  function getDomEntries(container) {
+    clearNoiseText(container);
+    const entries = [];
+    for (const child of Array.from(container.children)) {
+      if (!(child instanceof HTMLElement)) continue;
+      const card4 = cardOf(child);
+      if (!card4) continue;
+      alignStrengthText(card4);
+      entries.push({ wrapper: child, card: card4 });
+    }
+    return entries;
+  }
+  function domOrderChanged(previous, entries) {
+    if (!previous || previous.length !== entries.length) return true;
+    return entries.some((entry, i) => previous[i] !== entry.wrapper);
+  }
+  function assignBaseIndexes(entries) {
+    entries.forEach((entry, index) => {
+      entry.wrapper.dataset[BASE_INDEX_DATASET_KEY] = String(index);
+      entry.card.dataset[BASE_INDEX_DATASET_KEY] = String(index);
+    });
+  }
+  function readBaseIndex(entry) {
+    const raw = entry.wrapper.dataset[BASE_INDEX_DATASET_KEY] ?? entry.card.dataset[BASE_INDEX_DATASET_KEY];
+    if (raw == null) return null;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : null;
+  }
+  function findSectionByHeader(headerText) {
+    const header = Array.from(document.querySelectorAll("p.chakra-text")).find(
+      (el) => (el.textContent ?? "").trim() === headerText
+    );
+    for (let current3 = header ?? null; current3 && current3 !== document.body; current3 = current3.parentElement) {
+      const next = current3.nextElementSibling;
+      if (next?.querySelector(ITEM_CARD_SELECTOR)) return next;
+    }
+    return null;
+  }
+  var GRID_SELECTOR, FILTERS_BLOCK_SELECTOR, ITEMS_CONTAINER_SELECTOR, ITEM_CARD_SELECTORS, ITEM_CARD_SELECTOR, NOISE_SELECTOR, BASE_INDEX_DATASET_KEY, domOrderOf;
+  var init_inventoryDom = __esm({
+    "src/features/inventory/inventoryDom.ts"() {
+      "use strict";
+      init_strengthBadge();
+      GRID_SELECTOR = "div.McGrid.css-1kv58ap";
+      FILTERS_BLOCK_SELECTOR = ".McGrid.css-o1vp12";
+      ITEMS_CONTAINER_SELECTOR = ".McFlex.css-zo8r2v";
+      ITEM_CARD_SELECTORS = [".css-vmnhaw", ".css-1avy1fz"];
+      ITEM_CARD_SELECTOR = ITEM_CARD_SELECTORS.join(", ");
+      NOISE_SELECTOR = ".McFlex.css-1tkifdd, .chakra-text.css-glp3xv, .chakra-text.css-repqgl, .chakra-text.css-ah6ymv";
+      BASE_INDEX_DATASET_KEY = "tmInventoryBaseIndex";
+      domOrderOf = (entries) => entries.map((entry) => entry.wrapper);
+    }
+  });
+
+  // src/features/inventory/valueDisplay.ts
+  function formatCompactValue(value) {
+    const abs = Math.abs(value);
+    for (const { threshold, suffix } of COMPACT_UNITS) {
+      if (abs >= threshold) return `${(value / threshold).toFixed(1).replace(/\.0$/, "")}${suffix}`;
+    }
+    return FULL_FORMAT.format(value);
+  }
+  function updateCardValue(card4, value, show) {
+    const container = card4.querySelector(VALUE_CONTAINER_SELECTOR);
+    const current3 = container?.querySelector(`.${VALUE_ELEMENT_CLASS}`) ?? null;
+    if (!container || !show || typeof value !== "number" || !Number.isFinite(value)) {
+      if (container) current3?.remove();
+      delete card4.dataset[VALUE_DATASET_KEY];
+      return;
+    }
+    const target = current3 ?? Object.assign(document.createElement("div"), { className: VALUE_ELEMENT_CLASS });
+    Object.assign(target.style, {
+      fontSynthesis: "none",
+      WebkitFontSmoothing: "antialiased",
+      WebkitTextSizeAdjust: "100%",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      gap: "0.15rem",
+      marginTop: "3px",
+      fontFamily: 'var(--chakra-fonts-body, "GreyCliff CF", sans-serif)',
+      fontWeight: "700",
+      fontSize: "0.65rem",
+      lineHeight: "1",
+      textTransform: "none",
+      color: GAME_YELLOW2
+    });
+    let text2 = target.querySelector(`.${VALUE_TEXT_CLASS}`);
+    if (!text2) {
+      target.textContent = "";
+      text2 = document.createElement("span");
+      text2.className = VALUE_TEXT_CLASS;
+      Object.assign(text2.style, { display: "inline-flex", alignItems: "center", color: "inherit" });
+      target.appendChild(text2);
+    }
+    text2.textContent = formatCompactValue(value);
+    target.title = formatFullValue(value);
+    card4.dataset[VALUE_DATASET_KEY] = String(value);
+    if (target.parentElement !== container || target !== container.lastElementChild) container.appendChild(target);
+  }
+  var VALUE_CONTAINER_SELECTOR, VALUE_ELEMENT_CLASS, VALUE_TEXT_CLASS, VALUE_DATASET_KEY, GAME_YELLOW2, LOADING, UNKNOWN, COMPACT_UNITS, FULL_FORMAT, formatFullValue, COIN_ICON_SRC, ValueSummary;
+  var init_valueDisplay = __esm({
+    "src/features/inventory/valueDisplay.ts"() {
+      "use strict";
+      init_data();
+      init_atoms();
+      init_filters();
+      init_itemInfo();
+      VALUE_CONTAINER_SELECTOR = ".McFlex.css-1p00rng";
+      VALUE_ELEMENT_CLASS = "tm-inventory-item-value";
+      VALUE_TEXT_CLASS = `${VALUE_ELEMENT_CLASS}__text`;
+      VALUE_DATASET_KEY = "tmInventoryValue";
+      GAME_YELLOW2 = "var(--chakra-colors-Yellow-Magic, #F3D32B)";
+      LOADING = "\u2026";
+      UNKNOWN = "\u2014";
+      COMPACT_UNITS = [
+        { threshold: 1e12, suffix: "T" },
+        { threshold: 1e9, suffix: "B" },
+        { threshold: 1e6, suffix: "M" },
+        { threshold: 1e3, suffix: "K" }
+      ];
+      FULL_FORMAT = new Intl.NumberFormat(void 0, { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+      formatFullValue = (value) => FULL_FORMAT.format(value);
+      COIN_ICON_SRC = (() => {
+        const src = coin2?.img64 ?? "";
+        if (typeof src !== "string" || !src) return "";
+        return src.startsWith("data:") ? src : `data:image/png;base64,${src}`;
+      })();
+      ValueSummary = class {
+        constructor() {
+          this.token = null;
+          this.el = document.createElement("span");
+          Object.assign(this.el.style, {
+            font: "inherit",
+            color: GAME_YELLOW2,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            flex: "1 1 auto",
+            whiteSpace: "nowrap",
+            marginLeft: "auto",
+            textAlign: "right",
+            gap: "0.25rem"
+          });
+          if (COIN_ICON_SRC) {
+            const icon2 = document.createElement("span");
+            icon2.setAttribute("aria-hidden", "true");
+            Object.assign(icon2.style, {
+              width: "1.2rem",
+              height: "1.2rem",
+              flexShrink: "0",
+              display: "inline-block",
+              backgroundImage: `url("${COIN_ICON_SRC}")`,
+              backgroundSize: "contain",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center",
+              pointerEvents: "none",
+              userSelect: "none"
+            });
+            this.el.appendChild(icon2);
+          }
+          this.text = document.createElement("span");
+          Object.assign(this.text.style, { fontWeight: "700", color: "inherit" });
+          this.el.appendChild(this.text);
+          this.set(LOADING);
+        }
+        set(text2, title) {
+          this.text.textContent = text2;
+          if (title) this.el.title = title;
+          else this.el.removeAttribute("title");
+        }
+        /** Totals the values of the items these filters show. A newer call wins over a slower older one. */
+        async update(filters, searchQuery) {
+          const token = Symbol("value-summary");
+          this.token = token;
+          this.set(LOADING);
+          try {
+            const inventory = await Atoms.inventory.myInventory.get();
+            if (this.token !== token) return;
+            if (!inventory || typeof inventory !== "object") return this.set(UNKNOWN);
+            const items = Array.isArray(inventory.items) ? inventory.items : [];
+            const shown = filterInventoryItems(items, filters, searchQuery);
+            if (!shown.length) return this.set("0", "0");
+            const values = shown.map(getInventoryItemValue).filter((v) => typeof v === "number" && Number.isFinite(v));
+            if (!values.length) return this.set(UNKNOWN);
+            const total = values.reduce((sum, v) => sum + v, 0);
+            this.set(formatCompactValue(total), formatFullValue(total));
+          } catch (error) {
+            console.warn("[InventorySorting] Could not total the filtered value", error);
+            if (this.token === token) this.set(UNKNOWN);
+          }
+        }
+      };
+    }
+  });
+
+  // src/features/inventory/domSorter.ts
+  function indexEntries2(state5, entries) {
+    state5.entryByBaseIndex.clear();
+    for (const entry of entries) {
+      const baseIndex = readBaseIndex(entry);
+      if (baseIndex != null) state5.entryByBaseIndex.set(baseIndex, entry);
+    }
+  }
+  function rebaseToDomOrder(state5, entries) {
+    if (entries.length !== state5.baseItems.length) return false;
+    const used = /* @__PURE__ */ new Set();
+    const reordered = [];
+    for (const entry of entries) {
+      const baseIndex = readBaseIndex(entry);
+      if (baseIndex == null || baseIndex < 0 || baseIndex >= state5.baseItems.length || used.has(baseIndex)) return false;
+      used.add(baseIndex);
+      reordered.push(state5.baseItems[baseIndex]);
+    }
+    if (reordered.every((item, i) => item === state5.baseItems[i])) return false;
+    state5.baseItems = reordered;
+    assignBaseIndexes(entries);
+    state5.entryByBaseIndex.clear();
+    entries.forEach((entry, index) => state5.entryByBaseIndex.set(index, entry));
+    state5.entryCount = entries.length;
+    return true;
+  }
+  function createDomSorter() {
+    const stateByGrid = /* @__PURE__ */ new WeakMap();
+    async function ensureState(grid, filters, entries, searchQuery) {
+      const filtersKey = JSON.stringify({ filters });
+      const state5 = stateByGrid.get(grid);
+      const reusable = state5 && state5.filtersKey === filtersKey && state5.searchQuery === searchQuery && state5.playersInRoom === playersInRoomForValues() && state5.entryCount === entries.length && state5.baseItems.length === entries.length && entries.every((entry) => readBaseIndex(entry) != null);
+      if (state5 && reusable) {
+        indexEntries2(state5, entries);
+        return state5;
+      }
+      try {
+        const inventory = await Atoms.inventory.myInventory.get();
+        if (!inventory || typeof inventory !== "object") return null;
+        const items = Array.isArray(inventory.items) ? inventory.items : [];
+        const shown = filterInventoryItems(items, filters, searchQuery);
+        if (shown.length !== entries.length) {
+          console.warn(`[InventorySorting] ${shown.length} filtered items but ${entries.length} cards, not reordering.`);
+          return null;
+        }
+        assignBaseIndexes(entries);
+        const next = {
+          filtersKey,
+          searchQuery,
+          entryCount: entries.length,
+          playersInRoom: playersInRoomForValues(),
+          baseItems: shown.slice(),
+          entryByBaseIndex: new Map(entries.map((entry, index) => [index, entry])),
+          lastSortKey: state5?.lastSortKey ?? null
+        };
+        stateByGrid.set(grid, next);
+        return next;
+      } catch (error) {
+        console.warn("[InventorySorting] Could not read the inventory to sort the cards", error);
+        return null;
+      }
+    }
+    return async (grid, sortKey, direction, showValues) => {
+      const container = getItemsContainer(grid);
+      if (!container) return;
+      const entries = getDomEntries(container);
+      if (!entries.length) return;
+      const state5 = await ensureState(grid, getActiveFilters(grid), entries, getSearchQuery(grid));
+      if (!state5) return;
+      const unsorted = !sortKey || sortKey === "none";
+      if (unsorted && state5.lastSortKey === "none") rebaseToDomOrder(state5, entries);
+      const baseIndexByItem = new Map(state5.baseItems.map((item, index) => [item, index]));
+      const effectiveDirection = isSortDirection(direction) ? direction : DEFAULT_DIRECTION[sortKey] ?? "asc";
+      const desiredItems = unsorted ? state5.baseItems.slice() : sortInventoryItems(state5.baseItems, sortKey, effectiveDirection);
+      const desiredEntries = [];
+      const used = /* @__PURE__ */ new Set();
+      for (const item of desiredItems) {
+        const baseIndex = baseIndexByItem.get(item);
+        const entry = baseIndex == null ? void 0 : state5.entryByBaseIndex.get(baseIndex);
+        if (!entry || used.has(entry)) continue;
+        updateCardValue(entry.card, getInventoryItemValue(item), showValues);
+        updateStrengthText(entry.card, item);
+        alignStrengthText(entry.card);
+        desiredEntries.push(entry);
+        used.add(entry);
+      }
+      if (desiredEntries.length !== entries.length) {
+        console.warn(`[InventorySorting] Only ${desiredEntries.length} of ${entries.length} cards matched, not reordering.`);
+        return;
+      }
+      if (!desiredEntries.every((entry, index) => entry.wrapper === entries[index]?.wrapper)) {
+        const fragment = document.createDocumentFragment();
+        for (const entry of desiredEntries) fragment.appendChild(entry.wrapper);
+        container.appendChild(fragment);
+      }
+      indexEntries2(state5, desiredEntries);
+      state5.lastSortKey = sortKey;
+    };
+  }
+  var init_domSorter = __esm({
+    "src/features/inventory/domSorter.ts"() {
+      "use strict";
+      init_atoms();
+      init_comparators();
+      init_filters();
+      init_inventoryDom();
+      init_itemInfo();
+      init_sortOptions();
+      init_strengthBadge();
+      init_value();
+      init_valueDisplay();
+    }
+  });
+
+  // src/features/inventory/petHutch.ts
+  function isPetItem(item) {
+    if (normalize(typeof item?.itemType === "string" ? item.itemType : "") === "pet") return true;
+    return !!petSpeciesOf(item);
+  }
+  function nameCandidates(item) {
+    const names = /* @__PURE__ */ new Set();
+    const name = readNestedString(item, "name");
+    if (name) names.add(normalize(name));
+    const species = petSpeciesOf(item);
+    if (species) names.add(normalize(species));
+    return [...names];
+  }
+  function applyPetsToList(container, items) {
+    if (!container) return;
+    const entries = getDomEntries(container);
+    const pets = (Array.isArray(items) ? items : []).filter(isPetItem);
+    if (!entries.length || !pets.length) return;
+    const used = /* @__PURE__ */ new Set();
+    const firstUnused = (match) => pets.findIndex((pet, i) => !used.has(i) && match(pet));
+    for (const entry of entries) {
+      const cardName = normalize(entry.card.querySelector(PET_NAME_SELECTOR)?.textContent ?? "");
+      let index = cardName ? firstUnused((pet) => nameCandidates(pet).includes(cardName)) : -1;
+      if (index < 0) index = firstUnused(() => true);
+      if (index < 0) continue;
+      used.add(index);
+      updateStrengthText(entry.card, pets[index]);
+      alignStrengthText(entry.card);
+    }
+  }
+  function setHidden(containers, hidden) {
+    for (const container of containers) {
+      if (!container) continue;
+      if (hidden) container.style.setProperty("visibility", "hidden");
+      else container.style.removeProperty("visibility");
+    }
+  }
+  async function updatePetHutchSections(hideDuringUpdate = false) {
+    const root4 = document.querySelector(PET_HUTCH_ROOT_SELECTOR) ?? document.body;
+    const hutchList = root4.querySelector(HUTCH_LIST_SELECTOR) ?? findSectionByHeader("Pets in Hutch");
+    const inventoryList = root4.querySelector(INVENTORY_LIST_SELECTOR) ?? findSectionByHeader("Pets in Inventory");
+    if (!hutchList && !inventoryList) return false;
+    const lists = [hutchList, inventoryList];
+    if (hideDuringUpdate) setHidden(lists, true);
+    try {
+      const [hutchItems, inventory] = await Promise.all([
+        myPetHutchPetItems.get().catch(() => []),
+        Atoms.inventory.myInventory.get().catch(() => null)
+      ]);
+      const inventoryItems4 = Array.isArray(inventory?.items) ? inventory.items : Array.isArray(inventory) ? inventory : [];
+      applyPetsToList(hutchList, hutchItems);
+      applyPetsToList(inventoryList, inventoryItems4);
+      return true;
+    } catch (error) {
+      console.warn("[InventorySorting] Could not update the hutch pets", error);
+      return false;
+    } finally {
+      if (hideDuringUpdate) setHidden(lists, false);
+    }
+  }
+  var PET_HUTCH_ROOT_SELECTOR, HUTCH_LIST_SELECTOR, INVENTORY_LIST_SELECTOR, PET_NAME_SELECTOR, petSpeciesOf;
+  var init_petHutch = __esm({
+    "src/features/inventory/petHutch.ts"() {
+      "use strict";
+      init_atoms();
+      init_inventoryDom();
+      init_itemInfo();
+      init_strengthBadge();
+      PET_HUTCH_ROOT_SELECTOR = ".McGrid.css-3c49ba";
+      HUTCH_LIST_SELECTOR = ".McGrid.css-1nv2ym8 .McFlex.css-1tgchvv";
+      INVENTORY_LIST_SELECTOR = ".McGrid.css-1nv2ym8 .McFlex.css-gui45t";
+      PET_NAME_SELECTOR = ".McFlex.css-1lpag07 .chakra-text";
+      petSpeciesOf = (item) => readNestedString(item, "petSpecies") ?? readNestedString(item, "species");
+    }
+  });
+
+  // src/features/inventory/settings.ts
+  function read(path, parse) {
+    try {
+      return parse(readAriesPath(path));
+    } catch (error) {
+      console.warn(`[InventorySorting] Could not read ${path}`, error);
+      return null;
+    }
+  }
+  function write(path, value) {
+    try {
+      writeAriesPath(path, value);
+    } catch (error) {
+      console.warn(`[InventorySorting] Could not save ${path}`, error);
+    }
+  }
+  function saveSort(sortKey, direction) {
+    write(SORT_KEY_PATH, sortKey);
+    write(SORT_DIRECTION_PATH, direction);
+  }
+  var SORT_KEY_PATH, SORT_DIRECTION_PATH, SHOW_VALUES_PATH, loadSortKey, loadSortDirection, loadShowValues, saveShowValues;
+  var init_settings4 = __esm({
+    "src/features/inventory/settings.ts"() {
+      "use strict";
+      init_storage();
+      init_sortOptions();
+      SORT_KEY_PATH = "inventory.sortKey";
+      SORT_DIRECTION_PATH = "inventory.sortDirection";
+      SHOW_VALUES_PATH = "inventory.showValues";
+      loadSortKey = () => read(SORT_KEY_PATH, (v) => isSortKey(v) ? v : null);
+      loadSortDirection = () => read(SORT_DIRECTION_PATH, (v) => isSortDirection(v) ? v : null);
+      loadShowValues = () => read(SHOW_VALUES_PATH, (v) => {
+        if (v === true || v === 1 || v === "1" || v === "true") return true;
+        if (v === false || v === 0 || v === "0" || v === "false") return false;
+        return null;
+      });
+      saveShowValues = (visible) => write(SHOW_VALUES_PATH, visible);
+    }
+  });
+
+  // src/features/inventory/sortBar.ts
+  function caption(text2) {
+    const el = document.createElement("span");
+    el.textContent = text2;
+    Object.assign(el.style, { font: "inherit", opacity: "0.8", flex: "0 0 auto" });
+    return el;
+  }
+  function createSortBar(handlers) {
+    const wrap = document.createElement("div");
+    wrap.className = WRAP_CLASS;
+    Object.assign(wrap.style, { display: "block", width: "100%", gridColumn: "1 / -1", flex: "0 0 auto", contain: "layout style" });
+    const row5 = document.createElement("div");
+    Object.assign(row5.style, {
+      display: "flex",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: "8px",
+      marginTop: "10px",
+      paddingTop: "8px",
+      borderTop: `1px solid ${color.borderStrong}`,
+      width: "100%",
+      boxSizing: "border-box"
+    });
+    const sortSelect = select2({ small: true });
+    const directionSelect = select2({ small: true });
+    for (const direction of DIRECTIONS) {
+      directionSelect.appendChild(new Option(DIRECTION_LABELS[direction], direction));
+    }
+    const showValues = switchInput(true);
+    const showValuesLabel = document.createElement("label");
+    Object.assign(showValuesLabel.style, { display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer", flex: "0 0 auto" });
+    showValuesLabel.append(showValues, "Show values");
+    const divider = document.createElement("span");
+    Object.assign(divider.style, { alignSelf: "stretch", width: "1px", minHeight: "24px", background: color.border, flex: "0 0 auto" });
+    const summary = new ValueSummary();
+    row5.append(caption("Sort by:"), sortSelect, caption("Order:"), directionSelect, divider, showValuesLabel, summary.el);
+    wrap.appendChild(row5);
+    const bar = { wrap, sortSelect, directionSelect, showValues, summary, lastSortKey: null, lastDirection: null };
+    const picked = () => {
+      bar.lastSortKey = sortSelect.value || "none";
+      bar.lastDirection = directionSelect.value || "asc";
+      handlers.onSortChange(bar.lastSortKey, bar.lastDirection);
+    };
+    sortSelect.addEventListener("change", picked);
+    directionSelect.addEventListener("change", picked);
+    showValues.addEventListener("change", () => handlers.onShowValuesChange(showValues.checked));
+    return bar;
+  }
+  function ensureSortBar(grid, handlers) {
+    const filtersBlock = grid.querySelector(FILTERS_BLOCK_SELECTOR);
+    if (!filtersBlock) return null;
+    const existing = filtersBlock.querySelector(`:scope > .${WRAP_CLASS}`);
+    const bar = existing && bars.get(existing) || createSortBar(handlers);
+    bars.set(bar.wrap, bar);
+    if (bar.wrap.parentElement !== filtersBlock) filtersBlock.appendChild(bar.wrap);
+    return bar;
+  }
+  function renderSortOptions(select3, options2, preferred) {
+    const previous = preferred ?? select3.value;
+    select3.replaceChildren(...options2.map((opt) => new Option(opt.label, opt.value)));
+    if (options2.some((o) => o.value === "none")) select3.value = "none";
+    if (previous && previous !== "none" && options2.some((o) => o.value === previous)) select3.value = previous;
+  }
+  var WRAP_CLASS, bars;
+  var init_sortBar = __esm({
+    "src/features/inventory/sortBar.ts"() {
+      "use strict";
+      init_fields();
+      init_toggles();
+      init_theme();
+      init_inventoryDom();
+      init_sortOptions();
+      init_valueDisplay();
+      WRAP_CLASS = "tm-sort-wrap";
+      bars = /* @__PURE__ */ new WeakMap();
+    }
+  });
+
+  // src/features/inventory/sorting.ts
+  function attachInventorySorting() {
+    const sortCards = createDomSorter();
+    const subs = new Subscriptions();
+    let showValues = loadShowValues() ?? true;
+    let grid = null;
+    let bar = null;
+    let lastAppliedSortKey = null;
+    let lastAppliedDirection = null;
+    let lastSortedOrder = null;
+    let lastContextKey = null;
+    let lastRenderedEntryCount = null;
+    let gridListeners = null;
+    const resolveGrid = () => {
+      if (grid && document.contains(grid)) return grid;
+      const next = document.querySelector(GRID_SELECTOR);
+      if (next !== grid) setGrid(next);
+      return grid && document.contains(grid) ? grid : null;
+    };
+    const sortGrid = (target, sortKey, direction) => sortCards(target, sortKey, direction, showValues).then(() => {
+      const container = getItemsContainer(target);
+      lastSortedOrder = container ? domOrderOf(getDomEntries(container)) : null;
+    });
+    const sortWithBar = () => {
+      const target = resolveGrid();
+      if (!target || !bar) return;
+      void sortGrid(target, bar.sortSelect.value, bar.directionSelect.value);
+    };
+    let noiseContainer = null;
+    const noiseObserver = new MutationObserver(() => {
+      if (noiseContainer) clearNoiseText(noiseContainer);
+    });
+    const observeNoise = (container) => {
+      if (noiseContainer === container) return;
+      noiseObserver.disconnect();
+      noiseContainer = container;
+      if (!container) return;
+      noiseObserver.observe(container, { subtree: true, childList: true, characterData: true });
+      clearNoiseText(container);
+    };
+    const gridObserver = new MutationObserver((mutations) => {
+      const relevant = mutations.some(
+        (m) => m.type === "attributes" ? GRID_ATTRIBUTES.includes(m.attributeName || "") : m.type === "childList"
+      );
+      if (relevant) refresh();
+    });
+    function setGrid(next) {
+      if (grid === next) return;
+      gridObserver.disconnect();
+      grid = next;
+      lastAppliedSortKey = null;
+      lastSortedOrder = null;
+      lastContextKey = null;
+      lastRenderedEntryCount = null;
+      if (!grid) {
+        gridListeners?.dispose();
+        gridListeners = null;
+        observeNoise(null);
+        return;
+      }
+      gridObserver.observe(grid, { subtree: true, childList: true, attributes: true, attributeFilter: GRID_ATTRIBUTES });
+    }
+    const handlers = {
+      onSortChange(sortKey, direction) {
+        lastAppliedSortKey = sortKey;
+        lastAppliedDirection = direction;
+        saveSort(sortKey, direction);
+        const target = resolveGrid();
+        if (target) void sortGrid(target, sortKey, direction);
+      },
+      onShowValuesChange(visible) {
+        showValues = visible;
+        saveShowValues(visible);
+        sortWithBar();
+      }
+    };
+    const refreshSummary = () => {
+      const target = resolveGrid();
+      if (target && bar) void bar.summary.update(getActiveFilters(target), getSearchQuery(target));
+    };
+    function pickDirection(current3, sortKey) {
+      const fallback = DEFAULT_DIRECTION[sortKey] ?? "asc";
+      const saved = loadSortDirection();
+      const preferred = isSortDirection(current3.lastDirection) && current3.lastDirection || saved || fallback;
+      current3.directionSelect.value = preferred;
+      if (!isSortDirection(current3.directionSelect.value)) current3.directionSelect.value = fallback;
+      return current3.directionSelect.value;
+    }
+    function update() {
+      const target = resolveGrid();
+      if (!target || !isVisible(target)) return;
+      void followInventoryValues();
+      const current3 = ensureSortBar(target, handlers);
+      if (!current3) return;
+      bar = current3;
+      if (!gridListeners) {
+        gridListeners = new Subscriptions();
+        gridListeners.add(onInventoryItemsChange(refreshSummary));
+        gridListeners.add(
+          onPlayersInRoomChange(() => {
+            refreshSummary();
+            sortWithBar();
+          })
+        );
+        gridListeners.add(
+          onShownItemTypesChange((contextKey) => {
+            if (contextKey === lastContextKey) setTimeout(refresh, 0);
+          })
+        );
+      }
+      current3.showValues.checked = showValues;
+      const filters = getActiveFilters(target);
+      const search2 = getSearchQuery(target);
+      const container = getItemsContainer(target);
+      observeNoise(container);
+      const entries = container ? getDomEntries(container) : [];
+      const domChanged = domOrderChanged(lastSortedOrder, entries);
+      lastContextKey = filterContextKey(filters, search2);
+      void current3.summary.update(filters, search2);
+      const options2 = computeSortOptions(filters, shownItemTypes(filters, search2));
+      const offered2 = (key2) => key2 && options2.some((o) => o.value === key2) ? key2 : null;
+      if (lastRenderedEntryCount !== entries.length || !current3.sortSelect.options.length) {
+        renderSortOptions(current3.sortSelect, options2, offered2(current3.lastSortKey) || offered2(loadSortKey()));
+        lastRenderedEntryCount = entries.length;
+      }
+      const sortKey = current3.sortSelect.value;
+      current3.lastSortKey = sortKey;
+      const direction = pickDirection(current3, sortKey);
+      current3.lastDirection = direction;
+      if (sortKey !== lastAppliedSortKey || direction !== lastAppliedDirection || domChanged) {
+        lastAppliedSortKey = sortKey;
+        lastAppliedDirection = direction;
+        saveSort(sortKey, direction);
+        void sortGrid(target, sortKey, direction);
+      } else {
+        lastSortedOrder = domOrderOf(entries);
+      }
+    }
+    const refresh = debounce(update, 120);
+    let lastHutchRoot = null;
+    let hutchNeedsInit = true;
+    const refreshPetHutch = debounce(() => void updatePetHutchSections(), 120);
+    const maybeInitPetHutch = () => {
+      const root4 = document.querySelector(PET_HUTCH_ROOT_SELECTOR);
+      if (root4 !== lastHutchRoot) {
+        lastHutchRoot = root4;
+        hutchNeedsInit = true;
+      }
+      if (!root4 || !hutchNeedsInit) return;
+      void updatePetHutchSections(true).then((applied2) => {
+        if (applied2) hutchNeedsInit = false;
+      });
+    };
+    const bodyObserver = new MutationObserver(() => {
+      const current3 = grid && document.contains(grid) ? grid : null;
+      if (grid && !current3) setGrid(null);
+      const next = document.querySelector(GRID_SELECTOR);
+      if (next !== current3) {
+        setGrid(next);
+        if (next) update();
+      }
+      maybeInitPetHutch();
+      refreshPetHutch();
+    });
+    const onGridInput = (event) => {
+      const target = event.target;
+      const within = target?.closest(GRID_SELECTOR);
+      if (within && within === resolveGrid()) setTimeout(refresh, 0);
+    };
+    bodyObserver.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    setGrid(document.querySelector(GRID_SELECTOR));
+    document.addEventListener("change", onGridInput, true);
+    document.addEventListener("input", onGridInput, true);
+    update();
+    maybeInitPetHutch();
+    refreshPetHutch();
+    subs.add(() => {
+      gridObserver.disconnect();
+      bodyObserver.disconnect();
+      noiseObserver.disconnect();
+      refresh.cancel();
+      refreshPetHutch.cancel();
+      document.removeEventListener("change", onGridInput, true);
+      document.removeEventListener("input", onGridInput, true);
+      gridListeners?.dispose();
+      bar?.wrap.remove();
+    });
+    return () => subs.dispose();
+  }
+  function startInventorySortingObserver() {
+    if (typeof window === "undefined" || typeof document === "undefined") return () => {
+    };
+    let stop = null;
+    let waiter = null;
+    const attachIfReady = () => {
+      if (stop) return true;
+      if (!document.querySelector(GRID_SELECTOR) && !document.querySelector(PET_HUTCH_ROOT_SELECTOR)) return false;
+      stop = attachInventorySorting();
+      return true;
+    };
+    const start2 = () => {
+      if (attachIfReady()) return;
+      const target = document.body || document.documentElement;
+      if (!target) return;
+      waiter = new MutationObserver(() => {
+        if (attachIfReady()) {
+          waiter?.disconnect();
+          waiter = null;
+        }
+      });
+      waiter.observe(target, { childList: true, subtree: true });
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start2, { once: true });
+    else start2();
+    return () => {
+      document.removeEventListener("DOMContentLoaded", start2);
+      waiter?.disconnect();
+      stop?.();
+    };
+  }
+  var GRID_ATTRIBUTES;
+  var init_sorting = __esm({
+    "src/features/inventory/sorting.ts"() {
+      "use strict";
+      init_async2();
+      init_emitter();
+      init_domSorter();
+      init_filters();
+      init_inventoryDom();
+      init_petHutch();
+      init_settings4();
+      init_sortBar();
+      init_sortOptions();
+      init_value();
+      GRID_ATTRIBUTES = ["data-checked", "style", "class", "hidden", "aria-hidden"];
+    }
+  });
+
+  // src/game/keyCombos.ts
+  function modifierOf(part) {
+    const p = part.toLowerCase();
+    if (p === "ctrl" || p === "control") return "ctrl";
+    if (p === "shift") return "shift";
+    if (p === "alt") return "alt";
+    if (p === "meta" || p === "cmd" || p === "command" || p === "win") return "meta";
+    return null;
+  }
+  function parseComboSpec(c) {
+    const spec = { code: "", ctrl: false, shift: false, alt: false, meta: false };
+    for (const part of String(c).split("+").map((s) => s.trim()).filter(Boolean)) {
+      const mod = modifierOf(part);
+      if (mod) spec[mod] = true;
+      else spec.code = part;
+    }
+    return spec;
+  }
+  function parseCombo(c) {
+    const parsed = parseComboSpec(c);
+    const spec = {};
+    for (const mod of MODIFIER_ORDER) {
+      if (parsed[mod]) spec[mod] = true;
+    }
+    if (parsed.code) {
+      spec.code = parsed.code;
+      spec.key = codeToKey(parsed.code, !!spec.shift);
+    }
+    return spec;
+  }
+  function joinModifiers(mods, code) {
+    mods.sort((a, b) => MODIFIER_ORDER.indexOf(a) - MODIFIER_ORDER.indexOf(b));
+    return (mods.length ? mods.join("+") + "+" : "") + code;
+  }
+  function normalizeCombo(c) {
+    const mods = [];
+    let code = "";
+    for (const part of String(c).split("+").map((s) => s.trim()).filter(Boolean)) {
+      const mod = modifierOf(part);
+      if (mod) mods.push(mod);
+      else code = part;
+    }
+    return joinModifiers(mods, code);
+  }
+  function eventToCombo(e) {
+    const mods = [];
+    if (e.ctrlKey) mods.push("ctrl");
+    if (e.shiftKey) mods.push("shift");
+    if (e.altKey) mods.push("alt");
+    if (e.metaKey) mods.push("meta");
+    return joinModifiers(mods, e.code || "");
+  }
+  function formatCombo(c) {
+    const mods = [];
+    if (c.ctrl) mods.push("Ctrl");
+    if (c.shift) mods.push("Shift");
+    if (c.alt) mods.push("Alt");
+    if (c.meta) mods.push("Meta");
+    return (mods.length ? mods.join("+") + "+" : "") + (c.code || "");
+  }
+  var MODIFIER_ORDER, KEYCODE_TABLE, codeToKey, keyCodeOf, isEditableTarget;
+  var init_keyCombos = __esm({
+    "src/game/keyCombos.ts"() {
+      "use strict";
+      MODIFIER_ORDER = ["ctrl", "shift", "alt", "meta"];
+      KEYCODE_TABLE = {
+        KeyA: 65,
+        KeyB: 66,
+        KeyC: 67,
+        KeyD: 68,
+        KeyE: 69,
+        KeyF: 70,
+        KeyG: 71,
+        KeyH: 72,
+        KeyI: 73,
+        KeyJ: 74,
+        KeyK: 75,
+        KeyL: 76,
+        KeyM: 77,
+        KeyN: 78,
+        KeyO: 79,
+        KeyP: 80,
+        KeyQ: 81,
+        KeyR: 82,
+        KeyS: 83,
+        KeyT: 84,
+        KeyU: 85,
+        KeyV: 86,
+        KeyW: 87,
+        KeyX: 88,
+        KeyY: 89,
+        KeyZ: 90,
+        Digit0: 48,
+        Digit1: 49,
+        Digit2: 50,
+        Digit3: 51,
+        Digit4: 52,
+        Digit5: 53,
+        Digit6: 54,
+        Digit7: 55,
+        Digit8: 56,
+        Digit9: 57,
+        Space: 32,
+        Enter: 13,
+        Escape: 27,
+        Tab: 9,
+        Backspace: 8,
+        Delete: 46,
+        Insert: 45,
+        ArrowLeft: 37,
+        ArrowUp: 38,
+        ArrowRight: 39,
+        ArrowDown: 40
+      };
+      codeToKey = (code, shift = false) => {
+        if (!code) return "";
+        if (/^Key[A-Z]$/.test(code)) return shift ? code.slice(3).toUpperCase() : code.slice(3).toLowerCase();
+        if (/^Digit[0-9]$/.test(code)) return code.slice(5);
+        if (code === "Space") return " ";
+        return code;
+      };
+      keyCodeOf = (code, key2) => KEYCODE_TABLE[code] ?? (key2 && key2.length === 1 ? key2.toUpperCase().charCodeAt(0) : 0);
+      isEditableTarget = (t) => {
+        const el = t;
+        if (!el || !el.tagName) return false;
+        const tag = el.tagName.toLowerCase();
+        if (tag === "input" || tag === "textarea") return true;
+        const ce = el.getAttribute && el.getAttribute("contenteditable");
+        return !!(ce && ce !== "false");
+      };
+    }
+  });
+
+  // src/game/ingameHotkeys.ts
+  var resolveContext, REMAP_FLAG, RAPID_SYN_FLAG, InGameHotkeys, defaultContext, inGameHotkeys;
+  var init_ingameHotkeys = __esm({
+    "src/game/ingameHotkeys.ts"() {
+      "use strict";
+      init_pageContext();
+      init_keyCombos();
+      resolveContext = (context) => {
+        if (context) return context;
+        const win = pageWindow ?? window;
+        const doc = win.document ?? document;
+        return { window: win, document: doc };
+      };
+      REMAP_FLAG = "__inGameHotkeysRemapped__";
+      RAPID_SYN_FLAG = "__inGameHotkeysRapidSynthetic__";
+      InGameHotkeys = class {
+        constructor(autoAttach = true, context) {
+          // remapper
+          this.enabled = true;
+          this.map = /* @__PURE__ */ new Map();
+          // normalised combo -> target spec
+          this.blockedSet = /* @__PURE__ */ new Set();
+          // blocked combos
+          this.eventBlockers = /* @__PURE__ */ new Set();
+          this.attachedDocs = /* @__PURE__ */ new WeakSet();
+          // documents already hooked
+          this.observers = [];
+          this.handlers = /* @__PURE__ */ new Map();
+          this.passthrough = /* @__PURE__ */ new Set(["F5", "F12"]);
+          // rapid-fire manager
+          this.sessions = /* @__PURE__ */ new Map();
+          const ctx2 = resolveContext(context);
+          this.win = ctx2.window;
+          this.doc = ctx2.document;
+          if (autoAttach) {
+            this.attachDoc(this.doc);
+            this.attachAllFrames();
+            if (this.win.MutationObserver) {
+              const mo = new this.win.MutationObserver(() => this.attachAllFrames());
+              mo.observe(this.doc.documentElement || this.doc, { childList: true, subtree: true });
+              this.observers.push(mo);
+            }
+          }
+        }
+        /* --------- remapper on/off --------- */
+        enable(flag = true) {
+          this.enabled = !!flag;
+        }
+        disable() {
+          this.enabled = false;
+        }
+        isEnabled() {
+          return this.enabled;
+        }
+        /* --------- remaps --------- */
+        setMap(m) {
+          this.map.clear();
+          for (const [from, to] of Object.entries(m || {})) this.map.set(normalizeCombo(from), parseCombo(to));
+        }
+        add(from, to) {
+          this.map.set(normalizeCombo(from), parseCombo(to));
+        }
+        remove(from) {
+          this.map.delete(normalizeCombo(from));
+        }
+        clear() {
+          this.map.clear();
+        }
+        current() {
+          const out = {};
+          for (const [k, v] of this.map.entries()) out[k] = formatCombo(v);
+          return out;
+        }
+        /* --------- blocking --------- */
+        block(combo) {
+          this.blockedSet.add(normalizeCombo(combo));
+        }
+        unblock(combo) {
+          this.blockedSet.delete(normalizeCombo(combo));
+        }
+        blocked() {
+          return Array.from(this.blockedSet);
+        }
+        addEventBlocker(blocker) {
+          if (typeof blocker !== "function") {
+            return () => {
+            };
+          }
+          this.eventBlockers.add(blocker);
+          return () => {
+            this.eventBlockers.delete(blocker);
+          };
+        }
+        /* --------- binding helpers --------- */
+        /** Moves the action bound to oldBase onto newPhysical and disables oldBase. */
+        replace(oldBase, newPhysical) {
+          const oldN = normalizeCombo(oldBase);
+          const newN = normalizeCombo(newPhysical);
+          this.blockedSet.add(oldN);
+          this.map.set(newN, parseCombo(oldN));
+        }
+        /** Swaps two keys both ways (blocks neither). */
+        swap(a, b) {
+          const an = normalizeCombo(a), bn = normalizeCombo(b);
+          this.map.set(an, parseCombo(bn));
+          this.map.set(bn, parseCombo(an));
+        }
+        /* --------- frames & cleanup --------- */
+        attachAllFrames() {
+          this.doc.querySelectorAll("iframe").forEach((f) => {
+            try {
+              const d = f.contentDocument;
+              const origin = d?.location?.origin;
+              if (d && origin && origin === this.win.location.origin) this.attachDoc(d);
+            } catch {
+            }
+          });
+        }
+        destroy() {
+          for (const [doc, handler] of this.handlers.entries()) {
+            try {
+              const win = doc.defaultView || this.win;
+              win.removeEventListener("keydown", handler, true);
+              win.removeEventListener("keypress", handler, true);
+              win.removeEventListener("keyup", handler, true);
+            } catch {
+            }
+          }
+          this.handlers.clear();
+          this.attachedDocs = /* @__PURE__ */ new WeakSet();
+          for (const mo of this.observers) mo.disconnect();
+          this.observers = [];
+          this.stopAllRapidFires();
+          this.eventBlockers.clear();
+        }
+        /* --------- rapid-fire (API) --------- */
+        startRapidFire(opts) {
+          const trigger = normalizeCombo(opts.trigger);
+          const emit2 = normalizeCombo(opts.emit ?? opts.trigger);
+          const rateMs = 1e3 / Math.max(1, opts.rateHz ?? 12);
+          const mode = opts.mode ?? "tap";
+          const keyupDelayMs = opts.keyupDelayMs ?? 20;
+          this.sessions.set(trigger, {
+            trigger: parseComboSpec(trigger),
+            emit: parseComboSpec(emit2),
+            rateMs,
+            mode,
+            keyupDelayMs,
+            pressed: false,
+            lastTarget: null,
+            tickTimer: null,
+            upTimer: null
+          });
+        }
+        stopRapidFire(trigger) {
+          if (!trigger) {
+            this.stopAllRapidFires();
+            return;
+          }
+          const key2 = normalizeCombo(trigger);
+          const s = this.sessions.get(key2);
+          if (!s) return;
+          this.endSession(s);
+          this.sessions.delete(key2);
+        }
+        stopAllRapidFires() {
+          for (const s of this.sessions.values()) this.endSession(s);
+          this.sessions.clear();
+        }
+        isRapidFireActive(trigger) {
+          const s = this.sessions.get(normalizeCombo(trigger));
+          return !!(s && s.pressed);
+        }
+        setRapidFireRate(trigger, hz) {
+          const s = this.sessions.get(normalizeCombo(trigger));
+          if (!s) return;
+          s.rateMs = 1e3 / Math.max(1, hz);
+          if (s.pressed) this.restartLoop(s);
+        }
+        setRapidFireMode(trigger, mode) {
+          const s = this.sessions.get(normalizeCombo(trigger));
+          if (!s) return;
+          s.mode = mode;
+        }
+        listRapidFires() {
+          const out = [];
+          for (const [key2, s] of this.sessions.entries()) {
+            out.push({
+              trigger: key2,
+              emit: formatCombo(s.emit),
+              rateHz: Math.round(1e3 / s.rateMs),
+              mode: s.mode
+            });
+          }
+          return out;
+        }
+        /* ================= internals ================= */
+        attachDoc(doc) {
+          if (!doc || this.attachedDocs.has(doc)) return;
+          const handler = this.makeHandler(doc);
+          const win = doc.defaultView || this.win;
+          win.addEventListener("keydown", handler, true);
+          win.addEventListener("keypress", handler, true);
+          win.addEventListener("keyup", handler, true);
+          this.handlers.set(doc, handler);
+          this.attachedDocs.add(doc);
+        }
+        makeHandler(doc) {
+          return (evt) => {
+            const e = evt;
+            if (e[REMAP_FLAG]) return;
+            const isRapidSynthetic = !!e[RAPID_SYN_FLAG];
+            if (!isRapidSynthetic) this.handleRapidFireInput(doc, e);
+            if (!isRapidSynthetic && this.eventBlockers.size) {
+              for (const blocker of Array.from(this.eventBlockers)) {
+                let shouldBlock = false;
+                try {
+                  shouldBlock = blocker(e);
+                } catch {
+                  shouldBlock = false;
+                }
+                if (shouldBlock) {
+                  e.stopImmediatePropagation();
+                  e.preventDefault();
+                  return;
+                }
+              }
+            }
+            if (!this.enabled) return;
+            if (isEditableTarget(e.target)) return;
+            if (this.passthrough.has(e.code)) return;
+            const combo = eventToCombo(e);
+            if (this.blockedSet.has(combo)) {
+              e.stopImmediatePropagation();
+              e.preventDefault();
+              return;
+            }
+            const spec = this.map.get(combo);
+            if (!spec) return;
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            const code = spec.code || "";
+            const key2 = spec.key !== void 0 ? spec.key : codeToKey(code, e.shiftKey);
+            const ctrl = spec.ctrl ?? e.ctrlKey;
+            const shift = spec.shift ?? e.shiftKey;
+            const alt = spec.alt ?? e.altKey;
+            const meta = spec.meta ?? e.metaKey;
+            const kc = keyCodeOf(code, key2);
+            const eventWindow = doc.defaultView || this.win;
+            const ne = new eventWindow.KeyboardEvent(e.type, {
+              bubbles: true,
+              cancelable: true,
+              composed: true,
+              key: key2,
+              code,
+              ctrlKey: ctrl,
+              shiftKey: shift,
+              altKey: alt,
+              metaKey: meta,
+              repeat: e.repeat,
+              location: e.location
+            });
+            Object.defineProperties(ne, {
+              keyCode: { get: () => kc },
+              which: { get: () => kc },
+              charCode: { get: () => kc },
+              [REMAP_FLAG]: { value: true }
+            });
+            const target = e.target || doc;
+            target.dispatchEvent(ne);
+          };
+        }
+        /* ---------- rapid fire internals ---------- */
+        handleRapidFireInput(doc, e) {
+          if (isEditableTarget(e.target)) return;
+          if (e.type === "keydown" && !e.repeat) {
+            for (const s of this.sessions.values()) {
+              if (this.matches(e, s.trigger)) {
+                s.pressed = true;
+                s.lastTarget = e.target || doc;
+                this.startLoop(doc, s);
+              }
+            }
+          } else if (e.type === "keyup") {
+            for (const s of this.sessions.values()) {
+              if (this.matches(e, s.trigger)) {
+                s.pressed = false;
+                this.stopLoop(doc, s);
+              }
+            }
+          }
+        }
+        matches(e, c) {
+          return e.code === c.code && !!e.ctrlKey === !!c.ctrl && !!e.shiftKey === !!c.shift && !!e.altKey === !!c.alt && !!e.metaKey === !!c.meta;
+        }
+        startLoop(doc, s) {
+          this.stopLoop(doc, s);
+          const tick = () => {
+            if (!s.pressed) return;
+            this.dispatchKey(doc, s.lastTarget || doc, "keydown", s.emit, true);
+            if (s.mode === "tap") {
+              if (s.upTimer) this.win.clearTimeout(s.upTimer);
+              s.upTimer = this.win.setTimeout(() => {
+                this.dispatchKey(doc, s.lastTarget || doc, "keyup", s.emit, false);
+              }, s.keyupDelayMs);
+            }
+          };
+          tick();
+          s.tickTimer = this.win.setInterval(tick, s.rateMs);
+        }
+        stopLoop(doc, s) {
+          if (s.tickTimer) {
+            this.win.clearInterval(s.tickTimer);
+            s.tickTimer = null;
+          }
+          if (s.upTimer) {
+            this.win.clearTimeout(s.upTimer);
+            s.upTimer = null;
+          }
+          if (s.mode === "hold" && s.lastTarget) {
+            this.dispatchKey(doc, s.lastTarget, "keyup", s.emit, false);
+          }
+        }
+        restartLoop(s) {
+          if (!s.pressed) return;
+          const anyDoc = this.doc;
+          this.startLoop(anyDoc, s);
+        }
+        endSession(s) {
+          this.stopLoop(this.doc, s);
+          s.pressed = false;
+          s.lastTarget = null;
+        }
+        dispatchKey(doc, target, type, c, repeat) {
+          const code = c.code;
+          const key2 = codeToKey(code, c.shift);
+          const kc = keyCodeOf(code, key2);
+          const eventWindow = doc.defaultView || this.win;
+          const ev = new eventWindow.KeyboardEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: key2,
+            code,
+            ctrlKey: c.ctrl,
+            shiftKey: c.shift,
+            altKey: c.alt,
+            metaKey: c.meta,
+            repeat
+          });
+          Object.defineProperties(ev, {
+            keyCode: { get: () => kc },
+            which: { get: () => kc },
+            charCode: { get: () => kc },
+            [RAPID_SYN_FLAG]: { value: true }
+          });
+          try {
+            target.dispatchEvent(ev);
+          } catch {
+            doc.dispatchEvent(ev);
+          }
+        }
+      };
+      defaultContext = resolveContext();
+      inGameHotkeys = new InGameHotkeys(true, defaultContext);
+      shareGlobal("inGameHotkeys", inGameHotkeys);
+    }
+  });
+
+  // src/features/keybinds/gameRemap.ts
+  function clearRemapsTo(gameKey) {
+    try {
+      inGameHotkeys.unblock(gameKey);
+    } catch {
+    }
+    try {
+      for (const [from, to] of Object.entries(inGameHotkeys.current())) {
+        if (String(to).split("+").pop() === gameKey) {
+          try {
+            inGameHotkeys.remove(from);
+          } catch {
+          }
+        }
+      }
+    } catch {
+    }
+  }
+  function syncGameKeybind(id) {
+    const gameKey = GAME_KEYS[id];
+    clearRemapsTo(gameKey);
+    const previousRapidFire = rapidFireCombos.get(id);
+    if (previousRapidFire) {
+      try {
+        inGameHotkeys.stopRapidFire(previousRapidFire);
+      } catch {
+      }
+      rapidFireCombos.delete(id);
+    }
+    const hk = getKeybind(id);
+    const combo = hk ? hotkeyToString(hk) : "";
+    if (!combo) return;
+    if (combo !== gameKey) {
+      try {
+        inGameHotkeys.replace(gameKey, combo);
+      } catch {
+      }
+    }
+    if (getKeybindHoldDetection(id)) {
+      try {
+        inGameHotkeys.startRapidFire({ trigger: combo, emit: combo, mode: "tap", rateHz: 10 });
+        rapidFireCombos.set(id, combo);
+      } catch {
+      }
+    }
+  }
+  function installGameKeybindsOnce() {
+    if (installed2 || typeof window === "undefined") return;
+    installed2 = true;
+    for (const id of Object.keys(GAME_KEYS)) {
+      syncGameKeybind(id);
+      onKeybindChange(id, () => syncGameKeybind(id));
+      onKeybindHoldDetectionChange(id, () => syncGameKeybind(id));
+    }
+  }
+  var GAME_KEYS, rapidFireCombos, installed2;
+  var init_gameRemap = __esm({
+    "src/features/keybinds/gameRemap.ts"() {
+      "use strict";
+      init_ingameHotkeys();
+      init_hotkey();
+      init_keybinds();
+      GAME_KEYS = {
+        "game.action": "Space",
+        "game.inventory": "KeyE",
+        "game.move-up": "KeyW",
+        "game.move-down": "KeyS",
+        "game.move-left": "KeyA",
+        "game.move-right": "KeyD"
+      };
+      rapidFireCombos = /* @__PURE__ */ new Map();
+      installed2 = false;
+    }
+  });
+
+  // src/features/keybinds/modalToggles.ts
+  async function toggleModal(modalId) {
+    try {
+      if (await Atoms.ui.activeModal.get() === modalId) await closeModal(modalId);
+      else await openModal(modalId);
+    } catch {
+    }
+  }
+  function installModalToggleKeybind(actionId, modalId) {
+    if (installedActions.has(actionId) || typeof window === "undefined") return;
+    installedActions.add(actionId);
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (shouldIgnoreKeydown(event) || !eventMatchesKeybind(actionId, event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        void toggleModal(modalId);
+      },
+      true
+    );
+  }
+  function installModalToggleKeybinds() {
+    for (const [actionId, modalId] of MODAL_TOGGLES) installModalToggleKeybind(actionId, modalId);
+  }
+  var MODAL_TOGGLES, installedActions;
+  var init_modalToggles = __esm({
+    "src/features/keybinds/modalToggles.ts"() {
+      "use strict";
+      init_atoms();
+      init_fakeModal();
+      init_keyboard();
+      init_keybinds();
+      MODAL_TOGGLES = [
+        ["game.pet-hutch", "petHutch"],
+        ["game.journal", JOURNAL_MODAL_ID],
+        ["game.seed-silo", "seedSilo"],
+        ["game.decor-shed", "decorShed"],
+        ["game.tool-shack", "toolShack"],
+        ["game.feeding-trough", "feedingTrough"],
+        ["game.weather-station", "weatherStation"]
+      ];
+      installedActions = /* @__PURE__ */ new Set();
+    }
+  });
+
+  // src/features/locker/decorPickupLockIndicator.ts
+  function looksLikeDecorTooltip(el) {
+    const text2 = (el.textContent || "").toLowerCase();
+    return !!text2 && !!el.querySelector("canvas") && decorLabels().some((label2) => text2.includes(label2));
+  }
+  function startDecorPickupLockIndicator() {
+    const indicator = startDomLockIndicator({
+      look: { owner: "decor", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyph: cornerGlyph(8) },
+      selector: ".css-502lyi",
+      isTarget: looksLikeDecorTooltip,
+      isLocked: () => lockerRestrictionsService.isDecorPickupLocked()
+    });
+    indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
+    return indicator;
+  }
+  var decorLabels;
+  var init_decorPickupLockIndicator = __esm({
+    "src/features/locker/decorPickupLockIndicator.ts"() {
+      "use strict";
+      init_data();
+      init_domLockMarks();
+      init_restrictions();
+      decorLabels = memoOnCatalogs(() => {
+        const labels = /* @__PURE__ */ new Set();
+        for (const [decorId, entry] of Object.entries(decorCatalog2)) {
+          if (decorId) labels.add(decorId.toLowerCase());
+          if (typeof entry?.name === "string" && entry.name) labels.add(entry.name.toLowerCase());
+        }
+        return Array.from(labels);
+      });
+    }
+  });
+
+  // src/features/locker/eggHatchLockIndicator.ts
+  function startEggHatchLockIndicator() {
+    let currentEggId = null;
+    const indicator = startDomLockIndicator({
+      look: { owner: "egg", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyph: cornerGlyph(8) },
+      selector: ".css-502lyi",
+      isTarget: (el) => (el.textContent || "").toLowerCase().includes("egg"),
+      isLocked: () => lockerRestrictionsService.isEggLocked(currentEggId)
+    });
+    indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
+    void Atoms.data.myCurrentGardenObject.get().then((initial) => {
+      currentEggId = eggIdOf(initial);
+    }).catch(() => {
+    });
+    indicator.add(
+      Atoms.data.myCurrentGardenObject.onChange((next) => {
+        currentEggId = eggIdOf(next);
+        indicator.refresh();
+      })
+    );
+    return indicator;
+  }
+  var init_eggHatchLockIndicator = __esm({
+    "src/features/locker/eggHatchLockIndicator.ts"() {
+      "use strict";
+      init_atoms();
+      init_domLockMarks();
+      init_restrictions();
+    }
+  });
+
+  // src/features/locker/indicator.ts
+  function isDecorObject(obj) {
+    return !!obj && typeof obj === "object" && obj.objectType === "decor";
+  }
+  function startLockerIndicatorInPixi() {
+    let running = true;
+    let currentCard2 = null;
+    let geometry = null;
+    let border = null;
+    let lockIcon = null;
+    let graphicsCtor = null;
+    let currentGardenObject2 = null;
+    const debugState3 = { lastError: null, hasBorder: false, objectType: null };
+    shareGlobal("__MG_LOCKER_INDICATOR_PIXI_DEBUG__", debugState3);
+    const isLocked = () => {
+      const eggId = eggIdOf(currentGardenObject2);
+      if (eggId) return lockerRestrictionsService.isEggLocked(eggId);
+      if (isDecorObject(currentGardenObject2)) return lockerRestrictionsService.isDecorPickupLocked();
+      return lockerService.currentHarvestAllowed() === false;
+    };
+    const removeBorder = () => {
+      if (border) {
+        try {
+          border.destroy();
+        } catch {
+        }
+        border = null;
+      }
+      if (lockIcon) {
+        try {
+          lockIcon.destroy();
+        } catch {
+        }
+        lockIcon = null;
+      }
+      debugState3.hasBorder = false;
+    };
+    const syncUnsafe = () => {
+      debugState3.objectType = currentGardenObject2?.objectType ?? null;
+      if (!running || !currentCard2 || currentCard2.destroyed || !geometry || !isLocked()) {
+        removeBorder();
+        return;
+      }
+      const state5 = getReadySpriteState();
+      if (!graphicsCtor) {
+        graphicsCtor = state5 ? findGraphicsCtor(getStage(state5)) : null;
+        if (!graphicsCtor) return;
+      }
+      if (!border) {
+        border = new graphicsCtor();
+        currentCard2.addChild(border);
+      }
+      const left = -BORDER_EXPAND;
+      const top = -BORDER_EXPAND;
+      const width = Math.max(0, geometry.width + BORDER_EXPAND * 2);
+      const height = Math.max(0, geometry.height + BORDER_EXPAND * 2);
+      const inset = BORDER_WIDTH / 2;
+      border.clear();
+      border.roundRect(left + inset, top + inset, Math.max(0, width - BORDER_WIDTH), Math.max(0, height - BORDER_WIDTH), BORDER_RADIUS).stroke({ width: BORDER_WIDTH, color: BORDER_COLOR, alpha: 1 });
+      debugState3.hasBorder = true;
+      if (!lockIcon && state5?.ctors?.Text) {
+        lockIcon = new state5.ctors.Text({ text: LOCK_ICON_TEXT, style: LOCK_ICON_STYLE });
+        currentCard2.addChild(lockIcon);
+      }
+      if (lockIcon) {
+        const right = left + width;
+        lockIcon.position.set(right - lockIcon.width / 2 - LOCK_ICON_X_NUDGE, top - lockIcon.height / 2 + LOCK_ICON_Y_NUDGE);
+      }
+    };
+    const sync2 = () => {
+      try {
+        syncUnsafe();
+        debugState3.lastError = null;
+      } catch (error) {
+        debugState3.lastError = String(error?.message ?? error);
+        console.warn("[lockerIndicator] sync failed, clearing border", error);
+        try {
+          removeBorder();
+        } catch {
+        }
+      }
+    };
+    const subs = new Subscriptions();
+    subs.add(
+      watchGardenInfoCard((card4, geom) => {
+        removeBorder();
+        currentCard2 = card4;
+        geometry = geom;
+        sync2();
+      })
+    );
+    subs.add(lockerService.onSlotInfoChange(sync2));
+    subs.add(lockerRestrictionsService.subscribe(sync2));
+    void Atoms.data.myCurrentGardenObject.get().then((initial) => {
+      currentGardenObject2 = initial;
+      sync2();
+    }).catch(() => {
+    });
+    subs.add(
+      Atoms.data.myCurrentGardenObject.onChange((next) => {
+        currentGardenObject2 = next;
+        sync2();
+      })
+    );
+    return {
+      stop() {
+        if (!running) return;
+        running = false;
+        subs.dispose();
+        removeBorder();
+        currentCard2 = null;
+      }
+    };
+  }
+  var BORDER_COLOR, BORDER_WIDTH, BORDER_RADIUS, BORDER_EXPAND, LOCK_ICON_TEXT, LOCK_ICON_STYLE, LOCK_ICON_X_NUDGE, LOCK_ICON_Y_NUDGE;
+  var init_indicator = __esm({
+    "src/features/locker/indicator.ts"() {
+      "use strict";
+      init_locker();
+      init_restrictions();
+      init_atoms();
+      init_emitter();
+      init_pageContext();
+      init_gardenInfoCard();
+      init_context();
+      BORDER_COLOR = 12334551;
+      BORDER_WIDTH = 3;
+      BORDER_RADIUS = 12;
+      BORDER_EXPAND = 2;
+      LOCK_ICON_TEXT = "\u{1F512}";
+      LOCK_ICON_STYLE = { fontSize: 16 };
+      LOCK_ICON_X_NUDGE = 4;
+      LOCK_ICON_Y_NUDGE = 4;
+    }
+  });
+
+  // src/features/locker/sellCropsLock.ts
+  function startSellCropsLockWatcher() {
+    const indicator = startDomLockIndicator({
+      look: SELL_CROPS_LOCK_LOOK,
+      selector: ".css-vmnhaw",
+      isTarget: hasSellCropsButton,
+      isLocked: () => !lockerRestrictionsService.allowsCropSale(currentFriendBonus() ?? 0)
+    });
+    indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
+    indicator.add(onFriendBonusChange(indicator.refresh));
+    return indicator;
+  }
+  var SELL_CROPS_LOCK_LOOK, hasSellCropsButton;
+  var init_sellCropsLock = __esm({
+    "src/features/locker/sellCropsLock.ts"() {
+      "use strict";
+      init_domLockMarks();
+      init_friendBonus();
+      init_restrictions();
+      SELL_CROPS_LOCK_LOOK = {
+        owner: "sell-crops",
+        style: {
+          border: "none",
+          "border-radius": "",
+          padding: "",
+          "box-sizing": "",
+          "box-shadow": "none",
+          overflow: "",
+          "z-index": "1000"
+        },
+        glyph: cornerGlyph(4)
+      };
+      hasSellCropsButton = (container) => /sell\s*crops/i.test((container.querySelector("button")?.textContent || "").trim());
+    }
+  });
+
+  // src/features/notifier/audio/encode.ts
+  function reject(toast3, detail) {
+    try {
+      toastSimple("Audio import", toast3, "error").catch(() => {
+      });
+    } catch {
+    }
+    throw new Error(detail);
+  }
+  function checkDuration(buffer, maxSeconds) {
+    if (buffer.duration <= maxSeconds) return;
+    const duration = seconds(buffer.duration);
+    const limit = seconds(maxSeconds);
+    reject(`File duration is ${duration}s (limit: ${limit}s).`, `Audio duration ${duration}s exceeds limit of ${limit}s.`);
+  }
+  function newAudioContext() {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    return new Ctx();
+  }
+  async function decode(file) {
+    const bytes = await file.arrayBuffer();
+    const ctx2 = newAudioContext();
+    try {
+      return await new Promise((resolve, fail) => ctx2.decodeAudioData(bytes.slice(0), resolve, fail));
+    } catch {
+      throw new Error("Failed to decode audio file.");
+    } finally {
+      await ctx2.close().catch(() => {
+      });
+    }
+  }
+  function readAsDataUrl(blob) {
+    return new Promise((resolve, fail) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = fail;
+      reader.readAsDataURL(blob);
+    });
+  }
+  function pickEncoderMime() {
+    if (typeof MediaRecorder === "undefined") return null;
+    for (const mime of ENCODER_MIMES) {
+      try {
+        if (MediaRecorder.isTypeSupported?.(mime)) return mime;
+      } catch {
+      }
+    }
+    return null;
+  }
+  async function reencode(buffer, mime, bitsPerSecond) {
+    const ctx2 = newAudioContext();
+    const dest = ctx2.createMediaStreamDestination();
+    const src = ctx2.createBufferSource();
+    src.buffer = buffer;
+    const gain = ctx2.createGain();
+    gain.gain.value = 0.9;
+    src.connect(gain).connect(dest);
+    const chunks = [];
+    const recorder = new MediaRecorder(dest.stream, { mimeType: mime, bitsPerSecond });
+    const recorded = new Promise((resolve, fail) => {
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size) chunks.push(e.data);
+      };
+      recorder.onerror = (e) => fail(e.error || new Error("MediaRecorder error"));
+      recorder.onstop = () => {
+        try {
+          resolve(new Blob(chunks, { type: mime }));
+        } catch (err) {
+          fail(err);
+        }
+      };
+    });
+    recorder.start();
+    src.start();
+    await new Promise((done) => {
+      src.onended = () => done();
+    });
+    recorder.stop();
+    const out = await recorded;
+    await ctx2.close().catch(() => {
+    });
+    return out;
+  }
+  async function encodeSoundFile(file, limits = SOUND_LIMITS) {
+    if (!file || !(file instanceof File)) throw new Error("No file provided.");
+    const extension = (file.name?.split(".").pop() || "").toLowerCase();
+    const allowedMimes = ALLOWED_MIMES_BY_EXTENSION.get(extension);
+    if (!extension || !allowedMimes) {
+      reject("Unsupported audio format. Allowed formats: MP3, WAV, OGG.", `Unsupported audio extension: ${extension || "unknown"}`);
+    }
+    const type = (file.type || "").toLowerCase();
+    if (!type || !allowedMimes.has(type)) {
+      reject(
+        "File extension and MIME type must match (MP3, WAV, OGG only).",
+        type ? `MIME type ${type} is not valid for .${extension} files.` : `Missing MIME type for .${extension} files.`
+      );
+    }
+    const kb = (bytes) => Math.round(bytes / 1024);
+    if (file.size > limits.maxInputBytes) {
+      throw new Error(`Input file too large (${kb(file.size)}KB). Limit is ${kb(limits.maxInputBytes)}KB.`);
+    }
+    if (file.size <= limits.maxBytes) {
+      checkDuration(await decode(file), limits.maxSeconds);
+      return readAsDataUrl(file);
+    }
+    const mime = pickEncoderMime();
+    if (!mime) throw new Error("Compression unavailable in this browser; file exceeds 200KB.");
+    const buffer = await decode(file);
+    checkDuration(buffer, limits.maxSeconds);
+    for (const bitrate of limits.bitrates) {
+      const blob = await reencode(buffer, mime, bitrate);
+      if (blob.size <= limits.maxBytes) return readAsDataUrl(blob);
+    }
+    reject(
+      `Unable to compress under ${kb(limits.maxBytes)}KB. Try a shorter clip.`,
+      `Could not compress under ${kb(limits.maxBytes)}KB. Try a shorter clip.`
+    );
+  }
+  var SOUND_LIMITS, ALLOWED_MIMES_BY_EXTENSION, ENCODER_MIMES, seconds;
+  var init_encode = __esm({
+    "src/features/notifier/audio/encode.ts"() {
+      "use strict";
+      init_toast();
+      SOUND_LIMITS = {
+        maxBytes: 200 * 1024,
+        maxSeconds: 10,
+        bitrates: [48e3, 32e3, 2e4, 12e3, 8e3],
+        maxInputBytes: 8 * 1024 * 1024
+      };
+      ALLOWED_MIMES_BY_EXTENSION = /* @__PURE__ */ new Map([
+        ["mp3", /* @__PURE__ */ new Set(["audio/mpeg", "audio/mp3"])],
+        ["wav", /* @__PURE__ */ new Set(["audio/wav", "audio/x-wav", "audio/wave"])],
+        ["ogg", /* @__PURE__ */ new Set(["audio/ogg"])]
+      ]);
+      ENCODER_MIMES = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/webm", "audio/ogg", "audio/mp4"];
+      seconds = (s) => s.toFixed(1).replace(/\.0$/, "");
+    }
+  });
+
+  // src/features/notifier/audio/defaultSound.ts
+  var DEFAULT_SOUND_MP3_BASE64;
+  var init_defaultSound = __esm({
+    "src/features/notifier/audio/defaultSound.ts"() {
+      "use strict";
+      DEFAULT_SOUND_MP3_BASE64 = "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yWIx4QmQjniP/DFmXUHhpXgYKiwj0jItaDYoKCJwwYeA8MCCDGJuOoIQJFQEHjhJiW1NwKgKQTnbpNVZyKIIqeEtci87LqvPjrDXFvdx/v/r9eT//////////8X/O/34YjQv//nbVV62e+zRaNdv5k3Nlkv54MsiVZJ2XPNImgx6LJVuEpwRk5xtEkjOFydK6U44SZKtPgOpWFyUrA5KVwmCTAGQasapCi+pBXrShYhskHhSRHScOBoQjCMWFSqaA+hRJoD6EhSXc0qk25kNUMSzoQpY4x2EatYayUjWUjakatczs/X6ssMtcmvSZausPNb1Z7MvsZNtBRrR1vBf8Fl4/xpo2gYAPVqmZh3Zqv0o3AwpxomhWHeCsQjJYtDR7Oz09UeaGmZLiY9UBT1bvBXDXLaLg7lpUq79eJRnBoGZcjQTIU2QmlCpBRpZLpk6gKKER4ApYROtLHiXKhLWJYoV9Wv/+5RE9I8C3GLBgyFE8lsMeDBkI54KgY8CDATVwgApIWj0jpl1oLeWDtoUPes6hly6zueDsS8io9hriUNB3GPDCgoloBCgoCpRstUAnAQHUSTcAmVGcv2VV/9aWqqu212q5xjVZI4mG8LIwk8L0T/zXdc6WGAln0Kv8/jUBpZGq6nVUmNf89VL2oCVJjqk2qiS//YwrDQXEBQxI1VUaWqnglaJ0ZnIUsbjOFEozLLDhrJUFUmZpqv9Vv9mjF7HV2XZv9s/2Paeaw1JVh3NZ3alqp89m2L6vxi1jBjFS8S7FguQVjiwFeb/8O/5ZkxBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr/+5Rk3QDBygs8yCEYED0hV4IEJgwLEY7GIYR+QVyl2chTDDGqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo=";
+    }
+  });
+
+  // src/features/notifier/audio/library.ts
+  function toDataUrl(dataOrBase64, mime = "audio/mpeg") {
+    const s = (dataOrBase64 || "").trim();
+    if (!s) return "";
+    return looksLikeDataUrl(s) ? s : `data:${mime};base64,${s}`;
+  }
+  var LIBRARY_PATH, BUILTIN_SOUND_NAME, DATA_URL_RE, looksLikeDataUrl, SoundLibrary;
+  var init_library = __esm({
+    "src/features/notifier/audio/library.ts"() {
+      "use strict";
+      init_storage();
+      init_defaultSound();
+      LIBRARY_PATH = "audio.library";
+      BUILTIN_SOUND_NAME = "Default";
+      DATA_URL_RE = /^data:audio\/[a-z0-9.+-]+(?:;[a-z0-9.+-]+=[^;,]*)*;base64,/i;
+      looksLikeDataUrl = (s) => DATA_URL_RE.test(s.trim());
+      SoundLibrary = class {
+        constructor() {
+          this.sounds = /* @__PURE__ */ new Map();
+          this.builtinDataUrl = toDataUrl(DEFAULT_SOUND_MP3_BASE64);
+          this.sounds.set(BUILTIN_SOUND_NAME, this.builtinDataUrl);
+        }
+        load() {
+          const stored = readAriesPath(LIBRARY_PATH);
+          if (!Array.isArray(stored)) return;
+          this.sounds.clear();
+          this.sounds.set(BUILTIN_SOUND_NAME, this.builtinDataUrl);
+          for (const entry of stored) {
+            const name = String(entry?.name || "").trim();
+            const data = String(entry?.data || "").trim();
+            if (!name || !data || name === BUILTIN_SOUND_NAME) continue;
+            this.sounds.set(name, toDataUrl(data));
+          }
+        }
+        save() {
+          const entries = [];
+          for (const [name, data] of this.sounds) {
+            if (name !== BUILTIN_SOUND_NAME) entries.push({ name, data });
+          }
+          writeAriesPath(LIBRARY_PATH, entries);
+        }
+        names() {
+          return Array.from(this.sounds.keys());
+        }
+        has(name) {
+          return this.sounds.has(name);
+        }
+        get(name) {
+          return this.sounds.get(name);
+        }
+        isBuiltin(name) {
+          return name === BUILTIN_SOUND_NAME;
+        }
+        /** Adds or replaces a sound. */
+        add(name, dataUrl) {
+          this.sounds.set(name, dataUrl);
+          this.save();
+        }
+        /** Removes a sound; the built-in one stays. Returns whether anything was removed. */
+        remove(name) {
+          if (this.isBuiltin(name) || !this.sounds.delete(name)) return false;
+          this.save();
+          return true;
+        }
+        /** A name not taken yet, from a file name: "Ding", then "Ding (2)"... */
+        uniqueName(raw) {
+          const base = String(raw || "Sound").replace(/\.[a-z0-9]+$/i, "").trim() || "Sound";
+          if (!this.sounds.has(base)) return base;
+          let i = 2;
+          while (this.sounds.has(`${base} (${i})`)) i++;
+          return `${base} (${i})`;
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/audio/settings.ts
+  function readStop(value) {
+    const mode = value?.mode;
+    if (mode === "purchase") return { mode: "purchase" };
+    if (mode === "manual" || mode === "repeat") return { mode: "manual" };
+    return null;
+  }
+  function applyStored(target, stored) {
+    const loaded2 = /* @__PURE__ */ new Set();
+    if (typeof stored.volume === "number") {
+      target.volume = clamp(stored.volume, 0, 1);
+      loaded2.add("volume");
+    }
+    if (stored.mode === "loop" || stored.mode === "oneshot") {
+      target.mode = stored.mode;
+      loaded2.add("mode");
+    }
+    const stop = stored.stop && typeof stored.stop === "object" ? readStop(stored.stop) : null;
+    if (stop) {
+      target.stop = stop;
+      loaded2.add("stop");
+    }
+    if (typeof stored.loopIntervalMs === "number" && Number.isFinite(stored.loopIntervalMs)) {
+      target.loopIntervalMs = Math.max(MIN_LOOP_GAP_MS, Math.floor(stored.loopIntervalMs));
+      loaded2.add("loopIntervalMs");
+    }
+    if (typeof stored.defaultSoundName === "string") {
+      target.defaultSoundName = stored.defaultSoundName.trim() || null;
+      loaded2.add("defaultSoundName");
+    }
+    return loaded2;
+  }
+  var SETTINGS_PATH, AUDIO_CONTEXTS, MIN_LOOP_GAP_MS, DEFAULT_VOLUME, DEFAULT_LOOP_INTERVAL_MS, DEFAULT_MIN_PLAY_GAP_MS, freshContext, AudioSettings;
+  var init_settings5 = __esm({
+    "src/features/notifier/audio/settings.ts"() {
+      "use strict";
+      init_math();
+      init_storage();
+      SETTINGS_PATH = "audio.settings";
+      AUDIO_CONTEXTS = ["shops", "weather", "pets"];
+      MIN_LOOP_GAP_MS = 150;
+      DEFAULT_VOLUME = 0.7;
+      DEFAULT_LOOP_INTERVAL_MS = 1500;
+      DEFAULT_MIN_PLAY_GAP_MS = 1200;
+      freshContext = () => ({
+        volume: DEFAULT_VOLUME,
+        mode: "oneshot",
+        stop: { mode: "manual" },
+        loopIntervalMs: DEFAULT_LOOP_INTERVAL_MS,
+        defaultSoundName: null
+      });
+      AudioSettings = class {
+        constructor() {
+          this.enabled = true;
+          this.minPlayGapMs = DEFAULT_MIN_PLAY_GAP_MS;
+          this.contexts = {
+            shops: freshContext(),
+            weather: freshContext(),
+            pets: freshContext()
+          };
+        }
+        /**
+         * Reads the stored settings. The shops' settings also sit at the top level,
+         * where builds before per-context settings kept them, and a weather or pets
+         * field never stored falls back to the shops' value.
+         */
+        load() {
+          const stored = readAriesPath(SETTINGS_PATH);
+          if (!stored || typeof stored !== "object") return;
+          if (typeof stored.enabled === "boolean") this.enabled = stored.enabled;
+          if (typeof stored.minPlayGapMs === "number") this.minPlayGapMs = Math.max(0, stored.minPlayGapMs | 0);
+          const shops2 = this.contexts.shops;
+          applyStored(shops2, {
+            ...stored,
+            loopIntervalMs: typeof stored.loopIntervalMs === "number" ? Math.max(MIN_LOOP_GAP_MS, stored.loopIntervalMs | 0) : void 0
+          });
+          const contexts = stored.contexts && typeof stored.contexts === "object" ? stored.contexts : {};
+          const shopsStored = contexts.shops;
+          if (shopsStored && typeof shopsStored === "object") applyStored(shops2, shopsStored);
+          for (const key2 of ["weather", "pets"]) {
+            const target = this.contexts[key2];
+            const conf = contexts[key2];
+            const loaded2 = conf && typeof conf === "object" ? applyStored(target, conf) : /* @__PURE__ */ new Set();
+            if (!loaded2.has("volume")) target.volume = shops2.volume;
+            if (!loaded2.has("mode")) target.mode = shops2.mode;
+            if (!loaded2.has("stop")) target.stop = { mode: shops2.stop.mode };
+            if (!loaded2.has("loopIntervalMs")) target.loopIntervalMs = shops2.loopIntervalMs;
+            if (!loaded2.has("defaultSoundName")) target.defaultSoundName = shops2.defaultSoundName;
+          }
+        }
+        save() {
+          const { shops: shops2 } = this.contexts;
+          const contexts = Object.fromEntries(AUDIO_CONTEXTS.map((key2) => [key2, { ...this.contexts[key2] }]));
+          writeAriesPath(SETTINGS_PATH, {
+            enabled: this.enabled,
+            volume: shops2.volume,
+            minPlayGapMs: this.minPlayGapMs,
+            mode: shops2.mode,
+            stop: shops2.stop,
+            loopIntervalMs: shops2.loopIntervalMs,
+            defaultSoundName: shops2.defaultSoundName,
+            contexts
+          });
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/audio/audio.ts
+  var clamp01, AudioNotifier, audio;
+  var init_audio = __esm({
+    "src/features/notifier/audio/audio.ts"() {
+      "use strict";
+      init_math();
+      init_encode();
+      init_library();
+      init_settings5();
+      clamp01 = (v) => clamp(v, 0, 1);
+      AudioNotifier = class {
+        constructor() {
+          this.settings = new AudioSettings();
+          this.library = new SoundLibrary();
+          this.lastPlayTs = 0;
+          this.loops = /* @__PURE__ */ new Map();
+          this.oneshotQueue = [];
+          this.oneshotQueueTimer = null;
+          this.oneshotProcessing = false;
+          this.audioCtx = null;
+          this.primed = false;
+          this.library.load();
+          this.settings.load();
+          if (this.ensureValidDefaults()) this.settings.save();
+        }
+        ctx(context) {
+          return this.settings.contexts[context];
+        }
+        /**
+         * Points every context's default sound at a sound that exists: the shops
+         * fall back to the built-in sound, weather and pets to the shops' sound.
+         * Returns whether anything changed.
+         */
+        ensureValidDefaults() {
+          const fallback = this.library.names()[0] ?? null;
+          const valid = (name, prefer) => {
+            if (name && this.library.has(name)) return name;
+            if (prefer && this.library.has(prefer)) return prefer;
+            return fallback;
+          };
+          let changed5 = false;
+          const shops2 = valid(this.ctx("shops").defaultSoundName);
+          for (const key2 of AUDIO_CONTEXTS) {
+            const target = this.ctx(key2);
+            const next = key2 === "shops" ? shops2 : valid(target.defaultSoundName, shops2);
+            if (next !== target.defaultSoundName) {
+              target.defaultSoundName = next;
+              changed5 = true;
+            }
+          }
+          return changed5;
+        }
+        /* ================================ Library ================================ */
+        listSounds() {
+          return this.library.names();
+        }
+        isProtectedSound(name) {
+          return this.library.isBuiltin(name);
+        }
+        registerSound(name, dataUrl) {
+          this.library.add(name, dataUrl);
+          let defaultsChanged = false;
+          for (const key2 of AUDIO_CONTEXTS) {
+            if (!this.ctx(key2).defaultSoundName) {
+              this.ctx(key2).defaultSoundName = name;
+              defaultsChanged = true;
+            }
+          }
+          if (defaultsChanged) this.settings.save();
+        }
+        unregisterSound(name) {
+          if (!this.library.remove(name)) return;
+          let wasDefault = false;
+          for (const key2 of AUDIO_CONTEXTS) {
+            if (this.ctx(key2).defaultSoundName === name) {
+              this.ctx(key2).defaultSoundName = null;
+              wasDefault = true;
+            }
+          }
+          if (wasDefault || this.ensureValidDefaults()) this.settings.save();
+        }
+        /**
+         * Imports audio files into the library, under unique names. A context with
+         * no default sound yet gets the first one imported. Returns the names added
+         * and an error line per file that failed.
+         */
+        async importFiles(files) {
+          const added = [];
+          const errors = [];
+          for (const file of files) {
+            try {
+              const dataUrl = await encodeSoundFile(file);
+              const name = this.library.uniqueName(file.name);
+              this.registerSound(name, dataUrl);
+              added.push(name);
+            } catch (e) {
+              errors.push(`Failed for "${file.name}": ${e?.message || e}`);
+            }
+          }
+          if (added.length) {
+            for (const key2 of AUDIO_CONTEXTS) {
+              if (!this.getDefaultSoundName(key2)) this.setDefaultSoundByName(added[0], key2);
+            }
+          }
+          return { added, errors };
+        }
+        setDefaultSoundByName(name, context = "shops") {
+          if (!this.library.has(name) || this.ctx(context).defaultSoundName === name) return;
+          this.ctx(context).defaultSoundName = name;
+          this.settings.save();
+        }
+        /** The context's default sound; weather and pets fall back to the shops' one. */
+        getDefaultSoundName(context = "shops") {
+          const own = this.ctx(context).defaultSoundName;
+          return context === "shops" ? own : own ?? this.ctx("shops").defaultSoundName;
+        }
+        /** A sound name or data URL as a playable data URL; nothing means the context's default. */
+        resolveToDataUrl(src, context) {
+          if (!src) {
+            const name = this.getDefaultSoundName(context);
+            return name && this.library.get(name) || null;
+          }
+          const s = src.trim();
+          const named = this.library.get(s);
+          if (named) return named;
+          if (looksLikeDataUrl(s)) return s;
+          if (/^[A-Za-z0-9+/=\s]+$/.test(s) && s.length > 100) return toDataUrl(s);
+          return null;
+        }
+        /* =============================== Settings ================================ */
+        setVolume(v, context = "shops") {
+          const next = clamp01(v);
+          if (this.ctx(context).volume === next) return;
+          this.ctx(context).volume = next;
+          this.forEachLoop(context, (st) => {
+            if (st.volumeOverride == null) st.volume = next;
+          });
+          this.settings.save();
+        }
+        setPlaybackMode(mode, context = "shops") {
+          if (this.ctx(context).mode === mode) return;
+          this.ctx(context).mode = mode;
+          this.settings.save();
+        }
+        getPlaybackMode(context = "shops") {
+          return this.ctx(context).mode;
+        }
+        setStop(mode, context) {
+          if (this.ctx(context).stop.mode === mode) return;
+          this.ctx(context).stop = { mode };
+          this.forEachLoop(context, (st) => {
+            st.baseStop = { mode };
+          });
+          this.settings.save();
+        }
+        setStopManual(context = "shops") {
+          this.setStop("manual", context);
+        }
+        setStopPurchase(context = "shops") {
+          this.setStop("purchase", context);
+        }
+        setLoopInterval(ms, context = "shops") {
+          const next = Math.max(MIN_LOOP_GAP_MS, ms | 0);
+          if (this.ctx(context).loopIntervalMs === next) return;
+          this.ctx(context).loopIntervalMs = next;
+          this.forEachLoop(context, (st) => {
+            st.baseLoopInterval = next;
+          });
+          this.settings.save();
+        }
+        getLoopInterval(context = "shops") {
+          return this.ctx(context).loopIntervalMs;
+        }
+        setPurchaseChecker(fn) {
+          this.purchaseChecker = fn;
+        }
+        getPlaybackSettings(context = "shops") {
+          const ctx2 = this.ctx(context);
+          return {
+            volume: ctx2.volume,
+            mode: ctx2.mode,
+            stop: { mode: ctx2.stop.mode },
+            loopIntervalMs: ctx2.loopIntervalMs,
+            defaultSoundName: this.getDefaultSoundName(context)
+          };
+        }
+        /* =============================== Playback ================================ */
+        /**
+         * Plays the alert `key` in the context's mode (or the override's). A loop
+         * replaces any loop already running under the same key.
+         */
+        async trigger(key2 = "global", overrides = {}, context = "shops") {
+          const sound = typeof overrides.sound === "string" && overrides.sound.trim() ? overrides.sound.trim() : void 0;
+          const mode = overrides.mode === "oneshot" || overrides.mode === "loop" ? overrides.mode : this.ctx(context).mode;
+          const rawVolume = overrides.volume == null ? NaN : Number(overrides.volume);
+          const volumeOverride = Number.isFinite(rawVolume) ? clamp01(rawVolume) : null;
+          const volume = volumeOverride ?? this.ctx(context).volume;
+          this.stopLoop(key2);
+          if (mode === "oneshot") {
+            this.enqueueOneshot({ key: key2, dataUrl: this.resolveToDataUrl(sound ?? null, context), volume, context });
+            return;
+          }
+          const stopOverride = overrides.stop ? { mode: overrides.stop.mode === "purchase" ? "purchase" : "manual" } : null;
+          const interval = overrides.loopIntervalMs;
+          const state5 = {
+            key: key2,
+            context,
+            timer: null,
+            stopped: false,
+            soundOverride: sound,
+            stopOverride,
+            loopIntervalOverride: interval != null && Number.isFinite(interval) ? Math.max(MIN_LOOP_GAP_MS, Math.round(interval)) : null,
+            baseStop: { mode: this.ctx(context).stop.mode },
+            baseLoopInterval: this.ctx(context).loopIntervalMs,
+            volumeOverride,
+            volume
+          };
+          this.loops.set(key2, state5);
+          this.runLoop(state5);
+        }
+        forEachLoop(context, fn) {
+          for (const st of this.loops.values()) {
+            if (st.context === context) fn(st);
+          }
+        }
+        stopLoop(key2 = "global") {
+          const st = this.loops.get(key2);
+          if (!st) return;
+          st.stopped = true;
+          if (st.timer != null) clearTimeout(st.timer);
+          st.timer = null;
+          this.loops.delete(key2);
+        }
+        stopAllLoops() {
+          for (const key2 of [...this.loops.keys()]) this.stopLoop(key2);
+        }
+        /** Unlocks audio on a user gesture, for browsers that block sound until one. */
+        async prime() {
+          try {
+            if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (this.audioCtx.state === "suspended") await this.audioCtx.resume();
+            const osc = this.audioCtx.createOscillator();
+            const gain = this.audioCtx.createGain();
+            gain.gain.value = 1e-4;
+            osc.connect(gain).connect(this.audioCtx.destination);
+            osc.start();
+            osc.stop(this.audioCtx.currentTime + 0.02);
+          } catch {
+          }
+          this.primed = true;
+        }
+        /**
+         * Plays one sound. Returns false when it came too soon after the previous
+         * one (the caller retries). Without a sound, beeps if audio is unlocked.
+         */
+        async playOnce(dataUrl, volume, awaitEnd = false) {
+          if (!this.settings.enabled) return true;
+          const now = Date.now();
+          if (now - this.lastPlayTs < this.settings.minPlayGapMs) return false;
+          this.lastPlayTs = now;
+          if (!dataUrl) {
+            if (this.primed && this.audioCtx) {
+              try {
+                const osc = this.audioCtx.createOscillator();
+                const gain = this.audioCtx.createGain();
+                gain.gain.value = volume * 0.1;
+                osc.frequency.value = 880;
+                osc.connect(gain).connect(this.audioCtx.destination);
+                osc.start();
+                osc.stop(this.audioCtx.currentTime + 0.06);
+              } catch {
+              }
+            }
+            return true;
+          }
+          try {
+            const el = new Audio();
+            el.src = dataUrl;
+            el.volume = volume;
+            el.crossOrigin = "anonymous";
+            let ended = null;
+            let finish = null;
+            if (awaitEnd) {
+              ended = new Promise((resolve) => {
+                const done = () => {
+                  el.removeEventListener("ended", done);
+                  el.removeEventListener("error", done);
+                  resolve();
+                };
+                finish = done;
+                el.addEventListener("ended", done);
+                el.addEventListener("error", done);
+              });
+            }
+            await el.play().catch(() => finish?.());
+            if (ended) await ended;
+          } catch {
+          }
+          return true;
+        }
+        /** One loop iteration: check the stop condition, play to the end, wait the interval, repeat. */
+        runLoop(state5) {
+          const run = async () => {
+            if (state5.stopped) return;
+            const stop = state5.stopOverride ?? state5.baseStop;
+            if (stop.mode === "purchase" && this.purchaseChecker) {
+              try {
+                if (this.purchaseChecker(state5.key)) {
+                  this.stopLoop(state5.key);
+                  return;
+                }
+              } catch {
+              }
+            }
+            await this.playOnce(this.resolveToDataUrl(state5.soundOverride, state5.context), state5.volume, true);
+            if (state5.stopped) return;
+            const gap = Math.max(MIN_LOOP_GAP_MS, (state5.loopIntervalOverride ?? state5.baseLoopInterval) | 0);
+            state5.timer = window.setTimeout(() => this.runLoop(state5), gap);
+          };
+          run().catch(() => {
+          });
+        }
+        /** Weather one-shots jump ahead of the shops' and pets' ones. */
+        enqueueOneshot(entry) {
+          const firstOther = entry.context === "weather" ? this.oneshotQueue.findIndex((item) => item.context !== "weather") : -1;
+          if (firstOther === -1) this.oneshotQueue.push(entry);
+          else this.oneshotQueue.splice(firstOther, 0, entry);
+          this.scheduleOneshots();
+        }
+        scheduleOneshots() {
+          if (!this.oneshotQueue.length || this.oneshotQueueTimer != null) return;
+          const wait = Math.max(0, this.settings.minPlayGapMs - (Date.now() - this.lastPlayTs));
+          this.oneshotQueueTimer = window.setTimeout(() => {
+            this.oneshotQueueTimer = null;
+            if (!this.oneshotProcessing) this.playNextOneshot();
+          }, wait);
+        }
+        playNextOneshot() {
+          const next = this.oneshotQueue.shift();
+          if (!next) return;
+          this.oneshotProcessing = true;
+          void (async () => {
+            let tooSoon = false;
+            try {
+              tooSoon = !await this.playOnce(next.dataUrl, next.volume);
+            } finally {
+              this.oneshotProcessing = false;
+              if (tooSoon) this.enqueueOneshot(next);
+              this.scheduleOneshots();
+            }
+          })().catch(() => {
+          });
+        }
+      };
+      audio = new AudioNotifier();
+    }
+  });
+
+  // src/features/notifier/bell/ring.ts
+  function bellRingAngleAt(cycleOffset) {
+    for (let i = 1; i < BELL_RING_SEQUENCE.length; i++) {
+      const next = BELL_RING_SEQUENCE[i];
+      if (cycleOffset > next.offset) continue;
+      const prev = BELL_RING_SEQUENCE[i - 1];
+      const span = next.offset - prev.offset;
+      const ratio = span > 0 ? (cycleOffset - prev.offset) / span : 0;
+      return (prev.deg + (next.deg - prev.deg) * ratio) * DEG_TO_RAD;
+    }
+    return 0;
+  }
+  var BELL_RING_SEQUENCE, BELL_RING_DURATION_MS, BELL_GLYPH, DEG_TO_RAD;
+  var init_ring = __esm({
+    "src/features/notifier/bell/ring.ts"() {
+      "use strict";
+      BELL_RING_SEQUENCE = [
+        { offset: 0, deg: 0 },
+        { offset: 0.05, deg: 15 },
+        { offset: 0.1, deg: -13 },
+        { offset: 0.15, deg: 11 },
+        { offset: 0.2, deg: -9 },
+        { offset: 0.25, deg: 7 },
+        { offset: 0.3, deg: -5 },
+        { offset: 0.35, deg: 3 },
+        { offset: 0.4, deg: -2 },
+        { offset: 0.45, deg: 1 },
+        { offset: 0.5, deg: 0 },
+        { offset: 1, deg: 0 }
+      ];
+      BELL_RING_DURATION_MS = 1600;
+      BELL_GLYPH = "\u{1F514}";
+      DEG_TO_RAD = Math.PI / 180;
+    }
+  });
+
+  // src/features/notifier/bell/pixiBell.ts
+  function startPixiBell(opts) {
+    let running = true;
+    let rail = null;
+    let bellContainer = null;
+    let bellText = null;
+    let lastSize = DEFAULT_SLOT_SIZE;
+    let findAttempts2 = 0;
+    let findRafId3 = null;
+    let lastFindCheckAt3 = 0;
+    let wiggleActive = false;
+    let wiggleRafId = null;
+    let wiggleT = 0;
+    let wiggleLastFrameAt = null;
+    let canvasEl = null;
+    let canvasListenersAttached = false;
+    let weSetPointerCursor = false;
+    const debugState3 = {
+      attached: false,
+      findAttempts: 0,
+      hasButton: false,
+      lastError: null,
+      slotY: null,
+      screenScaleX: null,
+      screenScaleY: null
+    };
+    shareGlobal("__MG_NOTIFICATION_BELL_PIXI_DEBUG__", debugState3);
+    const raf3 = pageWindow.requestAnimationFrame.bind(pageWindow);
+    const cancelRaf = pageWindow.cancelAnimationFrame.bind(pageWindow);
+    const forgetButtonRefs = () => {
+      bellContainer = null;
+      bellText = null;
+      debugState3.hasButton = false;
+    };
+    const removeButton = () => {
+      if (bellContainer) {
+        try {
+          bellContainer.destroy({ children: true });
+        } catch {
+        }
+      }
+      forgetButtonRefs();
+    };
+    const onClick = () => {
+      try {
+        opts.onClick();
+      } catch (error) {
+        console.error("[PixiBell] onClick error:", error);
+      }
+    };
+    const computeScreenRect = () => {
+      if (!bellContainer || bellContainer.destroyed) return null;
+      const state5 = getReadySpriteState();
+      const canvas = state5?.renderer?.canvas || state5?.renderer?.view?.canvas || state5?.renderer?.view;
+      if (!canvas) return null;
+      try {
+        const rect = canvas.getBoundingClientRect();
+        const renderResolution = Number(state5?.renderer?.resolution) || 1;
+        const stageWidth = Number(state5?.renderer?.screen?.width) || (Number(canvas.width) || 0) / renderResolution;
+        const stageHeight = Number(state5?.renderer?.screen?.height) || (Number(canvas.height) || 0) / renderResolution;
+        const scaleX = stageWidth > 0 ? rect.width / stageWidth : 1;
+        const scaleY = stageHeight > 0 ? rect.height / stageHeight : 1;
+        debugState3.screenScaleX = scaleX;
+        debugState3.screenScaleY = scaleY;
+        const topLeft = bellContainer.toGlobal({ x: 0, y: 0 });
+        const bottomRight = bellContainer.toGlobal({ x: lastSize, y: lastSize });
+        return {
+          left: rect.left + topLeft.x * scaleX,
+          top: rect.top + topLeft.y * scaleY,
+          right: rect.left + bottomRight.x * scaleX,
+          bottom: rect.top + bottomRight.y * scaleY,
+          width: (bottomRight.x - topLeft.x) * scaleX,
+          height: (bottomRight.y - topLeft.y) * scaleY
+        };
+      } catch {
+        return null;
+      }
+    };
+    const hitTestButton = (clientX, clientY) => {
+      const rect = computeScreenRect();
+      if (!rect) return false;
+      return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+    };
+    const onWindowPointerDownCapture = (ev) => {
+      if (!hitTestButton(ev.clientX, ev.clientY)) return;
+      ev.stopPropagation();
+      ev.stopImmediatePropagation();
+      ev.preventDefault();
+      onClick();
+    };
+    const onCanvasPointerMove = (ev) => {
+      if (!canvasEl) return;
+      const isHovering = hitTestButton(ev.clientX, ev.clientY);
+      if (isHovering && !weSetPointerCursor) {
+        canvasEl.style.cursor = "pointer";
+        weSetPointerCursor = true;
+      } else if (!isHovering && weSetPointerCursor) {
+        canvasEl.style.cursor = "";
+        weSetPointerCursor = false;
+      }
+    };
+    const onCanvasPointerLeave = () => {
+      if (weSetPointerCursor && canvasEl) {
+        canvasEl.style.cursor = "";
+        weSetPointerCursor = false;
+      }
+    };
+    const ensureCanvasListeners = (state5) => {
+      if (canvasListenersAttached) return;
+      const canvas = state5.renderer?.canvas || state5.renderer?.view?.canvas || state5.renderer?.view;
+      if (!canvas) return;
+      canvasEl = canvas;
+      pageWindow.addEventListener("pointerdown", onWindowPointerDownCapture, true);
+      canvas.addEventListener("pointermove", onCanvasPointerMove);
+      canvas.addEventListener("pointerleave", onCanvasPointerLeave);
+      canvasListenersAttached = true;
+    };
+    const findChatSlot = () => {
+      if (!Array.isArray(rail?.children)) return null;
+      for (const child of rail.children) {
+        if (child === bellContainer) continue;
+        if (findByLabel(child, CHAT_SLOT_MARKER_LABEL)) return child;
+      }
+      return null;
+    };
+    const railLocalScreenBounds = () => {
+      const state5 = getReadySpriteState();
+      const screenHeight = Number(state5?.renderer?.screen?.height);
+      if (!Number.isFinite(screenHeight) || screenHeight <= 0) return null;
+      try {
+        const top = rail.toLocal({ x: 0, y: 0 }).y;
+        const bottom = rail.toLocal({ x: 0, y: screenHeight }).y;
+        return { top, bottom };
+      } catch {
+        return null;
+      }
+    };
+    const computeSlot = () => {
+      const siblings = Array.isArray(rail?.children) ? rail.children.filter((c) => c !== bellContainer) : [];
+      let size = DEFAULT_SLOT_SIZE;
+      const railWidth = Number(rail?.width);
+      if (Number.isFinite(railWidth) && railWidth > 0) size = railWidth;
+      const ys = siblings.map((c) => Number(c?.y) || 0).sort((a, b) => a - b);
+      let spacing = DEFAULT_SLOT_SPACING;
+      if (ys.length >= 2) {
+        const diffs = [];
+        for (let i = 1; i < ys.length; i++) diffs.push(ys[i] - ys[i - 1]);
+        diffs.sort((a, b) => a - b);
+        const median2 = diffs[Math.floor(diffs.length / 2)];
+        if (Number.isFinite(median2) && median2 > 0) spacing = median2;
+      }
+      const isSlotOccupied = (y) => ys.some((siblingY) => Math.abs(siblingY - y) < spacing * SLOT_OCCUPIED_TOLERANCE_RATIO);
+      const chatSlot = findChatSlot();
+      const anchorY = chatSlot ? Number(chatSlot.y) || 0 : ys.length ? ys[ys.length - 1] : -spacing;
+      let nextY = anchorY + spacing;
+      for (let step = 0; step < MAX_SLOT_SEARCH_STEPS && isSlotOccupied(nextY); step++) {
+        nextY += spacing;
+      }
+      const bounds = railLocalScreenBounds();
+      if (bounds && nextY + size > bounds.bottom) {
+        const aboveTopmost = (ys.length ? ys[0] : nextY) - spacing;
+        nextY = aboveTopmost >= bounds.top ? aboveTopmost : Math.max(bounds.top, bounds.bottom - size);
+      }
+      return { size, nextY };
+    };
+    const syncGeometry = () => {
+      const { size, nextY } = computeSlot();
+      lastSize = size;
+      debugState3.slotY = nextY;
+      bellContainer.position.set(0, nextY);
+      if (bellText) {
+        bellText.style.fontSize = Math.round(size * 0.6);
+        if (typeof bellText.anchor?.set === "function") bellText.anchor.set(0.5, 0);
+        const textHeight = Number(bellText.height) || size * 0.6;
+        bellText.position.set(size / 2, Math.max(0, (size - textHeight) / 2));
+      }
+    };
+    const syncUnsafe = () => {
+      if (!running || !rail || rail.destroyed) {
+        removeButton();
+        return;
+      }
+      const state5 = getReadySpriteState();
+      if (!state5?.ctors?.Text) return;
+      if (!bellContainer) {
+        const ContainerCtor = state5.ctors.Container ?? rail.constructor;
+        bellContainer = new ContainerCtor();
+        bellContainer.label = "GeminiNotificationBell";
+        const thisContainer = bellContainer;
+        thisContainer.once("destroyed", () => {
+          if (bellContainer === thisContainer) forgetButtonRefs();
+        });
+        rail.addChild(bellContainer);
+      }
+      if (!bellText) {
+        bellText = new state5.ctors.Text({ text: BELL_GLYPH, style: { fontSize: DEFAULT_SLOT_SIZE } });
+        bellContainer.addChild(bellText);
+      }
+      ensureCanvasListeners(state5);
+      syncGeometry();
+      debugState3.hasButton = true;
+    };
+    const sync2 = () => {
+      try {
+        syncUnsafe();
+        debugState3.lastError = null;
+      } catch (error) {
+        debugState3.lastError = String(error?.message ?? error);
+        console.warn("[PixiBell] sync failed, clearing button", error);
+        try {
+          removeButton();
+        } catch {
+        }
+      }
+    };
+    const onRailChildrenChanged = () => sync2();
+    const restartSearchIfNeeded2 = () => {
+      if (!running || rail) return;
+      tryFindRail();
+      if (!rail && findRafId3 == null) findRafId3 = raf3(scheduleFind2);
+    };
+    const attachToRail = (node) => {
+      rail = node;
+      rail.on("childAdded", onRailChildrenChanged);
+      rail.on("childRemoved", onRailChildrenChanged);
+      rail.once("destroyed", () => {
+        if (rail === node) {
+          rail = null;
+          debugState3.attached = false;
+          removeButton();
+          restartSearchIfNeeded2();
+        }
+      });
+      debugState3.attached = true;
+      console.info(`[PixiBell] attached to ${RAIL_LABEL} after ${findAttempts2} attempt(s)`);
+      sync2();
+    };
+    const tryFindRail = () => {
+      if (!running || rail) return;
+      const state5 = getReadySpriteState();
+      if (!state5) return;
+      const stage = getStage(state5);
+      const found = findAcrossBranches(stage, (node) => node?.label === RAIL_LABEL);
+      if (found) {
+        attachToRail(found);
+        return;
+      }
+      findAttempts2 += 1;
+      debugState3.findAttempts = findAttempts2;
+      if (findAttempts2 % RAIL_FIND_LOG_EVERY === 0) {
+        console.info(`[PixiBell] still searching for ${RAIL_LABEL} (${findAttempts2} attempts so far)`);
+      }
+    };
+    const scheduleFind2 = (now) => {
+      findRafId3 = null;
+      if (!running || rail) return;
+      if (now - lastFindCheckAt3 >= RAIL_FIND_RETRY_MS) {
+        lastFindCheckAt3 = now;
+        tryFindRail();
+      }
+      if (!running || rail) return;
+      findRafId3 = raf3(scheduleFind2);
+    };
+    const isReachableFromLiveStage = (node) => {
+      const state5 = getReadySpriteState();
+      if (!state5) return false;
+      const stage = getStage(state5);
+      if (!stage) return false;
+      let cur = node;
+      let hops = 0;
+      while (cur && hops++ < RAIL_REACHABILITY_MAX_HOPS) {
+        if (cur === stage) return true;
+        cur = cur.parent;
+      }
+      return false;
+    };
+    const periodicRailMaintenance = () => {
+      if (!running || !rail || rail.destroyed) return;
+      if (!isReachableFromLiveStage(rail)) {
+        console.warn("[PixiBell] rail orphaned from the live stage (no destroyed event fired), resetting");
+        rail = null;
+        debugState3.attached = false;
+        removeButton();
+        restartSearchIfNeeded2();
+        return;
+      }
+      sync2();
+    };
+    const maintenanceIntervalId = pageWindow.setInterval(periodicRailMaintenance, RAIL_REACHABILITY_CHECK_MS);
+    const onWindowResize = () => {
+      if (!running || !rail || rail.destroyed) return;
+      sync2();
+    };
+    pageWindow.addEventListener("resize", onWindowResize);
+    const stopWiggleAnimation = () => {
+      if (wiggleRafId != null) {
+        cancelRaf(wiggleRafId);
+        wiggleRafId = null;
+      }
+      wiggleLastFrameAt = null;
+      if (bellText && !bellText.destroyed) bellText.rotation = 0;
+    };
+    const wiggleTick = (time) => {
+      wiggleRafId = null;
+      if (!wiggleActive || !bellText || bellText.destroyed) {
+        stopWiggleAnimation();
+        return;
+      }
+      if (wiggleLastFrameAt == null) wiggleLastFrameAt = time;
+      const dt = time - wiggleLastFrameAt;
+      wiggleLastFrameAt = time;
+      wiggleT += dt;
+      const cycleOffset = wiggleT % BELL_RING_DURATION_MS / BELL_RING_DURATION_MS;
+      bellText.rotation = bellRingAngleAt(cycleOffset);
+      wiggleRafId = raf3(wiggleTick);
+    };
+    tryFindRail();
+    if (!rail) findRafId3 = raf3(scheduleFind2);
+    return {
+      stop() {
+        if (!running) return;
+        running = false;
+        if (findRafId3 != null) {
+          cancelRaf(findRafId3);
+          findRafId3 = null;
+        }
+        pageWindow.clearInterval(maintenanceIntervalId);
+        pageWindow.removeEventListener("resize", onWindowResize);
+        stopWiggleAnimation();
+        if (rail) {
+          try {
+            rail.off("childAdded", onRailChildrenChanged);
+            rail.off("childRemoved", onRailChildrenChanged);
+          } catch {
+          }
+        }
+        if (canvasListenersAttached) {
+          try {
+            pageWindow.removeEventListener("pointerdown", onWindowPointerDownCapture, true);
+            if (canvasEl) {
+              canvasEl.removeEventListener("pointermove", onCanvasPointerMove);
+              canvasEl.removeEventListener("pointerleave", onCanvasPointerLeave);
+              if (weSetPointerCursor) canvasEl.style.cursor = "";
+            }
+          } catch {
+          }
+        }
+        removeButton();
+        rail = null;
+      },
+      getScreenRect() {
+        return computeScreenRect();
+      },
+      setWiggle(active3) {
+        if (wiggleActive === active3) return;
+        wiggleActive = active3;
+        if (active3) {
+          wiggleT = 0;
+          wiggleLastFrameAt = null;
+          if (wiggleRafId == null) wiggleRafId = raf3(wiggleTick);
+        } else {
+          stopWiggleAnimation();
+        }
+      }
+    };
+  }
+  var RAIL_LABEL, RAIL_FIND_RETRY_MS, RAIL_FIND_LOG_EVERY, RAIL_REACHABILITY_CHECK_MS, RAIL_REACHABILITY_MAX_HOPS, CHAT_SLOT_MARKER_LABEL, DEFAULT_SLOT_SIZE, DEFAULT_SLOT_SPACING, SLOT_OCCUPIED_TOLERANCE_RATIO, MAX_SLOT_SEARCH_STEPS;
+  var init_pixiBell = __esm({
+    "src/features/notifier/bell/pixiBell.ts"() {
+      "use strict";
+      init_gardenInfoCard();
+      init_context();
+      init_pageContext();
+      init_ring();
+      RAIL_LABEL = "RightSideRail";
+      RAIL_FIND_RETRY_MS = 1e3;
+      RAIL_FIND_LOG_EVERY = 30;
+      RAIL_REACHABILITY_CHECK_MS = 2e3;
+      RAIL_REACHABILITY_MAX_HOPS = 64;
+      CHAT_SLOT_MARKER_LABEL = "RightSideRailChatBadge";
+      DEFAULT_SLOT_SIZE = 45;
+      DEFAULT_SLOT_SPACING = 52;
+      SLOT_OCCUPIED_TOLERANCE_RATIO = 0.5;
+      MAX_SLOT_SEARCH_STEPS = 20;
+    }
+  });
+
+  // src/features/notifier/bell/floatingBell.ts
+  function isFloatingBellEnabled() {
+    return readAriesPath(ENABLED_PATH, false) === true;
+  }
+  function setFloatingBellEnabled(value) {
+    writeAriesPath(ENABLED_PATH, value);
+    try {
+      window.dispatchEvent(new CustomEvent(BELL_MODE_EVENT, { detail: { floating: value } }));
+    } catch {
+    }
+  }
+  function readSavedPosition() {
+    const raw = readAriesPath(POS_PATH);
+    if (!raw || typeof raw !== "object") return null;
+    const left = Number(raw.left);
+    const top = Number(raw.top);
+    if (!Number.isFinite(left) || !Number.isFinite(top)) return null;
+    return { left, top };
+  }
+  function persistPosition(pos) {
+    writeAriesPath(POS_PATH, { left: Math.round(pos.left), top: Math.round(pos.top) });
+  }
+  function clampCoord(value, min, max) {
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
+    if (max < min) return min;
+    return Math.min(Math.max(value, min), max);
+  }
+  function startFloatingBell(opts) {
+    let running = true;
+    let wiggleAnimation = null;
+    const button2 = h("button");
+    button2.type = "button";
+    button2.setAttribute("data-notification-bell-widget", "1");
+    button2.title = "Notifications";
+    button2.setAttribute("aria-label", "Notifications");
+    Object.assign(button2.style, {
+      position: "fixed",
+      left: "-9999px",
+      top: "-9999px",
+      width: `${BUTTON_SIZE}px`,
+      height: `${BUTTON_SIZE}px`,
+      zIndex: String(BELL_WIDGET_Z_INDEX),
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "0",
+      borderRadius: "50%",
+      border: "1px solid var(--qmm-border-strong)",
+      background: "var(--qmm-gradient-panel)",
+      boxShadow: "var(--qmm-shadow-window)",
+      cursor: "grab",
+      userSelect: "none",
+      touchAction: "none"
+    });
+    const icon2 = document.createElement("span");
+    icon2.textContent = BELL_GLYPH;
+    Object.assign(icon2.style, {
+      fontSize: `${ICON_FONT_SIZE}px`,
+      lineHeight: "1",
+      pointerEvents: "none",
+      display: "inline-block",
+      // Swing around the bell's mounting point (top center), not its middle.
+      transformOrigin: "50% 0%"
+    });
+    button2.appendChild(icon2);
+    const applyPosition2 = (left, top) => {
+      const boundedLeft = clampCoord(left, SCREEN_MARGIN, window.innerWidth - BUTTON_SIZE - SCREEN_MARGIN);
+      const boundedTop = clampCoord(top, SCREEN_MARGIN, window.innerHeight - BUTTON_SIZE - SCREEN_MARGIN);
+      button2.style.left = `${Math.round(boundedLeft)}px`;
+      button2.style.top = `${Math.round(boundedTop)}px`;
+      try {
+        opts.onMoved?.();
+      } catch {
+      }
+      return { left: boundedLeft, top: boundedTop };
+    };
+    const defaultPosition = () => ({
+      left: window.innerWidth - BUTTON_SIZE - DEFAULT_RIGHT_GAP,
+      top: window.innerHeight * DEFAULT_TOP_RATIO
+    });
+    let desiredPosition = null;
+    let usingDefaultPosition = true;
+    const applyDesiredPosition = () => {
+      const target = usingDefaultPosition || !desiredPosition ? defaultPosition() : desiredPosition;
+      applyPosition2(target.left, target.top);
+    };
+    const applyInitialPosition2 = () => {
+      const saved = readSavedPosition();
+      desiredPosition = saved;
+      usingDefaultPosition = !saved;
+      applyDesiredPosition();
+    };
+    const onWindowResize = () => {
+      if (!running) return;
+      applyDesiredPosition();
+    };
+    let dragState = null;
+    const onDragMove = (ev) => {
+      if (!dragState || ev.pointerId !== dragState.pointerId) return;
+      const dx = ev.clientX - dragState.startX;
+      const dy = ev.clientY - dragState.startY;
+      if (!dragState.dragged && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+      dragState.dragged = true;
+      dragState.lastPos = applyPosition2(dragState.baseLeft + dx, dragState.baseTop + dy);
+      desiredPosition = dragState.lastPos;
+      usingDefaultPosition = false;
+    };
+    const stopDrag = (ev) => {
+      if (!dragState) return;
+      if (ev && ev.pointerId !== dragState.pointerId) return;
+      document.removeEventListener("pointermove", onDragMove);
+      document.removeEventListener("pointerup", stopDrag);
+      document.removeEventListener("pointercancel", stopDrag);
+      try {
+        button2.releasePointerCapture(dragState.pointerId);
+      } catch {
+      }
+      const wasDrag = dragState.dragged;
+      if (wasDrag) persistPosition(dragState.lastPos);
+      dragState = null;
+      button2.style.cursor = "grab";
+      if (!wasDrag && ev?.type === "pointerup") {
+        try {
+          opts.onClick();
+        } catch (error) {
+          console.error("[FloatingBell] onClick error:", error);
+        }
+      }
+    };
+    const onPointerDown = (ev) => {
+      if (ev.button !== 0) return;
+      if (dragState) stopDrag();
+      const rect = button2.getBoundingClientRect();
+      dragState = {
+        pointerId: ev.pointerId,
+        startX: ev.clientX,
+        startY: ev.clientY,
+        baseLeft: rect.left,
+        baseTop: rect.top,
+        lastPos: { left: rect.left, top: rect.top },
+        dragged: false
+      };
+      try {
+        button2.setPointerCapture(ev.pointerId);
+      } catch {
+      }
+      document.addEventListener("pointermove", onDragMove);
+      document.addEventListener("pointerup", stopDrag);
+      document.addEventListener("pointercancel", stopDrag);
+      button2.style.cursor = "grabbing";
+      ev.preventDefault();
+      ev.stopPropagation();
+    };
+    button2.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("resize", onWindowResize);
+    document.body.appendChild(button2);
+    applyInitialPosition2();
+    const settleTimers = SETTLE_REAPPLY_DELAYS_MS.map(
+      (delay) => window.setTimeout(() => {
+        if (running) applyDesiredPosition();
+      }, delay)
+    );
+    const clearSettleTimers = () => {
+      for (const id of settleTimers) {
+        try {
+          window.clearTimeout(id);
+        } catch {
+        }
+      }
+    };
+    const stopWiggle = () => {
+      if (wiggleAnimation) {
+        try {
+          wiggleAnimation.cancel();
+        } catch {
+        }
+        wiggleAnimation = null;
+      }
+    };
+    return {
+      stop() {
+        if (!running) return;
+        running = false;
+        stopDrag();
+        stopWiggle();
+        clearSettleTimers();
+        window.removeEventListener("resize", onWindowResize);
+        button2.removeEventListener("pointerdown", onPointerDown);
+        try {
+          button2.remove();
+        } catch {
+        }
+      },
+      getScreenRect() {
+        if (!running || !button2.isConnected) return null;
+        const rect = button2.getBoundingClientRect();
+        return {
+          left: rect.left,
+          top: rect.top,
+          right: rect.right,
+          bottom: rect.bottom,
+          width: rect.width,
+          height: rect.height
+        };
+      },
+      setWiggle(active3) {
+        if (!running) return;
+        if (!active3) {
+          stopWiggle();
+          return;
+        }
+        if (wiggleAnimation) return;
+        if (typeof icon2.animate !== "function") return;
+        wiggleAnimation = icon2.animate(RING_KEYFRAMES, {
+          duration: BELL_RING_DURATION_MS,
+          iterations: Infinity
+        });
+      }
+    };
+  }
+  var ENABLED_PATH, POS_PATH, BELL_MODE_EVENT, BUTTON_SIZE, ICON_FONT_SIZE, BELL_WIDGET_Z_INDEX, SCREEN_MARGIN, DEFAULT_RIGHT_GAP, DEFAULT_TOP_RATIO, SETTLE_REAPPLY_DELAYS_MS, DRAG_THRESHOLD_PX, RING_KEYFRAMES;
+  var init_floatingBell = __esm({
+    "src/features/notifier/bell/floatingBell.ts"() {
+      "use strict";
+      init_ring();
+      init_storage();
+      init_dom2();
+      ENABLED_PATH = "notifier.floatingBell.enabled";
+      POS_PATH = "notifier.floatingBell.pos";
+      BELL_MODE_EVENT = "qws:alerts-bell-mode-changed";
+      BUTTON_SIZE = 44;
+      ICON_FONT_SIZE = 24;
+      BELL_WIDGET_Z_INDEX = 1999900;
+      SCREEN_MARGIN = 8;
+      DEFAULT_RIGHT_GAP = 16;
+      DEFAULT_TOP_RATIO = 0.35;
+      SETTLE_REAPPLY_DELAYS_MS = [0, 250, 1e3];
+      DRAG_THRESHOLD_PX = 4;
+      RING_KEYFRAMES = BELL_RING_SEQUENCE.map(({ offset, deg }) => ({
+        transform: `rotate(${deg}deg)`,
+        offset
+      }));
+    }
+  });
+
+  // src/game/ws/shopPurchaseMessage.ts
+  function parseViewMode(raw) {
+    if (raw == null) return null;
+    let value = raw;
+    try {
+      value = JSON.parse(raw);
+    } catch {
+    }
+    return value === "list" || value === "grid" ? value : null;
+  }
+  function readShopViewMode(shop, storage) {
+    if (!storage) return "list";
+    try {
+      for (let i = 0; i < storage.length; i++) {
+        const key2 = storage.key(i);
+        if (!key2) continue;
+        const match = VIEW_MODE_KEY.exec(key2);
+        if (!match || match[1] !== shop) continue;
+        const mode = parseViewMode(storage.getItem(key2));
+        if (mode) return mode;
+      }
+    } catch {
+    }
+    return "list";
+  }
+  function buildShopPurchaseCommand(shop, item, viewMode, quantity = 1) {
+    const q = Math.max(1, Math.floor(Number(quantity) || 1));
+    return {
+      type: "PurchaseShopItem",
+      shop,
+      viewMode,
+      item,
+      ...q === 1 ? {} : { quantity: q }
+    };
+  }
+  var VIEW_MODE_KEY;
+  var init_shopPurchaseMessage = __esm({
+    "src/game/ws/shopPurchaseMessage.ts"() {
+      "use strict";
+      VIEW_MODE_KEY = /^shop:.*:(.+):viewMode$/;
+    }
+  });
+
+  // src/features/shops/purchases.ts
+  function isCurrentRestock(entry, shop) {
+    if (!("restockId" in entry)) return true;
+    const current3 = shop?.restockId;
+    return current3 != null && entry.restockId === current3;
+  }
+  function purchasesForCurrentRestock(shops2, shopPurchases, kindOf) {
+    const out = { seed: {}, egg: {}, tool: {}, decor: {} };
+    if (!shopPurchases || typeof shopPurchases !== "object") return out;
+    for (const shopKey of Object.keys(shopPurchases)) {
+      const entry = shopPurchases[shopKey];
+      if (!entry || typeof entry !== "object") continue;
+      if (!isCurrentRestock(entry, shops2?.[shopKey])) continue;
+      const purch = entry.purchases;
+      if (!purch || typeof purch !== "object") continue;
+      for (const [itemId, count] of Object.entries(purch)) {
+        const n = Number(count) || 0;
+        const kind = DIRECT_KIND[shopKey] ?? kindOf(itemId);
+        if (!kind) continue;
+        out[kind][itemId] = (out[kind][itemId] ?? 0) + n;
+      }
+    }
+    return out;
+  }
+  function resolveShop(key2, shops2, mySlot) {
+    if (CUSTOM_RESTOCK_SHOPS.has(key2)) {
+      const custom = mySlot?.data?.customRestocks?.[key2];
+      if (custom) {
+        const inv = mySlot?.customRestockInventories?.[key2];
+        return inv && inv.restockId === `${key2}:custom:${custom.purchasedAt}` ? inv : null;
+      }
+    }
+    const shop = shops2?.[key2];
+    if (!shop || typeof shop !== "object") return null;
+    if ("restockId" in shop && shop.restockId == null) return null;
+    return shop;
+  }
+  function purchasesKnown(entry, shop) {
+    if (!entry || typeof entry !== "object" || !("restockId" in entry)) return true;
+    if (entry.restockId === shop?.restockId) return true;
+    return Number(entry.startedAtMs) < Number(shop?.startedAtMs);
+  }
+  function playerShopView(shops2, mySlot, kindOf) {
+    const shopPurchases = mySlot?.data?.shopPurchases;
+    const open = {};
+    const keys = new Set(shops2 && typeof shops2 === "object" ? Object.keys(shops2) : []);
+    for (const key2 of CUSTOM_RESTOCK_SHOPS) {
+      if (mySlot?.data?.customRestocks?.[key2]) keys.add(key2);
+    }
+    for (const key2 of keys) {
+      const shop = resolveShop(key2, shops2, mySlot);
+      if (!shop) continue;
+      if (!purchasesKnown(shopPurchases?.[key2], shop)) continue;
+      open[key2] = shop;
+    }
+    return { shops: open, purchases: purchasesForCurrentRestock(open, shopPurchases, kindOf) };
+  }
+  var DIRECT_KIND, CUSTOM_RESTOCK_SHOPS;
+  var init_purchases = __esm({
+    "src/features/shops/purchases.ts"() {
+      "use strict";
+      DIRECT_KIND = { seed: "seed", egg: "egg", tool: "tool", decor: "decor" };
+      CUSTOM_RESTOCK_SHOPS = /* @__PURE__ */ new Set(["seed", "egg", "tool", "decor"]);
+    }
+  });
+
+  // src/features/shops/shops.ts
+  function installShopKeybindsOnce() {
+    if (shopKeybindsInstalled || typeof window === "undefined") return;
+    shopKeybindsInstalled = true;
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (shouldIgnoreKeydown(event)) return;
+        const bind = SHOP_KEYBINDS.find(({ id }) => eventMatchesKeybind(id, event));
+        if (!bind) return;
+        event.preventDefault();
+        event.stopPropagation();
+        void openModal(bind.modal);
+      },
+      true
+    );
+  }
+  function itemIdOf(kind, it) {
+    if (kind === "seeds") return it.species ?? it.name;
+    if (kind === "tools") return it.toolId ?? it.id;
+    if (kind === "eggs") return it.eggId ?? it.id;
+    return it.decorId ?? it.id;
+  }
+  function buildPurchasePayload(kind, it) {
+    const id = itemIdOf(kind, it);
+    if (!id) return null;
+    const value = String(id);
+    if (kind === "seeds") return { item: { itemType: "Seed", species: value }, stat: "seedsBought" };
+    if (kind === "tools") return { item: { itemType: "Tool", toolId: value }, stat: "toolsBought" };
+    if (kind === "eggs") return { item: { itemType: "Egg", eggId: value }, stat: "eggsBought" };
+    return { item: { itemType: "Decor", decorId: value }, stat: "decorBought" };
+  }
+  function findShopForItem(shops2, kind, it) {
+    if (!shops2 || typeof shops2 !== "object") return null;
+    const keys = Object.keys(shops2);
+    const ordered = [...keys.filter((k) => !BASE_SHOP_KEYS.includes(k)), ...keys.filter((k) => BASE_SHOP_KEYS.includes(k))];
+    const target = itemIdOf(kind, it);
+    if (target == null) return null;
+    const field2 = ITEM_FIELD[kind];
+    for (const key2 of ordered) {
+      const inv = shops2[key2]?.inventory;
+      if (Array.isArray(inv) && inv.some((entry) => entry && typeof entry === "object" && entry[field2] === target)) {
+        return key2;
+      }
+    }
+    return null;
+  }
+  var SHOP_KEYBINDS, shopKeybindsInstalled, BASE_SHOP_KEYS, BASE_SHOP_OF, ITEM_FIELD, ShopsService;
+  var init_shops = __esm({
+    "src/features/shops/shops.ts"() {
+      "use strict";
+      init_fakeModal();
+      init_keybinds();
+      init_keyboard();
+      init_stats();
+      init_send();
+      init_atoms();
+      init_pageContext();
+      init_shopPurchaseMessage();
+      init_purchases();
+      SHOP_KEYBINDS = [
+        { id: "shops.seeds", modal: "seedShop" },
+        { id: "shops.eggs", modal: "eggShop" },
+        { id: "shops.decors", modal: "decorShop" },
+        { id: "shops.tools", modal: "toolShop" }
+      ];
+      shopKeybindsInstalled = false;
+      BASE_SHOP_KEYS = ["seed", "egg", "tool", "decor"];
+      BASE_SHOP_OF = { seeds: "seed", tools: "tool", eggs: "egg", decor: "decor" };
+      ITEM_FIELD = { seeds: "species", tools: "toolId", eggs: "eggId", decor: "decorId" };
+      ShopsService = {
+        /** Buys one of the item. */
+        async buyOne(kind, it) {
+          return ShopsService.buy(kind, it, 1);
+        },
+        /**
+         * Buys `count` of the item, one purchase at a time. The server takes a
+         * `quantity` since v1292, but the game only sends it when the player can pay
+         * for the whole stack and has room for it, and the mod knows neither. Unit
+         * purchases still buy what the player can afford.
+         */
+        async buyEach(kind, it, count) {
+          for (let i = 0; i < count; i++) await ShopsService.buyOne(kind, it);
+        },
+        /** Buys `quantity` of the item in one command, like the game's own Buy All. */
+        async buy(kind, it, quantity) {
+          const built = buildPurchasePayload(kind, it);
+          if (!built) return;
+          let shop = null;
+          try {
+            const [shops2, slot] = await Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
+            shop = findShopForItem(playerShopView(shops2, slot, () => null).shops, kind, it);
+          } catch {
+          }
+          if (!shop) shop = BASE_SHOP_OF[kind];
+          try {
+            let storage = null;
+            try {
+              storage = pageWindow.localStorage;
+            } catch {
+            }
+            const command = buildShopPurchaseCommand(shop, built.item, readShopViewMode(shop, storage), quantity);
+            sendToGame(command);
+            StatsService.incrementShopStat(built.stat, Number(command.quantity ?? 1));
+          } catch {
+          }
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/itemIcon.ts
+  function spriteCandidates2(type, key2, name) {
+    const out = /* @__PURE__ */ new Set();
+    const add = (value) => {
+      const trimmed = value?.trim();
+      if (!trimmed) return;
+      out.add(trimmed);
+      out.add(trimmed.replace(/\s+/g, ""));
+      if (type === "Seed" || type === "Egg") {
+        const stripped = trimmed.replace(/(?:seed|egg)$/i, "").trim();
+        if (stripped) {
+          out.add(stripped);
+          out.add(stripped.replace(/\s+/g, ""));
+        }
+      }
+    };
+    add(key2);
+    add(name);
+    const names = [...out];
+    for (const value of names) {
+      const base = value.replace(/icon$/i, "");
+      if (base) out.add(`${base}Icon`);
+    }
+    return [...out];
+  }
+  function shopItemIcon(id, name, size, logTag) {
+    const [type = "", key2 = ""] = id.split(":");
+    const wrap = h("div");
+    Object.assign(wrap.style, {
+      width: `${size}px`,
+      height: `${size}px`,
+      flex: `0 0 ${size}px`,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center"
+    });
+    const glyph = h("span", void 0, FALLBACK_GLYPH[type] ?? "\u{1F3E0}");
+    glyph.style.fontSize = `${Math.max(10, Math.round(size * 0.75))}px`;
+    glyph.setAttribute("aria-hidden", "true");
+    wrap.appendChild(glyph);
+    const categories = SPRITE_CATEGORIES[type];
+    const candidates = spriteCandidates2(type, key2 || name, name);
+    if (categories && candidates.length) attachSpriteIcon(wrap, categories, candidates, size, logTag);
+    return wrap;
+  }
+  var FALLBACK_GLYPH, SPRITE_CATEGORIES;
+  var init_itemIcon = __esm({
+    "src/features/notifier/itemIcon.ts"() {
+      "use strict";
+      init_dom2();
+      init_iconCache();
+      FALLBACK_GLYPH = { Seed: "\u{1F331}", Egg: "\u{1F95A}", Tool: "\u{1F9F0}", Decor: "\u{1F3E0}" };
+      SPRITE_CATEGORIES = {
+        Seed: ["seed"],
+        Egg: ["pet"],
+        Tool: ["item"],
+        Decor: ["decor"]
+      };
+    }
+  });
+
+  // src/features/shops/shopFeed.ts
+  function itemKind(itemId) {
+    if (itemId in plantCatalog2) return "seed";
+    if (itemId in eggCatalog2) return "egg";
+    if (itemId in toolCatalog2) return "tool";
+    if (itemId in decorCatalog2) return "decor";
+    return null;
+  }
+  function toShopsSnapshot(shops2) {
+    const snap = {
+      seed: { inventory: [], secondsUntilRestock: Number(shops2?.seed?.secondsUntilRestock) || 0 },
+      egg: { inventory: [], secondsUntilRestock: Number(shops2?.egg?.secondsUntilRestock) || 0 },
+      tool: { inventory: [], secondsUntilRestock: Number(shops2?.tool?.secondsUntilRestock) || 0 },
+      decor: { inventory: [], secondsUntilRestock: Number(shops2?.decor?.secondsUntilRestock) || 0 }
+    };
+    if (!shops2 || typeof shops2 !== "object") return snap;
+    for (const shop of Object.values(shops2)) {
+      if (!shop || typeof shop !== "object" || !Array.isArray(shop.inventory)) continue;
+      for (const item of shop.inventory) {
+        if (!item || typeof item !== "object") continue;
+        const kind = ITEM_TYPE_KIND[item.itemType];
+        if (kind) snap[kind].inventory.push(item);
+      }
+    }
+    return snap;
+  }
+  function toPurchasesSnapshot(view, slot) {
+    const raw = slot?.data?.shopPurchases;
+    const startedAt = (kind) => Number(raw?.[kind]?.startedAtMs ?? raw?.[kind]?.createdAt) || 0;
+    const section5 = (kind) => ({ createdAt: startedAt(kind), purchases: view.purchases[kind] });
+    return { seed: section5("seed"), egg: section5("egg"), tool: section5("tool"), decor: section5("decor") };
+  }
+  function onShops(shops2) {
+    rawShops = shops2;
+    emitShops();
+    if (rawSlot != null) emitPurchases();
+  }
+  function onSlot(slot) {
+    rawSlot = slot;
+    if (rawShops != null) emitShops();
+    emitPurchases();
+  }
+  async function readBoth() {
+    return Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
+  }
+  function shopItemId(kind, item) {
+    const key2 = kind === "seed" ? item.species : kind === "egg" ? item.eggId : kind === "tool" ? item.toolId : item.decorId;
+    if (key2 == null) return null;
+    return `${ALERT_ID_PREFIX[kind]}:${key2}`;
+  }
+  function purchasedCount(id, purchases) {
+    if (!purchases) return 0;
+    const [type, raw] = String(id).split(":");
+    const kind = type === "Seed" ? "seed" : type === "Egg" ? "egg" : type === "Tool" ? "tool" : "decor";
+    const n = purchases[kind]?.purchases?.[raw];
+    return typeof n === "number" && n > 0 ? n : 0;
+  }
+  var ITEM_TYPE_KIND, viewOf, sameShopParts, rawShops, rawSlot, shopsChanged, purchasesChanged, watching, emitShops, emitPurchases, ShopFeed, ALERT_ID_PREFIX;
+  var init_shopFeed = __esm({
+    "src/features/shops/shopFeed.ts"() {
+      "use strict";
+      init_atoms();
+      init_emitter();
+      init_data();
+      init_purchases();
+      ITEM_TYPE_KIND = { Seed: "seed", Egg: "egg", Tool: "tool", Decor: "decor" };
+      viewOf = (shops2, slot) => playerShopView(shops2, slot, itemKind);
+      sameShopParts = (a, b) => a?.data?.shopPurchases === b?.data?.shopPurchases && a?.data?.customRestocks === b?.data?.customRestocks && a?.customRestockInventories === b?.customRestockInventories;
+      rawShops = null;
+      rawSlot = null;
+      shopsChanged = new Emitter();
+      purchasesChanged = new Emitter();
+      watching = false;
+      emitShops = () => shopsChanged.emit(toShopsSnapshot(viewOf(rawShops, rawSlot).shops));
+      emitPurchases = () => purchasesChanged.emit(toPurchasesSnapshot(viewOf(rawShops, rawSlot), rawSlot));
+      ShopFeed = {
+        /**
+         * Follows the room's shops and the player's slot. The atoms may not exist
+         * yet (the HUD mounts the overlay at document-start): the subscriptions
+         * attach once the game registers them, and push the current value then.
+         */
+        start() {
+          if (watching) return;
+          watching = true;
+          void Atoms.shop.shops.onChangeNow((next) => onShops(next));
+          void Atoms.shop.myUserSlot.onChangeNow((next) => onSlot(next), sameShopParts);
+        },
+        onShopsChange(cb) {
+          return shopsChanged.on(cb);
+        },
+        onPurchasesChange(cb) {
+          return purchasesChanged.on(cb);
+        },
+        /** The shops right now, read from the store rather than the last push. */
+        async readShops() {
+          const [shops2, slot] = await readBoth();
+          return toShopsSnapshot(viewOf(shops2, slot).shops);
+        },
+        /** The purchases right now, read from the store rather than the last push. */
+        async readPurchases() {
+          const [shops2, slot] = await readBoth();
+          return toPurchasesSnapshot(viewOf(shops2, slot), slot);
+        }
+      };
+      ALERT_ID_PREFIX = { seed: "Seed", egg: "Egg", tool: "Tool", decor: "Decor" };
+    }
+  });
+
+  // src/features/notifier/playbackDefaults.ts
+  function clampLoopInterval(raw, fallback) {
+    const text2 = typeof raw === "string" ? raw.trim() : raw;
+    const n = text2 === "" || text2 == null ? NaN : Number(text2);
+    const value = Number.isFinite(n) ? n : fallback;
+    return Math.max(MIN_LOOP_INTERVAL_MS, Math.min(MAX_LOOP_INTERVAL_MS, Math.floor(value)));
+  }
+  function ensureLoaded() {
+    if (loaded) return;
+    loaded = true;
+    loopIntervals = {};
+    const stored = readAriesPath(LOOP_DEFAULTS_PATH);
+    if (!stored || typeof stored !== "object") return;
+    for (const context of ["shops", "weather"]) {
+      const entry = stored[context];
+      if (!entry) continue;
+      const raw = Number(entry.loopIntervalMs);
+      loopIntervals[context] = normalizeInterval(Number.isFinite(raw) ? raw : audio.getLoopInterval(context));
+    }
+  }
+  function save() {
+    const out = {};
+    for (const context of ["shops", "weather"]) {
+      const loopIntervalMs = loopIntervals[context];
+      if (loopIntervalMs == null) continue;
+      out[context] = { stopMode: context === "shops" ? "purchase" : "manual", stopRepeats: null, loopIntervalMs };
+    }
+    writeAriesPath(LOOP_DEFAULTS_PATH, out);
+  }
+  function setContextPlayback(context, mode, loopIntervalMs) {
+    audio.setPlaybackMode(context === "weather" ? "oneshot" : mode, context);
+    audio.setLoopInterval(loopIntervalMs, context);
+    if (context === "shops" && mode === "loop") audio.setStopPurchase(context);
+    else audio.setStopManual(context);
+    if (context !== "pets") LoopDefaults.setLoopInterval(context, loopIntervalMs);
+  }
+  var LOOP_DEFAULTS_PATH, MIN_LOOP_INTERVAL_MS, MAX_LOOP_INTERVAL_MS, loopIntervals, loaded, normalizeInterval, LoopDefaults;
+  var init_playbackDefaults = __esm({
+    "src/features/notifier/playbackDefaults.ts"() {
+      "use strict";
+      init_storage();
+      init_audio();
+      LOOP_DEFAULTS_PATH = "notifier.loopDefaults";
+      MIN_LOOP_INTERVAL_MS = 150;
+      MAX_LOOP_INTERVAL_MS = 1e4;
+      loopIntervals = {};
+      loaded = false;
+      normalizeInterval = (ms) => Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(ms || 0));
+      LoopDefaults = {
+        get(context) {
+          ensureLoaded();
+          const loopIntervalMs = normalizeInterval(loopIntervals[context] ?? audio.getLoopInterval(context));
+          return { stopMode: context === "shops" ? "purchase" : "manual", stopRepeats: null, loopIntervalMs };
+        },
+        /** Remembers a context's loop interval; an invalid one keeps the current value. */
+        setLoopInterval(context, ms) {
+          ensureLoaded();
+          const current3 = LoopDefaults.get(context).loopIntervalMs;
+          loopIntervals[context] = Number.isFinite(ms) ? normalizeInterval(ms) : current3;
+          save();
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/rules.ts
+  function sanitizeVolume(value) {
+    if (value == null) return void 0;
+    const num2 = Number(value);
+    if (!Number.isFinite(num2)) return void 0;
+    return clamp(num2 > 1 ? num2 / 100 : num2, 0, 1);
+  }
+  function sanitizeLoopInterval(value) {
+    if (value == null) return void 0;
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(n)) : void 0;
+  }
+  function mergeRule(prev, patch) {
+    const next = { ...prev ?? {} };
+    const set2 = (key2, value) => {
+      if (value === void 0) delete next[key2];
+      else next[key2] = value;
+    };
+    if (hasOwn(patch, "sound")) {
+      const sound = typeof patch.sound === "string" ? patch.sound.trim() : "";
+      set2("sound", sound || void 0);
+    }
+    if (hasOwn(patch, "volume")) set2("volume", sanitizeVolume(patch.volume));
+    if (hasOwn(patch, "playbackMode")) {
+      const mode = patch.playbackMode;
+      set2("playbackMode", mode === "oneshot" || mode === "loop" ? mode : void 0);
+    }
+    if (hasOwn(patch, "stopMode")) set2("stopMode", patch.stopMode === "purchase" ? "purchase" : void 0);
+    if (hasOwn(patch, "loopIntervalMs")) set2("loopIntervalMs", sanitizeLoopInterval(patch.loopIntervalMs));
+    return Object.keys(next).length ? next : null;
+  }
+  function rulesEqual(a, b) {
+    if (!a || !b) return !a && !b;
+    return a.sound === b.sound && a.volume === b.volume && a.playbackMode === b.playbackMode && a.stopMode === b.stopMode && a.loopIntervalMs === b.loopIntervalMs;
+  }
+  function ensureRulesLoaded() {
+    if (rulesLoaded) return;
+    rulesLoaded = true;
+    rules2 = /* @__PURE__ */ new Map();
+    const stored = readAriesPath(RULES_PATH);
+    if (!stored || typeof stored !== "object") return;
+    for (const [id, raw] of Object.entries(stored)) {
+      const rule = mergeRule(void 0, raw && typeof raw === "object" ? raw : {});
+      if (rule) rules2.set(String(id), rule);
+    }
+  }
+  function saveRules() {
+    const out = {};
+    for (const [id, rule] of rules2) out[id] = { ...rule };
+    writeAriesPath(RULES_PATH, out);
+  }
+  function rulesSnapshot() {
+    ensureRulesLoaded();
+    const out = {};
+    for (const [id, rule] of rules2) out[id] = copyRule(rule);
+    return out;
+  }
+  function commitRules() {
+    saveRules();
+    rulesChanged.emit(rulesSnapshot());
+  }
+  function hasRule(rule) {
+    return !!(rule && (rule.sound || rule.volume != null || rule.playbackMode || rule.stopMode || rule.loopIntervalMs != null));
+  }
+  function ruleOverrides(rule) {
+    if (!rule) return null;
+    const overrides = {};
+    if (rule.sound) overrides.sound = rule.sound;
+    if (rule.volume != null && Number.isFinite(rule.volume)) overrides.volume = clamp(Number(rule.volume), 0, 1);
+    if (rule.playbackMode === "loop" || rule.playbackMode === "oneshot") overrides.mode = rule.playbackMode;
+    if (rule.stopMode === "purchase" || rule.stopMode === "manual") overrides.stop = { mode: rule.stopMode };
+    if (rule.loopIntervalMs != null && Number.isFinite(rule.loopIntervalMs)) {
+      overrides.loopIntervalMs = Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(Number(rule.loopIntervalMs)));
+    }
+    return Object.keys(overrides).length ? overrides : null;
+  }
+  function shortSoundName(name) {
+    return name.length > 32 ? `${name.slice(0, 29)}\u2026` : name;
+  }
+  function formatInterval(ms) {
+    const seconds2 = ms / 1e3;
+    if (seconds2 < 1) return `${ms} ms`;
+    return seconds2 >= 10 ? `${Math.round(seconds2)} s` : `${(Math.round(seconds2 * 10) / 10).toFixed(1)} s`;
+  }
+  function formatRuleSummary(rule) {
+    if (!rule) return "";
+    const parts = [];
+    if (rule.sound) {
+      const label2 = audio.listSounds().includes(rule.sound) ? rule.sound : shortSoundName(rule.sound);
+      parts.push(`Sound: ${label2}`);
+    }
+    if (rule.volume != null) parts.push(`Volume: ${Math.round(clamp(Number(rule.volume), 0, 1) * 100)}%`);
+    if (rule.playbackMode === "oneshot") parts.push("Mode: One-shot");
+    else if (rule.playbackMode === "loop") parts.push("Mode: Loop");
+    if (rule.stopMode === "purchase") parts.push("Stop: Until purchase");
+    else if (rule.stopMode === "manual") parts.push("Stop: Manual");
+    if (rule.loopIntervalMs != null) {
+      const raw = Number(rule.loopIntervalMs);
+      if (Number.isFinite(raw)) parts.push(`Interval: ${formatInterval(Math.max(1, Math.round(raw)))}`);
+    }
+    return parts.join(" \u2022 ");
+  }
+  function ruleDefaults(context) {
+    const playback = audio.getPlaybackSettings(context);
+    const loop = LoopDefaults.get(context);
+    return {
+      soundName: (playback.defaultSoundName || "").trim() || "Default",
+      volume: clamp(playback.volume || 0, 0, 1),
+      mode: playback.mode,
+      stopMode: loop.stopMode,
+      loopIntervalMs: Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(loop.loopIntervalMs))
+    };
+  }
+  function rulePatchFromEditor(context, values) {
+    const defaults = ruleDefaults(context);
+    const canLoop = context === "shops";
+    let playbackMode = values.mode === "oneshot" || values.mode === "loop" ? values.mode : null;
+    if (playbackMode === defaults.mode) playbackMode = null;
+    let stopMode = canLoop && values.stop === "purchase" ? "purchase" : null;
+    if (stopMode === defaults.stopMode) stopMode = null;
+    let loopIntervalMs = null;
+    const typed = values.interval.trim();
+    if (canLoop && typed && Number.isFinite(Number(typed))) {
+      const interval = clampLoopInterval(typed, defaults.loopIntervalMs);
+      if (interval !== defaults.loopIntervalMs) loopIntervalMs = interval;
+    }
+    const ratio = clamp(Math.round(values.volumePct) || 0, 0, 100) / 100;
+    const volume = Math.abs(ratio - defaults.volume) > 1e-3 ? ratio : null;
+    if (canLoop && !playbackMode && defaults.mode !== "loop" && (stopMode != null || loopIntervalMs != null)) {
+      playbackMode = "loop";
+    }
+    return { sound: values.sound.trim() || null, volume, playbackMode, stopMode, loopIntervalMs };
+  }
+  var RULES_PATH, hasOwn, rules2, rulesLoaded, rulesChanged, copyRule, NotifierRules;
+  var init_rules = __esm({
+    "src/features/notifier/rules.ts"() {
+      "use strict";
+      init_storage();
+      init_emitter();
+      init_math();
+      init_audio();
+      init_playbackDefaults();
+      RULES_PATH = "notifier.rules";
+      hasOwn = (obj, key2) => Object.prototype.hasOwnProperty.call(obj, key2);
+      rules2 = /* @__PURE__ */ new Map();
+      rulesLoaded = false;
+      rulesChanged = new Emitter();
+      copyRule = (rule) => ({ ...rule });
+      NotifierRules = {
+        get(id) {
+          if (!id) return null;
+          ensureRulesLoaded();
+          const rule = rules2.get(id);
+          return rule ? copyRule(rule) : null;
+        },
+        getAll() {
+          return rulesSnapshot();
+        },
+        set(id, patch) {
+          if (!id || !patch || typeof patch !== "object") return;
+          ensureRulesLoaded();
+          const prev = rules2.get(id);
+          const next = mergeRule(prev, patch);
+          if (rulesEqual(prev, next)) return;
+          if (next) rules2.set(id, next);
+          else rules2.delete(id);
+          commitRules();
+        },
+        clear(id) {
+          if (!id) return;
+          ensureRulesLoaded();
+          if (rules2.delete(id)) commitRules();
+        },
+        onChange(cb) {
+          ensureRulesLoaded();
+          return rulesChanged.on(cb);
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/inventoryCaps.ts
+  function isCapReachedIn(catalog, counts, itemId) {
+    const meta = catalog[itemId];
+    if (!meta) return false;
+    const owned2 = counts.get(itemId) || 0;
+    if (meta.isOneTimePurchase && owned2 >= 1) return true;
+    const max = Number(meta.maxInventoryQuantity);
+    return Number.isFinite(max) && max > 0 && owned2 >= max;
+  }
+  function isCapReached(id) {
+    if (id.startsWith("Tool:")) return isCapReachedIn(toolCatalog2, toolCounts, id.slice(5));
+    if (id.startsWith("Decor:")) return isCapReachedIn(decorCatalog2, decorCounts, id.slice(6));
+    return false;
+  }
+  function countsOf(items, idOf) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const item of Array.isArray(items) ? items : []) {
+      const id = String(idOf(item) ?? "");
+      if (id) counts.set(id, Number(item?.quantity) || 0);
+    }
+    return counts;
+  }
+  async function follow(view, apply) {
+    const update = (value) => {
+      try {
+        apply(value);
+      } catch {
+      }
+      changed2.emit();
+    };
+    try {
+      update(await view.get());
+    } catch {
+    }
+    try {
+      await view.onChange(update);
+    } catch {
+    }
+  }
+  var toolCounts, decorCounts, changed2, InventoryCaps;
+  var init_inventoryCaps = __esm({
+    "src/features/notifier/inventoryCaps.ts"() {
+      "use strict";
+      init_atoms();
+      init_emitter();
+      init_data();
+      toolCounts = /* @__PURE__ */ new Map();
+      decorCounts = /* @__PURE__ */ new Map();
+      changed2 = new Emitter();
+      InventoryCaps = {
+        async start() {
+          await follow(Atoms.inventory.myToolInventory, (items) => {
+            toolCounts = countsOf(items, (it) => it?.toolId);
+          });
+          await follow(Atoms.inventory.myDecorInventory, (items) => {
+            decorCounts = countsOf(items, (it) => it?.decorId ?? it?.id);
+          });
+        },
+        /** Fires after every inventory update. */
+        onChange(cb) {
+          return changed2.on(cb);
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/shopRows.ts
+  function followedIds() {
+    if (followed) return followed;
+    followed = /* @__PURE__ */ new Set();
+    const stored = readAriesPath(FOLLOWED_PATH);
+    if (stored && typeof stored === "object") {
+      for (const [id, bits] of Object.entries(stored)) {
+        if (id && (Number(bits) | 0) & 1) followed.add(id);
+      }
+    }
+    return followed;
+  }
+  function saveFollowed() {
+    const out = {};
+    for (const id of followedIds()) out[id] = 1;
+    writeAriesPath(FOLLOWED_PATH, out);
+  }
+  function splitEligibleShops(shops2) {
+    const names = Array.isArray(shops2) ? shops2.map((s) => String(s ?? "").trim()).filter(Boolean) : [];
+    let base = null;
+    const weathers = [];
+    for (const name of names) {
+      if (BASE_SHOPS.has(name)) base = name;
+      else weathers.push(name);
+    }
+    return { base, weathers };
+  }
+  function buildRows() {
+    const rows = [];
+    const seen = /* @__PURE__ */ new Set();
+    const sources = [
+      { catalog: plantCatalog2, section: "Seed", entryOf: (raw) => raw?.seed ?? raw },
+      { catalog: eggCatalog2, section: "Egg", entryOf: (raw) => raw },
+      { catalog: toolCatalog2, section: "Tool", entryOf: (raw) => raw },
+      { catalog: decorCatalog2, section: "Decor", entryOf: (raw) => raw }
+    ];
+    for (const { catalog, section: naturalSection, entryOf: entryOf3 } of sources) {
+      if (!catalog || typeof catalog !== "object") continue;
+      for (const key2 of Object.keys(catalog)) {
+        const entry = entryOf3(catalog[key2]);
+        if (!entry || typeof entry !== "object") continue;
+        const { base, weathers } = splitEligibleShops(entry.eligibleShops);
+        if (!base && weathers.length === 0) continue;
+        const section5 = base ?? naturalSection;
+        const id = `${section5}:${key2}`;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        const rawRarity = typeof entry.rarity === "string" ? entry.rarity : void 0;
+        const popup = followedIds().has(id);
+        rows.push({
+          id,
+          type: section5,
+          name: typeof entry.name === "string" && entry.name.trim() ? String(entry.name) : key2,
+          rarity: rawRarity ? DISPLAY_RARITY[rawRarity] ?? rawRarity : void 0,
+          popup,
+          followed: popup,
+          weatherOnly: !base || void 0,
+          weathers: weathers.length ? weathers : void 0
+        });
+      }
+    }
+    return rows;
+  }
+  var FOLLOWED_PATH, followed, DISPLAY_RARITY, BASE_SHOPS, state2, idsSig, changed3, countFollowed, emit, ShopRows;
+  var init_shopRows = __esm({
+    "src/features/notifier/shopRows.ts"() {
+      "use strict";
+      init_data();
+      init_emitter();
+      init_storage();
+      init_inventoryCaps();
+      FOLLOWED_PATH = "notifier.prefs";
+      followed = null;
+      DISPLAY_RARITY = {
+        [rarity2.Common]: "Common",
+        [rarity2.Uncommon]: "Uncommon",
+        [rarity2.Rare]: "Rare",
+        [rarity2.Legendary]: "Legendary",
+        [rarity2.Mythic]: "Mythical",
+        // The live API returns "Mythic" while rarityMap.Mythic is "Mythical".
+        Mythic: "Mythical",
+        [rarity2.Divine]: "Divine",
+        [rarity2.Celestial]: "Celestial"
+      };
+      BASE_SHOPS = /* @__PURE__ */ new Set(["Seed", "Egg", "Tool", "Decor"]);
+      state2 = null;
+      idsSig = "";
+      changed3 = new Emitter();
+      countFollowed = (rows) => rows.reduce((n, r) => n + (r.followed ? 1 : 0), 0);
+      emit = () => {
+        if (state2) changed3.emit({ ...state2, rows: state2.rows.slice() });
+      };
+      ShopRows = {
+        /** Rebuilds the rows from the catalogs. Listeners hear of it only when the set of items changed. */
+        rebuild() {
+          const rows = buildRows();
+          state2 = { updatedAt: Date.now(), rows, counts: { items: rows.length, followed: countFollowed(rows) } };
+          const sig = rows.map((r) => r.id).sort().join("|");
+          if (sig === idsSig) return;
+          idsSig = sig;
+          emit();
+        },
+        /** Re-reads every row's alert (followed, capped) and tells the listeners. */
+        refresh() {
+          if (!state2) return;
+          for (const row5 of state2.rows) {
+            const popup = followedIds().has(row5.id) && !isCapReached(row5.id);
+            row5.popup = popup;
+            row5.followed = popup;
+          }
+          state2 = {
+            ...state2,
+            updatedAt: Date.now(),
+            rows: state2.rows.slice(),
+            counts: { items: state2.rows.length, followed: countFollowed(state2.rows) }
+          };
+          emit();
+        },
+        state() {
+          if (!state2) ShopRows.rebuild();
+          return state2;
+        },
+        onChange(cb) {
+          return changed3.on(cb);
+        },
+        /** Whether an item's alert is on. A capped item reads as off. */
+        isFollowed(id) {
+          return !isCapReached(id) && followedIds().has(id);
+        },
+        /** Turns an item's alert on or off. Turning on a capped item does nothing. */
+        setFollowed(id, enabled2) {
+          if (!id || enabled2 && isCapReached(id)) return;
+          if (enabled2) followedIds().add(id);
+          else followedIds().delete(id);
+          saveFollowed();
+          ShopRows.refresh();
+        },
+        /** Filters rows by type and rarity, as the Shops tab's selects ask. */
+        filter(rows, filters) {
+          const type = filters.type ?? "all";
+          const rarity3 = filters.rarity ?? "all";
+          return rows.filter(
+            (r) => (type === "all" || r.type.toLowerCase() === type) && (rarity3 === "all" || String(r.rarity ?? "").toLowerCase() === rarity3)
+          );
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/shopAlerts.ts
+  function findStockItem(shops2, id) {
+    if (!shops2) return null;
+    const [prefix, raw] = String(id).split(":");
+    const kind = KIND_OF_PREFIX[prefix];
+    if (!kind || !raw) return null;
+    const item = shops2[kind]?.inventory?.find((it) => shopItemId(kind, it) === `${prefix}:${raw}`);
+    return item ? { kind: BUY_KIND[kind], item } : null;
+  }
+  var SHOP_KINDS, BUY_KIND, KIND_OF_PREFIX, SHOP_UPDATES_TO_ARM, PURCHASE_UPDATES_TO_ARM, ShopAlerts;
+  var init_shopAlerts = __esm({
+    "src/features/notifier/shopAlerts.ts"() {
+      "use strict";
+      init_emitter();
+      init_shopFeed();
+      init_audio();
+      init_rules();
+      init_shopRows();
+      SHOP_KINDS = ["seed", "tool", "egg", "decor"];
+      BUY_KIND = { seed: "seeds", egg: "eggs", tool: "tools", decor: "decor" };
+      KIND_OF_PREFIX = { Seed: "seed", Egg: "egg", Tool: "tool", Decor: "decor" };
+      SHOP_UPDATES_TO_ARM = 3;
+      PURCHASE_UPDATES_TO_ARM = 2;
+      ShopAlerts = class {
+        constructor() {
+          this.shops = null;
+          this.purchases = null;
+          this.rules = /* @__PURE__ */ new Map();
+          this.available = [];
+          this.listedIds = /* @__PURE__ */ new Set();
+          this.prevListedIds = /* @__PURE__ */ new Set();
+          this.shopUpdates = 0;
+          this.purchaseUpdates = 0;
+          this.armed = false;
+          this.justRestocked = false;
+          this.changed = new Emitter();
+          audio.setPurchaseChecker((itemId) => {
+            if (!itemId || this.listedIds.has(itemId)) return false;
+            return purchasedCount(itemId, this.purchases) > 0;
+          });
+        }
+        /** Fires with the listed items after every update, before any sound starts. */
+        onChange(cb) {
+          return this.changed.on(cb);
+        }
+        items() {
+          return this.available;
+        }
+        shopsSnapshot() {
+          return this.shops;
+        }
+        setShops(next) {
+          const prev = this.shops;
+          this.shops = next;
+          this.shopUpdates++;
+          this.justRestocked = !!prev && SHOP_KINDS.some((k) => (prev[k]?.secondsUntilRestock ?? 0) < (next[k]?.secondsUntilRestock ?? 0));
+          this.update();
+        }
+        setPurchases(next) {
+          this.purchases = next;
+          this.purchaseUpdates++;
+          this.update();
+        }
+        /** The followed items changed. */
+        refresh() {
+          this.update();
+        }
+        setRules(rules3) {
+          this.rules.clear();
+          for (const [id, rule] of Object.entries(rules3)) {
+            if (id && rule) this.rules.set(id, { ...rule });
+          }
+          this.restartLoops();
+        }
+        /* ================================ Listing ================================ */
+        listAvailable(shops2, purchases) {
+          const out = [];
+          for (const kind of SHOP_KINDS) {
+            for (const item of shops2[kind].inventory) {
+              const id = shopItemId(kind, item);
+              if (!id || !ShopRows.isFollowed(id)) continue;
+              const remaining = Math.max(Number(item.initialStock) - purchasedCount(id, purchases), 0);
+              if (remaining > 0) out.push({ id, qty: remaining });
+            }
+          }
+          return out;
+        }
+        update() {
+          const shops2 = this.shops;
+          const purchases = this.purchases;
+          if (!shops2 || !purchases) return;
+          this.available = this.listAvailable(shops2, purchases);
+          this.changed.emit(this.available);
+          const listed = new Set(this.available.map((r) => r.id));
+          this.listedIds = listed;
+          if (!this.armed) {
+            const shopsEmpty = SHOP_KINDS.every((k) => (shops2[k]?.inventory?.length ?? 0) === 0);
+            const settled = this.shopUpdates >= SHOP_UPDATES_TO_ARM && this.purchaseUpdates >= PURCHASE_UPDATES_TO_ARM && !shopsEmpty;
+            if (settled) {
+              this.armed = true;
+              if (listed.size > 0) this.ring(listed);
+              this.justRestocked = false;
+            }
+            this.prevListedIds = listed;
+            return;
+          }
+          if (listed.size === 0) {
+            audio.stopAllLoops();
+          } else if (this.justRestocked) {
+            this.ring(listed);
+            this.stopLoopsLeaving(listed);
+          } else {
+            const appeared = [...listed].filter((id) => !this.prevListedIds.has(id));
+            if (appeared.length) this.ring(appeared);
+            this.stopLoopsLeaving(listed);
+          }
+          this.prevListedIds = listed;
+          this.justRestocked = false;
+        }
+        stopLoopsLeaving(listed) {
+          for (const id of this.prevListedIds) {
+            if (!listed.has(id)) audio.stopLoop(id);
+          }
+        }
+        /* ================================ Sounds ================================= */
+        playbackModeOf(id) {
+          const rule = this.rules.get(id);
+          const baseMode = audio.getPlaybackMode("shops");
+          if (!rule) return baseMode;
+          if (rule.playbackMode === "loop" || rule.playbackMode === "oneshot") return rule.playbackMode;
+          if ((rule.stopMode || rule.loopIntervalMs != null) && baseMode === "loop") return "loop";
+          return baseMode;
+        }
+        /**
+         * Rings for these items. Items sharing a sound and volume ring once
+         * together: every loop starts, and a one-shot plays only when no loop
+         * shares its sound.
+         */
+        ring(ids) {
+          const groups = /* @__PURE__ */ new Map();
+          for (const id of ids) {
+            const overrides = ruleOverrides(this.rules.get(id)) ?? {};
+            const sound = overrides.sound ? overrides.sound.trim().toLowerCase() : "__default__";
+            const volume = overrides.volume != null ? Math.round(overrides.volume * 1e3) : "__default__";
+            const key2 = `sound:${sound}|vol:${volume}`;
+            const group2 = groups.get(key2) ?? { loops: [], oneshots: [] };
+            if (this.playbackModeOf(id) === "loop") group2.loops.push({ id, overrides });
+            else group2.oneshots.push({ id, overrides });
+            groups.set(key2, group2);
+          }
+          for (const { loops, oneshots } of groups.values()) {
+            if (loops.length) {
+              for (const entry of loops) audio.trigger(entry.id, entry.overrides, "shops").catch(() => {
+              });
+            } else if (oneshots.length) {
+              audio.trigger(oneshots[0].id, oneshots[0].overrides, "shops").catch(() => {
+              });
+            }
+          }
+        }
+        /** Restarts the loops of listed items so a changed rule takes effect. */
+        restartLoops() {
+          const loopIds = [...this.listedIds].filter((id) => this.playbackModeOf(id) === "loop");
+          for (const id of loopIds) audio.stopLoop(id);
+          if (loopIds.length) this.ring(loopIds);
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/buyPanel.ts
+  function itemName(id) {
+    const [type, raw] = id.split(":");
+    switch (type) {
+      case "Seed":
+        return seedCatalogName(raw) ?? raw;
+      case "Egg":
+        return eggCatalogName(raw) ?? raw;
+      case "Tool":
+        return toolCatalogName(raw) ?? raw;
+      case "Decor":
+        return decorCatalogName(raw) ?? raw;
+      default:
+        return raw;
+    }
+  }
+  async function withBusyButton(btn, label2, purchase) {
+    btn.disabled = true;
+    const labelEl = btn.querySelector(".label");
+    if (labelEl) labelEl.textContent = "Buying...";
+    try {
+      await purchase();
+    } catch {
+    } finally {
+      if (labelEl) labelEl.textContent = label2;
+      btn.disabled = false;
+    }
+  }
+  var ROW_BORDER, BuyPanel;
+  var init_buyPanel = __esm({
+    "src/features/notifier/buyPanel.ts"() {
+      "use strict";
+      init_names();
+      init_button();
+      init_dom2();
+      init_shops();
+      init_itemIcon();
+      init_shopAlerts();
+      ROW_BORDER = "1px solid var(--qmm-border)";
+      BuyPanel = class {
+        constructor(alerts) {
+          this.alerts = alerts;
+          this.lastSig = null;
+          this.el = h("div");
+          this.el.setAttribute("role", "dialog");
+          this.el.setAttribute("aria-label", "Tracked items available");
+          Object.assign(this.el.style, {
+            position: "fixed",
+            width: "min(340px, 80vw)",
+            maxHeight: "50vh",
+            overflow: "auto",
+            // Keeps the scroll, and touch gestures, from reaching the game.
+            overscrollBehavior: "contain",
+            touchAction: "pan-y",
+            borderRadius: "var(--chakra-radii-card, 12px)",
+            border: "1px solid var(--qmm-border-strong)",
+            background: "var(--qmm-panel-bg)",
+            backdropFilter: "blur(8px)",
+            color: "var(--qmm-text)",
+            boxShadow: "var(--qmm-shadow-window)",
+            padding: "8px",
+            display: "none",
+            zIndex: "var(--chakra-zIndices-DialogModal, 7010)",
+            pointerEvents: "auto"
+          });
+          this.el.style.setProperty("-webkit-backdrop-filter", "blur(8px)");
+          this.stopScrollReachingGame();
+        }
+        get isOpen() {
+          return this.el.style.display === "block";
+        }
+        setOpen(open) {
+          this.el.style.display = open ? "block" : "none";
+        }
+        /** Redraws the list, unless the items and quantities are unchanged. */
+        render(items) {
+          const sig = JSON.stringify(items.map((r) => [r.id, r.qty]));
+          if (sig === this.lastSig) return;
+          this.lastSig = sig;
+          const head = h("div", void 0, "Tracked items available");
+          Object.assign(head.style, {
+            fontWeight: "700",
+            opacity: "0.9",
+            padding: "4px 2px",
+            borderBottom: ROW_BORDER,
+            marginBottom: "4px"
+          });
+          this.el.replaceChildren(head);
+          if (!items.length) {
+            const empty = h("div", void 0, "No tracked items are available.");
+            Object.assign(empty.style, { opacity: "0.75", padding: "8px 2px" });
+            this.el.appendChild(empty);
+            return;
+          }
+          for (const item of items) this.el.appendChild(this.renderRow(item));
+        }
+        renderRow({ id, qty }) {
+          const row5 = h("div");
+          Object.assign(row5.style, {
+            display: "grid",
+            gridTemplateColumns: "24px 1fr max-content max-content max-content",
+            alignItems: "center",
+            gap: "8px",
+            padding: "6px 4px",
+            borderBottom: ROW_BORDER
+          });
+          const title = h("div", void 0, itemName(id));
+          Object.assign(title.style, {
+            fontWeight: "600",
+            fontSize: "12px",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap"
+          });
+          const count = h("div", void 0, `\xD7${qty}`);
+          Object.assign(count.style, {
+            fontVariantNumeric: "tabular-nums",
+            opacity: "0.9",
+            color: "var(--qmm-text-soft)",
+            textAlign: "right"
+          });
+          const buyBtn = button("Buy", { size: "xs", variant: "primary" });
+          const buyAllBtn = button("Buy all", { size: "xs" });
+          buyBtn.onclick = (e) => {
+            e.stopPropagation();
+            void this.buy(id, buyBtn, "Buy", (stock) => ShopsService.buyOne(stock.kind, stock.item));
+          };
+          buyAllBtn.onclick = (e) => {
+            e.stopPropagation();
+            const available = this.alerts.items().find((r) => r.id === id)?.qty ?? 0;
+            if (available <= 0) {
+              buyAllBtn.disabled = true;
+              return;
+            }
+            void this.buy(id, buyAllBtn, "Buy all", (stock) => ShopsService.buyEach(stock.kind, stock.item, available));
+          };
+          if (!findStockItem(this.alerts.shopsSnapshot(), id)) {
+            for (const btn of [buyBtn, buyAllBtn]) {
+              btn.setEnabled(false);
+              btn.title = "Unavailable";
+            }
+          }
+          row5.append(shopItemIcon(id, itemName(id), 24, "alerts-overlay"), title, count, buyBtn, buyAllBtn);
+          return row5;
+        }
+        async buy(id, btn, label2, purchase) {
+          const stock = findStockItem(this.alerts.shopsSnapshot(), id);
+          if (!stock) {
+            btn.disabled = true;
+            return;
+          }
+          await withBusyButton(btn, label2, () => purchase(stock));
+        }
+        /** Lets the panel scroll without the wheel or touch reaching the game's canvas. */
+        stopScrollReachingGame() {
+          const stop = (e) => e.stopPropagation();
+          const opts = { passive: true, capture: true };
+          for (const type of ["wheel", "mousewheel", "DOMMouseScroll", "touchmove"]) {
+            this.el.addEventListener(type, stop, opts);
+          }
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/weather.ts
+  function readCycle(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const entry = raw;
+    const rawKind = trimmedString(entry.kind);
+    const kindLc = rawKind.toLowerCase();
+    const kind = kindLc === "weather" || kindLc === "lunar" || kindLc === "base" ? kindLc : "unknown";
+    const meta = { kind, rawKind: rawKind || void 0 };
+    for (const field2 of ["startWindowMin", "startWindowMax", "durationMinutes", "periodMinutes"]) {
+      const value = finiteNumber2(entry[field2]);
+      if (value !== void 0) meta[field2] = value;
+    }
+    return meta;
+  }
+  function readMutations(raw) {
+    if (!Array.isArray(raw)) return [];
+    const items = [];
+    for (const entry of raw) {
+      if (!entry || typeof entry !== "object") continue;
+      const name = trimmedString(entry.name);
+      if (!name) continue;
+      const mutation = { name };
+      const multiplier = finiteNumber2(entry.multiplier);
+      if (multiplier !== void 0) mutation.multiplier = multiplier;
+      const conditional = trimmedString(entry.conditional);
+      if (conditional) mutation.conditional = conditional;
+      items.push(mutation);
+    }
+    return items;
+  }
+  function readMutator(mutator) {
+    const id = trimmedString(mutator?.mutation);
+    if (!id) return [];
+    const entry = mutationCatalog2[id];
+    const mutation = { name: typeof entry?.name === "string" && entry.name ? entry.name : id };
+    const multiplier = finiteNumber2(entry?.coinMultiplier);
+    if (multiplier !== void 0) mutation.multiplier = multiplier;
+    return [mutation];
+  }
+  function readWeather(key2, value) {
+    const entry = value ?? {};
+    const safeName = String(key2 || "").trim();
+    if (!safeName) return null;
+    const rawDisplayName = trimmedString(entry.displayName) || trimmedString(entry.name);
+    const displayName = spaceWords(rawDisplayName || safeName).replace(/_/g, " ").replace(/\s+/g, " ").trim();
+    const atomValue = "atomValue" in entry ? trimmedString(entry.atomValue) : entry.mutator ? safeName : "";
+    return {
+      id: `${WEATHER_ID_PREFIX}${safeName}`,
+      name: displayName || safeName,
+      atomValue,
+      type: atomValue || displayName,
+      description: trimmedString(entry.description) || null,
+      cycle: readCycle(entry.cycle),
+      weightInCycle: finiteNumber2(entry.weightInCycle) ?? null,
+      mutations: Array.isArray(entry.mutations) ? readMutations(entry.mutations) : readMutator(entry.mutator)
+    };
+  }
+  function weatherDefs() {
+    return weatherIndex().defs;
+  }
+  function weatherById(id) {
+    return weatherIndex().byId.get(id);
+  }
+  function weatherForAtomValue(value) {
+    const key2 = value.toLowerCase();
+    const { byAtom, byName } = weatherIndex();
+    return byAtom.get(key2) || byName.get(key2) || (key2 ? byName.get(key2.replace(/\s+/g, "")) : void 0);
+  }
+  function formatWeatherMutation(mutation) {
+    const raw = Number(mutation.multiplier);
+    if (mutation.multiplier == null || !Number.isFinite(raw)) return mutation.name;
+    const rounded = Math.abs(raw - Math.round(raw)) < 0.01 ? Math.round(raw) : Math.round(raw * 100) / 100;
+    return `${mutation.name} \xD7${rounded}`;
+  }
+  function formatLastSeen(timestamp, isCurrent) {
+    if (isCurrent) {
+      return { label: "Now", title: timestamp ? new Date(timestamp).toLocaleString() : "Currently active" };
+    }
+    if (!timestamp) return { label: "Never", title: "Never seen" };
+    const diff = Math.max(0, Date.now() - timestamp);
+    const plural3 = (n, unit) => `${n} ${unit}${n > 1 ? "s" : ""} ago`;
+    let label2;
+    if (diff < 45e3) label2 = "Just now";
+    else if (diff < 9e4) label2 = "1 min ago";
+    else if (diff < 36e5) label2 = plural3(Math.round(diff / 6e4), "min");
+    else if (diff < 36 * 36e5) label2 = plural3(Math.round(diff / 36e5), "hour");
+    else label2 = plural3(Math.round(diff / 864e5), "day");
+    return { label: label2, title: new Date(timestamp).toLocaleString() };
+  }
+  var WEATHER_ID_PREFIX, finiteNumber2, trimmedString, weatherIndex;
+  var init_weather = __esm({
+    "src/features/notifier/weather.ts"() {
+      "use strict";
+      init_data();
+      init_format();
+      WEATHER_ID_PREFIX = "Weather:";
+      finiteNumber2 = (value) => {
+        const num2 = typeof value === "number" ? value : Number(value);
+        return Number.isFinite(num2) ? num2 : void 0;
+      };
+      trimmedString = (value) => typeof value === "string" ? value.trim() : "";
+      weatherIndex = memoOnCatalogs(() => {
+        const defs = [];
+        for (const [key2, value] of Object.entries(weatherCatalog2 ?? {})) {
+          const def = readWeather(key2, value);
+          if (def) defs.push(def);
+        }
+        const byId = /* @__PURE__ */ new Map();
+        const byAtom = /* @__PURE__ */ new Map();
+        const byName = /* @__PURE__ */ new Map();
+        for (const def of defs) {
+          byId.set(def.id, def);
+          byName.set(def.name.toLowerCase(), def);
+          byAtom.set(def.atomValue.toLowerCase(), def);
+          byName.set(def.id.slice(WEATHER_ID_PREFIX.length).toLowerCase(), def);
+        }
+        return { defs, byId, byAtom, byName };
+      });
+    }
+  });
+
+  // src/features/notifier/weatherAlerts.ts
+  function ensurePrefsLoaded() {
+    if (prefsLoaded) return;
+    prefsLoaded = true;
+    prefs = /* @__PURE__ */ new Map();
+    const stored = readAriesPath(PREFS_PATH);
+    if (!stored || typeof stored !== "object") return;
+    for (const [id, value] of Object.entries(stored)) {
+      if (!id) continue;
+      const pref = {};
+      if (typeof value?.notify === "boolean") pref.notify = value.notify;
+      if (typeof value?.lastSeen === "number" && Number.isFinite(value.lastSeen)) pref.lastSeen = value.lastSeen;
+      prefs.set(String(id), pref);
+    }
+  }
+  function savePrefs() {
+    const out = {};
+    for (const [id, pref] of prefs) {
+      const entry = {};
+      if (pref.notify) entry.notify = true;
+      if (typeof pref.lastSeen === "number" && Number.isFinite(pref.lastSeen)) entry.lastSeen = pref.lastSeen;
+      if (entry.notify || entry.lastSeen != null) out[id] = entry;
+    }
+    writeAriesPath(PREFS_PATH, out);
+  }
+  function prefOf(id) {
+    ensurePrefsLoaded();
+    let pref = prefs.get(id);
+    if (!pref) {
+      pref = {};
+      prefs.set(id, pref);
+    }
+    return pref;
+  }
+  function recomputeState() {
+    const rows = weatherDefs().map((def) => {
+      const pref = prefOf(def.id);
+      return {
+        ...def,
+        notify: !!pref.notify,
+        lastSeen: typeof pref.lastSeen === "number" && Number.isFinite(pref.lastSeen) ? pref.lastSeen : null,
+        isCurrent: def.id === currentId,
+        cycle: def.cycle ? { ...def.cycle } : null,
+        mutations: def.mutations.map((mutation) => ({ ...mutation }))
+      };
+    });
+    const sig = weatherStateSignature(rows);
+    const isNew = sig !== stateSig;
+    stateSig = sig;
+    state3 = { updatedAt: Date.now(), currentId, rows };
+    if (isNew) changed4.emit(state3);
+  }
+  function ring(id) {
+    if (!weatherById(id)) return;
+    const rule = NotifierRules.get(id);
+    const overrides = { mode: "oneshot" };
+    if (rule?.sound) overrides.sound = rule.sound;
+    if (rule?.volume != null) overrides.volume = rule.volume;
+    audio.trigger(id, overrides, "weather").catch(() => {
+    });
+  }
+  function onWeather(raw, force = false) {
+    const value = raw == null ? "" : String(raw).trim();
+    if (!force && currentValue === value) return;
+    const def = weatherForAtomValue(value);
+    const prevId = currentId;
+    if (def) prefOf(def.id).lastSeen = Date.now();
+    currentId = def?.id ?? null;
+    currentValue = value;
+    if (currentId) StatsService.incrementWeatherStat(currentId.replace(WEATHER_ID_PREFIX, ""));
+    if (prevId && prevId !== currentId) audio.stopLoop(prevId);
+    if (def && prefOf(def.id).notify) ring(def.id);
+    if (def) savePrefs();
+    recomputeState();
+  }
+  var PREFS_PATH, prefs, prefsLoaded, state3, stateSig, currentId, currentValue, changed4, weatherStateSignature, WeatherAlerts;
+  var init_weatherAlerts = __esm({
+    "src/features/notifier/weatherAlerts.ts"() {
+      "use strict";
+      init_atoms();
+      init_emitter();
+      init_storage();
+      init_stats();
+      init_audio();
+      init_rules();
+      init_weather();
+      PREFS_PATH = "notifier.weatherPrefs";
+      prefs = /* @__PURE__ */ new Map();
+      prefsLoaded = false;
+      state3 = null;
+      stateSig = null;
+      currentId = null;
+      currentValue = null;
+      changed4 = new Emitter();
+      weatherStateSignature = (rows) => JSON.stringify(rows.map((r) => [r.id, r.notify ? 1 : 0, r.lastSeen || 0, r.isCurrent ? 1 : 0]));
+      WeatherAlerts = {
+        /** Reads the weather once, then follows it. */
+        async start() {
+          const view = Atoms.data.weather;
+          try {
+            onWeather(await view.get(), true);
+          } catch {
+          }
+          try {
+            await view.onChange((next) => {
+              try {
+                onWeather(next);
+              } catch {
+              }
+            });
+          } catch {
+          }
+        },
+        state() {
+          if (!state3) recomputeState();
+          return state3;
+        },
+        onChange(cb) {
+          return changed4.on(cb);
+        },
+        setNotify(id, enabled2) {
+          if (!id) return;
+          const pref = prefOf(id);
+          if (!!pref.notify === enabled2) return;
+          pref.notify = enabled2;
+          savePrefs();
+          if (!enabled2) audio.stopLoop(id);
+          else if (currentId === id) ring(id);
+          recomputeState();
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/notifier.ts
+  async function ensureStarted() {
+    if (started) return;
+    started = true;
+    try {
+      ShopRows.rebuild();
+    } catch {
+    }
+    window.addEventListener("gemini:data-updated", onCatalogsUpdated);
+    ShopFeed.start();
+    InventoryCaps.onChange(() => ShopRows.refresh());
+    await InventoryCaps.start();
+    await WeatherAlerts.start();
+  }
+  var started, onCatalogsUpdated, NotifierService;
+  var init_notifier = __esm({
+    "src/features/notifier/notifier.ts"() {
+      "use strict";
+      init_shopFeed();
+      init_inventoryCaps();
+      init_rules();
+      init_shopRows();
+      init_weatherAlerts();
+      started = false;
+      onCatalogsUpdated = () => {
+        try {
+          ShopRows.rebuild();
+        } catch {
+        }
+      };
+      NotifierService = {
+        async get() {
+          await ensureStarted();
+          return ShopRows.state();
+        },
+        async onChangeNow(cb) {
+          await ensureStarted();
+          cb(ShopRows.state());
+          return ShopRows.onChange(cb);
+        },
+        async onShopsChangeNow(cb) {
+          await ensureStarted();
+          try {
+            cb(await ShopFeed.readShops());
+          } catch {
+          }
+          return ShopFeed.onShopsChange(cb);
+        },
+        async onPurchasesChangeNow(cb) {
+          await ensureStarted();
+          try {
+            cb(await ShopFeed.readPurchases());
+          } catch {
+          }
+          return ShopFeed.onPurchasesChange(cb);
+        },
+        async getWeatherState() {
+          await ensureStarted();
+          return WeatherAlerts.state();
+        },
+        async onWeatherChangeNow(cb) {
+          await ensureStarted();
+          cb(WeatherAlerts.state());
+          return WeatherAlerts.onChange(cb);
+        },
+        async onRulesChangeNow(cb) {
+          await ensureStarted();
+          cb(NotifierRules.getAll());
+          return NotifierRules.onChange(cb);
+        },
+        /** Whether an item's alert is on. A capped item reads as off. */
+        getPref(id) {
+          const on = ShopRows.isFollowed(id);
+          return { popup: on, followed: on };
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/overlay.ts
+  async function renderOverlay() {
+    const alerts = new ShopAlerts();
+    new Overlay(alerts);
+    await NotifierService.onPurchasesChangeNow((p) => alerts.setPurchases(p));
+    await NotifierService.onShopsChangeNow((s) => alerts.setShops(s));
+    await NotifierService.onChangeNow(() => alerts.refresh());
+    await NotifierService.onRulesChangeNow((rules3) => alerts.setRules(rules3));
+  }
+  var REPOSITION_INTERVAL_MS, SLOT_Z_INDEX, Overlay;
+  var init_overlay2 = __esm({
+    "src/features/notifier/overlay.ts"() {
+      "use strict";
+      init_dom2();
+      init_audio();
+      init_pixiBell();
+      init_floatingBell();
+      init_buyPanel();
+      init_notifier();
+      init_shopAlerts();
+      REPOSITION_INTERVAL_MS = 1e3;
+      SLOT_Z_INDEX = 9999;
+      Overlay = class {
+        constructor(alerts) {
+          /** A fixed stacking context holding the badge and the panel. */
+          this.slot = h("div");
+          this.badge = h("span");
+          this.bell = null;
+          this.items = [];
+          this.audioPrimed = false;
+          this.panel = new BuyPanel(alerts);
+          this.styleSlot();
+          this.styleBadge();
+          this.slot.id = "qws-notifier-slot";
+          this.slot.append(this.badge, this.panel.el);
+          document.body.appendChild(this.slot);
+          this.startBell();
+          window.addEventListener(BELL_MODE_EVENT, () => this.startBell());
+          window.addEventListener("pointerdown", (e) => this.closeOnOutsideClick(e));
+          window.addEventListener("resize", () => this.reposition());
+          window.setInterval(() => this.reposition(), REPOSITION_INTERVAL_MS);
+          alerts.onChange((items) => this.show(items));
+        }
+        show(items) {
+          this.items = items;
+          this.badge.textContent = items.length ? String(items.length) : "";
+          this.badge.style.display = items.length ? "inline-flex" : "none";
+          this.placeBadge();
+          if (this.panel.isOpen) this.panel.render(items);
+          this.updateWiggle();
+        }
+        /** (Re)creates the bell in the current mode, stopping the other one first. */
+        startBell() {
+          this.bell?.stop();
+          const onClick = () => void this.toggleBell();
+          const floating = isFloatingBellEnabled();
+          this.bell = floating ? startFloatingBell({ onClick, onMoved: () => this.reposition() }) : startPixiBell({ onClick });
+          this.slot.style.zIndex = String(floating ? BELL_WIDGET_Z_INDEX + 1 : SLOT_Z_INDEX);
+          this.reposition();
+          this.updateWiggle();
+        }
+        async toggleBell() {
+          if (!this.audioPrimed) {
+            this.audioPrimed = true;
+            try {
+              await audio.prime();
+            } catch {
+            }
+          }
+          const open = !this.panel.isOpen;
+          this.panel.setOpen(open);
+          if (open) {
+            this.placePanel();
+            this.panel.render(this.items);
+            this.placeBadge();
+          }
+          this.updateWiggle();
+        }
+        closeOnOutsideClick(e) {
+          if (!this.panel.isOpen) return;
+          if (this.slot.contains(e.target) || this.isOnBell(e.clientX, e.clientY)) return;
+          this.panel.setOpen(false);
+        }
+        isOnBell(x, y) {
+          const rect = this.bell?.getScreenRect();
+          return !!rect && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+        }
+        reposition() {
+          this.placeBadge();
+          if (this.panel.isOpen) this.placePanel();
+        }
+        placeBadge() {
+          const rect = this.bell?.getScreenRect();
+          if (!rect) return;
+          this.badge.style.top = `${rect.top - 4}px`;
+          this.badge.style.right = `${window.innerWidth - rect.right - 4}px`;
+        }
+        placePanel() {
+          const rect = this.bell?.getScreenRect();
+          if (!rect) return;
+          this.panel.el.style.top = `${rect.bottom + 8}px`;
+          this.panel.el.style.right = `${window.innerWidth - rect.right}px`;
+        }
+        /** The bell rings while items wait and the panel is closed. */
+        updateWiggle() {
+          this.bell?.setWiggle(this.items.length > 0 && !this.panel.isOpen);
+        }
+        styleSlot() {
+          Object.assign(this.slot.style, {
+            position: "fixed",
+            top: "0",
+            right: "0",
+            pointerEvents: "none",
+            zIndex: String(SLOT_Z_INDEX),
+            fontFamily: "var(--chakra-fonts-body, GreyCliff CF), system-ui, sans-serif",
+            color: "var(--chakra-colors-chakra-body-text, #e7eef7)",
+            userSelect: "none"
+          });
+          this.slot.style.setProperty("-webkit-font-smoothing", "antialiased");
+          this.slot.style.setProperty("-webkit-text-size-adjust", "100%");
+          this.slot.style.setProperty("text-rendering", "optimizeLegibility");
+        }
+        /** The game's own red notification bubble. */
+        styleBadge() {
+          Object.assign(this.badge.style, {
+            position: "fixed",
+            minWidth: "18px",
+            height: "18px",
+            padding: "0 6px",
+            borderRadius: "999px",
+            background: "var(--chakra-colors-Red-Magic, #D02128)",
+            color: "var(--chakra-colors-Neutral-TrueWhite, #fff)",
+            fontSize: "12px",
+            fontWeight: "700",
+            display: "none",
+            alignItems: "center",
+            justifyContent: "center",
+            border: "1px solid rgba(0,0,0,.35)",
+            lineHeight: "18px",
+            pointerEvents: "none",
+            zIndex: "10000"
+          });
+        }
+      };
+    }
+  });
+
   // src/features/pets/abilityNames.ts
   function abilityName(id) {
     const key2 = String(id ?? "");
@@ -15068,7 +24134,7 @@
     for (const pet of hutchRaw.map(inventoryItemToPet)) if (pet) byId.set(pet.id, pet);
     for (const pet of itemsOf(inventoryRaw).map(inventoryItemToPet)) if (pet) byId.set(pet.id, pet);
     for (const pet of activeRaw.map(activeSlotToPet)) if (pet) byId.set(pet.id, pet);
-    cache = Array.from(byId.values());
+    cache2 = Array.from(byId.values());
   }
   async function startWatchers() {
     let inventorySig = "";
@@ -15130,10 +24196,10 @@
   }
   async function getInventoryPets() {
     await ensureInventoryWatchers();
-    return cache.slice();
+    return cache2.slice();
   }
   function findCachedPet(petId) {
-    return cache.find((p) => p.id === petId) ?? null;
+    return cache2.find((p) => p.id === petId) ?? null;
   }
   async function getPetLookup() {
     const owned2 = await getInventoryPets().catch(() => []);
@@ -15148,7 +24214,7 @@
     }
     return map2;
   }
-  var lower, stringOrNull, finiteOrZero, stringList, catalogKeyByLowercase, inventoryRaw, activeRaw, hutchRaw, cache, watchersStarted, watchers, itemsOf, starting, lastNonEmpty;
+  var lower, stringOrNull, finiteOrZero, stringList, catalogKeyByLowercase, inventoryRaw, activeRaw, hutchRaw, cache2, watchersStarted, watchers, itemsOf, starting, lastNonEmpty;
   var init_inventoryPets = __esm({
     "src/features/pets/inventoryPets.ts"() {
       "use strict";
@@ -15166,7 +24232,7 @@
       inventoryRaw = null;
       activeRaw = [];
       hutchRaw = [];
-      cache = [];
+      cache2 = [];
       watchersStarted = false;
       watchers = new Subscriptions();
       itemsOf = (inv) => Array.isArray(inv?.items) ? inv.items : Array.isArray(inv) ? inv : [];
@@ -15217,7 +24283,7 @@
       restored.sort((a, b) => a.performedAt - b.performedAt);
       logs = restored.slice(-MAX_ENTRIES);
       seenKeys.clear();
-      for (const entry of logs) seenKeys.add(entryKey(entry));
+      for (const entry of logs) seenKeys.add(entryKey2(entry));
       const cutoff = Number(saved.cutoff);
       if (Number.isFinite(cutoff) && cutoff > 0) cutoffMs = cutoff;
     } catch {
@@ -15226,7 +24292,7 @@
   function push(entry) {
     logs.push(entry);
     if (logs.length > MAX_ENTRIES) logs.splice(0, logs.length - MAX_ENTRIES);
-    changes2.emit(getAbilityLogs());
+    changes5.emit(getAbilityLogs());
     persist2();
   }
   function ingestActivityLogEntry(raw) {
@@ -15239,7 +24305,7 @@
     const petParam = params.pet;
     const petId = typeof petParam?.id === "string" ? petParam.id : "";
     if (!petId) return;
-    const key2 = entryKey({ abilityId, petId, performedAt });
+    const key2 = entryKey2({ abilityId, petId, performedAt });
     if (seenKeys.has(key2)) return;
     seenKeys.add(key2);
     if (cutoffMs && performedAt < cutoffMs - CUTOFF_SKEW_MS) return;
@@ -15303,7 +24369,7 @@
     return sessionStart;
   }
   function onAbilityLogs(cb) {
-    const off = changes2.on(cb);
+    const off = changes5.on(cb);
     try {
       cb(getAbilityLogs());
     } catch {
@@ -15317,10 +24383,10 @@
     logs = [];
     seenKeys.clear();
     cutoffMs = Date.now();
-    changes2.emit(getAbilityLogs());
+    changes5.emit(getAbilityLogs());
     persist2();
   }
-  var STORAGE_PATH3, MAX_ENTRIES, CUTOFF_SKEW_MS, logs, seenKeys, cutoffMs, sessionStart, changes2, entryKey, time12, optionalString;
+  var STORAGE_PATH3, MAX_ENTRIES, CUTOFF_SKEW_MS, logs, seenKeys, cutoffMs, sessionStart, changes5, entryKey2, time12, optionalString;
   var init_abilityLogs = __esm({
     "src/features/pets/abilityLogs.ts"() {
       "use strict";
@@ -15338,8 +24404,8 @@
       seenKeys = /* @__PURE__ */ new Set();
       cutoffMs = 0;
       sessionStart = Date.now();
-      changes2 = new Emitter();
-      entryKey = (e) => `${e.abilityId}|${e.petId}|${e.performedAt}`;
+      changes5 = new Emitter();
+      entryKey2 = (e) => `${e.abilityId}|${e.petId}|${e.performedAt}`;
       time12 = (ms) => new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
       optionalString = (v) => typeof v === "string" && v ? v : void 0;
     }
@@ -15404,223 +24470,6 @@
     }
   });
 
-  // src/game/activityLogModalLayout.ts
-  function locateActivityLogAnchors(modalNode2) {
-    const modalContainer = modalNode2?.children?.[0];
-    if (!modalContainer || modalContainer.destroyed) return null;
-    const children = modalContainer.children;
-    if (!Array.isArray(children) || children.length < 3) return null;
-    const backgroundSprite = children[0];
-    if (!children.some((child) => TAB_BAR_LABELS.has(child?.label))) return null;
-    const scrollViewContainer = children.find(
-      (child, index) => index > 0 && child && !TAB_BAR_LABELS.has(child.label) && child.label !== FILTER_TOOLBAR_LABEL
-    );
-    if (!backgroundSprite || !scrollViewContainer) return null;
-    return { modalContainer, backgroundSprite, scrollViewContainer };
-  }
-  function activityLogOpenTarget(tab) {
-    return { modal: ACTIVITY_LOG_MODAL_ID, tab };
-  }
-  function activityLogTabOf(value) {
-    return value === "stats" ? "stats" : "logs";
-  }
-  function locateScrollParts(scrollViewContainer) {
-    const children = scrollViewContainer?.children;
-    if (!Array.isArray(children)) return null;
-    const viewport = children.find((child) => child?.mask && Array.isArray(child.children));
-    const content2 = viewport?.children?.[0];
-    if (!viewport || !content2 || !Array.isArray(content2.children)) return null;
-    return { mask: viewport.mask, content: content2 };
-  }
-  function logsContentKind(contentChildren2) {
-    let kind = "unknown";
-    for (const child of contentChildren2) {
-      if (child?.label === STAT_CARD_LABEL) return "stats";
-      if (child?.label === LOG_ROW_LABEL) kind = "logs";
-    }
-    return kind;
-  }
-  function planLogRowsShift(contentChildren2, toolbarSpace) {
-    const first = contentChildren2[0];
-    const isNote = !!first && first.label !== LOG_ROW_LABEL && (typeof first.textComponent?.text === "string" || typeof first.text === "string" && !(first.children?.length > 0));
-    if (!isNote) return { hideFirst: false, shift: toolbarSpace };
-    const next = contentChildren2[1];
-    const firstY = first.position?.y ?? first.y ?? 0;
-    const noteSpace = next ? (next.position?.y ?? next.y ?? firstY) - firstY : first.height ?? 0;
-    return { hideFirst: true, shift: toolbarSpace - noteSpace };
-  }
-  function maskTransformFor(maskGeometryHeight, toolbarSpace) {
-    if (!(maskGeometryHeight > toolbarSpace) || toolbarSpace <= 0) return { y: 0, scaleY: 1 };
-    return { y: toolbarSpace, scaleY: (maskGeometryHeight - toolbarSpace) / maskGeometryHeight };
-  }
-  var ACTIVITY_LOG_MODAL_ID, ACTIVITY_LOG_MODAL_LABEL, FILTER_TOOLBAR_LABEL, TAB_BAR_LABELS, LOG_ROW_LABEL, STAT_CARD_LABEL;
-  var init_activityLogModalLayout = __esm({
-    "src/game/activityLogModalLayout.ts"() {
-      "use strict";
-      ACTIVITY_LOG_MODAL_ID = "activityLog";
-      ACTIVITY_LOG_MODAL_LABEL = "ActivityLogModal";
-      FILTER_TOOLBAR_LABEL = "AriesActivityLogFilter";
-      TAB_BAR_LABELS = /* @__PURE__ */ new Set(["JournalTabs", "JournalTabTaps"]);
-      LOG_ROW_LABEL = "ActivityLogRow";
-      STAT_CARD_LABEL = "StatCard";
-    }
-  });
-
-  // src/game/fakeModal.ts
-  async function openModal(modalId) {
-    try {
-      const current3 = await Atoms.ui.activeModal.get();
-      if (current3 && current3 !== modalId) {
-        await Atoms.ui.activeModal.set(null);
-        await Atoms.ui.inventoryModalIsActive.set(false);
-        await new Promise((r) => requestAnimationFrame(r));
-      }
-      await Atoms.ui.activeModal.set(modalId);
-      await Atoms.ui.inventoryModalIsActive.set(modalId === INVENTORY_MODAL_ID);
-    } catch {
-    }
-  }
-  async function closeModal(modalId) {
-    try {
-      if (modalId) {
-        const current3 = await Atoms.ui.activeModal.get();
-        if (current3 !== modalId) return;
-      }
-      await Atoms.ui.activeModal.set(null);
-      if (modalId === INVENTORY_MODAL_ID || !modalId) {
-        await Atoms.ui.inventoryModalIsActive.set(false);
-      }
-    } catch {
-    }
-  }
-  function isModalOpen(value, modalId) {
-    return modalNameOf(value) === modalId;
-  }
-  async function isModalOpenAsync(modalId) {
-    try {
-      return isModalOpen(await Atoms.ui.activeModal.get(), modalId);
-    } catch {
-      return false;
-    }
-  }
-  async function waitModalClosed(modalId, timeoutMs = 12e4) {
-    const t0 = performance.now();
-    while (performance.now() - t0 < timeoutMs) {
-      try {
-        if (!isModalOpen(await Atoms.ui.activeModal.get(), modalId)) return true;
-      } catch {
-        return true;
-      }
-      await new Promise((r) => setTimeout(r, 80));
-    }
-    return false;
-  }
-  function defineFakeModal(spec) {
-    return {
-      async show(payload, opts) {
-        const fakeOpts = { openGate: false, autoRestoreMs: opts?.autoRestoreMs };
-        if (spec.inventoryAtom === "clear") await fakeHide(INVENTORY_ATOM_PATCH.label);
-        await fakeShow(SHARED_MYDATA_PATCH, { [spec.field]: payload ?? spec.empty }, fakeOpts);
-        if (spec.inventoryAtom === "patch") await fakeShow(INVENTORY_ATOM_PATCH, payload, fakeOpts);
-        if (opts?.open !== false) await spec.open();
-      },
-      isOpen: spec.isOpen ?? (() => isModalOpenAsync(spec.modal)),
-      waitClosed: (timeoutMs) => waitModalClosed(spec.modal, timeoutMs)
-    };
-  }
-  async function disableFakeInventory() {
-    await fakeHide(INVENTORY_ATOM_PATCH.label);
-    await fakeHide(SHARED_MYDATA_PATCH.label);
-  }
-  function isInventoryOpen(v) {
-    return isModalOpen(v, INVENTORY_MODAL_ID);
-  }
-  async function openActivityLogTab(tab) {
-    const target = activityLogOpenTarget(tab);
-    try {
-      await Atoms.ui.activityLogTab.set(target.tab);
-    } catch {
-    }
-    return openModal(target.modal);
-  }
-  var JOURNAL_MODAL_ID, INVENTORY_MODAL_ID, SHARED_MYDATA_PATCH, INVENTORY_ATOM_PATCH, closeInventory, fakeInventory, fakeJournal, fakeStats, fakeActivityLog;
-  var init_fakeModal = __esm({
-    "src/game/fakeModal.ts"() {
-      "use strict";
-      init_fakeAtoms();
-      init_atoms();
-      init_modalState();
-      init_activityLogModalLayout();
-      JOURNAL_MODAL_ID = "journal";
-      INVENTORY_MODAL_ID = "inventory";
-      SHARED_MYDATA_PATCH = {
-        label: Atoms.data.myData.label,
-        merge: (real, patch) => ({
-          ...real && typeof real === "object" ? real : {},
-          ...patch && typeof patch === "object" ? patch : {}
-        }),
-        gate: {
-          label: Atoms.ui.activeModal.label,
-          isOpen: (v) => ["inventory", "journal", "activityLog"].includes(modalNameOf(v) ?? ""),
-          autoDisableOnClose: true
-        }
-      };
-      INVENTORY_ATOM_PATCH = {
-        label: Atoms.inventory.myInventory.label,
-        merge: (_real, fake) => fake,
-        gate: {
-          label: Atoms.ui.activeModal.label,
-          isOpen: (v) => modalNameOf(v) === INVENTORY_MODAL_ID,
-          autoDisableOnClose: true
-        }
-      };
-      closeInventory = () => closeModal(INVENTORY_MODAL_ID);
-      fakeInventory = {
-        ...defineFakeModal({
-          field: "inventory",
-          modal: INVENTORY_MODAL_ID,
-          open: () => openModal(INVENTORY_MODAL_ID),
-          inventoryAtom: "patch"
-        }),
-        disable: disableFakeInventory,
-        close: closeInventory,
-        /** Drops the fake and closes the inventory. */
-        async hide() {
-          await disableFakeInventory();
-          await closeInventory();
-        }
-      };
-      fakeJournal = defineFakeModal({
-        field: "journal",
-        empty: {},
-        modal: JOURNAL_MODAL_ID,
-        open: () => openModal(JOURNAL_MODAL_ID),
-        inventoryAtom: "clear"
-      });
-      fakeStats = defineFakeModal({
-        field: "stats",
-        empty: {},
-        // Waits for the modal to close, not for a change of tab.
-        modal: ACTIVITY_LOG_MODAL_ID,
-        open: () => openActivityLogTab("stats"),
-        async isOpen() {
-          if (!await isModalOpenAsync(ACTIVITY_LOG_MODAL_ID)) return false;
-          try {
-            return activityLogTabOf(await Atoms.ui.activityLogTab.get()) === "stats";
-          } catch {
-            return false;
-          }
-        }
-      });
-      fakeActivityLog = defineFakeModal({
-        field: "activityLogs",
-        empty: [],
-        modal: ACTIVITY_LOG_MODAL_ID,
-        open: () => openActivityLogTab("logs")
-      });
-    }
-  });
-
   // src/features/pets/teamStore.ts
   function load2() {
     const saved = readAriesPath(STORAGE_PATH4) ?? [];
@@ -15638,11 +24487,11 @@
         serverId: t?.serverId ? String(t.serverId) : null
       });
     }
-    if (out.length !== saved.length) save(out);
+    if (out.length !== saved.length) save2(out);
     for (const t of out) if (t.serverId) localIdByServerId.set(t.serverId, t.id);
     return out;
   }
-  function save(list) {
+  function save2(list) {
     for (const t of list) {
       if (t?.serverId && t?.id) localIdByServerId.set(String(t.serverId), String(t.id));
     }
@@ -15653,8 +24502,8 @@
   }
   function commitTeams(next) {
     teams = next;
-    save(teams);
-    changes3.emit(getTeams());
+    save2(teams);
+    changes6.emit(getTeams());
   }
   function getTeams() {
     return teams.map(copy);
@@ -15664,7 +24513,7 @@
     return team ? copy(team) : null;
   }
   function onTeamsChange(cb) {
-    const off = changes3.on(cb);
+    const off = changes6.on(cb);
     try {
       cb(getTeams());
     } catch {
@@ -15696,7 +24545,7 @@
     }
     return `t_${Date.now().toString(36)}_${Math.random().toString(16).slice(2)}`;
   }
-  var STORAGE_PATH4, SLOT_COUNT, localIdByServerId, changes3, normalizeSlots, teams, copy;
+  var STORAGE_PATH4, SLOT_COUNT, localIdByServerId, changes6, normalizeSlots, teams, copy;
   var init_teamStore = __esm({
     "src/features/pets/teamStore.ts"() {
       "use strict";
@@ -15705,7 +24554,7 @@
       STORAGE_PATH4 = "pets.teams";
       SLOT_COUNT = 3;
       localIdByServerId = /* @__PURE__ */ new Map();
-      changes3 = new Emitter();
+      changes6 = new Emitter();
       normalizeSlots = (slots) => Array.isArray(slots) ? slots.slice(0, SLOT_COUNT).map((x) => x ? String(x) : null) : [null, null, null];
       teams = load2();
       copy = (t) => ({ ...t, slots: t.slots.slice(0, SLOT_COUNT) });
@@ -16598,2967 +25447,37 @@
     }
   });
 
-  // src/lib/hotkey.ts
-  function codesMatch(expected, actual) {
-    if (expected === actual) return true;
-    return MODIFIER_PAIRS.some((pair) => pair.includes(expected) && pair.includes(actual));
-  }
-  function isMac() {
-    return navigator.platform?.toLowerCase().includes("mac") || /mac|iphone|ipad|ipod/i.test(navigator.userAgent);
-  }
-  function eventToHotkey(e, allowModifierOnly = false) {
-    const isModifier = MODIFIER_CODES.has(e.code) || ["Shift", "Control", "Alt", "Meta"].includes(e.key);
-    if (isModifier && !allowModifierOnly) return null;
-    return { code: e.code, ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey, meta: e.metaKey };
-  }
-  function matchHotkey(e, h2) {
-    if (!h2) return false;
-    if (!!h2.ctrl !== e.ctrlKey) return false;
-    if (!!h2.shift !== e.shiftKey) return false;
-    if (!!h2.alt !== e.altKey) return false;
-    if (!!h2.meta !== e.metaKey) return false;
-    return codesMatch(h2.code, e.code);
-  }
-  function hotkeyToString(hk) {
-    if (!hk) return "";
-    const parts = [];
-    if (hk.ctrl) parts.push("Ctrl");
-    if (hk.shift) parts.push("Shift");
-    if (hk.alt) parts.push("Alt");
-    if (hk.meta) parts.push("Meta");
-    if (hk.code) parts.push(hk.code);
-    return parts.join("+");
-  }
-  function stringToHotkey(s) {
-    if (!s) return null;
-    const parts = s.split("+").map((p) => p.trim()).filter(Boolean);
-    if (!parts.length) return null;
-    const hk = { code: canonicalizeCode(parts.pop() || "") };
-    for (const p of parts) {
-      const mod = p.toLowerCase();
-      if (mod === "ctrl" || mod === "control") hk.ctrl = true;
-      else if (mod === "shift") hk.shift = true;
-      else if (mod === "alt") hk.alt = true;
-      else if (mod === "meta" || mod === "cmd" || mod === "command") hk.meta = true;
-    }
-    return hk.code ? hk : null;
-  }
-  function canonicalizeCode(rawCode) {
-    const trimmed = rawCode.trim();
-    if (!trimmed) return "";
-    const lower2 = trimmed.toLowerCase();
-    const letter = lower2.match(/^key([a-z])$/);
-    if (letter) return `Key${letter[1].toUpperCase()}`;
-    const digit = lower2.match(/^digit([0-9])$/);
-    if (digit) return `Digit${digit[1]}`;
-    const numpadDigit = lower2.match(/^numpad([0-9])$/);
-    if (numpadDigit) return `Numpad${numpadDigit[1]}`;
-    if (lower2.startsWith("numpad")) {
-      const suffix = lower2.slice(6);
-      return suffix ? `Numpad${CANONICAL_CODES[suffix] ?? capitalize(suffix)}` : "Numpad";
-    }
-    const fKey = lower2.match(/^f([0-9]{1,2})$/);
-    if (fKey) return `F${fKey[1]}`;
-    const arrow = lower2.match(/^arrow([a-z]+)$/);
-    if (arrow) return `Arrow${CANONICAL_CODES[arrow[1]] ?? capitalize(arrow[1])}`;
-    return CANONICAL_CODES[lower2] ?? capitalize(trimmed);
-  }
-  function prettyCode(code) {
-    if (code === "AltLeft" || code === "AltRight") return "Alt";
-    if (code === "ControlLeft" || code === "ControlRight") return "Ctrl";
-    if (code === "ShiftLeft" || code === "ShiftRight") return "Shift";
-    if (code === "MetaLeft" || code === "MetaRight") return isMac() ? "\u2318" : "Meta";
-    if (code.startsWith("Key")) return code.slice(3);
-    if (code.startsWith("Digit")) return code.slice(5);
-    if (code.startsWith("Numpad")) return "Numpad " + code.slice(6);
-    const arrows = { ArrowUp: "\u2191", ArrowDown: "\u2193", ArrowLeft: "\u2190", ArrowRight: "\u2192" };
-    return arrows[code] ?? code;
-  }
-  function hotkeyToPretty(h2) {
-    const mac = isMac();
-    const mods = [];
-    if (h2.ctrl) mods.push(mac ? "\u2303" : "Ctrl");
-    if (h2.alt) mods.push(mac ? "\u2325" : "Alt");
-    if (h2.shift) mods.push(mac ? "\u21E7" : "Shift");
-    if (h2.meta) mods.push(mac ? "\u2318" : "Meta");
-    const modifierAlone = h2.alt && (h2.code === "AltLeft" || h2.code === "AltRight") || h2.ctrl && (h2.code === "ControlLeft" || h2.code === "ControlRight") || h2.shift && (h2.code === "ShiftLeft" || h2.code === "ShiftRight") || h2.meta && (h2.code === "MetaLeft" || h2.code === "MetaRight");
-    const parts = mods.slice();
-    if (!modifierAlone || parts.length === 0) parts.push(prettyCode(h2.code));
-    return parts.join(mac ? "" : " + ");
-  }
-  var MODIFIER_CODES, MODIFIER_PAIRS, CANONICAL_CODES, capitalize;
-  var init_hotkey = __esm({
-    "src/lib/hotkey.ts"() {
-      "use strict";
-      MODIFIER_CODES = /* @__PURE__ */ new Set([
-        "ShiftLeft",
-        "ShiftRight",
-        "ControlLeft",
-        "ControlRight",
-        "AltLeft",
-        "AltRight",
-        "MetaLeft",
-        "MetaRight"
-      ]);
-      MODIFIER_PAIRS = [
-        ["AltLeft", "AltRight"],
-        ["ControlLeft", "ControlRight"],
-        ["ShiftLeft", "ShiftRight"],
-        ["MetaLeft", "MetaRight"]
-      ];
-      CANONICAL_CODES = {
-        space: "Space",
-        enter: "Enter",
-        escape: "Escape",
-        tab: "Tab",
-        backspace: "Backspace",
-        delete: "Delete",
-        insert: "Insert",
-        home: "Home",
-        end: "End",
-        pageup: "PageUp",
-        pagedown: "PageDown",
-        arrowup: "ArrowUp",
-        arrowdown: "ArrowDown",
-        arrowleft: "ArrowLeft",
-        arrowright: "ArrowRight",
-        bracketleft: "BracketLeft",
-        bracketright: "BracketRight",
-        backslash: "Backslash",
-        slash: "Slash",
-        minus: "Minus",
-        equal: "Equal",
-        semicolon: "Semicolon",
-        quote: "Quote",
-        backquote: "Backquote",
-        comma: "Comma",
-        period: "Period",
-        dot: "Period",
-        capslock: "CapsLock",
-        numlock: "NumLock",
-        scrolllock: "ScrollLock",
-        pause: "Pause",
-        contextmenu: "ContextMenu",
-        printscreen: "PrintScreen",
-        metaleft: "MetaLeft",
-        metaright: "MetaRight",
-        altleft: "AltLeft",
-        altright: "AltRight",
-        controlleft: "ControlLeft",
-        controlright: "ControlRight",
-        shiftleft: "ShiftLeft",
-        shiftright: "ShiftRight"
-      };
-      capitalize = (word) => word ? word[0].toUpperCase() + word.slice(1) : "";
-    }
-  });
-
-  // src/lib/keyboard.ts
-  function isKeybindCaptureActive() {
-    return keybindCaptureCount > 0;
-  }
-  function beginKeybindCapture() {
-    keybindCaptureCount++;
-  }
-  function endKeybindCapture() {
-    keybindCaptureCount = Math.max(0, keybindCaptureCount - 1);
-  }
-  function shouldIgnoreKeydown(e) {
-    if (isKeybindCaptureActive()) return true;
-    const el = e.target;
-    if (!el) return false;
-    return el.isContentEditable || el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT";
-  }
-  var keybindCaptureCount;
-  var init_keyboard = __esm({
-    "src/lib/keyboard.ts"() {
-      "use strict";
-      keybindCaptureCount = 0;
-    }
-  });
-
-  // src/features/keybinds/catalog.ts
-  var PET_SECTION_ID, SECTION_CONFIG;
-  var init_catalog = __esm({
-    "src/features/keybinds/catalog.ts"() {
-      "use strict";
-      PET_SECTION_ID = "pets";
-      SECTION_CONFIG = [
-        {
-          id: "gui",
-          title: "GUI",
-          icon: "\u{1F5A5}\uFE0F",
-          description: "Choose how you open and move the overlay.",
-          actions: [
-            {
-              id: "gui.toggle",
-              label: "Toggle menu visibility",
-              icon: "sprite/ui/CameraOff",
-              hint: "Opens or closes the Arie's Mod overlay.",
-              defaultHotkey: { alt: true, code: "KeyX" }
-            },
-            {
-              id: "gui.drag",
-              label: "Drag HUD",
-              icon: "sprite/ui/Touchpad",
-              hint: "Hold to drag menus interfaces around the screen.",
-              defaultHotkey: { alt: true, code: "AltLeft" },
-              allowModifierOnly: true
-            }
-          ]
-        },
-        {
-          id: "shops",
-          title: "Shops",
-          icon: "\u{1F6D2}",
-          description: "Quick shortcuts to every shop tab.",
-          actions: [
-            { id: "shops.seeds", label: "Seeds shop", icon: "sprite/ui/SeedIcon", defaultHotkey: { alt: true, code: "KeyS" } },
-            { id: "shops.eggs", label: "Eggs shop", icon: "sprite/ui/EggIcon", defaultHotkey: { alt: true, code: "KeyE" } },
-            { id: "shops.decors", label: "Decors shop", icon: "sprite/ui/DecorIcon", defaultHotkey: { alt: true, code: "KeyD" } },
-            { id: "shops.tools", label: "Tools shop", icon: "sprite/ui/ToolIcon", defaultHotkey: { alt: true, code: "KeyT" } }
-          ]
-        },
-        {
-          id: "game",
-          title: "Game",
-          icon: "\u{1F3AE}",
-          description: "Remap the in-game actions",
-          actions: [
-            {
-              id: "game.action",
-              label: "Action",
-              icon: "sprite/ui/PickupPin",
-              defaultHotkey: { code: "Space" },
-              holdDetection: { label: "Rapid fire", defaultEnabled: false }
-            },
-            { id: "game.inventory", label: "Inventory", icon: "sprite/ui/InventoryBag", defaultHotkey: { code: "KeyE" } },
-            { id: "game.pet-hutch", label: "Pet hutch", icon: "sprite/decor/PetHutch_1", defaultHotkey: null, allowClear: true },
-            { id: "game.decor-shed", label: "Decor shed", icon: "sprite/decor/DecorShed", defaultHotkey: null, allowClear: true },
-            { id: "game.tool-shack", label: "Tool shack", icon: "sprite/decor/ToolShack", defaultHotkey: null, allowClear: true },
-            { id: "game.seed-silo", label: "Seed silo", icon: "sprite/decor/SeedSilo", defaultHotkey: null, allowClear: true },
-            { id: "game.feeding-trough", label: "Feeding trough", icon: "sprite/decor/FeedingTrough", defaultHotkey: null, allowClear: true },
-            { id: "game.weather-station", label: "Weather station", icon: "sprite/object/WeatherStation", defaultHotkey: null, allowClear: true },
-            { id: "game.journal", label: "Journal", icon: "sprite/ui/JournalStamp", defaultHotkey: null, allowClear: true },
-            { id: "game.move-up", label: "Move up", icon: "https://i.imgur.com/EkbKUgi.png", defaultHotkey: { code: "KeyW" } },
-            { id: "game.move-down", label: "Move down", icon: "https://i.imgur.com/tdJ7IGP.png", defaultHotkey: { code: "KeyS" } },
-            { id: "game.move-left", label: "Move left", icon: "https://i.imgur.com/86VbR70.png", defaultHotkey: { code: "KeyA" } },
-            { id: "game.move-right", label: "Move right", icon: "https://i.imgur.com/Ljzz6td.png", defaultHotkey: { code: "KeyD" } }
-          ]
-        },
-        {
-          id: "sell",
-          title: "Sell",
-          icon: "\u{1F4B0}",
-          description: "Streamline selling actions.",
-          actions: [
-            {
-              id: "sell.sell-all",
-              label: "All crops",
-              icon: "sprite/ui/IconSell",
-              hint: "Trigger the sell-all flow for harvested crops.",
-              defaultHotkey: null
-            },
-            {
-              id: "sell.sell-all-pets",
-              label: "All pets",
-              icon: "sprite/ui/IconShop",
-              hint: "Sell every non-favorited pet in your inventory.",
-              defaultHotkey: null
-            }
-          ]
-        },
-        {
-          id: "companion",
-          title: "Companion",
-          icon: "\u{1F916}",
-          description: "Reach your companion without going through the launcher.",
-          actions: [
-            {
-              id: "companion.chat",
-              label: "Open the chat",
-              // No icon: the `ui` atlas has no chat pictogram, and a made-up key
-              // would show an empty box.
-              hint: "Opens the Companion window straight on its Chat tab.",
-              defaultHotkey: { alt: true, code: "KeyC" }
-            }
-          ]
-        },
-        {
-          id: PET_SECTION_ID,
-          title: "Pets",
-          icon: "\u{1F437}",
-          description: "Assign shortcuts to your pet teams and cycle through them instantly.",
-          actions: [
-            { id: "pets.team.prev", label: "Previous team", defaultHotkey: null },
-            { id: "pets.team.next", label: "Next team", defaultHotkey: null }
-          ]
-        }
-      ];
-    }
-  });
-
-  // src/features/keybinds/keybinds.ts
-  function register(section5, config) {
-    const action2 = {
-      ...config,
-      sectionId: section5.id,
-      defaultHotkey: cloneHotkey(config.defaultHotkey),
-      holdDetection: config.holdDetection ? { ...config.holdDetection } : void 0
-    };
-    actions.set(action2.id, action2);
-    if (action2.holdDetection) holdDefaults.set(action2.id, !!action2.holdDetection.defaultEnabled);
-    section5.actions.push(action2);
-  }
-  function setDynamicActions(sectionId, configs) {
-    const index = SECTION_CONFIG.findIndex((s) => s.id === sectionId);
-    if (index < 0) return;
-    const section5 = sections[index];
-    const fixed = new Set(SECTION_CONFIG[index].actions.map((a) => a.id));
-    for (const old of section5.actions) {
-      if (fixed.has(old.id)) continue;
-      actions.delete(old.id);
-      holdDefaults.delete(old.id);
-      cache2.delete(old.id);
-      holdCache.delete(old.id);
-    }
-    section5.actions = section5.actions.filter((a) => fixed.has(a.id));
-    for (const config of configs) {
-      if (!fixed.has(config.id)) register(section5, config);
-    }
-  }
-  function getKeybindSections() {
-    return sections.map((section5) => ({
-      ...section5,
-      actions: section5.actions.map((action2) => ({
-        ...action2,
-        defaultHotkey: cloneHotkey(action2.defaultHotkey),
-        holdDetection: action2.holdDetection ? { ...action2.holdDetection } : void 0
-      }))
-    }));
-  }
-  function readStored(id) {
-    const raw = readAriesPath(BINDINGS_PATH)?.[id];
-    if (raw == null) return void 0;
-    if (raw === STORED_NONE || typeof raw !== "string") return null;
-    return stringToHotkey(raw) ?? null;
-  }
-  function writeStored(id, hk) {
-    updateAriesPath(BINDINGS_PATH, (current3) => {
-      const next = current3 && typeof current3 === "object" ? { ...current3 } : {};
-      if (hk === void 0) delete next[id];
-      else next[id] = hk ? hotkeyToString(hk) : STORED_NONE;
-      return next;
-    });
-  }
-  function readHoldStored(id) {
-    const raw = readAriesPath(HOLD_PATH)?.[id];
-    if (typeof raw === "string") return raw === "1";
-    if (typeof raw === "number") return raw === 1;
-    if (typeof raw === "boolean") return raw;
-    return void 0;
-  }
-  function writeHoldStored(id, enabled2) {
-    updateAriesPath(HOLD_PATH, (current3) => {
-      const next = current3 && typeof current3 === "object" ? { ...current3 } : {};
-      next[id] = enabled2;
-      return next;
-    });
-  }
-  function emitterFor(map2, id) {
-    let emitter = map2.get(id);
-    if (!emitter) {
-      emitter = new Emitter();
-      map2.set(id, emitter);
-    }
-    return emitter;
-  }
-  function emitChange(id) {
-    changes4.get(id)?.emit(getKeybind(id));
-  }
-  function emitHoldChange(id) {
-    holdChanges.get(id)?.emit(getKeybindHoldDetection(id));
-  }
-  function onKeybindChange(id, cb) {
-    return emitterFor(changes4, id).on(cb);
-  }
-  function onKeybindHoldDetectionChange(id, cb) {
-    if (!holdDefaults.has(id)) return () => {
-    };
-    return emitterFor(holdChanges, id).on(cb);
-  }
-  function getKeybind(id) {
-    if (!cache2.has(id)) {
-      const stored = readStored(id);
-      cache2.set(id, stored === void 0 ? cloneHotkey(actions.get(id)?.defaultHotkey) : stored);
-    }
-    return cloneHotkey(cache2.get(id));
-  }
-  function getDefaultKeybind(id) {
-    return cloneHotkey(actions.get(id)?.defaultHotkey);
-  }
-  function setKeybind(id, hk) {
-    const next = cloneHotkey(hk);
-    const wanted = hotkeyToString(next);
-    if (hotkeyToString(getKeybind(id)) === wanted) return;
-    if (next) {
-      for (const otherId of actions.keys()) {
-        if (otherId === id || hotkeyToString(getKeybind(otherId)) !== wanted) continue;
-        cache2.set(otherId, null);
-        writeStored(otherId, null);
-        emitChange(otherId);
-      }
-    }
-    cache2.set(id, next);
-    writeStored(id, next);
-    emitChange(id);
-  }
-  function resetKeybind(id) {
-    cache2.delete(id);
-    writeStored(id, void 0);
-    emitChange(id);
-  }
-  function getKeybindHoldDetection(id) {
-    if (!holdDefaults.has(id)) return false;
-    if (!holdCache.has(id)) {
-      const stored = readHoldStored(id);
-      holdCache.set(id, stored === void 0 ? !!holdDefaults.get(id) : stored);
-    }
-    return holdCache.get(id) ?? false;
-  }
-  function setKeybindHoldDetection(id, enabled2) {
-    if (!holdDefaults.has(id) || getKeybindHoldDetection(id) === enabled2) return;
-    holdCache.set(id, enabled2);
-    writeHoldStored(id, enabled2);
-    emitHoldChange(id);
-  }
-  function eventMatchesKeybind(id, e) {
-    return matchHotkey(e, getKeybind(id));
-  }
-  function getKeybindLabel(id) {
-    const hk = getKeybind(id);
-    return hk ? hotkeyToPretty(hk) : UNBOUND_LABEL;
-  }
-  var BINDINGS_PATH, HOLD_PATH, ARIES_ROOT_KEY, STORED_NONE, UNBOUND_LABEL, sections, actions, holdDefaults, cache2, holdCache, changes4, holdChanges, cloneHotkey;
-  var init_keybinds = __esm({
-    "src/features/keybinds/keybinds.ts"() {
-      "use strict";
-      init_emitter();
-      init_hotkey();
-      init_storage();
-      init_catalog();
-      BINDINGS_PATH = "keybinds.bindings";
-      HOLD_PATH = "keybinds.hold";
-      ARIES_ROOT_KEY = "aries_mod";
-      STORED_NONE = "__none__";
-      UNBOUND_LABEL = "None";
-      sections = SECTION_CONFIG.map((section5) => ({ ...section5, actions: [] }));
-      actions = /* @__PURE__ */ new Map();
-      holdDefaults = /* @__PURE__ */ new Map();
-      cache2 = /* @__PURE__ */ new Map();
-      holdCache = /* @__PURE__ */ new Map();
-      changes4 = /* @__PURE__ */ new Map();
-      holdChanges = /* @__PURE__ */ new Map();
-      cloneHotkey = (hk) => hk ? { ...hk } : null;
-      for (let i = 0; i < SECTION_CONFIG.length; i++) {
-        for (const config of SECTION_CONFIG[i].actions) register(sections[i], config);
-      }
-      if (typeof window !== "undefined") {
-        window.addEventListener("storage", (event) => {
-          if (event.key !== ARIES_ROOT_KEY) return;
-          cache2.clear();
-          holdCache.clear();
-          for (const id of actions.keys()) emitChange(id);
-          for (const id of holdDefaults.keys()) emitHoldChange(id);
-        });
-      }
-    }
-  });
-
-  // src/features/pets/teamHotkeys.ts
-  function migrateLegacyHotkey(teamId2) {
-    const legacy = readAriesPath(LEGACY_HOTKEYS_PATH) ?? {};
-    if (!legacy[teamId2]) return;
-    const actionId = teamActionId(teamId2);
-    if (!getKeybind(actionId)) {
-      const hk = stringToHotkey(legacy[teamId2]);
-      if (hk) setKeybind(actionId, hk);
-    }
-    const rest2 = { ...legacy };
-    delete rest2[teamId2];
-    writeAriesPath(LEGACY_HOTKEYS_PATH, rest2);
-  }
-  function setPetTeamKeybinds(teams2) {
-    const seen = /* @__PURE__ */ new Set();
-    const unique = teams2.filter((team) => {
-      const id = String(team?.id ?? "");
-      if (!id || seen.has(id)) return false;
-      seen.add(id);
-      return true;
-    });
-    teamIds = unique.map((team) => String(team.id));
-    setDynamicActions(
-      PET_SECTION_ID,
-      unique.map((team, index) => ({
-        id: teamActionId(String(team.id)),
-        label: `Use team: ${String(team.name ?? "").trim() || `Team ${index + 1}`}`,
-        defaultHotkey: null
-      }))
-    );
-    for (const id of teamIds) migrateLegacyHotkey(id);
-  }
-  async function teamAfterStep(ids, step) {
-    if (!ids.length) return null;
-    let current3 = null;
-    try {
-      current3 = await getActiveTeamId();
-    } catch {
-    }
-    if (!current3 || !ids.includes(current3)) current3 = getLastUsedTeamId();
-    const index = current3 ? ids.indexOf(current3) : -1;
-    if (index < 0) return ids[0];
-    return ids[(index + step + ids.length) % ids.length];
-  }
-  function onKeyDown(e, useTeam2) {
-    if (shouldIgnoreKeydown(e) || !teamIds.length) return;
-    const ids = teamIds.slice();
-    const step = eventMatchesKeybind(PET_TEAM_PREV_ID, e) ? -1 : eventMatchesKeybind(PET_TEAM_NEXT_ID, e) ? 1 : 0;
-    const direct = step ? null : ids.find((id) => eventMatchesKeybind(teamActionId(id), e)) ?? null;
-    if (!step && !direct) return;
-    e.preventDefault();
-    e.stopPropagation();
-    if (direct) {
-      useTeam2(direct);
-      return;
-    }
-    void teamAfterStep(ids, step).then((target) => {
-      if (target) useTeam2(target);
-    });
-  }
-  function installPetTeamHotkeys(useTeam2) {
-    if (installed || typeof window === "undefined") return;
-    installed = true;
-    onTeamsChange((teams2) => setPetTeamKeybinds(teams2));
-    window.addEventListener("keydown", (e) => onKeyDown(e, useTeam2), true);
-  }
-  var PET_TEAM_PREV_ID, PET_TEAM_NEXT_ID, LEGACY_HOTKEYS_PATH, teamIds, installed, teamActionId;
-  var init_teamHotkeys = __esm({
-    "src/features/pets/teamHotkeys.ts"() {
-      "use strict";
-      init_hotkey();
-      init_keyboard();
-      init_storage();
-      init_catalog();
-      init_keybinds();
-      init_teamSwitch();
-      init_teamStore();
-      PET_TEAM_PREV_ID = "pets.team.prev";
-      PET_TEAM_NEXT_ID = "pets.team.next";
-      LEGACY_HOTKEYS_PATH = "pets.hotkeys";
-      teamIds = [];
-      installed = false;
-      teamActionId = (teamId2) => `pets.team.${teamId2}`;
-    }
-  });
-
-  // src/game/ws/shopPurchaseMessage.ts
-  function parseViewMode(raw) {
-    if (raw == null) return null;
-    let value = raw;
-    try {
-      value = JSON.parse(raw);
-    } catch {
-    }
-    return value === "list" || value === "grid" ? value : null;
-  }
-  function readShopViewMode(shop, storage) {
-    if (!storage) return "list";
-    try {
-      for (let i = 0; i < storage.length; i++) {
-        const key2 = storage.key(i);
-        if (!key2) continue;
-        const match = VIEW_MODE_KEY.exec(key2);
-        if (!match || match[1] !== shop) continue;
-        const mode = parseViewMode(storage.getItem(key2));
-        if (mode) return mode;
-      }
-    } catch {
-    }
-    return "list";
-  }
-  function buildShopPurchaseCommand(shop, item, viewMode, quantity = 1) {
-    const q = Math.max(1, Math.floor(Number(quantity) || 1));
-    return {
-      type: "PurchaseShopItem",
-      shop,
-      viewMode,
-      item,
-      ...q === 1 ? {} : { quantity: q }
-    };
-  }
-  var VIEW_MODE_KEY;
-  var init_shopPurchaseMessage = __esm({
-    "src/game/ws/shopPurchaseMessage.ts"() {
-      "use strict";
-      VIEW_MODE_KEY = /^shop:.*:(.+):viewMode$/;
-    }
-  });
-
-  // src/features/shops/purchases.ts
-  function isCurrentRestock(entry, shop) {
-    if (!("restockId" in entry)) return true;
-    const current3 = shop?.restockId;
-    return current3 != null && entry.restockId === current3;
-  }
-  function purchasesForCurrentRestock(shops2, shopPurchases, kindOf) {
-    const out = { seed: {}, egg: {}, tool: {}, decor: {} };
-    if (!shopPurchases || typeof shopPurchases !== "object") return out;
-    for (const shopKey of Object.keys(shopPurchases)) {
-      const entry = shopPurchases[shopKey];
-      if (!entry || typeof entry !== "object") continue;
-      if (!isCurrentRestock(entry, shops2?.[shopKey])) continue;
-      const purch = entry.purchases;
-      if (!purch || typeof purch !== "object") continue;
-      for (const [itemId, count] of Object.entries(purch)) {
-        const n = Number(count) || 0;
-        const kind = DIRECT_KIND[shopKey] ?? kindOf(itemId);
-        if (!kind) continue;
-        out[kind][itemId] = (out[kind][itemId] ?? 0) + n;
-      }
-    }
-    return out;
-  }
-  function resolveShop(key2, shops2, mySlot) {
-    if (CUSTOM_RESTOCK_SHOPS.has(key2)) {
-      const custom = mySlot?.data?.customRestocks?.[key2];
-      if (custom) {
-        const inv = mySlot?.customRestockInventories?.[key2];
-        return inv && inv.restockId === `${key2}:custom:${custom.purchasedAt}` ? inv : null;
-      }
-    }
-    const shop = shops2?.[key2];
-    if (!shop || typeof shop !== "object") return null;
-    if ("restockId" in shop && shop.restockId == null) return null;
-    return shop;
-  }
-  function purchasesKnown(entry, shop) {
-    if (!entry || typeof entry !== "object" || !("restockId" in entry)) return true;
-    if (entry.restockId === shop?.restockId) return true;
-    return Number(entry.startedAtMs) < Number(shop?.startedAtMs);
-  }
-  function playerShopView(shops2, mySlot, kindOf) {
-    const shopPurchases = mySlot?.data?.shopPurchases;
-    const open = {};
-    const keys = new Set(shops2 && typeof shops2 === "object" ? Object.keys(shops2) : []);
-    for (const key2 of CUSTOM_RESTOCK_SHOPS) {
-      if (mySlot?.data?.customRestocks?.[key2]) keys.add(key2);
-    }
-    for (const key2 of keys) {
-      const shop = resolveShop(key2, shops2, mySlot);
-      if (!shop) continue;
-      if (!purchasesKnown(shopPurchases?.[key2], shop)) continue;
-      open[key2] = shop;
-    }
-    return { shops: open, purchases: purchasesForCurrentRestock(open, shopPurchases, kindOf) };
-  }
-  var DIRECT_KIND, CUSTOM_RESTOCK_SHOPS;
-  var init_purchases = __esm({
-    "src/features/shops/purchases.ts"() {
-      "use strict";
-      DIRECT_KIND = { seed: "seed", egg: "egg", tool: "tool", decor: "decor" };
-      CUSTOM_RESTOCK_SHOPS = /* @__PURE__ */ new Set(["seed", "egg", "tool", "decor"]);
-    }
-  });
-
-  // src/features/shops/shops.ts
-  function installShopKeybindsOnce() {
-    if (shopKeybindsInstalled || typeof window === "undefined") return;
-    shopKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        const bind = SHOP_KEYBINDS.find(({ id }) => eventMatchesKeybind(id, event));
-        if (!bind) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void openModal(bind.modal);
-      },
-      true
-    );
-  }
-  function itemIdOf(kind, it) {
-    if (kind === "seeds") return it.species ?? it.name;
-    if (kind === "tools") return it.toolId ?? it.id;
-    if (kind === "eggs") return it.eggId ?? it.id;
-    return it.decorId ?? it.id;
-  }
-  function buildPurchasePayload(kind, it) {
-    const id = itemIdOf(kind, it);
-    if (!id) return null;
-    const value = String(id);
-    if (kind === "seeds") return { item: { itemType: "Seed", species: value }, stat: "seedsBought" };
-    if (kind === "tools") return { item: { itemType: "Tool", toolId: value }, stat: "toolsBought" };
-    if (kind === "eggs") return { item: { itemType: "Egg", eggId: value }, stat: "eggsBought" };
-    return { item: { itemType: "Decor", decorId: value }, stat: "decorBought" };
-  }
-  function findShopForItem(shops2, kind, it) {
-    if (!shops2 || typeof shops2 !== "object") return null;
-    const keys = Object.keys(shops2);
-    const ordered = [...keys.filter((k) => !BASE_SHOP_KEYS.includes(k)), ...keys.filter((k) => BASE_SHOP_KEYS.includes(k))];
-    const target = itemIdOf(kind, it);
-    if (target == null) return null;
-    const field2 = ITEM_FIELD[kind];
-    for (const key2 of ordered) {
-      const inv = shops2[key2]?.inventory;
-      if (Array.isArray(inv) && inv.some((entry) => entry && typeof entry === "object" && entry[field2] === target)) {
-        return key2;
-      }
-    }
-    return null;
-  }
-  var SHOP_KEYBINDS, shopKeybindsInstalled, BASE_SHOP_KEYS, BASE_SHOP_OF, ITEM_FIELD, ShopsService;
-  var init_shops = __esm({
-    "src/features/shops/shops.ts"() {
-      "use strict";
-      init_fakeModal();
-      init_keybinds();
-      init_keyboard();
-      init_stats();
-      init_send();
-      init_atoms();
-      init_pageContext();
-      init_shopPurchaseMessage();
-      init_purchases();
-      SHOP_KEYBINDS = [
-        { id: "shops.seeds", modal: "seedShop" },
-        { id: "shops.eggs", modal: "eggShop" },
-        { id: "shops.decors", modal: "decorShop" },
-        { id: "shops.tools", modal: "toolShop" }
-      ];
-      shopKeybindsInstalled = false;
-      BASE_SHOP_KEYS = ["seed", "egg", "tool", "decor"];
-      BASE_SHOP_OF = { seeds: "seed", tools: "tool", eggs: "egg", decor: "decor" };
-      ITEM_FIELD = { seeds: "species", tools: "toolId", eggs: "eggId", decor: "decorId" };
-      ShopsService = {
-        /** Buys one of the item. */
-        async buyOne(kind, it) {
-          return ShopsService.buy(kind, it, 1);
-        },
-        /**
-         * Buys `count` of the item, one purchase at a time. The server takes a
-         * `quantity` since v1292, but the game only sends it when the player can pay
-         * for the whole stack and has room for it, and the mod knows neither. Unit
-         * purchases still buy what the player can afford.
-         */
-        async buyEach(kind, it, count) {
-          for (let i = 0; i < count; i++) await ShopsService.buyOne(kind, it);
-        },
-        /** Buys `quantity` of the item in one command, like the game's own Buy All. */
-        async buy(kind, it, quantity) {
-          const built = buildPurchasePayload(kind, it);
-          if (!built) return;
-          let shop = null;
-          try {
-            const [shops2, slot] = await Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
-            shop = findShopForItem(playerShopView(shops2, slot, () => null).shops, kind, it);
-          } catch {
-          }
-          if (!shop) shop = BASE_SHOP_OF[kind];
-          try {
-            let storage = null;
-            try {
-              storage = pageWindow.localStorage;
-            } catch {
-            }
-            const command = buildShopPurchaseCommand(shop, built.item, readShopViewMode(shop, storage), quantity);
-            sendToGame(command);
-            StatsService.incrementShopStat(built.stat, Number(command.quantity ?? 1));
-          } catch {
-          }
-        }
-      };
-    }
-  });
-
-  // src/features/companion/keybind.ts
-  function openCompanionChat() {
-    window.dispatchEvent(new CustomEvent("qws:open-panel", { detail: { id: COMPANION_PANEL_ID } }));
-    window.dispatchEvent(new CustomEvent(COMPANION_TAB_EVENT, { detail: { tab: CHAT_TAB_ID } }));
-  }
-  function installCompanionKeybindsOnce() {
-    if (installed2 || typeof window === "undefined") return;
-    installed2 = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind("companion.chat", event)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        openCompanionChat();
-      },
-      true
-    );
-  }
-  var COMPANION_PANEL_ID, CHAT_TAB_ID, COMPANION_TAB_EVENT, installed2;
-  var init_keybind = __esm({
-    "src/features/companion/keybind.ts"() {
-      "use strict";
-      init_keybinds();
-      init_keyboard();
-      COMPANION_PANEL_ID = "companion";
-      CHAT_TAB_ID = "chat";
-      COMPANION_TAB_EVENT = "qws:companion-tab";
-      installed2 = false;
-    }
-  });
-
-  // src/data/rules/petValue.ts
-  var SEC_PER_HOUR, XP_STRENGTH_MAX, BASE_STRENGTH_FLOOR, getCatalogEntry, getMutationEntry, getTargetScale, getXp, getPetMaxStrength, getBaseStrength, getPetStrength, getPetCoinMultiplier, getPetValue, getPetInfo;
-  var init_petValue = __esm({
-    "src/data/rules/petValue.ts"() {
-      "use strict";
-      init_data();
-      SEC_PER_HOUR = 3600;
-      XP_STRENGTH_MAX = 30;
-      BASE_STRENGTH_FLOOR = 30;
-      getCatalogEntry = (species) => {
-        if (!species) return null;
-        const entry = petCatalog2[species];
-        return entry ?? null;
-      };
-      getMutationEntry = (mutation) => {
-        if (!mutation) return null;
-        const entry = mutationCatalog2[mutation];
-        return entry ?? null;
-      };
-      getTargetScale = (pet) => {
-        const raw = pet?.targetScale;
-        return typeof raw === "number" && Number.isFinite(raw) ? raw : 1;
-      };
-      getXp = (pet) => {
-        const raw = pet?.xp;
-        return typeof raw === "number" && Number.isFinite(raw) ? Math.max(0, raw) : 0;
-      };
-      getPetMaxStrength = (pet) => {
-        const entry = getCatalogEntry(pet?.petSpecies ?? "");
-        if (!entry) return 0;
-        const maxScale = typeof entry.maxScale === "number" && entry.maxScale > 1 ? entry.maxScale : 1;
-        const targetScale = getTargetScale(pet);
-        const ratio = maxScale > 1 ? (targetScale - 1) / (maxScale - 1) : 0;
-        const raw = ratio * 20 + 80;
-        const strength = Math.floor(Number.isFinite(raw) ? raw : 0);
-        return Math.max(strength, 0);
-      };
-      getBaseStrength = (maxStrength) => {
-        const base = maxStrength - BASE_STRENGTH_FLOOR;
-        return Math.max(base, 0);
-      };
-      getPetStrength = (pet) => {
-        const entry = getCatalogEntry(pet?.petSpecies ?? "");
-        if (!entry) return 0;
-        const hoursToMature = typeof entry.hoursToMature === "number" && entry.hoursToMature > 0 ? entry.hoursToMature : 1;
-        const maxStrength = getPetMaxStrength(pet);
-        if (maxStrength <= 0) return 0;
-        const xpRate = getXp(pet) / (hoursToMature * SEC_PER_HOUR);
-        const xpComponent = Math.min(Math.floor(xpRate * XP_STRENGTH_MAX), XP_STRENGTH_MAX);
-        const baseStrength = getBaseStrength(maxStrength);
-        const strength = Math.min(baseStrength + xpComponent, maxStrength);
-        return Math.max(strength, 0);
-      };
-      getPetCoinMultiplier = (pet) => {
-        const mutations = Array.isArray(pet?.mutations) ? pet.mutations : [];
-        return mutations.reduce((acc, mutation) => {
-          const entry = getMutationEntry(mutation);
-          const multiplier = entry?.coinMultiplier;
-          if (typeof multiplier === "number" && Number.isFinite(multiplier) && multiplier > 0) {
-            return acc * multiplier;
-          }
-          return acc;
-        }, 1);
-      };
-      getPetValue = (pet) => {
-        const entry = getCatalogEntry(pet?.petSpecies ?? "");
-        if (!entry) return 0;
-        const maturitySellPrice = typeof entry.maturitySellPrice === "number" ? entry.maturitySellPrice : 0;
-        const maxStrength = getPetMaxStrength(pet);
-        if (maxStrength <= 0) return 0;
-        const strength = getPetStrength(pet);
-        const targetScale = getTargetScale(pet);
-        const coinMultiplier = getPetCoinMultiplier(pet);
-        const raw = maturitySellPrice * (strength / maxStrength) * targetScale * coinMultiplier;
-        if (!Number.isFinite(raw)) return 0;
-        return Math.round(Math.max(raw, 0));
-      };
-      getPetInfo = (pet) => ({
-        value: getPetValue(pet),
-        strength: getPetStrength(pet),
-        maxStrength: getPetMaxStrength(pet),
-        coinMultiplier: getPetCoinMultiplier(pet)
-      });
-    }
-  });
-
-  // src/data/rules/cropValue.ts
-  function resolveSpeciesKey(species) {
-    const wanted = key(species).toLowerCase();
-    if (!wanted) return null;
-    for (const k of Object.keys(plantCatalog2)) {
-      if (k.toLowerCase() === wanted) return k;
-    }
-    return null;
-  }
-  function findAnySellPriceNode(obj) {
-    if (!obj || typeof obj !== "object") return null;
-    if (typeof obj.baseSellPrice === "number" && Number.isFinite(obj.baseSellPrice)) {
-      return obj.baseSellPrice;
-    }
-    for (const k of ["produce", "crop", "item", "items", "data"]) {
-      if (obj[k]) {
-        const v = findAnySellPriceNode(obj[k]);
-        if (v != null) return v;
-      }
-    }
-    try {
-      const seen = /* @__PURE__ */ new Set();
-      const stack = [obj];
-      while (stack.length) {
-        const cur = stack.pop();
-        if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
-        seen.add(cur);
-        if (typeof cur.baseSellPrice === "number") {
-          const v = cur.baseSellPrice;
-          if (Number.isFinite(v)) return v;
-        }
-        for (const v of Object.values(cur)) if (v && typeof v === "object") stack.push(v);
-      }
-    } catch {
-    }
-    return null;
-  }
-  function defaultGetBasePrice(species) {
-    const spKey = resolveSpeciesKey(species);
-    if (!spKey) return null;
-    const node = plantCatalog2[spKey];
-    const cands = [
-      node?.produce?.baseSellPrice,
-      node?.crop?.baseSellPrice,
-      node?.item?.baseSellPrice,
-      node?.items?.Produce?.baseSellPrice
-    ].filter((v) => typeof v === "number" && Number.isFinite(v));
-    if (cands.length) return cands[0];
-    return findAnySellPriceNode(node);
-  }
-  function applyRounding(v, mode = "round") {
-    switch (mode) {
-      case "floor":
-        return Math.floor(v);
-      case "ceil":
-        return Math.ceil(v);
-      case "none":
-        return v;
-      case "round":
-      default:
-        return Math.round(v);
-    }
-  }
-  function friendBonusMultiplier2(playersInRoom3) {
-    if (!Number.isFinite(playersInRoom3)) return 1;
-    const n = Math.max(1, Math.min(6, Math.floor(playersInRoom3)));
-    return 1 + (n - 1) * 0.1;
-  }
-  function mutationMultiplier(name) {
-    const k = lowerKey(name);
-    if (!k) return null;
-    const mult = mutationMultipliers()[k];
-    return Number.isFinite(mult) ? mult : null;
-  }
-  function isColor(m) {
-    return m === "Gold" || m === "Rainbow";
-  }
-  function isWeather(m) {
-    return m === "Wet" || m === "Chilled" || m === "Frozen" || m === "Thunderstruck" || m === "Thundercharged";
-  }
-  function isTime(m) {
-    return m === "Dawnlit" || m === "Dawnbound" || m === "Amberlit" || m === "Amberbound";
-  }
-  function normalizeMutationName(m) {
-    const s = lowerKey(m);
-    if (!s) return "";
-    if (s === "amberglow" || s === "ambershine" || s === "amberlight") return "Amberlit";
-    if (s === "dawn" || s === "dawnlight") return "Dawnlit";
-    if (s === "golden") return "Gold";
-    if (s === "gold") return "Gold";
-    if (s === "rainbow") return "Rainbow";
-    if (s === "wet") return "Wet";
-    if (s === "chilled") return "Chilled";
-    if (s === "frozen") return "Frozen";
-    if (s === "thunderstruck" || s === "thunder") return "Thunderstruck";
-    if (s === "thunderstruckground" || s === "thunderstruck_ground") return "Thunderstruck";
-    if (s === "thundercharged" || s === "thunder charged" || s === "thunder-charged") return "Thundercharged";
-    if (s === "dawnlit") return "Dawnlit";
-    if (s === "dawnbound") return "Dawnbound";
-    if (s === "amberlit") return "Amberlit";
-    if (s === "dawncharged" || s === "dawnradiant" || s === "dawn-radiant" || s === "dawn charged") return "Dawnbound";
-    if (s === "amberbound" || s === "ambercharged" || s === "amberradiant" || s === "amber-radiant" || s === "amber charged") return "Amberbound";
-    return m;
-  }
-  function computeColorMultiplier(mutations) {
-    if (!Array.isArray(mutations)) return 1;
-    let best = 1;
-    for (const raw of mutations) {
-      const m = normalizeMutationName(raw);
-      if (isColor(m)) {
-        const mult = mutationMultiplier(m);
-        if (typeof mult === "number" && mult > best) best = mult;
-      }
-    }
-    return best;
-  }
-  function pickWeather(mutations) {
-    if (!Array.isArray(mutations)) return null;
-    const candidates = /* @__PURE__ */ new Set();
-    let hasWet = false;
-    let hasChilled = false;
-    for (const raw of mutations) {
-      const m = normalizeMutationName(raw);
-      if (m === "Wet") {
-        hasWet = true;
-        continue;
-      }
-      if (m === "Chilled") {
-        hasChilled = true;
-        continue;
-      }
-      if (isWeather(m)) candidates.add(m);
-    }
-    if (hasWet && hasChilled) {
-      candidates.add("Frozen");
-    } else if (hasWet) {
-      candidates.add("Wet");
-    } else if (hasChilled) {
-      candidates.add("Chilled");
-    }
-    if (!candidates.size) return null;
-    let pick = null;
-    let best = -Infinity;
-    for (const cand of candidates) {
-      const mult = mutationMultiplier(cand) ?? 1;
-      if (mult > best) {
-        best = mult;
-        pick = cand;
-      }
-    }
-    return pick;
-  }
-  function pickTime(mutations) {
-    if (!Array.isArray(mutations)) return null;
-    const candidates = /* @__PURE__ */ new Set();
-    for (const raw of mutations) {
-      const m = normalizeMutationName(raw);
-      if (isTime(m)) candidates.add(m);
-    }
-    if (!candidates.size) return null;
-    let pick = null;
-    let best = -Infinity;
-    for (const cand of candidates) {
-      const mult = mutationMultiplier(cand) ?? 1;
-      if (mult > best) {
-        best = mult;
-        pick = cand;
-      }
-    }
-    return pick;
-  }
-  function combineWeatherMultipliers(multipliers) {
-    if (!multipliers.length) return 1;
-    const sum = multipliers.reduce((acc, value) => acc + value, 0);
-    return sum - multipliers.length + 1;
-  }
-  function computeWeatherTimeMultiplier(weather2, time) {
-    if (!weather2 && !time) return 1;
-    const multipliers = [];
-    if (weather2) {
-      const mult = mutationMultiplier(weather2);
-      if (typeof mult === "number") multipliers.push(mult);
-    }
-    if (time) {
-      const mult = mutationMultiplier(time);
-      if (typeof mult === "number") multipliers.push(mult);
-    }
-    if (!multipliers.length) return 1;
-    return combineWeatherMultipliers(multipliers);
-  }
-  function mutationsMultiplier(mutations) {
-    const color2 = computeColorMultiplier(mutations);
-    const weather2 = pickWeather(mutations);
-    const time = pickTime(mutations);
-    const wt = computeWeatherTimeMultiplier(weather2, time);
-    return color2 * wt;
-  }
-  function estimateProduceValue(species, size, mutations, opts) {
-    const getBase = opts?.getBasePrice ?? defaultGetBasePrice;
-    const toMultiplier = opts?.sizeMultiplier ?? cropSizeMultiplier;
-    const round = opts?.rounding ?? "round";
-    const base = getBase(species);
-    if (!(Number.isFinite(base) && base > 0)) return 0;
-    const numericSize = Number(size);
-    if (!Number.isFinite(numericSize)) return 0;
-    const sizeMult = toMultiplier(species, numericSize);
-    if (!Number.isFinite(sizeMult) || sizeMult <= 0) return 0;
-    const mutMult = mutationsMultiplier(mutations);
-    const friendsMult = friendBonusMultiplier2(opts?.friendPlayers);
-    const pre = base * sizeMult * mutMult * friendsMult;
-    const out = Math.max(0, applyRounding(pre, round));
-    return out;
-  }
-  function valueFromInventoryProduce(item, opts, playersInRoom3) {
-    if (!item || item.itemType !== "Produce") return 0;
-    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
-    const size = readCropSize(item);
-    if (size == null) return 0;
-    return estimateProduceValue(item.species, size, item.mutations, merged);
-  }
-  function valueFromGardenSlot(slot, opts, playersInRoom3) {
-    if (!slot) return 0;
-    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
-    const size = readCropSize(slot);
-    if (size == null) return 0;
-    return estimateProduceValue(slot.species, size, slot.mutations, merged);
-  }
-  function valueFromGardenPlant(plant, opts, playersInRoom3) {
-    if (!plant || plant.objectType !== "plant" || !Array.isArray(plant.slots)) return 0;
-    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
-    let sum = 0;
-    for (const s of plant.slots) sum += valueFromGardenSlot(s, merged);
-    return sum;
-  }
-  function sumInventoryValue(items, opts, playersInRoom3) {
-    if (!Array.isArray(items)) return 0;
-    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
-    let sum = 0;
-    for (const it of items) {
-      if (it?.itemType === "Produce") {
-        sum += valueFromInventoryProduce(it, merged);
-      }
-    }
-    return sum;
-  }
-  function sumGardenValue(garden3, opts, playersInRoom3) {
-    if (!garden3 || typeof garden3 !== "object") return 0;
-    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
-    let sum = 0;
-    for (const k of Object.keys(garden3)) {
-      const p = garden3[k];
-      if (p?.objectType === "plant") {
-        sum += valueFromGardenPlant(p, merged);
-      }
-    }
-    return sum;
-  }
-  var key, lowerKey, mutationMultipliers, DefaultPricing;
-  var init_cropValue = __esm({
-    "src/data/rules/cropValue.ts"() {
-      "use strict";
-      init_data();
-      init_cropSize();
-      key = (s) => String(s ?? "").trim();
-      lowerKey = (s) => key(s).toLowerCase();
-      mutationMultipliers = memoOnCatalogs(() => {
-        const map2 = {};
-        if (!mutationCatalog2 || typeof mutationCatalog2 !== "object") return map2;
-        for (const [rawKey, rawValue] of Object.entries(mutationCatalog2)) {
-          const mult = Number(rawValue?.coinMultiplier);
-          if (!Number.isFinite(mult)) continue;
-          const name = key(rawValue?.name);
-          const lowerName = lowerKey(name);
-          const lowerRawKey = lowerKey(rawKey);
-          if (lowerName) map2[lowerName] = mult;
-          if (lowerRawKey) map2[lowerRawKey] = mult;
-        }
-        return map2;
-      });
-      DefaultPricing = Object.freeze({
-        getBasePrice: defaultGetBasePrice,
-        rounding: "round"
-      });
-    }
-  });
-
-  // src/features/inventory/value.ts
-  function finiteNumber(value) {
-    if (typeof value === "number") return Number.isFinite(value) ? value : null;
-    if (typeof value === "string" && value.trim()) {
-      const parsed = Number(value);
-      return Number.isFinite(parsed) ? parsed : null;
-    }
-    return null;
-  }
-  function identifier(raw) {
-    if (typeof raw === "string") return raw.trim() || null;
-    if (typeof raw === "number") return Number.isFinite(raw) ? String(raw) : null;
-    return null;
-  }
-  function computeInventoryItemValue(item, context = {}) {
-    if (!item || typeof item !== "object") return null;
-    const type = typeof item.itemType === "string" ? item.itemType.trim() : "";
-    const playersInRoom3 = context.playersInRoom ?? void 0;
-    switch (type) {
-      case "":
-        return null;
-      case "Pet": {
-        const value = getPetInfo(item).value;
-        return typeof value === "number" && Number.isFinite(value) ? value : null;
-      }
-      case "Plant": {
-        let total = 0;
-        for (const slot of Array.isArray(item.slots) ? item.slots : []) {
-          const species = typeof slot?.species === "string" ? slot.species : null;
-          const size = readCropSize(slot);
-          if (!species || size == null) continue;
-          const value = estimateProduceValue(species, size, stringMutations(slot), { friendPlayers: playersInRoom3 });
-          if (Number.isFinite(value)) total += value;
-        }
-        return total;
-      }
-      case "Produce": {
-        const value = valueFromInventoryProduce(item, void 0, playersInRoom3);
-        return Number.isFinite(value) ? value : null;
-      }
-      default: {
-        const priced = PRICED_BY_QUANTITY[type];
-        if (!priced) return null;
-        const id = identifier(item[priced.idField]);
-        const quantity = finiteNumber(item.quantity);
-        const coinPrice = id ? finiteNumber(priced.coinPrice(id)) : null;
-        if (quantity == null || coinPrice == null) return null;
-        const value = coinPrice * quantity;
-        return Number.isFinite(value) ? value : null;
-      }
-    }
-  }
-  function followInventoryValues() {
-    following2 ?? (following2 = Promise.all([
-      readAndFollow(Atoms.server.numPlayers, (raw) => {
-        playersInRoom = Number.isFinite(raw) ? raw : null;
-        playersInRoomChanges.emit();
-      }),
-      Atoms.inventory.myInventory.onChange(() => itemsChanges.emit()).catch(() => {
-      })
-    ]).then(() => {
-    }));
-    return following2;
-  }
-  var PRICED_BY_QUANTITY, stringMutations, playersInRoom, following2, playersInRoomChanges, itemsChanges, playersInRoomForValues, onPlayersInRoomChange, onInventoryItemsChange;
-  var init_value = __esm({
-    "src/features/inventory/value.ts"() {
-      "use strict";
-      init_atoms();
-      init_hub();
-      init_emitter();
-      init_data();
-      init_petValue();
-      init_cropValue();
-      init_cropSize();
-      PRICED_BY_QUANTITY = {
-        Seed: { idField: "species", coinPrice: (id) => plantCatalog2[id]?.seed?.coinPrice },
-        Tool: { idField: "toolId", coinPrice: (id) => toolCatalog2[id]?.coinPrice },
-        Egg: { idField: "eggId", coinPrice: (id) => eggCatalog2[id]?.coinPrice },
-        Decor: { idField: "decorId", coinPrice: (id) => decorCatalog2[id]?.coinPrice }
-      };
-      stringMutations = (slot) => Array.isArray(slot?.mutations) ? slot.mutations.filter((m) => typeof m === "string") : [];
-      playersInRoom = null;
-      following2 = null;
-      playersInRoomChanges = new Emitter();
-      itemsChanges = new Emitter();
-      playersInRoomForValues = () => playersInRoom;
-      onPlayersInRoomChange = (listener) => playersInRoomChanges.on(listener);
-      onInventoryItemsChange = (listener) => itemsChanges.on(listener);
-    }
-  });
-
-  // src/ui/kit/badges.ts
-  function pill(text2, tone) {
-    const el = h("span", "qmm-pill", text2);
-    setTone(el, tone);
-    return el;
-  }
-  function setTone(el, tone) {
-    el.classList.remove("is-ok", "is-warn", "is-bad");
-    if (tone) el.classList.add(`is-${tone}`);
-  }
-  function badge(text2, tone) {
-    return h("span", `qmm-badge is-${tone}`, text2);
-  }
-  function meter() {
-    const root4 = h("div", "qmm-meter");
-    const fill = h("div", "qmm-meter__fill");
-    root4.appendChild(fill);
-    return {
-      root: root4,
-      set(ratio, tone = "accent") {
-        fill.style.width = `${clampFinite(ratio, 0, 1, 0) * 100}%`;
-        fill.classList.toggle("is-warn", tone === "warn");
-      }
-    };
-  }
-  var init_badges = __esm({
-    "src/ui/kit/badges.ts"() {
-      "use strict";
-      init_math();
-      init_dom2();
-    }
-  });
-
-  // src/ui/kit/modal.ts
-  function menuCard(options2) {
-    const card4 = h("button", "qmm-menu-card");
-    card4.type = "button";
-    card4.disabled = options2.disabled === true;
-    card4.append(h("div", "qmm-menu-card__name", options2.name), h("div", "qmm-menu-card__detail", options2.detail));
-    if (!card4.disabled) card4.addEventListener("click", options2.onClick);
-    return card4;
-  }
-  function openModal2(options2) {
-    let closed = false;
-    const scrim = h("div", "qmm-modal-scrim");
-    const hostZ = Number.parseInt(getComputedStyle(options2.host).zIndex, 10);
-    scrim.style.zIndex = String((Number.isFinite(hostZ) ? hostZ : layer.window) + 1);
-    const panel = h("div", "qmm-modal");
-    panel.style.width = `min(${options2.widthPx ?? 420}px, 100%)`;
-    panel.style.maxHeight = `min(${options2.maxHeightPx ?? 520}px, 88vh)`;
-    panel.addEventListener("click", (event) => event.stopPropagation());
-    const closeButton = h("button", "qmm-modal__close", "\u2715");
-    closeButton.type = "button";
-    closeButton.title = "Close";
-    closeButton.addEventListener("click", () => close());
-    const header = h("div", "qmm-modal__head");
-    header.append(h("div", "qmm-modal__title", options2.title), closeButton);
-    const body = h("div", "qmm-modal__body qmm-scroll");
-    const footer = h("div", "qmm-modal__foot");
-    panel.append(header, body, footer);
-    scrim.append(panel);
-    function onKeyDown2(event) {
-      if (event.key === "Escape") {
-        event.stopPropagation();
-        close();
-      }
-    }
-    function close() {
-      if (closed) return;
-      closed = true;
-      clearInterval(hostWatch);
-      document.removeEventListener("keydown", onKeyDown2, true);
-      scrim.remove();
-      options2.onClose?.();
-    }
-    const hostWatch = window.setInterval(() => {
-      if (!options2.host.isConnected) close();
-    }, 1e3);
-    scrim.addEventListener("click", () => close());
-    document.addEventListener("keydown", onKeyDown2, true);
-    (document.documentElement || document.body).appendChild(scrim);
-    return { body, footer, close, isOpen: () => !closed };
-  }
-  var init_modal = __esm({
-    "src/ui/kit/modal.ts"() {
-      "use strict";
-      init_dom2();
-      init_theme();
-    }
-  });
-
-  // src/features/sellAllPets/confirmModal.ts
-  function petRow({ pet, reasons, mutations }) {
-    const row5 = document.createElement("div");
-    Object.assign(row5.style, {
-      display: "grid",
-      gridTemplateColumns: `${ICON_PX}px 1fr`,
-      gap: "10px",
-      alignItems: "center",
-      padding: "6px 8px",
-      border: `1px solid ${color.border}`,
-      borderRadius: "10px",
-      background: color.cardBg
-    });
-    const icon2 = document.createElement("div");
-    Object.assign(icon2.style, {
-      width: `${ICON_PX}px`,
-      height: `${ICON_PX}px`,
-      borderRadius: "10px",
-      background: color.hoverBg,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      overflow: "hidden",
-      fontSize: "12px",
-      fontWeight: "700"
-    });
-    icon2.textContent = String(pet.petSpecies || pet.name || "Pet").slice(0, 2).toUpperCase();
-    const species = String(pet.petSpecies || "").trim();
-    if (species) {
-      attachSpriteIcon(icon2, ["pet"], [species, pet.name || ""], ICON_PX, "sell-all-pets-confirm", {
-        mutations: mutations.map((m) => m.trim()).filter(Boolean)
-      });
-    }
-    const name = document.createElement("div");
-    name.textContent = pet.name ? `${pet.name} (${pet.petSpecies ?? "Pet"})` : pet.petSpecies ?? "Pet";
-    Object.assign(name.style, { fontWeight: "700", fontSize: "13px" });
-    const chips = document.createElement("div");
-    Object.assign(chips.style, { display: "flex", flexWrap: "wrap", gap: "6px" });
-    chips.append(...reasons.map((reason) => pill(reason)));
-    const info = document.createElement("div");
-    Object.assign(info.style, { display: "grid", gap: "4px" });
-    info.append(name, chips);
-    row5.append(icon2, info);
-    return row5;
-  }
-  function confirmProtectedPetSale(flagged) {
-    current?.close();
-    return new Promise((resolve) => {
-      let settled = false;
-      const settle = (value) => {
-        if (settled) return;
-        settled = true;
-        resolve(value);
-      };
-      const modal = openModal2({
-        host: document.body,
-        title: "Confirm sell all pets",
-        widthPx: 520,
-        onClose: () => {
-          if (current === modal) current = null;
-          settle(false);
-        }
-      });
-      current = modal;
-      const scrim = modal.body.closest(".qmm-modal-scrim");
-      if (scrim) scrim.style.zIndex = ON_TOP;
-      const intro = document.createElement("div");
-      intro.textContent = "The following pets match protected rules:";
-      Object.assign(intro.style, { fontSize: "13px", lineHeight: "1.4", color: color.textSoft });
-      modal.body.append(intro, ...flagged.map(petRow));
-      const spacer = document.createElement("div");
-      spacer.style.flex = "1";
-      const sell = button("Sell", {
-        variant: "primary",
-        onClick: () => {
-          settle(true);
-          modal.close();
-        }
-      });
-      modal.footer.append(spacer, button("Cancel", { onClick: () => modal.close() }), sell);
-      sell.focus();
-    });
-  }
-  var ICON_PX, ON_TOP, current;
-  var init_confirmModal = __esm({
-    "src/features/sellAllPets/confirmModal.ts"() {
-      "use strict";
-      init_badges();
-      init_button();
-      init_modal();
-      init_theme();
-      init_iconCache();
-      ICON_PX = 48;
-      ON_TOP = "2147483647";
-      current = null;
-    }
-  });
-
-  // src/features/sellAllPets/protection.ts
-  function flagProtectedPets(pets) {
-    const rules3 = lockerRestrictionsService.getSellAllPetsRules();
-    if (!rules3.enabled) return [];
-    const protectedColors = /* @__PURE__ */ new Map();
-    if (rules3.protectGold) protectedColors.set("gold", "Gold");
-    if (rules3.protectRainbow) protectedColors.set("rainbow", "Rainbow");
-    const maxStrThreshold = Math.round(clampFinite(rules3.maxStrThreshold, 0, 100, 0));
-    const protectedRarities = new Set(rules3.protectedRarities);
-    const flagged = [];
-    for (const pet of pets) {
-      const mutations = (Array.isArray(pet.mutations) ? pet.mutations : []).filter((m) => typeof m === "string");
-      const colors = new Set(mutations.map((m) => protectedColors.get(m.toLowerCase())).filter((c) => !!c));
-      const maxStrength = getPetInfo(pet)?.maxStrength;
-      const strong = rules3.protectMaxStr && typeof maxStrength === "number" && Number.isFinite(maxStrength) && maxStrength >= maxStrThreshold;
-      const species = String(pet.petSpecies || "").trim();
-      const rarity3 = species ? petCatalog2[species]?.rarity ?? "" : "";
-      const rare = rarity3 !== "" && protectedRarities.has(rarity3);
-      const reasons = [
-        ...Array.from(colors, (color2) => `Mutation: ${color2}`),
-        ...strong ? [`Max STR: ${Math.floor(maxStrength ?? 0)}`] : [],
-        ...rare ? [`Rarity: ${rarity3}`] : []
-      ];
-      if (reasons.length) flagged.push({ pet, reasons, mutations });
-    }
-    return flagged;
-  }
-  var init_protection = __esm({
-    "src/features/sellAllPets/protection.ts"() {
-      "use strict";
-      init_data();
-      init_petValue();
-      init_math();
-      init_restrictions();
-    }
-  });
-
-  // src/features/sellAllPets/flow.ts
-  async function unfavoritedInventoryPets() {
-    try {
-      await ensureStore();
-    } catch {
-    }
-    const [inventory, favoriteIds2] = await Promise.all([
-      Atoms.inventory.myInventory.get().catch(() => null),
-      Atoms.inventory.favoriteIds.get().catch(() => [])
-    ]);
-    const favorites = new Set(Array.isArray(favoriteIds2) ? favoriteIds2.filter((id) => typeof id === "string") : []);
-    const items = Array.isArray(inventory?.items) ? inventory.items : [];
-    return items.filter(isInventoryPet).filter((pet) => !favorites.has(pet.id));
-  }
-  function totalSellValue(pets) {
-    let total = 0;
-    for (const pet of pets) {
-      const value = computeInventoryItemValue(pet);
-      if (typeof value === "number" && Number.isFinite(value)) total += value;
-    }
-    return total.toLocaleString("en-US");
-  }
-  async function countSaleValue() {
-    try {
-      const value = Number(await Atoms.pets.totalPetSellPrice.get());
-      if (Number.isFinite(value) && value > 0) StatsService.incrementShopStat("petsSoldValue", value);
-    } catch (error) {
-      console.error("[SellPet] Unable to read pet sell price", error);
-    }
-  }
-  async function runSellAllPetsFlow() {
-    await PlayerService.logItems();
-    const pets = await unfavoritedInventoryPets();
-    if (pets.length === 0) return;
-    const flagged = flagProtectedPets(pets);
-    if (flagged.length && !await confirmProtectedPetSale(flagged)) {
-      void toastSimple("Sell all Pets", "Sale cancelled.", "info").catch(() => {
-      });
-      return;
-    }
-    const totalValue = totalSellValue(pets);
-    let sold = 0;
-    let failures = 0;
-    for (const pet of pets) {
-      try {
-        await PlayerService.sellPet(pet.id);
-        sold += 1;
-        StatsService.incrementShopStat("petsSoldCount");
-        void countSaleValue();
-      } catch {
-        failures += 1;
-      }
-    }
-    if (failures === 0) {
-      void toastSimple("Sell all Pets", `${sold} pets have been sold for ${totalValue} coins!`, "success").catch(() => {
-      });
-    }
-    audioPlayer.playSellNotification();
-  }
-  var isInventoryPet;
-  var init_flow = __esm({
-    "src/features/sellAllPets/flow.ts"() {
-      "use strict";
-      init_atoms();
-      init_jotai();
-      init_player();
-      init_audioPlayer();
-      init_toast();
-      init_stats();
-      init_value();
-      init_confirmModal();
-      init_protection();
-      isInventoryPet = (item) => !!item && item.itemType === "Pet" && typeof item.id === "string" && item.id.trim().length > 0;
-    }
-  });
-
-  // src/features/sellAllPets/keybind.ts
-  function installSellKeybindsOnce() {
-    if (sellKeybindsInstalled || typeof window === "undefined") return;
-    sellKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        if (eventMatchesKeybind("sell.sell-all", event)) {
-          event.preventDefault();
-          event.stopPropagation();
-          void PlayerService.sellAllCrops();
-          return;
-        }
-        if (eventMatchesKeybind("sell.sell-all-pets", event)) {
-          event.preventDefault();
-          event.stopPropagation();
-          void runSellAllPetsFlow();
-        }
-      },
-      true
-    );
-  }
-  var sellKeybindsInstalled;
-  var init_keybind2 = __esm({
-    "src/features/sellAllPets/keybind.ts"() {
-      "use strict";
-      init_player();
-      init_keybinds();
-      init_keyboard();
-      init_flow();
-      sellKeybindsInstalled = false;
-    }
-  });
-
-  // src/features/keybinds/modalToggles.ts
-  async function toggleModal(modalId) {
-    try {
-      if (await Atoms.ui.activeModal.get() === modalId) await closeModal(modalId);
-      else await openModal(modalId);
-    } catch {
-    }
-  }
-  function installModalToggleKeybind(actionId, modalId) {
-    if (installedActions.has(actionId) || typeof window === "undefined") return;
-    installedActions.add(actionId);
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event) || !eventMatchesKeybind(actionId, event)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void toggleModal(modalId);
-      },
-      true
-    );
-  }
-  function installModalToggleKeybinds() {
-    for (const [actionId, modalId] of MODAL_TOGGLES) installModalToggleKeybind(actionId, modalId);
-  }
-  var MODAL_TOGGLES, installedActions;
-  var init_modalToggles = __esm({
-    "src/features/keybinds/modalToggles.ts"() {
-      "use strict";
-      init_atoms();
-      init_fakeModal();
-      init_keyboard();
-      init_keybinds();
-      MODAL_TOGGLES = [
-        ["game.pet-hutch", "petHutch"],
-        ["game.journal", JOURNAL_MODAL_ID],
-        ["game.seed-silo", "seedSilo"],
-        ["game.decor-shed", "decorShed"],
-        ["game.tool-shack", "toolShack"],
-        ["game.feeding-trough", "feedingTrough"],
-        ["game.weather-station", "weatherStation"]
-      ];
-      installedActions = /* @__PURE__ */ new Set();
-    }
-  });
-
-  // src/game/keyCombos.ts
-  function modifierOf(part) {
-    const p = part.toLowerCase();
-    if (p === "ctrl" || p === "control") return "ctrl";
-    if (p === "shift") return "shift";
-    if (p === "alt") return "alt";
-    if (p === "meta" || p === "cmd" || p === "command" || p === "win") return "meta";
-    return null;
-  }
-  function parseComboSpec(c) {
-    const spec = { code: "", ctrl: false, shift: false, alt: false, meta: false };
-    for (const part of String(c).split("+").map((s) => s.trim()).filter(Boolean)) {
-      const mod = modifierOf(part);
-      if (mod) spec[mod] = true;
-      else spec.code = part;
-    }
-    return spec;
-  }
-  function parseCombo(c) {
-    const parsed = parseComboSpec(c);
-    const spec = {};
-    for (const mod of MODIFIER_ORDER) {
-      if (parsed[mod]) spec[mod] = true;
-    }
-    if (parsed.code) {
-      spec.code = parsed.code;
-      spec.key = codeToKey(parsed.code, !!spec.shift);
-    }
-    return spec;
-  }
-  function joinModifiers(mods, code) {
-    mods.sort((a, b) => MODIFIER_ORDER.indexOf(a) - MODIFIER_ORDER.indexOf(b));
-    return (mods.length ? mods.join("+") + "+" : "") + code;
-  }
-  function normalizeCombo(c) {
-    const mods = [];
-    let code = "";
-    for (const part of String(c).split("+").map((s) => s.trim()).filter(Boolean)) {
-      const mod = modifierOf(part);
-      if (mod) mods.push(mod);
-      else code = part;
-    }
-    return joinModifiers(mods, code);
-  }
-  function eventToCombo(e) {
-    const mods = [];
-    if (e.ctrlKey) mods.push("ctrl");
-    if (e.shiftKey) mods.push("shift");
-    if (e.altKey) mods.push("alt");
-    if (e.metaKey) mods.push("meta");
-    return joinModifiers(mods, e.code || "");
-  }
-  function formatCombo(c) {
-    const mods = [];
-    if (c.ctrl) mods.push("Ctrl");
-    if (c.shift) mods.push("Shift");
-    if (c.alt) mods.push("Alt");
-    if (c.meta) mods.push("Meta");
-    return (mods.length ? mods.join("+") + "+" : "") + (c.code || "");
-  }
-  var MODIFIER_ORDER, KEYCODE_TABLE, codeToKey, keyCodeOf, isEditableTarget;
-  var init_keyCombos = __esm({
-    "src/game/keyCombos.ts"() {
-      "use strict";
-      MODIFIER_ORDER = ["ctrl", "shift", "alt", "meta"];
-      KEYCODE_TABLE = {
-        KeyA: 65,
-        KeyB: 66,
-        KeyC: 67,
-        KeyD: 68,
-        KeyE: 69,
-        KeyF: 70,
-        KeyG: 71,
-        KeyH: 72,
-        KeyI: 73,
-        KeyJ: 74,
-        KeyK: 75,
-        KeyL: 76,
-        KeyM: 77,
-        KeyN: 78,
-        KeyO: 79,
-        KeyP: 80,
-        KeyQ: 81,
-        KeyR: 82,
-        KeyS: 83,
-        KeyT: 84,
-        KeyU: 85,
-        KeyV: 86,
-        KeyW: 87,
-        KeyX: 88,
-        KeyY: 89,
-        KeyZ: 90,
-        Digit0: 48,
-        Digit1: 49,
-        Digit2: 50,
-        Digit3: 51,
-        Digit4: 52,
-        Digit5: 53,
-        Digit6: 54,
-        Digit7: 55,
-        Digit8: 56,
-        Digit9: 57,
-        Space: 32,
-        Enter: 13,
-        Escape: 27,
-        Tab: 9,
-        Backspace: 8,
-        Delete: 46,
-        Insert: 45,
-        ArrowLeft: 37,
-        ArrowUp: 38,
-        ArrowRight: 39,
-        ArrowDown: 40
-      };
-      codeToKey = (code, shift = false) => {
-        if (!code) return "";
-        if (/^Key[A-Z]$/.test(code)) return shift ? code.slice(3).toUpperCase() : code.slice(3).toLowerCase();
-        if (/^Digit[0-9]$/.test(code)) return code.slice(5);
-        if (code === "Space") return " ";
-        return code;
-      };
-      keyCodeOf = (code, key2) => KEYCODE_TABLE[code] ?? (key2 && key2.length === 1 ? key2.toUpperCase().charCodeAt(0) : 0);
-      isEditableTarget = (t) => {
-        const el = t;
-        if (!el || !el.tagName) return false;
-        const tag = el.tagName.toLowerCase();
-        if (tag === "input" || tag === "textarea") return true;
-        const ce = el.getAttribute && el.getAttribute("contenteditable");
-        return !!(ce && ce !== "false");
-      };
-    }
-  });
-
-  // src/game/ingameHotkeys.ts
-  var resolveContext, REMAP_FLAG, RAPID_SYN_FLAG, InGameHotkeys, defaultContext, inGameHotkeys;
-  var init_ingameHotkeys = __esm({
-    "src/game/ingameHotkeys.ts"() {
-      "use strict";
-      init_pageContext();
-      init_keyCombos();
-      resolveContext = (context) => {
-        if (context) return context;
-        const win = pageWindow ?? window;
-        const doc = win.document ?? document;
-        return { window: win, document: doc };
-      };
-      REMAP_FLAG = "__inGameHotkeysRemapped__";
-      RAPID_SYN_FLAG = "__inGameHotkeysRapidSynthetic__";
-      InGameHotkeys = class {
-        constructor(autoAttach = true, context) {
-          // remapper
-          this.enabled = true;
-          this.map = /* @__PURE__ */ new Map();
-          // normalised combo -> target spec
-          this.blockedSet = /* @__PURE__ */ new Set();
-          // blocked combos
-          this.eventBlockers = /* @__PURE__ */ new Set();
-          this.attachedDocs = /* @__PURE__ */ new WeakSet();
-          // documents already hooked
-          this.observers = [];
-          this.handlers = /* @__PURE__ */ new Map();
-          this.passthrough = /* @__PURE__ */ new Set(["F5", "F12"]);
-          // rapid-fire manager
-          this.sessions = /* @__PURE__ */ new Map();
-          const ctx2 = resolveContext(context);
-          this.win = ctx2.window;
-          this.doc = ctx2.document;
-          if (autoAttach) {
-            this.attachDoc(this.doc);
-            this.attachAllFrames();
-            if (this.win.MutationObserver) {
-              const mo = new this.win.MutationObserver(() => this.attachAllFrames());
-              mo.observe(this.doc.documentElement || this.doc, { childList: true, subtree: true });
-              this.observers.push(mo);
-            }
-          }
-        }
-        /* --------- remapper on/off --------- */
-        enable(flag = true) {
-          this.enabled = !!flag;
-        }
-        disable() {
-          this.enabled = false;
-        }
-        isEnabled() {
-          return this.enabled;
-        }
-        /* --------- remaps --------- */
-        setMap(m) {
-          this.map.clear();
-          for (const [from, to] of Object.entries(m || {})) this.map.set(normalizeCombo(from), parseCombo(to));
-        }
-        add(from, to) {
-          this.map.set(normalizeCombo(from), parseCombo(to));
-        }
-        remove(from) {
-          this.map.delete(normalizeCombo(from));
-        }
-        clear() {
-          this.map.clear();
-        }
-        current() {
-          const out = {};
-          for (const [k, v] of this.map.entries()) out[k] = formatCombo(v);
-          return out;
-        }
-        /* --------- blocking --------- */
-        block(combo) {
-          this.blockedSet.add(normalizeCombo(combo));
-        }
-        unblock(combo) {
-          this.blockedSet.delete(normalizeCombo(combo));
-        }
-        blocked() {
-          return Array.from(this.blockedSet);
-        }
-        addEventBlocker(blocker) {
-          if (typeof blocker !== "function") {
-            return () => {
-            };
-          }
-          this.eventBlockers.add(blocker);
-          return () => {
-            this.eventBlockers.delete(blocker);
-          };
-        }
-        /* --------- binding helpers --------- */
-        /** Moves the action bound to oldBase onto newPhysical and disables oldBase. */
-        replace(oldBase, newPhysical) {
-          const oldN = normalizeCombo(oldBase);
-          const newN = normalizeCombo(newPhysical);
-          this.blockedSet.add(oldN);
-          this.map.set(newN, parseCombo(oldN));
-        }
-        /** Swaps two keys both ways (blocks neither). */
-        swap(a, b) {
-          const an = normalizeCombo(a), bn = normalizeCombo(b);
-          this.map.set(an, parseCombo(bn));
-          this.map.set(bn, parseCombo(an));
-        }
-        /* --------- frames & cleanup --------- */
-        attachAllFrames() {
-          this.doc.querySelectorAll("iframe").forEach((f) => {
-            try {
-              const d = f.contentDocument;
-              const origin = d?.location?.origin;
-              if (d && origin && origin === this.win.location.origin) this.attachDoc(d);
-            } catch {
-            }
-          });
-        }
-        destroy() {
-          for (const [doc, handler] of this.handlers.entries()) {
-            try {
-              const win = doc.defaultView || this.win;
-              win.removeEventListener("keydown", handler, true);
-              win.removeEventListener("keypress", handler, true);
-              win.removeEventListener("keyup", handler, true);
-            } catch {
-            }
-          }
-          this.handlers.clear();
-          this.attachedDocs = /* @__PURE__ */ new WeakSet();
-          for (const mo of this.observers) mo.disconnect();
-          this.observers = [];
-          this.stopAllRapidFires();
-          this.eventBlockers.clear();
-        }
-        /* --------- rapid-fire (API) --------- */
-        startRapidFire(opts) {
-          const trigger = normalizeCombo(opts.trigger);
-          const emit2 = normalizeCombo(opts.emit ?? opts.trigger);
-          const rateMs = 1e3 / Math.max(1, opts.rateHz ?? 12);
-          const mode = opts.mode ?? "tap";
-          const keyupDelayMs = opts.keyupDelayMs ?? 20;
-          this.sessions.set(trigger, {
-            trigger: parseComboSpec(trigger),
-            emit: parseComboSpec(emit2),
-            rateMs,
-            mode,
-            keyupDelayMs,
-            pressed: false,
-            lastTarget: null,
-            tickTimer: null,
-            upTimer: null
-          });
-        }
-        stopRapidFire(trigger) {
-          if (!trigger) {
-            this.stopAllRapidFires();
-            return;
-          }
-          const key2 = normalizeCombo(trigger);
-          const s = this.sessions.get(key2);
-          if (!s) return;
-          this.endSession(s);
-          this.sessions.delete(key2);
-        }
-        stopAllRapidFires() {
-          for (const s of this.sessions.values()) this.endSession(s);
-          this.sessions.clear();
-        }
-        isRapidFireActive(trigger) {
-          const s = this.sessions.get(normalizeCombo(trigger));
-          return !!(s && s.pressed);
-        }
-        setRapidFireRate(trigger, hz) {
-          const s = this.sessions.get(normalizeCombo(trigger));
-          if (!s) return;
-          s.rateMs = 1e3 / Math.max(1, hz);
-          if (s.pressed) this.restartLoop(s);
-        }
-        setRapidFireMode(trigger, mode) {
-          const s = this.sessions.get(normalizeCombo(trigger));
-          if (!s) return;
-          s.mode = mode;
-        }
-        listRapidFires() {
-          const out = [];
-          for (const [key2, s] of this.sessions.entries()) {
-            out.push({
-              trigger: key2,
-              emit: formatCombo(s.emit),
-              rateHz: Math.round(1e3 / s.rateMs),
-              mode: s.mode
-            });
-          }
-          return out;
-        }
-        /* ================= internals ================= */
-        attachDoc(doc) {
-          if (!doc || this.attachedDocs.has(doc)) return;
-          const handler = this.makeHandler(doc);
-          const win = doc.defaultView || this.win;
-          win.addEventListener("keydown", handler, true);
-          win.addEventListener("keypress", handler, true);
-          win.addEventListener("keyup", handler, true);
-          this.handlers.set(doc, handler);
-          this.attachedDocs.add(doc);
-        }
-        makeHandler(doc) {
-          return (evt) => {
-            const e = evt;
-            if (e[REMAP_FLAG]) return;
-            const isRapidSynthetic = !!e[RAPID_SYN_FLAG];
-            if (!isRapidSynthetic) this.handleRapidFireInput(doc, e);
-            if (!isRapidSynthetic && this.eventBlockers.size) {
-              for (const blocker of Array.from(this.eventBlockers)) {
-                let shouldBlock = false;
-                try {
-                  shouldBlock = blocker(e);
-                } catch {
-                  shouldBlock = false;
-                }
-                if (shouldBlock) {
-                  e.stopImmediatePropagation();
-                  e.preventDefault();
-                  return;
-                }
-              }
-            }
-            if (!this.enabled) return;
-            if (isEditableTarget(e.target)) return;
-            if (this.passthrough.has(e.code)) return;
-            const combo = eventToCombo(e);
-            if (this.blockedSet.has(combo)) {
-              e.stopImmediatePropagation();
-              e.preventDefault();
-              return;
-            }
-            const spec = this.map.get(combo);
-            if (!spec) return;
-            e.stopImmediatePropagation();
-            e.preventDefault();
-            const code = spec.code || "";
-            const key2 = spec.key !== void 0 ? spec.key : codeToKey(code, e.shiftKey);
-            const ctrl = spec.ctrl ?? e.ctrlKey;
-            const shift = spec.shift ?? e.shiftKey;
-            const alt = spec.alt ?? e.altKey;
-            const meta = spec.meta ?? e.metaKey;
-            const kc = keyCodeOf(code, key2);
-            const eventWindow = doc.defaultView || this.win;
-            const ne = new eventWindow.KeyboardEvent(e.type, {
-              bubbles: true,
-              cancelable: true,
-              composed: true,
-              key: key2,
-              code,
-              ctrlKey: ctrl,
-              shiftKey: shift,
-              altKey: alt,
-              metaKey: meta,
-              repeat: e.repeat,
-              location: e.location
-            });
-            Object.defineProperties(ne, {
-              keyCode: { get: () => kc },
-              which: { get: () => kc },
-              charCode: { get: () => kc },
-              [REMAP_FLAG]: { value: true }
-            });
-            const target = e.target || doc;
-            target.dispatchEvent(ne);
-          };
-        }
-        /* ---------- rapid fire internals ---------- */
-        handleRapidFireInput(doc, e) {
-          if (isEditableTarget(e.target)) return;
-          if (e.type === "keydown" && !e.repeat) {
-            for (const s of this.sessions.values()) {
-              if (this.matches(e, s.trigger)) {
-                s.pressed = true;
-                s.lastTarget = e.target || doc;
-                this.startLoop(doc, s);
-              }
-            }
-          } else if (e.type === "keyup") {
-            for (const s of this.sessions.values()) {
-              if (this.matches(e, s.trigger)) {
-                s.pressed = false;
-                this.stopLoop(doc, s);
-              }
-            }
-          }
-        }
-        matches(e, c) {
-          return e.code === c.code && !!e.ctrlKey === !!c.ctrl && !!e.shiftKey === !!c.shift && !!e.altKey === !!c.alt && !!e.metaKey === !!c.meta;
-        }
-        startLoop(doc, s) {
-          this.stopLoop(doc, s);
-          const tick = () => {
-            if (!s.pressed) return;
-            this.dispatchKey(doc, s.lastTarget || doc, "keydown", s.emit, true);
-            if (s.mode === "tap") {
-              if (s.upTimer) this.win.clearTimeout(s.upTimer);
-              s.upTimer = this.win.setTimeout(() => {
-                this.dispatchKey(doc, s.lastTarget || doc, "keyup", s.emit, false);
-              }, s.keyupDelayMs);
-            }
-          };
-          tick();
-          s.tickTimer = this.win.setInterval(tick, s.rateMs);
-        }
-        stopLoop(doc, s) {
-          if (s.tickTimer) {
-            this.win.clearInterval(s.tickTimer);
-            s.tickTimer = null;
-          }
-          if (s.upTimer) {
-            this.win.clearTimeout(s.upTimer);
-            s.upTimer = null;
-          }
-          if (s.mode === "hold" && s.lastTarget) {
-            this.dispatchKey(doc, s.lastTarget, "keyup", s.emit, false);
-          }
-        }
-        restartLoop(s) {
-          if (!s.pressed) return;
-          const anyDoc = this.doc;
-          this.startLoop(anyDoc, s);
-        }
-        endSession(s) {
-          this.stopLoop(this.doc, s);
-          s.pressed = false;
-          s.lastTarget = null;
-        }
-        dispatchKey(doc, target, type, c, repeat) {
-          const code = c.code;
-          const key2 = codeToKey(code, c.shift);
-          const kc = keyCodeOf(code, key2);
-          const eventWindow = doc.defaultView || this.win;
-          const ev = new eventWindow.KeyboardEvent(type, {
-            bubbles: true,
-            cancelable: true,
-            composed: true,
-            key: key2,
-            code,
-            ctrlKey: c.ctrl,
-            shiftKey: c.shift,
-            altKey: c.alt,
-            metaKey: c.meta,
-            repeat
-          });
-          Object.defineProperties(ev, {
-            keyCode: { get: () => kc },
-            which: { get: () => kc },
-            charCode: { get: () => kc },
-            [RAPID_SYN_FLAG]: { value: true }
-          });
-          try {
-            target.dispatchEvent(ev);
-          } catch {
-            doc.dispatchEvent(ev);
-          }
-        }
-      };
-      defaultContext = resolveContext();
-      inGameHotkeys = new InGameHotkeys(true, defaultContext);
-      shareGlobal("inGameHotkeys", inGameHotkeys);
-    }
-  });
-
-  // src/features/keybinds/gameRemap.ts
-  function clearRemapsTo(gameKey) {
-    try {
-      inGameHotkeys.unblock(gameKey);
-    } catch {
-    }
-    try {
-      for (const [from, to] of Object.entries(inGameHotkeys.current())) {
-        if (String(to).split("+").pop() === gameKey) {
-          try {
-            inGameHotkeys.remove(from);
-          } catch {
-          }
-        }
-      }
-    } catch {
-    }
-  }
-  function syncGameKeybind(id) {
-    const gameKey = GAME_KEYS[id];
-    clearRemapsTo(gameKey);
-    const previousRapidFire = rapidFireCombos.get(id);
-    if (previousRapidFire) {
-      try {
-        inGameHotkeys.stopRapidFire(previousRapidFire);
-      } catch {
-      }
-      rapidFireCombos.delete(id);
-    }
-    const hk = getKeybind(id);
-    const combo = hk ? hotkeyToString(hk) : "";
-    if (!combo) return;
-    if (combo !== gameKey) {
-      try {
-        inGameHotkeys.replace(gameKey, combo);
-      } catch {
-      }
-    }
-    if (getKeybindHoldDetection(id)) {
-      try {
-        inGameHotkeys.startRapidFire({ trigger: combo, emit: combo, mode: "tap", rateHz: 10 });
-        rapidFireCombos.set(id, combo);
-      } catch {
-      }
-    }
-  }
-  function installGameKeybindsOnce() {
-    if (installed3 || typeof window === "undefined") return;
-    installed3 = true;
-    for (const id of Object.keys(GAME_KEYS)) {
-      syncGameKeybind(id);
-      onKeybindChange(id, () => syncGameKeybind(id));
-      onKeybindHoldDetectionChange(id, () => syncGameKeybind(id));
-    }
-  }
-  var GAME_KEYS, rapidFireCombos, installed3;
-  var init_gameRemap = __esm({
-    "src/features/keybinds/gameRemap.ts"() {
-      "use strict";
-      init_ingameHotkeys();
-      init_hotkey();
-      init_keybinds();
-      GAME_KEYS = {
-        "game.action": "Space",
-        "game.inventory": "KeyE",
-        "game.move-up": "KeyW",
-        "game.move-down": "KeyS",
-        "game.move-left": "KeyA",
-        "game.move-right": "KeyD"
-      };
-      rapidFireCombos = /* @__PURE__ */ new Map();
-      installed3 = false;
-    }
-  });
-
-  // src/features/notifier/audio/encode.ts
-  function reject(toast3, detail) {
-    try {
-      toastSimple("Audio import", toast3, "error").catch(() => {
-      });
-    } catch {
-    }
-    throw new Error(detail);
-  }
-  function checkDuration(buffer, maxSeconds) {
-    if (buffer.duration <= maxSeconds) return;
-    const duration = seconds(buffer.duration);
-    const limit = seconds(maxSeconds);
-    reject(`File duration is ${duration}s (limit: ${limit}s).`, `Audio duration ${duration}s exceeds limit of ${limit}s.`);
-  }
-  function newAudioContext() {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    return new Ctx();
-  }
-  async function decode(file) {
-    const bytes = await file.arrayBuffer();
-    const ctx2 = newAudioContext();
-    try {
-      return await new Promise((resolve, fail) => ctx2.decodeAudioData(bytes.slice(0), resolve, fail));
-    } catch {
-      throw new Error("Failed to decode audio file.");
-    } finally {
-      await ctx2.close().catch(() => {
-      });
-    }
-  }
-  function readAsDataUrl(blob) {
-    return new Promise((resolve, fail) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = fail;
-      reader.readAsDataURL(blob);
-    });
-  }
-  function pickEncoderMime() {
-    if (typeof MediaRecorder === "undefined") return null;
-    for (const mime of ENCODER_MIMES) {
-      try {
-        if (MediaRecorder.isTypeSupported?.(mime)) return mime;
-      } catch {
-      }
-    }
-    return null;
-  }
-  async function reencode(buffer, mime, bitsPerSecond) {
-    const ctx2 = newAudioContext();
-    const dest = ctx2.createMediaStreamDestination();
-    const src = ctx2.createBufferSource();
-    src.buffer = buffer;
-    const gain = ctx2.createGain();
-    gain.gain.value = 0.9;
-    src.connect(gain).connect(dest);
-    const chunks = [];
-    const recorder = new MediaRecorder(dest.stream, { mimeType: mime, bitsPerSecond });
-    const recorded = new Promise((resolve, fail) => {
-      recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size) chunks.push(e.data);
-      };
-      recorder.onerror = (e) => fail(e.error || new Error("MediaRecorder error"));
-      recorder.onstop = () => {
-        try {
-          resolve(new Blob(chunks, { type: mime }));
-        } catch (err) {
-          fail(err);
-        }
-      };
-    });
-    recorder.start();
-    src.start();
-    await new Promise((done) => {
-      src.onended = () => done();
-    });
-    recorder.stop();
-    const out = await recorded;
-    await ctx2.close().catch(() => {
-    });
-    return out;
-  }
-  async function encodeSoundFile(file, limits = SOUND_LIMITS) {
-    if (!file || !(file instanceof File)) throw new Error("No file provided.");
-    const extension = (file.name?.split(".").pop() || "").toLowerCase();
-    const allowedMimes = ALLOWED_MIMES_BY_EXTENSION.get(extension);
-    if (!extension || !allowedMimes) {
-      reject("Unsupported audio format. Allowed formats: MP3, WAV, OGG.", `Unsupported audio extension: ${extension || "unknown"}`);
-    }
-    const type = (file.type || "").toLowerCase();
-    if (!type || !allowedMimes.has(type)) {
-      reject(
-        "File extension and MIME type must match (MP3, WAV, OGG only).",
-        type ? `MIME type ${type} is not valid for .${extension} files.` : `Missing MIME type for .${extension} files.`
-      );
-    }
-    const kb = (bytes) => Math.round(bytes / 1024);
-    if (file.size > limits.maxInputBytes) {
-      throw new Error(`Input file too large (${kb(file.size)}KB). Limit is ${kb(limits.maxInputBytes)}KB.`);
-    }
-    if (file.size <= limits.maxBytes) {
-      checkDuration(await decode(file), limits.maxSeconds);
-      return readAsDataUrl(file);
-    }
-    const mime = pickEncoderMime();
-    if (!mime) throw new Error("Compression unavailable in this browser; file exceeds 200KB.");
-    const buffer = await decode(file);
-    checkDuration(buffer, limits.maxSeconds);
-    for (const bitrate of limits.bitrates) {
-      const blob = await reencode(buffer, mime, bitrate);
-      if (blob.size <= limits.maxBytes) return readAsDataUrl(blob);
-    }
-    reject(
-      `Unable to compress under ${kb(limits.maxBytes)}KB. Try a shorter clip.`,
-      `Could not compress under ${kb(limits.maxBytes)}KB. Try a shorter clip.`
-    );
-  }
-  var SOUND_LIMITS, ALLOWED_MIMES_BY_EXTENSION, ENCODER_MIMES, seconds;
-  var init_encode = __esm({
-    "src/features/notifier/audio/encode.ts"() {
-      "use strict";
-      init_toast();
-      SOUND_LIMITS = {
-        maxBytes: 200 * 1024,
-        maxSeconds: 10,
-        bitrates: [48e3, 32e3, 2e4, 12e3, 8e3],
-        maxInputBytes: 8 * 1024 * 1024
-      };
-      ALLOWED_MIMES_BY_EXTENSION = /* @__PURE__ */ new Map([
-        ["mp3", /* @__PURE__ */ new Set(["audio/mpeg", "audio/mp3"])],
-        ["wav", /* @__PURE__ */ new Set(["audio/wav", "audio/x-wav", "audio/wave"])],
-        ["ogg", /* @__PURE__ */ new Set(["audio/ogg"])]
-      ]);
-      ENCODER_MIMES = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/webm", "audio/ogg", "audio/mp4"];
-      seconds = (s) => s.toFixed(1).replace(/\.0$/, "");
-    }
-  });
-
-  // src/features/notifier/audio/defaultSound.ts
-  var DEFAULT_SOUND_MP3_BASE64;
-  var init_defaultSound = __esm({
-    "src/features/notifier/audio/defaultSound.ts"() {
-      "use strict";
-      DEFAULT_SOUND_MP3_BASE64 = "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yWIx4QmQjniP/DFmXUHhpXgYKiwj0jItaDYoKCJwwYeA8MCCDGJuOoIQJFQEHjhJiW1NwKgKQTnbpNVZyKIIqeEtci87LqvPjrDXFvdx/v/r9eT//////////8X/O/34YjQv//nbVV62e+zRaNdv5k3Nlkv54MsiVZJ2XPNImgx6LJVuEpwRk5xtEkjOFydK6U44SZKtPgOpWFyUrA5KVwmCTAGQasapCi+pBXrShYhskHhSRHScOBoQjCMWFSqaA+hRJoD6EhSXc0qk25kNUMSzoQpY4x2EatYayUjWUjakatczs/X6ssMtcmvSZausPNb1Z7MvsZNtBRrR1vBf8Fl4/xpo2gYAPVqmZh3Zqv0o3AwpxomhWHeCsQjJYtDR7Oz09UeaGmZLiY9UBT1bvBXDXLaLg7lpUq79eJRnBoGZcjQTIU2QmlCpBRpZLpk6gKKER4ApYROtLHiXKhLWJYoV9Wv/+5RE9I8C3GLBgyFE8lsMeDBkI54KgY8CDATVwgApIWj0jpl1oLeWDtoUPes6hly6zueDsS8io9hriUNB3GPDCgoloBCgoCpRstUAnAQHUSTcAmVGcv2VV/9aWqqu212q5xjVZI4mG8LIwk8L0T/zXdc6WGAln0Kv8/jUBpZGq6nVUmNf89VL2oCVJjqk2qiS//YwrDQXEBQxI1VUaWqnglaJ0ZnIUsbjOFEozLLDhrJUFUmZpqv9Vv9mjF7HV2XZv9s/2Paeaw1JVh3NZ3alqp89m2L6vxi1jBjFS8S7FguQVjiwFeb/8O/5ZkxBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr/+5Rk3QDBygs8yCEYED0hV4IEJgwLEY7GIYR+QVyl2chTDDGqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo=";
-    }
-  });
-
-  // src/features/notifier/audio/library.ts
-  function toDataUrl(dataOrBase64, mime = "audio/mpeg") {
-    const s = (dataOrBase64 || "").trim();
-    if (!s) return "";
-    return looksLikeDataUrl(s) ? s : `data:${mime};base64,${s}`;
-  }
-  var LIBRARY_PATH, BUILTIN_SOUND_NAME, DATA_URL_RE, looksLikeDataUrl, SoundLibrary;
-  var init_library = __esm({
-    "src/features/notifier/audio/library.ts"() {
-      "use strict";
-      init_storage();
-      init_defaultSound();
-      LIBRARY_PATH = "audio.library";
-      BUILTIN_SOUND_NAME = "Default";
-      DATA_URL_RE = /^data:audio\/[a-z0-9.+-]+(?:;[a-z0-9.+-]+=[^;,]*)*;base64,/i;
-      looksLikeDataUrl = (s) => DATA_URL_RE.test(s.trim());
-      SoundLibrary = class {
-        constructor() {
-          this.sounds = /* @__PURE__ */ new Map();
-          this.builtinDataUrl = toDataUrl(DEFAULT_SOUND_MP3_BASE64);
-          this.sounds.set(BUILTIN_SOUND_NAME, this.builtinDataUrl);
-        }
-        load() {
-          const stored = readAriesPath(LIBRARY_PATH);
-          if (!Array.isArray(stored)) return;
-          this.sounds.clear();
-          this.sounds.set(BUILTIN_SOUND_NAME, this.builtinDataUrl);
-          for (const entry of stored) {
-            const name = String(entry?.name || "").trim();
-            const data = String(entry?.data || "").trim();
-            if (!name || !data || name === BUILTIN_SOUND_NAME) continue;
-            this.sounds.set(name, toDataUrl(data));
-          }
-        }
-        save() {
-          const entries = [];
-          for (const [name, data] of this.sounds) {
-            if (name !== BUILTIN_SOUND_NAME) entries.push({ name, data });
-          }
-          writeAriesPath(LIBRARY_PATH, entries);
-        }
-        names() {
-          return Array.from(this.sounds.keys());
-        }
-        has(name) {
-          return this.sounds.has(name);
-        }
-        get(name) {
-          return this.sounds.get(name);
-        }
-        isBuiltin(name) {
-          return name === BUILTIN_SOUND_NAME;
-        }
-        /** Adds or replaces a sound. */
-        add(name, dataUrl) {
-          this.sounds.set(name, dataUrl);
-          this.save();
-        }
-        /** Removes a sound; the built-in one stays. Returns whether anything was removed. */
-        remove(name) {
-          if (this.isBuiltin(name) || !this.sounds.delete(name)) return false;
-          this.save();
-          return true;
-        }
-        /** A name not taken yet, from a file name: "Ding", then "Ding (2)"... */
-        uniqueName(raw) {
-          const base = String(raw || "Sound").replace(/\.[a-z0-9]+$/i, "").trim() || "Sound";
-          if (!this.sounds.has(base)) return base;
-          let i = 2;
-          while (this.sounds.has(`${base} (${i})`)) i++;
-          return `${base} (${i})`;
-        }
-      };
-    }
-  });
-
-  // src/features/notifier/audio/settings.ts
-  function readStop(value) {
-    const mode = value?.mode;
-    if (mode === "purchase") return { mode: "purchase" };
-    if (mode === "manual" || mode === "repeat") return { mode: "manual" };
-    return null;
-  }
-  function applyStored(target, stored) {
-    const loaded2 = /* @__PURE__ */ new Set();
-    if (typeof stored.volume === "number") {
-      target.volume = clamp(stored.volume, 0, 1);
-      loaded2.add("volume");
-    }
-    if (stored.mode === "loop" || stored.mode === "oneshot") {
-      target.mode = stored.mode;
-      loaded2.add("mode");
-    }
-    const stop = stored.stop && typeof stored.stop === "object" ? readStop(stored.stop) : null;
-    if (stop) {
-      target.stop = stop;
-      loaded2.add("stop");
-    }
-    if (typeof stored.loopIntervalMs === "number" && Number.isFinite(stored.loopIntervalMs)) {
-      target.loopIntervalMs = Math.max(MIN_LOOP_GAP_MS, Math.floor(stored.loopIntervalMs));
-      loaded2.add("loopIntervalMs");
-    }
-    if (typeof stored.defaultSoundName === "string") {
-      target.defaultSoundName = stored.defaultSoundName.trim() || null;
-      loaded2.add("defaultSoundName");
-    }
-    return loaded2;
-  }
-  var SETTINGS_PATH, AUDIO_CONTEXTS, MIN_LOOP_GAP_MS, DEFAULT_VOLUME, DEFAULT_LOOP_INTERVAL_MS, DEFAULT_MIN_PLAY_GAP_MS, freshContext, AudioSettings;
-  var init_settings4 = __esm({
-    "src/features/notifier/audio/settings.ts"() {
-      "use strict";
-      init_math();
-      init_storage();
-      SETTINGS_PATH = "audio.settings";
-      AUDIO_CONTEXTS = ["shops", "weather", "pets"];
-      MIN_LOOP_GAP_MS = 150;
-      DEFAULT_VOLUME = 0.7;
-      DEFAULT_LOOP_INTERVAL_MS = 1500;
-      DEFAULT_MIN_PLAY_GAP_MS = 1200;
-      freshContext = () => ({
-        volume: DEFAULT_VOLUME,
-        mode: "oneshot",
-        stop: { mode: "manual" },
-        loopIntervalMs: DEFAULT_LOOP_INTERVAL_MS,
-        defaultSoundName: null
-      });
-      AudioSettings = class {
-        constructor() {
-          this.enabled = true;
-          this.minPlayGapMs = DEFAULT_MIN_PLAY_GAP_MS;
-          this.contexts = {
-            shops: freshContext(),
-            weather: freshContext(),
-            pets: freshContext()
-          };
-        }
-        /**
-         * Reads the stored settings. The shops' settings also sit at the top level,
-         * where builds before per-context settings kept them, and a weather or pets
-         * field never stored falls back to the shops' value.
-         */
-        load() {
-          const stored = readAriesPath(SETTINGS_PATH);
-          if (!stored || typeof stored !== "object") return;
-          if (typeof stored.enabled === "boolean") this.enabled = stored.enabled;
-          if (typeof stored.minPlayGapMs === "number") this.minPlayGapMs = Math.max(0, stored.minPlayGapMs | 0);
-          const shops2 = this.contexts.shops;
-          applyStored(shops2, {
-            ...stored,
-            loopIntervalMs: typeof stored.loopIntervalMs === "number" ? Math.max(MIN_LOOP_GAP_MS, stored.loopIntervalMs | 0) : void 0
-          });
-          const contexts = stored.contexts && typeof stored.contexts === "object" ? stored.contexts : {};
-          const shopsStored = contexts.shops;
-          if (shopsStored && typeof shopsStored === "object") applyStored(shops2, shopsStored);
-          for (const key2 of ["weather", "pets"]) {
-            const target = this.contexts[key2];
-            const conf = contexts[key2];
-            const loaded2 = conf && typeof conf === "object" ? applyStored(target, conf) : /* @__PURE__ */ new Set();
-            if (!loaded2.has("volume")) target.volume = shops2.volume;
-            if (!loaded2.has("mode")) target.mode = shops2.mode;
-            if (!loaded2.has("stop")) target.stop = { mode: shops2.stop.mode };
-            if (!loaded2.has("loopIntervalMs")) target.loopIntervalMs = shops2.loopIntervalMs;
-            if (!loaded2.has("defaultSoundName")) target.defaultSoundName = shops2.defaultSoundName;
-          }
-        }
-        save() {
-          const { shops: shops2 } = this.contexts;
-          const contexts = Object.fromEntries(AUDIO_CONTEXTS.map((key2) => [key2, { ...this.contexts[key2] }]));
-          writeAriesPath(SETTINGS_PATH, {
-            enabled: this.enabled,
-            volume: shops2.volume,
-            minPlayGapMs: this.minPlayGapMs,
-            mode: shops2.mode,
-            stop: shops2.stop,
-            loopIntervalMs: shops2.loopIntervalMs,
-            defaultSoundName: shops2.defaultSoundName,
-            contexts
-          });
-        }
-      };
-    }
-  });
-
-  // src/features/notifier/audio/audio.ts
-  var clamp01, AudioNotifier, audio;
-  var init_audio = __esm({
-    "src/features/notifier/audio/audio.ts"() {
-      "use strict";
-      init_math();
-      init_encode();
-      init_library();
-      init_settings4();
-      clamp01 = (v) => clamp(v, 0, 1);
-      AudioNotifier = class {
-        constructor() {
-          this.settings = new AudioSettings();
-          this.library = new SoundLibrary();
-          this.lastPlayTs = 0;
-          this.loops = /* @__PURE__ */ new Map();
-          this.oneshotQueue = [];
-          this.oneshotQueueTimer = null;
-          this.oneshotProcessing = false;
-          this.audioCtx = null;
-          this.primed = false;
-          this.library.load();
-          this.settings.load();
-          if (this.ensureValidDefaults()) this.settings.save();
-        }
-        ctx(context) {
-          return this.settings.contexts[context];
-        }
-        /**
-         * Points every context's default sound at a sound that exists: the shops
-         * fall back to the built-in sound, weather and pets to the shops' sound.
-         * Returns whether anything changed.
-         */
-        ensureValidDefaults() {
-          const fallback = this.library.names()[0] ?? null;
-          const valid = (name, prefer) => {
-            if (name && this.library.has(name)) return name;
-            if (prefer && this.library.has(prefer)) return prefer;
-            return fallback;
-          };
-          let changed5 = false;
-          const shops2 = valid(this.ctx("shops").defaultSoundName);
-          for (const key2 of AUDIO_CONTEXTS) {
-            const target = this.ctx(key2);
-            const next = key2 === "shops" ? shops2 : valid(target.defaultSoundName, shops2);
-            if (next !== target.defaultSoundName) {
-              target.defaultSoundName = next;
-              changed5 = true;
-            }
-          }
-          return changed5;
-        }
-        /* ================================ Library ================================ */
-        listSounds() {
-          return this.library.names();
-        }
-        isProtectedSound(name) {
-          return this.library.isBuiltin(name);
-        }
-        registerSound(name, dataUrl) {
-          this.library.add(name, dataUrl);
-          let defaultsChanged = false;
-          for (const key2 of AUDIO_CONTEXTS) {
-            if (!this.ctx(key2).defaultSoundName) {
-              this.ctx(key2).defaultSoundName = name;
-              defaultsChanged = true;
-            }
-          }
-          if (defaultsChanged) this.settings.save();
-        }
-        unregisterSound(name) {
-          if (!this.library.remove(name)) return;
-          let wasDefault = false;
-          for (const key2 of AUDIO_CONTEXTS) {
-            if (this.ctx(key2).defaultSoundName === name) {
-              this.ctx(key2).defaultSoundName = null;
-              wasDefault = true;
-            }
-          }
-          if (wasDefault || this.ensureValidDefaults()) this.settings.save();
-        }
-        /**
-         * Imports audio files into the library, under unique names. A context with
-         * no default sound yet gets the first one imported. Returns the names added
-         * and an error line per file that failed.
-         */
-        async importFiles(files) {
-          const added = [];
-          const errors = [];
-          for (const file of files) {
-            try {
-              const dataUrl = await encodeSoundFile(file);
-              const name = this.library.uniqueName(file.name);
-              this.registerSound(name, dataUrl);
-              added.push(name);
-            } catch (e) {
-              errors.push(`Failed for "${file.name}": ${e?.message || e}`);
-            }
-          }
-          if (added.length) {
-            for (const key2 of AUDIO_CONTEXTS) {
-              if (!this.getDefaultSoundName(key2)) this.setDefaultSoundByName(added[0], key2);
-            }
-          }
-          return { added, errors };
-        }
-        setDefaultSoundByName(name, context = "shops") {
-          if (!this.library.has(name) || this.ctx(context).defaultSoundName === name) return;
-          this.ctx(context).defaultSoundName = name;
-          this.settings.save();
-        }
-        /** The context's default sound; weather and pets fall back to the shops' one. */
-        getDefaultSoundName(context = "shops") {
-          const own = this.ctx(context).defaultSoundName;
-          return context === "shops" ? own : own ?? this.ctx("shops").defaultSoundName;
-        }
-        /** A sound name or data URL as a playable data URL; nothing means the context's default. */
-        resolveToDataUrl(src, context) {
-          if (!src) {
-            const name = this.getDefaultSoundName(context);
-            return name && this.library.get(name) || null;
-          }
-          const s = src.trim();
-          const named = this.library.get(s);
-          if (named) return named;
-          if (looksLikeDataUrl(s)) return s;
-          if (/^[A-Za-z0-9+/=\s]+$/.test(s) && s.length > 100) return toDataUrl(s);
-          return null;
-        }
-        /* =============================== Settings ================================ */
-        setVolume(v, context = "shops") {
-          const next = clamp01(v);
-          if (this.ctx(context).volume === next) return;
-          this.ctx(context).volume = next;
-          this.forEachLoop(context, (st) => {
-            if (st.volumeOverride == null) st.volume = next;
-          });
-          this.settings.save();
-        }
-        setPlaybackMode(mode, context = "shops") {
-          if (this.ctx(context).mode === mode) return;
-          this.ctx(context).mode = mode;
-          this.settings.save();
-        }
-        getPlaybackMode(context = "shops") {
-          return this.ctx(context).mode;
-        }
-        setStop(mode, context) {
-          if (this.ctx(context).stop.mode === mode) return;
-          this.ctx(context).stop = { mode };
-          this.forEachLoop(context, (st) => {
-            st.baseStop = { mode };
-          });
-          this.settings.save();
-        }
-        setStopManual(context = "shops") {
-          this.setStop("manual", context);
-        }
-        setStopPurchase(context = "shops") {
-          this.setStop("purchase", context);
-        }
-        setLoopInterval(ms, context = "shops") {
-          const next = Math.max(MIN_LOOP_GAP_MS, ms | 0);
-          if (this.ctx(context).loopIntervalMs === next) return;
-          this.ctx(context).loopIntervalMs = next;
-          this.forEachLoop(context, (st) => {
-            st.baseLoopInterval = next;
-          });
-          this.settings.save();
-        }
-        getLoopInterval(context = "shops") {
-          return this.ctx(context).loopIntervalMs;
-        }
-        setPurchaseChecker(fn) {
-          this.purchaseChecker = fn;
-        }
-        getPlaybackSettings(context = "shops") {
-          const ctx2 = this.ctx(context);
-          return {
-            volume: ctx2.volume,
-            mode: ctx2.mode,
-            stop: { mode: ctx2.stop.mode },
-            loopIntervalMs: ctx2.loopIntervalMs,
-            defaultSoundName: this.getDefaultSoundName(context)
-          };
-        }
-        /* =============================== Playback ================================ */
-        /**
-         * Plays the alert `key` in the context's mode (or the override's). A loop
-         * replaces any loop already running under the same key.
-         */
-        async trigger(key2 = "global", overrides = {}, context = "shops") {
-          const sound = typeof overrides.sound === "string" && overrides.sound.trim() ? overrides.sound.trim() : void 0;
-          const mode = overrides.mode === "oneshot" || overrides.mode === "loop" ? overrides.mode : this.ctx(context).mode;
-          const rawVolume = overrides.volume == null ? NaN : Number(overrides.volume);
-          const volumeOverride = Number.isFinite(rawVolume) ? clamp01(rawVolume) : null;
-          const volume = volumeOverride ?? this.ctx(context).volume;
-          this.stopLoop(key2);
-          if (mode === "oneshot") {
-            this.enqueueOneshot({ key: key2, dataUrl: this.resolveToDataUrl(sound ?? null, context), volume, context });
-            return;
-          }
-          const stopOverride = overrides.stop ? { mode: overrides.stop.mode === "purchase" ? "purchase" : "manual" } : null;
-          const interval = overrides.loopIntervalMs;
-          const state5 = {
-            key: key2,
-            context,
-            timer: null,
-            stopped: false,
-            soundOverride: sound,
-            stopOverride,
-            loopIntervalOverride: interval != null && Number.isFinite(interval) ? Math.max(MIN_LOOP_GAP_MS, Math.round(interval)) : null,
-            baseStop: { mode: this.ctx(context).stop.mode },
-            baseLoopInterval: this.ctx(context).loopIntervalMs,
-            volumeOverride,
-            volume
-          };
-          this.loops.set(key2, state5);
-          this.runLoop(state5);
-        }
-        forEachLoop(context, fn) {
-          for (const st of this.loops.values()) {
-            if (st.context === context) fn(st);
-          }
-        }
-        stopLoop(key2 = "global") {
-          const st = this.loops.get(key2);
-          if (!st) return;
-          st.stopped = true;
-          if (st.timer != null) clearTimeout(st.timer);
-          st.timer = null;
-          this.loops.delete(key2);
-        }
-        stopAllLoops() {
-          for (const key2 of [...this.loops.keys()]) this.stopLoop(key2);
-        }
-        /** Unlocks audio on a user gesture, for browsers that block sound until one. */
-        async prime() {
-          try {
-            if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (this.audioCtx.state === "suspended") await this.audioCtx.resume();
-            const osc = this.audioCtx.createOscillator();
-            const gain = this.audioCtx.createGain();
-            gain.gain.value = 1e-4;
-            osc.connect(gain).connect(this.audioCtx.destination);
-            osc.start();
-            osc.stop(this.audioCtx.currentTime + 0.02);
-          } catch {
-          }
-          this.primed = true;
-        }
-        /**
-         * Plays one sound. Returns false when it came too soon after the previous
-         * one (the caller retries). Without a sound, beeps if audio is unlocked.
-         */
-        async playOnce(dataUrl, volume, awaitEnd = false) {
-          if (!this.settings.enabled) return true;
-          const now = Date.now();
-          if (now - this.lastPlayTs < this.settings.minPlayGapMs) return false;
-          this.lastPlayTs = now;
-          if (!dataUrl) {
-            if (this.primed && this.audioCtx) {
-              try {
-                const osc = this.audioCtx.createOscillator();
-                const gain = this.audioCtx.createGain();
-                gain.gain.value = volume * 0.1;
-                osc.frequency.value = 880;
-                osc.connect(gain).connect(this.audioCtx.destination);
-                osc.start();
-                osc.stop(this.audioCtx.currentTime + 0.06);
-              } catch {
-              }
-            }
-            return true;
-          }
-          try {
-            const el = new Audio();
-            el.src = dataUrl;
-            el.volume = volume;
-            el.crossOrigin = "anonymous";
-            let ended = null;
-            let finish = null;
-            if (awaitEnd) {
-              ended = new Promise((resolve) => {
-                const done = () => {
-                  el.removeEventListener("ended", done);
-                  el.removeEventListener("error", done);
-                  resolve();
-                };
-                finish = done;
-                el.addEventListener("ended", done);
-                el.addEventListener("error", done);
-              });
-            }
-            await el.play().catch(() => finish?.());
-            if (ended) await ended;
-          } catch {
-          }
-          return true;
-        }
-        /** One loop iteration: check the stop condition, play to the end, wait the interval, repeat. */
-        runLoop(state5) {
-          const run = async () => {
-            if (state5.stopped) return;
-            const stop = state5.stopOverride ?? state5.baseStop;
-            if (stop.mode === "purchase" && this.purchaseChecker) {
-              try {
-                if (this.purchaseChecker(state5.key)) {
-                  this.stopLoop(state5.key);
-                  return;
-                }
-              } catch {
-              }
-            }
-            await this.playOnce(this.resolveToDataUrl(state5.soundOverride, state5.context), state5.volume, true);
-            if (state5.stopped) return;
-            const gap = Math.max(MIN_LOOP_GAP_MS, (state5.loopIntervalOverride ?? state5.baseLoopInterval) | 0);
-            state5.timer = window.setTimeout(() => this.runLoop(state5), gap);
-          };
-          run().catch(() => {
-          });
-        }
-        /** Weather one-shots jump ahead of the shops' and pets' ones. */
-        enqueueOneshot(entry) {
-          const firstOther = entry.context === "weather" ? this.oneshotQueue.findIndex((item) => item.context !== "weather") : -1;
-          if (firstOther === -1) this.oneshotQueue.push(entry);
-          else this.oneshotQueue.splice(firstOther, 0, entry);
-          this.scheduleOneshots();
-        }
-        scheduleOneshots() {
-          if (!this.oneshotQueue.length || this.oneshotQueueTimer != null) return;
-          const wait = Math.max(0, this.settings.minPlayGapMs - (Date.now() - this.lastPlayTs));
-          this.oneshotQueueTimer = window.setTimeout(() => {
-            this.oneshotQueueTimer = null;
-            if (!this.oneshotProcessing) this.playNextOneshot();
-          }, wait);
-        }
-        playNextOneshot() {
-          const next = this.oneshotQueue.shift();
-          if (!next) return;
-          this.oneshotProcessing = true;
-          void (async () => {
-            let tooSoon = false;
-            try {
-              tooSoon = !await this.playOnce(next.dataUrl, next.volume);
-            } finally {
-              this.oneshotProcessing = false;
-              if (tooSoon) this.enqueueOneshot(next);
-              this.scheduleOneshots();
-            }
-          })().catch(() => {
-          });
-        }
-      };
-      audio = new AudioNotifier();
-    }
-  });
-
   // src/features/notifier/petAlerts.ts
   function loadPrefs() {
-    const stored = readAriesPath(PREFS_PATH);
+    const stored = readAriesPath(PREFS_PATH2);
     if (!stored || typeof stored !== "object") return;
-    prefs = {
+    prefs2 = {
       globalEnabled: stored.globalEnabled !== false,
       generalEnabled: !!stored.generalEnabled,
-      defaultThresholdPct: clampPct(stored.defaultThresholdPct ?? prefs.defaultThresholdPct),
+      defaultThresholdPct: clampPct(stored.defaultThresholdPct ?? prefs2.defaultThresholdPct),
       pets: typeof stored.pets === "object" && stored.pets ? stored.pets : {}
     };
   }
-  function savePrefs() {
-    writeAriesPath(PREFS_PATH, prefs);
+  function savePrefs2() {
+    writeAriesPath(PREFS_PATH2, prefs2);
   }
   function prefFor(petId) {
-    const baseThreshold = clampPct(prefs.defaultThresholdPct);
-    if (prefs.generalEnabled) return { enabled: prefs.globalEnabled !== false, thresholdPct: baseThreshold };
+    const baseThreshold = clampPct(prefs2.defaultThresholdPct);
+    if (prefs2.generalEnabled) return { enabled: prefs2.globalEnabled !== false, thresholdPct: baseThreshold };
     if (!petId) return { enabled: false, thresholdPct: baseThreshold };
-    const entry = prefs.pets[petId] ?? {};
+    const entry = prefs2.pets[petId] ?? {};
     return { enabled: entry.enabled ?? false, thresholdPct: clampPct(entry.thresholdPct ?? baseThreshold) };
   }
   function evaluatePet(pet) {
     const petId = String(pet?.slot?.id || "");
-    if (!petId || !prefs.globalEnabled) {
+    if (!petId || !prefs2.globalEnabled) {
       wasBelow.set(petId, false);
       return;
     }
     const { enabled: enabled2, thresholdPct } = prefFor(petId);
     const hungerPct = PetsService.getHungerPctFor(pet);
     const below = enabled2 && Number.isFinite(hungerPct) && hungerPct < thresholdPct;
-    const loopKey = prefs.generalEnabled ? "pets:general" : `pet:${petId}`;
+    const loopKey = prefs2.generalEnabled ? "pets:general" : `pet:${petId}`;
     if (!below) {
       audio.stopLoop(loopKey);
     } else if (audio.getPlaybackMode("pets") === "loop" || !wasBelow.get(petId)) {
@@ -19575,7 +25494,7 @@
       }
     }
   }
-  var PREFS_PATH, ACTIVE_PET_SLOTS, clampPct, prefs, started, lastPets, wasBelow, PetAlertService;
+  var PREFS_PATH2, ACTIVE_PET_SLOTS, clampPct, prefs2, started2, lastPets, wasBelow, PetAlertService;
   var init_petAlerts = __esm({
     "src/features/notifier/petAlerts.ts"() {
       "use strict";
@@ -19583,21 +25502,21 @@
       init_math();
       init_storage();
       init_audio();
-      PREFS_PATH = "pets.alerts";
+      PREFS_PATH2 = "pets.alerts";
       ACTIVE_PET_SLOTS = 3;
       clampPct = (v) => clamp(Math.round(v), 1, 100);
-      prefs = {
+      prefs2 = {
         globalEnabled: true,
         generalEnabled: false,
         defaultThresholdPct: 25,
         pets: {}
       };
-      started = false;
+      started2 = false;
       lastPets = [];
       wasBelow = /* @__PURE__ */ new Map();
       PetAlertService = {
         async start() {
-          if (started) return;
+          if (started2) return;
           loadPrefs();
           try {
             await PetsService.onPetsChangeNow((pets) => {
@@ -19606,2327 +25525,25 @@
             });
           } catch {
           }
-          started = true;
+          started2 = true;
         },
         isGeneralEnabled() {
-          return !!prefs.generalEnabled;
+          return !!prefs2.generalEnabled;
         },
         setGeneralEnabled(on) {
-          prefs.generalEnabled = on;
-          savePrefs();
+          prefs2.generalEnabled = on;
+          savePrefs2();
           evaluateAll();
         },
         getGeneralThresholdPct() {
-          return clampPct(prefs.defaultThresholdPct);
+          return clampPct(prefs2.defaultThresholdPct);
         },
         /** Sets the shared threshold and returns it as stored (whole percent, 1 to 100). */
         setGeneralThresholdPct(pct) {
-          prefs.defaultThresholdPct = clampPct(pct);
-          savePrefs();
-          evaluateAll();
-          return prefs.defaultThresholdPct;
-        }
-      };
-    }
-  });
-
-  // src/game/pixi/gardenInfoCard.ts
-  function getStage(state5) {
-    return state5.renderer.lastObjectRendered ?? state5.renderer.stage ?? state5.app?.stage ?? null;
-  }
-  function findByLabel(root4, label2, limit = 25e3) {
-    if (!root4) return null;
-    const stack = [root4];
-    const seen = /* @__PURE__ */ new Set();
-    let n = 0;
-    while (stack.length && n++ < limit) {
-      const node = stack.pop();
-      if (!node || seen.has(node)) continue;
-      seen.add(node);
-      if (node.label === label2) return node;
-      const children = node.children;
-      if (Array.isArray(children)) for (const child of children) stack.push(child);
-    }
-    return null;
-  }
-  function findAcrossBranches(root4, pred, limitPerBranch = 25e3) {
-    if (!root4) return null;
-    if (pred(root4)) return root4;
-    const children = root4.children;
-    if (!Array.isArray(children)) return null;
-    for (const child of children) {
-      const stack = [child];
-      const seen = /* @__PURE__ */ new Set();
-      let n = 0;
-      while (stack.length && n++ < limitPerBranch) {
-        const node = stack.pop();
-        if (!node || seen.has(node)) continue;
-        seen.add(node);
-        if (pred(node)) return node;
-        const kids = node.children;
-        if (Array.isArray(kids)) for (const kid of kids) stack.push(kid);
-      }
-    }
-    return null;
-  }
-  function findGraphicsCtor(root4) {
-    if (cachedGraphicsCtor) return cachedGraphicsCtor;
-    const found = findAcrossBranches(
-      root4,
-      (node) => typeof node?.roundRect === "function" && typeof node?.clear === "function"
-    )?.constructor ?? null;
-    if (found) cachedGraphicsCtor = found;
-    return found;
-  }
-  function computeGeometry(card4) {
-    const cardBounds = card4.getLocalBounds();
-    const width = card4.hitArea?.width ?? cardBounds.width;
-    const height = card4.hitArea?.height ?? cardBounds.height;
-    const titleRow = (card4.children ?? []).find((c) => c?.label === TITLE_ROW_LABEL);
-    const contentTop = titleRow ? titleRow.position.y + titleRow.getLocalBounds().minY : cardBounds.minY;
-    const abilitiesSection = (cardSystem?.children ?? []).find((c) => c?.label === ABILITIES_SECTION_LABEL);
-    const extraTopOffset = abilitiesSection ? abilitiesSection.getLocalBounds().height + SECTION_GAP_ESTIMATE : 0;
-    return { top: contentTop - extraTopOffset, width, height };
-  }
-  function notifyListeners(card4, geometry) {
-    for (const listener of listeners) {
-      try {
-        listener(card4, geometry);
-      } catch (error) {
-        console.warn("[gardenInfoCardPixi] listener failed", error);
-      }
-    }
-  }
-  function onChildAddedUnsafe(row5) {
-    if (row5?.label !== CARD_ROW_LABEL) return;
-    const card4 = findByLabel(row5, OBJECT_CARD_LABEL);
-    if (!card4) return;
-    currentCard = card4;
-    const geometry = computeGeometry(card4);
-    card4.once("destroyed", () => {
-      if (currentCard === card4) {
-        currentCard = null;
-        notifyListeners(null, null);
-      }
-    });
-    notifyListeners(card4, geometry);
-  }
-  function onChildAdded(row5) {
-    try {
-      onChildAddedUnsafe(row5);
-    } catch (error) {
-      console.warn("[gardenInfoCardPixi] onChildAdded failed", error);
-    }
-  }
-  function attachToCardSystem(system) {
-    cardSystem = system;
-    cardSystem.on("childAdded", onChildAdded);
-    cardSystem.once("destroyed", () => {
-      if (cardSystem === system) {
-        cardSystem = null;
-        debugState.attached = false;
-        currentCard = null;
-        notifyListeners(null, null);
-        restartSearchIfNeeded();
-      }
-    });
-    debugState.attached = true;
-    console.info(`[gardenInfoCardPixi] attached to ${CARD_SYSTEM_LABEL} after ${findAttempts} attempt(s)`);
-    const existingRow = (system.children ?? []).find((c) => c?.label === CARD_ROW_LABEL);
-    if (existingRow) onChildAdded(existingRow);
-  }
-  function tryFindCardSystem() {
-    if (cardSystem) return;
-    const state5 = getReadySpriteState();
-    if (!state5) return;
-    const stage = getStage(state5);
-    const found = findAcrossBranches(stage, (node) => node?.label === CARD_SYSTEM_LABEL);
-    if (found) {
-      attachToCardSystem(found);
-      return;
-    }
-    findAttempts += 1;
-    debugState.findAttempts = findAttempts;
-    if (findAttempts % CARD_SYSTEM_FIND_LOG_EVERY === 0) {
-      console.info(`[gardenInfoCardPixi] still searching for ${CARD_SYSTEM_LABEL} (${findAttempts} attempts so far)`);
-    }
-  }
-  function scheduleFind(now) {
-    findRafId = null;
-    debugState.rafTicks += 1;
-    if (!listeners.size || cardSystem) return;
-    if (now - lastFindCheckAt >= CARD_SYSTEM_FIND_RETRY_MS) {
-      lastFindCheckAt = now;
-      tryFindCardSystem();
-    }
-    if (!listeners.size || cardSystem) return;
-    findRafId = raf(scheduleFind);
-  }
-  function restartSearchIfNeeded() {
-    if (!listeners.size || cardSystem) return;
-    tryFindCardSystem();
-    if (!cardSystem && findRafId == null) {
-      findRafId = raf(scheduleFind);
-    }
-  }
-  function watchGardenInfoCard(listener) {
-    listeners.add(listener);
-    debugState.listenerCount = listeners.size;
-    restartSearchIfNeeded();
-    if (currentCard) {
-      try {
-        listener(currentCard, computeGeometry(currentCard));
-      } catch (error) {
-        console.warn("[gardenInfoCardPixi] listener failed", error);
-      }
-    }
-    return () => {
-      listeners.delete(listener);
-      debugState.listenerCount = listeners.size;
-    };
-  }
-  var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, CARD_SYSTEM_FIND_RETRY_MS, CARD_SYSTEM_FIND_LOG_EVERY, cachedGraphicsCtor, cardSystem, currentCard, findAttempts, findRafId, lastFindCheckAt, listeners, debugState, raf;
-  var init_gardenInfoCard = __esm({
-    "src/game/pixi/gardenInfoCard.ts"() {
-      "use strict";
-      init_pageContext();
-      init_context();
-      CARD_SYSTEM_LABEL = "GardenInfoCardSystem";
-      CARD_ROW_LABEL = "GardenInfoCardRow";
-      OBJECT_CARD_LABEL = "GardenInfoObjectCard";
-      TITLE_ROW_LABEL = "GardenInfoObjectTitleRow";
-      ABILITIES_SECTION_LABEL = "GardenInfoPlantAbilities";
-      SECTION_GAP_ESTIMATE = 8;
-      CARD_SYSTEM_FIND_RETRY_MS = 1e3;
-      CARD_SYSTEM_FIND_LOG_EVERY = 30;
-      cachedGraphicsCtor = null;
-      cardSystem = null;
-      currentCard = null;
-      findAttempts = 0;
-      findRafId = null;
-      lastFindCheckAt = 0;
-      listeners = /* @__PURE__ */ new Set();
-      debugState = {
-        findAttempts: 0,
-        attached: false,
-        rafTicks: 0,
-        scriptStartedAt: Date.now(),
-        listenerCount: 0
-      };
-      shareGlobal("__MG_GARDEN_INFO_CARD_DEBUG__", debugState);
-      raf = pageWindow.requestAnimationFrame.bind(pageWindow);
-    }
-  });
-
-  // src/features/notifier/bell/ring.ts
-  function bellRingAngleAt(cycleOffset) {
-    for (let i = 1; i < BELL_RING_SEQUENCE.length; i++) {
-      const next = BELL_RING_SEQUENCE[i];
-      if (cycleOffset > next.offset) continue;
-      const prev = BELL_RING_SEQUENCE[i - 1];
-      const span = next.offset - prev.offset;
-      const ratio = span > 0 ? (cycleOffset - prev.offset) / span : 0;
-      return (prev.deg + (next.deg - prev.deg) * ratio) * DEG_TO_RAD;
-    }
-    return 0;
-  }
-  var BELL_RING_SEQUENCE, BELL_RING_DURATION_MS, BELL_GLYPH, DEG_TO_RAD;
-  var init_ring = __esm({
-    "src/features/notifier/bell/ring.ts"() {
-      "use strict";
-      BELL_RING_SEQUENCE = [
-        { offset: 0, deg: 0 },
-        { offset: 0.05, deg: 15 },
-        { offset: 0.1, deg: -13 },
-        { offset: 0.15, deg: 11 },
-        { offset: 0.2, deg: -9 },
-        { offset: 0.25, deg: 7 },
-        { offset: 0.3, deg: -5 },
-        { offset: 0.35, deg: 3 },
-        { offset: 0.4, deg: -2 },
-        { offset: 0.45, deg: 1 },
-        { offset: 0.5, deg: 0 },
-        { offset: 1, deg: 0 }
-      ];
-      BELL_RING_DURATION_MS = 1600;
-      BELL_GLYPH = "\u{1F514}";
-      DEG_TO_RAD = Math.PI / 180;
-    }
-  });
-
-  // src/features/notifier/bell/pixiBell.ts
-  function startPixiBell(opts) {
-    let running = true;
-    let rail = null;
-    let bellContainer = null;
-    let bellText = null;
-    let lastSize = DEFAULT_SLOT_SIZE;
-    let findAttempts2 = 0;
-    let findRafId3 = null;
-    let lastFindCheckAt3 = 0;
-    let wiggleActive = false;
-    let wiggleRafId = null;
-    let wiggleT = 0;
-    let wiggleLastFrameAt = null;
-    let canvasEl = null;
-    let canvasListenersAttached = false;
-    let weSetPointerCursor = false;
-    const debugState3 = {
-      attached: false,
-      findAttempts: 0,
-      hasButton: false,
-      lastError: null,
-      slotY: null,
-      screenScaleX: null,
-      screenScaleY: null
-    };
-    shareGlobal("__MG_NOTIFICATION_BELL_PIXI_DEBUG__", debugState3);
-    const raf3 = pageWindow.requestAnimationFrame.bind(pageWindow);
-    const cancelRaf = pageWindow.cancelAnimationFrame.bind(pageWindow);
-    const forgetButtonRefs = () => {
-      bellContainer = null;
-      bellText = null;
-      debugState3.hasButton = false;
-    };
-    const removeButton = () => {
-      if (bellContainer) {
-        try {
-          bellContainer.destroy({ children: true });
-        } catch {
-        }
-      }
-      forgetButtonRefs();
-    };
-    const onClick = () => {
-      try {
-        opts.onClick();
-      } catch (error) {
-        console.error("[PixiBell] onClick error:", error);
-      }
-    };
-    const computeScreenRect = () => {
-      if (!bellContainer || bellContainer.destroyed) return null;
-      const state5 = getReadySpriteState();
-      const canvas = state5?.renderer?.canvas || state5?.renderer?.view?.canvas || state5?.renderer?.view;
-      if (!canvas) return null;
-      try {
-        const rect = canvas.getBoundingClientRect();
-        const renderResolution = Number(state5?.renderer?.resolution) || 1;
-        const stageWidth = Number(state5?.renderer?.screen?.width) || (Number(canvas.width) || 0) / renderResolution;
-        const stageHeight = Number(state5?.renderer?.screen?.height) || (Number(canvas.height) || 0) / renderResolution;
-        const scaleX = stageWidth > 0 ? rect.width / stageWidth : 1;
-        const scaleY = stageHeight > 0 ? rect.height / stageHeight : 1;
-        debugState3.screenScaleX = scaleX;
-        debugState3.screenScaleY = scaleY;
-        const topLeft = bellContainer.toGlobal({ x: 0, y: 0 });
-        const bottomRight = bellContainer.toGlobal({ x: lastSize, y: lastSize });
-        return {
-          left: rect.left + topLeft.x * scaleX,
-          top: rect.top + topLeft.y * scaleY,
-          right: rect.left + bottomRight.x * scaleX,
-          bottom: rect.top + bottomRight.y * scaleY,
-          width: (bottomRight.x - topLeft.x) * scaleX,
-          height: (bottomRight.y - topLeft.y) * scaleY
-        };
-      } catch {
-        return null;
-      }
-    };
-    const hitTestButton = (clientX, clientY) => {
-      const rect = computeScreenRect();
-      if (!rect) return false;
-      return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
-    };
-    const onWindowPointerDownCapture = (ev) => {
-      if (!hitTestButton(ev.clientX, ev.clientY)) return;
-      ev.stopPropagation();
-      ev.stopImmediatePropagation();
-      ev.preventDefault();
-      onClick();
-    };
-    const onCanvasPointerMove = (ev) => {
-      if (!canvasEl) return;
-      const isHovering = hitTestButton(ev.clientX, ev.clientY);
-      if (isHovering && !weSetPointerCursor) {
-        canvasEl.style.cursor = "pointer";
-        weSetPointerCursor = true;
-      } else if (!isHovering && weSetPointerCursor) {
-        canvasEl.style.cursor = "";
-        weSetPointerCursor = false;
-      }
-    };
-    const onCanvasPointerLeave = () => {
-      if (weSetPointerCursor && canvasEl) {
-        canvasEl.style.cursor = "";
-        weSetPointerCursor = false;
-      }
-    };
-    const ensureCanvasListeners = (state5) => {
-      if (canvasListenersAttached) return;
-      const canvas = state5.renderer?.canvas || state5.renderer?.view?.canvas || state5.renderer?.view;
-      if (!canvas) return;
-      canvasEl = canvas;
-      pageWindow.addEventListener("pointerdown", onWindowPointerDownCapture, true);
-      canvas.addEventListener("pointermove", onCanvasPointerMove);
-      canvas.addEventListener("pointerleave", onCanvasPointerLeave);
-      canvasListenersAttached = true;
-    };
-    const findChatSlot = () => {
-      if (!Array.isArray(rail?.children)) return null;
-      for (const child of rail.children) {
-        if (child === bellContainer) continue;
-        if (findByLabel(child, CHAT_SLOT_MARKER_LABEL)) return child;
-      }
-      return null;
-    };
-    const railLocalScreenBounds = () => {
-      const state5 = getReadySpriteState();
-      const screenHeight = Number(state5?.renderer?.screen?.height);
-      if (!Number.isFinite(screenHeight) || screenHeight <= 0) return null;
-      try {
-        const top = rail.toLocal({ x: 0, y: 0 }).y;
-        const bottom = rail.toLocal({ x: 0, y: screenHeight }).y;
-        return { top, bottom };
-      } catch {
-        return null;
-      }
-    };
-    const computeSlot = () => {
-      const siblings = Array.isArray(rail?.children) ? rail.children.filter((c) => c !== bellContainer) : [];
-      let size = DEFAULT_SLOT_SIZE;
-      const railWidth = Number(rail?.width);
-      if (Number.isFinite(railWidth) && railWidth > 0) size = railWidth;
-      const ys = siblings.map((c) => Number(c?.y) || 0).sort((a, b) => a - b);
-      let spacing = DEFAULT_SLOT_SPACING;
-      if (ys.length >= 2) {
-        const diffs = [];
-        for (let i = 1; i < ys.length; i++) diffs.push(ys[i] - ys[i - 1]);
-        diffs.sort((a, b) => a - b);
-        const median2 = diffs[Math.floor(diffs.length / 2)];
-        if (Number.isFinite(median2) && median2 > 0) spacing = median2;
-      }
-      const isSlotOccupied = (y) => ys.some((siblingY) => Math.abs(siblingY - y) < spacing * SLOT_OCCUPIED_TOLERANCE_RATIO);
-      const chatSlot = findChatSlot();
-      const anchorY = chatSlot ? Number(chatSlot.y) || 0 : ys.length ? ys[ys.length - 1] : -spacing;
-      let nextY = anchorY + spacing;
-      for (let step = 0; step < MAX_SLOT_SEARCH_STEPS && isSlotOccupied(nextY); step++) {
-        nextY += spacing;
-      }
-      const bounds = railLocalScreenBounds();
-      if (bounds && nextY + size > bounds.bottom) {
-        const aboveTopmost = (ys.length ? ys[0] : nextY) - spacing;
-        nextY = aboveTopmost >= bounds.top ? aboveTopmost : Math.max(bounds.top, bounds.bottom - size);
-      }
-      return { size, nextY };
-    };
-    const syncGeometry = () => {
-      const { size, nextY } = computeSlot();
-      lastSize = size;
-      debugState3.slotY = nextY;
-      bellContainer.position.set(0, nextY);
-      if (bellText) {
-        bellText.style.fontSize = Math.round(size * 0.6);
-        if (typeof bellText.anchor?.set === "function") bellText.anchor.set(0.5, 0);
-        const textHeight = Number(bellText.height) || size * 0.6;
-        bellText.position.set(size / 2, Math.max(0, (size - textHeight) / 2));
-      }
-    };
-    const syncUnsafe = () => {
-      if (!running || !rail || rail.destroyed) {
-        removeButton();
-        return;
-      }
-      const state5 = getReadySpriteState();
-      if (!state5?.ctors?.Text) return;
-      if (!bellContainer) {
-        const ContainerCtor = state5.ctors.Container ?? rail.constructor;
-        bellContainer = new ContainerCtor();
-        bellContainer.label = "GeminiNotificationBell";
-        const thisContainer = bellContainer;
-        thisContainer.once("destroyed", () => {
-          if (bellContainer === thisContainer) forgetButtonRefs();
-        });
-        rail.addChild(bellContainer);
-      }
-      if (!bellText) {
-        bellText = new state5.ctors.Text({ text: BELL_GLYPH, style: { fontSize: DEFAULT_SLOT_SIZE } });
-        bellContainer.addChild(bellText);
-      }
-      ensureCanvasListeners(state5);
-      syncGeometry();
-      debugState3.hasButton = true;
-    };
-    const sync2 = () => {
-      try {
-        syncUnsafe();
-        debugState3.lastError = null;
-      } catch (error) {
-        debugState3.lastError = String(error?.message ?? error);
-        console.warn("[PixiBell] sync failed, clearing button", error);
-        try {
-          removeButton();
-        } catch {
-        }
-      }
-    };
-    const onRailChildrenChanged = () => sync2();
-    const restartSearchIfNeeded2 = () => {
-      if (!running || rail) return;
-      tryFindRail();
-      if (!rail && findRafId3 == null) findRafId3 = raf3(scheduleFind2);
-    };
-    const attachToRail = (node) => {
-      rail = node;
-      rail.on("childAdded", onRailChildrenChanged);
-      rail.on("childRemoved", onRailChildrenChanged);
-      rail.once("destroyed", () => {
-        if (rail === node) {
-          rail = null;
-          debugState3.attached = false;
-          removeButton();
-          restartSearchIfNeeded2();
-        }
-      });
-      debugState3.attached = true;
-      console.info(`[PixiBell] attached to ${RAIL_LABEL} after ${findAttempts2} attempt(s)`);
-      sync2();
-    };
-    const tryFindRail = () => {
-      if (!running || rail) return;
-      const state5 = getReadySpriteState();
-      if (!state5) return;
-      const stage = getStage(state5);
-      const found = findAcrossBranches(stage, (node) => node?.label === RAIL_LABEL);
-      if (found) {
-        attachToRail(found);
-        return;
-      }
-      findAttempts2 += 1;
-      debugState3.findAttempts = findAttempts2;
-      if (findAttempts2 % RAIL_FIND_LOG_EVERY === 0) {
-        console.info(`[PixiBell] still searching for ${RAIL_LABEL} (${findAttempts2} attempts so far)`);
-      }
-    };
-    const scheduleFind2 = (now) => {
-      findRafId3 = null;
-      if (!running || rail) return;
-      if (now - lastFindCheckAt3 >= RAIL_FIND_RETRY_MS) {
-        lastFindCheckAt3 = now;
-        tryFindRail();
-      }
-      if (!running || rail) return;
-      findRafId3 = raf3(scheduleFind2);
-    };
-    const isReachableFromLiveStage = (node) => {
-      const state5 = getReadySpriteState();
-      if (!state5) return false;
-      const stage = getStage(state5);
-      if (!stage) return false;
-      let cur = node;
-      let hops = 0;
-      while (cur && hops++ < RAIL_REACHABILITY_MAX_HOPS) {
-        if (cur === stage) return true;
-        cur = cur.parent;
-      }
-      return false;
-    };
-    const periodicRailMaintenance = () => {
-      if (!running || !rail || rail.destroyed) return;
-      if (!isReachableFromLiveStage(rail)) {
-        console.warn("[PixiBell] rail orphaned from the live stage (no destroyed event fired), resetting");
-        rail = null;
-        debugState3.attached = false;
-        removeButton();
-        restartSearchIfNeeded2();
-        return;
-      }
-      sync2();
-    };
-    const maintenanceIntervalId = pageWindow.setInterval(periodicRailMaintenance, RAIL_REACHABILITY_CHECK_MS);
-    const onWindowResize = () => {
-      if (!running || !rail || rail.destroyed) return;
-      sync2();
-    };
-    pageWindow.addEventListener("resize", onWindowResize);
-    const stopWiggleAnimation = () => {
-      if (wiggleRafId != null) {
-        cancelRaf(wiggleRafId);
-        wiggleRafId = null;
-      }
-      wiggleLastFrameAt = null;
-      if (bellText && !bellText.destroyed) bellText.rotation = 0;
-    };
-    const wiggleTick = (time) => {
-      wiggleRafId = null;
-      if (!wiggleActive || !bellText || bellText.destroyed) {
-        stopWiggleAnimation();
-        return;
-      }
-      if (wiggleLastFrameAt == null) wiggleLastFrameAt = time;
-      const dt = time - wiggleLastFrameAt;
-      wiggleLastFrameAt = time;
-      wiggleT += dt;
-      const cycleOffset = wiggleT % BELL_RING_DURATION_MS / BELL_RING_DURATION_MS;
-      bellText.rotation = bellRingAngleAt(cycleOffset);
-      wiggleRafId = raf3(wiggleTick);
-    };
-    tryFindRail();
-    if (!rail) findRafId3 = raf3(scheduleFind2);
-    return {
-      stop() {
-        if (!running) return;
-        running = false;
-        if (findRafId3 != null) {
-          cancelRaf(findRafId3);
-          findRafId3 = null;
-        }
-        pageWindow.clearInterval(maintenanceIntervalId);
-        pageWindow.removeEventListener("resize", onWindowResize);
-        stopWiggleAnimation();
-        if (rail) {
-          try {
-            rail.off("childAdded", onRailChildrenChanged);
-            rail.off("childRemoved", onRailChildrenChanged);
-          } catch {
-          }
-        }
-        if (canvasListenersAttached) {
-          try {
-            pageWindow.removeEventListener("pointerdown", onWindowPointerDownCapture, true);
-            if (canvasEl) {
-              canvasEl.removeEventListener("pointermove", onCanvasPointerMove);
-              canvasEl.removeEventListener("pointerleave", onCanvasPointerLeave);
-              if (weSetPointerCursor) canvasEl.style.cursor = "";
-            }
-          } catch {
-          }
-        }
-        removeButton();
-        rail = null;
-      },
-      getScreenRect() {
-        return computeScreenRect();
-      },
-      setWiggle(active3) {
-        if (wiggleActive === active3) return;
-        wiggleActive = active3;
-        if (active3) {
-          wiggleT = 0;
-          wiggleLastFrameAt = null;
-          if (wiggleRafId == null) wiggleRafId = raf3(wiggleTick);
-        } else {
-          stopWiggleAnimation();
-        }
-      }
-    };
-  }
-  var RAIL_LABEL, RAIL_FIND_RETRY_MS, RAIL_FIND_LOG_EVERY, RAIL_REACHABILITY_CHECK_MS, RAIL_REACHABILITY_MAX_HOPS, CHAT_SLOT_MARKER_LABEL, DEFAULT_SLOT_SIZE, DEFAULT_SLOT_SPACING, SLOT_OCCUPIED_TOLERANCE_RATIO, MAX_SLOT_SEARCH_STEPS;
-  var init_pixiBell = __esm({
-    "src/features/notifier/bell/pixiBell.ts"() {
-      "use strict";
-      init_gardenInfoCard();
-      init_context();
-      init_pageContext();
-      init_ring();
-      RAIL_LABEL = "RightSideRail";
-      RAIL_FIND_RETRY_MS = 1e3;
-      RAIL_FIND_LOG_EVERY = 30;
-      RAIL_REACHABILITY_CHECK_MS = 2e3;
-      RAIL_REACHABILITY_MAX_HOPS = 64;
-      CHAT_SLOT_MARKER_LABEL = "RightSideRailChatBadge";
-      DEFAULT_SLOT_SIZE = 45;
-      DEFAULT_SLOT_SPACING = 52;
-      SLOT_OCCUPIED_TOLERANCE_RATIO = 0.5;
-      MAX_SLOT_SEARCH_STEPS = 20;
-    }
-  });
-
-  // src/features/notifier/bell/floatingBell.ts
-  function isFloatingBellEnabled() {
-    return readAriesPath(ENABLED_PATH, false) === true;
-  }
-  function setFloatingBellEnabled(value) {
-    writeAriesPath(ENABLED_PATH, value);
-    try {
-      window.dispatchEvent(new CustomEvent(BELL_MODE_EVENT, { detail: { floating: value } }));
-    } catch {
-    }
-  }
-  function readSavedPosition() {
-    const raw = readAriesPath(POS_PATH);
-    if (!raw || typeof raw !== "object") return null;
-    const left = Number(raw.left);
-    const top = Number(raw.top);
-    if (!Number.isFinite(left) || !Number.isFinite(top)) return null;
-    return { left, top };
-  }
-  function persistPosition(pos) {
-    writeAriesPath(POS_PATH, { left: Math.round(pos.left), top: Math.round(pos.top) });
-  }
-  function clampCoord(value, min, max) {
-    if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
-    if (max < min) return min;
-    return Math.min(Math.max(value, min), max);
-  }
-  function startFloatingBell(opts) {
-    let running = true;
-    let wiggleAnimation = null;
-    const button2 = h("button");
-    button2.type = "button";
-    button2.setAttribute("data-notification-bell-widget", "1");
-    button2.title = "Notifications";
-    button2.setAttribute("aria-label", "Notifications");
-    Object.assign(button2.style, {
-      position: "fixed",
-      left: "-9999px",
-      top: "-9999px",
-      width: `${BUTTON_SIZE}px`,
-      height: `${BUTTON_SIZE}px`,
-      zIndex: String(BELL_WIDGET_Z_INDEX),
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "0",
-      borderRadius: "50%",
-      border: "1px solid var(--qmm-border-strong)",
-      background: "var(--qmm-gradient-panel)",
-      boxShadow: "var(--qmm-shadow-window)",
-      cursor: "grab",
-      userSelect: "none",
-      touchAction: "none"
-    });
-    const icon2 = document.createElement("span");
-    icon2.textContent = BELL_GLYPH;
-    Object.assign(icon2.style, {
-      fontSize: `${ICON_FONT_SIZE}px`,
-      lineHeight: "1",
-      pointerEvents: "none",
-      display: "inline-block",
-      // Swing around the bell's mounting point (top center), not its middle.
-      transformOrigin: "50% 0%"
-    });
-    button2.appendChild(icon2);
-    const applyPosition2 = (left, top) => {
-      const boundedLeft = clampCoord(left, SCREEN_MARGIN, window.innerWidth - BUTTON_SIZE - SCREEN_MARGIN);
-      const boundedTop = clampCoord(top, SCREEN_MARGIN, window.innerHeight - BUTTON_SIZE - SCREEN_MARGIN);
-      button2.style.left = `${Math.round(boundedLeft)}px`;
-      button2.style.top = `${Math.round(boundedTop)}px`;
-      try {
-        opts.onMoved?.();
-      } catch {
-      }
-      return { left: boundedLeft, top: boundedTop };
-    };
-    const defaultPosition = () => ({
-      left: window.innerWidth - BUTTON_SIZE - DEFAULT_RIGHT_GAP,
-      top: window.innerHeight * DEFAULT_TOP_RATIO
-    });
-    let desiredPosition = null;
-    let usingDefaultPosition = true;
-    const applyDesiredPosition = () => {
-      const target = usingDefaultPosition || !desiredPosition ? defaultPosition() : desiredPosition;
-      applyPosition2(target.left, target.top);
-    };
-    const applyInitialPosition2 = () => {
-      const saved = readSavedPosition();
-      desiredPosition = saved;
-      usingDefaultPosition = !saved;
-      applyDesiredPosition();
-    };
-    const onWindowResize = () => {
-      if (!running) return;
-      applyDesiredPosition();
-    };
-    let dragState = null;
-    const onDragMove = (ev) => {
-      if (!dragState || ev.pointerId !== dragState.pointerId) return;
-      const dx = ev.clientX - dragState.startX;
-      const dy = ev.clientY - dragState.startY;
-      if (!dragState.dragged && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
-      dragState.dragged = true;
-      dragState.lastPos = applyPosition2(dragState.baseLeft + dx, dragState.baseTop + dy);
-      desiredPosition = dragState.lastPos;
-      usingDefaultPosition = false;
-    };
-    const stopDrag = (ev) => {
-      if (!dragState) return;
-      if (ev && ev.pointerId !== dragState.pointerId) return;
-      document.removeEventListener("pointermove", onDragMove);
-      document.removeEventListener("pointerup", stopDrag);
-      document.removeEventListener("pointercancel", stopDrag);
-      try {
-        button2.releasePointerCapture(dragState.pointerId);
-      } catch {
-      }
-      const wasDrag = dragState.dragged;
-      if (wasDrag) persistPosition(dragState.lastPos);
-      dragState = null;
-      button2.style.cursor = "grab";
-      if (!wasDrag && ev?.type === "pointerup") {
-        try {
-          opts.onClick();
-        } catch (error) {
-          console.error("[FloatingBell] onClick error:", error);
-        }
-      }
-    };
-    const onPointerDown = (ev) => {
-      if (ev.button !== 0) return;
-      if (dragState) stopDrag();
-      const rect = button2.getBoundingClientRect();
-      dragState = {
-        pointerId: ev.pointerId,
-        startX: ev.clientX,
-        startY: ev.clientY,
-        baseLeft: rect.left,
-        baseTop: rect.top,
-        lastPos: { left: rect.left, top: rect.top },
-        dragged: false
-      };
-      try {
-        button2.setPointerCapture(ev.pointerId);
-      } catch {
-      }
-      document.addEventListener("pointermove", onDragMove);
-      document.addEventListener("pointerup", stopDrag);
-      document.addEventListener("pointercancel", stopDrag);
-      button2.style.cursor = "grabbing";
-      ev.preventDefault();
-      ev.stopPropagation();
-    };
-    button2.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("resize", onWindowResize);
-    document.body.appendChild(button2);
-    applyInitialPosition2();
-    const settleTimers = SETTLE_REAPPLY_DELAYS_MS.map(
-      (delay) => window.setTimeout(() => {
-        if (running) applyDesiredPosition();
-      }, delay)
-    );
-    const clearSettleTimers = () => {
-      for (const id of settleTimers) {
-        try {
-          window.clearTimeout(id);
-        } catch {
-        }
-      }
-    };
-    const stopWiggle = () => {
-      if (wiggleAnimation) {
-        try {
-          wiggleAnimation.cancel();
-        } catch {
-        }
-        wiggleAnimation = null;
-      }
-    };
-    return {
-      stop() {
-        if (!running) return;
-        running = false;
-        stopDrag();
-        stopWiggle();
-        clearSettleTimers();
-        window.removeEventListener("resize", onWindowResize);
-        button2.removeEventListener("pointerdown", onPointerDown);
-        try {
-          button2.remove();
-        } catch {
-        }
-      },
-      getScreenRect() {
-        if (!running || !button2.isConnected) return null;
-        const rect = button2.getBoundingClientRect();
-        return {
-          left: rect.left,
-          top: rect.top,
-          right: rect.right,
-          bottom: rect.bottom,
-          width: rect.width,
-          height: rect.height
-        };
-      },
-      setWiggle(active3) {
-        if (!running) return;
-        if (!active3) {
-          stopWiggle();
-          return;
-        }
-        if (wiggleAnimation) return;
-        if (typeof icon2.animate !== "function") return;
-        wiggleAnimation = icon2.animate(RING_KEYFRAMES, {
-          duration: BELL_RING_DURATION_MS,
-          iterations: Infinity
-        });
-      }
-    };
-  }
-  var ENABLED_PATH, POS_PATH, BELL_MODE_EVENT, BUTTON_SIZE, ICON_FONT_SIZE, BELL_WIDGET_Z_INDEX, SCREEN_MARGIN, DEFAULT_RIGHT_GAP, DEFAULT_TOP_RATIO, SETTLE_REAPPLY_DELAYS_MS, DRAG_THRESHOLD_PX, RING_KEYFRAMES;
-  var init_floatingBell = __esm({
-    "src/features/notifier/bell/floatingBell.ts"() {
-      "use strict";
-      init_ring();
-      init_storage();
-      init_dom2();
-      ENABLED_PATH = "notifier.floatingBell.enabled";
-      POS_PATH = "notifier.floatingBell.pos";
-      BELL_MODE_EVENT = "qws:alerts-bell-mode-changed";
-      BUTTON_SIZE = 44;
-      ICON_FONT_SIZE = 24;
-      BELL_WIDGET_Z_INDEX = 1999900;
-      SCREEN_MARGIN = 8;
-      DEFAULT_RIGHT_GAP = 16;
-      DEFAULT_TOP_RATIO = 0.35;
-      SETTLE_REAPPLY_DELAYS_MS = [0, 250, 1e3];
-      DRAG_THRESHOLD_PX = 4;
-      RING_KEYFRAMES = BELL_RING_SEQUENCE.map(({ offset, deg }) => ({
-        transform: `rotate(${deg}deg)`,
-        offset
-      }));
-    }
-  });
-
-  // src/features/notifier/itemIcon.ts
-  function spriteCandidates2(type, key2, name) {
-    const out = /* @__PURE__ */ new Set();
-    const add = (value) => {
-      const trimmed = value?.trim();
-      if (!trimmed) return;
-      out.add(trimmed);
-      out.add(trimmed.replace(/\s+/g, ""));
-      if (type === "Seed" || type === "Egg") {
-        const stripped = trimmed.replace(/(?:seed|egg)$/i, "").trim();
-        if (stripped) {
-          out.add(stripped);
-          out.add(stripped.replace(/\s+/g, ""));
-        }
-      }
-    };
-    add(key2);
-    add(name);
-    const names = [...out];
-    for (const value of names) {
-      const base = value.replace(/icon$/i, "");
-      if (base) out.add(`${base}Icon`);
-    }
-    return [...out];
-  }
-  function shopItemIcon(id, name, size, logTag) {
-    const [type = "", key2 = ""] = id.split(":");
-    const wrap = h("div");
-    Object.assign(wrap.style, {
-      width: `${size}px`,
-      height: `${size}px`,
-      flex: `0 0 ${size}px`,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center"
-    });
-    const glyph = h("span", void 0, FALLBACK_GLYPH[type] ?? "\u{1F3E0}");
-    glyph.style.fontSize = `${Math.max(10, Math.round(size * 0.75))}px`;
-    glyph.setAttribute("aria-hidden", "true");
-    wrap.appendChild(glyph);
-    const categories = SPRITE_CATEGORIES[type];
-    const candidates = spriteCandidates2(type, key2 || name, name);
-    if (categories && candidates.length) attachSpriteIcon(wrap, categories, candidates, size, logTag);
-    return wrap;
-  }
-  var FALLBACK_GLYPH, SPRITE_CATEGORIES;
-  var init_itemIcon = __esm({
-    "src/features/notifier/itemIcon.ts"() {
-      "use strict";
-      init_dom2();
-      init_iconCache();
-      FALLBACK_GLYPH = { Seed: "\u{1F331}", Egg: "\u{1F95A}", Tool: "\u{1F9F0}", Decor: "\u{1F3E0}" };
-      SPRITE_CATEGORIES = {
-        Seed: ["seed"],
-        Egg: ["pet"],
-        Tool: ["item"],
-        Decor: ["decor"]
-      };
-    }
-  });
-
-  // src/features/shops/shopFeed.ts
-  function itemKind(itemId) {
-    if (itemId in plantCatalog2) return "seed";
-    if (itemId in eggCatalog2) return "egg";
-    if (itemId in toolCatalog2) return "tool";
-    if (itemId in decorCatalog2) return "decor";
-    return null;
-  }
-  function toShopsSnapshot(shops2) {
-    const snap = {
-      seed: { inventory: [], secondsUntilRestock: Number(shops2?.seed?.secondsUntilRestock) || 0 },
-      egg: { inventory: [], secondsUntilRestock: Number(shops2?.egg?.secondsUntilRestock) || 0 },
-      tool: { inventory: [], secondsUntilRestock: Number(shops2?.tool?.secondsUntilRestock) || 0 },
-      decor: { inventory: [], secondsUntilRestock: Number(shops2?.decor?.secondsUntilRestock) || 0 }
-    };
-    if (!shops2 || typeof shops2 !== "object") return snap;
-    for (const shop of Object.values(shops2)) {
-      if (!shop || typeof shop !== "object" || !Array.isArray(shop.inventory)) continue;
-      for (const item of shop.inventory) {
-        if (!item || typeof item !== "object") continue;
-        const kind = ITEM_TYPE_KIND[item.itemType];
-        if (kind) snap[kind].inventory.push(item);
-      }
-    }
-    return snap;
-  }
-  function toPurchasesSnapshot(view, slot) {
-    const raw = slot?.data?.shopPurchases;
-    const startedAt = (kind) => Number(raw?.[kind]?.startedAtMs ?? raw?.[kind]?.createdAt) || 0;
-    const section5 = (kind) => ({ createdAt: startedAt(kind), purchases: view.purchases[kind] });
-    return { seed: section5("seed"), egg: section5("egg"), tool: section5("tool"), decor: section5("decor") };
-  }
-  function onShops(shops2) {
-    rawShops = shops2;
-    emitShops();
-    if (rawSlot != null) emitPurchases();
-  }
-  function onSlot(slot) {
-    rawSlot = slot;
-    if (rawShops != null) emitShops();
-    emitPurchases();
-  }
-  async function readBoth() {
-    return Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
-  }
-  function shopItemId(kind, item) {
-    const key2 = kind === "seed" ? item.species : kind === "egg" ? item.eggId : kind === "tool" ? item.toolId : item.decorId;
-    if (key2 == null) return null;
-    return `${ALERT_ID_PREFIX[kind]}:${key2}`;
-  }
-  function purchasedCount(id, purchases) {
-    if (!purchases) return 0;
-    const [type, raw] = String(id).split(":");
-    const kind = type === "Seed" ? "seed" : type === "Egg" ? "egg" : type === "Tool" ? "tool" : "decor";
-    const n = purchases[kind]?.purchases?.[raw];
-    return typeof n === "number" && n > 0 ? n : 0;
-  }
-  var ITEM_TYPE_KIND, viewOf, sameShopParts, rawShops, rawSlot, shopsChanged, purchasesChanged, watching, emitShops, emitPurchases, ShopFeed, ALERT_ID_PREFIX;
-  var init_shopFeed = __esm({
-    "src/features/shops/shopFeed.ts"() {
-      "use strict";
-      init_atoms();
-      init_emitter();
-      init_data();
-      init_purchases();
-      ITEM_TYPE_KIND = { Seed: "seed", Egg: "egg", Tool: "tool", Decor: "decor" };
-      viewOf = (shops2, slot) => playerShopView(shops2, slot, itemKind);
-      sameShopParts = (a, b) => a?.data?.shopPurchases === b?.data?.shopPurchases && a?.data?.customRestocks === b?.data?.customRestocks && a?.customRestockInventories === b?.customRestockInventories;
-      rawShops = null;
-      rawSlot = null;
-      shopsChanged = new Emitter();
-      purchasesChanged = new Emitter();
-      watching = false;
-      emitShops = () => shopsChanged.emit(toShopsSnapshot(viewOf(rawShops, rawSlot).shops));
-      emitPurchases = () => purchasesChanged.emit(toPurchasesSnapshot(viewOf(rawShops, rawSlot), rawSlot));
-      ShopFeed = {
-        /**
-         * Follows the room's shops and the player's slot. The atoms may not exist
-         * yet (the HUD mounts the overlay at document-start): the subscriptions
-         * attach once the game registers them, and push the current value then.
-         */
-        start() {
-          if (watching) return;
-          watching = true;
-          void Atoms.shop.shops.onChangeNow((next) => onShops(next));
-          void Atoms.shop.myUserSlot.onChangeNow((next) => onSlot(next), sameShopParts);
-        },
-        onShopsChange(cb) {
-          return shopsChanged.on(cb);
-        },
-        onPurchasesChange(cb) {
-          return purchasesChanged.on(cb);
-        },
-        /** The shops right now, read from the store rather than the last push. */
-        async readShops() {
-          const [shops2, slot] = await readBoth();
-          return toShopsSnapshot(viewOf(shops2, slot).shops);
-        },
-        /** The purchases right now, read from the store rather than the last push. */
-        async readPurchases() {
-          const [shops2, slot] = await readBoth();
-          return toPurchasesSnapshot(viewOf(shops2, slot), slot);
-        }
-      };
-      ALERT_ID_PREFIX = { seed: "Seed", egg: "Egg", tool: "Tool", decor: "Decor" };
-    }
-  });
-
-  // src/features/notifier/playbackDefaults.ts
-  function clampLoopInterval(raw, fallback) {
-    const text2 = typeof raw === "string" ? raw.trim() : raw;
-    const n = text2 === "" || text2 == null ? NaN : Number(text2);
-    const value = Number.isFinite(n) ? n : fallback;
-    return Math.max(MIN_LOOP_INTERVAL_MS, Math.min(MAX_LOOP_INTERVAL_MS, Math.floor(value)));
-  }
-  function ensureLoaded() {
-    if (loaded) return;
-    loaded = true;
-    loopIntervals = {};
-    const stored = readAriesPath(LOOP_DEFAULTS_PATH);
-    if (!stored || typeof stored !== "object") return;
-    for (const context of ["shops", "weather"]) {
-      const entry = stored[context];
-      if (!entry) continue;
-      const raw = Number(entry.loopIntervalMs);
-      loopIntervals[context] = normalizeInterval(Number.isFinite(raw) ? raw : audio.getLoopInterval(context));
-    }
-  }
-  function save2() {
-    const out = {};
-    for (const context of ["shops", "weather"]) {
-      const loopIntervalMs = loopIntervals[context];
-      if (loopIntervalMs == null) continue;
-      out[context] = { stopMode: context === "shops" ? "purchase" : "manual", stopRepeats: null, loopIntervalMs };
-    }
-    writeAriesPath(LOOP_DEFAULTS_PATH, out);
-  }
-  function setContextPlayback(context, mode, loopIntervalMs) {
-    audio.setPlaybackMode(context === "weather" ? "oneshot" : mode, context);
-    audio.setLoopInterval(loopIntervalMs, context);
-    if (context === "shops" && mode === "loop") audio.setStopPurchase(context);
-    else audio.setStopManual(context);
-    if (context !== "pets") LoopDefaults.setLoopInterval(context, loopIntervalMs);
-  }
-  var LOOP_DEFAULTS_PATH, MIN_LOOP_INTERVAL_MS, MAX_LOOP_INTERVAL_MS, loopIntervals, loaded, normalizeInterval, LoopDefaults;
-  var init_playbackDefaults = __esm({
-    "src/features/notifier/playbackDefaults.ts"() {
-      "use strict";
-      init_storage();
-      init_audio();
-      LOOP_DEFAULTS_PATH = "notifier.loopDefaults";
-      MIN_LOOP_INTERVAL_MS = 150;
-      MAX_LOOP_INTERVAL_MS = 1e4;
-      loopIntervals = {};
-      loaded = false;
-      normalizeInterval = (ms) => Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(ms || 0));
-      LoopDefaults = {
-        get(context) {
-          ensureLoaded();
-          const loopIntervalMs = normalizeInterval(loopIntervals[context] ?? audio.getLoopInterval(context));
-          return { stopMode: context === "shops" ? "purchase" : "manual", stopRepeats: null, loopIntervalMs };
-        },
-        /** Remembers a context's loop interval; an invalid one keeps the current value. */
-        setLoopInterval(context, ms) {
-          ensureLoaded();
-          const current3 = LoopDefaults.get(context).loopIntervalMs;
-          loopIntervals[context] = Number.isFinite(ms) ? normalizeInterval(ms) : current3;
-          save2();
-        }
-      };
-    }
-  });
-
-  // src/features/notifier/rules.ts
-  function sanitizeVolume(value) {
-    if (value == null) return void 0;
-    const num2 = Number(value);
-    if (!Number.isFinite(num2)) return void 0;
-    return clamp(num2 > 1 ? num2 / 100 : num2, 0, 1);
-  }
-  function sanitizeLoopInterval(value) {
-    if (value == null) return void 0;
-    const n = Number(value);
-    return Number.isFinite(n) ? Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(n)) : void 0;
-  }
-  function mergeRule(prev, patch) {
-    const next = { ...prev ?? {} };
-    const set2 = (key2, value) => {
-      if (value === void 0) delete next[key2];
-      else next[key2] = value;
-    };
-    if (hasOwn(patch, "sound")) {
-      const sound = typeof patch.sound === "string" ? patch.sound.trim() : "";
-      set2("sound", sound || void 0);
-    }
-    if (hasOwn(patch, "volume")) set2("volume", sanitizeVolume(patch.volume));
-    if (hasOwn(patch, "playbackMode")) {
-      const mode = patch.playbackMode;
-      set2("playbackMode", mode === "oneshot" || mode === "loop" ? mode : void 0);
-    }
-    if (hasOwn(patch, "stopMode")) set2("stopMode", patch.stopMode === "purchase" ? "purchase" : void 0);
-    if (hasOwn(patch, "loopIntervalMs")) set2("loopIntervalMs", sanitizeLoopInterval(patch.loopIntervalMs));
-    return Object.keys(next).length ? next : null;
-  }
-  function rulesEqual(a, b) {
-    if (!a || !b) return !a && !b;
-    return a.sound === b.sound && a.volume === b.volume && a.playbackMode === b.playbackMode && a.stopMode === b.stopMode && a.loopIntervalMs === b.loopIntervalMs;
-  }
-  function ensureRulesLoaded() {
-    if (rulesLoaded) return;
-    rulesLoaded = true;
-    rules2 = /* @__PURE__ */ new Map();
-    const stored = readAriesPath(RULES_PATH);
-    if (!stored || typeof stored !== "object") return;
-    for (const [id, raw] of Object.entries(stored)) {
-      const rule = mergeRule(void 0, raw && typeof raw === "object" ? raw : {});
-      if (rule) rules2.set(String(id), rule);
-    }
-  }
-  function saveRules() {
-    const out = {};
-    for (const [id, rule] of rules2) out[id] = { ...rule };
-    writeAriesPath(RULES_PATH, out);
-  }
-  function rulesSnapshot() {
-    ensureRulesLoaded();
-    const out = {};
-    for (const [id, rule] of rules2) out[id] = copyRule(rule);
-    return out;
-  }
-  function commitRules() {
-    saveRules();
-    rulesChanged.emit(rulesSnapshot());
-  }
-  function hasRule(rule) {
-    return !!(rule && (rule.sound || rule.volume != null || rule.playbackMode || rule.stopMode || rule.loopIntervalMs != null));
-  }
-  function ruleOverrides(rule) {
-    if (!rule) return null;
-    const overrides = {};
-    if (rule.sound) overrides.sound = rule.sound;
-    if (rule.volume != null && Number.isFinite(rule.volume)) overrides.volume = clamp(Number(rule.volume), 0, 1);
-    if (rule.playbackMode === "loop" || rule.playbackMode === "oneshot") overrides.mode = rule.playbackMode;
-    if (rule.stopMode === "purchase" || rule.stopMode === "manual") overrides.stop = { mode: rule.stopMode };
-    if (rule.loopIntervalMs != null && Number.isFinite(rule.loopIntervalMs)) {
-      overrides.loopIntervalMs = Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(Number(rule.loopIntervalMs)));
-    }
-    return Object.keys(overrides).length ? overrides : null;
-  }
-  function shortSoundName(name) {
-    return name.length > 32 ? `${name.slice(0, 29)}\u2026` : name;
-  }
-  function formatInterval(ms) {
-    const seconds2 = ms / 1e3;
-    if (seconds2 < 1) return `${ms} ms`;
-    return seconds2 >= 10 ? `${Math.round(seconds2)} s` : `${(Math.round(seconds2 * 10) / 10).toFixed(1)} s`;
-  }
-  function formatRuleSummary(rule) {
-    if (!rule) return "";
-    const parts = [];
-    if (rule.sound) {
-      const label2 = audio.listSounds().includes(rule.sound) ? rule.sound : shortSoundName(rule.sound);
-      parts.push(`Sound: ${label2}`);
-    }
-    if (rule.volume != null) parts.push(`Volume: ${Math.round(clamp(Number(rule.volume), 0, 1) * 100)}%`);
-    if (rule.playbackMode === "oneshot") parts.push("Mode: One-shot");
-    else if (rule.playbackMode === "loop") parts.push("Mode: Loop");
-    if (rule.stopMode === "purchase") parts.push("Stop: Until purchase");
-    else if (rule.stopMode === "manual") parts.push("Stop: Manual");
-    if (rule.loopIntervalMs != null) {
-      const raw = Number(rule.loopIntervalMs);
-      if (Number.isFinite(raw)) parts.push(`Interval: ${formatInterval(Math.max(1, Math.round(raw)))}`);
-    }
-    return parts.join(" \u2022 ");
-  }
-  function ruleDefaults(context) {
-    const playback = audio.getPlaybackSettings(context);
-    const loop = LoopDefaults.get(context);
-    return {
-      soundName: (playback.defaultSoundName || "").trim() || "Default",
-      volume: clamp(playback.volume || 0, 0, 1),
-      mode: playback.mode,
-      stopMode: loop.stopMode,
-      loopIntervalMs: Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(loop.loopIntervalMs))
-    };
-  }
-  function rulePatchFromEditor(context, values) {
-    const defaults = ruleDefaults(context);
-    const canLoop = context === "shops";
-    let playbackMode = values.mode === "oneshot" || values.mode === "loop" ? values.mode : null;
-    if (playbackMode === defaults.mode) playbackMode = null;
-    let stopMode = canLoop && values.stop === "purchase" ? "purchase" : null;
-    if (stopMode === defaults.stopMode) stopMode = null;
-    let loopIntervalMs = null;
-    const typed = values.interval.trim();
-    if (canLoop && typed && Number.isFinite(Number(typed))) {
-      const interval = clampLoopInterval(typed, defaults.loopIntervalMs);
-      if (interval !== defaults.loopIntervalMs) loopIntervalMs = interval;
-    }
-    const ratio = clamp(Math.round(values.volumePct) || 0, 0, 100) / 100;
-    const volume = Math.abs(ratio - defaults.volume) > 1e-3 ? ratio : null;
-    if (canLoop && !playbackMode && defaults.mode !== "loop" && (stopMode != null || loopIntervalMs != null)) {
-      playbackMode = "loop";
-    }
-    return { sound: values.sound.trim() || null, volume, playbackMode, stopMode, loopIntervalMs };
-  }
-  var RULES_PATH, hasOwn, rules2, rulesLoaded, rulesChanged, copyRule, NotifierRules;
-  var init_rules = __esm({
-    "src/features/notifier/rules.ts"() {
-      "use strict";
-      init_storage();
-      init_emitter();
-      init_math();
-      init_audio();
-      init_playbackDefaults();
-      RULES_PATH = "notifier.rules";
-      hasOwn = (obj, key2) => Object.prototype.hasOwnProperty.call(obj, key2);
-      rules2 = /* @__PURE__ */ new Map();
-      rulesLoaded = false;
-      rulesChanged = new Emitter();
-      copyRule = (rule) => ({ ...rule });
-      NotifierRules = {
-        get(id) {
-          if (!id) return null;
-          ensureRulesLoaded();
-          const rule = rules2.get(id);
-          return rule ? copyRule(rule) : null;
-        },
-        getAll() {
-          return rulesSnapshot();
-        },
-        set(id, patch) {
-          if (!id || !patch || typeof patch !== "object") return;
-          ensureRulesLoaded();
-          const prev = rules2.get(id);
-          const next = mergeRule(prev, patch);
-          if (rulesEqual(prev, next)) return;
-          if (next) rules2.set(id, next);
-          else rules2.delete(id);
-          commitRules();
-        },
-        clear(id) {
-          if (!id) return;
-          ensureRulesLoaded();
-          if (rules2.delete(id)) commitRules();
-        },
-        onChange(cb) {
-          ensureRulesLoaded();
-          return rulesChanged.on(cb);
-        }
-      };
-    }
-  });
-
-  // src/features/notifier/inventoryCaps.ts
-  function isCapReachedIn(catalog, counts, itemId) {
-    const meta = catalog[itemId];
-    if (!meta) return false;
-    const owned2 = counts.get(itemId) || 0;
-    if (meta.isOneTimePurchase && owned2 >= 1) return true;
-    const max = Number(meta.maxInventoryQuantity);
-    return Number.isFinite(max) && max > 0 && owned2 >= max;
-  }
-  function isCapReached(id) {
-    if (id.startsWith("Tool:")) return isCapReachedIn(toolCatalog2, toolCounts, id.slice(5));
-    if (id.startsWith("Decor:")) return isCapReachedIn(decorCatalog2, decorCounts, id.slice(6));
-    return false;
-  }
-  function countsOf(items, idOf) {
-    const counts = /* @__PURE__ */ new Map();
-    for (const item of Array.isArray(items) ? items : []) {
-      const id = String(idOf(item) ?? "");
-      if (id) counts.set(id, Number(item?.quantity) || 0);
-    }
-    return counts;
-  }
-  async function follow(view, apply) {
-    const update = (value) => {
-      try {
-        apply(value);
-      } catch {
-      }
-      changed2.emit();
-    };
-    try {
-      update(await view.get());
-    } catch {
-    }
-    try {
-      await view.onChange(update);
-    } catch {
-    }
-  }
-  var toolCounts, decorCounts, changed2, InventoryCaps;
-  var init_inventoryCaps = __esm({
-    "src/features/notifier/inventoryCaps.ts"() {
-      "use strict";
-      init_atoms();
-      init_emitter();
-      init_data();
-      toolCounts = /* @__PURE__ */ new Map();
-      decorCounts = /* @__PURE__ */ new Map();
-      changed2 = new Emitter();
-      InventoryCaps = {
-        async start() {
-          await follow(Atoms.inventory.myToolInventory, (items) => {
-            toolCounts = countsOf(items, (it) => it?.toolId);
-          });
-          await follow(Atoms.inventory.myDecorInventory, (items) => {
-            decorCounts = countsOf(items, (it) => it?.decorId ?? it?.id);
-          });
-        },
-        /** Fires after every inventory update. */
-        onChange(cb) {
-          return changed2.on(cb);
-        }
-      };
-    }
-  });
-
-  // src/features/notifier/shopRows.ts
-  function followedIds() {
-    if (followed) return followed;
-    followed = /* @__PURE__ */ new Set();
-    const stored = readAriesPath(FOLLOWED_PATH);
-    if (stored && typeof stored === "object") {
-      for (const [id, bits] of Object.entries(stored)) {
-        if (id && (Number(bits) | 0) & 1) followed.add(id);
-      }
-    }
-    return followed;
-  }
-  function saveFollowed() {
-    const out = {};
-    for (const id of followedIds()) out[id] = 1;
-    writeAriesPath(FOLLOWED_PATH, out);
-  }
-  function splitEligibleShops(shops2) {
-    const names = Array.isArray(shops2) ? shops2.map((s) => String(s ?? "").trim()).filter(Boolean) : [];
-    let base = null;
-    const weathers = [];
-    for (const name of names) {
-      if (BASE_SHOPS.has(name)) base = name;
-      else weathers.push(name);
-    }
-    return { base, weathers };
-  }
-  function buildRows() {
-    const rows = [];
-    const seen = /* @__PURE__ */ new Set();
-    const sources = [
-      { catalog: plantCatalog2, section: "Seed", entryOf: (raw) => raw?.seed ?? raw },
-      { catalog: eggCatalog2, section: "Egg", entryOf: (raw) => raw },
-      { catalog: toolCatalog2, section: "Tool", entryOf: (raw) => raw },
-      { catalog: decorCatalog2, section: "Decor", entryOf: (raw) => raw }
-    ];
-    for (const { catalog, section: naturalSection, entryOf: entryOf3 } of sources) {
-      if (!catalog || typeof catalog !== "object") continue;
-      for (const key2 of Object.keys(catalog)) {
-        const entry = entryOf3(catalog[key2]);
-        if (!entry || typeof entry !== "object") continue;
-        const { base, weathers } = splitEligibleShops(entry.eligibleShops);
-        if (!base && weathers.length === 0) continue;
-        const section5 = base ?? naturalSection;
-        const id = `${section5}:${key2}`;
-        if (seen.has(id)) continue;
-        seen.add(id);
-        const rawRarity = typeof entry.rarity === "string" ? entry.rarity : void 0;
-        const popup = followedIds().has(id);
-        rows.push({
-          id,
-          type: section5,
-          name: typeof entry.name === "string" && entry.name.trim() ? String(entry.name) : key2,
-          rarity: rawRarity ? DISPLAY_RARITY[rawRarity] ?? rawRarity : void 0,
-          popup,
-          followed: popup,
-          weatherOnly: !base || void 0,
-          weathers: weathers.length ? weathers : void 0
-        });
-      }
-    }
-    return rows;
-  }
-  var FOLLOWED_PATH, followed, DISPLAY_RARITY, BASE_SHOPS, state2, idsSig, changed3, countFollowed, emit, ShopRows;
-  var init_shopRows = __esm({
-    "src/features/notifier/shopRows.ts"() {
-      "use strict";
-      init_data();
-      init_emitter();
-      init_storage();
-      init_inventoryCaps();
-      FOLLOWED_PATH = "notifier.prefs";
-      followed = null;
-      DISPLAY_RARITY = {
-        [rarity2.Common]: "Common",
-        [rarity2.Uncommon]: "Uncommon",
-        [rarity2.Rare]: "Rare",
-        [rarity2.Legendary]: "Legendary",
-        [rarity2.Mythic]: "Mythical",
-        // The live API returns "Mythic" while rarityMap.Mythic is "Mythical".
-        Mythic: "Mythical",
-        [rarity2.Divine]: "Divine",
-        [rarity2.Celestial]: "Celestial"
-      };
-      BASE_SHOPS = /* @__PURE__ */ new Set(["Seed", "Egg", "Tool", "Decor"]);
-      state2 = null;
-      idsSig = "";
-      changed3 = new Emitter();
-      countFollowed = (rows) => rows.reduce((n, r) => n + (r.followed ? 1 : 0), 0);
-      emit = () => {
-        if (state2) changed3.emit({ ...state2, rows: state2.rows.slice() });
-      };
-      ShopRows = {
-        /** Rebuilds the rows from the catalogs. Listeners hear of it only when the set of items changed. */
-        rebuild() {
-          const rows = buildRows();
-          state2 = { updatedAt: Date.now(), rows, counts: { items: rows.length, followed: countFollowed(rows) } };
-          const sig = rows.map((r) => r.id).sort().join("|");
-          if (sig === idsSig) return;
-          idsSig = sig;
-          emit();
-        },
-        /** Re-reads every row's alert (followed, capped) and tells the listeners. */
-        refresh() {
-          if (!state2) return;
-          for (const row5 of state2.rows) {
-            const popup = followedIds().has(row5.id) && !isCapReached(row5.id);
-            row5.popup = popup;
-            row5.followed = popup;
-          }
-          state2 = {
-            ...state2,
-            updatedAt: Date.now(),
-            rows: state2.rows.slice(),
-            counts: { items: state2.rows.length, followed: countFollowed(state2.rows) }
-          };
-          emit();
-        },
-        state() {
-          if (!state2) ShopRows.rebuild();
-          return state2;
-        },
-        onChange(cb) {
-          return changed3.on(cb);
-        },
-        /** Whether an item's alert is on. A capped item reads as off. */
-        isFollowed(id) {
-          return !isCapReached(id) && followedIds().has(id);
-        },
-        /** Turns an item's alert on or off. Turning on a capped item does nothing. */
-        setFollowed(id, enabled2) {
-          if (!id || enabled2 && isCapReached(id)) return;
-          if (enabled2) followedIds().add(id);
-          else followedIds().delete(id);
-          saveFollowed();
-          ShopRows.refresh();
-        },
-        /** Filters rows by type and rarity, as the Shops tab's selects ask. */
-        filter(rows, filters) {
-          const type = filters.type ?? "all";
-          const rarity3 = filters.rarity ?? "all";
-          return rows.filter(
-            (r) => (type === "all" || r.type.toLowerCase() === type) && (rarity3 === "all" || String(r.rarity ?? "").toLowerCase() === rarity3)
-          );
-        }
-      };
-    }
-  });
-
-  // src/features/notifier/shopAlerts.ts
-  function findStockItem(shops2, id) {
-    if (!shops2) return null;
-    const [prefix, raw] = String(id).split(":");
-    const kind = KIND_OF_PREFIX[prefix];
-    if (!kind || !raw) return null;
-    const item = shops2[kind]?.inventory?.find((it) => shopItemId(kind, it) === `${prefix}:${raw}`);
-    return item ? { kind: BUY_KIND[kind], item } : null;
-  }
-  var SHOP_KINDS, BUY_KIND, KIND_OF_PREFIX, SHOP_UPDATES_TO_ARM, PURCHASE_UPDATES_TO_ARM, ShopAlerts;
-  var init_shopAlerts = __esm({
-    "src/features/notifier/shopAlerts.ts"() {
-      "use strict";
-      init_emitter();
-      init_shopFeed();
-      init_audio();
-      init_rules();
-      init_shopRows();
-      SHOP_KINDS = ["seed", "tool", "egg", "decor"];
-      BUY_KIND = { seed: "seeds", egg: "eggs", tool: "tools", decor: "decor" };
-      KIND_OF_PREFIX = { Seed: "seed", Egg: "egg", Tool: "tool", Decor: "decor" };
-      SHOP_UPDATES_TO_ARM = 3;
-      PURCHASE_UPDATES_TO_ARM = 2;
-      ShopAlerts = class {
-        constructor() {
-          this.shops = null;
-          this.purchases = null;
-          this.rules = /* @__PURE__ */ new Map();
-          this.available = [];
-          this.listedIds = /* @__PURE__ */ new Set();
-          this.prevListedIds = /* @__PURE__ */ new Set();
-          this.shopUpdates = 0;
-          this.purchaseUpdates = 0;
-          this.armed = false;
-          this.justRestocked = false;
-          this.changed = new Emitter();
-          audio.setPurchaseChecker((itemId) => {
-            if (!itemId || this.listedIds.has(itemId)) return false;
-            return purchasedCount(itemId, this.purchases) > 0;
-          });
-        }
-        /** Fires with the listed items after every update, before any sound starts. */
-        onChange(cb) {
-          return this.changed.on(cb);
-        }
-        items() {
-          return this.available;
-        }
-        shopsSnapshot() {
-          return this.shops;
-        }
-        setShops(next) {
-          const prev = this.shops;
-          this.shops = next;
-          this.shopUpdates++;
-          this.justRestocked = !!prev && SHOP_KINDS.some((k) => (prev[k]?.secondsUntilRestock ?? 0) < (next[k]?.secondsUntilRestock ?? 0));
-          this.update();
-        }
-        setPurchases(next) {
-          this.purchases = next;
-          this.purchaseUpdates++;
-          this.update();
-        }
-        /** The followed items changed. */
-        refresh() {
-          this.update();
-        }
-        setRules(rules3) {
-          this.rules.clear();
-          for (const [id, rule] of Object.entries(rules3)) {
-            if (id && rule) this.rules.set(id, { ...rule });
-          }
-          this.restartLoops();
-        }
-        /* ================================ Listing ================================ */
-        listAvailable(shops2, purchases) {
-          const out = [];
-          for (const kind of SHOP_KINDS) {
-            for (const item of shops2[kind].inventory) {
-              const id = shopItemId(kind, item);
-              if (!id || !ShopRows.isFollowed(id)) continue;
-              const remaining = Math.max(Number(item.initialStock) - purchasedCount(id, purchases), 0);
-              if (remaining > 0) out.push({ id, qty: remaining });
-            }
-          }
-          return out;
-        }
-        update() {
-          const shops2 = this.shops;
-          const purchases = this.purchases;
-          if (!shops2 || !purchases) return;
-          this.available = this.listAvailable(shops2, purchases);
-          this.changed.emit(this.available);
-          const listed = new Set(this.available.map((r) => r.id));
-          this.listedIds = listed;
-          if (!this.armed) {
-            const shopsEmpty = SHOP_KINDS.every((k) => (shops2[k]?.inventory?.length ?? 0) === 0);
-            const settled = this.shopUpdates >= SHOP_UPDATES_TO_ARM && this.purchaseUpdates >= PURCHASE_UPDATES_TO_ARM && !shopsEmpty;
-            if (settled) {
-              this.armed = true;
-              if (listed.size > 0) this.ring(listed);
-              this.justRestocked = false;
-            }
-            this.prevListedIds = listed;
-            return;
-          }
-          if (listed.size === 0) {
-            audio.stopAllLoops();
-          } else if (this.justRestocked) {
-            this.ring(listed);
-            this.stopLoopsLeaving(listed);
-          } else {
-            const appeared = [...listed].filter((id) => !this.prevListedIds.has(id));
-            if (appeared.length) this.ring(appeared);
-            this.stopLoopsLeaving(listed);
-          }
-          this.prevListedIds = listed;
-          this.justRestocked = false;
-        }
-        stopLoopsLeaving(listed) {
-          for (const id of this.prevListedIds) {
-            if (!listed.has(id)) audio.stopLoop(id);
-          }
-        }
-        /* ================================ Sounds ================================= */
-        playbackModeOf(id) {
-          const rule = this.rules.get(id);
-          const baseMode = audio.getPlaybackMode("shops");
-          if (!rule) return baseMode;
-          if (rule.playbackMode === "loop" || rule.playbackMode === "oneshot") return rule.playbackMode;
-          if ((rule.stopMode || rule.loopIntervalMs != null) && baseMode === "loop") return "loop";
-          return baseMode;
-        }
-        /**
-         * Rings for these items. Items sharing a sound and volume ring once
-         * together: every loop starts, and a one-shot plays only when no loop
-         * shares its sound.
-         */
-        ring(ids) {
-          const groups = /* @__PURE__ */ new Map();
-          for (const id of ids) {
-            const overrides = ruleOverrides(this.rules.get(id)) ?? {};
-            const sound = overrides.sound ? overrides.sound.trim().toLowerCase() : "__default__";
-            const volume = overrides.volume != null ? Math.round(overrides.volume * 1e3) : "__default__";
-            const key2 = `sound:${sound}|vol:${volume}`;
-            const group2 = groups.get(key2) ?? { loops: [], oneshots: [] };
-            if (this.playbackModeOf(id) === "loop") group2.loops.push({ id, overrides });
-            else group2.oneshots.push({ id, overrides });
-            groups.set(key2, group2);
-          }
-          for (const { loops, oneshots } of groups.values()) {
-            if (loops.length) {
-              for (const entry of loops) audio.trigger(entry.id, entry.overrides, "shops").catch(() => {
-              });
-            } else if (oneshots.length) {
-              audio.trigger(oneshots[0].id, oneshots[0].overrides, "shops").catch(() => {
-              });
-            }
-          }
-        }
-        /** Restarts the loops of listed items so a changed rule takes effect. */
-        restartLoops() {
-          const loopIds = [...this.listedIds].filter((id) => this.playbackModeOf(id) === "loop");
-          for (const id of loopIds) audio.stopLoop(id);
-          if (loopIds.length) this.ring(loopIds);
-        }
-      };
-    }
-  });
-
-  // src/features/notifier/buyPanel.ts
-  function itemName(id) {
-    const [type, raw] = id.split(":");
-    switch (type) {
-      case "Seed":
-        return seedCatalogName(raw) ?? raw;
-      case "Egg":
-        return eggCatalogName(raw) ?? raw;
-      case "Tool":
-        return toolCatalogName(raw) ?? raw;
-      case "Decor":
-        return decorCatalogName(raw) ?? raw;
-      default:
-        return raw;
-    }
-  }
-  async function withBusyButton(btn, label2, purchase) {
-    btn.disabled = true;
-    const labelEl = btn.querySelector(".label");
-    if (labelEl) labelEl.textContent = "Buying...";
-    try {
-      await purchase();
-    } catch {
-    } finally {
-      if (labelEl) labelEl.textContent = label2;
-      btn.disabled = false;
-    }
-  }
-  var ROW_BORDER, BuyPanel;
-  var init_buyPanel = __esm({
-    "src/features/notifier/buyPanel.ts"() {
-      "use strict";
-      init_names();
-      init_button();
-      init_dom2();
-      init_shops();
-      init_itemIcon();
-      init_shopAlerts();
-      ROW_BORDER = "1px solid var(--qmm-border)";
-      BuyPanel = class {
-        constructor(alerts) {
-          this.alerts = alerts;
-          this.lastSig = null;
-          this.el = h("div");
-          this.el.setAttribute("role", "dialog");
-          this.el.setAttribute("aria-label", "Tracked items available");
-          Object.assign(this.el.style, {
-            position: "fixed",
-            width: "min(340px, 80vw)",
-            maxHeight: "50vh",
-            overflow: "auto",
-            // Keeps the scroll, and touch gestures, from reaching the game.
-            overscrollBehavior: "contain",
-            touchAction: "pan-y",
-            borderRadius: "var(--chakra-radii-card, 12px)",
-            border: "1px solid var(--qmm-border-strong)",
-            background: "var(--qmm-panel-bg)",
-            backdropFilter: "blur(8px)",
-            color: "var(--qmm-text)",
-            boxShadow: "var(--qmm-shadow-window)",
-            padding: "8px",
-            display: "none",
-            zIndex: "var(--chakra-zIndices-DialogModal, 7010)",
-            pointerEvents: "auto"
-          });
-          this.el.style.setProperty("-webkit-backdrop-filter", "blur(8px)");
-          this.stopScrollReachingGame();
-        }
-        get isOpen() {
-          return this.el.style.display === "block";
-        }
-        setOpen(open) {
-          this.el.style.display = open ? "block" : "none";
-        }
-        /** Redraws the list, unless the items and quantities are unchanged. */
-        render(items) {
-          const sig = JSON.stringify(items.map((r) => [r.id, r.qty]));
-          if (sig === this.lastSig) return;
-          this.lastSig = sig;
-          const head = h("div", void 0, "Tracked items available");
-          Object.assign(head.style, {
-            fontWeight: "700",
-            opacity: "0.9",
-            padding: "4px 2px",
-            borderBottom: ROW_BORDER,
-            marginBottom: "4px"
-          });
-          this.el.replaceChildren(head);
-          if (!items.length) {
-            const empty = h("div", void 0, "No tracked items are available.");
-            Object.assign(empty.style, { opacity: "0.75", padding: "8px 2px" });
-            this.el.appendChild(empty);
-            return;
-          }
-          for (const item of items) this.el.appendChild(this.renderRow(item));
-        }
-        renderRow({ id, qty }) {
-          const row5 = h("div");
-          Object.assign(row5.style, {
-            display: "grid",
-            gridTemplateColumns: "24px 1fr max-content max-content max-content",
-            alignItems: "center",
-            gap: "8px",
-            padding: "6px 4px",
-            borderBottom: ROW_BORDER
-          });
-          const title = h("div", void 0, itemName(id));
-          Object.assign(title.style, {
-            fontWeight: "600",
-            fontSize: "12px",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap"
-          });
-          const count = h("div", void 0, `\xD7${qty}`);
-          Object.assign(count.style, {
-            fontVariantNumeric: "tabular-nums",
-            opacity: "0.9",
-            color: "var(--qmm-text-soft)",
-            textAlign: "right"
-          });
-          const buyBtn = button("Buy", { size: "xs", variant: "primary" });
-          const buyAllBtn = button("Buy all", { size: "xs" });
-          buyBtn.onclick = (e) => {
-            e.stopPropagation();
-            void this.buy(id, buyBtn, "Buy", (stock) => ShopsService.buyOne(stock.kind, stock.item));
-          };
-          buyAllBtn.onclick = (e) => {
-            e.stopPropagation();
-            const available = this.alerts.items().find((r) => r.id === id)?.qty ?? 0;
-            if (available <= 0) {
-              buyAllBtn.disabled = true;
-              return;
-            }
-            void this.buy(id, buyAllBtn, "Buy all", (stock) => ShopsService.buyEach(stock.kind, stock.item, available));
-          };
-          if (!findStockItem(this.alerts.shopsSnapshot(), id)) {
-            for (const btn of [buyBtn, buyAllBtn]) {
-              btn.setEnabled(false);
-              btn.title = "Unavailable";
-            }
-          }
-          row5.append(shopItemIcon(id, itemName(id), 24, "alerts-overlay"), title, count, buyBtn, buyAllBtn);
-          return row5;
-        }
-        async buy(id, btn, label2, purchase) {
-          const stock = findStockItem(this.alerts.shopsSnapshot(), id);
-          if (!stock) {
-            btn.disabled = true;
-            return;
-          }
-          await withBusyButton(btn, label2, () => purchase(stock));
-        }
-        /** Lets the panel scroll without the wheel or touch reaching the game's canvas. */
-        stopScrollReachingGame() {
-          const stop = (e) => e.stopPropagation();
-          const opts = { passive: true, capture: true };
-          for (const type of ["wheel", "mousewheel", "DOMMouseScroll", "touchmove"]) {
-            this.el.addEventListener(type, stop, opts);
-          }
-        }
-      };
-    }
-  });
-
-  // src/features/notifier/weather.ts
-  function readCycle(raw) {
-    if (!raw || typeof raw !== "object") return null;
-    const entry = raw;
-    const rawKind = trimmedString(entry.kind);
-    const kindLc = rawKind.toLowerCase();
-    const kind = kindLc === "weather" || kindLc === "lunar" || kindLc === "base" ? kindLc : "unknown";
-    const meta = { kind, rawKind: rawKind || void 0 };
-    for (const field2 of ["startWindowMin", "startWindowMax", "durationMinutes", "periodMinutes"]) {
-      const value = finiteNumber2(entry[field2]);
-      if (value !== void 0) meta[field2] = value;
-    }
-    return meta;
-  }
-  function readMutations(raw) {
-    if (!Array.isArray(raw)) return [];
-    const items = [];
-    for (const entry of raw) {
-      if (!entry || typeof entry !== "object") continue;
-      const name = trimmedString(entry.name);
-      if (!name) continue;
-      const mutation = { name };
-      const multiplier = finiteNumber2(entry.multiplier);
-      if (multiplier !== void 0) mutation.multiplier = multiplier;
-      const conditional = trimmedString(entry.conditional);
-      if (conditional) mutation.conditional = conditional;
-      items.push(mutation);
-    }
-    return items;
-  }
-  function readMutator(mutator) {
-    const id = trimmedString(mutator?.mutation);
-    if (!id) return [];
-    const entry = mutationCatalog2[id];
-    const mutation = { name: typeof entry?.name === "string" && entry.name ? entry.name : id };
-    const multiplier = finiteNumber2(entry?.coinMultiplier);
-    if (multiplier !== void 0) mutation.multiplier = multiplier;
-    return [mutation];
-  }
-  function readWeather(key2, value) {
-    const entry = value ?? {};
-    const safeName = String(key2 || "").trim();
-    if (!safeName) return null;
-    const rawDisplayName = trimmedString(entry.displayName) || trimmedString(entry.name);
-    const displayName = spaceWords(rawDisplayName || safeName).replace(/_/g, " ").replace(/\s+/g, " ").trim();
-    const atomValue = "atomValue" in entry ? trimmedString(entry.atomValue) : entry.mutator ? safeName : "";
-    return {
-      id: `${WEATHER_ID_PREFIX}${safeName}`,
-      name: displayName || safeName,
-      atomValue,
-      type: atomValue || displayName,
-      description: trimmedString(entry.description) || null,
-      cycle: readCycle(entry.cycle),
-      weightInCycle: finiteNumber2(entry.weightInCycle) ?? null,
-      mutations: Array.isArray(entry.mutations) ? readMutations(entry.mutations) : readMutator(entry.mutator)
-    };
-  }
-  function weatherDefs() {
-    return weatherIndex().defs;
-  }
-  function weatherById(id) {
-    return weatherIndex().byId.get(id);
-  }
-  function weatherForAtomValue(value) {
-    const key2 = value.toLowerCase();
-    const { byAtom, byName } = weatherIndex();
-    return byAtom.get(key2) || byName.get(key2) || (key2 ? byName.get(key2.replace(/\s+/g, "")) : void 0);
-  }
-  function formatWeatherMutation(mutation) {
-    const raw = Number(mutation.multiplier);
-    if (mutation.multiplier == null || !Number.isFinite(raw)) return mutation.name;
-    const rounded = Math.abs(raw - Math.round(raw)) < 0.01 ? Math.round(raw) : Math.round(raw * 100) / 100;
-    return `${mutation.name} \xD7${rounded}`;
-  }
-  function formatLastSeen(timestamp, isCurrent) {
-    if (isCurrent) {
-      return { label: "Now", title: timestamp ? new Date(timestamp).toLocaleString() : "Currently active" };
-    }
-    if (!timestamp) return { label: "Never", title: "Never seen" };
-    const diff = Math.max(0, Date.now() - timestamp);
-    const plural3 = (n, unit) => `${n} ${unit}${n > 1 ? "s" : ""} ago`;
-    let label2;
-    if (diff < 45e3) label2 = "Just now";
-    else if (diff < 9e4) label2 = "1 min ago";
-    else if (diff < 36e5) label2 = plural3(Math.round(diff / 6e4), "min");
-    else if (diff < 36 * 36e5) label2 = plural3(Math.round(diff / 36e5), "hour");
-    else label2 = plural3(Math.round(diff / 864e5), "day");
-    return { label: label2, title: new Date(timestamp).toLocaleString() };
-  }
-  var WEATHER_ID_PREFIX, finiteNumber2, trimmedString, weatherIndex;
-  var init_weather = __esm({
-    "src/features/notifier/weather.ts"() {
-      "use strict";
-      init_data();
-      init_format();
-      WEATHER_ID_PREFIX = "Weather:";
-      finiteNumber2 = (value) => {
-        const num2 = typeof value === "number" ? value : Number(value);
-        return Number.isFinite(num2) ? num2 : void 0;
-      };
-      trimmedString = (value) => typeof value === "string" ? value.trim() : "";
-      weatherIndex = memoOnCatalogs(() => {
-        const defs = [];
-        for (const [key2, value] of Object.entries(weatherCatalog2 ?? {})) {
-          const def = readWeather(key2, value);
-          if (def) defs.push(def);
-        }
-        const byId = /* @__PURE__ */ new Map();
-        const byAtom = /* @__PURE__ */ new Map();
-        const byName = /* @__PURE__ */ new Map();
-        for (const def of defs) {
-          byId.set(def.id, def);
-          byName.set(def.name.toLowerCase(), def);
-          byAtom.set(def.atomValue.toLowerCase(), def);
-          byName.set(def.id.slice(WEATHER_ID_PREFIX.length).toLowerCase(), def);
-        }
-        return { defs, byId, byAtom, byName };
-      });
-    }
-  });
-
-  // src/features/notifier/weatherAlerts.ts
-  function ensurePrefsLoaded() {
-    if (prefsLoaded) return;
-    prefsLoaded = true;
-    prefs2 = /* @__PURE__ */ new Map();
-    const stored = readAriesPath(PREFS_PATH2);
-    if (!stored || typeof stored !== "object") return;
-    for (const [id, value] of Object.entries(stored)) {
-      if (!id) continue;
-      const pref = {};
-      if (typeof value?.notify === "boolean") pref.notify = value.notify;
-      if (typeof value?.lastSeen === "number" && Number.isFinite(value.lastSeen)) pref.lastSeen = value.lastSeen;
-      prefs2.set(String(id), pref);
-    }
-  }
-  function savePrefs2() {
-    const out = {};
-    for (const [id, pref] of prefs2) {
-      const entry = {};
-      if (pref.notify) entry.notify = true;
-      if (typeof pref.lastSeen === "number" && Number.isFinite(pref.lastSeen)) entry.lastSeen = pref.lastSeen;
-      if (entry.notify || entry.lastSeen != null) out[id] = entry;
-    }
-    writeAriesPath(PREFS_PATH2, out);
-  }
-  function prefOf(id) {
-    ensurePrefsLoaded();
-    let pref = prefs2.get(id);
-    if (!pref) {
-      pref = {};
-      prefs2.set(id, pref);
-    }
-    return pref;
-  }
-  function recomputeState() {
-    const rows = weatherDefs().map((def) => {
-      const pref = prefOf(def.id);
-      return {
-        ...def,
-        notify: !!pref.notify,
-        lastSeen: typeof pref.lastSeen === "number" && Number.isFinite(pref.lastSeen) ? pref.lastSeen : null,
-        isCurrent: def.id === currentId,
-        cycle: def.cycle ? { ...def.cycle } : null,
-        mutations: def.mutations.map((mutation) => ({ ...mutation }))
-      };
-    });
-    const sig = weatherStateSignature(rows);
-    const isNew = sig !== stateSig;
-    stateSig = sig;
-    state3 = { updatedAt: Date.now(), currentId, rows };
-    if (isNew) changed4.emit(state3);
-  }
-  function ring(id) {
-    if (!weatherById(id)) return;
-    const rule = NotifierRules.get(id);
-    const overrides = { mode: "oneshot" };
-    if (rule?.sound) overrides.sound = rule.sound;
-    if (rule?.volume != null) overrides.volume = rule.volume;
-    audio.trigger(id, overrides, "weather").catch(() => {
-    });
-  }
-  function onWeather(raw, force = false) {
-    const value = raw == null ? "" : String(raw).trim();
-    if (!force && currentValue === value) return;
-    const def = weatherForAtomValue(value);
-    const prevId = currentId;
-    if (def) prefOf(def.id).lastSeen = Date.now();
-    currentId = def?.id ?? null;
-    currentValue = value;
-    if (currentId) StatsService.incrementWeatherStat(currentId.replace(WEATHER_ID_PREFIX, ""));
-    if (prevId && prevId !== currentId) audio.stopLoop(prevId);
-    if (def && prefOf(def.id).notify) ring(def.id);
-    if (def) savePrefs2();
-    recomputeState();
-  }
-  var PREFS_PATH2, prefs2, prefsLoaded, state3, stateSig, currentId, currentValue, changed4, weatherStateSignature, WeatherAlerts;
-  var init_weatherAlerts = __esm({
-    "src/features/notifier/weatherAlerts.ts"() {
-      "use strict";
-      init_atoms();
-      init_emitter();
-      init_storage();
-      init_stats();
-      init_audio();
-      init_rules();
-      init_weather();
-      PREFS_PATH2 = "notifier.weatherPrefs";
-      prefs2 = /* @__PURE__ */ new Map();
-      prefsLoaded = false;
-      state3 = null;
-      stateSig = null;
-      currentId = null;
-      currentValue = null;
-      changed4 = new Emitter();
-      weatherStateSignature = (rows) => JSON.stringify(rows.map((r) => [r.id, r.notify ? 1 : 0, r.lastSeen || 0, r.isCurrent ? 1 : 0]));
-      WeatherAlerts = {
-        /** Reads the weather once, then follows it. */
-        async start() {
-          const view = Atoms.data.weather;
-          try {
-            onWeather(await view.get(), true);
-          } catch {
-          }
-          try {
-            await view.onChange((next) => {
-              try {
-                onWeather(next);
-              } catch {
-              }
-            });
-          } catch {
-          }
-        },
-        state() {
-          if (!state3) recomputeState();
-          return state3;
-        },
-        onChange(cb) {
-          return changed4.on(cb);
-        },
-        setNotify(id, enabled2) {
-          if (!id) return;
-          const pref = prefOf(id);
-          if (!!pref.notify === enabled2) return;
-          pref.notify = enabled2;
+          prefs2.defaultThresholdPct = clampPct(pct);
           savePrefs2();
-          if (!enabled2) audio.stopLoop(id);
-          else if (currentId === id) ring(id);
-          recomputeState();
-        }
-      };
-    }
-  });
-
-  // src/features/notifier/notifier.ts
-  async function ensureStarted() {
-    if (started2) return;
-    started2 = true;
-    try {
-      ShopRows.rebuild();
-    } catch {
-    }
-    window.addEventListener("gemini:data-updated", onCatalogsUpdated);
-    ShopFeed.start();
-    InventoryCaps.onChange(() => ShopRows.refresh());
-    await InventoryCaps.start();
-    await WeatherAlerts.start();
-  }
-  var started2, onCatalogsUpdated, NotifierService;
-  var init_notifier = __esm({
-    "src/features/notifier/notifier.ts"() {
-      "use strict";
-      init_shopFeed();
-      init_inventoryCaps();
-      init_rules();
-      init_shopRows();
-      init_weatherAlerts();
-      started2 = false;
-      onCatalogsUpdated = () => {
-        try {
-          ShopRows.rebuild();
-        } catch {
-        }
-      };
-      NotifierService = {
-        async get() {
-          await ensureStarted();
-          return ShopRows.state();
-        },
-        async onChangeNow(cb) {
-          await ensureStarted();
-          cb(ShopRows.state());
-          return ShopRows.onChange(cb);
-        },
-        async onShopsChangeNow(cb) {
-          await ensureStarted();
-          try {
-            cb(await ShopFeed.readShops());
-          } catch {
-          }
-          return ShopFeed.onShopsChange(cb);
-        },
-        async onPurchasesChangeNow(cb) {
-          await ensureStarted();
-          try {
-            cb(await ShopFeed.readPurchases());
-          } catch {
-          }
-          return ShopFeed.onPurchasesChange(cb);
-        },
-        async getWeatherState() {
-          await ensureStarted();
-          return WeatherAlerts.state();
-        },
-        async onWeatherChangeNow(cb) {
-          await ensureStarted();
-          cb(WeatherAlerts.state());
-          return WeatherAlerts.onChange(cb);
-        },
-        async onRulesChangeNow(cb) {
-          await ensureStarted();
-          cb(NotifierRules.getAll());
-          return NotifierRules.onChange(cb);
-        },
-        /** Whether an item's alert is on. A capped item reads as off. */
-        getPref(id) {
-          const on = ShopRows.isFollowed(id);
-          return { popup: on, followed: on };
-        }
-      };
-    }
-  });
-
-  // src/features/notifier/overlay.ts
-  async function renderOverlay() {
-    const alerts = new ShopAlerts();
-    new Overlay(alerts);
-    await NotifierService.onPurchasesChangeNow((p) => alerts.setPurchases(p));
-    await NotifierService.onShopsChangeNow((s) => alerts.setShops(s));
-    await NotifierService.onChangeNow(() => alerts.refresh());
-    await NotifierService.onRulesChangeNow((rules3) => alerts.setRules(rules3));
-  }
-  var REPOSITION_INTERVAL_MS, SLOT_Z_INDEX, Overlay;
-  var init_overlay2 = __esm({
-    "src/features/notifier/overlay.ts"() {
-      "use strict";
-      init_dom2();
-      init_audio();
-      init_pixiBell();
-      init_floatingBell();
-      init_buyPanel();
-      init_notifier();
-      init_shopAlerts();
-      REPOSITION_INTERVAL_MS = 1e3;
-      SLOT_Z_INDEX = 9999;
-      Overlay = class {
-        constructor(alerts) {
-          /** A fixed stacking context holding the badge and the panel. */
-          this.slot = h("div");
-          this.badge = h("span");
-          this.bell = null;
-          this.items = [];
-          this.audioPrimed = false;
-          this.panel = new BuyPanel(alerts);
-          this.styleSlot();
-          this.styleBadge();
-          this.slot.id = "qws-notifier-slot";
-          this.slot.append(this.badge, this.panel.el);
-          document.body.appendChild(this.slot);
-          this.startBell();
-          window.addEventListener(BELL_MODE_EVENT, () => this.startBell());
-          window.addEventListener("pointerdown", (e) => this.closeOnOutsideClick(e));
-          window.addEventListener("resize", () => this.reposition());
-          window.setInterval(() => this.reposition(), REPOSITION_INTERVAL_MS);
-          alerts.onChange((items) => this.show(items));
-        }
-        show(items) {
-          this.items = items;
-          this.badge.textContent = items.length ? String(items.length) : "";
-          this.badge.style.display = items.length ? "inline-flex" : "none";
-          this.placeBadge();
-          if (this.panel.isOpen) this.panel.render(items);
-          this.updateWiggle();
-        }
-        /** (Re)creates the bell in the current mode, stopping the other one first. */
-        startBell() {
-          this.bell?.stop();
-          const onClick = () => void this.toggleBell();
-          const floating = isFloatingBellEnabled();
-          this.bell = floating ? startFloatingBell({ onClick, onMoved: () => this.reposition() }) : startPixiBell({ onClick });
-          this.slot.style.zIndex = String(floating ? BELL_WIDGET_Z_INDEX + 1 : SLOT_Z_INDEX);
-          this.reposition();
-          this.updateWiggle();
-        }
-        async toggleBell() {
-          if (!this.audioPrimed) {
-            this.audioPrimed = true;
-            try {
-              await audio.prime();
-            } catch {
-            }
-          }
-          const open = !this.panel.isOpen;
-          this.panel.setOpen(open);
-          if (open) {
-            this.placePanel();
-            this.panel.render(this.items);
-            this.placeBadge();
-          }
-          this.updateWiggle();
-        }
-        closeOnOutsideClick(e) {
-          if (!this.panel.isOpen) return;
-          if (this.slot.contains(e.target) || this.isOnBell(e.clientX, e.clientY)) return;
-          this.panel.setOpen(false);
-        }
-        isOnBell(x, y) {
-          const rect = this.bell?.getScreenRect();
-          return !!rect && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
-        }
-        reposition() {
-          this.placeBadge();
-          if (this.panel.isOpen) this.placePanel();
-        }
-        placeBadge() {
-          const rect = this.bell?.getScreenRect();
-          if (!rect) return;
-          this.badge.style.top = `${rect.top - 4}px`;
-          this.badge.style.right = `${window.innerWidth - rect.right - 4}px`;
-        }
-        placePanel() {
-          const rect = this.bell?.getScreenRect();
-          if (!rect) return;
-          this.panel.el.style.top = `${rect.bottom + 8}px`;
-          this.panel.el.style.right = `${window.innerWidth - rect.right}px`;
-        }
-        /** The bell rings while items wait and the panel is closed. */
-        updateWiggle() {
-          this.bell?.setWiggle(this.items.length > 0 && !this.panel.isOpen);
-        }
-        styleSlot() {
-          Object.assign(this.slot.style, {
-            position: "fixed",
-            top: "0",
-            right: "0",
-            pointerEvents: "none",
-            zIndex: String(SLOT_Z_INDEX),
-            fontFamily: "var(--chakra-fonts-body, GreyCliff CF), system-ui, sans-serif",
-            color: "var(--chakra-colors-chakra-body-text, #e7eef7)",
-            userSelect: "none"
-          });
-          this.slot.style.setProperty("-webkit-font-smoothing", "antialiased");
-          this.slot.style.setProperty("-webkit-text-size-adjust", "100%");
-          this.slot.style.setProperty("text-rendering", "optimizeLegibility");
-        }
-        /** The game's own red notification bubble. */
-        styleBadge() {
-          Object.assign(this.badge.style, {
-            position: "fixed",
-            minWidth: "18px",
-            height: "18px",
-            padding: "0 6px",
-            borderRadius: "999px",
-            background: "var(--chakra-colors-Red-Magic, #D02128)",
-            color: "var(--chakra-colors-Neutral-TrueWhite, #fff)",
-            fontSize: "12px",
-            fontWeight: "700",
-            display: "none",
-            alignItems: "center",
-            justifyContent: "center",
-            border: "1px solid rgba(0,0,0,.35)",
-            lineHeight: "18px",
-            pointerEvents: "none",
-            zIndex: "10000"
-          });
+          evaluateAll();
+          return prefs2.defaultThresholdPct;
         }
       };
     }
@@ -21976,13 +25593,13 @@
       } catch {
       }
       try {
-        modalOpen = await Atoms.ui.activeModal.get() != null;
+        modalOpen2 = await Atoms.ui.activeModal.get() != null;
         syncVisibility();
       } catch {
       }
       try {
         await Atoms.ui.activeModal.onChange((next) => {
-          modalOpen = next != null;
+          modalOpen2 = next != null;
           syncVisibility();
         });
       } catch {
@@ -22005,7 +25622,7 @@
     })();
   }
   function isWidgetVisible() {
-    return enabled && !modalOpen && !inventoryCardOpen;
+    return enabled && !modalOpen2 && !inventoryCardOpen;
   }
   function syncVisibility() {
     if (!widget) return;
@@ -22326,7 +25943,7 @@
     };
     const maxStr = getPetMaxStrength(petLike);
     if (maxStr <= 0) return null;
-    const str = getPetStrength(petLike);
+    const str = getPetStrength2(petLike);
     const maxed = str >= maxStr;
     return { text: maxed ? `STR ${maxStr}` : `STR ${str}/${maxStr}`, maxed };
   }
@@ -22417,7 +26034,7 @@
       }
     }
   }
-  var DEFAULT_LABEL, MAX_BUTTONS, ICON_SIZE, WIDGET_Z_INDEX, SCREEN_MARGIN2, DEFAULT_TOP, GLOBAL_START_FLAG, INVENTORY_CARD_ATOM, ENABLED_PATH2, POS_PATH2, started3, enabled, modalOpen, inventoryCardOpen, activePets, activePetsSig, widget, widgetButtons, savedPos, positioned;
+  var DEFAULT_LABEL, MAX_BUTTONS, ICON_SIZE, WIDGET_Z_INDEX, SCREEN_MARGIN2, DEFAULT_TOP, GLOBAL_START_FLAG, INVENTORY_CARD_ATOM, ENABLED_PATH2, POS_PATH2, started3, enabled, modalOpen2, inventoryCardOpen, activePets, activePetsSig, widget, widgetButtons, savedPos, positioned;
   var init_feedWidget = __esm({
     "src/features/pets/feedWidget.ts"() {
       "use strict";
@@ -22440,7 +26057,7 @@
       POS_PATH2 = "pets.instantFeedWidget.pos";
       started3 = false;
       enabled = true;
-      modalOpen = false;
+      modalOpen2 = false;
       inventoryCardOpen = false;
       activePets = [];
       activePetsSig = "";
@@ -22451,738 +26068,358 @@
     }
   });
 
-  // src/features/cropPrice/priceWatcher.ts
-  function startCropPriceWatcherViaGardenObject() {
-    let gardenObject = null;
-    let players = void 0;
-    let selectedSlotId = null;
-    let price = null;
-    const changes8 = new Emitter();
-    const subs = new Subscriptions();
-    const computePrice = () => {
-      if (!isPlantObject2(gardenObject)) return null;
-      const slot = resolveGrowSlot(Array.isArray(gardenObject.slots) ? gardenObject.slots : [], selectedSlotId);
-      const slotValue = slot ? positive(valueFromGardenSlot(slot, DefaultPricing, players)) : null;
-      return slotValue ?? positive(valueFromGardenPlant(gardenObject, DefaultPricing, players));
-    };
-    const recompute = () => {
-      const next = computePrice();
-      if (next === price) return;
-      price = next;
-      changes8.emit();
-    };
-    let scheduled = false;
-    const scheduleRecompute = () => {
-      if (scheduled) return;
-      scheduled = true;
-      requestAnimationFrame(() => {
-        scheduled = false;
-        recompute();
-      });
-    };
-    void (async () => {
-      try {
-        gardenObject = await myCurrentGardenObject.get();
-      } catch {
-      }
-      try {
-        players = await numPlayers.get();
-      } catch {
-      }
-      try {
-        selectedSlotId = await myCurrentGrowSlotIndex.get();
-      } catch {
-      }
-      subs.add(numPlayers.onChange((n) => {
-        players = n;
-      }));
-      subs.add(myCurrentGardenObject.onChange((next) => {
-        gardenObject = next;
-        scheduleRecompute();
-      }));
-      subs.add(
-        myCurrentGrowSlotIndex.onChange((id) => {
-          selectedSlotId = Number.isFinite(id) ? id : null;
-          scheduleRecompute();
-        })
-      );
-      recompute();
-    })();
-    return {
-      get: () => price,
-      onChange: (cb) => changes8.on(cb),
-      stop() {
-        changes8.clear();
-        subs.dispose();
-      }
-    };
-  }
-  var isPlantObject2, positive;
-  var init_priceWatcher = __esm({
-    "src/features/cropPrice/priceWatcher.ts"() {
-      "use strict";
-      init_atoms();
-      init_cropValue();
-      init_growSlot();
-      init_emitter();
-      isPlantObject2 = (obj) => !!obj && obj.objectType === "plant";
-      positive = (value) => Number.isFinite(value) && value > 0 ? value : null;
+  // src/features/pets/teamHotkeys.ts
+  function migrateLegacyHotkey(teamId2) {
+    const legacy = readAriesPath(LEGACY_HOTKEYS_PATH) ?? {};
+    if (!legacy[teamId2]) return;
+    const actionId = teamActionId(teamId2);
+    if (!getKeybind(actionId)) {
+      const hk = stringToHotkey(legacy[teamId2]);
+      if (hk) setKeybind(actionId, hk);
     }
-  });
-
-  // src/features/cropPrice/setting.ts
-  function readShowCropPrice() {
-    try {
-      return readAriesPath(PATH_SHOW_CROP_PRICE) !== false;
-    } catch {
+    const rest2 = { ...legacy };
+    delete rest2[teamId2];
+    writeAriesPath(LEGACY_HOTKEYS_PATH, rest2);
+  }
+  function setPetTeamKeybinds(teams2) {
+    const seen = /* @__PURE__ */ new Set();
+    const unique = teams2.filter((team) => {
+      const id = String(team?.id ?? "");
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
       return true;
-    }
+    });
+    teamIds = unique.map((team) => String(team.id));
+    setDynamicActions(
+      PET_SECTION_ID,
+      unique.map((team, index) => ({
+        id: teamActionId(String(team.id)),
+        label: `Use team: ${String(team.name ?? "").trim() || `Team ${index + 1}`}`,
+        defaultHotkey: null
+      }))
+    );
+    for (const id of teamIds) migrateLegacyHotkey(id);
   }
-  function writeShowCropPrice(on) {
-    const next = !!on;
-    if (readShowCropPrice() === next) return;
+  async function teamAfterStep(ids, step) {
+    if (!ids.length) return null;
+    let current3 = null;
     try {
-      writeAriesPath(PATH_SHOW_CROP_PRICE, next);
+      current3 = await getActiveTeamId();
     } catch {
     }
-    changes5.emit(next);
+    if (!current3 || !ids.includes(current3)) current3 = getLastUsedTeamId();
+    const index = current3 ? ids.indexOf(current3) : -1;
+    if (index < 0) return ids[0];
+    return ids[(index + step + ids.length) % ids.length];
   }
-  function onShowCropPriceChange(cb) {
-    return changes5.on(cb);
+  function onKeyDown(e, useTeam2) {
+    if (shouldIgnoreKeydown(e) || !teamIds.length) return;
+    const ids = teamIds.slice();
+    const step = eventMatchesKeybind(PET_TEAM_PREV_ID, e) ? -1 : eventMatchesKeybind(PET_TEAM_NEXT_ID, e) ? 1 : 0;
+    const direct = step ? null : ids.find((id) => eventMatchesKeybind(teamActionId(id), e)) ?? null;
+    if (!step && !direct) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (direct) {
+      useTeam2(direct);
+      return;
+    }
+    void teamAfterStep(ids, step).then((target) => {
+      if (target) useTeam2(target);
+    });
   }
-  var PATH_SHOW_CROP_PRICE, changes5;
-  var init_setting = __esm({
-    "src/features/cropPrice/setting.ts"() {
+  function installPetTeamHotkeys(useTeam2) {
+    if (installed3 || typeof window === "undefined") return;
+    installed3 = true;
+    onTeamsChange((teams2) => setPetTeamKeybinds(teams2));
+    window.addEventListener("keydown", (e) => onKeyDown(e, useTeam2), true);
+  }
+  var PET_TEAM_PREV_ID, PET_TEAM_NEXT_ID, LEGACY_HOTKEYS_PATH, teamIds, installed3, teamActionId;
+  var init_teamHotkeys = __esm({
+    "src/features/pets/teamHotkeys.ts"() {
       "use strict";
+      init_hotkey();
+      init_keyboard();
       init_storage();
-      init_emitter();
-      PATH_SHOW_CROP_PRICE = "misc.showCropPrice";
-      changes5 = new Emitter();
+      init_catalog();
+      init_keybinds();
+      init_teamSwitch();
+      init_teamStore();
+      PET_TEAM_PREV_ID = "pets.team.prev";
+      PET_TEAM_NEXT_ID = "pets.team.next";
+      LEGACY_HOTKEYS_PATH = "pets.hotkeys";
+      teamIds = [];
+      installed3 = false;
+      teamActionId = (teamId2) => `pets.team.${teamId2}`;
     }
   });
 
-  // src/features/locker/domLockMarks.ts
-  function markLocked(el, look) {
-    const key2 = datasetKey(look.owner);
-    if (el.dataset[key2] === void 0) {
-      const saved = {};
-      for (const prop of [...Object.keys(look.style), "position"]) saved[prop] = el.style.getPropertyValue(prop);
-      el.dataset[key2] = JSON.stringify(saved);
+  // src/ui/kit/modal.ts
+  function menuCard(options2) {
+    const card4 = h("button", "qmm-menu-card");
+    card4.type = "button";
+    card4.disabled = options2.disabled === true;
+    card4.append(h("div", "qmm-menu-card__name", options2.name), h("div", "qmm-menu-card__detail", options2.detail));
+    if (!card4.disabled) card4.addEventListener("click", options2.onClick);
+    return card4;
+  }
+  function openModal2(options2) {
+    let closed = false;
+    const scrim = h("div", "qmm-modal-scrim");
+    const hostZ = Number.parseInt(getComputedStyle(options2.host).zIndex, 10);
+    scrim.style.zIndex = String((Number.isFinite(hostZ) ? hostZ : layer.window) + 1);
+    const panel = h("div", "qmm-modal");
+    panel.style.width = `min(${options2.widthPx ?? 420}px, 100%)`;
+    panel.style.maxHeight = `min(${options2.maxHeightPx ?? 520}px, 88vh)`;
+    panel.addEventListener("click", (event) => event.stopPropagation());
+    const closeButton = h("button", "qmm-modal__close", "\u2715");
+    closeButton.type = "button";
+    closeButton.title = "Close";
+    closeButton.addEventListener("click", () => close());
+    const header = h("div", "qmm-modal__head");
+    header.append(h("div", "qmm-modal__title", options2.title), closeButton);
+    const body = h("div", "qmm-modal__body qmm-scroll");
+    const footer = h("div", "qmm-modal__foot");
+    panel.append(header, body, footer);
+    scrim.append(panel);
+    function onKeyDown2(event) {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        close();
+      }
     }
-    for (const [prop, value] of Object.entries(look.style)) el.style.setProperty(prop, value);
-    if (getComputedStyle(el).position === "static") el.style.setProperty("position", "relative");
-    const cls = glyphClass(look.owner);
-    if (el.querySelector(`span.${cls}`)) return;
-    const glyph = document.createElement("span");
-    glyph.className = cls;
-    glyph.textContent = LOCK_GLYPH;
-    for (const [prop, value] of Object.entries(look.glyph)) glyph.style.setProperty(prop, value);
-    el.appendChild(glyph);
-  }
-  function unmarkLocked(el, owner2) {
-    const key2 = datasetKey(owner2);
-    const raw = el.dataset[key2];
-    if (raw !== void 0) {
-      let saved = {};
-      try {
-        saved = JSON.parse(raw);
-      } catch {
-      }
-      for (const [prop, value] of Object.entries(saved)) {
-        if (value) el.style.setProperty(prop, value);
-        else el.style.removeProperty(prop);
-      }
-      delete el.dataset[key2];
+    function close() {
+      if (closed) return;
+      closed = true;
+      clearInterval(hostWatch);
+      document.removeEventListener("keydown", onKeyDown2, true);
+      scrim.remove();
+      options2.onClose?.();
     }
-    el.querySelectorAll(`span.${glyphClass(owner2)}`).forEach((node) => node.remove());
+    const hostWatch = window.setInterval(() => {
+      if (!options2.host.isConnected) close();
+    }, 1e3);
+    scrim.addEventListener("click", () => close());
+    document.addEventListener("keydown", onKeyDown2, true);
+    (document.documentElement || document.body).appendChild(scrim);
+    return { body, footer, close, isOpen: () => !closed };
   }
-  function startDomLockIndicator(opts) {
-    const subs = new Subscriptions();
-    let running = true;
-    const elements = () => Array.from(document.querySelectorAll(opts.selector));
-    const refresh = () => {
-      if (!running) return;
-      const locked = opts.isLocked();
-      for (const el of elements()) {
-        if (locked && opts.isTarget(el)) markLocked(el, opts.look);
-        else unmarkLocked(el, opts.look.owner);
-      }
-    };
-    const observer2 = new MutationObserver(refresh);
-    observer2.observe(document.documentElement, { childList: true, subtree: true });
-    subs.add(() => observer2.disconnect());
-    refresh();
-    return {
-      refresh,
-      add: (unsubscribe2) => subs.add(unsubscribe2),
-      stop() {
-        running = false;
-        subs.dispose();
-        for (const el of elements()) unmarkLocked(el, opts.look.owner);
-      }
-    };
-  }
-  var LOCK_GLYPH, cornerGlyph, datasetKey, glyphClass, datasetAttr, markedElements;
-  var init_domLockMarks = __esm({
-    "src/features/locker/domLockMarks.ts"() {
+  var init_modal = __esm({
+    "src/ui/kit/modal.ts"() {
       "use strict";
-      init_emitter();
-      LOCK_GLYPH = "\u{1F512}";
-      cornerGlyph = (offsetPx) => ({
-        position: "absolute",
-        top: `-${offsetPx}px`,
-        right: `-${offsetPx}px`,
-        "font-size": "16px",
-        "pointer-events": "none",
-        "user-select": "none",
-        "z-index": "2"
-      });
-      datasetKey = (owner2) => `tm${owner2.replace(/(^|-)(\w)/g, (_, _dash, c) => c.toUpperCase())}LockStyles`;
-      glyphClass = (owner2) => `tm-${owner2}-lock`;
-      datasetAttr = (owner2) => `tm-${owner2}-lock-styles`;
-      markedElements = (owner2) => Array.from(document.querySelectorAll(`[data-${datasetAttr(owner2)}]`));
+      init_dom2();
+      init_theme();
     }
   });
 
-  // src/features/cropPrice/domTooltip.ts
-  function startCropValuesObserverFromGardenAtom() {
-    const priceWatcher = startCropPriceWatcherViaGardenObject();
-    let running = true;
-    let harvestAllowed = lockerService.currentHarvestAllowed();
-    let lockerReady = !lockerService.isEnabled();
-    let needsReposition = false;
-    let last = null;
-    const render = () => {
-      if (!running || !lockerReady) return;
-      unmarkStrayTooltips();
-      const next = { value: priceWatcher.get(), locked: harvestAllowed === false, showPrice: readShowCropPrice() };
-      if (!needsReposition && last && last.value === next.value && last.locked === next.locked && last.showPrice === next.showPrice) {
-        return;
-      }
-      last = next;
-      needsReposition = false;
-      const text2 = next.value == null ? "-" : formatInteger(next.value, "round");
-      for (const panel of Array.from(document.querySelectorAll(PANEL_SELECTOR))) {
-        for (const block of Array.from(panel.querySelectorAll(BLOCK_SELECTOR))) {
-          if (!(block instanceof HTMLElement)) continue;
-          updateTooltipLock(block, next.locked);
-          if (!next.showPrice || isWrapperBlock(block)) removePriceLine(block);
-          else ensurePriceLine(block, text2);
-        }
-      }
-    };
-    const readyTimer = lockerReady ? null : setTimeout(() => {
-      lockerReady = true;
-      render();
-    }, LOCKER_FIRST_VERDICT_WAIT_MS);
-    const offLocker = lockerService.onSlotInfoChange((event) => {
-      harvestAllowed = event.harvestAllowed;
-      if (readyTimer != null) clearTimeout(readyTimer);
-      lockerReady = true;
-      render();
+  // src/features/sellAllPets/confirmModal.ts
+  function petRow({ pet, reasons, mutations }) {
+    const row5 = document.createElement("div");
+    Object.assign(row5.style, {
+      display: "grid",
+      gridTemplateColumns: `${ICON_PX}px 1fr`,
+      gap: "10px",
+      alignItems: "center",
+      padding: "6px 8px",
+      border: `1px solid ${color.border}`,
+      borderRadius: "10px",
+      background: color.cardBg
     });
-    const qpmObserver = new MutationObserver((mutations) => {
-      const added = mutations.some(
-        (m) => Array.from(m.addedNodes).some(
-          (node) => node instanceof Element && (node.classList.contains("qpm-crop-size") || !!node.querySelector(".qpm-crop-size"))
-        )
-      );
-      if (!added) return;
-      needsReposition = true;
-      render();
+    const icon2 = document.createElement("div");
+    Object.assign(icon2.style, {
+      width: `${ICON_PX}px`,
+      height: `${ICON_PX}px`,
+      borderRadius: "10px",
+      background: color.hoverBg,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+      fontSize: "12px",
+      fontWeight: "700"
     });
-    qpmObserver.observe(document.body ?? document.documentElement, { childList: true, subtree: true });
-    render();
-    const offPrice = priceWatcher.onChange(render);
-    const offShowPrice = onShowCropPriceChange(render);
-    return {
-      stop() {
-        if (!running) return;
-        running = false;
-        if (readyTimer != null) clearTimeout(readyTimer);
-        qpmObserver.disconnect();
-        offPrice();
-        offShowPrice();
-        offLocker();
-        priceWatcher.stop();
-      }
-    };
-  }
-  function isWrapperBlock(block) {
-    if (!block.matches(BLOCK_SELECTOR)) return false;
-    const own = BLOCK_SELECTORS.find((selector) => block.matches(selector));
-    if (own) {
-      const inner = Array.from(block.children).find((child) => child.matches(own));
-      if (inner && contentChildren(inner).length > 1) return true;
-    }
-    return contentChildren(block).length === 1;
-  }
-  function removePriceLine(block) {
-    block.querySelectorAll(`:scope > span.${PRICE_CLASS}`).forEach((line) => line.remove());
-  }
-  function ensurePriceLine(block, text2) {
-    const lines = Array.from(block.querySelectorAll(`:scope > span.${PRICE_CLASS}`));
-    lines.slice(1).forEach((extra) => extra.remove());
-    let line = lines[0];
-    if (!line) {
-      line = document.createElement("span");
-      line.className = PRICE_CLASS;
-      Object.assign(line.style, { display: "block", marginTop: "6px", fontWeight: "700", color: "#FFD84D", fontSize: "14px" });
-    }
-    let icon2 = line.querySelector(`:scope > span.${PRICE_ICON_CLASS}`);
-    if (!icon2) {
-      icon2 = document.createElement("span");
-      icon2.className = PRICE_ICON_CLASS;
-      icon2.setAttribute("aria-hidden", "true");
-      Object.assign(icon2.style, {
-        width: "18px",
-        height: "18px",
-        display: "inline-block",
-        verticalAlign: "middle",
-        marginRight: "6px",
-        userSelect: "none",
-        pointerEvents: "none",
-        backgroundSize: "contain",
-        backgroundRepeat: "no-repeat",
-        backgroundPosition: "center"
+    icon2.textContent = String(pet.petSpecies || pet.name || "Pet").slice(0, 2).toUpperCase();
+    const species = String(pet.petSpecies || "").trim();
+    if (species) {
+      attachSpriteIcon(icon2, ["pet"], [species, pet.name || ""], ICON_PX, "sell-all-pets-confirm", {
+        mutations: mutations.map((m) => m.trim()).filter(Boolean)
       });
-      line.insertBefore(icon2, line.firstChild);
     }
-    const background = `url("${coin2.img64}")`;
-    if (icon2.style.backgroundImage !== background) icon2.style.backgroundImage = background;
-    let label2 = line.querySelector(`:scope > span.${PRICE_LABEL_CLASS}`);
-    if (!label2) {
-      label2 = document.createElement("span");
-      label2.className = PRICE_LABEL_CLASS;
-      label2.style.display = "inline";
-      line.appendChild(label2);
-    }
-    if (label2.textContent !== text2) label2.textContent = text2;
-    const qpmSize = readSharedGlobal("QPM") ? block.querySelector("span.qpm-crop-size") : null;
-    if (qpmSize) {
-      if (qpmSize.nextElementSibling !== line) block.insertBefore(line, qpmSize.nextElementSibling);
-    } else if (block.lastElementChild !== line) {
-      block.appendChild(line);
-    }
+    const name = document.createElement("div");
+    name.textContent = pet.name ? `${pet.name} (${pet.petSpecies ?? "Pet"})` : pet.petSpecies ?? "Pet";
+    Object.assign(name.style, { fontWeight: "700", fontSize: "13px" });
+    const chips = document.createElement("div");
+    Object.assign(chips.style, { display: "flex", flexWrap: "wrap", gap: "6px" });
+    chips.append(...reasons.map((reason) => pill(reason)));
+    const info = document.createElement("div");
+    Object.assign(info.style, { display: "grid", gap: "4px" });
+    info.append(name, chips);
+    row5.append(icon2, info);
+    return row5;
   }
-  function isTooltipRoot(el) {
-    if (TOOLTIP_ROOT_CLASSES.some((cls) => el.classList.contains(cls))) return true;
-    const children = Array.from(el.children);
-    const grid = children.find((child) => child.classList.contains("McGrid"));
-    return !!grid && children.every((child) => child === grid || child.classList.contains(TOOLTIP_GLYPH_CLASS));
-  }
-  function tooltipRootOf(block) {
-    for (const cls of TOOLTIP_ROOT_CLASSES) {
-      const root5 = block.closest(`.${cls}`);
-      if (root5) return root5;
-    }
-    const grid = block.parentElement;
-    if (!grid?.classList.contains("McGrid")) return null;
-    const root4 = grid.parentElement;
-    return root4 && isTooltipRoot(root4) ? root4 : null;
-  }
-  function unmarkStrayTooltips() {
-    for (const el of markedElements(TOOLTIP_LOCK_LOOK.owner)) {
-      if (!isTooltipRoot(el)) unmarkLocked(el, TOOLTIP_LOCK_LOOK.owner);
-    }
-    document.querySelectorAll(`span.${TOOLTIP_GLYPH_CLASS}`).forEach((glyph) => {
-      const parent = glyph.parentElement;
-      if (!parent || !isTooltipRoot(parent)) glyph.remove();
-    });
-  }
-  function updateTooltipLock(block, locked) {
-    const root4 = tooltipRootOf(block);
-    if (!root4) return;
-    if (locked) markLocked(root4, TOOLTIP_LOCK_LOOK);
-    else unmarkLocked(root4, TOOLTIP_LOCK_LOOK.owner);
-  }
-  var PANEL_SELECTOR, BLOCK_SELECTORS, BLOCK_SELECTOR, PRICE_CLASS, PRICE_ICON_CLASS, PRICE_LABEL_CLASS, TOOLTIP_ROOT_CLASSES, TOOLTIP_LOCK_LOOK, TOOLTIP_GLYPH_CLASS, LOCKER_FIRST_VERDICT_WAIT_MS, contentChildren;
-  var init_domTooltip = __esm({
-    "src/features/cropPrice/domTooltip.ts"() {
-      "use strict";
-      init_priceWatcher();
-      init_setting();
-      init_data();
-      init_format();
-      init_locker();
-      init_domLockMarks();
-      init_pageContext();
-      PANEL_SELECTOR = ".McFlex.css-fsggty, .McFlex.css-6prrn";
-      BLOCK_SELECTORS = [".McFlex.css-1l3zq7", ".McFlex.css-11dqzw"];
-      BLOCK_SELECTOR = BLOCK_SELECTORS.join(", ");
-      PRICE_CLASS = "tm-crop-price";
-      PRICE_ICON_CLASS = "tm-crop-price-icon";
-      PRICE_LABEL_CLASS = "tm-crop-price-label";
-      TOOLTIP_ROOT_CLASSES = ["css-129757o", "css-7cru8u"];
-      TOOLTIP_LOCK_LOOK = {
-        owner: "locker-tooltip",
-        style: { border: "2px solid rgb(188, 53, 215)", "border-radius": "15px", overflow: "visible" },
-        glyph: {
-          position: "absolute",
-          top: "0",
-          right: "0",
-          transform: "translate(50%, -50%)",
-          "font-size": "18px",
-          padding: "2px 8px",
-          "border-radius": "999px",
-          color: "white",
-          "pointer-events": "none",
-          "user-select": "none",
-          "z-index": "1"
-        }
+  function confirmProtectedPetSale(flagged) {
+    current?.close();
+    return new Promise((resolve) => {
+      let settled = false;
+      const settle = (value) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
       };
-      TOOLTIP_GLYPH_CLASS = `tm-${TOOLTIP_LOCK_LOOK.owner}-lock`;
-      LOCKER_FIRST_VERDICT_WAIT_MS = 500;
-      contentChildren = (block) => Array.from(block.children).filter((el) => !(el.tagName === "SPAN" && el.classList.contains(PRICE_CLASS)));
+      const modal = openModal2({
+        host: document.body,
+        title: "Confirm sell all pets",
+        widthPx: 520,
+        onClose: () => {
+          if (current === modal) current = null;
+          settle(false);
+        }
+      });
+      current = modal;
+      const scrim = modal.body.closest(".qmm-modal-scrim");
+      if (scrim) scrim.style.zIndex = ON_TOP;
+      const intro = document.createElement("div");
+      intro.textContent = "The following pets match protected rules:";
+      Object.assign(intro.style, { fontSize: "13px", lineHeight: "1.4", color: color.textSoft });
+      modal.body.append(intro, ...flagged.map(petRow));
+      const spacer = document.createElement("div");
+      spacer.style.flex = "1";
+      const sell = button("Sell", {
+        variant: "primary",
+        onClick: () => {
+          settle(true);
+          modal.close();
+        }
+      });
+      modal.footer.append(spacer, button("Cancel", { onClick: () => modal.close() }), sell);
+      sell.focus();
+    });
+  }
+  var ICON_PX, ON_TOP, current;
+  var init_confirmModal = __esm({
+    "src/features/sellAllPets/confirmModal.ts"() {
+      "use strict";
+      init_badges();
+      init_button();
+      init_modal();
+      init_theme();
+      init_iconCache();
+      ICON_PX = 48;
+      ON_TOP = "2147483647";
+      current = null;
     }
   });
 
-  // src/features/cropPrice/badge.ts
-  function isPlantObject3(obj) {
-    return !!obj && typeof obj === "object" && obj.objectType === "plant";
+  // src/features/sellAllPets/protection.ts
+  function flagProtectedPets(pets) {
+    const rules3 = lockerRestrictionsService.getSellAllPetsRules();
+    if (!rules3.enabled) return [];
+    const protectedColors = /* @__PURE__ */ new Map();
+    if (rules3.protectGold) protectedColors.set("gold", "Gold");
+    if (rules3.protectRainbow) protectedColors.set("rainbow", "Rainbow");
+    const maxStrThreshold = Math.round(clampFinite(rules3.maxStrThreshold, 0, 100, 0));
+    const protectedRarities = new Set(rules3.protectedRarities);
+    const flagged = [];
+    for (const pet of pets) {
+      const mutations = (Array.isArray(pet.mutations) ? pet.mutations : []).filter((m) => typeof m === "string");
+      const colors = new Set(mutations.map((m) => protectedColors.get(m.toLowerCase())).filter((c) => !!c));
+      const maxStrength = getPetInfo(pet)?.maxStrength;
+      const strong = rules3.protectMaxStr && typeof maxStrength === "number" && Number.isFinite(maxStrength) && maxStrength >= maxStrThreshold;
+      const species = String(pet.petSpecies || "").trim();
+      const rarity3 = species ? petCatalog2[species]?.rarity ?? "" : "";
+      const rare = rarity3 !== "" && protectedRarities.has(rarity3);
+      const reasons = [
+        ...Array.from(colors, (color2) => `Mutation: ${color2}`),
+        ...strong ? [`Max STR: ${Math.floor(maxStrength ?? 0)}`] : [],
+        ...rare ? [`Rarity: ${rarity3}`] : []
+      ];
+      if (reasons.length) flagged.push({ pet, reasons, mutations });
+    }
+    return flagged;
   }
-  function ensureCoinTexture(TextureCtor) {
-    if (coinTexture) return Promise.resolve(coinTexture);
-    if (!coinTexturePromise) {
-      coinTexturePromise = new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => {
-          try {
-            coinTexture = TextureCtor.from(img);
-          } catch {
-            coinTexture = null;
-          }
-          resolve(coinTexture);
-        };
-        img.onerror = () => resolve(null);
-        img.src = coin2.img64;
+  var init_protection = __esm({
+    "src/features/sellAllPets/protection.ts"() {
+      "use strict";
+      init_data();
+      init_petValue();
+      init_math();
+      init_restrictions();
+    }
+  });
+
+  // src/features/sellAllPets/flow.ts
+  async function unfavoritedInventoryPets() {
+    try {
+      await ensureStore();
+    } catch {
+    }
+    const [inventory, favoriteIds2] = await Promise.all([
+      Atoms.inventory.myInventory.get().catch(() => null),
+      Atoms.inventory.favoriteIds.get().catch(() => [])
+    ]);
+    const favorites = new Set(Array.isArray(favoriteIds2) ? favoriteIds2.filter((id) => typeof id === "string") : []);
+    const items = Array.isArray(inventory?.items) ? inventory.items : [];
+    return items.filter(isInventoryPet).filter((pet) => !favorites.has(pet.id));
+  }
+  function totalSellValue(pets) {
+    let total = 0;
+    for (const pet of pets) {
+      const value = computeInventoryItemValue(pet);
+      if (typeof value === "number" && Number.isFinite(value)) total += value;
+    }
+    return total.toLocaleString("en-US");
+  }
+  async function countSaleValue() {
+    try {
+      const value = Number(await Atoms.pets.totalPetSellPrice.get());
+      if (Number.isFinite(value) && value > 0) StatsService.incrementShopStat("petsSoldValue", value);
+    } catch (error) {
+      console.error("[SellPet] Unable to read pet sell price", error);
+    }
+  }
+  async function runSellAllPetsFlow() {
+    await PlayerService.logItems();
+    const pets = await unfavoritedInventoryPets();
+    if (pets.length === 0) return;
+    const flagged = flagProtectedPets(pets);
+    if (flagged.length && !await confirmProtectedPetSale(flagged)) {
+      void toastSimple("Sell all Pets", "Sale cancelled.", "info").catch(() => {
+      });
+      return;
+    }
+    const totalValue = totalSellValue(pets);
+    let sold = 0;
+    let failures = 0;
+    for (const pet of pets) {
+      try {
+        await PlayerService.sellPet(pet.id);
+        sold += 1;
+        StatsService.incrementShopStat("petsSoldCount");
+        void countSaleValue();
+      } catch {
+        failures += 1;
+      }
+    }
+    if (failures === 0) {
+      void toastSimple("Sell all Pets", `${sold} pets have been sold for ${totalValue} coins!`, "success").catch(() => {
       });
     }
-    return coinTexturePromise;
+    audioPlayer.playSellNotification();
   }
-  function startCropValueOverlayInPixi() {
-    let running = true;
-    let currentCard2 = null;
-    let geometry = null;
-    let hitAreaBaseHeight = 0;
-    let valueText = null;
-    let valueIcon = null;
-    let valueBadge = null;
-    let graphicsCtor = null;
-    let iconRetryScheduled = false;
-    let currentGardenObject2 = null;
-    const debugState3 = {
-      attached: false,
-      lastSyncAt: null,
-      lastError: null,
-      hasValueText: false,
-      hasCoinTexture: false,
-      objectType: null
-    };
-    shareGlobal("__MG_CROP_VALUE_PIXI_DEBUG__", debugState3);
-    const priceWatcher = startCropPriceWatcherViaGardenObject();
-    const detachValueText = () => {
-      if (valueBadge) {
-        try {
-          valueBadge.destroy();
-        } catch {
-        }
-        valueBadge = null;
-      }
-      if (valueIcon) {
-        try {
-          valueIcon.destroy();
-        } catch {
-        }
-        valueIcon = null;
-      }
-      if (valueText) {
-        try {
-          valueText.destroy();
-        } catch {
-        }
-        valueText = null;
-      }
-      if (currentCard2?.hitArea) {
-        currentCard2.hitArea.y = 0;
-        currentCard2.hitArea.height = hitAreaBaseHeight;
-      }
-    };
-    const syncValueNodeUnsafe = () => {
-      debugState3.objectType = currentGardenObject2?.objectType ?? null;
-      if (!running || !currentCard2 || currentCard2.destroyed || !geometry || !isPlantObject3(currentGardenObject2) || // Switched off in the Misc menu: the card is left as the game drew it.
-      !readShowCropPrice()) {
-        detachValueText();
-        return;
-      }
-      const state5 = getReadySpriteState();
-      const ctors = state5?.ctors;
-      if (!state5 || !ctors) return;
-      const value = priceWatcher.get();
-      if (value == null) {
-        detachValueText();
-        return;
-      }
-      const text2 = formatInteger(value, "round");
-      if (!valueText) {
-        graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state5)));
-        if (graphicsCtor) {
-          valueBadge = new graphicsCtor();
-          currentCard2.addChild(valueBadge);
-        }
-        valueText = new ctors.Text({ text: text2, style: VALUE_TEXT_STYLE });
-        currentCard2.addChild(valueText);
-      } else if (valueText.text !== text2) {
-        valueText.text = text2;
-      }
-      if (!valueIcon && ctors.Sprite) {
-        if (coinTexture) {
-          valueIcon = new ctors.Sprite(coinTexture);
-          valueIcon.width = VALUE_ICON_SIZE;
-          valueIcon.height = VALUE_ICON_SIZE;
-          currentCard2.addChild(valueIcon);
-        } else if (!iconRetryScheduled) {
-          iconRetryScheduled = true;
-          ensureCoinTexture(ctors.Texture).then(() => {
-            iconRetryScheduled = false;
-            if (running) syncValueNode();
-          });
-        }
-      }
-      const rowHeight = Math.max(valueIcon ? VALUE_ICON_SIZE : 0, valueText.height);
-      const rowWidth = (valueIcon ? VALUE_ICON_SIZE + VALUE_ICON_GAP : 0) + valueText.width;
-      const badgeHeight = rowHeight + BADGE_PADDING_Y * 2;
-      const badgeTop = geometry.top - VALUE_BADGE_GAP - badgeHeight;
-      const rowTop = badgeTop + BADGE_PADDING_Y;
-      const startX = Math.max(0, (geometry.width - rowWidth) / 2);
-      if (valueIcon) {
-        valueIcon.position.set(startX, rowTop + (rowHeight - VALUE_ICON_SIZE) / 2);
-        valueText.position.set(startX + VALUE_ICON_SIZE + VALUE_ICON_GAP, rowTop + (rowHeight - valueText.height) / 2);
-      } else {
-        valueText.position.set(startX, rowTop + (rowHeight - valueText.height) / 2);
-      }
-      if (valueBadge) {
-        const badgeWidth = rowWidth + BADGE_PADDING_X * 2;
-        valueBadge.clear();
-        valueBadge.roundRect(0, 0, badgeWidth, badgeHeight, BADGE_RADIUS).fill({ color: BADGE_COLOR, alpha: BADGE_ALPHA });
-        valueBadge.position.set(startX - BADGE_PADDING_X, badgeTop);
-      }
-      if (currentCard2.hitArea) {
-        currentCard2.hitArea.y = badgeTop;
-        currentCard2.hitArea.height = hitAreaBaseHeight - badgeTop;
-      }
-    };
-    const syncValueNode = () => {
-      try {
-        syncValueNodeUnsafe();
-        debugState3.lastSyncAt = Date.now();
-        debugState3.lastError = null;
-        debugState3.hasValueText = !!valueText;
-        debugState3.hasCoinTexture = !!coinTexture;
-      } catch (error) {
-        debugState3.lastError = String(error?.message ?? error);
-        console.warn("[cropPrice] badge sync failed, clearing overlay", error);
-        try {
-          detachValueText();
-        } catch {
-        }
-      }
-    };
-    const subs = new Subscriptions();
-    subs.add(
-      watchGardenInfoCard((card4, geom) => {
-        currentCard2 = card4;
-        geometry = geom;
-        hitAreaBaseHeight = card4?.hitArea?.height ?? 0;
-        detachValueText();
-        debugState3.attached = !!card4;
-        if (card4) syncValueNode();
-      })
-    );
-    subs.add(priceWatcher.onChange(syncValueNode));
-    subs.add(onShowCropPriceChange(() => syncValueNode()));
-    void Atoms.data.myCurrentGardenObject.get().then((initial) => {
-      currentGardenObject2 = initial;
-      syncValueNode();
-    }).catch(() => {
-    });
-    subs.add(
-      Atoms.data.myCurrentGardenObject.onChange((next) => {
-        currentGardenObject2 = next;
-        syncValueNode();
-      })
-    );
-    return {
-      stop() {
-        if (!running) return;
-        running = false;
-        subs.dispose();
-        priceWatcher.stop();
-        detachValueText();
-        currentCard2 = null;
-      }
-    };
-  }
-  var VALUE_TEXT_STYLE, VALUE_BADGE_GAP, VALUE_ICON_SIZE, VALUE_ICON_GAP, BADGE_PADDING_X, BADGE_PADDING_Y, BADGE_RADIUS, BADGE_COLOR, BADGE_ALPHA, coinTexture, coinTexturePromise;
-  var init_badge = __esm({
-    "src/features/cropPrice/badge.ts"() {
+  var isInventoryPet;
+  var init_flow = __esm({
+    "src/features/sellAllPets/flow.ts"() {
       "use strict";
-      init_priceWatcher();
-      init_setting();
-      init_pageContext();
-      init_format();
-      init_emitter();
-      init_data();
       init_atoms();
-      init_gardenInfoCard();
-      init_context();
-      VALUE_TEXT_STYLE = { fontFamily: "Arial", fontSize: 14, fontWeight: "700", fill: "#FFD84D" };
-      VALUE_BADGE_GAP = 20;
-      VALUE_ICON_SIZE = 16;
-      VALUE_ICON_GAP = 4;
-      BADGE_PADDING_X = 8;
-      BADGE_PADDING_Y = 4;
-      BADGE_RADIUS = 6;
-      BADGE_COLOR = 0;
-      BADGE_ALPHA = 0.55;
-      coinTexture = null;
-      coinTexturePromise = null;
-    }
-  });
-
-  // src/features/locker/indicator.ts
-  function isDecorObject(obj) {
-    return !!obj && typeof obj === "object" && obj.objectType === "decor";
-  }
-  function startLockerIndicatorInPixi() {
-    let running = true;
-    let currentCard2 = null;
-    let geometry = null;
-    let border = null;
-    let lockIcon = null;
-    let graphicsCtor = null;
-    let currentGardenObject2 = null;
-    const debugState3 = { lastError: null, hasBorder: false, objectType: null };
-    shareGlobal("__MG_LOCKER_INDICATOR_PIXI_DEBUG__", debugState3);
-    const isLocked = () => {
-      const eggId = eggIdOf(currentGardenObject2);
-      if (eggId) return lockerRestrictionsService.isEggLocked(eggId);
-      if (isDecorObject(currentGardenObject2)) return lockerRestrictionsService.isDecorPickupLocked();
-      return lockerService.currentHarvestAllowed() === false;
-    };
-    const removeBorder = () => {
-      if (border) {
-        try {
-          border.destroy();
-        } catch {
-        }
-        border = null;
-      }
-      if (lockIcon) {
-        try {
-          lockIcon.destroy();
-        } catch {
-        }
-        lockIcon = null;
-      }
-      debugState3.hasBorder = false;
-    };
-    const syncUnsafe = () => {
-      debugState3.objectType = currentGardenObject2?.objectType ?? null;
-      if (!running || !currentCard2 || currentCard2.destroyed || !geometry || !isLocked()) {
-        removeBorder();
-        return;
-      }
-      const state5 = getReadySpriteState();
-      if (!graphicsCtor) {
-        graphicsCtor = state5 ? findGraphicsCtor(getStage(state5)) : null;
-        if (!graphicsCtor) return;
-      }
-      if (!border) {
-        border = new graphicsCtor();
-        currentCard2.addChild(border);
-      }
-      const left = -BORDER_EXPAND;
-      const top = -BORDER_EXPAND;
-      const width = Math.max(0, geometry.width + BORDER_EXPAND * 2);
-      const height = Math.max(0, geometry.height + BORDER_EXPAND * 2);
-      const inset = BORDER_WIDTH / 2;
-      border.clear();
-      border.roundRect(left + inset, top + inset, Math.max(0, width - BORDER_WIDTH), Math.max(0, height - BORDER_WIDTH), BORDER_RADIUS).stroke({ width: BORDER_WIDTH, color: BORDER_COLOR, alpha: 1 });
-      debugState3.hasBorder = true;
-      if (!lockIcon && state5?.ctors?.Text) {
-        lockIcon = new state5.ctors.Text({ text: LOCK_ICON_TEXT, style: LOCK_ICON_STYLE });
-        currentCard2.addChild(lockIcon);
-      }
-      if (lockIcon) {
-        const right = left + width;
-        lockIcon.position.set(right - lockIcon.width / 2 - LOCK_ICON_X_NUDGE, top - lockIcon.height / 2 + LOCK_ICON_Y_NUDGE);
-      }
-    };
-    const sync2 = () => {
-      try {
-        syncUnsafe();
-        debugState3.lastError = null;
-      } catch (error) {
-        debugState3.lastError = String(error?.message ?? error);
-        console.warn("[lockerIndicator] sync failed, clearing border", error);
-        try {
-          removeBorder();
-        } catch {
-        }
-      }
-    };
-    const subs = new Subscriptions();
-    subs.add(
-      watchGardenInfoCard((card4, geom) => {
-        removeBorder();
-        currentCard2 = card4;
-        geometry = geom;
-        sync2();
-      })
-    );
-    subs.add(lockerService.onSlotInfoChange(sync2));
-    subs.add(lockerRestrictionsService.subscribe(sync2));
-    void Atoms.data.myCurrentGardenObject.get().then((initial) => {
-      currentGardenObject2 = initial;
-      sync2();
-    }).catch(() => {
-    });
-    subs.add(
-      Atoms.data.myCurrentGardenObject.onChange((next) => {
-        currentGardenObject2 = next;
-        sync2();
-      })
-    );
-    return {
-      stop() {
-        if (!running) return;
-        running = false;
-        subs.dispose();
-        removeBorder();
-        currentCard2 = null;
-      }
-    };
-  }
-  var BORDER_COLOR, BORDER_WIDTH, BORDER_RADIUS, BORDER_EXPAND, LOCK_ICON_TEXT, LOCK_ICON_STYLE, LOCK_ICON_X_NUDGE, LOCK_ICON_Y_NUDGE;
-  var init_indicator = __esm({
-    "src/features/locker/indicator.ts"() {
-      "use strict";
-      init_locker();
-      init_restrictions();
-      init_atoms();
-      init_emitter();
-      init_pageContext();
-      init_gardenInfoCard();
-      init_context();
-      BORDER_COLOR = 12334551;
-      BORDER_WIDTH = 3;
-      BORDER_RADIUS = 12;
-      BORDER_EXPAND = 2;
-      LOCK_ICON_TEXT = "\u{1F512}";
-      LOCK_ICON_STYLE = { fontSize: 16 };
-      LOCK_ICON_X_NUDGE = 4;
-      LOCK_ICON_Y_NUDGE = 4;
+      init_jotai();
+      init_player();
+      init_audioPlayer();
+      init_toast();
+      init_stats();
+      init_value();
+      init_confirmModal();
+      init_protection();
+      isInventoryPet = (item) => !!item && item.itemType === "Pet" && typeof item.id === "string" && item.id.trim().length > 0;
     }
   });
 
@@ -23288,6 +26525,41 @@
         ring: "var(--chakra-ring-color, rgba(66,153,225,0.6))"
       };
       labelOf = (el) => (el.textContent || "").replace(/\s+/g, " ").trim() || (el.getAttribute("aria-label") ?? "").replace(/\s+/g, " ").trim();
+    }
+  });
+
+  // src/features/sellAllPets/keybind.ts
+  function installSellKeybindsOnce() {
+    if (sellKeybindsInstalled || typeof window === "undefined") return;
+    sellKeybindsInstalled = true;
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (shouldIgnoreKeydown(event)) return;
+        if (eventMatchesKeybind("sell.sell-all", event)) {
+          event.preventDefault();
+          event.stopPropagation();
+          void PlayerService.sellAllCrops();
+          return;
+        }
+        if (eventMatchesKeybind("sell.sell-all-pets", event)) {
+          event.preventDefault();
+          event.stopPropagation();
+          void runSellAllPetsFlow();
+        }
+      },
+      true
+    );
+  }
+  var sellKeybindsInstalled;
+  var init_keybind2 = __esm({
+    "src/features/sellAllPets/keybind.ts"() {
+      "use strict";
+      init_player();
+      init_keybinds();
+      init_keyboard();
+      init_flow();
+      sellKeybindsInstalled = false;
     }
   });
 
@@ -23559,7 +26831,7 @@
       }
       if (!buttonContainer || !buttonText || !buttonBg) return;
       const buttonTextHeight = safeSize(buttonText, "height", 20);
-      const badgeWidth = safeSize(buttonText, "width", 100) + BUTTON_PADDING_X * 2;
+      const badgeWidth = safeSize(buttonText, "width", 100) + BUTTON_PADDING_X2 * 2;
       const badgeHeight = Math.max(faceHeight, buttonTextHeight + 12);
       let localAnchor = { x: 0, y: 0 };
       try {
@@ -23570,11 +26842,11 @@
       } catch {
       }
       buttonBg.clear();
-      buttonBg.roundRect(0, 0, badgeWidth, badgeHeight, BUTTON_RADIUS).fill({ color: BUTTON_FILL_COLOR }).stroke({ width: BUTTON_BORDER_WIDTH, color: BUTTON_BORDER_COLOR });
-      buttonText.position.set(BUTTON_PADDING_X, (badgeHeight - buttonTextHeight) / 2);
+      buttonBg.roundRect(0, 0, badgeWidth, badgeHeight, BUTTON_RADIUS2).fill({ color: BUTTON_FILL_COLOR }).stroke({ width: BUTTON_BORDER_WIDTH, color: BUTTON_BORDER_COLOR });
+      buttonText.position.set(BUTTON_PADDING_X2, (badgeHeight - buttonTextHeight) / 2);
       buttonContainer.pivot.set(badgeWidth / 2, badgeHeight / 2);
       buttonContainer.position.set(
-        localAnchor.x + BUTTON_GAP + badgeWidth / 2,
+        localAnchor.x + BUTTON_GAP2 + badgeWidth / 2,
         localAnchor.y
       );
       debugState3.hasButton = true;
@@ -23647,7 +26919,7 @@
       }
     };
   }
-  var BUTTON_FACE_LABEL, SELL_PET_ACTION_TYPES, BUTTON_GAP, BUTTON_TEXT, BUTTON_TEXT_STYLE, BUTTON_PADDING_X, BUTTON_RADIUS, BUTTON_FILL_COLOR, BUTTON_BORDER_COLOR, BUTTON_BORDER_WIDTH, HOVER_SCALE, HOVER_SCALE_EASE, HOVER_SCALE_SETTLE_EPSILON;
+  var BUTTON_FACE_LABEL, SELL_PET_ACTION_TYPES, BUTTON_GAP2, BUTTON_TEXT, BUTTON_TEXT_STYLE, BUTTON_PADDING_X2, BUTTON_RADIUS2, BUTTON_FILL_COLOR, BUTTON_BORDER_COLOR, BUTTON_BORDER_WIDTH, HOVER_SCALE, HOVER_SCALE_EASE, HOVER_SCALE_SETTLE_EPSILON;
   var init_pixiButton = __esm({
     "src/features/sellAllPets/pixiButton.ts"() {
       "use strict";
@@ -23660,11 +26932,11 @@
       init_emitter();
       BUTTON_FACE_LABEL = "McButtonFace";
       SELL_PET_ACTION_TYPES = /* @__PURE__ */ new Set(["sellPet", "sellRainbowPet", "sellGoldPet"]);
-      BUTTON_GAP = 10;
+      BUTTON_GAP2 = 10;
       BUTTON_TEXT = "Sell all Pets";
       BUTTON_TEXT_STYLE = { fontFamily: "Arial", fontSize: 14, fontWeight: "700", fill: "#FFFFFF" };
-      BUTTON_PADDING_X = 14;
-      BUTTON_RADIUS = 10;
+      BUTTON_PADDING_X2 = 14;
+      BUTTON_RADIUS2 = 10;
       BUTTON_FILL_COLOR = 26548;
       BUTTON_BORDER_COLOR = 4763124;
       BUTTON_BORDER_WIDTH = 2;
@@ -23674,3275 +26946,30 @@
     }
   });
 
-  // src/features/locker/sellCropsLock.ts
-  function startSellCropsLockWatcher() {
-    const indicator = startDomLockIndicator({
-      look: SELL_CROPS_LOCK_LOOK,
-      selector: ".css-vmnhaw",
-      isTarget: hasSellCropsButton,
-      isLocked: () => !lockerRestrictionsService.allowsCropSale(currentFriendBonus() ?? 0)
-    });
-    indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
-    indicator.add(onFriendBonusChange(indicator.refresh));
-    return indicator;
-  }
-  var SELL_CROPS_LOCK_LOOK, hasSellCropsButton;
-  var init_sellCropsLock = __esm({
-    "src/features/locker/sellCropsLock.ts"() {
-      "use strict";
-      init_domLockMarks();
-      init_friendBonus();
-      init_restrictions();
-      SELL_CROPS_LOCK_LOOK = {
-        owner: "sell-crops",
-        style: {
-          border: "none",
-          "border-radius": "",
-          padding: "",
-          "box-sizing": "",
-          "box-shadow": "none",
-          overflow: "",
-          "z-index": "1000"
-        },
-        glyph: cornerGlyph(4)
-      };
-      hasSellCropsButton = (container) => /sell\s*crops/i.test((container.querySelector("button")?.textContent || "").trim());
-    }
-  });
-
-  // src/features/locker/eggHatchLockIndicator.ts
-  function startEggHatchLockIndicator() {
-    let currentEggId = null;
-    const indicator = startDomLockIndicator({
-      look: { owner: "egg", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyph: cornerGlyph(8) },
-      selector: ".css-502lyi",
-      isTarget: (el) => (el.textContent || "").toLowerCase().includes("egg"),
-      isLocked: () => lockerRestrictionsService.isEggLocked(currentEggId)
-    });
-    indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
-    void Atoms.data.myCurrentGardenObject.get().then((initial) => {
-      currentEggId = eggIdOf(initial);
-    }).catch(() => {
-    });
-    indicator.add(
-      Atoms.data.myCurrentGardenObject.onChange((next) => {
-        currentEggId = eggIdOf(next);
-        indicator.refresh();
-      })
-    );
-    return indicator;
-  }
-  var init_eggHatchLockIndicator = __esm({
-    "src/features/locker/eggHatchLockIndicator.ts"() {
-      "use strict";
-      init_atoms();
-      init_domLockMarks();
-      init_restrictions();
-    }
-  });
-
-  // src/features/locker/decorPickupLockIndicator.ts
-  function looksLikeDecorTooltip(el) {
-    const text2 = (el.textContent || "").toLowerCase();
-    return !!text2 && !!el.querySelector("canvas") && decorLabels().some((label2) => text2.includes(label2));
-  }
-  function startDecorPickupLockIndicator() {
-    const indicator = startDomLockIndicator({
-      look: { owner: "decor", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyph: cornerGlyph(8) },
-      selector: ".css-502lyi",
-      isTarget: looksLikeDecorTooltip,
-      isLocked: () => lockerRestrictionsService.isDecorPickupLocked()
-    });
-    indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
-    return indicator;
-  }
-  var decorLabels;
-  var init_decorPickupLockIndicator = __esm({
-    "src/features/locker/decorPickupLockIndicator.ts"() {
-      "use strict";
-      init_data();
-      init_domLockMarks();
-      init_restrictions();
-      decorLabels = memoOnCatalogs(() => {
-        const labels = /* @__PURE__ */ new Set();
-        for (const [decorId, entry] of Object.entries(decorCatalog2)) {
-          if (decorId) labels.add(decorId.toLowerCase());
-          if (typeof entry?.name === "string" && entry.name) labels.add(entry.name.toLowerCase());
-        }
-        return Array.from(labels);
-      });
-    }
-  });
-
-  // src/platform/modVersion.ts
-  function getLocalVersion() {
-    if (true) {
-      return "3.2.233";
-    }
-    if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
-      return GM_info.script.version;
-    }
-    return void 0;
-  }
-  async function fetchRemoteVersion() {
-    try {
-      const meta = extractUserscriptMetadata(await fetchScriptSource());
-      if (!meta) throw new Error("Metadata block not found in remote script");
-      return {
-        version: meta.get("version")?.[0],
-        download: meta.get("downloadurl")?.[0] ?? meta.get("updateurl")?.[0]
-      };
-    } catch (error) {
-      console.error("Unable to retrieve remote version:", error);
-      return null;
-    }
-  }
-  async function fetchScriptSource() {
-    const commitSha = await fetchLatestCommitSha();
-    const scriptUrl = commitSha ? `${RAW_BASE_URL}/${commitSha}/dist/${SCRIPT_FILE_PATH}` : `${RAW_BASE_URL}/refs/heads/${REPO_BRANCH}/dist/${SCRIPT_FILE_PATH}?t=${Date.now()}`;
-    return getText(scriptUrl, { noCache: true });
-  }
-  async function fetchLatestCommitSha() {
-    try {
-      const data = await getJSON(COMMITS_API_URL, {
-        noCache: true,
-        headers: { Accept: "application/vnd.github+json" }
-      });
-      const sha = typeof data?.sha === "string" ? data.sha.trim() : "";
-      if (sha) return sha;
-    } catch (error) {
-      console.warn("[MagicGarden] Failed to resolve latest commit SHA:", error);
-    }
-    return null;
-  }
-  function extractUserscriptMetadata(source) {
-    const header = source.match(/\/\/ ==UserScript==([\s\S]*?)\/\/ ==\/UserScript==/);
-    if (!header) return null;
-    const meta = /* @__PURE__ */ new Map();
-    for (const [, rawKey, rawValue] of header[1].matchAll(/^\/\/\s*@([^\s]+)\s+(.+)$/gm)) {
-      const key2 = rawKey.trim().toLowerCase();
-      if (!key2) continue;
-      const values = meta.get(key2) ?? [];
-      values.push(rawValue.trim());
-      meta.set(key2, values);
-    }
-    return meta;
-  }
-  var REPO_OWNER, REPO_NAME, REPO_BRANCH, SCRIPT_FILE_PATH, RAW_BASE_URL, COMMITS_API_URL;
-  var init_modVersion = __esm({
-    "src/platform/modVersion.ts"() {
-      "use strict";
-      init_http();
-      REPO_OWNER = "Ariedam64";
-      REPO_NAME = "MG-AriesMod";
-      REPO_BRANCH = "main";
-      SCRIPT_FILE_PATH = "quinoa-ws.min.user.js";
-      RAW_BASE_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}`;
-      COMMITS_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/commits/${REPO_BRANCH}`;
-    }
-  });
-
-  // src/features/inventory/itemInfo.ts
-  function readNestedValue(item, field2, parse) {
-    if (!item || typeof item !== "object") return null;
-    for (const source of [item, item.item, item.data]) {
-      if (!source || typeof source !== "object") continue;
-      const parsed = parse(source[field2]);
-      if (parsed != null) return parsed;
-    }
-    return null;
-  }
-  function firstNestedString(source, paths) {
-    for (const path of paths) {
-      let current3 = source;
-      for (const key2 of path) current3 = current3 && typeof current3 === "object" ? current3[key2] : void 0;
-      const value = stringOrEmpty(current3);
-      if (value) return value;
-    }
-    return "";
-  }
-  function plantLookup(order) {
-    const namePaths = order.map((part) => [part, "name"]);
-    return {
-      idField: "species",
-      catalog: plantCatalog2,
-      name: (_id, entry) => firstNestedString(entry, namePaths),
-      rarityPaths: order.map((part) => [part, "rarity"])
-    };
-  }
-  function flatLookup(idField, catalog, name) {
-    return { idField, catalog, name: (id) => name(id) ?? "", rarityPaths: [["rarity"]] };
-  }
-  function lookupOf(item) {
-    const lookup = CATALOG_LOOKUPS[itemTypeOf(item)];
-    if (!lookup) return null;
-    const id = readNestedString(item, lookup.idField);
-    if (!id) return null;
-    return { lookup, id, entry: lookup.catalog?.[id] };
-  }
-  function getInventoryItemName(item) {
-    if (!item || typeof item !== "object") return "";
-    const found = lookupOf(item);
-    if (found) return found.lookup.name(found.id, found.entry) || found.id;
-    return stringOrEmpty(item.name) || stringOrEmpty(item.id) || itemTypeOf(item);
-  }
-  function getInventoryItemRarity(item) {
-    if (!item || typeof item !== "object") return "";
-    const found = lookupOf(item);
-    return found ? firstNestedString(found.entry, found.lookup.rarityPaths) : "";
-  }
-  function getInventoryItemQuantity(item) {
-    if (!item || typeof item !== "object") return 0;
-    if (SINGLE_ITEM_TYPES.has(itemTypeOf(item))) return 1;
-    const quantity = Number(item.quantity);
-    return Number.isFinite(quantity) && quantity >= 0 ? quantity : 0;
-  }
-  function collectSpeciesCandidates(source, out) {
-    if (!source || typeof source !== "object") return;
-    for (const field2 of SPECIES_FIELDS) {
-      const value = stringOrEmpty(source[field2]);
-      if (value) out.add(value);
-    }
-  }
-  function getInventoryItemSize(item) {
-    if (!item || typeof item !== "object") return null;
-    const type = itemTypeOf(item);
-    if (type !== "Crop" && type !== "Produce") return null;
-    const direct = readCropSize(item);
-    if (direct != null) return direct;
-    const candidates = /* @__PURE__ */ new Set();
-    collectSpeciesCandidates(item, candidates);
-    collectSpeciesCandidates(item.item, candidates);
-    collectSpeciesCandidates(item.data, candidates);
-    for (const species of candidates) {
-      const size = readCropSize({ ...item, species });
-      if (size != null) return size;
-    }
-    return null;
-  }
-  function collectMutations(source, out) {
-    if (!source || typeof source !== "object") return;
-    const record2 = source;
-    if (Array.isArray(record2.mutations)) {
-      for (const mutation of record2.mutations) {
-        if (typeof mutation === "string" && mutation.trim()) out.push(mutation.trim());
-      }
-    }
-    if (Array.isArray(record2.slots)) {
-      for (const slot of record2.slots) collectMutations(slot, out);
-    }
-  }
-  function getInventoryItemMutations(item) {
-    if (!item || typeof item !== "object") return [];
-    const mutations = [];
-    collectMutations(item, mutations);
-    collectMutations(item.item, mutations);
-    collectMutations(item.data, mutations);
-    return mutations;
-  }
-  function getInventoryItemValue(item) {
-    if (!item || typeof item !== "object") return null;
-    const raw = item.value;
-    if (typeof raw === "number" && Number.isFinite(raw)) return raw;
-    if (typeof raw === "string" && raw.trim()) {
-      const parsed = Number(raw);
-      return Number.isFinite(parsed) ? parsed : null;
-    }
-    return null;
-  }
-  function petAbilityName(abilityId) {
-    if (typeof abilityId !== "string" || !abilityId.trim()) return null;
-    const name = petAbilities2[abilityId.trim()]?.name;
-    return stringOrEmpty(name) || null;
-  }
-  function itemMatchesSearch(item, normalizedQuery) {
-    if (!normalizedQuery) return true;
-    const visited = /* @__PURE__ */ new Set();
-    const matches = (value) => {
-      if (value == null) return false;
-      if (typeof value === "string") return normalize(value).includes(normalizedQuery);
-      if (typeof value === "number" || typeof value === "boolean") return normalize(String(value)).includes(normalizedQuery);
-      if (Array.isArray(value)) return value.some(matches);
-      if (typeof value === "object") {
-        if (visited.has(value)) return false;
-        visited.add(value);
-        for (const [key2, entry] of Object.entries(value)) {
-          if (key2 === "itemType") continue;
-          if (key2 === "abilities") {
-            if (Array.isArray(entry) && entry.some((id) => matches(petAbilityName(id)))) return true;
-            continue;
-          }
-          if (matches(entry)) return true;
-        }
-      }
-      return false;
-    };
-    const abilityNames = Array.isArray(item?.abilities) ? item.abilities.map(petAbilityName).filter(Boolean) : [];
-    const ownString = (field2) => typeof item?.[field2] === "string" ? item[field2] : null;
-    const candidates = [
-      getInventoryItemName(item),
-      ...["species", "seedSpecies", "plantSpecies", "petSpecies", "eggId", "decorId", "toolId", "id"].map(ownString),
-      ...abilityNames
-    ];
-    return candidates.some(matches) || matches(item);
-  }
-  var normalize, stringOrEmpty, itemTypeOf, readNestedString, readNestedNumber, CROP_ORDER, CATALOG_LOOKUPS, SINGLE_ITEM_TYPES, SPECIES_FIELDS;
-  var init_itemInfo = __esm({
-    "src/features/inventory/itemInfo.ts"() {
-      "use strict";
-      init_data();
-      init_names();
-      init_cropSize();
-      normalize = (s) => (s ?? "").trim().toLowerCase();
-      stringOrEmpty = (value) => typeof value === "string" ? value.trim() : "";
-      itemTypeOf = (item) => stringOrEmpty(item?.itemType);
-      readNestedString = (item, field2) => readNestedValue(item, field2, (value) => stringOrEmpty(value) || null);
-      readNestedNumber = (item, field2) => readNestedValue(item, field2, (value) => {
-        if (typeof value === "number" && Number.isFinite(value)) return value;
-        if (typeof value === "string" && value.trim()) {
-          const parsed = Number(value);
-          return Number.isFinite(parsed) ? parsed : null;
-        }
-        return null;
-      });
-      CROP_ORDER = ["crop", "plant", "seed"];
-      CATALOG_LOOKUPS = {
-        Seed: { ...plantLookup(["seed", "crop", "plant"]), name: (id) => seedCatalogName(id) ?? "" },
-        Crop: plantLookup(CROP_ORDER),
-        Produce: plantLookup(CROP_ORDER),
-        Plant: plantLookup(["plant", "crop", "seed"]),
-        Pet: { idField: "petSpecies", catalog: petCatalog2, name: (_id, entry) => stringOrEmpty(entry?.name), rarityPaths: [["rarity"]] },
-        Egg: flatLookup("eggId", eggCatalog2, eggCatalogName),
-        Tool: flatLookup("toolId", toolCatalog2, toolCatalogName),
-        Decor: flatLookup("decorId", decorCatalog2, decorCatalogName)
-      };
-      SINGLE_ITEM_TYPES = /* @__PURE__ */ new Set(["Produce", "Crop", "Plant", "Pet"]);
-      SPECIES_FIELDS = ["species", "seedSpecies", "plantSpecies", "cropSpecies", "baseSpecies", "seedKey"];
-    }
-  });
-
-  // src/features/inventory/petStrength.ts
-  function statsFor(item) {
-    for (const field2 of ["petSpecies", "species", "name"]) {
-      const candidate = readNestedString(item, field2);
-      if (!candidate) continue;
-      const key2 = speciesKey(candidate);
-      const stats = key2 ? petStatsBySpecies().get(key2) : void 0;
-      if (stats) return stats;
-    }
-    return null;
-  }
-  function getPetStrengthInfo(item) {
-    if (!item || typeof item !== "object" || itemTypeOf(item) !== "Pet") return null;
-    const stats = statsFor(item);
-    if (!stats) return null;
-    const { maxScale, hoursToMature } = stats;
-    const xp = Math.max(0, readNestedNumber(item, "xp") ?? 0);
-    const xpComponent = Math.min(Math.floor(xp / (hoursToMature * 3600) * 30), 30);
-    const scale = clamp(readNestedNumber(item, "targetScale") ?? 1, 1, maxScale);
-    const maxStrength = clamp(Math.floor((scale - 1) / (maxScale - 1) * 20 + 80), 0, 100);
-    const strength = clamp(xpComponent + maxStrength - 30, 0, maxStrength);
-    return { strength, maxStrength };
-  }
-  var speciesKey, petStatsBySpecies, getPetStrength2;
-  var init_petStrength = __esm({
-    "src/features/inventory/petStrength.ts"() {
-      "use strict";
-      init_data();
-      init_math();
-      init_itemInfo();
-      speciesKey = (value) => value.toLowerCase().replace(/['’`]/g, "").replace(/\s+/g, "").replace(/-/g, "").replace(/(seed|plant|baby|fruit|crop)$/i, "");
-      petStatsBySpecies = memoOnCatalogs(() => {
-        const map2 = /* @__PURE__ */ new Map();
-        const register2 = (key2, stats) => {
-          if (typeof key2 !== "string") return;
-          const normalized = speciesKey(key2);
-          if (normalized && !map2.has(normalized)) map2.set(normalized, stats);
-        };
-        for (const [species, entry] of Object.entries(petCatalog2)) {
-          const maxScale = Number(entry?.maxScale);
-          const hoursToMature = Number(entry?.hoursToMature);
-          if (!Number.isFinite(maxScale) || maxScale <= 1) continue;
-          if (!Number.isFinite(hoursToMature) || hoursToMature <= 0) continue;
-          register2(species, { maxScale, hoursToMature });
-          register2(entry?.name, { maxScale, hoursToMature });
-        }
-        return map2;
-      });
-      getPetStrength2 = (item) => getPetStrengthInfo(item)?.strength ?? null;
-    }
-  });
-
-  // src/features/inventory/comparators.ts
-  function compareByNameThenTypeThenId(a, b) {
-    const nameA = getInventoryItemName(a);
-    const nameB = getInventoryItemName(b);
-    if (nameA && nameB) {
-      const cmp = compareText(nameA, nameB);
-      if (cmp !== 0) return cmp;
-    }
-    if (!nameA && nameB) return 1;
-    if (nameA && !nameB) return -1;
-    return compareText(stringField(a, "itemType"), stringField(b, "itemType")) || compareText(stringField(a, "id"), stringField(b, "id"));
-  }
-  function byOptionalNumber(read2, isDesc) {
-    return (a, b) => {
-      const va = read2(a);
-      const vb = read2(b);
-      const hasA = typeof va === "number" && Number.isFinite(va);
-      const hasB = typeof vb === "number" && Number.isFinite(vb);
-      if (hasA && hasB && va !== vb) return isDesc ? vb - va : va - vb;
-      if (hasA && !hasB) return isDesc ? -1 : 1;
-      if (!hasA && hasB) return isDesc ? 1 : -1;
-      return compareByNameThenTypeThenId(a, b);
-    };
-  }
-  function comparatorFor(sortKey, isDesc) {
-    const directed = (cmp) => isDesc ? -cmp : cmp;
-    switch (sortKey) {
-      case "alpha":
-        return (a, b) => directed(compareByNameThenTypeThenId(a, b));
-      case "qty":
-        return (a, b) => {
-          const diff = getInventoryItemQuantity(a) - getInventoryItemQuantity(b);
-          return diff !== 0 ? directed(diff) : compareByNameThenTypeThenId(a, b);
-        };
-      case "rarity":
-        return (a, b) => {
-          const rarityA = getInventoryItemRarity(a);
-          const rarityB = getInventoryItemRarity(b);
-          const rankA = rarityRank(rarityA);
-          const rankB = rarityRank(rarityB);
-          if (rankA !== rankB) return directed(rankA - rankB);
-          return compareText(rarityA, rarityB) || compareByNameThenTypeThenId(a, b);
-        };
-      case "value":
-        return byOptionalNumber(ownValue, isDesc);
-      case "size":
-        return byOptionalNumber(getInventoryItemSize, isDesc);
-      case "strength":
-        return byOptionalNumber(getPetStrength2, isDesc);
-      case "mutations":
-        return (a, b) => {
-          const mutationsA = getInventoryItemMutations(a);
-          const mutationsB = getInventoryItemMutations(b);
-          if (mutationsA.length !== mutationsB.length) return directed(mutationsA.length - mutationsB.length);
-          if (mutationsA.length > 0) {
-            const cmp = compareText(sortedMutationLabel(mutationsA), sortedMutationLabel(mutationsB));
-            if (cmp !== 0) return cmp;
-          }
-          return compareByNameThenTypeThenId(a, b);
-        };
-      default:
-        return null;
-    }
-  }
-  function sortInventoryItems(items, sortKey, direction) {
-    const sorted = items.slice();
-    const comparator = comparatorFor(sortKey, direction === "desc");
-    if (comparator) sorted.sort(comparator);
-    return sorted;
-  }
-  var compareText, stringField, ownValue, sortedMutationLabel;
-  var init_comparators = __esm({
-    "src/features/inventory/comparators.ts"() {
-      "use strict";
-      init_data();
-      init_itemInfo();
-      init_petStrength();
-      compareText = (a, b) => a.localeCompare(b, void 0, { sensitivity: "base" });
-      stringField = (item, field2) => typeof item?.[field2] === "string" ? item[field2] : "";
-      ownValue = (item) => typeof item?.value === "number" ? item.value : null;
-      sortedMutationLabel = (mutations) => mutations.slice().sort(compareText).join("\0");
-    }
-  });
-
-  // src/features/inventory/sortOptions.ts
-  function filterKeysByItemType() {
-    const map2 = /* @__PURE__ */ new Map();
-    for (const [filterKey, itemTypes] of Object.entries(FILTER_LABEL_TO_ITEM_TYPES)) {
-      for (const itemType of itemTypes) {
-        const type = normalize(itemType);
-        if (type) map2.set(type, [...map2.get(type) ?? [], filterKey]);
-      }
-    }
-    return map2;
-  }
-  function extrasForFilter(filterKey) {
-    if (!filterKey) return [];
-    const direct = EXTRA_SORTS[filterKey];
-    if (direct?.length) return direct;
-    if (filterKey.endsWith("s")) {
-      const singular = EXTRA_SORTS[filterKey.slice(0, -1)];
-      if (singular?.length) return singular;
-    }
-    return [];
-  }
-  function extrasForItemType(itemType) {
-    const type = normalize(itemType);
-    if (!type) return [];
-    const extras = new Set(EXTRA_SORTS[type] ?? []);
-    for (const filterKey of FILTER_KEYS_BY_ITEM_TYPE.get(type) ?? []) {
-      for (const key2 of EXTRA_SORTS[filterKey] ?? []) extras.add(key2);
-    }
-    return [...extras];
-  }
-  function intersect(sets) {
-    if (!sets.length) return null;
-    return sets.reduce((acc, set2) => new Set([...acc].filter((key2) => set2.has(key2))));
-  }
-  function computeSortOptions(activeFilters, shownItemTypes2) {
-    const filterSets = activeFilters.map((value) => normalize(value)).filter(Boolean).map((key2) => /* @__PURE__ */ new Set([...BASE_SORT, ...extrasForFilter(key2)]));
-    const typeSets = [...shownItemTypes2 ?? []].map((type) => /* @__PURE__ */ new Set([...BASE_SORT, ...extrasForItemType(type)]));
-    const fromFilters = intersect(filterSets);
-    const fromTypes = intersect(typeSets);
-    let allowed = fromFilters && fromTypes ? intersect([fromFilters, fromTypes]) : fromFilters ?? fromTypes;
-    if (!allowed?.size) allowed = new Set(BASE_SORT);
-    return SORT_KEYS.filter((key2) => key2 === "none" || allowed.has(key2)).map((value) => ({ value, label: SORT_LABELS[value] }));
-  }
-  var SORT_KEYS, BASE_SORT, SORT_LABELS, DIRECTIONS, DIRECTION_LABELS, DEFAULT_DIRECTION, isSortKey, isSortDirection, EXTRA_SORTS, FILTER_LABEL_TO_ITEM_TYPES, FILTER_KEYS_BY_ITEM_TYPE;
-  var init_sortOptions = __esm({
-    "src/features/inventory/sortOptions.ts"() {
-      "use strict";
-      init_itemInfo();
-      SORT_KEYS = ["none", "alpha", "qty", "rarity", "value", "size", "mutations", "strength"];
-      BASE_SORT = ["alpha", "qty", "rarity", "value"];
-      SORT_LABELS = {
-        none: "None",
-        alpha: "A\u2013Z",
-        qty: "Quantity",
-        rarity: "Rarity",
-        value: "Values",
-        size: "Size",
-        mutations: "Mutations",
-        strength: "Strength"
-      };
-      DIRECTIONS = ["asc", "desc"];
-      DIRECTION_LABELS = { asc: "Ascending", desc: "Descending" };
-      DEFAULT_DIRECTION = {
-        none: "asc",
-        alpha: "asc",
-        qty: "desc",
-        rarity: "asc",
-        value: "desc",
-        size: "desc",
-        mutations: "desc",
-        strength: "desc"
-      };
-      isSortKey = (value) => typeof value === "string" && SORT_KEYS.includes(value);
-      isSortDirection = (value) => typeof value === "string" && DIRECTIONS.includes(value);
-      EXTRA_SORTS = {
-        seed: [],
-        tool: [],
-        decor: [],
-        crop: ["size", "mutations"],
-        produce: ["size", "mutations"],
-        plant: [],
-        pet: ["mutations", "strength"]
-      };
-      FILTER_LABEL_TO_ITEM_TYPES = {
-        crop: ["Produce"],
-        crops: ["Produce"],
-        produce: ["Produce"],
-        seed: ["Seed"],
-        seeds: ["Seed"],
-        plant: ["Plant"],
-        plants: ["Plant"],
-        pet: ["Pet"],
-        pets: ["Pet"],
-        tool: ["Tool"],
-        tools: ["Tool"],
-        decor: ["Decor"],
-        decors: ["Decor"],
-        decoration: ["Decor"],
-        decorations: ["Decor"],
-        egg: ["Egg"],
-        eggs: ["Egg"]
-      };
-      FILTER_KEYS_BY_ITEM_TYPE = filterKeysByItemType();
-    }
-  });
-
-  // src/features/inventory/filters.ts
-  function getActiveFilters(grid) {
-    return Array.from(grid.querySelectorAll(FILTER_CHECKBOX_SELECTOR)).filter(isChecked).map((label2) => (label2.querySelector(FILTER_CHECKBOX_LABEL_SELECTOR)?.textContent ?? "").trim()).filter(Boolean);
-  }
-  function getSearchQuery(grid) {
-    const input = grid?.querySelector(SEARCH_INPUT_SELECTOR);
-    return normalize(typeof input?.value === "string" ? input.value : "");
-  }
-  function filterContextKey(filters, search2) {
-    const keys = filters.map(normalize).filter((value) => value && value !== "all");
-    keys.sort();
-    return `${keys.join("|")}::${normalize(search2)}`;
-  }
-  function rememberShownTypes(contextKey, types) {
-    const next = new Set([...types].map(normalize).filter(Boolean));
-    const previous = shownTypesByContext.get(contextKey);
-    if (previous && previous.size === next.size && [...previous].every((type) => next.has(type))) return;
-    shownTypesByContext.set(contextKey, next);
-    shownTypesChanged.emit(contextKey);
-  }
-  function filterLabelToItemTypes(filter) {
-    const key2 = normalize(filter);
-    if (!key2 || key2 === "all") return [];
-    const mapped = FILTER_LABEL_TO_ITEM_TYPES[key2];
-    if (mapped) return mapped;
-    const singular = key2.endsWith("s") ? key2.slice(0, -1) : key2;
-    return singular ? [singular.charAt(0).toUpperCase() + singular.slice(1)] : [];
-  }
-  function filterInventoryItems(items, filters, searchQuery) {
-    const itemTypes = new Set(filters.flatMap(filterLabelToItemTypes).filter(Boolean));
-    const byType = itemTypes.size ? items.filter((item) => itemTypes.has(itemTypeOf(item))) : items.slice();
-    const search2 = normalize(searchQuery);
-    const shown = search2 ? byType.filter((item) => itemMatchesSearch(item, search2)) : byType;
-    const playersInRoom3 = playersInRoomForValues();
-    for (const item of shown) {
-      if (item && typeof item === "object") item.value = computeInventoryItemValue(item, { playersInRoom: playersInRoom3 }) ?? null;
-    }
-    const types = new Set(shown.map(itemTypeOf).filter(Boolean));
-    rememberShownTypes(filterContextKey(filters, search2), types);
-    return shown;
-  }
-  var FILTER_CHECKBOX_SELECTOR, FILTER_CHECKBOX_LABEL_SELECTOR, SEARCH_INPUT_SELECTOR, isChecked, shownTypesByContext, shownTypesChanged, onShownItemTypesChange, shownItemTypes;
-  var init_filters = __esm({
-    "src/features/inventory/filters.ts"() {
-      "use strict";
-      init_emitter();
-      init_itemInfo();
-      init_sortOptions();
-      init_value();
-      FILTER_CHECKBOX_SELECTOR = "label.chakra-checkbox.css-1v6h4z7";
-      FILTER_CHECKBOX_LABEL_SELECTOR = ".chakra-checkbox__label";
-      SEARCH_INPUT_SELECTOR = "input.chakra-input.css-8e1l1i";
-      isChecked = (el) => el.matches("[data-checked]") || !!el.querySelector("[data-checked]");
-      shownTypesByContext = /* @__PURE__ */ new Map();
-      shownTypesChanged = new Emitter();
-      onShownItemTypesChange = (listener) => shownTypesChanged.on(listener);
-      shownItemTypes = (filters, search2) => shownTypesByContext.get(filterContextKey(filters, search2)) ?? null;
-    }
-  });
-
-  // src/features/inventory/strengthBadge.ts
-  function badgeTone(item) {
-    const mutations = new Set(getInventoryItemMutations(item).map((m) => m.toLowerCase()));
-    if (mutations.has("rainbow")) return "rainbow";
-    if (mutations.has("gold") || mutations.has("golden")) return "gold";
-    return "normal";
-  }
-  function applyBadgeTone(badge2, tone) {
-    if (badge2.dataset.tmStrengthTone === tone) return;
-    badge2.dataset.tmStrengthTone = tone;
-    const style = badge2.style;
-    style.backgroundImage = "";
-    style.backgroundColor = "";
-    style.color = "";
-    style.backgroundClip = "";
-    style.webkitBackgroundClip = "";
-    style.backgroundOrigin = "";
-    style.webkitTextFillColor = "";
-    style.fontWeight = "700";
-    if (tone === "rainbow") {
-      style.color = "transparent";
-      style.backgroundImage = `linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.25)), ${RAINBOW_TEXT}`;
-      style.backgroundClip = "padding-box, text";
-      style.webkitBackgroundClip = "padding-box, text";
-      style.backgroundOrigin = "padding-box, text";
-      style.webkitTextFillColor = "transparent";
-    } else if (tone === "gold") {
-      style.color = GAME_YELLOW;
-      style.backgroundColor = GAME_YELLOW_SOFT;
-    } else {
-      style.color = "#8fd3ff";
-      style.backgroundColor = "rgba(79, 166, 255, 0.28)";
-    }
-  }
-  function ensureBadge(textEl, before) {
-    let badge2 = textEl.querySelector(`.${BADGE_CLASS}`);
-    if (!badge2) {
-      badge2 = document.createElement("span");
-      badge2.className = BADGE_CLASS;
-      badge2.textContent = "MAX";
-      Object.assign(badge2.style, {
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "0 3px",
-        marginRight: "0",
-        borderRadius: "3px",
-        fontSize: "0.5rem",
-        lineHeight: "1",
-        fontWeight: "700",
-        color: GAME_YELLOW,
-        backgroundColor: GAME_YELLOW_SOFT
-      });
-    }
-    if (badge2.parentElement !== textEl) textEl.insertBefore(badge2, before);
-    return badge2;
-  }
-  function ensureParts(textEl) {
-    let label2 = textEl.querySelector(`.${LABEL_CLASS}`);
-    let current3 = textEl.querySelector(`.${CURRENT_CLASS}`);
-    let max = textEl.querySelector(`.${MAX_CLASS}`);
-    if (!label2 || !current3 || !max) {
-      textEl.textContent = "";
-      label2 = Object.assign(document.createElement("span"), { className: LABEL_CLASS });
-      current3 = Object.assign(document.createElement("span"), { className: CURRENT_CLASS });
-      max = Object.assign(document.createElement("span"), { className: MAX_CLASS });
-      textEl.append(label2, current3, max);
-    }
-    return { label: label2, current: current3, max };
-  }
-  function updateStrengthText(card4, item) {
-    const wrap = card4.querySelector(STRENGTH_WRAPPER_SELECTOR);
-    const textEl = wrap?.querySelector(STRENGTH_TEXT_SELECTOR);
-    if (!wrap || !textEl) return;
-    const info = getPetStrengthInfo(item);
-    if (!info || !Number.isFinite(info.maxStrength) || info.maxStrength <= 0) return;
-    const printed = parseFirstInteger(textEl.textContent ?? "");
-    const currentStrength = printed ?? (Number.isFinite(info.strength) ? Math.round(info.strength) : null);
-    if (currentStrength == null) return;
-    const max = Math.round(info.maxStrength);
-    if (!Number.isFinite(max) || max <= 0) return;
-    const current3 = clamp(currentStrength, 0, max);
-    const isMax = current3 >= max;
-    const parts = ensureParts(textEl);
-    setText(parts.label, "STR ");
-    setText(parts.current, String(current3));
-    parts.current.style.setProperty("color", "#ffffff", "important");
-    parts.current.style.setProperty("font-weight", "700", "important");
-    if (isMax) {
-      applyBadgeTone(ensureBadge(textEl, parts.label), badgeTone(item));
-      setText(parts.max, "");
-      parts.max.style.display = "none";
-    } else {
-      textEl.querySelector(`.${BADGE_CLASS}`)?.remove();
-      setText(parts.max, `/${max}`);
-      parts.max.style.display = "";
-      parts.max.style.setProperty("font-weight", "700", "important");
-    }
-    parts.max.style.visibility = "";
-    parts.max.style.setProperty("color", "#ffffff", "important");
-    wrap.dataset[IS_MAX_DATASET_KEY] = isMax ? "1" : "0";
-  }
-  function ancestorContaining(start2, selector) {
-    for (let current3 = start2; current3; current3 = current3.parentElement) {
-      if (current3.querySelector(selector)) return current3;
-    }
-    return null;
-  }
-  function alignStrengthText(card4) {
-    const wrap = card4.querySelector(STRENGTH_WRAPPER_SELECTOR);
-    if (!wrap) return;
-    if (wrap.dataset[BASE_TRANSFORM_DATASET_KEY] == null) {
-      wrap.dataset[BASE_TRANSFORM_DATASET_KEY] = wrap.style.transform ?? "";
-    }
-    const baseTransform = wrap.dataset[BASE_TRANSFORM_DATASET_KEY] ?? "";
-    wrap.style.transform = baseTransform;
-    const textEl = wrap.querySelector(STRENGTH_TEXT_SELECTOR);
-    if (!textEl) return;
-    const isMax = wrap.dataset[IS_MAX_DATASET_KEY];
-    const shouldAlign = isMax === "0" || isMax === "1" || isMax == null && !!textEl.textContent?.includes("/");
-    if (!shouldAlign) {
-      if (wrap.style.pointerEvents) wrap.style.pointerEvents = "";
-      return;
-    }
-    const row5 = ancestorContaining(wrap, FAVORITE_BUTTON_SELECTOR) ?? ancestorContaining(card4, FAVORITE_BUTTON_SELECTOR);
-    const favorite = row5?.querySelector(FAVORITE_BUTTON_SELECTOR);
-    if (!row5 || !favorite) return;
-    const anchor = favorite.querySelector("svg") ?? favorite.querySelector(".chakra-icon") ?? favorite;
-    const rowRect = row5.getBoundingClientRect();
-    if (!rowRect.width) return;
-    const GAP_PX_MAX = 5;
-    const GAP_PX_NON_MAX = 7;
-    let deltaX = null;
-    if (isMax === "1") {
-      const badgeRect = textEl.querySelector(`.${BADGE_CLASS}`)?.getBoundingClientRect();
-      if (badgeRect?.width) deltaX = rowRect.left + GAP_PX_MAX - badgeRect.left;
-    }
-    if (deltaX == null) {
-      const anchorRect = anchor.getBoundingClientRect();
-      const textRect = textEl.getBoundingClientRect();
-      if (!anchorRect.width || !textRect.width) return;
-      deltaX = anchorRect.left - textRect.right - GAP_PX_NON_MAX;
-    }
-    if (!Number.isFinite(deltaX)) return;
-    const shift = `translateX(${Math.round(deltaX)}px)`;
-    wrap.style.transform = baseTransform ? `${baseTransform} ${shift}` : shift;
-    textEl.style.margin = "0";
-    if (wrap.style.pointerEvents) wrap.style.pointerEvents = "";
-  }
-  var STRENGTH_WRAPPER_SELECTOR, STRENGTH_TEXT_SELECTOR, FAVORITE_BUTTON_SELECTOR, LABEL_CLASS, CURRENT_CLASS, MAX_CLASS, BADGE_CLASS, IS_MAX_DATASET_KEY, BASE_TRANSFORM_DATASET_KEY, GAME_YELLOW, GAME_YELLOW_SOFT, RAINBOW_TEXT, parseFirstInteger, setText;
-  var init_strengthBadge = __esm({
-    "src/features/inventory/strengthBadge.ts"() {
-      "use strict";
-      init_math();
-      init_itemInfo();
-      init_petStrength();
-      STRENGTH_WRAPPER_SELECTOR = ".McFlex.css-15lpbqz";
-      STRENGTH_TEXT_SELECTOR = ".chakra-text.css-wqvsdi";
-      FAVORITE_BUTTON_SELECTOR = "button.chakra-button.css-1iytwn1";
-      LABEL_CLASS = "tm-strength__label";
-      CURRENT_CLASS = "tm-strength__current";
-      MAX_CLASS = "tm-strength__max";
-      BADGE_CLASS = "tm-strength__badge";
-      IS_MAX_DATASET_KEY = "tmStrengthIsMax";
-      BASE_TRANSFORM_DATASET_KEY = "tmStrengthBaseTransform";
-      GAME_YELLOW = "var(--chakra-colors-Yellow-Magic, #F3D32B)";
-      GAME_YELLOW_SOFT = "rgba(243, 211, 43, 0.25)";
-      RAINBOW_TEXT = "linear-gradient(90deg, #ff6b6b 0%, #ffd86f 25%, #6bff8f 50%, #6bc7ff 75%, #b86bff 100%)";
-      parseFirstInteger = (text2) => {
-        const match = text2.match(/(\d+)/);
-        const parsed = match ? Number(match[1]) : NaN;
-        return Number.isFinite(parsed) ? parsed : null;
-      };
-      setText = (el, text2) => {
-        if (el.textContent !== text2) el.textContent = text2;
-      };
-    }
-  });
-
-  // src/features/inventory/inventoryDom.ts
-  function isVisible(el) {
-    if (!el || !document.contains(el)) return false;
-    const rect = el.getBoundingClientRect();
-    const cs = getComputedStyle(el);
-    if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") return false;
-    return rect.width > 0 && rect.height > 0;
-  }
-  function getItemsContainer(grid) {
-    return grid.querySelector(ITEMS_CONTAINER_SELECTOR) || document.querySelector(ITEMS_CONTAINER_SELECTOR);
-  }
-  function cardOf(element) {
-    if (ITEM_CARD_SELECTORS.some((selector) => element.matches(selector))) return element;
-    return element.querySelector(ITEM_CARD_SELECTOR);
-  }
-  function clearNoiseText(container) {
-    if (!(container instanceof HTMLElement)) return;
-    for (const node of container.querySelectorAll(NOISE_SELECTOR)) {
-      const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
-      for (let text2 = walker.nextNode(); text2; text2 = walker.nextNode()) {
-        if (text2.textContent) text2.textContent = "";
-      }
-    }
-  }
-  function getDomEntries(container) {
-    clearNoiseText(container);
-    const entries = [];
-    for (const child of Array.from(container.children)) {
-      if (!(child instanceof HTMLElement)) continue;
-      const card4 = cardOf(child);
-      if (!card4) continue;
-      alignStrengthText(card4);
-      entries.push({ wrapper: child, card: card4 });
-    }
-    return entries;
-  }
-  function domOrderChanged(previous, entries) {
-    if (!previous || previous.length !== entries.length) return true;
-    return entries.some((entry, i) => previous[i] !== entry.wrapper);
-  }
-  function assignBaseIndexes(entries) {
-    entries.forEach((entry, index) => {
-      entry.wrapper.dataset[BASE_INDEX_DATASET_KEY] = String(index);
-      entry.card.dataset[BASE_INDEX_DATASET_KEY] = String(index);
-    });
-  }
-  function readBaseIndex(entry) {
-    const raw = entry.wrapper.dataset[BASE_INDEX_DATASET_KEY] ?? entry.card.dataset[BASE_INDEX_DATASET_KEY];
-    if (raw == null) return null;
-    const value = Number(raw);
-    return Number.isFinite(value) ? value : null;
-  }
-  function findSectionByHeader(headerText) {
-    const header = Array.from(document.querySelectorAll("p.chakra-text")).find(
-      (el) => (el.textContent ?? "").trim() === headerText
-    );
-    for (let current3 = header ?? null; current3 && current3 !== document.body; current3 = current3.parentElement) {
-      const next = current3.nextElementSibling;
-      if (next?.querySelector(ITEM_CARD_SELECTOR)) return next;
-    }
-    return null;
-  }
-  var GRID_SELECTOR, FILTERS_BLOCK_SELECTOR, ITEMS_CONTAINER_SELECTOR, ITEM_CARD_SELECTORS, ITEM_CARD_SELECTOR, NOISE_SELECTOR, BASE_INDEX_DATASET_KEY, domOrderOf;
-  var init_inventoryDom = __esm({
-    "src/features/inventory/inventoryDom.ts"() {
-      "use strict";
-      init_strengthBadge();
-      GRID_SELECTOR = "div.McGrid.css-1kv58ap";
-      FILTERS_BLOCK_SELECTOR = ".McGrid.css-o1vp12";
-      ITEMS_CONTAINER_SELECTOR = ".McFlex.css-zo8r2v";
-      ITEM_CARD_SELECTORS = [".css-vmnhaw", ".css-1avy1fz"];
-      ITEM_CARD_SELECTOR = ITEM_CARD_SELECTORS.join(", ");
-      NOISE_SELECTOR = ".McFlex.css-1tkifdd, .chakra-text.css-glp3xv, .chakra-text.css-repqgl, .chakra-text.css-ah6ymv";
-      BASE_INDEX_DATASET_KEY = "tmInventoryBaseIndex";
-      domOrderOf = (entries) => entries.map((entry) => entry.wrapper);
-    }
-  });
-
-  // src/features/inventory/valueDisplay.ts
-  function formatCompactValue(value) {
-    const abs = Math.abs(value);
-    for (const { threshold, suffix } of COMPACT_UNITS) {
-      if (abs >= threshold) return `${(value / threshold).toFixed(1).replace(/\.0$/, "")}${suffix}`;
-    }
-    return FULL_FORMAT.format(value);
-  }
-  function updateCardValue(card4, value, show) {
-    const container = card4.querySelector(VALUE_CONTAINER_SELECTOR);
-    const current3 = container?.querySelector(`.${VALUE_ELEMENT_CLASS}`) ?? null;
-    if (!container || !show || typeof value !== "number" || !Number.isFinite(value)) {
-      if (container) current3?.remove();
-      delete card4.dataset[VALUE_DATASET_KEY];
-      return;
-    }
-    const target = current3 ?? Object.assign(document.createElement("div"), { className: VALUE_ELEMENT_CLASS });
-    Object.assign(target.style, {
-      fontSynthesis: "none",
-      WebkitFontSmoothing: "antialiased",
-      WebkitTextSizeAdjust: "100%",
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "flex-start",
-      gap: "0.15rem",
-      marginTop: "3px",
-      fontFamily: 'var(--chakra-fonts-body, "GreyCliff CF", sans-serif)',
-      fontWeight: "700",
-      fontSize: "0.65rem",
-      lineHeight: "1",
-      textTransform: "none",
-      color: GAME_YELLOW2
-    });
-    let text2 = target.querySelector(`.${VALUE_TEXT_CLASS}`);
-    if (!text2) {
-      target.textContent = "";
-      text2 = document.createElement("span");
-      text2.className = VALUE_TEXT_CLASS;
-      Object.assign(text2.style, { display: "inline-flex", alignItems: "center", color: "inherit" });
-      target.appendChild(text2);
-    }
-    text2.textContent = formatCompactValue(value);
-    target.title = formatFullValue(value);
-    card4.dataset[VALUE_DATASET_KEY] = String(value);
-    if (target.parentElement !== container || target !== container.lastElementChild) container.appendChild(target);
-  }
-  var VALUE_CONTAINER_SELECTOR, VALUE_ELEMENT_CLASS, VALUE_TEXT_CLASS, VALUE_DATASET_KEY, GAME_YELLOW2, LOADING, UNKNOWN, COMPACT_UNITS, FULL_FORMAT, formatFullValue, COIN_ICON_SRC, ValueSummary;
-  var init_valueDisplay = __esm({
-    "src/features/inventory/valueDisplay.ts"() {
-      "use strict";
-      init_data();
-      init_atoms();
-      init_filters();
-      init_itemInfo();
-      VALUE_CONTAINER_SELECTOR = ".McFlex.css-1p00rng";
-      VALUE_ELEMENT_CLASS = "tm-inventory-item-value";
-      VALUE_TEXT_CLASS = `${VALUE_ELEMENT_CLASS}__text`;
-      VALUE_DATASET_KEY = "tmInventoryValue";
-      GAME_YELLOW2 = "var(--chakra-colors-Yellow-Magic, #F3D32B)";
-      LOADING = "\u2026";
-      UNKNOWN = "\u2014";
-      COMPACT_UNITS = [
-        { threshold: 1e12, suffix: "T" },
-        { threshold: 1e9, suffix: "B" },
-        { threshold: 1e6, suffix: "M" },
-        { threshold: 1e3, suffix: "K" }
-      ];
-      FULL_FORMAT = new Intl.NumberFormat(void 0, { maximumFractionDigits: 2, minimumFractionDigits: 0 });
-      formatFullValue = (value) => FULL_FORMAT.format(value);
-      COIN_ICON_SRC = (() => {
-        const src = coin2?.img64 ?? "";
-        if (typeof src !== "string" || !src) return "";
-        return src.startsWith("data:") ? src : `data:image/png;base64,${src}`;
-      })();
-      ValueSummary = class {
-        constructor() {
-          this.token = null;
-          this.el = document.createElement("span");
-          Object.assign(this.el.style, {
-            font: "inherit",
-            color: GAME_YELLOW2,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            flex: "1 1 auto",
-            whiteSpace: "nowrap",
-            marginLeft: "auto",
-            textAlign: "right",
-            gap: "0.25rem"
-          });
-          if (COIN_ICON_SRC) {
-            const icon2 = document.createElement("span");
-            icon2.setAttribute("aria-hidden", "true");
-            Object.assign(icon2.style, {
-              width: "1.2rem",
-              height: "1.2rem",
-              flexShrink: "0",
-              display: "inline-block",
-              backgroundImage: `url("${COIN_ICON_SRC}")`,
-              backgroundSize: "contain",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "center",
-              pointerEvents: "none",
-              userSelect: "none"
-            });
-            this.el.appendChild(icon2);
-          }
-          this.text = document.createElement("span");
-          Object.assign(this.text.style, { fontWeight: "700", color: "inherit" });
-          this.el.appendChild(this.text);
-          this.set(LOADING);
-        }
-        set(text2, title) {
-          this.text.textContent = text2;
-          if (title) this.el.title = title;
-          else this.el.removeAttribute("title");
-        }
-        /** Totals the values of the items these filters show. A newer call wins over a slower older one. */
-        async update(filters, searchQuery) {
-          const token = Symbol("value-summary");
-          this.token = token;
-          this.set(LOADING);
-          try {
-            const inventory = await Atoms.inventory.myInventory.get();
-            if (this.token !== token) return;
-            if (!inventory || typeof inventory !== "object") return this.set(UNKNOWN);
-            const items = Array.isArray(inventory.items) ? inventory.items : [];
-            const shown = filterInventoryItems(items, filters, searchQuery);
-            if (!shown.length) return this.set("0", "0");
-            const values = shown.map(getInventoryItemValue).filter((v) => typeof v === "number" && Number.isFinite(v));
-            if (!values.length) return this.set(UNKNOWN);
-            const total = values.reduce((sum, v) => sum + v, 0);
-            this.set(formatCompactValue(total), formatFullValue(total));
-          } catch (error) {
-            console.warn("[InventorySorting] Could not total the filtered value", error);
-            if (this.token === token) this.set(UNKNOWN);
-          }
-        }
-      };
-    }
-  });
-
-  // src/features/inventory/domSorter.ts
-  function indexEntries2(state5, entries) {
-    state5.entryByBaseIndex.clear();
-    for (const entry of entries) {
-      const baseIndex = readBaseIndex(entry);
-      if (baseIndex != null) state5.entryByBaseIndex.set(baseIndex, entry);
-    }
-  }
-  function rebaseToDomOrder(state5, entries) {
-    if (entries.length !== state5.baseItems.length) return false;
-    const used = /* @__PURE__ */ new Set();
-    const reordered = [];
-    for (const entry of entries) {
-      const baseIndex = readBaseIndex(entry);
-      if (baseIndex == null || baseIndex < 0 || baseIndex >= state5.baseItems.length || used.has(baseIndex)) return false;
-      used.add(baseIndex);
-      reordered.push(state5.baseItems[baseIndex]);
-    }
-    if (reordered.every((item, i) => item === state5.baseItems[i])) return false;
-    state5.baseItems = reordered;
-    assignBaseIndexes(entries);
-    state5.entryByBaseIndex.clear();
-    entries.forEach((entry, index) => state5.entryByBaseIndex.set(index, entry));
-    state5.entryCount = entries.length;
-    return true;
-  }
-  function createDomSorter() {
-    const stateByGrid = /* @__PURE__ */ new WeakMap();
-    async function ensureState(grid, filters, entries, searchQuery) {
-      const filtersKey = JSON.stringify({ filters });
-      const state5 = stateByGrid.get(grid);
-      const reusable = state5 && state5.filtersKey === filtersKey && state5.searchQuery === searchQuery && state5.playersInRoom === playersInRoomForValues() && state5.entryCount === entries.length && state5.baseItems.length === entries.length && entries.every((entry) => readBaseIndex(entry) != null);
-      if (state5 && reusable) {
-        indexEntries2(state5, entries);
-        return state5;
-      }
-      try {
-        const inventory = await Atoms.inventory.myInventory.get();
-        if (!inventory || typeof inventory !== "object") return null;
-        const items = Array.isArray(inventory.items) ? inventory.items : [];
-        const shown = filterInventoryItems(items, filters, searchQuery);
-        if (shown.length !== entries.length) {
-          console.warn(`[InventorySorting] ${shown.length} filtered items but ${entries.length} cards, not reordering.`);
-          return null;
-        }
-        assignBaseIndexes(entries);
-        const next = {
-          filtersKey,
-          searchQuery,
-          entryCount: entries.length,
-          playersInRoom: playersInRoomForValues(),
-          baseItems: shown.slice(),
-          entryByBaseIndex: new Map(entries.map((entry, index) => [index, entry])),
-          lastSortKey: state5?.lastSortKey ?? null
-        };
-        stateByGrid.set(grid, next);
-        return next;
-      } catch (error) {
-        console.warn("[InventorySorting] Could not read the inventory to sort the cards", error);
-        return null;
-      }
-    }
-    return async (grid, sortKey, direction, showValues) => {
-      const container = getItemsContainer(grid);
-      if (!container) return;
-      const entries = getDomEntries(container);
-      if (!entries.length) return;
-      const state5 = await ensureState(grid, getActiveFilters(grid), entries, getSearchQuery(grid));
-      if (!state5) return;
-      const unsorted = !sortKey || sortKey === "none";
-      if (unsorted && state5.lastSortKey === "none") rebaseToDomOrder(state5, entries);
-      const baseIndexByItem = new Map(state5.baseItems.map((item, index) => [item, index]));
-      const effectiveDirection = isSortDirection(direction) ? direction : DEFAULT_DIRECTION[sortKey] ?? "asc";
-      const desiredItems = unsorted ? state5.baseItems.slice() : sortInventoryItems(state5.baseItems, sortKey, effectiveDirection);
-      const desiredEntries = [];
-      const used = /* @__PURE__ */ new Set();
-      for (const item of desiredItems) {
-        const baseIndex = baseIndexByItem.get(item);
-        const entry = baseIndex == null ? void 0 : state5.entryByBaseIndex.get(baseIndex);
-        if (!entry || used.has(entry)) continue;
-        updateCardValue(entry.card, getInventoryItemValue(item), showValues);
-        updateStrengthText(entry.card, item);
-        alignStrengthText(entry.card);
-        desiredEntries.push(entry);
-        used.add(entry);
-      }
-      if (desiredEntries.length !== entries.length) {
-        console.warn(`[InventorySorting] Only ${desiredEntries.length} of ${entries.length} cards matched, not reordering.`);
-        return;
-      }
-      if (!desiredEntries.every((entry, index) => entry.wrapper === entries[index]?.wrapper)) {
-        const fragment = document.createDocumentFragment();
-        for (const entry of desiredEntries) fragment.appendChild(entry.wrapper);
-        container.appendChild(fragment);
-      }
-      indexEntries2(state5, desiredEntries);
-      state5.lastSortKey = sortKey;
-    };
-  }
-  var init_domSorter = __esm({
-    "src/features/inventory/domSorter.ts"() {
-      "use strict";
-      init_atoms();
-      init_comparators();
-      init_filters();
-      init_inventoryDom();
-      init_itemInfo();
-      init_sortOptions();
-      init_strengthBadge();
-      init_value();
-      init_valueDisplay();
-    }
-  });
-
-  // src/features/inventory/petHutch.ts
-  function isPetItem(item) {
-    if (normalize(typeof item?.itemType === "string" ? item.itemType : "") === "pet") return true;
-    return !!petSpeciesOf(item);
-  }
-  function nameCandidates(item) {
-    const names = /* @__PURE__ */ new Set();
-    const name = readNestedString(item, "name");
-    if (name) names.add(normalize(name));
-    const species = petSpeciesOf(item);
-    if (species) names.add(normalize(species));
-    return [...names];
-  }
-  function applyPetsToList(container, items) {
-    if (!container) return;
-    const entries = getDomEntries(container);
-    const pets = (Array.isArray(items) ? items : []).filter(isPetItem);
-    if (!entries.length || !pets.length) return;
-    const used = /* @__PURE__ */ new Set();
-    const firstUnused = (match) => pets.findIndex((pet, i) => !used.has(i) && match(pet));
-    for (const entry of entries) {
-      const cardName = normalize(entry.card.querySelector(PET_NAME_SELECTOR)?.textContent ?? "");
-      let index = cardName ? firstUnused((pet) => nameCandidates(pet).includes(cardName)) : -1;
-      if (index < 0) index = firstUnused(() => true);
-      if (index < 0) continue;
-      used.add(index);
-      updateStrengthText(entry.card, pets[index]);
-      alignStrengthText(entry.card);
-    }
-  }
-  function setHidden(containers, hidden) {
-    for (const container of containers) {
-      if (!container) continue;
-      if (hidden) container.style.setProperty("visibility", "hidden");
-      else container.style.removeProperty("visibility");
-    }
-  }
-  async function updatePetHutchSections(hideDuringUpdate = false) {
-    const root4 = document.querySelector(PET_HUTCH_ROOT_SELECTOR) ?? document.body;
-    const hutchList = root4.querySelector(HUTCH_LIST_SELECTOR) ?? findSectionByHeader("Pets in Hutch");
-    const inventoryList = root4.querySelector(INVENTORY_LIST_SELECTOR) ?? findSectionByHeader("Pets in Inventory");
-    if (!hutchList && !inventoryList) return false;
-    const lists = [hutchList, inventoryList];
-    if (hideDuringUpdate) setHidden(lists, true);
-    try {
-      const [hutchItems, inventory] = await Promise.all([
-        myPetHutchPetItems.get().catch(() => []),
-        Atoms.inventory.myInventory.get().catch(() => null)
-      ]);
-      const inventoryItems4 = Array.isArray(inventory?.items) ? inventory.items : Array.isArray(inventory) ? inventory : [];
-      applyPetsToList(hutchList, hutchItems);
-      applyPetsToList(inventoryList, inventoryItems4);
-      return true;
-    } catch (error) {
-      console.warn("[InventorySorting] Could not update the hutch pets", error);
-      return false;
-    } finally {
-      if (hideDuringUpdate) setHidden(lists, false);
-    }
-  }
-  var PET_HUTCH_ROOT_SELECTOR, HUTCH_LIST_SELECTOR, INVENTORY_LIST_SELECTOR, PET_NAME_SELECTOR, petSpeciesOf;
-  var init_petHutch = __esm({
-    "src/features/inventory/petHutch.ts"() {
-      "use strict";
-      init_atoms();
-      init_inventoryDom();
-      init_itemInfo();
-      init_strengthBadge();
-      PET_HUTCH_ROOT_SELECTOR = ".McGrid.css-3c49ba";
-      HUTCH_LIST_SELECTOR = ".McGrid.css-1nv2ym8 .McFlex.css-1tgchvv";
-      INVENTORY_LIST_SELECTOR = ".McGrid.css-1nv2ym8 .McFlex.css-gui45t";
-      PET_NAME_SELECTOR = ".McFlex.css-1lpag07 .chakra-text";
-      petSpeciesOf = (item) => readNestedString(item, "petSpecies") ?? readNestedString(item, "species");
-    }
-  });
-
-  // src/features/inventory/settings.ts
-  function read(path, parse) {
-    try {
-      return parse(readAriesPath(path));
-    } catch (error) {
-      console.warn(`[InventorySorting] Could not read ${path}`, error);
-      return null;
-    }
-  }
-  function write(path, value) {
-    try {
-      writeAriesPath(path, value);
-    } catch (error) {
-      console.warn(`[InventorySorting] Could not save ${path}`, error);
-    }
-  }
-  function saveSort(sortKey, direction) {
-    write(SORT_KEY_PATH, sortKey);
-    write(SORT_DIRECTION_PATH, direction);
-  }
-  var SORT_KEY_PATH, SORT_DIRECTION_PATH, SHOW_VALUES_PATH, loadSortKey, loadSortDirection, loadShowValues, saveShowValues;
-  var init_settings5 = __esm({
-    "src/features/inventory/settings.ts"() {
-      "use strict";
-      init_storage();
-      init_sortOptions();
-      SORT_KEY_PATH = "inventory.sortKey";
-      SORT_DIRECTION_PATH = "inventory.sortDirection";
-      SHOW_VALUES_PATH = "inventory.showValues";
-      loadSortKey = () => read(SORT_KEY_PATH, (v) => isSortKey(v) ? v : null);
-      loadSortDirection = () => read(SORT_DIRECTION_PATH, (v) => isSortDirection(v) ? v : null);
-      loadShowValues = () => read(SHOW_VALUES_PATH, (v) => {
-        if (v === true || v === 1 || v === "1" || v === "true") return true;
-        if (v === false || v === 0 || v === "0" || v === "false") return false;
-        return null;
-      });
-      saveShowValues = (visible) => write(SHOW_VALUES_PATH, visible);
-    }
-  });
-
-  // src/features/inventory/sortBar.ts
-  function caption(text2) {
-    const el = document.createElement("span");
-    el.textContent = text2;
-    Object.assign(el.style, { font: "inherit", opacity: "0.8", flex: "0 0 auto" });
-    return el;
-  }
-  function createSortBar(handlers) {
-    const wrap = document.createElement("div");
-    wrap.className = WRAP_CLASS;
-    Object.assign(wrap.style, { display: "block", width: "100%", gridColumn: "1 / -1", flex: "0 0 auto", contain: "layout style" });
-    const row5 = document.createElement("div");
-    Object.assign(row5.style, {
-      display: "flex",
-      alignItems: "center",
-      flexWrap: "wrap",
-      gap: "8px",
-      marginTop: "10px",
-      paddingTop: "8px",
-      borderTop: `1px solid ${color.borderStrong}`,
-      width: "100%",
-      boxSizing: "border-box"
-    });
-    const sortSelect = select2({ small: true });
-    const directionSelect = select2({ small: true });
-    for (const direction of DIRECTIONS) {
-      directionSelect.appendChild(new Option(DIRECTION_LABELS[direction], direction));
-    }
-    const showValues = switchInput(true);
-    const showValuesLabel = document.createElement("label");
-    Object.assign(showValuesLabel.style, { display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer", flex: "0 0 auto" });
-    showValuesLabel.append(showValues, "Show values");
-    const divider = document.createElement("span");
-    Object.assign(divider.style, { alignSelf: "stretch", width: "1px", minHeight: "24px", background: color.border, flex: "0 0 auto" });
-    const summary = new ValueSummary();
-    row5.append(caption("Sort by:"), sortSelect, caption("Order:"), directionSelect, divider, showValuesLabel, summary.el);
-    wrap.appendChild(row5);
-    const bar = { wrap, sortSelect, directionSelect, showValues, summary, lastSortKey: null, lastDirection: null };
-    const picked = () => {
-      bar.lastSortKey = sortSelect.value || "none";
-      bar.lastDirection = directionSelect.value || "asc";
-      handlers.onSortChange(bar.lastSortKey, bar.lastDirection);
-    };
-    sortSelect.addEventListener("change", picked);
-    directionSelect.addEventListener("change", picked);
-    showValues.addEventListener("change", () => handlers.onShowValuesChange(showValues.checked));
-    return bar;
-  }
-  function ensureSortBar(grid, handlers) {
-    const filtersBlock = grid.querySelector(FILTERS_BLOCK_SELECTOR);
-    if (!filtersBlock) return null;
-    const existing = filtersBlock.querySelector(`:scope > .${WRAP_CLASS}`);
-    const bar = existing && bars.get(existing) || createSortBar(handlers);
-    bars.set(bar.wrap, bar);
-    if (bar.wrap.parentElement !== filtersBlock) filtersBlock.appendChild(bar.wrap);
-    return bar;
-  }
-  function renderSortOptions(select3, options2, preferred) {
-    const previous = preferred ?? select3.value;
-    select3.replaceChildren(...options2.map((opt) => new Option(opt.label, opt.value)));
-    if (options2.some((o) => o.value === "none")) select3.value = "none";
-    if (previous && previous !== "none" && options2.some((o) => o.value === previous)) select3.value = previous;
-  }
-  var WRAP_CLASS, bars;
-  var init_sortBar = __esm({
-    "src/features/inventory/sortBar.ts"() {
-      "use strict";
-      init_fields();
-      init_toggles();
-      init_theme();
-      init_inventoryDom();
-      init_sortOptions();
-      init_valueDisplay();
-      WRAP_CLASS = "tm-sort-wrap";
-      bars = /* @__PURE__ */ new WeakMap();
-    }
-  });
-
-  // src/features/inventory/sorting.ts
-  function attachInventorySorting() {
-    const sortCards = createDomSorter();
-    const subs = new Subscriptions();
-    let showValues = loadShowValues() ?? true;
-    let grid = null;
-    let bar = null;
-    let lastAppliedSortKey = null;
-    let lastAppliedDirection = null;
-    let lastSortedOrder = null;
-    let lastContextKey = null;
-    let lastRenderedEntryCount = null;
-    let gridListeners = null;
-    const resolveGrid = () => {
-      if (grid && document.contains(grid)) return grid;
-      const next = document.querySelector(GRID_SELECTOR);
-      if (next !== grid) setGrid(next);
-      return grid && document.contains(grid) ? grid : null;
-    };
-    const sortGrid = (target, sortKey, direction) => sortCards(target, sortKey, direction, showValues).then(() => {
-      const container = getItemsContainer(target);
-      lastSortedOrder = container ? domOrderOf(getDomEntries(container)) : null;
-    });
-    const sortWithBar = () => {
-      const target = resolveGrid();
-      if (!target || !bar) return;
-      void sortGrid(target, bar.sortSelect.value, bar.directionSelect.value);
-    };
-    let noiseContainer = null;
-    const noiseObserver = new MutationObserver(() => {
-      if (noiseContainer) clearNoiseText(noiseContainer);
-    });
-    const observeNoise = (container) => {
-      if (noiseContainer === container) return;
-      noiseObserver.disconnect();
-      noiseContainer = container;
-      if (!container) return;
-      noiseObserver.observe(container, { subtree: true, childList: true, characterData: true });
-      clearNoiseText(container);
-    };
-    const gridObserver = new MutationObserver((mutations) => {
-      const relevant = mutations.some(
-        (m) => m.type === "attributes" ? GRID_ATTRIBUTES.includes(m.attributeName || "") : m.type === "childList"
-      );
-      if (relevant) refresh();
-    });
-    function setGrid(next) {
-      if (grid === next) return;
-      gridObserver.disconnect();
-      grid = next;
-      lastAppliedSortKey = null;
-      lastSortedOrder = null;
-      lastContextKey = null;
-      lastRenderedEntryCount = null;
-      if (!grid) {
-        gridListeners?.dispose();
-        gridListeners = null;
-        observeNoise(null);
-        return;
-      }
-      gridObserver.observe(grid, { subtree: true, childList: true, attributes: true, attributeFilter: GRID_ATTRIBUTES });
-    }
-    const handlers = {
-      onSortChange(sortKey, direction) {
-        lastAppliedSortKey = sortKey;
-        lastAppliedDirection = direction;
-        saveSort(sortKey, direction);
-        const target = resolveGrid();
-        if (target) void sortGrid(target, sortKey, direction);
-      },
-      onShowValuesChange(visible) {
-        showValues = visible;
-        saveShowValues(visible);
-        sortWithBar();
-      }
-    };
-    const refreshSummary = () => {
-      const target = resolveGrid();
-      if (target && bar) void bar.summary.update(getActiveFilters(target), getSearchQuery(target));
-    };
-    function pickDirection(current3, sortKey) {
-      const fallback = DEFAULT_DIRECTION[sortKey] ?? "asc";
-      const saved = loadSortDirection();
-      const preferred = isSortDirection(current3.lastDirection) && current3.lastDirection || saved || fallback;
-      current3.directionSelect.value = preferred;
-      if (!isSortDirection(current3.directionSelect.value)) current3.directionSelect.value = fallback;
-      return current3.directionSelect.value;
-    }
-    function update() {
-      const target = resolveGrid();
-      if (!target || !isVisible(target)) return;
-      void followInventoryValues();
-      const current3 = ensureSortBar(target, handlers);
-      if (!current3) return;
-      bar = current3;
-      if (!gridListeners) {
-        gridListeners = new Subscriptions();
-        gridListeners.add(onInventoryItemsChange(refreshSummary));
-        gridListeners.add(
-          onPlayersInRoomChange(() => {
-            refreshSummary();
-            sortWithBar();
-          })
-        );
-        gridListeners.add(
-          onShownItemTypesChange((contextKey) => {
-            if (contextKey === lastContextKey) setTimeout(refresh, 0);
-          })
-        );
-      }
-      current3.showValues.checked = showValues;
-      const filters = getActiveFilters(target);
-      const search2 = getSearchQuery(target);
-      const container = getItemsContainer(target);
-      observeNoise(container);
-      const entries = container ? getDomEntries(container) : [];
-      const domChanged = domOrderChanged(lastSortedOrder, entries);
-      lastContextKey = filterContextKey(filters, search2);
-      void current3.summary.update(filters, search2);
-      const options2 = computeSortOptions(filters, shownItemTypes(filters, search2));
-      const offered2 = (key2) => key2 && options2.some((o) => o.value === key2) ? key2 : null;
-      if (lastRenderedEntryCount !== entries.length || !current3.sortSelect.options.length) {
-        renderSortOptions(current3.sortSelect, options2, offered2(current3.lastSortKey) || offered2(loadSortKey()));
-        lastRenderedEntryCount = entries.length;
-      }
-      const sortKey = current3.sortSelect.value;
-      current3.lastSortKey = sortKey;
-      const direction = pickDirection(current3, sortKey);
-      current3.lastDirection = direction;
-      if (sortKey !== lastAppliedSortKey || direction !== lastAppliedDirection || domChanged) {
-        lastAppliedSortKey = sortKey;
-        lastAppliedDirection = direction;
-        saveSort(sortKey, direction);
-        void sortGrid(target, sortKey, direction);
-      } else {
-        lastSortedOrder = domOrderOf(entries);
-      }
-    }
-    const refresh = debounce(update, 120);
-    let lastHutchRoot = null;
-    let hutchNeedsInit = true;
-    const refreshPetHutch = debounce(() => void updatePetHutchSections(), 120);
-    const maybeInitPetHutch = () => {
-      const root4 = document.querySelector(PET_HUTCH_ROOT_SELECTOR);
-      if (root4 !== lastHutchRoot) {
-        lastHutchRoot = root4;
-        hutchNeedsInit = true;
-      }
-      if (!root4 || !hutchNeedsInit) return;
-      void updatePetHutchSections(true).then((applied2) => {
-        if (applied2) hutchNeedsInit = false;
-      });
-    };
-    const bodyObserver = new MutationObserver(() => {
-      const current3 = grid && document.contains(grid) ? grid : null;
-      if (grid && !current3) setGrid(null);
-      const next = document.querySelector(GRID_SELECTOR);
-      if (next !== current3) {
-        setGrid(next);
-        if (next) update();
-      }
-      maybeInitPetHutch();
-      refreshPetHutch();
-    });
-    const onGridInput = (event) => {
-      const target = event.target;
-      const within = target?.closest(GRID_SELECTOR);
-      if (within && within === resolveGrid()) setTimeout(refresh, 0);
-    };
-    bodyObserver.observe(document.body || document.documentElement, { childList: true, subtree: true });
-    setGrid(document.querySelector(GRID_SELECTOR));
-    document.addEventListener("change", onGridInput, true);
-    document.addEventListener("input", onGridInput, true);
-    update();
-    maybeInitPetHutch();
-    refreshPetHutch();
-    subs.add(() => {
-      gridObserver.disconnect();
-      bodyObserver.disconnect();
-      noiseObserver.disconnect();
-      refresh.cancel();
-      refreshPetHutch.cancel();
-      document.removeEventListener("change", onGridInput, true);
-      document.removeEventListener("input", onGridInput, true);
-      gridListeners?.dispose();
-      bar?.wrap.remove();
-    });
-    return () => subs.dispose();
-  }
-  function startInventorySortingObserver() {
-    if (typeof window === "undefined" || typeof document === "undefined") return () => {
-    };
-    let stop = null;
-    let waiter = null;
-    const attachIfReady = () => {
-      if (stop) return true;
-      if (!document.querySelector(GRID_SELECTOR) && !document.querySelector(PET_HUTCH_ROOT_SELECTOR)) return false;
-      stop = attachInventorySorting();
-      return true;
-    };
-    const start2 = () => {
-      if (attachIfReady()) return;
-      const target = document.body || document.documentElement;
-      if (!target) return;
-      waiter = new MutationObserver(() => {
-        if (attachIfReady()) {
-          waiter?.disconnect();
-          waiter = null;
-        }
-      });
-      waiter.observe(target, { childList: true, subtree: true });
-    };
-    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start2, { once: true });
-    else start2();
-    return () => {
-      document.removeEventListener("DOMContentLoaded", start2);
-      waiter?.disconnect();
-      stop?.();
-    };
-  }
-  var GRID_ATTRIBUTES;
-  var init_sorting = __esm({
-    "src/features/inventory/sorting.ts"() {
-      "use strict";
-      init_async2();
-      init_emitter();
-      init_domSorter();
-      init_filters();
-      init_inventoryDom();
-      init_petHutch();
-      init_settings5();
-      init_sortBar();
-      init_sortOptions();
-      init_value();
-      GRID_ATTRIBUTES = ["data-checked", "style", "class", "hidden", "aria-hidden"];
-    }
-  });
-
-  // src/features/activityLog/classification.ts
-  function normalizeAbilityAction(raw) {
-    const trimmed = String(raw || "").trim();
-    if (!trimmed) return null;
-    let key2 = trimmed.replace(/^Snowy/i, "");
-    key2 = key2.replace(/_NEW$/i, "");
-    key2 = key2.replace(/(?:[_-]?(?:I|II|III|IV|V|VI|VII|VIII|IX|X)|\d+)$/i, "");
-    key2 = key2.replace(/[_-]+$/g, "");
-    return key2 ? key2 : null;
-  }
-  function classifyEntryAction(action2) {
-    const raw = String(action2 ?? "").trim();
-    if (!raw) return "other";
-    const lowered = raw.toLowerCase();
-    const mapped = ACTION_MAP[raw];
-    const mappedLower = ACTION_MAP_LOWER[lowered];
-    const abilityKey = normalizeAbilityAction(raw);
-    if (mapped) return mapped === "boost" && abilityKey ? abilityKey : mapped;
-    if (mappedLower) return mappedLower === "boost" && abilityKey ? abilityKey : mappedLower;
-    if (abilityKey) return abilityKey;
-    return lowered || "other";
-  }
-  function getActionLabel(action2) {
-    const preset = ACTION_LABELS[action2];
-    if (preset) return preset;
-    const spaced2 = spaceWords(String(action2 || "")).replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
-    if (!spaced2) return String(action2 || "");
-    return spaced2.split(" ").map((word) => word ? word.charAt(0).toUpperCase() + word.slice(1) : word).join(" ");
-  }
-  function mergeActions(actions2) {
-    const seen = /* @__PURE__ */ new Set();
-    const ordered = [];
-    for (const key2 of ACTION_ORDER) {
-      if (key2 === "all") continue;
-      if (actions2.includes(key2) && !seen.has(key2)) {
-        seen.add(key2);
-        ordered.push(key2);
-      }
-    }
-    for (const action2 of actions2) {
-      if (action2 === "all") continue;
-      if (!seen.has(action2)) {
-        seen.add(action2);
-        ordered.push(action2);
-      }
-    }
-    return ordered;
-  }
-  var ACTION_ORDER, ACTION_LABELS, ACTION_MAP, ACTION_MAP_LOWER;
-  var init_classification = __esm({
-    "src/features/activityLog/classification.ts"() {
-      "use strict";
-      init_format();
-      ACTION_ORDER = [
-        "all",
-        "found",
-        "buy",
-        "sell",
-        "harvest",
-        "plant",
-        "feed",
-        "hatch",
-        "water",
-        "coinFinder",
-        "seedFinder",
-        "double",
-        "eggGrowth",
-        "plantGrowth",
-        "granter",
-        "kisser",
-        "refund",
-        "boost",
-        "remove",
-        "other"
-      ];
-      ACTION_LABELS = {
-        all: "All",
-        found: "Finds",
-        buy: "Purchases",
-        sell: "Sold",
-        harvest: "Harvests",
-        plant: "Planted",
-        feed: "Feed",
-        hatch: "Hatch",
-        water: "Water",
-        coinFinder: "Coin Finder",
-        seedFinder: "Seed Finder",
-        double: "Double",
-        eggGrowth: "Egg Growth",
-        plantGrowth: "Plant Growth",
-        granter: "Granters",
-        kisser: "Kissers",
-        refund: "Refunds",
-        boost: "Boosts",
-        remove: "Remove",
-        other: "Other"
-      };
-      ACTION_MAP = {
-        purchaseDecor: "buy",
-        purchaseSeed: "buy",
-        purchaseEgg: "buy",
-        purchaseTool: "buy",
-        upgradePetHutch: "buy",
-        upgradeDecorShed: "buy",
-        upgradeSeedSilo: "buy",
-        waterPlant: "water",
-        plantSeed: "plant",
-        plantGardenPlant: "plant",
-        potPlant: "plant",
-        removeGardenObject: "remove",
-        preserve: "remove",
-        harvest: "harvest",
-        feedPet: "feed",
-        feedPetFromTrough: "feed",
-        plantEgg: "hatch",
-        hatchEgg: "hatch",
-        instaGrow: "boost",
-        customRestock: "boost",
-        spinSlotMachine: "boost",
-        sellAllCrops: "sell",
-        sellPet: "sell",
-        logItems: "boost",
-        mutationPotion: "boost",
-        cropCleanser: "boost",
-        dawnCapture: "boost",
-        openDawnCapsule: "boost",
-        thundercharge: "boost",
-        replenishPotion: "boost",
-        xpPotion: "boost",
-        ProduceScaleBoost: "boost",
-        ProduceScaleBoostII: "boost",
-        ProduceScaleBoostIII: "boost",
-        DoubleHarvest: "double",
-        DoubleHatch: "double",
-        ProduceEater: "boost",
-        SellBoostI: "boost",
-        SellBoostII: "boost",
-        SellBoostIII: "boost",
-        SellBoostIV: "boost",
-        ProduceRefund: "boost",
-        PlantGrowthBoost: "plantGrowth",
-        PlantGrowthBoostII: "plantGrowth",
-        PlantGrowthBoostIII: "plantGrowth",
-        SnowyPlantGrowthBoost: "plantGrowth",
-        DawnPlantGrowthBoost: "plantGrowth",
-        AmberPlantGrowthBoost: "plantGrowth",
-        ThunderPlantGrowthBoost: "plantGrowth",
-        HungerRestore: "boost",
-        HungerRestoreII: "boost",
-        HungerRestoreIII: "boost",
-        SnowyHungerRestore: "boost",
-        GoldGranter: "granter",
-        RainbowGranter: "granter",
-        RainDance: "granter",
-        SnowGranter: "granter",
-        FrostGranter: "granter",
-        DawnlitGranter: "granter",
-        AmberlitGranter: "granter",
-        ThunderstruckGranter: "granter",
-        PetXpBoost: "boost",
-        PetXpBoostII: "boost",
-        PetXpBoostIII: "boost",
-        SnowyPetXpBoost: "boost",
-        DawnXpBoost: "boost",
-        ThunderXpBoost: "boost",
-        SnowyEggGrowthBoost: "eggGrowth",
-        EggGrowthBoost: "eggGrowth",
-        EggGrowthBoostII_NEW: "eggGrowth",
-        EggGrowthBoostII: "eggGrowth",
-        ThunderEggGrowthBoost: "eggGrowth",
-        PetAgeBoost: "boost",
-        PetAgeBoostII: "boost",
-        PetAgeBoostIII: "boost",
-        CoinFinderI: "coinFinder",
-        CoinFinderII: "coinFinder",
-        CoinFinderIII: "coinFinder",
-        SnowyCoinFinder: "coinFinder",
-        DawnCoinFinder: "coinFinder",
-        ThunderCoinFinder: "coinFinder",
-        SnowyCropSizeBoost: "boost",
-        SnowyHungerBoost: "boost",
-        SeedFinderI: "seedFinder",
-        SeedFinderII: "seedFinder",
-        SeedFinderIII: "seedFinder",
-        SeedFinderIV: "seedFinder",
-        PetHatchSizeBoost: "boost",
-        PetHatchSizeBoostII: "boost",
-        PetHatchSizeBoostIII: "boost",
-        MoonKisser: "kisser",
-        DawnKisser: "kisser",
-        PetRefund: "refund",
-        PetRefundII: "refund"
-      };
-      ACTION_MAP_LOWER = Object.fromEntries(
-        Object.entries(ACTION_MAP).map(([key2, value]) => [key2.toLowerCase(), value])
-      );
-    }
-  });
-
-  // src/features/activityLog/history.ts
-  function normalizeEntry(raw) {
-    if (!raw || typeof raw !== "object") return null;
-    const ts = Number(raw.timestamp);
-    if (!Number.isFinite(ts)) return null;
-    let parameters = raw.parameters;
-    if (parameters && typeof parameters === "object") {
-      const petId = typeof parameters.pet?.id === "string" ? parameters.pet.id : null;
-      if (petId && !parameters.petId) parameters = { ...parameters, petId };
-    }
-    const entry = { ...raw, timestamp: ts, parameters };
-    if (typeof raw.action === "string" && raw.action.trim()) entry.action = String(raw.action);
-    return entry;
-  }
-  function normalizeEntries(logs2) {
-    if (!Array.isArray(logs2)) return [];
-    const out = [];
-    for (const raw of logs2) {
-      const entry = normalizeEntry(raw);
-      if (entry) out.push(entry);
-    }
-    return out;
-  }
-  function stableStringify(value) {
-    const seen = /* @__PURE__ */ new WeakSet();
-    const walk = (val) => {
-      if (val === null || typeof val !== "object") return val;
-      if (seen.has(val)) return "__CYCLE__";
-      seen.add(val);
-      if (Array.isArray(val)) return val.map(walk);
-      const obj = {};
-      for (const k of Object.keys(val).sort()) obj[k] = walk(val[k]);
-      return obj;
-    };
-    try {
-      return JSON.stringify(walk(value));
-    } catch {
-      return "";
-    }
-  }
-  function entryIdentity(entry) {
-    const p = entry?.parameters;
-    if (!p) return null;
-    const pick = (c) => typeof c === "string" && c.trim() ? c : null;
-    const direct = pick(p.id) ?? pick(p.pet?.id);
-    if (direct) return direct;
-    for (const field2 of IDENTITY_FIELDS) {
-      const value = pick(p[field2]);
-      if (value) return value;
-    }
-    return null;
-  }
-  function entryKey2(entry) {
-    const action2 = typeof entry.action === "string" ? entry.action : "";
-    return `${entry.timestamp}|${action2}|${entryIdentity(entry) ?? "__noid__"}`;
-  }
-  function getActivityLogHistory() {
-    try {
-      return normalizeEntries(readAriesPath(HISTORY_STORAGE_KEY));
-    } catch {
-      return [];
-    }
-  }
-  function saveHistory(entries) {
-    const sorted = entries.slice().sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
-    if (sorted.length > HISTORY_LIMIT) sorted.splice(0, sorted.length - HISTORY_LIMIT);
-    try {
-      writeAriesPath(HISTORY_STORAGE_KEY, sorted);
-    } catch {
-    }
-  }
-  function diffSnapshots(prev, next) {
-    const prevBuckets = /* @__PURE__ */ new Map();
-    for (const entry of prev) {
-      const key2 = entryKey2(entry);
-      const bucket = prevBuckets.get(key2);
-      if (bucket) bucket.push(entry);
-      else prevBuckets.set(key2, [entry]);
-    }
-    const added = [];
-    const updated = [];
-    for (const entry of next) {
-      const key2 = entryKey2(entry);
-      const bucket = prevBuckets.get(key2);
-      const prevEntry = bucket?.shift();
-      if (!prevEntry) added.push(entry);
-      else if (!entriesEqual(prevEntry, entry)) updated.push(entry);
-      if (bucket && bucket.length === 0) prevBuckets.delete(key2);
-    }
-    return { added, updated };
-  }
-  function syncHistory(prevSnapshot, nextSnapshot) {
-    const { added, updated } = diffSnapshots(prevSnapshot, nextSnapshot);
-    if (!added.length && !updated.length) return;
-    const byKey = /* @__PURE__ */ new Map();
-    for (const entry of getActivityLogHistory()) byKey.set(entryKey2(entry), entry);
-    let changed5 = false;
-    for (const entry of [...updated, ...added]) {
-      const key2 = entryKey2(entry);
-      const cur = byKey.get(key2);
-      if (!cur || !entriesEqual(cur, entry)) {
-        byKey.set(key2, entry);
-        changed5 = true;
-      }
-    }
-    if (changed5) saveHistory(Array.from(byKey.values()));
-  }
-  var HISTORY_STORAGE_KEY, HISTORY_LIMIT, IDENTITY_FIELDS, entriesEqual;
-  var init_history = __esm({
-    "src/features/activityLog/history.ts"() {
-      "use strict";
-      init_storage();
-      HISTORY_STORAGE_KEY = "activityLog.history";
-      HISTORY_LIMIT = 500;
-      IDENTITY_FIELDS = [
-        "petId",
-        "playerId",
-        "userId",
-        "objectId",
-        "slotId",
-        "itemId",
-        "cropId",
-        "seedId",
-        "decorId",
-        "toolId",
-        "targetId",
-        "abilityId"
-      ];
-      entriesEqual = (a, b) => stableStringify(a) === stableStringify(b);
-    }
-  });
-
-  // src/features/activityLog/filter.ts
-  function loadPersistedFilter() {
-    try {
-      return readAriesPath(FILTER_STORAGE_KEY) || "all";
-    } catch {
-      return "all";
-    }
-  }
-  function getActiveFilter() {
-    return activeFilter;
-  }
-  function computeFilteredHistory(filter) {
-    const history = getActivityLogHistory();
-    if (filter === "all") return history;
-    return history.filter((entry) => classifyEntryAction(entry.action) === filter);
-  }
-  function filteredHistory() {
-    return computeFilteredHistory(activeFilter);
-  }
-  function setActivityLogModalOpen(open) {
-    modalOpen2 = open;
-  }
-  function isActivityLogModalOpen() {
-    return modalOpen2;
-  }
-  function setActiveFilter(filter) {
-    if (filter === activeFilter) return;
-    activeFilter = filter;
-    try {
-      writeAriesPath(FILTER_STORAGE_KEY, String(filter));
-    } catch {
-    }
-    if (!modalOpen2) return;
-    fakeActivityLog.show(filteredHistory(), { open: false }).catch(() => {
-    });
-  }
-  var FILTER_STORAGE_KEY, activeFilter, modalOpen2;
-  var init_filter = __esm({
-    "src/features/activityLog/filter.ts"() {
-      "use strict";
-      init_storage();
-      init_pageContext();
-      init_fakeModal();
-      init_classification();
-      init_history();
-      FILTER_STORAGE_KEY = "activityLog.filter";
-      activeFilter = loadPersistedFilter();
-      modalOpen2 = false;
-      shareGlobal("__MG_ACTIVITY_LOG_FILTER_DEBUG__", {
-        get activeFilter() {
-          return activeFilter;
-        },
-        get modalOpen() {
-          return modalOpen2;
-        },
-        getActiveFilter,
-        setActiveFilter,
-        computeFilteredHistory
-      });
-    }
-  });
-
-  // src/features/activityLog/filterToolbar.ts
-  function countActions(history) {
-    const counts = /* @__PURE__ */ new Map();
-    for (const entry of history) {
-      const key2 = classifyEntryAction(entry.action);
-      counts.set(key2, (counts.get(key2) ?? 0) + 1);
-    }
-    return counts;
-  }
-  function labelFor(key2, counts, total) {
-    const count = key2 === "all" ? total : counts.get(key2) ?? 0;
-    return `${getActionLabel(key2)}${count ? ` (${count})` : ""}`;
-  }
-  function drawButtonBg(bg, width, active3) {
-    bg.roundRect(0, 0, width, BUTTON_HEIGHT, BUTTON_RADIUS2).fill({
-      color: active3 ? BUTTON_FILL_ACTIVE : BUTTON_FILL_INACTIVE,
-      alpha: active3 ? BUTTON_ALPHA_ACTIVE : BUTTON_ALPHA_INACTIVE
-    });
-  }
-  function layoutClosedButton(button2) {
-    const width = button2.text.width + BUTTON_PADDING_X2 * 2 + CARET_GAP + button2.caret.width;
-    button2.bg.clear();
-    drawButtonBg(button2.bg, width, true);
-    button2.text.position.set(BUTTON_PADDING_X2, (BUTTON_HEIGHT - button2.text.height) / 2);
-    button2.caret.position.set(width - BUTTON_PADDING_X2 - button2.caret.width, (BUTTON_HEIGHT - button2.caret.height) / 2);
-  }
-  function buildClosedButton(ctors, label2) {
-    const text2 = new ctors.Text({ text: label2, style: TEXT_STYLE });
-    const caret = new ctors.Text({ text: CARET_CLOSED, style: TEXT_STYLE });
-    const bg = new ctors.Graphics();
-    const container = new ctors.Container();
-    container.addChild(bg);
-    container.addChild(text2);
-    container.addChild(caret);
-    container.eventMode = "static";
-    container.cursor = "pointer";
-    const button2 = { container, bg, text: text2, caret };
-    layoutClosedButton(button2);
-    return button2;
-  }
-  function buildOptions(ctors, maxWidth, counts, total) {
-    const keys = ["all", ...mergeActions(Array.from(counts.keys()))];
-    const container = new ctors.Container();
-    const buttons = [];
-    const active3 = getActiveFilter();
-    let x = 0;
-    let y = 0;
-    for (const key2 of keys) {
-      const text2 = new ctors.Text({ text: labelFor(key2, counts, total), style: TEXT_STYLE });
-      const width = text2.width + BUTTON_PADDING_X2 * 2;
-      if (x > 0 && x + width > maxWidth) {
-        x = 0;
-        y += BUTTON_HEIGHT + BUTTON_GAP2;
-      }
-      const bg = new ctors.Graphics();
-      drawButtonBg(bg, width, key2 === active3);
-      text2.position.set(BUTTON_PADDING_X2, (BUTTON_HEIGHT - text2.height) / 2);
-      const button2 = new ctors.Container();
-      button2.addChild(bg);
-      button2.addChild(text2);
-      button2.position.set(x, y);
-      button2.eventMode = "static";
-      button2.cursor = "pointer";
-      container.addChild(button2);
-      buttons.push({ container: button2, bg, key: key2 });
-      x += width + BUTTON_GAP2;
-    }
-    return { container, buttons, height: y + BUTTON_HEIGHT };
-  }
-  function setExpanded(toolbar2, expanded) {
-    if (toolbar2.isExpanded === expanded) return;
-    toolbar2.isExpanded = expanded;
-    toolbar2.options.container.visible = expanded;
-    toolbar2.closedButton.caret.text = expanded ? CARET_OPEN : CARET_CLOSED;
-  }
-  function buildFilterToolbar(ctors, maxWidth) {
-    const history = getActivityLogHistory();
-    const counts = countActions(history);
-    const total = history.length;
-    const container = new ctors.Container();
-    container.label = FILTER_TOOLBAR_LABEL;
-    const closedButton = buildClosedButton(ctors, closedLabel({ counts, total }));
-    container.addChild(closedButton.container);
-    const options2 = buildOptions(ctors, maxWidth, counts, total);
-    options2.container.position.set(0, BUTTON_HEIGHT + PANEL_GAP);
-    options2.container.visible = false;
-    container.addChild(options2.container);
-    const toolbar2 = { container, closedButton, options: options2, counts, total, isExpanded: false };
-    closedButton.container.on("pointertap", () => setExpanded(toolbar2, !toolbar2.isExpanded));
-    for (const button2 of options2.buttons) {
-      button2.container.on("pointertap", () => {
-        setActiveFilter(button2.key);
-        setExpanded(toolbar2, false);
-      });
-    }
-    return toolbar2;
-  }
-  function refreshToolbarHighlight(toolbar2) {
-    const active3 = getActiveFilter();
-    for (const button2 of toolbar2.options.buttons) {
-      if (button2.bg.destroyed) continue;
-      const width = button2.bg.getLocalBounds().width;
-      button2.bg.clear();
-      drawButtonBg(button2.bg, width, button2.key === active3);
-    }
-    const label2 = closedLabel(toolbar2);
-    if (toolbar2.closedButton.text.text !== label2) {
-      toolbar2.closedButton.text.text = label2;
-      layoutClosedButton(toolbar2.closedButton);
-    }
-  }
-  var BUTTON_HEIGHT, BUTTON_PADDING_X2, BUTTON_GAP2, BUTTON_RADIUS2, BUTTON_FILL_INACTIVE, BUTTON_FILL_ACTIVE, BUTTON_ALPHA_INACTIVE, BUTTON_ALPHA_ACTIVE, TEXT_STYLE, CLOSED_LABEL_PREFIX, CARET_GAP, CARET_CLOSED, CARET_OPEN, PANEL_GAP, COLLAPSED_HEIGHT, closedLabel;
-  var init_filterToolbar = __esm({
-    "src/features/activityLog/filterToolbar.ts"() {
-      "use strict";
-      init_classification();
-      init_filter();
-      init_history();
-      init_activityLogModalLayout();
-      BUTTON_HEIGHT = 26;
-      BUTTON_PADDING_X2 = 10;
-      BUTTON_GAP2 = 6;
-      BUTTON_RADIUS2 = 8;
-      BUTTON_FILL_INACTIVE = 8084024;
-      BUTTON_FILL_ACTIVE = 14918205;
-      BUTTON_ALPHA_INACTIVE = 0.55;
-      BUTTON_ALPHA_ACTIVE = 0.95;
-      TEXT_STYLE = { fontFamily: "Arial", fontSize: 12, fontWeight: "700", fill: "#FFFFFF" };
-      CLOSED_LABEL_PREFIX = "Filter: ";
-      CARET_GAP = 8;
-      CARET_CLOSED = "\u25BE";
-      CARET_OPEN = "\u25B4";
-      PANEL_GAP = 6;
-      COLLAPSED_HEIGHT = BUTTON_HEIGHT;
-      closedLabel = (toolbar2) => CLOSED_LABEL_PREFIX + labelFor(getActiveFilter(), toolbar2.counts, toolbar2.total);
-    }
-  });
-
-  // src/features/activityLog/filterBar.ts
-  function safeWidth(node, fallback) {
-    try {
-      const value = node?.width;
-      return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
-    } catch {
-      return fallback;
-    }
-  }
-  function restoreScroll() {
-    if (!touchedScroll) return;
-    const { container, mask } = touchedScroll;
-    try {
-      if (!container.destroyed) container.visible = true;
-    } catch {
-    }
-    try {
-      if (mask && !mask.destroyed) {
-        mask.position.y = 0;
-        mask.scale.y = 1;
-      }
-    } catch {
-    }
-    touchedScroll = null;
-  }
-  function teardownToolbar() {
-    restoreScroll();
-    try {
-      toolbar?.container.destroy({ children: true });
-    } catch {
-    }
-    toolbar = null;
-    shiftedRows = /* @__PURE__ */ new WeakSet();
-    plannedFirst = null;
-    plannedShift = 0;
-  }
-  function shiftLogRows(content2, toolbarSpace) {
-    const children = content2.children;
-    const first = children[0];
-    if (!first) return;
-    if (first !== plannedFirst) {
-      const plan = planLogRowsShift(children, toolbarSpace);
-      plannedFirst = first;
-      plannedShift = plan.shift;
-      if (plan.hideFirst) {
-        first.visible = false;
-        shiftedRows.add(first);
-      }
-    }
-    for (const child of children) {
-      if (shiftedRows.has(child)) continue;
-      shiftedRows.add(child);
-      child.position.y += plannedShift;
-    }
-  }
-  function buildToolbarInto(anchors) {
-    const state5 = getReadySpriteState();
-    if (!state5?.ctors?.Text) return null;
-    const graphicsCtor = findGraphicsCtor(getStage(state5));
-    if (!graphicsCtor) return null;
-    const maxWidth = safeWidth(anchors.backgroundSprite, 0) - 2 * (anchors.scrollViewContainer.position?.x ?? 0);
-    if (maxWidth <= 0) return null;
-    const built = buildFilterToolbar(
-      { Graphics: graphicsCtor, Text: state5.ctors.Text, Container: anchors.modalContainer.constructor },
-      maxWidth
-    );
-    anchors.modalContainer.addChild(built.container);
-    syncDebug.toolbarBuilt = true;
-    return built;
-  }
-  function syncToolbarUnsafe() {
-    if (!modalNode || modalNode.destroyed) {
-      teardownToolbar();
-      modalNode = null;
-      return;
-    }
-    const anchors = locateActivityLogAnchors(modalNode);
-    syncDebug.anchorsFound = !!anchors;
-    if (!anchors) return;
-    toolbar ?? (toolbar = buildToolbarInto(anchors));
-    if (!toolbar) return;
-    const scrollContainer = anchors.scrollViewContainer;
-    const parts = locateScrollParts(scrollContainer);
-    syncDebug.scrollPartsFound = !!parts;
-    const kind = parts ? logsContentKind(parts.content.children) : "unknown";
-    const onLogs = kind === "unknown" ? activeTab === "logs" : kind === "logs";
-    toolbar.container.visible = onLogs;
-    if (!onLogs && toolbar.isExpanded) setExpanded(toolbar, false);
-    toolbar.container.position.set(scrollContainer.position.x, scrollContainer.position.y);
-    refreshToolbarHighlight(toolbar);
-    if (!onLogs || !parts) {
-      restoreScroll();
-      return;
-    }
-    touchedScroll = { container: scrollContainer, mask: parts.mask };
-    scrollContainer.visible = !toolbar.isExpanded;
-    const toolbarSpace = COLLAPSED_HEIGHT + TOOLBAR_GAP_BELOW;
-    const maskHeight = parts.mask.getLocalBounds?.().height ?? 0;
-    const transform = maskTransformFor(maskHeight, toolbarSpace);
-    parts.mask.position.y = transform.y;
-    parts.mask.scale.y = transform.scaleY;
-    shiftLogRows(parts.content, toolbarSpace);
-  }
-  function syncToolbar() {
-    try {
-      syncToolbarUnsafe();
-      syncDebug.lastError = null;
-    } catch (error) {
-      syncDebug.lastError = String(error?.message ?? error);
-      console.warn("[activityLogFilter] syncToolbar failed", error);
-    }
-  }
-  function tryFindModal() {
-    if (!isActivityLogModalOpen() || modalNode) return;
-    const state5 = getReadySpriteState();
-    if (!state5) return;
-    const found = findAcrossBranches(getStage(state5), (node) => node?.label === ACTIVITY_LOG_MODAL_LABEL);
-    if (!found) return;
-    modalNode = found;
-    found.once("destroyed", () => {
-      if (modalNode === found) {
-        modalNode = null;
-        teardownToolbar();
-      }
-    });
-  }
-  function onFrame(now) {
-    findRafId2 = null;
-    const open = isActivityLogModalOpen();
-    if (open && !modalNode && now - lastFindCheckAt2 >= FIND_RETRY_MS) {
-      lastFindCheckAt2 = now;
-      tryFindModal();
-    }
-    if (modalNode) syncToolbar();
-    if (!open && modalNode) {
-      modalNode = null;
-      teardownToolbar();
-    }
-    findRafId2 = raf2(onFrame);
-  }
-  function startActivityLogFilterPixi() {
-    void (async () => {
-      try {
-        setActivityLogModalOpen(await Atoms.ui.activeModal.get() === ACTIVITY_LOG_MODAL_ID);
-      } catch {
-      }
-      try {
-        await Atoms.ui.activeModal.onChange((next) => {
-          setActivityLogModalOpen(next === ACTIVITY_LOG_MODAL_ID);
-        });
-      } catch {
-      }
-      try {
-        activeTab = activityLogTabOf(await Atoms.ui.activityLogTab.get());
-        await Atoms.ui.activityLogTab.onChange((next) => {
-          activeTab = activityLogTabOf(next);
-        });
-      } catch {
-      }
-      if (findRafId2 == null) findRafId2 = raf2(onFrame);
-    })();
-  }
-  var FIND_RETRY_MS, TOOLBAR_GAP_BELOW, raf2, activeTab, modalNode, toolbar, findRafId2, lastFindCheckAt2, touchedScroll, shiftedRows, plannedFirst, plannedShift, syncDebug;
-  var init_filterBar = __esm({
-    "src/features/activityLog/filterBar.ts"() {
-      "use strict";
-      init_pageContext();
-      init_atoms();
-      init_gardenInfoCard();
-      init_context();
-      init_activityLogModalLayout();
-      init_filter();
-      init_filterToolbar();
-      FIND_RETRY_MS = 1e3;
-      TOOLBAR_GAP_BELOW = 6;
-      raf2 = pageWindow.requestAnimationFrame.bind(pageWindow);
-      activeTab = "logs";
-      modalNode = null;
-      toolbar = null;
-      findRafId2 = null;
-      lastFindCheckAt2 = 0;
-      touchedScroll = null;
-      shiftedRows = /* @__PURE__ */ new WeakSet();
-      plannedFirst = null;
-      plannedShift = 0;
-      syncDebug = {
-        lastError: null,
-        anchorsFound: false,
-        toolbarBuilt: false,
-        scrollPartsFound: false
-      };
-      shareGlobal("__MG_ACTIVITY_LOG_TOOLBAR_DEBUG__", {
-        get modalOpen() {
-          return isActivityLogModalOpen();
-        },
-        get modalFound() {
-          return !!modalNode;
-        },
-        get toolbarBuilt() {
-          return syncDebug.toolbarBuilt;
-        },
-        get anchorsFound() {
-          return syncDebug.anchorsFound;
-        },
-        get lastError() {
-          return syncDebug.lastError;
-        },
-        get modalNode() {
-          return modalNode;
-        },
-        get anchors() {
-          return modalNode ? locateActivityLogAnchors(modalNode) : null;
-        },
-        get activeTab() {
-          return activeTab;
-        },
-        get scrollPartsFound() {
-          return syncDebug.scrollPartsFound;
-        }
-      });
-    }
-  });
-
-  // src/features/activityLog/historyWatcher.ts
-  function skipNextActivityLogHistoryReopen() {
-    skipNextReopen = true;
-  }
-  function consumeReopenSkip() {
-    const w = pageWindow;
-    const sharedSkip = w[SKIP_NEXT_REOPEN_GLOBAL] === true;
-    if (!skipNextReopen && !sharedSkip) return false;
-    skipNextReopen = false;
-    if (sharedSkip) delete w[SKIP_NEXT_REOPEN_GLOBAL];
-    return true;
-  }
-  async function showStoredHistory() {
-    try {
-      await fakeActivityLog.show(filteredHistory(), { open: false });
-    } catch {
-    }
-  }
-  async function startActivityLogHistoryWatcher() {
-    const subs = new Subscriptions();
-    let lastSnapshot = [];
-    const ingest2 = (logs2, prev) => {
-      try {
-        const prevSnapshot = typeof prev !== "undefined" ? normalizeEntries(prev) : lastSnapshot;
-        const nextSnapshot = normalizeEntries(logs2);
-        syncHistory(prevSnapshot, nextSnapshot);
-        lastSnapshot = nextSnapshot;
-      } catch {
-      }
-    };
-    try {
-      ingest2(await myActivityLog.get());
-    } catch {
-    }
-    try {
-      subs.add(await myActivityLog.onChange((next, prev) => ingest2(next, prev)));
-    } catch {
-    }
-    let lastModal = null;
-    try {
-      lastModal = await Atoms.ui.activeModal.get() ?? null;
-    } catch {
-    }
-    try {
-      subs.add(
-        await Atoms.ui.activeModal.onChange(async (modalId) => {
-          const cur = modalId ?? null;
-          const justOpened = cur === ACTIVITY_LOG_MODAL_ID && lastModal !== ACTIVITY_LOG_MODAL_ID;
-          lastModal = cur;
-          if (justOpened && !consumeReopenSkip()) await showStoredHistory();
-        })
-      );
-    } catch {
-    }
-    return () => subs.dispose();
-  }
-  var SKIP_NEXT_REOPEN_GLOBAL, skipNextReopen;
-  var init_historyWatcher = __esm({
-    "src/features/activityLog/historyWatcher.ts"() {
-      "use strict";
-      init_fakeModal();
-      init_atoms();
-      init_pageContext();
-      init_emitter();
-      init_filter();
-      init_history();
-      SKIP_NEXT_REOPEN_GLOBAL = "__MG_SKIP_NEXT_ACTIVITY_LOG_REOPEN__";
-      skipNextReopen = false;
-    }
-  });
-
-  // src/features/hatch/pity.ts
-  function isRecord3(value) {
-    return typeof value === "object" && value !== null;
-  }
-  function toPositiveNumber(value) {
-    const n = Number(value);
-    return Number.isFinite(n) && n > 0 ? n : null;
-  }
-  function thresholdForChance(chance) {
-    if (!Number.isFinite(chance) || chance <= 0) return 0;
-    return Math.round(PITY_MULTIPLIER / chance);
-  }
-  function mutationEntry(mutationId) {
-    const entry = mutationCatalog2[mutationId];
-    return isRecord3(entry) ? entry : null;
-  }
-  function mutationIcon2(mutationId) {
-    const sprite = mutationEntry(mutationId)?.sprite;
-    return typeof sprite === "string" && sprite ? sprite : `sprite/ui/Mutation${mutationId}`;
-  }
-  function mutationTargets() {
-    const targets = [];
-    for (const [key2, mutationId] of [
-      ["gold", GOLD_MUTATION],
-      ["rainbow", RAINBOW_MUTATION]
-    ]) {
-      const chance = toPositiveNumber(mutationEntry(mutationId)?.baseChance) ?? 0;
-      if (chance <= 0) continue;
-      targets.push({
-        key: key2,
-        label: `${mutationId} pet`,
-        icon: mutationIcon2(mutationId),
-        chance,
-        threshold: thresholdForChance(chance),
-        kind: "mutation"
-      });
-    }
-    return targets;
-  }
-  function speciesChances(weights) {
-    const out = /* @__PURE__ */ new Map();
-    let total = 0;
-    for (const value of Object.values(weights)) {
-      total += toPositiveNumber(value) ?? 0;
-    }
-    if (total <= 0) return out;
-    for (const [species, value] of Object.entries(weights)) {
-      const weight = toPositiveNumber(value);
-      if (weight === null) continue;
-      out.set(species, weight / total);
-    }
-    return out;
-  }
-  function speciesTargets(entry) {
-    const weights = isRecord3(entry.faunaSpawnWeights) ? entry.faunaSpawnWeights : {};
-    const chances = speciesChances(weights);
-    const declared = isRecord3(entry.speciesPityThresholdPulls) ? entry.speciesPityThresholdPulls : null;
-    const targets = [];
-    const species = declared ? Object.keys(declared) : Array.from(chances.keys());
-    for (const id of species) {
-      const chance = chances.get(id) ?? 0;
-      const declaredThreshold = declared ? toPositiveNumber(declared[id]) : null;
-      if (declaredThreshold === null && (chance <= 0 || chance > MAX_PROTECTED_CHANCE)) continue;
-      const threshold = declaredThreshold ?? thresholdForChance(chance);
-      if (threshold <= 0) continue;
-      targets.push({
-        key: id,
-        label: id,
-        icon: `sprite/pet/${id}`,
-        chance,
-        threshold,
-        kind: "species"
-      });
-    }
-    targets.sort((a, b) => b.threshold - a.threshold || a.label.localeCompare(b.label));
-    return targets;
-  }
-  function buildEggPity(eggId, entry) {
-    const targets = [...speciesTargets(entry), ...mutationTargets()];
-    if (!targets.length) return null;
-    const weights = isRecord3(entry.faunaSpawnWeights) ? entry.faunaSpawnWeights : {};
-    const fauna = Array.from(speciesChances(weights)).map(([species, share]) => ({ species, share })).sort((a, b) => b.share - a.share || a.species.localeCompare(b.species));
-    return {
-      eggId,
-      name: typeof entry.name === "string" && entry.name.trim() ? entry.name : eggId,
-      rarity: typeof entry.rarity === "string" ? entry.rarity : "",
-      fauna,
-      targets
-    };
-  }
-  function listEggPity() {
-    const out = [];
-    for (const eggId of Object.keys(eggCatalog2)) {
-      const entry = eggCatalog2[eggId];
-      if (!isRecord3(entry)) continue;
-      const pity = buildEggPity(eggId, entry);
-      if (pity) out.push(pity);
-    }
-    out.sort((a, b) => {
-      const diff = rarityRank(a.rarity) - rarityRank(b.rarity);
-      return diff !== 0 ? diff : a.name.localeCompare(b.name);
-    });
-    return out;
-  }
-  function getEggPity(eggId) {
-    const entry = eggCatalog2[eggId];
-    return isRecord3(entry) ? buildEggPity(eggId, entry) : null;
-  }
-  function protectedSpecies(eggId) {
-    const pity = getEggPity(eggId);
-    if (!pity) return [];
-    return pity.targets.filter((target) => target.kind === "species").map((target) => target.key);
-  }
-  var PITY_MULTIPLIER, MAX_PROTECTED_CHANCE, GOLD_MUTATION, RAINBOW_MUTATION;
-  var init_pity = __esm({
-    "src/features/hatch/pity.ts"() {
-      "use strict";
-      init_data();
-      PITY_MULTIPLIER = 2;
-      MAX_PROTECTED_CHANCE = 0.05;
-      GOLD_MUTATION = "Gold";
-      RAINBOW_MUTATION = "Rainbow";
-    }
-  });
-
-  // src/features/hatch/tracker.ts
-  function emptyCounters() {
-    return { species: {}, gold: 0, rainbow: 0, pulls: 0 };
-  }
-  function isRecord4(value) {
-    return typeof value === "object" && value !== null;
-  }
-  function toCount(value) {
-    const n = Number(value);
-    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
-  }
-  function normalizeCounters(raw) {
-    const out = emptyCounters();
-    if (!isRecord4(raw)) return out;
-    if (isRecord4(raw.species)) {
-      for (const [species, value] of Object.entries(raw.species)) {
-        const count = toCount(value);
-        if (count > 0) out.species[species] = count;
-      }
-    }
-    out.gold = toCount(raw.gold);
-    out.rainbow = toCount(raw.rainbow);
-    out.pulls = toCount(raw.pulls);
-    return out;
-  }
-  function normalizeCounterMap(raw) {
-    const out = {};
-    if (!isRecord4(raw)) return out;
-    for (const [eggId, value] of Object.entries(raw)) {
-      out[eggId] = normalizeCounters(value);
-    }
-    return out;
-  }
-  function loadState() {
-    if (cachedState) return cachedState;
-    let raw = null;
-    try {
-      raw = readAriesPath(STATE_PATH2);
-    } catch {
-    }
-    const seenPetIds = [];
-    if (isRecord4(raw) && Array.isArray(raw.seenPetIds)) {
-      for (const id of raw.seenPetIds) {
-        if (typeof id === "string" && id) seenPetIds.push(id);
-      }
-    }
-    cachedState = {
-      seenPetIds,
-      counters: normalizeCounterMap(isRecord4(raw) ? raw.counters : null),
-      offsets: normalizeCounterMap(isRecord4(raw) ? raw.offsets : null),
-      lastHatchAt: isRecord4(raw) ? toCount(raw.lastHatchAt) : 0,
-      trackingStartedAt: isRecord4(raw) ? toCount(raw.trackingStartedAt) : 0,
-      bootstrapped: isRecord4(raw) ? raw.bootstrapped === true : false
-    };
-    return cachedState;
-  }
-  function saveState(state5) {
-    if (state5.seenPetIds.length > SEEN_LIMIT) {
-      state5.seenPetIds.splice(0, state5.seenPetIds.length - SEEN_LIMIT);
-    }
-    cachedState = state5;
-    try {
-      writeAriesPath(STATE_PATH2, state5);
-    } catch {
-    }
-    changes6.emit(state5);
-  }
-  function readPet(raw, eggIdFallback, timestamp, isPull) {
-    if (!isRecord4(raw)) return null;
-    const petId = typeof raw.id === "string" ? raw.id.trim() : "";
-    const species = typeof raw.petSpecies === "string" ? raw.petSpecies.trim() : "";
-    if (!petId || !species) return null;
-    let hasGold = false;
-    let hasRainbow = false;
-    if (Array.isArray(raw.mutations)) {
-      for (const mutation of raw.mutations) {
-        if (typeof mutation !== "string") continue;
-        const normalized = mutation.trim().toLowerCase();
-        if (normalized === GOLD_MUTATION.toLowerCase()) hasGold = true;
-        if (normalized === RAINBOW_MUTATION.toLowerCase()) hasRainbow = true;
-      }
-    }
-    const sourceEggId = typeof raw.sourceEggId === "string" && raw.sourceEggId.trim() ? raw.sourceEggId : null;
-    return {
-      petId,
-      species,
-      eggId: eggIdFallback ?? sourceEggId,
-      hasGold,
-      hasRainbow,
-      timestamp,
-      isPull
-    };
-  }
-  function extractHatchEvents(entries) {
-    const events = [];
-    for (const entry of entries) {
-      const action2 = typeof entry?.action === "string" ? entry.action.trim() : "";
-      if (!action2) continue;
-      const timestamp = Number(entry.timestamp) || 0;
-      const parameters = entry.parameters;
-      if (!isRecord4(parameters)) continue;
-      if (action2 === HATCH_ACTION) {
-        const eggId = typeof parameters.eggId === "string" && parameters.eggId.trim() ? parameters.eggId : null;
-        const event = readPet(parameters.pet, eggId, timestamp, true);
-        if (event) events.push(event);
-        continue;
-      }
-      if (DOUBLE_HATCH_ACTIONS.has(action2.toLowerCase())) {
-        const event = readPet(parameters.extraPet, null, timestamp, false);
-        if (event) events.push(event);
-      }
-    }
-    events.sort((a, b) => a.timestamp - b.timestamp);
-    return events;
-  }
-  function rarityOf(event) {
-    if (event.hasRainbow) return "rainbow";
-    if (event.hasGold) return "gold";
-    return "normal";
-  }
-  function applyPull(counters, event, rareSpecies) {
-    counters.pulls += 1;
-    for (const species of rareSpecies) {
-      if (event.species === species) counters.species[species] = 0;
-      else counters.species[species] = (counters.species[species] ?? 0) + 1;
-    }
-    counters.gold = event.hasGold ? 0 : counters.gold + 1;
-    counters.rainbow = event.hasRainbow ? 0 : counters.rainbow + 1;
-  }
-  function ingest(entries, countStats) {
-    var _a, _b;
-    const events = extractHatchEvents(entries);
-    if (!events.length) return false;
-    const state5 = loadState();
-    const seen = new Set(state5.seenPetIds);
-    let changed5 = false;
-    for (const event of events) {
-      if (seen.has(event.petId)) continue;
-      seen.add(event.petId);
-      state5.seenPetIds.push(event.petId);
-      changed5 = true;
-      if (countStats) {
-        try {
-          StatsService.incrementPetHatched(event.species, rarityOf(event));
-        } catch {
-        }
-      }
-      if (event.timestamp > state5.lastHatchAt) state5.lastHatchAt = event.timestamp;
-      if (!event.isPull || !event.eggId) continue;
-      const counters = (_a = state5.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
-      applyPull(counters, event, protectedSpecies(event.eggId));
-    }
-    if (changed5) saveState(state5);
-    return changed5;
-  }
-  async function startHatchTracker() {
-    const firstRun = !loadState().bootstrapped;
-    const consume = (logs2, countStats) => {
-      if (!Array.isArray(logs2)) return;
-      try {
-        ingest(logs2, countStats);
-      } catch {
-      }
-    };
-    try {
-      ingest(getActivityLogHistory(), false);
-    } catch {
-    }
-    try {
-      consume(await myActivityLog.get(), !firstRun);
-    } catch {
-    }
-    if (firstRun) {
-      const state5 = loadState();
-      state5.bootstrapped = true;
-      state5.trackingStartedAt = Date.now();
-      saveState(state5);
-    }
-    const current3 = loadState();
-    if (current3.bootstrapped && current3.trackingStartedAt <= 0) {
-      current3.trackingStartedAt = current3.lastHatchAt > 0 ? current3.lastHatchAt : Date.now();
-      saveState(current3);
-    }
-    let unsubscribe2 = null;
-    try {
-      unsubscribe2 = await myActivityLog.onChange((next) => consume(next, true));
-    } catch {
-    }
-    return () => {
-      try {
-        unsubscribe2?.();
-      } catch {
-      }
-    };
-  }
-  var STATE_PATH2, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, changes6, cachedState, HatchTracker;
-  var init_tracker = __esm({
-    "src/features/hatch/tracker.ts"() {
-      "use strict";
-      init_history();
-      init_atoms();
-      init_stats();
-      init_pity();
-      init_emitter();
-      init_storage();
-      STATE_PATH2 = "hatch.tracker";
-      HATCH_ACTION = "hatchEgg";
-      DOUBLE_HATCH_ACTIONS = /* @__PURE__ */ new Set(["doublehatch", "doublehatchii"]);
-      SEEN_LIMIT = 4e3;
-      changes6 = new Emitter();
-      cachedState = null;
-      HatchTracker = {
-        getState() {
-          return loadState();
-        },
-        /** Observed misses for one egg, before the manual offset. */
-        getCounters(eggId) {
-          return loadState().counters[eggId] ?? emptyCounters();
-        },
-        getOffsets(eggId) {
-          return loadState().offsets[eggId] ?? emptyCounters();
-        },
-        /** When this install started watching, or 0 before it ever has. */
-        getTrackingStartedAt() {
-          return loadState().trackingStartedAt;
-        },
-        setOffset(eggId, key2, value) {
-          var _a;
-          const state5 = loadState();
-          const offsets = (_a = state5.offsets)[eggId] ?? (_a[eggId] = emptyCounters());
-          const next = toCount(value);
-          if (key2 === "gold") offsets.gold = next;
-          else if (key2 === "rainbow") offsets.rainbow = next;
-          else if (next > 0) offsets.species[key2] = next;
-          else delete offsets.species[key2];
-          saveState(state5);
-        },
-        // Deliberately no reset: a counter that can be cleared is worse than useless,
-        // since the server's own never resets except on the outcome itself. Only
-        // `setOffset` moves a counter by hand.
-        subscribe(listener) {
-          return changes6.on(listener);
-        }
-      };
-    }
-  });
-
-  // src/ui/hud.ts
-  function currentPos(el) {
-    const rect = el.getBoundingClientRect();
-    const cs = getComputedStyle(el);
-    let r = parseFloat(cs.right);
-    let b = parseFloat(cs.bottom);
-    if (Number.isNaN(r)) r = window.innerWidth - rect.right;
-    if (Number.isNaN(b)) b = window.innerHeight - rect.bottom;
-    return { r, b };
-  }
-  function placeClamped(el, r, b) {
-    const rect = el.getBoundingClientRect();
-    const maxRight = Math.max(MARGIN, window.innerWidth - rect.width - MARGIN);
-    const maxBottom = Math.max(MARGIN, window.innerHeight - rect.height - MARGIN);
-    el.style.right = `${Math.min(Math.max(r, MARGIN), maxRight)}px`;
-    el.style.bottom = `${Math.min(Math.max(b, MARGIN), maxBottom)}px`;
-  }
-  function clampRect(el) {
-    const { r, b } = currentPos(el);
-    placeClamped(el, r, b);
-  }
-  function ensureOnScreen(el) {
-    clampRect(el);
-    const rect = el.getBoundingClientRect();
-    const head = el.querySelector(".w-head")?.getBoundingClientRect() ?? rect;
-    let { r, b } = currentPos(el);
-    const maxRight = Math.max(MARGIN, window.innerWidth - rect.width - MARGIN);
-    const maxBottom = Math.max(MARGIN, window.innerHeight - rect.height - MARGIN);
-    if (head.top < MARGIN) b = Math.max(MARGIN, Math.min(maxBottom, b - (MARGIN - head.top)));
-    if (rect.left < MARGIN) r = Math.max(MARGIN, Math.min(maxRight, r - (MARGIN - rect.left)));
-    el.style.right = `${r}px`;
-    el.style.bottom = `${b}px`;
-  }
-  function attachAutoClamp(win) {
-    if (typeof ResizeObserver === "undefined") return;
-    let raf3 = 0;
-    new ResizeObserver(() => {
-      if (raf3) cancelAnimationFrame(raf3);
-      raf3 = requestAnimationFrame(() => ensureOnScreen(win));
-    }).observe(win);
-  }
-  function withTopLocked(el, mutate) {
-    const before = el.getBoundingClientRect();
-    const { b } = currentPos(el);
-    mutate();
-    requestAnimationFrame(() => {
-      const after = el.getBoundingClientRect();
-      const maxBottom = Math.max(MARGIN, window.innerHeight - after.height - MARGIN);
-      el.style.bottom = `${Math.min(Math.max(MARGIN, b + after.top - before.top), maxBottom)}px`;
-      ensureOnScreen(el);
-    });
-  }
-  function makeDraggable(handle, target, opts) {
-    let start2 = null;
-    handle.addEventListener("mousedown", (e) => {
-      if (opts.ignore?.(e.target)) return;
-      start2 = { x: e.clientX, y: e.clientY, pos: currentPos(target) };
-      document.body.style.userSelect = "none";
-      opts.onStart?.();
-    });
-    window.addEventListener("mousemove", (e) => {
-      if (!start2) return;
-      placeClamped(target, start2.pos.r - (e.clientX - start2.x), start2.pos.b - (e.clientY - start2.y));
-    });
-    window.addEventListener("mouseup", () => {
-      if (!start2) return;
-      start2 = null;
-      document.body.style.userSelect = "";
-      opts.onEnd();
-    });
-  }
-  function installInputKeyTrap() {
-    const isTextField = (el) => {
-      if (el instanceof HTMLTextAreaElement) return true;
-      if (el instanceof HTMLInputElement) return ["text", "number", "search"].includes((el.type || "").toLowerCase());
-      return el instanceof HTMLElement && el.isContentEditable;
-    };
-    const ours = (el) => !!el?.closest?.(".qws-win, .qws2");
-    const trap = (ev) => {
-      const target = ev.target;
-      const active3 = document.activeElement;
-      if (!(ours(target) && isTextField(target) || ours(active3) && isTextField(active3))) return;
-      ev.stopPropagation();
-      ev.stopImmediatePropagation();
-    };
-    for (const type of ["keydown", "keypress", "keyup"]) window.addEventListener(type, trap, true);
-  }
-  function openDownloadLink(url) {
-    const gmObject = globalThis.GM;
-    const gmOpen = typeof GM_openInTab === "function" ? GM_openInTab : typeof gmObject?.openInTab === "function" ? gmObject.openInTab.bind(gmObject) : null;
-    if (isDiscordSurface() && gmOpen) {
-      try {
-        gmOpen(url, { active: true, setParent: true });
-        return;
-      } catch (error) {
-        console.warn("[MagicGarden] GM_openInTab failed, falling back to window.open", error);
-      }
-    }
-    window.open(url, "_blank", "noopener,noreferrer");
-  }
-  function mountHUD(opts) {
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", () => mountHUD(opts), { once: true });
-      return;
-    }
-    const statusMini = pill("\u2026", "warn");
-    statusMini.classList.add("mini");
-    const btnMin = button("\u2013", { size: "sm", title: "Minimize/Expand" });
-    const btnHide = button("\u2715", { size: "sm", title: "Hide" });
-    const header = h("div", "row drag");
-    header.append(h("div", "title", "Arie's Mod"), h("div", "qmm-spacer"), statusMini, btnMin, btnHide);
-    const statusFull = pill("status", "warn");
-    const versionPill = pill("\u2026", "warn");
-    const statusRow = h("div", "row");
-    statusRow.append(statusFull, versionPill);
-    const launch = h("div", "qws-launch");
-    const body = h("div", "body");
-    body.appendChild(launch);
-    const box2 = h("div", "qws2");
-    box2.append(header, statusRow, body);
-    (document.documentElement || document.body).appendChild(box2);
-    const setHUDHidden = (hidden) => {
-      box2.classList.toggle("hidden", hidden);
-      writeAriesPath(HUD_HIDDEN_PATH, hidden);
-    };
-    const toggleHUDHidden = () => setHUDHidden(!box2.classList.contains("hidden"));
-    const saveHUDPos = () => {
-      writeAriesPath(HUD_POS_PATH, { r: parseFloat(box2.style.right) || 16, b: parseFloat(box2.style.bottom) || 16 });
-    };
-    const isOn = (v) => v === true || v === "1" || v === 1;
-    const pos = readAriesPath(HUD_POS_PATH);
-    if (pos && typeof pos.r === "number" && typeof pos.b === "number") {
-      box2.style.right = `${pos.r}px`;
-      box2.style.bottom = `${pos.b}px`;
-    }
-    if (isOn(readAriesPath(HUD_COLLAPSED_PATH))) {
-      box2.classList.add("min");
-      btnMin.textContent = "+";
-    }
-    if (isOn(readAriesPath(HUD_HIDDEN_PATH))) box2.classList.add("hidden");
-    requestAnimationFrame(() => clampRect(box2));
-    window.addEventListener("resize", () => clampRect(box2));
-    let insertDown = false;
-    let insertUsedAsModifier = false;
-    const KEY_TOGGLE = "gui.toggle";
-    const KEY_DRAG = "gui.drag";
-    const downCodes = /* @__PURE__ */ new Set();
-    let toggleHotkey = getKeybind(KEY_TOGGLE);
-    let dragHotkey = getKeybind(KEY_DRAG);
-    let dragActive = false;
-    const isCodePressed = (code) => [...downCodes].some((pressed) => codesMatch(code, pressed));
-    const updateDragState = () => {
-      const hk = dragHotkey;
-      dragActive = !!hk && !!hk.alt === isCodePressed("AltLeft") && !!hk.ctrl === isCodePressed("ControlLeft") && !!hk.shift === isCodePressed("ShiftLeft") && !!hk.meta === isCodePressed("MetaLeft") && isCodePressed(hk.code);
-    };
-    updateDragState();
-    const isModifierActive = (e) => {
-      if (dragHotkey && dragActive) return true;
-      const insertModifier = insertDown && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey;
-      if (insertModifier) insertUsedAsModifier = true;
-      return insertModifier;
-    };
-    const onInsertKey = (e) => {
-      if (e.code !== "Insert" && e.key !== "Insert") return;
-      if (e.type === "keydown") {
-        if (!insertDown) insertUsedAsModifier = false;
-        insertDown = true;
-        return;
-      }
-      const usedAsModifier = insertUsedAsModifier;
-      insertDown = false;
-      insertUsedAsModifier = false;
-      if (!usedAsModifier && !isEditing(e.target)) {
-        e.preventDefault();
-        toggleHUDHidden();
-      }
-    };
-    window.addEventListener("keydown", onInsertKey, true);
-    window.addEventListener("keyup", onInsertKey, true);
-    const resetKeys = () => {
-      insertDown = false;
-      insertUsedAsModifier = false;
-      downCodes.clear();
-      updateDragState();
-    };
-    window.addEventListener("blur", resetKeys, true);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState !== "visible") resetKeys();
-    });
-    window.addEventListener("keydown", (e) => {
-      downCodes.add(e.code);
-      updateDragState();
-      if (isEditing(e.target) || e.repeat) return;
-      if (isKeybindCaptureActive()) return;
-      if (matchHotkey(e, toggleHotkey)) {
-        if (insertDown && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) insertUsedAsModifier = true;
-        e.preventDefault();
-        toggleHUDHidden();
-      }
-    }, true);
-    window.addEventListener("keyup", (e) => {
-      downCodes.delete(e.code);
-      updateDragState();
-    }, true);
-    const updateHideButtonTitle = () => {
-      const keys = [];
-      if (toggleHotkey) keys.push(getKeybindLabel(KEY_TOGGLE));
-      keys.push("Insert");
-      btnHide.title = `Hide (${keys.join(" / ")})`;
-    };
-    updateHideButtonTitle();
-    onKeybindChange(KEY_TOGGLE, (hk) => {
-      toggleHotkey = hk;
-      updateHideButtonTitle();
-    });
-    onKeybindChange(KEY_DRAG, (hk) => {
-      dragHotkey = hk;
-      updateDragState();
-    });
-    makeDraggable(header, box2, { onEnd: saveHUDPos });
-    btnMin.onclick = () => {
-      withTopLocked(box2, () => {
-        box2.classList.toggle("min");
-        btnMin.textContent = box2.classList.contains("min") ? "+" : "\u2013";
-        writeAriesPath(HUD_COLLAPSED_PATH, box2.classList.contains("min"));
-      });
-    };
-    btnHide.onclick = () => setHUDHidden(true);
-    const windows = /* @__PURE__ */ new Map();
-    let cascade = 0;
-    function bumpZ(el) {
-      let maxZ = layer.window;
-      windows.forEach((w) => {
-        const z = parseInt(getComputedStyle(w.el).zIndex || String(layer.window), 10);
-        if (z > maxZ) maxZ = z;
-      });
-      el.style.zIndex = String(maxZ + 1);
-    }
-    function saveWinPos(id, el) {
-      writeAriesPath(HUD_WIN_PATH(id), { r: parseFloat(el.style.right) || 16, b: parseFloat(el.style.bottom) || 16 });
-    }
-    function restoreWinPos(id, el) {
-      const saved = readAriesPath(HUD_WIN_PATH(id));
-      if (typeof saved?.r === "number") el.style.right = `${saved.r}px`;
-      if (typeof saved?.b === "number") el.style.bottom = `${saved.b}px`;
-      ensureOnScreen(el);
-    }
-    function showWindow(id, title, render) {
-      const existing = windows.get(id);
-      if (existing) {
-        existing.el.style.display = "";
-        bumpZ(existing.el);
-        ensureOnScreen(existing.el);
-        setLaunchState(id, true);
-        return;
-      }
-      const win = h("div", "qws-win");
-      const head = h("div", "w-head");
-      const winMin = button("\u2013", { size: "xs", title: "Minimize/Expand" });
-      const winClose = button("\u2715", { size: "xs", title: "Close" });
-      winMin.classList.add("w-btn");
-      winClose.classList.add("w-btn");
-      head.append(h("div", "w-title", title), h("div", "qmm-spacer"), winMin, winClose);
-      const winBody = h("div", "w-body");
-      win.append(head, winBody);
-      (document.documentElement || document.body).appendChild(win);
-      const offset = cascade++ % 5 * 24;
-      win.style.right = `${16 + offset}px`;
-      win.style.bottom = `${16 + offset}px`;
-      clampRect(win);
-      bumpZ(win);
-      makeDraggable(head, win, {
-        ignore: (t) => !!t.closest(".w-btn"),
-        onStart: () => bumpZ(win),
-        onEnd: () => saveWinPos(id, win)
-      });
-      winMin.onclick = () => {
-        withTopLocked(win, () => {
-          const hidden = winBody.style.display === "none";
-          winBody.style.display = hidden ? "" : "none";
-          winMin.textContent = hidden ? "\u2013" : "+";
-        });
-      };
-      winClose.onclick = () => {
-        win.style.display = "none";
-        setLaunchState(id, false);
-      };
-      restoreWinPos(id, win);
-      try {
-        render(winBody);
-      } catch (e) {
-        winBody.textContent = String(e);
-      }
-      attachAutoClamp(win);
-      requestAnimationFrame(() => ensureOnScreen(win));
-      saveWinPos(id, win);
-      windows.set(id, { id, el: win });
-      setLaunchState(id, true);
-    }
-    window.addEventListener("resize", () => windows.forEach((w) => ensureOnScreen(w.el)));
-    (function enableModifierDrag() {
-      let drag = null;
-      window.addEventListener("mousedown", (e) => {
-        if (!isModifierActive(e) || e.button !== 0) return;
-        const root4 = e.target?.closest?.(".qws-win, .qws2");
-        if (!root4 || root4.style.display === "none") return;
-        drag = { el: root4, x: e.clientX, y: e.clientY, pos: currentPos(root4) };
-        document.body.style.userSelect = "none";
-        bumpZ(root4);
-        e.preventDefault();
-        e.stopPropagation();
-      }, true);
-      window.addEventListener("mousemove", (e) => {
-        if (!drag) return;
-        placeClamped(drag.el, drag.pos.r - (e.clientX - drag.x), drag.pos.b - (e.clientY - drag.y));
-      }, true);
-      const stopDrag = () => {
-        if (!drag) return;
-        const el = drag.el;
-        drag = null;
-        document.body.style.userSelect = "";
-        clampRect(el);
-        const win = [...windows.values()].find((w) => w.el === el);
-        if (win) saveWinPos(win.id, el);
-        else if (el === box2) saveHUDPos();
-      };
-      window.addEventListener("mouseup", stopDrag, true);
-      window.addEventListener("keyup", (e) => {
-        if (!dragHotkey || matchHotkey(e, dragHotkey) || !dragActive) stopDrag();
-      }, true);
-    })();
-    installInputKeyTrap();
-    const registry2 = [];
-    const launchButtons = /* @__PURE__ */ new Map();
-    function setLaunchState(id, open) {
-      const btn = launchButtons.get(id);
-      if (!btn) return;
-      btn.textContent = open ? "Close" : "Open";
-      btn.dataset.open = open ? "1" : "0";
-      btn.classList.toggle("active", open);
-    }
-    function register2(id, title, render) {
-      registry2.push({ id, title, render });
-      const openBtn = button("Open", { size: "sm" });
-      openBtn.dataset.open = "0";
-      launchButtons.set(id, openBtn);
-      openBtn.onclick = () => {
-        const w = windows.get(id);
-        if (w && w.el.style.display !== "none") {
-          w.el.style.display = "none";
-          setLaunchState(id, false);
-        } else {
-          showWindow(id, title, render);
-        }
-      };
-      const item = h("div", "launch-item");
-      item.append(h("div", "name", title), openBtn);
-      launch.appendChild(item);
-    }
-    try {
-      opts?.onRegister?.(register2);
-    } catch (error) {
-      console.error("[HUD] panel registration failed:", error);
-    }
-    window.addEventListener("qws:open-panel", (ev) => {
-      const id = String(ev.detail?.id || "");
-      const entry = registry2.find((r) => r.id === id);
-      if (entry) showWindow(id, entry.title, entry.render);
-    });
-    initVersionBadge(versionPill);
-    void ensureStore().catch(() => {
-    });
-    startStatusLoop(statusFull, statusMini);
-  }
-  function initVersionBadge(badge2) {
-    const show = (text2, tone, downloadUrl) => {
-      badge2.textContent = text2;
-      setTone(badge2, tone);
-      badge2.classList.toggle("is-link", !!downloadUrl);
-      if (downloadUrl) {
-        badge2.dataset.download = downloadUrl;
-        badge2.title = "Download the new version";
-      } else {
-        delete badge2.dataset.download;
-        badge2.removeAttribute("title");
-      }
-    };
-    show("checking\u2026", "warn");
-    badge2.addEventListener("click", () => {
-      const url = badge2.dataset.download;
-      if (url) openDownloadLink(url);
-    });
-    void (async () => {
-      const localVersion = getLocalVersion();
-      try {
-        const remoteData = await fetchRemoteVersion();
-        const remoteVersion = remoteData?.version?.trim();
-        if (!remoteVersion) show(localVersion || "Unknown", "warn");
-        else if (!localVersion) show(remoteVersion, "warn", remoteData?.download);
-        else if (localVersion === remoteVersion) show(localVersion, "ok");
-        else show(`${localVersion} \u2192 ${remoteVersion}`, "warn", remoteData?.download);
-      } catch (error) {
-        console.error("[MagicGarden] Failed to check version:", error);
-        show(localVersion || "Unknown", "warn");
-      }
-    })();
-  }
-  function getWSStatus() {
-    if (sockets.some((ws) => ws.readyState === NativeWS.OPEN)) return { level: "ok", message: "ws open" };
-    if (window.__QWS_workerFound || workerFound) return { level: "ok", message: "ws via worker" };
-    return { level: "bad", message: "ws none" };
-  }
-  function getStoreStatus() {
-    try {
-      const info = getCapturedInfo();
-      if (isStoreCaptured()) return { level: "ok", message: `store ${info.via || "ready"}` };
-      if (info.via === "polyfill" || info.polyfill) return { level: "warn", message: "store polyfill" };
-      return { level: "bad", message: "store none" };
-    } catch {
-      return { level: "bad", message: "store error" };
-    }
-  }
-  function startStatusLoop(full, mini) {
-    let warmup = getSpriteWarmupState();
-    const update = () => {
-      if (!warmup.completed) {
-        const progress = warmup.total > 0 ? `${warmup.done}/${warmup.total}` : `${warmup.done}`;
-        const summary = warmup.total > 0 ? `Sprites warming: ${progress}` : "Sprites warming up";
-        full.textContent = `Sprites ${progress}`;
-        mini.textContent = progress;
-        full.title = mini.title = summary;
-        setTone(full, "warn");
-        setTone(mini, "warn");
-        mini.style.display = "";
-        return;
-      }
-      const ws = getWSStatus();
-      const store = getStoreStatus();
-      const level = store.message === "store none" && ws.level === "bad" ? "bad" : ws.level === "ok" && store.level === "ok" ? "ok" : "warn";
-      full.textContent = "status";
-      mini.textContent = level === "ok" ? "OK" : level === "warn" ? "WARN" : "ISSUES";
-      full.title = mini.title = `${ws.message}, ${store.message}`;
-      setTone(full, level);
-      setTone(mini, level);
-      mini.style.display = level === "ok" ? "none" : "";
-    };
-    onSpriteWarmupProgress((state5) => {
-      warmup = state5;
-      update();
-    });
-    setInterval(update, 800);
-  }
-  function initWatchers() {
+  // src/startFeatures.ts
+  function startFeatures() {
     installShopKeybindsOnce();
     installSellKeybindsOnce();
     installModalToggleKeybinds();
     installGameKeybindsOnce();
     installCompanionKeybindsOnce();
-    const bootToolbar = async () => {
+    const mountShopBell = async () => {
       try {
         await renderOverlay();
-      } catch (e) {
-        console.error("[HUD] renderOverlay failed:", e);
+      } catch (error) {
+        console.error("[Aries] shop bell failed to mount:", error);
       }
     };
-    if (document.head) {
-      bootToolbar();
-    } else {
-      document.addEventListener("DOMContentLoaded", () => bootToolbar(), { once: true });
-    }
-    (async () => {
+    if (document.head) void mountShopBell();
+    else document.addEventListener("DOMContentLoaded", () => void mountShopBell(), { once: true });
+    void (async () => {
       try {
         await PetAlertService.start();
       } catch {
       }
       try {
         installPetTeamHotkeys((teamId2) => {
-          PetsService.useTeam(teamId2).catch((e) => console.warn("[Pets] hotkey useTeam failed:", e));
+          PetsService.useTeam(teamId2).catch((error) => console.warn("[Pets] hotkey useTeam failed:", error));
         });
       } catch {
       }
@@ -26975,54 +27002,31 @@
       startInventorySortingObserver();
     })();
   }
-  var HUD_POS_PATH, HUD_COLLAPSED_PATH, HUD_HIDDEN_PATH, HUD_WIN_PATH, MARGIN, isEditing;
-  var init_hud = __esm({
-    "src/ui/hud.ts"() {
+  var init_startFeatures = __esm({
+    "src/startFeatures.ts"() {
       "use strict";
-      init_sockets();
-      init_jotai();
+      init_filterBar();
+      init_historyWatcher();
+      init_keybind();
+      init_badge();
+      init_domTooltip();
+      init_tracker();
+      init_sorting();
+      init_gameRemap();
+      init_modalToggles();
+      init_decorPickupLockIndicator();
+      init_eggHatchLockIndicator();
+      init_indicator();
+      init_sellCropsLock();
+      init_overlay2();
+      init_petAlerts();
+      init_feedWidget();
       init_pets();
       init_teamHotkeys();
-      init_shops();
-      init_keybind();
-      init_keybind2();
-      init_modalToggles();
-      init_gameRemap();
-      init_petAlerts();
-      init_keybinds();
-      init_keyboard();
-      init_hotkey();
-      init_overlay2();
-      init_feedWidget();
-      init_iconCache();
-      init_domTooltip();
-      init_badge();
-      init_indicator();
       init_domButton();
+      init_keybind2();
       init_pixiButton();
-      init_sellCropsLock();
-      init_eggHatchLockIndicator();
-      init_decorPickupLockIndicator();
-      init_modVersion();
-      init_environment();
-      init_sorting();
-      init_filterBar();
-      init_storage();
-      init_historyWatcher();
-      init_tracker();
-      init_badges();
-      init_button();
-      init_dom2();
-      init_theme();
-      HUD_POS_PATH = "hud.pos";
-      HUD_COLLAPSED_PATH = "hud.collapsed";
-      HUD_HIDDEN_PATH = "hud.hidden";
-      HUD_WIN_PATH = (id) => `hud.windows.${id}`;
-      MARGIN = 8;
-      isEditing = (el) => {
-        const t = el;
-        return !!t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName));
-      };
+      init_shops();
     }
   });
 
@@ -32580,7 +32584,7 @@ next: ${next}`;
     return typeof value === "number" && Number.isFinite(value) ? value : null;
   }
   function getStrengthRatio(pet) {
-    return getPetStrength(pet) / STRENGTH_SCALE;
+    return getPetStrength2(pet) / STRENGTH_SCALE;
   }
   function getMaxStrengthRatio(pet) {
     return getPetMaxStrength(pet) / STRENGTH_SCALE;
@@ -32800,7 +32804,7 @@ next: ${next}`;
       if (!isKnownSpecies(pet.petSpecies) && !unknownSpecies.includes(pet.petSpecies)) {
         unknownSpecies.push(pet.petSpecies);
       }
-      strengthCurrent += getPetStrength(pet);
+      strengthCurrent += getPetStrength2(pet);
       strengthMax += getPetMaxStrength(pet);
       const ratio = getStrengthRatio(pet);
       const maxRatio = getMaxStrengthRatio(pet);
@@ -33362,7 +33366,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       setIcon(species, pet?.mutations ?? []);
       const maxStrength = pet ? getPetMaxStrength(pet) : 0;
       if (pet && maxStrength > 0) {
-        const strength = getPetStrength(pet);
+        const strength = getPetStrength2(pet);
         const maxed = strength >= maxStrength;
         strengthBadge.textContent = maxed ? `${maxStrength}` : `${strength}/${maxStrength}`;
         strengthBadge.style.color = maxed ? MAX_STRENGTH_COLOR : "#fff";
@@ -34723,7 +34727,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     chip.appendChild(nameSpan);
     if (pet) {
       const strBadge = document.createElement("span");
-      strBadge.textContent = `${getPetStrength(pet)}/${getPetMaxStrength(pet)}`;
+      strBadge.textContent = `${getPetStrength2(pet)}/${getPetMaxStrength(pet)}`;
       strBadge.title = "Strength (current/max). Teams rank by max strength.";
       Object.assign(strBadge.style, {
         fontSize: "10px",
@@ -50800,6 +50804,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_outgoingRules2();
       init_outgoingCounters();
       init_hud();
+      init_startFeatures();
       init_menu2();
       init_menu3();
       init_menu4();
@@ -50870,7 +50875,7 @@ Restore figures are averages; unlucky streaks do worse.`;
             register2("debug-data", "\u{1F41E} Debug", renderDebugDataMenu);
           }
         });
-        initWatchers();
+        startFeatures();
         startCompanion();
         mountCompanionAsk();
         shareGlobal("Companion", CompanionService);

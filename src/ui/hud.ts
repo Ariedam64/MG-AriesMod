@@ -1,13 +1,5 @@
 import { NativeWS, sockets, workerFound } from "../game/ws/sockets";
 import { ensureStore, isStoreCaptured, getCapturedInfo } from "../game/store/jotai";
-import { PetsService } from "../features/pets/pets";
-import { installPetTeamHotkeys } from "../features/pets/teamHotkeys";
-import { installShopKeybindsOnce } from "../features/shops/shops";
-import { installCompanionKeybindsOnce } from "../features/companion/keybind";
-import { installSellKeybindsOnce } from "../features/sellAllPets/keybind";
-import { installModalToggleKeybinds } from "../features/keybinds/modalToggles";
-import { installGameKeybindsOnce } from "../features/keybinds/gameRemap";
-import { PetAlertService } from "../features/notifier/petAlerts";
 import {
   getKeybind,
   getKeybindLabel,
@@ -17,24 +9,10 @@ import {
 } from "../features/keybinds/keybinds";
 import { isKeybindCaptureActive } from "../lib/keyboard";
 import { codesMatch, matchHotkey } from "../lib/hotkey";
-import { renderOverlay } from "../features/notifier/overlay";
-import { startInstantFeedWidget } from "../features/pets/feedWidget";
 import { getSpriteWarmupState, onSpriteWarmupProgress } from "./kit/sprites/iconCache";
-import { startCropValuesObserverFromGardenAtom } from "../features/cropPrice/domTooltip";
-import { startCropValueOverlayInPixi } from "../features/cropPrice/badge";
-import { startLockerIndicatorInPixi } from "../features/locker/indicator";
-import { startInjectSellAllPets } from "../features/sellAllPets/domButton";
-import { startSellAllPetsPixi } from "../features/sellAllPets/pixiButton";
-import { startSellCropsLockWatcher } from "../features/locker/sellCropsLock";
-import { startEggHatchLockIndicator } from "../features/locker/eggHatchLockIndicator";
-import { startDecorPickupLockIndicator } from "../features/locker/decorPickupLockIndicator";
 import { fetchRemoteVersion, getLocalVersion } from "../platform/modVersion";
 import { isDiscordSurface } from "../platform/environment";
-import { startInventorySortingObserver } from "../features/inventory/sorting";
-import { startActivityLogFilterPixi } from "../features/activityLog/filterBar";
 import { readAriesPath, writeAriesPath } from "../platform/storage";
-import { startActivityLogHistoryWatcher } from "../features/activityLog/historyWatcher";
-import { startHatchTracker } from "../features/hatch/tracker";
 import { pill, setTone, type StatusTone } from "./kit/badges";
 import { button } from "./kit/button";
 import { h } from "./kit/dom";
@@ -606,45 +584,4 @@ function startStatusLoop(full: HTMLElement, mini: HTMLElement): void {
     update();
   });
   setInterval(update, 800);
-}
-
-export function initWatchers(){
-    installShopKeybindsOnce();
-    installSellKeybindsOnce();
-    installModalToggleKeybinds();
-    installGameKeybindsOnce();
-    installCompanionKeybindsOnce();
-
-    const bootToolbar = async () => {
-      try { await renderOverlay(); } catch (e) { console.error("[HUD] renderOverlay failed:", e); }
-    };
-    if (document.head) {
-      bootToolbar();
-    } else {
-      document.addEventListener("DOMContentLoaded", () => bootToolbar(), { once: true });
-    }
-
-    (async () => {
-        try { await PetAlertService.start(); } catch {}
-        try {
-          installPetTeamHotkeys((teamId) => {
-            PetsService.useTeam(teamId).catch((e) => console.warn("[Pets] hotkey useTeam failed:", e));
-          });
-        } catch {}
-        try { await PetsService.startPetTeamSync(); } catch {}
-      try { await PetsService.startAbilityLogsWatcher(); } catch {}
-      try { await startActivityLogHistoryWatcher(); } catch {}
-      try { await startHatchTracker(); } catch {}
-      startActivityLogFilterPixi();
-      startCropValuesObserverFromGardenAtom();
-      startCropValueOverlayInPixi();
-      startSellCropsLockWatcher();
-      startDecorPickupLockIndicator();
-      startEggHatchLockIndicator();
-      startLockerIndicatorInPixi();
-      startInjectSellAllPets();
-      startSellAllPetsPixi();
-      startInstantFeedWidget();
-      startInventorySortingObserver();
-  })();
 }

@@ -1,4 +1,3 @@
-// src/main.ts
 import "./game/sprites";
 import { installPageWebSocketHook } from "./game/ws/socketHook";
 import { startAutoReco } from "./features/autoReco/autoReco";
@@ -8,7 +7,8 @@ import { installInventoryReserve } from "./features/misc/inventoryReserve";
 import { startGhostMode } from "./features/misc/ghost";
 import { installLockerOutgoingRules } from "./features/locker/outgoingRules";
 import { installStatsCounters } from "./features/stats/outgoingCounters";
-import { mountHUD, initWatchers } from "./ui/hud";
+import { mountHUD } from "./ui/hud";
+import { startFeatures } from "./startFeatures";
 
 import { renderDebugDataMenu } from "./features/debug/menu";
 import { renderLockerMenu } from "./features/locker/menu";
@@ -48,8 +48,6 @@ import { tos } from "./game/pixi/tileObjects";
 import { initAuthBridgeIfNeeded } from "./platform/ariesApi/authBridge";
 import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/playerStateReport";
 
-
-
 (async function () {
   "use strict";
 
@@ -70,8 +68,8 @@ import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/play
   shareGlobal("MGData", MGData);
   detectGameVersion();
 
-  try {warmupSpriteCache();} catch {}
-    tos.init()
+  try { warmupSpriteCache(); } catch {}
+  tos.init();
 
   EditorService.init();
   installEditorPointerControls();
@@ -85,7 +83,7 @@ import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/play
     onRegister(register) {
       register('pets', '🐾 Pets', renderPetsMenu);
       register('locker', '🔒 Locker', renderLockerMenu);
-      register('alerts',  '🔔 Alerts', renderNotifierMenu)
+      register('alerts', '🔔 Alerts', renderNotifierMenu);
       register('calculator', '🤓 Calculator', renderCalculatorMenu);
       register('room', '🏠 Room', renderRoomMenu);
       register('editor', '📝 Editor', renderEditorMenu);
@@ -99,7 +97,7 @@ import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/play
     }
   });
 
-  initWatchers()
+  startFeatures();
 
   startCompanion();
   // The companion's questions also show at the top of the screen, menu closed.
