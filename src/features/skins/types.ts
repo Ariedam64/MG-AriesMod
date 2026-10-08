@@ -1,7 +1,7 @@
 // Shared types for the skin system (custom sprite replacement).
 
 /**
- * One replaceable frame — the atomic unit of skinning.
+ * One replaceable frame: the atomic unit of skinning.
  *
  * `logicalSize` is the sprite's own (unrotated) size, and the box a custom
  * image gets contained into. `occupiedRect` is the region the frame occupies in

@@ -6,12 +6,9 @@
 // label, or a baked composite. Each probe separates those cases.
 
 import { getSpriteState } from '../../game/sprites/context';
-import { collectGameMatches, type LabelMatch } from './applier';
+import { pageWindow } from '../../platform/pageContext';
+import { collectGameMatches, frameRectOf, sourceOf, type LabelMatch } from './applier';
 import { findRenderTextureCache, rebakeStats } from './gameCaches';
-
-const frameRectOf = (texture: any) => texture?.frame ?? texture?._frame ?? null;
-const sourceOf = (texture: any) =>
-  texture?.source ?? texture?._source ?? texture?.baseTexture ?? null;
 const rectKey = (x: number, y: number, w: number, h: number) => `${x}|${y}|${w}|${h}`;
 
 /**
@@ -70,7 +67,7 @@ function inspectFrame(
  *
  * Answers the question the other probes assume: is the object even on screen,
  * and under which frame key. `unlabelledRects` exposes textures drawn with no
- * label — derived instances a label lookup can never find, and baked composites
+ * label: derived instances a label lookup can never find, and baked composites
  * (recognisable by a rectangle starting at `0|0`).
  */
 function findOnStage(substring = '') {
@@ -121,8 +118,7 @@ function describeGameCaches() {
 
 /** Idempotent: attaches the probes to the page-context debug object. */
 export function installSkinsDebug(): void {
-  const root: any = (globalThis as any).unsafeWindow || (globalThis as any);
-  const target = root.__MG_SKINS_DEBUG__;
+  const target = pageWindow.__MG_SKINS_DEBUG__;
   if (!target) return;
   target.inspect = inspectFrame;
   target.find = findOnStage;

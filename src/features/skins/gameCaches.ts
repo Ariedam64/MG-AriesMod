@@ -5,7 +5,7 @@
 // `species-mutations` combo and cached, so they need telling separately. The
 // game's own RenderTextureCache exposes `rebakeAll()`, which re-runs every live
 // entry against the current base textures; it marks those textures `dynamic`,
-// so their update notification actually reaches sprites — unlike raw atlas
+// so their update notification actually reaches sprites, unlike raw atlas
 // frames.
 //
 // Inventory icons are deliberately NOT handled here. Each one is rendered from
@@ -13,10 +13,11 @@
 // container destroyed straight after, so it keeps no live link to the atlas.
 // There is no central cache to clear either: every inventory widget owns its
 // texture, keyed on item identity and never on skin state. Icons therefore pick
-// up a skin when they are next generated — a reload does it — and no amount of
+// up a skin when they are next generated (a reload does it), and no amount of
 // invalidation from here can refresh one already on screen.
 
 import { getPixiApp, getSpriteState } from '../../game/sprites/context';
+import { pageWindow } from '../../platform/pageContext';
 
 interface RenderTextureCache {
   rebakeAll: () => number;
@@ -35,22 +36,21 @@ const hasRebake = (value: any): value is RenderTextureCache =>
  */
 function holders(): any[] {
   const state = getSpriteState();
-  const root: any = (globalThis as any).unsafeWindow || (globalThis as any);
   return [
     getPixiApp(),
     state.app,
     (state.app as any)?.app,
     state.renderer,
     (state.renderer as any)?.app,
-    root.__PIXI_APP__,
-    root.app,
+    pageWindow.__PIXI_APP__,
+    pageWindow.app,
   ].filter(Boolean);
 }
 
 /**
  * Shallow hunt for a named cache property.
  *
- * Bounded hard — this walks live engine objects, not a data structure, and must
+ * Bounded hard: this walks live engine objects, not a data structure, and must
  * never become an expensive or recursive crawl.
  */
 function search<T>(property: string, matches: (value: any) => value is T): T | null {

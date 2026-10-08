@@ -2,7 +2,7 @@
 // and renders previews for the menu.
 //
 // Nothing here reads the game's atlas. Since v834 every atlas ships as KTX2
-// (GPU-compressed), so its pixels cannot be decoded in the browser — the skin
+// (GPU-compressed), so its pixels cannot be decoded in the browser. The skin
 // system replaces a frame's texture outright instead of patching the atlas.
 
 import { renderFrameToCanvas } from '../../game/sprites/api/frameCanvas';

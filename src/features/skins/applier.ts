@@ -2,7 +2,7 @@
 //
 // Pixi Textures are shared: every sprite showing a Birdhouse points at the one
 // Texture the atlas parser built for `sprite/decor/Birdhouse`. Mutating that
-// object once updates all of them at no per-frame cost — no render loop hook,
+// object once updates all of them at no per-frame cost: no render loop hook,
 // no display-list traversal on every tick.
 //
 // Only `source`, `frame` and `rotate` change. `orig`, `trim` and
@@ -10,6 +10,7 @@
 // skinned sprite keeps the original's footprint and anchor in the world.
 
 import { getSpriteState } from '../../game/sprites/context';
+import { pageWindow } from '../../platform/pageContext';
 import type { SkinTarget } from './types';
 
 const MAX_WALK_NODES = 40_000;
@@ -42,7 +43,7 @@ export interface LabelMatch {
  * `byLabel` is the obvious route but is not enough on its own: the game builds
  * derived Texture instances per sprite (`new Texture({ source, frame })`),
  * and those inherit no label. Only the spritesheet's canonical texture keeps
- * it, and that one is often referenced by nothing the player can see — which
+ * it, and that one is often referenced by nothing the player can see, which
  * looks exactly like a skin that applies successfully and changes nothing.
  *
  * `byRect` catches those clones: a frame is uniquely identified by its
@@ -77,13 +78,10 @@ const debugState: SkinsDebugState = {
   lastRectCount: 0,
   lastApply: {},
 };
-{
-  const root: any = (globalThis as any).unsafeWindow || (globalThis as any);
-  root.__MG_SKINS_DEBUG__ = debugState;
-}
+pageWindow.__MG_SKINS_DEBUG__ = debugState;
 
-const frameRectOf = (texture: any) => texture?.frame ?? texture?._frame ?? null;
-const sourceOf = (texture: any) =>
+export const frameRectOf = (texture: any) => texture?.frame ?? texture?._frame ?? null;
+export const sourceOf = (texture: any) =>
   texture?.source ?? texture?._source ?? texture?.baseTexture ?? null;
 
 /**
@@ -157,13 +155,13 @@ function collectGameMatches(): StageIndex {
  * Finds the canonical Texture the game registered for a frame key, without
  * needing anything on screen to be using it.
  *
- * This is what lets an object be skinned before the player has ever seen it —
+ * This is what lets an object be skinned before the player has ever seen it:
  * walking the display list can only ever find what is already drawn. It also
  * matters because the game bakes plant sprites into RenderTextures: a bake
  * performed after the canonical texture has been skinned comes out skinned.
  *
  * `Texture.from(<string>)` resolves through Pixi's global Cache, so the class
- * the sprite catalog already captured is enough — no exposed `window.PIXI`
+ * the sprite catalog already captured is enough. No exposed `window.PIXI` is
  * required, which the game does not reliably provide.
  */
 function lookupCachedTexture(frameKey: string): any {
@@ -178,8 +176,7 @@ function lookupCachedTexture(frameKey: string): any {
     }
   }
 
-  const root: any = (globalThis as any).unsafeWindow || (globalThis as any);
-  const pixi = root.PIXI;
+  const pixi = pageWindow.PIXI;
   for (const holder of [pixi?.Assets, pixi?.Cache]) {
     if (typeof holder?.get !== 'function') continue;
     try {
@@ -197,7 +194,7 @@ function lookupCachedTexture(frameKey: string): any {
  * accessor.
  *
  * The bundle is not guaranteed to run in strict mode, where such an assignment
- * would throw — it can simply do nothing instead, which looks exactly like a
+ * would throw; it can simply do nothing instead, which looks exactly like a
  * skin that "applied fine" but changed nothing on screen. Verify and fall back
  * to the backing field.
  */
@@ -256,7 +253,7 @@ function retarget(
  *
  * Necessary but not sufficient: `updateUvs()` only recomputes coordinates, and
  * the 'update' event reaches nobody because Pixi v8 subscribes a Sprite to its
- * texture only when that texture is `dynamic` — atlas frames are not. Flipping
+ * texture only when that texture is `dynamic`, and atlas frames are not. Flipping
  * `dynamic` on makes later mutations propagate on their own; the sprites that
  * already exist still have to be poked individually (see `pokeNode`).
  */
@@ -343,7 +340,7 @@ export function applySkinTexture(
 
   // The atlas source the frame really belongs to. The sprite catalog builds
   // its textures on the game's own base texture, so this identifies the atlas
-  // without guessing — and keeps a coincidental rectangle collision in some
+  // without guessing, and keeps a coincidental rectangle collision in some
   // unrelated texture from being skinned.
   const atlasSource = sourceOf(state.tex.get(frameKey));
 

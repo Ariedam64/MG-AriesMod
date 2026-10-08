@@ -1,7 +1,9 @@
 // Skin system entrypoint: loads stored skins and keeps the game's textures
 // pointed at them.
 
+import { Emitter } from '../../lib/emitter';
 import { getSpriteState } from '../../game/sprites/context';
+import { pageWindow } from '../../platform/pageContext';
 import { getAriesStorage, updateAriesStorage } from '../../platform/storage';
 import {
   applySkinTexture,
@@ -17,7 +19,6 @@ import { deleteSkin, clearSkins, listSkins, putSkin, MAX_SKIN_FILE_BYTES } from 
 import { groupTargets, loadTargets } from './targets';
 import type { SkinApplyResult, SkinEntry, SkinnableObject } from './types';
 
-const SKINS_CHANGED_EVENT = 'gemini:skins-changed';
 const RENDERER_WATCH_MS = 2_000;
 /**
  * A texture only becomes reachable once the game has actually built it, which
@@ -62,23 +63,15 @@ export function getSkinsSnapshot(): SkinsSnapshot {
   return snapshot;
 }
 
+const skinsChanged = new Emitter();
+
 function notifyChanged(): void {
-  try {
-    window.dispatchEvent(new CustomEvent(SKINS_CHANGED_EVENT));
-  } catch {
-    /* ignore */
-  }
+  skinsChanged.emit();
 }
 
 /** Subscribes to skin state changes. Returns an idempotent unsubscribe. */
 export function onSkinsChanged(listener: () => void): () => void {
-  window.addEventListener(SKINS_CHANGED_EVENT, listener);
-  let removed = false;
-  return () => {
-    if (removed) return;
-    removed = true;
-    window.removeEventListener(SKINS_CHANGED_EVENT, listener);
-  };
+  return skinsChanged.on(listener);
 }
 
 export function areSkinsEnabled(): boolean {
@@ -166,7 +159,7 @@ async function runApply(): Promise<void> {
     }
   }
 
-  // Once, after every skin is in place — each entry costs a GPU render.
+  // Once, after every skin is in place: each entry costs a GPU render.
   snapshot.rebaked = rebakeAll();
 
   snapshot.error = null;
@@ -240,16 +233,14 @@ export async function removeAllSkins(): Promise<void> {
 
 /**
  * Re-applies skins after the game rebuilds its renderer (WebGL context loss on
- * alt-tab, which src/sprite/index.ts already recovers from). The old textures
+ * alt-tab, which game/sprites already recovers from). The old textures
  * are dead objects by then, so the stored originals are dropped rather than
  * restored.
  */
 function startTimers(): void {
-  const pageWin: any = (globalThis as any).unsafeWindow || (globalThis as any);
-
   if (watchId === null) {
     lastRenderer = getSpriteState().renderer;
-    watchId = pageWin.setInterval(() => {
+    watchId = pageWindow.setInterval(() => {
       const current = getSpriteState().renderer;
       if (!current || current === lastRenderer) return;
       lastRenderer = current;
@@ -261,7 +252,7 @@ function startTimers(): void {
   }
 
   if (retryId === null) {
-    retryId = pageWin.setInterval(() => {
+    retryId = pageWindow.setInterval(() => {
       void retryPending().catch(error => {
         console.warn('[MG Skins] retry pass failed', error);
       });
@@ -293,5 +284,3 @@ export async function initSkins(): Promise<void> {
     notifyChanged();
   }
 }
-
-;

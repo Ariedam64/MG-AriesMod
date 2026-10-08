@@ -9,7 +9,7 @@ import type { SkinTarget, SkinnableObject } from './types';
  * The atlas image format is deliberately not checked here.
  *
  * Since game v834 every atlas ships as KTX2, which cannot be decoded or
- * re-encoded in the browser — but the applier never touches the atlas image:
+ * re-encoded in the browser, but the applier never touches the atlas image:
  * it repoints the frame's Texture at a canvas of our own. Compression of the
  * original is therefore irrelevant to whether a frame can be skinned.
  */

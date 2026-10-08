@@ -21221,15 +21221,15 @@
         reasons.style.flexWrap = "wrap";
         reasons.style.gap = "6px";
         for (const reason of entry.reasons) {
-          const chip2 = document.createElement("div");
-          chip2.textContent = reason;
-          chip2.style.fontSize = "11px";
-          chip2.style.padding = "2px 6px";
-          chip2.style.borderRadius = "999px";
-          chip2.style.background = "rgba(122,162,255,0.2)";
-          chip2.style.border = "1px solid rgba(122,162,255,0.4)";
-          chip2.style.color = "#dbe7ff";
-          reasons.appendChild(chip2);
+          const chip = document.createElement("div");
+          chip.textContent = reason;
+          chip.style.fontSize = "11px";
+          chip.style.padding = "2px 6px";
+          chip.style.borderRadius = "999px";
+          chip.style.background = "rgba(122,162,255,0.2)";
+          chip.style.border = "1px solid rgba(122,162,255,0.4)";
+          chip.style.color = "#dbe7ff";
+          reasons.appendChild(chip);
         }
         info.append(name, reasons);
         row.append(imgWrap, info);
@@ -21351,32 +21351,32 @@
   function ensureInjectedNextTo(targetBtn, injectedClass, injectedText, onClick) {
     const parent = targetBtn.parentElement || targetBtn.closest(".McFlex, .css-0") || targetBtn.parentNode;
     if (!parent) return;
-    let injected5 = parent.querySelector(`.${injectedClass}`);
-    if (injected5) {
-      if (targetBtn.nextElementSibling !== injected5) {
-        parent.insertBefore(injected5, targetBtn.nextSibling);
+    let injected6 = parent.querySelector(`.${injectedClass}`);
+    if (injected6) {
+      if (targetBtn.nextElementSibling !== injected6) {
+        parent.insertBefore(injected6, targetBtn.nextSibling);
       }
-      if (injected5.textContent !== injectedText) injected5.textContent = injectedText;
+      if (injected6.textContent !== injectedText) injected6.textContent = injectedText;
       return;
     }
-    injected5 = document.createElement("button");
-    injected5.type = "button";
-    injected5.className = `${injectedClass} chakra-button`;
-    injected5.textContent = injectedText;
-    injected5.setAttribute("aria-label", injectedText);
-    injected5.title = injectedText;
-    injected5.style.marginLeft = "8px";
+    injected6 = document.createElement("button");
+    injected6.type = "button";
+    injected6.className = `${injectedClass} chakra-button`;
+    injected6.textContent = injectedText;
+    injected6.setAttribute("aria-label", injectedText);
+    injected6.title = injectedText;
+    injected6.style.marginLeft = "8px";
     const cs = getComputedStyle(parent);
     if (cs.display !== "flex") {
-      injected5.style.display = "inline-flex";
-      injected5.style.alignItems = "center";
+      injected6.style.display = "inline-flex";
+      injected6.style.alignItems = "center";
     }
-    injected5.addEventListener("click", (ev) => onClick(ev, {
+    injected6.addEventListener("click", (ev) => onClick(ev, {
       host: targetBtn.closest(DEFAULTS.rootSelector),
       targetBtn,
-      injectedBtn: injected5
+      injectedBtn: injected6
     }));
-    parent.insertBefore(injected5, targetBtn.nextSibling);
+    parent.insertBefore(injected6, targetBtn.nextSibling);
   }
   function cleanup(root, injectedClass) {
     root.querySelectorAll(`.${injectedClass}`).forEach((n) => n.remove());
@@ -33565,9 +33565,9 @@
           const text2 = h("div", "qmm-chip__text");
           text2.appendChild(h("div", "t", it.title));
           if (it.subtitle) text2.appendChild(h("div", "qmm-chip__sub", it.subtitle));
-          const chip2 = h("div", "qmm-chip");
-          chip2.append(img, text2);
-          btn.append(dot, chip2, it.badge != null ? h("span", "qmm-tag", String(it.badge)) : h("div"));
+          const chip = h("div", "qmm-chip");
+          chip.append(img, text2);
+          btn.append(dot, chip, it.badge != null ? h("span", "qmm-tag", String(it.badge)) : h("div"));
         }
       };
     }
@@ -35172,7 +35172,7 @@ next: ${next}`;
     function repaintMutes() {
       mutesWrap.innerHTML = "";
       mutePatterns.forEach((rx, i) => {
-        const chip2 = button(`/${rx.source}/i \xD7`, {
+        const chip = button(`/${rx.source}/i \xD7`, {
           variant: "ghost",
           size: "sm",
           onClick: () => {
@@ -35181,7 +35181,7 @@ next: ${next}`;
             repaint(true);
           }
         });
-        mutesWrap.appendChild(chip2);
+        mutesWrap.appendChild(chip);
       });
     }
     const logWrap = document.createElement("div");
@@ -36017,9 +36017,9 @@ next: ${next}`;
       return r;
     };
     const radio2 = (name, value, text2) => {
-      const chip2 = ui.toggleChip(text2, { type: "radio", name, value });
-      chip2.root.classList.add("qmm-radio-chip");
-      return { label: chip2.root, input: chip2.input };
+      const chip = ui.toggleChip(text2, { type: "radio", name, value });
+      chip.root.classList.add("qmm-radio-chip");
+      return { label: chip.root, input: chip.input };
     };
     const makeSelect = (id) => {
       const sel = ui.select({ id, width: "180px" });
@@ -37520,9 +37520,9 @@ next: ${next}`;
       });
       if (row.mutations.length) {
         for (const mutation of row.mutations) {
-          const chip2 = document.createElement("span");
-          chip2.textContent = formatWeatherMutation(mutation);
-          Object.assign(chip2.style, {
+          const chip = document.createElement("span");
+          chip.textContent = formatWeatherMutation(mutation);
+          Object.assign(chip.style, {
             display: "inline-flex",
             alignItems: "center",
             padding: "2px 8px",
@@ -37530,13 +37530,13 @@ next: ${next}`;
             background: "#ffffff12",
             whiteSpace: "nowrap"
           });
-          mutationsList.appendChild(chip2);
+          mutationsList.appendChild(chip);
         }
       } else {
-        const chip2 = document.createElement("span");
-        chip2.textContent = "No mutation effects.";
-        chip2.style.whiteSpace = "nowrap";
-        mutationsList.appendChild(chip2);
+        const chip = document.createElement("span");
+        chip.textContent = "No mutation effects.";
+        chip.style.whiteSpace = "nowrap";
+        mutationsList.appendChild(chip);
       }
       const ruleHint = document.createElement("div");
       ruleHint.dataset.role = "rule-hint";
@@ -41877,7 +41877,7 @@ next: ${next}`;
     el.style.textAlign = "right";
     return el;
   }
-  var TEAL, TEAL_DIM, TEAL_BORDER, BORDER, CARD_BG, TEXT, TEXT_DIM, DANGER, WARN, GOLD, RAINBOW, css, ensurePanelStyles, sectionLabel2, card2, chip, meter2, setButtonEnabled2, VARIANT;
+  var TEAL, TEAL_DIM, TEAL_BORDER, BORDER, CARD_BG, TEXT, TEXT_DIM, DANGER, WARN, GOLD, RAINBOW, css, ensurePanelStyles, sectionLabel2, card2, meter2, setButtonEnabled2, VARIANT;
   var init_panel = __esm({
     "src/ui/kit/panel.ts"() {
       "use strict";
@@ -41906,7 +41906,6 @@ next: ${next}`;
       ensurePanelStyles = ensureKitStyles;
       sectionLabel2 = sectionLabel;
       card2 = plainCard;
-      chip = badge;
       meter2 = meter;
       setButtonEnabled2 = setButtonEnabled;
       VARIANT = { accent: "primary", neutral: "default", danger: "danger" };
@@ -44156,10 +44155,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     wrap.style.gap = "4px";
     const ids = Array.isArray(pet.abilities) ? pet.abilities.filter(Boolean) : [];
     for (const id of ids) {
-      const chip2 = document.createElement("span");
+      const chip = document.createElement("span");
       const { bg, hover } = getAbilityChipColors(id);
-      chip2.title = PetsService.getAbilityName(id) || id;
-      Object.assign(chip2.style, {
+      chip.title = PetsService.getAbilityName(id) || id;
+      Object.assign(chip.style, {
         display: "inline-block",
         width: "9px",
         height: "9px",
@@ -44168,19 +44167,19 @@ Restore figures are averages; unlucky streaks do worse.`;
         boxShadow: "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff1a",
         cursor: "default"
       });
-      chip2.onmouseenter = () => {
-        chip2.style.background = hover;
+      chip.onmouseenter = () => {
+        chip.style.background = hover;
       };
-      chip2.onmouseleave = () => {
-        chip2.style.background = bg;
+      chip.onmouseleave = () => {
+        chip.style.background = bg;
       };
-      wrap.appendChild(chip2);
+      wrap.appendChild(chip);
     }
     return wrap;
   }
   function renderPetChip(pet) {
-    const chip2 = document.createElement("div");
-    Object.assign(chip2.style, {
+    const chip = document.createElement("div");
+    Object.assign(chip.style, {
       display: "flex",
       alignItems: "center",
       gap: "6px",
@@ -44189,13 +44188,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       borderRadius: "6px",
       transition: "background 100ms ease"
     });
-    chip2.onmouseenter = () => {
-      chip2.style.background = "rgba(255,255,255,0.04)";
+    chip.onmouseenter = () => {
+      chip.style.background = "rgba(255,255,255,0.04)";
     };
-    chip2.onmouseleave = () => {
-      chip2.style.background = "transparent";
+    chip.onmouseleave = () => {
+      chip.style.background = "transparent";
     };
-    chip2.appendChild(mkMiniIcon(pet ?? null));
+    chip.appendChild(mkMiniIcon(pet ?? null));
     const nameSpan = document.createElement("span");
     nameSpan.style.fontSize = "11px";
     nameSpan.style.fontWeight = "600";
@@ -44205,7 +44204,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     nameSpan.style.flex = "1 1 auto";
     nameSpan.style.minWidth = "0";
     nameSpan.textContent = pet ? pet.name || pet.petSpecies || "?" : "\u2014";
-    chip2.appendChild(nameSpan);
+    chip.appendChild(nameSpan);
     if (pet) {
       const strBadge = document.createElement("span");
       strBadge.textContent = `${getPetStrength(pet)}/${getPetMaxStrength(pet)}`;
@@ -44219,10 +44218,10 @@ Restore figures are averages; unlucky streaks do worse.`;
         borderRadius: "999px",
         flex: "0 0 auto"
       });
-      chip2.appendChild(strBadge);
-      chip2.appendChild(abilityChipsFor(pet));
+      chip.appendChild(strBadge);
+      chip.appendChild(abilityChipsFor(pet));
     }
-    return chip2;
+    return chip;
   }
   function charLength(text2) {
     return Array.from(text2).length;
@@ -44677,11 +44676,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       const cell = document.createElement("div");
       css(cell, { display: "flex", minWidth: "0" });
       const text2 = log2.abilityName || log2.abilityId || "\u2014";
-      const chip2 = document.createElement("span");
-      chip2.textContent = text2;
-      chip2.title = text2;
+      const chip = document.createElement("span");
+      chip.textContent = text2;
+      chip.title = text2;
       const { bg, hover } = getAbilityChipColors(log2.abilityId);
-      css(chip2, {
+      css(chip, {
         display: "inline-block",
         maxWidth: "100%",
         padding: "3px 9px",
@@ -44698,13 +44697,13 @@ Restore figures are averages; unlucky streaks do worse.`;
         textOverflow: "ellipsis",
         transition: "background 120ms ease"
       });
-      chip2.onmouseenter = () => {
-        chip2.style.background = hover;
+      chip.onmouseenter = () => {
+        chip.style.background = hover;
       };
-      chip2.onmouseleave = () => {
-        chip2.style.background = bg;
+      chip.onmouseleave = () => {
+        chip.style.background = bg;
       };
-      cell.appendChild(chip2);
+      cell.appendChild(chip);
       return cell;
     }
     function detailsCell(log2) {
@@ -45048,11 +45047,11 @@ Restore figures are averages; unlucky streaks do worse.`;
         return wrap2;
       }
       ids.forEach((id, i) => {
-        const chip2 = document.createElement("span");
+        const chip = document.createElement("span");
         const { bg, hover } = getAbilityChipColors(id);
-        chip2.title = PetsService.getAbilityName(id) || id;
-        chip2.setAttribute("aria-label", chip2.title);
-        Object.assign(chip2.style, {
+        chip.title = PetsService.getAbilityName(id) || id;
+        chip.setAttribute("aria-label", chip.title);
+        Object.assign(chip.style, {
           display: "inline-block",
           width: `${SIZE_PX}px`,
           height: `${SIZE_PX}px`,
@@ -45063,17 +45062,17 @@ Restore figures are averages; unlucky streaks do worse.`;
           cursor: "default",
           boxShadow: "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff1a"
         });
-        chip2.onmouseenter = () => {
-          chip2.style.background = hover;
-          chip2.style.transform = "scale(1.08)";
-          chip2.style.boxShadow = "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff33";
+        chip.onmouseenter = () => {
+          chip.style.background = hover;
+          chip.style.transform = "scale(1.08)";
+          chip.style.boxShadow = "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff33";
         };
-        chip2.onmouseleave = () => {
-          chip2.style.background = bg;
-          chip2.style.transform = "none";
-          chip2.style.boxShadow = "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff1a";
+        chip.onmouseleave = () => {
+          chip.style.background = bg;
+          chip.style.transform = "none";
+          chip.style.boxShadow = "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff1a";
         };
-        wrap2.appendChild(chip2);
+        wrap2.appendChild(chip);
       });
       return wrap2;
     }
@@ -46696,13 +46695,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     function buildChip(item) {
       const icon = h("span", "qws-del-chip__icon", config.fallbackIcon);
       attachSpriteIcon(icon, config.spriteCategories, [item.id], CHIP_SPRITE_PX, "deleter-chip");
-      const chip2 = h("div", "qws-del-chip");
-      chip2.append(
+      const chip = h("div", "qws-del-chip");
+      chip.append(
         icon,
         h("span", "qws-del-chip__name", item.label || item.id || "?"),
         h("span", "qws-del-chip__qty", formatInteger(item.qty))
       );
-      return chip2;
+      return chip;
     }
     function readSelection() {
       const selection = controller.getSelection();
@@ -49362,18 +49361,18 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/tools/detailView.ts
   function createCreatorChip(creator) {
-    const chip2 = document.createElement("div");
-    chip2.className = creator.avatar ? "mgt-creator" : "mgt-creator mgt-creator--plain";
+    const chip = document.createElement("div");
+    chip.className = creator.avatar ? "mgt-creator" : "mgt-creator mgt-creator--plain";
     if (creator.avatar) {
       const avatar3 = document.createElement("img");
       avatar3.alt = creator.name;
       loadImageInto(avatar3, creator.avatar);
-      chip2.appendChild(avatar3);
+      chip.appendChild(avatar3);
     }
     const name = document.createElement("span");
     name.textContent = creator.name;
-    chip2.appendChild(name);
-    return chip2;
+    chip.appendChild(name);
+    return chip;
   }
   function createHero(tool) {
     const hero = document.createElement("div");
@@ -51869,8 +51868,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       } catch {
       }
     }
-    const root = globalThis.unsafeWindow || globalThis;
-    const pixi = root.PIXI;
+    const pixi = pageWindow.PIXI;
     for (const holder2 of [pixi?.Assets, pixi?.Cache]) {
       if (typeof holder2?.get !== "function") continue;
       try {
@@ -52062,6 +52060,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/features/skins/applier.ts"() {
       "use strict";
       init_context();
+      init_pageContext();
       MAX_WALK_NODES = 4e4;
       applied = /* @__PURE__ */ new Map();
       rectKey = (x, y, w, h2) => `${x}|${y}|${w}|${h2}`;
@@ -52071,10 +52070,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         lastRectCount: 0,
         lastApply: {}
       };
-      {
-        const root = globalThis.unsafeWindow || globalThis;
-        root.__MG_SKINS_DEBUG__ = debugState3;
-      }
+      pageWindow.__MG_SKINS_DEBUG__ = debugState3;
       frameRectOf = (texture) => texture?.frame ?? texture?._frame ?? null;
       sourceOf = (texture) => texture?.source ?? texture?._source ?? texture?.baseTexture ?? null;
     }
@@ -52155,15 +52151,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/skins/gameCaches.ts
   function holders() {
     const state5 = getSpriteState();
-    const root = globalThis.unsafeWindow || globalThis;
     return [
       getPixiApp(),
       state5.app,
       state5.app?.app,
       state5.renderer,
       state5.renderer?.app,
-      root.__PIXI_APP__,
-      root.app
+      pageWindow.__PIXI_APP__,
+      pageWindow.app
     ].filter(Boolean);
   }
   function search(property, matches) {
@@ -52211,6 +52206,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/features/skins/gameCaches.ts"() {
       "use strict";
       init_context();
+      init_pageContext();
       hasRebake = (value) => !!value && typeof value.rebakeAll === "function";
     }
   });
@@ -52220,15 +52216,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     const state5 = getSpriteState();
     const stage = collectGameMatches();
     const catalogTexture = state5.tex.get(frameKey);
-    const atlasSource = sourceOf2(catalogTexture);
+    const atlasSource = sourceOf(catalogTexture);
     const describe = (match) => (match?.nodes ?? []).map((node) => ({
       ctor: node?.constructor?.name,
       renderPipeId: node?.renderPipeId,
       label: node?.label,
       textureLabel: node?.texture?.label,
-      sameAtlasSource: sourceOf2(node?.texture) === atlasSource,
+      sameAtlasSource: sourceOf(node?.texture) === atlasSource,
       frame: (() => {
-        const rect2 = frameRectOf2(node?.texture);
+        const rect2 = frameRectOf(node?.texture);
         return rect2 ? rectKey2(rect2.x, rect2.y, rect2.width, rect2.height) : null;
       })(),
       visible: node?.visible,
@@ -52236,7 +52232,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       worldX: node?.worldTransform?.tx,
       worldY: node?.worldTransform?.ty
     }));
-    const rect = occupiedRect ?? (catalogTexture ? frameRectOf2(catalogTexture) : null);
+    const rect = occupiedRect ?? (catalogTexture ? frameRectOf(catalogTexture) : null);
     const key2 = rect ? rectKey2(
       rect.x,
       rect.y,
@@ -52279,7 +52275,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       unlabelledRects: unlabelled.slice(0, 40),
       unlabelledRectCount: unlabelled.length,
       catalogRect: (() => {
-        const rect = frameRectOf2(state5.tex.get(substring));
+        const rect = frameRectOf(state5.tex.get(substring));
         return rect ? rectKey2(rect.x, rect.y, rect.width, rect.height) : null;
       })()
     };
@@ -52291,22 +52287,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function installSkinsDebug() {
-    const root = globalThis.unsafeWindow || globalThis;
-    const target = root.__MG_SKINS_DEBUG__;
+    const target = pageWindow.__MG_SKINS_DEBUG__;
     if (!target) return;
     target.inspect = inspectFrame;
     target.find = findOnStage;
     target.caches = describeGameCaches;
   }
-  var frameRectOf2, sourceOf2, rectKey2;
+  var rectKey2;
   var init_debug = __esm({
     "src/features/skins/debug.ts"() {
       "use strict";
       init_context();
+      init_pageContext();
       init_applier();
       init_gameCaches();
-      frameRectOf2 = (texture) => texture?.frame ?? texture?._frame ?? null;
-      sourceOf2 = (texture) => texture?.source ?? texture?._source ?? texture?.baseTexture ?? null;
       rectKey2 = (x, y, w, h2) => `${x}|${y}|${w}|${h2}`;
     }
   });
@@ -52443,19 +52437,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     return snapshot;
   }
   function notifyChanged() {
-    try {
-      window.dispatchEvent(new CustomEvent(SKINS_CHANGED_EVENT));
-    } catch {
-    }
+    skinsChanged.emit();
   }
   function onSkinsChanged(listener) {
-    window.addEventListener(SKINS_CHANGED_EVENT, listener);
-    let removed = false;
-    return () => {
-      if (removed) return;
-      removed = true;
-      window.removeEventListener(SKINS_CHANGED_EVENT, listener);
-    };
+    return skinsChanged.on(listener);
   }
   function areSkinsEnabled() {
     return snapshot.enabled;
@@ -52572,10 +52557,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     await reapply();
   }
   function startTimers() {
-    const pageWin = globalThis.unsafeWindow || globalThis;
     if (watchId === null) {
       lastRenderer = getSpriteState().renderer;
-      watchId = pageWin.setInterval(() => {
+      watchId = pageWindow.setInterval(() => {
         const current = getSpriteState().renderer;
         if (!current || current === lastRenderer) return;
         lastRenderer = current;
@@ -52586,7 +52570,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }, RENDERER_WATCH_MS);
     }
     if (retryId === null) {
-      retryId = pageWin.setInterval(() => {
+      retryId = pageWindow.setInterval(() => {
         void retryPending().catch((error) => {
           console.warn("[MG Skins] retry pass failed", error);
         });
@@ -52613,11 +52597,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       notifyChanged();
     }
   }
-  var SKINS_CHANGED_EVENT, RENDERER_WATCH_MS, RETRY_PASS_MS, MAX_RETRY_PASSES, snapshot, skinCanvases, started3, watchId, retryId, lastRenderer, applyChain, retriesLeft;
+  var RENDERER_WATCH_MS, RETRY_PASS_MS, MAX_RETRY_PASSES, snapshot, skinCanvases, started3, watchId, retryId, lastRenderer, applyChain, retriesLeft, skinsChanged;
   var init_skins = __esm({
     "src/features/skins/index.ts"() {
       "use strict";
+      init_emitter();
       init_context();
+      init_pageContext();
       init_storage();
       init_applier();
       init_compositor();
@@ -52625,7 +52611,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_debug();
       init_store();
       init_targets();
-      SKINS_CHANGED_EVENT = "gemini:skins-changed";
       RENDERER_WATCH_MS = 2e3;
       RETRY_PASS_MS = 5e3;
       MAX_RETRY_PASSES = 12;
@@ -52645,6 +52630,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       lastRenderer = null;
       applyChain = Promise.resolve();
       retriesLeft = MAX_RETRY_PASSES;
+      skinsChanged = new Emitter();
     }
   });
 
@@ -52723,150 +52709,98 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
   }
   function thumbBox(empty = false) {
-    const el = document.createElement("div");
-    css(el, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: "54px",
-      height: "54px",
-      flex: "0 0 auto",
-      borderRadius: "9px",
-      background: "rgba(0,0,0,0.22)",
-      border: `1px solid ${BORDER}`
-    });
-    if (empty) {
-      const plus = document.createElement("span");
-      css(plus, { color: TEXT_DIM, fontSize: "18px" });
-      plus.textContent = "+";
-      el.appendChild(plus);
-    }
+    const el = h("div", "qws-skins-thumb");
+    if (empty) el.appendChild(h("span", "qws-skins-thumb__plus", "+"));
     return el;
   }
   function buildSlot(target, index, deps) {
     const { entry, result, onError, onChanged } = deps;
-    const row = document.createElement("div");
-    css(row, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "8px",
-      padding: "8px",
-      borderRadius: "10px",
-      background: CARD_BG,
-      border: `1px solid ${BORDER}`
-    });
+    const row = h("div", "qws-skins-slot");
     const before = thumbBox();
     mountThumb(before, target, null, SLOT_THUMB_PX);
-    const arrow = document.createElement("span");
-    css(arrow, { color: TEXT_DIM, fontSize: "12px" });
-    arrow.textContent = "\u2192";
     const after = thumbBox(!entry);
     if (entry) mountThumb(after, target, entry.blob, SLOT_THUMB_PX);
-    const head = document.createElement("div");
-    css(head, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
-    const name = document.createElement("div");
-    css(name, {
-      fontSize: "11px",
-      color: TEXT,
-      flex: "1 1 auto",
-      minWidth: "0",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    });
-    name.textContent = target.frameKey.split("/").pop() || `Stage ${index + 1}`;
+    const head = h("div", "qws-skins-slot__head");
+    const name = h("div", "qws-skins-slot__name", target.frameKey.split("/").pop() || `Stage ${index + 1}`);
     name.title = target.frameKey;
     head.appendChild(name);
     if (entry) {
       const applied2 = result?.applied !== false;
-      const pill2 = chip(applied2 ? "Active" : "Waiting", applied2 ? "ok" : "warn");
-      css(pill2, { alignSelf: "center", flex: "0 0 auto" });
-      if (result?.error) pill2.title = result.error;
-      head.appendChild(pill2);
+      const status2 = badge(applied2 ? "Active" : "Waiting", applied2 ? "ok" : "warn");
+      if (result?.error) status2.title = result.error;
+      head.appendChild(status2);
     }
-    const body = document.createElement("div");
-    css(body, { display: "flex", alignItems: "center", gap: "8px" });
-    const dims = document.createElement("div");
-    css(dims, { fontSize: "10px", color: TEXT_DIM, whiteSpace: "nowrap" });
-    dims.textContent = `${target.logicalSize.w}\xD7${target.logicalSize.h}`;
+    const dims = h("div", "qws-skins-slot__dims", `${target.logicalSize.w}\xD7${target.logicalSize.h}`);
     dims.title = "Ideal image size for this slot";
-    const spacer2 = document.createElement("div");
-    css(spacer2, { flex: "1 1 auto" });
-    const actions = document.createElement("div");
-    css(actions, { display: "flex", gap: "5px", flex: "0 0 auto" });
+    const actions = h("div", "qws-skins-slot__actions");
     if (!target.skinnable) {
-      actions.appendChild(chip(target.blockedReason || "Unavailable", "warn"));
+      actions.appendChild(badge(target.blockedReason || "Unavailable", "warn"));
     } else {
       actions.appendChild(
-        button2(entry ? "Replace" : "Set", entry ? "neutral" : "accent", async () => {
-          const file = await pickImageFile();
-          if (!file) return;
-          try {
-            await importSkin(target.frameKey, file);
-            onChanged();
-          } catch (error) {
-            onError(error instanceof Error ? error.message : String(error));
+        button(entry ? "Replace" : "Set", {
+          variant: entry ? "default" : "primary",
+          size: "sm",
+          lockWhilePending: true,
+          onClick: async () => {
+            const file = await pickImageFile();
+            if (!file) return;
+            try {
+              await importSkin(target.frameKey, file);
+              onChanged();
+            } catch (error) {
+              onError(errorText2(error));
+            }
           }
         })
       );
       if (entry) {
-        const remove = button2("\u2715", "danger", async () => {
-          try {
-            await removeSkin(target.frameKey);
-            onChanged();
-          } catch (error) {
-            onError(error instanceof Error ? error.message : String(error));
-          }
-        });
-        remove.title = "Remove this skin";
-        actions.appendChild(remove);
+        actions.appendChild(
+          button("\u2715", {
+            variant: "danger",
+            size: "sm",
+            title: "Remove this skin",
+            lockWhilePending: true,
+            onClick: async () => {
+              try {
+                await removeSkin(target.frameKey);
+                onChanged();
+              } catch (error) {
+                onError(errorText2(error));
+              }
+            }
+          })
+        );
       }
     }
-    body.append(before, arrow, after, dims, spacer2, actions);
+    const body = h("div", "qws-skins-slot__body");
+    body.append(
+      before,
+      h("span", "qws-skins-slot__arrow", "\u2192"),
+      after,
+      dims,
+      h("div", "qws-skins-slot__spacer"),
+      actions
+    );
     row.append(head, body);
     return row;
   }
   function buildDetail(options) {
     const { object, entries: entries2, results, onError, onChanged } = options;
-    const host = document.createElement("div");
-    css(host, { display: "flex", flexDirection: "column", gap: "10px", minHeight: "0" });
+    const host = h("div", "qws-skins-detail");
     if (!object) {
-      const empty = document.createElement("div");
-      css(empty, { fontSize: "12px", color: TEXT_DIM, textAlign: "center", padding: "28px 0" });
-      empty.textContent = "Pick a sprite";
-      host.appendChild(empty);
+      host.appendChild(h("div", "qws-skins-detail__empty", "Pick a sprite"));
       return host;
     }
-    host.appendChild(sectionLabel2(object.category));
+    host.appendChild(sectionLabel(object.category));
     if (object.category === "tile") {
-      const notice = document.createElement("div");
-      css(notice, {
-        fontSize: "11px",
-        color: WARN,
-        lineHeight: "1.45",
-        padding: "8px",
-        borderRadius: "9px",
-        background: "rgba(251,191,36,0.10)",
-        border: "1px solid rgba(251,191,36,0.25)"
-      });
-      notice.textContent = "Ground tiles are baked into the map and cannot be skinned.";
-      host.appendChild(notice);
+      host.appendChild(
+        h("div", "qws-skins-detail__notice", "Ground tiles are baked into the map and cannot be skinned.")
+      );
     }
-    const title = document.createElement("div");
-    css(title, {
-      fontSize: "14px",
-      fontWeight: "600",
-      color: TEXT,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    });
-    title.textContent = object.label;
+    const title = h("div", "qws-skins-detail__title", object.label);
     title.title = object.key;
     host.appendChild(title);
-    const list = document.createElement("div");
-    list.className = "qws-pnl-scroll";
-    css(list, { display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto", minHeight: "0" });
+    const list = h("div", "qws-pnl-scroll qws-skins-detail__list");
     object.slots.forEach((target, index) => {
       list.appendChild(
         buildSlot(target, index, {
@@ -52880,14 +52814,88 @@ Restore figures are averages; unlucky streaks do worse.`;
     host.appendChild(list);
     return host;
   }
-  var SLOT_THUMB_PX;
+  var SLOT_THUMB_PX, errorText2;
   var init_detail = __esm({
     "src/features/skins/detail.ts"() {
       "use strict";
+      init_badges();
+      init_button();
+      init_card();
+      init_dom2();
       init_skins();
       init_thumb();
-      init_panel();
       SLOT_THUMB_PX = 46;
+      errorText2 = (error) => error instanceof Error ? error.message : String(error);
+    }
+  });
+
+  // src/features/skins/styles.ts
+  function ensureSkinsStyles() {
+    if (injected5) return;
+    injected5 = true;
+    addStyle(SKINS_CSS);
+  }
+  var SKINS_CSS, injected5;
+  var init_styles6 = __esm({
+    "src/features/skins/styles.ts"() {
+      "use strict";
+      init_dom();
+      SKINS_CSS = `
+.qws-skins {
+  display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 12px; padding: 14px;
+  width: 820px; max-width: 100%; height: min(72vh, 620px); overflow: hidden; box-sizing: border-box;
+  background: var(--qmm-gradient-panel);
+}
+.qws-skins > .qmm-card { overflow: hidden; }
+.qws-skins__header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.qws-skins__enable { display: flex; align-items: center; gap: 8px; }
+.qws-skins__filters { display: flex; gap: 8px; }
+.qws-skins__category { flex: 0 0 auto; max-width: 150px; }
+.qws-skins__search { flex: 1 1 auto; min-width: 0; }
+.qws-skins__grid {
+  display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  overflow-y: auto; min-height: 0; flex: 1 1 auto; align-content: start; padding-right: 2px;
+}
+.qws-skins__empty { grid-column: 1 / -1; padding: 24px 0; text-align: center; font-size: 12px; color: var(--qmm-text-dim); }
+.qws-skins__status { min-height: 15px; font-size: 11px; color: var(--qmm-text-dim); }
+.qws-skins__status.is-warn { color: var(--qmm-warn); }
+.qws-skins__error { font-size: 11px; color: var(--qmm-danger); }
+.qws-skins__error[hidden] { display: none; }
+.qws-skins__detail-host { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+
+.qws-skins-detail { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.qws-skins-detail__empty { padding: 28px 0; text-align: center; font-size: 12px; color: var(--qmm-text-dim); }
+.qws-skins-detail__notice {
+  padding: 8px; border-radius: 9px; font-size: 11px; line-height: 1.45;
+  color: var(--qmm-warn); background: var(--qmm-warn-soft); border: 1px solid var(--qmm-warn-border);
+}
+.qws-skins-detail__title {
+  font-size: 14px; font-weight: 600; color: var(--qmm-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.qws-skins-detail__list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; min-height: 0; }
+
+.qws-skins-slot {
+  display: flex; flex-direction: column; gap: 8px; padding: 8px;
+  border-radius: 10px; background: var(--qmm-card-bg); border: 1px solid var(--qmm-border);
+}
+.qws-skins-slot__head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.qws-skins-slot__name {
+  flex: 1 1 auto; min-width: 0; font-size: 11px; color: var(--qmm-text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.qws-skins-slot__head .qmm-badge { align-self: center; flex: 0 0 auto; }
+.qws-skins-slot__body { display: flex; align-items: center; gap: 8px; }
+.qws-skins-slot__arrow { font-size: 12px; color: var(--qmm-text-dim); }
+.qws-skins-slot__dims { font-size: 10px; color: var(--qmm-text-dim); white-space: nowrap; }
+.qws-skins-slot__spacer { flex: 1 1 auto; }
+.qws-skins-slot__actions { display: flex; flex: 0 0 auto; gap: 5px; }
+.qws-skins-thumb {
+  display: flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 54px; height: 54px;
+  border-radius: 9px; background: var(--qmm-field-bg); border: 1px solid var(--qmm-border);
+}
+.qws-skins-thumb__plus { font-size: 18px; color: var(--qmm-text-dim); }
+`;
+      injected5 = false;
     }
   });
 
@@ -52900,51 +52908,35 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
   }
   function renderSkinsMenu(container) {
-    ensurePanelStyles();
+    ensureSkinsStyles();
     void initSkins();
-    css(container, { padding: "0", overflow: "hidden" });
-    container.innerHTML = "";
-    const root = document.createElement("div");
-    css(root, {
-      display: "grid",
-      gridTemplateColumns: "minmax(0,1fr) 300px",
-      gap: "12px",
-      padding: "14px",
-      // A *definite* height, not 100%: the HUD window (`.qws-win`) is itself the
-      // scroller (`max-height:90vh; overflow:auto`) and has no fixed height, so
-      // `height:100%` collapses to the content height and the whole menu ends up
-      // scrolling instead of the sprite list.
-      width: "820px",
-      maxWidth: "100%",
-      height: "min(72vh, 620px)",
-      overflow: "hidden",
-      boxSizing: "border-box",
-      background: "linear-gradient(160deg, rgba(15,20,30,0.95) 0%, rgba(10,14,20,0.95) 60%, rgba(8,12,18,0.96) 100%)"
-    });
-    container.appendChild(root);
-    const browser = card2();
-    const detail = card2();
-    css(browser, { overflow: "hidden" });
-    css(detail, { overflow: "hidden" });
+    container.style.padding = "0";
+    container.style.overflow = "hidden";
+    const root = h("div", "qws-skins");
+    const browser = plainCard();
+    const detail = plainCard();
     root.append(browser, detail);
-    const header = document.createElement("div");
-    css(header, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" });
-    const enableWrap = document.createElement("div");
-    css(enableWrap, { display: "flex", alignItems: "center", gap: "8px" });
-    const enableToggle = toggle(areSkinsEnabled(), (on) => void setSkinsEnabled(on));
+    container.replaceChildren(root);
+    const enableToggle = switchInput(areSkinsEnabled(), (on) => void setSkinsEnabled(on));
     enableToggle.title = "Enable skins";
-    enableWrap.append(sectionLabel2("Sprites"), enableToggle);
+    const enableWrap = h("div", "qws-skins__enable");
+    enableWrap.append(sectionLabel("Sprites"), enableToggle);
     let confirmTimer = null;
-    const clearBtn = button2("Clear all", "danger", async () => {
-      if (clearBtn.dataset.armed !== "yes") {
-        clearBtn.dataset.armed = "yes";
-        clearBtn.textContent = "Delete every skin?";
-        confirmTimer = window.setTimeout(resetClear, CONFIRM_RESET_MS);
-        return;
+    const clearBtn = button("Clear all", {
+      variant: "danger",
+      size: "sm",
+      lockWhilePending: true,
+      onClick: async () => {
+        if (clearBtn.dataset.armed !== "yes") {
+          clearBtn.dataset.armed = "yes";
+          clearBtn.textContent = "Delete every skin?";
+          confirmTimer = window.setTimeout(resetClear, CONFIRM_RESET_MS);
+          return;
+        }
+        resetClear();
+        await removeAllSkins();
+        renderAll();
       }
-      resetClear();
-      await removeAllSkins();
-      renderAll();
     });
     function resetClear() {
       if (confirmTimer !== null) window.clearTimeout(confirmTimer);
@@ -52952,50 +52944,30 @@ Restore figures are averages; unlucky streaks do worse.`;
       clearBtn.dataset.armed = "";
       clearBtn.textContent = "Clear all";
     }
+    const header = h("div", "qws-skins__header");
     header.append(enableWrap, clearBtn);
-    browser.appendChild(header);
-    const filters = document.createElement("div");
-    css(filters, { display: "flex", gap: "8px" });
-    const categorySelect = document.createElement("select");
-    categorySelect.className = "qws-pnl-input";
-    css(categorySelect, { flex: "0 0 auto", maxWidth: "150px" });
-    const search2 = document.createElement("input");
-    search2.className = "qws-pnl-input";
+    const categorySelect = select2({ small: true });
+    categorySelect.classList.add("qws-skins__category");
+    const search2 = textInput("Search", "", { small: true });
     search2.type = "search";
-    search2.placeholder = "Search";
-    css(search2, { flex: "1 1 auto", minWidth: "0" });
+    search2.classList.add("qws-skins__search");
+    const filters = h("div", "qws-skins__filters");
     filters.append(categorySelect, search2);
-    browser.appendChild(filters);
-    const grid = document.createElement("div");
-    grid.className = "qws-pnl-scroll";
-    css(grid, {
-      display: "grid",
-      gap: "8px",
-      gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))",
-      overflowY: "auto",
-      minHeight: "0",
-      flex: "1 1 auto",
-      alignContent: "start",
-      paddingRight: "2px"
-    });
-    browser.appendChild(grid);
-    const status2 = document.createElement("div");
-    css(status2, { fontSize: "11px", color: TEXT_DIM, minHeight: "15px" });
-    browser.appendChild(status2);
-    const errorEl = document.createElement("div");
-    css(errorEl, { fontSize: "11px", color: DANGER, display: "none" });
-    detail.appendChild(errorEl);
-    const detailHost = document.createElement("div");
-    css(detailHost, { display: "flex", flexDirection: "column", minHeight: "0", flex: "1 1 auto" });
-    detail.appendChild(detailHost);
+    const grid = h("div", "qws-pnl-scroll qws-skins__grid");
+    const status2 = h("div", "qws-skins__status");
+    browser.append(header, filters, grid, status2);
+    const errorEl = h("div", "qws-skins__error");
+    errorEl.hidden = true;
+    const detailHost = h("div", "qws-skins__detail-host");
+    detail.append(errorEl, detailHost);
     const showError = (message) => {
       errorEl.textContent = message;
-      errorEl.style.display = "block";
+      errorEl.hidden = false;
     };
     const renderCategories = (objects) => {
       const previous = menuState.category;
       const categories = [...new Set(objects.map((o) => o.category))].sort();
-      categorySelect.innerHTML = "";
+      categorySelect.replaceChildren();
       const all = document.createElement("option");
       all.value = ALL_CATEGORIES;
       all.textContent = "All";
@@ -53019,7 +52991,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           results: snapshot2.results,
           onError: showError,
           onChanged: () => {
-            errorEl.style.display = "none";
+            errorEl.hidden = true;
             renderAll();
           }
         })
@@ -53046,10 +53018,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         grid.appendChild(cell);
       }
       if (!matches.length) {
-        const empty = document.createElement("div");
-        css(empty, { gridColumn: "1 / -1", fontSize: "12px", color: TEXT_DIM, padding: "24px 0", textAlign: "center" });
-        empty.textContent = snapshot2.ready ? "No match" : "Loading\u2026";
-        grid.appendChild(empty);
+        grid.appendChild(h("div", "qws-skins__empty", snapshot2.ready ? "No match" : "Loading\u2026"));
       }
     };
     const renderStatus = () => {
@@ -53057,12 +53026,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       const hasSkins = snapshot2.entries.size > 0;
       clearBtn.style.display = hasSkins ? "" : "none";
       if (!hasSkins) resetClear();
-      enableToggle.setChecked?.(areSkinsEnabled());
+      enableToggle.setChecked(areSkinsEnabled());
       const parts = [];
       if (snapshot2.error) parts.push(`\u26A0 ${snapshot2.error}`);
       if (hasSkins && snapshot2.rebaked === null) parts.push("\u26A0 Mutated plants keep their original look");
       status2.textContent = parts.join(" \xB7 ");
-      status2.style.color = parts.some((p) => p.startsWith("\u26A0")) ? WARN : TEXT_DIM;
+      status2.classList.toggle("is-warn", parts.length > 0);
     };
     const renderAll = () => {
       renderCategories(getSkinsSnapshot().objects);
@@ -53092,10 +53061,15 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_menu13 = __esm({
     "src/features/skins/menu.ts"() {
       "use strict";
+      init_button();
+      init_card();
+      init_dom2();
+      init_fields();
+      init_toggles();
       init_detail();
       init_thumb();
-      init_panel();
       init_skins();
+      init_styles6();
       ALL_CATEGORIES = "__all__";
       MAX_VISIBLE = 400;
       GRID_THUMB_PX = 52;
