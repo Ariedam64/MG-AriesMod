@@ -10,7 +10,8 @@ import { shouldIgnoreKeydown } from "../../lib/keyboard";
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
 import { PET_SECTION_ID, type KeybindId } from "../keybinds/catalog";
 import { eventMatchesKeybind, getKeybind, setDynamicActions, setKeybind } from "../keybinds/keybinds";
-import { PetsService, type PetTeam } from "./pets";
+import { getActiveTeamId, getLastUsedTeamId } from "./teamSwitch";
+import { onTeamsChange, type PetTeam } from "./teamStore";
 
 const PET_TEAM_PREV_ID: KeybindId = "pets.team.prev";
 const PET_TEAM_NEXT_ID: KeybindId = "pets.team.next";
@@ -69,8 +70,8 @@ export function setPetTeamKeybinds(teams: TeamRef[]): void {
 async function teamAfterStep(ids: string[], step: 1 | -1): Promise<string | null> {
   if (!ids.length) return null;
   let current: string | null = null;
-  try { current = await PetsService.getActiveTeamId(); } catch {}
-  if (!current || !ids.includes(current)) current = PetsService.getLastUsedTeamId();
+  try { current = await getActiveTeamId(); } catch {}
+  if (!current || !ids.includes(current)) current = getLastUsedTeamId();
   const index = current ? ids.indexOf(current) : -1;
   if (index < 0) return ids[0];
   return ids[(index + step + ids.length) % ids.length];
@@ -102,6 +103,6 @@ function onKeyDown(e: KeyboardEvent, useTeam: (teamId: string) => void): void {
 export function installPetTeamHotkeys(useTeam: (teamId: string) => void): void {
   if (installed || typeof window === "undefined") return;
   installed = true;
-  PetsService.onTeamsChange((teams) => setPetTeamKeybinds(teams));
+  onTeamsChange((teams) => setPetTeamKeybinds(teams));
   window.addEventListener("keydown", (e) => onKeyDown(e, useTeam), true);
 }

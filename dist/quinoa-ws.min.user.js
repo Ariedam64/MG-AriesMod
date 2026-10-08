@@ -2621,12 +2621,12 @@
     };
   }
   async function captureViaWriteOnce() {
-    let cache2 = getAtomCache() ?? null;
-    if (!cache2) {
+    let cache3 = getAtomCache() ?? null;
+    if (!cache3) {
       console.log("[jotai-bridge] Waiting for jotaiAtomCache...");
-      cache2 = await waitUntil(getAtomCache, { timeoutMs: ATOM_CACHE_WAIT_MS, intervalMs: 100 });
+      cache3 = await waitUntil(getAtomCache, { timeoutMs: ATOM_CACHE_WAIT_MS, intervalMs: 100 });
     }
-    if (!cache2) {
+    if (!cache3) {
       console.warn("[jotai-bridge] jotaiAtomCache.cache not found");
       return makePolyfillStore();
     }
@@ -2644,7 +2644,7 @@
         }
       }
     };
-    for (const atom of cache2.values()) {
+    for (const atom of cache3.values()) {
       if (!atom || typeof atom.write !== "function" || atom.__origWrite) continue;
       const orig = atom.write;
       atom.__origWrite = orig;
@@ -2739,10 +2739,10 @@
     return s.sub(atom, cb);
   }
   function findAtomsByLabel(regex) {
-    const cache2 = getAtomCache();
-    if (!cache2) return [];
+    const cache3 = getAtomCache();
+    if (!cache3) return [];
     const out = [];
-    for (const a of cache2.values()) {
+    for (const a of cache3.values()) {
       const label2 = a?.debugLabel || a?.label || "";
       if (regex.test(String(label2))) out.push(a);
     }
@@ -3597,10 +3597,10 @@
     }
     return null;
   }
-  async function fetchBundleByFinder(findUrl, cache2, label2) {
-    if (cache2.value) return cache2.value;
-    if (cache2.inFlight) return cache2.inFlight;
-    cache2.inFlight = (async () => {
+  async function fetchBundleByFinder(findUrl, cache3, label2) {
+    if (cache3.value) return cache3.value;
+    if (cache3.inFlight) return cache3.inFlight;
+    cache3.inFlight = (async () => {
       const MAX_RETRIES = 30;
       const RETRY_INTERVAL = 500;
       let url = null;
@@ -3617,15 +3617,15 @@
         const res = await fetch(url, { credentials: "include" });
         if (!res.ok) return null;
         const text2 = await res.text();
-        cache2.value = text2;
+        cache3.value = text2;
         return text2;
       } catch {
         return null;
       } finally {
-        cache2.inFlight = null;
+        cache3.inFlight = null;
       }
     })();
-    return cache2.inFlight;
+    return cache3.inFlight;
   }
   function fetchMainBundle() {
     return fetchBundleByFinder(findMainBundleUrl, mainBundleCache, "main bundle");
@@ -11088,8 +11088,8 @@
           if (!("caches" in window)) return;
           try {
             for (const k of await caches.keys()) {
-              const cache2 = await caches.open(k);
-              for (const r of await cache2.keys()) this.add(r.url);
+              const cache3 = await caches.open(k);
+              for (const r of await cache3.keys()) this.add(r.url);
             }
           } catch {
           }
@@ -13028,20 +13028,20 @@
         Object.keys(mutationCatalog2 || {})
       );
       const applyMutationsPatch = (nextMutations) => {
-        const copy2 = nextMutations.slice();
+        const copy3 = nextMutations.slice();
         mutations.length = 0;
-        mutations.push(...copy2);
+        mutations.push(...copy3);
         void updateGardenObjectAtCurrentTile((obj) => {
           if (obj?.objectType !== "plant") return obj;
           const nextSlots = Array.isArray(obj.slots) ? obj.slots.slice() : [];
           if (applyAll) {
             for (let i = 0; i < nextSlots.length; i++) {
-              nextSlots[i] = { ...nextSlots[i] || {}, mutations: copy2.slice() };
+              nextSlots[i] = { ...nextSlots[i] || {}, mutations: copy3.slice() };
             }
           } else {
             nextSlots[idx] = {
               ...nextSlots[idx] || {},
-              mutations: copy2.slice()
+              mutations: copy3.slice()
             };
           }
           return { ...obj, slots: nextSlots };
@@ -16875,6 +16875,844 @@
     }
   });
 
+  // src/lib/emitter.ts
+  var Emitter, Subscriptions;
+  var init_emitter = __esm({
+    "src/lib/emitter.ts"() {
+      "use strict";
+      Emitter = class {
+        constructor() {
+          this.listeners = /* @__PURE__ */ new Set();
+        }
+        on(listener) {
+          this.listeners.add(listener);
+          return () => {
+            this.listeners.delete(listener);
+          };
+        }
+        emit(value) {
+          for (const listener of [...this.listeners]) {
+            try {
+              listener(value);
+            } catch (error) {
+              console.error("[Aries] listener failed", error);
+            }
+          }
+        }
+        get size() {
+          return this.listeners.size;
+        }
+        clear() {
+          this.listeners.clear();
+        }
+      };
+      Subscriptions = class {
+        constructor() {
+          this.pending = [];
+        }
+        add(unsubscribe2) {
+          this.pending.push(unsubscribe2);
+        }
+        dispose() {
+          for (const entry of this.pending.splice(0)) {
+            Promise.resolve(entry).then((off) => off?.()).catch(() => {
+            });
+          }
+        }
+      };
+    }
+  });
+
+  // src/features/pets/abilityNames.ts
+  function abilityName(id) {
+    const key2 = String(id ?? "");
+    const name = petAbilities2[key2]?.name;
+    return typeof name === "string" && name.trim() ? name : key2;
+  }
+  function abilityNameWithoutLevel(id) {
+    return abilityName(id).replace(TIER_SUFFIX, "").trim();
+  }
+  function isLoggableAbility(id) {
+    return loggableIds().has(id);
+  }
+  function loggableIds() {
+    const keys = Object.keys(petAbilities2);
+    if (!loggableCache || loggableCache.count !== keys.length) {
+      loggableCache = { count: keys.length, ids: new Set(keys.filter((id) => !WEATHER_MUTATION_BOOST_IDS.has(id))) };
+    }
+    return loggableCache.ids;
+  }
+  var WEATHER_MUTATION_BOOST_IDS, TIER_SUFFIX, loggableCache;
+  var init_abilityNames = __esm({
+    "src/features/pets/abilityNames.ts"() {
+      "use strict";
+      init_data();
+      WEATHER_MUTATION_BOOST_IDS = /* @__PURE__ */ new Set([
+        "ProduceMutationBoost",
+        "ProduceMutationBoostII",
+        "ProduceMutationBoostIII",
+        "DawnBoost",
+        "AmberMoonBoost",
+        "ThunderBoost",
+        "SnowyCropMutationBoost",
+        "PetMutationBoost",
+        "PetMutationBoostII",
+        "PetMutationBoostIII",
+        // A passive chance boost the game itself never logs.
+        "DawnbinderBoost"
+      ]);
+      TIER_SUFFIX = /(?:\s+|-)?(?:I|II|III|IV|V|VI|VII|VIII|IX|X)\s*$/;
+      loggableCache = null;
+    }
+  });
+
+  // src/features/pets/abilityLogText.ts
+  function fallbackText(abilityId, params) {
+    switch (abilityId) {
+      case "HungerBoost":
+      case "HungerBoostII":
+      case "HungerBoostIII":
+      case "SnowyHungerBoost": {
+        const pct = baseParameters(abilityId)["hungerDepletionRateDecreasePercentage"];
+        return pct != null ? `- ${Number(pct).toFixed(0)}% hunger drain` : "Hunger reduced";
+      }
+      case "Copycat":
+        return "Copied another ability";
+      case "DawnCapture": {
+        const capsules = params["capsulesAdded"];
+        const dawnlit = Number(params["dawnlitRemoved"]) || 0;
+        const dawncharged = Number(params["dawnboundRemoved"]) || 0;
+        const absorbed = [];
+        if (dawnlit > 0) absorbed.push(`${formatCount(dawnlit)} Dawnlit`);
+        if (dawncharged > 0) absorbed.push(`${formatCount(dawncharged)} Dawncharged`);
+        const head = capsules != null ? `+ ${formatCount(capsules)} ${plural(capsules, "Dawn Capsule")}` : "Dawn Capsules added";
+        return absorbed.length ? `${head} (${absorbed.join(", ")} absorbed)` : head;
+      }
+      case "Thunderbloom":
+        return "Thunder mutations empowered";
+      case "Thundercharger": {
+        const charged = params["cropsCharged"];
+        return charged != null ? `${formatCount(charged)} ${plural(charged, "crop")} Thundercharged` : "Crops Thundercharged";
+      }
+      default: {
+        const meta = petAbilities2[abilityId];
+        return meta?.description || meta?.name || abilityId;
+      }
+    }
+  }
+  function abilityLogText(abilityId, params) {
+    if (abilityId === "GoldGranter" || abilityId === "RainbowGranter") {
+      const growSlot = params.growSlot;
+      const species = typeof growSlot?.species === "string" ? growSlot.species.trim() : "";
+      if (!species) return null;
+    }
+    if (isPetAbilityAction(abilityId)) {
+      try {
+        const text2 = formatAbilityLog({ action: abilityId, timestamp: 0, parameters: params });
+        if (text2) return text2;
+      } catch {
+      }
+    }
+    return fallbackText(abilityId, params);
+  }
+  function abilityLogValue(abilityId, rawData) {
+    const data = rawData ?? {};
+    const base = baseParameters(abilityId);
+    switch (abilityId) {
+      case "CoinFinderI":
+      case "CoinFinderII":
+      case "CoinFinderIII":
+      case "SnowyCoinFinder":
+      case "DawnCoinFinder":
+      case "ThunderCoinFinder":
+        return nonNegative(firstOf(data, base, ["coinsFound", "coins"]));
+      case "SellBoostI":
+      case "SellBoostII":
+      case "SellBoostIII":
+      case "SellBoostIV":
+        return nonNegative(firstOf(data, base, ["bonusCoins", "coinsEarned"]));
+      case "ProduceEater":
+        return nonNegative(firstOf(data, base, ["sellPrice"]));
+      case "ProduceScaleBoost":
+      case "ProduceScaleBoostII":
+      case "ProduceScaleBoostIII":
+      case "SnowyCropSizeBoost":
+        return nonNegative(firstOf(
+          data,
+          base,
+          ["sizeIncrease", "scaleIncreasePercentage", "cropScaleIncreasePercentage"],
+          ["sizeIncrease", "scaleIncreasePercentage"]
+        ));
+      case "EggGrowthBoost":
+      case "EggGrowthBoostII_NEW":
+      case "EggGrowthBoostII":
+      case "SnowyEggGrowthBoost":
+      case "ThunderEggGrowthBoost":
+        return reductionMs(data, base, ["eggGrowthTimeReductionMinutes", "minutesReduced", "reductionMinutes"], "eggGrowthTimeReductionMinutes");
+      case "PlantGrowthBoost":
+      case "PlantGrowthBoostII":
+      case "PlantGrowthBoostIII":
+      case "SnowyPlantGrowthBoost":
+      case "DawnPlantGrowthBoost":
+      case "AmberPlantGrowthBoost":
+      case "ThunderPlantGrowthBoost":
+        return reductionMs(data, base, ["minutesReduced", "reductionMinutes", "plantGrowthReductionMinutes"], "plantGrowthReductionMinutes");
+      case "PetXpBoost":
+      case "SnowyPetXpBoost":
+      case "PetXpBoostII":
+      case "PetXpBoostIII":
+      case "DawnXpBoost":
+      case "ThunderXpBoost":
+      case "PetAgeBoost":
+      case "PetAgeBoostII":
+      case "PetAgeBoostIII":
+        return nonNegative(firstOf(data, base, ["bonusXp"], ["bonusXp"]));
+      case "DawnCapture":
+        return nonNegative(firstOf(data, base, ["capsulesAdded"]));
+      case "PetHatchSizeBoost":
+      case "PetHatchSizeBoostII":
+      case "PetHatchSizeBoostIII":
+        return nonNegative(firstOf(data, base, ["strengthIncrease"]));
+      case "HungerRestore":
+      case "HungerRestoreII":
+      case "HungerRestoreIII":
+      case "SnowyHungerRestore":
+        return nonNegative(firstOf(data, base, ["hungerRestoreAmount", "hungerRestoredPercentage"], ["hungerRestorePercentage"]));
+      case "HungerBoost":
+      case "HungerBoostII":
+      case "HungerBoostIII":
+      case "SnowyHungerBoost":
+        return nonNegative(firstOf(data, base, ["hungerDepletionRateDecreasePercentage"], ["hungerDepletionRateDecreasePercentage"]));
+      case "Thundercharger":
+        return nonNegative(firstOf(data, base, ["cropsCharged"]));
+      default:
+        return 0;
+    }
+  }
+  var baseParameters, formatCount, plural, nonNegative, firstOf, reductionMs;
+  var init_abilityLogText = __esm({
+    "src/features/pets/abilityLogText.ts"() {
+      "use strict";
+      init_data();
+      baseParameters = (abilityId) => petAbilities2[abilityId]?.baseParameters ?? {};
+      formatCount = (n) => Number.isFinite(Number(n)) ? Math.round(Number(n)).toLocaleString("en-US") : "0";
+      plural = (n, word) => `${word}${Number(n) === 1 ? "" : "s"}`;
+      nonNegative = (value) => {
+        const n = Number(value);
+        return Number.isFinite(n) ? Math.max(0, n) : 0;
+      };
+      firstOf = (data, base, dataKeys, baseKeys = []) => {
+        for (const key2 of dataKeys) if (data[key2] != null) return data[key2];
+        for (const key2 of baseKeys) if (base[key2] != null) return base[key2];
+        return 0;
+      };
+      reductionMs = (data, base, minuteKeys, baseMinuteKey) => {
+        if (data["secondsReduced"] != null) return nonNegative(data["secondsReduced"]) * 1e3;
+        return nonNegative(firstOf(data, base, minuteKeys, [baseMinuteKey])) * 60 * 1e3;
+      };
+    }
+  });
+
+  // src/features/pets/inventoryPets.ts
+  function canonicalSpecies(species) {
+    if (!species) return species;
+    if (petCatalog2[species]) return species;
+    const found = catalogKeyByLowercase().get(species.toLowerCase());
+    if (found) return found;
+    const capitalized = species.charAt(0).toUpperCase() + species.slice(1).toLowerCase();
+    return petCatalog2[capitalized] ? capitalized : species;
+  }
+  function inventoryItemToPet(x) {
+    if (!x || x.itemType !== "Pet") return null;
+    const id = lower(x.id);
+    if (!id) return null;
+    const scale = x.targetScale ?? x.data?.targetScale;
+    return {
+      id,
+      itemType: "Pet",
+      petSpecies: canonicalSpecies(String(x.petSpecies ?? x.data?.petSpecies ?? "").trim()),
+      name: stringOrNull(x.name ?? x.data?.name ?? null),
+      xp: finiteOrZero(x.xp ?? x.data?.xp),
+      hunger: finiteOrZero(x.hunger ?? x.data?.hunger),
+      mutations: stringList(x.mutations ?? x.data?.mutations),
+      targetScale: Number.isFinite(scale) ? Number(scale) : void 0,
+      abilities: stringList(x.abilities ?? x.data?.abilities)
+    };
+  }
+  function activeSlotToPet(entry) {
+    const slot = entry?.slot ?? entry;
+    if (!slot || typeof slot !== "object") return null;
+    const id = lower(slot.id);
+    if (!id) return null;
+    return {
+      id,
+      itemType: "Pet",
+      petSpecies: canonicalSpecies(String(slot.petSpecies ?? slot.species ?? "").trim()),
+      name: stringOrNull(slot.name ?? null),
+      xp: finiteOrZero(slot.xp),
+      hunger: finiteOrZero(slot.hunger),
+      mutations: stringList(slot.mutations),
+      targetScale: Number.isFinite(slot.targetScale) ? Number(slot.targetScale) : void 0,
+      abilities: stringList(slot.abilities)
+    };
+  }
+  function petToInventoryItem(p) {
+    return {
+      id: p.id,
+      itemType: "Pet",
+      petSpecies: canonicalSpecies(p.petSpecies),
+      name: p.name ?? null,
+      xp: p.xp,
+      hunger: p.hunger,
+      mutations: p.mutations.slice(),
+      targetScale: p.targetScale,
+      abilities: p.abilities.slice()
+    };
+  }
+  function stableSignature(list) {
+    return list.filter((p) => !!p).map((p) => JSON.stringify([p.id, p.petSpecies, p.name ?? null, p.mutations, p.targetScale ?? null, p.abilities])).join("\n");
+  }
+  function rebuild() {
+    const byId = /* @__PURE__ */ new Map();
+    for (const pet of hutchRaw.map(inventoryItemToPet)) if (pet) byId.set(pet.id, pet);
+    for (const pet of itemsOf(inventoryRaw).map(inventoryItemToPet)) if (pet) byId.set(pet.id, pet);
+    for (const pet of activeRaw.map(activeSlotToPet)) if (pet) byId.set(pet.id, pet);
+    cache = Array.from(byId.values());
+  }
+  async function startWatchers() {
+    let inventorySig = "";
+    let activeSig = "";
+    try {
+      inventoryRaw = await Atoms.inventory.myInventory.get();
+      inventorySig = stableSignature(itemsOf(inventoryRaw).map(inventoryItemToPet));
+    } catch {
+    }
+    watchers.add(Atoms.inventory.myInventory.onChange((inv) => {
+      const sig = stableSignature(itemsOf(inv).map(inventoryItemToPet));
+      if (sig === inventorySig) return;
+      inventorySig = sig;
+      inventoryRaw = inv;
+      rebuild();
+    }));
+    let primitive = null;
+    try {
+      primitive = await Atoms.pets.myPrimitivePetSlots.get();
+    } catch {
+    }
+    const activeAtom = Array.isArray(primitive) ? Atoms.pets.myPrimitivePetSlots : Atoms.pets.myPetInfos;
+    if (Array.isArray(primitive)) {
+      activeRaw = primitive;
+    } else {
+      try {
+        const infos = await Atoms.pets.myPetInfos.get();
+        activeRaw = Array.isArray(infos) ? infos : [];
+      } catch {
+      }
+    }
+    activeSig = stableSignature(activeRaw.map(activeSlotToPet));
+    watchers.add(activeAtom.onChange((list) => {
+      const next = Array.isArray(list) ? list : [];
+      const sig = stableSignature(next.map(activeSlotToPet));
+      if (sig === activeSig) return;
+      activeSig = sig;
+      activeRaw = next;
+      rebuild();
+    }));
+    try {
+      const hutch = await myPetHutchPetItems.get();
+      hutchRaw = Array.isArray(hutch) ? hutch : [];
+    } catch {
+    }
+    watchers.add(myPetHutchPetItems.onChange((list) => {
+      hutchRaw = Array.isArray(list) ? list : [];
+      rebuild();
+    }));
+    rebuild();
+  }
+  function ensureInventoryWatchers() {
+    if (!watchersStarted) {
+      watchersStarted = true;
+      starting = startWatchers().catch(() => {
+      });
+    }
+    return starting ?? Promise.resolve();
+  }
+  async function getInventoryPets() {
+    await ensureInventoryWatchers();
+    return cache.slice();
+  }
+  function findCachedPet(petId) {
+    return cache.find((p) => p.id === petId) ?? null;
+  }
+  async function getPetLookup() {
+    const owned2 = await getInventoryPets().catch(() => []);
+    if (owned2.length) lastNonEmpty = owned2;
+    const map2 = new Map(lastNonEmpty.map((p) => [p.id, p]));
+    try {
+      for (const entry of await PlayerService.getPets() ?? []) {
+        const pet = activeSlotToPet(entry);
+        if (pet && !map2.has(pet.id)) map2.set(pet.id, pet);
+      }
+    } catch {
+    }
+    return map2;
+  }
+  var lower, stringOrNull, finiteOrZero, stringList, catalogKeyByLowercase, inventoryRaw, activeRaw, hutchRaw, cache, watchersStarted, watchers, itemsOf, starting, lastNonEmpty;
+  var init_inventoryPets = __esm({
+    "src/features/pets/inventoryPets.ts"() {
+      "use strict";
+      init_data();
+      init_player();
+      init_atoms();
+      init_emitter();
+      lower = (v) => (v ?? "").toLowerCase();
+      stringOrNull = (v) => typeof v === "string" ? v : null;
+      finiteOrZero = (v) => Number.isFinite(v) ? v : 0;
+      stringList = (v) => Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
+      catalogKeyByLowercase = memoOnCatalogs(
+        () => new Map(Object.keys(petCatalog2).map((k) => [k.toLowerCase(), k]))
+      );
+      inventoryRaw = null;
+      activeRaw = [];
+      hutchRaw = [];
+      cache = [];
+      watchersStarted = false;
+      watchers = new Subscriptions();
+      itemsOf = (inv) => Array.isArray(inv?.items) ? inv.items : Array.isArray(inv) ? inv : [];
+      starting = null;
+      lastNonEmpty = [];
+    }
+  });
+
+  // src/features/pets/abilityLogs.ts
+  function persist3() {
+    try {
+      writeAriesPath(STORAGE_PATH, {
+        version: 1,
+        cutoff: cutoffMs,
+        logs: logs.map((entry) => ({
+          ...entry,
+          species: entry.species ?? null,
+          name: entry.name ?? null,
+          mutations: entry.mutations?.slice()
+        }))
+      });
+    } catch {
+    }
+  }
+  function restoreAbilityLogs() {
+    try {
+      const saved = readAriesPath(STORAGE_PATH);
+      if (!saved || typeof saved !== "object") return;
+      const restored = [];
+      for (const item of Array.isArray(saved.logs) ? saved.logs : []) {
+        if (!item || typeof item !== "object") continue;
+        const abilityId = typeof item.abilityId === "string" ? item.abilityId : "";
+        const performedAt = Number(item.performedAt) || 0;
+        if (!abilityId || !performedAt) continue;
+        const mutations = Array.isArray(item.mutations) ? item.mutations.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
+        restored.push({
+          petId: typeof item.petId === "string" ? item.petId : "",
+          species: optionalString(item.species),
+          name: optionalString(item.name),
+          mutations: mutations.length ? mutations : void 0,
+          abilityId,
+          abilityName: optionalString(item.abilityName) ?? abilityId,
+          data: item.data,
+          performedAt,
+          time12: optionalString(item.time12) ?? time12(performedAt)
+        });
+      }
+      restored.sort((a, b) => a.performedAt - b.performedAt);
+      logs = restored.slice(-MAX_ENTRIES);
+      seenKeys.clear();
+      for (const entry of logs) seenKeys.add(entryKey(entry));
+      const cutoff = Number(saved.cutoff);
+      if (Number.isFinite(cutoff) && cutoff > 0) cutoffMs = cutoff;
+    } catch {
+    }
+  }
+  function push(entry) {
+    logs.push(entry);
+    if (logs.length > MAX_ENTRIES) logs.splice(0, logs.length - MAX_ENTRIES);
+    changes.emit(getAbilityLogs());
+    persist3();
+  }
+  function ingestActivityLogEntry(raw) {
+    if (!raw || typeof raw !== "object") return;
+    const abilityId = typeof raw.action === "string" ? raw.action : "";
+    if (!abilityId || !isLoggableAbility(abilityId)) return;
+    const performedAt = Number(raw.timestamp);
+    if (!Number.isFinite(performedAt) || performedAt <= 0) return;
+    const params = raw.parameters && typeof raw.parameters === "object" ? raw.parameters : {};
+    const petParam = params.pet;
+    const petId = typeof petParam?.id === "string" ? petParam.id : "";
+    if (!petId) return;
+    const key2 = entryKey({ abilityId, petId, performedAt });
+    if (seenKeys.has(key2)) return;
+    seenKeys.add(key2);
+    if (cutoffMs && performedAt < cutoffMs - CUTOFF_SKEW_MS) return;
+    const details = abilityLogText(abilityId, params);
+    if (details === null) return;
+    const cached2 = findCachedPet(petId);
+    const mutationsRaw = Array.isArray(petParam?.mutations) ? petParam.mutations : cached2?.mutations;
+    const mutations = Array.isArray(mutationsRaw) ? mutationsRaw.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
+    try {
+      StatsService.incrementAbilityStat(abilityId, "triggers");
+      const value = abilityLogValue(abilityId, params);
+      if (value > 0) StatsService.incrementAbilityStat(abilityId, "totalValue", value);
+    } catch {
+    }
+    push({
+      petId,
+      species: optionalString(petParam?.petSpecies) ?? (cached2?.petSpecies || void 0),
+      name: optionalString(petParam?.name) ?? (cached2?.name || void 0),
+      mutations: mutations.length ? mutations : void 0,
+      abilityId,
+      abilityName: abilityName(abilityId),
+      data: details,
+      performedAt,
+      time12: time12(performedAt)
+    });
+  }
+  async function startAbilityLogsWatcher() {
+    try {
+      await ensureInventoryWatchers();
+    } catch {
+    }
+    const ingest2 = (rawLogs) => {
+      for (const raw of Array.isArray(rawLogs) ? rawLogs : []) {
+        try {
+          ingestActivityLogEntry(raw);
+        } catch {
+        }
+      }
+    };
+    try {
+      ingest2(await myActivityLog.get());
+    } catch {
+    }
+    let stop2 = null;
+    try {
+      const res = await myActivityLog.onChange((next) => ingest2(next));
+      if (typeof res === "function") stop2 = res;
+    } catch {
+    }
+    return () => {
+      try {
+        stop2?.();
+      } catch {
+      }
+    };
+  }
+  function getAbilityLogs() {
+    return logs.slice().sort((a, b) => b.performedAt - a.performedAt);
+  }
+  function getAbilityLogsSessionStart() {
+    return sessionStart;
+  }
+  function onAbilityLogs(cb) {
+    const off = changes.on(cb);
+    try {
+      cb(getAbilityLogs());
+    } catch {
+    }
+    return off;
+  }
+  function getSeenAbilityIds() {
+    return Array.from(new Set(logs.map((e) => e.abilityId))).sort();
+  }
+  function clearAbilityLogs() {
+    logs = [];
+    seenKeys.clear();
+    cutoffMs = Date.now();
+    changes.emit(getAbilityLogs());
+    persist3();
+  }
+  var STORAGE_PATH, MAX_ENTRIES, CUTOFF_SKEW_MS, logs, seenKeys, cutoffMs, sessionStart, changes, entryKey, time12, optionalString;
+  var init_abilityLogs = __esm({
+    "src/features/pets/abilityLogs.ts"() {
+      "use strict";
+      init_atoms();
+      init_emitter();
+      init_storage();
+      init_stats();
+      init_abilityNames();
+      init_abilityLogText();
+      init_inventoryPets();
+      STORAGE_PATH = "pets.abilityLogs";
+      MAX_ENTRIES = 500;
+      CUTOFF_SKEW_MS = 1500;
+      logs = [];
+      seenKeys = /* @__PURE__ */ new Set();
+      cutoffMs = 0;
+      sessionStart = Date.now();
+      changes = new Emitter();
+      entryKey = (e) => `${e.abilityId}|${e.petId}|${e.performedAt}`;
+      time12 = (ms) => new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+      optionalString = (v) => typeof v === "string" && v ? v : void 0;
+    }
+  });
+
+  // src/features/pets/feeding.ts
+  function readMap(path) {
+    const saved = readAriesPath(path);
+    return saved && typeof saved === "object" ? saved : {};
+  }
+  function getOverride(petId) {
+    const saved = readMap(OVERRIDES_PATH)[petId];
+    return {
+      enabled: !!saved?.enabled,
+      thresholdPct: Math.min(100, Math.max(1, Number(saved?.thresholdPct) || DEFAULT_THRESHOLD_PCT)),
+      crops: { ...saved?.crops || {} }
+    };
+  }
+  function instantFeedRules(species) {
+    return { ...readMap(INSTANT_FEED_PATH)[canonicalSpecies(String(species || ""))]?.crops || {} };
+  }
+  function isInstantFeedCropAllowed(species, crop) {
+    return isAllowed(instantFeedRules(species), crop);
+  }
+  function setInstantFeedCropAllowed(species, crop, allowed) {
+    const key2 = canonicalSpecies(String(species || ""));
+    const all = readMap(INSTANT_FEED_PATH);
+    all[key2] = { crops: { ...all[key2]?.crops || {}, [crop]: { allowed: !!allowed } } };
+    writeAriesPath(INSTANT_FEED_PATH, all);
+  }
+  function getInstantFeedAllowedCrops(species) {
+    const rules2 = instantFeedRules(species);
+    return new Set(getCompatibleCropsForSpecies(canonicalSpecies(String(species || ""))).filter((c) => isAllowed(rules2, c)));
+  }
+  function getCompatibleCropsForSpecies(species) {
+    const entry = catalogEntry(species);
+    const raw = entry?.diet ?? entry?.compatibleCrops ?? entry?.crops ?? [];
+    return (Array.isArray(raw) ? raw : []).filter((c) => typeof c === "string" && c.length > 0);
+  }
+  function maxHungerForSpecies(species) {
+    const v = catalogEntry(species)?.coinsToFullyReplenishHunger;
+    return typeof v === "number" && Number.isFinite(v) && v > 0 ? v : DEFAULT_MAX_HUNGER;
+  }
+  function getHungerPctFor(pet) {
+    const current = Number(pet?.slot?.hunger) || 0;
+    const pct = current / maxHungerForSpecies(String(pet?.slot?.petSpecies || "")) * 100;
+    return +Math.max(0, Math.min(100, pct)).toFixed(1);
+  }
+  var OVERRIDES_PATH, INSTANT_FEED_PATH, DEFAULT_THRESHOLD_PCT, DEFAULT_MAX_HUNGER, isAllowed, catalogEntry;
+  var init_feeding = __esm({
+    "src/features/pets/feeding.ts"() {
+      "use strict";
+      init_data();
+      init_storage();
+      init_inventoryPets();
+      OVERRIDES_PATH = "pets.overrides";
+      INSTANT_FEED_PATH = "pets.instantFeed";
+      DEFAULT_THRESHOLD_PCT = 10;
+      DEFAULT_MAX_HUNGER = 3e3;
+      isAllowed = (rules2, crop) => rules2[crop] ? !!rules2[crop].allowed : true;
+      catalogEntry = (species) => petCatalog2[species];
+    }
+  });
+
+  // src/features/pets/teamStore.ts
+  function load2() {
+    const saved = readAriesPath(STORAGE_PATH2) ?? [];
+    if (!Array.isArray(saved)) return [];
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const t of saved) {
+      const id = String(t?.id || "");
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      out.push({
+        id,
+        name: String(t?.name || "Team"),
+        slots: normalizeSlots(t?.slots),
+        serverId: t?.serverId ? String(t.serverId) : null
+      });
+    }
+    if (out.length !== saved.length) save(out);
+    for (const t of out) if (t.serverId) localIdByServerId.set(t.serverId, t.id);
+    return out;
+  }
+  function save(list) {
+    for (const t of list) {
+      if (t?.serverId && t?.id) localIdByServerId.set(String(t.serverId), String(t.id));
+    }
+    writeAriesPath(STORAGE_PATH2, list);
+  }
+  function teamsRef() {
+    return teams;
+  }
+  function commitTeams(next) {
+    teams = next;
+    save(teams);
+    changes2.emit(getTeams());
+  }
+  function getTeams() {
+    return teams.map(copy);
+  }
+  function getTeamById(teamId2) {
+    const team = teams.find((t) => t.id === teamId2);
+    return team ? copy(team) : null;
+  }
+  function onTeamsChange(cb) {
+    const off = changes2.on(cb);
+    try {
+      cb(getTeams());
+    } catch {
+    }
+    return off;
+  }
+  function rememberLocalId(serverId, localId2) {
+    localIdByServerId.set(serverId, localId2);
+  }
+  function knownLocalId(serverId) {
+    return localIdByServerId.get(serverId);
+  }
+  function teamIdForPets(petIds) {
+    const wanted = new Set(petIds.map((id) => String(id || "")).filter(Boolean));
+    if (!wanted.size) return null;
+    for (const team of teams) {
+      const slots = team.slots.map((id) => String(id || "")).filter(Boolean);
+      if (slots.length !== wanted.size) continue;
+      const slotSet = new Set(slots);
+      if ([...wanted].every((id) => slotSet.has(id))) return team.id;
+    }
+    return null;
+  }
+  function newTeamId() {
+    try {
+      const uuid = globalThis.crypto?.randomUUID?.();
+      if (uuid) return uuid;
+    } catch {
+    }
+    return `t_${Date.now().toString(36)}_${Math.random().toString(16).slice(2)}`;
+  }
+  var STORAGE_PATH2, SLOT_COUNT, localIdByServerId, changes2, normalizeSlots, teams, copy;
+  var init_teamStore = __esm({
+    "src/features/pets/teamStore.ts"() {
+      "use strict";
+      init_emitter();
+      init_storage();
+      STORAGE_PATH2 = "pets.teams";
+      SLOT_COUNT = 3;
+      localIdByServerId = /* @__PURE__ */ new Map();
+      changes2 = new Emitter();
+      normalizeSlots = (slots) => Array.isArray(slots) ? slots.slice(0, SLOT_COUNT).map((x) => x ? String(x) : null) : [null, null, null];
+      teams = load2();
+      copy = (t) => ({ ...t, slots: t.slots.slice(0, SLOT_COUNT) });
+    }
+  });
+
+  // src/features/pets/teamReconcile.ts
+  function serverMemberIds(team) {
+    return Array.isArray(team?.members) ? team.members.map((m) => String(m?.petId || "")).filter(Boolean) : [];
+  }
+  function sameMemberSet(a, b) {
+    const aa = a.filter((x) => !!x).slice().sort();
+    const bb = b.slice().sort();
+    if (aa.length !== bb.length) return false;
+    return aa.every((v, i) => v === bb[i]);
+  }
+  function petTeamName(name) {
+    const trimmed = String(name ?? "").trim();
+    let parts;
+    try {
+      const seg = new Intl.Segmenter(void 0, { granularity: "grapheme" });
+      parts = Array.from(seg.segment(trimmed), (s) => s.segment);
+    } catch {
+      parts = Array.from(trimmed);
+    }
+    return parts.length <= PET_TEAM_NAME_MAX_CLUSTERS ? trimmed : parts.slice(0, PET_TEAM_NAME_MAX_CLUSTERS).join("");
+  }
+  function nameKey(name) {
+    return name ? petTeamName(name).toLowerCase() : "";
+  }
+  function reconcilePetTeams(teams2, serverTeams2, env) {
+    const serverById = new Map(serverTeams2.map((t) => [String(t.id), t]));
+    const linkedServerIds = new Set(teams2.map((t) => t.serverId).filter((v) => !!v));
+    const freeByName = (key2) => key2 ? serverTeams2.filter((t) => !linkedServerIds.has(String(t.id)) && nameKey(t.name) === key2) : [];
+    const result = {
+      teams: teams2,
+      changed: false,
+      linkedLocalIds: [],
+      pushUpdates: [],
+      needsCreate: [],
+      dropped: []
+    };
+    const folded = /* @__PURE__ */ new Set();
+    for (const local of teams2) {
+      if (folded.has(local)) continue;
+      if (local.serverId) {
+        const server = serverById.get(local.serverId);
+        if (!server) continue;
+        const memberIds = serverMemberIds(server);
+        if (server.name !== local.name || !sameMemberSet(local.slots, memberIds)) {
+          local.name = server.name;
+          local.slots = [0, 1, 2].map((i) => memberIds[i] ?? null);
+          result.changed = true;
+        }
+        continue;
+      }
+      const candidates = [...freeByName(nameKey(local.name)), ...freeByName(nameKey(env.sentName(local.id)))];
+      const match = candidates.find((t) => sameMemberSet(local.slots, serverMemberIds(t))) ?? candidates[0];
+      if (match) {
+        local.serverId = String(match.id);
+        linkedServerIds.add(local.serverId);
+        result.linkedLocalIds.push(local.id);
+        const matchMemberIds = serverMemberIds(match);
+        const divergedWhilePending = match.name !== petTeamName(local.name) || !sameMemberSet(local.slots, matchMemberIds);
+        if (divergedWhilePending) {
+          const petIds = local.slots.filter((x) => !!x);
+          if (petIds.length) result.pushUpdates.push({ serverId: local.serverId, name: local.name.trim() || "Team", petIds });
+        } else {
+          local.name = match.name;
+          local.slots = [0, 1, 2].map((i) => matchMemberIds[i] ?? null);
+        }
+        result.changed = true;
+        continue;
+      }
+      const twin = teams2.find((t) => t !== local && !folded.has(t) && !!t.serverId && serverById.has(t.serverId) && nameKey(t.name) === nameKey(local.name) && sameMemberSet(t.slots, local.slots.filter((x) => !!x)));
+      if (twin) {
+        local.serverId = twin.serverId;
+        local.name = twin.name;
+        local.slots = twin.slots.slice();
+        folded.add(twin);
+        result.changed = true;
+        continue;
+      }
+      result.needsCreate.push(local);
+    }
+    result.dropped = teams2.filter((t) => !folded.has(t) && !!t.serverId && !serverById.has(t.serverId));
+    const kept = teams2.filter((t) => !folded.has(t) && (!t.serverId || serverById.has(t.serverId)));
+    if (kept.length !== teams2.length) result.changed = true;
+    const usedLocalIds = new Set(kept.map((t) => t.id));
+    for (const server of serverTeams2) {
+      if (linkedServerIds.has(String(server.id))) continue;
+      const memberIds = serverMemberIds(server);
+      const knownLocalId2 = env.knownLocalId(String(server.id));
+      const importedId = knownLocalId2 && !usedLocalIds.has(knownLocalId2) ? knownLocalId2 : env.newId();
+      usedLocalIds.add(importedId);
+      kept.push({
+        id: importedId,
+        name: server.name,
+        slots: [0, 1, 2].map((i) => memberIds[i] ?? null),
+        serverId: String(server.id)
+      });
+      linkedServerIds.add(String(server.id));
+      result.changed = true;
+    }
+    result.teams = kept;
+    return result;
+  }
+  var PET_TEAM_NAME_MAX_CLUSTERS;
+  var init_teamReconcile = __esm({
+    "src/features/pets/teamReconcile.ts"() {
+      "use strict";
+      PET_TEAM_NAME_MAX_CLUSTERS = 16;
+    }
+  });
+
   // src/game/playerIdentity.ts
   function asRecord(value) {
     return value && typeof value === "object" ? value : null;
@@ -16963,846 +17801,385 @@
     }
   });
 
-  // src/features/pets/teamReconcile.ts
-  function serverMemberIds(team) {
-    return Array.isArray(team?.members) ? team.members.map((m) => String(m?.petId || "")).filter(Boolean) : [];
+  // src/features/pets/teamSync.ts
+  function isTeamSyncEnabled() {
+    return syncEnabled;
   }
-  function sameMemberSet(a, b) {
-    const aa = a.filter((x) => !!x).slice().sort();
-    const bb = b.slice().sort();
-    if (aa.length !== bb.length) return false;
-    return aa.every((v, i) => v === bb[i]);
-  }
-  function petTeamName(name) {
-    const trimmed = String(name ?? "").trim();
-    let parts;
+  function send(message) {
+    if (!syncEnabled) return;
     try {
-      const seg = new Intl.Segmenter(void 0, { granularity: "grapheme" });
-      parts = Array.from(seg.segment(trimmed), (s) => s.segment);
+      sendToGame(message);
     } catch {
-      parts = Array.from(trimmed);
     }
-    return parts.length <= PET_TEAM_NAME_MAX_CLUSTERS ? trimmed : parts.slice(0, PET_TEAM_NAME_MAX_CLUSTERS).join("");
   }
-  function nameKey(name) {
-    return name ? petTeamName(name).toLowerCase() : "";
+  function sendSavePetTeam(serverId, name, petIds) {
+    send({ type: "SavePetTeam", teamId: serverId ?? newTeamId(), isCreate: serverId === null, name: petTeamName(name), petIds });
   }
-  function reconcilePetTeams(teams, serverTeams, env) {
-    const serverById = new Map(serverTeams.map((t) => [String(t.id), t]));
-    const linkedServerIds = new Set(teams.map((t) => t.serverId).filter((v) => !!v));
-    const freeByName = (key2) => key2 ? serverTeams.filter((t) => !linkedServerIds.has(String(t.id)) && nameKey(t.name) === key2) : [];
-    const result = {
-      teams,
-      changed: false,
-      linkedLocalIds: [],
-      pushUpdates: [],
-      needsCreate: [],
-      dropped: []
-    };
-    const folded = /* @__PURE__ */ new Set();
-    for (const local of teams) {
-      if (folded.has(local)) continue;
-      if (local.serverId) {
-        const server = serverById.get(local.serverId);
-        if (!server) continue;
-        const memberIds = serverMemberIds(server);
-        if (server.name !== local.name || !sameMemberSet(local.slots, memberIds)) {
-          local.name = server.name;
-          local.slots = [0, 1, 2].map((i) => memberIds[i] ?? null);
-          result.changed = true;
-        }
-        continue;
-      }
-      const candidates = [...freeByName(nameKey(local.name)), ...freeByName(nameKey(env.sentName(local.id)))];
-      const match = candidates.find((t) => sameMemberSet(local.slots, serverMemberIds(t))) ?? candidates[0];
-      if (match) {
-        local.serverId = String(match.id);
-        linkedServerIds.add(local.serverId);
-        result.linkedLocalIds.push(local.id);
-        const matchMemberIds = serverMemberIds(match);
-        const divergedWhilePending = match.name !== petTeamName(local.name) || !sameMemberSet(local.slots, matchMemberIds);
-        if (divergedWhilePending) {
-          const petIds = local.slots.filter((x) => !!x);
-          if (petIds.length) result.pushUpdates.push({ serverId: local.serverId, name: local.name.trim() || "Team", petIds });
-        } else {
-          local.name = match.name;
-          local.slots = [0, 1, 2].map((i) => matchMemberIds[i] ?? null);
-        }
-        result.changed = true;
-        continue;
-      }
-      const twin = teams.find((t) => t !== local && !folded.has(t) && !!t.serverId && serverById.has(t.serverId) && nameKey(t.name) === nameKey(local.name) && sameMemberSet(t.slots, local.slots.filter((x) => !!x)));
-      if (twin) {
-        local.serverId = twin.serverId;
-        local.name = twin.name;
-        local.slots = twin.slots.slice();
-        folded.add(twin);
-        result.changed = true;
-        continue;
-      }
-      result.needsCreate.push(local);
+  function sendDeletePetTeam(serverId) {
+    send({ type: "DeletePetTeam", teamId: serverId });
+  }
+  function sendApplyPetTeam(serverId) {
+    send({ type: "ApplyPetTeam", teamId: serverId });
+  }
+  function sendMovePetTeam(serverId, toIndex) {
+    send({ type: "MovePetTeam", movePetTeamId: serverId, toPetTeamIndex: toIndex });
+  }
+  function clearPendingCreate(localId2) {
+    const timer2 = pendingCreates.get(localId2);
+    if (timer2) clearTimeout(timer2);
+    pendingCreates.delete(localId2);
+    pendingCreateNames.delete(localId2);
+  }
+  function maybeCreateServerTeam(team) {
+    if (!syncEnabled) return;
+    if (pendingCreates.has(team.id)) return;
+    const petIds = team.slots.filter((x) => !!x);
+    const name = (team.name || "").trim();
+    if (!name || !petIds.length) return;
+    const signature = createSignature(team);
+    if (lastCreateAttempt.get(team.id) === signature) return;
+    lastCreateAttempt.set(team.id, signature);
+    pendingCreateNames.set(team.id, name);
+    pendingCreates.set(team.id, setTimeout(() => clearPendingCreate(team.id), PENDING_CREATE_TIMEOUT_MS));
+    console.warn(`[Pets] Creating native pet team "${name}" (${petIds.length} pet(s)), once, never retried on its own.`);
+    sendSavePetTeam(null, name, petIds);
+  }
+  function reconcile() {
+    if (!syncEnabled) return;
+    if (reconciling) {
+      reconcileQueued = true;
+      return;
     }
-    result.dropped = teams.filter((t) => !folded.has(t) && !!t.serverId && !serverById.has(t.serverId));
-    const kept = teams.filter((t) => !folded.has(t) && (!t.serverId || serverById.has(t.serverId)));
-    if (kept.length !== teams.length) result.changed = true;
-    const usedLocalIds = new Set(kept.map((t) => t.id));
-    for (const server of serverTeams) {
-      if (linkedServerIds.has(String(server.id))) continue;
-      const memberIds = serverMemberIds(server);
-      const knownLocalId = env.knownLocalId(String(server.id));
-      const importedId = knownLocalId && !usedLocalIds.has(knownLocalId) ? knownLocalId : env.newId();
-      usedLocalIds.add(importedId);
-      kept.push({
-        id: importedId,
-        name: server.name,
-        slots: [0, 1, 2].map((i) => memberIds[i] ?? null),
-        serverId: String(server.id)
+    reconciling = true;
+    try {
+      const result = reconcilePetTeams(teamsRef(), serverTeams, {
+        sentName: (localId2) => pendingCreateNames.get(localId2),
+        knownLocalId,
+        newId: newTeamId
       });
-      linkedServerIds.add(String(server.id));
-      result.changed = true;
-    }
-    result.teams = kept;
-    return result;
-  }
-  var PET_TEAM_NAME_MAX_CLUSTERS;
-  var init_teamReconcile = __esm({
-    "src/features/pets/teamReconcile.ts"() {
-      "use strict";
-      PET_TEAM_NAME_MAX_CLUSTERS = 16;
-    }
-  });
-
-  // src/features/pets/pets.ts
-  function markTeamAsUsed(teamId2) {
-    lastUsedTeamId = teamId2 ? String(teamId2) : null;
-  }
-  function _abilityName(id) {
-    const key2 = String(id ?? "");
-    const raw = typeof _AB?.[key2]?.name === "string" && _AB[key2].name.trim() ? _AB[key2].name : key2;
-    return String(raw);
-  }
-  function petAbilityIds() {
-    const keys = Object.keys(_AB);
-    if (!_abilityIdsCache || _abilityIdsCache.count !== keys.length) {
-      _abilityIdsCache = {
-        count: keys.length,
-        ids: new Set(keys.filter((id) => !WEATHER_MUTATION_BOOST_IDS.has(id)))
-      };
-    }
-    return _abilityIdsCache.ids;
-  }
-  function _abilityLogFallbackText(abilityId, params) {
-    const fmtInt = (n) => Number.isFinite(Number(n)) ? Math.round(Number(n)).toLocaleString("en-US") : "0";
-    switch (abilityId) {
-      case "HungerBoost":
-      case "HungerBoostII":
-      case "HungerBoostIII":
-      case "SnowyHungerBoost": {
-        const base = petAbilities2[abilityId]?.baseParameters ?? {};
-        const pct = base["hungerDepletionRateDecreasePercentage"];
-        return pct != null ? `- ${Number(pct).toFixed(0)}% hunger drain` : "Hunger reduced";
-      }
-      case "Copycat":
-        return "Copied another ability";
-      case "DawnCapture": {
-        const capsules = params["capsulesAdded"];
-        const dawnlit = Number(params["dawnlitRemoved"]) || 0;
-        const dawncharged = Number(params["dawnboundRemoved"]) || 0;
-        const absorbed = [];
-        if (dawnlit > 0) absorbed.push(`${fmtInt(dawnlit)} Dawnlit`);
-        if (dawncharged > 0) absorbed.push(`${fmtInt(dawncharged)} Dawncharged`);
-        const head = capsules != null ? `+ ${fmtInt(capsules)} Dawn Capsule${Number(capsules) === 1 ? "" : "s"}` : "Dawn Capsules added";
-        return absorbed.length ? `${head} (${absorbed.join(", ")} absorbed)` : head;
-      }
-      case "Thunderbloom":
-        return "Thunder mutations empowered";
-      case "Thundercharger": {
-        const charged = params["cropsCharged"];
-        return charged != null ? `${fmtInt(charged)} crop${Number(charged) === 1 ? "" : "s"} Thundercharged` : "Crops Thundercharged";
-      }
-      default: {
-        const meta = petAbilities2[abilityId];
-        return meta?.description || meta?.name || abilityId;
+      for (const localId2 of result.linkedLocalIds) clearPendingCreate(localId2);
+      for (const update of result.pushUpdates) sendSavePetTeam(update.serverId, update.name, update.petIds);
+      for (const team of result.needsCreate) maybeCreateServerTeam(team);
+      for (const team of result.dropped) rememberLocalId(String(team.serverId), team.id);
+      if (result.changed) commitTeams(result.teams);
+    } finally {
+      reconciling = false;
+      if (reconcileQueued) {
+        reconcileQueued = false;
+        reconcile();
       }
     }
   }
-  function _buildAbilityLogText(abilityId, params) {
-    if (abilityId === "GoldGranter" || abilityId === "RainbowGranter") {
-      const growSlot = params?.growSlot;
-      const species = typeof growSlot?.species === "string" ? growSlot.species.trim() : "";
-      if (!species) return null;
-    }
-    if (isPetAbilityAction(abilityId)) {
+  async function myUserSlotIndex() {
+    try {
+      const slots = await stateUserSlots.get();
+      const list = Array.isArray(slots) ? slots : [];
+      if (!list.length) return null;
+      let roomId2 = null;
+      let accountId = null;
       try {
-        const text2 = formatAbilityLog({ action: abilityId, timestamp: 0, parameters: params });
-        if (text2) return text2;
+        roomId2 = await playerId.get() ?? null;
       } catch {
       }
-    }
-    return _abilityLogFallbackText(abilityId, params);
-  }
-  function _abilityNameWithoutLevel(id) {
-    const key2 = String(id ?? "");
-    const raw = typeof _AB?.[key2]?.name === "string" && _AB[key2].name.trim() ? _AB[key2].name : key2;
-    return String(raw).replace(/(?:\s+|-)?(?:I|II|III|IV|V|VI|VII|VIII|IX|X)\s*$/, "").trim();
-  }
-  function _parseTeamSearch(raw) {
-    const s = String(raw || "").trim();
-    const m = s.match(/^(ab|sp):\s*(.*)$/i);
-    if (!m) return { mode: "text", value: s };
-    return { mode: m[1].toLowerCase() === "ab" ? "ability" : "species", value: (m[2] || "").trim() };
-  }
-  async function _abilityNameToPresentIds(name) {
-    await _ensureInventoryWatchersStarted();
-    const target = String(name || "").toLowerCase().trim().replace(/(?:\s+|-)?(?:i|ii|iii|iv|v|vi|vii|viii|ix|x)\s*$/i, "");
-    const ids = /* @__PURE__ */ new Set();
-    if (!target) return ids;
-    for (const p of _invPetsCache) {
-      const abs = Array.isArray(p.abilities) ? p.abilities : [];
-      for (const id of abs) {
-        if (_abilityNameWithoutLevel(id).toLowerCase() === target) ids.add(id);
-      }
-    }
-    return ids;
-  }
-  function _canonicalSpecies(s) {
-    if (!s) return s;
-    if (petCatalog2[s]) return s;
-    const lc = s.toLowerCase();
-    const found = _petCatalogKeyByLc().get(lc);
-    if (found) return found;
-    const t = s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-    return petCatalog2[t] ? t : s;
-  }
-  function _invPetToRawItem(p) {
-    return {
-      id: p.id,
-      itemType: "Pet",
-      petSpecies: _canonicalSpecies(p.petSpecies),
-      name: p.name ?? null,
-      xp: p.xp,
-      hunger: p.hunger,
-      mutations: Array.isArray(p.mutations) ? p.mutations.slice() : [],
-      targetScale: p.targetScale,
-      abilities: Array.isArray(p.abilities) ? p.abilities.slice() : []
-    };
-  }
-  function _dedupeTeams(arr) {
-    const seen = /* @__PURE__ */ new Set();
-    const out = [];
-    for (const t of Array.isArray(arr) ? arr : []) {
-      const id = String(t?.id || "");
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
-      const slots = Array.isArray(t?.slots) ? t.slots.slice(0, 3).map((x) => x ? String(x) : null) : [null, null, null];
-      out.push({ ...t, id, slots });
-    }
-    return out;
-  }
-  function loadTeams() {
-    const arr = readAriesPath(PATH_PETS_TEAMS) ?? [];
-    if (!Array.isArray(arr)) return [];
-    const mapped = arr.map((t) => ({
-      id: String(t?.id || ""),
-      name: String(t?.name || "Team"),
-      slots: Array.isArray(t?.slots) ? t.slots.slice(0, 3).map((x) => x ? String(x) : null) : [null, null, null],
-      serverId: t?.serverId ? String(t.serverId) : null
-    })).filter((t) => t.id);
-    const unique = _dedupeTeams(mapped);
-    if (unique.length !== mapped.length) {
       try {
-        saveTeams(unique);
+        accountId = readAccountId(await player.get());
       } catch {
       }
-    }
-    for (const t of unique) {
-      if (t.serverId) _localTeamIdByServerId.set(t.serverId, t.id);
-    }
-    return unique;
-  }
-  function saveTeams(arr) {
-    for (const t of Array.isArray(arr) ? arr : []) {
-      if (t?.serverId && t?.id) _localTeamIdByServerId.set(String(t.serverId), String(t.id));
-    }
-    writeAriesPath(PATH_PETS_TEAMS, arr);
-  }
-  function _uid() {
-    try {
-      return crypto.randomUUID();
-    } catch {
-      return `t_${Date.now().toString(36)}_${Math.random().toString(16).slice(2)}`;
-    }
-  }
-  function _loadTeamSearchMap() {
-    const obj = readAriesPath(PATH_PETS_TEAM_SEARCH);
-    return obj && typeof obj === "object" ? obj : {};
-  }
-  function _saveTeamSearchMap(map2) {
-    writeAriesPath(PATH_PETS_TEAM_SEARCH, map2);
-  }
-  function _teamIdFromSlots(ids) {
-    const wanted = new Set(ids.map((id) => String(id || "")).filter(Boolean));
-    if (!wanted.size) return null;
-    for (const team of PetsService.getTeams()) {
-      const slots = (Array.isArray(team?.slots) ? team.slots : []).map((id) => String(id || "")).filter(Boolean);
-      if (slots.length !== wanted.size) continue;
-      const set2 = new Set(slots);
-      let ok = true;
-      for (const id of wanted) {
-        if (!set2.has(id)) {
-          ok = false;
-          break;
-        }
-      }
-      if (ok) return team.id;
-    }
-    return null;
-  }
-  async function _currentActiveTeamId() {
-    try {
-      const slots = await _getActivePetSlotIds();
-      return _teamIdFromSlots(slots);
+      if (!roomId2 && !accountId) return null;
+      return findSlotIndex(list, { accountId, roomId: roomId2 });
     } catch {
       return null;
     }
   }
-  function _sendSavePetTeam(teamId2, name, petIds) {
-    if (!_teamSyncEnabled) return;
-    const isCreate = teamId2 === null;
-    const id = teamId2 ?? _newTeamId();
+  async function readServerTeams(slots) {
     try {
-      sendToGame({ type: "SavePetTeam", teamId: id, isCreate, name: petTeamName(name), petIds });
+      const index = await myUserSlotIndex();
+      if (index == null) return null;
+      const mySlot = (Array.isArray(slots) ? slots : [])[index];
+      if (!mySlot || typeof mySlot !== "object") return null;
+      const teams2 = mySlot?.data?.petTeams;
+      return Array.isArray(teams2) ? teams2 : null;
     } catch {
+      return null;
     }
   }
-  function _newTeamId() {
-    try {
-      const uuid = globalThis.crypto?.randomUUID?.();
-      if (uuid) return uuid;
-    } catch {
-    }
-    return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
-  }
-  function _sendDeletePetTeam(teamId2) {
-    if (!_teamSyncEnabled) return;
-    try {
-      sendToGame({ type: "DeletePetTeam", teamId: teamId2 });
-    } catch {
-    }
-  }
-  function _sendApplyPetTeam(teamId2) {
-    if (!_teamSyncEnabled) return;
-    try {
-      sendToGame({ type: "ApplyPetTeam", teamId: teamId2 });
-    } catch {
-    }
-  }
-  function _sendMovePetTeam(teamId2, toIndex) {
-    if (!_teamSyncEnabled) return;
-    try {
-      sendToGame({ type: "MovePetTeam", movePetTeamId: teamId2, toPetTeamIndex: toIndex });
-    } catch {
-    }
-  }
-  function _clearPendingCreate(localId2) {
-    _pendingServerCreates.delete(localId2);
-    _pendingCreateSentName.delete(localId2);
-    const t = _pendingCreateTimeouts.get(localId2);
-    if (t) {
-      clearTimeout(t);
-      _pendingCreateTimeouts.delete(localId2);
-    }
-  }
-  function _createAttemptSig(local) {
-    const petIds = (local.slots || []).filter((x) => !!x).slice().sort();
-    return `${local.name.trim().toLowerCase()}::${petIds.join(",")}`;
-  }
-  function _serverTeamsSig(list) {
+  function serverSignature(list) {
     try {
       return list.map((t) => `${t.id}:${t.name}:${serverMemberIds(t).slice().sort().join(",")}`).sort().join("|");
     } catch {
       return "";
     }
   }
-  function _maybeCreateServerTeam(local) {
-    if (!_teamSyncEnabled) return;
-    if (_pendingServerCreates.has(local.id)) return;
-    const petIds = (local.slots || []).filter((x) => !!x);
-    const name = (local.name || "").trim();
-    if (!name || !petIds.length) return;
-    const sig = _createAttemptSig(local);
-    if (_lastCreateAttemptSig.get(local.id) === sig) return;
-    _lastCreateAttemptSig.set(local.id, sig);
-    _pendingServerCreates.add(local.id);
-    _pendingCreateSentName.set(local.id, name);
-    try {
-      console.warn(`[Pets] Creating native pet team "${name}" (${petIds.length} pet(s)) \u2014 one-shot, will not auto-retry.`);
-    } catch {
-    }
-    _sendSavePetTeam(null, name, petIds);
-    const timeout = setTimeout(() => _clearPendingCreate(local.id), PENDING_CREATE_TIMEOUT_MS);
-    _pendingCreateTimeouts.set(local.id, timeout);
-  }
-  function _reconcileTeams() {
-    if (!_teamSyncEnabled) return;
-    if (_reconcilingTeams) {
-      _reconcileTeamsQueued = true;
-      return;
-    }
-    _reconcilingTeams = true;
-    try {
-      const r = reconcilePetTeams(PetsService._teams, _serverTeams, {
-        sentName: (localId2) => _pendingCreateSentName.get(localId2),
-        knownLocalId: (serverId) => _localTeamIdByServerId.get(serverId),
-        newId: _uid
-      });
-      for (const localId2 of r.linkedLocalIds) _clearPendingCreate(localId2);
-      for (const u of r.pushUpdates) _sendSavePetTeam(u.serverId, u.name, u.petIds);
-      for (const local of r.needsCreate) _maybeCreateServerTeam(local);
-      for (const t of r.dropped) _localTeamIdByServerId.set(String(t.serverId), t.id);
-      PetsService._teams = r.teams;
-      if (r.changed) {
-        saveTeams(PetsService._teams);
-        PetsService._notifyTeamSubs();
-      }
-    } finally {
-      _reconcilingTeams = false;
-      if (_reconcileTeamsQueued) {
-        _reconcileTeamsQueued = false;
-        _reconcileTeams();
-      }
-    }
-  }
-  async function _extractServerTeamsFromSlots(slots) {
-    try {
-      const idx = await _getMyUserSlotIndex();
-      if (idx == null) return null;
-      const list = Array.isArray(slots) ? slots : [];
-      const mySlot = list[idx];
-      if (!mySlot || typeof mySlot !== "object") return null;
-      const teams = mySlot?.data?.petTeams;
-      return Array.isArray(teams) ? teams : null;
-    } catch {
-      return null;
-    }
-  }
-  async function _startServerTeamsWatcher() {
-    const applyNext = async (slots) => {
-      const next = await _extractServerTeamsFromSlots(slots);
+  async function startPetTeamSync() {
+    if (watcherStarted) return;
+    watcherStarted = true;
+    const apply2 = async (slots) => {
+      const next = await readServerTeams(slots);
       if (next === null) return;
-      const sig = _serverTeamsSig(next);
-      if (sig === _lastServerTeamsSig) return;
-      _lastServerTeamsSig = sig;
-      _serverTeams = next;
-      _reconcileTeams();
+      const signature = serverSignature(next);
+      if (signature === lastServerSignature) return;
+      lastServerSignature = signature;
+      serverTeams = next;
+      reconcile();
     };
     try {
-      await applyNext(await stateUserSlots.get());
+      await apply2(await stateUserSlots.get());
     } catch {
     }
     try {
       await stateUserSlots.onChange((slots) => {
-        applyNext(slots);
+        void apply2(slots);
       });
     } catch {
     }
   }
-  function _setTeamSyncEnabled(value) {
+  function setTeamSyncEnabled(value) {
     const next = !!value;
-    if (next === _teamSyncEnabled) return;
-    _teamSyncEnabled = next;
-    writeAriesPath(PATH_PETS_TEAM_SYNC, next);
+    if (next === syncEnabled) return;
+    syncEnabled = next;
+    writeAriesPath(SYNC_ENABLED_PATH, next);
     if (!next) {
-      for (const localId2 of Array.from(_pendingServerCreates)) _clearPendingCreate(localId2);
+      for (const localId2 of Array.from(pendingCreates.keys())) clearPendingCreate(localId2);
       return;
     }
-    _lastCreateAttemptSig.clear();
-    _reconcileTeams();
+    lastCreateAttempt.clear();
+    reconcile();
   }
-  function _inventoryItemToPet(x) {
-    if (!x || x.itemType !== "Pet") return null;
-    const id = _s(x.id);
-    if (!id) return null;
-    const speciesRaw = x.petSpecies ?? x.data?.petSpecies;
-    return {
-      id,
-      itemType: "Pet",
-      petSpecies: _canonicalSpecies(String(speciesRaw ?? "").trim()),
-      name: _sOpt(x.name ?? x.data?.name ?? null),
-      xp: _n(x.xp ?? x.data?.xp),
-      hunger: _n(x.hunger ?? x.data?.hunger),
-      mutations: _sArr(x.mutations ?? x.data?.mutations),
-      targetScale: Number.isFinite(x.targetScale ?? x.data?.targetScale) ? Number(x.targetScale ?? x.data?.targetScale) : void 0,
-      abilities: _sArr(x.abilities ?? x.data?.abilities)
-    };
-  }
-  function _activeSlotToPet(entry) {
-    const slot = entry?.slot ?? entry;
-    if (!slot || typeof slot !== "object") return null;
-    const id = _s(slot.id);
-    if (!id) return null;
-    const speciesRaw = slot.petSpecies ?? slot.species;
-    return {
-      id,
-      itemType: "Pet",
-      petSpecies: _canonicalSpecies(String(speciesRaw ?? "").trim()),
-      name: _sOpt(slot.name ?? null),
-      xp: _n(slot.xp),
-      hunger: _n(slot.hunger),
-      mutations: _sArr(slot.mutations),
-      targetScale: Number.isFinite(slot.targetScale) ? Number(slot.targetScale) : void 0,
-      abilities: _sArr(slot.abilities)
-    };
-  }
-  function _petSigStableNoXpNoHunger(p) {
-    return JSON.stringify({
-      id: p.id,
-      itemType: "Pet",
-      petSpecies: p.petSpecies,
-      name: p.name ?? null,
-      mutations: Array.isArray(p.mutations) ? p.mutations : [],
-      targetScale: Number.isFinite(p.targetScale) ? p.targetScale : null,
-      abilities: Array.isArray(p.abilities) ? p.abilities : []
-    });
-  }
-  function _buildInvSigFromInventory(inv) {
-    const out = /* @__PURE__ */ new Map();
-    const items = Array.isArray(inv?.items) ? inv.items : Array.isArray(inv) ? inv : [];
-    for (const it of items) {
-      const p = _inventoryItemToPet(it);
-      if (p) out.set(p.id, _petSigStableNoXpNoHunger(p));
+  var SYNC_ENABLED_PATH, PENDING_CREATE_TIMEOUT_MS, syncEnabled, serverTeams, lastServerSignature, watcherStarted, reconciling, reconcileQueued, pendingCreates, pendingCreateNames, lastCreateAttempt, createSignature;
+  var init_teamSync = __esm({
+    "src/features/pets/teamSync.ts"() {
+      "use strict";
+      init_playerIdentity();
+      init_atoms();
+      init_send();
+      init_storage();
+      init_teamReconcile();
+      init_teamStore();
+      SYNC_ENABLED_PATH = "pets.teamSync";
+      PENDING_CREATE_TIMEOUT_MS = 8e3;
+      syncEnabled = readAriesPath(SYNC_ENABLED_PATH, true) !== false;
+      serverTeams = [];
+      lastServerSignature = "";
+      watcherStarted = false;
+      reconciling = false;
+      reconcileQueued = false;
+      pendingCreates = /* @__PURE__ */ new Map();
+      pendingCreateNames = /* @__PURE__ */ new Map();
+      lastCreateAttempt = /* @__PURE__ */ new Map();
+      createSignature = (team) => `${team.name.trim().toLowerCase()}::${team.slots.filter((x) => !!x).sort().join(",")}`;
     }
-    return out;
+  });
+
+  // src/features/pets/teams.ts
+  function createTeam(name) {
+    const list = teamsRef();
+    const team = {
+      id: newTeamId(),
+      name: petTeamName(name ?? "") || `Team ${list.length + 1}`,
+      slots: [null, null, null],
+      serverId: null
+    };
+    commitTeams([...list, team]);
+    return team;
   }
-  function _buildActiveSig(list) {
-    const out = /* @__PURE__ */ new Map();
-    const arr = Array.isArray(list) ? list : [];
-    for (const e of arr) {
-      const p = _activeSlotToPet(e);
-      if (p) out.set(p.id, _petSigStableNoXpNoHunger(p));
-    }
-    return out;
-  }
-  function _mapsEqual(a, b) {
-    if (!a) return false;
-    if (a.size !== b.size) return false;
-    for (const [k, v] of b) if (a.get(k) !== v) return false;
+  function deleteTeam(teamId2) {
+    const list = teamsRef();
+    const removed = list.find((t) => t.id === teamId2);
+    if (!removed) return false;
+    commitTeams(list.filter((t) => t !== removed));
+    if (removed.serverId) sendDeletePetTeam(removed.serverId);
     return true;
   }
-  function _rebuildInvPets() {
-    const map2 = /* @__PURE__ */ new Map();
-    const hutchItems = Array.isArray(_hutchRaw) ? _hutchRaw : [];
-    const invItems = Array.isArray(_invRaw?.items) ? _invRaw.items : Array.isArray(_invRaw) ? _invRaw : [];
-    for (const it of hutchItems) {
-      const p = _inventoryItemToPet(it);
-      if (p && p.id) map2.set(p.id, p);
-    }
-    for (const it of invItems) {
-      const p = _inventoryItemToPet(it);
-      if (p && p.id) map2.set(p.id, p);
-    }
-    const act = Array.isArray(_activeRaw) ? _activeRaw : [];
-    for (const e of act) {
-      const p = _activeSlotToPet(e);
-      if (p && p.id) map2.set(p.id, p);
-    }
-    _invPetsCache = Array.from(map2.values());
-  }
-  async function _startInventoryWatcher() {
-    const unsub = await (async () => {
-      try {
-        const cur = await Atoms.inventory.myInventory.get();
-        _invSig = _buildInvSigFromInventory(cur);
-        _invRaw = cur;
-        _rebuildInvPets();
-      } catch {
-      }
-      return Atoms.inventory.myInventory.onChange((inv) => {
-        const nextSig = _buildInvSigFromInventory(inv);
-        if (_mapsEqual(_invSig, nextSig)) return;
-        _invSig = nextSig;
-        _invRaw = inv;
-        _rebuildInvPets();
-      });
-    })();
-    _invUnsub = () => {
-      try {
-        unsub();
-      } catch {
-      }
+  function saveTeam(patch) {
+    const list = teamsRef();
+    const index = list.findIndex((t) => t.id === patch.id);
+    if (index < 0) return null;
+    const current = list[index];
+    const next = {
+      id: current.id,
+      name: typeof patch.name === "string" ? petTeamName(patch.name) : current.name,
+      slots: Array.isArray(patch.slots) ? patch.slots.slice(0, SLOT_COUNT2) : current.slots,
+      serverId: current.serverId ?? null
     };
+    commitTeams(list.map((t, i) => i === index ? next : t));
+    const petIds = next.slots.filter((x) => !!x);
+    if (!next.serverId) maybeCreateServerTeam(next);
+    else if (petIds.length) sendSavePetTeam(next.serverId, next.name.trim() || "Team", petIds);
+    return next;
   }
-  async function _startActivePetsWatcher() {
-    const unsub = await (async () => {
-      try {
-        const curPrim = await Atoms.pets.myPrimitivePetSlots.get();
-        if (Array.isArray(curPrim)) {
-          _activeSig = _buildActiveSig(curPrim);
-          _activeRaw = curPrim;
-          _rebuildInvPets();
-          return Atoms.pets.myPrimitivePetSlots.onChange((list) => {
-            const nextSig = _buildActiveSig(list);
-            if (_mapsEqual(_activeSig, nextSig)) return;
-            _activeSig = nextSig;
-            _activeRaw = Array.isArray(list) ? list : [];
-            _rebuildInvPets();
-          });
-        }
-      } catch {
-      }
-      try {
-        const cur = await Atoms.pets.myPetInfos.get();
-        _activeSig = _buildActiveSig(cur);
-        _activeRaw = Array.isArray(cur) ? cur : [];
-        _rebuildInvPets();
-      } catch {
-      }
-      return Atoms.pets.myPetInfos.onChange((list) => {
-        const nextSig = _buildActiveSig(list);
-        if (_mapsEqual(_activeSig, nextSig)) return;
-        _activeSig = nextSig;
-        _activeRaw = Array.isArray(list) ? list : [];
-        _rebuildInvPets();
-      });
-    })();
-    _activeUnsub = () => {
-      try {
-        unsub();
-      } catch {
-      }
-    };
-  }
-  async function _startHutchWatcher() {
-    const unsub = await (async () => {
-      try {
-        const cur = await myPetHutchPetItems.get();
-        _hutchRaw = Array.isArray(cur) ? cur : [];
-        _rebuildInvPets();
-      } catch {
-      }
-      return myPetHutchPetItems.onChange((list) => {
-        _hutchRaw = Array.isArray(list) ? list : [];
-        _rebuildInvPets();
-      });
-    })();
-    _hutchUnsub = () => {
-      try {
-        unsub();
-      } catch {
-      }
-    };
-  }
-  async function _ensureInventoryWatchersStarted() {
-    if (!_invUnsub) await _startInventoryWatcher();
-    if (!_activeUnsub) await _startActivePetsWatcher();
-    if (!_hutchUnsub) await _startHutchWatcher();
-    if (!_invPetsCache.length) {
-      try {
-        const inv = await Atoms.inventory.myInventory.get();
-        let active2 = null;
-        try {
-          active2 = await Atoms.pets.myPrimitivePetSlots.get();
-        } catch {
-        }
-        if (!Array.isArray(active2)) {
-          try {
-            active2 = await Atoms.pets.myPetInfos.get();
-          } catch {
-          }
-        }
-        const hutch = await myPetHutchPetItems.get();
-        _invSig = _buildInvSigFromInventory(inv);
-        _activeSig = _buildActiveSig(active2);
-        _invRaw = inv;
-        _activeRaw = Array.isArray(active2) ? active2 : [];
-        _hutchRaw = Array.isArray(hutch) ? hutch : [];
-        _rebuildInvPets();
-      } catch {
+  function setTeamsOrder(ids) {
+    const byId = new Map(teamsRef().map((t) => [t.id, t]));
+    const next = [];
+    for (const id of ids) {
+      const team = byId.get(id);
+      if (team) {
+        next.push(team);
+        byId.delete(id);
       }
     }
+    next.push(...byId.values());
+    commitTeams(next);
+    next.filter((t) => t.serverId).forEach((t, serverIndex) => sendMovePetTeam(t.serverId, serverIndex));
   }
+  var SLOT_COUNT2;
+  var init_teams = __esm({
+    "src/features/pets/teams.ts"() {
+      "use strict";
+      init_teamReconcile();
+      init_teamStore();
+      init_teamSync();
+      SLOT_COUNT2 = 3;
+    }
+  });
+
+  // src/features/pets/petPicker.ts
   async function clearHandSelection() {
     try {
       await Atoms.inventory.setSelectedIndexToEnd.set(null);
-    } catch (err) {
+    } catch {
     }
     try {
       await Atoms.inventory.mySelectedItemId.set(null);
-    } catch (err) {
+    } catch {
     }
     try {
       await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.set(null);
-    } catch (err) {
+    } catch {
     }
     try {
       await PlayerService.setSelectedItem(null);
-    } catch (err) {
+    } catch {
     }
     try {
       await PlayerService.dropObject();
-    } catch (err) {
+    } catch {
     }
   }
-  async function _waitValidatedInventoryIndex(timeoutMs = 2e4) {
+  async function waitForPickedIndex(timeoutMs) {
     await clearHandSelection();
-    const t0 = performance.now();
-    while (performance.now() - t0 < timeoutMs) {
+    const deadline = performance.now() + timeoutMs;
+    while (performance.now() < deadline) {
       try {
-        const modalVal = await Atoms.ui.activeModal.get();
-        if (!isInventoryOpen(modalVal)) return null;
+        if (!isInventoryOpen(await Atoms.ui.activeModal.get())) return null;
       } catch {
         return null;
       }
       try {
-        const v = await Atoms.inventory.myValidatedSelectedItemIndex.get();
-        if (typeof v === "number" && Number.isInteger(v) && v >= 0) return v;
+        const index = await Atoms.inventory.myValidatedSelectedItemIndex.get();
+        if (typeof index === "number" && Number.isInteger(index) && index >= 0) return index;
       } catch {
       }
-      await new Promise((r) => setTimeout(r, 80));
+      await sleep2(80);
     }
     return null;
   }
-  function saveOverrides(map2) {
-    writeAriesPath(PATH_PETS_OVERRIDES, map2);
-  }
-  function loadOverrides() {
-    const obj = readAriesPath(PATH_PETS_OVERRIDES);
-    return obj && typeof obj === "object" ? obj : {};
-  }
-  function saveInstantFeedOverrides(map2) {
-    writeAriesPath(PATH_PETS_INSTANT_FEED, map2);
-  }
-  function loadInstantFeedOverrides() {
-    const obj = readAriesPath(PATH_PETS_INSTANT_FEED);
-    return obj && typeof obj === "object" ? obj : {};
-  }
-  function saveUIState(next) {
-    writeAriesPath(PATH_PETS_UI, next);
-  }
-  function loadUIState() {
-    const obj = readAriesPath(PATH_PETS_UI);
-    const merged = { ...DEFAULT_UI, ...obj || {} };
-    return merged;
-  }
-  function cloneOverride(o) {
-    const src = o ?? DEFAULT_OVERRIDE;
-    return {
-      enabled: !!src.enabled,
-      thresholdPct: Math.min(100, Math.max(1, Number(src.thresholdPct) || DEFAULT_OVERRIDE.thresholdPct)),
-      crops: { ...src.crops || {} }
+  async function pickablePets(exclude) {
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    const add = (pet) => {
+      if (!pet || exclude.has(pet.id) || seen.has(pet.id)) return;
+      seen.add(pet.id);
+      out.push(pet);
     };
-  }
-  function cloneInstantFeedOverride(o) {
-    const src = o ?? DEFAULT_INSTANT_FEED;
-    return {
-      crops: { ...src.crops || {} }
-    };
-  }
-  function clampPct(n) {
-    return Math.max(0, Math.min(100, n));
-  }
-  function getCompatibleCropsFromData(species) {
-    const PC = petCatalog2;
-    const entry = PC?.[species];
-    const raw = entry?.diet ?? entry?.compatibleCrops ?? entry?.crops ?? [];
-    const arr = Array.isArray(raw) ? raw : [];
-    return arr.filter((c) => typeof c === "string" && c.length > 0);
-  }
-  function getMaxHungerFromData(species) {
-    const v = petCatalog2?.[species]?.coinsToFullyReplenishHunger;
-    if (typeof v === "number" && Number.isFinite(v) && v > 0) return v;
-    return 3e3;
-  }
-  async function findPetById(petId) {
+    for (const pet of await getInventoryPets()) add(pet);
     try {
-      const list = await PlayerService.getPets();
-      const arr = Array.isArray(list) ? list : [];
-      return arr.find((p) => String(p?.slot?.id || "") === String(petId)) ?? null;
+      const hutch = await myPetHutchPetItems.get();
+      for (const item of Array.isArray(hutch) ? hutch : []) add(inventoryItemToPet(item));
+      const active2 = await PlayerService.getPets();
+      for (const entry of Array.isArray(active2) ? active2 : []) add(activeSlotToPet(entry));
+    } catch {
+    }
+    return out;
+  }
+  async function chooseSlotPet(teamId2, slotIndex) {
+    const index = Math.max(0, Math.min(2, Math.floor(slotIndex || 0)));
+    const team = getTeamById(teamId2);
+    if (!team) return null;
+    const exclude = /* @__PURE__ */ new Set();
+    team.slots.forEach((id, i) => {
+      if (i !== index && id) exclude.add(String(id));
+    });
+    const pets = await pickablePets(exclude);
+    if (!pets.length) return null;
+    let favoritedItemIds = [];
+    try {
+      const favorites = await Atoms.inventory.favoriteIds.get() || [];
+      const ids = new Set(pets.map((p) => p.id));
+      favoritedItemIds = favorites.filter((id) => ids.has(id));
+    } catch {
+    }
+    await fakeInventory.show({ items: pets.map(petToInventoryItem), favoritedItemIds }, { open: true });
+    const picked = await waitForPickedIndex(PICK_TIMEOUT_MS);
+    if (picked == null || picked >= pets.length) {
+      await fakeInventory.disable();
+      return null;
+    }
+    await fakeInventory.close();
+    const chosen = pets[picked];
+    const slots = team.slots.slice(0, 3);
+    slots[index] = chosen.id;
+    saveTeam({ id: team.id, slots });
+    try {
+      await clearHandSelection();
+    } catch {
+    }
+    return chosen;
+  }
+  var PICK_TIMEOUT_MS;
+  var init_petPicker = __esm({
+    "src/features/pets/petPicker.ts"() {
+      "use strict";
+      init_fakeModal();
+      init_player();
+      init_atoms();
+      init_async2();
+      init_inventoryPets();
+      init_teamStore();
+      init_teams();
+      PICK_TIMEOUT_MS = 2e4;
+    }
+  });
+
+  // src/features/pets/teamSwitch.ts
+  function getLastUsedTeamId() {
+    return lastUsedTeamId;
+  }
+  async function getActivePetIds() {
+    try {
+      const primitives = await Atoms.pets.myPrimitivePetSlots.get();
+      const ids = (Array.isArray(primitives) ? primitives : []).map((p) => String(p?.id || "")).filter(Boolean).slice(0, MAX_TEAM_SLOTS);
+      if (ids.length) return ids;
+      const pets = await PlayerService.getPets();
+      return (Array.isArray(pets) ? pets : []).map((p) => String(p?.slot?.id || "")).filter(Boolean).slice(0, MAX_TEAM_SLOTS);
+    } catch {
+      return [];
+    }
+  }
+  async function getActiveTeamId() {
+    try {
+      return teamIdForPets(await getActivePetIds());
     } catch {
       return null;
     }
   }
-  function findFirstCompatibleInvItem(allowed, inv) {
-    const arr = Array.isArray(inv) ? inv : [];
-    for (const it of arr) {
-      const species = String(it?.species || "");
-      if (species && allowed.has(species)) return it;
-    }
-    return null;
+  function sameSet(a, b) {
+    if (a.length !== b.length) return false;
+    const set2 = new Set(a);
+    return b.every((x) => set2.has(x));
   }
-  function _emitTrigger(payload) {
-    try {
-      _userTriggerCb?.(payload);
-    } catch {
-    }
+  async function waitForTeamEquipped(teamId2, timeoutMs = 2e3) {
+    const target = (getTeamById(teamId2)?.slots ?? []).filter((x) => !!x);
+    const done = await waitUntil(
+      async () => {
+        const pets = await PlayerService.getPets().catch(() => null);
+        const equipped = Array.isArray(pets) ? pets.map((p) => String(p?.slot?.id || "")).filter(Boolean) : [];
+        return sameSet(equipped, target);
+      },
+      { timeoutMs, intervalMs: 80 }
+    );
+    return !!done;
   }
-  async function _evaluatePet(pet) {
-    const petId = String(pet?.slot?.id || "");
-    if (!petId) return;
-    const ov = PetsService.getOverride(petId);
-    if (!ov.enabled) {
-      _lastAutofeedAttemptAt.delete(petId);
-      return;
-    }
-    const hungerPct = PetsService.getHungerPctFor(pet);
-    const thresholdPct = Math.max(1, Math.min(100, ov.thresholdPct | 0 || 10));
-    const nowBelow = hungerPct < thresholdPct;
-    const now2 = Date.now();
-    const lastAttempt = _lastAutofeedAttemptAt.get(petId) || 0;
-    if (nowBelow && now2 - lastAttempt >= AUTOF_FEED_MIN_INTERVAL_MS) {
-      let allowedSet;
-      try {
-        allowedSet = await PetsService.getPetAllowedCrops(petId);
-      } catch {
-        const species = String(pet?.slot?.petSpecies || "");
-        allowedSet = new Set(PetsService.getCompatibleCropsForSpecies(species));
-      }
-      const allowed = Array.from(allowedSet);
-      let chosen = null;
-      let didUnfavorite = false;
-      try {
-        const [invRaw, favIdsRaw] = await Promise.all([
-          PlayerService.getCropInventoryState(),
-          PlayerService.getFavoriteIds?.() ?? []
-        ]);
-        const inv = Array.isArray(invRaw) ? invRaw : [];
-        const favSet = new Set(Array.isArray(favIdsRaw) ? favIdsRaw : []);
-        const invNonFav = inv.filter((it) => !favSet.has(String(it?.id)));
-        chosen = findFirstCompatibleInvItem(allowedSet, invNonFav);
-        if (chosen?.id && PlayerService.feedPet) {
-          try {
-            await PlayerService.feedPet(petId, chosen.id);
-          } catch {
-          }
-        }
-      } catch {
-      }
-      _emitTrigger({
-        pet,
-        petId,
-        species: String(pet?.slot?.petSpecies || ""),
-        hungerPct,
-        thresholdPct,
-        allowedCrops: allowed,
-        chosenItem: chosen,
-        didUnfavorite
-      });
-      _lastAutofeedAttemptAt.set(petId, now2);
-    }
-    if (!nowBelow) {
-      _lastAutofeedAttemptAt.delete(petId);
-    }
-  }
-  async function _evaluateAll() {
-    const arr = Array.isArray(_currentPets) ? _currentPets : [];
-    for (const p of arr) {
-      try {
-        await _evaluatePet(p);
-      } catch {
-      }
-    }
-  }
-  async function _getHutchInfo() {
+  async function hutchInfo() {
     let capacity = 0;
     let used = 0;
     try {
@@ -17831,209 +18208,95 @@
     }
     return { capacity, used, free: Math.max(0, capacity - used) };
   }
-  async function _getActivePetSlotIds() {
+  async function hutchPetIds() {
     try {
-      const primitives = await Atoms.pets.myPrimitivePetSlots.get();
-      const primList = Array.isArray(primitives) ? primitives : [];
-      const primIds = primList.map((p) => String(p?.id || "")).filter((id) => !!id).slice(0, 3);
-      if (primIds.length) return primIds;
-      const arr = await PlayerService.getPets();
-      const list = Array.isArray(arr) ? arr : [];
-      return list.map((p) => String(p?.slot?.id || "")).filter((id) => !!id).slice(0, 3);
+      const items = await myPetHutchPetItems.get();
+      return new Set((Array.isArray(items) ? items : []).map((it) => String(it?.id ?? "")).filter(Boolean));
     } catch {
-      return [];
+      return /* @__PURE__ */ new Set();
     }
   }
-  async function _waitForHutchState(predicate, timeoutMs = 4e3) {
-    const snapshotMatches = async () => {
-      try {
-        const cur = await myPetHutchPetItems.get();
-        const set2 = new Set(
-          (Array.isArray(cur) ? cur : []).map((p) => String(p?.id || "")).filter(Boolean)
-        );
-        return predicate(set2);
-      } catch {
-        return false;
-      }
-    };
-    if (await snapshotMatches()) return true;
-    return new Promise((resolve) => {
-      const deadline = Date.now() + timeoutMs;
-      let unsub = null;
-      let pendingUnsub = null;
-      let stopped = false;
-      const doUnsub = (fn) => {
-        if (fn) {
-          try {
-            fn();
-          } catch {
-          }
-        }
-      };
-      const stop2 = (ok) => {
-        if (stopped) return;
-        stopped = true;
-        if (unsub) {
-          doUnsub(unsub);
-        } else if (pendingUnsub) {
-          pendingUnsub.then((fn) => doUnsub(fn)).catch(() => {
-          });
-        }
-        resolve(ok);
-      };
-      const check = async (state5) => {
-        const set2 = new Set(
-          (Array.isArray(state5) ? state5 : []).map((p) => String(p?.id || "")).filter(Boolean)
-        );
-        if (predicate(set2)) {
-          stop2(true);
-        } else if (Date.now() >= deadline) {
-          stop2(false);
-        }
-      };
-      try {
-        const res = myPetHutchPetItems.onChange((state5) => {
-          void check(state5);
-        });
-        if (typeof res === "function") {
-          unsub = res;
-        } else if (res && typeof res.then === "function") {
-          pendingUnsub = res;
-          pendingUnsub.then((fn) => {
-            unsub = fn;
-            if (stopped) {
-              doUnsub(fn);
-            }
-          }).catch(() => {
-          });
-        }
-      } catch {
-        stop2(false);
-        return;
-      }
-      void check();
-      setTimeout(() => stop2(false), timeoutMs + 50);
-    });
-  }
-  function _alignTargetsToActiveSlots(targets, activeSlots) {
-    const aligned = new Array(MAX_TEAM_SLOTS).fill("");
-    const remaining = [];
-    for (const id of targets) {
-      const idx = activeSlots.indexOf(id);
-      if (idx >= 0 && idx < MAX_TEAM_SLOTS && !aligned[idx]) aligned[idx] = id;
-      else remaining.push(id);
-    }
-    for (const id of remaining) {
-      const free = aligned.findIndex((v) => v === "");
-      if (free < 0) break;
-      aligned[free] = id;
-    }
-    return aligned;
-  }
-  async function _moveSparePetToHutch(targetSet, activeSlots, hutchItemsSet) {
+  async function moveSparePetToHutch(targets, activeSlots, inHutch) {
     try {
-      const invPets = await PetsService.getInventoryPets();
-      const spare = (Array.isArray(invPets) ? invPets : []).find((p) => {
+      const spare = (await getInventoryPets()).find((p) => {
         const id = String(p?.id || "");
-        return id && !hutchItemsSet.has(id) && !activeSlots.includes(id) && !targetSet.has(id);
+        return id && !inHutch.has(id) && !activeSlots.includes(id) && !targets.has(id);
       });
       if (!spare) return false;
       await PlayerService.putItemInStorage(spare.id, "PetHutch");
-      void _waitForHutchState((set2) => set2.has(String(spare.id)), 3e3);
       return true;
     } catch {
       return false;
     }
   }
-  async function _getMyUserSlotIndex() {
-    try {
-      const slots = await stateUserSlots.get();
-      const list = Array.isArray(slots) ? slots : [];
-      if (!list.length) return null;
-      let roomId2 = null;
-      let accountId = null;
-      try {
-        roomId2 = await playerId.get() ?? null;
-      } catch {
-      }
-      try {
-        accountId = readAccountId(await player.get());
-      } catch {
-      }
-      if (!roomId2 && !accountId) return null;
-      return findSlotIndex(list, { accountId, roomId: roomId2 });
-    } catch {
-      return null;
-    }
-  }
-  async function _getMyDirtTilePlacement(tileOffset) {
+  async function myDirtTile(tileOffset) {
     try {
       const map2 = await Atoms.root.map.get();
       const cols = Number(map2?.cols);
-      const dirtArrays = Array.isArray(map2?.userSlotIdxAndDirtTileIdxToGlobalTileIdx) ? map2.userSlotIdxAndDirtTileIdxToGlobalTileIdx : [];
-      if (!Number.isFinite(cols) || cols <= 0 || !dirtArrays.length) return null;
-      const slotIdx2 = await _getMyUserSlotIndex();
-      if (slotIdx2 == null) return null;
-      const dirtGlobals = Array.isArray(dirtArrays[slotIdx2]) ? dirtArrays[slotIdx2] : [];
-      if (!dirtGlobals.length) return null;
-      const localTileIndex = Math.min(Math.max(0, tileOffset), dirtGlobals.length - 1);
-      const globalIndex = Number(dirtGlobals[localTileIndex]);
+      const dirtBySlot = Array.isArray(map2?.userSlotIdxAndDirtTileIdxToGlobalTileIdx) ? map2.userSlotIdxAndDirtTileIdxToGlobalTileIdx : [];
+      if (!Number.isFinite(cols) || cols <= 0 || !dirtBySlot.length) return null;
+      const slotIndex = await myUserSlotIndex();
+      if (slotIndex == null) return null;
+      const dirt = Array.isArray(dirtBySlot[slotIndex]) ? dirtBySlot[slotIndex] : [];
+      if (!dirt.length) return null;
+      const localTileIndex = Math.min(Math.max(0, tileOffset), dirt.length - 1);
+      const globalIndex = Number(dirt[localTileIndex]);
       if (!Number.isFinite(globalIndex)) return null;
-      return {
-        position: { x: globalIndex % cols, y: Math.floor(globalIndex / cols) },
-        localTileIndex
-      };
+      return { position: { x: globalIndex % cols, y: Math.floor(globalIndex / cols) }, localTileIndex };
     } catch {
       return null;
     }
   }
-  async function _placePetInMyGarden(petId, tileOffset) {
-    const tile = await _getMyDirtTilePlacement(tileOffset);
+  async function placePetInMyGarden(petId, tileOffset) {
+    const tile = await myDirtTile(tileOffset);
     if (tile) {
       await PlayerService.placePet(petId, tile.position, "Dirt", tile.localTileIndex);
       return;
     }
     await PlayerService.placePet(petId, { x: 0, y: 0 }, "Boardwalk", 64);
   }
-  async function _equipPetIds(targetInvIdsRaw, opts) {
-    const markId = (opts?.markTeamId ?? null) || null;
-    const seenIds = /* @__PURE__ */ new Set();
-    const targetInvIds = (Array.isArray(targetInvIdsRaw) ? targetInvIdsRaw : []).map((v) => String(v || "")).filter((v) => v.length > 0 && !seenIds.has(v) && !!seenIds.add(v)).slice(0, MAX_TEAM_SLOTS);
-    const markResolved = markId ?? _teamIdFromSlots(targetInvIds) ?? null;
-    const shouldMark = opts?.markUsed !== false && !!markResolved;
-    const finish = (res) => {
-      if (shouldMark) markTeamAsUsed(markResolved);
-      return res;
-    };
-    if (!targetInvIds.length) return finish({ swapped: 0, placed: 0, skipped: 0 });
-    const activeSlots = await _getActivePetSlotIds();
-    const sameTeam = targetInvIds.length === activeSlots.length && [...targetInvIds].sort().join("|") === [...activeSlots].sort().join("|");
-    if (sameTeam) return finish({ swapped: 0, placed: 0, skipped: targetInvIds.length });
-    let freeHutch = (await _getHutchInfo()).free;
-    let hutchItemsSet = /* @__PURE__ */ new Set();
-    try {
-      const hutchItems = await myPetHutchPetItems.get();
-      if (Array.isArray(hutchItems)) {
-        hutchItemsSet = new Set(
-          hutchItems.map((it) => String(it?.id ?? "")).filter(Boolean)
-        );
-      }
-    } catch {
+  function alignTargetsToActiveSlots(targets, activeSlots) {
+    const aligned = new Array(MAX_TEAM_SLOTS).fill("");
+    const remaining = [];
+    for (const id of targets) {
+      const index = activeSlots.indexOf(id);
+      if (index >= 0 && index < MAX_TEAM_SLOTS && !aligned[index]) aligned[index] = id;
+      else remaining.push(id);
     }
-    const targetSet = new Set(targetInvIds);
-    const aligned = _alignTargetsToActiveSlots(targetInvIds, activeSlots);
-    const notifyInventoryFull = async () => {
-      try {
-        await toastSimple(
-          "Inventory Full",
-          "Cannot equip team: required pets are in the Pet Hutch and your inventory is full.",
-          "error"
-        );
-      } catch {
-      }
+    for (const id of remaining) {
+      const free = aligned.indexOf("");
+      if (free < 0) break;
+      aligned[free] = id;
+    }
+    return aligned;
+  }
+  async function equipPetIds(rawIds, markTeamId, markUsed = true) {
+    const targets = Array.from(new Set(rawIds.map((v) => String(v || "")).filter(Boolean))).slice(0, MAX_TEAM_SLOTS);
+    const teamToMark = markTeamId ?? teamIdForPets(targets);
+    const finish = (result) => {
+      if (markUsed && teamToMark) lastUsedTeamId = teamToMark;
+      return result;
     };
-    let swapped = 0, placed = 0, skipped = 0;
+    if (!targets.length) return finish({ swapped: 0, placed: 0, skipped: 0 });
+    const activeSlots = await getActivePetIds();
+    if (sameSet(targets, activeSlots)) return finish({ swapped: 0, placed: 0, skipped: targets.length });
+    let freeHutch = (await hutchInfo()).free;
+    const inHutch = await hutchPetIds();
+    const targetSet = new Set(targets);
+    const aligned = alignTargetsToActiveSlots(targets, activeSlots);
+    let swapped = 0;
+    let placed = 0;
+    let skipped = 0;
     let placementOffset = 0;
+    const storeInHutch = async (petId) => {
+      if (freeHutch <= 0) return;
+      await PlayerService.putItemInStorage(petId, "PetHutch");
+      freeHutch--;
+    };
+    const place = async (petId) => {
+      await placePetInMyGarden(petId, placementOffset++);
+      placed++;
+    };
     for (let slot = 0; slot < MAX_TEAM_SLOTS; slot++) {
       const targetId = aligned[slot];
       const currentId = String(activeSlots[slot] ?? "");
@@ -18041,64 +18304,64 @@
         skipped++;
         continue;
       }
-      if (!targetId && currentId) {
-        try {
-          await PlayerService.storePet(currentId);
-          activeSlots[slot] = "";
-          if (freeHutch > 0) {
-            await PlayerService.putItemInStorage(currentId, "PetHutch");
-            freeHutch--;
-            void _waitForHutchState((set2) => set2.has(currentId), 3e3);
-          }
-        } catch {
-        }
-        continue;
-      }
-      if (!targetId) continue;
-      if (currentId && hutchItemsSet.has(targetId)) {
-        try {
-          await PlayerService.swapPetFromStorage(currentId, targetId, "PetHutch");
-          swapped++;
-          activeSlots[slot] = targetId;
-          hutchItemsSet.delete(targetId);
-          hutchItemsSet.add(currentId);
-        } catch {
+      if (!targetId) {
+        if (currentId) {
           try {
-            await _placePetInMyGarden(targetId, placementOffset++);
-            placed++;
+            await PlayerService.storePet(currentId);
+            activeSlots[slot] = "";
+            await storeInHutch(currentId);
           } catch {
           }
         }
         continue;
       }
-      if (hutchItemsSet.has(targetId)) {
-        let invFull = false;
+      if (currentId && inHutch.has(targetId)) {
         try {
-          invFull = !!await isMyInventoryAtMaxLength.get();
+          await PlayerService.swapPetFromStorage(currentId, targetId, "PetHutch");
+          swapped++;
+          activeSlots[slot] = targetId;
+          inHutch.delete(targetId);
+          inHutch.add(currentId);
+        } catch {
+          try {
+            await place(targetId);
+          } catch {
+          }
+        }
+        continue;
+      }
+      if (inHutch.has(targetId)) {
+        let inventoryFull2 = false;
+        try {
+          inventoryFull2 = !!await isMyInventoryAtMaxLength.get();
         } catch {
         }
-        if (invFull) {
-          const freed = freeHutch > 0 && await _moveSparePetToHutch(targetSet, activeSlots, hutchItemsSet);
-          if (freed) {
-            freeHutch--;
-          } else {
-            await notifyInventoryFull();
+        if (inventoryFull2) {
+          const freed = freeHutch > 0 && await moveSparePetToHutch(targetSet, activeSlots, inHutch);
+          if (!freed) {
+            try {
+              await toastSimple(
+                "Inventory Full",
+                "Cannot equip team: required pets are in the Pet Hutch and your inventory is full.",
+                "error"
+              );
+            } catch {
+            }
             return finish({ swapped, placed, skipped });
           }
+          freeHutch--;
         }
         try {
           await PlayerService.retrieveItemFromStorage(targetId, "PetHutch");
-          hutchItemsSet.delete(targetId);
+          inHutch.delete(targetId);
           freeHutch++;
-          void _waitForHutchState((set2) => !set2.has(targetId), 3e3);
         } catch {
           continue;
         }
       }
       if (!currentId) {
         try {
-          await _placePetInMyGarden(targetId, placementOffset++);
-          placed++;
+          await place(targetId);
           activeSlots[slot] = targetId;
         } catch {
         }
@@ -18108,102 +18371,69 @@
         await PlayerService.swapPet(currentId, targetId);
         swapped++;
         activeSlots[slot] = targetId;
-        if (freeHutch > 0) {
-          try {
-            await PlayerService.putItemInStorage(currentId, "PetHutch");
-            freeHutch--;
-            void _waitForHutchState((set2) => set2.has(currentId), 3e3);
-          } catch {
-          }
+        try {
+          await storeInHutch(currentId);
+        } catch {
         }
       } catch {
         try {
-          await _placePetInMyGarden(targetId, placementOffset++);
-          placed++;
+          await place(targetId);
         } catch {
         }
       }
     }
     return finish({ swapped, placed, skipped });
   }
-  var PATH_PETS_OVERRIDES, PATH_PETS_INSTANT_FEED, PATH_PETS_UI, PATH_PETS_TEAMS, PATH_PETS_TEAM_SEARCH, PATH_PETS_TEAM_SYNC, PATH_PETS_ABILITY_LOGS, WEATHER_MUTATION_BOOST_IDS, lastUsedTeamId, _AB, _abilityIdsCache, _s, _sOpt, _n, _sArr, _petCatalogKeyByLc, _teamSearch, _teamSyncEnabled, _localTeamIdByServerId, _serverTeams, _teamSyncStarted, _lastServerTeamsSig, _reconcilingTeams, _reconcileTeamsQueued, _pendingServerCreates, _pendingCreateTimeouts, _pendingCreateSentName, PENDING_CREATE_TIMEOUT_MS, _lastCreateAttemptSig, _invRaw, _activeRaw, _hutchRaw, _invPetsCache, _invUnsub, _activeUnsub, _hutchUnsub, _invSig, _activeSig, _lastAutofeedAttemptAt, _belowThreshold, AUTOF_FEED_MIN_INTERVAL_MS, DEFAULT_OVERRIDE, DEFAULT_UI, DEFAULT_INSTANT_FEED, _currentPets, _userTriggerCb, PetsService, HUTCH_DEFAULT_CAPACITY, MAX_TEAM_SLOTS;
+  async function useTeam(teamId2, opts) {
+    const team = getTeams().find((t) => t.id === teamId2);
+    if (!team) throw new Error("Team not found");
+    const petIds = team.slots.filter((x) => typeof x === "string" && x.length > 0).slice(0, MAX_TEAM_SLOTS);
+    if (isTeamSyncEnabled() && team.serverId) {
+      sendApplyPetTeam(team.serverId);
+      if (opts?.markUsed !== false) lastUsedTeamId = teamId2;
+      return { swapped: petIds.length, placed: 0, skipped: 0 };
+    }
+    return equipPetIds(petIds, teamId2, opts?.markUsed !== false);
+  }
+  function usePetIds(petIds) {
+    return equipPetIds(petIds, null);
+  }
+  var MAX_TEAM_SLOTS, HUTCH_DEFAULT_CAPACITY, lastUsedTeamId;
+  var init_teamSwitch = __esm({
+    "src/features/pets/teamSwitch.ts"() {
+      "use strict";
+      init_player();
+      init_atoms();
+      init_async2();
+      init_toast();
+      init_inventoryPets();
+      init_teamStore();
+      init_teamSync();
+      MAX_TEAM_SLOTS = 3;
+      HUTCH_DEFAULT_CAPACITY = 10;
+      lastUsedTeamId = null;
+    }
+  });
+
+  // src/features/pets/pets.ts
+  var PetsService;
   var init_pets = __esm({
     "src/features/pets/pets.ts"() {
       "use strict";
       init_player();
-      init_data();
-      init_fakeModal();
       init_atoms();
-      init_playerIdentity();
-      init_toast();
-      init_stats();
-      init_storage();
       init_pageContext();
-      init_send();
-      init_teamReconcile();
-      PATH_PETS_OVERRIDES = "pets.overrides";
-      PATH_PETS_INSTANT_FEED = "pets.instantFeed";
-      PATH_PETS_UI = "pets.ui";
-      PATH_PETS_TEAMS = "pets.teams";
-      PATH_PETS_TEAM_SEARCH = "pets.teamSearch";
-      PATH_PETS_TEAM_SYNC = "pets.teamSync";
-      PATH_PETS_ABILITY_LOGS = "pets.abilityLogs";
-      WEATHER_MUTATION_BOOST_IDS = /* @__PURE__ */ new Set([
-        "ProduceMutationBoost",
-        "ProduceMutationBoostII",
-        "ProduceMutationBoostIII",
-        "DawnBoost",
-        "AmberMoonBoost",
-        "ThunderBoost",
-        "SnowyCropMutationBoost",
-        "PetMutationBoost",
-        "PetMutationBoostII",
-        "PetMutationBoostIII",
-        // Passive chance boost; the game itself never logs it (returns nothing).
-        "DawnbinderBoost"
-      ]);
-      lastUsedTeamId = null;
-      _AB = petAbilities2 ?? {};
-      _abilityIdsCache = null;
-      _s = (v) => (v ?? "").toLowerCase();
-      _sOpt = (v) => typeof v === "string" ? v : null;
-      _n = (v) => Number.isFinite(v) ? v : 0;
-      _sArr = (v) => Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
-      _petCatalogKeyByLc = memoOnCatalogs(() => new Map(
-        Object.keys(petCatalog2).map((k) => [k.toLowerCase(), k])
-      ));
-      _teamSearch = _loadTeamSearchMap();
-      _teamSyncEnabled = readAriesPath(PATH_PETS_TEAM_SYNC, true) !== false;
-      _localTeamIdByServerId = /* @__PURE__ */ new Map();
-      _serverTeams = [];
-      _teamSyncStarted = false;
-      _lastServerTeamsSig = "";
-      _reconcilingTeams = false;
-      _reconcileTeamsQueued = false;
-      _pendingServerCreates = /* @__PURE__ */ new Set();
-      _pendingCreateTimeouts = /* @__PURE__ */ new Map();
-      _pendingCreateSentName = /* @__PURE__ */ new Map();
-      PENDING_CREATE_TIMEOUT_MS = 8e3;
-      _lastCreateAttemptSig = /* @__PURE__ */ new Map();
-      _invRaw = null;
-      _activeRaw = [];
-      _hutchRaw = [];
-      _invPetsCache = [];
-      _invUnsub = null;
-      _activeUnsub = null;
-      _hutchUnsub = null;
-      _invSig = null;
-      _activeSig = null;
-      _lastAutofeedAttemptAt = /* @__PURE__ */ new Map();
-      _belowThreshold = /* @__PURE__ */ new Map();
-      AUTOF_FEED_MIN_INTERVAL_MS = 2e3;
-      DEFAULT_OVERRIDE = { enabled: false, thresholdPct: 10, crops: {} };
-      DEFAULT_UI = { selectedPetId: null };
-      DEFAULT_INSTANT_FEED = { crops: {} };
-      _currentPets = [];
-      _userTriggerCb = null;
+      init_abilityLogs();
+      init_abilityNames();
+      init_feeding();
+      init_inventoryPets();
+      init_petPicker();
+      init_teams();
+      init_teamStore();
+      init_teamSwitch();
+      init_teamSync();
       PetsService = {
-        /* --------- Player-facing (UI list/subscribe) --------- */
+        // Equipped pets, straight from the player service.
         getPets() {
           return PlayerService.getPets();
         },
@@ -18213,757 +18443,50 @@
         onPetsChangeNow(cb) {
           return PlayerService.onPetsChangeNow(cb);
         },
-        /* ------------------------- Abilities utils ------------------------- */
-        getAbilityName(id) {
-          return _abilityName(id);
-        },
-        getAbilityNameWithoutLevel(id) {
-          return _abilityNameWithoutLevel(id);
-        },
-        /* ------------------------- Autofeed + per-pet UI state ------------------------- */
-        setUIState(next) {
-          const cur = loadUIState();
-          const merged = { ...cur, ...next || {} };
-          saveUIState(merged);
-          return merged;
-        },
-        setSelectedPet(id) {
-          return this.setUIState({ selectedPetId: id });
-        },
-        getSelectedPetId() {
-          return loadUIState().selectedPetId ?? null;
-        },
-        getOverride(petId) {
-          const all = loadOverrides();
-          return cloneOverride(all[petId]);
-        },
-        setOverride(petId, patch) {
-          const all = loadOverrides();
-          const cur = cloneOverride(all[petId]);
-          const next = {
-            enabled: patch.enabled ?? cur.enabled,
-            thresholdPct: Number.isFinite(patch.thresholdPct) ? Math.min(100, Math.max(1, Number(patch.thresholdPct))) : cur.thresholdPct,
-            crops: { ...cur.crops, ...patch.crops || {} }
-          };
-          all[petId] = next;
-          saveOverrides(all);
-          void _evaluateAll();
-          return next;
-        },
-        updateOverride(petId, fn) {
-          const all = loadOverrides();
-          const cur = cloneOverride(all[petId]);
-          const next = cloneOverride(fn(cur));
-          all[petId] = next;
-          saveOverrides(all);
-          void _evaluateAll();
-          return next;
-        },
-        async setPetAutofeedEnabled(petId, enabled5) {
-          return this.setOverride(petId, { enabled: !!enabled5 });
-        },
-        getPetAutofeedEnabled(petId) {
-          return this.getOverride(petId).enabled;
-        },
-        async setPetAutofeedThresholdPct(petId, pct) {
-          const v = Math.min(100, Math.max(1, Math.floor(Number(pct) || 10)));
-          return this.setOverride(petId, { thresholdPct: v });
-        },
-        getPetAutofeedThresholdPct(petId) {
-          return this.getOverride(petId).thresholdPct;
-        },
-        async setPetAllowedCrop(petId, crop, allowed) {
-          return this.updateOverride(petId, (cur) => {
-            const next = cloneOverride(cur);
-            const entry = next.crops[crop] ?? { allowed: true };
-            next.crops[crop] = { allowed: allowed ?? entry.allowed };
-            return next;
-          });
-        },
-        async getPetAllowedCrops(petId) {
-          const ov = this.getOverride(petId);
-          const pet = await findPetById(petId);
-          const species = pet?.slot?.petSpecies || "";
-          const compatibles = this.getCompatibleCropsForSpecies(species);
-          const allowed = /* @__PURE__ */ new Set();
-          for (const c of compatibles) {
-            const rule = ov.crops[c];
-            if (rule ? !!rule.allowed : true) allowed.add(c);
-          }
-          return allowed;
-        },
-        /* ------------------------- Instant feed (per-species) ------------------------- */
-        getInstantFeedOverride(species) {
-          const key2 = _canonicalSpecies(String(species || ""));
-          const all = loadInstantFeedOverrides();
-          return cloneInstantFeedOverride(all[key2]);
-        },
-        isInstantFeedCropAllowed(species, crop) {
-          const ov = this.getInstantFeedOverride(species);
-          const rule = ov.crops[crop];
-          return rule ? !!rule.allowed : true;
-        },
-        setInstantFeedCropAllowed(species, crop, allowed) {
-          const key2 = _canonicalSpecies(String(species || ""));
-          const all = loadInstantFeedOverrides();
-          const cur = cloneInstantFeedOverride(all[key2]);
-          cur.crops[crop] = { allowed: !!allowed };
-          all[key2] = cur;
-          saveInstantFeedOverrides(all);
-          return cloneInstantFeedOverride(cur);
-        },
-        getInstantFeedAllowedCrops(species) {
-          const key2 = _canonicalSpecies(String(species || ""));
-          const compatibles = this.getCompatibleCropsForSpecies(key2);
-          const ov = this.getInstantFeedOverride(key2);
-          const allowed = /* @__PURE__ */ new Set();
-          for (const c of compatibles) {
-            const rule = ov.crops[c];
-            if (rule ? !!rule.allowed : true) allowed.add(c);
-          }
-          return allowed;
-        },
-        getCompatibleCropsForSpecies(species) {
-          return getCompatibleCropsFromData(species);
-        },
-        getMaxHungerForSpecies(species) {
-          return getMaxHungerFromData(species);
-        },
-        getHungerPctFor(pet) {
-          const cur = Number(pet?.slot?.hunger) || 0;
-          const species = String(pet?.slot?.petSpecies || "");
-          const max = this.getMaxHungerForSpecies(species);
-          const pct = cur / max * 100;
-          return +clampPct(pct).toFixed(1);
-        },
-        async startAutofeedWatcher(onTrigger) {
-          _userTriggerCb = onTrigger ?? null;
-          const stop2 = await PlayerService.onPetsChangeNow((arr) => {
-            _currentPets = Array.isArray(arr) ? arr.slice() : [];
-            void _evaluateAll();
-          });
-          return () => {
-            try {
-              stop2();
-            } catch {
-            }
-            _currentPets = [];
-            _belowThreshold.clear();
-            _userTriggerCb = null;
-          };
-        },
-        /* ------------------------- Teams (UI-less core used by UI) ------------------------- */
-        _teams: loadTeams(),
-        _teamSubs: /* @__PURE__ */ new Set(),
-        _notifyTeamSubs() {
-          const snap = this.getTeams();
-          this._teamSubs.forEach((fn) => {
-            try {
-              fn(snap);
-            } catch {
-            }
-          });
-        },
-        getTeams() {
-          return Array.isArray(this._teams) ? this._teams.map((t) => ({ ...t, slots: t.slots.slice(0, 3) })) : [];
-        },
-        onTeamsChange(cb) {
-          this._teamSubs.add(cb);
-          try {
-            cb(this.getTeams());
-          } catch {
-          }
-          return () => {
-            this._teamSubs.delete(cb);
-          };
-        },
+        getAbilityName: abilityName,
+        getAbilityNameWithoutLevel: abilityNameWithoutLevel,
+        getOverride,
+        getCompatibleCropsForSpecies,
+        getHungerPctFor,
+        getInstantFeedAllowedCrops,
+        isInstantFeedCropAllowed,
+        setInstantFeedCropAllowed,
+        getTeams,
+        getTeamById,
+        /** Calls back at once with the current teams, then on every change. */
+        onTeamsChange,
+        /** Same as `onTeamsChange`, for callers that await their subscription. */
         async onTeamsChangeNow(cb) {
-          const unsub = this.onTeamsChange(cb);
-          try {
-            cb(this.getTeams());
-          } catch {
-          }
-          return unsub;
+          return onTeamsChange(cb);
         },
-        createTeam(name) {
-          const t = { id: _uid(), name: petTeamName(name ?? "") || `Team ${this._teams.length + 1}`, slots: [null, null, null], serverId: null };
-          this._teams.push(t);
-          saveTeams(this._teams);
-          this._notifyTeamSubs();
-          return t;
-        },
-        deleteTeam(teamId2) {
-          const i = this._teams.findIndex((t) => t.id === teamId2);
-          if (i < 0) return false;
-          const [removed] = this._teams.splice(i, 1);
-          saveTeams(this._teams);
-          this._notifyTeamSubs();
-          if (removed.serverId) _sendDeletePetTeam(removed.serverId);
-          return true;
-        },
-        saveTeam(patch) {
-          const i = this._teams.findIndex((t) => t.id === patch.id);
-          if (i < 0) return null;
-          const cur = this._teams[i];
-          const next = {
-            id: cur.id,
-            name: typeof patch.name === "string" ? petTeamName(patch.name) : cur.name,
-            slots: Array.isArray(patch.slots) ? patch.slots.slice(0, 3) : cur.slots,
-            serverId: cur.serverId ?? null
-          };
-          this._teams[i] = next;
-          saveTeams(this._teams);
-          this._notifyTeamSubs();
-          const petIds = next.slots.filter((x) => !!x);
-          if (next.serverId) {
-            if (petIds.length > 0) _sendSavePetTeam(next.serverId, next.name.trim() || "Team", petIds);
-          } else {
-            _maybeCreateServerTeam(next);
-          }
-          return next;
-        },
-        setTeamsOrder(ids) {
-          const byId = new Map(this._teams.map((t) => [t.id, t]));
-          const next = [];
-          for (const id of ids) {
-            const t = byId.get(id);
-            if (t) {
-              next.push(t);
-              byId.delete(id);
-            }
-          }
-          for (const rest2 of byId.values()) next.push(rest2);
-          this._teams = next;
-          saveTeams(this._teams);
-          this._notifyTeamSubs();
-          let serverIndex = 0;
-          for (const t of next) {
-            if (!t.serverId) continue;
-            _sendMovePetTeam(t.serverId, serverIndex);
-            serverIndex++;
-          }
-        },
-        getTeamById(teamId2) {
-          const t = this._teams.find((t2) => t2.id === teamId2) || null;
-          return t ? { ...t, slots: t.slots.slice(0, 3) } : null;
-        },
-        getTeamSearch(teamId2) {
-          return _teamSearch[teamId2] || "";
-        },
-        setTeamSearch(teamId2, q) {
-          _teamSearch[teamId2] = (q || "").trim();
-          _saveTeamSearchMap(_teamSearch);
-        },
-        /* ------------------------- Inventory filters + pickers ------------------------- */
-        async getInventoryPets() {
-          await _ensureInventoryWatchersStarted();
-          return _invPetsCache.slice();
-        },
-        async buildFilteredInventoryForTeam(teamId2, opts) {
-          await _ensureInventoryWatchersStarted();
-          const { mode, value } = _parseTeamSearch(this.getTeamSearch(teamId2) || "");
-          let list = await this.getInventoryPets();
-          if (mode === "ability" && value) {
-            const idSet = await _abilityNameToPresentIds(value);
-            list = idSet.size ? list.filter((p) => Array.isArray(p.abilities) && p.abilities.some((a) => idSet.has(a))) : [];
-          } else if (mode === "species" && value) {
-            const vv = value.toLowerCase();
-            list = list.filter((p) => (p.petSpecies || "").toLowerCase() === vv);
-          } else if (value) {
-            const q = value.toLowerCase();
-            list = list.filter(
-              (p) => _s(p.id).includes(q) || _s(p.petSpecies).includes(q) || _s(p.name).includes(q) || Array.isArray(p.abilities) && p.abilities.some((a) => _s(a).includes(q) || _s(_abilityName(a)).includes(q)) || Array.isArray(p.mutations) && p.mutations.some((m) => _s(m).includes(q))
-            );
-          }
-          if (opts?.excludeIds?.size) {
-            const ex = opts.excludeIds;
-            list = list.filter((p) => !ex.has(p.id));
-          }
-          const items = list.map(_invPetToRawItem);
-          let favoritedItemIds = [];
-          try {
-            const favAll = await Atoms.inventory.favoriteIds.get().catch(() => []);
-            const keep = new Set(list.map((p) => p.id));
-            favoritedItemIds = (favAll || []).filter((id) => keep.has(id));
-          } catch {
-          }
-          return { items, favoritedItemIds };
-        },
-        async buildFilteredInventoryByQuery(query, opts) {
-          await _ensureInventoryWatchersStarted();
-          const q = (query || "").toLowerCase().trim();
-          let list = await this.getInventoryPets();
-          if (q) {
-            list = list.filter(
-              (p) => _s(p.id).includes(q) || _s(p.petSpecies).includes(q) || _s(p.name).includes(q) || Array.isArray(p.abilities) && p.abilities.some((a) => _s(a).includes(q) || _s(_abilityName(a)).includes(q)) || Array.isArray(p.mutations) && p.mutations.some((m) => _s(m).includes(q))
-            );
-          }
-          if (opts?.excludeIds?.size) {
-            const ex = opts.excludeIds;
-            list = list.filter((p) => !ex.has(p.id));
-          }
-          const items = list.map(_invPetToRawItem);
-          let favoritedItemIds = [];
-          try {
-            const favAll = await Atoms.inventory.favoriteIds.get().catch(() => []);
-            const keep = new Set(list.map((p) => p.id));
-            favoritedItemIds = (favAll || []).filter((id) => keep.has(id));
-          } catch {
-          }
-          return { items, favoritedItemIds };
-        },
-        async chooseSlotPet(teamId2, slotIndex, searchOverride) {
-          const idx = Math.max(0, Math.min(2, Math.floor(slotIndex || 0)));
-          const team = this.getTeamById(teamId2);
-          if (!team) return null;
-          const exclude = /* @__PURE__ */ new Set();
-          team.slots.forEach((id, i) => {
-            if (i !== idx && id) exclude.add(String(id));
-          });
-          const payload = searchOverride && searchOverride.trim().length ? await this.buildFilteredInventoryByQuery(searchOverride, { excludeIds: exclude }) : await this.buildFilteredInventoryForTeam(teamId2, { excludeIds: exclude });
-          const items = Array.isArray(payload?.items) ? payload.items : [];
-          const teamSearch = this.getTeamSearch(teamId2) || "";
-          const applyFilters = async (list) => {
-            let out = Array.isArray(list) ? list : [];
-            if (searchOverride && searchOverride.trim().length) {
-              const q = searchOverride.toLowerCase().trim();
-              if (q) {
-                out = out.filter(
-                  (p) => _s(p.id).includes(q) || _s(p.petSpecies).includes(q) || _s(p.name).includes(q) || Array.isArray(p.abilities) && p.abilities.some((a) => _s(a).includes(q) || _s(_abilityName(a)).includes(q)) || Array.isArray(p.mutations) && p.mutations.some((m) => _s(m).includes(q))
-                );
-              }
-            } else if (teamSearch && teamSearch.trim().length) {
-              const { mode, value } = _parseTeamSearch(teamSearch);
-              if (mode === "ability" && value) {
-                const idSet = await _abilityNameToPresentIds(value);
-                out = idSet.size ? out.filter((p) => Array.isArray(p.abilities) && p.abilities.some((a) => idSet.has(a))) : [];
-              } else if (mode === "species" && value) {
-                const vv = value.toLowerCase();
-                out = out.filter((p) => (p.petSpecies || "").toLowerCase() === vv);
-              } else if (value) {
-                const q = value.toLowerCase();
-                out = out.filter(
-                  (p) => _s(p.id).includes(q) || _s(p.petSpecies).includes(q) || _s(p.name).includes(q) || Array.isArray(p.abilities) && p.abilities.some((a) => _s(a).includes(q) || _s(_abilityName(a)).includes(q)) || Array.isArray(p.mutations) && p.mutations.some((m) => _s(m).includes(q))
-                );
-              }
-            }
-            if (exclude.size) out = out.filter((p) => !exclude.has(p.id));
-            return out;
-          };
-          try {
-            const rawHutch = await myPetHutchPetItems.get();
-            const hutchArr = Array.isArray(rawHutch) ? rawHutch : [];
-            let hutchPets = hutchArr.map((it) => _inventoryItemToPet(it)).filter((p) => !!p);
-            hutchPets = await applyFilters(hutchPets);
-            const seen = new Set(items.map((it) => String(it?.id ?? "")));
-            for (const p of hutchPets) {
-              if (!seen.has(p.id)) {
-                items.push(_invPetToRawItem(p));
-                seen.add(p.id);
-              }
-            }
-            try {
-              const rawActive = await this.getPets();
-              const list = Array.isArray(rawActive) ? rawActive : [];
-              let activePets2 = list.map((p) => _activeSlotToPet(p)).filter((p) => !!p);
-              activePets2 = await applyFilters(activePets2);
-              for (const p of activePets2) {
-                if (!seen.has(p.id)) {
-                  items.push(_invPetToRawItem(p));
-                  seen.add(p.id);
-                }
-              }
-            } catch {
-            }
-          } catch {
-          }
-          if (!items.length) return null;
-          await fakeInventory.show(payload, { open: true });
-          const selIndex = await _waitValidatedInventoryIndex(2e4);
-          if (selIndex != null && selIndex >= 0 && selIndex < items.length) {
-            await fakeInventory.close();
-          } else {
-            await fakeInventory.disable();
-            return null;
-          }
-          const chosenPet = _inventoryItemToPet(items[selIndex]);
-          if (!chosenPet) return null;
-          const next = team.slots.slice(0, 3);
-          next[idx] = String(chosenPet.id);
-          this.saveTeam({ id: team.id, slots: next });
-          try {
-            await clearHandSelection();
-          } catch {
-          }
-          return chosenPet;
-        },
-        async pickPetViaFakeInventory(search2) {
-          const payload = await this.buildFilteredInventoryByQuery(search2 || "");
-          const items = Array.isArray(payload?.items) ? payload.items : [];
-          if (!items.length) return null;
-          await fakeInventory.show(payload, { open: true });
-          const selIndex = await _waitValidatedInventoryIndex(2e4);
-          if (selIndex != null && selIndex >= 0 && selIndex < items.length) {
-            await fakeInventory.close();
-          } else {
-            await fakeInventory.disable();
-            return null;
-          }
-          await clearHandSelection();
-          return _inventoryItemToPet(items[selIndex]);
-        },
-        /* ------------------------- Team switching ------------------------- */
-        async useTeam(teamId2, opts) {
-          const t = this.getTeams().find((tt) => tt.id === teamId2) || null;
-          if (!t) throw new Error("Team not found");
-          const targetInvIds = (t.slots || []).filter((x) => typeof x === "string" && x.length > 0).slice(0, 3);
-          if (_teamSyncEnabled && t.serverId) {
-            _sendApplyPetTeam(t.serverId);
-            if (opts?.markUsed !== false) markTeamAsUsed(teamId2);
-            return { swapped: targetInvIds.length, placed: 0, skipped: 0 };
-          }
-          return _equipPetIds(targetInvIds, { markTeamId: teamId2, markUsed: opts?.markUsed });
-        },
-        /** Whether mod teams mirror the native (in-game) pet teams. Defaults to true. */
-        isTeamSyncEnabled() {
-          return _teamSyncEnabled;
-        },
-        /** Turns the native pet-team mirroring on/off. Existing links are kept when turning it off. */
-        setTeamSyncEnabled(value) {
-          _setTeamSyncEnabled(value);
-        },
-        /** Starts the background watcher that keeps local teams linked to their native (in-game) counterpart. Idempotent. */
-        async startPetTeamSync() {
-          if (_teamSyncStarted) return;
-          _teamSyncStarted = true;
-          try {
-            await _startServerTeamsWatcher();
-          } catch {
-          }
-        },
-        async usePetIds(targetInvIds) {
-          return _equipPetIds(targetInvIds, { markTeamId: null });
-        },
-        async getActivePetIds() {
-          return _getActivePetSlotIds();
-        },
-        /** The team the equipped pets form, if any. */
-        getActiveTeamId() {
-          return _currentActiveTeamId();
-        },
-        getLastUsedTeamId() {
-          return lastUsedTeamId;
-        },
-        /* ------------------------- Ability logs ------------------------- */
-        _logs: [],
-        _logsMax: 500,
-        // Identity key (abilityId|petId|performedAt) of every log entry already ingested from
-        // myActivityLog, so a reconnect resync of the same historical entries can't double-log them.
-        _seenLogKeys: /* @__PURE__ */ new Set(),
-        _logSubs: /* @__PURE__ */ new Set(),
-        _logsCutoffMs: 0,
-        _logsCutoffSkewMs: 1500,
-        _logsStorageKey: PATH_PETS_ABILITY_LOGS,
-        _logsSessionStart: Date.now(),
-        _extractAbilityValue(abilityId, rawData) {
-          const num2 = (value) => {
-            const parsed = Number(value);
-            return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
-          };
-          const data = rawData ?? {};
-          const base = petAbilities2[abilityId]?.baseParameters ?? {};
-          switch (abilityId) {
-            case "CoinFinderI":
-            case "CoinFinderII":
-            case "CoinFinderIII":
-            case "SnowyCoinFinder":
-            case "DawnCoinFinder":
-            case "ThunderCoinFinder": {
-              const value = data["coinsFound"] ?? data["coins"] ?? 0;
-              return num2(value);
-            }
-            case "SellBoostI":
-            case "SellBoostII":
-            case "SellBoostIII":
-            case "SellBoostIV": {
-              const value = data["bonusCoins"] ?? data["coinsEarned"] ?? 0;
-              return num2(value);
-            }
-            case "ProduceEater":
-              return num2(data["sellPrice"] ?? 0);
-            case "ProduceScaleBoost":
-            case "ProduceScaleBoostII":
-            case "ProduceScaleBoostIII":
-            case "SnowyCropSizeBoost": {
-              const inc = data["sizeIncrease"] ?? data["scaleIncreasePercentage"] ?? data["cropScaleIncreasePercentage"] ?? base["sizeIncrease"] ?? base["scaleIncreasePercentage"] ?? 0;
-              return num2(inc);
-            }
-            case "EggGrowthBoost":
-            case "EggGrowthBoostII_NEW":
-            case "EggGrowthBoostII":
-            case "SnowyEggGrowthBoost":
-            case "ThunderEggGrowthBoost": {
-              if (data["secondsReduced"] != null) return num2(data["secondsReduced"]) * 1e3;
-              const minutes = data["eggGrowthTimeReductionMinutes"] ?? data["minutesReduced"] ?? data["reductionMinutes"] ?? base["eggGrowthTimeReductionMinutes"] ?? 0;
-              return num2(minutes) * 60 * 1e3;
-            }
-            case "PlantGrowthBoost":
-            case "PlantGrowthBoostII":
-            case "PlantGrowthBoostIII":
-            case "SnowyPlantGrowthBoost":
-            case "DawnPlantGrowthBoost":
-            case "AmberPlantGrowthBoost":
-            case "ThunderPlantGrowthBoost": {
-              if (data["secondsReduced"] != null) return num2(data["secondsReduced"]) * 1e3;
-              const minutes = data["minutesReduced"] ?? data["reductionMinutes"] ?? data["plantGrowthReductionMinutes"] ?? base["plantGrowthReductionMinutes"] ?? 0;
-              return num2(minutes) * 60 * 1e3;
-            }
-            case "PetXpBoost":
-            case "SnowyPetXpBoost":
-            case "PetXpBoostII":
-            case "PetXpBoostIII":
-            case "DawnXpBoost":
-            case "ThunderXpBoost": {
-              const xp = data["bonusXp"] ?? base["bonusXp"] ?? 0;
-              return num2(xp);
-            }
-            case "DawnCapture": {
-              const value = data["capsulesAdded"] ?? 0;
-              return num2(value);
-            }
-            case "PetAgeBoost":
-            case "PetAgeBoostII":
-            case "PetAgeBoostIII": {
-              const xp = data["bonusXp"] ?? base["bonusXp"] ?? 0;
-              return num2(xp);
-            }
-            case "PetHatchSizeBoost":
-            case "PetHatchSizeBoostII":
-            case "PetHatchSizeBoostIII": {
-              const strength = data["strengthIncrease"] ?? 0;
-              return num2(strength);
-            }
-            case "HungerRestore":
-            case "HungerRestoreII":
-            case "HungerRestoreIII":
-            case "SnowyHungerRestore": {
-              const amount = data["hungerRestoreAmount"] ?? data["hungerRestoredPercentage"] ?? base["hungerRestorePercentage"] ?? 0;
-              return num2(amount);
-            }
-            case "HungerBoost":
-            case "HungerBoostII":
-            case "HungerBoostIII":
-            case "SnowyHungerBoost": {
-              const pct = data["hungerDepletionRateDecreasePercentage"] ?? base["hungerDepletionRateDecreasePercentage"] ?? 0;
-              return num2(pct);
-            }
-            case "Thundercharger":
-              return num2(data["cropsCharged"] ?? 0);
-            default:
-              return 0;
-          }
-        },
-        async startAbilityLogsWatcher() {
-          try {
-            await _ensureInventoryWatchersStarted();
-          } catch {
-          }
-          const ingest2 = (rawLogs) => {
-            const list = Array.isArray(rawLogs) ? rawLogs : [];
-            for (const raw of list) {
-              try {
-                this._ingestActivityLogEntry(raw);
-              } catch {
-              }
-            }
-          };
-          try {
-            ingest2(await myActivityLog.get());
-          } catch {
-          }
-          let stop2 = null;
-          try {
-            const res = await myActivityLog.onChange((next) => {
-              try {
-                ingest2(next);
-              } catch {
-              }
-            });
-            if (typeof res === "function") stop2 = res;
-          } catch {
-          }
-          return () => {
-            try {
-              stop2?.();
-            } catch {
-            }
-          };
-        },
-        _ingestActivityLogEntry(raw) {
-          if (!raw || typeof raw !== "object") return;
-          const abilityId = typeof raw.action === "string" ? raw.action : "";
-          if (!abilityId || !petAbilityIds().has(abilityId)) return;
-          const performedAtNum = Number(raw.timestamp);
-          if (!Number.isFinite(performedAtNum) || performedAtNum <= 0) return;
-          const params = raw.parameters && typeof raw.parameters === "object" ? raw.parameters : {};
-          const petParam = params?.pet;
-          const petId = typeof petParam?.id === "string" ? petParam.id : "";
-          if (!petId) return;
-          const key2 = `${abilityId}|${petId}|${performedAtNum}`;
-          if (this._seenLogKeys.has(key2)) return;
-          this._seenLogKeys.add(key2);
-          if (this._logsCutoffMs && performedAtNum < this._logsCutoffMs - this._logsCutoffSkewMs) {
-            return;
-          }
-          const details = _buildAbilityLogText(abilityId, params);
-          if (details === null) return;
-          const cachedPet = _invPetsCache.find((p) => String(p.id) === petId) || null;
-          const species = typeof petParam?.petSpecies === "string" && petParam.petSpecies || cachedPet?.petSpecies || void 0;
-          const name = typeof petParam?.name === "string" && petParam.name || cachedPet?.name || void 0;
-          const mutationsRaw = Array.isArray(petParam?.mutations) ? petParam.mutations : cachedPet?.mutations;
-          const mutations = Array.isArray(mutationsRaw) ? mutationsRaw.map((m) => String(m ?? "").trim()).filter(Boolean) : void 0;
-          const logLine = {
-            petId,
-            species,
-            name,
-            mutations: mutations && mutations.length ? mutations : void 0,
-            abilityId,
-            abilityName: _abilityName(abilityId),
-            data: details,
-            performedAt: performedAtNum,
-            time12: new Date(performedAtNum).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
-          };
-          try {
-            StatsService.incrementAbilityStat(abilityId, "triggers");
-            const abilityValue = this._extractAbilityValue(abilityId, params);
-            if (abilityValue > 0) {
-              StatsService.incrementAbilityStat(abilityId, "totalValue", abilityValue);
-            }
-          } catch {
-          }
-          this._pushLog(logLine);
-        },
-        getAbilityLogs(opts) {
-          const ids = opts?.abilityIds && opts.abilityIds.length ? new Set(opts.abilityIds) : null;
-          const since = Number.isFinite(opts?.since) ? opts.since : 0;
-          const lim = Math.max(0, Math.floor(opts?.limit ?? 0));
-          let arr = this._logs.filter(
-            (e) => (since ? e.performedAt >= since : true) && (ids ? ids.has(e.abilityId) : true)
-          );
-          arr = arr.sort((a, b) => b.performedAt - a.performedAt);
-          return lim ? arr.slice(0, lim) : arr;
-        },
-        getAbilityLogsSessionStart() {
-          return this._logsSessionStart;
-        },
-        onAbilityLogs(cb) {
-          this._logSubs.add(cb);
-          try {
-            cb(this.getAbilityLogs());
-          } catch {
-          }
-          return () => {
-            this._logSubs.delete(cb);
-          };
-        },
-        getSeenAbilityIds() {
-          const set2 = /* @__PURE__ */ new Set();
-          for (const e of this._logs) set2.add(e.abilityId);
-          return Array.from(set2).sort();
-        },
-        clearAbilityLogs() {
-          this._logs.length = 0;
-          this._seenLogKeys.clear();
-          this._logsCutoffMs = Date.now();
-          this._notifyLogSubs();
-          this._persistAbilityLogs();
-        },
-        _notifyLogSubs() {
-          const snap = this.getAbilityLogs();
-          this._logSubs.forEach((fn) => {
-            try {
-              fn(snap);
-            } catch {
-            }
-          });
-        },
-        _pushLog(e) {
-          this._logs.push(e);
-          if (this._logs.length > this._logsMax) {
-            this._logs.splice(0, this._logs.length - this._logsMax);
-          }
-          this._notifyLogSubs();
-          this._persistAbilityLogs();
-        },
-        _persistAbilityLogs() {
-          try {
-            const payload = {
-              version: 1,
-              cutoff: this._logsCutoffMs,
-              logs: this._logs.map((entry) => ({
-                petId: entry.petId,
-                species: entry.species ?? null,
-                name: entry.name ?? null,
-                mutations: Array.isArray(entry.mutations) ? entry.mutations.slice() : void 0,
-                abilityId: entry.abilityId,
-                abilityName: entry.abilityName,
-                data: entry.data,
-                performedAt: entry.performedAt,
-                time12: entry.time12
-              }))
-            };
-            writeAriesPath(PATH_PETS_ABILITY_LOGS, payload);
-          } catch {
-          }
-        },
-        _restoreAbilityLogsFromStorage() {
-          try {
-            const parsed = readAriesPath(PATH_PETS_ABILITY_LOGS);
-            if (!parsed || typeof parsed !== "object") return;
-            const logsRaw = Array.isArray(parsed.logs) ? parsed.logs : [];
-            const restored = [];
-            for (const item of logsRaw) {
-              if (!item || typeof item !== "object") continue;
-              const abilityId = typeof item.abilityId === "string" ? String(item.abilityId) : "";
-              const performedAt = Number(item.performedAt) || 0;
-              if (!abilityId || !performedAt) continue;
-              const mutsRaw = item.mutations;
-              const mutations = Array.isArray(mutsRaw) ? mutsRaw.map((m) => String(m ?? "").trim()).filter(Boolean) : void 0;
-              restored.push({
-                petId: typeof item.petId === "string" ? String(item.petId) : "",
-                species: typeof item.species === "string" && item.species ? String(item.species) : void 0,
-                name: typeof item.name === "string" && item.name ? String(item.name) : void 0,
-                mutations: mutations && mutations.length ? mutations : void 0,
-                abilityId,
-                abilityName: typeof item.abilityName === "string" && item.abilityName ? String(item.abilityName) : abilityId,
-                data: typeof item.data === "string" ? String(item.data) : item.data,
-                performedAt,
-                time12: typeof item.time12 === "string" && item.time12 ? String(item.time12) : new Date(performedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
-              });
-            }
-            restored.sort((a, b) => a.performedAt - b.performedAt);
-            this._logs = restored.slice(-this._logsMax);
-            this._seenLogKeys.clear();
-            for (const entry of this._logs) {
-              this._seenLogKeys.add(`${entry.abilityId}|${entry.petId}|${entry.performedAt}`);
-            }
-            const cutoff = Number(parsed.cutoff);
-            if (Number.isFinite(cutoff) && cutoff > 0) this._logsCutoffMs = cutoff;
-          } catch {
-          }
-        }
+        createTeam,
+        deleteTeam,
+        saveTeam,
+        setTeamsOrder,
+        isTeamSyncEnabled,
+        setTeamSyncEnabled,
+        startPetTeamSync,
+        getInventoryPets,
+        getPetLookup,
+        chooseSlotPet,
+        useTeam,
+        usePetIds,
+        getActivePetIds,
+        getActiveTeamId,
+        getLastUsedTeamId,
+        waitForTeamEquipped,
+        startAbilityLogsWatcher,
+        onAbilityLogs,
+        getAbilityLogsSessionStart,
+        getSeenAbilityIds,
+        clearAbilityLogs
       };
-      try {
-        PetsService._restoreAbilityLogsFromStorage();
-      } catch {
-      }
+      restoreAbilityLogs();
       try {
         shareGlobal("QWS_PetsService", PetsService);
         shareGlobal("QWS_Atoms", Atoms);
       } catch {
       }
-      HUTCH_DEFAULT_CAPACITY = 10;
-      MAX_TEAM_SLOTS = 3;
     }
   });
 
@@ -19015,22 +18538,22 @@
   function canonicalizeCode(rawCode) {
     const trimmed = rawCode.trim();
     if (!trimmed) return "";
-    const lower = trimmed.toLowerCase();
-    const letter = lower.match(/^key([a-z])$/);
+    const lower2 = trimmed.toLowerCase();
+    const letter = lower2.match(/^key([a-z])$/);
     if (letter) return `Key${letter[1].toUpperCase()}`;
-    const digit = lower.match(/^digit([0-9])$/);
+    const digit = lower2.match(/^digit([0-9])$/);
     if (digit) return `Digit${digit[1]}`;
-    const numpadDigit = lower.match(/^numpad([0-9])$/);
+    const numpadDigit = lower2.match(/^numpad([0-9])$/);
     if (numpadDigit) return `Numpad${numpadDigit[1]}`;
-    if (lower.startsWith("numpad")) {
-      const suffix = lower.slice(6);
+    if (lower2.startsWith("numpad")) {
+      const suffix = lower2.slice(6);
       return suffix ? `Numpad${CANONICAL_CODES[suffix] ?? capitalize(suffix)}` : "Numpad";
     }
-    const fKey = lower.match(/^f([0-9]{1,2})$/);
+    const fKey = lower2.match(/^f([0-9]{1,2})$/);
     if (fKey) return `F${fKey[1]}`;
-    const arrow = lower.match(/^arrow([a-z]+)$/);
+    const arrow = lower2.match(/^arrow([a-z]+)$/);
     if (arrow) return `Arrow${CANONICAL_CODES[arrow[1]] ?? capitalize(arrow[1])}`;
-    return CANONICAL_CODES[lower] ?? capitalize(trimmed);
+    return CANONICAL_CODES[lower2] ?? capitalize(trimmed);
   }
   function prettyCode(code) {
     if (code === "AltLeft" || code === "AltRight") return "Alt";
@@ -19267,40 +18790,6 @@
     }
   });
 
-  // src/lib/emitter.ts
-  var Emitter;
-  var init_emitter = __esm({
-    "src/lib/emitter.ts"() {
-      "use strict";
-      Emitter = class {
-        constructor() {
-          this.listeners = /* @__PURE__ */ new Set();
-        }
-        on(listener) {
-          this.listeners.add(listener);
-          return () => {
-            this.listeners.delete(listener);
-          };
-        }
-        emit(value) {
-          for (const listener of [...this.listeners]) {
-            try {
-              listener(value);
-            } catch (error) {
-              console.error("[Aries] listener failed", error);
-            }
-          }
-        }
-        get size() {
-          return this.listeners.size;
-        }
-        clear() {
-          this.listeners.clear();
-        }
-      };
-    }
-  });
-
   // src/features/keybinds/keybinds.ts
   function register(section2, config) {
     const action2 = {
@@ -19322,7 +18811,7 @@
       if (fixed.has(old.id)) continue;
       actions.delete(old.id);
       holdDefaults.delete(old.id);
-      cache.delete(old.id);
+      cache2.delete(old.id);
       holdCache.delete(old.id);
     }
     section2.actions = section2.actions.filter((a) => fixed.has(a.id));
@@ -19377,13 +18866,13 @@
     return emitter;
   }
   function emitChange(id) {
-    changes.get(id)?.emit(getKeybind(id));
+    changes3.get(id)?.emit(getKeybind(id));
   }
   function emitHoldChange(id) {
     holdChanges.get(id)?.emit(getKeybindHoldDetection(id));
   }
   function onKeybindChange(id, cb) {
-    return emitterFor(changes, id).on(cb);
+    return emitterFor(changes3, id).on(cb);
   }
   function onKeybindHoldDetectionChange(id, cb) {
     if (!holdDefaults.has(id)) return () => {
@@ -19391,11 +18880,11 @@
     return emitterFor(holdChanges, id).on(cb);
   }
   function getKeybind(id) {
-    if (!cache.has(id)) {
+    if (!cache2.has(id)) {
       const stored = readStored(id);
-      cache.set(id, stored === void 0 ? cloneHotkey(actions.get(id)?.defaultHotkey) : stored);
+      cache2.set(id, stored === void 0 ? cloneHotkey(actions.get(id)?.defaultHotkey) : stored);
     }
-    return cloneHotkey(cache.get(id));
+    return cloneHotkey(cache2.get(id));
   }
   function getDefaultKeybind(id) {
     return cloneHotkey(actions.get(id)?.defaultHotkey);
@@ -19407,17 +18896,17 @@
     if (next) {
       for (const otherId of actions.keys()) {
         if (otherId === id || hotkeyToString(getKeybind(otherId)) !== wanted) continue;
-        cache.set(otherId, null);
+        cache2.set(otherId, null);
         writeStored(otherId, null);
         emitChange(otherId);
       }
     }
-    cache.set(id, next);
+    cache2.set(id, next);
     writeStored(id, next);
     emitChange(id);
   }
   function resetKeybind(id) {
-    cache.delete(id);
+    cache2.delete(id);
     writeStored(id, void 0);
     emitChange(id);
   }
@@ -19442,7 +18931,7 @@
     const hk = getKeybind(id);
     return hk ? hotkeyToPretty(hk) : UNBOUND_LABEL;
   }
-  var BINDINGS_PATH, HOLD_PATH, ARIES_ROOT_KEY, STORED_NONE, UNBOUND_LABEL, sections, actions, holdDefaults, cache, holdCache, changes, holdChanges, cloneHotkey;
+  var BINDINGS_PATH, HOLD_PATH, ARIES_ROOT_KEY, STORED_NONE, UNBOUND_LABEL, sections, actions, holdDefaults, cache2, holdCache, changes3, holdChanges, cloneHotkey;
   var init_keybinds = __esm({
     "src/features/keybinds/keybinds.ts"() {
       "use strict";
@@ -19458,9 +18947,9 @@
       sections = SECTION_CONFIG.map((section2) => ({ ...section2, actions: [] }));
       actions = /* @__PURE__ */ new Map();
       holdDefaults = /* @__PURE__ */ new Map();
-      cache = /* @__PURE__ */ new Map();
+      cache2 = /* @__PURE__ */ new Map();
       holdCache = /* @__PURE__ */ new Map();
-      changes = /* @__PURE__ */ new Map();
+      changes3 = /* @__PURE__ */ new Map();
       holdChanges = /* @__PURE__ */ new Map();
       cloneHotkey = (hk) => hk ? { ...hk } : null;
       for (let i = 0; i < SECTION_CONFIG.length; i++) {
@@ -19469,7 +18958,7 @@
       if (typeof window !== "undefined") {
         window.addEventListener("storage", (event) => {
           if (event.key !== ARIES_ROOT_KEY) return;
-          cache.clear();
+          cache2.clear();
           holdCache.clear();
           for (const id of actions.keys()) emitChange(id);
           for (const id of holdDefaults.keys()) emitHoldChange(id);
@@ -19491,9 +18980,9 @@
     delete rest2[teamId2];
     writeAriesPath(LEGACY_HOTKEYS_PATH, rest2);
   }
-  function setPetTeamKeybinds(teams) {
+  function setPetTeamKeybinds(teams2) {
     const seen = /* @__PURE__ */ new Set();
-    const unique = teams.filter((team) => {
+    const unique = teams2.filter((team) => {
       const id = String(team?.id ?? "");
       if (!id || seen.has(id)) return false;
       seen.add(id);
@@ -19514,15 +19003,15 @@
     if (!ids.length) return null;
     let current = null;
     try {
-      current = await PetsService.getActiveTeamId();
+      current = await getActiveTeamId();
     } catch {
     }
-    if (!current || !ids.includes(current)) current = PetsService.getLastUsedTeamId();
+    if (!current || !ids.includes(current)) current = getLastUsedTeamId();
     const index = current ? ids.indexOf(current) : -1;
     if (index < 0) return ids[0];
     return ids[(index + step + ids.length) % ids.length];
   }
-  function onKeyDown(e, useTeam) {
+  function onKeyDown(e, useTeam2) {
     if (shouldIgnoreKeydown(e) || !teamIds.length) return;
     const ids = teamIds.slice();
     const step = eventMatchesKeybind(PET_TEAM_PREV_ID, e) ? -1 : eventMatchesKeybind(PET_TEAM_NEXT_ID, e) ? 1 : 0;
@@ -19531,18 +19020,18 @@
     e.preventDefault();
     e.stopPropagation();
     if (direct) {
-      useTeam(direct);
+      useTeam2(direct);
       return;
     }
     void teamAfterStep(ids, step).then((target) => {
-      if (target) useTeam(target);
+      if (target) useTeam2(target);
     });
   }
-  function installPetTeamHotkeys(useTeam) {
+  function installPetTeamHotkeys(useTeam2) {
     if (installed || typeof window === "undefined") return;
     installed = true;
-    PetsService.onTeamsChange((teams) => setPetTeamKeybinds(teams));
-    window.addEventListener("keydown", (e) => onKeyDown(e, useTeam), true);
+    onTeamsChange((teams2) => setPetTeamKeybinds(teams2));
+    window.addEventListener("keydown", (e) => onKeyDown(e, useTeam2), true);
   }
   var PET_TEAM_PREV_ID, PET_TEAM_NEXT_ID, LEGACY_HOTKEYS_PATH, teamIds, installed, teamActionId;
   var init_teamHotkeys = __esm({
@@ -19553,7 +19042,8 @@
       init_storage();
       init_catalog();
       init_keybinds();
-      init_pets();
+      init_teamSwitch();
+      init_teamStore();
       PET_TEAM_PREV_ID = "pets.team.prev";
       PET_TEAM_NEXT_ID = "pets.team.next";
       LEGACY_HOTKEYS_PATH = "pets.hotkeys";
@@ -22889,7 +22379,7 @@
         prefs = {
           globalEnabled: parsed.globalEnabled !== false,
           generalEnabled: !!parsed.generalEnabled,
-          defaultThresholdPct: clampPct2(parsed.defaultThresholdPct ?? prefs.defaultThresholdPct),
+          defaultThresholdPct: clampPct(parsed.defaultThresholdPct ?? prefs.defaultThresholdPct),
           pets: typeof parsed.pets === "object" && parsed.pets ? parsed.pets : {}
         };
       }
@@ -22904,14 +22394,14 @@
     }
   }
   function prefFor(petId) {
-    const baseThreshold = clampPct2(prefs.defaultThresholdPct);
+    const baseThreshold = clampPct(prefs.defaultThresholdPct);
     if (prefs.generalEnabled) {
       return { enabled: prefs.globalEnabled !== false, thresholdPct: baseThreshold };
     }
     if (!petId) return { enabled: false, thresholdPct: baseThreshold };
     const entry = prefs.pets[petId] ?? {};
     const enabled5 = entry.enabled ?? false;
-    const thresholdPct = clampPct2(entry.thresholdPct ?? baseThreshold);
+    const thresholdPct = clampPct(entry.thresholdPct ?? baseThreshold);
     return { enabled: enabled5, thresholdPct };
   }
   async function triggerAlert(key2) {
@@ -22977,14 +22467,14 @@
     started = false;
     seenBelow.clear();
   }
-  var clampPct2, prefs, started, unsubPets, lastPets, seenBelow, PetAlertService;
+  var clampPct, prefs, started, unsubPets, lastPets, seenBelow, PetAlertService;
   var init_petAlerts = __esm({
     "src/features/notifier/petAlerts.ts"() {
       "use strict";
       init_pets();
       init_audio();
       init_storage();
-      clampPct2 = (v) => Math.max(1, Math.min(100, Math.round(v)));
+      clampPct = (v) => Math.max(1, Math.min(100, Math.round(v)));
       prefs = {
         globalEnabled: true,
         generalEnabled: false,
@@ -23017,20 +22507,20 @@
           void this.refreshNow();
         },
         getGeneralThresholdPct() {
-          return clampPct2(prefs.defaultThresholdPct);
+          return clampPct(prefs.defaultThresholdPct);
         },
         setGeneralThresholdPct(pct) {
-          const next = clampPct2(pct);
+          const next = clampPct(pct);
           prefs.defaultThresholdPct = next;
           savePrefs();
           void this.refreshNow();
           return next;
         },
         getDefaultThresholdPct() {
-          return clampPct2(prefs.defaultThresholdPct);
+          return clampPct(prefs.defaultThresholdPct);
         },
         setDefaultThresholdPct(pct) {
-          const next = clampPct2(pct);
+          const next = clampPct(pct);
           prefs.defaultThresholdPct = next;
           savePrefs();
           return next;
@@ -23049,7 +22539,7 @@
         },
         setPetThresholdPct(petId, pct) {
           if (!petId) return this.getDefaultThresholdPct();
-          const next = clampPct2(pct);
+          const next = clampPct(pct);
           prefs.pets[petId] = { ...prefs.pets[petId] || {}, thresholdPct: next };
           savePrefs();
           void evaluateAll();
@@ -26257,7 +25747,7 @@
       return `${id}|${species}|${name}|${muts}|${strength}`;
     }).join(";");
   }
-  async function findPetById2(petId) {
+  async function findPetById(petId) {
     try {
       const list = await PetsService.getPets();
       const arr = Array.isArray(list) ? list : [];
@@ -26273,7 +25763,7 @@
     const expectedPetId = petId;
     btn.disabled = true;
     try {
-      const pet = await findPetById2(petId);
+      const pet = await findPetById(petId);
       if (!pet) return;
       const species = String(pet?.slot?.petSpecies || "");
       const compatible = PetsService.getInstantFeedAllowedCrops(species);
@@ -28323,8 +27813,8 @@
           if (key2 === "abilities") {
             if (Array.isArray(entry)) {
               for (const abilityId of entry) {
-                const abilityName = getPetAbilityDisplayName(abilityId);
-                if (abilityName && matchesValue(abilityName)) {
+                const abilityName2 = getPetAbilityDisplayName(abilityId);
+                if (abilityName2 && matchesValue(abilityName2)) {
                   return true;
                 }
               }
@@ -30810,12 +30300,12 @@
             hutchContainer: hutchContainer?.className ?? null,
             inventoryContainer: inventoryContainer?.className ?? null
           });
-          const [hutchItemsRaw, inventoryRaw] = await Promise.all([
+          const [hutchItemsRaw, inventoryRaw2] = await Promise.all([
             myPetHutchPetItems.get().catch(() => []),
             Atoms.inventory.myInventory.get().catch(() => null)
           ]);
           const hutchItems = Array.isArray(hutchItemsRaw) ? hutchItemsRaw : [];
-          const inventoryItems4 = Array.isArray(inventoryRaw?.items) ? inventoryRaw.items : Array.isArray(inventoryRaw) ? inventoryRaw : [];
+          const inventoryItems4 = Array.isArray(inventoryRaw2?.items) ? inventoryRaw2.items : Array.isArray(inventoryRaw2) ? inventoryRaw2 : [];
           console.log("[InventorySorting] Hutch data", {
             hutchItems: hutchItems.length,
             inventoryItems: inventoryItems4.length
@@ -31142,10 +30632,10 @@
     if (action2 !== null) entry.action = action2;
     return entry;
   }
-  function normalizeList(logs) {
+  function normalizeList(logs2) {
     const out = [];
-    if (!Array.isArray(logs)) return out;
-    for (const raw of logs) {
+    if (!Array.isArray(logs2)) return out;
+    for (const raw of logs2) {
       const norm3 = normalizeEntry(raw);
       if (norm3) out.push(norm3);
     }
@@ -31193,7 +30683,7 @@
     }
     return null;
   }
-  function entryKey(entry) {
+  function entryKey2(entry) {
     const ts = Number(entry.timestamp);
     const action2 = typeof entry.action === "string" ? entry.action : "";
     const identity = entryIdentity(entry) ?? "__noid__";
@@ -31234,11 +30724,11 @@
       if (arr) arr.push(entry);
       else prevBuckets.set(k, [entry]);
     };
-    for (const entry of prev) bucketPush(entryKey(entry), entry);
+    for (const entry of prev) bucketPush(entryKey2(entry), entry);
     const added = [];
     const updated = [];
     for (const entry of next) {
-      const key2 = entryKey(entry);
+      const key2 = entryKey2(entry);
       const bucket = prevBuckets.get(key2);
       const prevEntry = bucket?.shift();
       if (!prevEntry) {
@@ -31255,10 +30745,10 @@
     const { added, updated } = diffSnapshots(prevSnapshot, nextSnapshot);
     if (!added.length && !updated.length) return history2;
     const map2 = /* @__PURE__ */ new Map();
-    for (const h2 of history2) map2.set(entryKey(h2), h2);
+    for (const h2 of history2) map2.set(entryKey2(h2), h2);
     let changed = false;
     const upsert = (entry) => {
-      const key2 = entryKey(entry);
+      const key2 = entryKey2(entry);
       const cur = map2.get(key2);
       if (!cur || !entriesEqual(cur, entry)) {
         map2.set(key2, entry);
@@ -31285,10 +30775,10 @@
   async function startActivityLogHistoryWatcher() {
     const stops = [];
     let lastSnapshot = [];
-    const ingest2 = async (logs, prev) => {
+    const ingest2 = async (logs2, prev) => {
       try {
         const prevSnapshot = typeof prev !== "undefined" ? normalizeList(prev) : lastSnapshot;
-        const nextSnapshot = normalizeList(logs);
+        const nextSnapshot = normalizeList(logs2);
         syncHistory(prevSnapshot, nextSnapshot);
         lastSnapshot = nextSnapshot;
       } catch {
@@ -32073,10 +31563,10 @@
   }
   async function startHatchTracker() {
     const firstRun = !loadState().bootstrapped;
-    const consume = (logs, countStats) => {
-      if (!Array.isArray(logs)) return;
+    const consume = (logs2, countStats) => {
+      if (!Array.isArray(logs2)) return;
       try {
-        ingest(logs, countStats);
+        ingest(logs2, countStats);
       } catch {
       }
     };
@@ -34504,7 +33994,7 @@
     columns.append(leftCol, rightCol);
     return { columns, leftCol, rightCol };
   }
-  function copy(text2) {
+  function copy2(text2) {
     const str = String(text2 ?? "");
     if (!str.length) return;
     const fallback = () => {
@@ -34703,7 +34193,7 @@
       icon: "\u{1F4CB}",
       onClick: () => {
         if (!visibleSfx.length) return;
-        copy(visibleSfx.map((s) => s.name).join("\n"));
+        copy2(visibleSfx.map((s) => s.name).join("\n"));
       }
     });
     sfxToolbar.append(sfxFilter, btnSfxClear, btnCopyVisible);
@@ -34801,7 +34291,7 @@
         actions2.appendChild(ui.btn("Copy URLs", {
           icon: "\u{1F4CB}",
           size: "sm",
-          onClick: () => copy([theme.music, theme.ambience].filter(Boolean).join("\n"))
+          onClick: () => copy2([theme.music, theme.ambience].filter(Boolean).join("\n"))
         }));
         row.appendChild(actions2);
         themeList.appendChild(row);
@@ -34843,7 +34333,7 @@
         const copyBtn = ui.btn("Copy URL", {
           icon: "\u{1F4CB}",
           size: "sm",
-          onClick: () => copy(atlasUrl)
+          onClick: () => copy2(atlasUrl)
         });
         actions2.append(playBtn, copyBtn);
         row.appendChild(actions2);
@@ -34933,7 +34423,7 @@
       const q = ui.inputText("regex label (ex: position|health)", "");
       q.classList.add("dd-grow");
       const btnList = ui.btn("List", { icon: "\u{1F4C4}", onClick: () => doList() });
-      const btnCopy = ui.btn("Copy", { icon: "\u{1F4CB}", onClick: () => copy(pre.textContent || "") });
+      const btnCopy = ui.btn("Copy", { icon: "\u{1F4CB}", onClick: () => copy2(pre.textContent || "") });
       queryRow.append(q, btnList, btnCopy);
       const pre = document.createElement("pre");
       stylePre(pre);
@@ -35001,7 +34491,7 @@
           btnSub.textContent = "Unsubscribe";
         }
       });
-      const btnCopy = ui.btn("Copy", { icon: "\u{1F4CB}", onClick: () => copy(pre.textContent || "") });
+      const btnCopy = ui.btn("Copy", { icon: "\u{1F4CB}", onClick: () => copy2(pre.textContent || "") });
       controls.append(q, btnGet, btnSub, btnCopy);
       const note = document.createElement("p");
       note.className = "dd-inline-note";
@@ -35065,7 +34555,7 @@
           }
         }
       });
-      const btnCopy = ui.btn("Copy JSON", { icon: "\u{1F4CB}", onClick: () => copy(ta.value) });
+      const btnCopy = ui.btn("Copy JSON", { icon: "\u{1F4CB}", onClick: () => copy2(ta.value) });
       controls.append(q, btnSet, btnCopy);
       card5.body.append(controls, ta);
     }
@@ -35648,7 +35138,7 @@
 previous: ${prev}
 next: ${next}`;
       }).join("\n\n");
-      copy(text2);
+      copy2(text2);
     }
     function snapshot2(value) {
       if (value == null) return value;
@@ -35882,7 +35372,7 @@ next: ${next}`;
       replayToSource = replayToggle.input.checked;
     });
     const btnSend = ui.btn("Send", { variant: "primary", icon: "\u{1F4E8}", onClick: () => doSend() });
-    const btnCopyPayload = ui.btn("Copy payload", { variant: "ghost", icon: "\u{1F4CB}", onClick: () => copy(ta.value) });
+    const btnCopyPayload = ui.btn("Copy payload", { variant: "ghost", icon: "\u{1F4CB}", onClick: () => copy2(ta.value) });
     sendControls.append(asJson, replayToggle.root, btnSend, btnCopyPayload);
     sendCard.body.append(ta, sendControls);
     function refreshSocketPicker() {
@@ -35928,7 +35418,7 @@ next: ${next}`;
       bCopy.textContent = "Copy";
       bCopy.onclick = (e) => {
         e.stopPropagation();
-        copy(f.text);
+        copy2(f.text);
       };
       const bToEd = document.createElement("button");
       bToEd.className = "qmm-btn";
@@ -35990,7 +35480,7 @@ next: ${next}`;
     }
     function copyVisible() {
       const lines = frames.toArray().filter((f) => passesFilters(f)).map((f) => `[${fmtTime(f.t)}] ${f.dir === "in" ? "<-" : "->"} ${f.text}`).join("\n");
-      copy(lines);
+      copy2(lines);
     }
     function replayFrame(f) {
       const target = replayToSource && f.ws ? f.ws : currentWS();
@@ -41561,8 +41051,8 @@ next: ${next}`;
   }
   function applyCropSimulationSprite(el, speciesKey, options = {}) {
     const { fallback, layer: layer2 } = ensureCropSpriteLayers(el);
-    const fallbackText = typeof options.fallback === "string" && options.fallback.trim().length > 0 ? options.fallback : "??";
-    fallback.textContent = fallbackText;
+    const fallbackText2 = typeof options.fallback === "string" && options.fallback.trim().length > 0 ? options.fallback : "??";
+    fallback.textContent = fallbackText2;
     if (!speciesKey) {
       layer2.replaceChildren();
       syncCropSpriteLoadedState(el, layer2);
@@ -43053,9 +42543,9 @@ next: ${next}`;
     const seen = /* @__PURE__ */ new Set();
     const out = [];
     const consider = (species) => {
-      const lower = species.toLowerCase();
-      if (seen.has(lower) || fromEggs.has(lower)) return;
-      seen.add(lower);
+      const lower2 = species.toLowerCase();
+      if (seen.has(lower2) || fromEggs.has(lower2)) return;
+      seen.add(lower2);
       out.push(species);
     };
     for (const species of Object.keys(petCatalog2)) consider(species);
@@ -43234,10 +42724,10 @@ next: ${next}`;
     if (!definition) return null;
     const safeRatio = Number.isFinite(ratio) && ratio > 0 ? ratio : 0;
     const baseProbability = toFiniteNumber(definition.baseProbability);
-    const baseParameters = definition.baseParameters ?? {};
+    const baseParameters2 = definition.baseParameters ?? {};
     const scaledParameters = {};
     let effectiveCooldownSeconds = null;
-    for (const [key2, rawValue] of Object.entries(baseParameters)) {
+    for (const [key2, rawValue] of Object.entries(baseParameters2)) {
       const value = toFiniteNumber(rawValue);
       if (value === null) continue;
       if (key2 === COOLDOWN_PARAMETER_KEY) {
@@ -43319,7 +42809,7 @@ next: ${next}`;
     if (numericKeys.length) {
       return `param:${numericKeys.join("+")}@${stats.trigger ?? "?"}`;
     }
-    return `id:${stats.abilityId.replace(TIER_SUFFIX, "")}`;
+    return `id:${stats.abilityId.replace(TIER_SUFFIX2, "")}`;
   }
   function effectGroupKeyForAbility(abilityId) {
     const stats = computeAbilityStatsAtRatio(abilityId, 1);
@@ -43504,7 +42994,7 @@ next: ${next}`;
       unknownSpecies
     };
   }
-  var PERCENT, DRAIN_REDUCTION_KEYS, RESTORE_AMOUNT_KEY, SECONDS_PER_MINUTE, TIER_SUFFIX;
+  var PERCENT, DRAIN_REDUCTION_KEYS, RESTORE_AMOUNT_KEY, SECONDS_PER_MINUTE, TIER_SUFFIX2;
   var init_teamStats = __esm({
     "src/features/pets/teamStats.ts"() {
       "use strict";
@@ -43515,7 +43005,7 @@ next: ${next}`;
       DRAIN_REDUCTION_KEYS = ["hungerRefundPercentage", "hungerDepletionRateDecreasePercentage"];
       RESTORE_AMOUNT_KEY = "hungerRestorePercentage";
       SECONDS_PER_MINUTE = 60;
-      TIER_SUFFIX = /(?:_NEW)?(?:IV|I{1,3})$/;
+      TIER_SUFFIX2 = /(?:_NEW)?(?:IV|I{1,3})$/;
     }
   });
 
@@ -43532,11 +43022,11 @@ next: ${next}`;
   function isHungerBoostAbility(id) {
     return id === "HungerBoost" || id === "HungerBoostII" || id === "HungerBoostIII" || id === "SnowyHungerBoost";
   }
-  function petAbilityIds2(pet) {
+  function petAbilityIds(pet) {
     return Array.isArray(pet.abilities) ? pet.abilities : [];
   }
   function sustainScore(pet) {
-    const abilities = petAbilityIds2(pet);
+    const abilities = petAbilityIds(pet);
     const hasRestore = abilities.some(isHungerRestoreAbility);
     const hasBoost = abilities.some(isHungerBoostAbility);
     if (hasRestore && hasBoost) return 2;
@@ -43547,7 +43037,7 @@ next: ${next}`;
     const NOT_USEFUL = Number.POSITIVE_INFINITY;
     const wantedMutations = category ? categoryGrantedMutations(category) : /* @__PURE__ */ new Set();
     const ranked = pets.map((pet) => {
-      const abilities = petAbilityIds2(pet);
+      const abilities = petAbilityIds(pet);
       const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
       const tierIndex = category ? bestTierIndex(category, relevant) : -1;
       const { hardAvoidCount, softAvoidCount } = granterPenaltyFor(pet, wantedMutations);
@@ -43579,7 +43069,7 @@ next: ${next}`;
   }
   function petGrantedMutations(pet) {
     const mutations = /* @__PURE__ */ new Set();
-    for (const abilityId of petAbilityIds2(pet)) {
+    for (const abilityId of petAbilityIds(pet)) {
       for (const mutation of abilityGrantedMutations(abilityId)) mutations.add(mutation);
     }
     return Array.from(mutations);
@@ -43632,7 +43122,7 @@ next: ${next}`;
   function categoryCombinedProbability(category, teamPets) {
     let missAll = 1;
     for (const pet of teamPets) {
-      const abilities = petAbilityIds2(pet).filter(isAfkEligibleAbility);
+      const abilities = petAbilityIds(pet).filter(isAfkEligibleAbility);
       const tierIndex = bestTierIndex(category, abilities);
       if (tierIndex === -1) continue;
       const stats = computeAbilityStatsAtRatio(category.abilityIds[tierIndex], getStrengthRatio(pet));
@@ -43697,7 +43187,7 @@ next: ${next}`;
   function rankCandidates(category, pets, afkOnly) {
     const wantedMutations = categoryGrantedMutations(category);
     const ranked = pets.map((pet) => {
-      const abilities = petAbilityIds2(pet);
+      const abilities = petAbilityIds(pet);
       const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
       const { hardAvoidCount, softAvoidCount } = granterPenaltyFor(pet, wantedMutations);
       return {
@@ -43725,7 +43215,7 @@ next: ${next}`;
     return ranked.map((c) => c.pet);
   }
   function qualifyingCategories(pet) {
-    const abilities = petAbilityIds2(pet);
+    const abilities = petAbilityIds(pet);
     return CATEGORIES.filter((c) => bestTierIndex(c, abilities) !== -1);
   }
   function findUnusedPets(pets, usedIds, sustainPet) {
@@ -43741,10 +43231,10 @@ next: ${next}`;
     }
     return unused;
   }
-  function mergeTeamsWithSamePets(teams) {
+  function mergeTeamsWithSamePets(teams2) {
     const order = [];
     const byKey = /* @__PURE__ */ new Map();
-    for (const team of teams) {
+    for (const team of teams2) {
       const key2 = `${team.mode}::${team.petIds.slice().sort().join(",")}`;
       const existing = byKey.get(key2);
       if (existing) {
@@ -43766,7 +43256,7 @@ next: ${next}`;
   }
   function buildSuggestedTeams(pets) {
     const sustainPet = getBestSustainPet(pets);
-    const teams = [];
+    const teams2 = [];
     const usedIds = /* @__PURE__ */ new Set();
     if (sustainPet) usedIds.add(sustainPet.id);
     for (const category of CATEGORIES) {
@@ -43813,7 +43303,7 @@ next: ${next}`;
       }
       activeCandidates.forEach((p) => usedIds.add(p.id));
       if (activeCandidates.length) {
-        teams.push({
+        teams2.push({
           categories: [categoryRef],
           mode: "active",
           petIds: activeCandidates.map((p) => p.id),
@@ -43824,7 +43314,7 @@ next: ${next}`;
         const afkTeam = pickAfkTeam(category, pets, maxSlots);
         if (afkTeam?.length) {
           afkTeam.forEach((p) => usedIds.add(p.id));
-          teams.push({
+          teams2.push({
             categories: [categoryRef],
             mode: "afk",
             // Only the category's own ability. A feeder in this team may well
@@ -43839,7 +43329,7 @@ next: ${next}`;
       const fillerSustainPet = pickSustainPet(pets, category, false);
       if (afkRelevant && fillerSustainPet && activeCandidates.length > 0 && activeCandidates.length < maxSlots && !activeCandidates.some((p) => p.id === fillerSustainPet.id)) {
         usedIds.add(fillerSustainPet.id);
-        teams.push({
+        teams2.push({
           categories: [categoryRef],
           mode: "afk",
           petIds: [...activeCandidates.map((p) => p.id), fillerSustainPet.id],
@@ -43848,7 +43338,7 @@ next: ${next}`;
       }
     }
     return {
-      teams: mergeTeamsWithSamePets(teams),
+      teams: mergeTeamsWithSamePets(teams2),
       sustainPet,
       unusedPets: findUnusedPets(pets, usedIds, sustainPet)
     };
@@ -45141,11 +44631,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     return card5.root;
   }
-  async function loadTeams2() {
+  async function loadTeams() {
     const pets = await PetsService.getInventoryPets();
     const petsById = new Map(pets.map((p) => [p.id, p]));
-    const { teams, sustainPet, unusedPets } = buildSuggestedTeams(pets);
-    return { teams, sustainPet, unusedPets, petsById };
+    const { teams: teams2, sustainPet, unusedPets } = buildSuggestedTeams(pets);
+    return { teams: teams2, sustainPet, unusedPets, petsById };
   }
   function renderTeamBuilderTab(view, ui) {
     const prevCleanup = view.__cleanup__;
@@ -45186,17 +44676,17 @@ Restore figures are averages; unlucky streaks do worse.`;
       loading.textContent = "Loading\u2026";
       loading.style.opacity = "0.6";
       content.appendChild(loading);
-      const { teams, unusedPets, petsById } = await loadTeams2();
+      const { teams: teams2, unusedPets, petsById } = await loadTeams();
       if (destroyed || !view.isConnected) return;
       content.innerHTML = "";
-      if (!teams.length) {
+      if (!teams2.length) {
         const empty = document.createElement("div");
         empty.textContent = "No useful team found \u2014 hatch pets with offensive abilities.";
         empty.style.opacity = "0.7";
         content.appendChild(empty);
         return;
       }
-      for (const team of teams) {
+      for (const team of teams2) {
         content.appendChild(renderTeamCard(team, petsById, ui));
       }
       if (unusedPets.length) {
@@ -45324,9 +44814,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       minHeight: "0"
     });
     panel.appendChild(list);
-    const sessionStart = PetsService.getAbilityLogsSessionStart?.() ?? 0;
+    const sessionStart2 = PetsService.getAbilityLogsSessionStart?.() ?? 0;
     const petSpriteCache = /* @__PURE__ */ new Map();
-    let logs = [];
+    let logs2 = [];
     let abilityFilter = "";
     let sortDir = "desc";
     let search2 = "";
@@ -45482,7 +44972,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return row;
     }
     function applyFilters() {
-      let result = logs.slice();
+      let result = logs2.slice();
       if (abilityFilter.trim()) {
         const wanted = normalizeAbilityKey(abilityFilter);
         result = result.filter((log2) => {
@@ -45515,7 +45005,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     function repaint() {
       const visible = applyFilters();
-      count.textContent = visible.length === logs.length ? `${logs.length} entries` : `${visible.length} of ${logs.length} entries`;
+      count.textContent = visible.length === logs2.length ? `${logs2.length} entries` : `${visible.length} of ${logs2.length} entries`;
       list.innerHTML = "";
       if (!visible.length) {
         const empty = document.createElement("div");
@@ -45525,7 +45015,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           textAlign: "center",
           padding: "24px 8px"
         });
-        empty.textContent = logs.length ? "No log matches these filters." : "\u{1F5D2}\uFE0F No logs yet.";
+        empty.textContent = logs2.length ? "No log matches these filters." : "\u{1F5D2}\uFE0F No logs yet.";
         list.appendChild(empty);
         return;
       }
@@ -45551,7 +45041,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         stopWatcher = await PetsService.startAbilityLogsWatcher();
         rebuildAbilityOptions();
         unsubLogs = PetsService.onAbilityLogs((all) => {
-          logs = all.map((entry) => ({
+          logs2 = all.map((entry) => ({
             petId: entry.petId,
             petName: entry.name ?? null,
             species: entry.species ?? null,
@@ -45562,7 +45052,7 @@ Restore figures are averages; unlucky streaks do worse.`;
             performedAt: entry.performedAt,
             date: formatDateMMDDYY(entry.performedAt),
             time12: entry.time12,
-            isActiveSession: sessionStart > 0 && entry.performedAt >= sessionStart
+            isActiveSession: sessionStart2 > 0 && entry.performedAt >= sessionStart2
           }));
           rebuildAbilityOptions();
           repaint();
@@ -45601,7 +45091,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/pets/menu.ts
   function renderManagerTab(view, ui) {
     view.innerHTML = "";
-    let teams = [];
+    let teams2 = [];
     let selectedId = null;
     let activeTeamId = null;
     let activePetIdSet = /* @__PURE__ */ new Set();
@@ -45758,7 +45248,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     btnDel.style.flex = "1 1 0";
     footer.append(btnNew, btnDel);
     function getSelectedTeam() {
-      return teams.find((t) => t.id === selectedId) || null;
+      return teams2.find((t) => t.id === selectedId) || null;
     }
     function computeInsertIndex(clientY) {
       const children = Array.from(teamList.children);
@@ -45849,7 +45339,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         const pets = await PetsService.getPets();
         const equipIds = Array.isArray(pets) ? pets.map((p) => String(p?.slot?.id || "")).filter(Boolean) : [];
         activePetIdSet = new Set(equipIds);
-        for (const t of teams) {
+        for (const t of teams2) {
           const tIds = (t.slots || []).filter(Boolean);
           if (tIds.length !== equipIds.length) continue;
           let same = true;
@@ -45877,7 +45367,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       overInsertIdx = null;
       draggingHeight = 0;
       teamList.innerHTML = "";
-      if (!teams.length) {
+      if (!teams2.length) {
         const empty = document.createElement("div");
         empty.textContent = "No teams yet. Create one!";
         empty.style.opacity = "0.75";
@@ -45887,7 +45377,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         hydrateEditor(null);
         return;
       }
-      teams.forEach((t, idx) => {
+      teams2.forEach((t, idx) => {
         const item = document.createElement("div");
         const isActive = t.id === activeTeamId;
         item.dataset.index = String(idx);
@@ -45999,7 +45489,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           const rect = item.getBoundingClientRect();
           const mid = rect.top + rect.height / 2;
           const insertIdx = ev.clientY < mid ? idxOver : idxOver + 1;
-          const clamped = Math.max(0, Math.min(teams.length, insertIdx));
+          const clamped = Math.max(0, Math.min(teams2.length, insertIdx));
           if (overInsertIdx !== clamped) {
             overInsertIdx = clamped;
             applyLiveTransforms();
@@ -46015,14 +45505,14 @@ Restore figures are averages; unlucky streaks do worse.`;
           if (draggingIdx === null) return;
           let target = overInsertIdx ?? computeInsertIndex(ev.clientY);
           if (target > draggingIdx) target -= 1;
-          target = Math.max(0, Math.min(teams.length - 1, target));
+          target = Math.max(0, Math.min(teams2.length - 1, target));
           if (target !== draggingIdx) {
-            const a = teams.slice();
+            const a = teams2.slice();
             const [it] = a.splice(draggingIdx, 1);
             a.splice(target, 0, it);
-            teams = a;
+            teams2 = a;
             try {
-              PetsService.setTeamsOrder(teams.map((x) => x.id));
+              PetsService.setTeamsOrder(teams2.map((x) => x.id));
             } catch {
             }
           }
@@ -46055,14 +45545,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (draggingIdx === null) return;
       let target = overInsertIdx ?? computeInsertIndex(e.clientY);
       if (target > draggingIdx) target -= 1;
-      target = Math.max(0, Math.min(teams.length - 1, target));
+      target = Math.max(0, Math.min(teams2.length - 1, target));
       if (target !== draggingIdx) {
-        const a = teams.slice();
+        const a = teams2.slice();
         const [it] = a.splice(draggingIdx, 1);
         a.splice(target, 0, it);
-        teams = a;
+        teams2 = a;
         try {
-          PetsService.setTeamsOrder(teams.map((x) => x.id));
+          PetsService.setTeamsOrder(teams2.map((x) => x.id));
         } catch {
         }
       }
@@ -46106,11 +45596,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     (async () => {
       try {
         unsubTeams = await PetsService.onTeamsChangeNow(async (all) => {
-          teams = Array.isArray(all) ? all.slice() : [];
-          if (selectedId && !teams.some((t) => t.id === selectedId)) {
-            selectedId = teams[0]?.id ?? null;
+          teams2 = Array.isArray(all) ? all.slice() : [];
+          if (selectedId && !teams2.some((t) => t.id === selectedId)) {
+            selectedId = teams2[0]?.id ?? null;
           }
-          if (!selectedId && teams.length) selectedId = teams[0].id;
+          if (!selectedId && teams2.length) selectedId = teams2[0].id;
           void scheduleTeamListRefresh();
           await PetsService.getInventoryPets().catch(() => []);
           await hydrateEditor(getSelectedTeam());
@@ -46455,7 +45945,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const saved = PetsService.saveTeam({ id: t.id, slots: [null, null, null] });
       await repaintSlots(saved ?? getSelectedTeam());
     };
-    function sameSet(a, b) {
+    function sameSet2(a, b) {
       if (a.length !== b.length) return false;
       const s = new Set(a);
       for (const x of b) if (!s.has(x)) return false;
@@ -46467,7 +45957,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       while (performance.now() - t0 < timeoutMs) {
         const pets = await PetsService.getPets().catch(() => null);
         const equip = Array.isArray(pets) ? pets.map((p) => String(p?.slot?.id || "")).filter(Boolean) : [];
-        if (sameSet(equip, target)) return true;
+        if (sameSet2(equip, target)) return true;
         await new Promise((r) => setTimeout(r, 80));
       }
       return false;
@@ -48572,9 +48062,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     css(sliderValue, { minWidth: "64px", textAlign: "center" });
     const enabledToggle = toggle(featureDisabled ? false : MiscService.readAutoRecoEnabled(false), (on) => {
       MiscService.writeAutoRecoEnabled(on);
-      syncEnabled(on);
+      syncEnabled2(on);
     });
-    function syncEnabled(on) {
+    function syncEnabled2(on) {
       slider2.disabled = featureDisabled || !on;
       hint.textContent = on ? "Automatically log back in if this account is disconnected because it was opened in another session." : "Auto reconnect on session conflict is turned off.";
     }
@@ -48585,14 +48075,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       slider2.disabled = true;
       hint.textContent = "Auto reconnect has been temporarily disabled at the request of the game developers. It will most likely come back later.";
     } else {
-      syncEnabled(MiscService.readAutoRecoEnabled(false));
+      syncEnabled2(MiscService.readAutoRecoEnabled(false));
     }
     const clampSeconds = (value) => Math.max(0, Math.min(AUTO_RECO_MAX_SECONDS, Math.round(value / AUTO_RECO_STEP_SECONDS) * AUTO_RECO_STEP_SECONDS));
-    const applySeconds = (raw, persist3) => {
+    const applySeconds = (raw, persist4) => {
       const seconds = clampSeconds(raw);
       slider2.value = String(seconds);
       sliderValue.textContent = formatShortDuration(seconds);
-      if (persist3) MiscService.setAutoRecoDelayMs(seconds * 1e3);
+      if (persist4) MiscService.setAutoRecoDelayMs(seconds * 1e3);
     };
     slider2.addEventListener("input", () => applySeconds(Number(slider2.value), false));
     slider2.addEventListener("change", () => applySeconds(Number(slider2.value), true));
@@ -51399,9 +50889,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     return stats;
   }
   function extractActivityLogsFromSlot(slot) {
-    const logs = slot?.data?.activityLogs ?? slot?.activityLogs;
-    if (!Array.isArray(logs)) return null;
-    return logs;
+    const logs2 = slot?.data?.activityLogs ?? slot?.activityLogs;
+    if (!Array.isArray(logs2)) return null;
+    return logs2;
   }
   function extractGardenFromSlot(slot) {
     const g = slot?.data?.garden ?? slot?.garden;
@@ -51798,13 +51288,13 @@ Restore figures are averages; unlucky streaks do worse.`;
         },
         async openActivityLogModal(playerId2, playerName) {
           try {
-            const logs = await this.getActivityLogs(playerId2);
-            if (!logs || logs.length === 0) {
+            const logs2 = await this.getActivityLogs(playerId2);
+            if (!logs2 || logs2.length === 0) {
               await toastSimple("Activity log", "No activity logs for this player.", "info");
               return;
             }
             skipNextActivityLogHistoryReopen();
-            await fakeActivityLog.show(logs, { open: true });
+            await fakeActivityLog.show(logs2, { open: true });
             if (playerName) await toastSimple("Activity log", `${playerName}'s activity log displayed.`, "info");
           } catch (e) {
             await toastSimple("Activity log", e?.message || "Failed to open activity log.", "error");
@@ -53462,12 +52952,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       try {
         const source = await renderFramePreview(target, blob);
         if (!source || !host.isConnected) return;
-        const copy2 = document.createElement("canvas");
-        copy2.width = source.width;
-        copy2.height = source.height;
-        copy2.getContext("2d")?.drawImage(source, 0, 0);
+        const copy3 = document.createElement("canvas");
+        copy3.width = source.width;
+        copy3.height = source.height;
+        copy3.getContext("2d")?.drawImage(source, 0, 0);
         host.textContent = "";
-        host.appendChild(fit(copy2, box));
+        host.appendChild(fit(copy3, box));
       } catch {
       }
     };
@@ -54126,9 +53616,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function ensureTickAtom() {
     if (tickAtom) return tickAtom;
-    const cache2 = pageWindow.jotaiAtomCache;
-    if (!cache2 || typeof cache2.get !== "function") return null;
-    tickAtom = cache2.get(CACHE_KEY, createTickAtom());
+    const cache3 = pageWindow.jotaiAtomCache;
+    if (!cache3 || typeof cache3.get !== "function") return null;
+    tickAtom = cache3.get(CACHE_KEY, createTickAtom());
     return tickAtom;
   }
   function isTickAvailable() {
@@ -54923,8 +54413,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
   }
   function harvestMessage(ready, random) {
-    const crops = `${ready} ${plural(ready, "crop", "crops")}`;
-    const isAre = plural(ready, "is", "are");
+    const crops = `${ready} ${plural2(ready, "crop", "crops")}`;
+    const isAre = plural2(ready, "is", "are");
     return pickOne2(
       [
         `${crops} ${isAre} ready to harvest, by the way.`,
@@ -54938,8 +54428,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     );
   }
   function hungryPetMessage(hungry, random) {
-    const pets = `${hungry} ${plural(hungry, "pet", "pets")}`;
-    const isAre = plural(hungry, "is", "are");
+    const pets = `${hungry} ${plural2(hungry, "pet", "pets")}`;
+    const isAre = plural2(hungry, "is", "are");
     return pickOne2(
       [
         `${pets} ${isAre} getting hungry.`,
@@ -54977,7 +54467,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (own && own.length > 0) return pickOne2(own, random);
     return pickOne2(GENERIC_WEATHER_TEMPLATES, random)(displayName);
   }
-  var LEGACY_DEFAULT_LINES, DEFAULT_CUSTOM_LINES, LINE_EMOTES, POKE_WINDOW_MS, POKE_THRESHOLD, plural, WEATHER_LINES, GENERIC_WEATHER_TEMPLATES;
+  var LEGACY_DEFAULT_LINES, DEFAULT_CUSTOM_LINES, LINE_EMOTES, POKE_WINDOW_MS, POKE_THRESHOLD, plural2, WEATHER_LINES, GENERIC_WEATHER_TEMPLATES;
   var init_dialogueLines = __esm({
     "src/features/companion/dialogueLines.ts"() {
       "use strict";
@@ -55059,7 +54549,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       };
       POKE_WINDOW_MS = 1e4;
       POKE_THRESHOLD = 5;
-      plural = (count, singular, pluralForm) => count === 1 ? singular : pluralForm;
+      plural2 = (count, singular, pluralForm) => count === 1 ? singular : pluralForm;
       WEATHER_LINES = {
         Rain: [
           "It's raining! The crops are loving this.",
@@ -55286,10 +54776,10 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/state.ts
   function loadCompanionSettings() {
-    return coerceSettings(readAriesPath(STORAGE_PATH, void 0));
+    return coerceSettings(readAriesPath(STORAGE_PATH3, void 0));
   }
   function saveCompanionSettings(settings) {
-    writeAriesPath(STORAGE_PATH, settings);
+    writeAriesPath(STORAGE_PATH3, settings);
   }
   function patchCompanionSettings(patch) {
     saveCompanionSettings({ ...loadCompanionSettings(), ...patch });
@@ -55303,14 +54793,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (current.includes(group2)) return;
     patchCompanionSettings({ reviewedSettings: [...current, group2] });
   }
-  var STORAGE_PATH;
+  var STORAGE_PATH3;
   var init_state3 = __esm({
     "src/features/companion/state.ts"() {
       "use strict";
       init_storage();
       init_settingsShape();
       init_settingsShape();
-      STORAGE_PATH = "companion";
+      STORAGE_PATH3 = "companion";
     }
   });
 
@@ -55856,7 +55346,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     startTimer2(rt);
     return true;
   }
-  var CHAT_BUBBLE_MIN_INTERVAL_MS, RENDER_WAIT_TIMEOUT_MS, CONTEXTUAL_REFRESH_MS, npcChatBubbles, npcQuinoaUsers2, runtime, starting, wanderHooks, WALK_TIMEOUT_MS, ARRIVAL_POLL_MS, NEARBY_DISTANCE, STILL_POLL_MS, STILL_TIMEOUT_MS, stillToken, CompanionService;
+  var CHAT_BUBBLE_MIN_INTERVAL_MS, RENDER_WAIT_TIMEOUT_MS, CONTEXTUAL_REFRESH_MS, npcChatBubbles, npcQuinoaUsers2, runtime, starting2, wanderHooks, WALK_TIMEOUT_MS, ARRIVAL_POLL_MS, NEARBY_DISTANCE, STILL_POLL_MS, STILL_TIMEOUT_MS, stillToken, CompanionService;
   var init_companion = __esm({
     "src/features/companion/index.ts"() {
       "use strict";
@@ -55881,7 +55371,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       npcChatBubbles = makeAtom("npcChatBubblesAtom");
       npcQuinoaUsers2 = makeAtom("npcQuinoaUsersAtom");
       runtime = null;
-      starting = null;
+      starting2 = null;
       wanderHooks = null;
       WALK_TIMEOUT_MS = 5e3;
       ARRIVAL_POLL_MS = 50;
@@ -56061,12 +55551,12 @@ Restore figures are averages; unlucky streaks do worse.`;
         /** Démarre le companion. Idempotent, y compris sur appels concurrents. */
         async start() {
           if (runtime) return true;
-          if (!starting) {
-            starting = startInternal().finally(() => {
-              starting = null;
+          if (!starting2) {
+            starting2 = startInternal().finally(() => {
+              starting2 = null;
             });
           }
-          return starting;
+          return starting2;
         },
         /** Arrête tout et restaure l'atom du jeu. Sûr à appeler plusieurs fois. */
         async stop() {
@@ -57071,7 +56561,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const most = countByItem(plan)[0];
     return most?.kind === "seed" ? seedIcon(most.id) : null;
   }
-  async function send(assignment) {
+  async function send2(assignment) {
     if (assignment.kind === "egg") {
       await PlayerService.plantEgg(assignment.tileIndex, assignment.id);
       return;
@@ -57128,7 +56618,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       await walker.toGardenTile(assignment.tileIndex);
       await pace.wait();
       attempted.push(assignment);
-      await send(assignment);
+      await send2(assignment);
       pace.mark();
       const done = attempted.length;
       reporter2.progress(done, plan.length);
@@ -58913,21 +58403,21 @@ Restore figures are averages; unlucky streaks do worse.`;
     none.value = NO_TEAM;
     none.textContent = "Leave my team alone";
     el.append(none);
-    let teams = [];
+    let teams2 = [];
     try {
-      teams = PetsService.getTeams().map((team) => ({ id: team.id, name: team.name }));
+      teams2 = PetsService.getTeams().map((team) => ({ id: team.id, name: team.name }));
     } catch {
-      teams = [];
+      teams2 = [];
     }
-    for (const team of teams) {
+    for (const team of teams2) {
       const option = document.createElement("option");
       option.value = team.id;
       option.textContent = team.name;
       el.append(option);
     }
-    el.value = current && teams.some((team) => team.id === current) ? current : NO_TEAM;
+    el.value = current && teams2.some((team) => team.id === current) ? current : NO_TEAM;
     el.addEventListener("change", () => onPick(el.value === NO_TEAM ? null : el.value));
-    return { el, empty: teams.length === 0 };
+    return { el, empty: teams2.length === 0 };
   }
   var NO_TEAM, NO_TEAMS_HINT;
   var init_teamSelect = __esm({
@@ -60698,7 +60188,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       offer(reaction);
     }
   }
-  function onAbilityLogs(all) {
+  function onAbilityLogs2(all) {
     if (!Array.isArray(all) || all.length === 0) return;
     const newest = all.reduce((a, b) => b.performedAt > a.performedAt ? b : a);
     const first = lastAbilityAt === 0;
@@ -60760,7 +60250,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
     }
     try {
-      add(PetsService.onAbilityLogs((all) => onAbilityLogs(all)));
+      add(PetsService.onAbilityLogs((all) => onAbilityLogs2(all)));
     } catch {
     }
     try {
@@ -62299,8 +61789,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return null;
   }
   function normalizeActivityLog(slotData) {
-    const logs = slotData?.activityLog ?? slotData?.activityLogs ?? slotData?.activitylog;
-    return Array.isArray(logs) ? logs : null;
+    const logs2 = slotData?.activityLog ?? slotData?.activityLogs ?? slotData?.activitylog;
+    return Array.isArray(logs2) ? logs2 : null;
   }
   async function buildPlayerStatePayload(options = {}) {
     try {
