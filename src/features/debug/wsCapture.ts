@@ -6,10 +6,13 @@
 // wrapped again to catch new sockets, each socket gets a message listener, and
 // its `send` is wrapped per instance. Outgoing frames are captured before the
 // mod's outgoing rules run, so a frame a rule drops still shows here.
+//
+// It only watches: which socket the mod treats as the game's stays the socket
+// hook's call, and the hook's socket list is left alone.
 
 import { Emitter } from "../../lib/emitter";
 import { pad2 } from "../../lib/format";
-import { quinoaWS, setQWS, sockets, label as wsStateLabel } from "../../game/ws/sockets";
+import { quinoaWS, sockets, label as wsStateLabel } from "../../game/ws/sockets";
 
 export type Frame = {
   /** Epoch milliseconds. */
@@ -94,7 +97,7 @@ export function installWSHookIfNeeded(): void {
     const ProxyCtor = new Proxy(Ctor, {
       construct(target: any, args: any[], newTarget: any) {
         const ws: WebSocket = Reflect.construct(target, args, newTarget);
-        try { trackSocket(ws, "new"); } catch {}
+        try { trackSocket(ws); } catch {}
         return ws;
       },
     });
@@ -103,17 +106,14 @@ export function installWSHookIfNeeded(): void {
   }
 
   for (const ws of sockets) {
-    try { trackSocket(ws, "existing"); } catch {}
+    try { trackSocket(ws); } catch {}
   }
 }
 
-function trackSocket(ws: WebSocket, why: string) {
+function trackSocket(ws: WebSocket) {
   if (registry.has(ws)) return;
 
   const info: WSInfo = { ws, id: `WS#${1 + registry.size} (${wsStateLabel(ws.readyState)})` };
-
-  if (!sockets.includes(ws)) sockets.push(ws);
-  setQWS(ws, why);
 
   ws.addEventListener("message", (ev: MessageEvent) => {
     wsFrames.emit({ t: Date.now(), dir: "in", text: toText(ev.data), ws });

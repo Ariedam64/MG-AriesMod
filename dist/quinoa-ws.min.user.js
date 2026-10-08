@@ -28125,7 +28125,7 @@
         construct(target, args, newTarget) {
           const ws = Reflect.construct(target, args, newTarget);
           try {
-            trackSocket(ws, "new");
+            trackSocket(ws);
           } catch {
           }
           return ws;
@@ -28136,16 +28136,14 @@
     }
     for (const ws of sockets) {
       try {
-        trackSocket(ws, "existing");
+        trackSocket(ws);
       } catch {
       }
     }
   }
-  function trackSocket(ws, why) {
+  function trackSocket(ws) {
     if (registry.has(ws)) return;
     const info = { ws, id: `WS#${1 + registry.size} (${label(ws.readyState)})` };
-    if (!sockets.includes(ws)) sockets.push(ws);
-    setQWS(ws, why);
     ws.addEventListener("message", (ev) => {
       wsFrames.emit({ t: Date.now(), dir: "in", text: toText(ev.data), ws });
     });
