@@ -21351,32 +21351,32 @@
   function ensureInjectedNextTo(targetBtn, injectedClass, injectedText, onClick) {
     const parent = targetBtn.parentElement || targetBtn.closest(".McFlex, .css-0") || targetBtn.parentNode;
     if (!parent) return;
-    let injected3 = parent.querySelector(`.${injectedClass}`);
-    if (injected3) {
-      if (targetBtn.nextElementSibling !== injected3) {
-        parent.insertBefore(injected3, targetBtn.nextSibling);
+    let injected4 = parent.querySelector(`.${injectedClass}`);
+    if (injected4) {
+      if (targetBtn.nextElementSibling !== injected4) {
+        parent.insertBefore(injected4, targetBtn.nextSibling);
       }
-      if (injected3.textContent !== injectedText) injected3.textContent = injectedText;
+      if (injected4.textContent !== injectedText) injected4.textContent = injectedText;
       return;
     }
-    injected3 = document.createElement("button");
-    injected3.type = "button";
-    injected3.className = `${injectedClass} chakra-button`;
-    injected3.textContent = injectedText;
-    injected3.setAttribute("aria-label", injectedText);
-    injected3.title = injectedText;
-    injected3.style.marginLeft = "8px";
+    injected4 = document.createElement("button");
+    injected4.type = "button";
+    injected4.className = `${injectedClass} chakra-button`;
+    injected4.textContent = injectedText;
+    injected4.setAttribute("aria-label", injectedText);
+    injected4.title = injectedText;
+    injected4.style.marginLeft = "8px";
     const cs = getComputedStyle(parent);
     if (cs.display !== "flex") {
-      injected3.style.display = "inline-flex";
-      injected3.style.alignItems = "center";
+      injected4.style.display = "inline-flex";
+      injected4.style.alignItems = "center";
     }
-    injected3.addEventListener("click", (ev) => onClick(ev, {
+    injected4.addEventListener("click", (ev) => onClick(ev, {
       host: targetBtn.closest(DEFAULTS.rootSelector),
       targetBtn,
-      injectedBtn: injected3
+      injectedBtn: injected4
     }));
-    parent.insertBefore(injected3, targetBtn.nextSibling);
+    parent.insertBefore(injected4, targetBtn.nextSibling);
   }
   function cleanup(root, injectedClass) {
     root.querySelectorAll(`.${injectedClass}`).forEach((n) => n.remove());
@@ -48370,160 +48370,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/settings/backup.ts
-  function generateId() {
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-      return crypto.randomUUID();
-    }
-    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-  }
-  function ensureVersion(snapshot2) {
-    const next = { ...snapshot2 };
-    if (!Number.isFinite(next.version)) {
-      next.version = DEFAULT_VERSION;
-    }
-    return next;
-  }
-  function readRawStorage() {
-    try {
-      if (typeof GM_getValue === "function") {
-        return GM_getValue(STORAGE_KEY, "[]") ?? "[]";
-      }
-      if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
-        return window.localStorage.getItem(STORAGE_KEY) ?? "[]";
-      }
-    } catch {
-    }
-    return "[]";
-  }
-  function writeRawStorage(payload) {
-    try {
-      if (typeof GM_setValue === "function") {
-        GM_setValue(STORAGE_KEY, payload);
-        return;
-      }
-      if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
-        window.localStorage.setItem(STORAGE_KEY, payload);
-      }
-    } catch {
-    }
-  }
-  function readBackups() {
-    const raw = readRawStorage();
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed;
-      }
-    } catch {
-    }
-    return [];
-  }
-  function persistBackups(backups) {
-    writeRawStorage(JSON.stringify(backups));
-  }
-  function listBackups() {
-    const entries2 = readBackups();
-    return [...entries2].sort((a, b) => b.timestamp - a.timestamp);
-  }
-  function saveBackup(name) {
-    const normalizedName = name.trim() || `Backup ${(/* @__PURE__ */ new Date()).toLocaleString()}`;
-    const current = ensureVersion(getAriesStorage());
-    const entry = {
-      id: generateId(),
-      name: normalizedName,
-      timestamp: Date.now(),
-      data: current
-    };
-    const next = [entry, ...readBackups()].slice(0, MAX_BACKUPS);
-    persistBackups(next);
-    return { success: true, message: "Backup saved.", backup: entry };
-  }
-  function loadBackup(id) {
-    const entry = readBackups().find((backup) => backup.id === id);
-    if (!entry) {
-      return { success: false, message: "Backup not found." };
-    }
-    try {
-      saveAriesStorage(entry.data);
-      return { success: true, message: "Backup loaded. Reload the game to apply the changes." };
-    } catch (error) {
-      return {
-        success: false,
-        message: `Failed to load backup (${error instanceof Error ? error.message : "unknown error"}).`
-      };
-    }
-  }
-  function deleteBackup(id) {
-    const next = readBackups().filter((backup) => backup.id !== id);
-    if (next.length === readBackups().length) {
-      return { success: false, message: "Backup not found." };
-    }
-    persistBackups(next);
-    return { success: true, message: "Backup deleted." };
-  }
-  function exportAllSettings() {
-    const current = ensureVersion(getAriesStorage());
-    return JSON.stringify(current, null, 2);
-  }
-  function tryDecodePercentEncodedJson(text2) {
-    if (!/^%(?:7B|5B)/i.test(text2)) return null;
-    try {
-      return decodeURIComponent(text2);
-    } catch {
-      return null;
-    }
-  }
-  function importSettings(payload) {
-    const trimmed = payload.trim();
-    if (!trimmed) {
-      return { success: false, message: "Payload is empty." };
-    }
-    let parsed;
-    try {
-      parsed = JSON.parse(trimmed);
-    } catch (error) {
-      let rescued;
-      const decoded = tryDecodePercentEncodedJson(trimmed);
-      if (decoded != null) {
-        try {
-          rescued = JSON.parse(decoded.trim());
-        } catch {
-        }
-      }
-      if (rescued === void 0) {
-        return {
-          success: false,
-          message: `Invalid JSON (${error instanceof Error ? error.message : "unknown error"}).`
-        };
-      }
-      parsed = rescued;
-    }
-    if (!parsed || typeof parsed !== "object") {
-      return { success: false, message: "JSON payload must be an object." };
-    }
-    try {
-      const normalized = ensureVersion(parsed);
-      saveAriesStorage(normalized);
-      return { success: true, message: "Settings applied. Reload the game to apply the changes." };
-    } catch (error) {
-      return {
-        success: false,
-        message: `Failed to import settings (${error instanceof Error ? error.message : "unknown error"}).`
-      };
-    }
-  }
-  var STORAGE_KEY, MAX_BACKUPS, DEFAULT_VERSION;
-  var init_backup = __esm({
-    "src/features/settings/backup.ts"() {
-      "use strict";
-      init_storage();
-      STORAGE_KEY = "aries_backups";
-      MAX_BACKUPS = 25;
-      DEFAULT_VERSION = 1;
-    }
-  });
-
   // src/lib/download.ts
   function copyTextToClipboard(text2) {
     if (navigator.clipboard?.writeText) {
@@ -48594,468 +48440,525 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/settings/menu.ts
-  function createActionButton(label2) {
-    const button3 = document.createElement("button");
-    button3.type = "button";
-    button3.textContent = label2;
-    button3.style.borderRadius = "6px";
-    button3.style.border = "1px solid rgba(255,255,255,0.2)";
-    button3.style.background = "rgba(255,255,255,0.04)";
-    button3.style.color = "inherit";
-    button3.style.fontWeight = "600";
-    button3.style.fontSize = "13px";
-    button3.style.padding = "6px 12px";
-    button3.style.cursor = "pointer";
-    button3.addEventListener("mouseenter", () => button3.style.background = "rgba(255,255,255,0.08)");
-    button3.addEventListener("mouseleave", () => button3.style.background = "rgba(255,255,255,0.04)");
-    return button3;
+  // src/features/settings/backup.ts
+  function generateId() {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   }
-  function createStatusLine() {
-    const line = document.createElement("div");
-    line.style.fontSize = "13px";
-    line.style.minHeight = "18px";
-    line.style.opacity = "0.9";
-    return line;
+  function ensureVersion(snapshot2) {
+    const next = { ...snapshot2 };
+    if (!Number.isFinite(next.version)) {
+      next.version = DEFAULT_VERSION;
+    }
+    return next;
   }
-  function showStatus(line, result) {
-    line.textContent = result.message;
-    line.style.color = result.success ? "#8bf1b5" : "#ff9c9c";
+  function readRawStorage() {
+    try {
+      if (typeof GM_getValue === "function") {
+        return GM_getValue(STORAGE_KEY, "[]") ?? "[]";
+      }
+      if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
+        return window.localStorage.getItem(STORAGE_KEY) ?? "[]";
+      }
+    } catch {
+    }
+    return "[]";
   }
-  function formatBackupDate(value) {
-    return new Date(value).toLocaleDateString();
+  function writeRawStorage(payload) {
+    try {
+      if (typeof GM_setValue === "function") {
+        GM_setValue(STORAGE_KEY, payload);
+        return;
+      }
+      if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
+        window.localStorage.setItem(STORAGE_KEY, payload);
+      }
+    } catch {
+    }
+  }
+  function readBackups() {
+    const raw = readRawStorage();
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+    }
+    return [];
+  }
+  function persistBackups(backups) {
+    writeRawStorage(JSON.stringify(backups));
+  }
+  function listBackups() {
+    const entries2 = readBackups();
+    return [...entries2].sort((a, b) => b.timestamp - a.timestamp);
+  }
+  function saveBackup(name) {
+    const normalizedName = name.trim() || `Backup ${(/* @__PURE__ */ new Date()).toLocaleString()}`;
+    const current = ensureVersion(getAriesStorage());
+    const entry = {
+      id: generateId(),
+      name: normalizedName,
+      timestamp: Date.now(),
+      data: current
+    };
+    const next = [entry, ...readBackups()].slice(0, MAX_BACKUPS);
+    persistBackups(next);
+    return { success: true, message: "Backup saved.", backup: entry };
+  }
+  function loadBackup(id) {
+    const entry = readBackups().find((backup) => backup.id === id);
+    if (!entry) {
+      return { success: false, message: "Backup not found." };
+    }
+    try {
+      saveAriesStorage(entry.data);
+      return { success: true, message: "Backup loaded. Reload the game to apply the changes." };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to load backup (${error instanceof Error ? error.message : "unknown error"}).`
+      };
+    }
+  }
+  function deleteBackup(id) {
+    const backups = readBackups();
+    const next = backups.filter((backup) => backup.id !== id);
+    if (next.length === backups.length) {
+      return { success: false, message: "Backup not found." };
+    }
+    persistBackups(next);
+    return { success: true, message: "Backup deleted." };
+  }
+  function exportAllSettings() {
+    const current = ensureVersion(getAriesStorage());
+    return JSON.stringify(current, null, 2);
+  }
+  function tryDecodePercentEncodedJson(text2) {
+    if (!/^%(?:7B|5B)/i.test(text2)) return null;
+    try {
+      return decodeURIComponent(text2);
+    } catch {
+      return null;
+    }
+  }
+  function importSettings(payload) {
+    const trimmed = payload.trim();
+    if (!trimmed) {
+      return { success: false, message: "Payload is empty." };
+    }
+    let parsed;
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch (error) {
+      let rescued;
+      const decoded = tryDecodePercentEncodedJson(trimmed);
+      if (decoded != null) {
+        try {
+          rescued = JSON.parse(decoded.trim());
+        } catch {
+        }
+      }
+      if (rescued === void 0) {
+        return {
+          success: false,
+          message: `Invalid JSON (${error instanceof Error ? error.message : "unknown error"}).`
+        };
+      }
+      parsed = rescued;
+    }
+    if (!parsed || typeof parsed !== "object") {
+      return { success: false, message: "JSON payload must be an object." };
+    }
+    try {
+      const normalized = ensureVersion(parsed);
+      saveAriesStorage(normalized);
+      return { success: true, message: "Settings applied. Reload the game to apply the changes." };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to import settings (${error instanceof Error ? error.message : "unknown error"}).`
+      };
+    }
+  }
+  var STORAGE_KEY, MAX_BACKUPS, DEFAULT_VERSION;
+  var init_backup = __esm({
+    "src/features/settings/backup.ts"() {
+      "use strict";
+      init_storage();
+      STORAGE_KEY = "aries_backups";
+      MAX_BACKUPS = 25;
+      DEFAULT_VERSION = 1;
+    }
+  });
+
+  // src/features/settings/styles.ts
+  function ensureSettingsStyles() {
+    if (injected3) return;
+    injected3 = true;
+    addStyle(SETTINGS_CSS);
+  }
+  var SETTINGS_CSS, injected3;
+  var init_styles3 = __esm({
+    "src/features/settings/styles.ts"() {
+      "use strict";
+      init_dom();
+      SETTINGS_CSS = `
+.qws-set-tab { display: flex; flex-direction: column; gap: 12px; }
+.qws-set-card-body { display: flex; flex-direction: column; gap: 10px; }
+.qws-set-status { min-height: 18px; font-size: 13px; opacity: .9; }
+.qws-set-status.is-ok { color: var(--qmm-accent); }
+.qws-set-status.is-error { color: var(--qmm-danger); }
+
+.qws-set-drop {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; min-height: 110px; padding: 18px 22px; box-sizing: border-box; text-align: center; cursor: pointer;
+  border-radius: 14px; border: 1px dashed var(--qmm-border-hover); background: var(--qmm-field-bg);
+  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.qws-set-drop.is-active, .qws-set-drop:focus-visible {
+  outline: none; border-color: var(--qmm-accent-border-hover); background: var(--qmm-accent-soft);
+  box-shadow: 0 0 0 3px var(--qmm-accent-soft);
+}
+.qws-set-drop__title { font-size: 14px; font-weight: 600; letter-spacing: .02em; }
+.qws-set-drop__hint { font-size: 12px; opacity: .75; }
+
+.qws-set-row { display: flex; align-items: center; gap: 8px; }
+.qws-set-row > .qmm-input { flex: 1; }
+.qws-set-list { display: flex; flex-direction: column; gap: 10px; }
+.qws-set-empty { opacity: .6; }
+.qws-set-backup {
+  display: flex; flex-direction: column; gap: 6px; padding: 10px;
+  border-radius: 8px; border: 1px solid var(--qmm-border); background: var(--qmm-card-bg);
+}
+.qws-set-backup__head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.qws-set-backup__name { font-size: 13px; font-weight: 600; }
+.qws-set-backup__date { font-size: 11px; opacity: .65; }
+.qws-set-backup__actions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.qws-set-hero { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 0 14px; text-align: center; }
+.qws-set-hero__title { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; color: var(--qmm-text); }
+.qws-set-hero__sub { margin-top: 2px; font-size: 11px; color: var(--qmm-text-dim); }
+.qws-set-sep { height: 1px; margin: 0 0 12px; background: var(--qmm-border); }
+.qws-set-grid {
+  display: flex; flex-direction: column; margin-bottom: 14px; overflow: hidden;
+  border-radius: 10px; border: 1px solid var(--qmm-border);
+}
+.qws-set-grid__row { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; font-size: 12px; }
+.qws-set-grid__row:nth-child(odd) { background: var(--qmm-card-bg); }
+.qws-set-grid__label { color: var(--qmm-text-dim); }
+.qws-set-grid__value { font-weight: 600; color: var(--qmm-text); }
+.qws-set-support {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 12px;
+  border-radius: 10px; border: 1px solid var(--qmm-border); background: var(--qmm-card-bg);
+}
+.qws-set-support__text { font-size: 12px; line-height: 1.5; text-align: center; color: var(--qmm-text-soft); }
+.qws-set-kofi { display: inline-block; border: 0; transition: opacity .15s ease, transform .15s ease; }
+.qws-set-kofi:hover { opacity: .82; transform: translateY(-2px); }
+.qws-set-kofi img { display: block; height: 36px; border: 0; }
+`;
+      injected3 = false;
+    }
+  });
+
+  // src/features/settings/dataTab.ts
+  function statusLine() {
+    const el = h("div", "qws-set-status");
+    return {
+      el,
+      show(result) {
+        el.textContent = result.message;
+        el.classList.toggle("is-ok", result.success);
+        el.classList.toggle("is-error", !result.success);
+      }
+    };
   }
   function exportBackupData(entry) {
-    const json = JSON.stringify(entry.data, null, 2);
-    const filename = `${entry.name || "aries-backup"}-${entry.id}.json`;
-    downloadJSONFile(filename, json);
+    downloadJSONFile(`${entry.name || "aries-backup"}-${entry.id}.json`, JSON.stringify(entry.data, null, 2));
   }
-  function createBackupRow(entry, statusLine, listHolder) {
-    const container = document.createElement("div");
-    container.style.display = "flex";
-    container.style.flexDirection = "column";
-    container.style.gap = "6px";
-    container.style.padding = "10px";
-    container.style.borderRadius = "8px";
-    container.style.border = "1px solid rgba(255,255,255,0.08)";
-    container.style.background = "rgba(255,255,255,0.01)";
-    const header = document.createElement("div");
-    header.style.display = "flex";
-    header.style.justifyContent = "space-between";
-    header.style.alignItems = "baseline";
-    header.style.flexWrap = "wrap";
-    header.style.gap = "8px";
-    const title = document.createElement("div");
-    title.textContent = entry.name;
-    title.style.fontWeight = "600";
-    title.style.fontSize = "13px";
-    const date = document.createElement("div");
-    date.innerHTML = `<strong>Created:</strong> ${formatBackupDate(entry.timestamp)}`;
-    date.style.fontSize = "11px";
-    date.style.opacity = "0.65";
-    header.append(title, date);
-    const actions = document.createElement("div");
-    actions.style.display = "flex";
-    actions.style.gap = "6px";
-    actions.style.flexWrap = "wrap";
-    const loadButton = createActionButton("Load");
-    loadButton.addEventListener("click", () => {
-      const result = loadBackup(entry.id);
-      showStatus(statusLine, result);
-    });
-    const deleteButton = createActionButton("Delete");
-    deleteButton.addEventListener("click", () => {
-      const result = deleteBackup(entry.id);
-      showStatus(statusLine, result);
-      refreshBackupList(statusLine, listHolder);
-    });
-    const exportButton = createActionButton("Export");
-    exportButton.addEventListener("click", () => {
-      exportBackupData(entry);
-      showStatus(statusLine, { success: true, message: "Backup exported." });
-    });
-    actions.append(loadButton, deleteButton);
-    actions.append(exportButton);
-    container.append(header, actions);
-    return container;
-  }
-  function refreshBackupList(statusLine, listHolder) {
-    const backups = listBackups();
-    listHolder.innerHTML = "";
-    if (!backups.length) {
-      const empty = document.createElement("div");
-      empty.textContent = "No backups saved yet.";
-      empty.style.opacity = "0.6";
-      listHolder.appendChild(empty);
-      return;
-    }
-    backups.forEach((entry) => {
-      const row = createBackupRow(entry, statusLine, listHolder);
-      listHolder.appendChild(row);
-    });
-  }
-  function renderDataTab(view, ui) {
-    view.innerHTML = "";
-    const layout = document.createElement("div");
-    layout.style.display = "flex";
-    layout.style.flexDirection = "column";
-    layout.style.gap = "12px";
-    const ioCard = ui.card("Import / Export", {
-      description: "Import or export the mod settings directly through JSON files."
-    });
-    const card5 = ui.card("Backup", {
-      description: "Save our settings directly inside the mod storage for easy restores."
-    });
-    ioCard.body.style.display = "flex";
-    ioCard.body.style.flexDirection = "column";
-    ioCard.body.style.gap = "10px";
-    card5.body.style.display = "flex";
-    card5.body.style.flexDirection = "column";
-    card5.body.style.gap = "10px";
-    const ioStatus = createStatusLine();
-    const exportButton = createActionButton("Export Settings");
-    exportButton.style.width = "100%";
-    exportButton.style.boxSizing = "border-box";
-    exportButton.addEventListener("click", () => {
-      const payload = exportAllSettings();
-      const filename = `aries-settings-${Date.now()}.json`;
-      downloadJSONFile(filename, payload);
-      showStatus(ioStatus, { success: true, message: "Settings exported as JSON file." });
-    });
-    const importWrapper = document.createElement("div");
-    importWrapper.style.display = "flex";
-    importWrapper.style.flexDirection = "column";
-    importWrapper.style.gap = "8px";
-    const fileInput = document.createElement("input");
+  function importDropZone(onResult) {
+    const fileInput = h("input");
     fileInput.type = "file";
     fileInput.accept = ".json,application/json,text/plain";
     fileInput.style.display = "none";
-    const fileCard = document.createElement("div");
-    Object.assign(fileCard.style, {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "6px",
-      padding: "18px 22px",
-      width: "100%",
-      minHeight: "110px",
-      borderRadius: "14px",
-      border: "1px dashed #5d6a7d",
-      background: "linear-gradient(180deg, #0b141c, #091018)",
-      transition: "border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease",
-      cursor: "pointer",
-      textAlign: "center"
-    });
-    fileCard.tabIndex = 0;
-    fileCard.setAttribute("role", "button");
-    fileCard.setAttribute("aria-label", "Import settings JSON");
-    const fileCardTitle = document.createElement("div");
-    fileCardTitle.textContent = "Import settings";
-    Object.assign(fileCardTitle.style, {
-      fontWeight: "600",
-      fontSize: "14px",
-      letterSpacing: "0.02em"
-    });
-    const fileStatus = document.createElement("div");
-    const defaultStatusText = "Drop a JSON file or click to browse.";
-    fileStatus.textContent = defaultStatusText;
-    Object.assign(fileStatus.style, {
-      fontSize: "12px",
-      opacity: "0.75"
-    });
-    fileCard.append(fileCardTitle, fileStatus);
-    const setFileCardActive = (active2) => {
-      if (active2) {
-        fileCard.style.borderColor = "#6fc3ff";
-        fileCard.style.boxShadow = "0 0 0 3px #6fc3ff22";
-        fileCard.style.background = "linear-gradient(180deg, #102030, #0b1826)";
-      } else {
-        fileCard.style.borderColor = "#5d6a7d";
-        fileCard.style.boxShadow = "none";
-        fileCard.style.background = "linear-gradient(180deg, #0b141c, #091018)";
-      }
+    const hint = h("div", "qws-set-drop__hint", DROP_HINT);
+    const zone = h("div", "qws-set-drop");
+    zone.tabIndex = 0;
+    zone.setAttribute("role", "button");
+    zone.setAttribute("aria-label", "Import settings JSON");
+    zone.append(h("div", "qws-set-drop__title", "Import settings"), hint);
+    const setActive = (active2) => zone.classList.toggle("is-active", active2);
+    const settle = () => setActive(document.activeElement === zone);
+    const showSelection = (files) => {
+      if (!files || !files.length) hint.textContent = DROP_HINT;
+      else hint.textContent = files.length === 1 ? files[0].name : `${files.length} files selected`;
     };
-    const triggerFileSelect = () => fileInput.click();
-    fileCard.addEventListener("mouseenter", () => setFileCardActive(true));
-    fileCard.addEventListener("mouseleave", () => setFileCardActive(document.activeElement === fileCard));
-    fileCard.addEventListener("focus", () => setFileCardActive(true));
-    fileCard.addEventListener("blur", () => setFileCardActive(false));
-    fileCard.addEventListener("click", triggerFileSelect);
-    fileCard.addEventListener("keydown", (ev) => {
+    const importFiles = async (files) => {
+      showSelection(files);
+      if (files?.length) {
+        try {
+          onResult(importSettings(await files[0].text()));
+        } catch (error) {
+          onResult({ success: false, message: `Failed to read file (${errorText(error)}).` });
+        } finally {
+          fileInput.value = "";
+        }
+      }
+      showSelection(null);
+      settle();
+    };
+    zone.addEventListener("mouseenter", () => setActive(true));
+    zone.addEventListener("mouseleave", settle);
+    zone.addEventListener("click", () => fileInput.click());
+    zone.addEventListener("keydown", (ev) => {
       if (ev.key === "Enter" || ev.key === " ") {
         ev.preventDefault();
-        triggerFileSelect();
+        fileInput.click();
       }
     });
-    fileCard.addEventListener("dragover", (ev) => {
+    zone.addEventListener("dragover", (ev) => {
       ev.preventDefault();
-      setFileCardActive(true);
+      setActive(true);
       if (ev.dataTransfer) ev.dataTransfer.dropEffect = "copy";
     });
-    fileCard.addEventListener("dragleave", () => setFileCardActive(document.activeElement === fileCard));
-    const displaySelection = (files) => {
-      if (!files || !files.length) {
-        fileStatus.textContent = defaultStatusText;
-        return;
-      }
-      fileStatus.textContent = files.length === 1 ? files[0].name : `${files.length} files selected`;
-    };
-    const handleFiles = async (files) => {
-      if (!files || !files.length) return;
-      const file = files[0];
-      try {
-        const text2 = await file.text();
-        const result = importSettings(text2);
-        showStatus(ioStatus, result);
-      } catch (error) {
-        showStatus(ioStatus, {
-          success: false,
-          message: `Failed to read file (${error instanceof Error ? error.message : "unknown error"}).`
-        });
-      } finally {
-        fileInput.value = "";
-      }
-    };
-    fileCard.addEventListener("drop", async (ev) => {
+    zone.addEventListener("dragleave", settle);
+    zone.addEventListener("drop", (ev) => {
       ev.preventDefault();
-      const files = ev.dataTransfer?.files || null;
-      displaySelection(files);
-      await handleFiles(files);
-      displaySelection(null);
-      setFileCardActive(document.activeElement === fileCard);
+      void importFiles(ev.dataTransfer?.files ?? null);
     });
-    fileInput.onchange = async () => {
-      const files = fileInput.files;
-      displaySelection(files);
-      await handleFiles(files);
-      displaySelection(null);
-      setFileCardActive(document.activeElement === fileCard);
-    };
-    importWrapper.append(fileInput, fileCard);
-    ioCard.body.append(importWrapper, ioStatus, exportButton);
-    layout.appendChild(ioCard.root);
-    const controlRow = document.createElement("div");
-    controlRow.style.display = "flex";
-    controlRow.style.gap = "8px";
-    controlRow.style.alignItems = "center";
-    const nameInput = document.createElement("input");
-    nameInput.type = "text";
-    nameInput.placeholder = "Backup name";
-    nameInput.style.flex = "1";
-    nameInput.style.borderRadius = "6px";
-    nameInput.style.border = "1px solid rgba(255,255,255,0.08)";
-    nameInput.style.background = "rgba(255,255,255,0.02)";
-    nameInput.style.color = "inherit";
-    nameInput.style.padding = "8px 10px";
-    nameInput.style.fontSize = "13px";
-    const saveButton = createActionButton("Save");
-    const controlStatus = createStatusLine();
-    const backupListHolder = document.createElement("div");
-    backupListHolder.style.display = "flex";
-    backupListHolder.style.flexDirection = "column";
-    backupListHolder.style.gap = "10px";
-    saveButton.addEventListener("click", () => {
-      const result = saveBackup(nameInput.value);
-      showStatus(controlStatus, result);
-      if (result.success) {
-        nameInput.value = "";
-        refreshBackupList(controlStatus, backupListHolder);
+    fileInput.onchange = () => void importFiles(fileInput.files);
+    const wrap = h("div");
+    wrap.append(fileInput, zone);
+    return wrap;
+  }
+  function importExportCard() {
+    const section2 = card("Import / Export", {
+      description: "Import or export the mod settings directly through JSON files."
+    });
+    section2.body.classList.add("qws-set-card-body");
+    const status2 = statusLine();
+    const exportButton = button("Export Settings", {
+      fullWidth: true,
+      onClick: () => {
+        downloadJSONFile(`aries-settings-${Date.now()}.json`, exportAllSettings());
+        status2.show({ success: true, message: "Settings exported as JSON file." });
       }
     });
-    controlRow.append(nameInput, saveButton);
-    card5.body.append(controlRow, controlStatus, backupListHolder);
-    layout.appendChild(card5.root);
-    view.appendChild(layout);
-    refreshBackupList(controlStatus, backupListHolder);
+    section2.body.append(importDropZone(status2.show), status2.el, exportButton);
+    return section2.root;
   }
+  function backupCard() {
+    const section2 = card("Backup", {
+      description: "Save our settings directly inside the mod storage for easy restores."
+    });
+    section2.body.classList.add("qws-set-card-body");
+    const status2 = statusLine();
+    const list = h("div", "qws-set-list");
+    const backupRow = (entry) => {
+      const date = h("div", "qws-set-backup__date");
+      date.append(h("strong", void 0, "Created:"), ` ${new Date(entry.timestamp).toLocaleDateString()}`);
+      const head = h("div", "qws-set-backup__head");
+      head.append(h("div", "qws-set-backup__name", entry.name), date);
+      const actions = h("div", "qws-set-backup__actions");
+      actions.append(
+        button("Load", { size: "sm", onClick: () => status2.show(loadBackup(entry.id)) }),
+        button("Delete", {
+          size: "sm",
+          onClick: () => {
+            status2.show(deleteBackup(entry.id));
+            refresh();
+          }
+        }),
+        button("Export", {
+          size: "sm",
+          onClick: () => {
+            exportBackupData(entry);
+            status2.show({ success: true, message: "Backup exported." });
+          }
+        })
+      );
+      const row = h("div", "qws-set-backup");
+      row.append(head, actions);
+      return row;
+    };
+    function refresh() {
+      const backups = listBackups();
+      if (!backups.length) list.replaceChildren(h("div", "qws-set-empty", "No backups saved yet."));
+      else list.replaceChildren(...backups.map(backupRow));
+    }
+    const nameInput = textInput("Backup name");
+    const saveButton = button("Save", {
+      onClick: () => {
+        const result = saveBackup(nameInput.value);
+        status2.show(result);
+        if (result.success) {
+          nameInput.value = "";
+          refresh();
+        }
+      }
+    });
+    const controls = h("div", "qws-set-row");
+    controls.append(nameInput, saveButton);
+    section2.body.append(controls, status2.el, list);
+    refresh();
+    return section2.root;
+  }
+  function renderDataTab(view) {
+    ensureSettingsStyles();
+    const layout = h("div", "qws-set-tab");
+    layout.append(importExportCard(), backupCard());
+    view.replaceChildren(layout);
+  }
+  var DROP_HINT, errorText;
+  var init_dataTab = __esm({
+    "src/features/settings/dataTab.ts"() {
+      "use strict";
+      init_download();
+      init_button();
+      init_card();
+      init_dom2();
+      init_fields();
+      init_backup();
+      init_styles3();
+      DROP_HINT = "Drop a JSON file or click to browse.";
+      errorText = (error) => error instanceof Error ? error.message : "unknown error";
+    }
+  });
+
+  // src/features/tools/openLink.ts
+  function openLink(url) {
+    if (typeof GM_openInTab === "function") {
+      GM_openInTab(url, { active: true, insert: true });
+      return true;
+    }
+    if (typeof window === "undefined") return false;
+    try {
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  var init_openLink = __esm({
+    "src/features/tools/openLink.ts"() {
+      "use strict";
+    }
+  });
+
+  // src/features/settings/infosTab.ts
   function describeSurface(env) {
     if (!env) return "n/a";
     return env.surface === "discord" ? "Discord" : "Web";
   }
   function describePlatform(env, nav) {
     if (!env) return "n/a";
-    if (env.platform === "desktop") {
-      return "Desktop";
-    }
+    if (env.platform === "desktop") return "Desktop";
     if (env.platform === "mobile") {
       const ua = nav?.userAgent ?? "";
-      if (/tablet|ipad|playbook|silk|kindle/i.test(ua)) {
-        return "Mobile (Tablet)";
-      }
-      if (/mobile|iphone|ipod|android/i.test(ua)) {
-        return "Mobile (Phone)";
-      }
+      if (/tablet|ipad|playbook|silk|kindle/i.test(ua)) return "Mobile (Tablet)";
+      if (/mobile|iphone|ipod|android/i.test(ua)) return "Mobile (Phone)";
       return "Mobile";
     }
     return env.platform;
   }
   function detectOsLabel(nav) {
-    const platform = nav?.platform ?? "";
-    const userAgent = nav?.userAgent ?? "";
-    const target = `${platform} ${userAgent}`.toLowerCase();
-    if (!target.trim()) {
-      return "n/a";
-    }
+    const target = `${nav?.platform ?? ""} ${nav?.userAgent ?? ""}`.toLowerCase();
+    if (!target.trim()) return "n/a";
     if (/windows/.test(target)) return "Windows";
     if (/mac os|macintosh|darwin/.test(target)) return "macOS";
-    if (/android/.test(target) && !/windows/.test(target)) return "Android";
+    if (/android/.test(target)) return "Android";
     if (/iphone|ipad|ipod/.test(target)) return "iOS";
-    if (/linux/.test(target) && !/android/.test(target)) return "Linux";
+    if (/linux/.test(target)) return "Linux";
     if (/cros/.test(target)) return "Chrome OS";
     if (/freebsd/.test(target)) return "FreeBSD";
     if (/sunos|solaris/.test(target)) return "Solaris";
     return nav?.platform || nav?.userAgent || "Unknown";
   }
-  function renderInfosTab(view, _ui) {
-    view.innerHTML = "";
-    const safeWindow = typeof window !== "undefined" ? window : null;
-    const safeNavigator = typeof navigator !== "undefined" ? navigator : null;
-    const safeLocation = typeof location !== "undefined" ? location : null;
-    const environment = safeWindow ? detectEnvironment() : null;
-    const resolvedGameVersion = gameVersion ?? "unknown";
-    const resolvedModVersion = getLocalVersion() ?? "unknown";
-    const header = document.createElement("div");
-    header.style.display = "flex";
-    header.style.flexDirection = "column";
-    header.style.alignItems = "center";
-    header.style.gap = "6px";
-    header.style.padding = "18px 0 14px";
-    header.style.textAlign = "center";
-    const headerTitle = document.createElement("div");
-    headerTitle.textContent = "Arie's Mod";
-    headerTitle.style.fontSize = "18px";
-    headerTitle.style.fontWeight = "700";
-    headerTitle.style.color = "#e7eef7";
-    headerTitle.style.letterSpacing = "-0.3px";
-    const versionBadge = document.createElement("div");
-    versionBadge.textContent = `v${resolvedModVersion}`;
-    versionBadge.style.display = "inline-block";
-    versionBadge.style.padding = "2px 10px";
-    versionBadge.style.borderRadius = "999px";
-    versionBadge.style.background = "rgba(94,234,212,0.12)";
-    versionBadge.style.border = "1px solid rgba(94,234,212,0.25)";
-    versionBadge.style.color = "#5eead4";
-    versionBadge.style.fontSize = "11px";
-    versionBadge.style.fontWeight = "600";
-    versionBadge.style.letterSpacing = "0.3px";
-    const headerSub = document.createElement("div");
-    headerSub.textContent = "Browser userscript for MagicGarden";
-    headerSub.style.fontSize = "11px";
-    headerSub.style.color = "rgba(231,238,247,0.45)";
-    headerSub.style.marginTop = "2px";
-    header.append(headerTitle, versionBadge, headerSub);
-    view.appendChild(header);
-    const sep = document.createElement("div");
-    sep.style.height = "1px";
-    sep.style.background = "rgba(255,255,255,0.07)";
-    sep.style.margin = "0 0 12px";
-    view.appendChild(sep);
-    const runtimeRows = [
-      ["Game version", resolvedGameVersion],
-      ["Host", environment?.host ?? safeLocation?.hostname ?? "n/a"],
-      ["Surface", describeSurface(environment)],
-      ["Platform", describePlatform(environment, safeNavigator)],
-      ["OS", detectOsLabel(safeNavigator)]
-    ];
-    const grid = document.createElement("div");
-    grid.style.display = "flex";
-    grid.style.flexDirection = "column";
-    grid.style.borderRadius = "10px";
-    grid.style.border = "1px solid rgba(255,255,255,0.07)";
-    grid.style.overflow = "hidden";
-    grid.style.marginBottom = "14px";
-    runtimeRows.forEach(([label2, value], i) => {
-      const row = document.createElement("div");
-      row.style.display = "flex";
-      row.style.justifyContent = "space-between";
-      row.style.alignItems = "center";
-      row.style.padding = "8px 12px";
-      row.style.background = i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent";
-      const labelEl = document.createElement("span");
-      labelEl.textContent = label2;
-      labelEl.style.fontSize = "12px";
-      labelEl.style.color = "rgba(231,238,247,0.5)";
-      const valueEl = document.createElement("span");
-      valueEl.textContent = value;
-      valueEl.style.fontSize = "12px";
-      valueEl.style.fontWeight = "600";
-      valueEl.style.color = "#e7eef7";
-      row.append(labelEl, valueEl);
-      grid.appendChild(row);
-    });
-    view.appendChild(grid);
-    const supportBlock = document.createElement("div");
-    supportBlock.style.display = "flex";
-    supportBlock.style.flexDirection = "column";
-    supportBlock.style.alignItems = "center";
-    supportBlock.style.gap = "10px";
-    supportBlock.style.padding = "16px 12px";
-    supportBlock.style.borderRadius = "10px";
-    supportBlock.style.border = "1px solid rgba(255,255,255,0.07)";
-    supportBlock.style.background = "rgba(255,255,255,0.02)";
-    const supportText = document.createElement("div");
-    supportText.style.fontSize = "12px";
-    supportText.style.lineHeight = "1.5";
-    supportText.style.color = "rgba(231,238,247,0.55)";
-    supportText.style.textAlign = "center";
-    supportText.textContent = "Some features rely on paid server hosting. If you enjoy the mod, a coffee is always appreciated!";
-    const kofiUrl = "https://ko-fi.com/E1E11TWTM1";
-    const isDiscord = environment?.surface === "discord";
-    const kofiButton = document.createElement("a");
-    kofiButton.href = kofiUrl;
-    kofiButton.target = "_blank";
-    kofiButton.rel = "noopener noreferrer";
-    kofiButton.title = "Buy Me a Coffee at ko-fi.com";
-    kofiButton.style.transition = "opacity 0.15s ease, transform 0.15s ease";
+  function kofiLink(isDiscord) {
     if (isDiscord) {
-      kofiButton.textContent = "\u2615 Support on Ko-fi";
-      kofiButton.style.display = "inline-flex";
-      kofiButton.style.alignItems = "center";
-      kofiButton.style.padding = "8px 20px";
-      kofiButton.style.borderRadius = "8px";
-      kofiButton.style.background = "rgba(94,234,212,0.1)";
-      kofiButton.style.border = "1px solid rgba(94,234,212,0.28)";
-      kofiButton.style.color = "#5eead4";
-      kofiButton.style.fontSize = "13px";
-      kofiButton.style.fontWeight = "600";
-      kofiButton.style.textDecoration = "none";
-      kofiButton.style.cursor = "pointer";
-    } else {
-      kofiButton.style.display = "inline-block";
-      kofiButton.style.border = "0";
-      const kofiImg = document.createElement("img");
-      kofiImg.src = "https://storage.ko-fi.com/cdn/kofi5.png?v=6";
-      kofiImg.alt = "Buy Me a Coffee at ko-fi.com";
-      kofiImg.height = 36;
-      kofiImg.style.height = "36px";
-      kofiImg.style.border = "0";
-      kofiImg.style.display = "block";
-      kofiButton.appendChild(kofiImg);
+      return button("\u2615 Support on Ko-fi", {
+        variant: "primary",
+        title: KOFI_TITLE,
+        onClick: () => void openLink(KOFI_URL)
+      });
     }
-    kofiButton.addEventListener("click", (event) => {
-      if (isDiscord && typeof GM_openInTab === "function") {
-        event.preventDefault();
-        GM_openInTab(kofiUrl, { active: true });
-      }
-    });
-    kofiButton.addEventListener("mouseenter", () => {
-      kofiButton.style.opacity = "0.82";
-      kofiButton.style.transform = "translateY(-2px)";
-    });
-    kofiButton.addEventListener("mouseleave", () => {
-      kofiButton.style.opacity = "1";
-      kofiButton.style.transform = "translateY(0)";
-    });
-    supportBlock.append(supportText, kofiButton);
-    view.appendChild(supportBlock);
+    const link = h("a", "qws-set-kofi");
+    link.href = KOFI_URL;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.title = KOFI_TITLE;
+    const img = h("img");
+    img.src = "https://storage.ko-fi.com/cdn/kofi5.png?v=6";
+    img.alt = KOFI_TITLE;
+    img.height = 36;
+    link.appendChild(img);
+    return link;
   }
+  function renderInfosTab(view) {
+    ensureSettingsStyles();
+    const nav = typeof navigator !== "undefined" ? navigator : null;
+    const environment = typeof window !== "undefined" ? detectEnvironment() : null;
+    const hero = h("div", "qws-set-hero");
+    hero.append(
+      h("div", "qws-set-hero__title", "Arie's Mod"),
+      pill(`v${getLocalVersion() ?? "unknown"}`, "ok"),
+      h("div", "qws-set-hero__sub", "Browser userscript for MagicGarden")
+    );
+    const runtimeRows = [
+      ["Game version", gameVersion ?? "unknown"],
+      ["Host", environment?.host ?? (typeof location !== "undefined" ? location.hostname : "n/a")],
+      ["Surface", describeSurface(environment)],
+      ["Platform", describePlatform(environment, nav)],
+      ["OS", detectOsLabel(nav)]
+    ];
+    const grid = h("div", "qws-set-grid");
+    for (const [label2, value] of runtimeRows) {
+      const row = h("div", "qws-set-grid__row");
+      row.append(h("span", "qws-set-grid__label", label2), h("span", "qws-set-grid__value", value));
+      grid.appendChild(row);
+    }
+    const support = h("div", "qws-set-support");
+    support.append(
+      h(
+        "div",
+        "qws-set-support__text",
+        "Some features rely on paid server hosting. If you enjoy the mod, a coffee is always appreciated!"
+      ),
+      kofiLink(environment?.surface === "discord")
+    );
+    view.replaceChildren(hero, h("div", "qws-set-sep"), grid, support);
+  }
+  var KOFI_URL, KOFI_TITLE;
+  var init_infosTab = __esm({
+    "src/features/settings/infosTab.ts"() {
+      "use strict";
+      init_gameVersion();
+      init_environment();
+      init_modVersion();
+      init_badges();
+      init_button();
+      init_dom2();
+      init_openLink();
+      init_styles3();
+      KOFI_URL = "https://ko-fi.com/E1E11TWTM1";
+      KOFI_TITLE = "Buy Me a Coffee at ko-fi.com";
+    }
+  });
+
+  // src/features/settings/menu.ts
   function renderSettingsMenu(container) {
     const ui = new Menu({ id: "settings", compact: true });
     ui.mount(container);
     ui.addTabs([
-      { id: "settings-data", title: "Settings", render: (root) => renderDataTab(root, ui) },
-      { id: "settings-infos", title: "Infos", render: (root) => renderInfosTab(root, ui) }
+      { id: "settings-data", title: "Settings", render: renderDataTab },
+      { id: "settings-infos", title: "Infos", render: renderInfosTab }
     ]);
     ui.switchTo("settings-data");
   }
@@ -49063,11 +48966,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/features/settings/menu.ts"() {
       "use strict";
       init_menu();
-      init_environment();
-      init_modVersion();
-      init_gameVersion();
-      init_backup();
-      init_download();
+      init_dataTab();
+      init_infosTab();
     }
   });
 
@@ -49367,32 +49267,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_image();
       init_tag();
       ALL_FILTER_LABEL = "All";
-    }
-  });
-
-  // src/features/tools/openLink.ts
-  function openLink(url) {
-    if (typeof GM_openInTab === "function") {
-      GM_openInTab(url, { active: true, insert: true });
-      return true;
-    }
-    if (typeof window === "undefined") return false;
-    try {
-      const a = document.createElement("a");
-      a.href = url;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  var init_openLink = __esm({
-    "src/features/tools/openLink.ts"() {
-      "use strict";
     }
   });
 
@@ -49915,7 +49789,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     document.head.appendChild(style2);
   }
   var STYLE_ID3;
-  var init_styles3 = __esm({
+  var init_styles4 = __esm({
     "src/features/tools/styles.ts"() {
       "use strict";
       STYLE_ID3 = "gemini-tools-styles";
@@ -50062,7 +49936,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_fetchTools();
       init_listView();
       init_detailView();
-      init_styles3();
+      init_styles4();
       init_transition();
       WRAPPER_WIDTH_PX = 720;
     }
@@ -61477,7 +61351,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_button();
       init_dom2();
       init_carousel();
-      init_styles3();
+      init_styles4();
       init_fetchChangelog();
       OVERLAY_ID3 = "mgChangelogNotice";
       NOTICE_CSS = `

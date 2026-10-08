@@ -1,4 +1,13 @@
-import { AriesStorage, getAriesStorage, saveAriesStorage } from "../../platform/storage";
+// Settings export, import and named backups.
+//
+// Export and import go through the `aries_mod` blob in platform/storage. The
+// backups do not: they are kept under their own `aries_backups` key, in GM
+// storage when the manager grants it and localStorage otherwise. Inside the
+// blob, each backup would carry every earlier backup with it, and the blob is
+// parsed and rewritten on every setting change. The key and its format stay
+// as they are so backups saved by earlier builds still load.
+
+import { type AriesStorage, getAriesStorage, saveAriesStorage } from "../../platform/storage";
 
 declare const GM_getValue:
   | ((name: string, defaultValue?: string) => string | undefined)
@@ -48,9 +57,7 @@ function readRawStorage(): string {
     if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
       return window.localStorage.getItem(STORAGE_KEY) ?? "[]";
     }
-  } catch {
-    // ignore
-  }
+  } catch {}
   return "[]";
 }
 
@@ -63,21 +70,15 @@ function writeRawStorage(payload: string): void {
     if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
       window.localStorage.setItem(STORAGE_KEY, payload);
     }
-  } catch {
-    // ignore
-  }
+  } catch {}
 }
 
 function readBackups(): AriesBackup[] {
   const raw = readRawStorage();
   try {
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed;
-    }
-  } catch {
-    // ignore
-  }
+    if (Array.isArray(parsed)) return parsed;
+  } catch {}
   return [];
 }
 
@@ -121,8 +122,9 @@ export function loadBackup(id: string): SettingsImportResult {
 }
 
 export function deleteBackup(id: string): SettingsImportResult {
-  const next = readBackups().filter((backup) => backup.id !== id);
-  if (next.length === readBackups().length) {
+  const backups = readBackups();
+  const next = backups.filter((backup) => backup.id !== id);
+  if (next.length === backups.length) {
     return { success: false, message: "Backup not found." };
   }
   persistBackups(next);
