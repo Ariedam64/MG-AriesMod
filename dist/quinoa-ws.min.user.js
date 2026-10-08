@@ -221,13 +221,13 @@
   // src/game/sprites/pixi/hooks.ts
   function mkSyntheticApp(renderer) {
     const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
-    const listeners9 = /* @__PURE__ */ new Set();
+    const listeners8 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
     const tick3 = (now2) => {
       const delta = last ? (now2 - last) / (1e3 / 60) : 1;
       last = now2;
-      for (const fn of listeners9) {
+      for (const fn of listeners8) {
         try {
           fn(delta);
         } catch {
@@ -237,14 +237,14 @@
     };
     const ticker = {
       add(fn) {
-        if (!listeners9.size) {
+        if (!listeners8.size) {
           rafId = requestAnimationFrame(tick3);
         }
-        listeners9.add(fn);
+        listeners8.add(fn);
       },
       remove(fn) {
-        listeners9.delete(fn);
-        if (!listeners9.size) {
+        listeners8.delete(fn);
+        if (!listeners8.size) {
           cancelAnimationFrame(rafId);
         }
       },
@@ -13934,7 +13934,7 @@
   }
   function applyState(enabled5, opts = {}) {
     const next = !!enabled5;
-    const changed4 = next !== currentEnabled;
+    const changed5 = next !== currentEnabled;
     if (next) showOverlay();
     else hideOverlay();
     if (next && overlaysVisible) showSideOverlay();
@@ -13950,7 +13950,7 @@
     }
     currentEnabled = next;
     if (opts.persist !== false) persist2(next);
-    if (changed4 && opts.emit !== false) notify(next);
+    if (changed5 && opts.emit !== false) notify(next);
   }
   function makeEmptyGarden() {
     return { ...EMPTY_GARDEN };
@@ -15237,9 +15237,9 @@
     let selectedIdx = null;
     let lastInfo = emptySlotInfo();
     let curSig = gardenObjectSignature(cur);
-    const listeners9 = /* @__PURE__ */ new Set();
+    const listeners8 = /* @__PURE__ */ new Set();
     const notify3 = () => {
-      for (const fn of listeners9) {
+      for (const fn of listeners8) {
         try {
           fn(lastInfo);
         } catch {
@@ -15440,13 +15440,13 @@
         run();
       };
       myCurrentSortedGrowSlotIndices.onChange((v) => {
-        const changed4 = refreshSorted(v);
-        if (!changed4) return;
+        const changed5 = refreshSorted(v);
+        if (!changed5) return;
         deferUntilIndexChanges();
       });
       myCurrentGardenObject.onChange((v) => {
-        const changed4 = refreshGarden(v);
-        if (!changed4) return;
+        const changed5 = refreshGarden(v);
+        if (!changed5) return;
         deferUntilIndexChanges();
       });
       myCurrentGrowSlotIndex.onChange((idx) => {
@@ -15474,11 +15474,11 @@
         return lastInfo;
       },
       onChange(cb) {
-        listeners9.add(cb);
-        return () => listeners9.delete(cb);
+        listeners8.add(cb);
+        return () => listeners8.delete(cb);
       },
       stop() {
-        listeners9.clear();
+        listeners8.clear();
       },
       recompute() {
         recomputeAndNotify();
@@ -16501,187 +16501,169 @@
     }
   });
 
+  // src/lib/emitter.ts
+  var Emitter, Subscriptions;
+  var init_emitter = __esm({
+    "src/lib/emitter.ts"() {
+      "use strict";
+      Emitter = class {
+        constructor() {
+          this.listeners = /* @__PURE__ */ new Set();
+        }
+        on(listener) {
+          this.listeners.add(listener);
+          return () => {
+            this.listeners.delete(listener);
+          };
+        }
+        emit(value) {
+          for (const listener of [...this.listeners]) {
+            try {
+              listener(value);
+            } catch (error) {
+              console.error("[Aries] listener failed", error);
+            }
+          }
+        }
+        get size() {
+          return this.listeners.size;
+        }
+        clear() {
+          this.listeners.clear();
+        }
+      };
+      Subscriptions = class {
+        constructor() {
+          this.pending = [];
+        }
+        add(unsubscribe2) {
+          this.pending.push(unsubscribe2);
+        }
+        dispose() {
+          for (const entry of this.pending.splice(0)) {
+            Promise.resolve(entry).then((off) => off?.()).catch(() => {
+            });
+          }
+        }
+      };
+    }
+  });
+
   // src/features/stats/stats.ts
+  function readCount(value, fallback, integer) {
+    const num2 = Number(value);
+    const positive = Math.max(0, Number.isFinite(num2) ? num2 : fallback);
+    return integer ? Math.floor(positive) : positive;
+  }
+  function unwrapNestedSnapshot2(raw) {
+    let cur = raw;
+    for (let guard = 0; guard < 10 && isRecord2(cur) && isRecord2(cur.snapshot); guard++) cur = cur.snapshot;
+    return cur;
+  }
   function createDefaultStats(createdAt = Date.now()) {
     const hatchedByType = {};
-    for (const species of Object.keys(petCatalog2)) {
-      hatchedByType[species.toLowerCase()] = { normal: 0, gold: 0, rainbow: 0 };
-    }
+    for (const species of Object.keys(petCatalog2)) hatchedByType[species.toLowerCase()] = zeroHatched();
     const abilities = {};
-    for (const abilityId of Object.keys(petAbilities2)) {
-      abilities[abilityId] = { triggers: 0, totalValue: 0 };
-    }
+    for (const abilityId of Object.keys(petAbilities2)) abilities[abilityId] = { triggers: 0, totalValue: 0 };
     const weather2 = {};
-    for (const key2 of Object.keys(weatherCatalog2)) {
-      weather2[key2.toLowerCase()] = { triggers: 0 };
-    }
-    return {
-      createdAt,
-      garden: {
-        totalPlanted: 0,
-        totalHarvested: 0,
-        totalDestroyed: 0,
-        watercanUsed: 0,
-        waterTimeSavedMs: 0
-      },
-      shops: {
-        seedsBought: 0,
-        decorBought: 0,
-        eggsBought: 0,
-        toolsBought: 0,
-        cropsSoldCount: 0,
-        cropsSoldValue: 0,
-        petsSoldCount: 0,
-        petsSoldValue: 0
-      },
-      pets: { hatchedByType },
-      abilities,
-      weather: weather2
-    };
+    for (const key2 of Object.keys(weatherCatalog2)) weather2[key2.toLowerCase()] = { triggers: 0 };
+    const garden3 = Object.fromEntries(Object.keys(GARDEN_INT_KEYS).map((k) => [k, 0]));
+    const shops2 = Object.fromEntries(Object.keys(SHOP_INT_KEYS).map((k) => [k, 0]));
+    return { createdAt, garden: garden3, shops: shops2, pets: { hatchedByType }, abilities, weather: weather2 };
   }
-  function normalizeHatchedCounts(value, fallback) {
-    if (!isRecord2(value)) return { ...fallback };
-    return {
-      normal: toPositiveInt(value.normal, fallback.normal),
-      gold: toPositiveInt(value.gold, fallback.gold),
-      rainbow: toPositiveInt(value.rainbow, fallback.rainbow)
-    };
+  function readGroup(raw, base, intKeys) {
+    if (!isRecord2(raw)) return base;
+    const out = { ...base };
+    for (const key2 of Object.keys(intKeys)) {
+      out[key2] = readCount(raw[key2], base[key2], intKeys[key2]);
+    }
+    return out;
   }
   function normalizeStats(raw) {
-    const fallbackCreatedAt = Date.now();
-    const base = createDefaultStats(fallbackCreatedAt);
+    const now2 = Date.now();
+    const base = createDefaultStats(now2);
     if (!isRecord2(raw)) return base;
     if (Object.prototype.hasOwnProperty.call(raw, "createdAt")) {
-      base.createdAt = toPositiveTimestamp(raw.createdAt, fallbackCreatedAt);
+      const createdAt = Number(raw.createdAt);
+      base.createdAt = Number.isFinite(createdAt) && createdAt > 0 ? Math.floor(createdAt) : now2;
     }
-    if (isRecord2(raw.garden)) {
-      base.garden = {
-        totalPlanted: toPositiveInt(raw.garden.totalPlanted, base.garden.totalPlanted),
-        totalHarvested: toPositiveInt(raw.garden.totalHarvested, base.garden.totalHarvested),
-        totalDestroyed: toPositiveInt(raw.garden.totalDestroyed, base.garden.totalDestroyed),
-        watercanUsed: toPositiveInt(raw.garden.watercanUsed, base.garden.watercanUsed),
-        waterTimeSavedMs: toPositiveInt(raw.garden.waterTimeSavedMs, base.garden.waterTimeSavedMs)
-      };
-    }
-    if (isRecord2(raw.shops)) {
-      base.shops = {
-        seedsBought: toPositiveInt(raw.shops.seedsBought, base.shops.seedsBought),
-        decorBought: toPositiveInt(raw.shops.decorBought, base.shops.decorBought),
-        eggsBought: toPositiveInt(raw.shops.eggsBought, base.shops.eggsBought),
-        toolsBought: toPositiveInt(raw.shops.toolsBought, base.shops.toolsBought),
-        cropsSoldCount: toPositiveInt(raw.shops.cropsSoldCount, base.shops.cropsSoldCount),
-        cropsSoldValue: toPositiveNumber(raw.shops.cropsSoldValue, base.shops.cropsSoldValue),
-        petsSoldCount: toPositiveInt(raw.shops.petsSoldCount, base.shops.petsSoldCount),
-        petsSoldValue: toPositiveNumber(raw.shops.petsSoldValue, base.shops.petsSoldValue)
-      };
-    }
+    base.garden = readGroup(raw.garden, base.garden, GARDEN_INT_KEYS);
+    base.shops = readGroup(raw.shops, base.shops, SHOP_INT_KEYS);
     if (isRecord2(raw.pets) && isRecord2(raw.pets.hatchedByType)) {
       for (const [key2, counts] of Object.entries(raw.pets.hatchedByType)) {
-        if (typeof key2 !== "string") continue;
-        const normalizedKey = key2.toLowerCase();
-        const fallback = base.pets.hatchedByType[normalizedKey] ?? { normal: 0, gold: 0, rainbow: 0 };
-        base.pets.hatchedByType[normalizedKey] = normalizeHatchedCounts(counts, fallback);
+        const species = key2.toLowerCase();
+        const fallback = base.pets.hatchedByType[species] ?? zeroHatched();
+        base.pets.hatchedByType[species] = isRecord2(counts) ? {
+          normal: readCount(counts.normal, fallback.normal, true),
+          gold: readCount(counts.gold, fallback.gold, true),
+          rainbow: readCount(counts.rainbow, fallback.rainbow, true)
+        } : { ...fallback };
       }
     }
     if (isRecord2(raw.abilities)) {
       for (const [key2, value] of Object.entries(raw.abilities)) {
-        if (typeof key2 !== "string" || !isRecord2(value)) continue;
+        if (!isRecord2(value)) continue;
         base.abilities[key2] = {
-          triggers: toPositiveInt(value.triggers, base.abilities[key2]?.triggers ?? 0),
-          totalValue: toPositiveNumber(value.totalValue, base.abilities[key2]?.totalValue ?? 0)
+          triggers: readCount(value.triggers, base.abilities[key2]?.triggers ?? 0, true),
+          totalValue: readCount(value.totalValue, base.abilities[key2]?.totalValue ?? 0, false)
         };
       }
     }
     if (isRecord2(raw.weather)) {
       for (const [key2, value] of Object.entries(raw.weather)) {
-        if (typeof key2 !== "string" || !isRecord2(value)) continue;
-        const normalizedKey = key2.toLowerCase();
-        const fallback = base.weather[normalizedKey] ?? { triggers: 0 };
-        base.weather[normalizedKey] = {
-          triggers: toPositiveInt(value.triggers, fallback.triggers)
-        };
+        if (!isRecord2(value)) continue;
+        const weather2 = key2.toLowerCase();
+        base.weather[weather2] = { triggers: readCount(value.triggers, base.weather[weather2]?.triggers ?? 0, true) };
       }
     }
     return base;
   }
+  function writeToStorage(stats) {
+    memoryStore = cloneStats(stats);
+    writeAriesPath(STORAGE_PATH, memoryStore);
+    return memoryStore;
+  }
   function readFromStorage() {
     if (memoryStore) return cloneStats(memoryStore);
-    const rawWrapped = readAriesPath("stats");
-    const raw = unwrapMaybeNestedSnapshot(rawWrapped);
+    const stored = readAriesPath(STORAGE_PATH);
+    const raw = unwrapNestedSnapshot2(stored);
     if (!raw) {
       const fresh = createDefaultStats();
-      memoryStore = cloneStats(fresh);
-      writeAriesPath("stats", memoryStore);
+      writeToStorage(fresh);
       return fresh;
     }
     const normalized = normalizeStats(raw);
     memoryStore = cloneStats(normalized);
-    if (rawWrapped !== raw) {
-      writeAriesPath("stats", memoryStore);
-    }
+    if (stored !== raw) writeAriesPath(STORAGE_PATH, memoryStore);
     return normalized;
-  }
-  function emitUpdate(stats) {
-    const snapshot2 = cloneStats(stats);
-    for (const listener of listeners2) {
-      try {
-        listener(snapshot2);
-      } catch (error) {
-        console.error("[StatsService] Listener error", error);
-      }
-    }
-  }
-  function writeToStorage(stats) {
-    const snapshot2 = cloneStats(stats);
-    memoryStore = snapshot2;
-    writeAriesPath("stats", snapshot2);
-    return snapshot2;
   }
   function adjustValue(current, delta, integer) {
     const a = Number(current);
     const b = Number(delta);
-    const sum = Number.isFinite(a) ? a : 0;
-    const next = sum + (Number.isFinite(b) ? b : 0);
-    const clamped = Math.max(0, next);
-    return integer ? Math.floor(clamped) : clamped;
+    const next = Math.max(0, (Number.isFinite(a) ? a : 0) + (Number.isFinite(b) ? b : 0));
+    return integer ? Math.floor(next) : next;
   }
   function updateStats(mutator) {
     const current = readFromStorage();
-    const before = JSON.stringify(current);
     const draft = cloneStats(current);
     mutator(draft);
-    const after = JSON.stringify(draft);
-    if (before === after) return current;
+    if (JSON.stringify(current) === JSON.stringify(draft)) return current;
     const stored = writeToStorage(draft);
-    emitUpdate(stored);
+    changed.emit(cloneStats(stored));
     return stored;
   }
-  function requireAbilityEntry(stats, abilityId) {
-    if (!stats.abilities[abilityId]) {
-      stats.abilities[abilityId] = { triggers: 0, totalValue: 0 };
-    }
-    return stats.abilities[abilityId];
+  function entryOf2(table, key2, fresh) {
+    if (!table[key2]) table[key2] = fresh();
+    return table[key2];
   }
-  function requireWeatherEntry(stats, weatherId) {
-    const key2 = weatherId.toLowerCase();
-    if (!stats.weather[key2]) {
-      stats.weather[key2] = { triggers: 0 };
-    }
-    return stats.weather[key2];
-  }
-  function requirePetEntry(stats, species) {
-    const key2 = species.toLowerCase();
-    if (!stats.pets.hatchedByType[key2]) {
-      stats.pets.hatchedByType[key2] = { normal: 0, gold: 0, rainbow: 0 };
-    }
-    return stats.pets.hatchedByType[key2];
-  }
-  var GARDEN_INT_KEYS, SHOP_INT_KEYS, ABILITY_INT_KEYS, WEATHER_INT_KEYS, memoryStore, listeners2, isRecord2, toNumber, toPositiveNumber, toPositiveInt, toPositiveTimestamp, cloneStats, unwrapMaybeNestedSnapshot, StatsService;
+  var STORAGE_PATH, GARDEN_INT_KEYS, SHOP_INT_KEYS, ABILITY_INT_KEYS, memoryStore, changed, isRecord2, zeroHatched, cloneStats, StatsService;
   var init_stats = __esm({
     "src/features/stats/stats.ts"() {
       "use strict";
       init_data();
+      init_emitter();
       init_storage();
+      STORAGE_PATH = "stats";
       GARDEN_INT_KEYS = {
         totalPlanted: true,
         totalHarvested: true,
@@ -16703,70 +16685,23 @@
         triggers: true,
         totalValue: false
       };
-      WEATHER_INT_KEYS = {
-        triggers: true
-      };
       memoryStore = null;
-      listeners2 = /* @__PURE__ */ new Set();
+      changed = new Emitter();
       isRecord2 = (value) => typeof value === "object" && value !== null;
-      toNumber = (value, fallback = 0) => {
-        const num2 = Number(value);
-        if (!Number.isFinite(num2)) return fallback;
-        return num2;
-      };
-      toPositiveNumber = (value, fallback = 0) => {
-        const num2 = toNumber(value, fallback);
-        return Math.max(0, num2);
-      };
-      toPositiveInt = (value, fallback = 0) => {
-        const num2 = toPositiveNumber(value, fallback);
-        return Math.floor(num2);
-      };
-      toPositiveTimestamp = (value, fallback) => {
-        const num2 = Number(value);
-        if (!Number.isFinite(num2) || num2 <= 0) return fallback;
-        return Math.floor(num2);
-      };
+      zeroHatched = () => ({ normal: 0, gold: 0, rainbow: 0 });
       cloneStats = (stats) => ({
         createdAt: stats.createdAt,
         garden: { ...stats.garden },
         shops: { ...stats.shops },
         pets: {
-          hatchedByType: Object.fromEntries(
-            Object.entries(stats.pets.hatchedByType).map(([key2, counts]) => [key2, { ...counts }])
-          )
+          hatchedByType: Object.fromEntries(Object.entries(stats.pets.hatchedByType).map(([key2, counts]) => [key2, { ...counts }]))
         },
-        abilities: Object.fromEntries(
-          Object.entries(stats.abilities).map(([key2, value]) => [key2, { ...value }])
-        ),
-        weather: Object.fromEntries(
-          Object.entries(stats.weather).map(([key2, value]) => [key2, { ...value }])
-        )
+        abilities: Object.fromEntries(Object.entries(stats.abilities).map(([key2, value]) => [key2, { ...value }])),
+        weather: Object.fromEntries(Object.entries(stats.weather).map(([key2, value]) => [key2, { ...value }]))
       });
-      unwrapMaybeNestedSnapshot = (raw) => {
-        let cur = raw;
-        let guard = 0;
-        while (guard++ < 10 && isRecord2(cur) && "snapshot" in cur && isRecord2(cur.snapshot)) {
-          cur = cur.snapshot;
-        }
-        return cur;
-      };
       StatsService = {
-        storageKey: "stats",
         getSnapshot() {
           return readFromStorage();
-        },
-        setSnapshot(snapshot2) {
-          const normalized = normalizeStats(unwrapMaybeNestedSnapshot(snapshot2));
-          const stored = writeToStorage(normalized);
-          emitUpdate(stored);
-          return stored;
-        },
-        reset() {
-          const fresh = createDefaultStats();
-          const stored = writeToStorage(fresh);
-          emitUpdate(stored);
-          return stored;
         },
         update(mutator) {
           return updateStats(mutator);
@@ -16783,27 +16718,24 @@
         },
         incrementPetHatched(species, rarityKey = "normal", amount = 1) {
           return updateStats((draft) => {
-            const entry = requirePetEntry(draft, species);
+            const entry = entryOf2(draft.pets.hatchedByType, species.toLowerCase(), zeroHatched);
             entry[rarityKey] = adjustValue(entry[rarityKey], amount, true);
           });
         },
         incrementAbilityStat(abilityId, key2, amount = 1) {
           return updateStats((draft) => {
-            const entry = requireAbilityEntry(draft, abilityId);
+            const entry = entryOf2(draft.abilities, abilityId, () => ({ triggers: 0, totalValue: 0 }));
             entry[key2] = adjustValue(entry[key2], amount, ABILITY_INT_KEYS[key2]);
           });
         },
-        incrementWeatherStat(weatherId, key2 = "triggers", amount = 1) {
+        incrementWeatherStat(weatherId, amount = 1) {
           return updateStats((draft) => {
-            const entry = requireWeatherEntry(draft, weatherId);
-            entry[key2] = adjustValue(entry[key2], amount, WEATHER_INT_KEYS[key2]);
+            const entry = entryOf2(draft.weather, weatherId.toLowerCase(), () => ({ triggers: 0 }));
+            entry.triggers = adjustValue(entry.triggers, amount, true);
           });
         },
         subscribe(listener) {
-          listeners2.add(listener);
-          return () => {
-            listeners2.delete(listener);
-          };
+          return changed.on(listener);
         }
       };
     }
@@ -17628,7 +17560,7 @@
     actionMap.delete(id);
     defaultMap.delete(id);
     cache.delete(id);
-    listeners3.delete(id);
+    listeners2.delete(id);
     holdDefaultMap.delete(id);
     holdCache.delete(id);
     holdListeners.delete(id);
@@ -17908,7 +17840,7 @@
     for (const cb of set2) cb(current);
   }
   function emitChange(id) {
-    const set2 = listeners3.get(id);
+    const set2 = listeners2.get(id);
     if (!set2 || set2.size === 0) return;
     const current = cloneHotkey(getKeybind(id));
     for (const cb of set2) cb(current);
@@ -17988,12 +17920,12 @@
     };
   }
   function onKeybindChange(id, cb) {
-    const set2 = listeners3.get(id) ?? /* @__PURE__ */ new Set();
-    if (!listeners3.has(id)) listeners3.set(id, set2);
+    const set2 = listeners2.get(id) ?? /* @__PURE__ */ new Set();
+    if (!listeners2.has(id)) listeners2.set(id, set2);
     set2.add(cb);
     return () => {
       set2.delete(cb);
-      if (set2.size === 0) listeners3.delete(id);
+      if (set2.size === 0) listeners2.delete(id);
     };
   }
   function eventMatchesKeybind(id, e) {
@@ -18025,7 +17957,7 @@
       }))
     }));
   }
-  var SECTION_CONFIG, KEYBINDS_BINDINGS_PATH, KEYBINDS_HOLD_PATH, ARIES_ROOT_KEY, STORED_NONE, actionMap, defaultMap, cache, listeners3, holdDefaultMap, holdCache, holdListeners, keybindSections, PET_SECTION_ID, PET_TEAM_ACTION_PREFIX, PET_TEAM_NEXT_ID, PET_TEAM_PREV_ID, petSection, petActionIds, GAME_KEYBIND_TARGETS, GAME_KEYBIND_IDS, gameActiveStates, gameKeybindsInstalled, GAME_ACTION_ID, gameActionBlockers, gameActionBlockedCombos;
+  var SECTION_CONFIG, KEYBINDS_BINDINGS_PATH, KEYBINDS_HOLD_PATH, ARIES_ROOT_KEY, STORED_NONE, actionMap, defaultMap, cache, listeners2, holdDefaultMap, holdCache, holdListeners, keybindSections, PET_SECTION_ID, PET_TEAM_ACTION_PREFIX, PET_TEAM_NEXT_ID, PET_TEAM_PREV_ID, petSection, petActionIds, GAME_KEYBIND_TARGETS, GAME_KEYBIND_IDS, gameActiveStates, gameKeybindsInstalled, GAME_ACTION_ID, gameActionBlockers, gameActionBlockedCombos;
   var init_keybinds = __esm({
     "src/features/keybinds/keybinds.ts"() {
       "use strict";
@@ -18231,7 +18163,7 @@
       actionMap = /* @__PURE__ */ new Map();
       defaultMap = /* @__PURE__ */ new Map();
       cache = /* @__PURE__ */ new Map();
-      listeners3 = /* @__PURE__ */ new Map();
+      listeners2 = /* @__PURE__ */ new Map();
       holdDefaultMap = /* @__PURE__ */ new Map();
       holdCache = /* @__PURE__ */ new Map();
       holdListeners = /* @__PURE__ */ new Map();
@@ -21346,7 +21278,7 @@
     };
   }
   function notifyListeners(snapshot2) {
-    for (const listener of listeners4) {
+    for (const listener of listeners3) {
       try {
         listener(snapshot2);
       } catch (error) {
@@ -21388,12 +21320,12 @@
     return currentSnapshot;
   }
   function onInventoryValueChange(listener) {
-    listeners4.add(listener);
+    listeners3.add(listener);
     return () => {
-      listeners4.delete(listener);
+      listeners3.delete(listener);
     };
   }
-  var INVENTORY_VALUE_CATEGORIES, currentSnapshot, watcherPromise, computeCounter, listeners4;
+  var INVENTORY_VALUE_CATEGORIES, currentSnapshot, watcherPromise, computeCounter, listeners3;
   var init_value = __esm({
     "src/features/inventory/value.ts"() {
       "use strict";
@@ -21479,7 +21411,7 @@
       currentSnapshot = null;
       watcherPromise = null;
       computeCounter = 0;
-      listeners4 = /* @__PURE__ */ new Set();
+      listeners3 = /* @__PURE__ */ new Set();
     }
   });
 
@@ -22842,17 +22774,17 @@
             if (prefer && this.library.has(prefer)) return prefer;
             return fallback;
           };
-          let changed4 = false;
+          let changed5 = false;
           const shops2 = valid(this.ctx("shops").defaultSoundName);
           for (const key2 of AUDIO_CONTEXTS) {
             const target = this.ctx(key2);
             const next = key2 === "shops" ? shops2 : valid(target.defaultSoundName, shops2);
             if (next !== target.defaultSoundName) {
               target.defaultSoundName = next;
-              changed4 = true;
+              changed5 = true;
             }
           }
-          return changed4;
+          return changed5;
         }
         /* ================================ Library ================================ */
         listSounds() {
@@ -23949,7 +23881,7 @@
     return { top: contentTop - extraTopOffset, width, height };
   }
   function notifyListeners2(card5, geometry) {
-    for (const listener of listeners5) {
+    for (const listener of listeners4) {
       try {
         listener(card5, geometry);
       } catch (error) {
@@ -24014,24 +23946,24 @@
   function scheduleFind(now2) {
     findRafId = null;
     debugState.rafTicks += 1;
-    if (!listeners5.size || cardSystem) return;
+    if (!listeners4.size || cardSystem) return;
     if (now2 - lastFindCheckAt >= CARD_SYSTEM_FIND_RETRY_MS) {
       lastFindCheckAt = now2;
       tryFindCardSystem();
     }
-    if (!listeners5.size || cardSystem) return;
+    if (!listeners4.size || cardSystem) return;
     findRafId = raf(scheduleFind);
   }
   function restartSearchIfNeeded() {
-    if (!listeners5.size || cardSystem) return;
+    if (!listeners4.size || cardSystem) return;
     tryFindCardSystem();
     if (!cardSystem && findRafId == null) {
       findRafId = raf(scheduleFind);
     }
   }
   function watchGardenInfoCard(listener) {
-    listeners5.add(listener);
-    debugState.listenerCount = listeners5.size;
+    listeners4.add(listener);
+    debugState.listenerCount = listeners4.size;
     restartSearchIfNeeded();
     if (currentCard) {
       try {
@@ -24041,11 +23973,11 @@
       }
     }
     return () => {
-      listeners5.delete(listener);
-      debugState.listenerCount = listeners5.size;
+      listeners4.delete(listener);
+      debugState.listenerCount = listeners4.size;
     };
   }
-  var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, CARD_SYSTEM_FIND_RETRY_MS, CARD_SYSTEM_FIND_LOG_EVERY, cachedGraphicsCtor, cardSystem, currentCard, findAttempts, findRafId, lastFindCheckAt, listeners5, debugState, raf;
+  var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, CARD_SYSTEM_FIND_RETRY_MS, CARD_SYSTEM_FIND_LOG_EVERY, cachedGraphicsCtor, cardSystem, currentCard, findAttempts, findRafId, lastFindCheckAt, listeners4, debugState, raf;
   var init_gardenInfoCard = __esm({
     "src/game/pixi/gardenInfoCard.ts"() {
       "use strict";
@@ -24065,7 +23997,7 @@
       findAttempts = 0;
       findRafId = null;
       lastFindCheckAt = 0;
-      listeners5 = /* @__PURE__ */ new Set();
+      listeners4 = /* @__PURE__ */ new Set();
       debugState = {
         findAttempts: 0,
         attached: false,
@@ -24860,54 +24792,6 @@
     }
   });
 
-  // src/lib/emitter.ts
-  var Emitter, Subscriptions;
-  var init_emitter = __esm({
-    "src/lib/emitter.ts"() {
-      "use strict";
-      Emitter = class {
-        constructor() {
-          this.listeners = /* @__PURE__ */ new Set();
-        }
-        on(listener) {
-          this.listeners.add(listener);
-          return () => {
-            this.listeners.delete(listener);
-          };
-        }
-        emit(value) {
-          for (const listener of [...this.listeners]) {
-            try {
-              listener(value);
-            } catch (error) {
-              console.error("[Aries] listener failed", error);
-            }
-          }
-        }
-        get size() {
-          return this.listeners.size;
-        }
-        clear() {
-          this.listeners.clear();
-        }
-      };
-      Subscriptions = class {
-        constructor() {
-          this.pending = [];
-        }
-        add(unsubscribe2) {
-          this.pending.push(unsubscribe2);
-        }
-        dispose() {
-          for (const entry of this.pending.splice(0)) {
-            Promise.resolve(entry).then((off) => off?.()).catch(() => {
-            });
-          }
-        }
-      };
-    }
-  });
-
   // src/features/shops/shopFeed.ts
   function itemKind(itemId) {
     if (itemId in plantCatalog2) return "seed";
@@ -25290,7 +25174,7 @@
         apply2(value);
       } catch {
       }
-      changed.emit();
+      changed2.emit();
     };
     try {
       update(await view.get());
@@ -25301,7 +25185,7 @@
     } catch {
     }
   }
-  var toolCounts, decorCounts, changed, InventoryCaps;
+  var toolCounts, decorCounts, changed2, InventoryCaps;
   var init_inventoryCaps = __esm({
     "src/features/notifier/inventoryCaps.ts"() {
       "use strict";
@@ -25310,7 +25194,7 @@
       init_data();
       toolCounts = /* @__PURE__ */ new Map();
       decorCounts = /* @__PURE__ */ new Map();
-      changed = new Emitter();
+      changed2 = new Emitter();
       InventoryCaps = {
         async start() {
           await follow(Atoms.inventory.myToolInventory, (items) => {
@@ -25322,7 +25206,7 @@
         },
         /** Fires after every inventory update. */
         onChange(cb) {
-          return changed.on(cb);
+          return changed2.on(cb);
         }
       };
     }
@@ -25364,10 +25248,10 @@
       { catalog: toolCatalog2, section: "Tool", entryOf: (raw) => raw },
       { catalog: decorCatalog2, section: "Decor", entryOf: (raw) => raw }
     ];
-    for (const { catalog, section: naturalSection, entryOf: entryOf2 } of sources) {
+    for (const { catalog, section: naturalSection, entryOf: entryOf3 } of sources) {
       if (!catalog || typeof catalog !== "object") continue;
       for (const key2 of Object.keys(catalog)) {
-        const entry = entryOf2(catalog[key2]);
+        const entry = entryOf3(catalog[key2]);
         if (!entry || typeof entry !== "object") continue;
         const { base, weathers } = splitEligibleShops(entry.eligibleShops);
         if (!base && weathers.length === 0) continue;
@@ -25391,7 +25275,7 @@
     }
     return rows;
   }
-  var FOLLOWED_PATH, followed, DISPLAY_RARITY, BASE_SHOPS, state2, idsSig, changed2, countFollowed, emit, ShopRows;
+  var FOLLOWED_PATH, followed, DISPLAY_RARITY, BASE_SHOPS, state2, idsSig, changed3, countFollowed, emit, ShopRows;
   var init_shopRows = __esm({
     "src/features/notifier/shopRows.ts"() {
       "use strict";
@@ -25415,10 +25299,10 @@
       BASE_SHOPS = /* @__PURE__ */ new Set(["Seed", "Egg", "Tool", "Decor"]);
       state2 = null;
       idsSig = "";
-      changed2 = new Emitter();
+      changed3 = new Emitter();
       countFollowed = (rows) => rows.reduce((n, r) => n + (r.followed ? 1 : 0), 0);
       emit = () => {
-        if (state2) changed2.emit({ ...state2, rows: state2.rows.slice() });
+        if (state2) changed3.emit({ ...state2, rows: state2.rows.slice() });
       };
       ShopRows = {
         /** Rebuilds the rows from the catalogs. Listeners hear of it only when the set of items changed. */
@@ -25451,7 +25335,7 @@
           return state2;
         },
         onChange(cb) {
-          return changed2.on(cb);
+          return changed3.on(cb);
         },
         /** Whether an item's alert is on. A capped item reads as off. */
         isFollowed(id) {
@@ -25983,7 +25867,7 @@
     const isNew = sig !== stateSig;
     stateSig = sig;
     state3 = { updatedAt: Date.now(), currentId, rows };
-    if (isNew) changed3.emit(state3);
+    if (isNew) changed4.emit(state3);
   }
   function ring(id) {
     if (!weatherById(id)) return;
@@ -26008,7 +25892,7 @@
     if (def) savePrefs2();
     recomputeState();
   }
-  var PREFS_PATH2, prefs2, prefsLoaded, state3, stateSig, currentId, currentValue, changed3, weatherStateSignature, WeatherAlerts;
+  var PREFS_PATH2, prefs2, prefsLoaded, state3, stateSig, currentId, currentValue, changed4, weatherStateSignature, WeatherAlerts;
   var init_weatherAlerts = __esm({
     "src/features/notifier/weatherAlerts.ts"() {
       "use strict";
@@ -26026,7 +25910,7 @@
       stateSig = null;
       currentId = null;
       currentValue = null;
-      changed3 = new Emitter();
+      changed4 = new Emitter();
       weatherStateSignature = (rows) => JSON.stringify(rows.map((r) => [r.id, r.notify ? 1 : 0, r.lastSeen || 0, r.isCurrent ? 1 : 0]));
       WeatherAlerts = {
         /** Reads the weather once, then follows it. */
@@ -26051,7 +25935,7 @@
           return state3;
         },
         onChange(cb) {
-          return changed3.on(cb);
+          return changed4.on(cb);
         },
         setNotify(id, enabled5) {
           if (!id) return;
@@ -26838,9 +26722,9 @@
     let players = void 0;
     let selectedSlotId = null;
     let lastPrice = null;
-    const listeners9 = /* @__PURE__ */ new Set();
+    const listeners8 = /* @__PURE__ */ new Set();
     const notify3 = () => {
-      for (const fn of listeners9) try {
+      for (const fn of listeners8) try {
         fn();
       } catch {
       }
@@ -26907,11 +26791,11 @@
         return lastPrice;
       },
       onChange(cb) {
-        listeners9.add(cb);
-        return () => listeners9.delete(cb);
+        listeners8.add(cb);
+        return () => listeners8.delete(cb);
       },
       stop() {
-        listeners9.clear();
+        listeners8.clear();
       }
     };
   }
@@ -26941,7 +26825,7 @@
       writeAriesPath(PATH_SHOW_CROP_PRICE, next);
     } catch {
     }
-    for (const listener of listeners6) {
+    for (const listener of listeners5) {
       try {
         listener(next);
       } catch {
@@ -26949,18 +26833,18 @@
     }
   }
   function onShowCropPriceChange(cb) {
-    listeners6.add(cb);
+    listeners5.add(cb);
     return () => {
-      listeners6.delete(cb);
+      listeners5.delete(cb);
     };
   }
-  var PATH_SHOW_CROP_PRICE, listeners6;
+  var PATH_SHOW_CROP_PRICE, listeners5;
   var init_setting = __esm({
     "src/features/cropPrice/setting.ts"() {
       "use strict";
       init_storage();
       PATH_SHOW_CROP_PRICE = "misc.showCropPrice";
-      listeners6 = /* @__PURE__ */ new Set();
+      listeners5 = /* @__PURE__ */ new Set();
     }
   });
 
@@ -29268,14 +29152,14 @@
         reordered.push(state7.baseItems[baseIndex]);
       }
       if (reordered.length !== state7.baseItems.length) return false;
-      let changed4 = false;
+      let changed5 = false;
       for (let i = 0; i < reordered.length; i++) {
         if (reordered[i] !== state7.baseItems[i]) {
-          changed4 = true;
+          changed5 = true;
           break;
         }
       }
-      if (!changed4) return false;
+      if (!changed5) return false;
       state7.baseItems = reordered;
       assignBaseIndexesToEntries(entries2);
       state7.entryByBaseIndex.clear();
@@ -31736,18 +31620,18 @@
     if (!added.length && !updated.length) return history2;
     const map2 = /* @__PURE__ */ new Map();
     for (const h2 of history2) map2.set(entryKey(h2), h2);
-    let changed4 = false;
+    let changed5 = false;
     const upsert = (entry) => {
       const key2 = entryKey(entry);
       const cur = map2.get(key2);
       if (!cur || !entriesEqual(cur, entry)) {
         map2.set(key2, entry);
-        changed4 = true;
+        changed5 = true;
       }
     };
     updated.forEach(upsert);
     added.forEach(upsert);
-    if (!changed4) return history2;
+    if (!changed5) return history2;
     const merged = Array.from(map2.values());
     saveHistory(merged);
     return merged;
@@ -32270,7 +32154,7 @@
   function isRecord3(value) {
     return typeof value === "object" && value !== null;
   }
-  function toPositiveNumber2(value) {
+  function toPositiveNumber(value) {
     const n = Number(value);
     return Number.isFinite(n) && n > 0 ? n : null;
   }
@@ -32292,7 +32176,7 @@
       ["gold", GOLD_MUTATION],
       ["rainbow", RAINBOW_MUTATION]
     ]) {
-      const chance = toPositiveNumber2(mutationEntry(mutationId)?.baseChance) ?? 0;
+      const chance = toPositiveNumber(mutationEntry(mutationId)?.baseChance) ?? 0;
       if (chance <= 0) continue;
       targets.push({
         key: key2,
@@ -32309,11 +32193,11 @@
     const out = /* @__PURE__ */ new Map();
     let total = 0;
     for (const value of Object.values(weights)) {
-      total += toPositiveNumber2(value) ?? 0;
+      total += toPositiveNumber(value) ?? 0;
     }
     if (total <= 0) return out;
     for (const [species, value] of Object.entries(weights)) {
-      const weight = toPositiveNumber2(value);
+      const weight = toPositiveNumber(value);
       if (weight === null) continue;
       out.set(species, weight / total);
     }
@@ -32327,7 +32211,7 @@
     const species = declared ? Object.keys(declared) : Array.from(chances.keys());
     for (const id of species) {
       const chance = chances.get(id) ?? 0;
-      const declaredThreshold = declared ? toPositiveNumber2(declared[id]) : null;
+      const declaredThreshold = declared ? toPositiveNumber(declared[id]) : null;
       if (declaredThreshold === null && (chance <= 0 || chance > MAX_PROTECTED_CHANCE)) continue;
       const threshold = declaredThreshold ?? thresholdForChance(chance);
       if (threshold <= 0) continue;
@@ -32456,7 +32340,7 @@
       writeAriesPath(STATE_PATH, state7);
     } catch {
     }
-    for (const listener of listeners7) {
+    for (const listener of listeners6) {
       try {
         listener(state7);
       } catch {
@@ -32531,12 +32415,12 @@
     if (!events.length) return false;
     const state7 = loadState();
     const seen = new Set(state7.seenPetIds);
-    let changed4 = false;
+    let changed5 = false;
     for (const event of events) {
       if (seen.has(event.petId)) continue;
       seen.add(event.petId);
       state7.seenPetIds.push(event.petId);
-      changed4 = true;
+      changed5 = true;
       if (countStats) {
         try {
           StatsService.incrementPetHatched(event.species, rarityOf(event));
@@ -32548,8 +32432,8 @@
       const counters = (_a = state7.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
       applyPull(counters, event, protectedSpecies(event.eggId));
     }
-    if (changed4) saveState(state7);
-    return changed4;
+    if (changed5) saveState(state7);
+    return changed5;
   }
   async function startHatchTracker() {
     const firstRun = !loadState().bootstrapped;
@@ -32591,7 +32475,7 @@
       }
     };
   }
-  var STATE_PATH, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, listeners7, cachedState, HatchTracker;
+  var STATE_PATH, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, listeners6, cachedState, HatchTracker;
   var init_tracker = __esm({
     "src/features/hatch/tracker.ts"() {
       "use strict";
@@ -32604,7 +32488,7 @@
       HATCH_ACTION = "hatchEgg";
       DOUBLE_HATCH_ACTIONS = /* @__PURE__ */ new Set(["doublehatch", "doublehatchii"]);
       SEEN_LIMIT = 4e3;
-      listeners7 = /* @__PURE__ */ new Set();
+      listeners6 = /* @__PURE__ */ new Set();
       cachedState = null;
       HatchTracker = {
         getState() {
@@ -32636,9 +32520,9 @@
         // since the server's own never resets except on the outcome itself. Only
         // `setOffset` moves a counter by hand.
         subscribe(listener) {
-          listeners7.add(listener);
+          listeners6.add(listener);
           return () => {
-            listeners7.delete(listener);
+            listeners6.delete(listener);
           };
         }
       };
@@ -43504,8 +43388,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         };
         item.onclick = (ev) => {
           if (ev.__byDrag) return;
-          const changed4 = selectedId !== t.id;
-          if (changed4) {
+          const changed5 = selectedId !== t.id;
+          if (changed5) {
             selectedId = t.id;
             refreshTeamList(true);
           }
@@ -44550,21 +44434,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       updateSummary2();
     };
     const onPauseState = () => updateControls();
-    const listeners9 = [
+    const listeners8 = [
       [`${config.eventPrefix}:progress`, onProgress],
       [`${config.eventPrefix}:done`, onComplete],
       [`${config.eventPrefix}:error`, onComplete],
       [`${config.eventPrefix}:paused`, onPauseState],
       [`${config.eventPrefix}:resumed`, onPauseState]
     ];
-    for (const [type, handler] of listeners9) window.addEventListener(type, handler);
+    for (const [type, handler] of listeners8) window.addEventListener(type, handler);
     updateSummary2();
     updateControls();
     return {
       root: section2.root,
       cleanup: () => {
         clearSummaryTimer();
-        for (const [type, handler] of listeners9) window.removeEventListener(type, handler);
+        for (const [type, handler] of listeners8) window.removeEventListener(type, handler);
       }
     };
   }
@@ -48436,10 +48320,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     const show = (next) => {
       const sig = weatherStateSignature(next.rows);
-      const changed4 = sig !== stateSig2;
+      const changed5 = sig !== stateSig2;
       state7 = next;
       stateSig2 = sig;
-      if (changed4) rebuild();
+      if (changed5) rebuild();
       else refreshLastSeen();
     };
     void (async () => {
@@ -52295,16 +52179,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     retriesLeft -= 1;
     const targets = await loadTargets();
     const index = sharedStageIndex();
-    let changed4 = false;
+    let changed5 = false;
     for (const result of pending6) {
       const canvas = skinCanvases.get(result.frameKey);
       const target = targets.get(result.frameKey);
       if (!canvas || !target) continue;
       if (!applySkinTexture(target, canvas, index)) continue;
       snapshot.results.set(result.frameKey, { frameKey: result.frameKey, applied: true });
-      changed4 = true;
+      changed5 = true;
     }
-    if (!changed4) return;
+    if (!changed5) return;
     snapshot.rebaked = rebakeAll();
     notifyChanged();
   }
@@ -54270,10 +54154,10 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/state.ts
   function loadCompanionSettings() {
-    return coerceSettings(readAriesPath(STORAGE_PATH, void 0));
+    return coerceSettings(readAriesPath(STORAGE_PATH2, void 0));
   }
   function saveCompanionSettings(settings) {
-    writeAriesPath(STORAGE_PATH, settings);
+    writeAriesPath(STORAGE_PATH2, settings);
   }
   function patchCompanionSettings(patch) {
     saveCompanionSettings({ ...loadCompanionSettings(), ...patch });
@@ -54287,14 +54171,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (current.includes(group2)) return;
     patchCompanionSettings({ reviewedSettings: [...current, group2] });
   }
-  var STORAGE_PATH;
+  var STORAGE_PATH2;
   var init_state3 = __esm({
     "src/features/companion/state.ts"() {
       "use strict";
       init_storage();
       init_settingsShape();
       init_settingsShape();
-      STORAGE_PATH = "companion";
+      STORAGE_PATH2 = "companion";
     }
   });
 
@@ -55314,14 +55198,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     return duplicate ? log2 : append(log2, message);
   }
   function clearProposal(log2, proposalId) {
-    let changed4 = false;
+    let changed5 = false;
     const messages = log2.messages.map((entry) => {
       if (entry.proposalId !== proposalId) return entry;
-      changed4 = true;
+      changed5 = true;
       const { proposalId: _dropped, ...rest2 } = entry;
       return rest2;
     });
-    return changed4 ? { ...log2, messages } : log2;
+    return changed5 ? { ...log2, messages } : log2;
   }
   var MAX_MESSAGES;
   var init_log = __esm({
@@ -56574,7 +56458,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/chat/index.ts
   function notify2() {
-    for (const listener of [...listeners8]) {
+    for (const listener of [...listeners7]) {
       try {
         listener();
       } catch {
@@ -56815,7 +56699,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (captured.kind === "sell") return captured.plan.sell.length;
     return captured.picks.length;
   }
-  var ALERT_DEDUPE_MS, state4, listeners8, nextProposalSeq, ACCEPTANCE, CompanionChat;
+  var ALERT_DEDUPE_MS, state4, listeners7, nextProposalSeq, ACCEPTANCE, CompanionChat;
   var init_chat = __esm({
     "src/features/companion/chat/index.ts"() {
       "use strict";
@@ -56848,7 +56732,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         run: null,
         cancelRequested: false
       };
-      listeners8 = /* @__PURE__ */ new Set();
+      listeners7 = /* @__PURE__ */ new Set();
       nextProposalSeq = 1;
       ACCEPTANCE = {
         harvest: "Yes, go ahead",
@@ -56910,8 +56794,8 @@ Restore figures are averages; unlucky streaks do worse.`;
           return state4.run !== null;
         },
         subscribe(listener) {
-          listeners8.add(listener);
-          return () => listeners8.delete(listener);
+          listeners7.add(listener);
+          return () => listeners7.delete(listener);
         },
         /** Alerte poussée par une source ; ignorée si identique et récente. */
         alert(text2) {
@@ -59285,7 +59169,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/antiAfk/antiAfk.ts
   function createAntiAfkController(deps) {
     const STOP_EVENTS = ["visibilitychange", "blur", "focus", "focusout", "pagehide", "freeze", "resume"];
-    const listeners9 = [];
+    const listeners8 = [];
     function swallowAll() {
       const add = (target, t) => {
         const h2 = (e) => {
@@ -59293,7 +59177,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           e.preventDefault?.();
         };
         target.addEventListener(t, h2, { capture: true });
-        listeners9.push({ t, h: h2, target });
+        listeners8.push({ t, h: h2, target });
       };
       STOP_EVENTS.forEach((t) => {
         add(document, t);
@@ -59301,11 +59185,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
     }
     function unswallowAll() {
-      for (const { t, h: h2, target } of listeners9) try {
+      for (const { t, h: h2, target } of listeners8) try {
         target.removeEventListener(t, h2, { capture: true });
       } catch {
       }
-      listeners9.length = 0;
+      listeners8.length = 0;
     }
     const docProto = Object.getPrototypeOf(document);
     const saved = {
