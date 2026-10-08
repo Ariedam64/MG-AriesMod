@@ -5,6 +5,7 @@ import { startAutoReco } from "./features/autoReco/autoReco";
 import { startAutoStores } from "./features/autoStore/stores";
 import { installEditorOutgoingRules } from "./features/editor/outgoingRules";
 import { installInventoryReserve } from "./features/misc/inventoryReserve";
+import { startGhostMode } from "./features/misc/ghost";
 import { installLockerOutgoingRules } from "./features/locker/outgoingRules";
 import { installStatsCounters } from "./features/stats/outgoingCounters";
 import { mountHUD, initWatchers } from "./ui/hud";
@@ -64,6 +65,7 @@ import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/play
   installLockerOutgoingRules();
   installStatsCounters();
   startAutoStores();
+  startGhostMode();
   MGData.init();
   shareGlobal("MGData", MGData);
   detectGameVersion();

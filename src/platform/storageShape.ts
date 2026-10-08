@@ -26,9 +26,7 @@ export type AriesStorage = {
   stats?: unknown;
   pets?: {
     overrides?: unknown;
-    ui?: unknown;
     teams?: unknown;
-    teamSearch?: unknown;
     hotkeys?: Record<string, string>;
     alerts?: unknown;
     abilityLogs?: unknown;
@@ -139,7 +137,12 @@ export function createDefaultAriesStorage(): AriesStorage {
   };
 }
 
-/** Flat root keys from builds before sections, and the section and field each one moved to. */
+/**
+ * Flat root keys from builds before sections, and the section and field each
+ * one moved to. `pets.ui` and `pets.teamSearch` are no longer read, but their
+ * entries stay: listing a key here is also what keeps it from being carried
+ * over as a stray root key of an old save.
+ */
 const LEGACY_ROOT_KEYS: Record<string, [section: string, field: string]> = {
   customRooms: ["room", "customRooms"],
   petsOverrides: ["pets", "overrides"],

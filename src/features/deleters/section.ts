@@ -6,7 +6,6 @@
 // those swap for a progress bar, so there is one thing on screen at a time and
 // the card never reads as a wall of controls.
 
-import { Subscriptions } from "../../lib/emitter";
 import { formatInteger } from "../../lib/format";
 import { meter } from "../../ui/kit/badges";
 import { button, setButtonEnabled } from "../../ui/kit/button";
@@ -84,7 +83,7 @@ function statTile(): { root: HTMLElement; set: (value: string, caption: string, 
   };
 }
 
-export function createDeleterSection(config: DeleterSectionConfig): { root: HTMLElement; cleanup: () => void } {
+export function createDeleterSection(config: DeleterSectionConfig): HTMLElement {
   ensureDeleterStyles();
   const { controller } = config;
 
@@ -302,17 +301,10 @@ export function createDeleterSection(config: DeleterSectionConfig): { root: HTML
         break;
     }
   };
-  const subscriptions = new Subscriptions();
-  subscriptions.add(controller.events.on(onEvent));
+  controller.events.on(onEvent);
 
   updateSummary();
   updateControls();
 
-  return {
-    root: section.root,
-    cleanup: () => {
-      clearSummaryTimer();
-      subscriptions.dispose();
-    },
-  };
+  return section.root;
 }

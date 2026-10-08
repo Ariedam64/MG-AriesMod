@@ -121,7 +121,7 @@ export function renderManagerTab(view: HTMLElement, ui: Menu): void {
     }
   }
 
-  const stopTeams = PetsService.onTeamsChange((all) => {
+  PetsService.onTeamsChange((all) => {
     teams = all.slice();
     if (selectedId && !teams.some((t) => t.id === selectedId)) selectedId = null;
     if (!selectedId && teams.length) selectedId = teams[0].id;
@@ -129,21 +129,13 @@ export function renderManagerTab(view: HTMLElement, ui: Menu): void {
     void editor.show(selectedTeam());
   });
 
-  let stopPets: (() => void) | null = null;
   void (async () => {
     try {
-      stopPets = await onActivePetsStructuralChangeNow(async () => {
+      await onActivePetsStructuralChangeNow(async () => {
         if (applyingTeam) return;
         await editor.repaint(selectedTeam());
         await scheduleRefresh();
       });
     } catch {}
   })();
-
-  const previousCleanup = (view as any).__cleanup__;
-  (view as any).__cleanup__ = () => {
-    try { stopTeams(); } catch {}
-    try { stopPets?.(); } catch {}
-    try { previousCleanup?.(); } catch {}
-  };
 }

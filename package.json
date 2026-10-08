@@ -55,7 +55,14 @@
     "check:editor": "esbuild scripts/checkEditorModel.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkEditorModel.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkEditorModel.cjs",
     "check:editorpanels": "esbuild scripts/checkEditorPanels.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkEditorPanels.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkEditorPanels.cjs",
     "check:shopalerts": "esbuild scripts/checkShopAlerts.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkShopAlerts.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkShopAlerts.cjs",
-    "check:alertsounds": "esbuild scripts/checkAlertSounds.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkAlertSounds.cjs --log-level=error && node node_modules/.cache/checkAlertSounds.cjs"
+    "check:alertsounds": "esbuild scripts/checkAlertSounds.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkAlertSounds.cjs --log-level=error && node node_modules/.cache/checkAlertSounds.cjs",
+    "check:kithidden": "esbuild scripts/checkKitHidden.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkKitHidden.cjs --log-level=error && node node_modules/.cache/checkKitHidden.cjs",
+    "check:toastcalls": "esbuild scripts/checkToastCalls.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkToastCalls.cjs --log-level=error && node node_modules/.cache/checkToastCalls.cjs",
+    "check:spawntiles": "esbuild scripts/checkSpawnTiles.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkSpawnTiles.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkSpawnTiles.cjs",
+    "check:inventoryfriends": "esbuild scripts/checkInventoryFriendBonus.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkInventoryFriendBonus.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkInventoryFriendBonus.cjs",
+    "check:debugsockets": "esbuild scripts/checkDebugSocketCapture.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkDebugSocketCapture.cjs --log-level=error && node node_modules/.cache/checkDebugSocketCapture.cjs",
+    "check:ghostmode": "esbuild scripts/checkGhostMode.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkGhostMode.cjs --log-level=error && node node_modules/.cache/checkGhostMode.cjs",
+    "check:inventorysummary": "esbuild scripts/checkInventoryValueSummary.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkInventoryValueSummary.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkInventoryValueSummary.cjs"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",

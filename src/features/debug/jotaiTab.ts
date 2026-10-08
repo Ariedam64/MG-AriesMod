@@ -186,7 +186,7 @@ export function renderJotaiTab(view: HTMLElement) {
 
         try {
           await jSet(atom, val);
-          toast(fallback ? "Set OK (raw text)" : "Set OK");
+          toast(fallback ? "Set OK (raw text)" : "Set OK", "success");
         } catch (e: any) {
           toast(e?.message || "Set failed");
         }

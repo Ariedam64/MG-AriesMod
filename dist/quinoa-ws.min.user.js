@@ -2604,6 +2604,10 @@
       "use strict";
       init_theme();
       chromeCss = `
+/* Any rule setting display beats the browser's own [hidden] rule, so kit
+   elements restate it, important to also beat compound selectors. */
+[class*="qmm"][hidden], [class*="qws"][hidden] { display: none !important; }
+
 .qmm-scroll, .qws-pnl-scroll, .qmm-views {
   scrollbar-width: thin; scrollbar-color: var(--qmm-scrollbar) transparent;
 }
@@ -13581,6 +13585,147 @@
     }
   });
 
+  // src/features/misc/ghost.ts
+  function readGhostDelayMs() {
+    try {
+      return normalizeDelay2(readAriesPath(PATH_GHOST_DELAY));
+    } catch {
+      return DEFAULT_DELAY_MS2;
+    }
+  }
+  function writeGhostDelayMs(ms) {
+    try {
+      writeAriesPath(PATH_GHOST_DELAY, normalizeDelay2(ms));
+    } catch {
+    }
+  }
+  function startGhostMode() {
+    if (readGhostEnabled()) ghost().start();
+  }
+  function setGhostEnabled(on) {
+    writeStoredFlag(PATH_GHOST_MODE, on);
+    if (on) ghost().start();
+    else ghost().stop();
+  }
+  function setGhostDelayMs(ms) {
+    ghost().setSpeed(ms);
+  }
+  function createGhostController() {
+    let delayMs = readGhostDelayMs();
+    const held = /* @__PURE__ */ new Set();
+    const onKeyDown2 = (e) => {
+      const key2 = e.key.toLowerCase();
+      if (!MOVE_KEYS.has(key2)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (e.repeat) return;
+      held.add(key2);
+    };
+    const onKeyUp = (e) => {
+      const key2 = e.key.toLowerCase();
+      if (!MOVE_KEYS.has(key2)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      held.delete(key2);
+    };
+    const onBlur = () => held.clear();
+    const onVisibility = () => {
+      if (document.hidden) held.clear();
+    };
+    const anyHeld = (keys) => keys.some((key2) => held.has(key2));
+    function direction() {
+      const dx = (anyHeld(RIGHT) ? 1 : 0) - (anyHeld(LEFT) ? 1 : 0);
+      const dy = (anyHeld(DOWN) ? 1 : 0) - (anyHeld(UP) ? 1 : 0);
+      return { dx, dy };
+    }
+    async function step(dx, dy) {
+      let current3;
+      try {
+        current3 = await PlayerService.getPosition();
+      } catch {
+      }
+      const x = Math.round(current3?.x ?? 0);
+      const y = Math.round(current3?.y ?? 0);
+      try {
+        await PlayerService.move(x + dx, y + dy);
+      } catch {
+      }
+    }
+    let rafId = null;
+    let lastTs = 0;
+    let budgetMs = 0;
+    let stepping = false;
+    function frame(ts) {
+      if (!lastTs) lastTs = ts;
+      budgetMs += ts - lastTs;
+      lastTs = ts;
+      const { dx, dy } = direction();
+      if ((dx !== 0 || dy !== 0) && budgetMs >= delayMs && !stepping) {
+        budgetMs -= delayMs;
+        stepping = true;
+        void step(dx, dy).finally(() => {
+          stepping = false;
+        });
+      }
+      budgetMs = Math.min(budgetMs, delayMs * 4);
+      rafId = requestAnimationFrame(frame);
+    }
+    const CAPTURE2 = { capture: true };
+    return {
+      start() {
+        if (rafId !== null) return;
+        lastTs = 0;
+        budgetMs = 0;
+        stepping = false;
+        window.addEventListener("keydown", onKeyDown2, CAPTURE2);
+        window.addEventListener("keyup", onKeyUp, CAPTURE2);
+        window.addEventListener("blur", onBlur);
+        document.addEventListener("visibilitychange", onVisibility);
+        rafId = requestAnimationFrame(frame);
+      },
+      stop() {
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
+        held.clear();
+        window.removeEventListener("keydown", onKeyDown2, CAPTURE2);
+        window.removeEventListener("keyup", onKeyUp, CAPTURE2);
+        window.removeEventListener("blur", onBlur);
+        document.removeEventListener("visibilitychange", onVisibility);
+      },
+      setSpeed(ms) {
+        delayMs = normalizeDelay2(ms);
+        writeGhostDelayMs(delayMs);
+      }
+    };
+  }
+  var PATH_GHOST_MODE, PATH_GHOST_DELAY, DEFAULT_DELAY_MS2, MIN_DELAY_MS, readGhostEnabled, normalizeDelay2, controller, ghost, UP, DOWN, LEFT, RIGHT, MOVE_KEYS;
+  var init_ghost = __esm({
+    "src/features/misc/ghost.ts"() {
+      "use strict";
+      init_player();
+      init_storage();
+      init_storedFlag();
+      PATH_GHOST_MODE = "misc.ghostMode";
+      PATH_GHOST_DELAY = "misc.ghostDelayMs";
+      DEFAULT_DELAY_MS2 = 50;
+      MIN_DELAY_MS = 5;
+      readGhostEnabled = () => readStoredFlag(PATH_GHOST_MODE);
+      normalizeDelay2 = (value) => {
+        const n = Math.floor(Number(value || DEFAULT_DELAY_MS2));
+        return Number.isFinite(n) ? Math.max(MIN_DELAY_MS, n) : DEFAULT_DELAY_MS2;
+      };
+      controller = null;
+      ghost = () => controller ?? (controller = createGhostController());
+      UP = ["z", "w", "arrowup"];
+      DOWN = ["s", "arrowdown"];
+      LEFT = ["q", "a", "arrowleft"];
+      RIGHT = ["d", "arrowright"];
+      MOVE_KEYS = /* @__PURE__ */ new Set([...UP, ...DOWN, ...LEFT, ...RIGHT]);
+    }
+  });
+
   // src/game/toasts.ts
   async function editGameToasts(edit) {
     const atom = getAtomByLabel(TOASTS_ATOM);
@@ -17693,23 +17838,24 @@
       }
     }
   }
-  function loadPlayersInRoomForValues() {
-    playersInRoomLoad ?? (playersInRoomLoad = (async () => {
-      try {
-        const raw = await Atoms.server.numPlayers.get();
+  function followInventoryValues() {
+    following2 ?? (following2 = Promise.all([
+      readAndFollow(Atoms.server.numPlayers, (raw) => {
         playersInRoom = Number.isFinite(raw) ? raw : null;
-      } catch {
-        playersInRoom = null;
-      }
-      playersInRoomLoaded.emit();
-    })());
-    return playersInRoomLoad;
+        playersInRoomChanges.emit();
+      }),
+      Atoms.inventory.myInventory.onChange(() => itemsChanges.emit()).catch(() => {
+      })
+    ]).then(() => {
+    }));
+    return following2;
   }
-  var PRICED_BY_QUANTITY, stringMutations, playersInRoom, playersInRoomLoad, playersInRoomLoaded, playersInRoomForValues, onPlayersInRoomLoaded;
+  var PRICED_BY_QUANTITY, stringMutations, playersInRoom, following2, playersInRoomChanges, itemsChanges, playersInRoomForValues, onPlayersInRoomChange, onInventoryItemsChange;
   var init_value = __esm({
     "src/features/inventory/value.ts"() {
       "use strict";
       init_atoms();
+      init_hub();
       init_emitter();
       init_data();
       init_petValue();
@@ -17723,10 +17869,12 @@
       };
       stringMutations = (slot) => Array.isArray(slot?.mutations) ? slot.mutations.filter((m) => typeof m === "string") : [];
       playersInRoom = null;
-      playersInRoomLoad = null;
-      playersInRoomLoaded = new Emitter();
+      following2 = null;
+      playersInRoomChanges = new Emitter();
+      itemsChanges = new Emitter();
       playersInRoomForValues = () => playersInRoom;
-      onPlayersInRoomLoaded = (listener) => playersInRoomLoaded.on(listener);
+      onPlayersInRoomChange = (listener) => playersInRoomChanges.on(listener);
+      onInventoryItemsChange = (listener) => itemsChanges.on(listener);
     }
   });
 
@@ -24605,7 +24753,7 @@
     async function ensureState(grid, filters, entries, searchQuery) {
       const filtersKey = JSON.stringify({ filters });
       const state5 = stateByGrid.get(grid);
-      const reusable = state5 && state5.filtersKey === filtersKey && state5.searchQuery === searchQuery && state5.entryCount === entries.length && state5.baseItems.length === entries.length && entries.every((entry) => readBaseIndex(entry) != null);
+      const reusable = state5 && state5.filtersKey === filtersKey && state5.searchQuery === searchQuery && state5.playersInRoom === playersInRoomForValues() && state5.entryCount === entries.length && state5.baseItems.length === entries.length && entries.every((entry) => readBaseIndex(entry) != null);
       if (state5 && reusable) {
         indexEntries2(state5, entries);
         return state5;
@@ -24624,6 +24772,7 @@
           filtersKey,
           searchQuery,
           entryCount: entries.length,
+          playersInRoom: playersInRoomForValues(),
           baseItems: shown.slice(),
           entryByBaseIndex: new Map(entries.map((entry, index) => [index, entry])),
           lastSortKey: state5?.lastSortKey ?? null
@@ -24682,6 +24831,7 @@
       init_itemInfo();
       init_sortOptions();
       init_strengthBadge();
+      init_value();
       init_valueDisplay();
     }
   });
@@ -24892,7 +25042,6 @@
     let lastSortedOrder = null;
     let lastContextKey = null;
     let lastRenderedEntryCount = null;
-    let loadValuesOnNextShow = true;
     let gridListeners = null;
     const resolveGrid = () => {
       if (grid && document.contains(grid)) return grid;
@@ -24935,7 +25084,6 @@
       lastSortedOrder = null;
       lastContextKey = null;
       lastRenderedEntryCount = null;
-      loadValuesOnNextShow = true;
       if (!grid) {
         gridListeners?.dispose();
         gridListeners = null;
@@ -24972,20 +25120,20 @@
     }
     function update() {
       const target = resolveGrid();
-      if (!target || !isVisible(target)) {
-        loadValuesOnNextShow = true;
-        return;
-      }
-      if (loadValuesOnNextShow) {
-        loadValuesOnNextShow = false;
-        void loadPlayersInRoomForValues();
-      }
+      if (!target || !isVisible(target)) return;
+      void followInventoryValues();
       const current3 = ensureSortBar(target, handlers);
       if (!current3) return;
       bar = current3;
       if (!gridListeners) {
         gridListeners = new Subscriptions();
-        gridListeners.add(onPlayersInRoomLoaded(refreshSummary));
+        gridListeners.add(onInventoryItemsChange(refreshSummary));
+        gridListeners.add(
+          onPlayersInRoomChange(() => {
+            refreshSummary();
+            sortWithBar();
+          })
+        );
         gridListeners.add(
           onShownItemTypesChange((contextKey) => {
             if (contextKey === lastContextKey) setTimeout(refresh, 0);
@@ -26714,7 +26862,7 @@
       try {
         const remoteData = await fetchRemoteVersion();
         const remoteVersion = remoteData?.version?.trim();
-        if (!remoteVersion) show(localVersion || "version inconnue", "warn");
+        if (!remoteVersion) show(localVersion || "Unknown", "warn");
         else if (!localVersion) show(remoteVersion, "warn", remoteData?.download);
         else if (localVersion === remoteVersion) show(localVersion, "ok");
         else show(`${localVersion} \u2192 ${remoteVersion}`, "warn", remoteData?.download);
@@ -27185,7 +27333,7 @@
           this.filterInput = null;
           this.items = [];
           this.root = h("div", "qmm-vtabs");
-          this.emptyText = opts.emptyText || "Aucun \xE9l\xE9ment.";
+          this.emptyText = opts.emptyText || "No items.";
           this.renderItemCustom = opts.renderItem;
           this.selectedId = opts.initialId ?? null;
           this.onSelectCb = opts.onSelect;
@@ -27529,10 +27677,8 @@
     else btn.textContent = text2;
   }
   function toast(msg, type = "warn") {
-    try {
-      window.toastSimple?.(msg, "", type);
-    } catch {
-    }
+    void toastSimple(msg, "", type).catch(() => {
+    });
   }
   function createTwoColumns(view) {
     const columns = document.createElement("div");
@@ -27564,18 +27710,10 @@
       } catch {
       }
       document.body.removeChild(ta);
-      try {
-        window.toastSimple?.(ok ? "Copied" : "Copy failed", "", ok ? "success" : "error");
-      } catch {
-      }
+      toast(ok ? "Copied" : "Copy failed", ok ? "success" : "error");
     };
     if (window.isSecureContext && navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(str).then(() => {
-        try {
-          window.toastSimple?.("Copied", "", "success");
-        } catch {
-        }
-      }).catch(fallback);
+      navigator.clipboard.writeText(str).then(() => toast("Copied", "success")).catch(fallback);
     } else {
       fallback();
     }
@@ -27593,6 +27731,7 @@
   var init_shared = __esm({
     "src/features/debug/shared.ts"() {
       "use strict";
+      init_toast();
     }
   });
 
@@ -28094,7 +28233,7 @@
           }
           try {
             await jSet(atom, val);
-            toast(fallback ? "Set OK (raw text)" : "Set OK");
+            toast(fallback ? "Set OK (raw text)" : "Set OK", "success");
           } catch (e) {
             toast(e?.message || "Set failed");
           }
@@ -28135,7 +28274,7 @@
         construct(target, args, newTarget) {
           const ws = Reflect.construct(target, args, newTarget);
           try {
-            trackSocket(ws, "new");
+            trackSocket(ws);
           } catch {
           }
           return ws;
@@ -28146,16 +28285,14 @@
     }
     for (const ws of sockets) {
       try {
-        trackSocket(ws, "existing");
+        trackSocket(ws);
       } catch {
       }
     }
   }
-  function trackSocket(ws, why) {
+  function trackSocket(ws) {
     if (registry.has(ws)) return;
     const info = { ws, id: `WS#${1 + registry.size} (${label(ws.readyState)})` };
-    if (!sockets.includes(ws)) sockets.push(ws);
-    setQWS(ws, why);
     ws.addEventListener("message", (ev) => {
       wsFrames.emit({ t: Date.now(), dir: "in", text: toText(ev.data), ws });
     });
@@ -30381,19 +30518,14 @@ next: ${next}`;
       renderDetail();
     };
     refresh();
-    const offStore = store.subscribe(refresh);
-    const onDataUpdated = (e) => {
+    store.subscribe(refresh);
+    window.addEventListener("gemini:data-updated", (e) => {
       if (e.detail?.key === "plants") refresh();
-    };
-    window.addEventListener("gemini:data-updated", onDataUpdated);
+    });
     return {
       render(view) {
         view.replaceChildren(layout);
         refresh();
-      },
-      destroy() {
-        offStore();
-        window.removeEventListener("gemini:data-updated", onDataUpdated);
       }
     };
   }
@@ -30785,15 +30917,14 @@ next: ${next}`;
       eggLocks.render();
       sellPets.refresh();
     };
-    const subs = new Subscriptions();
-    let following2 = false;
+    let following3 = false;
     const follow2 = () => {
-      if (following2) return;
-      following2 = true;
-      subs.add(onFriendBonusChange(friendBonus.showStatus));
-      subs.add(lockerRestrictionsService.subscribe(syncFromService));
+      if (following3) return;
+      following3 = true;
+      onFriendBonusChange(friendBonus.showStatus);
+      lockerRestrictionsService.subscribe(syncFromService);
       void Atoms.shop.eggShop.get().then((shop) => eggLocks.setEggs(lockableEggs(shop))).catch(() => eggLocks.render());
-      subs.add(Atoms.shop.eggShop.onChange((shop) => eggLocks.setEggs(lockableEggs(shop))));
+      void Atoms.shop.eggShop.onChange((shop) => eggLocks.setEggs(lockableEggs(shop)));
     };
     return {
       render(view) {
@@ -30801,8 +30932,7 @@ next: ${next}`;
         view.replaceChildren(layout);
         syncFromService();
         follow2();
-      },
-      destroy: () => subs.dispose()
+      }
     };
   }
   var toBonusStep2;
@@ -30810,7 +30940,6 @@ next: ${next}`;
     "src/features/locker/restrictionsTab.ts"() {
       "use strict";
       init_atoms();
-      init_emitter();
       init_badges();
       init_card();
       init_layout();
@@ -30988,15 +31117,14 @@ next: ${next}`;
       form.setDisabled(!store.global.enabled);
       form.refresh();
     };
-    const off = store.subscribe(update);
+    store.subscribe(update);
     update();
     return {
       render(view) {
         view.classList.add("lk-view");
         view.replaceChildren(root4);
         update();
-      },
-      destroy: off
+      }
     };
   }
   async function renderLockerMenu(container) {
@@ -31011,11 +31139,7 @@ next: ${next}`;
       { id: "locker-restrictions", title: "Restrictions", render: (view) => tabs.restrictions.render(view) }
     ]);
     ui.switchTo("locker-general");
-    const offService = lockerService.subscribe((state5) => store.syncFromService(state5));
-    ui.on("unmounted", () => {
-      offService();
-      Object.values(tabs).forEach((tab) => tab.destroy());
-    });
+    lockerService.subscribe((state5) => store.syncFromService(state5));
   }
   var init_menu3 = __esm({
     "src/features/locker/menu.ts"() {
@@ -31898,14 +32022,6 @@ next: ${next}`;
     return sortSpeciesByRarity(out);
   }
   function renderHatchTab(view) {
-    const prevCleanup = view.__cleanup__;
-    if (typeof prevCleanup === "function") {
-      try {
-        prevCleanup();
-      } catch {
-      }
-      view.__cleanup__ = void 0;
-    }
     view.replaceChildren();
     const wrap = document.createElement("div");
     wrap.classList.add("qws-pnl-scroll");
@@ -32011,7 +32127,6 @@ next: ${next}`;
         rafId = null;
       }
     }
-    view.__cleanup__ = cleanup;
     seedFromOwnedPets(StatsService.getSnapshot()).catch((error) => {
       console.error("[PetsHatch] Failed to seed pet stats", error);
     });
@@ -32417,14 +32532,6 @@ next: ${next}`;
     }
   }
   function renderLogsTab(view) {
-    const prevCleanup = view.__cleanup__;
-    if (typeof prevCleanup === "function") {
-      try {
-        prevCleanup();
-      } catch {
-      }
-      view.__cleanup__ = void 0;
-    }
     view.replaceChildren();
     const wrap = document.createElement("div");
     css3(wrap, {
@@ -32628,13 +32735,11 @@ next: ${next}`;
       search2 = inputSearch.value.trim();
       repaint();
     });
-    let stopWatcher = null;
-    let unsubLogs = null;
     void (async () => {
       try {
-        stopWatcher = await PetsService.startAbilityLogsWatcher();
+        await PetsService.startAbilityLogsWatcher();
         rebuildAbilityOptions();
-        unsubLogs = PetsService.onAbilityLogs((all) => {
+        PetsService.onAbilityLogs((all) => {
           logs2 = all.map((entry) => ({
             petId: entry.petId,
             petName: entry.name ?? null,
@@ -32655,16 +32760,6 @@ next: ${next}`;
       }
     })();
     repaint();
-    view.__cleanup__ = () => {
-      try {
-        unsubLogs?.();
-      } catch {
-      }
-      try {
-        stopWatcher?.();
-      } catch {
-      }
-    };
   }
   var css3, PANEL_WIDTH, LIST_MAX_HEIGHT, PET_ICON_PX, ROW_TEMPLATE2, normalizeAbilityKey;
   var init_logsTab = __esm({
@@ -33827,11 +33922,11 @@ Restore figures are averages; unlucky streaks do worse.`;
         ev.dataTransfer?.setData("text/plain", String(index));
         if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "move";
         try {
-          const ghost = row5.cloneNode(true);
-          Object.assign(ghost.style, { width: `${row5.getBoundingClientRect().width}px`, position: "absolute", top: "-9999px" });
-          document.body.appendChild(ghost);
-          ev.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
-          setTimeout(() => ghost.remove(), 0);
+          const ghost2 = row5.cloneNode(true);
+          Object.assign(ghost2.style, { width: `${row5.getBoundingClientRect().width}px`, position: "absolute", top: "-9999px" });
+          document.body.appendChild(ghost2);
+          ev.dataTransfer.setDragImage(ghost2, ghost2.offsetWidth / 2, ghost2.offsetHeight / 2);
+          setTimeout(() => ghost2.remove(), 0);
         } catch {
         }
       });
@@ -33982,17 +34077,16 @@ Restore figures are averages; unlucky streaks do worse.`;
         applyingTeam = false;
       }
     }
-    const stopTeams = PetsService.onTeamsChange((all) => {
+    PetsService.onTeamsChange((all) => {
       teams2 = all.slice();
       if (selectedId && !teams2.some((t) => t.id === selectedId)) selectedId = null;
       if (!selectedId && teams2.length) selectedId = teams2[0].id;
       void scheduleRefresh();
       void editor.show(selectedTeam());
     });
-    let stopPets = null;
     void (async () => {
       try {
-        stopPets = await onActivePetsStructuralChangeNow(async () => {
+        await onActivePetsStructuralChangeNow(async () => {
           if (applyingTeam) return;
           await editor.repaint(selectedTeam());
           await scheduleRefresh();
@@ -34000,21 +34094,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       } catch {
       }
     })();
-    const previousCleanup = view.__cleanup__;
-    view.__cleanup__ = () => {
-      try {
-        stopTeams();
-      } catch {
-      }
-      try {
-        stopPets?.();
-      } catch {
-      }
-      try {
-        previousCleanup?.();
-      } catch {
-      }
-    };
   }
   var init_managerTab = __esm({
     "src/features/pets/managerTab.ts"() {
@@ -35052,14 +35131,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { teams: teams2, sustainPet, unusedPets, petsById };
   }
   function renderTeamBuilderTab(view) {
-    const prevCleanup = view.__cleanup__;
-    if (typeof prevCleanup === "function") {
-      try {
-        prevCleanup();
-      } catch {
-      }
-      view.__cleanup__ = void 0;
-    }
     view.innerHTML = "";
     const wrap = document.createElement("div");
     wrap.style.display = "grid";
@@ -35080,10 +35151,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     content2.style.gridTemplateColumns = "repeat(3, minmax(0, 1fr))";
     content2.style.gap = "8px";
     wrap.appendChild(content2);
-    let destroyed = false;
-    view.__cleanup__ = () => {
-      destroyed = true;
-    };
     async function repaint() {
       content2.innerHTML = "";
       const loading2 = document.createElement("div");
@@ -35091,7 +35158,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       loading2.style.opacity = "0.6";
       content2.appendChild(loading2);
       const { teams: teams2, unusedPets, petsById } = await loadTeams();
-      if (destroyed || !view.isConnected) return;
+      if (!view.isConnected) return;
       content2.innerHTML = "";
       if (!teams2.length) {
         const empty = document.createElement("div");
@@ -35733,7 +35800,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function createDeleterSection(config) {
     ensureDeleterStyles();
-    const { controller } = config;
+    const { controller: controller2 } = config;
     const headerText = h("div", "qws-del-head__text");
     headerText.append(sectionLabel(config.title), h("div", "qws-del-head__desc", config.description));
     const header = h("div", "qws-del-head");
@@ -35767,7 +35834,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const btnClear = button(config.clearLabel, {
       size: "sm",
       onClick: () => {
-        controller.clearSelection();
+        controller2.clearSelection();
         updateSummary();
       }
     });
@@ -35778,15 +35845,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       onClick: () => runDelete()
     });
     const btnPause = button("Pause", { size: "sm", onClick: () => {
-      controller.pause();
+      controller2.pause();
       updateControls();
     } });
     const btnPlay = button("Resume", { size: "sm", onClick: () => {
-      controller.resume();
+      controller2.resume();
       updateControls();
     } });
     const btnStop = button("Stop", { variant: "danger", size: "sm", onClick: () => {
-      controller.cancel();
+      controller2.cancel();
       updateControls();
     } });
     const actions2 = h("div", "qws-del-actions");
@@ -35805,7 +35872,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return chip;
     }
     function readSelection() {
-      const selection = controller.getSelection();
+      const selection = controller2.getSelection();
       let totalQty = 0;
       let fromStorage = 0;
       for (const item of selection) {
@@ -35840,7 +35907,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           chips.append(h("div", "qws-del-chip qws-del-chip--more", `+${sorted.length - MAX_VISIBLE_CHIPS} more`));
         }
       }
-      const running = controller.isRunning();
+      const running = controller2.isRunning();
       const estimateMs = estimateMsFor(totalQty);
       const finishTimestamp = running ? estimatedFinish : estimateMs > 0 ? Date.now() + estimateMs : null;
       estimate.textContent = totalQty <= 0 ? "" : finishTimestamp ? `About ${formatDurationShort(estimateMs)} \xB7 done around ${formatFinishTime(finishTimestamp)}` : `About ${formatDurationShort(estimateMs)}`;
@@ -35854,8 +35921,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     }
     function updateControls() {
-      const running = controller.isRunning();
-      const paused = controller.isPaused();
+      const running = controller2.isRunning();
+      const paused = controller2.isPaused();
       section5.root.classList.toggle("is-running", running);
       btnPause.hidden = !running || paused;
       btnPlay.hidden = !running || !paused;
@@ -35881,7 +35948,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const estimateMs = estimateMsFor(readSelection().totalQty);
       estimatedFinish = estimateMs > 0 ? Date.now() + estimateMs : null;
       clearSummaryTimer();
-      const pending3 = controller.run(config.runDelayMs);
+      const pending3 = controller2.run(config.runDelayMs);
       updateControls();
       updateSummary();
       await pending3;
@@ -35910,23 +35977,15 @@ Restore figures are averages; unlucky streaks do worse.`;
           break;
       }
     };
-    const subscriptions = new Subscriptions();
-    subscriptions.add(controller.events.on(onEvent));
+    controller2.events.on(onEvent);
     updateSummary();
     updateControls();
-    return {
-      root: section5.root,
-      cleanup: () => {
-        clearSummaryTimer();
-        subscriptions.dispose();
-      }
-    };
+    return section5.root;
   }
   var EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS, MAX_VISIBLE_CHIPS, CHIP_SPRITE_PX, formatDurationShort, formatFinishTime;
   var init_section = __esm({
     "src/features/deleters/section.ts"() {
       "use strict";
-      init_emitter();
       init_format();
       init_badges();
       init_button();
@@ -35949,135 +36008,6 @@ Restore figures are averages; unlucky streaks do worse.`;
         return rest2 === 0 ? `${minutes} min` : `${minutes} min ${rest2} s`;
       };
       formatFinishTime = (timestamp) => new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    }
-  });
-
-  // src/features/misc/ghost.ts
-  function readGhostDelayMs() {
-    try {
-      return normalizeDelay2(readAriesPath(PATH_GHOST_DELAY));
-    } catch {
-      return DEFAULT_DELAY_MS2;
-    }
-  }
-  function writeGhostDelayMs(ms) {
-    try {
-      writeAriesPath(PATH_GHOST_DELAY, normalizeDelay2(ms));
-    } catch {
-    }
-  }
-  function createGhostController() {
-    let delayMs = readGhostDelayMs();
-    const held = /* @__PURE__ */ new Set();
-    const onKeyDown2 = (e) => {
-      const key2 = e.key.toLowerCase();
-      if (!MOVE_KEYS.has(key2)) return;
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      if (e.repeat) return;
-      held.add(key2);
-    };
-    const onKeyUp = (e) => {
-      const key2 = e.key.toLowerCase();
-      if (!MOVE_KEYS.has(key2)) return;
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      held.delete(key2);
-    };
-    const onBlur = () => held.clear();
-    const onVisibility = () => {
-      if (document.hidden) held.clear();
-    };
-    const anyHeld = (keys) => keys.some((key2) => held.has(key2));
-    function direction() {
-      const dx = (anyHeld(RIGHT) ? 1 : 0) - (anyHeld(LEFT) ? 1 : 0);
-      const dy = (anyHeld(DOWN) ? 1 : 0) - (anyHeld(UP) ? 1 : 0);
-      return { dx, dy };
-    }
-    async function step(dx, dy) {
-      let current3;
-      try {
-        current3 = await PlayerService.getPosition();
-      } catch {
-      }
-      const x = Math.round(current3?.x ?? 0);
-      const y = Math.round(current3?.y ?? 0);
-      try {
-        await PlayerService.move(x + dx, y + dy);
-      } catch {
-      }
-    }
-    let rafId = null;
-    let lastTs = 0;
-    let budgetMs = 0;
-    let stepping = false;
-    function frame(ts) {
-      if (!lastTs) lastTs = ts;
-      budgetMs += ts - lastTs;
-      lastTs = ts;
-      const { dx, dy } = direction();
-      if ((dx !== 0 || dy !== 0) && budgetMs >= delayMs && !stepping) {
-        budgetMs -= delayMs;
-        stepping = true;
-        void step(dx, dy).finally(() => {
-          stepping = false;
-        });
-      }
-      budgetMs = Math.min(budgetMs, delayMs * 4);
-      rafId = requestAnimationFrame(frame);
-    }
-    const CAPTURE2 = { capture: true };
-    return {
-      start() {
-        if (rafId !== null) return;
-        lastTs = 0;
-        budgetMs = 0;
-        stepping = false;
-        window.addEventListener("keydown", onKeyDown2, CAPTURE2);
-        window.addEventListener("keyup", onKeyUp, CAPTURE2);
-        window.addEventListener("blur", onBlur);
-        document.addEventListener("visibilitychange", onVisibility);
-        rafId = requestAnimationFrame(frame);
-      },
-      stop() {
-        if (rafId !== null) {
-          cancelAnimationFrame(rafId);
-          rafId = null;
-        }
-        held.clear();
-        window.removeEventListener("keydown", onKeyDown2, CAPTURE2);
-        window.removeEventListener("keyup", onKeyUp, CAPTURE2);
-        window.removeEventListener("blur", onBlur);
-        document.removeEventListener("visibilitychange", onVisibility);
-      },
-      setSpeed(ms) {
-        delayMs = normalizeDelay2(ms);
-        writeGhostDelayMs(delayMs);
-      }
-    };
-  }
-  var PATH_GHOST_MODE, PATH_GHOST_DELAY, DEFAULT_DELAY_MS2, MIN_DELAY_MS, readGhostEnabled, writeGhostEnabled, normalizeDelay2, UP, DOWN, LEFT, RIGHT, MOVE_KEYS;
-  var init_ghost = __esm({
-    "src/features/misc/ghost.ts"() {
-      "use strict";
-      init_player();
-      init_storage();
-      init_storedFlag();
-      PATH_GHOST_MODE = "misc.ghostMode";
-      PATH_GHOST_DELAY = "misc.ghostDelayMs";
-      DEFAULT_DELAY_MS2 = 50;
-      MIN_DELAY_MS = 5;
-      readGhostEnabled = () => readStoredFlag(PATH_GHOST_MODE);
-      writeGhostEnabled = (on) => writeStoredFlag(PATH_GHOST_MODE, on);
-      normalizeDelay2 = (value) => {
-        const n = Math.floor(Number(value || DEFAULT_DELAY_MS2));
-        return Number.isFinite(n) ? Math.max(MIN_DELAY_MS, n) : DEFAULT_DELAY_MS2;
-      };
-      UP = ["z", "w", "arrowup"];
-      DOWN = ["s", "arrowdown"];
-      LEFT = ["q", "a", "arrowleft"];
-      RIGHT = ["d", "arrowright"];
-      MOVE_KEYS = /* @__PURE__ */ new Set([...UP, ...DOWN, ...LEFT, ...RIGHT]);
     }
   });
 
@@ -37065,13 +36995,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       "Player controls",
       "Movement helpers for walking and testing."
     );
-    const ghost = createGhostController();
-    const ghostToggle = switchInput(readGhostEnabled(), (on) => {
-      writeGhostEnabled(on);
-      if (on) ghost.start();
-      else ghost.stop();
-    });
-    if (readGhostEnabled()) ghost.start();
+    const ghostToggle = switchInput(readGhostEnabled(), setGhostEnabled);
     const delayInput = numberInput(MOVE_DELAY_MIN_MS, MOVE_DELAY_MAX_MS, 5, readGhostDelayMs());
     delayInput.addEventListener("change", () => {
       const value = Math.max(
@@ -37079,16 +37003,13 @@ Restore figures are averages; unlucky streaks do worse.`;
         Math.min(MOVE_DELAY_MAX_MS, Math.floor(Number(delayInput.value) || MOVE_DELAY_DEFAULT_MS))
       );
       delayInput.value = String(value);
-      ghost.setSpeed(value);
+      setGhostDelayMs(value);
     });
     card4.body.append(
       settingRow("Ghost mode", "Ignores collisions while you move.", ghostToggle).row,
       settingRow("Move delay (ms)", "Lower values feel faster.", delayInput.wrap).row
     );
-    return {
-      root: card4.root,
-      cleanup: () => ghost.stop()
-    };
+    return card4.root;
   }
   function buildInventoryGuardSection() {
     const card4 = section3(
@@ -37185,20 +37106,19 @@ Restore figures are averages; unlucky streaks do worse.`;
       overflowY: "auto",
       boxSizing: "border-box"
     });
-    const player2 = buildPlayerSection();
     const modalHost = () => ui.root.closest(".qws-win") ?? ui.root;
-    const pickFor = (controller, opts) => new Promise((resolve) => {
+    const pickFor = (controller2, opts) => new Promise((resolve) => {
       let loaded2 = [];
       openDeleterPicker({
         ...opts,
         host: modalHost(),
-        initial: new Map(controller.getSelection().map((entry) => [entry.id, entry.qty])),
+        initial: new Map(controller2.getSelection().map((entry) => [entry.id, entry.qty])),
         loadEntries: async () => {
           loaded2 = await opts.loadEntries();
           return loaded2;
         },
         onConfirm: (picked) => {
-          controller.setSelection(
+          controller2.setSelection(
             Array.from(picked, ([id, qty]) => {
               const entry = loaded2.find((candidate) => candidate.id === id);
               return {
@@ -37268,27 +37188,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     root4.append(
       panelHeader(),
       buildAutoRecoSection(),
-      player2.root,
+      buildPlayerSection(),
       buildDisplaySection(modalHost),
       buildInventoryGuardSection(),
       buildStorageSection(),
-      seedDeleterSection.root,
-      decorDeleterSection.root
+      seedDeleterSection,
+      decorDeleterSection
     );
-    root4.__cleanup__ = () => {
-      try {
-        player2.cleanup();
-      } catch {
-      }
-      try {
-        seedDeleterSection.cleanup();
-      } catch {
-      }
-      try {
-        decorDeleterSection.cleanup();
-      } catch {
-      }
-    };
   }
   var PANEL_WIDTH_PX, AUTO_RECO_MAX_SECONDS, AUTO_RECO_STEP_SECONDS, MOVE_DELAY_MIN_MS, MOVE_DELAY_MAX_MS, MOVE_DELAY_DEFAULT_MS, formatShortDuration;
   var init_menu6 = __esm({
@@ -40446,22 +40352,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     renderSavedList();
     wrap.appendChild(card2(sectionLabel("Saved gardens"), status2.el, listWrap2));
-    const subs = new Subscriptions();
-    subs.add(
-      EditorService.onChange((enabled2) => {
-        mode.modeSwitch.checked = enabled2;
-        renderSavedList();
-      })
-    );
-    subs.add(EditorService.onSavedGardensChange(renderSavedList));
-    container.__cleanup__ = () => subs.dispose();
+    EditorService.onChange((enabled2) => {
+      mode.modeSwitch.checked = enabled2;
+      renderSavedList();
+    });
+    EditorService.onSavedGardensChange(renderSavedList);
   }
   var STATUS_CLEAR_MS, TONE_COLOR, row2, fileSafeName;
   var init_menu10 = __esm({
     "src/features/editor/menu.ts"() {
       "use strict";
       init_download();
-      init_emitter();
       init_button();
       init_card();
       init_fields();
@@ -40752,7 +40653,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (cachedSpawnTiles) return cachedSpawnTiles;
     if (!loading) {
       loading = loadSpawnTiles().then((tiles) => {
-        cachedSpawnTiles = tiles;
+        if (tiles.length) cachedSpawnTiles = tiles;
         loading = null;
         return tiles;
       });
@@ -41081,7 +40982,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const saved = await fn(player2.id, `${player2.name || player2.id}'s garden`);
     if (!saved) await toastSimple("Save garden", "Save failed (no garden state).", "error");
-    else await toastSimple(`Saved "${saved.name}".`, "success");
+    else await toastSimple("Save garden", `Saved "${saved.name}".`, "success");
   }
   function renderPlayerDetail(root4, player2) {
     const content2 = h("div");
@@ -50995,6 +50896,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_stores();
       init_outgoingRules();
       init_inventoryReserve();
+      init_ghost();
       init_outgoingRules2();
       init_outgoingCounters();
       init_hud();
@@ -51039,6 +50941,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         installLockerOutgoingRules();
         installStatsCounters();
         startAutoStores();
+        startGhostMode();
         MGData.init();
         shareGlobal("MGData", MGData);
         detectGameVersion();

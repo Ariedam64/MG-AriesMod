@@ -23,7 +23,7 @@ import { PET_HUTCH_ROOT_SELECTOR, updatePetHutchSections } from "./petHutch";
 import { loadShowValues, loadSortDirection, loadSortKey, saveShowValues, saveSort } from "./settings";
 import { ensureSortBar, renderSortOptions, type SortBar } from "./sortBar";
 import { DEFAULT_DIRECTION, computeSortOptions, isSortDirection, type SortDirection, type SortKey } from "./sortOptions";
-import { loadPlayersInRoomForValues, onPlayersInRoomLoaded } from "./value";
+import { followInventoryValues, onInventoryItemsChange, onPlayersInRoomChange } from "./value";
 
 const GRID_ATTRIBUTES = ["data-checked", "style", "class", "hidden", "aria-hidden"];
 
@@ -40,7 +40,6 @@ function attachInventorySorting(): () => void {
   let lastSortedOrder: HTMLElement[] | null = null;
   let lastContextKey: string | null = null;
   let lastRenderedEntryCount: number | null = null;
-  let loadValuesOnNextShow = true;
   /** Listeners that live while a grid is up. */
   let gridListeners: Subscriptions | null = null;
 
@@ -92,7 +91,6 @@ function attachInventorySorting(): () => void {
     lastSortedOrder = null;
     lastContextKey = null;
     lastRenderedEntryCount = null;
-    loadValuesOnNextShow = true;
     if (!grid) {
       gridListeners?.dispose();
       gridListeners = null;
@@ -134,23 +132,23 @@ function attachInventorySorting(): () => void {
 
   function update(): void {
     const target = resolveGrid();
-    if (!target || !isVisible(target)) {
-      loadValuesOnNextShow = true;
-      return;
-    }
-    if (loadValuesOnNextShow) {
-      loadValuesOnNextShow = false;
-      void loadPlayersInRoomForValues();
-    }
+    if (!target || !isVisible(target)) return;
+    void followInventoryValues();
 
     const current = ensureSortBar(target, handlers);
     if (!current) return;
     bar = current;
     if (!gridListeners) {
-      // The total refreshes once the friend bonus is known, the sort options
-      // once the item types a filter shows are.
+      // The total follows the items and the friend bonus, the cards the
+      // friend bonus, the sort options the item types a filter shows.
       gridListeners = new Subscriptions();
-      gridListeners.add(onPlayersInRoomLoaded(refreshSummary));
+      gridListeners.add(onInventoryItemsChange(refreshSummary));
+      gridListeners.add(
+        onPlayersInRoomChange(() => {
+          refreshSummary();
+          sortWithBar();
+        }),
+      );
       gridListeners.add(
         onShownItemTypesChange((contextKey) => {
           if (contextKey === lastContextKey) setTimeout(refresh, 0);

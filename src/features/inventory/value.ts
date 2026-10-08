@@ -2,6 +2,7 @@
 // price with the friend bonus, and catalog price times quantity for the rest.
 
 import { Atoms } from "../../game/store/atoms";
+import { readAndFollow } from "../../game/store/hub";
 import { Emitter } from "../../lib/emitter";
 import { decorCatalog, eggCatalog, plantCatalog, toolCatalog } from "../../data";
 import { getPetInfo } from "../../data/rules/petValue";
@@ -78,25 +79,29 @@ export function computeInventoryItemValue(item: any, context: InventoryItemValue
   }
 }
 
-// The friend bonus the inventory badges use. It is read once, the first time
-// the inventory shows, and kept for the session.
+// What the inventory's values depend on, followed from the first time the
+// inventory shows: the player count behind the friend bonus, so the bonus
+// moves as players join and leave, and the items themselves, so the value
+// summary is totalled again when something is sold, harvested or bought.
 let playersInRoom: number | null = null;
-let playersInRoomLoad: Promise<void> | null = null;
-const playersInRoomLoaded = new Emitter<void>();
+let following: Promise<void> | null = null;
+const playersInRoomChanges = new Emitter<void>();
+const itemsChanges = new Emitter<void>();
 
 export const playersInRoomForValues = (): number | null => playersInRoom;
 
-export const onPlayersInRoomLoaded = (listener: () => void) => playersInRoomLoaded.on(listener);
+export const onPlayersInRoomChange = (listener: () => void) => playersInRoomChanges.on(listener);
 
-export function loadPlayersInRoomForValues(): Promise<void> {
-  playersInRoomLoad ??= (async () => {
-    try {
-      const raw = await Atoms.server.numPlayers.get();
+export const onInventoryItemsChange = (listener: () => void) => itemsChanges.on(listener);
+
+/** Starts following the player count and the inventory; later calls return the same promise. */
+export function followInventoryValues(): Promise<void> {
+  following ??= Promise.all([
+    readAndFollow(Atoms.server.numPlayers, (raw) => {
       playersInRoom = Number.isFinite(raw) ? raw : null;
-    } catch {
-      playersInRoom = null;
-    }
-    playersInRoomLoaded.emit();
-  })();
-  return playersInRoomLoad;
+      playersInRoomChanges.emit();
+    }),
+    Atoms.inventory.myInventory.onChange(() => itemsChanges.emit()).catch(() => {}),
+  ]).then(() => {});
+  return following;
 }

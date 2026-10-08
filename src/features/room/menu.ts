@@ -192,7 +192,7 @@ async function saveGardenWithEditor(player: Player): Promise<void> {
   }
   const saved = await fn(player.id, `${player.name || player.id}'s garden`);
   if (!saved) await toastSimple("Save garden", "Save failed (no garden state).", "error");
-  else await toastSimple(`Saved "${saved.name}".`, "success");
+  else await toastSimple("Save garden", `Saved "${saved.name}".`, "success");
 }
 
 function renderPlayerDetail(root: HTMLElement, player: Player): HTMLElement {

@@ -1,13 +1,13 @@
+import { toastSimple, type ToastVariant } from "../../ui/toast";
+
 export function setBtnLabel(btn: HTMLButtonElement, text: string) {
   const label = btn.querySelector<HTMLElement>(".label");
   if (label) label.textContent = text;
   else btn.textContent = text;
 }
 
-export function toast(msg: string, type: "warn" | "success" = "warn") {
-  try {
-    (window as any).toastSimple?.(msg, "", type);
-  } catch {}
+export function toast(msg: string, type: ToastVariant = "warn") {
+  void toastSimple(msg, "", type).catch(() => {});
 }
 
 export function createTwoColumns(view: HTMLElement) {
@@ -41,12 +41,12 @@ export function copy(text: string) {
     let ok = false;
     try { ok = document.execCommand("copy"); } catch {}
     document.body.removeChild(ta);
-    try { (window as any).toastSimple?.(ok ? "Copied" : "Copy failed", "", ok ? "success" : "error"); } catch {}
+    toast(ok ? "Copied" : "Copy failed", ok ? "success" : "error");
   };
 
   if (window.isSecureContext && navigator.clipboard?.writeText) {
     navigator.clipboard.writeText(str)
-      .then(() => { try { (window as any).toastSimple?.("Copied", "", "success"); } catch {} })
+      .then(() => toast("Copied", "success"))
       .catch(fallback);
   } else {
     fallback();

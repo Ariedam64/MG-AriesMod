@@ -41,7 +41,7 @@ export class VTabs {
 
   constructor(opts: VTabsOptions = {}) {
     this.root = h("div", "qmm-vtabs");
-    this.emptyText = opts.emptyText || "Aucun élément.";
+    this.emptyText = opts.emptyText || "No items.";
     this.renderItemCustom = opts.renderItem;
     this.selectedId = opts.initialId ?? null;
     this.onSelectCb = opts.onSelect;

@@ -152,12 +152,6 @@ function otherSpecies(stats: StatsSnapshot, fromEggs: Set<string>): string[] {
 /* ----------------------------------- tab ----------------------------------- */
 
 export function renderHatchTab(view: HTMLElement): void {
-  const prevCleanup = (view as any).__cleanup__;
-  if (typeof prevCleanup === "function") {
-    try { prevCleanup(); } catch {}
-    (view as any).__cleanup__ = undefined;
-  }
-
   view.replaceChildren();
 
   // Style an inner wrapper, never the tab view itself: an inline display on
@@ -277,8 +271,6 @@ export function renderHatchTab(view: HTMLElement): void {
       rafId = null;
     }
   }
-
-  (view as any).__cleanup__ = cleanup;
 
   seedFromOwnedPets(StatsService.getSnapshot()).catch(error => {
     console.error("[PetsHatch] Failed to seed pet stats", error);

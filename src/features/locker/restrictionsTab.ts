@@ -3,7 +3,6 @@
 // protections.
 
 import { Atoms } from "../../game/store/atoms";
-import { Subscriptions } from "../../lib/emitter";
 import { pill, setTone } from "../../ui/kit/badges";
 import { card } from "../../ui/kit/card";
 import { settingRow } from "../../ui/kit/layout";
@@ -21,7 +20,7 @@ import {
 } from "./restrictions";
 import { sellPetsRulesCard } from "./sellPetsRulesCard";
 
-export type LockerTab = { render(view: HTMLElement): void; destroy(): void };
+export type LockerTab = { render(view: HTMLElement): void };
 
 const toBonusStep = (value: number) =>
   Math.max(0, Math.min(FRIEND_BONUS_MAX, Math.round(value / FRIEND_BONUS_STEP) * FRIEND_BONUS_STEP));
@@ -163,18 +162,17 @@ export function restrictionsTab(): LockerTab {
   };
 
   // Followed from the first time the tab is shown.
-  const subs = new Subscriptions();
   let following = false;
   const follow = () => {
     if (following) return;
     following = true;
-    subs.add(onFriendBonusChange(friendBonus.showStatus));
-    subs.add(lockerRestrictionsService.subscribe(syncFromService));
+    onFriendBonusChange(friendBonus.showStatus);
+    lockerRestrictionsService.subscribe(syncFromService);
     void Atoms.shop.eggShop
       .get()
       .then((shop) => eggLocks.setEggs(lockableEggs(shop)))
       .catch(() => eggLocks.render());
-    subs.add(Atoms.shop.eggShop.onChange((shop) => eggLocks.setEggs(lockableEggs(shop))));
+    void Atoms.shop.eggShop.onChange((shop) => eggLocks.setEggs(lockableEggs(shop)));
   };
 
   return {
@@ -184,6 +182,5 @@ export function restrictionsTab(): LockerTab {
       syncFromService();
       follow();
     },
-    destroy: () => subs.dispose(),
   };
 }

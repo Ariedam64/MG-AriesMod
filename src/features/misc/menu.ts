@@ -28,7 +28,7 @@ import { openDeleterPicker } from "../deleters/picker";
 import type { DeleterController } from "../deleters/run";
 import { createDeleterSection } from "../deleters/section";
 import { getDecorEntries, getSeedEntries, type DeleterEntry } from "../deleters/sources";
-import { createGhostController, readGhostDelayMs, readGhostEnabled, writeGhostEnabled } from "./ghost";
+import { readGhostDelayMs, readGhostEnabled, setGhostDelayMs, setGhostEnabled } from "./ghost";
 import { openGardenView } from "./gardenView";
 import { readInventorySlotReserveEnabled, writeInventorySlotReserveEnabled } from "./inventoryReserve";
 
@@ -155,7 +155,7 @@ function buildAutoRecoSection(): HTMLElement {
 }
 
 /* ===== Section: Player controls ===== */
-function buildPlayerSection(): { root: HTMLElement; cleanup: () => void } {
+function buildPlayerSection(): HTMLElement {
   const card = section(
     "player",
     "👻",
@@ -163,14 +163,7 @@ function buildPlayerSection(): { root: HTMLElement; cleanup: () => void } {
     "Movement helpers for walking and testing.",
   );
 
-  // Ghost mode starts when this menu is first built, not at boot.
-  const ghost = createGhostController();
-  const ghostToggle = switchInput(readGhostEnabled(), on => {
-    writeGhostEnabled(on);
-    if (on) ghost.start();
-    else ghost.stop();
-  });
-  if (readGhostEnabled()) ghost.start();
+  const ghostToggle = switchInput(readGhostEnabled(), setGhostEnabled);
 
   const delayInput = numberInput(MOVE_DELAY_MIN_MS, MOVE_DELAY_MAX_MS, 5, readGhostDelayMs());
   delayInput.addEventListener("change", () => {
@@ -179,7 +172,7 @@ function buildPlayerSection(): { root: HTMLElement; cleanup: () => void } {
       Math.min(MOVE_DELAY_MAX_MS, Math.floor(Number(delayInput.value) || MOVE_DELAY_DEFAULT_MS)),
     );
     delayInput.value = String(value);
-    ghost.setSpeed(value);
+    setGhostDelayMs(value);
   });
 
   card.body.append(
@@ -187,10 +180,7 @@ function buildPlayerSection(): { root: HTMLElement; cleanup: () => void } {
     settingRow("Move delay (ms)", "Lower values feel faster.", delayInput.wrap).row,
   );
 
-  return {
-    root: card.root,
-    cleanup: () => ghost.stop(),
-  };
+  return card.root;
 }
 
 /* ===== Section: Inventory guard ===== */
@@ -309,8 +299,6 @@ export async function renderMiscMenu(container: HTMLElement) {
     boxSizing: "border-box",
   });
 
-  const player = buildPlayerSection();
-
   /** HUD window the popup anchors to, so it stacks above this menu. */
   const modalHost = (): HTMLElement =>
     (ui.root.closest(".qws-win") as HTMLElement | null) ?? ui.root;
@@ -414,17 +402,11 @@ export async function renderMiscMenu(container: HTMLElement) {
   root.append(
     panelHeader(),
     buildAutoRecoSection(),
-    player.root,
+    buildPlayerSection(),
     buildDisplaySection(modalHost),
     buildInventoryGuardSection(),
     buildStorageSection(),
-    seedDeleterSection.root,
-    decorDeleterSection.root,
+    seedDeleterSection,
+    decorDeleterSection,
   );
-
-  (root as any).__cleanup__ = () => {
-    try { player.cleanup(); } catch {}
-    try { seedDeleterSection.cleanup(); } catch {}
-    try { decorDeleterSection.cleanup(); } catch {}
-  };
 }

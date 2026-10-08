@@ -15,7 +15,6 @@ const DEFAULT_DELAY_MS = 50;
 const MIN_DELAY_MS = 5;
 
 export const readGhostEnabled = (): boolean => readStoredFlag(PATH_GHOST_MODE);
-export const writeGhostEnabled = (on: boolean): void => writeStoredFlag(PATH_GHOST_MODE, on);
 
 const normalizeDelay = (value: unknown): number => {
   const n = Math.floor(Number(value || DEFAULT_DELAY_MS));
@@ -37,11 +36,33 @@ function writeGhostDelayMs(ms: number): void {
   } catch {}
 }
 
-export type GhostController = {
+type GhostController = {
   start(): void;
   stop(): void;
   setSpeed(ms: number): void;
 };
+
+// One controller for the whole session, built on first use. The setting alone
+// decides whether it runs: opening or closing the Misc menu changes nothing.
+let controller: GhostController | null = null;
+const ghost = (): GhostController => (controller ??= createGhostController());
+
+/** Starts ghost mode at boot when the player left it on. */
+export function startGhostMode(): void {
+  if (readGhostEnabled()) ghost().start();
+}
+
+/** Turns ghost mode on or off and saves the choice. */
+export function setGhostEnabled(on: boolean): void {
+  writeStoredFlag(PATH_GHOST_MODE, on);
+  if (on) ghost().start();
+  else ghost().stop();
+}
+
+/** Sets and saves the milliseconds between two steps. */
+export function setGhostDelayMs(ms: number): void {
+  ghost().setSpeed(ms);
+}
 
 /** Movement keys, by `KeyboardEvent.key` lowercased: ZQSD, WASD and the arrows. */
 const UP = ["z", "w", "arrowup"];
@@ -50,7 +71,7 @@ const LEFT = ["q", "a", "arrowleft"];
 const RIGHT = ["d", "arrowright"];
 const MOVE_KEYS = new Set([...UP, ...DOWN, ...LEFT, ...RIGHT]);
 
-export function createGhostController(): GhostController {
+function createGhostController(): GhostController {
   let delayMs = readGhostDelayMs();
   const held = new Set<string>();
 

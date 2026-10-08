@@ -1,8 +1,8 @@
 // Simple markdown-to-HTML renderer for tool descriptions
 // Supports: paragraphs, **bold**, *italic*, `code`, [text](url), and - bullet lists
 //
-// The output carries no styling of its own — callers wrap it in a container
-// that styles the tags (see `.mgt-md` in ui/menus/tools/styles.ts).
+// The output carries no styling of its own: callers wrap it in a container
+// that styles the tags (see `.mgt-md` in features/tools/styles.ts).
 
 function escapeHtml(text: string): string {
   const div = document.createElement('div');
