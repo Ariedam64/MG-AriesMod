@@ -49542,7 +49542,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   padding: 18px; border-radius: 16px;
   border: 1px solid var(--qmm-accent-border);
   background:
-    radial-gradient(130% 150% at 0% 0%, rgba(94,234,212,0.10), transparent 55%),
+    radial-gradient(130% 150% at 0% 0%, var(--qmm-accent-soft), transparent 55%),
     linear-gradient(160deg, rgba(18,24,34,0.95), rgba(12,17,26,0.96));
 }
 .mgt-hero__top { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
