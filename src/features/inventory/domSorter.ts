@@ -19,12 +19,15 @@ import {
 import { getInventoryItemValue } from "./itemInfo";
 import { DEFAULT_DIRECTION, isSortDirection, type SortDirection, type SortKey } from "./sortOptions";
 import { alignStrengthText, updateStrengthText } from "./strengthBadge";
+import { playersInRoomForValues } from "./value";
 import { updateCardValue } from "./valueDisplay";
 
 interface SortState {
   filtersKey: string;
   searchQuery: string;
   entryCount: number;
+  /** The player count the items were valued with: the friend bonus. */
+  playersInRoom: number | null;
   /** The filtered items in unsorted order: item `i` is the card with base index `i`. */
   baseItems: any[];
   entryByBaseIndex: Map<number, DomEntry>;
@@ -69,7 +72,7 @@ function rebaseToDomOrder(state: SortState, entries: DomEntry[]): boolean {
 export function createDomSorter(): DomSorter {
   const stateByGrid = new WeakMap<Element, SortState>();
 
-  /** The grid's sort state, rebuilt from the inventory whenever the filters, search or cards changed. */
+  /** The grid's sort state, rebuilt from the inventory whenever the filters, search, cards or friend bonus changed. */
   async function ensureState(grid: Element, filters: string[], entries: DomEntry[], searchQuery: string): Promise<SortState | null> {
     const filtersKey = JSON.stringify({ filters });
     const state = stateByGrid.get(grid);
@@ -77,6 +80,7 @@ export function createDomSorter(): DomSorter {
       state &&
       state.filtersKey === filtersKey &&
       state.searchQuery === searchQuery &&
+      state.playersInRoom === playersInRoomForValues() &&
       state.entryCount === entries.length &&
       state.baseItems.length === entries.length &&
       entries.every((entry) => readBaseIndex(entry) != null);
@@ -101,6 +105,7 @@ export function createDomSorter(): DomSorter {
         filtersKey,
         searchQuery,
         entryCount: entries.length,
+        playersInRoom: playersInRoomForValues(),
         baseItems: shown.slice(),
         entryByBaseIndex: new Map(entries.map((entry, index) => [index, entry])),
         lastSortKey: state?.lastSortKey ?? null,

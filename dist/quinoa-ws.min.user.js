@@ -17697,23 +17697,19 @@
       }
     }
   }
-  function loadPlayersInRoomForValues() {
-    playersInRoomLoad ?? (playersInRoomLoad = (async () => {
-      try {
-        const raw = await Atoms.server.numPlayers.get();
-        playersInRoom = Number.isFinite(raw) ? raw : null;
-      } catch {
-        playersInRoom = null;
-      }
-      playersInRoomLoaded.emit();
-    })());
-    return playersInRoomLoad;
+  function followPlayersInRoomForValues() {
+    following2 ?? (following2 = readAndFollow(Atoms.server.numPlayers, (raw) => {
+      playersInRoom = Number.isFinite(raw) ? raw : null;
+      playersInRoomChanges.emit();
+    }));
+    return following2;
   }
-  var PRICED_BY_QUANTITY, stringMutations, playersInRoom, playersInRoomLoad, playersInRoomLoaded, playersInRoomForValues, onPlayersInRoomLoaded;
+  var PRICED_BY_QUANTITY, stringMutations, playersInRoom, following2, playersInRoomChanges, playersInRoomForValues, onPlayersInRoomChange;
   var init_value = __esm({
     "src/features/inventory/value.ts"() {
       "use strict";
       init_atoms();
+      init_hub();
       init_emitter();
       init_data();
       init_petValue();
@@ -17727,10 +17723,10 @@
       };
       stringMutations = (slot) => Array.isArray(slot?.mutations) ? slot.mutations.filter((m) => typeof m === "string") : [];
       playersInRoom = null;
-      playersInRoomLoad = null;
-      playersInRoomLoaded = new Emitter();
+      following2 = null;
+      playersInRoomChanges = new Emitter();
       playersInRoomForValues = () => playersInRoom;
-      onPlayersInRoomLoaded = (listener) => playersInRoomLoaded.on(listener);
+      onPlayersInRoomChange = (listener) => playersInRoomChanges.on(listener);
     }
   });
 
@@ -24609,7 +24605,7 @@
     async function ensureState(grid, filters, entries2, searchQuery) {
       const filtersKey = JSON.stringify({ filters });
       const state7 = stateByGrid.get(grid);
-      const reusable = state7 && state7.filtersKey === filtersKey && state7.searchQuery === searchQuery && state7.entryCount === entries2.length && state7.baseItems.length === entries2.length && entries2.every((entry) => readBaseIndex(entry) != null);
+      const reusable = state7 && state7.filtersKey === filtersKey && state7.searchQuery === searchQuery && state7.playersInRoom === playersInRoomForValues() && state7.entryCount === entries2.length && state7.baseItems.length === entries2.length && entries2.every((entry) => readBaseIndex(entry) != null);
       if (state7 && reusable) {
         indexEntries2(state7, entries2);
         return state7;
@@ -24628,6 +24624,7 @@
           filtersKey,
           searchQuery,
           entryCount: entries2.length,
+          playersInRoom: playersInRoomForValues(),
           baseItems: shown.slice(),
           entryByBaseIndex: new Map(entries2.map((entry, index) => [index, entry])),
           lastSortKey: state7?.lastSortKey ?? null
@@ -24686,6 +24683,7 @@
       init_itemInfo();
       init_sortOptions();
       init_strengthBadge();
+      init_value();
       init_valueDisplay();
     }
   });
@@ -24896,7 +24894,6 @@
     let lastSortedOrder = null;
     let lastContextKey = null;
     let lastRenderedEntryCount = null;
-    let loadValuesOnNextShow = true;
     let gridListeners = null;
     const resolveGrid = () => {
       if (grid && document.contains(grid)) return grid;
@@ -24939,7 +24936,6 @@
       lastSortedOrder = null;
       lastContextKey = null;
       lastRenderedEntryCount = null;
-      loadValuesOnNextShow = true;
       if (!grid) {
         gridListeners?.dispose();
         gridListeners = null;
@@ -24976,20 +24972,19 @@
     }
     function update() {
       const target = resolveGrid();
-      if (!target || !isVisible(target)) {
-        loadValuesOnNextShow = true;
-        return;
-      }
-      if (loadValuesOnNextShow) {
-        loadValuesOnNextShow = false;
-        void loadPlayersInRoomForValues();
-      }
+      if (!target || !isVisible(target)) return;
+      void followPlayersInRoomForValues();
       const current2 = ensureSortBar(target, handlers);
       if (!current2) return;
       bar = current2;
       if (!gridListeners) {
         gridListeners = new Subscriptions();
-        gridListeners.add(onPlayersInRoomLoaded(refreshSummary));
+        gridListeners.add(
+          onPlayersInRoomChange(() => {
+            refreshSummary();
+            sortWithBar();
+          })
+        );
         gridListeners.add(
           onShownItemTypesChange((contextKey) => {
             if (contextKey === lastContextKey) setTimeout(refresh, 0);
@@ -30781,10 +30776,10 @@ next: ${next}`;
       sellPets.refresh();
     };
     const subs = new Subscriptions();
-    let following2 = false;
+    let following3 = false;
     const follow2 = () => {
-      if (following2) return;
-      following2 = true;
+      if (following3) return;
+      following3 = true;
       subs.add(onFriendBonusChange(friendBonus.showStatus));
       subs.add(lockerRestrictionsService.subscribe(syncFromService));
       void Atoms.shop.eggShop.get().then((shop) => eggLocks.setEggs(lockableEggs(shop))).catch(() => eggLocks.render());

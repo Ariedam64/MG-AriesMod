@@ -2,6 +2,7 @@
 // price with the friend bonus, and catalog price times quantity for the rest.
 
 import { Atoms } from "../../game/store/atoms";
+import { readAndFollow } from "../../game/store/hub";
 import { Emitter } from "../../lib/emitter";
 import { decorCatalog, eggCatalog, plantCatalog, toolCatalog } from "../../data";
 import { getPetInfo } from "../../data/rules/petValue";
@@ -78,25 +79,22 @@ export function computeInventoryItemValue(item: any, context: InventoryItemValue
   }
 }
 
-// The friend bonus the inventory badges use. It is read once, the first time
-// the inventory shows, and kept for the session.
+// The player count behind the friend bonus on the inventory's values. It is
+// followed from the first time the inventory shows, so the bonus moves as
+// players join and leave.
 let playersInRoom: number | null = null;
-let playersInRoomLoad: Promise<void> | null = null;
-const playersInRoomLoaded = new Emitter<void>();
+let following: Promise<void> | null = null;
+const playersInRoomChanges = new Emitter<void>();
 
 export const playersInRoomForValues = (): number | null => playersInRoom;
 
-export const onPlayersInRoomLoaded = (listener: () => void) => playersInRoomLoaded.on(listener);
+export const onPlayersInRoomChange = (listener: () => void) => playersInRoomChanges.on(listener);
 
-export function loadPlayersInRoomForValues(): Promise<void> {
-  playersInRoomLoad ??= (async () => {
-    try {
-      const raw = await Atoms.server.numPlayers.get();
-      playersInRoom = Number.isFinite(raw) ? raw : null;
-    } catch {
-      playersInRoom = null;
-    }
-    playersInRoomLoaded.emit();
-  })();
-  return playersInRoomLoad;
+/** Starts following the room's player count; later calls return the same promise. */
+export function followPlayersInRoomForValues(): Promise<void> {
+  following ??= readAndFollow(Atoms.server.numPlayers, (raw) => {
+    playersInRoom = Number.isFinite(raw) ? raw : null;
+    playersInRoomChanges.emit();
+  });
+  return following;
 }
