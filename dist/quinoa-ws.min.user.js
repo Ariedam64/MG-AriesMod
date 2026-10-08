@@ -221,13 +221,13 @@
   // src/game/sprites/pixi/hooks.ts
   function mkSyntheticApp(renderer) {
     const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
-    const listeners9 = /* @__PURE__ */ new Set();
+    const listeners8 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
     const tick3 = (now2) => {
       const delta = last ? (now2 - last) / (1e3 / 60) : 1;
       last = now2;
-      for (const fn of listeners9) {
+      for (const fn of listeners8) {
         try {
           fn(delta);
         } catch {
@@ -237,14 +237,14 @@
     };
     const ticker = {
       add(fn) {
-        if (!listeners9.size) {
+        if (!listeners8.size) {
           rafId = requestAnimationFrame(tick3);
         }
-        listeners9.add(fn);
+        listeners8.add(fn);
       },
       remove(fn) {
-        listeners9.delete(fn);
-        if (!listeners9.size) {
+        listeners8.delete(fn);
+        if (!listeners8.size) {
           cancelAnimationFrame(rafId);
         }
       },
@@ -2534,6 +2534,21 @@
       if (Date.now() >= deadline) return null;
       await sleep2(intervalMs);
     }
+  }
+  function debounce(fn, ms) {
+    let timer2 = null;
+    const debounced = (...args) => {
+      if (timer2 !== null) clearTimeout(timer2);
+      timer2 = setTimeout(() => {
+        timer2 = null;
+        fn(...args);
+      }, ms);
+    };
+    debounced.cancel = () => {
+      if (timer2 !== null) clearTimeout(timer2);
+      timer2 = null;
+    };
+    return debounced;
   }
   var sleep2;
   var init_async2 = __esm({
@@ -10258,14 +10273,14 @@
     };
   }
   function buildCatalogIndex() {
-    const read = catalogReader;
-    if (!read) return;
-    const loaded = CATALOG_SOURCES.filter((source) => read(source.key)).length;
+    const read2 = catalogReader;
+    if (!read2) return;
+    const loaded = CATALOG_SOURCES.filter((source) => read2(source.key)).length;
     if (loaded === catalogSourcesIndexed) return;
     catalogSourcesIndexed = loaded;
     catalogIndex.clear();
     for (const source of CATALOG_SOURCES) {
-      const catalog = read(source.key);
+      const catalog = read2(source.key);
       if (!catalog) continue;
       for (const [id, raw] of Object.entries(catalog)) {
         const record = raw;
@@ -10887,21 +10902,21 @@
       mark.style.width = "1px";
       mark.style.height = "5px";
       mark.style.background = "#2b3441";
-      const caption = document.createElement("div");
-      caption.textContent = text2;
-      caption.style.fontSize = "10px";
-      caption.style.whiteSpace = "nowrap";
-      caption.style.color = "#8b97a8";
-      cell.append(mark, caption);
+      const caption2 = document.createElement("div");
+      caption2.textContent = text2;
+      caption2.style.fontSize = "10px";
+      caption2.style.whiteSpace = "nowrap";
+      caption2.style.color = "#8b97a8";
+      cell.append(mark, caption2);
       root.appendChild(cell);
-      return { mark, caption };
+      return { mark, caption: caption2 };
     });
     const setActive = (index) => {
-      cells.forEach(({ mark, caption }, i) => {
+      cells.forEach(({ mark, caption: caption2 }, i) => {
         const active2 = i === index;
         mark.style.background = active2 ? "#5eead4" : "#2b3441";
-        caption.style.color = active2 ? "#5eead4" : "#8b97a8";
-        caption.style.fontWeight = active2 ? "700" : "400";
+        caption2.style.color = active2 ? "#5eead4" : "#8b97a8";
+        caption2.style.fontWeight = active2 ? "700" : "400";
       });
     };
     return { root, setActive };
@@ -15243,9 +15258,9 @@
     let selectedIdx = null;
     let lastInfo = emptySlotInfo();
     let curSig = gardenObjectSignature(cur);
-    const listeners9 = /* @__PURE__ */ new Set();
+    const listeners8 = /* @__PURE__ */ new Set();
     const notify3 = () => {
-      for (const fn of listeners9) {
+      for (const fn of listeners8) {
         try {
           fn(lastInfo);
         } catch {
@@ -15480,11 +15495,11 @@
         return lastInfo;
       },
       onChange(cb) {
-        listeners9.add(cb);
-        return () => listeners9.delete(cb);
+        listeners8.add(cb);
+        return () => listeners8.delete(cb);
       },
       stop() {
-        listeners9.clear();
+        listeners8.clear();
       },
       recompute() {
         recomputeAndNotify();
@@ -16816,8 +16831,8 @@
   });
 
   // src/features/stats/outgoingCounters.ts
-  async function addPositive(read, stat) {
-    const value = Number(await read());
+  async function addPositive(read2, stat) {
+    const value = Number(await read2());
     if (Number.isFinite(value) && value > 0) StatsService.incrementShopStat(stat, value);
   }
   function countHarvest(message) {
@@ -20764,6 +20779,54 @@
     }
   });
 
+  // src/lib/emitter.ts
+  var Emitter, Subscriptions;
+  var init_emitter = __esm({
+    "src/lib/emitter.ts"() {
+      "use strict";
+      Emitter = class {
+        constructor() {
+          this.listeners = /* @__PURE__ */ new Set();
+        }
+        on(listener) {
+          this.listeners.add(listener);
+          return () => {
+            this.listeners.delete(listener);
+          };
+        }
+        emit(value) {
+          for (const listener of [...this.listeners]) {
+            try {
+              listener(value);
+            } catch (error) {
+              console.error("[Aries] listener failed", error);
+            }
+          }
+        }
+        get size() {
+          return this.listeners.size;
+        }
+        clear() {
+          this.listeners.clear();
+        }
+      };
+      Subscriptions = class {
+        constructor() {
+          this.pending = [];
+        }
+        add(unsubscribe2) {
+          this.pending.push(unsubscribe2);
+        }
+        dispose() {
+          for (const entry of this.pending.splice(0)) {
+            Promise.resolve(entry).then((off) => off?.()).catch(() => {
+            });
+          }
+        }
+      };
+    }
+  });
+
   // src/data/rules/petValue.ts
   var SEC_PER_HOUR, XP_STRENGTH_MAX, BASE_STRENGTH_FLOOR, getCatalogEntry, getMutationEntry, getTargetScale, getXp, getPetMaxStrength, getBaseStrength, getPetStrength, getPetCoinMultiplier, getPetValue, getPetInfo;
   var init_petValue = __esm({
@@ -20913,9 +20976,9 @@
         return Math.round(v);
     }
   }
-  function friendBonusMultiplier2(playersInRoom2) {
-    if (!Number.isFinite(playersInRoom2)) return 1;
-    const n = Math.max(1, Math.min(6, Math.floor(playersInRoom2)));
+  function friendBonusMultiplier2(playersInRoom3) {
+    if (!Number.isFinite(playersInRoom3)) return 1;
+    const n = Math.max(1, Math.min(6, Math.floor(playersInRoom3)));
     return 1 + (n - 1) * 0.1;
   }
   function mutationMultiplier(name) {
@@ -21063,30 +21126,30 @@
     const out = Math.max(0, applyRounding(pre, round));
     return out;
   }
-  function valueFromInventoryProduce(item, opts, playersInRoom2) {
+  function valueFromInventoryProduce(item, opts, playersInRoom3) {
     if (!item || item.itemType !== "Produce") return 0;
-    const merged = playersInRoom2 == null ? opts : { ...opts, friendPlayers: playersInRoom2 };
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
     const size = readCropSize(item);
     if (size == null) return 0;
     return estimateProduceValue(item.species, size, item.mutations, merged);
   }
-  function valueFromGardenSlot(slot, opts, playersInRoom2) {
+  function valueFromGardenSlot(slot, opts, playersInRoom3) {
     if (!slot) return 0;
-    const merged = playersInRoom2 == null ? opts : { ...opts, friendPlayers: playersInRoom2 };
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
     const size = readCropSize(slot);
     if (size == null) return 0;
     return estimateProduceValue(slot.species, size, slot.mutations, merged);
   }
-  function valueFromGardenPlant(plant, opts, playersInRoom2) {
+  function valueFromGardenPlant(plant, opts, playersInRoom3) {
     if (!plant || plant.objectType !== "plant" || !Array.isArray(plant.slots)) return 0;
-    const merged = playersInRoom2 == null ? opts : { ...opts, friendPlayers: playersInRoom2 };
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
     let sum = 0;
     for (const s of plant.slots) sum += valueFromGardenSlot(s, merged);
     return sum;
   }
-  function sumInventoryValue(items, opts, playersInRoom2) {
+  function sumInventoryValue(items, opts, playersInRoom3) {
     if (!Array.isArray(items)) return 0;
-    const merged = playersInRoom2 == null ? opts : { ...opts, friendPlayers: playersInRoom2 };
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
     let sum = 0;
     for (const it of items) {
       if (it?.itemType === "Produce") {
@@ -21095,9 +21158,9 @@
     }
     return sum;
   }
-  function sumGardenValue(garden3, opts, playersInRoom2) {
+  function sumGardenValue(garden3, opts, playersInRoom3) {
     if (!garden3 || typeof garden3 !== "object") return 0;
-    const merged = playersInRoom2 == null ? opts : { ...opts, friendPlayers: playersInRoom2 };
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
     let sum = 0;
     for (const k of Object.keys(garden3)) {
       const p = garden3[k];
@@ -21137,363 +21200,91 @@
   });
 
   // src/features/inventory/value.ts
-  function getFiniteNumber(value) {
-    if (typeof value === "number") {
-      return Number.isFinite(value) ? value : null;
-    }
+  function finiteNumber(value) {
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
     if (typeof value === "string" && value.trim()) {
       const parsed = Number(value);
       return Number.isFinite(parsed) ? parsed : null;
     }
     return null;
   }
-  function extractItems(inventory) {
-    if (!inventory || typeof inventory !== "object") return null;
-    const items = inventory.items;
-    if (!Array.isArray(items)) return [];
-    return items;
-  }
-  function toNormalizedIdentifier(raw) {
-    if (typeof raw === "string") {
-      const trimmed = raw.trim();
-      return trimmed ? trimmed : null;
-    }
-    if (typeof raw === "number") {
-      return Number.isFinite(raw) ? String(raw) : null;
-    }
+  function identifier(raw) {
+    if (typeof raw === "string") return raw.trim() || null;
+    if (typeof raw === "number") return Number.isFinite(raw) ? String(raw) : null;
     return null;
-  }
-  function getInventoryValueCategoryByItemType(itemType) {
-    return INVENTORY_VALUE_CATEGORIES.find((config) => config.itemType === itemType);
   }
   function computeInventoryItemValue(item, context = {}) {
     if (!item || typeof item !== "object") return null;
-    const rawType = typeof item?.itemType === "string" ? item.itemType.trim() : "";
-    if (!rawType) return null;
-    switch (rawType) {
+    const type = typeof item.itemType === "string" ? item.itemType.trim() : "";
+    const playersInRoom3 = context.playersInRoom ?? void 0;
+    switch (type) {
+      case "":
+        return null;
       case "Pet": {
-        const info = getPetInfo(item);
-        const value = info.value;
+        const value = getPetInfo(item).value;
         return typeof value === "number" && Number.isFinite(value) ? value : null;
       }
       case "Plant": {
-        const slots = Array.isArray(item?.slots) ? item.slots : [];
-        const playersInRoom2 = context.playersInRoom ?? void 0;
         let total = 0;
-        for (const slot of slots) {
-          const slotSpecies = typeof slot?.species === "string" ? slot.species : null;
+        for (const slot of Array.isArray(item.slots) ? item.slots : []) {
+          const species = typeof slot?.species === "string" ? slot.species : null;
           const size = readCropSize(slot);
-          const mutations = Array.isArray(slot?.mutations) ? slot.mutations.filter((m) => typeof m === "string") : [];
-          if (!slotSpecies || size == null) continue;
-          const value = estimateProduceValue(slotSpecies, size, mutations, {
-            friendPlayers: playersInRoom2
-          });
-          if (typeof value === "number" && Number.isFinite(value)) {
-            total += value;
-          }
+          if (!species || size == null) continue;
+          const value = estimateProduceValue(species, size, stringMutations(slot), { friendPlayers: playersInRoom3 });
+          if (Number.isFinite(value)) total += value;
         }
         return total;
       }
       case "Produce": {
-        const playersInRoom2 = context.playersInRoom ?? void 0;
-        const value = valueFromInventoryProduce(item, void 0, playersInRoom2);
-        return typeof value === "number" && Number.isFinite(value) ? value : null;
+        const value = valueFromInventoryProduce(item, void 0, playersInRoom3);
+        return Number.isFinite(value) ? value : null;
       }
       default: {
-        const category = getInventoryValueCategoryByItemType(rawType);
-        if (!category) return null;
-        const identifier = toNormalizedIdentifier(item?.[category.identifierKey]);
-        const quantity = getFiniteNumber(item?.quantity);
-        const coinPrice = category.resolveCoinPrice(identifier);
+        const priced = PRICED_BY_QUANTITY[type];
+        if (!priced) return null;
+        const id = identifier(item[priced.idField]);
+        const quantity = finiteNumber(item.quantity);
+        const coinPrice = id ? finiteNumber(priced.coinPrice(id)) : null;
         if (quantity == null || coinPrice == null) return null;
         const value = coinPrice * quantity;
         return Number.isFinite(value) ? value : null;
       }
     }
   }
-  function computePetValues(items) {
-    const pets = items.filter((item) => {
-      const type = typeof item?.itemType === "string" ? item.itemType.trim() : "";
-      return type === "Pet";
-    });
-    const entries2 = pets.map((pet) => {
-      const info = getPetInfo(pet);
-      const id = typeof pet?.id === "string" ? pet.id : null;
-      const name = typeof pet?.name === "string" && pet.name.trim() ? pet.name : null;
-      const species = typeof pet?.petSpecies === "string" ? pet.petSpecies : null;
-      return {
-        id,
-        name,
-        petSpecies: species,
-        value: info.value,
-        strength: info.strength,
-        maxStrength: info.maxStrength,
-        coinMultiplier: info.coinMultiplier
-      };
-    });
-    const totalValue = entries2.reduce(
-      (acc, entry) => acc + (Number.isFinite(entry.value) ? entry.value : 0),
-      0
-    );
-    return { totalValue, pets: entries2 };
-  }
-  function computePlantValues(items, playersInRoom2) {
-    const plants = items.filter((item) => {
-      const type = typeof item?.itemType === "string" ? item.itemType.trim() : "";
-      return type === "Plant";
-    });
-    const entries2 = plants.map((plant) => {
-      const id = typeof plant?.id === "string" ? plant.id : null;
-      const species = typeof plant?.species === "string" ? plant.species : null;
-      const plantedAt = Number.isFinite(plant?.plantedAt) ? plant.plantedAt : null;
-      const maturedAt = Number.isFinite(plant?.maturedAt) ? plant.maturedAt : null;
-      const slots = Array.isArray(plant?.slots) ? plant.slots : [];
-      const slotEntries = slots.map((slot) => {
-        const slotSpecies = typeof slot?.species === "string" ? slot.species : null;
-        const size = readCropSize(slot);
-        const mutations = Array.isArray(slot?.mutations) ? slot.mutations.filter((m) => typeof m === "string") : [];
-        const value2 = slotSpecies && size != null ? estimateProduceValue(slotSpecies, size, mutations, {
-          friendPlayers: playersInRoom2
-        }) : 0;
-        return {
-          species: slotSpecies,
-          size,
-          mutations,
-          value: value2
-        };
-      });
-      const value = slotEntries.reduce(
-        (acc, entry) => acc + (Number.isFinite(entry.value) ? entry.value : 0),
-        0
-      );
-      return {
-        id,
-        species,
-        plantedAt,
-        maturedAt,
-        value,
-        slots: slotEntries
-      };
-    });
-    const totalValue = entries2.reduce(
-      (acc, entry) => acc + (Number.isFinite(entry.value) ? entry.value : 0),
-      0
-    );
-    return {
-      totalValue,
-      playersInRoom: Number.isFinite(playersInRoom2) ? playersInRoom2 : null,
-      plants: entries2
-    };
-  }
-  function computeCropValues(items, playersInRoom2) {
-    const crops = items.filter((item) => {
-      const type = typeof item?.itemType === "string" ? item.itemType.trim() : "";
-      return type === "Produce";
-    });
-    const entries2 = crops.map((crop) => {
-      const id = typeof crop?.id === "string" ? crop.id : null;
-      const species = typeof crop?.species === "string" ? crop.species : null;
-      const size = readCropSize(crop);
-      const mutations = Array.isArray(crop?.mutations) ? crop.mutations.filter((m) => typeof m === "string") : [];
-      const value = valueFromInventoryProduce(crop, void 0, playersInRoom2);
-      return {
-        id,
-        species,
-        size,
-        mutations,
-        value
-      };
-    });
-    const totalValue = entries2.reduce(
-      (acc, entry) => acc + (Number.isFinite(entry.value) ? entry.value : 0),
-      0
-    );
-    return { totalValue, crops: entries2 };
-  }
-  function computeMiscValues(items) {
-    const aggregated = {
-      seeds: { totalValue: 0, items: [] },
-      tools: { totalValue: 0, items: [] },
-      eggs: { totalValue: 0, items: [] },
-      decors: { totalValue: 0, items: [] }
-    };
-    for (const config of INVENTORY_VALUE_CATEGORIES) {
-      const filteredItems = items.filter((item) => {
-        const type = typeof item?.itemType === "string" ? item.itemType.trim() : "";
-        return type === config.itemType;
-      });
-      const entries2 = filteredItems.map((item) => {
-        const rawIdentifier = item?.[config.identifierKey];
-        const identifier = toNormalizedIdentifier(rawIdentifier);
-        const rawQuantity = item?.quantity;
-        const quantity = getFiniteNumber(rawQuantity);
-        const coinPrice = config.resolveCoinPrice(identifier);
-        const value = quantity != null && coinPrice != null ? coinPrice * quantity : null;
-        return config.createEntry(identifier, quantity, coinPrice, value);
-      });
-      const totalValue = entries2.reduce((acc, entry) => {
-        const entryValue = entry.value;
-        return typeof entryValue === "number" && Number.isFinite(entryValue) ? acc + entryValue : acc;
-      }, 0);
-      aggregated[config.logKey] = { totalValue, items: entries2 };
-    }
-    return aggregated;
-  }
-  async function resolvePlayersInRoom() {
-    try {
-      const rawPlayers = await Atoms.server.numPlayers.get();
-      return Number.isFinite(rawPlayers) ? rawPlayers : void 0;
-    } catch {
-      return void 0;
-    }
-  }
-  async function computeSnapshotFromInventory(inventory) {
-    const items = extractItems(inventory);
-    if (items === null) return null;
-    const safeItems = items ?? [];
-    const playersInRoom2 = await resolvePlayersInRoom();
-    return {
-      pets: computePetValues(safeItems),
-      plants: computePlantValues(safeItems, playersInRoom2),
-      crops: computeCropValues(safeItems, playersInRoom2),
-      misc: computeMiscValues(safeItems)
-    };
-  }
-  function notifyListeners(snapshot2) {
-    for (const listener of listeners4) {
+  function loadPlayersInRoomForValues() {
+    playersInRoomLoad ?? (playersInRoomLoad = (async () => {
       try {
-        listener(snapshot2);
-      } catch (error) {
-        console.warn("[InventoryValue] Listener error", error);
+        const raw = await Atoms.server.numPlayers.get();
+        playersInRoom = Number.isFinite(raw) ? raw : null;
+      } catch {
+        playersInRoom = null;
       }
-    }
+      playersInRoomLoaded.emit();
+    })());
+    return playersInRoomLoad;
   }
-  async function refreshSnapshot(nextInventory) {
-    const computeId = ++computeCounter;
-    try {
-      const snapshot2 = await computeSnapshotFromInventory(nextInventory);
-      if (computeId !== computeCounter) return;
-      currentSnapshot = snapshot2;
-      notifyListeners(currentSnapshot);
-    } catch (error) {
-      if (computeId !== computeCounter) return;
-      currentSnapshot = null;
-      console.warn("[InventoryValue] Impossible de calculer la valeur de l'inventaire", error);
-    }
-  }
-  async function ensureInventoryValueWatcher() {
-    if (watcherPromise) return watcherPromise;
-    watcherPromise = (async () => {
-      try {
-        const inventory = await Atoms.inventory.myInventory.get();
-        await refreshSnapshot(inventory);
-      } catch (error) {
-        currentSnapshot = null;
-        console.warn("[InventoryValue] Impossible de r\xE9cup\xE9rer l'inventaire initial", error);
-      }
-      try {
-      } catch (error) {
-        console.warn("[InventoryValue] Impossible de s'abonner \xE0 myInventory", error);
-      }
-    })();
-    return watcherPromise;
-  }
-  function getInventoryValueSnapshot() {
-    return currentSnapshot;
-  }
-  function onInventoryValueChange(listener) {
-    listeners4.add(listener);
-    return () => {
-      listeners4.delete(listener);
-    };
-  }
-  var INVENTORY_VALUE_CATEGORIES, currentSnapshot, watcherPromise, computeCounter, listeners4;
+  var PRICED_BY_QUANTITY, stringMutations, playersInRoom, playersInRoomLoad, playersInRoomLoaded, playersInRoomForValues, onPlayersInRoomLoaded;
   var init_value = __esm({
     "src/features/inventory/value.ts"() {
       "use strict";
       init_atoms();
+      init_emitter();
       init_data();
       init_petValue();
       init_cropValue();
       init_cropSize();
-      INVENTORY_VALUE_CATEGORIES = [
-        {
-          itemType: "Seed",
-          identifierKey: "species",
-          resolveCoinPrice: (identifier) => {
-            if (!identifier) return null;
-            const entry = plantCatalog2[identifier];
-            const price = entry?.seed?.coinPrice;
-            return getFiniteNumber(price);
-          },
-          logKey: "seeds",
-          emptyLogMessage: "[InventorySorting] Aucune seed trouv\xE9e dans l'inventaire pour le calcul de valeur.",
-          createEntry: (identifier, quantity, coinPrice, value) => ({
-            species: identifier,
-            quantity,
-            coinPrice,
-            value
-          })
-        },
-        {
-          itemType: "Tool",
-          identifierKey: "toolId",
-          resolveCoinPrice: (identifier) => {
-            if (!identifier) return null;
-            const entry = toolCatalog2[identifier];
-            const price = entry?.coinPrice;
-            return getFiniteNumber(price);
-          },
-          logKey: "tools",
-          emptyLogMessage: "[InventorySorting] Aucun tool trouv\xE9 dans l'inventaire pour le calcul de valeur.",
-          createEntry: (identifier, quantity, coinPrice, value) => ({
-            toolId: identifier,
-            quantity,
-            coinPrice,
-            value
-          })
-        },
-        {
-          itemType: "Egg",
-          identifierKey: "eggId",
-          resolveCoinPrice: (identifier) => {
-            if (!identifier) return null;
-            const entry = eggCatalog2[identifier];
-            const price = entry?.coinPrice;
-            return getFiniteNumber(price);
-          },
-          logKey: "eggs",
-          emptyLogMessage: "[InventorySorting] Aucun egg trouv\xE9 dans l'inventaire pour le calcul de valeur.",
-          createEntry: (identifier, quantity, coinPrice, value) => ({
-            eggId: identifier,
-            quantity,
-            coinPrice,
-            value
-          })
-        },
-        {
-          itemType: "Decor",
-          identifierKey: "decorId",
-          resolveCoinPrice: (identifier) => {
-            if (!identifier) return null;
-            const entry = decorCatalog2[identifier];
-            const price = entry?.coinPrice;
-            return getFiniteNumber(price);
-          },
-          logKey: "decors",
-          emptyLogMessage: "[InventorySorting] Aucun decor trouv\xE9 dans l'inventaire pour le calcul de valeur.",
-          createEntry: (identifier, quantity, coinPrice, value) => ({
-            decorId: identifier,
-            quantity,
-            coinPrice,
-            value
-          })
-        }
-      ];
-      currentSnapshot = null;
-      watcherPromise = null;
-      computeCounter = 0;
-      listeners4 = /* @__PURE__ */ new Set();
+      PRICED_BY_QUANTITY = {
+        Seed: { idField: "species", coinPrice: (id) => plantCatalog2[id]?.seed?.coinPrice },
+        Tool: { idField: "toolId", coinPrice: (id) => toolCatalog2[id]?.coinPrice },
+        Egg: { idField: "eggId", coinPrice: (id) => eggCatalog2[id]?.coinPrice },
+        Decor: { idField: "decorId", coinPrice: (id) => decorCatalog2[id]?.coinPrice }
+      };
+      stringMutations = (slot) => Array.isArray(slot?.mutations) ? slot.mutations.filter((m) => typeof m === "string") : [];
+      playersInRoom = null;
+      playersInRoomLoad = null;
+      playersInRoomLoaded = new Emitter();
+      playersInRoomForValues = () => playersInRoom;
+      onPlayersInRoomLoaded = (listener) => playersInRoomLoaded.on(listener);
     }
   });
 
@@ -24907,8 +24698,8 @@
     const extraTopOffset = abilitiesSection ? abilitiesSection.getLocalBounds().height + SECTION_GAP_ESTIMATE : 0;
     return { top: contentTop - extraTopOffset, width, height };
   }
-  function notifyListeners2(card5, geometry) {
-    for (const listener of listeners5) {
+  function notifyListeners(card5, geometry) {
+    for (const listener of listeners4) {
       try {
         listener(card5, geometry);
       } catch (error) {
@@ -24925,10 +24716,10 @@
     card5.once("destroyed", () => {
       if (currentCard === card5) {
         currentCard = null;
-        notifyListeners2(null, null);
+        notifyListeners(null, null);
       }
     });
-    notifyListeners2(card5, geometry);
+    notifyListeners(card5, geometry);
   }
   function onChildAdded(row2) {
     try {
@@ -24945,7 +24736,7 @@
         cardSystem = null;
         debugState.attached = false;
         currentCard = null;
-        notifyListeners2(null, null);
+        notifyListeners(null, null);
         restartSearchIfNeeded();
       }
     });
@@ -24973,24 +24764,24 @@
   function scheduleFind(now2) {
     findRafId = null;
     debugState.rafTicks += 1;
-    if (!listeners5.size || cardSystem) return;
+    if (!listeners4.size || cardSystem) return;
     if (now2 - lastFindCheckAt >= CARD_SYSTEM_FIND_RETRY_MS) {
       lastFindCheckAt = now2;
       tryFindCardSystem();
     }
-    if (!listeners5.size || cardSystem) return;
+    if (!listeners4.size || cardSystem) return;
     findRafId = raf(scheduleFind);
   }
   function restartSearchIfNeeded() {
-    if (!listeners5.size || cardSystem) return;
+    if (!listeners4.size || cardSystem) return;
     tryFindCardSystem();
     if (!cardSystem && findRafId == null) {
       findRafId = raf(scheduleFind);
     }
   }
   function watchGardenInfoCard(listener) {
-    listeners5.add(listener);
-    debugState.listenerCount = listeners5.size;
+    listeners4.add(listener);
+    debugState.listenerCount = listeners4.size;
     restartSearchIfNeeded();
     if (currentCard) {
       try {
@@ -25000,11 +24791,11 @@
       }
     }
     return () => {
-      listeners5.delete(listener);
-      debugState.listenerCount = listeners5.size;
+      listeners4.delete(listener);
+      debugState.listenerCount = listeners4.size;
     };
   }
-  var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, CARD_SYSTEM_FIND_RETRY_MS, CARD_SYSTEM_FIND_LOG_EVERY, cachedGraphicsCtor, cardSystem, currentCard, findAttempts, findRafId, lastFindCheckAt, listeners5, debugState, raf;
+  var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, CARD_SYSTEM_FIND_RETRY_MS, CARD_SYSTEM_FIND_LOG_EVERY, cachedGraphicsCtor, cardSystem, currentCard, findAttempts, findRafId, lastFindCheckAt, listeners4, debugState, raf;
   var init_gardenInfoCard = __esm({
     "src/game/pixi/gardenInfoCard.ts"() {
       "use strict";
@@ -25024,7 +24815,7 @@
       findAttempts = 0;
       findRafId = null;
       lastFindCheckAt = 0;
-      listeners5 = /* @__PURE__ */ new Set();
+      listeners4 = /* @__PURE__ */ new Set();
       debugState = {
         findAttempts: 0,
         attached: false,
@@ -26961,9 +26752,9 @@
     let players = void 0;
     let selectedSlotId = null;
     let lastPrice = null;
-    const listeners9 = /* @__PURE__ */ new Set();
+    const listeners8 = /* @__PURE__ */ new Set();
     const notify3 = () => {
-      for (const fn of listeners9) try {
+      for (const fn of listeners8) try {
         fn();
       } catch {
       }
@@ -27030,11 +26821,11 @@
         return lastPrice;
       },
       onChange(cb) {
-        listeners9.add(cb);
-        return () => listeners9.delete(cb);
+        listeners8.add(cb);
+        return () => listeners8.delete(cb);
       },
       stop() {
-        listeners9.clear();
+        listeners8.clear();
       }
     };
   }
@@ -27064,7 +26855,7 @@
       writeAriesPath(PATH_SHOW_CROP_PRICE, next);
     } catch {
     }
-    for (const listener of listeners6) {
+    for (const listener of listeners5) {
       try {
         listener(next);
       } catch {
@@ -27072,18 +26863,18 @@
     }
   }
   function onShowCropPriceChange(cb) {
-    listeners6.add(cb);
+    listeners5.add(cb);
     return () => {
-      listeners6.delete(cb);
+      listeners5.delete(cb);
     };
   }
-  var PATH_SHOW_CROP_PRICE, listeners6;
+  var PATH_SHOW_CROP_PRICE, listeners5;
   var init_setting = __esm({
     "src/features/cropPrice/setting.ts"() {
       "use strict";
       init_storage();
       PATH_SHOW_CROP_PRICE = "misc.showCropPrice";
-      listeners6 = /* @__PURE__ */ new Set();
+      listeners5 = /* @__PURE__ */ new Set();
     }
   });
 
@@ -28864,1764 +28655,372 @@
     }
   });
 
-  // src/features/inventory/sorting.ts
-  function createDomSnapshot(entries2) {
-    return entries2.map((entry) => entry.wrapper);
+  // src/features/inventory/itemInfo.ts
+  function readNestedValue(item, field, parse) {
+    if (!item || typeof item !== "object") return null;
+    for (const source of [item, item.item, item.data]) {
+      if (!source || typeof source !== "object") continue;
+      const parsed = parse(source[field]);
+      if (parsed != null) return parsed;
+    }
+    return null;
   }
-  function haveDomEntriesChanged(previous, nextEntries) {
-    if (!previous) return true;
-    if (previous.length !== nextEntries.length) return true;
-    for (let i = 0; i < nextEntries.length; i++) {
-      if (previous[i] !== nextEntries[i].wrapper) {
-        return true;
+  function firstNestedString(source, paths) {
+    for (const path of paths) {
+      let current = source;
+      for (const key2 of path) current = current && typeof current === "object" ? current[key2] : void 0;
+      const value = stringOrEmpty(current);
+      if (value) return value;
+    }
+    return "";
+  }
+  function plantLookup(order) {
+    const namePaths = order.map((part) => [part, "name"]);
+    return {
+      idField: "species",
+      catalog: plantCatalog2,
+      name: (_id, entry) => firstNestedString(entry, namePaths),
+      rarityPaths: order.map((part) => [part, "rarity"])
+    };
+  }
+  function flatLookup(idField, catalog, name) {
+    return { idField, catalog, name: (id) => name(id) ?? "", rarityPaths: [["rarity"]] };
+  }
+  function lookupOf(item) {
+    const lookup = CATALOG_LOOKUPS[itemTypeOf(item)];
+    if (!lookup) return null;
+    const id = readNestedString(item, lookup.idField);
+    if (!id) return null;
+    return { lookup, id, entry: lookup.catalog?.[id] };
+  }
+  function getInventoryItemName(item) {
+    if (!item || typeof item !== "object") return "";
+    const found = lookupOf(item);
+    if (found) return found.lookup.name(found.id, found.entry) || found.id;
+    return stringOrEmpty(item.name) || stringOrEmpty(item.id) || itemTypeOf(item);
+  }
+  function getInventoryItemRarity(item) {
+    if (!item || typeof item !== "object") return "";
+    const found = lookupOf(item);
+    return found ? firstNestedString(found.entry, found.lookup.rarityPaths) : "";
+  }
+  function getInventoryItemQuantity(item) {
+    if (!item || typeof item !== "object") return 0;
+    if (SINGLE_ITEM_TYPES.has(itemTypeOf(item))) return 1;
+    const quantity = Number(item.quantity);
+    return Number.isFinite(quantity) && quantity >= 0 ? quantity : 0;
+  }
+  function collectSpeciesCandidates(source, out) {
+    if (!source || typeof source !== "object") return;
+    for (const field of SPECIES_FIELDS) {
+      const value = stringOrEmpty(source[field]);
+      if (value) out.add(value);
+    }
+  }
+  function getInventoryItemSize(item) {
+    if (!item || typeof item !== "object") return null;
+    const type = itemTypeOf(item);
+    if (type !== "Crop" && type !== "Produce") return null;
+    const direct = readCropSize(item);
+    if (direct != null) return direct;
+    const candidates = /* @__PURE__ */ new Set();
+    collectSpeciesCandidates(item, candidates);
+    collectSpeciesCandidates(item.item, candidates);
+    collectSpeciesCandidates(item.data, candidates);
+    for (const species of candidates) {
+      const size = readCropSize({ ...item, species });
+      if (size != null) return size;
+    }
+    return null;
+  }
+  function collectMutations(source, out) {
+    if (!source || typeof source !== "object") return;
+    const record = source;
+    if (Array.isArray(record.mutations)) {
+      for (const mutation of record.mutations) {
+        if (typeof mutation === "string" && mutation.trim()) out.push(mutation.trim());
       }
     }
-    return false;
+    if (Array.isArray(record.slots)) {
+      for (const slot of record.slots) collectMutations(slot, out);
+    }
   }
-  function isVisible(el) {
-    if (!el || !document.contains(el)) return false;
-    const r = el.getBoundingClientRect();
-    const cs = getComputedStyle(el);
-    if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") return false;
-    return r.width > 0 && r.height > 0;
+  function getInventoryItemMutations(item) {
+    if (!item || typeof item !== "object") return [];
+    const mutations = [];
+    collectMutations(item, mutations);
+    collectMutations(item.item, mutations);
+    collectMutations(item.data, mutations);
+    return mutations;
   }
-  function filterLabelToItemTypes(filter) {
-    const key2 = normalize(filter);
-    if (!key2 || key2 === "all") return [];
-    const mapped = FILTER_LABEL_TO_ITEM_TYPES[key2];
-    if (mapped) return mapped;
-    const singular = key2.endsWith("s") ? key2.slice(0, -1) : key2;
-    if (!singular) return [];
-    const itemType = singular.charAt(0).toUpperCase() + singular.slice(1);
-    return itemType ? [itemType] : [];
+  function getInventoryItemValue(item) {
+    if (!item || typeof item !== "object") return null;
+    const raw = item.value;
+    if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+    if (typeof raw === "string" && raw.trim()) {
+      const parsed = Number(raw);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
   }
-  function inventoryItemMatchesSearchQuery(item, normalizedQuery) {
+  function petAbilityName(abilityId) {
+    if (typeof abilityId !== "string" || !abilityId.trim()) return null;
+    const name = petAbilities2[abilityId.trim()]?.name;
+    return stringOrEmpty(name) || null;
+  }
+  function itemMatchesSearch(item, normalizedQuery) {
     if (!normalizedQuery) return true;
     const visited = /* @__PURE__ */ new Set();
-    const matchesValue = (value) => {
+    const matches = (value) => {
       if (value == null) return false;
-      if (typeof value === "string") {
-        return normalize(value).includes(normalizedQuery);
-      }
-      if (typeof value === "number" || typeof value === "boolean") {
-        return normalize(String(value)).includes(normalizedQuery);
-      }
-      if (Array.isArray(value)) {
-        for (const entry of value) {
-          if (matchesValue(entry)) {
-            return true;
-          }
-        }
-        return false;
-      }
+      if (typeof value === "string") return normalize(value).includes(normalizedQuery);
+      if (typeof value === "number" || typeof value === "boolean") return normalize(String(value)).includes(normalizedQuery);
+      if (Array.isArray(value)) return value.some(matches);
       if (typeof value === "object") {
-        if (visited.has(value)) {
-          return false;
-        }
+        if (visited.has(value)) return false;
         visited.add(value);
         for (const [key2, entry] of Object.entries(value)) {
-          if (key2 === "itemType") {
-            continue;
-          }
+          if (key2 === "itemType") continue;
           if (key2 === "abilities") {
-            if (Array.isArray(entry)) {
-              for (const abilityId of entry) {
-                const abilityName = getPetAbilityDisplayName(abilityId);
-                if (abilityName && matchesValue(abilityName)) {
-                  return true;
-                }
-              }
-            }
+            if (Array.isArray(entry) && entry.some((id) => matches(petAbilityName(id)))) return true;
             continue;
           }
-          if (matchesValue(entry)) {
-            return true;
-          }
+          if (matches(entry)) return true;
         }
       }
       return false;
     };
-    const abilityNames = Array.isArray(item?.abilities) ? item.abilities.map((abilityId) => getPetAbilityDisplayName(abilityId)).filter((name) => typeof name === "string" && !!name) : [];
+    const abilityNames = Array.isArray(item?.abilities) ? item.abilities.map(petAbilityName).filter(Boolean) : [];
+    const ownString = (field) => typeof item?.[field] === "string" ? item[field] : null;
     const candidates = [
       getInventoryItemName(item),
-      typeof item?.species === "string" ? item.species : null,
-      typeof item?.seedSpecies === "string" ? item.seedSpecies : null,
-      typeof item?.plantSpecies === "string" ? item.plantSpecies : null,
-      typeof item?.petSpecies === "string" ? item.petSpecies : null,
-      typeof item?.eggId === "string" ? item.eggId : null,
-      typeof item?.decorId === "string" ? item.decorId : null,
-      typeof item?.toolId === "string" ? item.toolId : null,
-      typeof item?.id === "string" ? item.id : null,
+      ...["species", "seedSpecies", "plantSpecies", "petSpecies", "eggId", "decorId", "toolId", "id"].map(ownString),
       ...abilityNames
     ];
-    for (const candidate of candidates) {
-      if (matchesValue(candidate)) {
-        return true;
-      }
-    }
-    return matchesValue(item);
+    return candidates.some(matches) || matches(item);
   }
-  function attachItemValues(items) {
-    const snapshot2 = getInventoryValueSnapshot();
-    const playersInRoom2 = snapshot2?.plants?.playersInRoom ?? null;
-    for (const item of items) {
-      if (!item || typeof item !== "object") continue;
-      const value = computeInventoryItemValue(item, { playersInRoom: playersInRoom2 });
-      item.value = value ?? null;
-    }
-  }
-  function filterInventoryItems(items, filters, searchQuery) {
-    const normalizedFilters = filters.map((f) => normalize(f)).filter(Boolean);
-    const itemTypes = /* @__PURE__ */ new Set();
-    let recognized = false;
-    for (const filter of normalizedFilters) {
-      const mappedTypes = filterLabelToItemTypes(filter);
-      if (mappedTypes.length) {
-        recognized = true;
-        for (const type of mappedTypes) {
-          if (type) itemTypes.add(type);
+  var normalize, stringOrEmpty, itemTypeOf, readNestedString, readNestedNumber, CROP_ORDER, CATALOG_LOOKUPS, SINGLE_ITEM_TYPES, SPECIES_FIELDS;
+  var init_itemInfo = __esm({
+    "src/features/inventory/itemInfo.ts"() {
+      "use strict";
+      init_data();
+      init_names();
+      init_cropSize();
+      normalize = (s) => (s ?? "").trim().toLowerCase();
+      stringOrEmpty = (value) => typeof value === "string" ? value.trim() : "";
+      itemTypeOf = (item) => stringOrEmpty(item?.itemType);
+      readNestedString = (item, field) => readNestedValue(item, field, (value) => stringOrEmpty(value) || null);
+      readNestedNumber = (item, field) => readNestedValue(item, field, (value) => {
+        if (typeof value === "number" && Number.isFinite(value)) return value;
+        if (typeof value === "string" && value.trim()) {
+          const parsed = Number(value);
+          return Number.isFinite(parsed) ? parsed : null;
         }
-      }
+        return null;
+      });
+      CROP_ORDER = ["crop", "plant", "seed"];
+      CATALOG_LOOKUPS = {
+        Seed: { ...plantLookup(["seed", "crop", "plant"]), name: (id) => seedCatalogName(id) ?? "" },
+        Crop: plantLookup(CROP_ORDER),
+        Produce: plantLookup(CROP_ORDER),
+        Plant: plantLookup(["plant", "crop", "seed"]),
+        Pet: { idField: "petSpecies", catalog: petCatalog2, name: (_id, entry) => stringOrEmpty(entry?.name), rarityPaths: [["rarity"]] },
+        Egg: flatLookup("eggId", eggCatalog2, eggCatalogName),
+        Tool: flatLookup("toolId", toolCatalog2, toolCatalogName),
+        Decor: flatLookup("decorId", decorCatalog2, decorCatalogName)
+      };
+      SINGLE_ITEM_TYPES = /* @__PURE__ */ new Set(["Produce", "Crop", "Plant", "Pet"]);
+      SPECIES_FIELDS = ["species", "seedSpecies", "plantSpecies", "cropSpecies", "baseSpecies", "seedKey"];
     }
-    const keepAll = !recognized;
-    const filteredByType = keepAll ? items.slice() : items.filter((item) => {
-      const type = typeof item?.itemType === "string" ? item.itemType.trim() : "";
-      return type ? itemTypes.has(type) : false;
-    });
-    const normalizedSearch = normalize(searchQuery);
-    const filteredItems = normalizedSearch ? filteredByType.filter((item) => inventoryItemMatchesSearchQuery(item, normalizedSearch)) : filteredByType;
-    attachItemValues(filteredItems);
-    const detectedItemTypes = /* @__PURE__ */ new Set();
-    for (const item of filteredItems) {
-      const type = typeof item?.itemType === "string" ? item.itemType.trim() : "";
-      if (type) {
-        detectedItemTypes.add(type);
-      }
+  });
+
+  // src/features/inventory/petStrength.ts
+  function statsFor(item) {
+    for (const field of ["petSpecies", "species", "name"]) {
+      const candidate = readNestedString(item, field);
+      if (!candidate) continue;
+      const key2 = speciesKey(candidate);
+      const stats = key2 ? petStatsBySpecies().get(key2) : void 0;
+      if (stats) return stats;
     }
-    const contextKey = createFilterContextKey(filters, normalizedSearch);
-    setCachedItemTypesForKey(contextKey, detectedItemTypes);
-    return { filteredItems, keepAll, itemTypes, detectedItemTypes };
+    return null;
   }
-  function getInventoryItemsContainer(grid) {
-    return grid.querySelector(INVENTORY_ITEMS_CONTAINER_SELECTOR) || document.querySelector(INVENTORY_ITEMS_CONTAINER_SELECTOR);
+  function getPetStrengthInfo(item) {
+    if (!item || typeof item !== "object" || itemTypeOf(item) !== "Pet") return null;
+    const stats = statsFor(item);
+    if (!stats) return null;
+    const { maxScale, hoursToMature } = stats;
+    const xp = Math.max(0, readNestedNumber(item, "xp") ?? 0);
+    const xpComponent = Math.min(Math.floor(xp / (hoursToMature * 3600) * 30), 30);
+    const scale = clamp(readNestedNumber(item, "targetScale") ?? 1, 1, maxScale);
+    const maxStrength = clamp(Math.floor((scale - 1) / (maxScale - 1) * 20 + 80), 0, 100);
+    const strength = clamp(xpComponent + maxStrength - 30, 0, maxStrength);
+    return { strength, maxStrength };
   }
-  function getInventoryDomEntries(container) {
-    clearInventoryNoiseText(container);
-    const entries2 = [];
-    const children = Array.from(container.children);
-    for (const child of children) {
-      if (!(child instanceof HTMLElement)) continue;
-      const card5 = getInventoryCardElement(child);
-      if (card5) {
-        alignInventoryStrengthText(card5);
-        entries2.push({ wrapper: child, card: card5 });
-      }
-    }
-    return entries2;
-  }
-  function updateInventoryCardStrengthText(card5, item) {
-    const strengthWrap = card5.querySelector(INVENTORY_STRENGTH_WRAPPER_SELECTOR);
-    if (!strengthWrap) return;
-    const textEl = strengthWrap.querySelector(INVENTORY_STRENGTH_TEXT_SELECTOR);
-    if (!textEl) return;
-    const info = getPetStrengthInfo(item);
-    if (!info) return;
-    const { strength, maxStrength } = info;
-    if (!Number.isFinite(maxStrength) || maxStrength <= 0) return;
-    const existingText = textEl.textContent ?? "";
-    const currentStrength = parseStrengthValue(existingText) ?? (Number.isFinite(strength) ? Math.round(strength) : null);
-    if (currentStrength == null) return;
-    const roundedMax = Math.round(maxStrength);
-    if (!Number.isFinite(roundedMax) || roundedMax <= 0) return;
-    const safeCurrent = clampNumber2(currentStrength, 0, roundedMax);
-    const isMax = safeCurrent >= roundedMax;
-    const mutationTone = getPetMutationTone(item);
-    const parts = ensureStrengthTextParts(textEl);
-    if (parts.label.textContent !== "STR ") {
-      parts.label.textContent = "STR ";
-    }
-    const nextCurrent = String(safeCurrent);
-    if (parts.current.textContent !== nextCurrent) {
-      parts.current.textContent = nextCurrent;
-    }
-    parts.current.style.setProperty("color", "#ffffff", "important");
-    parts.current.style.setProperty("font-weight", "700", "important");
-    if (isMax) {
-      const badge2 = ensureStrengthBadge(textEl, parts.label);
-      applyStrengthBadgeTone(badge2, mutationTone);
-      if (parts.max.textContent) {
-        parts.max.textContent = "";
-      }
-      parts.max.style.display = "none";
-      parts.max.style.visibility = "";
-    } else {
-      textEl.querySelector(`.${TM_STRENGTH_BADGE_CLASS}`)?.remove();
-      const nextMax = `/${roundedMax}`;
-      if (parts.max.textContent !== nextMax) {
-        parts.max.textContent = nextMax;
-      }
-      parts.max.style.display = "";
-      parts.max.style.visibility = "";
-      parts.max.style.setProperty("font-weight", "700", "important");
-    }
-    parts.max.style.setProperty("color", "#ffffff", "important");
-    strengthWrap.dataset[TM_STRENGTH_IS_MAX_DATASET_KEY] = isMax ? "1" : "0";
-  }
-  async function updateFilteredInventoryValueSummary(wrap, filters, searchQuery) {
-    if (!wrap) return;
-    const summary = getValueSummaryElement(wrap);
-    if (!summary) return;
-    const token = Symbol("value-summary");
-    wrap.__valueSummaryToken = token;
-    setValueSummaryText(summary, FILTERED_VALUE_LOADING);
-    try {
-      const inventory = await Atoms.inventory.myInventory.get();
-      if (wrap.__valueSummaryToken !== token) {
-        return;
-      }
-      if (!inventory || typeof inventory !== "object") {
-        setValueSummaryText(summary, FILTERED_VALUE_UNKNOWN);
-        return;
-      }
-      const items = Array.isArray(inventory.items) ? inventory.items : [];
-      const { filteredItems } = filterInventoryItems(items, filters, searchQuery);
-      if (!filteredItems.length) {
-        setValueSummaryText(summary, "0", "0");
-        return;
-      }
-      let totalValue = 0;
-      let hasValue = false;
-      for (const item of filteredItems) {
-        const value = getInventoryItemValue(item);
-        if (typeof value === "number" && Number.isFinite(value)) {
-          totalValue += value;
-          hasValue = true;
+  var speciesKey, petStatsBySpecies, getPetStrength2;
+  var init_petStrength = __esm({
+    "src/features/inventory/petStrength.ts"() {
+      "use strict";
+      init_data();
+      init_math();
+      init_itemInfo();
+      speciesKey = (value) => value.toLowerCase().replace(/['’`]/g, "").replace(/\s+/g, "").replace(/-/g, "").replace(/(seed|plant|baby|fruit|crop)$/i, "");
+      petStatsBySpecies = memoOnCatalogs(() => {
+        const map2 = /* @__PURE__ */ new Map();
+        const register = (key2, stats) => {
+          if (typeof key2 !== "string") return;
+          const normalized = speciesKey(key2);
+          if (normalized && !map2.has(normalized)) map2.set(normalized, stats);
+        };
+        for (const [species, entry] of Object.entries(petCatalog2)) {
+          const maxScale = Number(entry?.maxScale);
+          const hoursToMature = Number(entry?.hoursToMature);
+          if (!Number.isFinite(maxScale) || maxScale <= 1) continue;
+          if (!Number.isFinite(hoursToMature) || hoursToMature <= 0) continue;
+          register(species, { maxScale, hoursToMature });
+          register(entry?.name, { maxScale, hoursToMature });
         }
-      }
-      if (!hasValue) {
-        setValueSummaryText(summary, FILTERED_VALUE_UNKNOWN);
-        return;
-      }
-      const compact = formatInventoryItemCompactValue(totalValue);
-      const full = formatInventoryItemFullValue(totalValue);
-      setValueSummaryText(summary, compact, full);
-    } catch (error) {
-      console.warn("[InventorySorting] Impossible de calculer la valeur filtr\xE9e", error);
-      if (wrap.__valueSummaryToken !== token) {
-        return;
-      }
-      setValueSummaryText(summary, FILTERED_VALUE_UNKNOWN);
+        return map2;
+      });
+      getPetStrength2 = (item) => getPetStrengthInfo(item)?.strength ?? null;
     }
+  });
+
+  // src/features/inventory/comparators.ts
+  function compareByNameThenTypeThenId(a, b) {
+    const nameA = getInventoryItemName(a);
+    const nameB = getInventoryItemName(b);
+    if (nameA && nameB) {
+      const cmp = compareText(nameA, nameB);
+      if (cmp !== 0) return cmp;
+    }
+    if (!nameA && nameB) return 1;
+    if (nameA && !nameB) return -1;
+    return compareText(stringField(a, "itemType"), stringField(b, "itemType")) || compareText(stringField(a, "id"), stringField(b, "id"));
   }
-  function updateInventoryCardValue(card5, rawValue) {
-    const container = card5.querySelector(INVENTORY_VALUE_CONTAINER_SELECTOR);
-    const existing = card5.dataset[INVENTORY_VALUE_DATASET_KEY];
-    if (!container) {
-      if (existing != null) {
-        delete card5.dataset[INVENTORY_VALUE_DATASET_KEY];
-      }
-      return;
-    }
-    const currentEl = container.querySelector(`.${INVENTORY_VALUE_ELEMENT_CLASS}`);
-    if (!getShouldDisplayInventoryValues()) {
-      if (currentEl?.parentElement) {
-        currentEl.parentElement.removeChild(currentEl);
-      }
-      if (existing != null) {
-        delete card5.dataset[INVENTORY_VALUE_DATASET_KEY];
-      }
-      return;
-    }
-    if (typeof rawValue !== "number" || !Number.isFinite(rawValue)) {
-      if (currentEl?.parentElement) {
-        currentEl.parentElement.removeChild(currentEl);
-      }
-      if (existing != null) {
-        delete card5.dataset[INVENTORY_VALUE_DATASET_KEY];
-      }
-      return;
-    }
-    const compactValue = formatInventoryItemCompactValue(rawValue);
-    const fullValue = formatInventoryItemFullValue(rawValue);
-    let target = currentEl;
-    if (!target) {
-      target = document.createElement("div");
-      target.className = INVENTORY_VALUE_ELEMENT_CLASS;
-    }
-    Object.assign(target.style, {
-      fontSynthesis: "none",
-      WebkitFontSmoothing: "antialiased",
-      WebkitTextSizeAdjust: "100%",
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "flex-start",
-      gap: "0.15rem",
-      marginTop: "3px",
-      fontFamily: 'var(--chakra-fonts-body, "GreyCliff CF", sans-serif)',
-      fontWeight: "700",
-      fontSize: "0.65rem",
-      lineHeight: "1",
-      textTransform: "none",
-      color: "var(--chakra-colors-Yellow-Magic, #F3D32B)"
-    });
-    let textEl = target.querySelector(`.${INVENTORY_VALUE_TEXT_CLASS}`);
-    if (!textEl) {
-      target.textContent = "";
-      textEl = document.createElement("span");
-      textEl.className = INVENTORY_VALUE_TEXT_CLASS;
-      textEl.style.display = "inline-flex";
-      textEl.style.alignItems = "center";
-      textEl.style.color = "inherit";
-      target.appendChild(textEl);
-    }
-    textEl.textContent = compactValue;
-    target.title = fullValue;
-    card5.dataset[INVENTORY_VALUE_DATASET_KEY] = String(rawValue);
-    if (target.parentElement !== container || target !== container.lastElementChild) {
-      container.appendChild(target);
-    }
+  function byOptionalNumber(read2, isDesc) {
+    return (a, b) => {
+      const va = read2(a);
+      const vb = read2(b);
+      const hasA = typeof va === "number" && Number.isFinite(va);
+      const hasB = typeof vb === "number" && Number.isFinite(vb);
+      if (hasA && hasB && va !== vb) return isDesc ? vb - va : va - vb;
+      if (hasA && !hasB) return isDesc ? -1 : 1;
+      if (!hasA && hasB) return isDesc ? 1 : -1;
+      return compareByNameThenTypeThenId(a, b);
+    };
   }
-  function assignBaseIndexesToEntries(entries2) {
-    entries2.forEach((entry, index) => {
-      entry.wrapper.dataset[INVENTORY_BASE_INDEX_DATASET_KEY] = String(index);
-      entry.card.dataset[INVENTORY_BASE_INDEX_DATASET_KEY] = String(index);
-    });
-  }
-  function readBaseIndex(entry) {
-    const raw = entry.wrapper.dataset[INVENTORY_BASE_INDEX_DATASET_KEY] ?? entry.card.dataset[INVENTORY_BASE_INDEX_DATASET_KEY];
-    if (raw == null) return null;
-    const value = Number(raw);
-    return Number.isFinite(value) ? value : null;
-  }
-  function sortInventoryItems(items, sortKey, direction) {
-    const sorted = items.slice();
-    const isDesc = direction === "desc";
+  function comparatorFor(sortKey, isDesc) {
+    const directed = (cmp) => isDesc ? -cmp : cmp;
     switch (sortKey) {
       case "alpha":
-        sorted.sort((a, b) => {
-          const cmp = compareByNameThenTypeThenId(a, b);
-          return isDesc ? -cmp : cmp;
-        });
-        break;
+        return (a, b) => directed(compareByNameThenTypeThenId(a, b));
       case "qty":
-        sorted.sort((a, b) => {
-          const qtyA = getInventoryItemQuantity(a);
-          const qtyB = getInventoryItemQuantity(b);
-          if (qtyA !== qtyB) {
-            const cmp = qtyA - qtyB;
-            return isDesc ? -cmp : cmp;
-          }
-          return compareByNameThenTypeThenId(a, b);
-        });
-        break;
+        return (a, b) => {
+          const diff = getInventoryItemQuantity(a) - getInventoryItemQuantity(b);
+          return diff !== 0 ? directed(diff) : compareByNameThenTypeThenId(a, b);
+        };
       case "rarity":
-        sorted.sort((a, b) => {
+        return (a, b) => {
           const rarityA = getInventoryItemRarity(a);
           const rarityB = getInventoryItemRarity(b);
-          const rankA = getRarityRank(rarityA);
-          const rankB = getRarityRank(rarityB);
-          if (rankA !== rankB) {
-            const cmp = rankA - rankB;
-            return isDesc ? -cmp : cmp;
-          }
-          const cmpRarity = rarityA.localeCompare(rarityB, void 0, { sensitivity: "base" });
-          if (cmpRarity !== 0) return cmpRarity;
-          return compareByNameThenTypeThenId(a, b);
-        });
-        break;
+          const rankA = rarityRank(rarityA);
+          const rankB = rarityRank(rarityB);
+          if (rankA !== rankB) return directed(rankA - rankB);
+          return compareText(rarityA, rarityB) || compareByNameThenTypeThenId(a, b);
+        };
       case "value":
-        sorted.sort((a, b) => {
-          const rawValueA = a?.value;
-          const rawValueB = b?.value;
-          const hasA = typeof rawValueA === "number" && Number.isFinite(rawValueA);
-          const hasB = typeof rawValueB === "number" && Number.isFinite(rawValueB);
-          if (hasA && hasB && rawValueA !== rawValueB) {
-            const cmp = rawValueA - rawValueB;
-            return isDesc ? -cmp : cmp;
-          }
-          if (hasA && !hasB) return isDesc ? -1 : 1;
-          if (!hasA && hasB) return isDesc ? 1 : -1;
-          return compareByNameThenTypeThenId(a, b);
-        });
-        break;
+        return byOptionalNumber(ownValue, isDesc);
       case "size":
-        sorted.sort((a, b) => {
-          const sizeA = getInventoryItemSizePercent(a);
-          const sizeB = getInventoryItemSizePercent(b);
-          const hasA = typeof sizeA === "number" && Number.isFinite(sizeA);
-          const hasB = typeof sizeB === "number" && Number.isFinite(sizeB);
-          if (hasA && hasB && sizeA !== sizeB) {
-            const cmp = sizeA - sizeB;
-            return isDesc ? -cmp : cmp;
-          }
-          if (hasA && !hasB) return isDesc ? -1 : 1;
-          if (!hasA && hasB) return isDesc ? 1 : -1;
-          return compareByNameThenTypeThenId(a, b);
-        });
-        break;
+        return byOptionalNumber(getInventoryItemSize, isDesc);
+      case "strength":
+        return byOptionalNumber(getPetStrength2, isDesc);
       case "mutations":
-        sorted.sort((a, b) => {
+        return (a, b) => {
           const mutationsA = getInventoryItemMutations(a);
           const mutationsB = getInventoryItemMutations(b);
-          const countA = mutationsA.length;
-          const countB = mutationsB.length;
-          if (countA !== countB) {
-            const cmp = countA - countB;
-            return isDesc ? -cmp : cmp;
-          }
-          if (countA > 0 && countB > 0) {
-            const labelA = mutationsA.slice().sort((x, y) => x.localeCompare(y, void 0, { sensitivity: "base" })).join("\0");
-            const labelB = mutationsB.slice().sort((x, y) => x.localeCompare(y, void 0, { sensitivity: "base" })).join("\0");
-            const cmp = labelA.localeCompare(labelB, void 0, { sensitivity: "base" });
+          if (mutationsA.length !== mutationsB.length) return directed(mutationsA.length - mutationsB.length);
+          if (mutationsA.length > 0) {
+            const cmp = compareText(sortedMutationLabel(mutationsA), sortedMutationLabel(mutationsB));
             if (cmp !== 0) return cmp;
           }
           return compareByNameThenTypeThenId(a, b);
-        });
-        break;
-      case "strength":
-        sorted.sort((a, b) => {
-          const strengthA = getPetStrength2(a);
-          const strengthB = getPetStrength2(b);
-          const hasA = typeof strengthA === "number" && Number.isFinite(strengthA);
-          const hasB = typeof strengthB === "number" && Number.isFinite(strengthB);
-          if (hasA && hasB && strengthA !== strengthB) {
-            const cmp = strengthA - strengthB;
-            return isDesc ? -cmp : cmp;
-          }
-          if (hasA && !hasB) return isDesc ? -1 : 1;
-          if (!hasA && hasB) return isDesc ? 1 : -1;
-          return compareByNameThenTypeThenId(a, b);
-        });
-        break;
+        };
       default:
-        break;
+        return null;
     }
+  }
+  function sortInventoryItems(items, sortKey, direction) {
+    const sorted = items.slice();
+    const comparator = comparatorFor(sortKey, direction === "desc");
+    if (comparator) sorted.sort(comparator);
     return sorted;
   }
-  async function logInventoryForFilters(filters, sortKey, direction, searchQuery) {
-    try {
-      const inventory = await Atoms.inventory.myInventory.get();
-      if (!inventory || typeof inventory !== "object") {
-        console.log("[InventorySorting] Inventaire introuvable pour le log des filtres.");
-        return;
-      }
-      const items = Array.isArray(inventory.items) ? inventory.items : [];
-      const { keepAll, itemTypes } = filterInventoryItems(items, filters, searchQuery);
-      const resolvedDirection = sortKey ? (direction && DIRECTION_ORDER.includes(direction) ? direction : DEFAULT_DIRECTION_BY_SORT_KEY[sortKey]) ?? "asc" : direction && DIRECTION_ORDER.includes(direction) ? direction : "asc";
-      const descriptor = keepAll ? "toutes cat\xE9gories" : `types: ${Array.from(itemTypes).join(", ") || "(aucun)"}`;
-      const sortDescriptor = sortKey ? `tri: ${sortKey} (${resolvedDirection})` : "tri: (non sp\xE9cifi\xE9)";
-      const searchDescriptor = searchQuery ? `recherche: "${searchQuery}"` : "recherche: (vide)";
-      console.log(
-        `[InventorySorting] myInventory filtr\xE9 (${descriptor}, ${sortDescriptor}, ${searchDescriptor}).`
-      );
-    } catch (error) {
-      console.warn("[InventorySorting] Impossible de r\xE9cup\xE9rer myInventory pour le log", error);
-    }
-  }
-  function createDefaultApplySorting(cfg) {
-    const stateByGrid = /* @__PURE__ */ new WeakMap();
-    const ensureState = async (grid, filters, entries2, searchQuery) => {
-      const filtersKey = JSON.stringify({ filters });
-      const state5 = stateByGrid.get(grid);
-      const hasAllBaseIndexes = entries2.every((e) => readBaseIndex(e) != null);
-      const searchChanged = state5 ? state5.searchQuery !== searchQuery : false;
-      const entryCountChanged = state5 ? state5.entryCount !== entries2.length : false;
-      const filtersChanged = state5 ? state5.filtersKey !== filtersKey : false;
-      const baseLengthChanged = state5 ? state5.baseItems.length !== entries2.length : false;
-      const needsRebuild = !state5 || filtersChanged || entryCountChanged || baseLengthChanged || !hasAllBaseIndexes || searchChanged;
-      if (state5 && !needsRebuild) {
-        state5.entryByBaseIndex.clear();
-        for (const entry of entries2) {
-          const baseIndex = readBaseIndex(entry);
-          if (baseIndex != null) {
-            state5.entryByBaseIndex.set(baseIndex, entry);
-          }
-        }
-        state5.filtersKey = filtersKey;
-        state5.searchQuery = searchQuery;
-        state5.entryCount = entries2.length;
-        return state5;
-      }
-      try {
-        const inventory = await Atoms.inventory.myInventory.get();
-        if (!inventory || typeof inventory !== "object") {
-          console.log("[InventorySorting] Inventaire introuvable pour le tri DOM.");
-          return null;
-        }
-        const items = Array.isArray(inventory.items) ? inventory.items : [];
-        const { filteredItems } = filterInventoryItems(items, filters, searchQuery);
-        if (filteredItems.length !== entries2.length) {
-          console.warn(
-            `[InventorySorting] Nombre d'\xE9l\xE9ments filtr\xE9s (${filteredItems.length}) diff\xE9rent du DOM (${entries2.length}). R\xE9organisation annul\xE9e.`
-          );
-          return null;
-        }
-        assignBaseIndexesToEntries(entries2);
-        const newState = {
-          filtersKey,
-          searchQuery,
-          entryCount: entries2.length,
-          baseItems: filteredItems.slice(),
-          entryByBaseIndex: /* @__PURE__ */ new Map(),
-          lastSortKey: state5?.lastSortKey ?? null
-        };
-        entries2.forEach((entry, index) => {
-          newState.entryByBaseIndex.set(index, entry);
-        });
-        stateByGrid.set(grid, newState);
-        return newState;
-      } catch (error) {
-        console.warn("[InventorySorting] Impossible de r\xE9cup\xE9rer myInventory pour le tri DOM", error);
-        return null;
-      }
-    };
-    const rebaseStateToDomOrder = (state5, entries2) => {
-      if (entries2.length !== state5.baseItems.length) return false;
-      const reordered = [];
-      const used = /* @__PURE__ */ new Set();
-      for (const entry of entries2) {
-        const baseIndex = readBaseIndex(entry);
-        if (baseIndex == null || baseIndex < 0 || baseIndex >= state5.baseItems.length) {
-          return false;
-        }
-        if (used.has(baseIndex)) {
-          return false;
-        }
-        used.add(baseIndex);
-        reordered.push(state5.baseItems[baseIndex]);
-      }
-      if (reordered.length !== state5.baseItems.length) return false;
-      let changed = false;
-      for (let i = 0; i < reordered.length; i++) {
-        if (reordered[i] !== state5.baseItems[i]) {
-          changed = true;
-          break;
-        }
-      }
-      if (!changed) return false;
-      state5.baseItems = reordered;
-      assignBaseIndexesToEntries(entries2);
-      state5.entryByBaseIndex.clear();
-      entries2.forEach((entry, index) => {
-        state5.entryByBaseIndex.set(index, entry);
-      });
-      state5.entryCount = entries2.length;
-      return true;
-    };
-    return async (grid, sortKey, direction) => {
-      if (typeof document === "undefined") return;
-      const container = getInventoryItemsContainer(grid);
-      if (!container) return;
-      const entries2 = getInventoryDomEntries(container);
-      if (!entries2.length) return;
-      const filters = getActiveFiltersFromGrid(
-        grid,
-        cfg.checkboxSelector,
-        cfg.checkboxLabelSelector
-      );
-      const searchQuery = getNormalizedInventorySearchQuery(grid);
-      const state5 = await ensureState(grid, filters, entries2, searchQuery);
-      if (!state5) return;
-      const previousSortKey = state5.lastSortKey;
-      if ((!sortKey || sortKey === "none") && previousSortKey === "none") {
-        rebaseStateToDomOrder(state5, entries2);
-      }
-      const baseIndexByItem = /* @__PURE__ */ new Map();
-      state5.baseItems.forEach((item, index) => {
-        baseIndexByItem.set(item, index);
-      });
-      const effectiveDirection = direction && DIRECTION_ORDER.includes(direction) ? direction : DEFAULT_DIRECTION_BY_SORT_KEY[sortKey] ?? "asc";
-      const desiredItems = !sortKey || sortKey === "none" ? state5.baseItems.slice() : sortInventoryItems(state5.baseItems, sortKey, effectiveDirection);
-      const desiredEntries = [];
-      const usedEntries = /* @__PURE__ */ new Set();
-      for (const item of desiredItems) {
-        const baseIndex = baseIndexByItem.get(item);
-        if (baseIndex == null) continue;
-        const entry = state5.entryByBaseIndex.get(baseIndex);
-        if (!entry || usedEntries.has(entry)) continue;
-        const value = getInventoryItemValue(item);
-        updateInventoryCardValue(entry.card, value);
-        updateInventoryCardStrengthText(entry.card, item);
-        alignInventoryStrengthText(entry.card);
-        desiredEntries.push(entry);
-        usedEntries.add(entry);
-      }
-      if (desiredEntries.length !== entries2.length) {
-        console.warn(
-          `[InventorySorting] Impossible de r\xE9ordonner l'inventaire : correspondances insuffisantes (${desiredEntries.length}/${entries2.length}).`
-        );
-        return;
-      }
-      const alreadyOrdered = desiredEntries.every(
-        (entry, index) => entry.wrapper === entries2[index]?.wrapper
-      );
-      if (!alreadyOrdered) {
-        const fragment = document.createDocumentFragment();
-        desiredEntries.forEach((entry) => {
-          fragment.appendChild(entry.wrapper);
-        });
-        container.appendChild(fragment);
-      }
-      state5.entryByBaseIndex.clear();
-      desiredEntries.forEach((entry) => {
-        const baseIndex = readBaseIndex(entry);
-        if (baseIndex != null) {
-          state5.entryByBaseIndex.set(baseIndex, entry);
-        }
-      });
-      state5.lastSortKey = sortKey;
-    };
-  }
-  function getActiveFiltersFromGrid(grid, checkboxSelector, checkboxLabelSelector) {
-    return Array.from(grid.querySelectorAll(checkboxSelector)).filter(labelIsChecked).map(
-      (lbl) => (lbl.querySelector(checkboxLabelSelector)?.textContent ?? "").trim()
-    ).filter(Boolean);
-  }
-  function computeSortOptions(activeFilters, labelByValue = LABEL_BY_VALUE_DEFAULT, mapExtraByFilter = MAP_EXTRA_BY_FILTER_DEFAULT, searchQuery = "") {
-    const normalizedFilters = activeFilters.map((value) => (value ?? "").trim().toLowerCase()).filter(Boolean);
-    const normalizedSearch = normalize(searchQuery);
-    const intersectSets = (sets) => {
-      if (!sets.length) return null;
-      let intersection = new Set(sets[0]);
-      for (let i = 1; i < sets.length; i++) {
-        const current = sets[i];
-        intersection = new Set([...intersection].filter((value) => current.has(value)));
-      }
-      return intersection;
-    };
-    const filterSets = normalizedFilters.map(
-      (filterKey) => /* @__PURE__ */ new Set([...BASE_SORT, ...getExtrasForFilterKey(filterKey, mapExtraByFilter)])
-    );
-    const detectedItemTypes = getCachedItemTypesForContext(activeFilters, normalizedSearch);
-    const typeSets = [];
-    if (detectedItemTypes && detectedItemTypes.size) {
-      detectedItemTypes.forEach((itemType) => {
-        const extras = getExtrasForItemType(itemType, mapExtraByFilter);
-        typeSets.push(/* @__PURE__ */ new Set([...BASE_SORT, ...extras]));
-      });
-    }
-    const allowedFromFilters = intersectSets(filterSets);
-    const allowedFromTypes = intersectSets(typeSets);
-    let allowed = null;
-    if (allowedFromFilters && allowedFromTypes) {
-      allowed = new Set([...allowedFromFilters].filter((value) => allowedFromTypes.has(value)));
-    } else if (allowedFromFilters) {
-      allowed = new Set(allowedFromFilters);
-    } else if (allowedFromTypes) {
-      allowed = new Set(allowedFromTypes);
-    }
-    if (!allowed || !allowed.size) {
-      allowed = new Set(BASE_SORT);
-    }
-    const values = ORDER.filter((value) => value === "none" || allowed.has(value));
-    return values.map((value) => ({ value, label: labelByValue[value] || value }));
-  }
-  function isMacOsPlatform() {
-    if (typeof navigator === "undefined") return false;
-    const nav = navigator;
-    const platform = nav.userAgentData?.platform || nav.platform || "";
-    if (platform && /mac/i.test(platform)) {
-      return true;
-    }
-    const userAgent = typeof nav.userAgent === "string" ? nav.userAgent : "";
-    return /mac os x/i.test(userAgent);
-  }
-  function shouldUseCustomSelectStyles() {
-    return !isMacOsPlatform();
-  }
-  function injectDarkSelectStyles(id = "inv-sort-dark-styles") {
-    if (document.getElementById(id)) return;
-    const css3 = `
-    .tm-sort-select {
-      color: #e7eef7 !important;
-      background-color: rgba(17,17,17,0.98) !important;
-      border: 1px solid rgba(255,255,255,0.25) !important;
-      outline: none !important;
-      -webkit-appearance: none;
-      appearance: none;
-      color-scheme: dark;
-      padding-right: 28px !important;
-    }
-    .tm-sort-select:focus { box-shadow: 0 0 0 2px rgba(122,162,255,.35); }
-    .tm-sort-select option { color: #e7eef7; background-color: #111; }
-    .tm-sort-select option:checked { background-color: #222; }
-    .tm-sort-select option:hover   { background-color: #1a1a1a; }
-    .tm-select-wrap { position: relative; display: inline-flex; align-items: center; }
-    .tm-select-arrow {
-      position: absolute; right: 10px; top: 50%;
-      transform: translateY(-50%);
-      pointer-events: none; display: inline-flex; align-items: center; justify-content: center;
-    }
-    .tm-select-arrow svg { display: block; }
-  `;
-    const style2 = document.createElement("style");
-    style2.id = id;
-    style2.textContent = css3;
-    document.head.appendChild(style2);
-  }
-  function createSortingBar(useCustomSelectStyles) {
-    const wrap = document.createElement("div");
-    wrap.className = "tm-sort-wrap";
-    Object.assign(wrap.style, {
-      display: "block",
-      width: "100%",
-      margin: "0",
-      padding: "0",
-      position: "relative",
-      flex: "0 0 auto",
-      minHeight: "0",
-      contain: "layout style"
-    });
-    const bar = document.createElement("div");
-    bar.className = "tm-sorting-bar";
-    Object.assign(bar.style, {
-      display: "flex",
-      alignItems: "center",
-      flexWrap: "wrap",
-      gap: "8px",
-      marginTop: "10px",
-      paddingTop: "8px",
-      borderTop: "1px solid rgba(255,255,255,0.12)",
-      width: "100%",
-      boxSizing: "border-box",
-      position: "relative",
-      flex: "0 0 auto",
-      height: "auto",
-      minHeight: "0",
-      maxHeight: "none",
-      alignSelf: "stretch"
-    });
-    const label2 = document.createElement("span");
-    label2.textContent = "Sort by:";
-    Object.assign(label2.style, { font: "inherit", opacity: "0.8", flex: "0 0 auto" });
-    const selectWrap = document.createElement("div");
-    selectWrap.className = "tm-select-wrap";
-    const select3 = document.createElement("select");
-    select3.className = "tm-sort-select tm-sort-select--key";
-    if (useCustomSelectStyles) {
-      Object.assign(select3.style, {
-        padding: "6px 10px",
-        border: "1px solid rgba(255,255,255,0.25)",
-        borderRadius: "6px",
-        background: "rgba(17,17,17,0.98)",
-        color: "#e7eef7",
-        cursor: "pointer",
-        flex: "0 0 auto",
-        width: "auto",
-        outline: "none",
-        appearance: "none"
-      });
-      select3.style.setProperty("-webkit-appearance", "none");
-    }
-    const arrow = document.createElement("span");
-    arrow.className = "tm-select-arrow";
-    arrow.innerHTML = `
-    <svg width="12" height="8" viewBox="0 0 12 8" aria-hidden="true">
-      <path d="M1 1l5 5 5-5" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  `;
-    if (useCustomSelectStyles) {
-      selectWrap.append(select3, arrow);
-    } else {
-      selectWrap.append(select3);
-    }
-    bar.append(label2, selectWrap);
-    const directionLabel = document.createElement("span");
-    directionLabel.className = "tm-direction-label";
-    directionLabel.textContent = DEFAULT_DIRECTION_LABEL;
-    Object.assign(directionLabel.style, {
-      font: "inherit",
-      opacity: "0.8",
-      flex: "0 0 auto"
-    });
-    const directionWrap = document.createElement("div");
-    directionWrap.className = "tm-select-wrap";
-    const directionSelect = document.createElement("select");
-    directionSelect.className = "tm-sort-select tm-direction-select";
-    const canStyleDirectionSelect = useCustomSelectStyles && !isMacOsPlatform();
-    if (canStyleDirectionSelect) {
-      Object.assign(directionSelect.style, {
-        padding: "6px 10px",
-        border: "1px solid rgba(255,255,255,0.25)",
-        borderRadius: "6px",
-        background: "rgba(17,17,17,0.98)",
-        color: "#e7eef7",
-        cursor: "pointer",
-        flex: "0 0 auto",
-        width: "auto",
-        outline: "none",
-        appearance: "none"
-      });
-      directionSelect.style.setProperty("-webkit-appearance", "none");
-    }
-    const directionArrow = document.createElement("span");
-    directionArrow.className = "tm-select-arrow";
-    directionArrow.innerHTML = `
-    <svg width="12" height="8" viewBox="0 0 12 8" aria-hidden="true">
-      <path d="M1 1l5 5 5-5" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  `;
-    if (canStyleDirectionSelect) {
-      directionWrap.append(directionSelect, directionArrow);
-    } else {
-      directionWrap.append(directionSelect);
-    }
-    bar.append(directionLabel, directionWrap);
-    const divider = document.createElement("span");
-    divider.className = "tm-value-toggle__divider";
-    Object.assign(divider.style, {
-      alignSelf: "stretch",
-      width: "1px",
-      minHeight: "24px",
-      background: "rgba(255,255,255,0.15)",
-      flex: "0 0 auto",
-      opacity: "0.5"
-    });
-    const valueToggleLabel = document.createElement("label");
-    valueToggleLabel.className = "tm-value-toggle";
-    Object.assign(valueToggleLabel.style, {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "8px",
-      font: "inherit",
-      opacity: "0.9",
-      cursor: "pointer",
-      flex: "0 0 auto"
-    });
-    const valueToggleControl = document.createElement("span");
-    valueToggleControl.className = "tm-value-toggle__control";
-    Object.assign(valueToggleControl.style, {
-      position: "relative",
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: "36px",
-      height: "20px",
-      flex: "0 0 auto"
-    });
-    const valueToggleInput = document.createElement("input");
-    valueToggleInput.type = "checkbox";
-    valueToggleInput.className = "tm-value-toggle__checkbox";
-    Object.assign(valueToggleInput.style, {
-      position: "absolute",
-      inset: "0",
-      margin: "0",
-      opacity: "0",
-      cursor: "pointer"
-    });
-    const switchTrack = document.createElement("span");
-    switchTrack.className = "tm-value-toggle__switch";
-    Object.assign(switchTrack.style, {
-      position: "relative",
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "flex-start",
-      width: "100%",
-      height: "100%",
-      borderRadius: "999px",
-      background: "rgba(255,255,255,0.25)",
-      transition: "background 120ms ease",
-      padding: "2px",
-      boxSizing: "border-box"
-    });
-    const switchThumb = document.createElement("span");
-    switchThumb.className = "tm-value-toggle__thumb";
-    Object.assign(switchThumb.style, {
-      width: "16px",
-      height: "16px",
-      borderRadius: "50%",
-      background: "#111",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
-      transform: "translateX(0)",
-      transition: "transform 120ms ease, background 120ms ease"
-    });
-    switchTrack.appendChild(switchThumb);
-    valueToggleControl.append(valueToggleInput, switchTrack);
-    const valueToggleText = document.createElement("span");
-    valueToggleText.className = "tm-value-toggle__label";
-    valueToggleText.textContent = "Show values";
-    Object.assign(valueToggleText.style, {
-      font: "inherit",
-      color: "inherit"
-    });
-    valueToggleLabel.append(valueToggleControl, valueToggleText);
-    const valueSummaryText = document.createElement("span");
-    valueSummaryText.className = "tm-value-toggle__summary";
-    Object.assign(valueSummaryText.style, {
-      font: "inherit",
-      color: "var(--chakra-colors-Yellow-Magic, #F3D32B)",
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "flex-end",
-      flex: "1 1 auto",
-      whiteSpace: "nowrap",
-      marginLeft: "auto",
-      textAlign: "right",
-      gap: "0.25rem"
-    });
-    setValueSummaryText(valueSummaryText, FILTERED_VALUE_LOADING);
-    bar.append(divider, valueToggleLabel, valueSummaryText);
-    const syncValueToggleVisual = (checked) => {
-      switchTrack.style.background = checked ? "var(--chakra-colors-Yellow-Magic, #F3D32B)" : "rgba(255,255,255,0.25)";
-      switchThumb.style.transform = checked ? "translateX(16px)" : "translateX(0)";
-      valueToggleLabel.setAttribute("data-checked", checked ? "true" : "false");
-      valueToggleLabel.setAttribute("role", "switch");
-      valueToggleLabel.setAttribute("aria-checked", checked ? "true" : "false");
-    };
-    valueToggleInput.addEventListener("change", () => {
-      syncValueToggleVisual(valueToggleInput.checked);
-    });
-    wrap.__syncValueToggle = syncValueToggleVisual;
-    syncValueToggleVisual(valueToggleInput.checked);
-    wrap.appendChild(bar);
-    return {
-      wrap,
-      bar,
-      select: select3,
-      directionSelect,
-      directionLabel,
-      valueToggleInput,
-      valueToggleLabel,
-      valueSummary: valueSummaryText
-    };
-  }
-  function ensureSortingBar(grid, cfg, useCustomSelectStyles, labelByValue, directionLabelText, onChange, showValues, onToggleValues) {
-    const filtersBlock = grid.querySelector(cfg.filtersBlockSelector);
-    if (!filtersBlock) return null;
-    let wrap = filtersBlock.querySelector(":scope > .tm-sort-wrap");
-    let select3;
-    let directionSelect;
-    let directionLabelEl = null;
-    let valueToggleInput = null;
-    let valueSummaryEl = null;
-    if (!wrap) {
-      const ui = createSortingBar(useCustomSelectStyles);
-      wrap = ui.wrap;
-      select3 = ui.select;
-      directionSelect = ui.directionSelect;
-      directionLabelEl = ui.directionLabel;
-      valueToggleInput = ui.valueToggleInput;
-      valueSummaryEl = ui.valueSummary;
-      wrap.__grid = grid;
-      wrap.__valueSummary = valueSummaryEl ?? null;
-      wrap.style.gridColumn = "1 / -1";
-      filtersBlock.appendChild(wrap);
-      if (directionLabelEl) {
-        directionLabelEl.textContent = directionLabelText;
-      }
-      if (valueToggleInput) {
-        valueToggleInput.checked = showValues;
-        valueToggleInput.addEventListener("change", () => {
-          const nextVisible = valueToggleInput ? valueToggleInput.checked : false;
-          wrap.__showValues = nextVisible;
-          onToggleValues(nextVisible);
-        });
-      }
-      select3.addEventListener("change", () => {
-        const value = select3.value;
-        wrap.__prevValue = value;
-        const direction = directionSelect?.value || "asc";
-        const currentGrid = wrap.__grid;
-        const activeFilters = currentGrid ? getActiveFiltersFromGrid(
-          currentGrid,
-          cfg.checkboxSelector,
-          cfg.checkboxLabelSelector
-        ) : [];
-        const searchQuery = getNormalizedInventorySearchQuery(currentGrid);
-        console.log("[InventorySorting] Tri s\xE9lectionn\xE9 :", value);
-        void logInventoryForFilters(activeFilters, value, direction, searchQuery);
-        onChange(value, direction, activeFilters, searchQuery);
-      });
-      directionSelect.addEventListener("change", () => {
-        const direction = directionSelect.value;
-        wrap.__prevDirection = direction;
-        const value = select3?.value || "none";
-        const currentGrid = wrap.__grid;
-        const activeFilters = currentGrid ? getActiveFiltersFromGrid(
-          currentGrid,
-          cfg.checkboxSelector,
-          cfg.checkboxLabelSelector
-        ) : [];
-        const searchQuery = getNormalizedInventorySearchQuery(currentGrid);
-        console.log("[InventorySorting] Ordre de tri s\xE9lectionn\xE9 :", direction);
-        void logInventoryForFilters(activeFilters, value, direction, searchQuery);
-        onChange(value, direction, activeFilters, searchQuery);
-      });
-    } else {
-      const maybeSelect = wrap.querySelector("select.tm-sort-select--key");
-      const maybeDirectionSelect = wrap.querySelector("select.tm-direction-select");
-      if (!maybeSelect || !maybeDirectionSelect) return null;
-      select3 = maybeSelect;
-      directionSelect = maybeDirectionSelect;
-      directionLabelEl = wrap.querySelector(".tm-direction-label");
-      valueToggleInput = wrap.querySelector('label.tm-value-toggle input[type="checkbox"]');
-      valueSummaryEl = wrap.querySelector(".tm-value-toggle__summary");
-      wrap.__valueSummary = valueSummaryEl ?? null;
-      if (directionLabelEl) {
-        directionLabelEl.textContent = directionLabelText;
-      }
-      if (wrap.parentElement !== filtersBlock) {
-        wrap.style.gridColumn = "1 / -1";
-        filtersBlock.appendChild(wrap);
-      } else {
-        wrap.style.gridColumn = "1 / -1";
-      }
-    }
-    if (valueToggleInput) {
-      valueToggleInput.checked = showValues;
-    }
-    const syncValueToggle = wrap.__syncValueToggle;
-    if (syncValueToggle) {
-      syncValueToggle(valueToggleInput?.checked ?? showValues);
-    }
-    wrap.__grid = grid;
-    wrap.__showValues = valueToggleInput?.checked ?? showValues;
-    return { wrap, select: select3, directionSelect, valueToggleInput, valueSummary: valueSummaryEl };
-  }
-  function renderSelectOptions(select3, options, prevValue) {
-    const prev = prevValue ?? select3.value;
-    select3.innerHTML = "";
-    for (const opt of options) {
-      const o = document.createElement("option");
-      o.value = opt.value;
-      o.textContent = opt.label;
-      select3.appendChild(o);
-    }
-    if (options.some((o) => o.value === "none")) {
-      select3.value = "none";
-    }
-    if (prev && options.some((o) => o.value === prev) && prev !== "none") {
-      select3.value = prev;
-    }
-  }
-  function renderDirectionOptions(select3, labels, prevValue) {
-    const prev = prevValue ?? select3.value ?? null;
-    select3.innerHTML = "";
-    for (const value of DIRECTION_ORDER) {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = labels[value] ?? value;
-      select3.appendChild(option);
-    }
-    if (prev && DIRECTION_ORDER.includes(prev)) {
-      select3.value = prev;
-    } else {
-      select3.value = DIRECTION_ORDER[0];
-    }
-  }
-  function attachInventorySorting(userConfig = {}) {
-    const cfg = {
-      ...DEFAULTS3,
-      ...userConfig
-    };
-    const mapExtraByFilter = { ...MAP_EXTRA_BY_FILTER_DEFAULT, ...cfg.mapExtraByFilter || {} };
-    const labelByValue = { ...LABEL_BY_VALUE_DEFAULT, ...cfg.labelByValue || {} };
-    const directionLabelText = cfg.directionLabel ?? DEFAULT_DIRECTION_LABEL;
-    const directionLabelByValue = {
-      ...DIRECTION_LABELS_DEFAULT,
-      ...cfg.directionLabelByValue || {}
-    };
-    const defaultDirectionBySortKey = {
-      ...DEFAULT_DIRECTION_BY_SORT_KEY,
-      ...cfg.defaultDirectionBySortKey || {}
-    };
-    const useCustomSelectStyles = shouldUseCustomSelectStyles();
-    if (cfg.injectDarkStyles && useCustomSelectStyles) injectDarkSelectStyles();
-    const applySorting = cfg.applySorting ?? createDefaultApplySorting(cfg);
-    let showInventoryValues = loadPersistedInventoryValueVisibility() ?? true;
-    setShouldDisplayInventoryValues(showInventoryValues);
-    let grid = null;
-    let currentWrap = null;
-    let currentSelect = null;
-    let currentDirectionSelect = null;
-    let currentValueToggle = null;
-    let stopValueSummaryListener = null;
-    let lastLoggedFilters = null;
-    let lastAppliedFiltersKey = null;
-    let lastAppliedSortKey = null;
-    let lastAppliedDirection = null;
-    let shouldEnsureInventoryValueWatcherOnNextVisible = true;
-    let lastSortedDomSnapshot = null;
-    let lastComputedFilterContextKey = null;
-    let stopFilterContextListener = null;
-    let lastRenderedInventoryEntryCount = null;
-    let noiseObserver = null;
-    let noiseObserverContainer = null;
-    let lastPetHutchRoot = null;
-    let petHutchNeedsInit = true;
-    const updateDomSnapshotForGrid = (target) => {
-      if (!target) {
-        lastSortedDomSnapshot = null;
-        return;
-      }
-      const container = getInventoryItemsContainer(target);
-      if (!container) {
-        lastSortedDomSnapshot = null;
-        return;
-      }
-      const entries2 = getInventoryDomEntries(container);
-      lastSortedDomSnapshot = createDomSnapshot(entries2);
-    };
-    const applySortingWithSnapshot = (target, sortKey, direction) => Promise.resolve(applySorting(target, sortKey, direction)).then(() => {
-      updateDomSnapshotForGrid(target);
-    });
-    const ensureNoiseObserver = () => {
-      if (noiseObserver) return;
-      noiseObserver = new MutationObserver(() => {
-        if (noiseObserverContainer) {
-          clearInventoryNoiseText(noiseObserverContainer);
-        }
-      });
-    };
-    const observeNoiseContainer = (container) => {
-      if (noiseObserverContainer === container) return;
-      if (noiseObserver) {
-        noiseObserver.disconnect();
-      }
-      noiseObserverContainer = container;
-      if (!container) return;
-      ensureNoiseObserver();
-      noiseObserver?.observe(container, {
-        subtree: true,
-        childList: true,
-        characterData: true
-      });
-      clearInventoryNoiseText(container);
-    };
-    const obs = new MutationObserver((muts) => {
-      const relevant = muts.some(
-        (m) => m.type === "attributes" ? ["data-checked", "style", "class", "hidden", "aria-hidden"].includes(m.attributeName || "") : m.type === "childList"
-      );
-      if (relevant) refresh();
-    });
-    const setGrid = (next) => {
-      if (grid === next) return;
-      obs.disconnect();
-      grid = next;
-      lastLoggedFilters = null;
-      lastAppliedFiltersKey = null;
-      lastAppliedSortKey = null;
-      lastSortedDomSnapshot = null;
-      lastComputedFilterContextKey = null;
-      lastRenderedInventoryEntryCount = null;
-      shouldEnsureInventoryValueWatcherOnNextVisible = true;
-      if (!grid && stopValueSummaryListener) {
-        stopValueSummaryListener();
-        stopValueSummaryListener = null;
-      }
-      if (!grid && stopFilterContextListener) {
-        stopFilterContextListener();
-        stopFilterContextListener = null;
-      }
-      if (!grid) {
-        observeNoiseContainer(null);
-      }
-      if (grid) {
-        obs.observe(grid, {
-          subtree: true,
-          childList: true,
-          attributes: true,
-          attributeFilter: ["data-checked", "style", "class", "hidden", "aria-hidden"]
-        });
-      }
-    };
-    const bodyObserver = new MutationObserver(() => {
-      const hasCurrent = !!(grid && document.contains(grid));
-      if (!hasCurrent && grid) {
-        setGrid(null);
-      }
-      const current = hasCurrent ? grid : null;
-      const next = document.querySelector(cfg.gridSelector);
-      if (next !== current) {
-        setGrid(next);
-        if (next) {
-          update();
-        }
-      }
-      maybeInitPetHutch();
-      refreshPetHutch();
-    });
-    const resolveGrid = () => {
-      if (grid && document.contains(grid)) return grid;
-      const next = document.querySelector(cfg.gridSelector);
-      if (next !== grid) {
-        setGrid(next);
-      }
-      return grid && document.contains(grid) ? grid : null;
-    };
-    const applyCurrentSorting = () => {
-      const targetGrid = resolveGrid();
-      if (!targetGrid) return;
-      const sortKey = currentSelect?.value ?? "none";
-      const fallbackDirection = defaultDirectionBySortKey[sortKey] ?? DEFAULT_DIRECTION_BY_SORT_KEY[sortKey] ?? "asc";
-      const direction = currentDirectionSelect?.value ?? fallbackDirection;
-      void applySortingWithSnapshot(targetGrid, sortKey, direction);
-    };
-    const update = () => {
-      const targetGrid = resolveGrid();
-      if (!targetGrid || !isVisible(targetGrid)) {
-        shouldEnsureInventoryValueWatcherOnNextVisible = true;
-        return;
-      }
-      setShouldDisplayInventoryValues(showInventoryValues);
-      if (shouldEnsureInventoryValueWatcherOnNextVisible) {
-        shouldEnsureInventoryValueWatcherOnNextVisible = false;
-        void ensureInventoryValueWatcher().catch((error) => {
-          console.warn(
-            "[InventorySorting] Impossible d'initialiser la surveillance de la valeur de l'inventaire",
-            error
-          );
-        });
-      }
-      const mount = ensureSortingBar(
-        targetGrid,
-        cfg,
-        useCustomSelectStyles,
-        labelByValue,
-        directionLabelText,
-        (value, direction, filters, searchQuery) => {
-          lastAppliedSortKey = value;
-          lastAppliedDirection = direction;
-          const filtersKey = JSON.stringify({ filters: filters ?? [], search: searchQuery ?? "" });
-          lastAppliedFiltersKey = filtersKey;
-          persistSortKey(value);
-          persistSortDirection(direction);
-          cfg.onSortChange?.(value, direction);
-          void applySortingWithSnapshot(targetGrid, value, direction);
-        },
-        showInventoryValues,
-        (visible) => {
-          showInventoryValues = visible;
-          setShouldDisplayInventoryValues(visible);
-          persistInventoryValueVisibility(visible);
-          if (currentValueToggle) {
-            currentValueToggle.checked = visible;
-          }
-          applyCurrentSorting();
-        }
-      );
-      if (!mount) return;
-      currentWrap = mount.wrap;
-      currentSelect = mount.select;
-      currentDirectionSelect = mount.directionSelect;
-      currentValueToggle = mount.valueToggleInput ?? null;
-      if (!stopValueSummaryListener) {
-        stopValueSummaryListener = onInventoryValueChange(() => {
-          const sourceGrid = resolveGrid();
-          if (!sourceGrid || !currentWrap) return;
-          const filtersForSummary = getActiveFiltersFromGrid(
-            sourceGrid,
-            cfg.checkboxSelector,
-            cfg.checkboxLabelSelector
-          );
-          const searchForSummary = getNormalizedInventorySearchQuery(sourceGrid);
-          void updateFilteredInventoryValueSummary(
-            currentWrap,
-            filtersForSummary,
-            searchForSummary
-          );
-        });
-      }
-      const activeFilters = getActiveFiltersFromGrid(
-        targetGrid,
-        cfg.checkboxSelector,
-        cfg.checkboxLabelSelector
-      );
-      const container = getInventoryItemsContainer(targetGrid);
-      observeNoiseContainer(container);
-      const currentEntries = container ? getInventoryDomEntries(container) : [];
-      const inventoryEntryCountChanged = lastRenderedInventoryEntryCount === null || lastRenderedInventoryEntryCount !== currentEntries.length;
-      const shouldRenderSelectOptions = inventoryEntryCountChanged || !currentSelect?.options?.length;
-      const shouldRenderDirectionOptions = inventoryEntryCountChanged || !currentDirectionSelect?.options?.length;
-      const domChangedSinceLastSort = haveDomEntriesChanged(lastSortedDomSnapshot, currentEntries);
-      const currentDomSnapshot = createDomSnapshot(currentEntries);
-      const searchQueryForGrid = getNormalizedInventorySearchQuery(targetGrid);
-      lastComputedFilterContextKey = createFilterContextKey(activeFilters, searchQueryForGrid);
-      if (!stopFilterContextListener) {
-        stopFilterContextListener = addFilterContextListener((contextKey) => {
-          if (contextKey === lastComputedFilterContextKey) {
-            setTimeout(refresh, 0);
-          }
-        });
-      }
-      void updateFilteredInventoryValueSummary(currentWrap, activeFilters, searchQueryForGrid);
-      const serializedFilters = JSON.stringify({
-        filters: activeFilters,
-        search: searchQueryForGrid
-      });
-      const filtersChanged = serializedFilters !== lastAppliedFiltersKey;
-      if (serializedFilters !== lastLoggedFilters) {
-        lastLoggedFilters = serializedFilters;
-        console.log("[InventorySorting] Filtres actifs :", activeFilters);
-        const currentSortKey = currentSelect?.value ?? void 0;
-        const currentDirection = currentDirectionSelect?.value ?? void 0;
-        void logInventoryForFilters(
-          activeFilters,
-          currentSortKey,
-          currentDirection,
-          searchQueryForGrid
-        );
-      }
-      const options = computeSortOptions(
-        activeFilters,
-        labelByValue,
-        mapExtraByFilter,
-        searchQueryForGrid
-      );
-      const wrapPrevValue = typeof currentWrap.__prevValue === "string" ? currentWrap.__prevValue : null;
-      const persistedSortKey = loadPersistedSortKey();
-      const preferredValue = (wrapPrevValue && options.some((o) => o.value === wrapPrevValue) ? wrapPrevValue : null) || (persistedSortKey && options.some((o) => o.value === persistedSortKey) ? persistedSortKey : null);
-      if (shouldRenderSelectOptions) {
-        renderSelectOptions(currentSelect, options, preferredValue);
-        lastRenderedInventoryEntryCount = currentEntries.length;
-      }
-      currentWrap.__prevValue = currentSelect.value;
-      const appliedSortKey = currentSelect.value;
-      const wrapPrevDirection = typeof currentWrap.__prevDirection === "string" ? currentWrap.__prevDirection : null;
-      const persistedDirection = loadPersistedSortDirection();
-      const fallbackDirection = defaultDirectionBySortKey[appliedSortKey] ?? DEFAULT_DIRECTION_BY_SORT_KEY[appliedSortKey] ?? "asc";
-      const preferredDirection = (wrapPrevDirection && DIRECTION_ORDER.includes(wrapPrevDirection) ? wrapPrevDirection : null) || (persistedDirection && DIRECTION_ORDER.includes(persistedDirection) ? persistedDirection : null) || fallbackDirection;
-      let appliedDirection;
-      if (currentDirectionSelect) {
-        if (shouldRenderDirectionOptions) {
-          renderDirectionOptions(currentDirectionSelect, directionLabelByValue, preferredDirection);
-        }
-        if (preferredDirection && DIRECTION_ORDER.includes(preferredDirection) && currentDirectionSelect.value !== preferredDirection) {
-          currentDirectionSelect.value = preferredDirection;
-        }
-        appliedDirection = currentDirectionSelect.value;
-        if (!DIRECTION_ORDER.includes(appliedDirection)) {
-          appliedDirection = fallbackDirection;
-          currentDirectionSelect.value = fallbackDirection;
-        }
-        currentWrap.__prevDirection = appliedDirection;
-      } else {
-        appliedDirection = fallbackDirection;
-      }
-      const sortChanged = appliedSortKey !== lastAppliedSortKey || appliedDirection !== lastAppliedDirection;
-      const shouldApplySorting = sortChanged || domChangedSinceLastSort;
-      if (shouldApplySorting) {
-        lastAppliedSortKey = appliedSortKey;
-        lastAppliedDirection = appliedDirection;
-        lastAppliedFiltersKey = serializedFilters;
-        persistSortKey(appliedSortKey);
-        persistSortDirection(appliedDirection);
-        cfg.onSortChange?.(appliedSortKey, appliedDirection);
-        void applySortingWithSnapshot(targetGrid, appliedSortKey, appliedDirection);
-      } else {
-        if (filtersChanged) {
-          lastAppliedFiltersKey = serializedFilters;
-          console.log(
-            "[InventorySorting] Filtres modifi\xE9s mais la liste DOM est inchang\xE9e, tri non r\xE9appliqu\xE9."
-          );
-        }
-        lastSortedDomSnapshot = currentDomSnapshot;
-      }
-    };
-    const refresh = debounce(update, 120);
-    const refreshPetHutch = debounce(() => {
-      void updatePetHutchSections();
-    }, 120);
-    const maybeInitPetHutch = () => {
-      const root = document.querySelector(PET_HUTCH_ROOT_SELECTOR);
-      if (!root) {
-        lastPetHutchRoot = null;
-        petHutchNeedsInit = true;
-        return;
-      }
-      if (root !== lastPetHutchRoot) {
-        lastPetHutchRoot = root;
-        petHutchNeedsInit = true;
-      }
-      if (!petHutchNeedsInit) return;
-      void updatePetHutchSections({ hideDuringUpdate: true }).then((applied2) => {
-        if (applied2) petHutchNeedsInit = false;
-      });
-    };
-    const changeHandler = (e) => {
-      const target = e.target;
-      if (!target) return;
-      const within = target.closest(cfg.gridSelector);
-      const currentGrid = resolveGrid();
-      if (e.type === "input" && target instanceof HTMLInputElement && target.matches(INVENTORY_SEARCH_INPUT_SELECTOR) && within && within === currentGrid) {
-        console.log("[InventorySorting] Texte de recherche modifi\xE9 :", target.value);
-        const activeFilters = getActiveFiltersFromGrid(
-          currentGrid,
-          cfg.checkboxSelector,
-          cfg.checkboxLabelSelector
-        );
-        const normalizedSearch = getNormalizedInventorySearchQuery(currentGrid);
-        void logFilteredInventorySearchResults(currentGrid, activeFilters, normalizedSearch);
-      }
-      if (within && within === currentGrid) {
-        setTimeout(refresh, 0);
-      }
-    };
-    const startObservers = () => {
-      const root = document.body || document.documentElement;
-      if (root) {
-        bodyObserver.observe(root, { childList: true, subtree: true });
-      }
-      setGrid(document.querySelector(cfg.gridSelector));
-      document.addEventListener("change", changeHandler, true);
-      document.addEventListener("input", changeHandler, true);
-      update();
-      maybeInitPetHutch();
-      refreshPetHutch();
-    };
-    startObservers();
-    return {
-      destroy() {
-        obs.disconnect();
-        bodyObserver.disconnect();
-        noiseObserver?.disconnect();
-        noiseObserver = null;
-        noiseObserverContainer = null;
-        document.removeEventListener("change", changeHandler, true);
-        document.removeEventListener("input", changeHandler, true);
-        if (stopValueSummaryListener) {
-          stopValueSummaryListener();
-          stopValueSummaryListener = null;
-        }
-        if (stopFilterContextListener) {
-          stopFilterContextListener();
-          stopFilterContextListener = null;
-        }
-        if (currentWrap && currentWrap.parentElement) {
-          currentWrap.parentElement.removeChild(currentWrap);
-        }
-        currentWrap = null;
-        currentSelect = null;
-        currentDirectionSelect = null;
-        currentValueToggle = null;
-        grid = null;
-        lastLoggedFilters = null;
-        lastAppliedFiltersKey = null;
-        lastAppliedSortKey = null;
-        lastAppliedDirection = null;
-        shouldEnsureInventoryValueWatcherOnNextVisible = true;
-        lastSortedDomSnapshot = null;
-      },
-      update,
-      getActiveFilters() {
-        const targetGrid = resolveGrid();
-        if (!targetGrid) return [];
-        return getActiveFiltersFromGrid(targetGrid, cfg.checkboxSelector, cfg.checkboxLabelSelector);
-      },
-      getCurrentSortKey() {
-        return currentSelect?.value ?? null;
-      },
-      getCurrentSortDirection() {
-        return currentDirectionSelect?.value ?? null;
-      },
-      setSortKey(k) {
-        if (!currentSelect) return;
-        currentSelect.value = k;
-        currentWrap.__prevValue = k;
-        const targetGrid = resolveGrid();
-        if (targetGrid) {
-          const filtersForLog = getActiveFiltersFromGrid(
-            targetGrid,
-            cfg.checkboxSelector,
-            cfg.checkboxLabelSelector
-          );
-          const searchQuery = getNormalizedInventorySearchQuery(targetGrid);
-          const filtersKey = JSON.stringify({ filters: filtersForLog, search: searchQuery });
-          console.log("[InventorySorting] Tri s\xE9lectionn\xE9 (programmatique) :", k);
-          const directionToApply = currentDirectionSelect?.value ?? defaultDirectionBySortKey[k] ?? DEFAULT_DIRECTION_BY_SORT_KEY[k] ?? "asc";
-          if (currentDirectionSelect) {
-            currentDirectionSelect.value = directionToApply;
-            currentWrap.__prevDirection = directionToApply;
-          }
-          void logInventoryForFilters(filtersForLog, k, directionToApply, searchQuery);
-          lastAppliedFiltersKey = filtersKey;
-          lastAppliedSortKey = k;
-          lastAppliedDirection = directionToApply;
-          persistSortKey(k);
-          persistSortDirection(directionToApply);
-          cfg.onSortChange?.(k, directionToApply);
-          setShouldDisplayInventoryValues(showInventoryValues);
-          void applySortingWithSnapshot(targetGrid, k, directionToApply);
-        }
-      },
-      setSortDirection(direction) {
-        if (!currentDirectionSelect) return;
-        currentDirectionSelect.value = direction;
-        currentWrap.__prevDirection = direction;
-        const targetGrid = resolveGrid();
-        const sortKey = currentSelect?.value ?? "none";
-        if (targetGrid) {
-          const filtersForLog = getActiveFiltersFromGrid(
-            targetGrid,
-            cfg.checkboxSelector,
-            cfg.checkboxLabelSelector
-          );
-          const searchQuery = getNormalizedInventorySearchQuery(targetGrid);
-          const filtersKey = JSON.stringify({ filters: filtersForLog, search: searchQuery });
-          console.log("[InventorySorting] Ordre de tri s\xE9lectionn\xE9 (programmatique) :", direction);
-          void logInventoryForFilters(filtersForLog, sortKey, direction, searchQuery);
-          lastAppliedFiltersKey = filtersKey;
-          lastAppliedSortKey = sortKey;
-          lastAppliedDirection = direction;
-          persistSortKey(sortKey);
-          persistSortDirection(direction);
-          cfg.onSortChange?.(sortKey, direction);
-          setShouldDisplayInventoryValues(showInventoryValues);
-          void applySortingWithSnapshot(targetGrid, sortKey, direction);
-        }
-      },
-      getSortOptions() {
-        const targetGrid = resolveGrid();
-        const filters = targetGrid ? getActiveFiltersFromGrid(targetGrid, cfg.checkboxSelector, cfg.checkboxLabelSelector) : [];
-        const search2 = getNormalizedInventorySearchQuery(targetGrid);
-        return computeSortOptions(filters, labelByValue, mapExtraByFilter, search2);
-      },
-      getGrid() {
-        return resolveGrid();
-      }
-    };
-  }
-  function startInventorySortingObserver(options = {}) {
-    if (typeof window === "undefined" || typeof document === "undefined") {
-      return {
-        stop() {
-        },
-        refresh() {
-        },
-        getController() {
-          return null;
-        }
-      };
-    }
-    const { waitForGrid = true, log: log2, ...config } = options;
-    const cfg = config;
-    let controller = null;
-    let observer2 = null;
-    let readyListener = null;
-    const logger = typeof log2 === "function" ? log2 : log2 ? (...args) => console.debug("[InventorySorting]", ...args) : () => {
-    };
-    const attachIfPossible = () => {
-      if (controller) return controller;
-      if (waitForGrid) {
-        const selector = cfg.gridSelector ?? DEFAULTS3.gridSelector;
-        const hasGrid = !!document.querySelector(selector);
-        const hasHutch = !!document.querySelector(PET_HUTCH_ROOT_SELECTOR);
-        if (!hasGrid && !hasHutch) {
-          return null;
-        }
-      }
-      controller = attachInventorySorting(cfg);
-      logger("attached");
-      return controller;
-    };
-    const ensureObserver2 = () => {
-      if (controller || observer2 || !waitForGrid) return;
-      const target = document.body || document.documentElement;
-      if (!target) return;
-      observer2 = new MutationObserver(() => {
-        if (attachIfPossible()) {
-          observer2?.disconnect();
-          observer2 = null;
-          logger("attached via mutation");
-        }
-      });
-      observer2.observe(target, { childList: true, subtree: true });
-    };
-    const start2 = () => {
-      if (!attachIfPossible()) {
-        ensureObserver2();
-      }
-    };
-    if (document.readyState === "loading") {
-      readyListener = () => {
-        readyListener = null;
-        start2();
-      };
-      document.addEventListener("DOMContentLoaded", readyListener, { once: true });
-    } else {
-      start2();
-    }
-    return {
-      stop() {
-        if (readyListener) {
-          document.removeEventListener("DOMContentLoaded", readyListener);
-          readyListener = null;
-        }
-        observer2?.disconnect();
-        observer2 = null;
-        controller?.destroy();
-        controller = null;
-      },
-      refresh() {
-        if (controller) {
-          controller.update();
-        } else {
-          start2();
-        }
-      },
-      getController() {
-        return controller;
-      }
-    };
-  }
-  var DEFAULTS3, INVENTORY_SEARCH_INPUT_SELECTOR, BASE_SORT, ORDER, SORT_KEY_PATH, SORT_KEY_SET, SORT_DIRECTION_PATH, SORT_DIRECTION_SET, DEFAULT_DIRECTION_LABEL, DIRECTION_LABELS_DEFAULT, getPetAbilityDisplayName, INVENTORY_VALUE_VISIBILITY_PATH, resolveVisibilityFromStoredValue, loadPersistedInventoryValueVisibility, persistInventoryValueVisibility, shouldDisplayInventoryValues, setShouldDisplayInventoryValues, getShouldDisplayInventoryValues, DEFAULT_DIRECTION_BY_SORT_KEY, DIRECTION_ORDER, isPersistedSortKey, isPersistedSortDirection, loadPersistedSortKey, persistSortKey, loadPersistedSortDirection, persistSortDirection, MAP_EXTRA_BY_FILTER_DEFAULT, FILTER_CONTEXT_ITEM_TYPES_CACHE, FILTER_CONTEXT_LISTENERS, addFilterContextListener, notifyFilterContextListeners, LABEL_BY_VALUE_DEFAULT, INVENTORY_BASE_INDEX_DATASET_KEY, INVENTORY_ITEM_CARD_SELECTORS, INVENTORY_ITEMS_CONTAINER_SELECTOR, INVENTORY_NOISE_SELECTOR, INVENTORY_STRENGTH_WRAPPER_SELECTOR, INVENTORY_STRENGTH_TEXT_SELECTOR, INVENTORY_FAVORITE_BUTTON_SELECTOR, INVENTORY_ITEM_CARD_SELECTOR, INVENTORY_VALUE_CONTAINER_SELECTOR, INVENTORY_VALUE_ELEMENT_CLASS, INVENTORY_VALUE_TEXT_CLASS, INVENTORY_VALUE_DATASET_KEY, FILTERED_VALUE_LOADING, FILTERED_VALUE_UNKNOWN, VALUE_SUMMARY_ICON_CLASS, VALUE_SUMMARY_TEXT_CLASS, VALUE_SUMMARY_ICON_SRC, VALUE_SUMMARY_ICON_BACKGROUND, debounce, labelIsChecked, normalize, createFilterContextKey, areSetsEqual, getCachedItemTypesForKey, getCachedItemTypesForContext, setCachedItemTypesForKey, getInventorySearchInput, getInventorySearchQuery, getNormalizedInventorySearchQuery, logFilteredInventorySearchResults, RARITY_ORDER, RARITY_RANK, getRarityRank, SPECIES_FIELDS, normalizeSpeciesKey, clampNumber2, collectSpeciesCandidates, getInventoryItemSizePercent, collectMutations, getInventoryItemMutations, FILTER_LABEL_TO_ITEM_TYPES, ITEM_TYPE_TO_FILTER_KEYS, getExtrasForFilterKey, getExtrasForItemType, getInventoryCardElement, clearInventoryNoiseText, findAncestorWithDescendant, alignInventoryStrengthText, INVENTORY_COMPACT_VALUE_UNITS, INVENTORY_FULL_VALUE_FORMATTER, formatInventoryItemCompactValue, formatInventoryItemFullValue, getInventoryItemValue, parseStrengthValue, TM_STRENGTH_LABEL_CLASS, TM_STRENGTH_CURRENT_CLASS, TM_STRENGTH_MAX_CLASS, TM_STRENGTH_BADGE_CLASS, TM_STRENGTH_IS_MAX_DATASET_KEY, PET_HUTCH_HEADER_TEXT, PET_INVENTORY_HEADER_TEXT, PET_NAME_SELECTOR, PET_HUTCH_ROOT_SELECTOR, PET_HUTCH_LIST_SELECTOR, PET_HUTCH_INVENTORY_LIST_SELECTOR, PET_HUTCH_VISIBILITY_STYLE, RAINBOW_BADGE_TEXT_GRADIENT, getPetMutationTone, applyStrengthBadgeTone, ensureStrengthBadge, ensureStrengthTextParts, getValueSummaryElement, ensureValueSummaryContent, setValueSummaryText, stringOrEmpty, pickNestedString, pickFirstNestedString, plantCatalogEntry, petCatalogEntry, eggCatalogEntry, toolCatalogEntry, decorCatalogEntry, SEED_NAME_PATHS, SEED_RARITY_PATHS, CROP_NAME_PATHS, CROP_RARITY_PATHS, PLANT_NAME_PATHS, PLANT_RARITY_PATHS, createPlantLookup, CATALOG_LOOKUPS, getCatalogLookup, getInventoryItemName, QUANTITY_ONE_TYPES, getInventoryItemQuantity, getInventoryItemRarity, readNestedValue, readNestedStringField, readNestedNumberField, findSectionContainerByHeaderText, getPetCardName, getPetNameCandidates, isPetItem, applyPetItemsToContainer, setPetHutchContainersHidden, updatePetHutchSections, petStatsBySpecies, lookupPetStats, getPetStrengthInfo, getPetStrength2, compareByNameThenTypeThenId;
-  var init_sorting = __esm({
-    "src/features/inventory/sorting.ts"() {
+  var compareText, stringField, ownValue, sortedMutationLabel;
+  var init_comparators = __esm({
+    "src/features/inventory/comparators.ts"() {
       "use strict";
-      init_atoms();
       init_data();
-      init_value();
-      init_cropSize();
-      init_storage();
-      DEFAULTS3 = {
-        // Updated to new Inventory root grid container (game UI update)
-        gridSelector: "div.McGrid.css-1kv58ap",
-        filtersBlockSelector: ".McGrid.css-o1vp12",
-        closeButtonSelector: "button.css-vuqwsg",
-        checkboxSelector: "label.chakra-checkbox.css-1v6h4z7",
-        checkboxLabelSelector: ".chakra-checkbox__label",
-        injectDarkStyles: true
-      };
-      INVENTORY_SEARCH_INPUT_SELECTOR = "input.chakra-input.css-8e1l1i";
+      init_itemInfo();
+      init_petStrength();
+      compareText = (a, b) => a.localeCompare(b, void 0, { sensitivity: "base" });
+      stringField = (item, field) => typeof item?.[field] === "string" ? item[field] : "";
+      ownValue = (item) => typeof item?.value === "number" ? item.value : null;
+      sortedMutationLabel = (mutations) => mutations.slice().sort(compareText).join("\0");
+    }
+  });
+
+  // src/features/inventory/sortOptions.ts
+  function filterKeysByItemType() {
+    const map2 = /* @__PURE__ */ new Map();
+    for (const [filterKey, itemTypes] of Object.entries(FILTER_LABEL_TO_ITEM_TYPES)) {
+      for (const itemType of itemTypes) {
+        const type = normalize(itemType);
+        if (type) map2.set(type, [...map2.get(type) ?? [], filterKey]);
+      }
+    }
+    return map2;
+  }
+  function extrasForFilter(filterKey) {
+    if (!filterKey) return [];
+    const direct = EXTRA_SORTS[filterKey];
+    if (direct?.length) return direct;
+    if (filterKey.endsWith("s")) {
+      const singular = EXTRA_SORTS[filterKey.slice(0, -1)];
+      if (singular?.length) return singular;
+    }
+    return [];
+  }
+  function extrasForItemType(itemType) {
+    const type = normalize(itemType);
+    if (!type) return [];
+    const extras = new Set(EXTRA_SORTS[type] ?? []);
+    for (const filterKey of FILTER_KEYS_BY_ITEM_TYPE.get(type) ?? []) {
+      for (const key2 of EXTRA_SORTS[filterKey] ?? []) extras.add(key2);
+    }
+    return [...extras];
+  }
+  function intersect(sets) {
+    if (!sets.length) return null;
+    return sets.reduce((acc, set2) => new Set([...acc].filter((key2) => set2.has(key2))));
+  }
+  function computeSortOptions(activeFilters, shownItemTypes2) {
+    const filterSets = activeFilters.map((value) => normalize(value)).filter(Boolean).map((key2) => /* @__PURE__ */ new Set([...BASE_SORT, ...extrasForFilter(key2)]));
+    const typeSets = [...shownItemTypes2 ?? []].map((type) => /* @__PURE__ */ new Set([...BASE_SORT, ...extrasForItemType(type)]));
+    const fromFilters = intersect(filterSets);
+    const fromTypes = intersect(typeSets);
+    let allowed = fromFilters && fromTypes ? intersect([fromFilters, fromTypes]) : fromFilters ?? fromTypes;
+    if (!allowed?.size) allowed = new Set(BASE_SORT);
+    return SORT_KEYS.filter((key2) => key2 === "none" || allowed.has(key2)).map((value) => ({ value, label: SORT_LABELS[value] }));
+  }
+  var SORT_KEYS, BASE_SORT, SORT_LABELS, DIRECTIONS, DIRECTION_LABELS, DEFAULT_DIRECTION, isSortKey, isSortDirection, EXTRA_SORTS, FILTER_LABEL_TO_ITEM_TYPES, FILTER_KEYS_BY_ITEM_TYPE;
+  var init_sortOptions = __esm({
+    "src/features/inventory/sortOptions.ts"() {
+      "use strict";
+      init_itemInfo();
+      SORT_KEYS = ["none", "alpha", "qty", "rarity", "value", "size", "mutations", "strength"];
       BASE_SORT = ["alpha", "qty", "rarity", "value"];
-      ORDER = [
-        "none",
-        "alpha",
-        "qty",
-        "rarity",
-        "value",
-        "size",
-        "mutations",
-        "strength"
-      ];
-      SORT_KEY_PATH = "inventory.sortKey";
-      SORT_KEY_SET = new Set(ORDER);
-      SORT_DIRECTION_PATH = "inventory.sortDirection";
-      SORT_DIRECTION_SET = /* @__PURE__ */ new Set(["asc", "desc"]);
-      DEFAULT_DIRECTION_LABEL = "Order:";
-      DIRECTION_LABELS_DEFAULT = {
-        asc: "Ascending",
-        desc: "Descending"
-      };
-      getPetAbilityDisplayName = (abilityId) => {
-        if (typeof abilityId !== "string") return null;
-        const trimmedId = abilityId.trim();
-        if (!trimmedId) return null;
-        const ability = petAbilities2[trimmedId] ?? null;
-        const name = ability?.name;
-        if (typeof name !== "string") return null;
-        const trimmedName = name.trim();
-        return trimmedName ? trimmedName : null;
-      };
-      INVENTORY_VALUE_VISIBILITY_PATH = "inventory.showValues";
-      resolveVisibilityFromStoredValue = (value) => {
-        if (value === true || value === false) return value;
-        if (value === 1 || value === "1" || value === "true") return true;
-        if (value === 0 || value === "0" || value === "false") return false;
-        return null;
-      };
-      loadPersistedInventoryValueVisibility = () => {
-        try {
-          const stored = readAriesPath(INVENTORY_VALUE_VISIBILITY_PATH);
-          return resolveVisibilityFromStoredValue(stored);
-        } catch (error) {
-          console.warn(
-            "[InventorySorting] Impossible de lire la pr\xE9f\xE9rence d'affichage des valeurs d'inventaire",
-            error
-          );
-          return null;
-        }
-      };
-      persistInventoryValueVisibility = (visible) => {
-        try {
-          writeAriesPath(INVENTORY_VALUE_VISIBILITY_PATH, visible);
-        } catch (error) {
-          console.warn(
-            "[InventorySorting] Impossible de sauvegarder la pr\xE9f\xE9rence d'affichage des valeurs d'inventaire",
-            error
-          );
-        }
-      };
-      shouldDisplayInventoryValues = true;
-      setShouldDisplayInventoryValues = (visible) => {
-        shouldDisplayInventoryValues = visible;
-      };
-      getShouldDisplayInventoryValues = () => shouldDisplayInventoryValues;
-      DEFAULT_DIRECTION_BY_SORT_KEY = {
-        none: "asc",
-        alpha: "asc",
-        qty: "desc",
-        rarity: "asc",
-        value: "desc",
-        size: "desc",
-        mutations: "desc",
-        strength: "desc"
-      };
-      DIRECTION_ORDER = ["asc", "desc"];
-      isPersistedSortKey = (value) => typeof value === "string" && SORT_KEY_SET.has(value);
-      isPersistedSortDirection = (value) => typeof value === "string" && SORT_DIRECTION_SET.has(value);
-      loadPersistedSortKey = () => {
-        try {
-          const stored = readAriesPath(SORT_KEY_PATH);
-          return isPersistedSortKey(stored) ? stored : null;
-        } catch (error) {
-          console.warn("[InventorySorting] Impossible de lire la valeur de tri persist\xE9e", error);
-          return null;
-        }
-      };
-      persistSortKey = (value) => {
-        try {
-          writeAriesPath(SORT_KEY_PATH, value);
-        } catch (error) {
-          console.warn("[InventorySorting] Impossible de sauvegarder la valeur de tri", error);
-        }
-      };
-      loadPersistedSortDirection = () => {
-        try {
-          const stored = readAriesPath(SORT_DIRECTION_PATH);
-          return isPersistedSortDirection(stored) ? stored : null;
-        } catch (error) {
-          console.warn("[InventorySorting] Impossible de lire l'ordre de tri persist\xE9", error);
-          return null;
-        }
-      };
-      persistSortDirection = (value) => {
-        try {
-          writeAriesPath(SORT_DIRECTION_PATH, value);
-        } catch (error) {
-          console.warn("[InventorySorting] Impossible de sauvegarder l'ordre de tri", error);
-        }
-      };
-      MAP_EXTRA_BY_FILTER_DEFAULT = {
-        // seed/tool/ decor = tri de base
-        seed: [],
-        tool: [],
-        decor: [],
-        // crop/plant = base + size/mutations
-        crop: ["size", "mutations"],
-        produce: ["size", "mutations"],
-        plant: [],
-        // pet = base + size/mutations/strength
-        pet: ["mutations", "strength"]
-      };
-      FILTER_CONTEXT_ITEM_TYPES_CACHE = /* @__PURE__ */ new Map();
-      FILTER_CONTEXT_LISTENERS = /* @__PURE__ */ new Set();
-      addFilterContextListener = (listener) => {
-        FILTER_CONTEXT_LISTENERS.add(listener);
-        return () => {
-          FILTER_CONTEXT_LISTENERS.delete(listener);
-        };
-      };
-      notifyFilterContextListeners = (contextKey) => {
-        FILTER_CONTEXT_LISTENERS.forEach((listener) => {
-          try {
-            listener(contextKey);
-          } catch (error) {
-            console.warn("[InventorySorting] Listener de contexte de filtre en erreur", error);
-          }
-        });
-      };
-      LABEL_BY_VALUE_DEFAULT = {
+      SORT_LABELS = {
         none: "None",
         alpha: "A\u2013Z",
         qty: "Quantity",
@@ -30631,198 +29030,28 @@
         mutations: "Mutations",
         strength: "Strength"
       };
-      INVENTORY_BASE_INDEX_DATASET_KEY = "tmInventoryBaseIndex";
-      INVENTORY_ITEM_CARD_SELECTORS = [".css-vmnhaw", ".css-1avy1fz"];
-      INVENTORY_ITEMS_CONTAINER_SELECTOR = ".McFlex.css-zo8r2v";
-      INVENTORY_NOISE_SELECTOR = ".McFlex.css-1tkifdd, .chakra-text.css-glp3xv, .chakra-text.css-repqgl, .chakra-text.css-ah6ymv";
-      INVENTORY_STRENGTH_WRAPPER_SELECTOR = ".McFlex.css-15lpbqz";
-      INVENTORY_STRENGTH_TEXT_SELECTOR = ".chakra-text.css-wqvsdi";
-      INVENTORY_FAVORITE_BUTTON_SELECTOR = "button.chakra-button.css-1iytwn1";
-      INVENTORY_ITEM_CARD_SELECTOR = INVENTORY_ITEM_CARD_SELECTORS.join(", ");
-      INVENTORY_VALUE_CONTAINER_SELECTOR = ".McFlex.css-1p00rng";
-      INVENTORY_VALUE_ELEMENT_CLASS = "tm-inventory-item-value";
-      INVENTORY_VALUE_TEXT_CLASS = `${INVENTORY_VALUE_ELEMENT_CLASS}__text`;
-      INVENTORY_VALUE_DATASET_KEY = "tmInventoryValue";
-      FILTERED_VALUE_LOADING = "\u2026";
-      FILTERED_VALUE_UNKNOWN = "\u2014";
-      VALUE_SUMMARY_ICON_CLASS = "tm-value-toggle__summary-icon";
-      VALUE_SUMMARY_TEXT_CLASS = "tm-value-toggle__summary-text";
-      VALUE_SUMMARY_ICON_SRC = (() => {
-        const src = coin2?.img64 ?? "";
-        if (typeof src !== "string" || !src) {
-          return "";
-        }
-        return src.startsWith("data:") ? src : `data:image/png;base64,${src}`;
-      })();
-      VALUE_SUMMARY_ICON_BACKGROUND = VALUE_SUMMARY_ICON_SRC ? `url("${VALUE_SUMMARY_ICON_SRC}")` : "";
-      debounce = (fn, wait = 120) => {
-        let t;
-        return (...args) => {
-          if (t) window.clearTimeout(t);
-          t = window.setTimeout(() => fn(...args), wait);
-        };
+      DIRECTIONS = ["asc", "desc"];
+      DIRECTION_LABELS = { asc: "Ascending", desc: "Descending" };
+      DEFAULT_DIRECTION = {
+        none: "asc",
+        alpha: "asc",
+        qty: "desc",
+        rarity: "asc",
+        value: "desc",
+        size: "desc",
+        mutations: "desc",
+        strength: "desc"
       };
-      labelIsChecked = (el) => el.matches("[data-checked]") || !!el.querySelector("[data-checked]");
-      normalize = (s) => (s ?? "").trim().toLowerCase();
-      createFilterContextKey = (filters, search2) => {
-        const normalizedFilters = filters.map((value) => normalize(value)).filter((value) => value && value !== "all");
-        normalizedFilters.sort();
-        const normalizedSearch = normalize(search2);
-        return `${normalizedFilters.join("|")}::${normalizedSearch}`;
-      };
-      areSetsEqual = (a, b) => {
-        if (a === b) return true;
-        if (!a || !b || a.size !== b.size) return false;
-        for (const value of a) {
-          if (!b.has(value)) return false;
-        }
-        return true;
-      };
-      getCachedItemTypesForKey = (contextKey) => {
-        return FILTER_CONTEXT_ITEM_TYPES_CACHE.get(contextKey) ?? null;
-      };
-      getCachedItemTypesForContext = (filters, search2) => {
-        const key2 = createFilterContextKey(filters, search2);
-        return getCachedItemTypesForKey(key2);
-      };
-      setCachedItemTypesForKey = (contextKey, types) => {
-        const normalizedTypes = /* @__PURE__ */ new Set();
-        types.forEach((type) => {
-          const normalizedType = normalize(type);
-          if (normalizedType) {
-            normalizedTypes.add(normalizedType);
-          }
-        });
-        const previous = FILTER_CONTEXT_ITEM_TYPES_CACHE.get(contextKey) ?? null;
-        if (previous && areSetsEqual(previous, normalizedTypes)) {
-          return;
-        }
-        FILTER_CONTEXT_ITEM_TYPES_CACHE.set(contextKey, normalizedTypes);
-        notifyFilterContextListeners(contextKey);
-      };
-      getInventorySearchInput = (grid) => {
-        if (!grid) return null;
-        const input = grid.querySelector(INVENTORY_SEARCH_INPUT_SELECTOR);
-        return input ?? null;
-      };
-      getInventorySearchQuery = (grid) => {
-        const input = getInventorySearchInput(grid);
-        return typeof input?.value === "string" ? input.value : "";
-      };
-      getNormalizedInventorySearchQuery = (grid) => normalize(getInventorySearchQuery(grid));
-      logFilteredInventorySearchResults = async (grid, filters, searchQuery) => {
-        if (!grid) return;
-        try {
-          const inventory = await Atoms.inventory.myInventory.get();
-          if (!inventory || typeof inventory !== "object") {
-            console.log("[InventorySorting] Inventaire introuvable pour le log de recherche.");
-            return;
-          }
-          const items = Array.isArray(inventory.items) ? inventory.items : [];
-          const { filteredItems } = filterInventoryItems(items, filters, searchQuery);
-          const container = getInventoryItemsContainer(grid);
-          const entries2 = container ? getInventoryDomEntries(container) : [];
-          console.log("[InventorySorting] R\xE9sultats filtr\xE9s (recherche) :", filteredItems);
-          console.log(
-            "[InventorySorting] Nombre d'\xE9l\xE9ments DOM pour la recherche :",
-            entries2.length
-          );
-        } catch (error) {
-          console.warn(
-            "[InventorySorting] Impossible de journaliser les r\xE9sultats filtr\xE9s de la recherche",
-            error
-          );
-        }
-      };
-      RARITY_ORDER = [
-        rarity2.Common,
-        rarity2.Uncommon,
-        rarity2.Rare,
-        rarity2.Legendary,
-        rarity2.Mythic,
-        rarity2.Divine,
-        rarity2.Celestial
-      ].filter(Boolean);
-      RARITY_RANK = (() => {
-        const entries2 = /* @__PURE__ */ new Map();
-        RARITY_ORDER.forEach((label2, index) => {
-          const key2 = normalize(label2);
-          if (key2) {
-            entries2.set(key2, index);
-          }
-        });
-        const mythicIndex = entries2.get(normalize(rarity2.Mythic));
-        if (typeof mythicIndex === "number") {
-          entries2.set(normalize("Mythic"), mythicIndex);
-        }
-        return entries2;
-      })();
-      getRarityRank = (value) => {
-        const key2 = normalize(value);
-        if (!key2) return RARITY_ORDER.length;
-        return RARITY_RANK.get(key2) ?? RARITY_ORDER.length;
-      };
-      SPECIES_FIELDS = [
-        "species",
-        "seedSpecies",
-        "plantSpecies",
-        "cropSpecies",
-        "baseSpecies",
-        "seedKey"
-      ];
-      normalizeSpeciesKey = (value) => value.toLowerCase().replace(/['’`]/g, "").replace(/\s+/g, "").replace(/-/g, "").replace(/(seed|plant|baby|fruit|crop)$/i, "");
-      clampNumber2 = (value, min, max) => Math.max(min, Math.min(max, value));
-      collectSpeciesCandidates = (source, out) => {
-        if (!source || typeof source !== "object") return;
-        for (const field of SPECIES_FIELDS) {
-          const raw = source[field];
-          if (typeof raw === "string") {
-            const value = raw.trim();
-            if (value) out.add(value);
-          }
-        }
-      };
-      getInventoryItemSizePercent = (item) => {
-        if (!item || typeof item !== "object") return null;
-        const rawType = typeof item.itemType === "string" ? item.itemType : "";
-        const type = rawType.trim();
-        if (type !== "Crop" && type !== "Produce") return null;
-        const direct = readCropSize(item);
-        if (direct != null) return direct;
-        const candidates = /* @__PURE__ */ new Set();
-        collectSpeciesCandidates(item, candidates);
-        collectSpeciesCandidates(item.item, candidates);
-        collectSpeciesCandidates(item.data, candidates);
-        for (const candidate of candidates) {
-          const size = readCropSize({ ...item, species: candidate });
-          if (size != null) return size;
-        }
-        return null;
-      };
-      collectMutations = (source, out) => {
-        if (!source || typeof source !== "object") return;
-        const rawMutations = source.mutations;
-        if (Array.isArray(rawMutations)) {
-          for (const mutation of rawMutations) {
-            if (typeof mutation === "string" && mutation.trim()) {
-              out.push(mutation.trim());
-            }
-          }
-        }
-        const slots = source.slots;
-        if (Array.isArray(slots)) {
-          for (const slot of slots) {
-            collectMutations(slot, out);
-          }
-        }
-      };
-      getInventoryItemMutations = (item) => {
-        if (!item || typeof item !== "object") return [];
-        const mutations = [];
-        collectMutations(item, mutations);
-        collectMutations(item.item, mutations);
-        collectMutations(item.data, mutations);
-        return mutations;
+      isSortKey = (value) => typeof value === "string" && SORT_KEYS.includes(value);
+      isSortDirection = (value) => typeof value === "string" && DIRECTIONS.includes(value);
+      EXTRA_SORTS = {
+        seed: [],
+        tool: [],
+        decor: [],
+        crop: ["size", "mutations"],
+        produce: ["size", "mutations"],
+        plant: [],
+        pet: ["mutations", "strength"]
       };
       FILTER_LABEL_TO_ITEM_TYPES = {
         crop: ["Produce"],
@@ -30843,680 +29072,1786 @@
         egg: ["Egg"],
         eggs: ["Egg"]
       };
-      ITEM_TYPE_TO_FILTER_KEYS = (() => {
-        const mapping = /* @__PURE__ */ new Map();
-        for (const [filterKey, itemTypes] of Object.entries(FILTER_LABEL_TO_ITEM_TYPES)) {
-          for (const itemType of itemTypes) {
-            const normalizedType = normalize(itemType);
-            if (!normalizedType) continue;
-            const set2 = mapping.get(normalizedType) ?? /* @__PURE__ */ new Set();
-            set2.add(filterKey);
-            mapping.set(normalizedType, set2);
-          }
-        }
-        const result = {};
-        mapping.forEach((value, key2) => {
-          result[key2] = Array.from(value);
-        });
-        return result;
-      })();
-      getExtrasForFilterKey = (filterKey, mapExtraByFilter) => {
-        if (!filterKey) return [];
-        const direct = mapExtraByFilter[filterKey];
-        if (Array.isArray(direct) && direct.length) {
-          return direct;
-        }
-        if (filterKey.endsWith("s")) {
-          const singular = filterKey.slice(0, -1);
-          if (singular) {
-            const singularMatch = mapExtraByFilter[singular];
-            if (Array.isArray(singularMatch) && singularMatch.length) {
-              return singularMatch;
-            }
-          }
-        }
-        return [];
+      FILTER_KEYS_BY_ITEM_TYPE = filterKeysByItemType();
+    }
+  });
+
+  // src/features/inventory/filters.ts
+  function getActiveFilters(grid) {
+    return Array.from(grid.querySelectorAll(FILTER_CHECKBOX_SELECTOR)).filter(isChecked).map((label2) => (label2.querySelector(FILTER_CHECKBOX_LABEL_SELECTOR)?.textContent ?? "").trim()).filter(Boolean);
+  }
+  function getSearchQuery(grid) {
+    const input = grid?.querySelector(SEARCH_INPUT_SELECTOR);
+    return normalize(typeof input?.value === "string" ? input.value : "");
+  }
+  function filterContextKey(filters, search2) {
+    const keys = filters.map(normalize).filter((value) => value && value !== "all");
+    keys.sort();
+    return `${keys.join("|")}::${normalize(search2)}`;
+  }
+  function rememberShownTypes(contextKey, types) {
+    const next = new Set([...types].map(normalize).filter(Boolean));
+    const previous = shownTypesByContext.get(contextKey);
+    if (previous && previous.size === next.size && [...previous].every((type) => next.has(type))) return;
+    shownTypesByContext.set(contextKey, next);
+    shownTypesChanged.emit(contextKey);
+  }
+  function filterLabelToItemTypes(filter) {
+    const key2 = normalize(filter);
+    if (!key2 || key2 === "all") return [];
+    const mapped = FILTER_LABEL_TO_ITEM_TYPES[key2];
+    if (mapped) return mapped;
+    const singular = key2.endsWith("s") ? key2.slice(0, -1) : key2;
+    return singular ? [singular.charAt(0).toUpperCase() + singular.slice(1)] : [];
+  }
+  function filterInventoryItems(items, filters, searchQuery) {
+    const itemTypes = new Set(filters.flatMap(filterLabelToItemTypes).filter(Boolean));
+    const byType = itemTypes.size ? items.filter((item) => itemTypes.has(itemTypeOf(item))) : items.slice();
+    const search2 = normalize(searchQuery);
+    const shown = search2 ? byType.filter((item) => itemMatchesSearch(item, search2)) : byType;
+    const playersInRoom3 = playersInRoomForValues();
+    for (const item of shown) {
+      if (item && typeof item === "object") item.value = computeInventoryItemValue(item, { playersInRoom: playersInRoom3 }) ?? null;
+    }
+    const types = new Set(shown.map(itemTypeOf).filter(Boolean));
+    rememberShownTypes(filterContextKey(filters, search2), types);
+    return shown;
+  }
+  var FILTER_CHECKBOX_SELECTOR, FILTER_CHECKBOX_LABEL_SELECTOR, SEARCH_INPUT_SELECTOR, isChecked, shownTypesByContext, shownTypesChanged, onShownItemTypesChange, shownItemTypes;
+  var init_filters = __esm({
+    "src/features/inventory/filters.ts"() {
+      "use strict";
+      init_emitter();
+      init_itemInfo();
+      init_sortOptions();
+      init_value();
+      FILTER_CHECKBOX_SELECTOR = "label.chakra-checkbox.css-1v6h4z7";
+      FILTER_CHECKBOX_LABEL_SELECTOR = ".chakra-checkbox__label";
+      SEARCH_INPUT_SELECTOR = "input.chakra-input.css-8e1l1i";
+      isChecked = (el) => el.matches("[data-checked]") || !!el.querySelector("[data-checked]");
+      shownTypesByContext = /* @__PURE__ */ new Map();
+      shownTypesChanged = new Emitter();
+      onShownItemTypesChange = (listener) => shownTypesChanged.on(listener);
+      shownItemTypes = (filters, search2) => shownTypesByContext.get(filterContextKey(filters, search2)) ?? null;
+    }
+  });
+
+  // src/features/inventory/strengthBadge.ts
+  function badgeTone(item) {
+    const mutations = new Set(getInventoryItemMutations(item).map((m) => m.toLowerCase()));
+    if (mutations.has("rainbow")) return "rainbow";
+    if (mutations.has("gold") || mutations.has("golden")) return "gold";
+    return "normal";
+  }
+  function applyBadgeTone(badge2, tone) {
+    if (badge2.dataset.tmStrengthTone === tone) return;
+    badge2.dataset.tmStrengthTone = tone;
+    const style2 = badge2.style;
+    style2.backgroundImage = "";
+    style2.backgroundColor = "";
+    style2.color = "";
+    style2.backgroundClip = "";
+    style2.webkitBackgroundClip = "";
+    style2.backgroundOrigin = "";
+    style2.webkitTextFillColor = "";
+    style2.fontWeight = "700";
+    if (tone === "rainbow") {
+      style2.color = "transparent";
+      style2.backgroundImage = `linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.25)), ${RAINBOW_TEXT}`;
+      style2.backgroundClip = "padding-box, text";
+      style2.webkitBackgroundClip = "padding-box, text";
+      style2.backgroundOrigin = "padding-box, text";
+      style2.webkitTextFillColor = "transparent";
+    } else if (tone === "gold") {
+      style2.color = GAME_YELLOW;
+      style2.backgroundColor = GAME_YELLOW_SOFT;
+    } else {
+      style2.color = "#8fd3ff";
+      style2.backgroundColor = "rgba(79, 166, 255, 0.28)";
+    }
+  }
+  function ensureBadge(textEl, before) {
+    let badge2 = textEl.querySelector(`.${BADGE_CLASS}`);
+    if (!badge2) {
+      badge2 = document.createElement("span");
+      badge2.className = BADGE_CLASS;
+      badge2.textContent = "MAX";
+      Object.assign(badge2.style, {
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "0 3px",
+        marginRight: "0",
+        borderRadius: "3px",
+        fontSize: "0.5rem",
+        lineHeight: "1",
+        fontWeight: "700",
+        color: GAME_YELLOW,
+        backgroundColor: GAME_YELLOW_SOFT
+      });
+    }
+    if (badge2.parentElement !== textEl) textEl.insertBefore(badge2, before);
+    return badge2;
+  }
+  function ensureParts(textEl) {
+    let label2 = textEl.querySelector(`.${LABEL_CLASS2}`);
+    let current = textEl.querySelector(`.${CURRENT_CLASS}`);
+    let max = textEl.querySelector(`.${MAX_CLASS}`);
+    if (!label2 || !current || !max) {
+      textEl.textContent = "";
+      label2 = Object.assign(document.createElement("span"), { className: LABEL_CLASS2 });
+      current = Object.assign(document.createElement("span"), { className: CURRENT_CLASS });
+      max = Object.assign(document.createElement("span"), { className: MAX_CLASS });
+      textEl.append(label2, current, max);
+    }
+    return { label: label2, current, max };
+  }
+  function updateStrengthText(card5, item) {
+    const wrap = card5.querySelector(STRENGTH_WRAPPER_SELECTOR);
+    const textEl = wrap?.querySelector(STRENGTH_TEXT_SELECTOR);
+    if (!wrap || !textEl) return;
+    const info = getPetStrengthInfo(item);
+    if (!info || !Number.isFinite(info.maxStrength) || info.maxStrength <= 0) return;
+    const printed = parseFirstInteger(textEl.textContent ?? "");
+    const currentStrength = printed ?? (Number.isFinite(info.strength) ? Math.round(info.strength) : null);
+    if (currentStrength == null) return;
+    const max = Math.round(info.maxStrength);
+    if (!Number.isFinite(max) || max <= 0) return;
+    const current = clamp(currentStrength, 0, max);
+    const isMax = current >= max;
+    const parts = ensureParts(textEl);
+    setText(parts.label, "STR ");
+    setText(parts.current, String(current));
+    parts.current.style.setProperty("color", "#ffffff", "important");
+    parts.current.style.setProperty("font-weight", "700", "important");
+    if (isMax) {
+      applyBadgeTone(ensureBadge(textEl, parts.label), badgeTone(item));
+      setText(parts.max, "");
+      parts.max.style.display = "none";
+    } else {
+      textEl.querySelector(`.${BADGE_CLASS}`)?.remove();
+      setText(parts.max, `/${max}`);
+      parts.max.style.display = "";
+      parts.max.style.setProperty("font-weight", "700", "important");
+    }
+    parts.max.style.visibility = "";
+    parts.max.style.setProperty("color", "#ffffff", "important");
+    wrap.dataset[IS_MAX_DATASET_KEY] = isMax ? "1" : "0";
+  }
+  function ancestorContaining(start2, selector) {
+    for (let current = start2; current; current = current.parentElement) {
+      if (current.querySelector(selector)) return current;
+    }
+    return null;
+  }
+  function alignStrengthText(card5) {
+    const wrap = card5.querySelector(STRENGTH_WRAPPER_SELECTOR);
+    if (!wrap) return;
+    if (wrap.dataset[BASE_TRANSFORM_DATASET_KEY] == null) {
+      wrap.dataset[BASE_TRANSFORM_DATASET_KEY] = wrap.style.transform ?? "";
+    }
+    const baseTransform = wrap.dataset[BASE_TRANSFORM_DATASET_KEY] ?? "";
+    wrap.style.transform = baseTransform;
+    const textEl = wrap.querySelector(STRENGTH_TEXT_SELECTOR);
+    if (!textEl) return;
+    const isMax = wrap.dataset[IS_MAX_DATASET_KEY];
+    const shouldAlign = isMax === "0" || isMax === "1" || isMax == null && !!textEl.textContent?.includes("/");
+    if (!shouldAlign) {
+      if (wrap.style.pointerEvents) wrap.style.pointerEvents = "";
+      return;
+    }
+    const row2 = ancestorContaining(wrap, FAVORITE_BUTTON_SELECTOR) ?? ancestorContaining(card5, FAVORITE_BUTTON_SELECTOR);
+    const favorite = row2?.querySelector(FAVORITE_BUTTON_SELECTOR);
+    if (!row2 || !favorite) return;
+    const anchor = favorite.querySelector("svg") ?? favorite.querySelector(".chakra-icon") ?? favorite;
+    const rowRect = row2.getBoundingClientRect();
+    if (!rowRect.width) return;
+    const GAP_PX_MAX = 5;
+    const GAP_PX_NON_MAX = 7;
+    let deltaX = null;
+    if (isMax === "1") {
+      const badgeRect = textEl.querySelector(`.${BADGE_CLASS}`)?.getBoundingClientRect();
+      if (badgeRect?.width) deltaX = rowRect.left + GAP_PX_MAX - badgeRect.left;
+    }
+    if (deltaX == null) {
+      const anchorRect = anchor.getBoundingClientRect();
+      const textRect = textEl.getBoundingClientRect();
+      if (!anchorRect.width || !textRect.width) return;
+      deltaX = anchorRect.left - textRect.right - GAP_PX_NON_MAX;
+    }
+    if (!Number.isFinite(deltaX)) return;
+    const shift = `translateX(${Math.round(deltaX)}px)`;
+    wrap.style.transform = baseTransform ? `${baseTransform} ${shift}` : shift;
+    textEl.style.margin = "0";
+    if (wrap.style.pointerEvents) wrap.style.pointerEvents = "";
+  }
+  var STRENGTH_WRAPPER_SELECTOR, STRENGTH_TEXT_SELECTOR, FAVORITE_BUTTON_SELECTOR, LABEL_CLASS2, CURRENT_CLASS, MAX_CLASS, BADGE_CLASS, IS_MAX_DATASET_KEY, BASE_TRANSFORM_DATASET_KEY, GAME_YELLOW, GAME_YELLOW_SOFT, RAINBOW_TEXT, parseFirstInteger, setText;
+  var init_strengthBadge = __esm({
+    "src/features/inventory/strengthBadge.ts"() {
+      "use strict";
+      init_math();
+      init_itemInfo();
+      init_petStrength();
+      STRENGTH_WRAPPER_SELECTOR = ".McFlex.css-15lpbqz";
+      STRENGTH_TEXT_SELECTOR = ".chakra-text.css-wqvsdi";
+      FAVORITE_BUTTON_SELECTOR = "button.chakra-button.css-1iytwn1";
+      LABEL_CLASS2 = "tm-strength__label";
+      CURRENT_CLASS = "tm-strength__current";
+      MAX_CLASS = "tm-strength__max";
+      BADGE_CLASS = "tm-strength__badge";
+      IS_MAX_DATASET_KEY = "tmStrengthIsMax";
+      BASE_TRANSFORM_DATASET_KEY = "tmStrengthBaseTransform";
+      GAME_YELLOW = "var(--chakra-colors-Yellow-Magic, #F3D32B)";
+      GAME_YELLOW_SOFT = "rgba(243, 211, 43, 0.25)";
+      RAINBOW_TEXT = "linear-gradient(90deg, #ff6b6b 0%, #ffd86f 25%, #6bff8f 50%, #6bc7ff 75%, #b86bff 100%)";
+      parseFirstInteger = (text2) => {
+        const match = text2.match(/(\d+)/);
+        const parsed = match ? Number(match[1]) : NaN;
+        return Number.isFinite(parsed) ? parsed : null;
       };
-      getExtrasForItemType = (itemType, mapExtraByFilter) => {
-        const normalizedType = normalize(itemType);
-        if (!normalizedType) return [];
-        const extras = /* @__PURE__ */ new Set();
-        const direct = mapExtraByFilter[normalizedType];
-        if (Array.isArray(direct)) {
-          direct.forEach((value) => extras.add(value));
-        }
-        const relatedFilterKeys = ITEM_TYPE_TO_FILTER_KEYS[normalizedType] ?? [];
-        for (const filterKey of relatedFilterKeys) {
-          const values = mapExtraByFilter[filterKey];
-          if (Array.isArray(values)) {
-            values.forEach((value) => extras.add(value));
-          }
-        }
-        return Array.from(extras);
+      setText = (el, text2) => {
+        if (el.textContent !== text2) el.textContent = text2;
       };
-      getInventoryCardElement = (element) => {
-        for (const selector of INVENTORY_ITEM_CARD_SELECTORS) {
-          if (element.matches(selector)) {
-            return element;
-          }
-        }
-        return element.querySelector(INVENTORY_ITEM_CARD_SELECTOR);
-      };
-      clearInventoryNoiseText = (container) => {
-        if (!(container instanceof HTMLElement)) return;
-        const nodes = Array.from(container.querySelectorAll(INVENTORY_NOISE_SELECTOR));
-        for (const node of nodes) {
-          const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
-          let textNode = walker.nextNode();
-          while (textNode) {
-            if (textNode.textContent) {
-              textNode.textContent = "";
-            }
-            textNode = walker.nextNode();
-          }
-        }
-      };
-      findAncestorWithDescendant = (start2, selector) => {
-        let current = start2;
-        while (current) {
-          if (current.querySelector(selector)) return current;
-          current = current.parentElement;
-        }
-        return null;
-      };
-      alignInventoryStrengthText = (card5) => {
-        const strengthWrap = card5.querySelector(INVENTORY_STRENGTH_WRAPPER_SELECTOR);
-        if (!strengthWrap) return;
-        const baseTransformKey = "tmStrengthBaseTransform";
-        const existingBase = strengthWrap.dataset[baseTransformKey];
-        if (existingBase == null) {
-          strengthWrap.dataset[baseTransformKey] = strengthWrap.style.transform ?? "";
-        }
-        const baseTransform = strengthWrap.dataset[baseTransformKey] ?? "";
-        strengthWrap.style.transform = baseTransform;
-        const textEl = strengthWrap.querySelector(INVENTORY_STRENGTH_TEXT_SELECTOR);
-        if (!textEl) return;
-        const datasetIsMax = strengthWrap.dataset[TM_STRENGTH_IS_MAX_DATASET_KEY];
-        const shouldAlign = datasetIsMax === "0" || datasetIsMax === "1" || datasetIsMax == null && !!textEl.textContent && textEl.textContent.includes("/");
-        if (!shouldAlign) {
-          if (strengthWrap.style.pointerEvents) {
-            strengthWrap.style.pointerEvents = "";
-          }
-          return;
-        }
-        const container = findAncestorWithDescendant(strengthWrap, INVENTORY_FAVORITE_BUTTON_SELECTOR) ?? findAncestorWithDescendant(card5, INVENTORY_FAVORITE_BUTTON_SELECTOR);
-        if (!container) return;
-        const favoriteButton = container.querySelector(INVENTORY_FAVORITE_BUTTON_SELECTOR);
-        if (!favoriteButton) return;
-        const anchor = favoriteButton.querySelector("svg") ?? favoriteButton.querySelector(".chakra-icon") ?? favoriteButton;
-        const containerRect = container.getBoundingClientRect();
-        if (!containerRect.width) return;
-        const GAP_PX_NON_MAX = 7;
-        const GAP_PX_MAX = 5;
-        let deltaX = null;
-        if (datasetIsMax === "1") {
-          const badge2 = textEl.querySelector(`.${TM_STRENGTH_BADGE_CLASS}`);
-          const badgeRect = badge2?.getBoundingClientRect();
-          if (badgeRect && badgeRect.width) {
-            deltaX = containerRect.left + GAP_PX_MAX - badgeRect.left;
-          }
-        }
-        if (deltaX == null) {
-          const anchorRect = anchor.getBoundingClientRect();
-          const textRect = textEl.getBoundingClientRect();
-          if (!anchorRect.width || !textRect.width) return;
-          deltaX = anchorRect.left - textRect.right - GAP_PX_NON_MAX;
-        }
-        if (!Number.isFinite(deltaX)) return;
-        strengthWrap.style.transform = baseTransform ? `${baseTransform} translateX(${Math.round(deltaX)}px)` : `translateX(${Math.round(deltaX)}px)`;
-        textEl.style.margin = "0";
-        if (strengthWrap.style.pointerEvents) {
-          strengthWrap.style.pointerEvents = "";
-        }
-      };
-      INVENTORY_COMPACT_VALUE_UNITS = [
+    }
+  });
+
+  // src/features/inventory/inventoryDom.ts
+  function isVisible(el) {
+    if (!el || !document.contains(el)) return false;
+    const rect = el.getBoundingClientRect();
+    const cs = getComputedStyle(el);
+    if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") return false;
+    return rect.width > 0 && rect.height > 0;
+  }
+  function getItemsContainer(grid) {
+    return grid.querySelector(ITEMS_CONTAINER_SELECTOR) || document.querySelector(ITEMS_CONTAINER_SELECTOR);
+  }
+  function cardOf(element) {
+    if (ITEM_CARD_SELECTORS.some((selector) => element.matches(selector))) return element;
+    return element.querySelector(ITEM_CARD_SELECTOR);
+  }
+  function clearNoiseText(container) {
+    if (!(container instanceof HTMLElement)) return;
+    for (const node of container.querySelectorAll(NOISE_SELECTOR)) {
+      const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+      for (let text2 = walker.nextNode(); text2; text2 = walker.nextNode()) {
+        if (text2.textContent) text2.textContent = "";
+      }
+    }
+  }
+  function getDomEntries(container) {
+    clearNoiseText(container);
+    const entries2 = [];
+    for (const child of Array.from(container.children)) {
+      if (!(child instanceof HTMLElement)) continue;
+      const card5 = cardOf(child);
+      if (!card5) continue;
+      alignStrengthText(card5);
+      entries2.push({ wrapper: child, card: card5 });
+    }
+    return entries2;
+  }
+  function domOrderChanged(previous, entries2) {
+    if (!previous || previous.length !== entries2.length) return true;
+    return entries2.some((entry, i) => previous[i] !== entry.wrapper);
+  }
+  function assignBaseIndexes(entries2) {
+    entries2.forEach((entry, index) => {
+      entry.wrapper.dataset[BASE_INDEX_DATASET_KEY] = String(index);
+      entry.card.dataset[BASE_INDEX_DATASET_KEY] = String(index);
+    });
+  }
+  function readBaseIndex(entry) {
+    const raw = entry.wrapper.dataset[BASE_INDEX_DATASET_KEY] ?? entry.card.dataset[BASE_INDEX_DATASET_KEY];
+    if (raw == null) return null;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : null;
+  }
+  function findSectionByHeader(headerText) {
+    const header = Array.from(document.querySelectorAll("p.chakra-text")).find(
+      (el) => (el.textContent ?? "").trim() === headerText
+    );
+    for (let current = header ?? null; current && current !== document.body; current = current.parentElement) {
+      const next = current.nextElementSibling;
+      if (next?.querySelector(ITEM_CARD_SELECTOR)) return next;
+    }
+    return null;
+  }
+  var GRID_SELECTOR, FILTERS_BLOCK_SELECTOR, ITEMS_CONTAINER_SELECTOR, ITEM_CARD_SELECTORS, ITEM_CARD_SELECTOR, NOISE_SELECTOR, BASE_INDEX_DATASET_KEY, domOrderOf;
+  var init_inventoryDom = __esm({
+    "src/features/inventory/inventoryDom.ts"() {
+      "use strict";
+      init_strengthBadge();
+      GRID_SELECTOR = "div.McGrid.css-1kv58ap";
+      FILTERS_BLOCK_SELECTOR = ".McGrid.css-o1vp12";
+      ITEMS_CONTAINER_SELECTOR = ".McFlex.css-zo8r2v";
+      ITEM_CARD_SELECTORS = [".css-vmnhaw", ".css-1avy1fz"];
+      ITEM_CARD_SELECTOR = ITEM_CARD_SELECTORS.join(", ");
+      NOISE_SELECTOR = ".McFlex.css-1tkifdd, .chakra-text.css-glp3xv, .chakra-text.css-repqgl, .chakra-text.css-ah6ymv";
+      BASE_INDEX_DATASET_KEY = "tmInventoryBaseIndex";
+      domOrderOf = (entries2) => entries2.map((entry) => entry.wrapper);
+    }
+  });
+
+  // src/features/inventory/valueDisplay.ts
+  function formatCompactValue(value) {
+    const abs = Math.abs(value);
+    for (const { threshold, suffix } of COMPACT_UNITS) {
+      if (abs >= threshold) return `${(value / threshold).toFixed(1).replace(/\.0$/, "")}${suffix}`;
+    }
+    return FULL_FORMAT.format(value);
+  }
+  function updateCardValue(card5, value, show) {
+    const container = card5.querySelector(VALUE_CONTAINER_SELECTOR);
+    const current = container?.querySelector(`.${VALUE_ELEMENT_CLASS}`) ?? null;
+    if (!container || !show || typeof value !== "number" || !Number.isFinite(value)) {
+      if (container) current?.remove();
+      delete card5.dataset[VALUE_DATASET_KEY];
+      return;
+    }
+    const target = current ?? Object.assign(document.createElement("div"), { className: VALUE_ELEMENT_CLASS });
+    Object.assign(target.style, {
+      fontSynthesis: "none",
+      WebkitFontSmoothing: "antialiased",
+      WebkitTextSizeAdjust: "100%",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      gap: "0.15rem",
+      marginTop: "3px",
+      fontFamily: 'var(--chakra-fonts-body, "GreyCliff CF", sans-serif)',
+      fontWeight: "700",
+      fontSize: "0.65rem",
+      lineHeight: "1",
+      textTransform: "none",
+      color: GAME_YELLOW2
+    });
+    let text2 = target.querySelector(`.${VALUE_TEXT_CLASS}`);
+    if (!text2) {
+      target.textContent = "";
+      text2 = document.createElement("span");
+      text2.className = VALUE_TEXT_CLASS;
+      Object.assign(text2.style, { display: "inline-flex", alignItems: "center", color: "inherit" });
+      target.appendChild(text2);
+    }
+    text2.textContent = formatCompactValue(value);
+    target.title = formatFullValue(value);
+    card5.dataset[VALUE_DATASET_KEY] = String(value);
+    if (target.parentElement !== container || target !== container.lastElementChild) container.appendChild(target);
+  }
+  var VALUE_CONTAINER_SELECTOR, VALUE_ELEMENT_CLASS, VALUE_TEXT_CLASS, VALUE_DATASET_KEY, GAME_YELLOW2, LOADING, UNKNOWN, COMPACT_UNITS, FULL_FORMAT, formatFullValue, COIN_ICON_SRC, ValueSummary;
+  var init_valueDisplay = __esm({
+    "src/features/inventory/valueDisplay.ts"() {
+      "use strict";
+      init_data();
+      init_atoms();
+      init_filters();
+      init_itemInfo();
+      VALUE_CONTAINER_SELECTOR = ".McFlex.css-1p00rng";
+      VALUE_ELEMENT_CLASS = "tm-inventory-item-value";
+      VALUE_TEXT_CLASS = `${VALUE_ELEMENT_CLASS}__text`;
+      VALUE_DATASET_KEY = "tmInventoryValue";
+      GAME_YELLOW2 = "var(--chakra-colors-Yellow-Magic, #F3D32B)";
+      LOADING = "\u2026";
+      UNKNOWN = "\u2014";
+      COMPACT_UNITS = [
         { threshold: 1e12, suffix: "T" },
         { threshold: 1e9, suffix: "B" },
         { threshold: 1e6, suffix: "M" },
         { threshold: 1e3, suffix: "K" }
       ];
-      INVENTORY_FULL_VALUE_FORMATTER = typeof Intl !== "undefined" && typeof Intl.NumberFormat === "function" ? new Intl.NumberFormat(void 0, { maximumFractionDigits: 2, minimumFractionDigits: 0 }) : null;
-      formatInventoryItemCompactValue = (value) => {
-        const abs = Math.abs(value);
-        for (const { threshold, suffix } of INVENTORY_COMPACT_VALUE_UNITS) {
-          if (abs >= threshold) {
-            const scaled = value / threshold;
-            const formatted = scaled.toFixed(1).replace(/\.0$/, "");
-            return `${formatted}${suffix}`;
-          }
-        }
-        return INVENTORY_FULL_VALUE_FORMATTER ? INVENTORY_FULL_VALUE_FORMATTER.format(value) : String(value);
-      };
-      formatInventoryItemFullValue = (value) => INVENTORY_FULL_VALUE_FORMATTER ? INVENTORY_FULL_VALUE_FORMATTER.format(value) : String(value);
-      getInventoryItemValue = (item) => {
-        if (!item || typeof item !== "object") return null;
-        const raw = item.value;
-        if (typeof raw === "number" && Number.isFinite(raw)) return raw;
-        if (typeof raw === "string" && raw.trim()) {
-          const parsed = Number(raw);
-          return Number.isFinite(parsed) ? parsed : null;
-        }
-        return null;
-      };
-      parseStrengthValue = (value) => {
-        const match = value.match(/(\d+)/);
-        if (!match) return null;
-        const parsed = Number(match[1]);
-        return Number.isFinite(parsed) ? parsed : null;
-      };
-      TM_STRENGTH_LABEL_CLASS = "tm-strength__label";
-      TM_STRENGTH_CURRENT_CLASS = "tm-strength__current";
-      TM_STRENGTH_MAX_CLASS = "tm-strength__max";
-      TM_STRENGTH_BADGE_CLASS = "tm-strength__badge";
-      TM_STRENGTH_IS_MAX_DATASET_KEY = "tmStrengthIsMax";
-      PET_HUTCH_HEADER_TEXT = "Pets in Hutch";
-      PET_INVENTORY_HEADER_TEXT = "Pets in Inventory";
-      PET_NAME_SELECTOR = ".McFlex.css-1lpag07 .chakra-text";
-      PET_HUTCH_ROOT_SELECTOR = ".McGrid.css-3c49ba";
-      PET_HUTCH_LIST_SELECTOR = ".McGrid.css-1nv2ym8 .McFlex.css-1tgchvv";
-      PET_HUTCH_INVENTORY_LIST_SELECTOR = ".McGrid.css-1nv2ym8 .McFlex.css-gui45t";
-      PET_HUTCH_VISIBILITY_STYLE = "visibility";
-      RAINBOW_BADGE_TEXT_GRADIENT = "linear-gradient(90deg, #ff6b6b 0%, #ffd86f 25%, #6bff8f 50%, #6bc7ff 75%, #b86bff 100%)";
-      getPetMutationTone = (item) => {
-        const mutations = getInventoryItemMutations(item);
-        if (!mutations.length) return "normal";
-        const seen = new Set(mutations.map((mutation) => mutation.toLowerCase()));
-        if (seen.has("rainbow")) return "rainbow";
-        if (seen.has("gold") || seen.has("golden")) return "gold";
-        return "normal";
-      };
-      applyStrengthBadgeTone = (badge2, tone) => {
-        if (badge2.dataset.tmStrengthTone === tone) return;
-        badge2.dataset.tmStrengthTone = tone;
-        badge2.style.backgroundImage = "";
-        badge2.style.backgroundColor = "";
-        badge2.style.color = "";
-        badge2.style.backgroundClip = "";
-        badge2.style.webkitBackgroundClip = "";
-        badge2.style.backgroundOrigin = "";
-        badge2.style.webkitTextFillColor = "";
-        badge2.style.fontWeight = "700";
-        switch (tone) {
-          case "rainbow":
-            badge2.style.color = "transparent";
-            badge2.style.backgroundImage = `linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.25)), ${RAINBOW_BADGE_TEXT_GRADIENT}`;
-            badge2.style.backgroundClip = "padding-box, text";
-            badge2.style.webkitBackgroundClip = "padding-box, text";
-            badge2.style.backgroundOrigin = "padding-box, text";
-            badge2.style.webkitTextFillColor = "transparent";
-            break;
-          case "gold":
-            badge2.style.color = "var(--chakra-colors-Yellow-Magic, #F3D32B)";
-            badge2.style.backgroundColor = "rgba(243, 211, 43, 0.25)";
-            break;
-          default:
-            badge2.style.color = "#8fd3ff";
-            badge2.style.backgroundColor = "rgba(79, 166, 255, 0.28)";
-            break;
-        }
-      };
-      ensureStrengthBadge = (textEl, beforeEl) => {
-        let badge2 = textEl.querySelector(`.${TM_STRENGTH_BADGE_CLASS}`);
-        if (!badge2) {
-          badge2 = document.createElement("span");
-          badge2.className = TM_STRENGTH_BADGE_CLASS;
-          badge2.textContent = "MAX";
-          Object.assign(badge2.style, {
+      FULL_FORMAT = new Intl.NumberFormat(void 0, { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+      formatFullValue = (value) => FULL_FORMAT.format(value);
+      COIN_ICON_SRC = (() => {
+        const src = coin2?.img64 ?? "";
+        if (typeof src !== "string" || !src) return "";
+        return src.startsWith("data:") ? src : `data:image/png;base64,${src}`;
+      })();
+      ValueSummary = class {
+        constructor() {
+          this.token = null;
+          this.el = document.createElement("span");
+          Object.assign(this.el.style, {
+            font: "inherit",
+            color: GAME_YELLOW2,
             display: "inline-flex",
             alignItems: "center",
-            justifyContent: "center",
-            padding: "0 3px",
-            marginRight: "0",
-            borderRadius: "3px",
-            fontSize: "0.5rem",
-            lineHeight: "1",
-            fontWeight: "700",
-            color: "var(--chakra-colors-Yellow-Magic, #F3D32B)",
-            backgroundColor: "rgba(243, 211, 43, 0.25)"
+            justifyContent: "flex-end",
+            flex: "1 1 auto",
+            whiteSpace: "nowrap",
+            marginLeft: "auto",
+            textAlign: "right",
+            gap: "0.25rem"
           });
-        }
-        if (badge2.parentElement !== textEl) {
-          textEl.insertBefore(badge2, beforeEl);
-        }
-        return badge2;
-      };
-      ensureStrengthTextParts = (textEl) => {
-        let label2 = textEl.querySelector(`.${TM_STRENGTH_LABEL_CLASS}`);
-        let current = textEl.querySelector(`.${TM_STRENGTH_CURRENT_CLASS}`);
-        let max = textEl.querySelector(`.${TM_STRENGTH_MAX_CLASS}`);
-        if (!label2 || !current || !max) {
-          textEl.textContent = "";
-          label2 = document.createElement("span");
-          label2.className = TM_STRENGTH_LABEL_CLASS;
-          current = document.createElement("span");
-          current.className = TM_STRENGTH_CURRENT_CLASS;
-          max = document.createElement("span");
-          max.className = TM_STRENGTH_MAX_CLASS;
-          textEl.append(label2, current, max);
-        }
-        return { label: label2, current, max };
-      };
-      getValueSummaryElement = (wrap) => {
-        if (!wrap) return null;
-        const summary = wrap.__valueSummary ?? null;
-        return summary ?? wrap.querySelector(".tm-value-toggle__summary");
-      };
-      ensureValueSummaryContent = (summary) => {
-        if (!summary.style.gap) {
-          summary.style.gap = "0.25rem";
-        }
-        if (VALUE_SUMMARY_ICON_BACKGROUND) {
-          let iconEl = summary.querySelector(`.${VALUE_SUMMARY_ICON_CLASS}`);
-          if (iconEl && iconEl.tagName !== "SPAN") {
-            iconEl.remove();
-            iconEl = null;
+          if (COIN_ICON_SRC) {
+            const icon2 = document.createElement("span");
+            icon2.setAttribute("aria-hidden", "true");
+            Object.assign(icon2.style, {
+              width: "1.2rem",
+              height: "1.2rem",
+              flexShrink: "0",
+              display: "inline-block",
+              backgroundImage: `url("${COIN_ICON_SRC}")`,
+              backgroundSize: "contain",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center",
+              pointerEvents: "none",
+              userSelect: "none"
+            });
+            this.el.appendChild(icon2);
           }
-          if (!iconEl) {
-            iconEl = document.createElement("span");
-            iconEl.className = VALUE_SUMMARY_ICON_CLASS;
-            iconEl.setAttribute("aria-hidden", "true");
-            iconEl.style.width = "1.2rem";
-            iconEl.style.height = "1.2rem";
-            iconEl.style.flexShrink = "0";
-            iconEl.style.display = "inline-block";
-            iconEl.style.backgroundSize = "contain";
-            iconEl.style.backgroundRepeat = "no-repeat";
-            iconEl.style.backgroundPosition = "center";
-            iconEl.style.pointerEvents = "none";
-            iconEl.style.userSelect = "none";
-            summary.insertBefore(iconEl, summary.firstChild);
-          }
-          if (iconEl && iconEl.style.backgroundImage !== VALUE_SUMMARY_ICON_BACKGROUND) {
-            iconEl.style.backgroundImage = VALUE_SUMMARY_ICON_BACKGROUND;
-          }
-        } else {
-          summary.querySelector(`.${VALUE_SUMMARY_ICON_CLASS}`)?.remove();
+          this.text = document.createElement("span");
+          Object.assign(this.text.style, { fontWeight: "700", color: "inherit" });
+          this.el.appendChild(this.text);
+          this.set(LOADING);
         }
-        let textEl = summary.querySelector(`.${VALUE_SUMMARY_TEXT_CLASS}`);
-        if (!textEl) {
-          textEl = document.createElement("span");
-          textEl.className = VALUE_SUMMARY_TEXT_CLASS;
-          textEl.style.fontWeight = "700";
-          textEl.style.color = "inherit";
-          summary.appendChild(textEl);
+        set(text2, title) {
+          this.text.textContent = text2;
+          if (title) this.el.title = title;
+          else this.el.removeAttribute("title");
         }
-        return textEl;
-      };
-      setValueSummaryText = (summary, text2, title) => {
-        if (!summary) return;
-        const textEl = ensureValueSummaryContent(summary);
-        textEl.textContent = text2;
-        if (title) {
-          summary.title = title;
-        } else {
-          summary.removeAttribute("title");
-        }
-      };
-      stringOrEmpty = (value) => typeof value === "string" ? value.trim() : "";
-      pickNestedString = (source, path) => {
-        let current = source;
-        for (const key2 of path) {
-          if (!current || typeof current !== "object") {
-            return "";
-          }
-          current = current[key2];
-        }
-        return stringOrEmpty(current);
-      };
-      pickFirstNestedString = (source, paths) => {
-        for (const path of paths) {
-          const value = pickNestedString(source, path);
-          if (value) return value;
-        }
-        return "";
-      };
-      plantCatalogEntry = (identifier) => plantCatalog2[identifier];
-      petCatalogEntry = (identifier) => petCatalog2[identifier];
-      eggCatalogEntry = (identifier) => eggCatalog2[identifier];
-      toolCatalogEntry = (identifier) => toolCatalog2[identifier];
-      decorCatalogEntry = (identifier) => decorCatalog2[identifier];
-      SEED_NAME_PATHS = [
-        ["seed", "name"],
-        ["plant", "name"],
-        ["crop", "name"]
-      ];
-      SEED_RARITY_PATHS = [
-        ["seed", "rarity"],
-        ["crop", "rarity"],
-        ["plant", "rarity"]
-      ];
-      CROP_NAME_PATHS = [
-        ["crop", "name"],
-        ["plant", "name"],
-        ["seed", "name"]
-      ];
-      CROP_RARITY_PATHS = [
-        ["crop", "rarity"],
-        ["plant", "rarity"],
-        ["seed", "rarity"]
-      ];
-      PLANT_NAME_PATHS = [
-        ["plant", "name"],
-        ["crop", "name"],
-        ["seed", "name"]
-      ];
-      PLANT_RARITY_PATHS = [
-        ["plant", "rarity"],
-        ["crop", "rarity"],
-        ["seed", "rarity"]
-      ];
-      createPlantLookup = (identifierField, namePaths, rarityPaths) => ({
-        identifierField,
-        getEntry: plantCatalogEntry,
-        getNamePaths: namePaths,
-        getRarityPaths: rarityPaths
-      });
-      CATALOG_LOOKUPS = {
-        Seed: createPlantLookup("species", SEED_NAME_PATHS, SEED_RARITY_PATHS),
-        Crop: createPlantLookup("species", CROP_NAME_PATHS, CROP_RARITY_PATHS),
-        Produce: createPlantLookup("species", CROP_NAME_PATHS, CROP_RARITY_PATHS),
-        Plant: createPlantLookup("species", PLANT_NAME_PATHS, PLANT_RARITY_PATHS),
-        Pet: {
-          identifierField: "petSpecies",
-          getEntry: petCatalogEntry,
-          getNamePaths: [["name"]],
-          getRarityPaths: [["rarity"]]
-        },
-        Egg: {
-          identifierField: "eggId",
-          getEntry: eggCatalogEntry,
-          getNamePaths: [["name"]],
-          getRarityPaths: [["rarity"]]
-        },
-        Tool: {
-          identifierField: "toolId",
-          getEntry: toolCatalogEntry,
-          getNamePaths: [["name"]],
-          getRarityPaths: [["rarity"]]
-        },
-        Decor: {
-          identifierField: "decorId",
-          getEntry: decorCatalogEntry,
-          getNamePaths: [["name"]],
-          getRarityPaths: [["rarity"]]
-        }
-      };
-      getCatalogLookup = (type) => CATALOG_LOOKUPS[type] ?? null;
-      getInventoryItemName = (item) => {
-        if (!item || typeof item !== "object") return "";
-        const type = stringOrEmpty(item.itemType);
-        const lookup = getCatalogLookup(type);
-        if (lookup) {
-          const identifier = readNestedStringField(item, lookup.identifierField) ?? "";
-          if (identifier) {
-            const entry = lookup.getEntry(identifier);
-            const catalogName = lookup.getNamePaths ? pickFirstNestedString(entry, lookup.getNamePaths) : "";
-            if (catalogName) {
-              return catalogName;
-            }
-            return identifier;
-          }
-        }
-        const fallbackName = stringOrEmpty(item.name);
-        if (fallbackName) return fallbackName;
-        const fallbackId = stringOrEmpty(item.id);
-        if (fallbackId) return fallbackId;
-        return type;
-      };
-      QUANTITY_ONE_TYPES = /* @__PURE__ */ new Set(["Produce", "Crop", "Plant", "Pet"]);
-      getInventoryItemQuantity = (item) => {
-        if (!item || typeof item !== "object") return 0;
-        const rawType = typeof item.itemType === "string" ? item.itemType : "";
-        const type = rawType.trim();
-        if (QUANTITY_ONE_TYPES.has(type)) {
-          return 1;
-        }
-        const rawQuantity = item.quantity;
-        const quantity = Number(rawQuantity);
-        if (Number.isFinite(quantity) && quantity >= 0) {
-          return quantity;
-        }
-        return 0;
-      };
-      getInventoryItemRarity = (item) => {
-        if (!item || typeof item !== "object") return "";
-        const type = stringOrEmpty(item.itemType);
-        const lookup = getCatalogLookup(type);
-        if (!lookup || !lookup.getRarityPaths?.length) {
-          return "";
-        }
-        const identifier = readNestedStringField(item, lookup.identifierField) ?? "";
-        if (!identifier) return "";
-        const entry = lookup.getEntry(identifier);
-        return pickFirstNestedString(entry, lookup.getRarityPaths);
-      };
-      readNestedValue = (item, field, parser) => {
-        if (!item || typeof item !== "object") return null;
-        const sources = [item, item.item, item.data];
-        for (const source of sources) {
-          if (!source || typeof source !== "object") continue;
-          const raw = source[field];
-          const parsed = parser(raw);
-          if (parsed != null) return parsed;
-        }
-        return null;
-      };
-      readNestedStringField = (item, field) => readNestedValue(item, field, (value) => {
-        if (typeof value !== "string") return null;
-        const trimmed = value.trim();
-        return trimmed ? trimmed : null;
-      });
-      readNestedNumberField = (item, field) => readNestedValue(item, field, (value) => {
-        if (typeof value === "number" && Number.isFinite(value)) return value;
-        if (typeof value === "string" && value.trim()) {
-          const parsed = Number(value);
-          return Number.isFinite(parsed) ? parsed : null;
-        }
-        return null;
-      });
-      findSectionContainerByHeaderText = (headerText) => {
-        if (typeof document === "undefined") return null;
-        const headers = Array.from(document.querySelectorAll("p.chakra-text"));
-        const header = headers.find((el) => (el.textContent ?? "").trim() === headerText) ?? null;
-        if (!header) return null;
-        let current = header;
-        while (current && current !== document.body) {
-          const next = current.nextElementSibling;
-          if (next && next.querySelector(INVENTORY_ITEM_CARD_SELECTOR)) {
-            return next;
-          }
-          current = current.parentElement;
-        }
-        return null;
-      };
-      getPetCardName = (card5) => normalize(card5.querySelector(PET_NAME_SELECTOR)?.textContent ?? "");
-      getPetNameCandidates = (item) => {
-        const candidates = /* @__PURE__ */ new Set();
-        const name = readNestedStringField(item, "name");
-        if (name) candidates.add(normalize(name));
-        const species = readNestedStringField(item, "petSpecies") ?? readNestedStringField(item, "species");
-        if (species) candidates.add(normalize(species));
-        return Array.from(candidates);
-      };
-      isPetItem = (item) => {
-        const rawType = typeof item?.itemType === "string" ? item.itemType : "";
-        if (rawType.trim().toLowerCase() === "pet") return true;
-        const species = readNestedStringField(item, "petSpecies") ?? readNestedStringField(item, "species");
-        return !!species;
-      };
-      applyPetItemsToContainer = (container, items) => {
-        if (!container) return;
-        const entries2 = getInventoryDomEntries(container);
-        if (!entries2.length) return;
-        const petItems = (Array.isArray(items) ? items : []).filter(isPetItem);
-        if (!petItems.length) return;
-        console.log(
-          "[InventorySorting] Hutch apply",
-          { container: container.className, entries: entries2.length, items: petItems.length }
-        );
-        const used = /* @__PURE__ */ new Set();
-        for (const entry of entries2) {
-          const cardName = getPetCardName(entry.card);
-          let matchIndex = -1;
-          if (cardName) {
-            for (let i = 0; i < petItems.length; i += 1) {
-              if (used.has(i)) continue;
-              const candidates = getPetNameCandidates(petItems[i]);
-              if (candidates.includes(cardName)) {
-                matchIndex = i;
-                break;
-              }
-            }
-          }
-          if (matchIndex < 0) {
-            for (let i = 0; i < petItems.length; i += 1) {
-              if (!used.has(i)) {
-                matchIndex = i;
-                break;
-              }
-            }
-          }
-          if (matchIndex < 0) continue;
-          used.add(matchIndex);
-          updateInventoryCardStrengthText(entry.card, petItems[matchIndex]);
-          alignInventoryStrengthText(entry.card);
-        }
-      };
-      setPetHutchContainersHidden = (containers, hidden) => {
-        for (const container of containers) {
-          if (!container) continue;
-          if (hidden) {
-            container.style.setProperty(PET_HUTCH_VISIBILITY_STYLE, "hidden");
-          } else {
-            container.style.removeProperty(PET_HUTCH_VISIBILITY_STYLE);
+        /** Totals the values of the items these filters show. A newer call wins over a slower older one. */
+        async update(filters, searchQuery) {
+          const token = Symbol("value-summary");
+          this.token = token;
+          this.set(LOADING);
+          try {
+            const inventory = await Atoms.inventory.myInventory.get();
+            if (this.token !== token) return;
+            if (!inventory || typeof inventory !== "object") return this.set(UNKNOWN);
+            const items = Array.isArray(inventory.items) ? inventory.items : [];
+            const shown = filterInventoryItems(items, filters, searchQuery);
+            if (!shown.length) return this.set("0", "0");
+            const values = shown.map(getInventoryItemValue).filter((v) => typeof v === "number" && Number.isFinite(v));
+            if (!values.length) return this.set(UNKNOWN);
+            const total = values.reduce((sum, v) => sum + v, 0);
+            this.set(formatCompactValue(total), formatFullValue(total));
+          } catch (error) {
+            console.warn("[InventorySorting] Could not total the filtered value", error);
+            if (this.token === token) this.set(UNKNOWN);
           }
         }
       };
-      updatePetHutchSections = async (options = {}) => {
-        const hideDuringUpdate = options.hideDuringUpdate === true;
-        const root = document.querySelector(PET_HUTCH_ROOT_SELECTOR) ?? document.body;
-        const hutchContainer = root.querySelector(PET_HUTCH_LIST_SELECTOR) ?? findSectionContainerByHeaderText(PET_HUTCH_HEADER_TEXT);
-        const inventoryContainer = root.querySelector(PET_HUTCH_INVENTORY_LIST_SELECTOR) ?? findSectionContainerByHeaderText(PET_INVENTORY_HEADER_TEXT);
-        const containers = [hutchContainer, inventoryContainer];
-        if (!hutchContainer && !inventoryContainer) return false;
-        if (hideDuringUpdate) {
-          setPetHutchContainersHidden(containers, true);
+    }
+  });
+
+  // src/features/inventory/domSorter.ts
+  function indexEntries2(state5, entries2) {
+    state5.entryByBaseIndex.clear();
+    for (const entry of entries2) {
+      const baseIndex = readBaseIndex(entry);
+      if (baseIndex != null) state5.entryByBaseIndex.set(baseIndex, entry);
+    }
+  }
+  function rebaseToDomOrder(state5, entries2) {
+    if (entries2.length !== state5.baseItems.length) return false;
+    const used = /* @__PURE__ */ new Set();
+    const reordered = [];
+    for (const entry of entries2) {
+      const baseIndex = readBaseIndex(entry);
+      if (baseIndex == null || baseIndex < 0 || baseIndex >= state5.baseItems.length || used.has(baseIndex)) return false;
+      used.add(baseIndex);
+      reordered.push(state5.baseItems[baseIndex]);
+    }
+    if (reordered.every((item, i) => item === state5.baseItems[i])) return false;
+    state5.baseItems = reordered;
+    assignBaseIndexes(entries2);
+    state5.entryByBaseIndex.clear();
+    entries2.forEach((entry, index) => state5.entryByBaseIndex.set(index, entry));
+    state5.entryCount = entries2.length;
+    return true;
+  }
+  function createDomSorter() {
+    const stateByGrid = /* @__PURE__ */ new WeakMap();
+    async function ensureState(grid, filters, entries2, searchQuery) {
+      const filtersKey = JSON.stringify({ filters });
+      const state5 = stateByGrid.get(grid);
+      const reusable = state5 && state5.filtersKey === filtersKey && state5.searchQuery === searchQuery && state5.entryCount === entries2.length && state5.baseItems.length === entries2.length && entries2.every((entry) => readBaseIndex(entry) != null);
+      if (state5 && reusable) {
+        indexEntries2(state5, entries2);
+        return state5;
+      }
+      try {
+        const inventory = await Atoms.inventory.myInventory.get();
+        if (!inventory || typeof inventory !== "object") return null;
+        const items = Array.isArray(inventory.items) ? inventory.items : [];
+        const shown = filterInventoryItems(items, filters, searchQuery);
+        if (shown.length !== entries2.length) {
+          console.warn(`[InventorySorting] ${shown.length} filtered items but ${entries2.length} cards, not reordering.`);
+          return null;
         }
-        try {
-          console.log("[InventorySorting] Hutch detect", {
-            root: root.className,
-            hutchContainer: hutchContainer?.className ?? null,
-            inventoryContainer: inventoryContainer?.className ?? null
-          });
-          const [hutchItemsRaw, inventoryRaw] = await Promise.all([
-            myPetHutchPetItems.get().catch(() => []),
-            Atoms.inventory.myInventory.get().catch(() => null)
-          ]);
-          const hutchItems = Array.isArray(hutchItemsRaw) ? hutchItemsRaw : [];
-          const inventoryItems4 = Array.isArray(inventoryRaw?.items) ? inventoryRaw.items : Array.isArray(inventoryRaw) ? inventoryRaw : [];
-          console.log("[InventorySorting] Hutch data", {
-            hutchItems: hutchItems.length,
-            inventoryItems: inventoryItems4.length
-          });
-          applyPetItemsToContainer(hutchContainer, hutchItems);
-          applyPetItemsToContainer(inventoryContainer, inventoryItems4);
-          return true;
-        } catch (error) {
-          console.warn("[InventorySorting] Impossible de mettre a jour les pets du hutch", error);
-          return false;
-        } finally {
-          if (hideDuringUpdate) {
-            setPetHutchContainersHidden(containers, false);
-          }
-        }
-      };
-      petStatsBySpecies = memoOnCatalogs(() => {
-        const map2 = /* @__PURE__ */ new Map();
-        const register = (key2, maxScale, hoursToMature) => {
-          if (typeof key2 !== "string") return;
-          const normalized = normalizeSpeciesKey(key2);
-          if (!normalized || map2.has(normalized)) return;
-          map2.set(normalized, { maxScale, hoursToMature });
+        assignBaseIndexes(entries2);
+        const next = {
+          filtersKey,
+          searchQuery,
+          entryCount: entries2.length,
+          baseItems: shown.slice(),
+          entryByBaseIndex: new Map(entries2.map((entry, index) => [index, entry])),
+          lastSortKey: state5?.lastSortKey ?? null
         };
-        for (const [species, entry] of Object.entries(petCatalog2)) {
-          const maxScale = Number(entry?.maxScale);
-          const hoursToMature = Number(entry?.hoursToMature);
-          if (!Number.isFinite(maxScale) || maxScale <= 1) continue;
-          if (!Number.isFinite(hoursToMature) || hoursToMature <= 0) continue;
-          register(species, maxScale, hoursToMature);
-          register(entry?.name, maxScale, hoursToMature);
-        }
-        return map2;
+        stateByGrid.set(grid, next);
+        return next;
+      } catch (error) {
+        console.warn("[InventorySorting] Could not read the inventory to sort the cards", error);
+        return null;
+      }
+    }
+    return async (grid, sortKey, direction, showValues) => {
+      const container = getItemsContainer(grid);
+      if (!container) return;
+      const entries2 = getDomEntries(container);
+      if (!entries2.length) return;
+      const state5 = await ensureState(grid, getActiveFilters(grid), entries2, getSearchQuery(grid));
+      if (!state5) return;
+      const unsorted = !sortKey || sortKey === "none";
+      if (unsorted && state5.lastSortKey === "none") rebaseToDomOrder(state5, entries2);
+      const baseIndexByItem = new Map(state5.baseItems.map((item, index) => [item, index]));
+      const effectiveDirection = isSortDirection(direction) ? direction : DEFAULT_DIRECTION[sortKey] ?? "asc";
+      const desiredItems = unsorted ? state5.baseItems.slice() : sortInventoryItems(state5.baseItems, sortKey, effectiveDirection);
+      const desiredEntries = [];
+      const used = /* @__PURE__ */ new Set();
+      for (const item of desiredItems) {
+        const baseIndex = baseIndexByItem.get(item);
+        const entry = baseIndex == null ? void 0 : state5.entryByBaseIndex.get(baseIndex);
+        if (!entry || used.has(entry)) continue;
+        updateCardValue(entry.card, getInventoryItemValue(item), showValues);
+        updateStrengthText(entry.card, item);
+        alignStrengthText(entry.card);
+        desiredEntries.push(entry);
+        used.add(entry);
+      }
+      if (desiredEntries.length !== entries2.length) {
+        console.warn(`[InventorySorting] Only ${desiredEntries.length} of ${entries2.length} cards matched, not reordering.`);
+        return;
+      }
+      if (!desiredEntries.every((entry, index) => entry.wrapper === entries2[index]?.wrapper)) {
+        const fragment = document.createDocumentFragment();
+        for (const entry of desiredEntries) fragment.appendChild(entry.wrapper);
+        container.appendChild(fragment);
+      }
+      indexEntries2(state5, desiredEntries);
+      state5.lastSortKey = sortKey;
+    };
+  }
+  var init_domSorter = __esm({
+    "src/features/inventory/domSorter.ts"() {
+      "use strict";
+      init_atoms();
+      init_comparators();
+      init_filters();
+      init_inventoryDom();
+      init_itemInfo();
+      init_sortOptions();
+      init_strengthBadge();
+      init_valueDisplay();
+    }
+  });
+
+  // src/features/inventory/petHutch.ts
+  function isPetItem(item) {
+    if (normalize(typeof item?.itemType === "string" ? item.itemType : "") === "pet") return true;
+    return !!petSpeciesOf(item);
+  }
+  function nameCandidates(item) {
+    const names = /* @__PURE__ */ new Set();
+    const name = readNestedString(item, "name");
+    if (name) names.add(normalize(name));
+    const species = petSpeciesOf(item);
+    if (species) names.add(normalize(species));
+    return [...names];
+  }
+  function applyPetsToList(container, items) {
+    if (!container) return;
+    const entries2 = getDomEntries(container);
+    const pets = (Array.isArray(items) ? items : []).filter(isPetItem);
+    if (!entries2.length || !pets.length) return;
+    const used = /* @__PURE__ */ new Set();
+    const firstUnused = (match) => pets.findIndex((pet, i) => !used.has(i) && match(pet));
+    for (const entry of entries2) {
+      const cardName = normalize(entry.card.querySelector(PET_NAME_SELECTOR)?.textContent ?? "");
+      let index = cardName ? firstUnused((pet) => nameCandidates(pet).includes(cardName)) : -1;
+      if (index < 0) index = firstUnused(() => true);
+      if (index < 0) continue;
+      used.add(index);
+      updateStrengthText(entry.card, pets[index]);
+      alignStrengthText(entry.card);
+    }
+  }
+  function setHidden(containers, hidden) {
+    for (const container of containers) {
+      if (!container) continue;
+      if (hidden) container.style.setProperty("visibility", "hidden");
+      else container.style.removeProperty("visibility");
+    }
+  }
+  async function updatePetHutchSections(hideDuringUpdate = false) {
+    const root = document.querySelector(PET_HUTCH_ROOT_SELECTOR) ?? document.body;
+    const hutchList = root.querySelector(HUTCH_LIST_SELECTOR) ?? findSectionByHeader("Pets in Hutch");
+    const inventoryList = root.querySelector(INVENTORY_LIST_SELECTOR) ?? findSectionByHeader("Pets in Inventory");
+    if (!hutchList && !inventoryList) return false;
+    const lists = [hutchList, inventoryList];
+    if (hideDuringUpdate) setHidden(lists, true);
+    try {
+      const [hutchItems, inventory] = await Promise.all([
+        myPetHutchPetItems.get().catch(() => []),
+        Atoms.inventory.myInventory.get().catch(() => null)
+      ]);
+      const inventoryItems4 = Array.isArray(inventory?.items) ? inventory.items : Array.isArray(inventory) ? inventory : [];
+      applyPetsToList(hutchList, hutchItems);
+      applyPetsToList(inventoryList, inventoryItems4);
+      return true;
+    } catch (error) {
+      console.warn("[InventorySorting] Could not update the hutch pets", error);
+      return false;
+    } finally {
+      if (hideDuringUpdate) setHidden(lists, false);
+    }
+  }
+  var PET_HUTCH_ROOT_SELECTOR, HUTCH_LIST_SELECTOR, INVENTORY_LIST_SELECTOR, PET_NAME_SELECTOR, petSpeciesOf;
+  var init_petHutch2 = __esm({
+    "src/features/inventory/petHutch.ts"() {
+      "use strict";
+      init_atoms();
+      init_inventoryDom();
+      init_itemInfo();
+      init_strengthBadge();
+      PET_HUTCH_ROOT_SELECTOR = ".McGrid.css-3c49ba";
+      HUTCH_LIST_SELECTOR = ".McGrid.css-1nv2ym8 .McFlex.css-1tgchvv";
+      INVENTORY_LIST_SELECTOR = ".McGrid.css-1nv2ym8 .McFlex.css-gui45t";
+      PET_NAME_SELECTOR = ".McFlex.css-1lpag07 .chakra-text";
+      petSpeciesOf = (item) => readNestedString(item, "petSpecies") ?? readNestedString(item, "species");
+    }
+  });
+
+  // src/features/inventory/settings.ts
+  function read(path, parse) {
+    try {
+      return parse(readAriesPath(path));
+    } catch (error) {
+      console.warn(`[InventorySorting] Could not read ${path}`, error);
+      return null;
+    }
+  }
+  function write(path, value) {
+    try {
+      writeAriesPath(path, value);
+    } catch (error) {
+      console.warn(`[InventorySorting] Could not save ${path}`, error);
+    }
+  }
+  function saveSort(sortKey, direction) {
+    write(SORT_KEY_PATH, sortKey);
+    write(SORT_DIRECTION_PATH, direction);
+  }
+  var SORT_KEY_PATH, SORT_DIRECTION_PATH, SHOW_VALUES_PATH, loadSortKey, loadSortDirection, loadShowValues, saveShowValues;
+  var init_settings2 = __esm({
+    "src/features/inventory/settings.ts"() {
+      "use strict";
+      init_storage();
+      init_sortOptions();
+      SORT_KEY_PATH = "inventory.sortKey";
+      SORT_DIRECTION_PATH = "inventory.sortDirection";
+      SHOW_VALUES_PATH = "inventory.showValues";
+      loadSortKey = () => read(SORT_KEY_PATH, (v) => isSortKey(v) ? v : null);
+      loadSortDirection = () => read(SORT_DIRECTION_PATH, (v) => isSortDirection(v) ? v : null);
+      loadShowValues = () => read(SHOW_VALUES_PATH, (v) => {
+        if (v === true || v === 1 || v === "1" || v === "true") return true;
+        if (v === false || v === 0 || v === "0" || v === "false") return false;
+        return null;
       });
-      lookupPetStats = (species) => {
-        if (typeof species !== "string") return null;
-        const normalized = normalizeSpeciesKey(species);
-        if (!normalized) return null;
-        return petStatsBySpecies().get(normalized) ?? null;
+      saveShowValues = (visible) => write(SHOW_VALUES_PATH, visible);
+    }
+  });
+
+  // src/ui/kit/theme.ts
+  function group(prefix, values, unit = "") {
+    return Object.entries(values).map(([key2, value]) => `--qmm-${prefix}${kebab(key2)}:${value}${unit};`);
+  }
+  function themeVariables() {
+    return [
+      ":root{",
+      ...group("", color),
+      ...group("gradient-", gradient),
+      ...group("shadow-", shadow),
+      ...group("radius-", radius, "px"),
+      ...group("space-", space, "px"),
+      ...group("fs-", fontSize, "px"),
+      `--qmm-font-mono:${fontMono};`,
+      // Compatibility names read by feature code that predates the tokens.
+      // Remove each once nothing outside the kit references it.
+      "--qmm-border-2:var(--qmm-border);",
+      "--qws-text:var(--qmm-text);",
+      "--qws-text-dim:var(--qmm-text-soft);",
+      "--qws-border:var(--qmm-border-strong);",
+      "--qws-border-2:var(--qmm-border);",
+      "--qws-panel:var(--qmm-panel-bg);",
+      "--qws-accent:var(--qmm-accent);",
+      "--qws-shadow:var(--qmm-shadow-window);",
+      "--qws-blur:8px;",
+      "}"
+    ].join("\n");
+  }
+  var color, gradient, shadow, radius, space, fontSize, fontMono, layer, kebab;
+  var init_theme = __esm({
+    "src/ui/kit/theme.ts"() {
+      "use strict";
+      color = {
+        accent: "#5eead4",
+        accentSoft: "rgba(94,234,212,0.12)",
+        accentHover: "rgba(94,234,212,0.22)",
+        accentBorder: "rgba(94,234,212,0.3)",
+        accentBorderHover: "rgba(94,234,212,0.55)",
+        text: "#e7eef7",
+        textSoft: "rgba(226,232,240,0.75)",
+        textDim: "rgba(226,232,240,0.45)",
+        border: "rgba(255,255,255,0.08)",
+        borderHover: "rgba(255,255,255,0.16)",
+        borderStrong: "rgba(255,255,255,0.14)",
+        cardBg: "rgba(255,255,255,0.03)",
+        hoverBg: "rgba(255,255,255,0.06)",
+        mutedBg: "rgba(0,0,0,0.18)",
+        fieldBg: "rgba(0,0,0,0.3)",
+        fieldBorder: "rgba(255,255,255,0.12)",
+        track: "rgba(255,255,255,0.1)",
+        sunken: "#080c12",
+        surface: "#101620",
+        panelBg: "rgba(17,24,35,0.8)",
+        scrollbar: "rgba(94,234,212,0.2)",
+        scrim: "rgba(0,0,0,0.55)",
+        danger: "#ef4444",
+        dangerSoft: "rgba(239,68,68,0.12)",
+        dangerHover: "rgba(239,68,68,0.2)",
+        dangerBorder: "rgba(239,68,68,0.3)",
+        dangerBorderHover: "rgba(239,68,68,0.55)",
+        warn: "#fbbf24",
+        warnSoft: "rgba(251,191,36,0.12)",
+        warnBorder: "rgba(251,191,36,0.55)",
+        gold: "#FFC734",
+        rainbow: "#c084fc"
       };
-      getPetStrengthInfo = (item) => {
-        if (!item || typeof item !== "object") return null;
-        const rawType = typeof item.itemType === "string" ? item.itemType : "";
-        const type = rawType.trim();
-        if (type !== "Pet") return null;
-        const rawXp = readNestedNumberField(item, "xp");
-        const xp = typeof rawXp === "number" && Number.isFinite(rawXp) ? rawXp : 0;
-        const rawTargetScale = readNestedNumberField(item, "targetScale");
-        const targetScale = typeof rawTargetScale === "number" && Number.isFinite(rawTargetScale) ? rawTargetScale : 1;
-        const speciesCandidates = /* @__PURE__ */ new Set();
-        const maybePetSpecies = readNestedStringField(item, "petSpecies");
-        if (maybePetSpecies) speciesCandidates.add(maybePetSpecies);
-        const maybeSpecies = readNestedStringField(item, "species");
-        if (maybeSpecies) speciesCandidates.add(maybeSpecies);
-        const maybeName = readNestedStringField(item, "name");
-        if (maybeName) speciesCandidates.add(maybeName);
-        let stats = null;
-        for (const candidate of speciesCandidates) {
-          stats = lookupPetStats(candidate);
-          if (stats) break;
+      gradient = {
+        panel: "linear-gradient(160deg, rgba(15,20,30,0.95) 0%, rgba(10,14,20,0.95) 60%, rgba(8,12,18,0.96) 100%)",
+        tabBar: "linear-gradient(120deg, rgba(22,28,40,0.9), rgba(12,17,26,0.92))",
+        head: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))"
+      };
+      shadow = {
+        panel: "0 18px 44px rgba(0,0,0,0.45)",
+        window: "0 10px 36px rgba(0,0,0,0.45)",
+        modal: "0 24px 64px rgba(0,0,0,0.55)"
+      };
+      radius = { sm: 6, md: 9, lg: 12, xl: 16, pill: 999 };
+      space = { xs: 4, sm: 6, md: 8, lg: 10, xl: 12 };
+      fontSize = { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 };
+      fontMono = "ui-monospace, SFMono-Regular, Consolas, monospace";
+      layer = { hud: 1000010, window: 2000001 };
+      kebab = (key2) => key2.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+    }
+  });
+
+  // src/ui/kit/styles/chrome.ts
+  var chromeCss;
+  var init_chrome = __esm({
+    "src/ui/kit/styles/chrome.ts"() {
+      "use strict";
+      init_theme();
+      chromeCss = `
+.qmm-scroll, .qws-pnl-scroll, .qmm-views {
+  scrollbar-width: thin; scrollbar-color: var(--qmm-scrollbar) transparent;
+}
+.qmm-scroll::-webkit-scrollbar, .qws-pnl-scroll::-webkit-scrollbar, .qmm-views::-webkit-scrollbar { width: 6px; }
+.qmm-scroll::-webkit-scrollbar-track, .qws-pnl-scroll::-webkit-scrollbar-track, .qmm-views::-webkit-scrollbar-track { background: transparent; }
+.qmm-scroll::-webkit-scrollbar-thumb, .qws-pnl-scroll::-webkit-scrollbar-thumb, .qmm-views::-webkit-scrollbar-thumb {
+  background: var(--qmm-scrollbar); border-radius: 3px;
+}
+.qmm-scroll::-webkit-scrollbar-thumb:hover, .qws-pnl-scroll::-webkit-scrollbar-thumb:hover, .qmm-views::-webkit-scrollbar-thumb:hover {
+  background: var(--qmm-accent-border);
+}
+
+.qmm { display: flex; flex-direction: column; gap: var(--qmm-space-lg); color: var(--qmm-text); }
+.qmm-compact { gap: var(--qmm-space-sm); }
+.qmm.qmm-alt-drag { cursor: grab; }
+.qmm.qmm-alt-drag:active { cursor: grabbing; }
+
+.qmm-tabs {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-xs); padding: 8px 10px;
+  border-bottom: 1px solid var(--qmm-border);
+  border-radius: var(--qmm-radius-xl) var(--qmm-radius-xl) 0 0;
+  background: var(--qmm-gradient-tab-bar);
+}
+.qmm-tab {
+  flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: var(--qmm-space-md);
+  margin: 0; padding: 8px 12px; border: 1px solid transparent; border-radius: var(--qmm-radius-lg);
+  background: transparent; color: var(--qmm-text-soft); font-size: var(--qmm-fs-md); cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.qmm-compact .qmm-tab { padding: 6px 10px; }
+.qmm-tab:hover { background: var(--qmm-hover-bg); color: var(--qmm-text); }
+.qmm-tab:active { transform: translateY(1px); }
+.qmm-tab:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
+.qmm-tab.active { background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); color: var(--qmm-accent); }
+
+.qmm-views {
+  display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; padding: 14px;
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-xl);
+  background: var(--qmm-gradient-panel); backdrop-filter: blur(10px); box-shadow: var(--qmm-shadow-panel);
+}
+.qmm-compact .qmm-views { padding: 8px; }
+.qmm-tabs + .qmm-views { border-top: none; border-top-left-radius: 0; border-top-right-radius: 0; }
+.qmm-view { display: none; min-width: 0; min-height: 0; }
+.qmm-view.active { display: block; }
+
+.qmm-spacer { flex: 1; }
+
+.qws-win {
+  position: fixed; z-index: ${layer.window}; min-width: 260px; max-width: 900px; max-height: 90vh; overflow: auto;
+  color: var(--qmm-text); background: var(--qmm-panel-bg);
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-lg);
+  box-shadow: var(--qmm-shadow-window); backdrop-filter: blur(8px);
+}
+.qws-win.is-hidden { display: none !important; }
+.qws-win .w-head {
+  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 10px 12px; cursor: move;
+  border-bottom: 1px solid var(--qmm-border-strong);
+  border-radius: var(--qmm-radius-lg) var(--qmm-radius-lg) 0 0;
+  background: var(--qmm-gradient-head);
+}
+.qws-win .w-title { font-weight: 700; }
+.qws-win .w-body { padding: 12px; }
+
+/* Bare text and number inputs a feature builds inside a window get the field look too. */
+.qws-win input:is([type="text"], [type="number"]):not(.qmm-input, .qws-pnl-input) {
+  padding: 8px 10px; border: 1px solid var(--qmm-field-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-field-bg); color: var(--qmm-text);
+}
+.qws-win input:is([type="text"], [type="number"]):not(.qmm-input, .qws-pnl-input):focus {
+  outline: none; border-color: var(--qmm-accent-border-hover);
+}
+/* Windows give text and number fields one width; an inline width still wins. */
+.qws-win input[type="text"], .qws-win input[type="number"] { width: 120px; }
+
+.qws2 {
+  position: fixed; right: 16px; bottom: 16px; z-index: ${layer.hud};
+  display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 160px; padding: 10px 12px;
+  font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: var(--qmm-text);
+  background: var(--qmm-panel-bg); border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-lg);
+  box-shadow: var(--qmm-shadow-window); backdrop-filter: blur(8px);
+}
+.qws2.hidden { display: none; }
+.qws2 .row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.qws2 .title { font-weight: 700; letter-spacing: .2px; }
+.qws2 .drag { cursor: move; opacity: .9; }
+.qws2 .mini { display: none; }
+.qws2.min .mini { display: inline-flex; }
+.qws2.min .body { display: none; }
+.qws2 .is-link { cursor: pointer; }
+
+.qws-launch { margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--qmm-border-strong); }
+.qws-launch .launch-item { display: flex; align-items: center; gap: var(--qmm-space-md); margin: 4px 0; }
+.qws-launch .launch-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+`;
+    }
+  });
+
+  // src/ui/kit/styles/containers.ts
+  var containersCss;
+  var init_containers = __esm({
+    "src/ui/kit/styles/containers.ts"() {
+      "use strict";
+      containersCss = `
+.qmm-card {
+  display: grid; gap: var(--qmm-space-xl); width: 100%; padding: 14px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
+}
+.qmm-card--plain { display: flex; flex-direction: column; gap: var(--qmm-space-lg); width: auto; min-height: 0; padding: 10px; }
+.qmm-card.is-center { text-align: center; align-items: center; }
+.qmm-card.is-stretch { align-items: stretch; }
+.qmm-card[data-tone="muted"] { background: var(--qmm-muted-bg); }
+.qmm-card[data-tone="accent"] { border-color: var(--qmm-accent-border); }
+.qmm-card__header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--qmm-space-lg); }
+.qmm-card__header.is-compact { gap: var(--qmm-space-sm); }
+.qmm-card__icon { font-size: 18px; }
+.qmm-card__title { font-size: var(--qmm-fs-xl); font-weight: 700; letter-spacing: .01em; }
+.qmm-card__subtitle { flex-basis: 100%; font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
+.qmm-card__actions { display: flex; gap: var(--qmm-space-sm); margin-left: auto; }
+.qmm-card__body { display: grid; gap: var(--qmm-space-lg); }
+
+.qmm-section-label {
+  font-size: var(--qmm-fs-xs); font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--qmm-text-dim);
+}
+
+.qmm-collapse { flex-shrink: 0; min-height: auto; }
+.qmm-collapse__head {
+  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 0; border: none; background: none;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.qmm-collapse__titles { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-width: 0; }
+.qmm-collapse__desc { font-size: var(--qmm-fs-sm); line-height: 1.45; color: var(--qmm-text-dim); }
+.qmm-collapse__chevron {
+  flex: 0 0 auto; margin-left: auto; font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim);
+  transition: transform 140ms ease, color 120ms ease;
+}
+.qmm-collapse__head:hover .qmm-collapse__chevron { color: var(--qmm-accent); }
+.qmm-collapse__head[aria-expanded="true"] .qmm-collapse__chevron { transform: rotate(90deg); }
+.qmm-collapse__body { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
+.qmm-collapse.is-collapsed > .qmm-collapse__body { display: none; }
+
+.qmm-setting-row {
+  display: flex; align-items: center; gap: var(--qmm-space-lg); flex-shrink: 0; padding: 8px 10px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md); background: var(--qmm-card-bg);
+}
+.qmm-setting-row__text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.qmm-setting-row__title { font-size: var(--qmm-fs-md); color: var(--qmm-text); }
+.qmm-setting-row__hint { font-size: var(--qmm-fs-xs); line-height: 1.4; color: var(--qmm-text-dim); }
+.qmm-setting-row__controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--qmm-space-md); flex: 0 0 auto; }
+
+.qmm-label { opacity: .9; }
+.qmm-flex { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.qmm-form-row { display: grid; align-items: center; width: 100%; }
+.qmm-form-row.is-top { align-items: start; }
+.qmm-form-row__label { justify-self: start; margin: 0; font-weight: 600; }
+.qmm-form-row.is-top .qmm-form-row__label { align-self: start; }
+
+.qmm-error {
+  padding: 10px; border: 1px solid var(--qmm-danger-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-danger-soft); color: #fecaca; font-size: var(--qmm-fs-lg); line-height: 1.4;
+}
+.qmm-error[hidden] { display: none; }
+
+.qmm-pill {
+  display: inline-flex; align-items: center; gap: var(--qmm-space-sm); padding: 4px 9px; white-space: nowrap;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-pill);
+  background: var(--qmm-field-bg); color: var(--qmm-text); font-size: var(--qmm-fs-sm); font-weight: 600;
+}
+.qmm-pill.is-ok { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
+.qmm-pill.is-warn { color: var(--qmm-warn); background: var(--qmm-warn-soft); border-color: var(--qmm-warn-border); }
+.qmm-pill.is-bad { color: var(--qmm-danger); background: var(--qmm-danger-soft); border-color: var(--qmm-danger-border); }
+.qmm-badge {
+  align-self: flex-start; padding: 2px 7px; border-radius: var(--qmm-radius-pill);
+  font-size: var(--qmm-fs-xs); font-weight: 600;
+}
+.qmm-badge.is-ok { color: var(--qmm-accent); background: var(--qmm-accent-soft); }
+.qmm-badge.is-warn { color: var(--qmm-warn); background: var(--qmm-warn-soft); }
+.qmm-meter {
+  position: relative; flex: 1 1 auto; min-width: 60px; height: 5px; overflow: hidden;
+  border-radius: var(--qmm-radius-pill); background: var(--qmm-border);
+}
+.qmm-meter__fill {
+  position: absolute; inset: 0 auto 0 0; width: 0%; border-radius: var(--qmm-radius-pill);
+  background: var(--qmm-accent); transition: width 200ms ease, background 200ms ease;
+}
+.qmm-meter__fill.is-warn { background: var(--qmm-warn); }
+
+.qmm-vtabs { display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 0; }
+.qmm-vtabs .filter input { width: 100%; }
+.qmm-vlist-wrap { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; width: 100%; }
+.qmm-vlist {
+  flex: 0 0 auto; min-width: 0; padding: 6px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
+}
+.qmm-vlist.is-scroll { flex: 1 1 auto; overflow: auto; }
+.qmm-vlist__items { display: flex; flex-direction: column; gap: var(--qmm-space-xs); margin: 0; padding: 0; list-style: none; }
+.qmm-vlist__empty { opacity: .75; }
+.qmm-vtab {
+  display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: var(--qmm-space-lg); width: 100%;
+  padding: 8px 10px; border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-card-bg); color: inherit; text-align: left; cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+.qmm-vtab:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); }
+.qmm-vtab:active { transform: translateY(1px); }
+.qmm-vtab.active { background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
+.qmm-dot { width: 10px; height: 10px; justify-self: center; border-radius: 50%; box-shadow: 0 0 0 1px #0006 inset; }
+.qmm-chip { display: flex; align-items: center; gap: var(--qmm-space-md); min-width: 0; }
+.qmm-chip img { width: 20px; height: 20px; object-fit: cover; border: 1px solid var(--qmm-border); border-radius: 50%; }
+.qmm-chip__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.qmm-chip .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qmm-chip__sub { font-size: var(--qmm-fs-md); opacity: .7; }
+.qmm-tag {
+  padding: 3px 7px; font-size: var(--qmm-fs-sm); line-height: 1;
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-hover-bg);
+}
+
+/* Drag handle for reorderable lists. */
+.qmm-grab {
+  display: grid; grid-template-columns: repeat(2, 3px); grid-template-rows: repeat(3, 3px);
+  align-content: center; justify-content: center; gap: 2px; margin-left: auto; padding: 4px 3px;
+  opacity: .8; cursor: grab; user-select: none;
+}
+.qmm-grab:active { cursor: grabbing; }
+.qmm-grab-dot { width: 3px; height: 3px; border-radius: 999px; background: var(--qmm-text-soft); }
+.qmm-dragging { opacity: .6; }
+
+/* Selectable tile of the skins grid. */
+.qws-pnl-cell {
+  position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 1; cursor: pointer;
+  border: 1px solid var(--qmm-border); border-radius: 10px; background: var(--qmm-card-bg);
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+.qws-pnl-cell:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); transform: translateY(-1px); }
+.qws-pnl-cell.is-active { border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft); }
+.qws-pnl-cell.is-skinned::after {
+  content: ''; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--qmm-accent);
+}
+
+.qmm-icon-box { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.qmm-icon-box > img { max-width: 100%; max-height: 100%; image-rendering: auto; }
+
+.qmm-modal-scrim {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: var(--qmm-scrim); backdrop-filter: blur(4px);
+}
+.qmm-modal {
+  display: flex; flex-direction: column; overflow: hidden; color: var(--qmm-text);
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-xl);
+  background: var(--qmm-surface); box-shadow: var(--qmm-shadow-modal);
+}
+.qmm-modal__head {
+  display: flex; align-items: center; gap: var(--qmm-space-lg); flex: 0 0 auto; padding: 12px 14px;
+  border-bottom: 1px solid var(--qmm-border);
+}
+.qmm-modal__title { flex: 1; min-width: 0; font-size: var(--qmm-fs-xl); font-weight: 600; color: var(--qmm-text); }
+.qmm-modal__close {
+  flex: 0 0 auto; width: 28px; height: 28px; cursor: pointer;
+  border: 1px solid var(--qmm-border); border-radius: 8px; background: var(--qmm-card-bg);
+  color: var(--qmm-text-dim); font-size: var(--qmm-fs-md); line-height: 1;
+}
+.qmm-modal__close:hover { color: var(--qmm-text); border-color: var(--qmm-border-hover); }
+.qmm-modal__body {
+  display: flex; flex-direction: column; gap: var(--qmm-space-lg); flex: 1 1 auto; min-height: 0;
+  padding: 12px 14px; overflow-y: auto;
+}
+.qmm-modal__foot {
+  display: flex; align-items: center; gap: var(--qmm-space-lg); flex: 0 0 auto; padding: 12px 14px;
+  border-top: 1px solid var(--qmm-border);
+}
+.qmm-modal__foot:empty { display: none; }
+
+.qmm-menu-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 11px 12px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
+  font: inherit; text-align: left; cursor: pointer; transition: background 120ms ease, border-color 120ms ease;
+}
+.qmm-menu-card:hover:not(:disabled) { background: var(--qmm-hover-bg); }
+.qmm-menu-card:disabled { opacity: .55; cursor: default; }
+.qmm-menu-card__name { font-size: var(--qmm-fs-lg); font-weight: 600; color: var(--qmm-text); }
+.qmm-menu-card__detail { font-size: 11.5px; line-height: 1.45; color: var(--qmm-text-dim); }
+.qmm-menu-card:disabled .qmm-menu-card__name { color: var(--qmm-text-dim); }
+.qmm-menu-card:disabled .qmm-menu-card__detail { color: var(--qmm-accent); }
+`;
+    }
+  });
+
+  // src/ui/kit/styles/controls.ts
+  var controlsCss;
+  var init_controls = __esm({
+    "src/ui/kit/styles/controls.ts"() {
+      "use strict";
+      controlsCss = `
+.qmm-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--qmm-space-sm); padding: 8px 14px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-card-bg); color: var(--qmm-text);
+  font-size: var(--qmm-fs-lg); font-weight: 600; line-height: 1.2; cursor: pointer; user-select: none;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease, opacity 120ms ease, transform 100ms ease;
+}
+.qmm-compact .qmm-btn:where(:not(.qmm-btn--sm, .qmm-btn--xs, .qmm-btn--icon)) { padding: 6px 10px; }
+.qmm-btn:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); }
+.qmm-btn:active { transform: translateY(1px); }
+.qmm-btn:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
+.qmm-btn:disabled, .qmm-btn.is-disabled { opacity: .4; pointer-events: none; }
+.qmm-btn.is-busy { opacity: .6; pointer-events: none; }
+.qmm-btn--sm { padding: 7px 12px; font-size: var(--qmm-fs-sm); white-space: nowrap; }
+.qmm-btn--xs { padding: 4px 8px; font-size: var(--qmm-fs-sm); }
+.qmm-btn--full { width: 100%; }
+.qmm-btn--block { display: flex; }
+.qmm-btn--icon { width: 34px; height: 34px; padding: 6px; gap: 0; border-radius: 50%; }
+.qmm-btn__icon { display: inline-flex; align-items: center; justify-content: center; font-size: 1.1em; }
+.qmm-btn__icon.is-right { order: 2; }
+.qmm-btn--primary { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
+.qmm-btn--primary:hover { background: var(--qmm-accent-hover); border-color: var(--qmm-accent-border-hover); }
+.qmm-btn--danger { color: var(--qmm-danger); background: var(--qmm-danger-soft); border-color: var(--qmm-danger-border); }
+.qmm-btn--danger:hover { background: var(--qmm-danger-hover); border-color: var(--qmm-danger-border-hover); }
+.qmm-btn--ghost { background: transparent; border-color: transparent; }
+.qmm-btn--ghost:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border); }
+.qmm-btn.active { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
+
+.qmm-input, .qws-pnl-input {
+  padding: 8px 10px; border: 1px solid var(--qmm-field-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-field-bg); color: var(--qmm-text); outline: none;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.qmm-input { min-width: 90px; }
+.qws-pnl-input { font-size: var(--qmm-fs-md); }
+.qmm-input::placeholder, .qws-pnl-input::placeholder { color: var(--qmm-text-dim); }
+.qmm-input:focus, .qws-pnl-input:focus { border-color: var(--qmm-accent-border-hover); }
+.qmm-input option, .qws-pnl-input option { background: var(--qmm-surface); color: var(--qmm-text); }
+.qmm-input--sm { min-width: 0; padding: 6px 9px; font-size: 11.5px; }
+.qmm-select { cursor: pointer; }
+
+.qmm-input-number { display: inline-flex; align-items: center; gap: var(--qmm-space-sm); }
+.qmm-input-number-input { width: 70px; text-align: center; }
+.qmm-spin { display: inline-flex; flex-direction: column; gap: 2px; }
+.qmm-step {
+  display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 16px; padding: 0;
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-sm);
+  background: var(--qmm-hover-bg); color: var(--qmm-text); font-size: 11px; line-height: 1;
+  cursor: pointer; user-select: none; transition: border-color 120ms ease, color 120ms ease;
+}
+.qmm-step:hover { border-color: var(--qmm-accent-border); color: var(--qmm-accent); }
+.qmm-step:active { transform: translateY(1px); }
+
+.qmm-radio { transform: scale(1.1); accent-color: var(--qmm-accent); }
+
+.qmm-switch {
+  -webkit-appearance: none; appearance: none; position: relative; flex-shrink: 0;
+  width: 36px; height: 20px; margin: 0; vertical-align: middle; cursor: pointer;
+  border: 1px solid var(--qmm-field-border); border-radius: 10px; background: var(--qmm-track);
+  transition: background 150ms ease, border-color 150ms ease;
+}
+.qmm-switch::before {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--qmm-text-dim); transition: transform 150ms ease, background 150ms ease;
+}
+.qmm-switch:checked { background: var(--qmm-accent-hover); border-color: var(--qmm-accent-border-hover); }
+.qmm-switch:checked::before { transform: translateX(16px); background: var(--qmm-accent); }
+.qmm-switch:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
+.qmm-switch:disabled { opacity: .4; cursor: not-allowed; }
+
+.qmm-chip-toggle {
+  display: inline-flex; align-items: stretch; cursor: pointer;
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-card-bg);
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.qmm-chip-toggle:hover { border-color: var(--qmm-accent-border); }
+.qmm-chip-toggle input { display: none; }
+.qmm-chip-toggle__face { display: flex; align-items: center; gap: var(--qmm-space-md); padding: 6px 12px; border-radius: var(--qmm-radius-pill); }
+.qmm-chip-toggle input:checked + .qmm-chip-toggle__face {
+  color: var(--qmm-accent); background: var(--qmm-accent-soft); box-shadow: inset 0 0 0 1px var(--qmm-accent-border);
+}
+.qmm-chip-toggle__icon { font-size: 14px; }
+.qmm-chip-toggle__label { font-weight: 600; }
+.qmm-chip-toggle__desc { font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
+.qmm-chip-toggle__badge {
+  padding: 2px 6px; font-size: var(--qmm-fs-sm);
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-hover-bg);
+}
+
+.qmm-range, .qws-pnl-range {
+  -webkit-appearance: none; appearance: none; height: 16px; margin: 0; padding: 0;
+  border: none; background: transparent; outline: none; cursor: pointer;
+}
+.qmm-range { width: 180px; }
+.qws-pnl-range { width: 100%; }
+.qmm-range::-webkit-slider-runnable-track, .qws-pnl-range::-webkit-slider-runnable-track {
+  height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
+}
+.qmm-range::-moz-range-track, .qws-pnl-range::-moz-range-track {
+  height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
+}
+.qmm-range::-webkit-slider-thumb, .qws-pnl-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 13px; height: 13px; margin-top: -4.5px;
+  border: none; border-radius: 50%; background: var(--qmm-accent); cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.qmm-range::-moz-range-thumb, .qws-pnl-range::-moz-range-thumb {
+  width: 13px; height: 13px; border: none; border-radius: 50%; background: var(--qmm-accent); cursor: pointer;
+}
+.qmm-range:hover::-webkit-slider-thumb, .qws-pnl-range:hover::-webkit-slider-thumb {
+  transform: scale(1.15); box-shadow: 0 0 0 4px var(--qmm-accent-soft);
+}
+.qmm-range:disabled, .qws-pnl-range:disabled { opacity: .4; cursor: not-allowed; }
+.qmm-range:disabled::-webkit-slider-thumb, .qws-pnl-range:disabled::-webkit-slider-thumb { background: var(--qmm-text-dim); }
+.qmm-range:disabled::-moz-range-thumb, .qws-pnl-range:disabled::-moz-range-thumb { background: var(--qmm-text-dim); }
+
+.qmm-range-dual { position: relative; width: 100%; padding: 18px 0 10px; }
+.qmm-range-dual-track {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  height: 6px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
+}
+.qmm-range-dual-fill {
+  position: absolute; top: 50%; transform: translateY(-50%); height: 6px;
+  border-radius: var(--qmm-radius-pill); background: var(--qmm-accent); transition: left .12s ease, right .12s ease;
+}
+.qmm-range-dual-input {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  width: 100%; height: 28px; pointer-events: none;
+}
+.qmm-range-dual-input::-webkit-slider-runnable-track { background: none; }
+.qmm-range-dual-input::-moz-range-track { background: none; }
+.qmm-range-dual-input::-webkit-slider-thumb {
+  pointer-events: auto; width: 16px; height: 16px; margin-top: -6px;
+  background: var(--qmm-accent); border: 2px solid var(--qmm-surface); box-shadow: 0 2px 8px rgba(0,0,0,.35);
+}
+.qmm-range-dual-input::-moz-range-thumb {
+  pointer-events: auto; width: 16px; height: 16px;
+  background: var(--qmm-accent); border: 2px solid var(--qmm-surface); box-shadow: 0 2px 8px rgba(0,0,0,.35);
+}
+.qmm-range-dual-input--min { z-index: 2; }
+.qmm-range-dual-input--max { z-index: 3; }
+
+/* --seg-pad, --seg-fill and --seg-stroke-color let a caller tint one control (the calculator does). */
+.qmm-seg {
+  position: relative; display: inline-flex; align-items: center; gap: var(--qmm-space-sm); overflow: hidden;
+  padding: var(--seg-pad, 8px); border-radius: var(--qmm-radius-pill);
+  background: var(--qmm-bg-soft, var(--qmm-sunken)); background-clip: padding-box;
+  border: 1px solid var(--qmm-border-2, var(--qmm-border));
+}
+.qmm-seg--full { display: flex; width: 100%; }
+.qmm-seg__btn {
+  position: relative; z-index: 1; padding: 8px 14px; border: 0; border-radius: var(--qmm-radius-pill);
+  appearance: none; background: transparent; color: var(--qmm-text-dim);
+  font: inherit; line-height: 1; white-space: nowrap; cursor: pointer;
+  transition: color .15s ease, transform .06s ease;
+}
+.qmm-seg__btn-label { display: inline-flex; align-items: center; justify-content: center; white-space: inherit; }
+.qmm-compact .qmm-seg__btn { padding: 6px 10px; }
+.qmm-seg__btn:hover { color: var(--qmm-text); }
+.qmm-seg__btn.active { color: var(--qmm-text); font-weight: 600; }
+.qmm-seg__btn:active { transform: translateY(1px); }
+.qmm-seg__btn[disabled] { opacity: .5; cursor: not-allowed; }
+.qmm-seg__indicator {
+  position: absolute; top: 0; left: 0; width: 40px; height: 100%; border-radius: inherit; pointer-events: none;
+  background: var(--seg-fill, var(--qmm-accent-soft));
+  outline: 1.2px solid var(--seg-stroke-color, var(--qmm-accent-border-hover)); outline-offset: -1.2px;
+  transform-origin: left center; will-change: transform, width, opacity;
+  transition: transform .18s cubic-bezier(.2,.8,.2,1), width .18s cubic-bezier(.2,.8,.2,1), opacity .18s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .qmm-seg__indicator, .qmm-seg__btn { transition: none; }
+}
+
+.qmm-hotkey {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: var(--qmm-hotkey-w, 180px); min-width: 104px; padding: 7px 12px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-field-bg); color: var(--qmm-text);
+  font-family: inherit; font-size: var(--qmm-fs-sm); font-weight: 600; white-space: nowrap;
+  cursor: pointer; user-select: none; transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+.qmm-hotkey:hover { border-color: var(--qmm-border-hover); }
+.qmm-hotkey:focus-visible { outline: none; }
+.qmm-hotkey.is-assigned { color: var(--qmm-accent); border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft); }
+.qmm-hotkey.is-empty { color: var(--qmm-text-dim); font-weight: 500; }
+.qmm-hotkey.is-recording {
+  color: var(--qmm-warn); border-color: var(--qmm-warn-border); background: var(--qmm-warn-soft);
+  animation: qmm-hotkey-breathe 1.2s ease-in-out infinite;
+}
+@keyframes qmm-hotkey-breathe {
+  0% { box-shadow: 0 0 0 0 rgba(251,191,36,.45); }
+  60% { box-shadow: 0 0 0 10px rgba(251,191,36,0); }
+  100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
+}
+`;
+    }
+  });
+
+  // src/ui/kit/styles/index.ts
+  function ensureKitStyles() {
+    if (injected) return;
+    if (typeof document === "undefined" || typeof document.getElementById !== "function") return;
+    injected = true;
+    if (document.getElementById(STYLE_ID3)) return;
+    const style2 = document.createElement("style");
+    style2.id = STYLE_ID3;
+    style2.textContent = [themeVariables(), chromeCss, controlsCss, containersCss].join("\n");
+    (document.head || document.documentElement).appendChild(style2);
+  }
+  var STYLE_ID3, injected;
+  var init_styles = __esm({
+    "src/ui/kit/styles/index.ts"() {
+      "use strict";
+      init_theme();
+      init_chrome();
+      init_containers();
+      init_controls();
+      STYLE_ID3 = "qmm-kit-css";
+      injected = false;
+    }
+  });
+
+  // src/ui/kit/dom.ts
+  function h(tag, className, text2) {
+    ensureKitStyles();
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text2 != null) el.textContent = text2;
+    return el;
+  }
+  function iconNode(icon2, className) {
+    const node = typeof icon2 === "string" ? h("span", void 0, icon2) : icon2;
+    node.classList.add(className);
+    return node;
+  }
+  var init_dom = __esm({
+    "src/ui/kit/dom.ts"() {
+      "use strict";
+      init_styles();
+    }
+  });
+
+  // src/ui/kit/fields.ts
+  function textInput(placeholder = "", value = "", opts = {}) {
+    const input = h("input", opts.small ? "qmm-input qmm-input--sm" : "qmm-input");
+    input.type = "text";
+    input.placeholder = placeholder;
+    input.value = value;
+    return input;
+  }
+  function numberInput(min = 0, max = 9999, step = 1, value = 0) {
+    const wrap = h("div", "qmm-input-number");
+    const input = h("input", "qmm-input qmm-input-number-input");
+    input.type = "number";
+    input.min = String(min);
+    input.max = String(max);
+    input.step = String(step);
+    input.value = String(value);
+    input.inputMode = "numeric";
+    const clampValue = () => {
+      const n = Number(input.value);
+      if (!Number.isFinite(n)) return;
+      const clamped = clamp(n, Number(input.min), Number(input.max));
+      if (clamped !== n) input.value = String(clamped);
+    };
+    const bump = (dir) => {
+      if (dir < 0) input.stepDown();
+      else input.stepUp();
+      clampValue();
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    const spin = h("div", "qmm-spin");
+    spin.append(stepButton("\u25B2", () => bump(1)), stepButton("\u25BC", () => bump(-1)));
+    input.addEventListener("change", clampValue);
+    wrap.append(input, spin);
+    input.wrap = wrap;
+    return input;
+  }
+  function stepButton(glyph, bump) {
+    const btn = h("button", "qmm-step", glyph);
+    btn.type = "button";
+    let pressTimer = null;
+    let repeatTimer = null;
+    let repeated = false;
+    const stop2 = () => {
+      if (pressTimer != null) clearTimeout(pressTimer);
+      if (repeatTimer != null) clearInterval(repeatTimer);
+      pressTimer = repeatTimer = null;
+    };
+    btn.addEventListener("pointerdown", (ev) => {
+      repeated = false;
+      pressTimer = window.setTimeout(() => {
+        repeated = true;
+        bump();
+        repeatTimer = window.setInterval(bump, 60);
+      }, 300);
+      btn.setPointerCapture?.(ev.pointerId);
+    });
+    for (const type of ["pointerup", "pointercancel", "pointerleave", "blur"]) btn.addEventListener(type, stop2);
+    btn.addEventListener("click", (e) => {
+      if (repeated) {
+        e.preventDefault();
+        e.stopPropagation();
+        repeated = false;
+        return;
+      }
+      bump();
+    });
+    return btn;
+  }
+  function select2(opts = {}) {
+    const sel = h("select", opts.small ? "qmm-input qmm-input--sm qmm-select" : "qmm-input qmm-select");
+    if (opts.id) sel.id = opts.id;
+    if (opts.width) sel.style.minWidth = opts.width;
+    if (opts.placeholder) {
+      const opt = h("option", void 0, opts.placeholder);
+      opt.value = "";
+      opt.disabled = true;
+      opt.selected = true;
+      sel.appendChild(opt);
+    }
+    return sel;
+  }
+  function radio(name, value, checked = false) {
+    const input = h("input", "qmm-radio");
+    input.type = "radio";
+    input.name = name;
+    input.value = value;
+    input.checked = checked;
+    return input;
+  }
+  function radioGroup(name, options, selected, onChange) {
+    const wrap = h("div", "qmm-radio-group");
+    for (const { value, label: label2 } of options) {
+      const input = radio(name, value, selected === value);
+      input.onchange = () => {
+        if (input.checked) onChange(value);
+      };
+      const row2 = h("label", "qmm-radio-label");
+      row2.append(input, label2);
+      wrap.appendChild(row2);
+    }
+    return wrap;
+  }
+  var init_fields = __esm({
+    "src/ui/kit/fields.ts"() {
+      "use strict";
+      init_math();
+      init_dom();
+    }
+  });
+
+  // src/ui/kit/toggles.ts
+  function switchInput(checked = false, onChange) {
+    const input = h("input", "qmm-switch");
+    input.type = "checkbox";
+    input.checked = checked;
+    input.setChecked = (value) => {
+      input.checked = value;
+    };
+    if (onChange) input.addEventListener("change", () => onChange(input.checked));
+    return input;
+  }
+  function toggleChip(labelText, opts = {}) {
+    const root = h("label", "qmm-chip-toggle");
+    if (opts.tooltip) root.title = opts.tooltip;
+    const input = h("input");
+    input.type = opts.type || "checkbox";
+    if (opts.name) input.name = opts.name;
+    if (opts.value) input.value = opts.value;
+    input.checked = !!opts.checked;
+    const face = h("div", "qmm-chip-toggle__face");
+    if (opts.icon) face.appendChild(iconNode(opts.icon, "qmm-chip-toggle__icon"));
+    const label2 = h("span", "qmm-chip-toggle__label", labelText);
+    face.appendChild(label2);
+    if (opts.description) face.appendChild(h("span", "qmm-chip-toggle__desc", opts.description));
+    if (opts.badge) face.appendChild(h("span", "qmm-chip-toggle__badge", opts.badge));
+    root.append(input, face);
+    return { root, input, label: label2 };
+  }
+  var init_toggles = __esm({
+    "src/ui/kit/toggles.ts"() {
+      "use strict";
+      init_dom();
+    }
+  });
+
+  // src/features/inventory/sortBar.ts
+  function caption(text2) {
+    const el = document.createElement("span");
+    el.textContent = text2;
+    Object.assign(el.style, { font: "inherit", opacity: "0.8", flex: "0 0 auto" });
+    return el;
+  }
+  function createSortBar(handlers) {
+    const wrap = document.createElement("div");
+    wrap.className = WRAP_CLASS;
+    Object.assign(wrap.style, { display: "block", width: "100%", gridColumn: "1 / -1", flex: "0 0 auto", contain: "layout style" });
+    const row2 = document.createElement("div");
+    Object.assign(row2.style, {
+      display: "flex",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: "8px",
+      marginTop: "10px",
+      paddingTop: "8px",
+      borderTop: `1px solid ${color.borderStrong}`,
+      width: "100%",
+      boxSizing: "border-box"
+    });
+    const sortSelect = select2({ small: true });
+    const directionSelect = select2({ small: true });
+    for (const direction of DIRECTIONS) {
+      directionSelect.appendChild(new Option(DIRECTION_LABELS[direction], direction));
+    }
+    const showValues = switchInput(true);
+    const showValuesLabel = document.createElement("label");
+    Object.assign(showValuesLabel.style, { display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer", flex: "0 0 auto" });
+    showValuesLabel.append(showValues, "Show values");
+    const divider = document.createElement("span");
+    Object.assign(divider.style, { alignSelf: "stretch", width: "1px", minHeight: "24px", background: color.border, flex: "0 0 auto" });
+    const summary = new ValueSummary();
+    row2.append(caption("Sort by:"), sortSelect, caption("Order:"), directionSelect, divider, showValuesLabel, summary.el);
+    wrap.appendChild(row2);
+    const bar = { wrap, sortSelect, directionSelect, showValues, summary, lastSortKey: null, lastDirection: null };
+    const picked = () => {
+      bar.lastSortKey = sortSelect.value || "none";
+      bar.lastDirection = directionSelect.value || "asc";
+      handlers.onSortChange(bar.lastSortKey, bar.lastDirection);
+    };
+    sortSelect.addEventListener("change", picked);
+    directionSelect.addEventListener("change", picked);
+    showValues.addEventListener("change", () => handlers.onShowValuesChange(showValues.checked));
+    return bar;
+  }
+  function ensureSortBar(grid, handlers) {
+    const filtersBlock = grid.querySelector(FILTERS_BLOCK_SELECTOR);
+    if (!filtersBlock) return null;
+    const existing = filtersBlock.querySelector(`:scope > .${WRAP_CLASS}`);
+    const bar = existing && bars.get(existing) || createSortBar(handlers);
+    bars.set(bar.wrap, bar);
+    if (bar.wrap.parentElement !== filtersBlock) filtersBlock.appendChild(bar.wrap);
+    return bar;
+  }
+  function renderSortOptions(select3, options, preferred) {
+    const previous = preferred ?? select3.value;
+    select3.replaceChildren(...options.map((opt) => new Option(opt.label, opt.value)));
+    if (options.some((o) => o.value === "none")) select3.value = "none";
+    if (previous && previous !== "none" && options.some((o) => o.value === previous)) select3.value = previous;
+  }
+  var WRAP_CLASS, bars;
+  var init_sortBar = __esm({
+    "src/features/inventory/sortBar.ts"() {
+      "use strict";
+      init_fields();
+      init_toggles();
+      init_theme();
+      init_inventoryDom();
+      init_sortOptions();
+      init_valueDisplay();
+      WRAP_CLASS = "tm-sort-wrap";
+      bars = /* @__PURE__ */ new WeakMap();
+    }
+  });
+
+  // src/features/inventory/sorting.ts
+  function attachInventorySorting() {
+    const sortCards = createDomSorter();
+    const subs = new Subscriptions();
+    let showValues = loadShowValues() ?? true;
+    let grid = null;
+    let bar = null;
+    let lastAppliedSortKey = null;
+    let lastAppliedDirection = null;
+    let lastSortedOrder = null;
+    let lastContextKey = null;
+    let lastRenderedEntryCount = null;
+    let loadValuesOnNextShow = true;
+    let gridListeners = null;
+    const resolveGrid = () => {
+      if (grid && document.contains(grid)) return grid;
+      const next = document.querySelector(GRID_SELECTOR);
+      if (next !== grid) setGrid(next);
+      return grid && document.contains(grid) ? grid : null;
+    };
+    const sortGrid = (target, sortKey, direction) => sortCards(target, sortKey, direction, showValues).then(() => {
+      const container = getItemsContainer(target);
+      lastSortedOrder = container ? domOrderOf(getDomEntries(container)) : null;
+    });
+    const sortWithBar = () => {
+      const target = resolveGrid();
+      if (!target || !bar) return;
+      void sortGrid(target, bar.sortSelect.value, bar.directionSelect.value);
+    };
+    let noiseContainer = null;
+    const noiseObserver = new MutationObserver(() => {
+      if (noiseContainer) clearNoiseText(noiseContainer);
+    });
+    const observeNoise = (container) => {
+      if (noiseContainer === container) return;
+      noiseObserver.disconnect();
+      noiseContainer = container;
+      if (!container) return;
+      noiseObserver.observe(container, { subtree: true, childList: true, characterData: true });
+      clearNoiseText(container);
+    };
+    const gridObserver = new MutationObserver((mutations) => {
+      const relevant = mutations.some(
+        (m) => m.type === "attributes" ? GRID_ATTRIBUTES.includes(m.attributeName || "") : m.type === "childList"
+      );
+      if (relevant) refresh();
+    });
+    function setGrid(next) {
+      if (grid === next) return;
+      gridObserver.disconnect();
+      grid = next;
+      lastAppliedSortKey = null;
+      lastSortedOrder = null;
+      lastContextKey = null;
+      lastRenderedEntryCount = null;
+      loadValuesOnNextShow = true;
+      if (!grid) {
+        gridListeners?.dispose();
+        gridListeners = null;
+        observeNoise(null);
+        return;
+      }
+      gridObserver.observe(grid, { subtree: true, childList: true, attributes: true, attributeFilter: GRID_ATTRIBUTES });
+    }
+    const handlers = {
+      onSortChange(sortKey, direction) {
+        lastAppliedSortKey = sortKey;
+        lastAppliedDirection = direction;
+        saveSort(sortKey, direction);
+        const target = resolveGrid();
+        if (target) void sortGrid(target, sortKey, direction);
+      },
+      onShowValuesChange(visible) {
+        showValues = visible;
+        saveShowValues(visible);
+        sortWithBar();
+      }
+    };
+    const refreshSummary = () => {
+      const target = resolveGrid();
+      if (target && bar) void bar.summary.update(getActiveFilters(target), getSearchQuery(target));
+    };
+    function pickDirection(current, sortKey) {
+      const fallback = DEFAULT_DIRECTION[sortKey] ?? "asc";
+      const saved = loadSortDirection();
+      const preferred = isSortDirection(current.lastDirection) && current.lastDirection || saved || fallback;
+      current.directionSelect.value = preferred;
+      if (!isSortDirection(current.directionSelect.value)) current.directionSelect.value = fallback;
+      return current.directionSelect.value;
+    }
+    function update() {
+      const target = resolveGrid();
+      if (!target || !isVisible(target)) {
+        loadValuesOnNextShow = true;
+        return;
+      }
+      if (loadValuesOnNextShow) {
+        loadValuesOnNextShow = false;
+        void loadPlayersInRoomForValues();
+      }
+      const current = ensureSortBar(target, handlers);
+      if (!current) return;
+      bar = current;
+      if (!gridListeners) {
+        gridListeners = new Subscriptions();
+        gridListeners.add(onPlayersInRoomLoaded(refreshSummary));
+        gridListeners.add(
+          onShownItemTypesChange((contextKey) => {
+            if (contextKey === lastContextKey) setTimeout(refresh, 0);
+          })
+        );
+      }
+      current.showValues.checked = showValues;
+      const filters = getActiveFilters(target);
+      const search2 = getSearchQuery(target);
+      const container = getItemsContainer(target);
+      observeNoise(container);
+      const entries2 = container ? getDomEntries(container) : [];
+      const domChanged = domOrderChanged(lastSortedOrder, entries2);
+      lastContextKey = filterContextKey(filters, search2);
+      void current.summary.update(filters, search2);
+      const options = computeSortOptions(filters, shownItemTypes(filters, search2));
+      const offered = (key2) => key2 && options.some((o) => o.value === key2) ? key2 : null;
+      if (lastRenderedEntryCount !== entries2.length || !current.sortSelect.options.length) {
+        renderSortOptions(current.sortSelect, options, offered(current.lastSortKey) || offered(loadSortKey()));
+        lastRenderedEntryCount = entries2.length;
+      }
+      const sortKey = current.sortSelect.value;
+      current.lastSortKey = sortKey;
+      const direction = pickDirection(current, sortKey);
+      current.lastDirection = direction;
+      if (sortKey !== lastAppliedSortKey || direction !== lastAppliedDirection || domChanged) {
+        lastAppliedSortKey = sortKey;
+        lastAppliedDirection = direction;
+        saveSort(sortKey, direction);
+        void sortGrid(target, sortKey, direction);
+      } else {
+        lastSortedOrder = domOrderOf(entries2);
+      }
+    }
+    const refresh = debounce(update, 120);
+    let lastHutchRoot = null;
+    let hutchNeedsInit = true;
+    const refreshPetHutch = debounce(() => void updatePetHutchSections(), 120);
+    const maybeInitPetHutch = () => {
+      const root = document.querySelector(PET_HUTCH_ROOT_SELECTOR);
+      if (root !== lastHutchRoot) {
+        lastHutchRoot = root;
+        hutchNeedsInit = true;
+      }
+      if (!root || !hutchNeedsInit) return;
+      void updatePetHutchSections(true).then((applied2) => {
+        if (applied2) hutchNeedsInit = false;
+      });
+    };
+    const bodyObserver = new MutationObserver(() => {
+      const current = grid && document.contains(grid) ? grid : null;
+      if (grid && !current) setGrid(null);
+      const next = document.querySelector(GRID_SELECTOR);
+      if (next !== current) {
+        setGrid(next);
+        if (next) update();
+      }
+      maybeInitPetHutch();
+      refreshPetHutch();
+    });
+    const onGridInput = (event) => {
+      const target = event.target;
+      const within = target?.closest(GRID_SELECTOR);
+      if (within && within === resolveGrid()) setTimeout(refresh, 0);
+    };
+    bodyObserver.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    setGrid(document.querySelector(GRID_SELECTOR));
+    document.addEventListener("change", onGridInput, true);
+    document.addEventListener("input", onGridInput, true);
+    update();
+    maybeInitPetHutch();
+    refreshPetHutch();
+    subs.add(() => {
+      gridObserver.disconnect();
+      bodyObserver.disconnect();
+      noiseObserver.disconnect();
+      refresh.cancel();
+      refreshPetHutch.cancel();
+      document.removeEventListener("change", onGridInput, true);
+      document.removeEventListener("input", onGridInput, true);
+      gridListeners?.dispose();
+      bar?.wrap.remove();
+    });
+    return () => subs.dispose();
+  }
+  function startInventorySortingObserver() {
+    if (typeof window === "undefined" || typeof document === "undefined") return () => {
+    };
+    let stop2 = null;
+    let waiter = null;
+    const attachIfReady = () => {
+      if (stop2) return true;
+      if (!document.querySelector(GRID_SELECTOR) && !document.querySelector(PET_HUTCH_ROOT_SELECTOR)) return false;
+      stop2 = attachInventorySorting();
+      return true;
+    };
+    const start2 = () => {
+      if (attachIfReady()) return;
+      const target = document.body || document.documentElement;
+      if (!target) return;
+      waiter = new MutationObserver(() => {
+        if (attachIfReady()) {
+          waiter?.disconnect();
+          waiter = null;
         }
-        if (!stats) return null;
-        const { maxScale, hoursToMature } = stats;
-        if (!Number.isFinite(maxScale) || maxScale <= 1) return null;
-        if (!Number.isFinite(hoursToMature) || hoursToMature <= 0) return null;
-        const safeXp = Math.max(0, xp);
-        const xpDenominator = hoursToMature * 3600;
-        const xpComponent = xpDenominator > 0 ? Math.min(Math.floor(safeXp / xpDenominator * 30), 30) : 0;
-        const minScale = 1;
-        const clampedScale = clampNumber2(targetScale, minScale, maxScale);
-        const scaleDenominator = maxScale - minScale;
-        const scaleComponent = scaleDenominator > 0 ? Math.floor((clampedScale - minScale) / scaleDenominator * 20 + 80) : 80;
-        const maxStrength = clampNumber2(scaleComponent, 0, 100);
-        const combined = xpComponent + maxStrength - 30;
-        const strength = clampNumber2(combined, 0, maxStrength);
-        return { strength, maxStrength };
-      };
-      getPetStrength2 = (item) => {
-        const info = getPetStrengthInfo(item);
-        return info ? info.strength : null;
-      };
-      compareByNameThenTypeThenId = (a, b) => {
-        const nameA = getInventoryItemName(a);
-        const nameB = getInventoryItemName(b);
-        if (nameA && nameB) {
-          const cmp = nameA.localeCompare(nameB, void 0, { sensitivity: "base" });
-          if (cmp !== 0) return cmp;
-        }
-        if (!nameA && nameB) return 1;
-        if (nameA && !nameB) return -1;
-        const typeA = typeof a?.itemType === "string" ? a.itemType : "";
-        const typeB = typeof b?.itemType === "string" ? b.itemType : "";
-        const typeCmp = typeA.localeCompare(typeB, void 0, { sensitivity: "base" });
-        if (typeCmp !== 0) return typeCmp;
-        const idA = typeof a.id === "string" ? a.id : "";
-        const idB = typeof b.id === "string" ? b.id : "";
-        return idA.localeCompare(idB, void 0, { sensitivity: "base" });
-      };
+      });
+      waiter.observe(target, { childList: true, subtree: true });
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start2, { once: true });
+    else start2();
+    return () => {
+      document.removeEventListener("DOMContentLoaded", start2);
+      waiter?.disconnect();
+      stop2?.();
+    };
+  }
+  var GRID_ATTRIBUTES;
+  var init_sorting = __esm({
+    "src/features/inventory/sorting.ts"() {
+      "use strict";
+      init_async2();
+      init_emitter();
+      init_domSorter();
+      init_filters();
+      init_inventoryDom();
+      init_petHutch2();
+      init_settings2();
+      init_sortBar();
+      init_sortOptions();
+      init_value();
+      GRID_ATTRIBUTES = ["data-checked", "style", "class", "hidden", "aria-hidden"];
     }
   });
 
@@ -32274,28 +31609,6 @@
     }
   });
 
-  // src/lib/emitter.ts
-  var Subscriptions;
-  var init_emitter = __esm({
-    "src/lib/emitter.ts"() {
-      "use strict";
-      Subscriptions = class {
-        constructor() {
-          this.pending = [];
-        }
-        add(unsubscribe2) {
-          this.pending.push(unsubscribe2);
-        }
-        dispose() {
-          for (const entry of this.pending.splice(0)) {
-            Promise.resolve(entry).then((off) => off?.()).catch(() => {
-            });
-          }
-        }
-      };
-    }
-  });
-
   // src/features/activityLog/historyWatcher.ts
   function skipNextActivityLogHistoryReopen() {
     skipNextReopen = true;
@@ -32557,7 +31870,7 @@
       writeAriesPath(STATE_PATH, state5);
     } catch {
     }
-    for (const listener of listeners7) {
+    for (const listener of listeners6) {
       try {
         listener(state5);
       } catch {
@@ -32692,7 +32005,7 @@
       }
     };
   }
-  var STATE_PATH, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, listeners7, cachedState, HatchTracker;
+  var STATE_PATH, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, listeners6, cachedState, HatchTracker;
   var init_tracker = __esm({
     "src/features/hatch/tracker.ts"() {
       "use strict";
@@ -32705,7 +32018,7 @@
       HATCH_ACTION = "hatchEgg";
       DOUBLE_HATCH_ACTIONS = /* @__PURE__ */ new Set(["doublehatch", "doublehatchii"]);
       SEEN_LIMIT = 4e3;
-      listeners7 = /* @__PURE__ */ new Set();
+      listeners6 = /* @__PURE__ */ new Set();
       cachedState = null;
       HatchTracker = {
         getState() {
@@ -32737,640 +32050,12 @@
         // since the server's own never resets except on the outcome itself. Only
         // `setOffset` moves a counter by hand.
         subscribe(listener) {
-          listeners7.add(listener);
+          listeners6.add(listener);
           return () => {
-            listeners7.delete(listener);
+            listeners6.delete(listener);
           };
         }
       };
-    }
-  });
-
-  // src/ui/kit/theme.ts
-  function group(prefix, values, unit = "") {
-    return Object.entries(values).map(([key2, value]) => `--qmm-${prefix}${kebab(key2)}:${value}${unit};`);
-  }
-  function themeVariables() {
-    return [
-      ":root{",
-      ...group("", color),
-      ...group("gradient-", gradient),
-      ...group("shadow-", shadow),
-      ...group("radius-", radius, "px"),
-      ...group("space-", space, "px"),
-      ...group("fs-", fontSize, "px"),
-      `--qmm-font-mono:${fontMono};`,
-      // Compatibility names read by feature code that predates the tokens.
-      // Remove each once nothing outside the kit references it.
-      "--qmm-border-2:var(--qmm-border);",
-      "--qws-text:var(--qmm-text);",
-      "--qws-text-dim:var(--qmm-text-soft);",
-      "--qws-border:var(--qmm-border-strong);",
-      "--qws-border-2:var(--qmm-border);",
-      "--qws-panel:var(--qmm-panel-bg);",
-      "--qws-accent:var(--qmm-accent);",
-      "--qws-shadow:var(--qmm-shadow-window);",
-      "--qws-blur:8px;",
-      "}"
-    ].join("\n");
-  }
-  var color, gradient, shadow, radius, space, fontSize, fontMono, layer, kebab;
-  var init_theme = __esm({
-    "src/ui/kit/theme.ts"() {
-      "use strict";
-      color = {
-        accent: "#5eead4",
-        accentSoft: "rgba(94,234,212,0.12)",
-        accentHover: "rgba(94,234,212,0.22)",
-        accentBorder: "rgba(94,234,212,0.3)",
-        accentBorderHover: "rgba(94,234,212,0.55)",
-        text: "#e7eef7",
-        textSoft: "rgba(226,232,240,0.75)",
-        textDim: "rgba(226,232,240,0.45)",
-        border: "rgba(255,255,255,0.08)",
-        borderHover: "rgba(255,255,255,0.16)",
-        borderStrong: "rgba(255,255,255,0.14)",
-        cardBg: "rgba(255,255,255,0.03)",
-        hoverBg: "rgba(255,255,255,0.06)",
-        mutedBg: "rgba(0,0,0,0.18)",
-        fieldBg: "rgba(0,0,0,0.3)",
-        fieldBorder: "rgba(255,255,255,0.12)",
-        track: "rgba(255,255,255,0.1)",
-        sunken: "#080c12",
-        surface: "#101620",
-        panelBg: "rgba(17,24,35,0.8)",
-        scrollbar: "rgba(94,234,212,0.2)",
-        scrim: "rgba(0,0,0,0.55)",
-        danger: "#ef4444",
-        dangerSoft: "rgba(239,68,68,0.12)",
-        dangerHover: "rgba(239,68,68,0.2)",
-        dangerBorder: "rgba(239,68,68,0.3)",
-        dangerBorderHover: "rgba(239,68,68,0.55)",
-        warn: "#fbbf24",
-        warnSoft: "rgba(251,191,36,0.12)",
-        warnBorder: "rgba(251,191,36,0.55)",
-        gold: "#FFC734",
-        rainbow: "#c084fc"
-      };
-      gradient = {
-        panel: "linear-gradient(160deg, rgba(15,20,30,0.95) 0%, rgba(10,14,20,0.95) 60%, rgba(8,12,18,0.96) 100%)",
-        tabBar: "linear-gradient(120deg, rgba(22,28,40,0.9), rgba(12,17,26,0.92))",
-        head: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))"
-      };
-      shadow = {
-        panel: "0 18px 44px rgba(0,0,0,0.45)",
-        window: "0 10px 36px rgba(0,0,0,0.45)",
-        modal: "0 24px 64px rgba(0,0,0,0.55)"
-      };
-      radius = { sm: 6, md: 9, lg: 12, xl: 16, pill: 999 };
-      space = { xs: 4, sm: 6, md: 8, lg: 10, xl: 12 };
-      fontSize = { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 };
-      fontMono = "ui-monospace, SFMono-Regular, Consolas, monospace";
-      layer = { hud: 1000010, window: 2000001 };
-      kebab = (key2) => key2.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
-    }
-  });
-
-  // src/ui/kit/styles/chrome.ts
-  var chromeCss;
-  var init_chrome = __esm({
-    "src/ui/kit/styles/chrome.ts"() {
-      "use strict";
-      init_theme();
-      chromeCss = `
-.qmm-scroll, .qws-pnl-scroll, .qmm-views {
-  scrollbar-width: thin; scrollbar-color: var(--qmm-scrollbar) transparent;
-}
-.qmm-scroll::-webkit-scrollbar, .qws-pnl-scroll::-webkit-scrollbar, .qmm-views::-webkit-scrollbar { width: 6px; }
-.qmm-scroll::-webkit-scrollbar-track, .qws-pnl-scroll::-webkit-scrollbar-track, .qmm-views::-webkit-scrollbar-track { background: transparent; }
-.qmm-scroll::-webkit-scrollbar-thumb, .qws-pnl-scroll::-webkit-scrollbar-thumb, .qmm-views::-webkit-scrollbar-thumb {
-  background: var(--qmm-scrollbar); border-radius: 3px;
-}
-.qmm-scroll::-webkit-scrollbar-thumb:hover, .qws-pnl-scroll::-webkit-scrollbar-thumb:hover, .qmm-views::-webkit-scrollbar-thumb:hover {
-  background: var(--qmm-accent-border);
-}
-
-.qmm { display: flex; flex-direction: column; gap: var(--qmm-space-lg); color: var(--qmm-text); }
-.qmm-compact { gap: var(--qmm-space-sm); }
-.qmm.qmm-alt-drag { cursor: grab; }
-.qmm.qmm-alt-drag:active { cursor: grabbing; }
-
-.qmm-tabs {
-  display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-xs); padding: 8px 10px;
-  border-bottom: 1px solid var(--qmm-border);
-  border-radius: var(--qmm-radius-xl) var(--qmm-radius-xl) 0 0;
-  background: var(--qmm-gradient-tab-bar);
-}
-.qmm-tab {
-  flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: var(--qmm-space-md);
-  margin: 0; padding: 8px 12px; border: 1px solid transparent; border-radius: var(--qmm-radius-lg);
-  background: transparent; color: var(--qmm-text-soft); font-size: var(--qmm-fs-md); cursor: pointer;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
-}
-.qmm-compact .qmm-tab { padding: 6px 10px; }
-.qmm-tab:hover { background: var(--qmm-hover-bg); color: var(--qmm-text); }
-.qmm-tab:active { transform: translateY(1px); }
-.qmm-tab:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
-.qmm-tab.active { background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); color: var(--qmm-accent); }
-
-.qmm-views {
-  display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; padding: 14px;
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-xl);
-  background: var(--qmm-gradient-panel); backdrop-filter: blur(10px); box-shadow: var(--qmm-shadow-panel);
-}
-.qmm-compact .qmm-views { padding: 8px; }
-.qmm-tabs + .qmm-views { border-top: none; border-top-left-radius: 0; border-top-right-radius: 0; }
-.qmm-view { display: none; min-width: 0; min-height: 0; }
-.qmm-view.active { display: block; }
-
-.qmm-spacer { flex: 1; }
-
-.qws-win {
-  position: fixed; z-index: ${layer.window}; min-width: 260px; max-width: 900px; max-height: 90vh; overflow: auto;
-  color: var(--qmm-text); background: var(--qmm-panel-bg);
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-lg);
-  box-shadow: var(--qmm-shadow-window); backdrop-filter: blur(8px);
-}
-.qws-win.is-hidden { display: none !important; }
-.qws-win .w-head {
-  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 10px 12px; cursor: move;
-  border-bottom: 1px solid var(--qmm-border-strong);
-  border-radius: var(--qmm-radius-lg) var(--qmm-radius-lg) 0 0;
-  background: var(--qmm-gradient-head);
-}
-.qws-win .w-title { font-weight: 700; }
-.qws-win .w-body { padding: 12px; }
-
-/* Bare text and number inputs a feature builds inside a window get the field look too. */
-.qws-win input:is([type="text"], [type="number"]):not(.qmm-input, .qws-pnl-input) {
-  padding: 8px 10px; border: 1px solid var(--qmm-field-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-field-bg); color: var(--qmm-text);
-}
-.qws-win input:is([type="text"], [type="number"]):not(.qmm-input, .qws-pnl-input):focus {
-  outline: none; border-color: var(--qmm-accent-border-hover);
-}
-/* Windows give text and number fields one width; an inline width still wins. */
-.qws-win input[type="text"], .qws-win input[type="number"] { width: 120px; }
-
-.qws2 {
-  position: fixed; right: 16px; bottom: 16px; z-index: ${layer.hud};
-  display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 160px; padding: 10px 12px;
-  font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: var(--qmm-text);
-  background: var(--qmm-panel-bg); border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-lg);
-  box-shadow: var(--qmm-shadow-window); backdrop-filter: blur(8px);
-}
-.qws2.hidden { display: none; }
-.qws2 .row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
-.qws2 .title { font-weight: 700; letter-spacing: .2px; }
-.qws2 .drag { cursor: move; opacity: .9; }
-.qws2 .mini { display: none; }
-.qws2.min .mini { display: inline-flex; }
-.qws2.min .body { display: none; }
-.qws2 .is-link { cursor: pointer; }
-
-.qws-launch { margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--qmm-border-strong); }
-.qws-launch .launch-item { display: flex; align-items: center; gap: var(--qmm-space-md); margin: 4px 0; }
-.qws-launch .launch-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-`;
-    }
-  });
-
-  // src/ui/kit/styles/containers.ts
-  var containersCss;
-  var init_containers = __esm({
-    "src/ui/kit/styles/containers.ts"() {
-      "use strict";
-      containersCss = `
-.qmm-card {
-  display: grid; gap: var(--qmm-space-xl); width: 100%; padding: 14px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
-}
-.qmm-card--plain { display: flex; flex-direction: column; gap: var(--qmm-space-lg); width: auto; min-height: 0; padding: 10px; }
-.qmm-card.is-center { text-align: center; align-items: center; }
-.qmm-card.is-stretch { align-items: stretch; }
-.qmm-card[data-tone="muted"] { background: var(--qmm-muted-bg); }
-.qmm-card[data-tone="accent"] { border-color: var(--qmm-accent-border); }
-.qmm-card__header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--qmm-space-lg); }
-.qmm-card__header.is-compact { gap: var(--qmm-space-sm); }
-.qmm-card__icon { font-size: 18px; }
-.qmm-card__title { font-size: var(--qmm-fs-xl); font-weight: 700; letter-spacing: .01em; }
-.qmm-card__subtitle { flex-basis: 100%; font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
-.qmm-card__actions { display: flex; gap: var(--qmm-space-sm); margin-left: auto; }
-.qmm-card__body { display: grid; gap: var(--qmm-space-lg); }
-
-.qmm-section-label {
-  font-size: var(--qmm-fs-xs); font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--qmm-text-dim);
-}
-
-.qmm-collapse { flex-shrink: 0; min-height: auto; }
-.qmm-collapse__head {
-  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 0; border: none; background: none;
-  color: inherit; font: inherit; text-align: left; cursor: pointer;
-}
-.qmm-collapse__titles { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-width: 0; }
-.qmm-collapse__desc { font-size: var(--qmm-fs-sm); line-height: 1.45; color: var(--qmm-text-dim); }
-.qmm-collapse__chevron {
-  flex: 0 0 auto; margin-left: auto; font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim);
-  transition: transform 140ms ease, color 120ms ease;
-}
-.qmm-collapse__head:hover .qmm-collapse__chevron { color: var(--qmm-accent); }
-.qmm-collapse__head[aria-expanded="true"] .qmm-collapse__chevron { transform: rotate(90deg); }
-.qmm-collapse__body { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
-.qmm-collapse.is-collapsed > .qmm-collapse__body { display: none; }
-
-.qmm-setting-row {
-  display: flex; align-items: center; gap: var(--qmm-space-lg); flex-shrink: 0; padding: 8px 10px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md); background: var(--qmm-card-bg);
-}
-.qmm-setting-row__text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
-.qmm-setting-row__title { font-size: var(--qmm-fs-md); color: var(--qmm-text); }
-.qmm-setting-row__hint { font-size: var(--qmm-fs-xs); line-height: 1.4; color: var(--qmm-text-dim); }
-.qmm-setting-row__controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--qmm-space-md); flex: 0 0 auto; }
-
-.qmm-label { opacity: .9; }
-.qmm-flex { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
-.qmm-form-row { display: grid; align-items: center; width: 100%; }
-.qmm-form-row.is-top { align-items: start; }
-.qmm-form-row__label { justify-self: start; margin: 0; font-weight: 600; }
-.qmm-form-row.is-top .qmm-form-row__label { align-self: start; }
-
-.qmm-error {
-  padding: 10px; border: 1px solid var(--qmm-danger-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-danger-soft); color: #fecaca; font-size: var(--qmm-fs-lg); line-height: 1.4;
-}
-.qmm-error[hidden] { display: none; }
-
-.qmm-pill {
-  display: inline-flex; align-items: center; gap: var(--qmm-space-sm); padding: 4px 9px; white-space: nowrap;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-pill);
-  background: var(--qmm-field-bg); color: var(--qmm-text); font-size: var(--qmm-fs-sm); font-weight: 600;
-}
-.qmm-pill.is-ok { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
-.qmm-pill.is-warn { color: var(--qmm-warn); background: var(--qmm-warn-soft); border-color: var(--qmm-warn-border); }
-.qmm-pill.is-bad { color: var(--qmm-danger); background: var(--qmm-danger-soft); border-color: var(--qmm-danger-border); }
-.qmm-badge {
-  align-self: flex-start; padding: 2px 7px; border-radius: var(--qmm-radius-pill);
-  font-size: var(--qmm-fs-xs); font-weight: 600;
-}
-.qmm-badge.is-ok { color: var(--qmm-accent); background: var(--qmm-accent-soft); }
-.qmm-badge.is-warn { color: var(--qmm-warn); background: var(--qmm-warn-soft); }
-.qmm-meter {
-  position: relative; flex: 1 1 auto; min-width: 60px; height: 5px; overflow: hidden;
-  border-radius: var(--qmm-radius-pill); background: var(--qmm-border);
-}
-.qmm-meter__fill {
-  position: absolute; inset: 0 auto 0 0; width: 0%; border-radius: var(--qmm-radius-pill);
-  background: var(--qmm-accent); transition: width 200ms ease, background 200ms ease;
-}
-.qmm-meter__fill.is-warn { background: var(--qmm-warn); }
-
-.qmm-vtabs { display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 0; }
-.qmm-vtabs .filter input { width: 100%; }
-.qmm-vlist-wrap { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; width: 100%; }
-.qmm-vlist {
-  flex: 0 0 auto; min-width: 0; padding: 6px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
-}
-.qmm-vlist.is-scroll { flex: 1 1 auto; overflow: auto; }
-.qmm-vlist__items { display: flex; flex-direction: column; gap: var(--qmm-space-xs); margin: 0; padding: 0; list-style: none; }
-.qmm-vlist__empty { opacity: .75; }
-.qmm-vtab {
-  display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: var(--qmm-space-lg); width: 100%;
-  padding: 8px 10px; border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-card-bg); color: inherit; text-align: left; cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
-}
-.qmm-vtab:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); }
-.qmm-vtab:active { transform: translateY(1px); }
-.qmm-vtab.active { background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
-.qmm-dot { width: 10px; height: 10px; justify-self: center; border-radius: 50%; box-shadow: 0 0 0 1px #0006 inset; }
-.qmm-chip { display: flex; align-items: center; gap: var(--qmm-space-md); min-width: 0; }
-.qmm-chip img { width: 20px; height: 20px; object-fit: cover; border: 1px solid var(--qmm-border); border-radius: 50%; }
-.qmm-chip__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.qmm-chip .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.qmm-chip__sub { font-size: var(--qmm-fs-md); opacity: .7; }
-.qmm-tag {
-  padding: 3px 7px; font-size: var(--qmm-fs-sm); line-height: 1;
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-hover-bg);
-}
-
-/* Drag handle for reorderable lists. */
-.qmm-grab {
-  display: grid; grid-template-columns: repeat(2, 3px); grid-template-rows: repeat(3, 3px);
-  align-content: center; justify-content: center; gap: 2px; margin-left: auto; padding: 4px 3px;
-  opacity: .8; cursor: grab; user-select: none;
-}
-.qmm-grab:active { cursor: grabbing; }
-.qmm-grab-dot { width: 3px; height: 3px; border-radius: 999px; background: var(--qmm-text-soft); }
-.qmm-dragging { opacity: .6; }
-
-/* Selectable tile of the skins grid. */
-.qws-pnl-cell {
-  position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 1; cursor: pointer;
-  border: 1px solid var(--qmm-border); border-radius: 10px; background: var(--qmm-card-bg);
-  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
-}
-.qws-pnl-cell:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); transform: translateY(-1px); }
-.qws-pnl-cell.is-active { border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft); }
-.qws-pnl-cell.is-skinned::after {
-  content: ''; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%;
-  background: var(--qmm-accent);
-}
-
-.qmm-icon-box { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
-.qmm-icon-box > img { max-width: 100%; max-height: 100%; image-rendering: auto; }
-
-.qmm-modal-scrim {
-  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px;
-  background: var(--qmm-scrim); backdrop-filter: blur(4px);
-}
-.qmm-modal {
-  display: flex; flex-direction: column; overflow: hidden; color: var(--qmm-text);
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-xl);
-  background: var(--qmm-surface); box-shadow: var(--qmm-shadow-modal);
-}
-.qmm-modal__head {
-  display: flex; align-items: center; gap: var(--qmm-space-lg); flex: 0 0 auto; padding: 12px 14px;
-  border-bottom: 1px solid var(--qmm-border);
-}
-.qmm-modal__title { flex: 1; min-width: 0; font-size: var(--qmm-fs-xl); font-weight: 600; color: var(--qmm-text); }
-.qmm-modal__close {
-  flex: 0 0 auto; width: 28px; height: 28px; cursor: pointer;
-  border: 1px solid var(--qmm-border); border-radius: 8px; background: var(--qmm-card-bg);
-  color: var(--qmm-text-dim); font-size: var(--qmm-fs-md); line-height: 1;
-}
-.qmm-modal__close:hover { color: var(--qmm-text); border-color: var(--qmm-border-hover); }
-.qmm-modal__body {
-  display: flex; flex-direction: column; gap: var(--qmm-space-lg); flex: 1 1 auto; min-height: 0;
-  padding: 12px 14px; overflow-y: auto;
-}
-.qmm-modal__foot {
-  display: flex; align-items: center; gap: var(--qmm-space-lg); flex: 0 0 auto; padding: 12px 14px;
-  border-top: 1px solid var(--qmm-border);
-}
-.qmm-modal__foot:empty { display: none; }
-
-.qmm-menu-card {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 11px 12px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
-  font: inherit; text-align: left; cursor: pointer; transition: background 120ms ease, border-color 120ms ease;
-}
-.qmm-menu-card:hover:not(:disabled) { background: var(--qmm-hover-bg); }
-.qmm-menu-card:disabled { opacity: .55; cursor: default; }
-.qmm-menu-card__name { font-size: var(--qmm-fs-lg); font-weight: 600; color: var(--qmm-text); }
-.qmm-menu-card__detail { font-size: 11.5px; line-height: 1.45; color: var(--qmm-text-dim); }
-.qmm-menu-card:disabled .qmm-menu-card__name { color: var(--qmm-text-dim); }
-.qmm-menu-card:disabled .qmm-menu-card__detail { color: var(--qmm-accent); }
-`;
-    }
-  });
-
-  // src/ui/kit/styles/controls.ts
-  var controlsCss;
-  var init_controls = __esm({
-    "src/ui/kit/styles/controls.ts"() {
-      "use strict";
-      controlsCss = `
-.qmm-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: var(--qmm-space-sm); padding: 8px 14px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-card-bg); color: var(--qmm-text);
-  font-size: var(--qmm-fs-lg); font-weight: 600; line-height: 1.2; cursor: pointer; user-select: none;
-  transition: background 120ms ease, border-color 120ms ease, color 120ms ease, opacity 120ms ease, transform 100ms ease;
-}
-.qmm-compact .qmm-btn:where(:not(.qmm-btn--sm, .qmm-btn--xs, .qmm-btn--icon)) { padding: 6px 10px; }
-.qmm-btn:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); }
-.qmm-btn:active { transform: translateY(1px); }
-.qmm-btn:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
-.qmm-btn:disabled, .qmm-btn.is-disabled { opacity: .4; pointer-events: none; }
-.qmm-btn.is-busy { opacity: .6; pointer-events: none; }
-.qmm-btn--sm { padding: 7px 12px; font-size: var(--qmm-fs-sm); white-space: nowrap; }
-.qmm-btn--xs { padding: 4px 8px; font-size: var(--qmm-fs-sm); }
-.qmm-btn--full { width: 100%; }
-.qmm-btn--block { display: flex; }
-.qmm-btn--icon { width: 34px; height: 34px; padding: 6px; gap: 0; border-radius: 50%; }
-.qmm-btn__icon { display: inline-flex; align-items: center; justify-content: center; font-size: 1.1em; }
-.qmm-btn__icon.is-right { order: 2; }
-.qmm-btn--primary { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
-.qmm-btn--primary:hover { background: var(--qmm-accent-hover); border-color: var(--qmm-accent-border-hover); }
-.qmm-btn--danger { color: var(--qmm-danger); background: var(--qmm-danger-soft); border-color: var(--qmm-danger-border); }
-.qmm-btn--danger:hover { background: var(--qmm-danger-hover); border-color: var(--qmm-danger-border-hover); }
-.qmm-btn--ghost { background: transparent; border-color: transparent; }
-.qmm-btn--ghost:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border); }
-.qmm-btn.active { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
-
-.qmm-input, .qws-pnl-input {
-  padding: 8px 10px; border: 1px solid var(--qmm-field-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-field-bg); color: var(--qmm-text); outline: none;
-  transition: border-color 120ms ease, background 120ms ease;
-}
-.qmm-input { min-width: 90px; }
-.qws-pnl-input { font-size: var(--qmm-fs-md); }
-.qmm-input::placeholder, .qws-pnl-input::placeholder { color: var(--qmm-text-dim); }
-.qmm-input:focus, .qws-pnl-input:focus { border-color: var(--qmm-accent-border-hover); }
-.qmm-input option, .qws-pnl-input option { background: var(--qmm-surface); color: var(--qmm-text); }
-.qmm-input--sm { min-width: 0; padding: 6px 9px; font-size: 11.5px; }
-.qmm-select { cursor: pointer; }
-
-.qmm-input-number { display: inline-flex; align-items: center; gap: var(--qmm-space-sm); }
-.qmm-input-number-input { width: 70px; text-align: center; }
-.qmm-spin { display: inline-flex; flex-direction: column; gap: 2px; }
-.qmm-step {
-  display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 16px; padding: 0;
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-sm);
-  background: var(--qmm-hover-bg); color: var(--qmm-text); font-size: 11px; line-height: 1;
-  cursor: pointer; user-select: none; transition: border-color 120ms ease, color 120ms ease;
-}
-.qmm-step:hover { border-color: var(--qmm-accent-border); color: var(--qmm-accent); }
-.qmm-step:active { transform: translateY(1px); }
-
-.qmm-radio { transform: scale(1.1); accent-color: var(--qmm-accent); }
-
-.qmm-switch {
-  -webkit-appearance: none; appearance: none; position: relative; flex-shrink: 0;
-  width: 36px; height: 20px; margin: 0; vertical-align: middle; cursor: pointer;
-  border: 1px solid var(--qmm-field-border); border-radius: 10px; background: var(--qmm-track);
-  transition: background 150ms ease, border-color 150ms ease;
-}
-.qmm-switch::before {
-  content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%;
-  background: var(--qmm-text-dim); transition: transform 150ms ease, background 150ms ease;
-}
-.qmm-switch:checked { background: var(--qmm-accent-hover); border-color: var(--qmm-accent-border-hover); }
-.qmm-switch:checked::before { transform: translateX(16px); background: var(--qmm-accent); }
-.qmm-switch:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
-.qmm-switch:disabled { opacity: .4; cursor: not-allowed; }
-
-.qmm-chip-toggle {
-  display: inline-flex; align-items: stretch; cursor: pointer;
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-card-bg);
-  transition: border-color 120ms ease, background 120ms ease;
-}
-.qmm-chip-toggle:hover { border-color: var(--qmm-accent-border); }
-.qmm-chip-toggle input { display: none; }
-.qmm-chip-toggle__face { display: flex; align-items: center; gap: var(--qmm-space-md); padding: 6px 12px; border-radius: var(--qmm-radius-pill); }
-.qmm-chip-toggle input:checked + .qmm-chip-toggle__face {
-  color: var(--qmm-accent); background: var(--qmm-accent-soft); box-shadow: inset 0 0 0 1px var(--qmm-accent-border);
-}
-.qmm-chip-toggle__icon { font-size: 14px; }
-.qmm-chip-toggle__label { font-weight: 600; }
-.qmm-chip-toggle__desc { font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
-.qmm-chip-toggle__badge {
-  padding: 2px 6px; font-size: var(--qmm-fs-sm);
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-hover-bg);
-}
-
-.qmm-range, .qws-pnl-range {
-  -webkit-appearance: none; appearance: none; height: 16px; margin: 0; padding: 0;
-  border: none; background: transparent; outline: none; cursor: pointer;
-}
-.qmm-range { width: 180px; }
-.qws-pnl-range { width: 100%; }
-.qmm-range::-webkit-slider-runnable-track, .qws-pnl-range::-webkit-slider-runnable-track {
-  height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
-}
-.qmm-range::-moz-range-track, .qws-pnl-range::-moz-range-track {
-  height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
-}
-.qmm-range::-webkit-slider-thumb, .qws-pnl-range::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none; width: 13px; height: 13px; margin-top: -4.5px;
-  border: none; border-radius: 50%; background: var(--qmm-accent); cursor: pointer;
-  transition: transform 120ms ease, box-shadow 120ms ease;
-}
-.qmm-range::-moz-range-thumb, .qws-pnl-range::-moz-range-thumb {
-  width: 13px; height: 13px; border: none; border-radius: 50%; background: var(--qmm-accent); cursor: pointer;
-}
-.qmm-range:hover::-webkit-slider-thumb, .qws-pnl-range:hover::-webkit-slider-thumb {
-  transform: scale(1.15); box-shadow: 0 0 0 4px var(--qmm-accent-soft);
-}
-.qmm-range:disabled, .qws-pnl-range:disabled { opacity: .4; cursor: not-allowed; }
-.qmm-range:disabled::-webkit-slider-thumb, .qws-pnl-range:disabled::-webkit-slider-thumb { background: var(--qmm-text-dim); }
-.qmm-range:disabled::-moz-range-thumb, .qws-pnl-range:disabled::-moz-range-thumb { background: var(--qmm-text-dim); }
-
-.qmm-range-dual { position: relative; width: 100%; padding: 18px 0 10px; }
-.qmm-range-dual-track {
-  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
-  height: 6px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
-}
-.qmm-range-dual-fill {
-  position: absolute; top: 50%; transform: translateY(-50%); height: 6px;
-  border-radius: var(--qmm-radius-pill); background: var(--qmm-accent); transition: left .12s ease, right .12s ease;
-}
-.qmm-range-dual-input {
-  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
-  width: 100%; height: 28px; pointer-events: none;
-}
-.qmm-range-dual-input::-webkit-slider-runnable-track { background: none; }
-.qmm-range-dual-input::-moz-range-track { background: none; }
-.qmm-range-dual-input::-webkit-slider-thumb {
-  pointer-events: auto; width: 16px; height: 16px; margin-top: -6px;
-  background: var(--qmm-accent); border: 2px solid var(--qmm-surface); box-shadow: 0 2px 8px rgba(0,0,0,.35);
-}
-.qmm-range-dual-input::-moz-range-thumb {
-  pointer-events: auto; width: 16px; height: 16px;
-  background: var(--qmm-accent); border: 2px solid var(--qmm-surface); box-shadow: 0 2px 8px rgba(0,0,0,.35);
-}
-.qmm-range-dual-input--min { z-index: 2; }
-.qmm-range-dual-input--max { z-index: 3; }
-
-/* --seg-pad, --seg-fill and --seg-stroke-color let a caller tint one control (the calculator does). */
-.qmm-seg {
-  position: relative; display: inline-flex; align-items: center; gap: var(--qmm-space-sm); overflow: hidden;
-  padding: var(--seg-pad, 8px); border-radius: var(--qmm-radius-pill);
-  background: var(--qmm-bg-soft, var(--qmm-sunken)); background-clip: padding-box;
-  border: 1px solid var(--qmm-border-2, var(--qmm-border));
-}
-.qmm-seg--full { display: flex; width: 100%; }
-.qmm-seg__btn {
-  position: relative; z-index: 1; padding: 8px 14px; border: 0; border-radius: var(--qmm-radius-pill);
-  appearance: none; background: transparent; color: var(--qmm-text-dim);
-  font: inherit; line-height: 1; white-space: nowrap; cursor: pointer;
-  transition: color .15s ease, transform .06s ease;
-}
-.qmm-seg__btn-label { display: inline-flex; align-items: center; justify-content: center; white-space: inherit; }
-.qmm-compact .qmm-seg__btn { padding: 6px 10px; }
-.qmm-seg__btn:hover { color: var(--qmm-text); }
-.qmm-seg__btn.active { color: var(--qmm-text); font-weight: 600; }
-.qmm-seg__btn:active { transform: translateY(1px); }
-.qmm-seg__btn[disabled] { opacity: .5; cursor: not-allowed; }
-.qmm-seg__indicator {
-  position: absolute; top: 0; left: 0; width: 40px; height: 100%; border-radius: inherit; pointer-events: none;
-  background: var(--seg-fill, var(--qmm-accent-soft));
-  outline: 1.2px solid var(--seg-stroke-color, var(--qmm-accent-border-hover)); outline-offset: -1.2px;
-  transform-origin: left center; will-change: transform, width, opacity;
-  transition: transform .18s cubic-bezier(.2,.8,.2,1), width .18s cubic-bezier(.2,.8,.2,1), opacity .18s ease-out;
-}
-@media (prefers-reduced-motion: reduce) {
-  .qmm-seg__indicator, .qmm-seg__btn { transition: none; }
-}
-
-.qmm-hotkey {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: var(--qmm-hotkey-w, 180px); min-width: 104px; padding: 7px 12px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-field-bg); color: var(--qmm-text);
-  font-family: inherit; font-size: var(--qmm-fs-sm); font-weight: 600; white-space: nowrap;
-  cursor: pointer; user-select: none; transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
-}
-.qmm-hotkey:hover { border-color: var(--qmm-border-hover); }
-.qmm-hotkey:focus-visible { outline: none; }
-.qmm-hotkey.is-assigned { color: var(--qmm-accent); border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft); }
-.qmm-hotkey.is-empty { color: var(--qmm-text-dim); font-weight: 500; }
-.qmm-hotkey.is-recording {
-  color: var(--qmm-warn); border-color: var(--qmm-warn-border); background: var(--qmm-warn-soft);
-  animation: qmm-hotkey-breathe 1.2s ease-in-out infinite;
-}
-@keyframes qmm-hotkey-breathe {
-  0% { box-shadow: 0 0 0 0 rgba(251,191,36,.45); }
-  60% { box-shadow: 0 0 0 10px rgba(251,191,36,0); }
-  100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
-}
-`;
-    }
-  });
-
-  // src/ui/kit/styles/index.ts
-  function ensureKitStyles() {
-    if (injected) return;
-    if (typeof document === "undefined" || typeof document.getElementById !== "function") return;
-    injected = true;
-    if (document.getElementById(STYLE_ID3)) return;
-    const style2 = document.createElement("style");
-    style2.id = STYLE_ID3;
-    style2.textContent = [themeVariables(), chromeCss, controlsCss, containersCss].join("\n");
-    (document.head || document.documentElement).appendChild(style2);
-  }
-  var STYLE_ID3, injected;
-  var init_styles = __esm({
-    "src/ui/kit/styles/index.ts"() {
-      "use strict";
-      init_theme();
-      init_chrome();
-      init_containers();
-      init_controls();
-      STYLE_ID3 = "qmm-kit-css";
-      injected = false;
-    }
-  });
-
-  // src/ui/kit/dom.ts
-  function h(tag, className, text2) {
-    ensureKitStyles();
-    const el = document.createElement(tag);
-    if (className) el.className = className;
-    if (text2 != null) el.textContent = text2;
-    return el;
-  }
-  function iconNode(icon2, className) {
-    const node = typeof icon2 === "string" ? h("span", void 0, icon2) : icon2;
-    node.classList.add(className);
-    return node;
-  }
-  var init_dom = __esm({
-    "src/ui/kit/dom.ts"() {
-      "use strict";
-      init_styles();
     }
   });
 
@@ -34103,117 +32788,6 @@
     }
   });
 
-  // src/ui/kit/fields.ts
-  function textInput(placeholder = "", value = "", opts = {}) {
-    const input = h("input", opts.small ? "qmm-input qmm-input--sm" : "qmm-input");
-    input.type = "text";
-    input.placeholder = placeholder;
-    input.value = value;
-    return input;
-  }
-  function numberInput(min = 0, max = 9999, step = 1, value = 0) {
-    const wrap = h("div", "qmm-input-number");
-    const input = h("input", "qmm-input qmm-input-number-input");
-    input.type = "number";
-    input.min = String(min);
-    input.max = String(max);
-    input.step = String(step);
-    input.value = String(value);
-    input.inputMode = "numeric";
-    const clampValue = () => {
-      const n = Number(input.value);
-      if (!Number.isFinite(n)) return;
-      const clamped = clamp(n, Number(input.min), Number(input.max));
-      if (clamped !== n) input.value = String(clamped);
-    };
-    const bump = (dir) => {
-      if (dir < 0) input.stepDown();
-      else input.stepUp();
-      clampValue();
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-    };
-    const spin = h("div", "qmm-spin");
-    spin.append(stepButton("\u25B2", () => bump(1)), stepButton("\u25BC", () => bump(-1)));
-    input.addEventListener("change", clampValue);
-    wrap.append(input, spin);
-    input.wrap = wrap;
-    return input;
-  }
-  function stepButton(glyph, bump) {
-    const btn = h("button", "qmm-step", glyph);
-    btn.type = "button";
-    let pressTimer = null;
-    let repeatTimer = null;
-    let repeated = false;
-    const stop2 = () => {
-      if (pressTimer != null) clearTimeout(pressTimer);
-      if (repeatTimer != null) clearInterval(repeatTimer);
-      pressTimer = repeatTimer = null;
-    };
-    btn.addEventListener("pointerdown", (ev) => {
-      repeated = false;
-      pressTimer = window.setTimeout(() => {
-        repeated = true;
-        bump();
-        repeatTimer = window.setInterval(bump, 60);
-      }, 300);
-      btn.setPointerCapture?.(ev.pointerId);
-    });
-    for (const type of ["pointerup", "pointercancel", "pointerleave", "blur"]) btn.addEventListener(type, stop2);
-    btn.addEventListener("click", (e) => {
-      if (repeated) {
-        e.preventDefault();
-        e.stopPropagation();
-        repeated = false;
-        return;
-      }
-      bump();
-    });
-    return btn;
-  }
-  function select2(opts = {}) {
-    const sel = h("select", opts.small ? "qmm-input qmm-input--sm qmm-select" : "qmm-input qmm-select");
-    if (opts.id) sel.id = opts.id;
-    if (opts.width) sel.style.minWidth = opts.width;
-    if (opts.placeholder) {
-      const opt = h("option", void 0, opts.placeholder);
-      opt.value = "";
-      opt.disabled = true;
-      opt.selected = true;
-      sel.appendChild(opt);
-    }
-    return sel;
-  }
-  function radio(name, value, checked = false) {
-    const input = h("input", "qmm-radio");
-    input.type = "radio";
-    input.name = name;
-    input.value = value;
-    input.checked = checked;
-    return input;
-  }
-  function radioGroup(name, options, selected, onChange) {
-    const wrap = h("div", "qmm-radio-group");
-    for (const { value, label: label2 } of options) {
-      const input = radio(name, value, selected === value);
-      input.onchange = () => {
-        if (input.checked) onChange(value);
-      };
-      const row2 = h("label", "qmm-radio-label");
-      row2.append(input, label2);
-      wrap.appendChild(row2);
-    }
-    return wrap;
-  }
-  var init_fields = __esm({
-    "src/ui/kit/fields.ts"() {
-      "use strict";
-      init_math();
-      init_dom();
-    }
-  });
-
   // src/ui/kit/hotkey.ts
   function hotkeyButton(initial, onChange, opts = {}) {
     const emptyLabel = opts.emptyLabel ?? "None";
@@ -34702,41 +33276,6 @@
     "src/ui/kit/sliders.ts"() {
       "use strict";
       init_math();
-      init_dom();
-    }
-  });
-
-  // src/ui/kit/toggles.ts
-  function switchInput(checked = false, onChange) {
-    const input = h("input", "qmm-switch");
-    input.type = "checkbox";
-    input.checked = checked;
-    input.setChecked = (value) => {
-      input.checked = value;
-    };
-    if (onChange) input.addEventListener("change", () => onChange(input.checked));
-    return input;
-  }
-  function toggleChip(labelText, opts = {}) {
-    const root = h("label", "qmm-chip-toggle");
-    if (opts.tooltip) root.title = opts.tooltip;
-    const input = h("input");
-    input.type = opts.type || "checkbox";
-    if (opts.name) input.name = opts.name;
-    if (opts.value) input.value = opts.value;
-    input.checked = !!opts.checked;
-    const face = h("div", "qmm-chip-toggle__face");
-    if (opts.icon) face.appendChild(iconNode(opts.icon, "qmm-chip-toggle__icon"));
-    const label2 = h("span", "qmm-chip-toggle__label", labelText);
-    face.appendChild(label2);
-    if (opts.description) face.appendChild(h("span", "qmm-chip-toggle__desc", opts.description));
-    if (opts.badge) face.appendChild(h("span", "qmm-chip-toggle__badge", opts.badge));
-    root.append(input, face);
-    return { root, input, label: label2 };
-  }
-  var init_toggles = __esm({
-    "src/ui/kit/toggles.ts"() {
-      "use strict";
       init_dom();
     }
   });
@@ -35578,9 +34117,9 @@
             return;
           }
           try {
-            setText(pre, await jGet(atom));
+            setText2(pre, await jGet(atom));
           } catch (e) {
-            setText(pre, e?.message || String(e));
+            setText2(pre, e?.message || String(e));
           }
         }
       });
@@ -35602,7 +34141,7 @@
           }
           unsubRef = await jSub(atom, async () => {
             try {
-              setText(pre, await jGet(atom));
+              setText2(pre, await jGet(atom));
             } catch {
             }
           });
@@ -35677,7 +34216,7 @@
       controls.append(q, btnSet, btnCopy);
       card5.body.append(controls, ta);
     }
-    function setText(el, v) {
+    function setText2(el, v) {
       el.textContent = typeof v === "string" ? v : JSON.stringify(v, null, 2);
     }
   }
@@ -39958,14 +38497,14 @@ next: ${next}`;
     iconWrap.appendChild(fallbackIcon);
     wrap.appendChild(iconWrap);
     attachWeatherSpriteIcon(iconWrap, key2, computedIconSize);
-    const caption = applyStyles(document.createElement("div"), {
+    const caption2 = applyStyles(document.createElement("div"), {
       fontSize: dense ? "11px" : "11.5px",
       fontWeight: dense ? "500" : "600",
       opacity: "0.85",
       textAlign: "center"
     });
-    caption.textContent = label2;
-    wrap.appendChild(caption);
+    caption2.textContent = label2;
+    wrap.appendChild(caption2);
     const applyDisabledState = () => {
       if (input.disabled) {
         wrap.style.cursor = "default";
@@ -46704,20 +45243,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const value = document.createElement("div");
     css(value, { fontSize: "19px", fontWeight: "700", color: TEXT, lineHeight: "1.1" });
-    const caption = document.createElement("div");
-    css(caption, {
+    const caption2 = document.createElement("div");
+    css(caption2, {
       fontSize: "9.5px",
       color: TEXT_DIM,
       textTransform: "uppercase",
       letterSpacing: "0.06em",
       whiteSpace: "nowrap"
     });
-    root.append(value, caption);
+    root.append(value, caption2);
     return {
       root,
       set: (nextValue, nextCaption, tone) => {
         value.textContent = nextValue;
-        caption.textContent = nextCaption;
+        caption2.textContent = nextCaption;
         css(value, { color: tone ?? TEXT });
       }
     };
@@ -46937,21 +45476,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       updateSummary2();
     };
     const onPauseState = () => updateControls();
-    const listeners9 = [
+    const listeners8 = [
       [`${config.eventPrefix}:progress`, onProgress],
       [`${config.eventPrefix}:done`, onComplete],
       [`${config.eventPrefix}:error`, onComplete],
       [`${config.eventPrefix}:paused`, onPauseState],
       [`${config.eventPrefix}:resumed`, onPauseState]
     ];
-    for (const [type, handler] of listeners9) window.addEventListener(type, handler);
+    for (const [type, handler] of listeners8) window.addEventListener(type, handler);
     updateSummary2();
     updateControls();
     return {
       root: section4.root,
       cleanup: () => {
         clearSummaryTimer();
-        for (const [type, handler] of listeners9) window.removeEventListener(type, handler);
+        for (const [type, handler] of listeners8) window.removeEventListener(type, handler);
       }
     };
   }
@@ -48208,9 +46747,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       needsNewInventoryEntry: fromStorage > 0 && entry.invQty <= 0
     };
   }
-  async function readAtom(read) {
+  async function readAtom(read2) {
     try {
-      return await read();
+      return await read2();
     } catch {
       return null;
     }
@@ -51606,7 +50145,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     await PlayerService.teleport(tileId % cols, Math.floor(tileId / cols));
     await toastSimple("Teleport", `Teleported to ${await playerName(playerId2)}'s garden`, "success");
   }
-  async function playersInRoom() {
+  async function playersInRoom2() {
     try {
       return clampFinite(Math.floor(Number(await Atoms.server.numPlayers.get())), 1, 6, 1);
     } catch {
@@ -51617,7 +50156,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     try {
       const items = inventoryOfSlot(await playerSlot(playerId2))?.items ?? [];
       if (!items.length) return 0;
-      return sumInventoryValue(items, void 0, await playersInRoom());
+      return sumInventoryValue(items, void 0, await playersInRoom2());
     } catch {
       return 0;
     }
@@ -51626,7 +50165,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     try {
       const garden3 = gardenOfSlot(await playerSlot(playerId2));
       if (!garden3) return 0;
-      return sumGardenValue(garden3.tileObjects ?? {}, void 0, await playersInRoom());
+      return sumGardenValue(garden3.tileObjects ?? {}, void 0, await playersInRoom2());
     } catch {
       return 0;
     }
@@ -57013,7 +55552,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/chat/index.ts
   function notify2() {
-    for (const listener of [...listeners8]) {
+    for (const listener of [...listeners7]) {
       try {
         listener();
       } catch {
@@ -57254,7 +55793,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (captured.kind === "sell") return captured.plan.sell.length;
     return captured.picks.length;
   }
-  var ALERT_DEDUPE_MS, state2, listeners8, nextProposalSeq, ACCEPTANCE, CompanionChat;
+  var ALERT_DEDUPE_MS, state2, listeners7, nextProposalSeq, ACCEPTANCE, CompanionChat;
   var init_chat = __esm({
     "src/features/companion/chat/index.ts"() {
       "use strict";
@@ -57287,7 +55826,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         run: null,
         cancelRequested: false
       };
-      listeners8 = /* @__PURE__ */ new Set();
+      listeners7 = /* @__PURE__ */ new Set();
       nextProposalSeq = 1;
       ACCEPTANCE = {
         harvest: "Yes, go ahead",
@@ -57349,8 +55888,8 @@ Restore figures are averages; unlucky streaks do worse.`;
           return state2.run !== null;
         },
         subscribe(listener) {
-          listeners8.add(listener);
-          return () => listeners8.delete(listener);
+          listeners7.add(listener);
+          return () => listeners7.delete(listener);
         },
         /** Alerte poussée par une source ; ignorée si identique et récente. */
         alert(text2) {
@@ -57838,7 +56377,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     return box2;
   }
-  function petSpeciesOf(pet) {
+  function petSpeciesOf2(pet) {
     const species = pet?.petSpecies;
     return typeof species === "string" && species ? species : null;
   }
@@ -57849,7 +56388,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return box3;
     }
     if ("petThing" in tag) {
-      const species = petSpeciesOf(tag.petThing.pet);
+      const species = petSpeciesOf2(tag.petThing.pet);
       if (!species) return null;
       const box3 = holder(sizePx);
       attachSpriteIcon(box3, ["pet"], [species, species.replace(/\s+/g, "")], sizePx, SPRITE_LOG_TAG4);
@@ -59724,7 +58263,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/antiAfk/antiAfk.ts
   function createAntiAfkController(deps) {
     const STOP_EVENTS = ["visibilitychange", "blur", "focus", "focusout", "pagehide", "freeze", "resume"];
-    const listeners9 = [];
+    const listeners8 = [];
     function swallowAll() {
       const add = (target, t) => {
         const h2 = (e) => {
@@ -59732,7 +58271,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           e.preventDefault?.();
         };
         target.addEventListener(t, h2, { capture: true });
-        listeners9.push({ t, h: h2, target });
+        listeners8.push({ t, h: h2, target });
       };
       STOP_EVENTS.forEach((t) => {
         add(document, t);
@@ -59740,11 +58279,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
     }
     function unswallowAll() {
-      for (const { t, h: h2, target } of listeners9) try {
+      for (const { t, h: h2, target } of listeners8) try {
         target.removeEventListener(t, h2, { capture: true });
       } catch {
       }
-      listeners9.length = 0;
+      listeners8.length = 0;
     }
     const docProto = Object.getPrototypeOf(document);
     const saved = {
@@ -60613,15 +59152,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       lastSpamLineAt: Number.NEGATIVE_INFINITY
     };
   }
-  function observeOwnEmote(state5, read) {
-    if (!read) return { state: state5, fresh: null };
-    if (!state5.primed || state5.scope !== read.scope) {
+  function observeOwnEmote(state5, read2) {
+    if (!read2) return { state: state5, fresh: null };
+    if (!state5.primed || state5.scope !== read2.scope) {
       return {
-        state: { ...state5, primed: true, scope: read.scope, seenAt: read.latest?.at ?? Number.NEGATIVE_INFINITY },
+        state: { ...state5, primed: true, scope: read2.scope, seenAt: read2.latest?.at ?? Number.NEGATIVE_INFINITY },
         fresh: null
       };
     }
-    const latest = read.latest;
+    const latest = read2.latest;
     if (!latest || latest.at <= state5.seenAt) return { state: state5, fresh: null };
     return { state: { ...state5, seenAt: latest.at }, fresh: latest };
   }

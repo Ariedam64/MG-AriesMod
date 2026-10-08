@@ -42,7 +42,8 @@
     "check:cataloglive": "esbuild scripts/checkCatalogLive.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkCatalogLive.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkCatalogLive.cjs",
     "check:abilitycolors": "esbuild scripts/checkAbilityChipColors.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkAbilityChipColors.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkAbilityChipColors.cjs",
     "check:outgoing": "esbuild scripts/checkOutgoingRules.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkOutgoingRules.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkOutgoingRules.cjs",
-    "check:calculator": "esbuild scripts/checkCalculator.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkCalculator.cjs --log-level=error && node -e \"globalThis.window=globalThis;globalThis.document={};require('./node_modules/.cache/checkCalculator.cjs')\""
+    "check:calculator": "esbuild scripts/checkCalculator.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkCalculator.cjs --log-level=error && node -e \"globalThis.window=globalThis;globalThis.document={};require('./node_modules/.cache/checkCalculator.cjs')\"",
+    "check:inventorysort": "esbuild scripts/checkInventorySort.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkInventorySort.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkInventorySort.cjs"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",
