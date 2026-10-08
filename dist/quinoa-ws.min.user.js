@@ -13214,23 +13214,23 @@
   background: transparent; cursor: pointer; margin: 0;
 }
 .${SLIDER_CLASS}::-webkit-slider-runnable-track {
-  height: 4px; border-radius: 999px; background: #2b3441;
+  height: 4px; border-radius: 999px; background: ${color.track};
 }
 .${SLIDER_CLASS}::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
   width: ${THUMB_SIZE_PX}px; height: ${THUMB_SIZE_PX}px;
   margin-top: ${(4 - THUMB_SIZE_PX) / 2}px;
-  border-radius: 50%; background: #5eead4; border: none;
+  border-radius: 50%; background: ${color.accent}; border: none;
   box-shadow: 0 1px 4px rgba(0,0,0,0.45);
 }
 .${SLIDER_CLASS}::-moz-range-track {
-  height: 4px; border-radius: 999px; background: #2b3441;
+  height: 4px; border-radius: 999px; background: ${color.track};
 }
 .${SLIDER_CLASS}::-moz-range-thumb {
   width: ${THUMB_SIZE_PX}px; height: ${THUMB_SIZE_PX}px;
-  border-radius: 50%; background: #5eead4; border: none;
+  border-radius: 50%; background: ${color.accent}; border: none;
 }
-.${SLIDER_CLASS}:focus-visible { outline: 2px solid #5eead4; outline-offset: 2px; }
+.${SLIDER_CLASS}:focus-visible { outline: 2px solid ${color.accent}; outline-offset: 2px; }
   `;
     document.head.appendChild(style2);
   }
@@ -13292,8 +13292,8 @@
       display: "grid",
       placeItems: "center",
       borderRadius: "8px",
-      border: "1px solid #2b3441",
-      background: "rgba(10,14,20,0.9)",
+      border: `1px solid ${color.borderStrong}`,
+      background: color.sunken,
       overflow: "hidden"
     });
     return box;
@@ -13337,12 +13337,12 @@
       const mark = document.createElement("div");
       mark.style.width = "1px";
       mark.style.height = "5px";
-      mark.style.background = "#2b3441";
+      mark.style.background = color.track;
       const caption = document.createElement("div");
       caption.textContent = text2;
       caption.style.fontSize = "10px";
       caption.style.whiteSpace = "nowrap";
-      caption.style.color = "#8b97a8";
+      caption.style.color = color.textDim;
       cell.append(mark, caption);
       root4.appendChild(cell);
       return { mark, caption };
@@ -13350,8 +13350,8 @@
     const setActive = (index) => {
       cells.forEach(({ mark, caption }, i) => {
         const active3 = i === index;
-        mark.style.background = active3 ? "#5eead4" : "#2b3441";
-        caption.style.color = active3 ? "#5eead4" : "#8b97a8";
+        mark.style.background = active3 ? color.accent : color.track;
+        caption.style.color = active3 ? color.accent : color.textDim;
         caption.style.fontWeight = active3 ? "700" : "400";
       });
     };
@@ -13415,6 +13415,7 @@
       "use strict";
       init_data();
       init_iconCache();
+      init_theme();
       ANGLE_NONE = 0;
       ANGLE_MIRRORED_NONE = -360;
       FULL_TURN_DEGREES = 360;
@@ -13424,7 +13425,7 @@
       SPRITE_LOG_TAG = "editor-decor-rotation";
       THUMB_SIZE_PX = 14;
       SLIDER_CLASS = "qws-decor-rot-slider";
-      STYLE_ID3 = "gemini-decor-rotation-styles";
+      STYLE_ID3 = "qws-decor-rotation-css";
     }
   });
 
