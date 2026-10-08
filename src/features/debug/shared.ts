@@ -55,16 +55,7 @@ export function copy(text: string) {
 
 export function safeRegex(q: string) { try { return new RegExp(q, "i"); } catch { return /.*/i; } }
 
+/** Monospace read-out box for atom values and listings. */
 export function stylePre(pre: HTMLPreElement) {
-  pre.style.maxHeight = "260px";
-  pre.style.overflow = "auto";
-  pre.style.background = "#0b1016";
-  pre.style.border = "1px solid #ffffff18";
-  pre.style.borderRadius = "12px";
-  pre.style.padding = "12px";
-  pre.style.margin = "6px 0 0";
-  pre.style.fontSize = "12px";
-  pre.style.lineHeight = "1.5";
-  pre.style.color = "#dbe4ff";
-  pre.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,.04)";
+  pre.classList.add("dd-pre");
 }

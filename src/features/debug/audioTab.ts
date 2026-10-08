@@ -1,4 +1,7 @@
-import { Menu } from "../../ui/kit/menu";
+import { button } from "../../ui/kit/button";
+import { card, errorBar } from "../../ui/kit/card";
+import { textInput } from "../../ui/kit/fields";
+import { flexRow } from "../../ui/kit/layout";
 import { copy, createTwoColumns, safeRegex } from "./shared";
 import { getAudioUrlSafe } from "../../platform/discordCsp";
 import { fetchAudioCatalog, type AudioCatalogResponse, type AudioSfxItem } from "../../platform/mgApi";
@@ -12,13 +15,13 @@ async function loadCatalog(force = false): Promise<AudioCatalogResponse | null> 
 }
 
 function formatTime(seconds: number): string {
-  if (!Number.isFinite(seconds)) return "—";
+  if (!Number.isFinite(seconds)) return "-";
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function renderAudioPlayerTab(view: HTMLElement, ui: Menu) {
+export function renderAudioPlayerTab(view: HTMLElement) {
   view.innerHTML = "";
   view.classList.add("dd-debug-view");
 
@@ -34,7 +37,7 @@ export function renderAudioPlayerTab(view: HTMLElement, ui: Menu) {
   let stopAtHandler: (() => void) | null = null;
   let nowPlayingLabel = "";
 
-  const overviewCard = ui.card("🎧 Audio catalog", {
+  const overviewCard = card("🎧 Audio catalog", {
     tone: "muted",
     subtitle: "Browse themes and SFX from mg-api.ariedam.fr /assets/audios.",
   });
@@ -49,15 +52,15 @@ export function renderAudioPlayerTab(view: HTMLElement, ui: Menu) {
   const nowPlaying = document.createElement("div");
   nowPlaying.className = "dd-audio-volume";
 
-  const overviewError = ui.errorBar();
+  const overviewError = errorBar();
 
-  const actionsRow = ui.flexRow({ gap: 10, wrap: true, fullWidth: true });
-  const btnReload = ui.btn("Reload catalog", {
+  const actionsRow = flexRow({ gap: 10, wrap: true, fullWidth: true });
+  const btnReload = button("Reload catalog", {
     icon: "🔄",
     variant: "primary",
     onClick: () => { void refreshAll(true); },
   }) as HTMLButtonElement;
-  const btnStop = ui.btn("Stop playback", {
+  const btnStop = button("Stop playback", {
     icon: "⏹️",
     onClick: () => stopPlayback(),
   }) as HTMLButtonElement;
@@ -65,7 +68,7 @@ export function renderAudioPlayerTab(view: HTMLElement, ui: Menu) {
 
   overviewCard.body.append(summary, nowPlaying, overviewError.el, actionsRow);
 
-  const themesCard = ui.card("🎵 Themes", {
+  const themesCard = card("🎵 Themes", {
     tone: "muted",
     subtitle: "Per-area music and ambience tracks.",
   });
@@ -77,16 +80,16 @@ export function renderAudioPlayerTab(view: HTMLElement, ui: Menu) {
   themeEmpty.textContent = "No themes loaded yet.";
   themesCard.body.append(themeList, themeEmpty);
 
-  const sfxCard = ui.card("🔉 SFX", {
+  const sfxCard = card("🔉 SFX", {
     tone: "muted",
     subtitle: "Sliced from the single SFX atlas file.",
   });
   rightCol.appendChild(sfxCard.root);
 
-  const sfxToolbar = ui.flexRow({ gap: 10, wrap: true, fullWidth: true });
-  const sfxFilter = ui.inputText("filter sfx (regex)", "");
+  const sfxToolbar = flexRow({ gap: 10, wrap: true, fullWidth: true });
+  const sfxFilter = textInput("filter sfx (regex)", "");
   sfxFilter.classList.add("dd-grow");
-  const btnSfxClear = ui.btn("Clear", {
+  const btnSfxClear = button("Clear", {
     icon: "🧹",
     onClick: () => {
       sfxFilter.value = "";
@@ -94,7 +97,7 @@ export function renderAudioPlayerTab(view: HTMLElement, ui: Menu) {
       sfxFilter.focus();
     },
   }) as HTMLButtonElement;
-  const btnCopyVisible = ui.btn("Copy visible names", {
+  const btnCopyVisible = button("Copy visible names", {
     icon: "📋",
     onClick: () => {
       if (!visibleSfx.length) return;
@@ -184,21 +187,21 @@ export function renderAudioPlayerTab(view: HTMLElement, ui: Menu) {
       infoWrap.append(title, urlEl);
       row.appendChild(infoWrap);
 
-      const actions = ui.flexRow({ gap: 6, wrap: true, align: "center" });
+      const actions = flexRow({ gap: 6, wrap: true, align: "center" });
       actions.className = "dd-audio-actions";
       if (theme.music) {
-        actions.appendChild(ui.btn("Play music", {
+        actions.appendChild(button("Play music", {
           icon: "▶️", size: "sm",
           onClick: () => { void playClip(theme.music!, `${theme.name} · music`); },
         }) as HTMLButtonElement);
       }
       if (theme.ambience) {
-        actions.appendChild(ui.btn("Play ambience", {
+        actions.appendChild(button("Play ambience", {
           icon: "▶️", size: "sm",
           onClick: () => { void playClip(theme.ambience!, `${theme.name} · ambience`); },
         }) as HTMLButtonElement);
       }
-      actions.appendChild(ui.btn("Copy URLs", {
+      actions.appendChild(button("Copy URLs", {
         icon: "📋", size: "sm",
         onClick: () => copy([theme.music, theme.ambience].filter(Boolean).join("\n")),
       }) as HTMLButtonElement);
@@ -236,13 +239,13 @@ export function renderAudioPlayerTab(view: HTMLElement, ui: Menu) {
       infoWrap.append(title, meta);
       row.appendChild(infoWrap);
 
-      const actions = ui.flexRow({ gap: 6, wrap: false, align: "center" });
+      const actions = flexRow({ gap: 6, wrap: false, align: "center" });
       actions.className = "dd-audio-actions";
-      const playBtn = ui.btn("Play", {
+      const playBtn = button("Play", {
         icon: "▶️", size: "sm",
         onClick: () => { void playClip(atlasUrl, item.name, item.start, item.end); },
       }) as HTMLButtonElement;
-      const copyBtn = ui.btn("Copy URL", {
+      const copyBtn = button("Copy URL", {
         icon: "📋", size: "sm",
         onClick: () => copy(atlasUrl),
       }) as HTMLButtonElement;

@@ -163,7 +163,7 @@ function buildPlayerSection(): { root: HTMLElement; cleanup: () => void } {
     "Movement helpers for walking and testing.",
   );
 
-  // Ghost mode only runs while this menu is mounted: the cleanup stops it.
+  // Ghost mode starts when this menu is first built, not at boot.
   const ghost = createGhostController();
   const ghostToggle = switchInput(readGhostEnabled(), on => {
     writeGhostEnabled(on);

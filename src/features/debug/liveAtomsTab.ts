@@ -1,4 +1,7 @@
-import { Menu } from "../../ui/kit/menu";
+import { button } from "../../ui/kit/button";
+import { card } from "../../ui/kit/card";
+import { textInput } from "../../ui/kit/fields";
+import { flexRow } from "../../ui/kit/layout";
 import { ensureStore, findAtomsByLabel, jGet, jSub } from "../../game/store/jotai";
 import { fmtTime } from "./wsCapture";
 import { copy, createTwoColumns, safeRegex, stylePre, setBtnLabel, toast } from "./shared";
@@ -17,7 +20,7 @@ type AtomLiveRecord = {
   type: "initial" | "update";
 };
 
-export function renderLiveAtomsTab(view: HTMLElement, ui: Menu) {
+export function renderLiveAtomsTab(view: HTMLElement) {
   if (typeof (view as any).__atoms_live_cleanup__ === "function") {
     try { (view as any).__atoms_live_cleanup__(); } catch {}
   }
@@ -33,16 +36,16 @@ export function renderLiveAtomsTab(view: HTMLElement, ui: Menu) {
   const { leftCol, rightCol } = createTwoColumns(view);
 
   // ---------- Selection controls ----------
-  const selectCard = ui.card("🧪 Pick atoms", {
+  const selectCard = card("🧪 Pick atoms", {
     tone: "muted",
     subtitle: "Filter labels with a regex then toggle atoms to monitor.",
   });
   leftCol.appendChild(selectCard.root);
 
-  const filterRow = ui.flexRow({ gap: 10, wrap: true, fullWidth: true });
-  const filterInput = ui.inputText("regex label (ex: position|health)", "");
+  const filterRow = flexRow({ gap: 10, wrap: true, fullWidth: true });
+  const filterInput = textInput("regex label (ex: position|health)", "");
   filterInput.classList.add("dd-grow");
-  const btnFilter = ui.btn("Refresh", { icon: "🔍", onClick: () => refreshMatches() });
+  const btnFilter = button("Refresh", { icon: "🔍", onClick: () => refreshMatches() });
   filterRow.append(filterInput, btnFilter);
 
   const matchesWrap = document.createElement("div");
@@ -67,18 +70,18 @@ export function renderLiveAtomsTab(view: HTMLElement, ui: Menu) {
   });
 
   // ---------- Live log ----------
-  const logCard = ui.card("📡 Live atom log", {
+  const logCard = card("📡 Live atom log", {
     tone: "muted",
     subtitle: "Start recording to capture updates for the selected atoms.",
   });
   rightCol.appendChild(logCard.root);
 
-  const controlsRow = ui.flexRow({ gap: 10, wrap: true, fullWidth: true });
-  const btnRecord = ui.btn("Start recording", {
+  const controlsRow = flexRow({ gap: 10, wrap: true, fullWidth: true });
+  const btnRecord = button("Start recording", {
     variant: "primary",
     onClick: () => toggleRecording(),
   });
-  const btnClear = ui.btn("Clear log", {
+  const btnClear = button("Clear log", {
     variant: "ghost",
     icon: "🧹",
     onClick: () => {
@@ -89,7 +92,7 @@ export function renderLiveAtomsTab(view: HTMLElement, ui: Menu) {
       updateControls();
     },
   });
-  const btnCopyLog = ui.btn("Copy log", {
+  const btnCopyLog = button("Copy log", {
     variant: "ghost",
     icon: "📋",
     onClick: () => copyLog(),
@@ -110,7 +113,7 @@ export function renderLiveAtomsTab(view: HTMLElement, ui: Menu) {
   detailHeader.className = "dd-card-description";
   detailHeader.textContent = "Select a log entry to inspect previous and next values.";
 
-  const detailWrap = ui.flexRow({ gap: 12, wrap: true, fullWidth: true });
+  const detailWrap = flexRow({ gap: 12, wrap: true, fullWidth: true });
   const prevBox = document.createElement("div");
   prevBox.style.flex = "1 1 320px";
   const prevTitle = document.createElement("strong");
@@ -235,24 +238,8 @@ export function renderLiveAtomsTab(view: HTMLElement, ui: Menu) {
     }
     records.forEach((rec, idx) => {
       const row = document.createElement("div");
-      row.className = "atoms-log-row";
+      row.className = selectedRecord === idx ? "dd-atom-entry dd-atom-entry--row is-selected" : "dd-atom-entry dd-atom-entry--row";
       row.dataset.idx = String(idx);
-      row.style.display = "grid";
-      row.style.gridTemplateColumns = "minmax(120px, 160px) minmax(0, 1fr)";
-      row.style.gap = "12px";
-      row.style.padding = "10px 12px";
-      row.style.margin = "4px 0";
-      row.style.borderRadius = "12px";
-      row.style.border = "1px solid rgba(255,255,255,.12)";
-      const isSelected = selectedRecord === idx;
-      row.style.background = isSelected ? "rgba(92,126,255,.16)" : "rgba(11,16,22,.85)";
-      row.style.borderColor = isSelected ? "rgba(92,126,255,.42)" : "rgba(255,255,255,.12)";
-      row.style.cursor = "pointer";
-      row.addEventListener("mouseenter", () => { row.style.borderColor = "rgba(255,255,255,.28)"; });
-      row.addEventListener("mouseleave", () => {
-        const sel = selectedRecord === idx;
-        row.style.borderColor = sel ? "rgba(92,126,255,.42)" : "rgba(255,255,255,.12)";
-      });
 
       const left = document.createElement("div");
       left.style.display = "flex";
@@ -301,7 +288,7 @@ export function renderLiveAtomsTab(view: HTMLElement, ui: Menu) {
       return;
     }
     const typeSuffix = rec.type === "initial" ? " (initial)" : "";
-    detailHeader.textContent = `${rec.label} — ${fmtTime(rec.timestamp)}${typeSuffix}`;
+    detailHeader.textContent = `${rec.label} · ${fmtTime(rec.timestamp)}${typeSuffix}`;
     prevTitle.textContent = rec.type === "initial" ? "Previous (none)" : "Previous";
     prevPre.textContent = rec.type === "initial" ? "(no previous snapshot)" : stringify(rec.previous);
     nextTitle.textContent = rec.type === "initial" ? "Initial value" : "Next";
@@ -333,23 +320,8 @@ export function renderLiveAtomsTab(view: HTMLElement, ui: Menu) {
 
     relevant.forEach(({ rec, idx }, order) => {
       const item = document.createElement("div");
-      item.style.display = "flex";
-      item.style.flexDirection = "column";
-      item.style.gap = "6px";
-      item.style.padding = "10px 12px";
-      item.style.borderRadius = "12px";
-      item.style.border = "1px solid rgba(255,255,255,.12)";
-      const isSelected = idx === selectedIdx;
-      item.style.background = isSelected ? "rgba(92,126,255,.16)" : "rgba(11,16,22,.85)";
-      item.style.borderColor = isSelected ? "rgba(92,126,255,.42)" : "rgba(255,255,255,.12)";
-      item.style.cursor = "pointer";
+      item.className = idx === selectedIdx ? "dd-atom-entry dd-atom-entry--history is-selected" : "dd-atom-entry dd-atom-entry--history";
 
-      item.addEventListener("mouseenter", () => {
-        if (!isSelected) item.style.borderColor = "rgba(255,255,255,.24)";
-      });
-      item.addEventListener("mouseleave", () => {
-        item.style.borderColor = isSelected ? "rgba(92,126,255,.42)" : "rgba(255,255,255,.12)";
-      });
       item.addEventListener("click", () => {
         selectedRecord = idx;
         renderRecords(false);
@@ -367,14 +339,8 @@ export function renderLiveAtomsTab(view: HTMLElement, ui: Menu) {
       meta.style.gap = "8px";
 
       const orderBadge = document.createElement("span");
+      orderBadge.className = "dd-atom-badge";
       orderBadge.textContent = `#${order + 1}`;
-      orderBadge.style.fontSize = "11px";
-      orderBadge.style.letterSpacing = ".04em";
-      orderBadge.style.textTransform = "uppercase";
-      orderBadge.style.padding = "2px 6px";
-      orderBadge.style.borderRadius = "999px";
-      orderBadge.style.background = "rgba(255,255,255,.08)";
-      orderBadge.style.border = "1px solid rgba(255,255,255,.16)";
 
       const type = document.createElement("span");
       type.textContent = rec.type === "initial" ? "Initial" : "Update";

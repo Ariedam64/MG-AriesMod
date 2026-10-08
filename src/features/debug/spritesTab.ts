@@ -1,5 +1,8 @@
-import { Menu } from "../../ui/kit/menu";
+import { button } from "../../ui/kit/button";
+import { card } from "../../ui/kit/card";
+import { select } from "../../ui/kit/fields";
 import { createTwoColumns } from "./shared";
+import { packFilesToZip, triggerBlobDownload } from "./zip";
 import { setImageSafe } from "../../platform/discordCsp";
 import { MUT_G1, MUT_G2, MUT_G3, type MutationName } from "../../game/sprites/settings";
 import {
@@ -59,25 +62,25 @@ type MutationFilterState = {
 
 type MutationGroupKey = "color" | "condition" | "lighting";
 
-export function renderSpritesTab(view: HTMLElement, ui: Menu) {
+export function renderSpritesTab(view: HTMLElement) {
   view.innerHTML = "";
   view.classList.add("dd-debug-view");
 
   const { leftCol, rightCol } = createTwoColumns(view);
 
-  const explorerCard = ui.card("Sprite Explorer", {
+  const explorerCard = card("Sprite Explorer", {
     tone: "muted",
     subtitle: "Browse the live sprite catalog from mg-api.ariedam.fr.",
   });
   leftCol.appendChild(explorerCard.root);
 
-  const listCard = ui.card("Sprites", {
+  const listCard = card("Sprites", {
     tone: "muted",
     subtitle: "Preview sprites for the selected category.",
   });
   rightCol.appendChild(listCard.root);
 
-  const categorySelect = ui.select({ width: "100%" });
+  const categorySelect = select({ width: "100%" });
   categorySelect.disabled = true;
 
   const searchInput = document.createElement("input");
@@ -85,7 +88,7 @@ export function renderSpritesTab(view: HTMLElement, ui: Menu) {
   searchInput.placeholder = "Search name";
   searchInput.className = "dd-sprite-search";
 
-  const reloadBtn = ui.btn("Reload sprites", {
+  const reloadBtn = button("Reload sprites", {
     size: "sm",
     variant: "ghost",
     onClick: () => {
@@ -93,7 +96,7 @@ export function renderSpritesTab(view: HTMLElement, ui: Menu) {
     },
   }) as HTMLButtonElement;
   const downloadBtnLabel = "Download visible sprites";
-  const downloadBtn = ui.btn(downloadBtnLabel, {
+  const downloadBtn = button(downloadBtnLabel, {
     size: "sm",
     variant: "primary",
     onClick: () => {
@@ -121,7 +124,7 @@ export function renderSpritesTab(view: HTMLElement, ui: Menu) {
     lighting: document.createElement("div"),
   };
 
-  const mutationCard = ui.card("Mutations", {
+  const mutationCard = card("Mutations", {
     tone: "muted",
     subtitle: "Apply color or weather overlays via /assets/sprites/composed.",
   });
@@ -350,16 +353,16 @@ export function renderSpritesTab(view: HTMLElement, ui: Menu) {
     downloadBtn.textContent = "Preparing zip...";
     try {
       const activeMutations = getActiveMutations();
-      const files: { name: string; dataUrl: string }[] = [];
+      const files: Array<{ name: string; bytes: Uint8Array }> = [];
       for (const record of visibleSpriteRecords) {
         const bytes = await mgApiGetBinary(previewUrlFor(record, activeMutations));
         if (!bytes) continue;
-        files.push({ name: buildSpriteFilename(record, activeMutations), dataUrl: arrayBufferToDataUrl(bytes, "image/png") });
+        files.push({ name: buildSpriteFilename(record, activeMutations), bytes: new Uint8Array(bytes) });
         downloadBtn.textContent = `Collected ${files.length}/${visibleSpriteRecords.length}`;
       }
       if (!files.length) return;
       downloadBtn.textContent = "Bundling zip...";
-      const zipBlob = await packFilesToZip(files);
+      const zipBlob = packFilesToZip(files);
       triggerBlobDownload(zipBlob, `sprites-${Date.now()}.zip`);
     } finally {
       downloadInProgress = false;
@@ -367,192 +370,6 @@ export function renderSpritesTab(view: HTMLElement, ui: Menu) {
       downloadBtn.disabled = !visibleSpriteRecords.length;
     }
   }
-}
-
-function arrayBufferToDataUrl(buffer: ArrayBuffer, mime: string): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  return `data:${mime};base64,${btoa(binary)}`;
-}
-
-async function packFilesToZip(files: { name: string; dataUrl: string }[]): Promise<Blob> {
-  const chunks: Uint8Array[] = [];
-  const fileEntries: { nameBytes: Uint8Array; data: Uint8Array; crc: number; offset: number }[] = [];
-  let offset = 0;
-  for (const file of files) {
-    const { bytes: data, crc32: crc } = dataUrlToBytesAndCrc(file.dataUrl);
-    const nameBytes = new TextEncoder().encode(file.name);
-    const localHeader = buildZipLocalHeader(nameBytes, data.length, crc);
-    fileEntries.push({ nameBytes, data, crc, offset });
-    chunks.push(localHeader, data);
-    offset += localHeader.length + data.length;
-  }
-
-  const centralRecords: Uint8Array[] = [];
-  fileEntries.forEach(entry => {
-    centralRecords.push(buildZipCentralDirectory(entry.nameBytes, entry.data.length, entry.crc, entry.offset));
-  });
-  const centralDirectory = concatUint8Arrays(centralRecords);
-  const endRecord = buildZipEndRecord(fileEntries.length, centralDirectory.length, offset);
-  return new Blob([...chunks, centralDirectory, endRecord].map(chunk => chunk.slice()), {
-    type: "application/zip",
-  });
-}
-
-const LOCAL_HEADER_SIGNATURE = 0x04034b50;
-const CENTRAL_DIR_SIGNATURE = 0x02014b50;
-const END_SIGNATURE = 0x06054b50;
-const ZIP_VERSION = 20;
-const ZIP_FLAGS = 0;
-const ZIP_METHOD_STORE = 0;
-
-function buildZipLocalHeader(nameBytes: Uint8Array, size: number, crc32: number): Uint8Array {
-  const buffer = new ArrayBuffer(30 + nameBytes.length);
-  const view = new DataView(buffer);
-  let offset = 0;
-  view.setUint32(offset, LOCAL_HEADER_SIGNATURE, true);
-  offset += 4;
-  view.setUint16(offset, ZIP_VERSION, true);
-  offset += 2;
-  view.setUint16(offset, ZIP_FLAGS, true);
-  offset += 2;
-  view.setUint16(offset, ZIP_METHOD_STORE, true);
-  offset += 2;
-  view.setUint16(offset, 0, true); // mod time
-  offset += 2;
-  view.setUint16(offset, 0, true); // mod date
-  offset += 2;
-  view.setUint32(offset, crc32 >>> 0, true);
-  offset += 4;
-  view.setUint32(offset, size, true);
-  offset += 4;
-  view.setUint32(offset, size, true);
-  offset += 4;
-  view.setUint16(offset, nameBytes.length, true);
-  offset += 2;
-  view.setUint16(offset, 0, true); // extra length
-  const out = new Uint8Array(buffer);
-  out.set(nameBytes, offset);
-  return out;
-}
-
-function buildZipCentralDirectory(nameBytes: Uint8Array, size: number, crc32: number, offset: number): Uint8Array {
-  const buffer = new ArrayBuffer(46 + nameBytes.length);
-  const view = new DataView(buffer);
-  let pos = 0;
-  view.setUint32(pos, CENTRAL_DIR_SIGNATURE, true);
-  pos += 4;
-  view.setUint16(pos, ZIP_VERSION, true);
-  pos += 2;
-  view.setUint16(pos, ZIP_VERSION, true);
-  pos += 2;
-  view.setUint16(pos, ZIP_FLAGS, true);
-  pos += 2;
-  view.setUint16(pos, ZIP_METHOD_STORE, true);
-  pos += 2;
-  view.setUint16(pos, 0, true);
-  pos += 2;
-  view.setUint16(pos, 0, true);
-  pos += 2;
-  view.setUint32(pos, crc32 >>> 0, true);
-  pos += 4;
-  view.setUint32(pos, size, true);
-  pos += 4;
-  view.setUint32(pos, size, true);
-  pos += 4;
-  view.setUint16(pos, nameBytes.length, true);
-  pos += 2;
-  view.setUint16(pos, 0, true); // extra
-  pos += 2;
-  view.setUint16(pos, 0, true); // comment
-  pos += 2;
-  view.setUint16(pos, 0, true); // disk number
-  pos += 2;
-  view.setUint16(pos, 0, true); // internal attrs
-  pos += 2;
-  view.setUint32(pos, 0, true); // external attrs
-  pos += 4;
-  view.setUint32(pos, offset, true);
-  pos += 4;
-  const out = new Uint8Array(buffer);
-  out.set(nameBytes, pos);
-  return out;
-}
-
-function buildZipEndRecord(fileCount: number, centralSize: number, centralOffset: number): Uint8Array {
-  const buffer = new ArrayBuffer(22);
-  const view = new DataView(buffer);
-  let pos = 0;
-  view.setUint32(pos, END_SIGNATURE, true);
-  pos += 4;
-  view.setUint16(pos, 0, true); // disk number
-  pos += 2;
-  view.setUint16(pos, 0, true); // disk with central dir
-  pos += 2;
-  view.setUint16(pos, fileCount, true);
-  pos += 2;
-  view.setUint16(pos, fileCount, true);
-  pos += 2;
-  view.setUint32(pos, centralSize, true);
-  pos += 4;
-  view.setUint32(pos, centralOffset, true);
-  pos += 4;
-  view.setUint16(pos, 0, true); // comment length
-  return new Uint8Array(buffer);
-}
-
-function concatUint8Arrays(arrays: Uint8Array[]): Uint8Array {
-  const total = arrays.reduce((sum, arr) => sum + arr.length, 0);
-  const result = new Uint8Array(total);
-  let offset = 0;
-  arrays.forEach(arr => {
-    result.set(arr, offset);
-    offset += arr.length;
-  });
-  return result;
-}
-
-function dataUrlToBytesAndCrc(dataUrl: string): { bytes: Uint8Array; crc32: number } {
-  const base64 = dataUrl.split(",")[1] ?? "";
-  const binary = atob(base64);
-  const length = binary.length;
-  const bytes = new Uint8Array(length);
-  for (let i = 0; i < length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return { bytes, crc32: crc32(bytes) };
-}
-
-function crc32(bytes: Uint8Array): number {
-  let crc = ~0;
-  for (let i = 0; i < bytes.length; i++) {
-    crc = (crc >>> 8) ^ CRC_TABLE[(crc ^ bytes[i]) & 0xff];
-  }
-  return ~crc >>> 0;
-}
-
-const CRC_TABLE = (() => {
-  const table = new Uint32Array(256);
-  for (let i = 0; i < 256; i++) {
-    let c = i;
-    for (let k = 0; k < 8; k++) {
-      c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    }
-    table[i] = c >>> 0;
-  }
-  return table;
-})();
-
-function triggerBlobDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
 function createSelectControl(labelText: string, control: HTMLElement): HTMLLabelElement {

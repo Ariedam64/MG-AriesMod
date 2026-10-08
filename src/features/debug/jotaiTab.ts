@@ -1,4 +1,7 @@
-import { Menu } from "../../ui/kit/menu";
+import { button } from "../../ui/kit/button";
+import { card } from "../../ui/kit/card";
+import { textInput } from "../../ui/kit/fields";
+import { flexRow } from "../../ui/kit/layout";
 import {
   ensureStore,
   isStoreCaptured,
@@ -10,7 +13,7 @@ import {
 } from "../../game/store/jotai";
 import { copy, createTwoColumns, safeRegex, stylePre, toast } from "./shared";
 
-export function renderJotaiTab(view: HTMLElement, ui: Menu) {
+export function renderJotaiTab(view: HTMLElement) {
   view.innerHTML = "";
   view.classList.add("dd-debug-view");
 
@@ -18,11 +21,11 @@ export function renderJotaiTab(view: HTMLElement, ui: Menu) {
 
   // LEFT: Capture store + helpers
   {
-    const card = ui.card("🗄️ Capture store", {
+    const section = card("🗄️ Capture store", {
       tone: "muted",
       subtitle: "Initialize the Jotai store so atoms can be inspected.",
     });
-    leftCol.appendChild(card.root);
+    leftCol.appendChild(section.root);
 
     const status = document.createElement("span");
     status.className = "dd-status-chip";
@@ -34,8 +37,8 @@ export function renderJotaiTab(view: HTMLElement, ui: Menu) {
     };
     refreshStatus();
 
-    const actions = ui.flexRow({ gap: 10, align: "center", wrap: true });
-    const btnCap = ui.btn("Capture store", {
+    const actions = flexRow({ gap: 10, align: "center", wrap: true });
+    const btnCap = button("Capture store", {
       variant: "primary",
       icon: "⏺",
       onClick: async () => {
@@ -45,22 +48,22 @@ export function renderJotaiTab(view: HTMLElement, ui: Menu) {
     });
 
     actions.append(btnCap, status);
-    card.body.appendChild(actions);
+    section.body.appendChild(actions);
   }
 
   // LEFT: Find / List atoms
   {
-    const card = ui.card("🔍 Explore atoms", {
+    const section = card("🔍 Explore atoms", {
       tone: "muted",
       subtitle: "Filter labels using a regular expression.",
     });
-    leftCol.appendChild(card.root);
+    leftCol.appendChild(section.root);
 
-    const queryRow = ui.flexRow({ gap: 10, wrap: true, fullWidth: true });
-    const q = ui.inputText("regex label (ex: position|health)", "");
+    const queryRow = flexRow({ gap: 10, wrap: true, fullWidth: true });
+    const q = textInput("regex label (ex: position|health)", "");
     q.classList.add("dd-grow");
-    const btnList = ui.btn("List", { icon: "📄", onClick: () => doList() });
-    const btnCopy = ui.btn("Copy", { icon: "📋", onClick: () => copy(pre.textContent || "") });
+    const btnList = button("List", { icon: "📄", onClick: () => doList() });
+    const btnCopy = button("Copy", { icon: "📋", onClick: () => copy(pre.textContent || "") });
     queryRow.append(q, btnList, btnCopy);
 
     const pre = document.createElement("pre");
@@ -76,26 +79,26 @@ export function renderJotaiTab(view: HTMLElement, ui: Menu) {
       pre.textContent = labels.join("\n");
     }
 
-    card.body.append(queryRow, pre);
+    section.body.append(queryRow, pre);
   }
 
   // RIGHT: Get / Subscribe
   {
-    const card = ui.card("🧭 Inspect an atom", {
+    const section = card("🧭 Inspect an atom", {
       tone: "muted",
       subtitle: "Get the current value or subscribe to updates.",
     });
-    rightCol.appendChild(card.root);
+    rightCol.appendChild(section.root);
 
-    const controls = ui.flexRow({ gap: 10, wrap: true, fullWidth: true });
-    const q = ui.inputText("atom label (ex: positionAtom)", "");
+    const controls = flexRow({ gap: 10, wrap: true, fullWidth: true });
+    const q = textInput("atom label (ex: positionAtom)", "");
     q.classList.add("dd-grow");
     const pre = document.createElement("pre");
     stylePre(pre);
     pre.style.minHeight = "160px";
     let unsubRef: null | (() => void) = null;
 
-    const btnGet = ui.btn("Get", {
+    const btnGet = button("Get", {
       icon: "👁",
       onClick: async () => {
         const atom = getAtomByLabel(q.value.trim());
@@ -104,7 +107,7 @@ export function renderJotaiTab(view: HTMLElement, ui: Menu) {
         catch (e: any) { setText(pre, e?.message || String(e)); }
       },
     });
-    const btnSub = ui.btn("Subscribe", {
+    const btnSub = button("Subscribe", {
       icon: "🔔",
       onClick: async () => {
         const label = q.value.trim();
@@ -121,32 +124,32 @@ export function renderJotaiTab(view: HTMLElement, ui: Menu) {
         btnSub.textContent = "Unsubscribe";
       },
     });
-    const btnCopy = ui.btn("Copy", { icon: "📋", onClick: () => copy(pre.textContent || "") });
+    const btnCopy = button("Copy", { icon: "📋", onClick: () => copy(pre.textContent || "") });
     controls.append(q, btnGet, btnSub, btnCopy);
 
     const note = document.createElement("p");
     note.className = "dd-inline-note";
     note.textContent = "Tip: subscriptions keep the value updated after each mutation.";
 
-    card.body.append(controls, note, pre);
+    section.body.append(controls, note, pre);
   }
 
   // RIGHT: Set atom
   {
-    const card = ui.card("✏️ Update an atom", {
+    const section = card("✏️ Update an atom", {
       tone: "muted",
       subtitle: "Publish a new value (JSON).",
     });
-    rightCol.appendChild(card.root);
+    rightCol.appendChild(section.root);
 
-    const controls = ui.flexRow({ gap: 10, wrap: true, fullWidth: true });
-    const q = ui.inputText("atom label (ex: activeModalStateAtom)", "");
+    const controls = flexRow({ gap: 10, wrap: true, fullWidth: true });
+    const q = textInput("atom label (ex: activeModalStateAtom)", "");
     q.classList.add("dd-grow");
     const ta = document.createElement("textarea");
     ta.className = "qmm-input dd-textarea";
     ta.placeholder = `JSON or text value, e.g. inventory or { "x": 1, "y": 2 }`;
 
-    const btnSet = ui.btn("Set", {
+    const btnSet = button("Set", {
       icon: "✅",
       variant: "primary",
       onClick: async () => {
@@ -189,10 +192,10 @@ export function renderJotaiTab(view: HTMLElement, ui: Menu) {
         }
       },
     });
-    const btnCopy = ui.btn("Copy JSON", { icon: "📋", onClick: () => copy(ta.value) });
+    const btnCopy = button("Copy JSON", { icon: "📋", onClick: () => copy(ta.value) });
     controls.append(q, btnSet, btnCopy);
 
-    card.body.append(controls, ta);
+    section.body.append(controls, ta);
   }
 
   function setText(el: HTMLElement, v: any) {
