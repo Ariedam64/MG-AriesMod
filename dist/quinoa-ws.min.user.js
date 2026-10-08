@@ -221,13 +221,13 @@
   // src/game/sprites/pixi/hooks.ts
   function mkSyntheticApp(renderer) {
     const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
-    const listeners9 = /* @__PURE__ */ new Set();
+    const listeners8 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
     const tick3 = (now2) => {
       const delta = last ? (now2 - last) / (1e3 / 60) : 1;
       last = now2;
-      for (const fn of listeners9) {
+      for (const fn of listeners8) {
         try {
           fn(delta);
         } catch {
@@ -237,14 +237,14 @@
     };
     const ticker = {
       add(fn) {
-        if (!listeners9.size) {
+        if (!listeners8.size) {
           rafId = requestAnimationFrame(tick3);
         }
-        listeners9.add(fn);
+        listeners8.add(fn);
       },
       remove(fn) {
-        listeners9.delete(fn);
-        if (!listeners9.size) {
+        listeners8.delete(fn);
+        if (!listeners8.size) {
           cancelAnimationFrame(rafId);
         }
       },
@@ -271,9 +271,9 @@
       resolveApp(APP ?? mkSyntheticApp(r));
     };
     const hook = (name, cb) => {
-      const root = pageWindow;
-      const prev = root[name];
-      root[name] = function() {
+      const root4 = pageWindow;
+      const prev = root4[name];
+      root4[name] = function() {
         try {
           cb.apply(this, arguments);
         } finally {
@@ -292,18 +292,18 @@
     });
     hook("__PIXI_RENDERER_INIT__", (r, v) => resolveRdr(r, v));
     const tryResolveExisting = () => {
-      const root = pageWindow;
-      const devtools = root.__PIXI_DEVTOOLS__;
+      const root4 = pageWindow;
+      const devtools = root4.__PIXI_DEVTOOLS__;
       if (devtools?.renderers?.size > 0) {
         const rdr = [...devtools.renderers][0];
         if (rdr) resolveRdr(rdr);
       }
       if (!APP) {
-        const maybeApp = root.__PIXI_APP__ || root.PIXI_APP || root.app;
+        const maybeApp = root4.__PIXI_APP__ || root4.PIXI_APP || root4.app;
         if (maybeApp?.renderer) resolveApp(maybeApp);
       }
       if (!RDR) {
-        const maybeRdr = root.__PIXI_RENDERER__ || root.renderer || APP?.renderer;
+        const maybeRdr = root4.__PIXI_RENDERER__ || root4.renderer || APP?.renderer;
         if (maybeRdr) resolveRdr(maybeRdr);
       }
     };
@@ -349,8 +349,8 @@
   });
 
   // src/game/sprites/utils/pixi.ts
-  function findAny(root, pred, lim = 25e3) {
-    const stack = [root];
+  function findAny(root4, pred, lim = 25e3) {
+    const stack = [root4];
     const seen = /* @__PURE__ */ new Set();
     let n = 0;
     while (stack.length && n++ < lim) {
@@ -365,10 +365,10 @@
     }
     return null;
   }
-  function findAnyPerBranch(root, pred, limPerBranch = 25e3) {
-    if (!root) return null;
-    if (pred(root)) return root;
-    const children = root.children;
+  function findAnyPerBranch(root4, pred, limPerBranch = 25e3) {
+    if (!root4) return null;
+    if (pred(root4)) return root4;
+    const children = root4.children;
     if (!Array.isArray(children)) return null;
     for (const child of children) {
       const hit = findAny(child, pred, limPerBranch);
@@ -393,8 +393,8 @@
     };
   }
   function getCtors(app) {
-    const root = pageWindow;
-    const P = root.PIXI;
+    const root4 = pageWindow;
+    const P = root4.PIXI;
     if (P?.Texture && P?.Sprite && P?.Container && P?.Rectangle) {
       return { Container: P.Container, Sprite: P.Sprite, Texture: P.Texture, Rectangle: P.Rectangle, Text: P.Text || null };
     }
@@ -420,22 +420,22 @@
 
   // src/game/sprites/pixi/resolvePixi.ts
   async function resolvePixiFast(hooks3) {
-    const root = pageWindow;
+    const root4 = pageWindow;
     const debugInfo = {
       startedAt: Date.now(),
       resolvedVia: null,
       resolvedAt: null
     };
-    root.__MG_RESOLVE_PIXI_DEBUG__ = debugInfo;
+    root4.__MG_RESOLVE_PIXI_DEBUG__ = debugInfo;
     const resolved = (via, bundle) => {
       debugInfo.resolvedVia = via;
       debugInfo.resolvedAt = Date.now();
       return bundle;
     };
     const check = () => {
-      const app = root.__PIXI_APP__ || root.PIXI_APP || root.app || null;
-      const renderer = root.__PIXI_RENDERER__ || root.PIXI_RENDERER__ || root.renderer || app?.renderer || null;
-      return app && renderer ? { app, renderer, version: root.__PIXI_VERSION__ || null } : null;
+      const app = root4.__PIXI_APP__ || root4.PIXI_APP || root4.app || null;
+      const renderer = root4.__PIXI_RENDERER__ || root4.PIXI_RENDERER__ || root4.renderer || app?.renderer || null;
+      return app && renderer ? { app, renderer, version: root4.__PIXI_VERSION__ || null } : null;
     };
     const hit = check();
     if (hit) return resolved("fast-check-immediate", hit);
@@ -448,8 +448,8 @@
     const waited = await waitForPixi(hooks3);
     return resolved("waitForPixi-fallback", { app: waited.app, renderer: waited.renderer, version: waited.version });
   }
-  function inspectStage(root) {
-    const stack = [root];
+  function inspectStage(root4) {
+    const stack = [root4];
     const seen = /* @__PURE__ */ new Set();
     let totalNodes = 0;
     let spriteLikeCount = 0;
@@ -467,7 +467,7 @@
         for (let i = children.length - 1; i >= 0; i -= 1) stack.push(children[i]);
       }
     }
-    const topChildLabels = Array.isArray(root?.children) ? root.children.map((c) => c?.label || c?.constructor?.name || typeof c) : [];
+    const topChildLabels = Array.isArray(root4?.children) ? root4.children.map((c) => c?.label || c?.constructor?.name || typeof c) : [];
     return { totalNodes, spriteLikeCount, textLikeCount, topChildLabels };
   }
   async function waitForCtors(app, renderer) {
@@ -809,8 +809,8 @@
     return [];
   }
   async function loadKtx2AsTexture(imgName, renderer, ctors, timeoutMs = 3e3) {
-    const root = pageWindow;
-    const PIXI = root.PIXI;
+    const root4 = pageWindow;
+    const PIXI = root4.PIXI;
     if (PIXI?.Assets?.load) {
       try {
         return await PIXI.Assets.load({ src: imgName, loadParser: "loadTextures" });
@@ -831,7 +831,7 @@
           return bt;
         }
       }
-      await new Promise((r) => root.setTimeout(r, 250));
+      await new Promise((r) => root4.setTimeout(r, 250));
     }
     if (ctors?.Texture?.from) {
       for (const alias of [imgName, imgName.replace(/^.*\//, "")]) {
@@ -1357,8 +1357,8 @@
       const aY = tex?.defaultAnchor?.y ?? 0.5;
       const basePos = { x: w * aX, y: h2 * aY };
       const baseCanvas = textureToCanvas(tex, state5, cfg);
-      const root = new Container();
-      root.sortableChildren = true;
+      const root4 = new Container();
+      root4.sortableChildren = true;
       try {
         const lock = new Sprite(tex);
         lock.anchor?.set?.(aX, aY);
@@ -1367,14 +1367,14 @@
         lock.height = h2;
         lock.alpha = 0;
         lock.zIndex = -1e3;
-        root.addChild(lock);
+        root4.addChild(lock);
       } catch {
       }
       const base = new Sprite(tex);
       base.anchor?.set?.(aX, aY);
       base.position.set(basePos.x, basePos.y);
       base.zIndex = 0;
-      root.addChild(base);
+      root4.addChild(base);
       const isTall = isTallKey(itKey);
       const pipeline = buildMutationPipeline(V.muts, isTall);
       const overlayPipeline = buildMutationPipeline(V.overlayMuts, isTall);
@@ -1383,23 +1383,23 @@
       const baseName = baseNameOf(itKey);
       const iconLayout = computeIconLayout(tex, baseName, isTall);
       const dims = { w, h: h2, aX, aY, basePos };
-      buildColorLayerSprites(tex, dims, pipeline, state5, cfg, disposables, Texture).forEach((layer2) => root.addChild(layer2));
+      buildColorLayerSprites(tex, dims, pipeline, state5, cfg, disposables, Texture).forEach((layer2) => root4.addChild(layer2));
       if (isTall) {
-        buildTallOverlaySprites(itKey, dims, overlayPipeline, state5, cfg, baseCanvas, Texture, disposables).forEach((ov) => root.addChild(ov));
+        buildTallOverlaySprites(itKey, dims, overlayPipeline, state5, cfg, baseCanvas, Texture, disposables).forEach((ov) => root4.addChild(ov));
       }
-      buildIconSprites(itKey, dims, iconPipeline, state5, iconLayout).forEach((icon) => root.addChild(icon));
+      buildIconSprites(itKey, dims, iconPipeline, state5, iconLayout).forEach((icon) => root4.addChild(icon));
       const RDR = state5.renderer;
       let rt = null;
       const RectCtor = state5.ctors?.Rectangle;
       const crop = RectCtor ? new RectCtor(0, 0, w, h2) : null;
       if (typeof RDR?.generateTexture === "function")
-        rt = RDR.generateTexture(root, { resolution: 1, region: crop ?? void 0 });
+        rt = RDR.generateTexture(root4, { resolution: 1, region: crop ?? void 0 });
       else if (RDR?.textureGenerator?.generateTexture)
-        rt = RDR.textureGenerator.generateTexture({ target: root, resolution: 1 });
+        rt = RDR.textureGenerator.generateTexture({ target: root4, resolution: 1 });
       if (!rt) throw new Error("no render texture");
       const outTex = rt instanceof Texture ? rt : Texture.from(RDR.extract.canvas(rt));
       if (rt && rt !== outTex) rt.destroy?.(true);
-      root.destroy({ children: true, texture: false, baseTexture: false });
+      root4.destroy({ children: true, texture: false, baseTexture: false });
       disposables.forEach(() => {
       });
       try {
@@ -1604,7 +1604,7 @@
 
   // src/game/sprites/api/expose.ts
   function exposeApi(state5, hud) {
-    const root = pageWindow;
+    const root4 = pageWindow;
     const api = {
       open() {
         hud.root?.style && (hud.root.style.display = "block");
@@ -1646,7 +1646,7 @@
       },
       curVariant: () => curVariant(state5)
     };
-    root.MGSpriteCatalog = api;
+    root4.MGSpriteCatalog = api;
     return api;
   }
   var init_expose = __esm({
@@ -1889,8 +1889,8 @@
     return null;
   }
   function fromGlobals() {
-    const root = pageWindow;
-    const gv = root.gameVersion || root.MG_gameVersion || root.__MG_GAME_VERSION__;
+    const root4 = pageWindow;
+    const gv = root4.gameVersion || root4.MG_gameVersion || root4.__MG_GAME_VERSION__;
     if (!gv) return null;
     try {
       if (typeof gv.getVersion === "function") return gv.getVersion() ? String(gv.getVersion()) : null;
@@ -2551,7 +2551,7 @@
     }
     return null;
   }
-  function acquireSharedStore(owner, capture) {
+  function acquireSharedStore(owner2, capture) {
     const existing = getBridge();
     if (existing) return existing.promise;
     const promise = capture().then((store) => {
@@ -2565,7 +2565,7 @@
     });
     pageWindow[STORE_BRIDGE_GLOBAL] = {
       version: 1,
-      owner,
+      owner: owner2,
       promise
     };
     return promise;
@@ -2586,9 +2586,9 @@
     for (const [rid] of hook.renderers) {
       const roots = hook.getFiberRoots?.(rid);
       if (!roots) continue;
-      for (const root of roots) {
+      for (const root4 of roots) {
         const seen = /* @__PURE__ */ new Set();
-        const stack = [root.current];
+        const stack = [root4.current];
         while (stack.length) {
           const f = stack.pop();
           if (!f || seen.has(f)) continue;
@@ -2898,18 +2898,18 @@
     if (!path) return [];
     return Array.isArray(path) ? path.slice() : path.split(".").map((k) => k.match(/^\d+$/) ? Number(k) : k);
   }
-  function getAtPath(root, path) {
-    let cur = root;
+  function getAtPath(root4, path) {
+    let cur = root4;
     for (const seg of toPathArray(path)) {
       if (cur == null) return void 0;
       cur = cur[seg];
     }
     return cur;
   }
-  function setAtPath(root, path, nextValue) {
+  function setAtPath(root4, path, nextValue) {
     const segs = toPathArray(path);
     if (!segs.length) return nextValue;
-    const clone2 = Array.isArray(root) ? root.slice() : { ...root ?? {} };
+    const clone2 = Array.isArray(root4) ? root4.slice() : { ...root4 ?? {} };
     let cur = clone2;
     for (let i = 0; i < segs.length - 1; i++) {
       const src = cur[segs[i]];
@@ -8395,9 +8395,9 @@
     const children = scrollViewContainer?.children;
     if (!Array.isArray(children)) return null;
     const viewport = children.find((child) => child?.mask && Array.isArray(child.children));
-    const content = viewport?.children?.[0];
-    if (!viewport || !content || !Array.isArray(content.children)) return null;
-    return { mask: viewport.mask, content };
+    const content2 = viewport?.children?.[0];
+    if (!viewport || !content2 || !Array.isArray(content2.children)) return null;
+    return { mask: viewport.mask, content: content2 };
   }
   function logsContentKind(contentChildren) {
     let kind = "unknown";
@@ -9014,12 +9014,12 @@
     });
     div.dataset["qwsSeedDeleter"] = "1";
   }
-  function makeDraggable(root, handle) {
+  function makeDraggable(root4, handle) {
     let dragging = false;
     let ox = 0, oy = 0;
     const onDown = (e) => {
       dragging = true;
-      const r = root.getBoundingClientRect();
+      const r = root4.getBoundingClientRect();
       ox = e.clientX - r.left;
       oy = e.clientY - r.top;
       document.addEventListener("mousemove", onMove);
@@ -9029,8 +9029,8 @@
       if (!dragging) return;
       const nx = Math.max(4, e.clientX - ox);
       const ny = Math.max(4, e.clientY - oy);
-      root.style.left = `${nx}px`;
-      root.style.top = `${ny}px`;
+      root4.style.left = `${nx}px`;
+      root4.style.top = `${ny}px`;
     };
     const onUp = () => {
       dragging = false;
@@ -9097,9 +9097,9 @@
     const title = document.createElement("div");
     title.textContent = "\u{1F3AF} Selection mode";
     setStyles(title, { fontWeight: "700", fontSize: "13px" });
-    const hint = document.createElement("div");
-    hint.textContent = "Click seeds in inventory to toggle selection.";
-    setStyles(hint, { opacity: "0.8", fontSize: "11px" });
+    const hint2 = document.createElement("div");
+    hint2.textContent = "Click seeds in inventory to toggle selection.";
+    setStyles(hint2, { opacity: "0.8", fontSize: "11px" });
     const hr = document.createElement("div");
     setStyles(hr, { height: "1px", background: "#2d333b" });
     const list = document.createElement("div");
@@ -9136,7 +9136,7 @@
     };
     header.append(title);
     actions.append(summary, btnClear, _btnConfirm);
-    box.append(header, hint, hr, list, actions);
+    box.append(header, hint2, hr, list, actions);
     makeDraggable(box, header);
     return box;
   }
@@ -9360,9 +9360,9 @@
     const title = document.createElement("div");
     title.textContent = "Decor selection";
     setStyles(title, { fontWeight: "700", fontSize: "13px" });
-    const hint = document.createElement("div");
-    hint.textContent = "Click decor in inventory to toggle selection.";
-    setStyles(hint, { opacity: "0.8", fontSize: "11px" });
+    const hint2 = document.createElement("div");
+    hint2.textContent = "Click decor in inventory to toggle selection.";
+    setStyles(hint2, { opacity: "0.8", fontSize: "11px" });
     const hr = document.createElement("div");
     setStyles(hr, { height: "1px", background: "#2d333b" });
     const list = document.createElement("div");
@@ -9399,7 +9399,7 @@
     };
     header.append(title);
     actions.append(summary, btnClear, btnConfirm);
-    box.append(header, hint, hr, list, actions);
+    box.append(header, hint2, hr, list, actions);
     makeDraggable(box, header);
     box.__btnConfirm = btnConfirm;
     return box;
@@ -10185,6 +10185,2444 @@
     }
   });
 
+  // src/lib/emitter.ts
+  var Emitter;
+  var init_emitter = __esm({
+    "src/lib/emitter.ts"() {
+      "use strict";
+      Emitter = class {
+        constructor() {
+          this.listeners = /* @__PURE__ */ new Set();
+        }
+        on(listener) {
+          this.listeners.add(listener);
+          return () => {
+            this.listeners.delete(listener);
+          };
+        }
+        emit(value) {
+          for (const listener of [...this.listeners]) {
+            try {
+              listener(value);
+            } catch (error) {
+              console.error("[Aries] listener failed", error);
+            }
+          }
+        }
+        get size() {
+          return this.listeners.size;
+        }
+        clear() {
+          this.listeners.clear();
+        }
+      };
+    }
+  });
+
+  // src/features/editor/gardenModel.ts
+  function tileObjectAt(garden3, tileType, localIdx) {
+    return garden3[tileMapKey(tileType)]?.[String(localIdx)] ?? null;
+  }
+  function withTileObject(garden3, tileType, localIdx, obj) {
+    const key2 = tileMapKey(tileType);
+    const map2 = { ...garden3[key2] };
+    if (obj) map2[String(localIdx)] = obj;
+    else delete map2[String(localIdx)];
+    return { ...garden3, [key2]: map2 };
+  }
+  function ensureSlotIds(slots) {
+    if (!Array.isArray(slots)) return [];
+    const used = /* @__PURE__ */ new Set();
+    for (const slot of slots) {
+      const id = slot?.slotId;
+      if (isFiniteNumber(id)) used.add(id);
+    }
+    let nextId = 0;
+    return slots.map((raw) => {
+      const slot = raw && typeof raw === "object" ? { ...raw } : {};
+      if (isFiniteNumber(slot.slotId)) return slot;
+      while (used.has(nextId)) nextId++;
+      used.add(nextId);
+      slot.slotId = nextId;
+      return slot;
+    });
+  }
+  function withPlantSlotIds(map2) {
+    const next = {};
+    for (const [key2, value] of Object.entries(map2 || {})) {
+      next[key2] = value && typeof value === "object" && value.objectType === "plant" ? { ...value, slots: ensureSlotIds(value.slots) } : value;
+    }
+    return next;
+  }
+  function sanitizeGarden(value) {
+    const record = value && typeof value === "object" ? value : {};
+    const tileObjects = typeof record.tileObjects === "object" && record.tileObjects ? record.tileObjects : {};
+    const boardwalk = typeof record.boardwalkTileObjects === "object" && record.boardwalkTileObjects ? record.boardwalkTileObjects : {};
+    return {
+      tileObjects: withPlantSlotIds({ ...tileObjects }),
+      boardwalkTileObjects: withPlantSlotIds({ ...boardwalk })
+    };
+  }
+  function findPlayerSlot(slots, playerId2) {
+    if (!slots || typeof slots !== "object") return null;
+    const isMatch = (slot) => !!slot && String(slot.userId || slot.playerId || slot.id || "") === String(playerId2);
+    if (Array.isArray(slots)) {
+      const index = slots.findIndex(isMatch);
+      return index >= 0 ? { slot: slots[index], index } : null;
+    }
+    const entries2 = Object.entries(slots).sort(([a], [b]) => compareSlotKeys(a, b));
+    for (const [key2, slot] of entries2) {
+      if (!isMatch(slot)) continue;
+      const index = Number(key2);
+      return { slot, index: Number.isFinite(index) ? index : 0 };
+    }
+    return null;
+  }
+  function compareSlotKeys(a, b) {
+    const ai = Number(a);
+    const bi = Number(b);
+    if (Number.isFinite(ai) && Number.isFinite(bi)) return ai - bi;
+    return a.localeCompare(b);
+  }
+  var makeEmptyGarden, tileMapKey, isFiniteNumber;
+  var init_gardenModel = __esm({
+    "src/features/editor/gardenModel.ts"() {
+      "use strict";
+      makeEmptyGarden = () => ({ tileObjects: {}, boardwalkTileObjects: {} });
+      tileMapKey = (tileType) => tileType === "Dirt" ? "tileObjects" : "boardwalkTileObjects";
+      isFiniteNumber = (value) => typeof value === "number" && Number.isFinite(value);
+    }
+  });
+
+  // src/game/pixi/tileCapture.ts
+  function looksLikeTileObjectSystem(o) {
+    return !!(o && typeof o === "object" && o.name === TILE_OBJECT_SYSTEM_NAME && o.tileViews && typeof o.tileViews.get === "function" && typeof o.getOrCreateTileView === "function");
+  }
+  function tileObjectSystemFrom(value) {
+    if (looksLikeTileObjectSystem(value)) return value;
+    if (looksLikeTileObjectSystem(value?.system)) return value.system;
+    return null;
+  }
+  function isLiveTileObjectSystem(o) {
+    if (!looksLikeTileObjectSystem(o)) return false;
+    try {
+      return o.worldContainer?.destroyed !== true;
+    } catch {
+      return true;
+    }
+  }
+  function isScopeLike(o) {
+    return !!(o && typeof o === "object" && (o.systems && typeof o.systems.values === "function" || typeof o.addScope === "function" || typeof o.addSystem === "function"));
+  }
+  function findTileObjectSystem(scope, depth = 0) {
+    if (!scope || typeof scope !== "object" || depth > SCOPE_SEARCH_DEPTH) return null;
+    try {
+      const systems = scope.systems;
+      if (systems && typeof systems.values === "function") {
+        for (const entry of systems.values()) {
+          const found = tileObjectSystemFrom(entry);
+          if (found) return found;
+        }
+      }
+    } catch {
+    }
+    try {
+      const children = scope.children;
+      if (children && typeof children[Symbol.iterator] === "function") {
+        for (const child of children) {
+          if (!isScopeLike(child)) continue;
+          const found = findTileObjectSystem(child, depth + 1);
+          if (found) return found;
+        }
+      }
+    } catch {
+    }
+    for (const key2 of ["rendererScope", "renderer", "worldScope", "world"]) {
+      try {
+        const next = scope[key2];
+        if (!isScopeLike(next)) continue;
+        const found = findTileObjectSystem(next, depth + 1);
+        if (found) return found;
+      } catch {
+      }
+    }
+    return null;
+  }
+  function tryCaptureFromKnownGlobals() {
+    if (!tileState.engine) {
+      const shared = readSharedGlobal("__QUINOA_ENGINE__");
+      if (shared) tileState.engine = shared;
+    }
+    if (!tileState.tos) {
+      const shared = readSharedGlobal("__TILE_OBJECT_SYSTEM__");
+      if (isLiveTileObjectSystem(shared)) tileState.tos = shared;
+    }
+    if (!tileState.tos && tileState.engine) tileState.tos = findTileObjectSystem(tileState.engine);
+    publishCapturedGlobals();
+  }
+  function publishCapturedGlobals() {
+    if (tileState.engine) shareGlobal("__QUINOA_ENGINE__", tileState.engine);
+    if (tileState.tos) shareGlobal("__TILE_OBJECT_SYSTEM__", tileState.tos);
+  }
+  function mapPrototype() {
+    const MapCtor = pageWindow?.Map ?? Map;
+    return MapCtor?.prototype ?? null;
+  }
+  function armCapture() {
+    if (tileState.tos || tileState.mapSetPatched) return;
+    const proto = mapPrototype();
+    const original = proto?.set;
+    if (typeof original !== "function") return;
+    const wrapper = function(key2, value) {
+      const result = original.call(this, key2, value);
+      if (key2 === TILE_OBJECT_SYSTEM_NAME) {
+        try {
+          const system = tileObjectSystemFrom(value);
+          if (system) {
+            tileState.tos = system;
+            tileState.worldSystems = this && typeof this.get === "function" ? this : null;
+            publishCapturedGlobals();
+            disarmCapture();
+          }
+        } catch {
+        }
+      }
+      return result;
+    };
+    tileState.origMapSet = original;
+    tileState.ourMapSet = wrapper;
+    tileState.mapSetPatched = true;
+    proto.set = wrapper;
+  }
+  function disarmCapture() {
+    if (!tileState.mapSetPatched) return;
+    tileState.mapSetPatched = false;
+    const proto = mapPrototype();
+    try {
+      if (proto && tileState.origMapSet && proto.set === tileState.ourMapSet) {
+        proto.set = tileState.origMapSet;
+      }
+    } catch {
+    }
+    tileState.origMapSet = null;
+    tileState.ourMapSet = null;
+  }
+  function ensureCapture() {
+    if (tileState.tos && isLiveTileObjectSystem(tileState.tos)) return;
+    if (tileState.tos) {
+      tileState.tos = null;
+      tileState.worldSystems = null;
+      try {
+        shareGlobal("__TILE_OBJECT_SYSTEM__", null);
+      } catch {
+      }
+    }
+    tryCaptureFromKnownGlobals();
+    if (!tileState.tos) armCapture();
+  }
+  function globalIndexFromXY(tx, ty) {
+    const cols = tileState.tos?.map?.cols;
+    if (!Number.isFinite(cols) || cols <= 0) return null;
+    return ty * cols + tx | 0;
+  }
+  function getTileViewAt(tx, ty, ensureView) {
+    const gidx = globalIndexFromXY(tx, ty);
+    if (!tileState.tos || gidx == null) return { gidx: null, tv: null };
+    let tv = tileState.tos.tileViews?.get?.(gidx) ?? null;
+    if (!tv && ensureView && typeof tileState.tos.getOrCreateTileView === "function") {
+      try {
+        tv = tileState.tos.getOrCreateTileView(gidx);
+      } catch {
+      }
+    }
+    return { gidx, tv };
+  }
+  function assertReady() {
+    ensureCapture();
+    if (!tileState.tos) {
+      throw new Error("Quinoa tile system not captured. Call tos.init() early (main entry) so it is watching before the world builds.");
+    }
+  }
+  function getWorldSystem(name) {
+    ensureCapture();
+    const entry = tileState.worldSystems?.get(name);
+    if (!entry) return null;
+    const system = entry.system ?? entry;
+    return system && typeof system === "object" && system.destroyed !== true ? system : null;
+  }
+  var tileState, TILE_OBJECT_SYSTEM_NAME, SCOPE_SEARCH_DEPTH;
+  var init_tileCapture = __esm({
+    "src/game/pixi/tileCapture.ts"() {
+      "use strict";
+      init_pageContext();
+      tileState = {
+        /**
+         * The old monolithic engine. Current builds have none, so this stays null
+         * unless another mod published one; everything below treats it as optional.
+         */
+        engine: null,
+        tos: null,
+        /**
+         * The world scope's system registry, where the tile system was found. Other
+         * systems of the same world live there too (`avatar`, for one), so keeping it
+         * lets them be reached without a capture of their own.
+         */
+        worldSystems: null,
+        /** Set while `Map.prototype.set` carries our capture wrapper. */
+        mapSetPatched: false,
+        origMapSet: null,
+        ourMapSet: null
+      };
+      TILE_OBJECT_SYSTEM_NAME = "tileObject";
+      SCOPE_SEARCH_DEPTH = 6;
+    }
+  });
+
+  // src/game/pixi/tileFlash.ts
+  function hasTint(node) {
+    return !!(node && typeof node.tint === "number");
+  }
+  function collectTintable(root4, cap = 900) {
+    const out = [];
+    const stack = [root4];
+    while (stack.length && out.length < cap) {
+      const node = stack.pop();
+      if (!node) continue;
+      if (hasTint(node)) out.push(node);
+      const children = node.children;
+      if (Array.isArray(children)) for (const child of children) stack.push(child);
+    }
+    return out;
+  }
+  function lerpColor(from, to, t) {
+    const r0 = from >> 16 & 255, g0 = from >> 8 & 255, b0 = from & 255;
+    const r1 = to >> 16 & 255, g1 = to >> 8 & 255, b1 = to & 255;
+    const r = Math.round(r0 + (r1 - r0) * t);
+    const g = Math.round(g0 + (g1 - g0) * t);
+    const b = Math.round(b0 + (b1 - b0) * t);
+    return r << 16 | g << 8 | b;
+  }
+  function stopFlashTile(gidx) {
+    const entry = activeFlashes.get(gidx);
+    if (!entry) return;
+    cancelAnimationFrame(entry.raf);
+    for (const node of entry.touched) {
+      const base = entry.baseline.get(node);
+      if (base == null) continue;
+      try {
+        node.tint = base;
+      } catch {
+      }
+    }
+    activeFlashes.delete(gidx);
+  }
+  function flashTileGreen(tx, ty, opts = {}) {
+    const { gidx } = getTileViewAt(Number(tx), Number(ty), true);
+    if (gidx == null) return false;
+    stopFlashTile(gidx);
+    const color2 = opts.color ?? FLASH_DEFAULT_COLOR;
+    const startMix = opts.startAlpha ?? FLASH_DEFAULT_MIX;
+    const durationMs = Math.max(1, opts.durationMs ?? FLASH_DEFAULT_DURATION_MS);
+    const resolveParent = () => {
+      const { tv } = getTileViewAt(Number(tx), Number(ty), false);
+      return tv?.displayObject || tv?.root || tv?.container || tv || null;
+    };
+    if (!resolveParent()) return false;
+    const entry = { raf: 0, baseline: /* @__PURE__ */ new WeakMap(), touched: /* @__PURE__ */ new Set() };
+    activeFlashes.set(gidx, entry);
+    const start2 = performance.now();
+    const tick3 = (now2) => {
+      const progress = Math.min(1, (now2 - start2) / durationMs);
+      const mix = startMix * (1 - progress);
+      const parent = resolveParent();
+      if (parent) {
+        for (const node of collectTintable(parent)) {
+          if (!entry.baseline.has(node)) entry.baseline.set(node, node.tint);
+          entry.touched.add(node);
+          const base = entry.baseline.get(node);
+          try {
+            node.tint = lerpColor(base, color2, mix);
+          } catch {
+          }
+        }
+      }
+      if (progress >= 1) {
+        stopFlashTile(gidx);
+        return;
+      }
+      entry.raf = requestAnimationFrame(tick3);
+    };
+    entry.raf = requestAnimationFrame(tick3);
+    return true;
+  }
+  var activeFlashes, FLASH_DEFAULT_COLOR, FLASH_DEFAULT_MIX, FLASH_DEFAULT_DURATION_MS;
+  var init_tileFlash = __esm({
+    "src/game/pixi/tileFlash.ts"() {
+      "use strict";
+      init_tileCapture();
+      activeFlashes = /* @__PURE__ */ new Map();
+      FLASH_DEFAULT_COLOR = 4906624;
+      FLASH_DEFAULT_MIX = 1;
+      FLASH_DEFAULT_DURATION_MS = 1e3;
+    }
+  });
+
+  // src/game/pixi/tileObjects.ts
+  function deepClone(v) {
+    try {
+      if (typeof structuredClone === "function") return structuredClone(v);
+    } catch {
+    }
+    try {
+      return JSON.parse(JSON.stringify(v));
+    } catch {
+    }
+    return v;
+  }
+  function getRenderContext() {
+    try {
+      return tileState.engine?.reusableContext ?? null;
+    } catch {
+      return null;
+    }
+  }
+  function applyTileObject(tx, ty, nextObj, opts = {}) {
+    assertReady();
+    const ensureView = opts.ensureView !== false;
+    const forceUpdate = opts.forceUpdate !== false;
+    const { gidx, tv } = getTileViewAt(tx, ty, ensureView);
+    if (gidx == null) throw new Error("TOS/map cols not available");
+    if (!tv) throw new Error("TileView not available");
+    const before = tv.tileObject;
+    tv.onDataChanged(nextObj);
+    const ctx2 = forceUpdate ? getRenderContext() : null;
+    if (ctx2 && typeof tv.update === "function") {
+      try {
+        tv.update(ctx2);
+      } catch {
+      }
+    }
+    return { tx, ty, gidx, ok: true, before, after: tv.tileObject };
+  }
+  function assertType(obj, type) {
+    if (!obj) throw new Error("No tileObject on this tile");
+    if (obj.objectType !== type) throw new Error(`Wrong objectType: expected "${type}", got "${obj.objectType}"`);
+  }
+  function patchPlantSlot(slot, slotPatch) {
+    const p = slotPatch || {};
+    if ("startTime" in p) slot.startTime = Number(p.startTime);
+    if ("endTime" in p) slot.endTime = Number(p.endTime);
+    if ("size" in p) slot.size = Number(p.size);
+    if ("mutations" in p) {
+      if (!Array.isArray(p.mutations)) throw new Error("mutations must be an array of strings");
+      if (!p.mutations.every((x) => typeof x === "string")) throw new Error("mutations must contain only strings");
+      slot.mutations = p.mutations.slice();
+    }
+  }
+  function getApp() {
+    try {
+      return tileState.engine?.app ?? getPixiApp() ?? pageWindow?.__PIXI_APP__ ?? null;
+    } catch {
+      return null;
+    }
+  }
+  function getRenderer() {
+    try {
+      return tileState.engine?.app?.renderer ?? getSpriteState().renderer ?? pageWindow?.__PIXI_RENDERER__ ?? getApp()?.renderer ?? null;
+    } catch {
+      return null;
+    }
+  }
+  function getCanvas() {
+    const app = getApp();
+    const renderer = getRenderer();
+    return renderer?.canvas || renderer?.view?.canvas || renderer?.view || app?.view || app?.canvas || null;
+  }
+  function pointerToFarmTile(ev) {
+    assertReady();
+    const canvas = getCanvas();
+    const renderer = getRenderer();
+    const worldContainer = tileState.tos?.worldContainer;
+    const map2 = tileState.tos?.map;
+    if (!canvas || !renderer?.screen || !worldContainer?.toLocal || !map2) return null;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    const global = {
+      x: (ev.clientX - rect.left) * renderer.screen.width / rect.width,
+      y: (ev.clientY - rect.top) * renderer.screen.height / rect.height
+    };
+    const world = worldContainer.toLocal(global);
+    const tx = Math.floor(world.x / FARM_TILE_SIZE);
+    const ty = Math.floor(world.y / FARM_TILE_SIZE);
+    const cols = Number(map2.cols);
+    const rows = Number(map2.rows);
+    if (!Number.isFinite(cols) || tx < 0 || ty < 0 || tx >= cols) return null;
+    if (Number.isFinite(rows) && ty >= rows) return null;
+    return { tx, ty, gidx: tx + ty * cols };
+  }
+  var FARM_TILE_SIZE, tos;
+  var init_tileObjects = __esm({
+    "src/game/pixi/tileObjects.ts"() {
+      "use strict";
+      init_pageContext();
+      init_tileCapture();
+      init_tileFlash();
+      init_context();
+      FARM_TILE_SIZE = 256;
+      tos = {
+        /** Call once from main, as early as possible, so the capture watches before the world builds. */
+        init() {
+          ensureCapture();
+          return { ok: !!tileState.tos, engine: tileState.engine, tos: tileState.tos };
+        },
+        isReady() {
+          ensureCapture();
+          return !!tileState.tos;
+        },
+        getStatus() {
+          return { ok: !!tileState.tos, engine: tileState.engine, tos: tileState.tos };
+        },
+        /**
+         * Frame context for a manual `TileView.update`, or null when the game does not
+         * hand one out. Callers must treat null as "no forced repaint needed".
+         */
+        getRenderContext,
+        /** Get tile object by global index (same index used in WS HarvestCrop slot field). */
+        getTileObjectByIndex(gidx) {
+          if (!tileState.tos) return null;
+          try {
+            const tv = tileState.tos.tileViews?.get?.(gidx) ?? null;
+            return tv ? { tileObject: tv.tileObject } : null;
+          } catch {
+            return null;
+          }
+        },
+        getTileObject(tx, ty, opts = {}) {
+          assertReady();
+          const ensureView = opts.ensureView !== false;
+          const { gidx, tv } = getTileViewAt(Number(tx), Number(ty), ensureView);
+          if (gidx == null) throw new Error("TOS/map cols not available");
+          return {
+            tx: Number(tx),
+            ty: Number(ty),
+            gidx,
+            tileView: tv,
+            tileObject: tv?.tileObject
+          };
+        },
+        /** Empties the tile (tileObject = null). */
+        setTileEmpty(tx, ty, opts = {}) {
+          return applyTileObject(Number(tx), Number(ty), null, opts);
+        },
+        setTilePlant(tx, ty, patch, opts = {}) {
+          const info = this.getTileObject(tx, ty, opts);
+          const cur = info.tileObject;
+          assertType(cur, "plant");
+          const next = deepClone(cur);
+          if (!Array.isArray(next.slots)) next.slots = [];
+          const p = patch || {};
+          if ("plantedAt" in p) next.plantedAt = Number(p.plantedAt);
+          if ("maturedAt" in p) next.maturedAt = Number(p.maturedAt);
+          if ("species" in p) next.species = String(p.species);
+          if ("slotIdx" in p && "slotPatch" in p) {
+            const i = Number(p.slotIdx) | 0;
+            if (!next.slots[i]) throw new Error(`Plant slot ${i} does not exist`);
+            patchPlantSlot(next.slots[i], p.slotPatch);
+            return applyTileObject(Number(tx), Number(ty), next, opts);
+          }
+          if ("slots" in p) {
+            const s = p.slots;
+            if (Array.isArray(s)) {
+              for (let i = 0; i < s.length; i++) {
+                if (s[i] == null) continue;
+                if (!next.slots[i]) throw new Error(`Plant slot ${i} does not exist`);
+                patchPlantSlot(next.slots[i], s[i]);
+              }
+            } else if (s && typeof s === "object") {
+              for (const k of Object.keys(s)) {
+                const i = Number(k) | 0;
+                if (!Number.isFinite(i)) continue;
+                if (!next.slots[i]) throw new Error(`Plant slot ${i} does not exist`);
+                patchPlantSlot(next.slots[i], s[k]);
+              }
+            } else {
+              throw new Error("patch.slots must be an array or object map");
+            }
+            return applyTileObject(Number(tx), Number(ty), next, opts);
+          }
+          return applyTileObject(Number(tx), Number(ty), next, opts);
+        },
+        setTileDecor(tx, ty, patch, opts = {}) {
+          const info = this.getTileObject(tx, ty, opts);
+          const cur = info.tileObject;
+          assertType(cur, "decor");
+          const next = deepClone(cur);
+          const p = patch || {};
+          if ("rotation" in p) next.rotation = Number(p.rotation);
+          return applyTileObject(Number(tx), Number(ty), next, opts);
+        },
+        setTileEgg(tx, ty, patch, opts = {}) {
+          const info = this.getTileObject(tx, ty, opts);
+          const cur = info.tileObject;
+          assertType(cur, "egg");
+          const next = deepClone(cur);
+          const p = patch || {};
+          if ("plantedAt" in p) next.plantedAt = Number(p.plantedAt);
+          if ("maturedAt" in p) next.maturedAt = Number(p.maturedAt);
+          return applyTileObject(Number(tx), Number(ty), next, opts);
+        },
+        /** The game's Pixi canvas, or null before it is known. */
+        getCanvas,
+        /** The garden tile under a pointer event, wherever the camera has panned to. */
+        pointerToFarmTile,
+        /** A green flash that fades on a tile (the editor's "placed" and "selected" cue). */
+        flashTileGreen
+      };
+    }
+  });
+
+  // src/features/editor/liveGarden.ts
+  async function getPlayerId() {
+    try {
+      const id = await Atoms.player.playerId.get();
+      return typeof id === "string" && id ? id : null;
+    } catch {
+      return null;
+    }
+  }
+  async function readUserSlotIdx() {
+    try {
+      const raw = await myUserSlotIdx.get();
+      if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+    } catch {
+    }
+    return 0;
+  }
+  async function readMapData() {
+    return await Atoms.root.map.get().catch(() => null) ?? null;
+  }
+  async function readPlayerSlot(playerId2) {
+    const slots = await stateUserSlots.get().catch(() => null);
+    return findPlayerSlot(slots, playerId2);
+  }
+  async function readRealGardenForPlayer(playerId2) {
+    if (!playerId2) return null;
+    try {
+      const match = await readPlayerSlot(playerId2);
+      return match?.slot ? sanitizeGarden(match.slot.data?.garden || {}) : null;
+    } catch {
+      return null;
+    }
+  }
+  var myUserSlotIdx;
+  var init_liveGarden = __esm({
+    "src/features/editor/liveGarden.ts"() {
+      "use strict";
+      init_atoms();
+      init_hub();
+      init_gardenModel();
+      myUserSlotIdx = makeAtom("myUserSlotIdxAtom");
+    }
+  });
+
+  // src/features/editor/tileMap.ts
+  function mapColumns(mapData) {
+    const cols = Number(mapData?.cols);
+    return mapData && Number.isFinite(cols) && cols > 0 ? cols : null;
+  }
+  function slotTiles(mapData, userSlotIdx) {
+    const cols = mapColumns(mapData);
+    if (cols == null) return [];
+    const out = [];
+    for (const { tileType, record, localKey } of SOURCES) {
+      for (const [gidxText, meta] of Object.entries(mapData?.[record] || {})) {
+        if (meta?.userSlotIdx !== userSlotIdx) continue;
+        const gidx = Number(gidxText);
+        if (!Number.isFinite(gidx)) continue;
+        out.push({
+          gidx,
+          tx: gidx % cols,
+          ty: Math.floor(gidx / cols),
+          localIdx: Number(meta[localKey] ?? -1),
+          tileType
+        });
+      }
+    }
+    return out;
+  }
+  function ownTileAt(mapData, tx, ty, ownSlotIdx) {
+    const cols = mapColumns(mapData);
+    if (cols == null || tx < 0 || ty < 0 || tx >= cols) return null;
+    const gidx = ty * cols + tx;
+    for (const { tileType, record, localKey } of SOURCES) {
+      const meta = mapData?.[record]?.[gidx];
+      if (meta && typeof meta === "object" && Number(meta.userSlotIdx) === ownSlotIdx) {
+        return { tileType, localTileIndex: Number(meta[localKey]), userSlotIdx: ownSlotIdx };
+      }
+    }
+    return null;
+  }
+  function tileCoordsOf(mapData, target) {
+    const cols = mapColumns(mapData);
+    if (cols == null) return null;
+    const source = SOURCES.find((s) => s.tileType === target.tileType) ?? SOURCES[1];
+    for (const [gidxText, meta] of Object.entries(mapData?.[source.record] || {})) {
+      if (!meta || typeof meta !== "object") continue;
+      const record = meta;
+      if (Number(record.userSlotIdx) !== target.userSlotIdx) continue;
+      if (Number(record[source.localKey]) !== target.localTileIndex) continue;
+      const gidx = Number(gidxText);
+      if (!Number.isFinite(gidx)) continue;
+      return { x: gidx % cols, y: Math.floor(gidx / cols) };
+    }
+    return null;
+  }
+  var SOURCES;
+  var init_tileMap = __esm({
+    "src/features/editor/tileMap.ts"() {
+      "use strict";
+      SOURCES = [
+        { tileType: "Dirt", record: "globalTileIdxToDirtTile", localKey: "dirtTileIdx" },
+        { tileType: "Boardwalk", record: "globalTileIdxToBoardwalk", localKey: "boardwalkTileIdx" }
+      ];
+    }
+  });
+
+  // src/features/editor/tilePaint.ts
+  function cloneTileObject(obj) {
+    if (!obj) return obj;
+    try {
+      return JSON.parse(JSON.stringify(obj));
+    } catch {
+      return obj;
+    }
+  }
+  function tileViewAt(tx, ty) {
+    try {
+      return tos.getTileObject(tx, ty, { ensureView: true })?.tileView ?? null;
+    } catch {
+      return null;
+    }
+  }
+  function renderContext() {
+    try {
+      return tos.getRenderContext();
+    } catch {
+      return null;
+    }
+  }
+  function pushToTileView(tileView, obj, ctx2) {
+    if (!tileView || typeof tileView.onDataChanged !== "function") return;
+    try {
+      tileView.onDataChanged(cloneTileObject(obj));
+    } catch {
+      return;
+    }
+    if (ctx2 && typeof tileView.update === "function") {
+      try {
+        tileView.update(ctx2);
+      } catch {
+      }
+    }
+  }
+  function paintTileObject(x, y, obj) {
+    if (!obj) {
+      tos.setTileEmpty(x, y, FORCE);
+      return;
+    }
+    pushToTileView(tileViewAt(x, y), obj, renderContext());
+    switch (obj.objectType) {
+      case "plant":
+        tos.setTilePlant(
+          x,
+          y,
+          { species: obj.species, plantedAt: obj.plantedAt, maturedAt: obj.maturedAt, slots: obj.slots },
+          FORCE
+        );
+        break;
+      case "decor":
+        tos.setTileDecor(x, y, { rotation: obj.rotation }, FORCE);
+        break;
+      case "egg":
+        tos.setTileEgg(x, y, { plantedAt: obj.plantedAt, maturedAt: obj.maturedAt }, FORCE);
+        break;
+      default:
+        tos.setTileEmpty(x, y, FORCE);
+    }
+  }
+  async function paintGarden(garden3, userSlotIdx) {
+    if (!tos.isReady()) return;
+    for (const tile of slotTiles(await readMapData(), userSlotIdx)) {
+      paintTileObject(tile.tx, tile.ty, tileObjectAt(garden3, tile.tileType, tile.localIdx));
+    }
+  }
+  async function pushGardenToTileViews(garden3, userSlotIdx) {
+    const tiles = slotTiles(await readMapData(), userSlotIdx);
+    const ctx2 = renderContext();
+    for (const tile of tiles) {
+      const tileView = tileViewAt(tile.tx, tile.ty);
+      if (tileView) pushToTileView(tileView, tileObjectAt(garden3, tile.tileType, tile.localIdx), ctx2);
+    }
+  }
+  var FORCE;
+  var init_tilePaint = __esm({
+    "src/features/editor/tilePaint.ts"() {
+      "use strict";
+      init_tileObjects();
+      init_gardenModel();
+      init_liveGarden();
+      init_tileMap();
+      FORCE = { ensureView: true, forceUpdate: true };
+    }
+  });
+
+  // src/features/editor/gardenOverlay.ts
+  function holdTile(tileView, resolve) {
+    if (!tileView || typeof tileView.onDataChanged !== "function") return null;
+    const hadOwnProperty = Object.prototype.hasOwnProperty.call(tileView, "onDataChanged");
+    const original = tileView.onDataChanged;
+    tileView.onDataChanged = function() {
+      return original.call(this, cloneTileObject(resolve()));
+    };
+    return { tileView, hadOwnProperty, original, resolve };
+  }
+  function releaseTile(hold) {
+    try {
+      if (hold.hadOwnProperty) hold.tileView.onDataChanged = hold.original;
+      else delete hold.tileView.onDataChanged;
+    } catch {
+      try {
+        hold.tileView.onDataChanged = hold.original;
+      } catch {
+      }
+    }
+  }
+  async function installGardenOverlay(nextOwner, userSlotIdx, getGarden) {
+    releaseGardenOverlay();
+    if (!tos.isReady()) return false;
+    const tiles = slotTiles(await readMapData(), userSlotIdx);
+    if (!tiles.length) return false;
+    const ctx2 = renderContext();
+    for (const tile of tiles) {
+      const tileView = tileViewAt(tile.tx, tile.ty);
+      if (!tileView) continue;
+      const resolve = () => tileObjectAt(getGarden(), tile.tileType, tile.localIdx);
+      const hold = holdTile(tileView, resolve);
+      if (hold) holds.set(tile.gidx, hold);
+      pushToTileView(tileView, resolve(), ctx2);
+    }
+    if (holds.size === 0) return false;
+    owner = nextOwner;
+    return true;
+  }
+  function releaseGardenOverlay() {
+    for (const hold of holds.values()) releaseTile(hold);
+    holds.clear();
+    owner = null;
+  }
+  function repaintOverlay() {
+    const ctx2 = renderContext();
+    for (const hold of holds.values()) pushToTileView(hold.tileView, hold.resolve(), ctx2);
+  }
+  async function showGardenInTileInfo(garden3) {
+    try {
+      await fakeShow(MYDATA_PATCH, { garden: sanitizeGarden(garden3) });
+    } catch (error) {
+      console.warn("[EditorService] tile info patch unavailable", error);
+    }
+  }
+  async function clearGardenInTileInfo() {
+    try {
+      await fakeHide(MYDATA_PATCH.label);
+    } catch {
+    }
+  }
+  var owner, holds, overlayOwner, MYDATA_PATCH;
+  var init_gardenOverlay = __esm({
+    "src/features/editor/gardenOverlay.ts"() {
+      "use strict";
+      init_atoms();
+      init_tileObjects();
+      init_fakeAtoms();
+      init_gardenModel();
+      init_liveGarden();
+      init_tileMap();
+      init_tilePaint();
+      owner = null;
+      holds = /* @__PURE__ */ new Map();
+      overlayOwner = () => owner;
+      MYDATA_PATCH = {
+        label: Atoms.data.myData.label,
+        merge: (real, fake) => ({ ...real || {}, ...fake || {} })
+      };
+    }
+  });
+
+  // src/features/editor/friendPreview.ts
+  async function applyFriendGardenPreview(garden3) {
+    if (!garden3 || typeof garden3 !== "object") return false;
+    try {
+      const pid = await getPlayerId();
+      if (!pid) return false;
+      const match = await readPlayerSlot(pid);
+      if (!match?.slot) return false;
+      previewGarden = sanitizeGarden(garden3);
+      if (!await installGardenOverlay("friend", match.index, () => previewGarden)) return false;
+      await showGardenInTileInfo(previewGarden);
+      active = { userSlotIdx: match.index, playerId: pid };
+      return true;
+    } catch (error) {
+      console.error("[EditorService] applyFriendGardenPreview failed", error);
+      releaseGardenOverlay();
+      await clearGardenInTileInfo();
+      active = null;
+      return false;
+    }
+  }
+  async function clearFriendGardenPreview() {
+    if (!active) return false;
+    const { userSlotIdx, playerId: playerId2 } = active;
+    active = null;
+    releaseGardenOverlay();
+    await clearGardenInTileInfo();
+    try {
+      const match = await readPlayerSlot(playerId2);
+      await pushGardenToTileViews(sanitizeGarden(match?.slot?.data?.garden), userSlotIdx);
+      return true;
+    } catch (error) {
+      console.error("[EditorService] clearFriendGardenPreview failed", error);
+      return false;
+    }
+  }
+  var active, previewGarden;
+  var init_friendPreview = __esm({
+    "src/features/editor/friendPreview.ts"() {
+      "use strict";
+      init_gardenModel();
+      init_gardenOverlay();
+      init_liveGarden();
+      init_tilePaint();
+      active = null;
+      previewGarden = makeEmptyGarden();
+    }
+  });
+
+  // src/game/audioPlayer.ts
+  function groupKeyOf(name) {
+    const base = String(name || "").replace(/\.mp3$/i, "");
+    const m = base.match(/^([A-Za-z]+)[_\-]/) ?? base.match(/^([A-Za-z]+)\d+$/) ?? base.match(/^([A-Za-z]+)/);
+    return m ? m[1].toLowerCase() : base.toLowerCase();
+  }
+  function extractMp3s(text2) {
+    if (!text2) return [];
+    const out = [];
+    let m;
+    MP3_IN_TEXT.lastIndex = 0;
+    while (m = MP3_IN_TEXT.exec(text2)) out.push(m[1]);
+    return out;
+  }
+  function sameAsset(a, b) {
+    try {
+      const A = new URL(a, location.href).href;
+      const B = new URL(b, location.href).href;
+      return A === B || logicalName(fileName(A)) === logicalName(fileName(B));
+    } catch {
+      return a === b;
+    }
+  }
+  function howler() {
+    return window.Howler && Array.isArray(window.Howler._howls) ? window.Howler : null;
+  }
+  function readGameVolume() {
+    const raw = localStorage.getItem(VOLUME_STORAGE_KEY);
+    if (raw == null) return null;
+    let text2 = raw;
+    try {
+      const val = JSON.parse(raw);
+      if (typeof val === "number") return val;
+      text2 = JSON.stringify(val);
+    } catch {
+    }
+    const m = String(text2).match(/-?\d+(?:\.\d+)?/);
+    return m ? parseFloat(m[0]) : null;
+  }
+  function effectiveVolume() {
+    const raw = readGameVolume() ?? VOLUME_MAX;
+    const clamped = Math.max(VOLUME_MIN, Math.min(VOLUME_MAX, raw));
+    const setting = Math.abs(clamped - VOLUME_MIN) < 1e-6 ? 0 : clamped;
+    let master = 1;
+    try {
+      if (window.Howler && typeof window.Howler.volume === "function") master = window.Howler.volume();
+    } catch {
+    }
+    return setting * master;
+  }
+  async function fetchText(u) {
+    try {
+      const res = await fetch(u, { mode: "same-origin", credentials: "same-origin" });
+      if (!res.ok) return "";
+      if (!/javascript|ecmascript|css|html/i.test(res.headers.get("content-type") || "")) return "";
+      return await res.text();
+    } catch {
+      return "";
+    }
+  }
+  var VOLUME_STORAGE_KEY, VOLUME_MIN, VOLUME_MAX, MIN_VARIANTS_PER_GROUP, MP3_URL, MP3_IN_TEXT, absolute, fileName, logicalName, AudioPlayer, audioPlayer;
+  var init_audioPlayer = __esm({
+    "src/game/audioPlayer.ts"() {
+      "use strict";
+      VOLUME_STORAGE_KEY = "soundEffectsVolumeAtom";
+      VOLUME_MIN = 1e-3;
+      VOLUME_MAX = 0.2000000000000001;
+      MIN_VARIANTS_PER_GROUP = 2;
+      MP3_URL = /\.mp3(?:[\?#][^\s'"]*)?$/i;
+      MP3_IN_TEXT = /["'`](\/?[^"'`)\s]+?\.mp3(?:\?[^"'`\s]*)?)["'`]/ig;
+      absolute = (u) => {
+        try {
+          return new URL(u, location.href).href;
+        } catch {
+          return u;
+        }
+      };
+      fileName = (u) => {
+        try {
+          return new URL(u, location.href).pathname.split("/").pop() || u;
+        } catch {
+          return String(u);
+        }
+      };
+      logicalName = (name) => name.replace(/-[A-Za-z0-9_=-]{6,}(?=\.mp3$)/i, "");
+      AudioPlayer = class {
+        constructor() {
+          /** Every mp3 found, by absolute URL, with its name without the hash. */
+          this.found = /* @__PURE__ */ new Map();
+          this.groupsMap = /* @__PURE__ */ new Map();
+          void this.scanAll();
+        }
+        add(u) {
+          if (!u || !MP3_URL.test(u)) return;
+          const url = absolute(u);
+          if (!this.found.has(url)) this.found.set(url, logicalName(fileName(url)));
+        }
+        scanPerformance() {
+          for (const entry of performance.getEntriesByType("resource")) {
+            this.add(entry.name);
+          }
+        }
+        scanHowler() {
+          for (const h2 of howler()?._howls ?? []) {
+            const src = h2 && (h2._src || h2._urls?.[0]);
+            if (src) this.add(src);
+          }
+        }
+        async scanCaches() {
+          if (!("caches" in window)) return;
+          try {
+            for (const k of await caches.keys()) {
+              const cache2 = await caches.open(k);
+              for (const r of await cache2.keys()) this.add(r.url);
+            }
+          } catch {
+          }
+        }
+        scanDOM() {
+          document.querySelectorAll("audio[src]").forEach((a) => this.add(a.getAttribute("src") || ""));
+          document.querySelectorAll("source[src]").forEach((s) => this.add(s.getAttribute("src") || ""));
+          for (const m of extractMp3s(document.documentElement?.outerHTML || "")) this.add(m);
+        }
+        /** The mp3 paths named in the page itself and its same-origin scripts and stylesheets. */
+        async scanResourcesForRefs() {
+          const urls = /* @__PURE__ */ new Set();
+          document.querySelectorAll('script[src],link[rel="stylesheet"][href]').forEach((el) => {
+            const u = el.src || el.href;
+            try {
+              const url = new URL(u, location.href);
+              if (url.origin === location.origin) urls.add(url.href);
+            } catch {
+            }
+          });
+          urls.add(location.href);
+          const texts = await Promise.all([...urls].map(fetchText));
+          for (const text2 of texts) for (const m of extractMp3s(text2)) this.add(m);
+        }
+        async scanAll() {
+          this.found.clear();
+          this.scanPerformance();
+          this.scanHowler();
+          this.scanDOM();
+          await this.scanCaches();
+          await this.scanResourcesForRefs();
+          const groups = /* @__PURE__ */ new Map();
+          for (const [url, name] of this.found) {
+            const key2 = groupKeyOf(name);
+            groups.set(key2, [...groups.get(key2) ?? [], url]);
+          }
+          for (const [key2, list] of groups) {
+            if (list.length >= MIN_VARIANTS_PER_GROUP) this.groupsMap.set(key2, list);
+          }
+        }
+        findExistingHowl(url) {
+          for (const h2 of howler()?._howls ?? []) {
+            const src = h2 && (h2._src || h2._urls?.[0]);
+            if (src && sameAsset(src, url)) return h2;
+          }
+          return null;
+        }
+        /** Plays a URL at the game's volume, through Howler when it is there. */
+        playUrl(url) {
+          const vol = effectiveVolume();
+          const existing = this.findExistingHowl(url);
+          if (existing) {
+            try {
+              existing.play();
+              return existing;
+            } catch {
+            }
+          }
+          const Howl = window.Howl && window.Howler ? window.Howl : null;
+          if (Howl) {
+            try {
+              const h2 = new Howl({ src: [url], volume: vol });
+              h2.play();
+              return h2;
+            } catch {
+            }
+          }
+          try {
+            const a = new Audio(url);
+            a.volume = Math.max(0, Math.min(1, vol));
+            void a.play().catch(() => {
+            });
+            return a;
+          } catch {
+            return null;
+          }
+        }
+        /** Plays the first sound whose URL matches (a RegExp, or text matched case-insensitively). */
+        playBy(matcher) {
+          const re = matcher instanceof RegExp ? matcher : new RegExp(String(matcher).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+          const hit = [...this.found.keys()].find((u) => re.test(u));
+          return hit ? this.playUrl(hit) : null;
+        }
+        /** Plays a random variation of a group ("harvest", "plantseed", ...), or null if there is none. */
+        playGroup(name) {
+          const list = this.groupsMap.get(String(name || "").trim().toLowerCase()) ?? [];
+          if (!list.length) return null;
+          return this.playUrl(list[Math.random() * list.length | 0]);
+        }
+        playSellNotification() {
+          return this.playBy("Score_PlusOne");
+        }
+      };
+      audioPlayer = new AudioPlayer();
+    }
+  });
+
+  // src/data/rules/cropSize.ts
+  function toFinite(value) {
+    const numeric = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+  function normalizeKey3(value) {
+    return String(value ?? "").trim().toLowerCase();
+  }
+  function clampCropSize(value) {
+    const numeric = toFinite(value);
+    if (numeric == null) return CROP_SIZE_MIN;
+    return Math.min(CROP_SIZE_MAX, Math.max(CROP_SIZE_MIN, Math.round(numeric)));
+  }
+  function findPlantCatalogEntry(species) {
+    const wanted = normalizeKey3(species);
+    if (!wanted) return null;
+    const catalog = plantCatalog2;
+    const direct = typeof species === "string" ? catalog[species] : void 0;
+    if (direct) return direct;
+    for (const key2 of Object.keys(catalog)) {
+      const entry = catalog[key2];
+      if (!entry) continue;
+      if (normalizeKey3(key2) === wanted) return entry;
+      if (normalizeKey3(entry.crop?.name) === wanted) return entry;
+      if (normalizeKey3(entry.plant?.name) === wanted) return entry;
+      if (normalizeKey3(entry.seed?.name) === wanted) return entry;
+    }
+    return null;
+  }
+  function getMaxSizeMultiplier(species) {
+    const crop = findPlantCatalogEntry(species)?.crop;
+    if (!crop) return null;
+    const value = toFinite(crop.maxSizeMultiplier) ?? toFinite(crop.maxScale);
+    return value != null && value > 0 ? value : null;
+  }
+  function cropSizeMultiplier(species, size) {
+    const maxMultiplier = getMaxSizeMultiplier(species);
+    if (maxMultiplier == null || maxMultiplier <= 1) return 1;
+    const ratio = (clampCropSize(size) - CROP_SIZE_MIN) / SIZE_SPAN;
+    return 1 + (maxMultiplier - 1) * ratio;
+  }
+  function legacyScaleToCropSize(scale, maxScale) {
+    const numeric = toFinite(scale);
+    if (numeric == null) return null;
+    const upper = maxScale != null && maxScale > LEGACY_SCALE_MIN ? maxScale : LEGACY_FALLBACK_MAX_SCALE;
+    const clamped = Math.min(upper, Math.max(LEGACY_SCALE_MIN, numeric));
+    const ratio = (clamped - LEGACY_SCALE_MIN) / (upper - LEGACY_SCALE_MIN);
+    return clampCropSize(CROP_SIZE_MIN + ratio * SIZE_SPAN);
+  }
+  function readCropSize(source) {
+    if (!source || typeof source !== "object") return null;
+    const record = source;
+    const direct = toFinite(record.size);
+    if (direct != null) return clampCropSize(direct);
+    const legacy = toFinite(record.targetScale) ?? toFinite(record.scale);
+    if (legacy == null) return null;
+    return legacyScaleToCropSize(legacy, getMaxSizeMultiplier(record.species));
+  }
+  var CROP_SIZE_MIN, CROP_SIZE_MAX, SIZE_SPAN, LEGACY_SCALE_MIN, LEGACY_FALLBACK_MAX_SCALE;
+  var init_cropSize = __esm({
+    "src/data/rules/cropSize.ts"() {
+      "use strict";
+      init_data();
+      CROP_SIZE_MIN = 50;
+      CROP_SIZE_MAX = 100;
+      SIZE_SPAN = CROP_SIZE_MAX - CROP_SIZE_MIN;
+      LEGACY_SCALE_MIN = 1;
+      LEGACY_FALLBACK_MAX_SCALE = 2;
+    }
+  });
+
+  // src/lib/math.ts
+  var clamp, clampFinite;
+  var init_math = __esm({
+    "src/lib/math.ts"() {
+      "use strict";
+      clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+      clampFinite = (value, min, max, fallback) => {
+        const n = typeof value === "number" ? value : Number(value);
+        return clamp(Number.isFinite(n) ? n : fallback, min, max);
+      };
+    }
+  });
+
+  // src/features/editor/slotSize.ts
+  function clampSizePercent(value) {
+    return clamp(Math.round(Number.isFinite(value) ? value : CROP_SIZE_MAX), CROP_SIZE_MIN, CROP_SIZE_MAX);
+  }
+  function parseSizeText(raw) {
+    const normalized = String(raw ?? "").replace(",", ".").replace(/\s+/g, "");
+    if (!normalized) return null;
+    const n = Number(normalized);
+    return Number.isFinite(n) ? n : null;
+  }
+  function initialSlotSize(slot, mode) {
+    const size = readCropSize(slot) ?? CROP_SIZE_MAX;
+    return { pct: clampSizePercent(size), size, mode: mode === "custom" ? "custom" : "percent" };
+  }
+  function applyEdit(states, idx, applyAll, next) {
+    const targets = applyAll ? states.map((_, i) => i) : [idx];
+    return {
+      states: states.map((state5, i) => targets.includes(i) ? { ...next } : state5),
+      size: next.size,
+      targets
+    };
+  }
+  function editSlotPercent(states, idx, value, applyAll) {
+    const pct = clampSizePercent(value);
+    return applyEdit(states, idx, applyAll, { pct, size: pct, mode: "percent" });
+  }
+  function editSlotCustom(states, idx, raw, applyAll) {
+    const size = parseSizeText(raw);
+    if (size == null) return null;
+    return applyEdit(states, idx, applyAll, { pct: clampSizePercent(size), size, mode: "custom" });
+  }
+  function editSlotMode(states, idx, mode, applyAll) {
+    const current = states[idx];
+    const size = mode === "custom" ? current.size : clampSizePercent(current.size);
+    return applyEdit(states, idx, applyAll, { pct: clampSizePercent(size), size, mode });
+  }
+  var init_slotSize = __esm({
+    "src/features/editor/slotSize.ts"() {
+      "use strict";
+      init_cropSize();
+      init_math();
+    }
+  });
+
+  // src/features/editor/brushSlots.ts
+  function maxSlotsForPlant(entry) {
+    const plant = entry?.plant;
+    const offsets = Array.isArray(plant?.slotOffsets) ? plant.slotOffsets : [];
+    return plant?.harvestType === "Multiple" && offsets.length > 0 ? offsets.length : 1;
+  }
+  function normalizeSlot(slot) {
+    const pct = clampSizePercent(Number(slot.sizePercent));
+    const mode = slot.sizeMode === "custom" ? "custom" : "percent";
+    const customScale = clampSizePercent(Number.isFinite(slot.customScale) ? slot.customScale : pct);
+    return {
+      enabled: slot.enabled !== false,
+      sizePercent: mode === "custom" ? customScale : pct,
+      customScale,
+      sizeMode: mode,
+      mutations: Array.isArray(slot.mutations) ? slot.mutations : []
+    };
+  }
+  function syncBrushSlots(state5, species, maxSlots) {
+    if (state5.species !== species) {
+      return { species, slots: Array.from({ length: maxSlots }, defaultBrushSlot), applyAll: false };
+    }
+    const kept = state5.slots.slice(0, maxSlots);
+    const slots = (kept.length ? kept : [defaultBrushSlot()]).map(normalizeSlot);
+    return { ...state5, slots, applyAll: !!state5.applyAll };
+  }
+  function patchBrushSlot(state5, idx, mode, patch) {
+    const hit = targetsOf(state5, idx);
+    return { ...state5, slots: state5.slots.map((c, i) => hit(i) ? { ...c, sizeMode: mode, ...patch } : c) };
+  }
+  function toggleBrushMutation(state5, idx, mutationId) {
+    const hit = targetsOf(state5, idx);
+    return {
+      ...state5,
+      slots: state5.slots.map((c, i) => {
+        if (!hit(i)) return c;
+        const prev = Array.isArray(c.mutations) ? c.mutations : [];
+        const mutations = prev.includes(mutationId) ? prev.filter((m) => m !== mutationId) : [...prev, mutationId];
+        return { ...c, mutations };
+      })
+    };
+  }
+  function brushPlantObject(species, slots, maxSlots) {
+    const growSlots = slots.slice(0, maxSlots).filter((cfg) => cfg.enabled).map((cfg) => makeGrowSlot(species, brushSlotSize(cfg), Array.isArray(cfg.mutations) ? cfg.mutations.slice() : []));
+    if (!growSlots.length) return null;
+    return {
+      objectType: "plant",
+      species,
+      slots: ensureSlotIds(growSlots),
+      plantedAt: PLANTED_AT,
+      maturedAt: MATURED_AT
+    };
+  }
+  var DEFAULT_SIZE_PERCENT, PLANTED_AT, MATURED_AT, SLOT_START_TIME, SLOT_END_TIME, emptyBrushSlots, defaultBrushSlot, targetsOf, addBrushSlot, removeBrushSlot, brushSlotSize, makeGrowSlot;
+  var init_brushSlots = __esm({
+    "src/features/editor/brushSlots.ts"() {
+      "use strict";
+      init_slotSize();
+      init_gardenModel();
+      DEFAULT_SIZE_PERCENT = 50;
+      PLANTED_AT = 1760779438723;
+      MATURED_AT = 1760865838723;
+      SLOT_START_TIME = 1760866288723;
+      SLOT_END_TIME = 1760867858782;
+      emptyBrushSlots = () => ({ species: null, slots: [], applyAll: false });
+      defaultBrushSlot = () => ({
+        enabled: true,
+        sizePercent: DEFAULT_SIZE_PERCENT,
+        customScale: DEFAULT_SIZE_PERCENT,
+        sizeMode: "percent",
+        mutations: []
+      });
+      targetsOf = (state5, idx) => (i) => state5.applyAll || i === idx;
+      addBrushSlot = (state5, maxSlots) => state5.slots.length >= maxSlots ? state5 : { ...state5, slots: [...state5.slots, defaultBrushSlot()] };
+      removeBrushSlot = (state5) => state5.slots.length <= 1 ? state5 : { ...state5, slots: state5.slots.slice(0, -1) };
+      brushSlotSize = (cfg) => clampSizePercent(cfg.sizeMode === "custom" ? cfg.customScale : cfg.sizePercent);
+      makeGrowSlot = (species, size, mutations = []) => ({
+        species,
+        startTime: SLOT_START_TIME,
+        endTime: SLOT_END_TIME,
+        size,
+        mutations
+      });
+    }
+  });
+
+  // src/features/editor/brush.ts
+  function setSelectedId(id) {
+    if (picker.mode === "decor") picker.selectedDecorId = id;
+    else picker.selectedPlantId = id;
+  }
+  function brushSlotsFor(species) {
+    brushSlots = syncBrushSlots(brushSlots, species, getMaxSlotsForSpecies(species));
+    return brushSlots;
+  }
+  function editBrushSlots(species, edit) {
+    brushSlots = edit(brushSlotsFor(species));
+    return brushSlots;
+  }
+  function pickerEntries() {
+    const catalog = picker.mode === "decor" ? decorCatalog2 : plantCatalog2;
+    const all = Object.keys(catalog || {}).map((id) => ({ id, label: entryLabel(picker.mode, id) }));
+    const query = picker.query.trim().toLowerCase();
+    return query ? all.filter((entry) => entry.label.toLowerCase().includes(query)) : all;
+  }
+  function buildBrushTileObject() {
+    const id = getSelectedId();
+    if (!id) return null;
+    if (picker.mode === "decor") return { objectType: "decor", decorId: id, rotation: picker.decorRotation };
+    return brushPlantObject(id, brushSlotsFor(id).slots, getMaxSlotsForSpecies(id));
+  }
+  var picker, brushSlots, getSelectedId, getMaxSlotsForSpecies, entryLabel;
+  var init_brush = __esm({
+    "src/features/editor/brush.ts"() {
+      "use strict";
+      init_data();
+      init_names();
+      init_brushSlots();
+      picker = {
+        mode: "plants",
+        query: "",
+        selectedPlantId: null,
+        selectedDecorId: null,
+        /** Rotation for the next decor, chosen in the picker rather than on a real inventory item. */
+        decorRotation: 0
+      };
+      brushSlots = emptyBrushSlots();
+      getSelectedId = () => picker.mode === "decor" ? picker.selectedDecorId : picker.selectedPlantId;
+      getMaxSlotsForSpecies = (species) => maxSlotsForPlant(plantCatalog2[species]);
+      entryLabel = (mode, id) => mode === "decor" ? decorLabel(id) : cropName(id);
+    }
+  });
+
+  // src/features/editor/session.ts
+  function setCurrentEditorTile(target) {
+    currentTile = target;
+    currentItemChanged.emit();
+  }
+  function forgetCurrentEditorTile() {
+    currentTile = null;
+  }
+  var editorSession, currentTile, getCurrentEditorTile, currentItemChanged;
+  var init_session = __esm({
+    "src/features/editor/session.ts"() {
+      "use strict";
+      init_emitter();
+      editorSession = { enabled: false };
+      currentTile = null;
+      getCurrentEditorTile = () => currentTile;
+      currentItemChanged = new Emitter();
+    }
+  });
+
+  // src/features/editor/plannedGarden.ts
+  function setPlannedGarden(next) {
+    planned = next;
+    if (overlayOwner() === "editor") void showGardenInTileInfo(planned);
+  }
+  async function startPlannedGarden() {
+    try {
+      const pid = await getPlayerId();
+      if (!pid) return;
+      const userSlotIdx = await readUserSlotIdx();
+      planned = await readRealGardenForPlayer(pid) || makeEmptyGarden();
+      plannedUserSlotIdx = userSlotIdx;
+      await installGardenOverlay("editor", userSlotIdx, () => planned);
+      await showGardenInTileInfo(planned);
+    } catch (err) {
+      console.log("[EditorService] startPlannedGarden failed", err);
+    }
+  }
+  async function stopPlannedGarden() {
+    releaseGardenOverlay();
+    await clearGardenInTileInfo();
+    try {
+      const pid = await getPlayerId();
+      if (pid && plannedUserSlotIdx != null) {
+        const realGarden = await readRealGardenForPlayer(pid) || makeEmptyGarden();
+        await pushGardenToTileViews(realGarden, plannedUserSlotIdx);
+      }
+    } catch (err) {
+      console.log("[EditorService] stopPlannedGarden failed", err);
+    }
+    planned = makeEmptyGarden();
+    plannedUserSlotIdx = null;
+  }
+  async function setCurrentGarden(nextGarden) {
+    try {
+      const pid = await getPlayerId();
+      if (!pid) return false;
+      const userSlotIdx = plannedUserSlotIdx ?? await readUserSlotIdx();
+      setPlannedGarden(sanitizeGarden(nextGarden));
+      plannedUserSlotIdx = userSlotIdx;
+      try {
+        if (overlayOwner() === "editor") repaintOverlay();
+        else await paintGarden(planned, userSlotIdx);
+      } catch {
+      }
+      return true;
+    } catch (err) {
+      console.log("[EditorService] setCurrentGarden failed", err);
+      return false;
+    }
+  }
+  async function getGardenForPlayer(playerId2) {
+    if (!playerId2) return null;
+    try {
+      if (editorSession.enabled && await getPlayerId() === playerId2) return sanitizeGarden(planned);
+      return await readRealGardenForPlayer(playerId2);
+    } catch {
+      return null;
+    }
+  }
+  var planned, plannedUserSlotIdx, getPlannedGarden;
+  var init_plannedGarden = __esm({
+    "src/features/editor/plannedGarden.ts"() {
+      "use strict";
+      init_gardenModel();
+      init_gardenOverlay();
+      init_liveGarden();
+      init_session();
+      init_tilePaint();
+      planned = makeEmptyGarden();
+      plannedUserSlotIdx = null;
+      getPlannedGarden = () => planned;
+    }
+  });
+
+  // src/features/editor/planEdits.ts
+  async function playEditAnimation(animation) {
+    try {
+      const playerId2 = await getPlayerId();
+      if (!playerId2) return;
+      await Atoms.player.avatarTriggerAnimationAtom.set({ playerId: playerId2, animation });
+      if (animation === "dig") {
+        void audioPlayer.playBy("Break_Dirt_01");
+      } else {
+        void (audioPlayer.playGroup("plant") || audioPlayer.playGroup("hit_dirt") || audioPlayer.playGroup("hit") || audioPlayer.playBy(/Hit_Dirt/i));
+      }
+    } catch {
+    }
+  }
+  async function currentTileWithCoords() {
+    const target = getCurrentEditorTile();
+    if (!target) return null;
+    const coords = tileCoordsOf(await readMapData(), target);
+    if (!coords || !tos.isReady()) return null;
+    return { target, ...coords };
+  }
+  async function placeBrushAtCurrentTile() {
+    try {
+      const tileObject = buildBrushTileObject();
+      if (!tileObject) return;
+      const tile = await currentTileWithCoords();
+      if (!tile) return;
+      setPlannedGarden(withTileObject(getPlannedGarden(), tile.target.tileType, tile.target.localTileIndex, tileObject));
+      paintTileObject(tile.x, tile.y, tileObject);
+      currentItemChanged.emit();
+      void playEditAnimation("dropObject");
+      tos.flashTileGreen(tile.x, tile.y, { startAlpha: 1, durationMs: 400 });
+    } catch (err) {
+      console.log("[EditorService] placing on the current tile failed", err);
+    }
+  }
+  async function removeGardenObjectAtCurrentTile() {
+    try {
+      const tile = await currentTileWithCoords();
+      if (!tile) return false;
+      setPlannedGarden(withTileObject(getPlannedGarden(), tile.target.tileType, tile.target.localTileIndex, null));
+      paintTileObject(tile.x, tile.y, null);
+      currentItemChanged.emit();
+      void playEditAnimation("dig");
+      return true;
+    } catch (err) {
+      console.log("[EditorService] removing from the current tile failed", err);
+      return false;
+    }
+  }
+  async function repaintTile(target, obj) {
+    try {
+      const coords = tileCoordsOf(await readMapData(), target);
+      if (coords && tos.isReady()) paintTileObject(coords.x, coords.y, obj);
+    } catch {
+    }
+  }
+  function updateGardenObjectAtCurrentTile(updater) {
+    try {
+      const target = getCurrentEditorTile();
+      if (!target) return false;
+      const current = readTileObjectAt(target);
+      if (!current) return false;
+      const updated = updater(current);
+      const next = updated?.objectType === "plant" ? { ...updated, slots: ensureSlotIds(updated.slots) } : updated;
+      setPlannedGarden(withTileObject(getPlannedGarden(), target.tileType, target.localTileIndex, next));
+      if (next) void repaintTile(target, next);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  var readTileObjectAt;
+  var init_planEdits = __esm({
+    "src/features/editor/planEdits.ts"() {
+      "use strict";
+      init_atoms();
+      init_audioPlayer();
+      init_tileObjects();
+      init_brush();
+      init_gardenModel();
+      init_liveGarden();
+      init_plannedGarden();
+      init_session();
+      init_tilePaint();
+      init_tileMap();
+      readTileObjectAt = (target) => tileObjectAt(getPlannedGarden(), target.tileType, target.localTileIndex);
+    }
+  });
+
+  // src/features/editor/savedGardenList.ts
+  function parseSavedGardens(raw, now2 = Date.now()) {
+    if (!Array.isArray(raw)) return [];
+    return raw.map((entry) => {
+      const g = entry ?? {};
+      return {
+        id: String(g.id || ""),
+        name: String(g.name || UNTITLED),
+        createdAt: Number(g.createdAt) || now2,
+        garden: sanitizeGarden(g.garden || {})
+      };
+    }).filter((g) => !!g.id);
+  }
+  function uniqueGardenName(base, existing) {
+    const taken = new Set(existing);
+    let candidate = base;
+    for (let i = 1; taken.has(candidate); i++) candidate = `${base} (${i})`;
+    return candidate;
+  }
+  function parseGardenJson(raw) {
+    if (!raw) return null;
+    try {
+      return sanitizeGarden(JSON.parse(raw));
+    } catch {
+      return null;
+    }
+  }
+  var MAX_SAVED_GARDENS, UNTITLED, newSavedGardenId, gardenSaveName, prependSaved, replaceSaved, serializeGarden;
+  var init_savedGardenList = __esm({
+    "src/features/editor/savedGardenList.ts"() {
+      "use strict";
+      init_gardenModel();
+      MAX_SAVED_GARDENS = 50;
+      UNTITLED = "Untitled";
+      newSavedGardenId = (now2) => `${now2}-${Math.random().toString(16).slice(2)}`;
+      gardenSaveName = (name, fallback = UNTITLED) => name?.trim() || fallback;
+      prependSaved = (list, saved) => [saved, ...list].slice(0, MAX_SAVED_GARDENS);
+      replaceSaved = (list, saved) => list.map((g) => g.id === saved.id ? saved : g);
+      serializeGarden = (garden3) => JSON.stringify(garden3, null, 2);
+    }
+  });
+
+  // src/features/editor/savedGardens.ts
+  function listSavedGardens() {
+    try {
+      return parseSavedGardens(readAriesPath(SAVED_GARDENS_PATH));
+    } catch {
+      return [];
+    }
+  }
+  function writeSavedGardens(list) {
+    try {
+      writeAriesPath(SAVED_GARDENS_PATH, list);
+    } catch {
+      return;
+    }
+    savedGardensChanged.emit();
+  }
+  async function saveCurrentGarden(name, playerId2) {
+    const pid = playerId2 || await getPlayerId();
+    if (!pid) return null;
+    const garden3 = await getGardenForPlayer(pid);
+    if (!garden3) return null;
+    const now2 = Date.now();
+    const all = listSavedGardens();
+    const baseName = gardenSaveName(name);
+    const existing = all.find((g) => g.name === baseName);
+    const overwrite = !!existing && confirmOverwrite(baseName);
+    const saved = {
+      id: overwrite ? existing.id : newSavedGardenId(now2),
+      name: overwrite ? baseName : uniqueGardenName(baseName, all.map((g) => g.name)),
+      createdAt: now2,
+      garden: garden3
+    };
+    writeSavedGardens(overwrite ? replaceSaved(all, saved) : prependSaved(all, saved));
+    return saved;
+  }
+  async function loadSavedGarden(id) {
+    const found = id ? listSavedGardens().find((g) => g.id === id) : void 0;
+    return found ? setCurrentGarden(found.garden) : false;
+  }
+  function deleteSavedGarden(id) {
+    if (!id) return false;
+    const all = listSavedGardens();
+    const next = all.filter((g) => g.id !== id);
+    if (next.length === all.length) return false;
+    writeSavedGardens(next);
+    return true;
+  }
+  function exportSavedGarden(id) {
+    const found = id ? listSavedGardens().find((g) => g.id === id) : void 0;
+    return found ? serializeGarden(found.garden) : null;
+  }
+  async function importGarden(name, raw) {
+    const garden3 = parseGardenJson(raw);
+    if (!garden3) return null;
+    const now2 = Date.now();
+    const saved = {
+      id: newSavedGardenId(now2),
+      name: gardenSaveName(name, "Imported garden"),
+      createdAt: now2,
+      garden: garden3
+    };
+    writeSavedGardens(prependSaved(listSavedGardens(), saved));
+    return saved;
+  }
+  var SAVED_GARDENS_PATH, savedGardensChanged, confirmOverwrite;
+  var init_savedGardens = __esm({
+    "src/features/editor/savedGardens.ts"() {
+      "use strict";
+      init_emitter();
+      init_storage();
+      init_liveGarden();
+      init_plannedGarden();
+      init_savedGardenList();
+      SAVED_GARDENS_PATH = "editor.savedGardens";
+      savedGardensChanged = new Emitter();
+      confirmOverwrite = (name) => typeof window !== "undefined" && typeof window.confirm === "function" && window.confirm(`A garden named "${name}" already exists. Overwrite it?`);
+    }
+  });
+
+  // src/features/editor/globals.ts
+  async function logSelectedInventoryItemWithTile() {
+    try {
+      const target = getCurrentEditorTile();
+      const selectedIndex = await Atoms.inventory.myValidatedSelectedItemIndex.get();
+      const inventory = await Atoms.inventory.myInventory.get();
+      const rotation = await Atoms.inventory.mySelectedItemRotation.get();
+      const items = Array.isArray(inventory?.items) ? inventory.items : [];
+      if (typeof selectedIndex !== "number" || selectedIndex < 0 || selectedIndex >= items.length) {
+        console.log("[EditorService] no valid selected item", { selectedIndex, itemsLen: items.length });
+        return;
+      }
+      console.log("[EditorService] selected item placement debug", {
+        tileType: target?.tileType,
+        localTileIndex: target?.localTileIndex,
+        selectedIndex,
+        rotation,
+        item: items[selectedIndex]
+      });
+    } catch (err) {
+      console.log("[EditorService] logSelectedInventoryItemWithTile failed", err);
+    }
+  }
+  function publishEditorGlobals() {
+    const removeAtCurrentTile = () => void removeGardenObjectAtCurrentTile();
+    shareGlobal("qwsLogSelectedInventoryItemWithTile", () => void logSelectedInventoryItemWithTile());
+    shareGlobal("qwsPlaceSelectedItemInGardenAtCurrentTile", () => void placeBrushAtCurrentTile());
+    shareGlobal("qwsRemoveItemFromGardenAtCurrentTile", removeAtCurrentTile);
+    shareGlobal("qwsRemoveDecorFromGardenAtCurrentTile", removeAtCurrentTile);
+    shareGlobal("qwsEditorListSavedGardens", listSavedGardens);
+    shareGlobal("qwsEditorSaveGarden", (name) => saveCurrentGarden(name || "Untitled"));
+    shareGlobal(
+      "qwsEditorSaveGardenForPlayer",
+      (playerId2, name) => saveCurrentGarden(name || "Untitled", playerId2)
+    );
+    shareGlobal("qwsEditorClearGarden", () => setCurrentGarden(makeEmptyGarden()));
+    shareGlobal("qwsEditorLoadGarden", loadSavedGarden);
+    shareGlobal("qwsEditorDeleteGarden", deleteSavedGarden);
+    shareGlobal("qwsEditorExportGarden", exportSavedGarden);
+    shareGlobal("qwsEditorImportGarden", importGarden);
+    shareGlobal("qwsEditorPreviewFriendGarden", (garden3) => applyFriendGardenPreview(garden3));
+    shareGlobal("qwsEditorClearFriendGardenPreview", clearFriendGardenPreview);
+  }
+  var init_globals = __esm({
+    "src/features/editor/globals.ts"() {
+      "use strict";
+      init_pageContext();
+      init_atoms();
+      init_friendPreview();
+      init_gardenModel();
+      init_planEdits();
+      init_plannedGarden();
+      init_savedGardens();
+      init_session();
+    }
+  });
+
+  // src/ui/kit/theme.ts
+  function group(prefix, values, unit = "") {
+    return Object.entries(values).map(([key2, value]) => `--qmm-${prefix}${kebab(key2)}:${value}${unit};`);
+  }
+  function themeVariables() {
+    return [
+      ":root{",
+      ...group("", color),
+      ...group("gradient-", gradient),
+      ...group("shadow-", shadow),
+      ...group("radius-", radius, "px"),
+      ...group("space-", space, "px"),
+      ...group("fs-", fontSize, "px"),
+      `--qmm-font-mono:${fontMono};`,
+      // Compatibility names read by feature code that predates the tokens.
+      // Remove each once nothing outside the kit references it.
+      "--qmm-border-2:var(--qmm-border);",
+      "--qws-text:var(--qmm-text);",
+      "--qws-text-dim:var(--qmm-text-soft);",
+      "--qws-border:var(--qmm-border-strong);",
+      "--qws-border-2:var(--qmm-border);",
+      "--qws-panel:var(--qmm-panel-bg);",
+      "--qws-accent:var(--qmm-accent);",
+      "--qws-shadow:var(--qmm-shadow-window);",
+      "--qws-blur:8px;",
+      "}"
+    ].join("\n");
+  }
+  var color, gradient, shadow, radius, space, fontSize, fontMono, layer, kebab;
+  var init_theme = __esm({
+    "src/ui/kit/theme.ts"() {
+      "use strict";
+      color = {
+        accent: "#5eead4",
+        accentSoft: "rgba(94,234,212,0.12)",
+        accentHover: "rgba(94,234,212,0.22)",
+        accentBorder: "rgba(94,234,212,0.3)",
+        accentBorderHover: "rgba(94,234,212,0.55)",
+        text: "#e7eef7",
+        textSoft: "rgba(226,232,240,0.75)",
+        textDim: "rgba(226,232,240,0.45)",
+        border: "rgba(255,255,255,0.08)",
+        borderHover: "rgba(255,255,255,0.16)",
+        borderStrong: "rgba(255,255,255,0.14)",
+        cardBg: "rgba(255,255,255,0.03)",
+        hoverBg: "rgba(255,255,255,0.06)",
+        mutedBg: "rgba(0,0,0,0.18)",
+        fieldBg: "rgba(0,0,0,0.3)",
+        fieldBorder: "rgba(255,255,255,0.12)",
+        track: "rgba(255,255,255,0.1)",
+        sunken: "#080c12",
+        surface: "#101620",
+        panelBg: "rgba(17,24,35,0.8)",
+        scrollbar: "rgba(94,234,212,0.2)",
+        scrim: "rgba(0,0,0,0.55)",
+        danger: "#ef4444",
+        dangerSoft: "rgba(239,68,68,0.12)",
+        dangerHover: "rgba(239,68,68,0.2)",
+        dangerBorder: "rgba(239,68,68,0.3)",
+        dangerBorderHover: "rgba(239,68,68,0.55)",
+        warn: "#fbbf24",
+        warnSoft: "rgba(251,191,36,0.12)",
+        warnBorder: "rgba(251,191,36,0.55)",
+        gold: "#FFC734",
+        rainbow: "#c084fc"
+      };
+      gradient = {
+        panel: "linear-gradient(160deg, rgba(15,20,30,0.95) 0%, rgba(10,14,20,0.95) 60%, rgba(8,12,18,0.96) 100%)",
+        tabBar: "linear-gradient(120deg, rgba(22,28,40,0.9), rgba(12,17,26,0.92))",
+        head: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))"
+      };
+      shadow = {
+        panel: "0 18px 44px rgba(0,0,0,0.45)",
+        window: "0 10px 36px rgba(0,0,0,0.45)",
+        modal: "0 24px 64px rgba(0,0,0,0.55)"
+      };
+      radius = { sm: 6, md: 9, lg: 12, xl: 16, pill: 999 };
+      space = { xs: 4, sm: 6, md: 8, lg: 10, xl: 12 };
+      fontSize = { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 };
+      fontMono = "ui-monospace, SFMono-Regular, Consolas, monospace";
+      layer = { hud: 1000010, window: 2000001 };
+      kebab = (key2) => key2.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+    }
+  });
+
+  // src/ui/kit/styles/chrome.ts
+  var chromeCss;
+  var init_chrome = __esm({
+    "src/ui/kit/styles/chrome.ts"() {
+      "use strict";
+      init_theme();
+      chromeCss = `
+.qmm-scroll, .qws-pnl-scroll, .qmm-views {
+  scrollbar-width: thin; scrollbar-color: var(--qmm-scrollbar) transparent;
+}
+.qmm-scroll::-webkit-scrollbar, .qws-pnl-scroll::-webkit-scrollbar, .qmm-views::-webkit-scrollbar { width: 6px; }
+.qmm-scroll::-webkit-scrollbar-track, .qws-pnl-scroll::-webkit-scrollbar-track, .qmm-views::-webkit-scrollbar-track { background: transparent; }
+.qmm-scroll::-webkit-scrollbar-thumb, .qws-pnl-scroll::-webkit-scrollbar-thumb, .qmm-views::-webkit-scrollbar-thumb {
+  background: var(--qmm-scrollbar); border-radius: 3px;
+}
+.qmm-scroll::-webkit-scrollbar-thumb:hover, .qws-pnl-scroll::-webkit-scrollbar-thumb:hover, .qmm-views::-webkit-scrollbar-thumb:hover {
+  background: var(--qmm-accent-border);
+}
+
+.qmm { display: flex; flex-direction: column; gap: var(--qmm-space-lg); color: var(--qmm-text); }
+.qmm-compact { gap: var(--qmm-space-sm); }
+.qmm.qmm-alt-drag { cursor: grab; }
+.qmm.qmm-alt-drag:active { cursor: grabbing; }
+
+.qmm-tabs {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-xs); padding: 8px 10px;
+  border-bottom: 1px solid var(--qmm-border);
+  border-radius: var(--qmm-radius-xl) var(--qmm-radius-xl) 0 0;
+  background: var(--qmm-gradient-tab-bar);
+}
+.qmm-tab {
+  flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: var(--qmm-space-md);
+  margin: 0; padding: 8px 12px; border: 1px solid transparent; border-radius: var(--qmm-radius-lg);
+  background: transparent; color: var(--qmm-text-soft); font-size: var(--qmm-fs-md); cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.qmm-compact .qmm-tab { padding: 6px 10px; }
+.qmm-tab:hover { background: var(--qmm-hover-bg); color: var(--qmm-text); }
+.qmm-tab:active { transform: translateY(1px); }
+.qmm-tab:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
+.qmm-tab.active { background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); color: var(--qmm-accent); }
+
+.qmm-views {
+  display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; padding: 14px;
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-xl);
+  background: var(--qmm-gradient-panel); backdrop-filter: blur(10px); box-shadow: var(--qmm-shadow-panel);
+}
+.qmm-compact .qmm-views { padding: 8px; }
+.qmm-tabs + .qmm-views { border-top: none; border-top-left-radius: 0; border-top-right-radius: 0; }
+.qmm-view { display: none; min-width: 0; min-height: 0; }
+.qmm-view.active { display: block; }
+
+.qmm-spacer { flex: 1; }
+
+.qws-win {
+  position: fixed; z-index: ${layer.window}; min-width: 260px; max-width: 900px; max-height: 90vh; overflow: auto;
+  color: var(--qmm-text); background: var(--qmm-panel-bg);
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-lg);
+  box-shadow: var(--qmm-shadow-window); backdrop-filter: blur(8px);
+}
+.qws-win.is-hidden { display: none !important; }
+.qws-win .w-head {
+  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 10px 12px; cursor: move;
+  border-bottom: 1px solid var(--qmm-border-strong);
+  border-radius: var(--qmm-radius-lg) var(--qmm-radius-lg) 0 0;
+  background: var(--qmm-gradient-head);
+}
+.qws-win .w-title { font-weight: 700; }
+.qws-win .w-body { padding: 12px; }
+
+/* Bare text and number inputs a feature builds inside a window get the field look too. */
+.qws-win input:is([type="text"], [type="number"]):not(.qmm-input, .qws-pnl-input) {
+  padding: 8px 10px; border: 1px solid var(--qmm-field-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-field-bg); color: var(--qmm-text);
+}
+.qws-win input:is([type="text"], [type="number"]):not(.qmm-input, .qws-pnl-input):focus {
+  outline: none; border-color: var(--qmm-accent-border-hover);
+}
+/* Windows give text and number fields one width; an inline width still wins. */
+.qws-win input[type="text"], .qws-win input[type="number"] { width: 120px; }
+
+.qws2 {
+  position: fixed; right: 16px; bottom: 16px; z-index: ${layer.hud};
+  display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 160px; padding: 10px 12px;
+  font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: var(--qmm-text);
+  background: var(--qmm-panel-bg); border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-lg);
+  box-shadow: var(--qmm-shadow-window); backdrop-filter: blur(8px);
+}
+.qws2.hidden { display: none; }
+.qws2 .row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.qws2 .title { font-weight: 700; letter-spacing: .2px; }
+.qws2 .drag { cursor: move; opacity: .9; }
+.qws2 .mini { display: none; }
+.qws2.min .mini { display: inline-flex; }
+.qws2.min .body { display: none; }
+.qws2 .is-link { cursor: pointer; }
+
+.qws-launch { margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--qmm-border-strong); }
+.qws-launch .launch-item { display: flex; align-items: center; gap: var(--qmm-space-md); margin: 4px 0; }
+.qws-launch .launch-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+`;
+    }
+  });
+
+  // src/ui/kit/styles/containers.ts
+  var containersCss;
+  var init_containers = __esm({
+    "src/ui/kit/styles/containers.ts"() {
+      "use strict";
+      containersCss = `
+.qmm-card {
+  display: grid; gap: var(--qmm-space-xl); width: 100%; padding: 14px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
+}
+.qmm-card--plain { display: flex; flex-direction: column; gap: var(--qmm-space-lg); width: auto; min-height: 0; padding: 10px; }
+.qmm-card.is-center { text-align: center; align-items: center; }
+.qmm-card.is-stretch { align-items: stretch; }
+.qmm-card[data-tone="muted"] { background: var(--qmm-muted-bg); }
+.qmm-card[data-tone="accent"] { border-color: var(--qmm-accent-border); }
+.qmm-card__header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--qmm-space-lg); }
+.qmm-card__header.is-compact { gap: var(--qmm-space-sm); }
+.qmm-card__icon { font-size: 18px; }
+.qmm-card__title { font-size: var(--qmm-fs-xl); font-weight: 700; letter-spacing: .01em; }
+.qmm-card__subtitle { flex-basis: 100%; font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
+.qmm-card__actions { display: flex; gap: var(--qmm-space-sm); margin-left: auto; }
+.qmm-card__body { display: grid; gap: var(--qmm-space-lg); }
+
+.qmm-section-label {
+  font-size: var(--qmm-fs-xs); font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--qmm-text-dim);
+}
+
+.qmm-collapse { flex-shrink: 0; min-height: auto; }
+.qmm-collapse__head {
+  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 0; border: none; background: none;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.qmm-collapse__titles { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-width: 0; }
+.qmm-collapse__desc { font-size: var(--qmm-fs-sm); line-height: 1.45; color: var(--qmm-text-dim); }
+.qmm-collapse__chevron {
+  flex: 0 0 auto; margin-left: auto; font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim);
+  transition: transform 140ms ease, color 120ms ease;
+}
+.qmm-collapse__head:hover .qmm-collapse__chevron { color: var(--qmm-accent); }
+.qmm-collapse__head[aria-expanded="true"] .qmm-collapse__chevron { transform: rotate(90deg); }
+.qmm-collapse__body { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
+.qmm-collapse.is-collapsed > .qmm-collapse__body { display: none; }
+
+.qmm-setting-row {
+  display: flex; align-items: center; gap: var(--qmm-space-lg); flex-shrink: 0; padding: 8px 10px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md); background: var(--qmm-card-bg);
+}
+.qmm-setting-row__text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.qmm-setting-row__title { font-size: var(--qmm-fs-md); color: var(--qmm-text); }
+.qmm-setting-row__hint { font-size: var(--qmm-fs-xs); line-height: 1.4; color: var(--qmm-text-dim); }
+.qmm-setting-row__controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--qmm-space-md); flex: 0 0 auto; }
+
+.qmm-label { opacity: .9; }
+.qmm-flex { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.qmm-form-row { display: grid; align-items: center; width: 100%; }
+.qmm-form-row.is-top { align-items: start; }
+.qmm-form-row__label { justify-self: start; margin: 0; font-weight: 600; }
+.qmm-form-row.is-top .qmm-form-row__label { align-self: start; }
+
+.qmm-error {
+  padding: 10px; border: 1px solid var(--qmm-danger-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-danger-soft); color: #fecaca; font-size: var(--qmm-fs-lg); line-height: 1.4;
+}
+.qmm-error[hidden] { display: none; }
+
+.qmm-pill {
+  display: inline-flex; align-items: center; gap: var(--qmm-space-sm); padding: 4px 9px; white-space: nowrap;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-pill);
+  background: var(--qmm-field-bg); color: var(--qmm-text); font-size: var(--qmm-fs-sm); font-weight: 600;
+}
+.qmm-pill.is-ok { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
+.qmm-pill.is-warn { color: var(--qmm-warn); background: var(--qmm-warn-soft); border-color: var(--qmm-warn-border); }
+.qmm-pill.is-bad { color: var(--qmm-danger); background: var(--qmm-danger-soft); border-color: var(--qmm-danger-border); }
+.qmm-badge {
+  align-self: flex-start; padding: 2px 7px; border-radius: var(--qmm-radius-pill);
+  font-size: var(--qmm-fs-xs); font-weight: 600;
+}
+.qmm-badge.is-ok { color: var(--qmm-accent); background: var(--qmm-accent-soft); }
+.qmm-badge.is-warn { color: var(--qmm-warn); background: var(--qmm-warn-soft); }
+.qmm-meter {
+  position: relative; flex: 1 1 auto; min-width: 60px; height: 5px; overflow: hidden;
+  border-radius: var(--qmm-radius-pill); background: var(--qmm-border);
+}
+.qmm-meter__fill {
+  position: absolute; inset: 0 auto 0 0; width: 0%; border-radius: var(--qmm-radius-pill);
+  background: var(--qmm-accent); transition: width 200ms ease, background 200ms ease;
+}
+.qmm-meter__fill.is-warn { background: var(--qmm-warn); }
+
+.qmm-vtabs { display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 0; }
+.qmm-vtabs .filter input { width: 100%; }
+.qmm-vlist-wrap { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; width: 100%; }
+.qmm-vlist {
+  flex: 0 0 auto; min-width: 0; padding: 6px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
+}
+.qmm-vlist.is-scroll { flex: 1 1 auto; overflow: auto; }
+.qmm-vlist__items { display: flex; flex-direction: column; gap: var(--qmm-space-xs); margin: 0; padding: 0; list-style: none; }
+.qmm-vlist__empty { opacity: .75; }
+.qmm-vtab {
+  display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: var(--qmm-space-lg); width: 100%;
+  padding: 8px 10px; border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-card-bg); color: inherit; text-align: left; cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+.qmm-vtab:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); }
+.qmm-vtab:active { transform: translateY(1px); }
+.qmm-vtab.active { background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
+.qmm-dot { width: 10px; height: 10px; justify-self: center; border-radius: 50%; box-shadow: 0 0 0 1px #0006 inset; }
+.qmm-chip { display: flex; align-items: center; gap: var(--qmm-space-md); min-width: 0; }
+.qmm-chip img { width: 20px; height: 20px; object-fit: cover; border: 1px solid var(--qmm-border); border-radius: 50%; }
+.qmm-chip__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.qmm-chip .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qmm-chip__sub { font-size: var(--qmm-fs-md); opacity: .7; }
+.qmm-tag {
+  padding: 3px 7px; font-size: var(--qmm-fs-sm); line-height: 1;
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-hover-bg);
+}
+
+/* Drag handle for reorderable lists. */
+.qmm-grab {
+  display: grid; grid-template-columns: repeat(2, 3px); grid-template-rows: repeat(3, 3px);
+  align-content: center; justify-content: center; gap: 2px; margin-left: auto; padding: 4px 3px;
+  opacity: .8; cursor: grab; user-select: none;
+}
+.qmm-grab:active { cursor: grabbing; }
+.qmm-grab-dot { width: 3px; height: 3px; border-radius: 999px; background: var(--qmm-text-soft); }
+.qmm-dragging { opacity: .6; }
+
+/* Selectable tile of the skins grid. */
+.qws-pnl-cell {
+  position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 1; cursor: pointer;
+  border: 1px solid var(--qmm-border); border-radius: 10px; background: var(--qmm-card-bg);
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+.qws-pnl-cell:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); transform: translateY(-1px); }
+.qws-pnl-cell.is-active { border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft); }
+.qws-pnl-cell.is-skinned::after {
+  content: ''; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--qmm-accent);
+}
+
+.qmm-icon-box { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.qmm-icon-box > img { max-width: 100%; max-height: 100%; image-rendering: auto; }
+
+.qmm-modal-scrim {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: var(--qmm-scrim); backdrop-filter: blur(4px);
+}
+.qmm-modal {
+  display: flex; flex-direction: column; overflow: hidden; color: var(--qmm-text);
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-xl);
+  background: var(--qmm-surface); box-shadow: var(--qmm-shadow-modal);
+}
+.qmm-modal__head {
+  display: flex; align-items: center; gap: var(--qmm-space-lg); flex: 0 0 auto; padding: 12px 14px;
+  border-bottom: 1px solid var(--qmm-border);
+}
+.qmm-modal__title { flex: 1; min-width: 0; font-size: var(--qmm-fs-xl); font-weight: 600; color: var(--qmm-text); }
+.qmm-modal__close {
+  flex: 0 0 auto; width: 28px; height: 28px; cursor: pointer;
+  border: 1px solid var(--qmm-border); border-radius: 8px; background: var(--qmm-card-bg);
+  color: var(--qmm-text-dim); font-size: var(--qmm-fs-md); line-height: 1;
+}
+.qmm-modal__close:hover { color: var(--qmm-text); border-color: var(--qmm-border-hover); }
+.qmm-modal__body {
+  display: flex; flex-direction: column; gap: var(--qmm-space-lg); flex: 1 1 auto; min-height: 0;
+  padding: 12px 14px; overflow-y: auto;
+}
+.qmm-modal__foot {
+  display: flex; align-items: center; gap: var(--qmm-space-lg); flex: 0 0 auto; padding: 12px 14px;
+  border-top: 1px solid var(--qmm-border);
+}
+.qmm-modal__foot:empty { display: none; }
+
+.qmm-menu-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 11px 12px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
+  font: inherit; text-align: left; cursor: pointer; transition: background 120ms ease, border-color 120ms ease;
+}
+.qmm-menu-card:hover:not(:disabled) { background: var(--qmm-hover-bg); }
+.qmm-menu-card:disabled { opacity: .55; cursor: default; }
+.qmm-menu-card__name { font-size: var(--qmm-fs-lg); font-weight: 600; color: var(--qmm-text); }
+.qmm-menu-card__detail { font-size: 11.5px; line-height: 1.45; color: var(--qmm-text-dim); }
+.qmm-menu-card:disabled .qmm-menu-card__name { color: var(--qmm-text-dim); }
+.qmm-menu-card:disabled .qmm-menu-card__detail { color: var(--qmm-accent); }
+`;
+    }
+  });
+
+  // src/ui/kit/styles/controls.ts
+  var controlsCss;
+  var init_controls = __esm({
+    "src/ui/kit/styles/controls.ts"() {
+      "use strict";
+      controlsCss = `
+.qmm-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--qmm-space-sm); padding: 8px 14px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-card-bg); color: var(--qmm-text);
+  font-size: var(--qmm-fs-lg); font-weight: 600; line-height: 1.2; cursor: pointer; user-select: none;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease, opacity 120ms ease, transform 100ms ease;
+}
+.qmm-compact .qmm-btn:where(:not(.qmm-btn--sm, .qmm-btn--xs, .qmm-btn--icon)) { padding: 6px 10px; }
+.qmm-btn:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); }
+.qmm-btn:active { transform: translateY(1px); }
+.qmm-btn:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
+.qmm-btn:disabled, .qmm-btn.is-disabled { opacity: .4; pointer-events: none; }
+.qmm-btn.is-busy { opacity: .6; pointer-events: none; }
+.qmm-btn--sm { padding: 7px 12px; font-size: var(--qmm-fs-sm); white-space: nowrap; }
+.qmm-btn--xs { padding: 4px 8px; font-size: var(--qmm-fs-sm); }
+.qmm-btn--full { width: 100%; }
+.qmm-btn--block { display: flex; }
+.qmm-btn--icon { width: 34px; height: 34px; padding: 6px; gap: 0; border-radius: 50%; }
+.qmm-btn__icon { display: inline-flex; align-items: center; justify-content: center; font-size: 1.1em; }
+.qmm-btn__icon.is-right { order: 2; }
+.qmm-btn--primary { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
+.qmm-btn--primary:hover { background: var(--qmm-accent-hover); border-color: var(--qmm-accent-border-hover); }
+.qmm-btn--danger { color: var(--qmm-danger); background: var(--qmm-danger-soft); border-color: var(--qmm-danger-border); }
+.qmm-btn--danger:hover { background: var(--qmm-danger-hover); border-color: var(--qmm-danger-border-hover); }
+.qmm-btn--ghost { background: transparent; border-color: transparent; }
+.qmm-btn--ghost:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border); }
+.qmm-btn.active { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
+
+.qmm-input, .qws-pnl-input {
+  padding: 8px 10px; border: 1px solid var(--qmm-field-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-field-bg); color: var(--qmm-text); outline: none;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.qmm-input { min-width: 90px; }
+.qws-pnl-input { font-size: var(--qmm-fs-md); }
+.qmm-input::placeholder, .qws-pnl-input::placeholder { color: var(--qmm-text-dim); }
+.qmm-input:focus, .qws-pnl-input:focus { border-color: var(--qmm-accent-border-hover); }
+.qmm-input option, .qws-pnl-input option { background: var(--qmm-surface); color: var(--qmm-text); }
+.qmm-input--sm { min-width: 0; padding: 6px 9px; font-size: 11.5px; }
+.qmm-select { cursor: pointer; }
+
+.qmm-input-number { display: inline-flex; align-items: center; gap: var(--qmm-space-sm); }
+.qmm-input-number-input { width: 70px; text-align: center; }
+.qmm-spin { display: inline-flex; flex-direction: column; gap: 2px; }
+.qmm-step {
+  display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 16px; padding: 0;
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-sm);
+  background: var(--qmm-hover-bg); color: var(--qmm-text); font-size: 11px; line-height: 1;
+  cursor: pointer; user-select: none; transition: border-color 120ms ease, color 120ms ease;
+}
+.qmm-step:hover { border-color: var(--qmm-accent-border); color: var(--qmm-accent); }
+.qmm-step:active { transform: translateY(1px); }
+
+.qmm-radio { transform: scale(1.1); accent-color: var(--qmm-accent); }
+
+.qmm-switch {
+  -webkit-appearance: none; appearance: none; position: relative; flex-shrink: 0;
+  width: 36px; height: 20px; margin: 0; vertical-align: middle; cursor: pointer;
+  border: 1px solid var(--qmm-field-border); border-radius: 10px; background: var(--qmm-track);
+  transition: background 150ms ease, border-color 150ms ease;
+}
+.qmm-switch::before {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--qmm-text-dim); transition: transform 150ms ease, background 150ms ease;
+}
+.qmm-switch:checked { background: var(--qmm-accent-hover); border-color: var(--qmm-accent-border-hover); }
+.qmm-switch:checked::before { transform: translateX(16px); background: var(--qmm-accent); }
+.qmm-switch:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
+.qmm-switch:disabled { opacity: .4; cursor: not-allowed; }
+
+.qmm-chip-toggle {
+  display: inline-flex; align-items: stretch; cursor: pointer;
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-card-bg);
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.qmm-chip-toggle:hover { border-color: var(--qmm-accent-border); }
+.qmm-chip-toggle input { display: none; }
+.qmm-chip-toggle__face { display: flex; align-items: center; gap: var(--qmm-space-md); padding: 6px 12px; border-radius: var(--qmm-radius-pill); }
+.qmm-chip-toggle input:checked + .qmm-chip-toggle__face {
+  color: var(--qmm-accent); background: var(--qmm-accent-soft); box-shadow: inset 0 0 0 1px var(--qmm-accent-border);
+}
+.qmm-chip-toggle__icon { font-size: 14px; }
+.qmm-chip-toggle__label { font-weight: 600; }
+.qmm-chip-toggle__desc { font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
+.qmm-chip-toggle__badge {
+  padding: 2px 6px; font-size: var(--qmm-fs-sm);
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-hover-bg);
+}
+
+.qmm-range, .qws-pnl-range {
+  -webkit-appearance: none; appearance: none; height: 16px; margin: 0; padding: 0;
+  border: none; background: transparent; outline: none; cursor: pointer;
+}
+.qmm-range { width: 180px; }
+.qws-pnl-range { width: 100%; }
+.qmm-range::-webkit-slider-runnable-track, .qws-pnl-range::-webkit-slider-runnable-track {
+  height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
+}
+.qmm-range::-moz-range-track, .qws-pnl-range::-moz-range-track {
+  height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
+}
+.qmm-range::-webkit-slider-thumb, .qws-pnl-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 13px; height: 13px; margin-top: -4.5px;
+  border: none; border-radius: 50%; background: var(--qmm-accent); cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.qmm-range::-moz-range-thumb, .qws-pnl-range::-moz-range-thumb {
+  width: 13px; height: 13px; border: none; border-radius: 50%; background: var(--qmm-accent); cursor: pointer;
+}
+.qmm-range:hover::-webkit-slider-thumb, .qws-pnl-range:hover::-webkit-slider-thumb {
+  transform: scale(1.15); box-shadow: 0 0 0 4px var(--qmm-accent-soft);
+}
+.qmm-range:disabled, .qws-pnl-range:disabled { opacity: .4; cursor: not-allowed; }
+.qmm-range:disabled::-webkit-slider-thumb, .qws-pnl-range:disabled::-webkit-slider-thumb { background: var(--qmm-text-dim); }
+.qmm-range:disabled::-moz-range-thumb, .qws-pnl-range:disabled::-moz-range-thumb { background: var(--qmm-text-dim); }
+
+.qmm-range-dual { position: relative; width: 100%; padding: 18px 0 10px; }
+.qmm-range-dual-track {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  height: 6px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
+}
+.qmm-range-dual-fill {
+  position: absolute; top: 50%; transform: translateY(-50%); height: 6px;
+  border-radius: var(--qmm-radius-pill); background: var(--qmm-accent); transition: left .12s ease, right .12s ease;
+}
+.qmm-range-dual-input {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  width: 100%; height: 28px; pointer-events: none;
+}
+.qmm-range-dual-input::-webkit-slider-runnable-track { background: none; }
+.qmm-range-dual-input::-moz-range-track { background: none; }
+.qmm-range-dual-input::-webkit-slider-thumb {
+  pointer-events: auto; width: 16px; height: 16px; margin-top: -6px;
+  background: var(--qmm-accent); border: 2px solid var(--qmm-surface); box-shadow: 0 2px 8px rgba(0,0,0,.35);
+}
+.qmm-range-dual-input::-moz-range-thumb {
+  pointer-events: auto; width: 16px; height: 16px;
+  background: var(--qmm-accent); border: 2px solid var(--qmm-surface); box-shadow: 0 2px 8px rgba(0,0,0,.35);
+}
+.qmm-range-dual-input--min { z-index: 2; }
+.qmm-range-dual-input--max { z-index: 3; }
+
+/* --seg-pad, --seg-fill and --seg-stroke-color let a caller tint one control (the calculator does). */
+.qmm-seg {
+  position: relative; display: inline-flex; align-items: center; gap: var(--qmm-space-sm); overflow: hidden;
+  padding: var(--seg-pad, 8px); border-radius: var(--qmm-radius-pill);
+  background: var(--qmm-bg-soft, var(--qmm-sunken)); background-clip: padding-box;
+  border: 1px solid var(--qmm-border-2, var(--qmm-border));
+}
+.qmm-seg--full { display: flex; width: 100%; }
+.qmm-seg__btn {
+  position: relative; z-index: 1; padding: 8px 14px; border: 0; border-radius: var(--qmm-radius-pill);
+  appearance: none; background: transparent; color: var(--qmm-text-dim);
+  font: inherit; line-height: 1; white-space: nowrap; cursor: pointer;
+  transition: color .15s ease, transform .06s ease;
+}
+.qmm-seg__btn-label { display: inline-flex; align-items: center; justify-content: center; white-space: inherit; }
+.qmm-compact .qmm-seg__btn { padding: 6px 10px; }
+.qmm-seg__btn:hover { color: var(--qmm-text); }
+.qmm-seg__btn.active { color: var(--qmm-text); font-weight: 600; }
+.qmm-seg__btn:active { transform: translateY(1px); }
+.qmm-seg__btn[disabled] { opacity: .5; cursor: not-allowed; }
+.qmm-seg__indicator {
+  position: absolute; top: 0; left: 0; width: 40px; height: 100%; border-radius: inherit; pointer-events: none;
+  background: var(--seg-fill, var(--qmm-accent-soft));
+  outline: 1.2px solid var(--seg-stroke-color, var(--qmm-accent-border-hover)); outline-offset: -1.2px;
+  transform-origin: left center; will-change: transform, width, opacity;
+  transition: transform .18s cubic-bezier(.2,.8,.2,1), width .18s cubic-bezier(.2,.8,.2,1), opacity .18s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .qmm-seg__indicator, .qmm-seg__btn { transition: none; }
+}
+
+.qmm-hotkey {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: var(--qmm-hotkey-w, 180px); min-width: 104px; padding: 7px 12px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-field-bg); color: var(--qmm-text);
+  font-family: inherit; font-size: var(--qmm-fs-sm); font-weight: 600; white-space: nowrap;
+  cursor: pointer; user-select: none; transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+.qmm-hotkey:hover { border-color: var(--qmm-border-hover); }
+.qmm-hotkey:focus-visible { outline: none; }
+.qmm-hotkey.is-assigned { color: var(--qmm-accent); border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft); }
+.qmm-hotkey.is-empty { color: var(--qmm-text-dim); font-weight: 500; }
+.qmm-hotkey.is-recording {
+  color: var(--qmm-warn); border-color: var(--qmm-warn-border); background: var(--qmm-warn-soft);
+  animation: qmm-hotkey-breathe 1.2s ease-in-out infinite;
+}
+@keyframes qmm-hotkey-breathe {
+  0% { box-shadow: 0 0 0 0 rgba(251,191,36,.45); }
+  60% { box-shadow: 0 0 0 10px rgba(251,191,36,0); }
+  100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
+}
+`;
+    }
+  });
+
+  // src/ui/kit/styles/index.ts
+  function ensureKitStyles() {
+    if (injected) return;
+    if (typeof document === "undefined" || typeof document.getElementById !== "function") return;
+    injected = true;
+    if (document.getElementById(STYLE_ID2)) return;
+    const style2 = document.createElement("style");
+    style2.id = STYLE_ID2;
+    style2.textContent = [themeVariables(), chromeCss, controlsCss, containersCss].join("\n");
+    (document.head || document.documentElement).appendChild(style2);
+  }
+  var STYLE_ID2, injected;
+  var init_styles = __esm({
+    "src/ui/kit/styles/index.ts"() {
+      "use strict";
+      init_theme();
+      init_chrome();
+      init_containers();
+      init_controls();
+      STYLE_ID2 = "qmm-kit-css";
+      injected = false;
+    }
+  });
+
+  // src/ui/kit/dom.ts
+  function h(tag, className, text2) {
+    ensureKitStyles();
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text2 != null) el.textContent = text2;
+    return el;
+  }
+  function iconNode(icon, className) {
+    const node = typeof icon === "string" ? h("span", void 0, icon) : icon;
+    node.classList.add(className);
+    return node;
+  }
+  var init_dom = __esm({
+    "src/ui/kit/dom.ts"() {
+      "use strict";
+      init_styles();
+    }
+  });
+
+  // src/ui/kit/button.ts
+  function button(label2, opts = {}) {
+    const btn = h("button", "qmm-btn");
+    btn.type = "button";
+    const text2 = (label2 ?? "").trim();
+    const labelEl = !opts.icon || text2 ? h("span", "label", label2) : null;
+    if (opts.icon) {
+      const icon = iconNode(opts.icon, "qmm-btn__icon");
+      if (opts.iconPosition === "right") icon.classList.add("is-right");
+      if (!text2) btn.classList.add("qmm-btn--icon");
+      btn.append(icon);
+    }
+    if (labelEl) btn.append(labelEl);
+    if (opts.variant && opts.variant !== "default" && opts.variant !== "secondary") {
+      btn.classList.add(`qmm-btn--${opts.variant}`);
+    }
+    if (opts.size && opts.size !== "md") btn.classList.add(`qmm-btn--${opts.size}`);
+    if (opts.fullWidth) btn.classList.add("qmm-btn--full");
+    if (opts.block) btn.classList.add("qmm-btn--block");
+    if (opts.active) btn.classList.add("active");
+    if (opts.tooltip || opts.title) btn.title = opts.tooltip || opts.title || "";
+    if (opts.ariaLabel) btn.setAttribute("aria-label", opts.ariaLabel);
+    const onClick = opts.onClick;
+    if (onClick && opts.lockWhilePending) {
+      btn.addEventListener("click", async () => {
+        if (btn.disabled) return;
+        btn.classList.add("is-busy");
+        try {
+          await onClick();
+        } finally {
+          btn.classList.remove("is-busy");
+        }
+      });
+    } else if (onClick) {
+      btn.addEventListener("click", () => void onClick());
+    }
+    btn.setEnabled = (enabled5) => setButtonEnabled(btn, enabled5);
+    btn.setActive = (active3) => btn.classList.toggle("active", !!active3);
+    if (opts.disabled) setButtonEnabled(btn, false);
+    return btn;
+  }
+  function setButtonEnabled(btn, enabled5) {
+    btn.disabled = !enabled5;
+    btn.classList.toggle("is-disabled", !enabled5);
+    btn.setAttribute("aria-disabled", String(!enabled5));
+  }
+  var init_button = __esm({
+    "src/ui/kit/button.ts"() {
+      "use strict";
+      init_dom();
+    }
+  });
+
   // src/ui/kit/sprites/resolver.ts
   function normalizeSpriteName(value) {
     let str = String(value || "").trim();
@@ -10752,9 +13190,9 @@
 
   // src/features/editor/decorRotation.ts
   function ensureSliderStyle() {
-    if (document.getElementById(STYLE_ID2)) return;
+    if (document.getElementById(STYLE_ID3)) return;
     const style2 = document.createElement("style");
-    style2.id = STYLE_ID2;
+    style2.id = STYLE_ID3;
     style2.textContent = `
 .${SLIDER_CLASS} {
   -webkit-appearance: none; appearance: none;
@@ -10867,10 +13305,10 @@
     return slider2;
   }
   function createTicks(labels) {
-    const root = document.createElement("div");
-    root.style.position = "relative";
-    root.style.width = "100%";
-    root.style.height = "20px";
+    const root4 = document.createElement("div");
+    root4.style.position = "relative";
+    root4.style.width = "100%";
+    root4.style.height = "20px";
     const lastIndex = Math.max(1, labels.length - 1);
     const cells = labels.map((text2, index) => {
       const fraction = index / lastIndex;
@@ -10892,27 +13330,27 @@
       caption.style.whiteSpace = "nowrap";
       caption.style.color = "#8b97a8";
       cell.append(mark, caption);
-      root.appendChild(cell);
+      root4.appendChild(cell);
       return { mark, caption };
     });
     const setActive = (index) => {
       cells.forEach(({ mark, caption }, i) => {
-        const active2 = i === index;
-        mark.style.background = active2 ? "#5eead4" : "#2b3441";
-        caption.style.color = active2 ? "#5eead4" : "#8b97a8";
-        caption.style.fontWeight = active2 ? "700" : "400";
+        const active3 = i === index;
+        mark.style.background = active3 ? "#5eead4" : "#2b3441";
+        caption.style.color = active3 ? "#5eead4" : "#8b97a8";
+        caption.style.fontWeight = active3 ? "700" : "400";
       });
     };
-    return { root, setActive };
+    return { root: root4, setActive };
   }
   function createDecorRotationControl(decorId, currentRotation, onSelect) {
-    const root = document.createElement("div");
-    root.style.display = "grid";
-    root.style.gap = "6px";
-    root.style.width = "100%";
-    root.style.maxWidth = "100%";
-    root.style.boxSizing = "border-box";
-    root.style.overflow = "hidden";
+    const root4 = document.createElement("div");
+    root4.style.display = "grid";
+    root4.style.gap = "6px";
+    root4.style.width = "100%";
+    root4.style.maxWidth = "100%";
+    root4.style.boxSizing = "border-box";
+    root4.style.overflow = "hidden";
     const preview = createPreviewBox();
     const holder2 = document.createElement("div");
     holder2.style.width = `${PREVIEW_SIZE_PX}px`;
@@ -10931,7 +13369,7 @@
     };
     const states = getDecorRotationStates(decorId);
     let index = Math.max(0, states.indexOf(Number(currentRotation) || 0));
-    root.append(createLabel("Rotation"), preview);
+    root4.append(createLabel("Rotation"), preview);
     if (states.length > 1) {
       const slider2 = createSlider(states.length, index);
       const ticks = createTicks(states.map(formatRotationLabel));
@@ -10948,16 +13386,16 @@
       };
       const track = createTrackWrap();
       track.append(slider2, ticks.root);
-      root.appendChild(track);
+      root4.appendChild(track);
       apply2();
-      return root;
+      return root4;
     }
     const rotation = states[0] ?? ANGLE_NONE;
     const { spriteIds, mirrored } = resolveDecorSpriteState(decorId, rotation);
     renderSprite(spriteIds, mirrored);
-    return root;
+    return root4;
   }
-  var ANGLE_NONE, ANGLE_MIRRORED_NONE, FULL_TURN_DEGREES, PREVIEW_SIZE_PX, CONTENT_MAX_WIDTH_PX, TRACK_INSET_PX, SPRITE_LOG_TAG, THUMB_SIZE_PX, SLIDER_CLASS, STYLE_ID2;
+  var ANGLE_NONE, ANGLE_MIRRORED_NONE, FULL_TURN_DEGREES, PREVIEW_SIZE_PX, CONTENT_MAX_WIDTH_PX, TRACK_INSET_PX, SPRITE_LOG_TAG, THUMB_SIZE_PX, SLIDER_CLASS, STYLE_ID3;
   var init_decorRotation = __esm({
     "src/features/editor/decorRotation.ts"() {
       "use strict";
@@ -10972,866 +13410,16 @@
       SPRITE_LOG_TAG = "editor-decor-rotation";
       THUMB_SIZE_PX = 14;
       SLIDER_CLASS = "qws-decor-rot-slider";
-      STYLE_ID2 = "gemini-decor-rotation-styles";
+      STYLE_ID3 = "gemini-decor-rotation-styles";
     }
   });
 
-  // src/game/audioPlayer.ts
-  function groupKeyOf(name) {
-    const base = String(name || "").replace(/\.mp3$/i, "");
-    const m = base.match(/^([A-Za-z]+)[_\-]/) ?? base.match(/^([A-Za-z]+)\d+$/) ?? base.match(/^([A-Za-z]+)/);
-    return m ? m[1].toLowerCase() : base.toLowerCase();
-  }
-  function extractMp3s(text2) {
-    if (!text2) return [];
-    const out = [];
-    let m;
-    MP3_IN_TEXT.lastIndex = 0;
-    while (m = MP3_IN_TEXT.exec(text2)) out.push(m[1]);
-    return out;
-  }
-  function sameAsset(a, b) {
-    try {
-      const A = new URL(a, location.href).href;
-      const B = new URL(b, location.href).href;
-      return A === B || logicalName(fileName(A)) === logicalName(fileName(B));
-    } catch {
-      return a === b;
-    }
-  }
-  function howler() {
-    return window.Howler && Array.isArray(window.Howler._howls) ? window.Howler : null;
-  }
-  function readGameVolume() {
-    const raw = localStorage.getItem(VOLUME_STORAGE_KEY);
-    if (raw == null) return null;
-    let text2 = raw;
-    try {
-      const val = JSON.parse(raw);
-      if (typeof val === "number") return val;
-      text2 = JSON.stringify(val);
-    } catch {
-    }
-    const m = String(text2).match(/-?\d+(?:\.\d+)?/);
-    return m ? parseFloat(m[0]) : null;
-  }
-  function effectiveVolume() {
-    const raw = readGameVolume() ?? VOLUME_MAX;
-    const clamped = Math.max(VOLUME_MIN, Math.min(VOLUME_MAX, raw));
-    const setting = Math.abs(clamped - VOLUME_MIN) < 1e-6 ? 0 : clamped;
-    let master = 1;
-    try {
-      if (window.Howler && typeof window.Howler.volume === "function") master = window.Howler.volume();
-    } catch {
-    }
-    return setting * master;
-  }
-  async function fetchText(u) {
-    try {
-      const res = await fetch(u, { mode: "same-origin", credentials: "same-origin" });
-      if (!res.ok) return "";
-      if (!/javascript|ecmascript|css|html/i.test(res.headers.get("content-type") || "")) return "";
-      return await res.text();
-    } catch {
-      return "";
-    }
-  }
-  var VOLUME_STORAGE_KEY, VOLUME_MIN, VOLUME_MAX, MIN_VARIANTS_PER_GROUP, MP3_URL, MP3_IN_TEXT, absolute, fileName, logicalName, AudioPlayer, audioPlayer;
-  var init_audioPlayer = __esm({
-    "src/game/audioPlayer.ts"() {
-      "use strict";
-      VOLUME_STORAGE_KEY = "soundEffectsVolumeAtom";
-      VOLUME_MIN = 1e-3;
-      VOLUME_MAX = 0.2000000000000001;
-      MIN_VARIANTS_PER_GROUP = 2;
-      MP3_URL = /\.mp3(?:[\?#][^\s'"]*)?$/i;
-      MP3_IN_TEXT = /["'`](\/?[^"'`)\s]+?\.mp3(?:\?[^"'`\s]*)?)["'`]/ig;
-      absolute = (u) => {
-        try {
-          return new URL(u, location.href).href;
-        } catch {
-          return u;
-        }
-      };
-      fileName = (u) => {
-        try {
-          return new URL(u, location.href).pathname.split("/").pop() || u;
-        } catch {
-          return String(u);
-        }
-      };
-      logicalName = (name) => name.replace(/-[A-Za-z0-9_=-]{6,}(?=\.mp3$)/i, "");
-      AudioPlayer = class {
-        constructor() {
-          /** Every mp3 found, by absolute URL, with its name without the hash. */
-          this.found = /* @__PURE__ */ new Map();
-          this.groupsMap = /* @__PURE__ */ new Map();
-          void this.scanAll();
-        }
-        add(u) {
-          if (!u || !MP3_URL.test(u)) return;
-          const url = absolute(u);
-          if (!this.found.has(url)) this.found.set(url, logicalName(fileName(url)));
-        }
-        scanPerformance() {
-          for (const entry of performance.getEntriesByType("resource")) {
-            this.add(entry.name);
-          }
-        }
-        scanHowler() {
-          for (const h2 of howler()?._howls ?? []) {
-            const src = h2 && (h2._src || h2._urls?.[0]);
-            if (src) this.add(src);
-          }
-        }
-        async scanCaches() {
-          if (!("caches" in window)) return;
-          try {
-            for (const k of await caches.keys()) {
-              const cache2 = await caches.open(k);
-              for (const r of await cache2.keys()) this.add(r.url);
-            }
-          } catch {
-          }
-        }
-        scanDOM() {
-          document.querySelectorAll("audio[src]").forEach((a) => this.add(a.getAttribute("src") || ""));
-          document.querySelectorAll("source[src]").forEach((s) => this.add(s.getAttribute("src") || ""));
-          for (const m of extractMp3s(document.documentElement?.outerHTML || "")) this.add(m);
-        }
-        /** The mp3 paths named in the page itself and its same-origin scripts and stylesheets. */
-        async scanResourcesForRefs() {
-          const urls = /* @__PURE__ */ new Set();
-          document.querySelectorAll('script[src],link[rel="stylesheet"][href]').forEach((el) => {
-            const u = el.src || el.href;
-            try {
-              const url = new URL(u, location.href);
-              if (url.origin === location.origin) urls.add(url.href);
-            } catch {
-            }
-          });
-          urls.add(location.href);
-          const texts = await Promise.all([...urls].map(fetchText));
-          for (const text2 of texts) for (const m of extractMp3s(text2)) this.add(m);
-        }
-        async scanAll() {
-          this.found.clear();
-          this.scanPerformance();
-          this.scanHowler();
-          this.scanDOM();
-          await this.scanCaches();
-          await this.scanResourcesForRefs();
-          const groups = /* @__PURE__ */ new Map();
-          for (const [url, name] of this.found) {
-            const key2 = groupKeyOf(name);
-            groups.set(key2, [...groups.get(key2) ?? [], url]);
-          }
-          for (const [key2, list] of groups) {
-            if (list.length >= MIN_VARIANTS_PER_GROUP) this.groupsMap.set(key2, list);
-          }
-        }
-        findExistingHowl(url) {
-          for (const h2 of howler()?._howls ?? []) {
-            const src = h2 && (h2._src || h2._urls?.[0]);
-            if (src && sameAsset(src, url)) return h2;
-          }
-          return null;
-        }
-        /** Plays a URL at the game's volume, through Howler when it is there. */
-        playUrl(url) {
-          const vol = effectiveVolume();
-          const existing = this.findExistingHowl(url);
-          if (existing) {
-            try {
-              existing.play();
-              return existing;
-            } catch {
-            }
-          }
-          const Howl = window.Howl && window.Howler ? window.Howl : null;
-          if (Howl) {
-            try {
-              const h2 = new Howl({ src: [url], volume: vol });
-              h2.play();
-              return h2;
-            } catch {
-            }
-          }
-          try {
-            const a = new Audio(url);
-            a.volume = Math.max(0, Math.min(1, vol));
-            void a.play().catch(() => {
-            });
-            return a;
-          } catch {
-            return null;
-          }
-        }
-        /** Plays the first sound whose URL matches (a RegExp, or text matched case-insensitively). */
-        playBy(matcher) {
-          const re = matcher instanceof RegExp ? matcher : new RegExp(String(matcher).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-          const hit = [...this.found.keys()].find((u) => re.test(u));
-          return hit ? this.playUrl(hit) : null;
-        }
-        /** Plays a random variation of a group ("harvest", "plantseed", ...), or null if there is none. */
-        playGroup(name) {
-          const list = this.groupsMap.get(String(name || "").trim().toLowerCase()) ?? [];
-          if (!list.length) return null;
-          return this.playUrl(list[Math.random() * list.length | 0]);
-        }
-        playSellNotification() {
-          return this.playBy("Score_PlusOne");
-        }
-      };
-      audioPlayer = new AudioPlayer();
-    }
-  });
-
-  // src/data/rules/cropSize.ts
-  function toFinite(value) {
-    const numeric = typeof value === "number" ? value : Number(value);
-    return Number.isFinite(numeric) ? numeric : null;
-  }
-  function normalizeKey3(value) {
-    return String(value ?? "").trim().toLowerCase();
-  }
-  function clampCropSize(value) {
-    const numeric = toFinite(value);
-    if (numeric == null) return CROP_SIZE_MIN;
-    return Math.min(CROP_SIZE_MAX, Math.max(CROP_SIZE_MIN, Math.round(numeric)));
-  }
-  function findPlantCatalogEntry(species) {
-    const wanted = normalizeKey3(species);
-    if (!wanted) return null;
-    const catalog = plantCatalog2;
-    const direct = typeof species === "string" ? catalog[species] : void 0;
-    if (direct) return direct;
-    for (const key2 of Object.keys(catalog)) {
-      const entry = catalog[key2];
-      if (!entry) continue;
-      if (normalizeKey3(key2) === wanted) return entry;
-      if (normalizeKey3(entry.crop?.name) === wanted) return entry;
-      if (normalizeKey3(entry.plant?.name) === wanted) return entry;
-      if (normalizeKey3(entry.seed?.name) === wanted) return entry;
-    }
-    return null;
-  }
-  function getMaxSizeMultiplier(species) {
-    const crop = findPlantCatalogEntry(species)?.crop;
-    if (!crop) return null;
-    const value = toFinite(crop.maxSizeMultiplier) ?? toFinite(crop.maxScale);
-    return value != null && value > 0 ? value : null;
-  }
-  function cropSizeMultiplier(species, size) {
-    const maxMultiplier = getMaxSizeMultiplier(species);
-    if (maxMultiplier == null || maxMultiplier <= 1) return 1;
-    const ratio = (clampCropSize(size) - CROP_SIZE_MIN) / SIZE_SPAN;
-    return 1 + (maxMultiplier - 1) * ratio;
-  }
-  function legacyScaleToCropSize(scale, maxScale) {
-    const numeric = toFinite(scale);
-    if (numeric == null) return null;
-    const upper = maxScale != null && maxScale > LEGACY_SCALE_MIN ? maxScale : LEGACY_FALLBACK_MAX_SCALE;
-    const clamped = Math.min(upper, Math.max(LEGACY_SCALE_MIN, numeric));
-    const ratio = (clamped - LEGACY_SCALE_MIN) / (upper - LEGACY_SCALE_MIN);
-    return clampCropSize(CROP_SIZE_MIN + ratio * SIZE_SPAN);
-  }
-  function readCropSize(source) {
-    if (!source || typeof source !== "object") return null;
-    const record = source;
-    const direct = toFinite(record.size);
-    if (direct != null) return clampCropSize(direct);
-    const legacy = toFinite(record.targetScale) ?? toFinite(record.scale);
-    if (legacy == null) return null;
-    return legacyScaleToCropSize(legacy, getMaxSizeMultiplier(record.species));
-  }
-  var CROP_SIZE_MIN, CROP_SIZE_MAX, SIZE_SPAN, LEGACY_SCALE_MIN, LEGACY_FALLBACK_MAX_SCALE;
-  var init_cropSize = __esm({
-    "src/data/rules/cropSize.ts"() {
-      "use strict";
-      init_data();
-      CROP_SIZE_MIN = 50;
-      CROP_SIZE_MAX = 100;
-      SIZE_SPAN = CROP_SIZE_MAX - CROP_SIZE_MIN;
-      LEGACY_SCALE_MIN = 1;
-      LEGACY_FALLBACK_MAX_SCALE = 2;
-    }
-  });
-
-  // src/game/pixi/tileCapture.ts
-  function looksLikeTileObjectSystem(o) {
-    return !!(o && typeof o === "object" && o.name === TILE_OBJECT_SYSTEM_NAME && o.tileViews && typeof o.tileViews.get === "function" && typeof o.getOrCreateTileView === "function");
-  }
-  function tileObjectSystemFrom(value) {
-    if (looksLikeTileObjectSystem(value)) return value;
-    if (looksLikeTileObjectSystem(value?.system)) return value.system;
-    return null;
-  }
-  function isLiveTileObjectSystem(o) {
-    if (!looksLikeTileObjectSystem(o)) return false;
-    try {
-      return o.worldContainer?.destroyed !== true;
-    } catch {
-      return true;
-    }
-  }
-  function isScopeLike(o) {
-    return !!(o && typeof o === "object" && (o.systems && typeof o.systems.values === "function" || typeof o.addScope === "function" || typeof o.addSystem === "function"));
-  }
-  function findTileObjectSystem(scope, depth = 0) {
-    if (!scope || typeof scope !== "object" || depth > SCOPE_SEARCH_DEPTH) return null;
-    try {
-      const systems = scope.systems;
-      if (systems && typeof systems.values === "function") {
-        for (const entry of systems.values()) {
-          const found = tileObjectSystemFrom(entry);
-          if (found) return found;
-        }
-      }
-    } catch {
-    }
-    try {
-      const children = scope.children;
-      if (children && typeof children[Symbol.iterator] === "function") {
-        for (const child of children) {
-          if (!isScopeLike(child)) continue;
-          const found = findTileObjectSystem(child, depth + 1);
-          if (found) return found;
-        }
-      }
-    } catch {
-    }
-    for (const key2 of ["rendererScope", "renderer", "worldScope", "world"]) {
-      try {
-        const next = scope[key2];
-        if (!isScopeLike(next)) continue;
-        const found = findTileObjectSystem(next, depth + 1);
-        if (found) return found;
-      } catch {
-      }
-    }
-    return null;
-  }
-  function tryCaptureFromKnownGlobals() {
-    if (!tileState.engine) {
-      const shared = readSharedGlobal("__QUINOA_ENGINE__");
-      if (shared) tileState.engine = shared;
-    }
-    if (!tileState.tos) {
-      const shared = readSharedGlobal("__TILE_OBJECT_SYSTEM__");
-      if (isLiveTileObjectSystem(shared)) tileState.tos = shared;
-    }
-    if (!tileState.tos && tileState.engine) tileState.tos = findTileObjectSystem(tileState.engine);
-    publishCapturedGlobals();
-  }
-  function publishCapturedGlobals() {
-    if (tileState.engine) shareGlobal("__QUINOA_ENGINE__", tileState.engine);
-    if (tileState.tos) shareGlobal("__TILE_OBJECT_SYSTEM__", tileState.tos);
-  }
-  function mapPrototype() {
-    const MapCtor = pageWindow?.Map ?? Map;
-    return MapCtor?.prototype ?? null;
-  }
-  function armCapture() {
-    if (tileState.tos || tileState.mapSetPatched) return;
-    const proto = mapPrototype();
-    const original = proto?.set;
-    if (typeof original !== "function") return;
-    const wrapper = function(key2, value) {
-      const result = original.call(this, key2, value);
-      if (key2 === TILE_OBJECT_SYSTEM_NAME) {
-        try {
-          const system = tileObjectSystemFrom(value);
-          if (system) {
-            tileState.tos = system;
-            tileState.worldSystems = this && typeof this.get === "function" ? this : null;
-            publishCapturedGlobals();
-            disarmCapture();
-          }
-        } catch {
-        }
-      }
-      return result;
-    };
-    tileState.origMapSet = original;
-    tileState.ourMapSet = wrapper;
-    tileState.mapSetPatched = true;
-    proto.set = wrapper;
-  }
-  function disarmCapture() {
-    if (!tileState.mapSetPatched) return;
-    tileState.mapSetPatched = false;
-    const proto = mapPrototype();
-    try {
-      if (proto && tileState.origMapSet && proto.set === tileState.ourMapSet) {
-        proto.set = tileState.origMapSet;
-      }
-    } catch {
-    }
-    tileState.origMapSet = null;
-    tileState.ourMapSet = null;
-  }
-  function ensureCapture() {
-    if (tileState.tos && isLiveTileObjectSystem(tileState.tos)) return;
-    if (tileState.tos) {
-      tileState.tos = null;
-      tileState.worldSystems = null;
-      try {
-        shareGlobal("__TILE_OBJECT_SYSTEM__", null);
-      } catch {
-      }
-    }
-    tryCaptureFromKnownGlobals();
-    if (!tileState.tos) armCapture();
-  }
-  function globalIndexFromXY(tx, ty) {
-    const cols = tileState.tos?.map?.cols;
-    if (!Number.isFinite(cols) || cols <= 0) return null;
-    return ty * cols + tx | 0;
-  }
-  function getTileViewAt(tx, ty, ensureView) {
-    const gidx = globalIndexFromXY(tx, ty);
-    if (!tileState.tos || gidx == null) return { gidx: null, tv: null };
-    let tv = tileState.tos.tileViews?.get?.(gidx) ?? null;
-    if (!tv && ensureView && typeof tileState.tos.getOrCreateTileView === "function") {
-      try {
-        tv = tileState.tos.getOrCreateTileView(gidx);
-      } catch {
-      }
-    }
-    return { gidx, tv };
-  }
-  function assertReady() {
-    ensureCapture();
-    if (!tileState.tos) {
-      throw new Error("Quinoa tile system not captured. Call tos.init() early (main entry) so it is watching before the world builds.");
-    }
-  }
-  function getWorldSystem(name) {
-    ensureCapture();
-    const entry = tileState.worldSystems?.get(name);
-    if (!entry) return null;
-    const system = entry.system ?? entry;
-    return system && typeof system === "object" && system.destroyed !== true ? system : null;
-  }
-  var tileState, TILE_OBJECT_SYSTEM_NAME, SCOPE_SEARCH_DEPTH;
-  var init_tileCapture = __esm({
-    "src/game/pixi/tileCapture.ts"() {
-      "use strict";
-      init_pageContext();
-      tileState = {
-        /**
-         * The old monolithic engine. Current builds have none, so this stays null
-         * unless another mod published one; everything below treats it as optional.
-         */
-        engine: null,
-        tos: null,
-        /**
-         * The world scope's system registry, where the tile system was found. Other
-         * systems of the same world live there too (`avatar`, for one), so keeping it
-         * lets them be reached without a capture of their own.
-         */
-        worldSystems: null,
-        /** Set while `Map.prototype.set` carries our capture wrapper. */
-        mapSetPatched: false,
-        origMapSet: null,
-        ourMapSet: null
-      };
-      TILE_OBJECT_SYSTEM_NAME = "tileObject";
-      SCOPE_SEARCH_DEPTH = 6;
-    }
-  });
-
-  // src/game/pixi/tileFlash.ts
-  function hasTint(node) {
-    return !!(node && typeof node.tint === "number");
-  }
-  function collectTintable(root, cap = 900) {
-    const out = [];
-    const stack = [root];
-    while (stack.length && out.length < cap) {
-      const node = stack.pop();
-      if (!node) continue;
-      if (hasTint(node)) out.push(node);
-      const children = node.children;
-      if (Array.isArray(children)) for (const child of children) stack.push(child);
-    }
-    return out;
-  }
-  function lerpColor(from, to, t) {
-    const r0 = from >> 16 & 255, g0 = from >> 8 & 255, b0 = from & 255;
-    const r1 = to >> 16 & 255, g1 = to >> 8 & 255, b1 = to & 255;
-    const r = Math.round(r0 + (r1 - r0) * t);
-    const g = Math.round(g0 + (g1 - g0) * t);
-    const b = Math.round(b0 + (b1 - b0) * t);
-    return r << 16 | g << 8 | b;
-  }
-  function stopFlashTile(gidx) {
-    const entry = activeFlashes.get(gidx);
-    if (!entry) return;
-    cancelAnimationFrame(entry.raf);
-    for (const node of entry.touched) {
-      const base = entry.baseline.get(node);
-      if (base == null) continue;
-      try {
-        node.tint = base;
-      } catch {
-      }
-    }
-    activeFlashes.delete(gidx);
-  }
-  function flashTileGreen(tx, ty, opts = {}) {
-    const { gidx } = getTileViewAt(Number(tx), Number(ty), true);
-    if (gidx == null) return false;
-    stopFlashTile(gidx);
-    const color2 = opts.color ?? FLASH_DEFAULT_COLOR;
-    const startMix = opts.startAlpha ?? FLASH_DEFAULT_MIX;
-    const durationMs = Math.max(1, opts.durationMs ?? FLASH_DEFAULT_DURATION_MS);
-    const resolveParent = () => {
-      const { tv } = getTileViewAt(Number(tx), Number(ty), false);
-      return tv?.displayObject || tv?.root || tv?.container || tv || null;
-    };
-    if (!resolveParent()) return false;
-    const entry = { raf: 0, baseline: /* @__PURE__ */ new WeakMap(), touched: /* @__PURE__ */ new Set() };
-    activeFlashes.set(gidx, entry);
-    const start2 = performance.now();
-    const tick3 = (now2) => {
-      const progress = Math.min(1, (now2 - start2) / durationMs);
-      const mix = startMix * (1 - progress);
-      const parent = resolveParent();
-      if (parent) {
-        for (const node of collectTintable(parent)) {
-          if (!entry.baseline.has(node)) entry.baseline.set(node, node.tint);
-          entry.touched.add(node);
-          const base = entry.baseline.get(node);
-          try {
-            node.tint = lerpColor(base, color2, mix);
-          } catch {
-          }
-        }
-      }
-      if (progress >= 1) {
-        stopFlashTile(gidx);
-        return;
-      }
-      entry.raf = requestAnimationFrame(tick3);
-    };
-    entry.raf = requestAnimationFrame(tick3);
-    return true;
-  }
-  var activeFlashes, FLASH_DEFAULT_COLOR, FLASH_DEFAULT_MIX, FLASH_DEFAULT_DURATION_MS;
-  var init_tileFlash = __esm({
-    "src/game/pixi/tileFlash.ts"() {
-      "use strict";
-      init_tileCapture();
-      activeFlashes = /* @__PURE__ */ new Map();
-      FLASH_DEFAULT_COLOR = 4906624;
-      FLASH_DEFAULT_MIX = 1;
-      FLASH_DEFAULT_DURATION_MS = 1e3;
-    }
-  });
-
-  // src/game/pixi/tileObjects.ts
-  function deepClone(v) {
-    try {
-      if (typeof structuredClone === "function") return structuredClone(v);
-    } catch {
-    }
-    try {
-      return JSON.parse(JSON.stringify(v));
-    } catch {
-    }
-    return v;
-  }
-  function getRenderContext() {
-    try {
-      return tileState.engine?.reusableContext ?? null;
-    } catch {
-      return null;
-    }
-  }
-  function applyTileObject(tx, ty, nextObj, opts = {}) {
-    assertReady();
-    const ensureView = opts.ensureView !== false;
-    const forceUpdate = opts.forceUpdate !== false;
-    const { gidx, tv } = getTileViewAt(tx, ty, ensureView);
-    if (gidx == null) throw new Error("TOS/map cols not available");
-    if (!tv) throw new Error("TileView not available");
-    const before = tv.tileObject;
-    tv.onDataChanged(nextObj);
-    const ctx2 = forceUpdate ? getRenderContext() : null;
-    if (ctx2 && typeof tv.update === "function") {
-      try {
-        tv.update(ctx2);
-      } catch {
-      }
-    }
-    return { tx, ty, gidx, ok: true, before, after: tv.tileObject };
-  }
-  function assertType(obj, type) {
-    if (!obj) throw new Error("No tileObject on this tile");
-    if (obj.objectType !== type) throw new Error(`Wrong objectType: expected "${type}", got "${obj.objectType}"`);
-  }
-  function patchPlantSlot(slot, slotPatch) {
-    const p = slotPatch || {};
-    if ("startTime" in p) slot.startTime = Number(p.startTime);
-    if ("endTime" in p) slot.endTime = Number(p.endTime);
-    if ("size" in p) slot.size = Number(p.size);
-    if ("mutations" in p) {
-      if (!Array.isArray(p.mutations)) throw new Error("mutations must be an array of strings");
-      if (!p.mutations.every((x) => typeof x === "string")) throw new Error("mutations must contain only strings");
-      slot.mutations = p.mutations.slice();
-    }
-  }
-  function getApp() {
-    try {
-      return tileState.engine?.app ?? getPixiApp() ?? pageWindow?.__PIXI_APP__ ?? null;
-    } catch {
-      return null;
-    }
-  }
-  function getRenderer() {
-    try {
-      return tileState.engine?.app?.renderer ?? getSpriteState().renderer ?? pageWindow?.__PIXI_RENDERER__ ?? getApp()?.renderer ?? null;
-    } catch {
-      return null;
-    }
-  }
-  function getCanvas() {
-    const app = getApp();
-    const renderer = getRenderer();
-    return renderer?.canvas || renderer?.view?.canvas || renderer?.view || app?.view || app?.canvas || null;
-  }
-  function pointerToFarmTile(ev) {
-    assertReady();
-    const canvas = getCanvas();
-    const renderer = getRenderer();
-    const worldContainer = tileState.tos?.worldContainer;
-    const map2 = tileState.tos?.map;
-    if (!canvas || !renderer?.screen || !worldContainer?.toLocal || !map2) return null;
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return null;
-    const global = {
-      x: (ev.clientX - rect.left) * renderer.screen.width / rect.width,
-      y: (ev.clientY - rect.top) * renderer.screen.height / rect.height
-    };
-    const world = worldContainer.toLocal(global);
-    const tx = Math.floor(world.x / FARM_TILE_SIZE);
-    const ty = Math.floor(world.y / FARM_TILE_SIZE);
-    const cols = Number(map2.cols);
-    const rows = Number(map2.rows);
-    if (!Number.isFinite(cols) || tx < 0 || ty < 0 || tx >= cols) return null;
-    if (Number.isFinite(rows) && ty >= rows) return null;
-    return { tx, ty, gidx: tx + ty * cols };
-  }
-  var FARM_TILE_SIZE, tos;
-  var init_tileObjects = __esm({
-    "src/game/pixi/tileObjects.ts"() {
-      "use strict";
-      init_pageContext();
-      init_tileCapture();
-      init_tileFlash();
-      init_context();
-      FARM_TILE_SIZE = 256;
-      tos = {
-        /** Call once from main, as early as possible, so the capture watches before the world builds. */
-        init() {
-          ensureCapture();
-          return { ok: !!tileState.tos, engine: tileState.engine, tos: tileState.tos };
-        },
-        isReady() {
-          ensureCapture();
-          return !!tileState.tos;
-        },
-        getStatus() {
-          return { ok: !!tileState.tos, engine: tileState.engine, tos: tileState.tos };
-        },
-        /**
-         * Frame context for a manual `TileView.update`, or null when the game does not
-         * hand one out. Callers must treat null as "no forced repaint needed".
-         */
-        getRenderContext,
-        /** Get tile object by global index (same index used in WS HarvestCrop slot field). */
-        getTileObjectByIndex(gidx) {
-          if (!tileState.tos) return null;
-          try {
-            const tv = tileState.tos.tileViews?.get?.(gidx) ?? null;
-            return tv ? { tileObject: tv.tileObject } : null;
-          } catch {
-            return null;
-          }
-        },
-        getTileObject(tx, ty, opts = {}) {
-          assertReady();
-          const ensureView = opts.ensureView !== false;
-          const { gidx, tv } = getTileViewAt(Number(tx), Number(ty), ensureView);
-          if (gidx == null) throw new Error("TOS/map cols not available");
-          return {
-            tx: Number(tx),
-            ty: Number(ty),
-            gidx,
-            tileView: tv,
-            tileObject: tv?.tileObject
-          };
-        },
-        /** Empties the tile (tileObject = null). */
-        setTileEmpty(tx, ty, opts = {}) {
-          return applyTileObject(Number(tx), Number(ty), null, opts);
-        },
-        setTilePlant(tx, ty, patch, opts = {}) {
-          const info = this.getTileObject(tx, ty, opts);
-          const cur = info.tileObject;
-          assertType(cur, "plant");
-          const next = deepClone(cur);
-          if (!Array.isArray(next.slots)) next.slots = [];
-          const p = patch || {};
-          if ("plantedAt" in p) next.plantedAt = Number(p.plantedAt);
-          if ("maturedAt" in p) next.maturedAt = Number(p.maturedAt);
-          if ("species" in p) next.species = String(p.species);
-          if ("slotIdx" in p && "slotPatch" in p) {
-            const i = Number(p.slotIdx) | 0;
-            if (!next.slots[i]) throw new Error(`Plant slot ${i} does not exist`);
-            patchPlantSlot(next.slots[i], p.slotPatch);
-            return applyTileObject(Number(tx), Number(ty), next, opts);
-          }
-          if ("slots" in p) {
-            const s = p.slots;
-            if (Array.isArray(s)) {
-              for (let i = 0; i < s.length; i++) {
-                if (s[i] == null) continue;
-                if (!next.slots[i]) throw new Error(`Plant slot ${i} does not exist`);
-                patchPlantSlot(next.slots[i], s[i]);
-              }
-            } else if (s && typeof s === "object") {
-              for (const k of Object.keys(s)) {
-                const i = Number(k) | 0;
-                if (!Number.isFinite(i)) continue;
-                if (!next.slots[i]) throw new Error(`Plant slot ${i} does not exist`);
-                patchPlantSlot(next.slots[i], s[k]);
-              }
-            } else {
-              throw new Error("patch.slots must be an array or object map");
-            }
-            return applyTileObject(Number(tx), Number(ty), next, opts);
-          }
-          return applyTileObject(Number(tx), Number(ty), next, opts);
-        },
-        setTileDecor(tx, ty, patch, opts = {}) {
-          const info = this.getTileObject(tx, ty, opts);
-          const cur = info.tileObject;
-          assertType(cur, "decor");
-          const next = deepClone(cur);
-          const p = patch || {};
-          if ("rotation" in p) next.rotation = Number(p.rotation);
-          return applyTileObject(Number(tx), Number(ty), next, opts);
-        },
-        setTileEgg(tx, ty, patch, opts = {}) {
-          const info = this.getTileObject(tx, ty, opts);
-          const cur = info.tileObject;
-          assertType(cur, "egg");
-          const next = deepClone(cur);
-          const p = patch || {};
-          if ("plantedAt" in p) next.plantedAt = Number(p.plantedAt);
-          if ("maturedAt" in p) next.maturedAt = Number(p.maturedAt);
-          return applyTileObject(Number(tx), Number(ty), next, opts);
-        },
-        /** The game's Pixi canvas, or null before it is known. */
-        getCanvas,
-        /** The garden tile under a pointer event, wherever the camera has panned to. */
-        pointerToFarmTile,
-        /** A green flash that fades on a tile (the editor's "placed" and "selected" cue). */
-        flashTileGreen
-      };
-    }
-  });
-
-  // src/features/editor/editor.ts
-  function ensureItemPanelStyles() {
-    if (document.getElementById(ITEM_PANEL_STYLE_ID)) return;
-    const style2 = document.createElement("style");
-    style2.id = ITEM_PANEL_STYLE_ID;
-    style2.textContent = `
-.qws-item-box {
-  border: 1px solid rgba(94,234,212,0.14);
-  border-radius: 10px;
-  padding: 10px;
-  background: linear-gradient(180deg, rgba(20,26,34,0.9), rgba(12,16,22,0.9));
-  box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 6px 16px rgba(0,0,0,0.25);
-  display: grid;
-  gap: 8px;
-  transition: border-color 150ms ease;
-}
-.qws-item-box:hover { border-color: rgba(94,234,212,0.3); }
-
-.qws-item-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: rgba(226,232,240,0.55);
-}
-
-.qws-item-range {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 16px;
-  background: transparent;
-  cursor: pointer;
-  margin: 2px 0;
-}
-.qws-item-range:focus { outline: none; }
-.qws-item-range:disabled { cursor: default; }
-.qws-item-range::-webkit-slider-runnable-track {
-  height: 6px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #5eead4, rgba(94,234,212,0.18));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
-}
-.qws-item-range::-moz-range-track {
-  height: 6px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #5eead4, rgba(94,234,212,0.18));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
-}
-.qws-item-range::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  margin-top: -4.5px;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 0 0 2px rgba(94,234,212,0.55);
-  transition: transform 120ms ease;
-}
-.qws-item-range:active::-webkit-slider-thumb { transform: scale(1.1); }
-.qws-item-range::-moz-range-thumb {
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  border: none;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 0 0 2px rgba(94,234,212,0.55);
-}
-.qws-item-range:disabled::-webkit-slider-thumb,
-.qws-item-range:disabled::-moz-range-thumb { opacity: 0.5; box-shadow: none; }
-
-.qws-item-check {
-  width: 13px;
-  height: 13px;
-  accent-color: #5eead4;
-  cursor: pointer;
-  transform: scale(1.05);
-}
-`;
-    document.head.appendChild(style2);
-  }
-  function buildSpriteCandidates(rawId, label2) {
+  // src/features/editor/ui/entryIcon.ts
+  function spriteCandidates(...names) {
     const set2 = /* @__PURE__ */ new Set();
-    const add = (value) => {
-      if (!value) return;
-      const trimmed = String(value).trim();
-      if (!trimmed) return;
+    for (const value of names) {
+      const trimmed = String(value ?? "").trim();
+      if (!trimmed) continue;
       set2.add(trimmed);
       set2.add(trimmed.replace(/\s+/g, ""));
       const last = trimmed.split(/[./]/).pop();
@@ -11839,18 +13427,156 @@
         set2.add(last);
         set2.add(last.replace(/\s+/g, ""));
       }
-    };
-    add(rawId);
-    add(label2);
+    }
     return Array.from(set2).filter(Boolean);
   }
-  function mutationCatalogKeyFor(storedId) {
-    return storedId === "Ambershine" ? "Amberlit" : storedId;
+  function plantSpriteKey(species) {
+    const entry = plantCatalog2[species];
+    return entry?.crop?.sprite ?? entry?.plant?.sprite ?? null;
   }
-  function createMutationIconBadge(storedId, size = 22) {
+  function entryIcon(kind, id, label2, size) {
+    const wrap = document.createElement("span");
+    Object.assign(wrap.style, {
+      width: `${size}px`,
+      height: `${size}px`,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: `${Math.max(14, size - 10)}px`,
+      lineHeight: "1"
+    });
+    wrap.setAttribute("aria-hidden", "true");
+    const fallback = label2?.trim().charAt(0).toUpperCase() || (kind === "decor" ? "D" : "P");
+    const applyFallback = () => {
+      if (!wrap.querySelector("img")) wrap.textContent = fallback;
+    };
+    const atlasName = kind === "plant" ? plantSpriteKey(id)?.split("/").pop() : null;
+    const candidates = spriteCandidates(atlasName, id, label2);
+    let categories = kind === "decor" ? ["decor"] : ["plant"];
+    if (kind === "plant" && /bamboo|cactus/i.test(id || label2 || "")) categories = ["tallplant", "tallPlant", "plant"];
+    if (candidates.length) {
+      attachSpriteIcon(wrap, categories, candidates, size, "editor", { onNoSpriteFound: applyFallback });
+    } else {
+      applyFallback();
+    }
+    return wrap;
+  }
+  var init_entryIcon = __esm({
+    "src/features/editor/ui/entryIcon.ts"() {
+      "use strict";
+      init_data();
+      init_iconCache();
+    }
+  });
+
+  // src/features/editor/mutationOrder.ts
+  function groupOfWeatherType(raw) {
+    const value = String(raw ?? "").toLowerCase();
+    if (value === "hydro" || value === "weather") return GROUP_HYDRO;
+    if (value === "lunar") return GROUP_LUNAR;
+    return null;
+  }
+  function commonPrefixLength(a, b) {
+    const la = a.toLowerCase();
+    const lb = b.toLowerCase();
+    const max = Math.min(la.length, lb.length);
+    let i = 0;
+    while (i < max && la[i] === lb[i]) i++;
+    return i;
+  }
+  function grantedMutations(weather2) {
+    const granted = [];
+    if (weather2?.mutator?.mutation) granted.push(String(weather2.mutator.mutation));
+    if (Array.isArray(weather2?.mutations)) {
+      for (const m of weather2.mutations) if (m?.name) granted.push(String(m.name));
+    }
+    return granted;
+  }
+  function computeMutationGroupRanks(keys, mutations, weathers) {
+    const ranks = {};
+    const keyByName = {};
+    for (const key2 of keys) {
+      const def = mutations[key2] || {};
+      keyByName[key2.toLowerCase()] = key2;
+      if (def.name) keyByName[String(def.name).toLowerCase()] = key2;
+      const alias = key2 === "Amberlit" ? "Ambershine" : key2 === "Ambershine" ? "Amberlit" : null;
+      if (alias) keyByName[alias.toLowerCase()] = key2;
+      if (Number(def.baseChance) > 0) ranks[key2] = GROUP_COLOR;
+    }
+    for (const weather2 of Object.values(weathers || {})) {
+      const granted = grantedMutations(weather2);
+      if (!granted.length) continue;
+      const rank = groupOfWeatherType(weather2?.groupId ?? weather2?.type) ?? GROUP_HYDRO;
+      for (const name of granted) {
+        const key2 = keyByName[name.toLowerCase()];
+        if (key2 && ranks[key2] == null) ranks[key2] = rank;
+      }
+    }
+    const grouped = keys.filter((k) => ranks[k] != null && ranks[k] !== GROUP_COLOR);
+    for (const key2 of keys) {
+      if (ranks[key2] != null) continue;
+      let bestRank = null;
+      let bestLen = 0;
+      for (const other of grouped) {
+        const len = commonPrefixLength(key2, other);
+        if (len >= STEM_MIN_PREFIX && len > bestLen) {
+          bestLen = len;
+          bestRank = ranks[other];
+        }
+      }
+      if (bestRank != null) ranks[key2] = bestRank;
+    }
+    for (let i = 0; i < keys.length; i++) {
+      const key2 = keys[i];
+      if (ranks[key2] != null) continue;
+      let inherited = null;
+      for (let j = i - 1; j >= 0 && inherited == null; j--) {
+        if (isWeatherGroup(ranks[keys[j]])) inherited = ranks[keys[j]];
+      }
+      for (let j = i + 1; j < keys.length && inherited == null; j++) {
+        if (isWeatherGroup(ranks[keys[j]])) inherited = ranks[keys[j]];
+      }
+      ranks[key2] = inherited ?? GROUP_OTHER;
+    }
+    return ranks;
+  }
+  function sortMutationCatalogKeys(keys, mutations, weathers) {
+    const ranks = computeMutationGroupRanks(keys, mutations, weathers);
+    const multiplier = (key2) => Number(mutations[key2]?.coinMultiplier) || 0;
+    return keys.slice().sort((a, b) => {
+      const rankDiff = (ranks[a] ?? GROUP_OTHER) - (ranks[b] ?? GROUP_OTHER);
+      if (rankDiff !== 0) return rankDiff;
+      const multDiff = multiplier(a) - multiplier(b);
+      if (multDiff !== 0) return multDiff;
+      return a.localeCompare(b);
+    });
+  }
+  function sortStoredMutationIds(ids, orderedKeys) {
+    const indexOf = (id) => {
+      const idx = orderedKeys.indexOf(mutationCatalogKeyFor(id));
+      return idx === -1 ? orderedKeys.length : idx;
+    };
+    return ids.slice().sort((a, b) => indexOf(a) - indexOf(b) || a.localeCompare(b));
+  }
+  var GROUP_COLOR, GROUP_HYDRO, GROUP_LUNAR, GROUP_OTHER, STEM_MIN_PREFIX, mutationCatalogKeyFor, storedMutationIdFor, isWeatherGroup;
+  var init_mutationOrder = __esm({
+    "src/features/editor/mutationOrder.ts"() {
+      "use strict";
+      GROUP_COLOR = 0;
+      GROUP_HYDRO = 1;
+      GROUP_LUNAR = 2;
+      GROUP_OTHER = 3;
+      STEM_MIN_PREFIX = 4;
+      mutationCatalogKeyFor = (storedId) => storedId === "Ambershine" ? "Amberlit" : storedId;
+      storedMutationIdFor = (catalogKey) => catalogKey === "Amberlit" ? "Ambershine" : catalogKey;
+      isWeatherGroup = (rank) => rank === GROUP_HYDRO || rank === GROUP_LUNAR;
+    }
+  });
+
+  // src/features/editor/ui/mutationPicker.ts
+  function mutationIcon(storedId, size = 22) {
     const catalogKey = mutationCatalogKeyFor(storedId);
-    const def = mutationCatalog2[catalogKey] || mutationCatalog2[storedId] || {};
-    const label2 = String(def.name || storedId || "?");
+    const label2 = mutationName(catalogKey) || storedId || "?";
     const wrap = document.createElement("span");
     Object.assign(wrap.style, {
       width: `${size}px`,
@@ -11865,3094 +13591,127 @@
     const applyFallback = () => {
       if (wrap.querySelector("img")) return;
       wrap.textContent = label2.charAt(0).toUpperCase() || "?";
-      const color2 = mutationColorMap[storedId] ?? mutationColorMap[catalogKey];
-      if (!color2) return;
-      if (color2.startsWith("linear-gradient")) {
-        wrap.style.backgroundImage = color2;
-        wrap.style.backgroundClip = "text";
-        wrap.style.webkitBackgroundClip = "text";
-        wrap.style.color = "transparent";
-        wrap.style.webkitTextFillColor = "transparent";
+      const fill = FALLBACK_COLORS[storedId] ?? FALLBACK_COLORS[catalogKey];
+      if (!fill) return;
+      if (fill.startsWith("linear-gradient")) {
+        Object.assign(wrap.style, {
+          backgroundImage: fill,
+          backgroundClip: "text",
+          webkitBackgroundClip: "text",
+          color: "transparent",
+          webkitTextFillColor: "transparent"
+        });
       } else {
-        wrap.style.color = color2;
+        wrap.style.color = fill;
       }
     };
-    const candidates = Array.from(
-      /* @__PURE__ */ new Set([
-        `Mutation${catalogKey}`,
-        `Mutation${storedId}`,
-        catalogKey,
-        storedId
-      ])
-    );
-    attachSpriteIcon(wrap, MUTATION_ICON_CATEGORIES, candidates, size, "editor", {
-      onNoSpriteFound: applyFallback
-    });
+    const candidates = Array.from(/* @__PURE__ */ new Set([`Mutation${catalogKey}`, `Mutation${storedId}`, catalogKey, storedId]));
+    attachSpriteIcon(wrap, ICON_CATEGORIES, candidates, size, "editor", { onNoSpriteFound: applyFallback });
     return wrap;
   }
-  function createMutationToggleButton(mutKey, storedId, active2, onToggle) {
-    const def = mutationCatalog2[mutKey] || {};
-    const label2 = String(def.name || mutKey || "?");
+  function squareButton() {
     const btn = document.createElement("button");
     btn.type = "button";
     Object.assign(btn.style, {
-      width: "34px",
-      height: "34px",
+      width: `${TILE_PX}px`,
+      height: `${TILE_PX}px`,
       padding: "0",
       borderRadius: "8px",
-      border: active2 ? "1px solid rgba(94,234,212,0.55)" : "1px solid #2c3643",
-      background: active2 ? "rgba(94,234,212,0.14)" : "rgba(10,14,20,0.9)",
-      boxShadow: active2 ? "0 0 0 1px rgba(94,234,212,0.25) inset" : "none",
+      border: `1px solid ${color.borderStrong}`,
+      background: color.sunken,
+      color: color.text,
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
-      cursor: "pointer",
-      opacity: active2 ? "1" : "0.85"
+      cursor: "pointer"
     });
-    btn.title = active2 ? `${label2} \u2014 remove` : `${label2} \u2014 add`;
-    btn.appendChild(createMutationIconBadge(storedId, 24));
-    btn.onclick = onToggle;
     return btn;
   }
-  function createSquarePlusButton() {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = "+";
-    Object.assign(btn.style, {
-      width: "34px",
-      height: "34px",
-      padding: "0",
-      borderRadius: "8px",
-      border: "1px solid #2c3643",
-      background: MUT_PLUS_BG_CLOSED,
-      color: "#e7eef7",
-      fontWeight: "900",
-      fontSize: "16px",
-      cursor: "pointer",
+  function mutationToggle(storedId, active3, onClick) {
+    const label2 = mutationName(mutationCatalogKeyFor(storedId));
+    const btn = squareButton();
+    if (active3) {
+      Object.assign(btn.style, {
+        border: `1px solid ${color.accentBorderHover}`,
+        background: color.accentSoft,
+        boxShadow: `0 0 0 1px ${color.accentBorder} inset`
+      });
+    } else {
+      btn.style.opacity = "0.85";
+    }
+    btn.title = active3 ? `Remove ${label2}` : `Add ${label2}`;
+    btn.appendChild(mutationIcon(storedId, 24));
+    btn.onclick = onClick;
+    return btn;
+  }
+  function mutationTag(storedId) {
+    const tag = document.createElement("span");
+    Object.assign(tag.style, {
       display: "inline-flex",
       alignItems: "center",
-      justifyContent: "center"
+      justifyContent: "center",
+      width: "28px",
+      height: "28px",
+      borderRadius: "8px",
+      border: `1px solid ${color.borderStrong}`,
+      background: color.sunken
     });
-    btn.title = "Add mutation";
-    return btn;
+    tag.title = mutationName(mutationCatalogKeyFor(storedId));
+    tag.appendChild(mutationIcon(storedId, 20));
+    return tag;
   }
-  function createMutationDropdown() {
-    const el = document.createElement("div");
-    Object.assign(el.style, {
+  function mutationPicker(onToggle, prefix) {
+    const row = document.createElement("div");
+    Object.assign(row.style, { display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" });
+    const dropdown = document.createElement("div");
+    Object.assign(dropdown.style, {
       display: "none",
       flexWrap: "wrap",
       gap: "6px",
       padding: "6px",
-      border: "1px solid #2c3643",
+      border: `1px solid ${color.borderStrong}`,
       borderRadius: "8px",
-      background: "rgba(8,12,18,0.9)"
+      background: color.sunken
     });
-    return el;
-  }
-  function mutationGroupRankFromWeatherType(raw) {
-    const val = String(raw ?? "").toLowerCase();
-    if (val === "hydro" || val === "weather") return MUTATION_GROUP_HYDRO;
-    if (val === "lunar") return MUTATION_GROUP_LUNAR;
-    return null;
-  }
-  function commonPrefixLength(a, b) {
-    const la = a.toLowerCase();
-    const lb = b.toLowerCase();
-    const max = Math.min(la.length, lb.length);
-    let i = 0;
-    while (i < max && la[i] === lb[i]) i++;
-    return i;
-  }
-  function computeMutationGroupRanks(keys) {
-    const ranks = {};
-    const nameToKey = {};
-    for (const key2 of keys) {
-      const def = mutationCatalog2[key2] || {};
-      nameToKey[key2.toLowerCase()] = key2;
-      if (def.name) nameToKey[String(def.name).toLowerCase()] = key2;
-      const alias = key2 === "Amberlit" ? "Ambershine" : key2 === "Ambershine" ? "Amberlit" : null;
-      if (alias) nameToKey[alias.toLowerCase()] = key2;
-      if (Number(def.baseChance) > 0) ranks[key2] = MUTATION_GROUP_COLOR;
-    }
-    for (const weatherKey of Object.keys(weatherCatalog2 || {})) {
-      const entry = weatherCatalog2[weatherKey] || {};
-      const granted = [];
-      const single = entry?.mutator?.mutation;
-      if (single) granted.push(String(single));
-      if (Array.isArray(entry.mutations)) {
-        for (const m of entry.mutations) {
-          if (m?.name) granted.push(String(m.name));
-        }
-      }
-      if (!granted.length) continue;
-      const rank = mutationGroupRankFromWeatherType(entry.groupId ?? entry.type) ?? MUTATION_GROUP_HYDRO;
-      for (const grantedName of granted) {
-        const key2 = nameToKey[grantedName.toLowerCase()];
-        if (key2 && ranks[key2] == null) ranks[key2] = rank;
-      }
-    }
-    const grouped = keys.filter(
-      (k) => ranks[k] != null && ranks[k] !== MUTATION_GROUP_COLOR
-    );
-    for (const key2 of keys) {
-      if (ranks[key2] != null) continue;
-      let bestRank = null;
-      let bestLen = 0;
-      for (const other of grouped) {
-        const len = commonPrefixLength(key2, other);
-        if (len >= MUTATION_STEM_MIN_PREFIX && len > bestLen) {
-          bestLen = len;
-          bestRank = ranks[other];
-        }
-      }
-      if (bestRank != null) ranks[key2] = bestRank;
-    }
-    for (let i = 0; i < keys.length; i++) {
-      const key2 = keys[i];
-      if (ranks[key2] != null) continue;
-      let inherited = null;
-      for (let j = i - 1; j >= 0; j--) {
-        const rank = ranks[keys[j]];
-        if (rank === MUTATION_GROUP_HYDRO || rank === MUTATION_GROUP_LUNAR) {
-          inherited = rank;
-          break;
-        }
-      }
-      if (inherited == null) {
-        for (let j = i + 1; j < keys.length; j++) {
-          const rank = ranks[keys[j]];
-          if (rank === MUTATION_GROUP_HYDRO || rank === MUTATION_GROUP_LUNAR) {
-            inherited = rank;
-            break;
-          }
-        }
-      }
-      ranks[key2] = inherited ?? MUTATION_GROUP_OTHER;
-    }
-    return ranks;
-  }
-  function sortMutationCatalogKeys(keys) {
-    const ranks = computeMutationGroupRanks(keys);
-    return keys.slice().sort((a, b) => {
-      const rankDiff = (ranks[a] ?? MUTATION_GROUP_OTHER) - (ranks[b] ?? MUTATION_GROUP_OTHER);
-      if (rankDiff !== 0) return rankDiff;
-      const multA = Number(mutationCatalog2[a]?.coinMultiplier) || 0;
-      const multB = Number(mutationCatalog2[b]?.coinMultiplier) || 0;
-      if (multA !== multB) return multA - multB;
-      return a.localeCompare(b);
-    });
-  }
-  function sortStoredMutationIds(ids) {
-    const order = sortMutationCatalogKeys(Object.keys(mutationCatalog2 || {}));
-    const orderIndex = (id) => {
-      const idx = order.indexOf(mutationCatalogKeyFor(id));
-      return idx === -1 ? order.length : idx;
-    };
-    return ids.slice().sort((a, b) => orderIndex(a) - orderIndex(b) || a.localeCompare(b));
-  }
-  function getCurrentTileTarget() {
-    return currentEditorTile;
-  }
-  function setCurrentEditorTile(target) {
-    currentEditorTile = target;
-    renderCurrentItemOverlay();
-  }
-  async function triggerEditorAnimation(animation) {
-    try {
-      const playerId2 = await getPlayerId();
-      if (!playerId2) return;
-      await Atoms.player.avatarTriggerAnimationAtom.set({ playerId: playerId2, animation });
-      if (animation === "dig") {
-        void audioPlayer.playBy("Break_Dirt_01");
-      } else if (animation === "dropObject") {
-        void (audioPlayer.playGroup("plant") || audioPlayer.playGroup("hit_dirt") || audioPlayer.playGroup("hit") || audioPlayer.playBy(/Hit_Dirt/i));
-      }
-    } catch {
-    }
-  }
-  function setPlannedGarden(next) {
-    plannedGarden = next;
-    if (overlayOwner === "editor") void setOverlayMyDataGarden(plannedGarden);
-  }
-  function createSelectionIcon(kind, label2, size = 32, rawId, spriteKey) {
-    const wrap = document.createElement("span");
-    Object.assign(wrap.style, {
-      width: `${size}px`,
-      height: `${size}px`,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: `${Math.max(14, size - 10)}px`,
-      lineHeight: "1"
-    });
-    const fallback = label2?.trim().charAt(0).toUpperCase() || (kind === "decor" ? "D" : "P");
-    wrap.textContent = "";
-    wrap.setAttribute("aria-hidden", "true");
-    const applyFallback = () => {
-      if (!wrap.querySelector("img")) {
-        wrap.textContent = fallback;
-      }
-    };
-    const spriteBaseName2 = spriteKey?.split("/").pop() ?? null;
-    const candidates = spriteBaseName2 ? [spriteBaseName2, ...buildSpriteCandidates(rawId, label2)] : buildSpriteCandidates(rawId, label2);
-    let categories = kind === "decor" ? ["decor"] : ["plant"];
-    if (kind !== "decor" && /bamboo|cactus/i.test(String(rawId ?? label2 ?? ""))) {
-      categories = ["tallplant", "tallPlant", "plant"];
-    }
-    if (candidates.length) {
-      attachSpriteIcon(wrap, categories, candidates, size, "editor", {
-        onNoSpriteFound: applyFallback
-      });
-    } else {
-      applyFallback();
-    }
-    return wrap;
-  }
-  function persist2(enabled5) {
-  }
-  function editorToolbarButtonStyle() {
-    return {
-      padding: "5px 10px",
-      borderRadius: "999px",
-      border: "1px solid #ffffff33",
-      background: "rgba(255,255,255,0.08)",
-      color: "#e7eef7",
-      font: "600 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-      cursor: "pointer"
-    };
-  }
-  function ensureOverlay() {
-    if (overlayEl && document.contains(overlayEl)) return overlayEl;
-    const el = document.createElement("div");
-    el.id = "qws-editor-overlay";
-    Object.assign(el.style, {
-      position: "fixed",
-      top: "7%",
-      left: "50%",
-      transform: "translateX(-50%)",
-      zIndex: "1000001",
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      padding: "6px 8px",
-      borderRadius: "999px",
-      border: "1px solid #ffffff33",
-      background: "linear-gradient(180deg, rgba(17,24,31,0.95), rgba(12,18,26,0.92))",
-      color: "#e7eef7",
-      font: "600 13px/1.3 system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-      letterSpacing: "0.3px",
-      boxShadow: "0 10px 30px rgba(0,0,0,.35)"
-    });
-    const label2 = document.createElement("span");
-    label2.textContent = "Editor mode";
-    label2.style.padding = "2px 6px";
-    const clearBtn = document.createElement("button");
-    clearBtn.type = "button";
-    clearBtn.textContent = "Clear garden";
-    Object.assign(clearBtn.style, editorToolbarButtonStyle());
-    clearBtn.onclick = () => {
-      void clearEditorGarden();
-    };
-    const hudBtn = document.createElement("button");
-    hudBtn.type = "button";
-    Object.assign(hudBtn.style, editorToolbarButtonStyle());
-    hudBtn.onclick = () => {
-      toggleEditorHud();
-    };
-    hudToggleBtnEl = hudBtn;
-    el.append(label2, clearBtn, hudBtn);
-    (document.body || document.documentElement || document).appendChild(el);
-    overlayEl = el;
-    updateHudToggleButtonLabel();
-    return el;
-  }
-  function updateHudToggleButtonLabel() {
-    if (hudToggleBtnEl)
-      hudToggleBtnEl.textContent = overlaysVisible ? "Hide HUD" : "Show HUD";
-  }
-  function toggleEditorHud() {
-    if (!currentEnabled) return;
-    overlaysVisible = !overlaysVisible;
-    if (overlaysVisible) {
-      showSideOverlay();
-      showCurrentItemOverlay();
-    } else {
-      hideSideOverlay();
-      hideCurrentItemOverlay();
-    }
-    updateHudToggleButtonLabel();
-  }
-  async function clearEditorGarden() {
-    if (!currentEnabled) return;
-    await setCurrentGarden(makeEmptyGarden());
-    currentEditorTile = null;
-    renderCurrentItemOverlay();
-  }
-  function showOverlay() {
-    ensureOverlay();
-    updateHudToggleButtonLabel();
-  }
-  function hideOverlay() {
-    if (overlayEl) {
-      overlayEl.remove();
-      overlayEl = null;
-      hudToggleBtnEl = null;
-    }
-  }
-  function notifySavedGardensChanged() {
-    if (!savedGardensListeners.size) return;
-    for (const listener of savedGardensListeners) {
-      try {
-        listener();
-      } catch (error) {
-        console.error("[EditorService] saved gardens listener failed", error);
-      }
-    }
-  }
-  function getSelectedId() {
-    return currentSideMode === "decor" ? selectedDecorId : selectedPlantId;
-  }
-  function setSelectedId(next) {
-    if (currentSideMode === "decor") {
-      selectedDecorId = next;
-    } else {
-      selectedPlantId = next;
-    }
-  }
-  function getSideEntries() {
-    const all = currentSideMode === "decor" ? Object.entries(decorCatalog2 || {}).map(([decorId, val]) => ({
-      id: decorId,
-      label: String(val?.name || decorId)
-    })) : Object.entries(plantCatalog2 || {}).map(([species, val]) => ({
-      id: species,
-      label: String(
-        val?.crop?.name || val?.seed?.name || species
-      )
-    }));
-    const query = sideSearchQuery.trim().toLowerCase();
-    if (!query) return all;
-    return all.filter((entry) => entry.label.toLowerCase().includes(query));
-  }
-  function getSideEntry(id) {
-    if (!id) return null;
-    return currentSideMode === "decor" ? decorCatalog2?.[id] : plantCatalog2?.[id];
-  }
-  function getSideEntryLabel(id, entry) {
-    if (currentSideMode === "decor") return entry?.name || id;
-    return entry?.crop?.name || entry?.seed?.name || id;
-  }
-  function getSideSpriteKind() {
-    return currentSideMode === "decor" ? "Decor" : "Crop";
-  }
-  function ensureSideOverlay() {
-    if (sideOverlayEl && document.contains(sideOverlayEl)) return sideOverlayEl;
-    const root = document.createElement("div");
-    root.id = "qws-editor-side";
-    Object.assign(root.style, {
-      position: "fixed",
-      top: "12%",
-      left: "12px",
-      zIndex: "1000001",
-      width: "300px",
-      minHeight: "420px",
-      maxHeight: "86vh",
-      height: "min(720px, 86vh)",
-      display: "grid",
-      gridTemplateRows: "auto 1fr",
-      // <- header + contenu
-      gap: "10px",
-      padding: "10px",
-      borderRadius: "12px",
-      border: "1px solid rgba(94,234,212,0.18)",
-      background: "linear-gradient(180deg, rgba(14,18,25,0.95), rgba(10,14,20,0.92))",
-      color: "#e7eef7",
-      boxShadow: "0 10px 30px rgba(0,0,0,0.35), 0 0 0 1px rgba(94,234,212,0.05)",
-      pointerEvents: "auto"
-    });
-    const header = document.createElement("div");
-    header.textContent = "\u{1F33F} Item picker";
-    header.style.borderBottom = "1px solid rgba(94,234,212,0.12)";
-    header.style.paddingBottom = "8px";
-    header.style.color = "#5eead4";
-    header.style.fontWeight = "700";
-    header.style.fontSize = "13px";
-    header.style.letterSpacing = "0.08em";
-    header.style.textTransform = "uppercase";
-    header.style.opacity = "0.85";
-    header.style.textAlign = "center";
-    const content = document.createElement("div");
-    content.style.display = "grid";
-    content.style.gridTemplateRows = "auto auto minmax(120px, 0.7fr) minmax(0, 1fr)";
-    content.style.gap = "8px";
-    content.style.minHeight = "0";
-    const searchInput = document.createElement("input");
-    searchInput.type = "text";
-    searchInput.placeholder = "Search\u2026";
-    Object.assign(searchInput.style, {
-      width: "100%",
-      padding: "7px 10px",
-      borderRadius: "8px",
-      border: "1px solid #33404e",
-      background: "rgba(20,25,33,0.9)",
-      color: "#e7eef7",
-      fontSize: "12px",
-      boxSizing: "border-box",
-      outline: "none",
-      transition: "border-color 150ms ease"
-    });
-    searchInput.value = sideSearchQuery;
-    searchInput.addEventListener("focus", () => {
-      searchInput.style.borderColor = "rgba(94,234,212,0.55)";
-    });
-    searchInput.addEventListener("blur", () => {
-      searchInput.style.borderColor = "#33404e";
-    });
-    searchInput.oninput = () => {
-      sideSearchQuery = searchInput.value;
-      renderSideList();
-    };
-    const modeRow = document.createElement("div");
-    Object.assign(modeRow.style, {
-      display: "flex",
-      gap: "4px",
-      padding: "3px",
-      borderRadius: "10px",
-      background: "rgba(20,25,33,0.9)",
-      border: "1px solid #33404e"
-    });
-    const modeButtonStyle = (btn, active2) => {
-      Object.assign(btn.style, {
-        flex: "1",
-        padding: "6px 8px",
-        borderRadius: "8px",
-        border: "none",
-        fontWeight: "700",
-        fontSize: "12px",
-        cursor: "pointer",
-        transition: "background 120ms ease, color 120ms ease",
-        background: active2 ? "rgba(94,234,212,0.22)" : "transparent",
-        color: active2 ? "#5eead4" : "#9aa7b5"
-      });
-    };
-    const plantsBtn = document.createElement("button");
-    plantsBtn.type = "button";
-    plantsBtn.textContent = "\u{1F331} Plants";
-    const decorBtn = document.createElement("button");
-    decorBtn.type = "button";
-    decorBtn.textContent = "\u{1F3A8} Decor";
-    const refreshModeButtons = () => {
-      modeButtonStyle(plantsBtn, currentSideMode === "plants");
-      modeButtonStyle(decorBtn, currentSideMode === "decor");
-    };
-    refreshModeButtons();
-    const switchSideMode = (mode) => {
-      if (currentSideMode === mode) return;
-      currentSideMode = mode;
-      sideSearchQuery = "";
-      searchInput.value = "";
-      refreshModeButtons();
-      renderSideList();
-      renderSideDetails();
-    };
-    plantsBtn.onclick = () => switchSideMode("plants");
-    decorBtn.onclick = () => switchSideMode("decor");
-    modeRow.append(plantsBtn, decorBtn);
-    const listWrap = document.createElement("div");
-    listWrap.id = "qws-editor-side-list";
-    Object.assign(listWrap.style, {
-      border: "1px solid rgba(94,234,212,0.12)",
-      borderRadius: "10px",
-      background: "rgba(16,21,28,0.9)",
-      overflow: "auto",
-      padding: "6px",
-      minHeight: "0"
-    });
-    sideListWrap = listWrap;
-    const right = document.createElement("div");
-    right.id = "qws-editor-side-details";
-    right.style.display = "grid";
-    right.style.gridTemplateRows = "1fr auto";
-    right.style.gap = "8px";
-    right.style.border = "1px solid rgba(94,234,212,0.12)";
-    right.style.borderRadius = "10px";
-    right.style.background = "rgba(16,21,28,0.9)";
-    right.style.padding = "10px";
-    right.style.minHeight = "0";
-    right.style.overflow = "hidden";
-    sideRightWrap = right;
-    content.append(modeRow, searchInput, listWrap, right);
-    root.append(header, content);
-    (document.body || document.documentElement || document).appendChild(root);
-    sideOverlayEl = root;
-    renderSideList();
-    renderSideDetails();
-    return root;
-  }
-  function showSideOverlay() {
-    ensureSideOverlay();
-  }
-  function hideSideOverlay() {
-    if (sideOverlayEl) {
-      sideOverlayEl.remove();
-      sideOverlayEl = null;
-      sideListWrap = null;
-      sideRightWrap = null;
-    }
-  }
-  function ensureCurrentItemOverlay() {
-    if (currentItemOverlayEl && document.contains(currentItemOverlayEl))
-      return currentItemOverlayEl;
-    const root = document.createElement("div");
-    root.id = "qws-editor-current-item";
-    Object.assign(root.style, {
-      position: "fixed",
-      top: "12%",
-      right: "12px",
-      zIndex: "1000001",
-      width: "300px",
-      minHeight: "200px",
-      maxHeight: "86vh",
-      display: "grid",
-      gridTemplateRows: "auto 1fr",
-      gap: "10px",
-      padding: "10px",
-      borderRadius: "12px",
-      border: "1px solid rgba(94,234,212,0.18)",
-      background: "linear-gradient(180deg, rgba(14,18,25,0.95), rgba(10,14,20,0.92))",
-      color: "#e7eef7",
-      boxShadow: "0 10px 30px rgba(0,0,0,0.35), 0 0 0 1px rgba(94,234,212,0.05)",
-      pointerEvents: "auto"
-    });
-    const header = document.createElement("div");
-    header.textContent = "\u2728 Current item";
-    header.style.fontWeight = "700";
-    header.style.fontSize = "13px";
-    header.style.letterSpacing = "0.08em";
-    header.style.textTransform = "uppercase";
-    header.style.color = "#5eead4";
-    header.style.textAlign = "center";
-    header.style.borderBottom = "1px solid rgba(94,234,212,0.12)";
-    header.style.paddingBottom = "8px";
-    const content = document.createElement("div");
-    content.id = "qws-editor-current-item-content";
-    content.style.display = "grid";
-    content.style.gap = "10px";
-    content.style.minHeight = "0";
-    content.style.overflow = "auto";
-    root.append(header, content);
-    (document.body || document.documentElement || document).appendChild(root);
-    currentItemOverlayEl = root;
-    attachCurrentItemListener();
-    renderCurrentItemOverlay();
-    return root;
-  }
-  function showCurrentItemOverlay() {
-    ensureCurrentItemOverlay();
-  }
-  function hideCurrentItemOverlay() {
-    if (currentItemUnsub) {
-      try {
-        currentItemUnsub();
-      } catch {
-      }
-      currentItemUnsub = null;
-    }
-    if (currentItemOverlayEl) {
-      currentItemOverlayEl.remove();
-      currentItemOverlayEl = null;
-    }
-  }
-  function attachCurrentItemListener() {
-    if (currentItemUnsub) {
-      try {
-        currentItemUnsub();
-      } catch {
-      }
-      currentItemUnsub = null;
-    }
-    void (async () => {
-      try {
-        const selectedIdxAtom = getAtomByLabel(
-          "myValidatedSelectedItemIndexAtom"
-        );
-        const store = await ensureStore().catch(() => null);
-        if (!selectedIdxAtom || !store) return;
-        const unsubB = store.sub(
-          selectedIdxAtom,
-          () => renderCurrentItemOverlay()
-        );
-        currentItemUnsub = () => {
-          try {
-            unsubB();
-          } catch {
-          }
-        };
-      } catch {
-      }
-    })();
-  }
-  async function readCurrentTileContext() {
-    const target = getCurrentTileTarget();
-    if (!target) return { tileType: void 0, tileKey: null, tileObject: null };
-    const tileObject = await readTileObjectAt(target);
-    return {
-      tileType: target.tileType,
-      tileKey: String(target.localTileIndex),
-      tileObject
-    };
-  }
-  async function readTileObjectAt(target) {
-    const key2 = String(target.localTileIndex);
-    const targetMap = target.tileType === "Dirt" ? plannedGarden.tileObjects || {} : plannedGarden.boardwalkTileObjects || {};
-    return targetMap[key2] ?? null;
-  }
-  function getGardenObjectLabel(obj) {
-    if (!obj || typeof obj !== "object") return "Unknown";
-    if (obj.objectType === "plant") {
-      const entry = plantCatalog2[obj.species];
-      return entry?.crop?.name || entry?.seed?.name || obj.species || "Plant";
-    }
-    if (obj.objectType === "decor") {
-      const entry = decorCatalog2[obj.decorId];
-      return entry?.name || obj.decorId || "Decor";
-    }
-    return String(obj.objectType || "Item");
-  }
-  function renderCurrentItemOverlay() {
-    if (!currentItemOverlayEl) return;
-    const content = currentItemOverlayEl.querySelector(
-      "#qws-editor-current-item-content"
-    );
-    if (!content) return;
-    void (async () => {
-      content.innerHTML = "";
-      const { tileKey, tileObject } = await readCurrentTileContext();
-      if (!tileObject) {
-        const empty = document.createElement("div");
-        empty.textContent = "Click on a plant or item to edit it.";
-        empty.style.opacity = "0.7";
-        empty.style.textAlign = "center";
-        content.appendChild(empty);
-        try {
-          const selId = getSelectedId();
-          if (selId) {
-            const isDecor = currentSideMode === "decor";
-            const entry = getSideEntry(selId);
-            const label2 = getSideEntryLabel(selId, entry);
-            const infoRow = document.createElement("div");
-            infoRow.style.display = "flex";
-            infoRow.style.flexDirection = "column";
-            infoRow.style.alignItems = "center";
-            infoRow.style.gap = "6px";
-            const nameEl2 = document.createElement("div");
-            nameEl2.textContent = label2;
-            nameEl2.style.fontWeight = "700";
-            nameEl2.style.fontSize = "14px";
-            nameEl2.style.overflow = "hidden";
-            nameEl2.style.textOverflow = "ellipsis";
-            nameEl2.style.whiteSpace = "nowrap";
-            nameEl2.style.textAlign = "center";
-            const _selCatalogEntry = !isDecor ? plantCatalog2[selId] : null;
-            const _selSpriteKey = _selCatalogEntry?.crop?.sprite ?? _selCatalogEntry?.plant?.sprite ?? null;
-            const icon2 = createSelectionIcon(
-              isDecor ? "decor" : "plants",
-              label2,
-              40,
-              selId,
-              _selSpriteKey
-            );
-            infoRow.append(icon2, nameEl2);
-            content.appendChild(infoRow);
-            if (!isDecor) {
-              const slotsConfig = ensureEditorStateForSpecies(selId).slots;
-              const mutSet = /* @__PURE__ */ new Set();
-              for (const cfg of slotsConfig) {
-                if (!cfg.enabled) continue;
-                (cfg.mutations || []).forEach((m) => mutSet.add(m));
-              }
-              const mutList = sortStoredMutationIds(Array.from(mutSet));
-              const mutRow = document.createElement("div");
-              mutRow.style.display = "flex";
-              mutRow.style.flexWrap = "wrap";
-              mutRow.style.gap = "6px";
-              mutRow.style.justifyContent = "center";
-              if (mutList.length) {
-                for (const mutId of mutList) {
-                  const tag = document.createElement("span");
-                  Object.assign(tag.style, {
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "28px",
-                    height: "28px",
-                    borderRadius: "8px",
-                    border: "1px solid #2c3643",
-                    background: "rgba(10,14,20,0.9)"
-                  });
-                  tag.title = mutationCatalog2[mutId]?.name || mutId;
-                  tag.appendChild(createMutationIconBadge(mutId, 20));
-                  mutRow.appendChild(tag);
-                }
-              } else {
-                const none = document.createElement("div");
-                none.textContent = "No mutations";
-                none.style.opacity = "0.7";
-                none.style.fontSize = "11px";
-                mutRow.appendChild(none);
-              }
-              content.append(mutRow);
-            }
-          }
-        } catch {
-        }
+    const render = (active3) => {
+      const wasOpen = dropdown.style.display !== "none";
+      row.replaceChildren();
+      dropdown.replaceChildren();
+      if (prefix) row.appendChild(prefix);
+      for (const id of sortMutationIds(active3)) row.appendChild(mutationToggle(id, true, () => onToggle(id)));
+      const available = orderedMutationKeys().map(storedMutationIdFor).filter((id) => !active3.includes(id));
+      if (!available.length) {
+        dropdown.style.display = "none";
         return;
       }
-      const name = getGardenObjectLabel(tileObject);
-      const header = document.createElement("div");
-      header.style.display = "flex";
-      header.style.flexDirection = "column";
-      header.style.alignItems = "center";
-      header.style.gap = "6px";
-      const nameEl = document.createElement("div");
-      nameEl.textContent = name;
-      nameEl.style.fontWeight = "700";
-      nameEl.style.fontSize = "15px";
-      nameEl.style.overflow = "hidden";
-      nameEl.style.textOverflow = "ellipsis";
-      nameEl.style.whiteSpace = "nowrap";
-      nameEl.style.textAlign = "center";
-      const _tileSpecies = tileObject.objectType === "plant" ? tileObject.species || tileKey || name : null;
-      const _tileCatalogEntry = _tileSpecies ? plantCatalog2[_tileSpecies] : null;
-      const _tileSpriteKey = _tileCatalogEntry?.crop?.sprite ?? _tileCatalogEntry?.plant?.sprite ?? null;
-      const icon = createSelectionIcon(
-        tileObject.objectType === "decor" ? "decor" : "plants",
-        name,
-        48,
-        tileObject.objectType === "decor" ? tileObject.decorId || tileKey || name : _tileSpecies,
-        _tileSpriteKey
-      );
-      header.append(icon, nameEl);
-      content.appendChild(header);
-      if (tileObject.objectType === "plant") {
-        renderCurrentPlantEditor(content, tileObject, tileKey || "");
-      } else if (tileObject.objectType === "decor") {
-        const currentRotation = Number(tileObject.rotation) || 0;
-        const rotRow = createDecorRotationControl(
-          String(tileObject.decorId || ""),
-          currentRotation,
-          (angle) => {
-            void updateGardenObjectAtCurrentTile((obj) => ({ ...obj, rotation: angle }));
-          }
-        );
-        content.appendChild(rotRow);
-      }
-      const removeBtn = document.createElement("button");
-      removeBtn.type = "button";
-      removeBtn.textContent = "Remove";
-      Object.assign(removeBtn.style, {
-        width: "100%",
-        padding: "8px 10px",
-        borderRadius: "8px",
-        border: "1px solid #2b3441",
-        background: "linear-gradient(180deg, rgba(220,80,80,0.18), rgba(160,40,40,0.25))",
-        color: "#e7eef7",
-        fontWeight: "700",
-        cursor: "pointer"
-      });
-      removeBtn.onclick = () => {
-        if (tileObject.objectType === "plant")
-          void removeItemFromGardenAtCurrentTile();
-        else void removeDecorFromGardenAtCurrentTile();
+      const plus = squareButton();
+      plus.textContent = "+";
+      plus.title = "Add mutation";
+      Object.assign(plus.style, { fontWeight: "900", fontSize: "16px", background: wasOpen ? PLUS_BG_OPEN : PLUS_BG_CLOSED });
+      plus.onclick = () => {
+        const open = dropdown.style.display === "none";
+        dropdown.style.display = open ? "flex" : "none";
+        plus.style.background = open ? PLUS_BG_OPEN : PLUS_BG_CLOSED;
       };
-      content.appendChild(removeBtn);
-    })();
-  }
-  function renderCurrentPlantEditor(content, tileObject, tileKey) {
-    ensureItemPanelStyles();
-    const species = tileObject?.species;
-    const slots = Array.isArray(tileObject?.slots) ? tileObject.slots : [];
-    const modeKey = tileKey || "default";
-    const slotModeMap = currentItemSlotModes[modeKey] || {};
-    let applyAll = currentItemApplyAll;
-    const slotsList = document.createElement("div");
-    slotsList.style.display = "grid";
-    slotsList.style.gap = "8px";
-    const maxSlots = getMaxSlotsForSpecies(species);
-    const applyAllRow = document.createElement("label");
-    applyAllRow.style.display = "flex";
-    applyAllRow.style.alignItems = "center";
-    applyAllRow.style.gap = "6px";
-    applyAllRow.style.fontSize = "12px";
-    applyAllRow.style.opacity = "0.9";
-    const applyToggle = document.createElement("input");
-    applyToggle.type = "checkbox";
-    applyToggle.style.accentColor = "#5eead4";
-    applyToggle.checked = applyAll;
-    applyToggle.onchange = () => {
-      applyAll = !!applyToggle.checked;
-      currentItemApplyAll = applyAll;
-      if (applyAll) syncApplyAllControls();
+      row.appendChild(plus);
+      for (const id of available) dropdown.appendChild(mutationToggle(id, false, () => onToggle(id)));
     };
-    const applyLabel = document.createElement("span");
-    applyLabel.textContent = "Edit all slots together";
-    applyAllRow.append(applyToggle, applyLabel);
-    const syncApplyAllControls = () => {
-      if (!applyAll) return;
-      slotsList.querySelectorAll("input[data-slot-idx]").forEach((s) => {
-        s.value = String(s._currentPct || s.value);
-        const mode = s._currentMode || "percent";
-        s.disabled = mode === "custom";
-        s.style.opacity = mode === "custom" ? "0.45" : "1";
-      });
-      slotsList.querySelectorAll("input[data-scale-input-slot]").forEach((s) => {
-        s.value = String(s._currentScale || s.value);
-      });
-      slotsList.querySelectorAll("[data-size-label]").forEach((lab) => {
-        const curPct = lab._currentPct;
-        if (curPct != null) lab.textContent = `${curPct}`;
-      });
-      slotsList.querySelectorAll("input[data-scale-mode-slot]").forEach((chk) => {
-        const mode = chk._currentMode || "percent";
-        chk.checked = mode === "custom";
-      });
-      slotsList.querySelectorAll("[data-custom-row-slot]").forEach((row) => {
-        const mode = row._currentMode || "percent";
-        row.style.display = mode === "custom" ? "flex" : "none";
-      });
-      slotsList.querySelectorAll("[data-slider-row-slot]").forEach((row) => {
-        const mode = row._currentMode || "percent";
-        row.style.display = mode === "custom" ? "none" : "";
-      });
-    };
-    slots.forEach((slot, idx) => {
-      const box = document.createElement("div");
-      box.className = "qws-item-box";
-      const rawScale = readCropSize(slot);
-      const fallbackScale = computeTargetScaleFromPercent(species, 100);
-      const initialScale = rawScale ?? fallbackScale;
-      const { minScale, maxScale } = getScaleBoundsForSpecies(species);
-      const computePercentLoose = (scale) => {
-        const { minScale: minScale2, maxScale: maxScale2 } = getScaleBoundsForSpecies(species);
-        if (!maxScale2 || maxScale2 <= minScale2) return 100;
-        const pct2 = 50 + (scale - minScale2) / (maxScale2 - minScale2) * 50;
-        return clampSizePercent(pct2);
-      };
-      const pct = computePercentLoose(initialScale);
-      let currentPct = pct;
-      let currentScale = initialScale;
-      const outOfBounds = initialScale < minScale || initialScale > maxScale;
-      let currentMode = slotModeMap[idx] === "custom" ? "custom" : outOfBounds ? "custom" : "percent";
-      if (!slotModeMap[idx] && outOfBounds) {
-        currentItemSlotModes[modeKey] = {
-          ...currentItemSlotModes[modeKey] || {},
-          [idx]: "custom"
-        };
-      }
-      const sizeRow = document.createElement("div");
-      sizeRow.style.display = "flex";
-      sizeRow.style.justifyContent = "space-between";
-      sizeRow.style.alignItems = "center";
-      sizeRow.style.fontSize = "11px";
-      sizeRow.style.opacity = "0.85";
-      const sizeName = document.createElement("span");
-      sizeName.textContent = "Size";
-      const sizeValue = document.createElement("span");
-      sizeValue.textContent = `${currentPct}`;
-      sizeValue.dataset.sizeLabel = String(idx);
-      sizeValue._currentPct = currentPct;
-      sizeRow.append(sizeName, sizeValue);
-      const slider2 = document.createElement("input");
-      slider2.type = "range";
-      slider2.min = "50";
-      slider2.max = "100";
-      slider2.step = "1";
-      slider2.value = String(currentPct);
-      slider2.dataset.slotIdx = String(idx);
-      slider2._currentPct = currentPct;
-      slider2._currentMode = currentMode;
-      slider2.className = "qws-item-range";
-      const sliderRow = document.createElement("div");
-      sliderRow.dataset.sliderRowSlot = String(idx);
-      sliderRow.appendChild(slider2);
-      const customRow = document.createElement("div");
-      customRow.style.display = "flex";
-      customRow.style.alignItems = "center";
-      customRow.style.gap = "6px";
-      customRow.style.fontSize = "11px";
-      customRow.style.opacity = "0.9";
-      const customLabel = document.createElement("span");
-      customLabel.textContent = "Custom size";
-      const customInput = document.createElement("input");
-      customInput.type = "text";
-      customInput.inputMode = "numeric";
-      customInput.autocomplete = "off";
-      customInput.value = String(currentScale);
-      customInput.dataset.scaleInputSlot = String(idx);
-      customInput._currentScale = currentScale;
-      Object.assign(customInput.style, {
-        width: "90px",
-        padding: "4px 6px",
-        borderRadius: "6px",
-        border: "1px solid #2c3643",
-        background: "rgba(10,14,20,0.9)",
-        color: "#e7eef7"
-      });
-      let pendingPatch = null;
-      const flushPatch = () => {
-        if (!pendingPatch) return;
-        const patch = pendingPatch;
-        pendingPatch = null;
-        void updateGardenObjectAtCurrentTile((obj) => {
-          if (obj?.objectType !== "plant") return obj;
-          const nextSlots = Array.isArray(obj.slots) ? obj.slots.slice() : [];
-          if (applyAll) {
-            for (let i = 0; i < nextSlots.length; i++) {
-              nextSlots[i] = { ...nextSlots[i] || {}, ...patch };
-            }
-          } else {
-            nextSlots[idx] = { ...nextSlots[idx] || {}, ...patch };
-          }
-          return { ...obj, slots: nextSlots };
-        });
-      };
-      const queuePatch = (patch) => {
-        pendingPatch = { ...pendingPatch || {}, ...patch };
-        flushPatch();
-      };
-      const updatePercent = (nextPct) => {
-        const pctVal = clampSizePercent(nextPct);
-        currentPct = pctVal;
-        slider2._currentPct = pctVal;
-        sizeValue._currentPct = pctVal;
-        sizeValue.textContent = `${pctVal}`;
-        slider2.value = String(pctVal);
-        currentScale = computeTargetScaleFromPercent(species, pctVal);
-        if (currentMode !== "custom") customInput.value = String(currentScale);
-        customInput._currentScale = currentScale;
-        queuePatch({ size: currentScale });
-        if (applyAll) {
-          slotsList.querySelectorAll("input[data-slot-idx]").forEach((s) => {
-            if (s === slider2) return;
-            s.value = String(pctVal);
-            s._currentPct = pctVal;
-            s._currentMode = "percent";
-            s.disabled = false;
-            s.style.opacity = "1";
-          });
-          slotsList.querySelectorAll("input[data-scale-input-slot]").forEach((s) => {
-            if (s === customInput) return;
-            s.value = String(currentScale);
-            s._currentScale = currentScale;
-          });
-          slotsList.querySelectorAll("[data-size-label]").forEach((lab) => {
-            lab.textContent = `${pctVal}`;
-            lab._currentPct = pctVal;
-          });
-          applyModeToAll("percent", currentScale, currentPct);
-        }
-      };
-      const updateCustomScale = (raw) => {
-        const normalized = raw.replace(",", ".").replace(/\s+/g, "");
-        const n = Number(normalized);
-        if (!Number.isFinite(n)) return;
-        currentScale = n;
-        customInput.value = normalized;
-        customInput._currentScale = n;
-        const pctVal = computePercentFromScale(species, n);
-        currentPct = pctVal;
-        slider2.value = String(pctVal);
-        sizeValue.textContent = `${pctVal}`;
-        queuePatch({ size: n });
-        if (applyAll) {
-          slotsList.querySelectorAll("input[data-slot-idx]").forEach((s) => {
-            if (s === slider2) return;
-            s.value = String(pctVal);
-            s._currentPct = pctVal;
-            s._currentMode = "custom";
-            s.disabled = true;
-            s.style.opacity = "0.45";
-          });
-          slotsList.querySelectorAll("input[data-scale-input-slot]").forEach((s) => {
-            if (s === customInput) return;
-            s.value = String(n);
-            s._currentScale = n;
-          });
-          slotsList.querySelectorAll("[data-size-label]").forEach((lab) => {
-            lab.textContent = `${pctVal}`;
-            lab._currentPct = pctVal;
-          });
-          applyModeToAll("custom", n, currentPct);
-        }
-      };
-      slider2.oninput = () => updatePercent(Number(slider2.value));
-      const commitCustomInput = () => updateCustomScale(customInput.value);
-      customInput.onblur = commitCustomInput;
-      customInput.onkeydown = (ev) => {
-        if (ev.key === "Enter") {
-          ev.preventDefault();
-          commitCustomInput();
-        }
-      };
-      customRow.append(customLabel, customInput);
-      const modeRow = document.createElement("label");
-      modeRow.style.display = "flex";
-      modeRow.style.alignItems = "center";
-      modeRow.style.gap = "6px";
-      modeRow.style.fontSize = "11px";
-      modeRow.style.opacity = "0.9";
-      const modeToggle = document.createElement("input");
-      modeToggle.type = "checkbox";
-      modeToggle.className = "qws-item-check";
-      modeToggle.dataset.scaleModeSlot = String(idx);
-      modeToggle._currentMode = currentMode;
-      modeToggle.checked = currentMode === "custom";
-      const modeText = document.createElement("span");
-      modeText.textContent = "Use custom size";
-      const syncValueLabel = () => {
-        sizeValue.textContent = currentMode === "custom" ? `${currentScale}` : `${currentPct}`;
-        sizeValue._currentPct = currentPct;
-      };
-      const syncControlState = () => {
-        const showPercent = currentMode !== "custom";
-        modeToggle._currentMode = currentMode;
-        slider2._currentMode = currentMode;
-        slider2.disabled = !showPercent;
-        sliderRow.style.display = showPercent ? "" : "none";
-        customRow.style.display = showPercent ? "none" : "flex";
-      };
-      modeToggle.onchange = () => {
-        currentMode = modeToggle.checked ? "custom" : "percent";
-        currentItemSlotModes[modeKey] = {
-          ...currentItemSlotModes[modeKey] || {},
-          [idx]: currentMode
-        };
-        if (currentMode === "custom") {
-          queuePatch({ size: currentScale });
-        } else {
-          const clamped = clampCustomScale(species, currentScale);
-          currentScale = clamped;
-          customInput._currentScale = clamped;
-          customInput.value = String(clamped);
-          const pctVal = computePercentFromScale(species, clamped);
-          currentPct = pctVal;
-          slider2._currentPct = pctVal;
-          slider2.value = String(pctVal);
-          queuePatch({ size: clamped });
-        }
-        syncControlState();
-        syncValueLabel();
-        if (applyAll) syncApplyAllControls();
-        if (applyAll) {
-          applyModeToAll(currentMode, currentScale, currentPct);
-        }
-      };
-      const installGameKeyBlocker = (inp) => {
-        const stop2 = (ev) => {
-          ev.stopImmediatePropagation?.();
-          ev.stopPropagation();
-        };
-        const attach2 = () => {
-          window.addEventListener("keydown", stop2, true);
-          window.addEventListener("keyup", stop2, true);
-        };
-        const detach = () => {
-          window.removeEventListener("keydown", stop2, true);
-          window.removeEventListener("keyup", stop2, true);
-        };
-        inp.addEventListener("focus", attach2);
-        inp.addEventListener("blur", detach);
-        inp.addEventListener("keydown", stop2);
-      };
-      const installCharGuard = (inp) => {
-        const allowed = /* @__PURE__ */ new Set([
-          "0",
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7",
-          "8",
-          "9",
-          "-",
-          "."
-        ]);
-        inp.addEventListener("keydown", (ev) => {
-          if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
-          const k = ev.key;
-          if ([
-            "Backspace",
-            "Delete",
-            "Tab",
-            "Enter",
-            "ArrowLeft",
-            "ArrowRight",
-            "ArrowUp",
-            "ArrowDown",
-            "Home",
-            "End"
-          ].includes(k)) {
-            return;
-          }
-          if (k.length === 1 && !allowed.has(k)) {
-            ev.preventDefault();
-          }
-        });
-        inp.addEventListener("input", () => {
-          const cleaned = inp.value.replace(/[^0-9.-]/g, "");
-          if (cleaned !== inp.value) inp.value = cleaned;
-        });
-      };
-      installGameKeyBlocker(customInput);
-      installCharGuard(customInput);
-      modeRow.append(modeToggle, modeText);
-      slider2.disabled = currentMode === "custom";
-      sliderRow.style.display = currentMode === "custom" ? "none" : "";
-      customRow.style.display = currentMode === "custom" ? "flex" : "none";
-      syncControlState();
-      syncValueLabel();
-      const mutWrap = document.createElement("div");
-      mutWrap.style.display = "grid";
-      mutWrap.style.gap = "6px";
-      const mutTitle = document.createElement("div");
-      mutTitle.textContent = "Mutations";
-      mutTitle.className = "qws-item-label";
-      const mutRow = document.createElement("div");
-      mutRow.style.display = "flex";
-      mutRow.style.flexWrap = "wrap";
-      mutRow.style.gap = "6px";
-      mutRow.style.alignItems = "center";
-      const mutations = Array.isArray(slot?.mutations) ? slot.mutations.slice() : [];
-      const mutationKeys = sortMutationCatalogKeys(
-        Object.keys(mutationCatalog2 || {})
-      );
-      const applyMutationsPatch = (nextMutations) => {
-        const copy2 = nextMutations.slice();
-        mutations.length = 0;
-        mutations.push(...copy2);
-        void updateGardenObjectAtCurrentTile((obj) => {
-          if (obj?.objectType !== "plant") return obj;
-          const nextSlots = Array.isArray(obj.slots) ? obj.slots.slice() : [];
-          if (applyAll) {
-            for (let i = 0; i < nextSlots.length; i++) {
-              nextSlots[i] = { ...nextSlots[i] || {}, mutations: copy2.slice() };
-            }
-          } else {
-            nextSlots[idx] = {
-              ...nextSlots[idx] || {},
-              mutations: copy2.slice()
-            };
-          }
-          return { ...obj, slots: nextSlots };
-        }).then(() => {
-          renderMutations();
-        });
-      };
-      const mutDropdown = createMutationDropdown();
-      const renderMutations = () => {
-        mutRow.innerHTML = "";
-        mutDropdown.innerHTML = "";
-        const wasOpen = mutDropdown.style.display !== "none";
-        for (const mutId of sortStoredMutationIds(mutations)) {
-          mutRow.appendChild(
-            createMutationToggleButton(
-              mutationCatalogKeyFor(mutId),
-              mutId,
-              true,
-              () => {
-                const next = mutations.filter((m) => m !== mutId);
-                applyMutationsPatch(next);
-              }
-            )
-          );
-        }
-        const availableKeys = mutationKeys.filter((mutKey) => {
-          const storedId = mutKey === "Amberlit" ? "Ambershine" : mutKey;
-          return !mutations.includes(storedId);
-        });
-        if (!availableKeys.length) {
-          mutDropdown.style.display = "none";
-          return;
-        }
-        const plusBtn = createSquarePlusButton();
-        plusBtn.style.background = wasOpen ? MUT_PLUS_BG_OPEN : MUT_PLUS_BG_CLOSED;
-        plusBtn.onclick = () => {
-          const isOpen = mutDropdown.style.display !== "none";
-          mutDropdown.style.display = isOpen ? "none" : "flex";
-          plusBtn.style.background = isOpen ? MUT_PLUS_BG_CLOSED : MUT_PLUS_BG_OPEN;
-        };
-        mutRow.appendChild(plusBtn);
-        for (const mutKey of availableKeys) {
-          const storedId = mutKey === "Amberlit" ? "Ambershine" : mutKey;
-          mutDropdown.appendChild(
-            createMutationToggleButton(mutKey, storedId, false, () => {
-              applyMutationsPatch([...mutations, storedId]);
-            })
-          );
-        }
-      };
-      mutWrap.append(mutTitle, mutRow, mutDropdown);
-      renderMutations();
-      box.append(sizeRow, modeRow, sliderRow, customRow, mutWrap);
-      slotsList.appendChild(box);
-    });
-    const showSlotControls = maxSlots > 1;
-    if (showSlotControls) {
-      const slotHeader = document.createElement("div");
-      slotHeader.style.display = "flex";
-      slotHeader.style.alignItems = "center";
-      slotHeader.style.justifyContent = "space-between";
-      slotHeader.style.fontSize = "12px";
-      slotHeader.style.opacity = "0.9";
-      slotHeader.style.gap = "8px";
-      const slotCount = document.createElement("span");
-      slotCount.textContent = `Slots ${slots.length}/${maxSlots}`;
-      const slotBtnWrap = document.createElement("div");
-      slotBtnWrap.style.display = "flex";
-      slotBtnWrap.style.gap = "6px";
-      slotBtnWrap.style.alignItems = "center";
-      const makeCircleBtn = (text2) => {
-        const b = document.createElement("button");
-        b.type = "button";
-        b.textContent = text2;
-        Object.assign(b.style, {
-          width: "28px",
-          height: "28px",
-          borderRadius: "50%",
-          border: "1px solid #2b3441",
-          background: "rgba(16,21,28,0.9)",
-          color: "#e7eef7",
-          cursor: "pointer",
-          fontSize: "14px",
-          fontWeight: "600",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center"
-        });
-        return b;
-      };
-      const btnAdd = makeCircleBtn("+");
-      const btnRemove = makeCircleBtn("-");
-      const updateSlotHeaderState = () => {
-        slotCount.textContent = `Slots ${slots.length}/${maxSlots}`;
-        btnAdd.disabled = slots.length >= maxSlots;
-        btnRemove.disabled = slots.length <= 1;
-        btnAdd.style.opacity = btnAdd.disabled ? "0.4" : "1";
-        btnRemove.style.opacity = btnRemove.disabled ? "0.4" : "1";
-      };
-      updateSlotHeaderState();
-      const makeDefaultSlot = () => ({
-        species,
-        startTime: FIXED_SLOT_START,
-        endTime: FIXED_SLOT_END,
-        size: computeTargetScaleFromPercent(species, DEFAULT_SIZE_PERCENT),
-        mutations: []
-      });
-      btnAdd.onclick = () => {
-        if (slots.length >= maxSlots) return;
-        void updateGardenObjectAtCurrentTile((obj) => {
-          if (obj?.objectType !== "plant") return obj;
-          const nextSlots = Array.isArray(obj.slots) ? obj.slots.slice() : [];
-          if (nextSlots.length >= maxSlots) return obj;
-          nextSlots.push(makeDefaultSlot());
-          return { ...obj, slots: nextSlots };
-        }).then((ok) => {
-          if (ok) renderCurrentItemOverlay();
-        });
-      };
-      btnRemove.onclick = () => {
-        if (slots.length <= 1) return;
-        void updateGardenObjectAtCurrentTile((obj) => {
-          if (obj?.objectType !== "plant") return obj;
-          const nextSlots = Array.isArray(obj.slots) ? obj.slots.slice(0, Math.max(1, obj.slots.length - 1)) : [];
-          return { ...obj, slots: nextSlots };
-        }).then((ok) => {
-          if (ok) renderCurrentItemOverlay();
-        });
-      };
-      slotBtnWrap.append(btnRemove, btnAdd);
-      slotHeader.append(slotCount, slotBtnWrap);
-      content.appendChild(slotHeader);
-      content.appendChild(applyAllRow);
-    }
-    content.appendChild(slotsList);
-    const applyModeToAll = (mode, refScale, refPct) => {
-      slotsList.querySelectorAll("input[data-scale-mode-slot]").forEach((chk) => {
-        chk.checked = mode === "custom";
-        chk._currentMode = mode;
-      });
-      slotsList.querySelectorAll("input[data-slot-idx]").forEach((s) => {
-        s._currentMode = mode;
-        s.disabled = mode === "custom";
-        s.style.opacity = mode === "custom" ? "0.45" : "1";
-        if (mode === "percent") {
-          s.value = String(s._currentPct ?? refPct);
-        }
-      });
-      slotsList.querySelectorAll("[data-slider-row-slot]").forEach((row) => {
-        row.style.display = mode === "custom" ? "none" : "";
-        row._currentMode = mode;
-      });
-      slotsList.querySelectorAll("[data-custom-row-slot]").forEach((row) => {
-        row.style.display = mode === "custom" ? "flex" : "none";
-        row._currentMode = mode;
-      });
-      slotsList.querySelectorAll("input[data-scale-input-slot]").forEach((inp) => {
-        if (mode === "custom") {
-          inp.value = String(inp._currentScale ?? refScale);
-        }
-      });
-      slotsList.querySelectorAll("[data-size-label]").forEach((lab) => {
-        const pctVal = lab._currentPct ?? refPct;
-        lab.textContent = mode === "custom" ? `${refScale}` : `${pctVal}`;
-      });
-      const map2 = currentItemSlotModes[modeKey] || {};
-      for (let i = 0; i < slots.length; i++) map2[i] = mode;
-      currentItemSlotModes[modeKey] = map2;
-    };
-  }
-  function renderSideList() {
-    if (!sideListWrap) return;
-    const applySelectionStyle = (btn, selected) => {
-      btn.style.border = "1px solid " + (selected ? "#5eead4" : "#2b3441");
-      btn.style.background = selected ? "rgba(94,234,212,0.16)" : "rgba(24,30,39,0.9)";
-      btn.style.boxShadow = selected ? "0 0 0 1px rgba(94,234,212,0.25)" : "none";
-      btn.style.transform = selected ? "scale(1.06)" : "scale(1)";
-    };
-    const selectedId = getSelectedId();
-    const entries2 = getSideEntries();
-    const sig = `${currentSideMode}:${JSON.stringify(entries2)}`;
-    const existingList = sideListWrap.querySelector(
-      '[data-editor-side-list="list"]'
-    );
-    if (existingList && existingList.dataset.sig === sig) {
-      existingList.querySelectorAll("button[data-id]").forEach((btn) => {
-        applySelectionStyle(btn, btn.dataset.id === selectedId);
-      });
-      return;
-    }
-    sideListWrap.innerHTML = "";
-    const list = document.createElement("div");
-    list.dataset.editorSideList = "list";
-    list.dataset.sig = sig;
-    list.style.display = "grid";
-    list.style.gridTemplateColumns = "repeat(auto-fill, minmax(34px, 1fr))";
-    list.style.gap = "4px";
-    const makeItem = (key2, label2, selected) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.dataset.id = key2;
-      btn.title = label2;
-      Object.assign(btn.style, {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "4px",
-        borderRadius: "8px",
-        color: "#e7eef7",
-        cursor: "pointer",
-        transition: "background 120ms ease, border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease"
-      });
-      applySelectionStyle(btn, selected);
-      btn.onmouseenter = () => {
-        if (btn.dataset.id !== getSelectedId()) {
-          btn.style.background = "rgba(94,234,212,0.08)";
-          btn.style.borderColor = "rgba(94,234,212,0.3)";
-        }
-      };
-      btn.onmouseleave = () => {
-        applySelectionStyle(btn, btn.dataset.id === getSelectedId());
-      };
-      const _listKind = getSideSpriteKind();
-      const _listCatalogEntry = _listKind !== "Decor" ? plantCatalog2[key2] : null;
-      const _listSpriteKey = _listCatalogEntry?.crop?.sprite ?? _listCatalogEntry?.plant?.sprite ?? null;
-      const icon = createSelectionIcon(
-        _listKind === "Decor" ? "decor" : "plants",
-        label2,
-        26,
-        key2,
-        _listSpriteKey
-      );
-      btn.onclick = () => {
-        setSelectedId(key2);
-        renderSideList();
-        renderSideDetails();
-      };
-      btn.appendChild(icon);
-      return btn;
-    };
-    for (const it of entries2) {
-      const isSelected = selectedId === it.id;
-      list.appendChild(makeItem(it.id, it.label, isSelected));
-    }
-    if (!list.childElementCount) {
-      const empty = document.createElement("div");
-      empty.style.opacity = "0.7";
-      empty.textContent = "No entries.";
-      sideListWrap.appendChild(empty);
-      return;
-    }
-    sideListWrap.appendChild(list);
-  }
-  function renderSideDetails() {
-    if (!sideRightWrap) return;
-    ensureItemPanelStyles();
-    sideRightWrap.innerHTML = "";
-    const content = document.createElement("div");
-    content.style.display = "grid";
-    content.style.gap = "10px";
-    content.style.minHeight = "0";
-    content.style.overflow = "auto";
-    content.style.alignContent = "flex-start";
-    content.style.justifyItems = "center";
-    const actionBar2 = document.createElement("div");
-    actionBar2.style.display = "grid";
-    actionBar2.style.gap = "6px";
-    actionBar2.style.justifyItems = "start";
-    actionBar2.style.marginTop = "4px";
-    const selId = getSelectedId();
-    if (!selId) {
-      const empty = document.createElement("div");
-      empty.style.opacity = "0.7";
-      empty.style.textAlign = "center";
-      empty.textContent = "Select an item on the left.";
-      content.appendChild(empty);
-      sideRightWrap.append(content, actionBar2);
-      return;
-    }
-    const entry = getSideEntry(selId);
-    const label2 = getSideEntryLabel(selId, entry);
-    const infoRow = document.createElement("div");
-    infoRow.style.display = "grid";
-    infoRow.style.gridTemplateColumns = "auto 1fr";
-    infoRow.style.alignItems = "center";
-    infoRow.style.gap = "10px";
-    infoRow.dataset.editorInfoRow = "true";
-    infoRow.dataset.selId = selId;
-    const existingInfo = sideRightWrap.querySelector(
-      "[data-editor-info-row]"
-    );
-    const existingIcon = existingInfo?.querySelector(
-      "[data-editor-info-icon]"
-    );
-    const existingLabel = existingInfo?.querySelector(
-      "[data-editor-info-label]"
-    );
-    const icon = existingIcon && existingInfo?.dataset.selId === selId ? existingIcon : (() => {
-      const _infoKind = getSideSpriteKind();
-      const _infoCatalogEntry = _infoKind !== "Decor" ? plantCatalog2[selId] : null;
-      const _infoSpriteKey = _infoCatalogEntry?.crop?.sprite ?? _infoCatalogEntry?.plant?.sprite ?? null;
-      const el = createSelectionIcon(
-        _infoKind === "Decor" ? "decor" : "plants",
-        label2,
-        48,
-        selId,
-        _infoSpriteKey
-      );
-      el.dataset.editorInfoIcon = "true";
-      return el;
-    })();
-    const nameEl = existingLabel && existingInfo?.dataset.selId === selId ? existingLabel : (() => {
-      const el = document.createElement("div");
-      el.dataset.editorInfoLabel = "true";
-      el.style.fontWeight = "700";
-      el.style.fontSize = "15px";
-      el.style.whiteSpace = "nowrap";
-      el.style.overflow = "hidden";
-      el.style.textOverflow = "ellipsis";
-      return el;
-    })();
-    nameEl.textContent = label2;
-    infoRow.append(icon, nameEl);
-    content.appendChild(infoRow);
-    if (currentSideMode === "plants") {
-      const maxSlots = getMaxSlotsForSpecies(selId);
-      const slotsState = ensureEditorStateForSpecies(selId);
-      const slotsConfig = slotsState.slots;
-      const applyAll = slotsState.applyAll;
-      const slotsPanel = document.createElement("div");
-      slotsPanel.style.display = "grid";
-      slotsPanel.style.gap = "6px";
-      slotsPanel.style.marginTop = "6px";
-      slotsPanel.style.width = "100%";
-      if (maxSlots > 1) {
-        const headerRow = document.createElement("div");
-        headerRow.style.display = "flex";
-        headerRow.style.justifyContent = "space-between";
-        headerRow.style.alignItems = "center";
-        headerRow.style.fontSize = "12px";
-        headerRow.style.opacity = "0.9";
-        const headerLabel = document.createElement("span");
-        headerLabel.textContent = "Slots";
-        const headerRight = document.createElement("div");
-        headerRight.style.display = "flex";
-        headerRight.style.gap = "6px";
-        headerRight.style.alignItems = "center";
-        const countLabel = document.createElement("span");
-        countLabel.textContent = `${slotsConfig.length}/${maxSlots}`;
-        const btnAdd = document.createElement("button");
-        btnAdd.type = "button";
-        btnAdd.textContent = "+";
-        Object.assign(btnAdd.style, {
-          width: "28px",
-          height: "28px",
-          borderRadius: "50%",
-          border: "1px solid #2b3441",
-          background: "rgba(16,21,28,0.9)",
-          color: "#e7eef7",
-          cursor: "pointer",
-          fontSize: "14px",
-          fontWeight: "600"
-        });
-        btnAdd.onclick = () => {
-          const state5 = ensureEditorStateForSpecies(selId);
-          const current = state5.slots;
-          if (current.length >= maxSlots) return;
-          const defaultScale = computeTargetScaleFromPercent(
-            selId,
-            DEFAULT_SIZE_PERCENT
-          );
-          editorPlantSlotsState = {
-            ...state5,
-            species: selId,
-            slots: [
-              ...current,
-              {
-                enabled: true,
-                sizePercent: DEFAULT_SIZE_PERCENT,
-                customScale: defaultScale,
-                sizeMode: "percent",
-                mutations: []
-              }
-            ]
-          };
-          renderSideDetails();
-        };
-        const btnRemove = document.createElement("button");
-        btnRemove.type = "button";
-        btnRemove.textContent = "-";
-        Object.assign(btnRemove.style, {
-          width: "28px",
-          height: "28px",
-          borderRadius: "50%",
-          border: "1px solid #2b3441",
-          background: "rgba(220,80,80,0.18)",
-          color: "#e7eef7",
-          cursor: "pointer",
-          fontSize: "14px",
-          fontWeight: "600"
-        });
-        btnRemove.onclick = () => {
-          const state5 = ensureEditorStateForSpecies(selId);
-          const current = state5.slots;
-          if (current.length <= 1) return;
-          editorPlantSlotsState = {
-            ...state5,
-            species: selId,
-            slots: current.slice(0, current.length - 1)
-          };
-          renderSideDetails();
-        };
-        headerRight.append(countLabel, btnRemove, btnAdd);
-        headerRow.append(headerLabel, headerRight);
-        slotsPanel.appendChild(headerRow);
-      }
-      if (maxSlots > 1) {
-        const applyAllRow = document.createElement("label");
-        applyAllRow.style.display = "flex";
-        applyAllRow.style.alignItems = "center";
-        applyAllRow.style.gap = "6px";
-        applyAllRow.style.fontSize = "12px";
-        applyAllRow.style.opacity = "0.9";
-        const applyToggle = document.createElement("input");
-        applyToggle.type = "checkbox";
-        applyToggle.style.accentColor = "#5eead4";
-        applyToggle.checked = applyAll;
-        applyToggle.onchange = () => {
-          editorPlantSlotsState.applyAll = applyToggle.checked;
-          renderSideDetails();
-        };
-        const applyLabel = document.createElement("span");
-        applyLabel.textContent = "Edit all slots together";
-        applyAllRow.append(applyToggle, applyLabel);
-        slotsPanel.appendChild(applyAllRow);
-      }
-      const list = document.createElement("div");
-      list.style.display = "grid";
-      list.style.gap = "6px";
-      slotsConfig.forEach((cfg, idx) => {
-        const slotBox = document.createElement("div");
-        slotBox.className = "qws-item-box";
-        const initialPct = clampSizePercent(
-          Number.isFinite(cfg.sizePercent) ? cfg.sizePercent : 100
-        );
-        const baseScaleFromPct = computeTargetScaleFromPercent(selId, initialPct);
-        const initialCustomScale = normalizeCustomScale(
-          selId,
-          Number.isFinite(cfg.customScale) ? cfg.customScale : baseScaleFromPct
-        );
-        let currentMode = cfg.sizeMode === "custom" ? "custom" : "percent";
-        let currentPct = initialPct;
-        let currentScale = currentMode === "custom" ? initialCustomScale : baseScaleFromPct;
-        let percentMemory = currentPct;
-        let customText = String(currentScale);
-        const sizeRow = document.createElement("div");
-        sizeRow.style.display = "flex";
-        sizeRow.style.alignItems = "center";
-        sizeRow.style.gap = "6px";
-        sizeRow.style.fontSize = "11px";
-        sizeRow.style.opacity = "0.85";
-        const sizeName = document.createElement("span");
-        sizeName.textContent = "Size";
-        const sizeValue = document.createElement("span");
-        sizeValue.dataset.sizeLabel = String(idx);
-        sizeValue.style.marginLeft = "auto";
-        const modeRow = document.createElement("label");
-        modeRow.style.display = "flex";
-        modeRow.style.alignItems = "center";
-        modeRow.style.gap = "3px";
-        modeRow.style.fontSize = "10px";
-        modeRow.style.opacity = "0.75";
-        modeRow.style.cursor = "pointer";
-        const modeToggle = document.createElement("input");
-        modeToggle.type = "checkbox";
-        modeToggle.className = "qws-item-check";
-        modeToggle.dataset.scaleMode = String(idx);
-        modeToggle.checked = currentMode === "custom";
-        const modeText = document.createElement("span");
-        modeText.textContent = "Custom";
-        modeRow.append(modeToggle, modeText);
-        sizeRow.append(sizeName, modeRow, sizeValue);
-        const slider2 = document.createElement("input");
-        slider2.type = "range";
-        slider2.min = "50";
-        slider2.max = "100";
-        slider2.step = "1";
-        slider2.value = String(currentPct);
-        slider2.dataset.slotIdx = String(idx);
-        slider2.className = "qws-item-range";
-        const customRow = document.createElement("div");
-        customRow.style.display = "flex";
-        customRow.style.alignItems = "center";
-        customRow.style.gap = "6px";
-        customRow.style.fontSize = "11px";
-        customRow.style.opacity = "0.9";
-        customRow.dataset.customRow = String(idx);
-        const customLabel = document.createElement("span");
-        customLabel.textContent = "Custom size";
-        const customInput = document.createElement("input");
-        customInput.type = "text";
-        customInput.inputMode = "numeric";
-        customInput.autocomplete = "off";
-        customInput.value = customText;
-        customInput.dataset.scaleInput = String(idx);
-        Object.assign(customInput.style, {
-          width: "90px",
-          padding: "4px 6px",
-          borderRadius: "6px",
-          border: "1px solid #2c3643",
-          background: "rgba(10,14,20,0.9)",
-          color: "#e7eef7"
-        });
-        customRow.append(customLabel, customInput);
-        const installGameKeyBlocker = (inp) => {
-          const stop2 = (ev) => {
-            ev.stopImmediatePropagation?.();
-            ev.stopPropagation();
-          };
-          const attach2 = () => {
-            window.addEventListener("keydown", stop2, true);
-            window.addEventListener("keyup", stop2, true);
-          };
-          const detach = () => {
-            window.removeEventListener("keydown", stop2, true);
-            window.removeEventListener("keyup", stop2, true);
-          };
-          inp.addEventListener("focus", attach2);
-          inp.addEventListener("blur", detach);
-          inp.addEventListener("keydown", stop2);
-        };
-        installGameKeyBlocker(customInput);
-        const formatScaleLabel = (val) => String(clampSizePercent(val));
-        const formatScaleInput = (val) => String(clampSizePercent(val));
-        const parseInputNumber = (el) => {
-          const raw = el.value;
-          if (raw === "" || raw == null) return null;
-          const normalized = raw.replace(",", ".").replace(/\s+/g, "");
-          const n = Number(normalized);
-          return Number.isFinite(n) ? n : null;
-        };
-        const installCharGuard = (inp) => {
-          const allowed = /* @__PURE__ */ new Set([
-            "0",
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-            "-",
-            "."
-          ]);
-          inp.addEventListener("keydown", (ev) => {
-            if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
-            const k = ev.key;
-            if (k === "Backspace" || k === "Delete" || k === "Tab" || k === "Enter" || k === "ArrowLeft" || k === "ArrowRight" || k === "ArrowUp" || k === "ArrowDown" || k === "Home" || k === "End") {
-              return;
-            }
-            if (k.length === 1 && !allowed.has(k)) {
-              ev.preventDefault();
-            }
-          });
-          inp.addEventListener("input", () => {
-            const cleaned = inp.value.replace(/[^0-9.-]/g, "");
-            if (cleaned !== inp.value) {
-              inp.value = cleaned;
-            }
-            customText = inp.value;
-          });
-        };
-        installCharGuard(customInput);
-        const syncValueLabel = () => {
-          sizeValue.textContent = currentMode === "custom" ? formatScaleLabel(currentScale) : `${currentPct}`;
-        };
-        const syncControlState = () => {
-          const showPercentMode = currentMode !== "custom";
-          slider2.disabled = currentMode === "custom";
-          slider2.style.opacity = currentMode === "custom" ? "0.45" : "1";
-          customInput.disabled = currentMode !== "custom";
-          customInput.style.opacity = currentMode === "custom" ? "1" : "0.5";
-          slider2.style.display = showPercentMode ? "" : "none";
-          customRow.style.display = showPercentMode ? "none" : "flex";
-        };
-        const syncApplyAll = () => {
-          if (!applyAll || !sideRightWrap) return;
-          const showPercentMode = currentMode !== "custom";
-          sideRightWrap.querySelectorAll("input[data-slot-idx]").forEach((s) => {
-            s.value = String(currentPct);
-            s.disabled = currentMode === "custom";
-            s.style.opacity = currentMode === "custom" ? "0.45" : "1";
-            s.style.display = showPercentMode ? "" : "none";
-          });
-          sideRightWrap.querySelectorAll("input[data-scale-input]").forEach((inp) => {
-            if (currentMode === "custom") {
-              inp.value = customText;
-            } else {
-              inp.value = formatScaleInput(currentScale);
-            }
-            inp.disabled = currentMode !== "custom";
-            inp.style.opacity = currentMode === "custom" ? "1" : "0.5";
-          });
-          sideRightWrap.querySelectorAll("input[data-scale-mode]").forEach((chk) => {
-            chk.checked = currentMode === "custom";
-          });
-          sideRightWrap.querySelectorAll("[data-size-label]").forEach((lab) => {
-            lab.textContent = currentMode === "custom" ? formatScaleLabel(currentScale) : `${currentPct}`;
-          });
-          sideRightWrap.querySelectorAll("[data-scale-row]").forEach((row) => {
-            row.remove();
-          });
-          sideRightWrap.querySelectorAll("[data-custom-row]").forEach((row) => {
-            row.style.display = showPercentMode ? "none" : "flex";
-          });
-        };
-        const applySlotPatch = (patch) => {
-          const base = ensureEditorStateForSpecies(selId).slots;
-          editorPlantSlotsState = {
-            ...editorPlantSlotsState,
-            species: selId,
-            slots: base.map((c, i) => {
-              if (!applyAll && i !== idx) return c;
-              return { ...c, sizeMode: currentMode, ...patch };
-            })
-          };
-        };
-        const updatePercent = (nextPct) => {
-          const pct = clampSizePercent(nextPct);
-          currentPct = pct;
-          percentMemory = pct;
-          slider2.value = String(pct);
-          if (currentMode !== "custom") {
-            currentScale = computeTargetScaleFromPercent(selId, pct);
-          }
-          applySlotPatch({
-            sizePercent: pct,
-            ...currentMode !== "custom" ? { customScale: currentScale } : {}
-          });
-          syncValueLabel();
-          syncApplyAll();
-        };
-        const updateCustomScale = (nextScale, rawText) => {
-          const normalized = normalizeCustomScale(selId, nextScale);
-          currentScale = normalized;
-          if (typeof rawText === "string") customText = rawText;
-          else customText = customInput.value;
-          applySlotPatch({ customScale: normalized });
-          syncValueLabel();
-          syncApplyAll();
-        };
-        slider2.oninput = () => {
-          updatePercent(Number(slider2.value));
-        };
-        customInput.oninput = () => {
-          const raw = customInput.value;
-          customText = raw;
-          const n = parseInputNumber(customInput);
-          if (n == null) return;
-          updateCustomScale(n, raw);
-        };
-        modeToggle.onchange = () => {
-          currentMode = modeToggle.checked ? "custom" : "percent";
-          if (currentMode === "custom") {
-            percentMemory = currentPct;
-            currentScale = normalizeCustomScale(
-              selId,
-              currentScale || computeTargetScaleFromPercent(selId, currentPct)
-            );
-            customText = customInput.value || String(currentScale);
-            applySlotPatch({ customScale: currentScale });
-          } else {
-            const restoredPct = clampSizePercent(percentMemory);
-            currentPct = restoredPct;
-            slider2.value = String(restoredPct);
-            applySlotPatch({ sizePercent: restoredPct });
-          }
-          syncControlState();
-          syncValueLabel();
-          syncApplyAll();
-        };
-        syncControlState();
-        syncValueLabel();
-        const mutWrap = document.createElement("div");
-        mutWrap.style.display = "grid";
-        mutWrap.style.gap = "4px";
-        const mutTitle = document.createElement("span");
-        mutTitle.textContent = "Mutations:";
-        mutTitle.className = "qws-item-label";
-        mutTitle.style.flexShrink = "0";
-        const mutRow = document.createElement("div");
-        mutRow.style.display = "flex";
-        mutRow.style.flexWrap = "wrap";
-        mutRow.style.gap = "6px";
-        mutRow.style.alignItems = "center";
-        const mutDropdown = createMutationDropdown();
-        const mutationKeys = sortMutationCatalogKeys(
-          Object.keys(mutationCatalog2 || {})
-        );
-        const activeMutations = Array.isArray(cfg.mutations) ? cfg.mutations : [];
-        const toggleMutation = (storedId) => {
-          const base = ensureEditorStateForSpecies(selId).slots;
-          editorPlantSlotsState = {
-            ...editorPlantSlotsState,
-            species: selId,
-            slots: base.map((c, i) => {
-              if (!applyAll && i !== idx) return c;
-              const prev = Array.isArray(c.mutations) ? c.mutations : [];
-              const has = prev.includes(storedId);
-              const next = has ? prev.filter((x) => x !== storedId) : [...prev, storedId];
-              return { ...c, mutations: next };
-            })
-          };
-          renderSideDetails();
-        };
-        for (const mutId of sortStoredMutationIds(activeMutations)) {
-          mutRow.appendChild(
-            createMutationToggleButton(
-              mutationCatalogKeyFor(mutId),
-              mutId,
-              true,
-              () => {
-                toggleMutation(mutId);
-              }
-            )
-          );
-        }
-        const availableKeys = mutationKeys.filter((mutKey) => {
-          const storedId = mutKey === "Amberlit" ? "Ambershine" : mutKey;
-          return !activeMutations.includes(storedId);
-        });
-        if (availableKeys.length) {
-          const plusBtn = createSquarePlusButton();
-          plusBtn.onclick = () => {
-            const isOpen = mutDropdown.style.display !== "none";
-            mutDropdown.style.display = isOpen ? "none" : "flex";
-            plusBtn.style.background = isOpen ? MUT_PLUS_BG_CLOSED : MUT_PLUS_BG_OPEN;
-          };
-          mutRow.appendChild(plusBtn);
-          for (const mutKey of availableKeys) {
-            const storedId = mutKey === "Amberlit" ? "Ambershine" : mutKey;
-            mutDropdown.appendChild(
-              createMutationToggleButton(mutKey, storedId, false, () => {
-                toggleMutation(storedId);
-              })
-            );
-          }
-        }
-        mutRow.prepend(mutTitle);
-        mutWrap.append(mutRow, mutDropdown);
-        slotBox.append(sizeRow, slider2, customRow, mutWrap);
-        list.appendChild(slotBox);
-      });
-      slotsPanel.appendChild(list);
-      content.appendChild(slotsPanel);
-    }
-    if (currentSideMode === "decor" && selectedDecorId) {
-      const decorId = selectedDecorId;
-      const rotRow = createDecorRotationControl(decorId, editorDecorRotation, (angle) => {
-        editorDecorRotation = angle;
-      });
-      rotRow.style.marginTop = "6px";
-      content.appendChild(rotRow);
-    }
-    sideRightWrap.append(content, actionBar2);
-  }
-  function compareSlotKeys(a, b) {
-    const ai = Number(a);
-    const bi = Number(b);
-    if (Number.isFinite(ai) && Number.isFinite(bi)) return ai - bi;
-    return a.localeCompare(b);
-  }
-  function findPlayerSlot(slots, playerId2, opts = {}) {
-    if (!slots || typeof slots !== "object") return null;
-    const isMatch = (slot) => slot && String(slot.userId || slot.playerId || slot.id || "") === String(playerId2);
-    if (Array.isArray(slots)) {
-      const arr = slots;
-      for (let i = 0; i < arr.length; i++) {
-        if (isMatch(arr[i])) {
-          return {
-            isArray: true,
-            matchSlot: arr[i],
-            matchIndex: i,
-            entries: null,
-            slotsArray: arr
-          };
-        }
-      }
-      return null;
-    }
-    const entries2 = Object.entries(slots);
-    if (opts.sortObject) entries2.sort(([a], [b]) => compareSlotKeys(a, b));
-    for (let i = 0; i < entries2.length; i++) {
-      const [, s] = entries2[i];
-      if (isMatch(s)) {
-        return {
-          isArray: false,
-          matchSlot: s,
-          matchIndex: i,
-          entries: entries2,
-          slotsArray: null
-        };
-      }
-    }
-    return null;
-  }
-  function slotMatchToIndex(meta) {
-    if (meta.isArray) return meta.matchIndex;
-    const entry = meta.entries?.[meta.matchIndex];
-    const k = entry ? entry[0] : null;
-    const n = Number(k);
-    return Number.isFinite(n) ? n : 0;
-  }
-  function buildBrushTileObject() {
-    const selId = getSelectedId();
-    if (!selId) return null;
-    if (currentSideMode === "decor") {
-      return {
-        objectType: "decor",
-        decorId: selId,
-        rotation: editorDecorRotation
-      };
-    }
-    const species = selId;
-    const maxSlots = getMaxSlotsForSpecies(species);
-    const slotsConfig = editorPlantSlotsState.species === species ? editorPlantSlotsState.slots.slice(0, maxSlots) : ensureEditorSlotsForSpecies(species).slice(0, maxSlots);
-    const slotsArr = [];
-    for (const cfg of slotsConfig) {
-      if (!cfg.enabled) continue;
-      const size = resolveSlotTargetScale(species, cfg);
-      const mutations = Array.isArray(cfg.mutations) ? cfg.mutations.slice() : [];
-      slotsArr.push({
-        species,
-        startTime: 1760866288723,
-        endTime: 1760867858782,
-        size,
-        mutations
-      });
-    }
-    if (!slotsArr.length) return null;
-    return {
-      objectType: "plant",
-      species,
-      slots: ensureSlotIds(slotsArr),
-      plantedAt: 1760779438723,
-      maturedAt: 1760865838723
-    };
-  }
-  function notify(enabled5) {
-    listeners.forEach((cb) => {
-      try {
-        cb(enabled5);
-      } catch {
-      }
-    });
-  }
-  async function startPlannedGardenLifecycle() {
-    try {
-      const pid = await getPlayerId();
-      if (!pid) return;
-      const userSlotIdx = await readUserSlotIdx();
-      plannedGarden = await readRealGardenForPlayer(pid) || makeEmptyGarden();
-      plannedUserSlotIdx = userSlotIdx;
-      await installGardenOverlay(
-        "editor",
-        userSlotIdx,
-        makeGardenTileResolver(() => plannedGarden)
-      );
-      await setOverlayMyDataGarden(plannedGarden);
-    } catch (err) {
-      console.log("[EditorService] startPlannedGardenLifecycle failed", err);
-    }
-  }
-  async function stopPlannedGardenLifecycle() {
-    releaseGardenOverlay();
-    await clearOverlayMyDataGarden();
-    try {
-      const pid = await getPlayerId();
-      if (pid && plannedUserSlotIdx != null) {
-        const realGarden = await readRealGardenForPlayer(pid) || makeEmptyGarden();
-        await repaintGarden(realGarden, plannedUserSlotIdx);
-      }
-    } catch (err) {
-      console.log("[EditorService] stopPlannedGardenLifecycle failed", err);
-    }
-    plannedGarden = { tileObjects: {}, boardwalkTileObjects: {} };
-    plannedUserSlotIdx = null;
-  }
-  function applyState(enabled5, opts = {}) {
-    const next = !!enabled5;
-    const changed = next !== currentEnabled;
-    if (next) showOverlay();
-    else hideOverlay();
-    if (next && overlaysVisible) showSideOverlay();
-    else hideSideOverlay();
-    if (next && overlaysVisible) showCurrentItemOverlay();
-    else hideCurrentItemOverlay();
-    if (next && !currentEnabled) {
-      currentEditorTile = null;
-      void logGardenTilesForEditor();
-      void startPlannedGardenLifecycle();
-    } else if (!next && currentEnabled) {
-      void stopPlannedGardenLifecycle();
-    }
-    currentEnabled = next;
-    if (opts.persist !== false) persist2(next);
-    if (changed && opts.emit !== false) notify(next);
-  }
-  function makeEmptyGarden() {
-    return { ...EMPTY_GARDEN };
-  }
-  function ensureSlotIds(slots) {
-    if (!Array.isArray(slots)) return [];
-    const used = /* @__PURE__ */ new Set();
-    for (const s of slots) {
-      const id = s?.slotId;
-      if (typeof id === "number" && Number.isFinite(id)) used.add(id);
-    }
-    let nextId = 0;
-    return slots.map((s) => {
-      const slot = s && typeof s === "object" ? { ...s } : {};
-      const id = slot.slotId;
-      if (typeof id === "number" && Number.isFinite(id)) return slot;
-      while (used.has(nextId)) nextId++;
-      used.add(nextId);
-      slot.slotId = nextId;
-      return slot;
-    });
-  }
-  function ensurePlantSlotIdsInTileMap(map2) {
-    const next = {};
-    for (const [k, v] of Object.entries(map2 || {})) {
-      if (v && typeof v === "object" && v.objectType === "plant") {
-        next[k] = { ...v, slots: ensureSlotIds(v.slots) };
-      } else {
-        next[k] = v;
-      }
-    }
-    return next;
-  }
-  function sanitizeGarden(val) {
-    const tileObjects = val && typeof val === "object" && typeof val.tileObjects === "object" ? val.tileObjects : {};
-    const boardwalkTileObjects = val && typeof val === "object" && typeof val.boardwalkTileObjects === "object" ? val.boardwalkTileObjects : {};
-    return {
-      tileObjects: ensurePlantSlotIdsInTileMap({ ...tileObjects }),
-      boardwalkTileObjects: ensurePlantSlotIdsInTileMap({
-        ...boardwalkTileObjects
-      })
-    };
-  }
-  function readSavedGardens() {
-    try {
-      const parsed = readAriesPath(ARIES_SAVED_GARDENS_PATH);
-      const arr = Array.isArray(parsed) ? parsed : [];
-      return arr.map((g) => ({
-        id: String(g?.id || ""),
-        name: String(g?.name || "Untitled"),
-        createdAt: Number(g?.createdAt) || Date.now(),
-        garden: sanitizeGarden(g?.garden || {})
-      })).filter((g) => !!g.id);
-    } catch {
-      return [];
-    }
-  }
-  function writeSavedGardens(list) {
-    try {
-      writeAriesPath(ARIES_SAVED_GARDENS_PATH, list || []);
-    } catch {
-      return;
-    }
-    notifySavedGardensChanged();
-  }
-  async function readRealGardenForPlayer(playerId2) {
-    try {
-      if (!playerId2) return null;
-      const cur = await Atoms.root.state.get();
-      const slots = cur?.child?.data?.userSlots;
-      const slotMatch = findPlayerSlot(slots, playerId2, { sortObject: true });
-      if (!slotMatch || !slotMatch.matchSlot) return null;
-      const g = slotMatch.matchSlot?.data?.garden;
-      return sanitizeGarden(g || {});
-    } catch {
-      return null;
-    }
-  }
-  async function getGardenForPlayer(playerId2) {
-    try {
-      if (!playerId2) return null;
-      if (currentEnabled) {
-        const selfId = await getPlayerId();
-        if (selfId === playerId2) return sanitizeGarden(plannedGarden);
-      }
-      return await readRealGardenForPlayer(playerId2);
-    } catch {
-      return null;
-    }
-  }
-  async function setCurrentGarden(nextGarden) {
-    try {
-      const pid = await getPlayerId();
-      if (!pid) return false;
-      const userSlotIdx = plannedUserSlotIdx ?? await readUserSlotIdx();
-      setPlannedGarden(sanitizeGarden(nextGarden));
-      plannedUserSlotIdx = userSlotIdx;
-      try {
-        if (overlayOwner === "editor") repaintOverlay();
-        else await applyGardenToTos(plannedGarden, userSlotIdx);
-      } catch {
-      }
-      return true;
-    } catch (err) {
-      console.log("[EditorService] setCurrentGarden failed", err);
-      return false;
-    }
-  }
-  function cloneOverlayTileObject(obj) {
-    if (!obj) return null;
-    try {
-      return JSON.parse(JSON.stringify(obj));
-    } catch {
-      return obj;
-    }
-  }
-  function makeGardenTileResolver(getGarden) {
-    return (localIdx, kind) => {
-      const garden3 = getGarden();
-      const source = kind === "dirt" ? garden3?.tileObjects : garden3?.boardwalkTileObjects;
-      return (source || {})[String(localIdx)] ?? null;
-    };
-  }
-  async function collectOverlayTileTargets(userSlotIdx) {
-    const mapData = await Atoms.root.map.get().catch(() => null);
-    const cols = Number(mapData?.cols);
-    if (!mapData || !Number.isFinite(cols) || cols <= 0) return [];
-    const out = [];
-    const collect = (record, localIdxKey, kind) => {
-      for (const [gidxStr, meta] of Object.entries(record || {})) {
-        if (meta?.userSlotIdx !== userSlotIdx) continue;
-        const gidx = Number(gidxStr);
-        if (!Number.isFinite(gidx)) continue;
-        out.push({
-          gidx,
-          tx: gidx % cols,
-          ty: Math.floor(gidx / cols),
-          localIdx: Number(meta?.[localIdxKey] ?? -1),
-          kind
-        });
-      }
-    };
-    collect(mapData.globalTileIdxToDirtTile, "dirtTileIdx", "dirt");
-    collect(mapData.globalTileIdxToBoardwalk, "boardwalkTileIdx", "boardwalk");
-    return out;
-  }
-  function overlayTileViewAt(target) {
-    try {
-      return tos.getTileObject(target.tx, target.ty, { ensureView: true })?.tileView ?? null;
-    } catch {
-      return null;
-    }
-  }
-  function overlayRenderContext() {
-    try {
-      return tos.getRenderContext();
-    } catch {
-      return null;
-    }
-  }
-  function pushToOverlayTileView(tileView, obj, ctx2) {
-    try {
-      tileView.onDataChanged(cloneOverlayTileObject(obj));
-    } catch {
-      return;
-    }
-    if (ctx2 && typeof tileView.update === "function") {
-      try {
-        tileView.update(ctx2);
-      } catch {
-      }
-    }
-  }
-  function installOverlayTileHold(tileView, resolve) {
-    if (!tileView || typeof tileView.onDataChanged !== "function") return null;
-    const hadOwnProperty = Object.prototype.hasOwnProperty.call(
-      tileView,
-      "onDataChanged"
-    );
-    const original = tileView.onDataChanged;
-    tileView.onDataChanged = function() {
-      return original.call(this, cloneOverlayTileObject(resolve()));
-    };
-    return { tileView, hadOwnProperty, original, resolve };
-  }
-  function releaseOverlayTileHold(hold) {
-    try {
-      if (hold.hadOwnProperty) {
-        hold.tileView.onDataChanged = hold.original;
-      } else {
-        delete hold.tileView.onDataChanged;
-      }
-    } catch {
-      try {
-        hold.tileView.onDataChanged = hold.original;
-      } catch {
-      }
-    }
-  }
-  async function installGardenOverlay(owner, userSlotIdx, resolve) {
-    releaseGardenOverlay();
-    if (!tos.isReady()) return false;
-    const targets = await collectOverlayTileTargets(userSlotIdx);
-    if (!targets.length) return false;
-    const ctx2 = overlayRenderContext();
-    for (const target of targets) {
-      const tileView = overlayTileViewAt(target);
-      if (!tileView) continue;
-      const tileResolve = () => resolve(target.localIdx, target.kind);
-      const hold = installOverlayTileHold(tileView, tileResolve);
-      if (hold) overlayHolds.set(target.gidx, hold);
-      pushToOverlayTileView(tileView, tileResolve(), ctx2);
-    }
-    if (overlayHolds.size === 0) return false;
-    overlayOwner = owner;
-    return true;
-  }
-  function releaseGardenOverlay() {
-    for (const hold of overlayHolds.values()) releaseOverlayTileHold(hold);
-    overlayHolds.clear();
-    overlayOwner = null;
-  }
-  function repaintOverlay() {
-    const ctx2 = overlayRenderContext();
-    for (const hold of overlayHolds.values()) {
-      pushToOverlayTileView(hold.tileView, hold.resolve(), ctx2);
-    }
-  }
-  async function repaintGarden(garden3, userSlotIdx) {
-    const targets = await collectOverlayTileTargets(userSlotIdx);
-    const resolve = makeGardenTileResolver(() => garden3);
-    const ctx2 = overlayRenderContext();
-    for (const target of targets) {
-      const tileView = overlayTileViewAt(target);
-      if (!tileView) continue;
-      pushToOverlayTileView(
-        tileView,
-        resolve(target.localIdx, target.kind),
-        ctx2
-      );
-    }
-  }
-  async function setOverlayMyDataGarden(garden3) {
-    try {
-      await fakeShow(OVERLAY_MYDATA_PATCH, { garden: sanitizeGarden(garden3) });
-    } catch (error) {
-      console.warn("[EditorService] tile info patch unavailable", error);
-    }
-  }
-  async function clearOverlayMyDataGarden() {
-    try {
-      await fakeHide(OVERLAY_MYDATA_PATCH.label);
-    } catch {
-    }
-  }
-  async function applyFriendGardenPreview(garden3) {
-    if (!garden3 || typeof garden3 !== "object") return false;
-    try {
-      const pid = await getPlayerId();
-      if (!pid) return false;
-      const cur = await Atoms.root.state.get().catch(() => null);
-      if (!cur) return false;
-      const slotMatch = findPlayerSlot(cur?.child?.data?.userSlots, pid, {
-        sortObject: true
-      });
-      if (!slotMatch || !slotMatch.matchSlot) return false;
-      const userSlotIdx = slotMatchToIndex(slotMatch);
-      friendPreviewGarden = sanitizeGarden(garden3);
-      const installed4 = await installGardenOverlay(
-        "friend",
-        userSlotIdx,
-        makeGardenTileResolver(() => friendPreviewGarden)
-      );
-      if (!installed4) return false;
-      await setOverlayMyDataGarden(friendPreviewGarden);
-      friendPreviewUserSlotIdx = userSlotIdx;
-      friendPreviewPlayerId = pid;
-      friendGardenPreviewActive = true;
-      return true;
-    } catch (error) {
-      console.error("[EditorService] applyFriendGardenPreview failed", error);
-      releaseGardenOverlay();
-      await clearOverlayMyDataGarden();
-      friendGardenPreviewActive = false;
-      return false;
-    }
-  }
-  async function clearFriendGardenPreview() {
-    if (!friendGardenPreviewActive) return false;
-    friendGardenPreviewActive = false;
-    const userSlotIdx = friendPreviewUserSlotIdx;
-    const playerId2 = friendPreviewPlayerId;
-    friendPreviewUserSlotIdx = null;
-    friendPreviewPlayerId = null;
-    releaseGardenOverlay();
-    await clearOverlayMyDataGarden();
-    try {
-      if (userSlotIdx == null || !playerId2) return true;
-      const cur = await Atoms.root.state.get().catch(() => null);
-      const slotMatch = findPlayerSlot(cur?.child?.data?.userSlots, playerId2, {
-        sortObject: true
-      });
-      await repaintGarden(
-        sanitizeGarden(slotMatch?.matchSlot?.data?.garden),
-        userSlotIdx
-      );
-      return true;
-    } catch (error) {
-      console.error("[EditorService] clearFriendGardenPreview failed", error);
-      return false;
-    }
-  }
-  function listSavedGardens() {
-    return readSavedGardens();
-  }
-  async function saveCurrentGarden(name, playerId2) {
-    const pid = playerId2 || await getPlayerId();
-    if (!pid) return null;
-    const garden3 = await getGardenForPlayer(pid);
-    if (!garden3) return null;
-    const now2 = Date.now();
-    const all = readSavedGardens();
-    const baseName = name?.trim() || "Untitled";
-    const makeUniqueName = (base, existing) => {
-      let idx = 1;
-      let candidate = base;
-      const set2 = new Set(existing);
-      while (set2.has(candidate)) {
-        candidate = `${base} (${idx})`;
-        idx += 1;
-      }
-      return candidate;
-    };
-    const existingIdx = all.findIndex((g) => g.name === baseName);
-    let finalName = baseName;
-    let reuseId = null;
-    if (existingIdx >= 0) {
-      const canConfirm = typeof window !== "undefined" && typeof window.confirm === "function";
-      const overwrite = canConfirm ? window.confirm(
-        `A garden named "${baseName}" already exists. Overwrite it?`
-      ) : false;
-      if (overwrite) {
-        reuseId = all[existingIdx]?.id || null;
-      } else {
-        finalName = makeUniqueName(
-          baseName,
-          all.map((g) => g.name)
-        );
-      }
-    }
-    const saved = {
-      id: reuseId || `${now2}-${Math.random().toString(16).slice(2)}`,
-      name: finalName,
-      createdAt: now2,
-      garden: garden3
-    };
-    let updated = [];
-    if (reuseId) {
-      updated = all.map((g) => g.id === reuseId ? saved : g);
-    } else {
-      all.unshift(saved);
-      updated = all.slice(0, 50);
-    }
-    writeSavedGardens(updated);
-    return saved;
-  }
-  async function loadSavedGarden(id) {
-    if (!id) return false;
-    const all = readSavedGardens();
-    const found = all.find((g) => g.id === id);
-    if (!found) return false;
-    return setCurrentGarden(found.garden);
-  }
-  function deleteSavedGarden(id) {
-    if (!id) return false;
-    const all = readSavedGardens();
-    const next = all.filter((g) => g.id !== id);
-    if (next.length === all.length) return false;
-    writeSavedGardens(next);
-    return true;
-  }
-  function exportSavedGarden(id) {
-    if (!id) return null;
-    const all = readSavedGardens();
-    const found = all.find((g) => g.id === id);
-    if (!found) return null;
-    return JSON.stringify(found.garden, null, 2);
-  }
-  async function importGarden(name, raw) {
-    if (!raw) return null;
-    try {
-      const parsed = JSON.parse(raw);
-      const garden3 = sanitizeGarden(parsed);
-      const now2 = Date.now();
-      const saved = {
-        id: `${now2}-${Math.random().toString(16).slice(2)}`,
-        name: name?.trim() || "Imported garden",
-        createdAt: now2,
-        garden: garden3
-      };
-      const all = readSavedGardens();
-      all.unshift(saved);
-      writeSavedGardens(all.slice(0, 50));
-      return saved;
-    } catch {
-      return null;
-    }
-  }
-  async function getPlayerId() {
-    try {
-      const id = await Atoms.player.playerId.get();
-      return typeof id === "string" && id ? id : null;
-    } catch {
-      return null;
-    }
-  }
-  async function readUserSlotIdx() {
-    try {
-      const store = await ensureStore().catch(() => null);
-      const atom = store ? getAtomByLabel("myUserSlotIdxAtom") : null;
-      const raw = atom ? store?.get(atom) : null;
-      if (typeof raw === "number" && Number.isFinite(raw)) return raw;
-    } catch {
-    }
-    return 0;
-  }
-  async function resolveOwnTile(tx, ty) {
-    try {
-      const mapData = await Atoms.root.map.get().catch(() => null);
-      const cols = Number(mapData?.cols);
-      if (!mapData || !Number.isFinite(cols) || cols <= 0) return null;
-      if (tx < 0 || ty < 0 || tx >= cols) return null;
-      const gidx = ty * cols + tx;
-      const ownSlotIdx = await readUserSlotIdx();
-      const dirt = mapData?.globalTileIdxToDirtTile?.[gidx];
-      if (dirt && typeof dirt === "object" && Number(dirt.userSlotIdx) === ownSlotIdx) {
-        return {
-          tileType: "Dirt",
-          localTileIndex: Number(dirt.dirtTileIdx),
-          userSlotIdx: ownSlotIdx
-        };
-      }
-      const board = mapData?.globalTileIdxToBoardwalk?.[gidx];
-      if (board && typeof board === "object" && Number(board.userSlotIdx) === ownSlotIdx) {
-        return {
-          tileType: "Boardwalk",
-          localTileIndex: Number(board.boardwalkTileIdx),
-          userSlotIdx: ownSlotIdx
-        };
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  }
-  async function collectCurrentUserGardenTiles() {
-    const [mapData, userSlotIdx] = await Promise.all([
-      Atoms.root.map.get().catch(() => null),
-      readUserSlotIdx()
-    ]);
-    const cols = Number(mapData?.cols);
-    if (!mapData || !Number.isFinite(cols)) return null;
-    const clone2 = (v) => {
-      try {
-        return JSON.parse(JSON.stringify(v));
-      } catch {
-        return v;
-      }
-    };
-    const toPos = (gidx) => ({
-      x: gidx % cols,
-      y: Math.floor(gidx / cols)
-    });
-    const stateVal = await Atoms.root.state.get().catch(() => null);
-    const slots = stateVal?.child?.data?.userSlots;
-    const garden3 = Array.isArray(slots) ? slots?.[userSlotIdx]?.data?.garden : slots?.[String(userSlotIdx)]?.data?.garden;
-    const dirtObjs = garden3?.tileObjects || {};
-    const boardObjs = garden3?.boardwalkTileObjects || {};
-    const dirt = Object.entries(mapData?.globalTileIdxToDirtTile || {}).filter(
-      ([, v]) => v && typeof v === "object" && v.userSlotIdx === userSlotIdx
-    ).map(([k, v]) => {
-      const gidx = Number(k);
-      const pos = toPos(gidx);
-      const localIdx = Number(v?.dirtTileIdx ?? -1);
-      return {
-        type: "dirt",
-        globalIdx: gidx,
-        localIdx,
-        obj: clone2(dirtObjs?.[String(localIdx)] ?? null),
-        ...pos
-      };
-    });
-    const boardwalk = Object.entries(
-      mapData?.globalTileIdxToBoardwalk || {}
-    ).filter(
-      ([, v]) => v && typeof v === "object" && v.userSlotIdx === userSlotIdx
-    ).map(([k, v]) => {
-      const gidx = Number(k);
-      const pos = toPos(gidx);
-      const localIdx = Number(v?.boardwalkTileIdx ?? -1);
-      return {
-        type: "boardwalk",
-        globalIdx: gidx,
-        localIdx,
-        obj: clone2(boardObjs?.[String(localIdx)] ?? null),
-        ...pos
-      };
-    });
-    const tiles = [...dirt, ...boardwalk].sort(
-      (a, b) => a.globalIdx - b.globalIdx
-    );
-    return { userSlotIdx, dirt, boardwalk, tiles };
-  }
-  async function resolveTileCoords(tileType, userSlotIdx, localTileIndex) {
-    const mapData = await Atoms.root.map.get().catch(() => null);
-    const cols = Number(mapData?.cols);
-    if (!mapData || !Number.isFinite(cols)) return null;
-    const entries2 = tileType === "Dirt" ? Object.entries(mapData?.globalTileIdxToDirtTile || {}) : Object.entries(mapData?.globalTileIdxToBoardwalk || {});
-    for (const [gidxStr, v] of entries2) {
-      const info = v;
-      if (!info || typeof info !== "object") continue;
-      const slotOk = Number(info.userSlotIdx) === userSlotIdx;
-      const localOk = tileType === "Dirt" ? Number(info.dirtTileIdx) === localTileIndex : Number(info.boardwalkTileIdx) === localTileIndex;
-      if (slotOk && localOk) {
-        const gidx = Number(gidxStr);
-        if (!Number.isFinite(gidx)) continue;
-        return { x: gidx % cols, y: Math.floor(gidx / cols) };
-      }
-    }
-    return null;
-  }
-  function injectTileObjectRaw(tx, ty, obj) {
-    try {
-      const info = tos.getTileObject(tx, ty, { ensureView: true });
-      const tv = info?.tileView;
-      if (!tv || typeof tv.onDataChanged !== "function") return false;
-      const cloned = (() => {
-        try {
-          return JSON.parse(JSON.stringify(obj));
-        } catch {
-          return obj;
-        }
-      })();
-      tv.onDataChanged(cloned);
-      const ctx2 = tos.getRenderContext();
-      if (ctx2 && typeof tv.update === "function") {
-        try {
-          tv.update(ctx2);
-        } catch {
-        }
-      }
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  async function applyGardenToTos(garden3, userSlotIdx) {
-    if (!tos.isReady()) return;
-    const mapData = await Atoms.root.map.get().catch(() => null);
-    const cols = Number(mapData?.cols);
-    if (!mapData || !Number.isFinite(cols)) return;
-    const dirtEntries = Object.entries(
-      mapData?.globalTileIdxToDirtTile || {}
-    ).filter(([, v]) => v?.userSlotIdx === userSlotIdx);
-    const boardEntries = Object.entries(
-      mapData?.globalTileIdxToBoardwalk || {}
-    ).filter(([, v]) => v?.userSlotIdx === userSlotIdx);
-    const applyEntry = (entry, type) => {
-      const [gidxStr, v] = entry;
-      const gidx = Number(gidxStr);
-      if (!Number.isFinite(gidx)) return;
-      const x = gidx % cols;
-      const y = Math.floor(gidx / cols);
-      const localIdx = type === "Dirt" ? Number(v?.dirtTileIdx ?? -1) : Number(v?.boardwalkTileIdx ?? -1);
-      const obj = type === "Dirt" ? (garden3.tileObjects || {})[String(localIdx)] : (garden3.boardwalkTileObjects || {})[String(localIdx)];
-      if (!obj) {
-        tos.setTileEmpty(x, y, { ensureView: true, forceUpdate: true });
-        return;
-      }
-      injectTileObjectRaw(x, y, obj);
-      const typ = obj.objectType;
-      if (typ === "plant") {
-        tos.setTilePlant(
-          x,
-          y,
-          {
-            species: obj.species,
-            plantedAt: obj.plantedAt,
-            maturedAt: obj.maturedAt,
-            slots: obj.slots
-          },
-          { ensureView: true, forceUpdate: true }
-        );
-      } else if (typ === "decor") {
-        tos.setTileDecor(
-          x,
-          y,
-          { rotation: obj.rotation },
-          { ensureView: true, forceUpdate: true }
-        );
-      } else if (typ === "egg") {
-        tos.setTileEgg(
-          x,
-          y,
-          { plantedAt: obj.plantedAt, maturedAt: obj.maturedAt },
-          { ensureView: true, forceUpdate: true }
-        );
-      } else {
-        tos.setTileEmpty(x, y, { ensureView: true, forceUpdate: true });
-      }
-    };
-    dirtEntries.forEach((e) => applyEntry(e, "Dirt"));
-    boardEntries.forEach((e) => applyEntry(e, "Boardwalk"));
-  }
-  async function logGardenTilesForEditor() {
-    try {
-      const info = await collectCurrentUserGardenTiles();
-      if (!info) {
-        console.log("[EditorService] garden tiles: map/user slot not ready");
-        return;
-      }
-      console.log("[EditorService] garden tiles (for setTileEmpty)", {
-        userSlotIdx: info.userSlotIdx,
-        total: info.tiles.length,
-        dirtCount: info.dirt.length,
-        boardwalkCount: info.boardwalk.length,
-        tiles: info.tiles
-      });
-    } catch (err) {
-      console.log("[EditorService] garden tiles log failed", err);
-    }
-  }
-  async function logSelectedInventoryItemWithTile() {
-    try {
-      const target = getCurrentTileTarget();
-      if (!target)
-        console.log(
-          "[EditorService] logSelectedInventoryItemWithTile: no currentEditorTile"
-        );
-      const tileType = target?.tileType;
-      const localTileIndex = target?.localTileIndex;
-      const selectedIndex = await Atoms.inventory.myValidatedSelectedItemIndex.get();
-      const inventoryVal = await Atoms.inventory.myInventory.get();
-      const rotation = await Atoms.inventory.mySelectedItemRotation.get();
-      const items = Array.isArray(inventoryVal?.items) ? inventoryVal.items : [];
-      if (selectedIndex == null || typeof selectedIndex !== "number" || selectedIndex < 0 || selectedIndex >= items.length) {
-        console.log(
-          "[EditorService] logSelectedInventoryItemWithTile: invalid selected index",
-          {
-            selectedIndex,
-            itemsLen: items.length
-          }
-        );
-        return;
-      }
-      const selectedItem = items[selectedIndex];
-      console.log("[EditorService] selected item placement debug", {
-        tileType,
-        localTileIndex,
-        selectedIndex,
-        rotation,
-        item: selectedItem
-      });
-    } catch (err) {
-      console.log("[EditorService] logSelectedInventoryItemWithTile failed", err);
-    }
-  }
-  async function placeSelectedItemInGardenAtCurrentTile() {
-    try {
-      const target = getCurrentTileTarget();
-      if (!target) {
-        console.log(
-          "[EditorService] placeSelectedItemInGardenAtCurrentTile: no currentEditorTile"
-        );
-        return;
-      }
-      const { tileType, localTileIndex, userSlotIdx } = target;
-      const tileObject = buildBrushTileObject();
-      if (!tileObject) {
-        console.log(
-          "[EditorService] placeSelectedItemInGardenAtCurrentTile: no brush selected"
-        );
-        return;
-      }
-      const coords = await resolveTileCoords(
-        tileType,
-        userSlotIdx,
-        localTileIndex
-      );
-      if (!coords) {
-        console.log(
-          "[EditorService] placeSelectedItemInGardenAtCurrentTile: cannot resolve coords",
-          {
-            tileType,
-            localTileIndex,
-            userSlotIdx
-          }
-        );
-        return;
-      }
-      if (!tos.isReady()) {
-        console.log(
-          "[EditorService] placeSelectedItemInGardenAtCurrentTile: tos not ready"
-        );
-        return;
-      }
-      const tileKey = String(localTileIndex);
-      const targetKey = tileType === "Dirt" ? "tileObjects" : "boardwalkTileObjects";
-      setPlannedGarden({
-        ...plannedGarden,
-        [targetKey]: {
-          ...plannedGarden[targetKey],
-          [tileKey]: tileObject
-        }
-      });
-      injectTileObjectRaw(coords.x, coords.y, tileObject);
-      if (tileObject.objectType === "plant") {
-        tos.setTilePlant(
-          coords.x,
-          coords.y,
-          {
-            species: tileObject.species,
-            plantedAt: tileObject.plantedAt,
-            maturedAt: tileObject.maturedAt,
-            slots: tileObject.slots
-          },
-          { ensureView: true, forceUpdate: true }
-        );
-      } else if (tileObject.objectType === "decor") {
-        tos.setTileDecor(
-          coords.x,
-          coords.y,
-          { rotation: tileObject.rotation },
-          { ensureView: true, forceUpdate: true }
-        );
-      }
-      console.log("[EditorService] placed item in garden (local plan)", {
-        tileType,
-        localTileIndex,
-        itemType: tileObject.objectType,
-        species: tileObject.species,
-        decorId: tileObject.decorId,
-        coords
-      });
-      renderCurrentItemOverlay();
-      void triggerEditorAnimation("dropObject");
-      tos.flashTileGreen(coords.x, coords.y, { startAlpha: 1, durationMs: 400 });
-    } catch (err) {
-      console.log(
-        "[EditorService] placeSelectedItemInGardenAtCurrentTile failed",
-        err
-      );
-    }
-  }
-  async function removeGardenObjectAtCurrentTile() {
-    try {
-      const target = getCurrentTileTarget();
-      if (!target) {
-        console.log(
-          "[EditorService] removeItemFromGardenAtCurrentTile: no currentEditorTile"
-        );
-        return false;
-      }
-      const { tileType, localTileIndex, userSlotIdx } = target;
-      const coords = await resolveTileCoords(
-        tileType,
-        userSlotIdx,
-        localTileIndex
-      );
-      if (!coords) {
-        console.log(
-          "[EditorService] removeItemFromGardenAtCurrentTile: cannot resolve coords",
-          {
-            tileType,
-            localTileIndex,
-            userSlotIdx
-          }
-        );
-        return false;
-      }
-      if (!tos.isReady()) {
-        console.log(
-          "[EditorService] removeItemFromGardenAtCurrentTile: tos not ready"
-        );
-        return false;
-      }
-      const tileKey = String(localTileIndex);
-      const targetKey = tileType === "Dirt" ? "tileObjects" : "boardwalkTileObjects";
-      const nextTargetMap = { ...plannedGarden[targetKey] };
-      delete nextTargetMap[tileKey];
-      setPlannedGarden({
-        ...plannedGarden,
-        [targetKey]: nextTargetMap
-      });
-      tos.setTileEmpty(coords.x, coords.y, {
-        ensureView: true,
-        forceUpdate: true
-      });
-      console.log("[EditorService] removed item from garden (local plan)", {
-        tileType,
-        localTileIndex,
-        coords
-      });
-      renderCurrentItemOverlay();
-      void triggerEditorAnimation("dig");
-      return true;
-    } catch (err) {
-      console.log(
-        "[EditorService] removeItemFromGardenAtCurrentTile failed",
-        err
-      );
-      return false;
-    }
-  }
-  async function removeItemFromGardenAtCurrentTile() {
-    void removeGardenObjectAtCurrentTile();
-  }
-  async function removeDecorFromGardenAtCurrentTile() {
-    void removeGardenObjectAtCurrentTile();
-  }
-  async function updateGardenObjectAtCurrentTile(updater) {
-    try {
-      const target = getCurrentTileTarget();
-      if (!target) return false;
-      const { tileType, localTileIndex, userSlotIdx } = target;
-      const tileKey = String(localTileIndex);
-      const targetKey = tileType === "Dirt" ? "tileObjects" : "boardwalkTileObjects";
-      const currentObj = plannedGarden[targetKey]?.[tileKey];
-      if (!currentObj) return false;
-      const rawNextObj = updater(currentObj);
-      const nextObj = rawNextObj && rawNextObj.objectType === "plant" ? { ...rawNextObj, slots: ensureSlotIds(rawNextObj.slots) } : rawNextObj;
-      setPlannedGarden({
-        ...plannedGarden,
-        [targetKey]: { ...plannedGarden[targetKey], [tileKey]: nextObj }
-      });
-      try {
-        const coords = await resolveTileCoords(
-          tileType,
-          userSlotIdx,
-          localTileIndex
-        );
-        if (coords && tos.isReady()) {
-          injectTileObjectRaw(coords.x, coords.y, nextObj);
-          if (nextObj.objectType === "plant") {
-            tos.setTilePlant(
-              coords.x,
-              coords.y,
-              {
-                species: nextObj.species,
-                plantedAt: nextObj.plantedAt,
-                maturedAt: nextObj.maturedAt,
-                slots: nextObj.slots
-              },
-              { ensureView: true, forceUpdate: true }
-            );
-          } else if (nextObj.objectType === "decor") {
-            tos.setTileDecor(
-              coords.x,
-              coords.y,
-              { rotation: nextObj.rotation },
-              { ensureView: true, forceUpdate: true }
-            );
-          } else if (nextObj.objectType === "egg") {
-            tos.setTileEgg(
-              coords.x,
-              coords.y,
-              {
-                plantedAt: nextObj.plantedAt,
-                maturedAt: nextObj.maturedAt
-              },
-              { ensureView: true, forceUpdate: true }
-            );
-          }
-        }
-      } catch {
-      }
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  function clampSizePercent(sizePercent) {
-    const pctRaw = Number.isFinite(sizePercent) ? sizePercent : CROP_SIZE_MAX;
-    return Math.max(CROP_SIZE_MIN, Math.min(CROP_SIZE_MAX, Math.round(pctRaw)));
-  }
-  function getScaleBoundsForSpecies(_species) {
-    return { minScale: CROP_SIZE_MIN, maxScale: CROP_SIZE_MAX };
-  }
-  function clampCustomScale(_species, size) {
-    return clampSizePercent(size);
-  }
-  function normalizeCustomScale(_species, size) {
-    return clampSizePercent(size);
-  }
-  function computeTargetScaleFromPercent(_species, sizePercent) {
-    return clampSizePercent(sizePercent);
-  }
-  function computePercentFromScale(_species, size) {
-    return clampSizePercent(size);
-  }
-  function resolveSlotTargetScale(species, cfg) {
-    if (cfg.sizeMode === "custom") {
-      return normalizeCustomScale(species, cfg.customScale);
-    }
-    return computeTargetScaleFromPercent(species, cfg.sizePercent);
-  }
-  function getMaxSlotsForSpecies(species) {
-    const entry = plantCatalog2[species];
-    const plantDef = entry?.plant ?? {};
-    const isMultipleHarvest = plantDef?.harvestType === "Multiple";
-    const slotOffsets = Array.isArray(plantDef.slotOffsets) ? plantDef.slotOffsets : [];
-    if (isMultipleHarvest && slotOffsets.length > 0) return slotOffsets.length;
-    return 1;
-  }
-  function ensureEditorSlotsForSpecies(species) {
-    const maxSlots = getMaxSlotsForSpecies(species);
-    if (editorPlantSlotsState.species !== species) {
-      const defaultScale = computeTargetScaleFromPercent(
-        species,
-        DEFAULT_SIZE_PERCENT
-      );
-      editorPlantSlotsState = {
-        species,
-        slots: Array.from({ length: maxSlots }, () => ({
-          enabled: true,
-          sizePercent: DEFAULT_SIZE_PERCENT,
-          customScale: defaultScale,
-          sizeMode: "percent",
-          mutations: []
-        })),
-        applyAll: false
-      };
-      return editorPlantSlotsState.slots;
-    }
-    let slots = editorPlantSlotsState.slots.slice(0, maxSlots);
-    if (!slots.length) {
-      const defaultScale = computeTargetScaleFromPercent(
-        species,
-        DEFAULT_SIZE_PERCENT
-      );
-      slots = [
-        {
-          enabled: true,
-          sizePercent: DEFAULT_SIZE_PERCENT,
-          customScale: defaultScale,
-          sizeMode: "percent",
-          mutations: []
-        }
-      ];
-    }
-    slots = slots.map((slot) => {
-      const pct = clampSizePercent(slot.sizePercent);
-      const mode = slot.sizeMode === "custom" ? "custom" : "percent";
-      const fallbackScale = computeTargetScaleFromPercent(species, pct);
-      const customScale = normalizeCustomScale(
-        species,
-        Number.isFinite(slot.customScale) ? slot.customScale : fallbackScale
-      );
-      const sizePercent = mode === "custom" ? computePercentFromScale(species, customScale) : pct;
-      return {
-        enabled: slot.enabled !== false,
-        sizePercent,
-        customScale,
-        sizeMode: mode,
-        mutations: Array.isArray(slot.mutations) ? slot.mutations : []
-      };
-    });
-    editorPlantSlotsState = {
-      ...editorPlantSlotsState,
-      slots,
-      applyAll: !!editorPlantSlotsState.applyAll
-    };
-    return slots;
-  }
-  function ensureEditorStateForSpecies(species) {
-    ensureEditorSlotsForSpecies(species);
-    if (editorPlantSlotsState.applyAll == null) {
-      editorPlantSlotsState.applyAll = false;
-    }
-    return editorPlantSlotsState;
-  }
-  var ARIES_SAVED_GARDENS_PATH, FIXED_SLOT_START, FIXED_SLOT_END, DEFAULT_SIZE_PERCENT, ITEM_PANEL_STYLE_ID, mutationColorMap, MUTATION_ICON_CATEGORIES, MUT_PLUS_BG_CLOSED, MUT_PLUS_BG_OPEN, MUTATION_GROUP_COLOR, MUTATION_GROUP_HYDRO, MUTATION_GROUP_LUNAR, MUTATION_GROUP_OTHER, MUTATION_STEM_MIN_PREFIX, overlayEl, hudToggleBtnEl, currentEnabled, listeners, savedGardensListeners, sideOverlayEl, sideListWrap, sideRightWrap, currentSideMode, sideSearchQuery, selectedPlantId, selectedDecorId, currentItemOverlayEl, currentItemUnsub, currentItemApplyAll, currentItemSlotModes, overlaysVisible, currentEditorTile, plannedGarden, plannedUserSlotIdx, editorDecorRotation, overlayOwner, overlayHolds, friendGardenPreviewActive, friendPreviewUserSlotIdx, friendPreviewPlayerId, friendPreviewGarden, OVERLAY_MYDATA_PATCH, EditorService, EMPTY_GARDEN, editorPlantSlotsState;
-  var init_editor = __esm({
-    "src/features/editor/editor.ts"() {
+    return { row, dropdown, render };
+  }
+  var orderedMutationKeys, sortMutationIds, FALLBACK_COLORS, ICON_CATEGORIES, TILE_PX, PLUS_BG_CLOSED, PLUS_BG_OPEN;
+  var init_mutationPicker = __esm({
+    "src/features/editor/ui/mutationPicker.ts"() {
       "use strict";
-      init_atoms();
       init_data();
-      init_decorRotation();
-      init_jotai();
-      init_pageContext();
-      init_audioPlayer();
-      init_cropSize();
-      init_storage();
-      init_tileObjects();
-      init_fakeAtoms();
+      init_names();
       init_iconCache();
-      ARIES_SAVED_GARDENS_PATH = "editor.savedGardens";
-      FIXED_SLOT_START = 1760866288723;
-      FIXED_SLOT_END = 1760867858782;
-      DEFAULT_SIZE_PERCENT = 50;
-      ITEM_PANEL_STYLE_ID = "qws-editor-item-panel-css";
-      mutationColorMap = {
+      init_theme();
+      init_mutationOrder();
+      orderedMutationKeys = memoOnCatalogs(
+        () => sortMutationCatalogKeys(Object.keys(mutationCatalog2 || {}), mutationCatalog2, weatherCatalog2)
+      );
+      sortMutationIds = (ids) => sortStoredMutationIds(ids, orderedMutationKeys());
+      FALLBACK_COLORS = {
         Gold: "rgba(200, 170, 0, 1)",
         Rainbow: "linear-gradient(135deg, #ff0000, #ff7a00, #ffeb3b, #00c853, #40c4ff, #8e24aa)",
         Wet: "rgb(30, 140, 230)",
@@ -14962,134 +13721,1263 @@
         Thundercharged: "rgb(10, 100, 190)",
         Dawnlit: "rgba(120, 100, 180, 1)",
         Ambershine: "rgba(160, 70, 50, 1)",
-        // <- important : Ambershine, pas Amberlit
         Dawncharged: "rgba(160, 140, 220, 1)",
         Ambercharged: "rgba(240, 110, 80, 1)"
       };
-      MUTATION_ICON_CATEGORIES = ["ui", "mutation", "weather"];
-      MUT_PLUS_BG_CLOSED = "rgba(10,14,20,0.9)";
-      MUT_PLUS_BG_OPEN = "rgba(32,42,56,0.8)";
-      MUTATION_GROUP_COLOR = 0;
-      MUTATION_GROUP_HYDRO = 1;
-      MUTATION_GROUP_LUNAR = 2;
-      MUTATION_GROUP_OTHER = 3;
-      MUTATION_STEM_MIN_PREFIX = 4;
-      overlayEl = null;
-      hudToggleBtnEl = null;
-      currentEnabled = false;
-      listeners = /* @__PURE__ */ new Set();
-      savedGardensListeners = /* @__PURE__ */ new Set();
-      sideOverlayEl = null;
-      sideListWrap = null;
-      sideRightWrap = null;
-      currentSideMode = "plants";
-      sideSearchQuery = "";
-      selectedPlantId = null;
-      selectedDecorId = null;
-      currentItemOverlayEl = null;
-      currentItemUnsub = null;
-      currentItemApplyAll = false;
-      currentItemSlotModes = {};
-      overlaysVisible = true;
-      currentEditorTile = null;
-      plannedGarden = { tileObjects: {}, boardwalkTileObjects: {} };
-      plannedUserSlotIdx = null;
-      editorDecorRotation = 0;
-      overlayOwner = null;
-      overlayHolds = /* @__PURE__ */ new Map();
-      friendGardenPreviewActive = false;
-      friendPreviewUserSlotIdx = null;
-      friendPreviewPlayerId = null;
-      friendPreviewGarden = {
-        tileObjects: {},
-        boardwalkTileObjects: {}
+      ICON_CATEGORIES = ["ui", "mutation", "weather"];
+      TILE_PX = 34;
+      PLUS_BG_CLOSED = color.sunken;
+      PLUS_BG_OPEN = color.hoverBg;
+    }
+  });
+
+  // src/features/editor/ui/panelChrome.ts
+  function floatingPanel(opts) {
+    ensureKitStyles();
+    const root4 = document.createElement("div");
+    root4.id = opts.id;
+    Object.assign(root4.style, {
+      position: "fixed",
+      top: "12%",
+      [opts.side]: "12px",
+      zIndex: EDITOR_LAYER,
+      width: "300px",
+      maxHeight: "86vh",
+      display: "grid",
+      gridTemplateRows: "auto 1fr",
+      gap: "10px",
+      padding: "10px",
+      borderRadius: "12px",
+      border: `1px solid ${color.accentBorder}`,
+      background: "var(--qmm-gradient-panel)",
+      color: color.text,
+      boxShadow: "var(--qmm-shadow-window)",
+      pointerEvents: "auto",
+      ...opts.style
+    });
+    const header = document.createElement("div");
+    header.textContent = opts.title;
+    Object.assign(header.style, {
+      borderBottom: `1px solid ${color.accentSoft}`,
+      paddingBottom: "8px",
+      color: color.accent,
+      fontWeight: "700",
+      fontSize: "13px",
+      letterSpacing: "0.08em",
+      textTransform: "uppercase",
+      textAlign: "center"
+    });
+    root4.appendChild(header);
+    appendToPage(root4);
+    return { root: root4, header };
+  }
+  function panelSection() {
+    const el = document.createElement("div");
+    Object.assign(el.style, {
+      border: `1px solid ${color.accentSoft}`,
+      borderRadius: "10px",
+      background: color.mutedBg,
+      minHeight: "0"
+    });
+    return el;
+  }
+  function roundButton(glyph, onClick, tone = "default") {
+    const btn = button(glyph, { size: "xs", variant: tone === "danger" ? "danger" : "default", onClick });
+    Object.assign(btn.style, { width: "28px", height: "28px", padding: "0", borderRadius: "50%", fontSize: "14px" });
+    return btn;
+  }
+  function hint(text2) {
+    const el = document.createElement("div");
+    el.textContent = text2;
+    el.style.opacity = "0.7";
+    el.style.textAlign = "center";
+    return el;
+  }
+  function iconWithName(icon, name, fontSize2) {
+    const row = document.createElement("div");
+    Object.assign(row.style, { display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" });
+    const nameEl = document.createElement("div");
+    nameEl.textContent = name;
+    Object.assign(nameEl.style, {
+      fontWeight: "700",
+      fontSize: `${fontSize2}px`,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+      textAlign: "center",
+      maxWidth: "100%"
+    });
+    row.append(icon, nameEl);
+    return row;
+  }
+  var EDITOR_LAYER, appendToPage;
+  var init_panelChrome = __esm({
+    "src/features/editor/ui/panelChrome.ts"() {
+      "use strict";
+      init_button();
+      init_styles();
+      init_theme();
+      EDITOR_LAYER = "1000001";
+      appendToPage = (el) => (document.body || document.documentElement).appendChild(el);
+    }
+  });
+
+  // src/ui/kit/card.ts
+  function card(title, opts = {}) {
+    const root4 = h("div", "qmm-card");
+    root4.dataset.tone = opts.tone || "default";
+    if (opts.align === "center") root4.classList.add("is-center");
+    if (opts.align === "stretch") root4.classList.add("is-stretch");
+    if (opts.padding) root4.style.padding = opts.padding;
+    if (opts.gap != null) root4.style.gap = `${opts.gap}px`;
+    if (opts.maxWidth) {
+      const max = typeof opts.maxWidth === "number" ? `${opts.maxWidth}px` : opts.maxWidth;
+      root4.style.width = `min(${max}, 100%)`;
+    }
+    const header = h("div", opts.compactHeader ? "qmm-card__header is-compact" : "qmm-card__header");
+    if (opts.icon) header.appendChild(iconNode(opts.icon, "qmm-card__icon"));
+    const titleEl = h("div", "qmm-card__title", title);
+    header.appendChild(titleEl);
+    const subtitle = opts.subtitle || opts.description;
+    if (subtitle) header.appendChild(h("div", "qmm-card__subtitle", subtitle));
+    if (opts.actions?.length) {
+      const actions = h("div", "qmm-card__actions");
+      actions.append(...opts.actions);
+      header.appendChild(actions);
+    }
+    const body = h("div", "qmm-card__body");
+    root4.append(header, body);
+    return { root: root4, header, body, setTitle: (next) => titleEl.textContent = next };
+  }
+  function plainCard() {
+    return h("div", "qmm-card qmm-card--plain");
+  }
+  function sectionLabel(text2) {
+    return h("div", "qmm-section-label", text2);
+  }
+  function errorBar() {
+    const el = h("div", "qmm-error");
+    el.hidden = true;
+    return {
+      el,
+      show(message) {
+        el.textContent = message;
+        el.hidden = false;
+      },
+      clear() {
+        el.textContent = "";
+        el.hidden = true;
+      }
+    };
+  }
+  var init_card = __esm({
+    "src/ui/kit/card.ts"() {
+      "use strict";
+      init_dom();
+    }
+  });
+
+  // src/ui/kit/toggles.ts
+  function switchInput(checked = false, onChange) {
+    const input = h("input", "qmm-switch");
+    input.type = "checkbox";
+    input.checked = checked;
+    input.setChecked = (value) => {
+      input.checked = value;
+    };
+    if (onChange) input.addEventListener("change", () => onChange(input.checked));
+    return input;
+  }
+  function toggleChip(labelText, opts = {}) {
+    const root4 = h("label", "qmm-chip-toggle");
+    if (opts.tooltip) root4.title = opts.tooltip;
+    const input = h("input");
+    input.type = opts.type || "checkbox";
+    if (opts.name) input.name = opts.name;
+    if (opts.value) input.value = opts.value;
+    input.checked = !!opts.checked;
+    const face = h("div", "qmm-chip-toggle__face");
+    if (opts.icon) face.appendChild(iconNode(opts.icon, "qmm-chip-toggle__icon"));
+    const label2 = h("span", "qmm-chip-toggle__label", labelText);
+    face.appendChild(label2);
+    if (opts.description) face.appendChild(h("span", "qmm-chip-toggle__desc", opts.description));
+    if (opts.badge) face.appendChild(h("span", "qmm-chip-toggle__badge", opts.badge));
+    root4.append(input, face);
+    return { root: root4, input, label: label2 };
+  }
+  var init_toggles = __esm({
+    "src/ui/kit/toggles.ts"() {
+      "use strict";
+      init_dom();
+    }
+  });
+
+  // src/ui/kit/fields.ts
+  function textInput(placeholder = "", value = "", opts = {}) {
+    const input = h("input", opts.small ? "qmm-input qmm-input--sm" : "qmm-input");
+    input.type = "text";
+    input.placeholder = placeholder;
+    input.value = value;
+    return input;
+  }
+  function numberInput(min = 0, max = 9999, step = 1, value = 0) {
+    const wrap = h("div", "qmm-input-number");
+    const input = h("input", "qmm-input qmm-input-number-input");
+    input.type = "number";
+    input.min = String(min);
+    input.max = String(max);
+    input.step = String(step);
+    input.value = String(value);
+    input.inputMode = "numeric";
+    const clampValue = () => {
+      const n = Number(input.value);
+      if (!Number.isFinite(n)) return;
+      const clamped = clamp(n, Number(input.min), Number(input.max));
+      if (clamped !== n) input.value = String(clamped);
+    };
+    const bump = (dir) => {
+      if (dir < 0) input.stepDown();
+      else input.stepUp();
+      clampValue();
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    const spin = h("div", "qmm-spin");
+    spin.append(stepButton("\u25B2", () => bump(1)), stepButton("\u25BC", () => bump(-1)));
+    input.addEventListener("change", clampValue);
+    wrap.append(input, spin);
+    input.wrap = wrap;
+    return input;
+  }
+  function stepButton(glyph, bump) {
+    const btn = h("button", "qmm-step", glyph);
+    btn.type = "button";
+    let pressTimer = null;
+    let repeatTimer = null;
+    let repeated = false;
+    const stop2 = () => {
+      if (pressTimer != null) clearTimeout(pressTimer);
+      if (repeatTimer != null) clearInterval(repeatTimer);
+      pressTimer = repeatTimer = null;
+    };
+    btn.addEventListener("pointerdown", (ev) => {
+      repeated = false;
+      pressTimer = window.setTimeout(() => {
+        repeated = true;
+        bump();
+        repeatTimer = window.setInterval(bump, 60);
+      }, 300);
+      btn.setPointerCapture?.(ev.pointerId);
+    });
+    for (const type of ["pointerup", "pointercancel", "pointerleave", "blur"]) btn.addEventListener(type, stop2);
+    btn.addEventListener("click", (e) => {
+      if (repeated) {
+        e.preventDefault();
+        e.stopPropagation();
+        repeated = false;
+        return;
+      }
+      bump();
+    });
+    return btn;
+  }
+  function select2(opts = {}) {
+    const sel = h("select", opts.small ? "qmm-input qmm-input--sm qmm-select" : "qmm-input qmm-select");
+    if (opts.id) sel.id = opts.id;
+    if (opts.width) sel.style.minWidth = opts.width;
+    if (opts.placeholder) {
+      const opt = h("option", void 0, opts.placeholder);
+      opt.value = "";
+      opt.disabled = true;
+      opt.selected = true;
+      sel.appendChild(opt);
+    }
+    return sel;
+  }
+  function radio(name, value, checked = false) {
+    const input = h("input", "qmm-radio");
+    input.type = "radio";
+    input.name = name;
+    input.value = value;
+    input.checked = checked;
+    return input;
+  }
+  function radioGroup(name, options, selected, onChange) {
+    const wrap = h("div", "qmm-radio-group");
+    for (const { value, label: label2 } of options) {
+      const input = radio(name, value, selected === value);
+      input.onchange = () => {
+        if (input.checked) onChange(value);
       };
-      OVERLAY_MYDATA_PATCH = {
-        label: Atoms.data.myData.label,
-        merge: (real, fake) => ({ ...real || {}, ...fake || {} })
+      const row = h("label", "qmm-radio-label");
+      row.append(input, label2);
+      wrap.appendChild(row);
+    }
+    return wrap;
+  }
+  var init_fields = __esm({
+    "src/ui/kit/fields.ts"() {
+      "use strict";
+      init_math();
+      init_dom();
+    }
+  });
+
+  // src/ui/kit/sliders.ts
+  function slider(min = 0, max = 100, step = 1, value = 0, opts = {}) {
+    const input = h("input", opts.fill ? "qws-pnl-range" : "qmm-range");
+    input.type = "range";
+    input.min = String(min);
+    input.max = String(max);
+    input.step = String(step);
+    input.value = String(value);
+    return input;
+  }
+  function rangeDual(min = 0, max = 100, step = 1, valueMin = min, valueMax = max) {
+    const root4 = h("div", "qmm-range-dual");
+    const track = h("div", "qmm-range-dual-track");
+    const fill = h("div", "qmm-range-dual-fill");
+    track.appendChild(fill);
+    root4.appendChild(track);
+    const thumb = (value, side) => {
+      const input = slider(min, max, step, value);
+      input.classList.add("qmm-range-dual-input", `qmm-range-dual-input--${side}`);
+      root4.appendChild(input);
+      return input;
+    };
+    const minInput = thumb(valueMin, "min");
+    const maxInput = thumb(valueMax, "max");
+    const refresh = () => {
+      const total = max - min;
+      if (!Number.isFinite(total) || total <= 0) {
+        fill.style.left = "0%";
+        fill.style.right = "100%";
+        return;
+      }
+      const a = Number(minInput.value);
+      const b = Number(maxInput.value);
+      const pct = (v) => clamp(v, 0, 100);
+      fill.style.left = `${pct((Math.min(a, b) - min) / total * 100)}%`;
+      fill.style.right = `${pct(100 - (Math.max(a, b) - min) / total * 100)}%`;
+    };
+    minInput.addEventListener("input", refresh);
+    maxInput.addEventListener("input", refresh);
+    refresh();
+    return {
+      root: root4,
+      min: minInput,
+      max: maxInput,
+      setValues(minValue, maxValue) {
+        minInput.value = String(minValue);
+        maxInput.value = String(maxValue);
+        refresh();
+      },
+      refresh
+    };
+  }
+  var init_sliders = __esm({
+    "src/ui/kit/sliders.ts"() {
+      "use strict";
+      init_math();
+      init_dom();
+    }
+  });
+
+  // src/features/editor/ui/inputGuards.ts
+  function blockGameKeys(input) {
+    const stop2 = (ev) => {
+      ev.stopImmediatePropagation();
+      ev.stopPropagation();
+    };
+    input.addEventListener("focus", () => {
+      window.addEventListener("keydown", stop2, true);
+      window.addEventListener("keyup", stop2, true);
+    });
+    input.addEventListener("blur", () => {
+      window.removeEventListener("keydown", stop2, true);
+      window.removeEventListener("keyup", stop2, true);
+    });
+    input.addEventListener("keydown", stop2);
+  }
+  function keepSizeCharacters(input) {
+    input.addEventListener("input", () => {
+      const cleaned = input.value.replace(/[^0-9.-]/g, "");
+      if (cleaned !== input.value) input.value = cleaned;
+    });
+  }
+  var init_inputGuards = __esm({
+    "src/features/editor/ui/inputGuards.ts"() {
+      "use strict";
+    }
+  });
+
+  // src/features/editor/ui/sizeControls.ts
+  function sizeControls(modeText) {
+    const value = document.createElement("span");
+    const modeSwitch = switchInput(false);
+    const modeLabel = document.createElement("label");
+    Object.assign(modeLabel.style, { display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" });
+    modeLabel.append(modeSwitch, document.createTextNode(modeText));
+    const range2 = slider(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, CROP_SIZE_MAX, { fill: true });
+    const customInput = textInput("", "", { small: true });
+    customInput.inputMode = "numeric";
+    customInput.autocomplete = "off";
+    customInput.style.width = "90px";
+    blockGameKeys(customInput);
+    keepSizeCharacters(customInput);
+    const customRow = smallRow();
+    customRow.style.opacity = "0.9";
+    customRow.append(document.createTextNode("Custom size"), customInput);
+    const show = ({ pct, mode, customText }) => {
+      const custom = mode === "custom";
+      value.textContent = String(pct);
+      modeSwitch.checked = custom;
+      range2.value = String(pct);
+      range2.disabled = custom;
+      range2.style.display = custom ? "none" : "";
+      customInput.disabled = !custom;
+      customRow.style.display = custom ? "flex" : "none";
+      if (customText !== void 0) customInput.value = customText;
+    };
+    return { value, modeLabel, modeSwitch, slider: range2, customRow, customInput, show };
+  }
+  function sizeHeader(value, beside) {
+    const row = smallRow();
+    row.style.opacity = "0.85";
+    const label2 = document.createElement("span");
+    label2.textContent = "Size";
+    row.appendChild(label2);
+    if (beside) row.appendChild(beside);
+    value.style.marginLeft = "auto";
+    row.appendChild(value);
+    return row;
+  }
+  var smallRow;
+  var init_sizeControls = __esm({
+    "src/features/editor/ui/sizeControls.ts"() {
+      "use strict";
+      init_fields();
+      init_sliders();
+      init_toggles();
+      init_cropSize();
+      init_inputGuards();
+      smallRow = () => {
+        const row = document.createElement("div");
+        Object.assign(row.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "11px" });
+        return row;
       };
+    }
+  });
+
+  // src/features/editor/ui/plantSlotsEditor.ts
+  function writeSlots(targets, patchFor) {
+    return updateGardenObjectAtCurrentTile((obj) => {
+      if (obj?.objectType !== "plant") return obj;
+      const slots = Array.isArray(obj.slots) ? obj.slots.slice() : [];
+      for (const i of targets) slots[i] = { ...slots[i] || {}, ...patchFor(i) };
+      return { ...obj, slots };
+    });
+  }
+  function renderPlantSlotsEditor(content2, plant, tileKey) {
+    var _a;
+    const species = String(plant.species ?? "");
+    const slots = Array.isArray(plant.slots) ? plant.slots : [];
+    const maxSlots = getMaxSlotsForSpecies(species);
+    const modes = slotModesByTile[_a = tileKey || "default"] ?? (slotModesByTile[_a] = {});
+    let sizes = slots.map((slot, i) => initialSlotSize(slot, modes[i]));
+    const mutationLists = slots.map((slot) => {
+      const list2 = slot?.mutations;
+      return Array.isArray(list2) ? list2.slice() : [];
+    });
+    const boxes = [];
+    const allIndices = () => slots.map((_, i) => i);
+    const applySize = (edit) => {
+      if (!edit) return;
+      sizes = edit.states;
+      for (const i of edit.targets) modes[i] = sizes[i].mode;
+      sizes.forEach((state5, i) => boxes[i]?.showSize(state5));
+      writeSlots(edit.targets, () => ({ size: edit.size }));
+    };
+    const toggleMutation = (idx, id) => {
+      const current = mutationLists[idx];
+      const next = current.includes(id) ? current.filter((m) => m !== id) : [...current, id];
+      const targets = editAllSlots ? allIndices() : [idx];
+      for (const t of targets) mutationLists[t] = next.slice();
+      writeSlots(targets, () => ({ mutations: next.slice() }));
+      for (const t of targets) boxes[t]?.showMutations(mutationLists[t]);
+    };
+    const list = document.createElement("div");
+    Object.assign(list.style, { display: "grid", gap: "8px" });
+    slots.forEach((_, idx) => {
+      const box = plantSlotBox({
+        onSlide: (value) => applySize(editSlotPercent(sizes, idx, value, editAllSlots)),
+        onCustom: (raw) => applySize(editSlotCustom(sizes, idx, raw, editAllSlots)),
+        onMode: (mode) => applySize(editSlotMode(sizes, idx, mode, editAllSlots)),
+        onToggleMutation: (id) => toggleMutation(idx, id)
+      });
+      box.showSize(sizes[idx]);
+      box.showMutations(mutationLists[idx]);
+      boxes.push(box);
+      list.appendChild(box.root);
+    });
+    if (maxSlots > 1) content2.append(slotCountRow(species, slots.length, maxSlots), editAllRow());
+    content2.appendChild(list);
+  }
+  function slotCountRow(species, count, maxSlots) {
+    const row = document.createElement("div");
+    Object.assign(row.style, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "8px",
+      fontSize: "12px",
+      opacity: "0.9"
+    });
+    const label2 = document.createElement("span");
+    label2.textContent = `Slots ${count}/${maxSlots}`;
+    const editSlots = (edit) => {
+      const changed = updateGardenObjectAtCurrentTile((obj) => {
+        if (obj?.objectType !== "plant") return obj;
+        return { ...obj, slots: edit(Array.isArray(obj.slots) ? obj.slots.slice() : []) };
+      });
+      if (changed) currentItemChanged.emit();
+    };
+    const remove = roundButton("-", () => {
+      if (count > 1) editSlots((slots) => slots.slice(0, Math.max(1, slots.length - 1)));
+    });
+    const add = roundButton("+", () => {
+      if (count >= maxSlots) return;
+      editSlots((slots) => slots.length >= maxSlots ? slots : [...slots, makeGrowSlot(species, DEFAULT_SIZE_PERCENT)]);
+    });
+    remove.setEnabled(count > 1);
+    add.setEnabled(count < maxSlots);
+    const buttons = document.createElement("div");
+    Object.assign(buttons.style, { display: "flex", gap: "6px", alignItems: "center" });
+    buttons.append(remove, add);
+    row.append(label2, buttons);
+    return row;
+  }
+  function editAllRow() {
+    const row = document.createElement("label");
+    Object.assign(row.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", opacity: "0.9", cursor: "pointer" });
+    row.append(
+      switchInput(editAllSlots, (on) => {
+        editAllSlots = on;
+      }),
+      document.createTextNode("Edit all slots together")
+    );
+    return row;
+  }
+  function plantSlotBox(handlers) {
+    const size = sizeControls("Use custom size");
+    Object.assign(size.modeLabel.style, { fontSize: "11px", opacity: "0.9" });
+    size.slider.oninput = () => handlers.onSlide(Number(size.slider.value));
+    size.customInput.onchange = () => handlers.onCustom(size.customInput.value);
+    size.modeSwitch.onchange = () => handlers.onMode(size.modeSwitch.checked ? "custom" : "percent");
+    const mutations = mutationPicker(handlers.onToggleMutation);
+    const mutationsWrap = document.createElement("div");
+    Object.assign(mutationsWrap.style, { display: "grid", gap: "6px" });
+    mutationsWrap.append(sectionLabel("Mutations"), mutations.row, mutations.dropdown);
+    const root4 = plainCard();
+    root4.style.gap = "8px";
+    root4.append(sizeHeader(size.value), size.modeLabel, size.slider, size.customRow, mutationsWrap);
+    return {
+      root: root4,
+      showSize: (state5) => size.show({ pct: state5.pct, mode: state5.mode, customText: String(state5.size) }),
+      showMutations: (list) => mutations.render(list)
+    };
+  }
+  var slotModesByTile, editAllSlots;
+  var init_plantSlotsEditor = __esm({
+    "src/features/editor/ui/plantSlotsEditor.ts"() {
+      "use strict";
+      init_card();
+      init_toggles();
+      init_brush();
+      init_brushSlots();
+      init_planEdits();
+      init_session();
+      init_slotSize();
+      init_mutationPicker();
+      init_panelChrome();
+      init_sizeControls();
+      slotModesByTile = {};
+      editAllSlots = false;
+    }
+  });
+
+  // src/features/editor/ui/currentItemPanel.ts
+  function showCurrentItemPanel() {
+    if (root && document.contains(root)) return;
+    const panel = floatingPanel({
+      id: "qws-editor-current-item",
+      side: "right",
+      title: "\u2728 Current item",
+      style: { minHeight: "200px" }
+    });
+    content = document.createElement("div");
+    content.id = "qws-editor-current-item-content";
+    Object.assign(content.style, { display: "grid", gap: "10px", minHeight: "0", overflow: "auto" });
+    panel.root.appendChild(content);
+    root = panel.root;
+    stopFollowing = currentItemChanged.on(renderCurrentItem);
+    renderCurrentItem();
+  }
+  function hideCurrentItemPanel() {
+    stopFollowing?.();
+    stopFollowing = null;
+    root?.remove();
+    root = content = null;
+  }
+  function objectLabel(obj) {
+    if (obj.objectType === "plant") return obj.species ? cropName(obj.species) : "Plant";
+    if (obj.objectType === "decor") return decorLabel(obj.decorId);
+    return String(obj.objectType || "Item");
+  }
+  function renderCurrentItem() {
+    if (!content) return;
+    content.replaceChildren();
+    const target = getCurrentEditorTile();
+    const obj = target ? readTileObjectAt(target) : null;
+    if (!target || !obj) {
+      renderBrushSummary(content);
+      return;
+    }
+    const name = objectLabel(obj);
+    const isDecor = obj.objectType === "decor";
+    const iconId = String((isDecor ? obj.decorId : obj.species) || name);
+    content.appendChild(iconWithName(entryIcon(isDecor ? "decor" : "plant", iconId, name, 48), name, 15));
+    if (obj.objectType === "plant") {
+      renderPlantSlotsEditor(content, obj, String(target.localTileIndex));
+    } else if (isDecor) {
+      content.appendChild(
+        createDecorRotationControl(String(obj.decorId || ""), Number(obj.rotation) || 0, (angle) => {
+          updateGardenObjectAtCurrentTile((o) => ({ ...o, rotation: angle }));
+        })
+      );
+    }
+    content.appendChild(
+      button("Remove", { variant: "danger", fullWidth: true, onClick: () => void removeGardenObjectAtCurrentTile() })
+    );
+  }
+  function renderBrushSummary(into) {
+    into.appendChild(hint("Click on a plant or item to edit it."));
+    const id = getSelectedId();
+    if (!id) return;
+    const isDecor = picker.mode === "decor";
+    const label2 = entryLabel(picker.mode, id);
+    into.appendChild(iconWithName(entryIcon(isDecor ? "decor" : "plant", id, label2, 40), label2, 14));
+    if (isDecor) return;
+    const active3 = /* @__PURE__ */ new Set();
+    for (const cfg of brushSlotsFor(id).slots) {
+      if (cfg.enabled) cfg.mutations.forEach((m) => active3.add(m));
+    }
+    const row = document.createElement("div");
+    Object.assign(row.style, { display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "center" });
+    if (active3.size) {
+      for (const mutationId of sortMutationIds([...active3])) row.appendChild(mutationTag(mutationId));
+    } else {
+      const none = document.createElement("div");
+      none.textContent = "No mutations";
+      Object.assign(none.style, { opacity: "0.7", fontSize: "11px" });
+      row.appendChild(none);
+    }
+    into.appendChild(row);
+  }
+  var root, content, stopFollowing;
+  var init_currentItemPanel = __esm({
+    "src/features/editor/ui/currentItemPanel.ts"() {
+      "use strict";
+      init_button();
+      init_names();
+      init_brush();
+      init_decorRotation();
+      init_planEdits();
+      init_session();
+      init_entryIcon();
+      init_mutationPicker();
+      init_panelChrome();
+      init_plantSlotsEditor();
+      root = null;
+      content = null;
+      stopFollowing = null;
+    }
+  });
+
+  // src/ui/kit/segmented.ts
+  function segmented(items, selected, onChange, opts = {}) {
+    const root4 = h("div", "qmm-seg");
+    if (opts.fullWidth) root4.classList.add("qmm-seg--full");
+    if (opts.id) root4.id = opts.id;
+    root4.setAttribute("role", "radiogroup");
+    if (opts.ariaLabel) root4.setAttribute("aria-label", opts.ariaLabel);
+    const rail = h("div", "qmm-seg__indicator");
+    root4.appendChild(rail);
+    const indicator = slidingIndicator(root4, rail);
+    let value = selected;
+    const buttons = [];
+    const activeButton = () => buttons.find((b) => b.dataset.value === value);
+    const select3 = (next, focus) => {
+      if (next !== value) {
+        value = next;
+        for (const b of buttons) {
+          const active3 = b.dataset.value === next;
+          b.setAttribute("aria-checked", active3 ? "true" : "false");
+          b.tabIndex = active3 ? 0 : -1;
+          b.classList.toggle("active", active3);
+        }
+        indicator.moveTo(activeButton(), buttons, true);
+      }
+      if (focus) activeButton()?.focus();
+      onChange?.(value);
+    };
+    for (const item of items) {
+      const btn = h("button", "qmm-seg__btn");
+      btn.type = "button";
+      btn.dataset.value = String(item.value);
+      btn.setAttribute("role", "radio");
+      btn.setAttribute("aria-checked", item.value === selected ? "true" : "false");
+      btn.tabIndex = item.value === selected ? 0 : -1;
+      btn.classList.toggle("active", item.value === selected);
+      btn.disabled = !!item.disabled;
+      btn.appendChild(h("span", "qmm-seg__btn-label", item.label));
+      btn.addEventListener("click", () => {
+        if (!btn.disabled) select3(item.value, false);
+      });
+      btn.addEventListener("keydown", (e) => {
+        if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(e.key)) return;
+        e.preventDefault();
+        if (e.key === "Home") return select3(items[0].value, true);
+        if (e.key === "End") return select3(items[items.length - 1].value, true);
+        const dir = e.key === "ArrowRight" ? 1 : -1;
+        let j = items.findIndex((it) => it.value === value);
+        for (let k = 0; k < items.length; k++) {
+          j = (j + dir + items.length) % items.length;
+          if (!items[j].disabled) return select3(items[j].value, true);
+        }
+      });
+      buttons.push(btn);
+      root4.appendChild(btn);
+    }
+    const relayout = () => indicator.moveTo(activeButton(), buttons, false);
+    if (typeof ResizeObserver !== "undefined") new ResizeObserver(relayout).observe(root4);
+    window.addEventListener("resize", relayout);
+    queueMicrotask(relayout);
+    root4.get = () => value;
+    root4.set = (next) => select3(next, false);
+    return root4;
+  }
+  function slidingIndicator(root4, rail) {
+    const reduceMotion = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+    const canAnimate = typeof rail.animate === "function";
+    if (canAnimate) rail.style.transition = "none";
+    let current = null;
+    let animation = null;
+    const apply2 = (left, width) => {
+      rail.style.transform = `translate3d(${left}px,0,0)`;
+      rail.style.width = `${width}px`;
+    };
+    return {
+      moveTo(active3, buttons, animate) {
+        if (!active3) return;
+        const i = buttons.indexOf(active3);
+        const n = buttons.length;
+        const cs = getComputedStyle(root4);
+        const gap = parseFloat(cs.gap || cs.columnGap || "0") || 0;
+        const borderLeft = parseFloat(cs.borderLeftWidth || "0") || 0;
+        const borderRight = parseFloat(cs.borderRightWidth || "0") || 0;
+        const rootRect = root4.getBoundingClientRect();
+        const btnRect = active3.getBoundingClientRect();
+        let left = btnRect.left - rootRect.left - borderLeft;
+        let width = btnRect.width;
+        const inner = rootRect.width - borderLeft - borderRight;
+        if (n === 1) {
+          left = 0;
+          width = inner;
+        } else if (i === 0) {
+          width = left + width + gap / 2;
+          left = 0;
+        } else if (i === n - 1) {
+          left -= gap / 2;
+          width = inner - left;
+        } else {
+          left -= gap / 2;
+          width += gap;
+        }
+        const dpr = window.devicePixelRatio || 1;
+        const snap = (x) => Math.round(x * dpr) / dpr;
+        const target = { left: snap(left), width: snap(width) };
+        const previous = current;
+        current = target;
+        animation?.cancel();
+        animation = null;
+        const shouldAnimate = animate && canAnimate && !reduceMotion?.matches && previous != null && previous.width > 0 && target.width > 0;
+        if (!shouldAnimate) {
+          apply2(target.left, target.width);
+          return;
+        }
+        apply2(previous.left, previous.width);
+        animation = rail.animate(
+          [
+            { transform: `translate3d(${previous.left}px,0,0)`, width: `${previous.width}px`, opacity: 0.92 },
+            { transform: `translate3d(${target.left}px,0,0)`, width: `${target.width}px`, opacity: 1 }
+          ],
+          { duration: 260, easing: "cubic-bezier(.22,.7,.28,1)", fill: "forwards" }
+        );
+        const finish = () => {
+          apply2(target.left, target.width);
+          animation = null;
+        };
+        animation.addEventListener("finish", finish, { once: true });
+        animation.addEventListener("cancel", finish, { once: true });
+      }
+    };
+  }
+  var init_segmented = __esm({
+    "src/ui/kit/segmented.ts"() {
+      "use strict";
+      init_dom();
+    }
+  });
+
+  // src/features/editor/ui/brushDetails.ts
+  function renderBrushDetails(wrap) {
+    const content2 = document.createElement("div");
+    Object.assign(content2.style, {
+      display: "grid",
+      gap: "10px",
+      minHeight: "0",
+      overflow: "auto",
+      alignContent: "flex-start",
+      justifyItems: "center"
+    });
+    wrap.replaceChildren(content2);
+    const id = getSelectedId();
+    if (!id) {
+      content2.appendChild(hint("Select an item on the left."));
+      return;
+    }
+    content2.appendChild(selectedEntryRow(id));
+    if (picker.mode === "plants") {
+      content2.appendChild(brushSlotsPanel(id, () => renderBrushDetails(wrap)));
+    } else {
+      const rotation = createDecorRotationControl(id, picker.decorRotation, (angle) => {
+        picker.decorRotation = angle;
+      });
+      rotation.style.marginTop = "6px";
+      content2.appendChild(rotation);
+    }
+  }
+  function selectedEntryRow(id) {
+    const label2 = entryLabel(picker.mode, id);
+    const row = document.createElement("div");
+    Object.assign(row.style, { display: "grid", gridTemplateColumns: "auto 1fr", alignItems: "center", gap: "10px" });
+    const name = document.createElement("div");
+    name.textContent = label2;
+    Object.assign(name.style, { fontWeight: "700", fontSize: "15px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" });
+    row.append(entryIcon(picker.mode === "decor" ? "decor" : "plant", id, label2, 48), name);
+    return row;
+  }
+  function brushSlotsPanel(species, rerender) {
+    const maxSlots = getMaxSlotsForSpecies(species);
+    const state5 = brushSlotsFor(species);
+    const panel = document.createElement("div");
+    Object.assign(panel.style, { display: "grid", gap: "6px", marginTop: "6px", width: "100%" });
+    if (maxSlots > 1) panel.append(...slotCountRows(species, state5, maxSlots, rerender));
+    const list = document.createElement("div");
+    Object.assign(list.style, { display: "grid", gap: "6px" });
+    const boxes = [];
+    const syncOthers = (next, from) => {
+      if (!next.applyAll) return;
+      next.slots.forEach((cfg, i) => {
+        if (i !== from) boxes[i]?.(cfg);
+      });
+    };
+    state5.slots.forEach((cfg, idx) => {
+      const { root: root4, show } = brushSlotBox(species, idx, cfg, syncOthers, rerender);
+      boxes.push(show);
+      list.appendChild(root4);
+    });
+    panel.appendChild(list);
+    return panel;
+  }
+  function slotCountRows(species, state5, maxSlots, rerender) {
+    const header = document.createElement("div");
+    Object.assign(header.style, { display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", opacity: "0.9" });
+    const right = document.createElement("div");
+    Object.assign(right.style, { display: "flex", gap: "6px", alignItems: "center" });
+    const count = document.createElement("span");
+    count.textContent = `${state5.slots.length}/${maxSlots}`;
+    right.append(
+      count,
+      roundButton("-", () => {
+        editBrushSlots(species, removeBrushSlot);
+        rerender();
+      }, "danger"),
+      roundButton("+", () => {
+        editBrushSlots(species, (s) => addBrushSlot(s, maxSlots));
+        rerender();
+      })
+    );
+    const title = document.createElement("span");
+    title.textContent = "Slots";
+    header.append(title, right);
+    const applyAllRow = document.createElement("label");
+    Object.assign(applyAllRow.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", opacity: "0.9", cursor: "pointer" });
+    const applyAll = switchInput(state5.applyAll, (on) => {
+      editBrushSlots(species, (s) => ({ ...s, applyAll: on }));
+      rerender();
+    });
+    applyAllRow.append(applyAll, document.createTextNode("Edit all slots together"));
+    return [header, applyAllRow];
+  }
+  function brushSlotBox(species, idx, initial, syncOthers, rerender) {
+    let cfg = initial;
+    const size = sizeControls("Custom");
+    size.modeLabel.style.fontSize = "10px";
+    size.modeLabel.style.opacity = "0.75";
+    const show = (next, rewriteField) => {
+      cfg = next;
+      const pct = brushSlotSize(next);
+      size.show({ pct, mode: next.sizeMode, customText: rewriteField ? String(pct) : void 0 });
+    };
+    const edit = (mode, patch, typing = false) => {
+      const next = editBrushSlots(species, (s) => patchBrushSlot(s, idx, mode, patch));
+      show(next.slots[idx], !typing);
+      syncOthers(next, idx);
+    };
+    let lastSize = brushSlotSize(initial);
+    let percentMemory = clampSizePercent(initial.sizePercent);
+    size.slider.oninput = () => {
+      const pct = clampSizePercent(Number(size.slider.value));
+      lastSize = percentMemory = pct;
+      edit("percent", { sizePercent: pct, customScale: pct });
+    };
+    size.customInput.oninput = () => {
+      const typed = parseSizeText(size.customInput.value);
+      if (typed == null) return;
+      lastSize = clampSizePercent(typed);
+      edit("custom", { customScale: lastSize }, true);
+    };
+    size.modeSwitch.onchange = () => {
+      if (size.modeSwitch.checked) {
+        percentMemory = clampSizePercent(cfg.sizePercent);
+        edit("custom", { customScale: lastSize });
+      } else {
+        edit("percent", { sizePercent: percentMemory });
+      }
+    };
+    const prefix = sectionLabel("Mutations:");
+    prefix.style.flexShrink = "0";
+    const mutations = mutationPicker((mutationId) => {
+      editBrushSlots(species, (s) => toggleBrushMutation(s, idx, mutationId));
+      rerender();
+    }, prefix);
+    mutations.render(Array.isArray(initial.mutations) ? initial.mutations : []);
+    const mutationsWrap = document.createElement("div");
+    Object.assign(mutationsWrap.style, { display: "grid", gap: "4px" });
+    mutationsWrap.append(mutations.row, mutations.dropdown);
+    const root4 = plainCard();
+    root4.style.gap = "8px";
+    root4.append(sizeHeader(size.value, size.modeLabel), size.slider, size.customRow, mutationsWrap);
+    show(initial, true);
+    return { root: root4, show: (next) => show(next, true) };
+  }
+  var init_brushDetails = __esm({
+    "src/features/editor/ui/brushDetails.ts"() {
+      "use strict";
+      init_card();
+      init_toggles();
+      init_decorRotation();
+      init_brushSlots();
+      init_brush();
+      init_slotSize();
+      init_entryIcon();
+      init_mutationPicker();
+      init_panelChrome();
+      init_sizeControls();
+    }
+  });
+
+  // src/features/editor/ui/itemPicker.ts
+  function showItemPicker() {
+    if (root2 && document.contains(root2)) return;
+    const panel = floatingPanel({
+      id: "qws-editor-side",
+      side: "left",
+      title: "\u{1F33F} Item picker",
+      style: { minHeight: "420px", height: "min(720px, 86vh)" }
+    });
+    panel.header.style.opacity = "0.85";
+    const content2 = document.createElement("div");
+    Object.assign(content2.style, {
+      display: "grid",
+      gridTemplateRows: "auto auto minmax(120px, 0.7fr) minmax(0, 1fr)",
+      gap: "8px",
+      minHeight: "0"
+    });
+    const search2 = textInput("Search\u2026", picker.query, { small: true });
+    Object.assign(search2.style, { width: "100%", boxSizing: "border-box" });
+    search2.oninput = () => {
+      picker.query = search2.value;
+      renderEntryGrid();
+    };
+    const mode = segmented(
+      [
+        { value: "plants", label: "\u{1F331} Plants" },
+        { value: "decor", label: "\u{1F3A8} Decor" }
+      ],
+      picker.mode,
+      (next) => {
+        if (picker.mode === next) return;
+        picker.mode = next;
+        picker.query = "";
+        search2.value = "";
+        renderEntryGrid();
+        renderDetails();
+      },
+      { fullWidth: true, ariaLabel: "Picker mode" }
+    );
+    listWrap = panelSection();
+    listWrap.id = "qws-editor-side-list";
+    Object.assign(listWrap.style, { overflow: "auto", padding: "6px" });
+    detailsWrap = panelSection();
+    detailsWrap.id = "qws-editor-side-details";
+    Object.assign(detailsWrap.style, { display: "grid", gridTemplateRows: "minmax(0, 1fr)", padding: "10px", overflow: "hidden" });
+    content2.append(mode, search2, listWrap, detailsWrap);
+    panel.root.appendChild(content2);
+    root2 = panel.root;
+    renderEntryGrid();
+    renderDetails();
+  }
+  function hideItemPicker() {
+    root2?.remove();
+    root2 = listWrap = detailsWrap = null;
+  }
+  function renderDetails() {
+    if (detailsWrap) renderBrushDetails(detailsWrap);
+  }
+  function styleEntry(btn, selected) {
+    Object.assign(btn.style, {
+      border: `1px solid ${selected ? color.accent : color.borderStrong}`,
+      background: selected ? color.accentSoft : color.cardBg,
+      boxShadow: selected ? `0 0 0 1px ${color.accentBorder}` : "none",
+      transform: selected ? "scale(1.06)" : "scale(1)"
+    });
+  }
+  function entryButton(id, label2, selected) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.dataset.id = id;
+    btn.title = label2;
+    Object.assign(btn.style, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "4px",
+      borderRadius: "8px",
+      color: color.text,
+      cursor: "pointer",
+      transition: "background 120ms ease, border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease"
+    });
+    styleEntry(btn, selected);
+    btn.onmouseenter = () => {
+      if (id === getSelectedId()) return;
+      btn.style.background = color.accentSoft;
+      btn.style.borderColor = color.accentBorder;
+    };
+    btn.onmouseleave = () => styleEntry(btn, id === getSelectedId());
+    btn.onclick = () => {
+      setSelectedId(id);
+      renderEntryGrid();
+      renderDetails();
+    };
+    btn.appendChild(entryIcon(picker.mode === "decor" ? "decor" : "plant", id, label2, 26));
+    return btn;
+  }
+  function renderEntryGrid() {
+    if (!listWrap) return;
+    const selectedId = getSelectedId();
+    const entries2 = pickerEntries();
+    const signature = `${picker.mode}:${JSON.stringify(entries2)}`;
+    const existing = listWrap.querySelector('[data-editor-side-list="list"]');
+    if (existing && existing.dataset.sig === signature) {
+      existing.querySelectorAll("button[data-id]").forEach((btn) => {
+        styleEntry(btn, btn.dataset.id === selectedId);
+      });
+      return;
+    }
+    if (!entries2.length) {
+      listWrap.replaceChildren(hint("No entries."));
+      return;
+    }
+    const grid = document.createElement("div");
+    grid.dataset.editorSideList = "list";
+    grid.dataset.sig = signature;
+    Object.assign(grid.style, { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(34px, 1fr))", gap: "4px" });
+    for (const entry of entries2) grid.appendChild(entryButton(entry.id, entry.label, entry.id === selectedId));
+    listWrap.replaceChildren(grid);
+  }
+  var root2, listWrap, detailsWrap;
+  var init_itemPicker = __esm({
+    "src/features/editor/ui/itemPicker.ts"() {
+      "use strict";
+      init_fields();
+      init_segmented();
+      init_theme();
+      init_brush();
+      init_brushDetails();
+      init_entryIcon();
+      init_panelChrome();
+      root2 = null;
+      listWrap = null;
+      detailsWrap = null;
+    }
+  });
+
+  // src/features/editor/ui/toolbar.ts
+  function showToolbar(actions, hudVisible) {
+    if (!(root3 && document.contains(root3))) {
+      const el = document.createElement("div");
+      el.id = "qws-editor-overlay";
+      Object.assign(el.style, {
+        position: "fixed",
+        top: "7%",
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: EDITOR_LAYER,
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        padding: "6px 8px",
+        borderRadius: "999px",
+        border: `1px solid ${color.borderStrong}`,
+        background: "var(--qmm-gradient-panel)",
+        color: color.text,
+        font: "600 13px/1.3 system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+        letterSpacing: "0.3px",
+        boxShadow: "var(--qmm-shadow-window)"
+      });
+      const label2 = document.createElement("span");
+      label2.textContent = "Editor mode";
+      label2.style.padding = "2px 6px";
+      const clear = button("Clear garden", { size: "sm", onClick: actions.onClear });
+      hudButton = button("", { size: "sm", onClick: actions.onToggleHud });
+      for (const btn of [clear, hudButton]) btn.style.borderRadius = "999px";
+      el.append(label2, clear, hudButton);
+      (document.body || document.documentElement).appendChild(el);
+      root3 = el;
+    }
+    setHudButtonLabel(hudVisible);
+  }
+  function setHudButtonLabel(hudVisible) {
+    const label2 = hudButton?.querySelector(".label");
+    if (label2) label2.textContent = hudVisible ? "Hide HUD" : "Show HUD";
+  }
+  function hideToolbar() {
+    root3?.remove();
+    root3 = null;
+    hudButton = null;
+  }
+  var root3, hudButton;
+  var init_toolbar = __esm({
+    "src/features/editor/ui/toolbar.ts"() {
+      "use strict";
+      init_button();
+      init_theme();
+      init_panelChrome();
+      root3 = null;
+      hudButton = null;
+    }
+  });
+
+  // src/features/editor/ui/overlays.ts
+  async function clearEditorGarden() {
+    await setCurrentGarden(makeEmptyGarden());
+    setCurrentEditorTile(null);
+  }
+  function togglePanels() {
+    panelsVisible = !panelsVisible;
+    showPanels(panelsVisible);
+    setHudButtonLabel(panelsVisible);
+  }
+  function showPanels(visible) {
+    if (visible) {
+      showItemPicker();
+      showCurrentItemPanel();
+    } else {
+      hideItemPicker();
+      hideCurrentItemPanel();
+    }
+  }
+  function setEditorUiShown(shown) {
+    if (shown) {
+      showToolbar({ onClear: () => void clearEditorGarden(), onToggleHud: togglePanels }, panelsVisible);
+    } else {
+      hideToolbar();
+    }
+    showPanels(shown && panelsVisible);
+  }
+  var panelsVisible;
+  var init_overlays = __esm({
+    "src/features/editor/ui/overlays.ts"() {
+      "use strict";
+      init_gardenModel();
+      init_plannedGarden();
+      init_session();
+      init_currentItemPanel();
+      init_itemPicker();
+      init_toolbar();
+      panelsVisible = true;
+    }
+  });
+
+  // src/features/editor/editor.ts
+  function applyState(enabled5, emit) {
+    const wasEnabled = editorSession.enabled;
+    if (enabled5 && !wasEnabled) forgetCurrentEditorTile();
+    setEditorUiShown(enabled5);
+    if (enabled5 && !wasEnabled) void startPlannedGarden();
+    else if (!enabled5 && wasEnabled) void stopPlannedGarden();
+    editorSession.enabled = enabled5;
+    if (emit && enabled5 !== wasEnabled) enabledChanged.emit(enabled5);
+  }
+  var enabledChanged, EditorService;
+  var init_editor = __esm({
+    "src/features/editor/editor.ts"() {
+      "use strict";
+      init_emitter();
+      init_globals();
+      init_plannedGarden();
+      init_savedGardens();
+      init_session();
+      init_overlays();
+      enabledChanged = new Emitter();
       EditorService = {
         init() {
-          applyState(currentEnabled, { persist: false, emit: false });
+          applyState(editorSession.enabled, false);
         },
         isEnabled() {
-          return currentEnabled;
+          return editorSession.enabled;
         },
         setEnabled(enabled5) {
-          applyState(enabled5, { persist: true, emit: true });
+          applyState(!!enabled5, true);
         },
         onChange(listener) {
-          listeners.add(listener);
-          return () => listeners.delete(listener);
+          return enabledChanged.on(listener);
         },
         onSavedGardensChange(listener) {
-          savedGardensListeners.add(listener);
-          return () => savedGardensListeners.delete(listener);
+          return savedGardensChanged.on(listener);
         }
       };
-      EMPTY_GARDEN = { tileObjects: {}, boardwalkTileObjects: {} };
-      editorPlantSlotsState = {
-        species: null,
-        slots: [],
-        applyAll: false
-      };
-      shareGlobal("qwsLogSelectedInventoryItemWithTile", () => {
-        void logSelectedInventoryItemWithTile();
-      });
-      shareGlobal("qwsPlaceSelectedItemInGardenAtCurrentTile", () => {
-        void placeSelectedItemInGardenAtCurrentTile();
-      });
-      shareGlobal("qwsRemoveItemFromGardenAtCurrentTile", () => {
-        void removeItemFromGardenAtCurrentTile();
-      });
-      shareGlobal("qwsRemoveDecorFromGardenAtCurrentTile", () => {
-        void removeDecorFromGardenAtCurrentTile();
-      });
-      shareGlobal("qwsEditorListSavedGardens", () => {
-        return listSavedGardens();
-      });
-      shareGlobal("qwsEditorSaveGarden", async (name) => {
-        return await saveCurrentGarden(name || "Untitled");
-      });
-      shareGlobal("qwsEditorClearGarden", async () => {
-        const empty = makeEmptyGarden();
-        return await setCurrentGarden(empty);
-      });
-      shareGlobal("qwsEditorLoadGarden", async (id) => {
-        return await loadSavedGarden(id);
-      });
-      shareGlobal(
-        "qwsEditorSaveGardenForPlayer",
-        async (playerId2, name) => {
-          return await saveCurrentGarden(name || "Untitled", playerId2);
-        }
-      );
-      shareGlobal("qwsEditorDeleteGarden", (id) => {
-        return deleteSavedGarden(id);
-      });
-      shareGlobal("qwsEditorExportGarden", (id) => {
-        return exportSavedGarden(id);
-      });
-      shareGlobal("qwsEditorImportGarden", async (name, raw) => {
-        return await importGarden(name, raw);
-      });
-      shareGlobal(
-        "qwsEditorPreviewFriendGarden",
-        async (garden3) => {
-          return await applyFriendGardenPreview(garden3);
-        }
-      );
-      shareGlobal("qwsEditorClearFriendGardenPreview", async () => {
-        return await clearFriendGardenPreview();
-      });
+      publishEditorGlobals();
     }
   });
 
   // src/features/editor/outgoingRules.ts
   function pickupDecorLocally() {
     if (!EditorService.isEnabled()) return;
-    console.log("[PickupDecor][Editor] intercept -> local remove");
-    void removeDecorFromGardenAtCurrentTile();
+    void removeGardenObjectAtCurrentTile();
     return "drop";
   }
   function installEditorOutgoingRules() {
@@ -15100,6 +14988,7 @@
       "use strict";
       init_outgoing();
       init_editor();
+      init_planEdits();
     }
   });
 
@@ -15205,19 +15094,6 @@
     }
   });
 
-  // src/lib/math.ts
-  var clamp, clampFinite;
-  var init_math = __esm({
-    "src/lib/math.ts"() {
-      "use strict";
-      clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-      clampFinite = (value, min, max, fallback) => {
-        const n = typeof value === "number" ? value : Number(value);
-        return clamp(Number.isFinite(n) ? n : fallback, min, max);
-      };
-    }
-  });
-
   // src/features/locker/locker.ts
   function startLockerSlotWatcherViaGardenObject() {
     if (typeof window === "undefined") {
@@ -15237,9 +15113,9 @@
     let selectedIdx = null;
     let lastInfo = emptySlotInfo();
     let curSig = gardenObjectSignature(cur);
-    const listeners9 = /* @__PURE__ */ new Set();
-    const notify3 = () => {
-      for (const fn of listeners9) {
+    const listeners8 = /* @__PURE__ */ new Set();
+    const notify2 = () => {
+      for (const fn of listeners8) {
         try {
           fn(lastInfo);
         } catch {
@@ -15375,7 +15251,7 @@
       const next = computeSlotInfo();
       if (!infosEqual(next, lastInfo)) {
         lastInfo = next;
-        notify3();
+        notify2();
       }
     }
     (async () => {
@@ -15474,11 +15350,11 @@
         return lastInfo;
       },
       onChange(cb) {
-        listeners9.add(cb);
-        return () => listeners9.delete(cb);
+        listeners8.add(cb);
+        return () => listeners8.delete(cb);
       },
       stop() {
-        listeners9.clear();
+        listeners8.clear();
       },
       recompute() {
         recomputeAndNotify();
@@ -16623,7 +16499,7 @@
   }
   function emitUpdate(stats) {
     const snapshot2 = cloneStats(stats);
-    for (const listener of listeners2) {
+    for (const listener of listeners) {
       try {
         listener(snapshot2);
       } catch (error) {
@@ -16676,7 +16552,7 @@
     }
     return stats.pets.hatchedByType[key2];
   }
-  var GARDEN_INT_KEYS, SHOP_INT_KEYS, ABILITY_INT_KEYS, WEATHER_INT_KEYS, memoryStore, listeners2, isRecord2, toNumber, toPositiveNumber, toPositiveInt, toPositiveTimestamp, cloneStats, unwrapMaybeNestedSnapshot, StatsService;
+  var GARDEN_INT_KEYS, SHOP_INT_KEYS, ABILITY_INT_KEYS, WEATHER_INT_KEYS, memoryStore, listeners, isRecord2, toNumber, toPositiveNumber, toPositiveInt, toPositiveTimestamp, cloneStats, unwrapMaybeNestedSnapshot, StatsService;
   var init_stats = __esm({
     "src/features/stats/stats.ts"() {
       "use strict";
@@ -16707,7 +16583,7 @@
         triggers: true
       };
       memoryStore = null;
-      listeners2 = /* @__PURE__ */ new Set();
+      listeners = /* @__PURE__ */ new Set();
       isRecord2 = (value) => typeof value === "object" && value !== null;
       toNumber = (value, fallback = 0) => {
         const num2 = Number(value);
@@ -16800,9 +16676,9 @@
           });
         },
         subscribe(listener) {
-          listeners2.add(listener);
+          listeners.add(listener);
           return () => {
-            listeners2.delete(listener);
+            listeners.delete(listener);
           };
         }
       };
@@ -17628,7 +17504,7 @@
     actionMap.delete(id);
     defaultMap.delete(id);
     cache.delete(id);
-    listeners3.delete(id);
+    listeners2.delete(id);
     holdDefaultMap.delete(id);
     holdCache.delete(id);
     holdListeners.delete(id);
@@ -17908,7 +17784,7 @@
     for (const cb of set2) cb(current);
   }
   function emitChange(id) {
-    const set2 = listeners3.get(id);
+    const set2 = listeners2.get(id);
     if (!set2 || set2.size === 0) return;
     const current = cloneHotkey(getKeybind(id));
     for (const cb of set2) cb(current);
@@ -17988,12 +17864,12 @@
     };
   }
   function onKeybindChange(id, cb) {
-    const set2 = listeners3.get(id) ?? /* @__PURE__ */ new Set();
-    if (!listeners3.has(id)) listeners3.set(id, set2);
+    const set2 = listeners2.get(id) ?? /* @__PURE__ */ new Set();
+    if (!listeners2.has(id)) listeners2.set(id, set2);
     set2.add(cb);
     return () => {
       set2.delete(cb);
-      if (set2.size === 0) listeners3.delete(id);
+      if (set2.size === 0) listeners2.delete(id);
     };
   }
   function eventMatchesKeybind(id, e) {
@@ -18025,7 +17901,7 @@
       }))
     }));
   }
-  var SECTION_CONFIG, KEYBINDS_BINDINGS_PATH, KEYBINDS_HOLD_PATH, ARIES_ROOT_KEY, STORED_NONE, actionMap, defaultMap, cache, listeners3, holdDefaultMap, holdCache, holdListeners, keybindSections, PET_SECTION_ID, PET_TEAM_ACTION_PREFIX, PET_TEAM_NEXT_ID, PET_TEAM_PREV_ID, petSection, petActionIds, GAME_KEYBIND_TARGETS, GAME_KEYBIND_IDS, gameActiveStates, gameKeybindsInstalled, GAME_ACTION_ID, gameActionBlockers, gameActionBlockedCombos;
+  var SECTION_CONFIG, KEYBINDS_BINDINGS_PATH, KEYBINDS_HOLD_PATH, ARIES_ROOT_KEY, STORED_NONE, actionMap, defaultMap, cache, listeners2, holdDefaultMap, holdCache, holdListeners, keybindSections, PET_SECTION_ID, PET_TEAM_ACTION_PREFIX, PET_TEAM_NEXT_ID, PET_TEAM_PREV_ID, petSection, petActionIds, GAME_KEYBIND_TARGETS, GAME_KEYBIND_IDS, gameActiveStates, gameKeybindsInstalled, GAME_ACTION_ID, gameActionBlockers, gameActionBlockedCombos;
   var init_keybinds = __esm({
     "src/features/keybinds/keybinds.ts"() {
       "use strict";
@@ -18231,7 +18107,7 @@
       actionMap = /* @__PURE__ */ new Map();
       defaultMap = /* @__PURE__ */ new Map();
       cache = /* @__PURE__ */ new Map();
-      listeners3 = /* @__PURE__ */ new Map();
+      listeners2 = /* @__PURE__ */ new Map();
       holdDefaultMap = /* @__PURE__ */ new Map();
       holdCache = /* @__PURE__ */ new Map();
       holdListeners = /* @__PURE__ */ new Map();
@@ -19125,22 +19001,22 @@
     if (!_invPetsCache.length) {
       try {
         const inv = await Atoms.inventory.myInventory.get();
-        let active2 = null;
+        let active3 = null;
         try {
-          active2 = await Atoms.pets.myPrimitivePetSlots.get();
+          active3 = await Atoms.pets.myPrimitivePetSlots.get();
         } catch {
         }
-        if (!Array.isArray(active2)) {
+        if (!Array.isArray(active3)) {
           try {
-            active2 = await Atoms.pets.myPetInfos.get();
+            active3 = await Atoms.pets.myPetInfos.get();
           } catch {
           }
         }
         const hutch = await myPetHutchPetItems.get();
         _invSig = _buildInvSigFromInventory(inv);
-        _activeSig = _buildActiveSig(active2);
+        _activeSig = _buildActiveSig(active3);
         _invRaw = inv;
-        _activeRaw = Array.isArray(active2) ? active2 : [];
+        _activeRaw = Array.isArray(active3) ? active3 : [];
         _hutchRaw = Array.isArray(hutch) ? hutch : [];
         _rebuildInvPets();
       } catch {
@@ -21354,7 +21230,7 @@
     };
   }
   function notifyListeners(snapshot2) {
-    for (const listener of listeners4) {
+    for (const listener of listeners3) {
       try {
         listener(snapshot2);
       } catch (error) {
@@ -21396,12 +21272,12 @@
     return currentSnapshot;
   }
   function onInventoryValueChange(listener) {
-    listeners4.add(listener);
+    listeners3.add(listener);
     return () => {
-      listeners4.delete(listener);
+      listeners3.delete(listener);
     };
   }
-  var INVENTORY_VALUE_CATEGORIES, currentSnapshot, watcherPromise, computeCounter, listeners4;
+  var INVENTORY_VALUE_CATEGORIES, currentSnapshot, watcherPromise, computeCounter, listeners3;
   var init_value = __esm({
     "src/features/inventory/value.ts"() {
       "use strict";
@@ -21487,7 +21363,7 @@
       currentSnapshot = null;
       watcherPromise = null;
       computeCounter = 0;
-      listeners4 = /* @__PURE__ */ new Set();
+      listeners3 = /* @__PURE__ */ new Set();
     }
   });
 
@@ -21514,21 +21390,21 @@
       pending6 = true;
       requestAnimationFrame(() => {
         try {
-          document.querySelectorAll(ROOT_SEL).forEach((root) => processRoot(root));
+          document.querySelectorAll(ROOT_SEL).forEach((root4) => processRoot(root4));
         } finally {
           pending6 = false;
         }
       });
     };
-    function processRoot(root) {
-      const gate2 = root.querySelector(CHECK_SEL);
+    function processRoot(root4) {
+      const gate2 = root4.querySelector(CHECK_SEL);
       if (!gate2) {
-        cleanup(root, INJ_CLASS);
+        cleanup(root4, INJ_CLASS);
         return;
       }
-      const target = findTargetButton(root, BTN_WIDE, BTN_STRICT, BTN_TEXT);
+      const target = findTargetButton(root4, BTN_WIDE, BTN_STRICT, BTN_TEXT);
       if (!target) {
-        cleanup(root, INJ_CLASS);
+        cleanup(root4, INJ_CLASS);
         return;
       }
       ensureInjectedNextTo(target, INJ_CLASS, INJ_TEXT, (ev, ctx2) => {
@@ -22031,8 +21907,8 @@
     }));
     parent.insertBefore(injected2, targetBtn.nextSibling);
   }
-  function cleanup(root, injectedClass) {
-    root.querySelectorAll(`.${injectedClass}`).forEach((n) => n.remove());
+  function cleanup(root4, injectedClass) {
+    root4.querySelectorAll(`.${injectedClass}`).forEach((n) => n.remove());
   }
   function ensureStyle2(injectedClass, theme) {
     const STYLE_ID11 = `${injectedClass}-style`;
@@ -23811,14 +23687,14 @@
     _ensureWeatherPrefsLoaded();
     const rows = weatherIndex().defs.map((def) => {
       const pref = _getWeatherPref(def.id);
-      const notify3 = !!pref.notify;
+      const notify2 = !!pref.notify;
       const lastSeen = typeof pref.lastSeen === "number" && Number.isFinite(pref.lastSeen) ? pref.lastSeen : null;
       return {
         id: def.id,
         name: def.name,
         type: def.type,
         atomValue: def.atomValue,
-        notify: notify3,
+        notify: notify2,
         lastSeen,
         isCurrent: def.id === _currentWeatherId,
         description: def.description,
@@ -24847,9 +24723,9 @@
   function getStage(state5) {
     return state5.renderer.lastObjectRendered ?? state5.renderer.stage ?? state5.app?.stage ?? null;
   }
-  function findByLabel(root, label2, limit = 25e3) {
-    if (!root) return null;
-    const stack = [root];
+  function findByLabel(root4, label2, limit = 25e3) {
+    if (!root4) return null;
+    const stack = [root4];
     const seen = /* @__PURE__ */ new Set();
     let n = 0;
     while (stack.length && n++ < limit) {
@@ -24862,10 +24738,10 @@
     }
     return null;
   }
-  function findAcrossBranches(root, pred, limitPerBranch = 25e3) {
-    if (!root) return null;
-    if (pred(root)) return root;
-    const children = root.children;
+  function findAcrossBranches(root4, pred, limitPerBranch = 25e3) {
+    if (!root4) return null;
+    if (pred(root4)) return root4;
+    const children = root4.children;
     if (!Array.isArray(children)) return null;
     for (const child of children) {
       const stack = [child];
@@ -24882,10 +24758,10 @@
     }
     return null;
   }
-  function findGraphicsCtor(root) {
+  function findGraphicsCtor(root4) {
     if (cachedGraphicsCtor) return cachedGraphicsCtor;
     const found = findAcrossBranches(
-      root,
+      root4,
       (node) => typeof node?.roundRect === "function" && typeof node?.clear === "function"
     )?.constructor ?? null;
     if (found) cachedGraphicsCtor = found;
@@ -24902,7 +24778,7 @@
     return { top: contentTop - extraTopOffset, width, height };
   }
   function notifyListeners2(card5, geometry) {
-    for (const listener of listeners5) {
+    for (const listener of listeners4) {
       try {
         listener(card5, geometry);
       } catch (error) {
@@ -24967,24 +24843,24 @@
   function scheduleFind(now2) {
     findRafId = null;
     debugState.rafTicks += 1;
-    if (!listeners5.size || cardSystem) return;
+    if (!listeners4.size || cardSystem) return;
     if (now2 - lastFindCheckAt >= CARD_SYSTEM_FIND_RETRY_MS) {
       lastFindCheckAt = now2;
       tryFindCardSystem();
     }
-    if (!listeners5.size || cardSystem) return;
+    if (!listeners4.size || cardSystem) return;
     findRafId = raf(scheduleFind);
   }
   function restartSearchIfNeeded() {
-    if (!listeners5.size || cardSystem) return;
+    if (!listeners4.size || cardSystem) return;
     tryFindCardSystem();
     if (!cardSystem && findRafId == null) {
       findRafId = raf(scheduleFind);
     }
   }
   function watchGardenInfoCard(listener) {
-    listeners5.add(listener);
-    debugState.listenerCount = listeners5.size;
+    listeners4.add(listener);
+    debugState.listenerCount = listeners4.size;
     restartSearchIfNeeded();
     if (currentCard) {
       try {
@@ -24994,11 +24870,11 @@
       }
     }
     return () => {
-      listeners5.delete(listener);
-      debugState.listenerCount = listeners5.size;
+      listeners4.delete(listener);
+      debugState.listenerCount = listeners4.size;
     };
   }
-  var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, CARD_SYSTEM_FIND_RETRY_MS, CARD_SYSTEM_FIND_LOG_EVERY, cachedGraphicsCtor, cardSystem, currentCard, findAttempts, findRafId, lastFindCheckAt, listeners5, debugState, raf;
+  var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, CARD_SYSTEM_FIND_RETRY_MS, CARD_SYSTEM_FIND_LOG_EVERY, cachedGraphicsCtor, cardSystem, currentCard, findAttempts, findRafId, lastFindCheckAt, listeners4, debugState, raf;
   var init_gardenInfoCard = __esm({
     "src/game/pixi/gardenInfoCard.ts"() {
       "use strict";
@@ -25018,7 +24894,7 @@
       findAttempts = 0;
       findRafId = null;
       lastFindCheckAt = 0;
-      listeners5 = /* @__PURE__ */ new Set();
+      listeners4 = /* @__PURE__ */ new Set();
       debugState = {
         findAttempts: 0,
         attached: false,
@@ -25396,10 +25272,10 @@
       getScreenRect() {
         return computeScreenRect();
       },
-      setWiggle(active2) {
-        if (wiggleActive === active2) return;
-        wiggleActive = active2;
-        if (active2) {
+      setWiggle(active3) {
+        if (wiggleActive === active3) return;
+        wiggleActive = active3;
+        if (active3) {
           wiggleT = 0;
           wiggleLastFrameAt = null;
           if (wiggleRafId == null) wiggleRafId = raf3(wiggleTick);
@@ -25651,9 +25527,9 @@
           height: rect.height
         };
       },
-      setWiggle(active2) {
+      setWiggle(active3) {
         if (!running6) return;
-        if (!active2) {
+        if (!active3) {
           stopWiggle();
           return;
         }
@@ -26955,9 +26831,9 @@
     let players = void 0;
     let selectedSlotId = null;
     let lastPrice = null;
-    const listeners9 = /* @__PURE__ */ new Set();
-    const notify3 = () => {
-      for (const fn of listeners9) try {
+    const listeners8 = /* @__PURE__ */ new Set();
+    const notify2 = () => {
+      for (const fn of listeners8) try {
         fn();
       } catch {
       }
@@ -26990,7 +26866,7 @@
       const next = slotVal ?? computeWholePlantPrice() ?? null;
       if (next !== lastPrice) {
         lastPrice = next;
-        notify3();
+        notify2();
       }
     }
     (async () => {
@@ -27024,11 +26900,11 @@
         return lastPrice;
       },
       onChange(cb) {
-        listeners9.add(cb);
-        return () => listeners9.delete(cb);
+        listeners8.add(cb);
+        return () => listeners8.delete(cb);
       },
       stop() {
-        listeners9.clear();
+        listeners8.clear();
       }
     };
   }
@@ -27058,7 +26934,7 @@
       writeAriesPath(PATH_SHOW_CROP_PRICE, next);
     } catch {
     }
-    for (const listener of listeners6) {
+    for (const listener of listeners5) {
       try {
         listener(next);
       } catch {
@@ -27066,18 +26942,18 @@
     }
   }
   function onShowCropPriceChange(cb) {
-    listeners6.add(cb);
+    listeners5.add(cb);
     return () => {
-      listeners6.delete(cb);
+      listeners5.delete(cb);
     };
   }
-  var PATH_SHOW_CROP_PRICE, listeners6;
+  var PATH_SHOW_CROP_PRICE, listeners5;
   var init_setting = __esm({
     "src/features/cropPrice/setting.ts"() {
       "use strict";
       init_storage();
       PATH_SHOW_CROP_PRICE = "misc.showCropPrice";
-      listeners6 = /* @__PURE__ */ new Set();
+      listeners5 = /* @__PURE__ */ new Set();
     }
   });
 
@@ -27090,8 +26966,8 @@
     if (!QPM) return null;
     return inner.querySelector("span.qpm-crop-size");
   }
-  function queryAll(root, sel) {
-    return Array.from(root.querySelectorAll(sel));
+  function queryAll(root4, sel) {
+    return Array.from(root4.querySelectorAll(sel));
   }
   function createLogger(option) {
     if (typeof option === "function") return option;
@@ -27099,13 +26975,13 @@
     return () => {
     };
   }
-  function forEachInner(root, selectors, callback) {
-    queryAll(root, selectors.rootSelector).forEach((rootEl) => {
+  function forEachInner(root4, selectors, callback) {
+    queryAll(root4, selectors.rootSelector).forEach((rootEl) => {
       queryAll(rootEl, selectors.innerSelector).forEach(callback);
     });
   }
-  function updatePanels(root, selectors, markerClass, text2, locked, showPrice = true) {
-    forEachInner(root, selectors, (inner) => {
+  function updatePanels(root4, selectors, markerClass, text2, locked, showPrice = true) {
+    forEachInner(root4, selectors, (inner) => {
       if (!showPrice || shouldSkipInner(inner, markerClass)) {
         removeMarker(inner, markerClass);
         updateLockEmoji(inner, locked);
@@ -27140,7 +27016,7 @@
       innerSelector: options.innerSelector ?? DEFAULTS2.innerSelector
     };
     const markerClass = options.markerClass ?? DEFAULTS2.markerClass;
-    const root = options.root ?? document;
+    const root4 = options.root ?? document;
     const logger = createLogger(options.log);
     const priceWatcher = startCropPriceWatcherViaGardenObject();
     const shouldWaitForLocker = lockerService.getState().enabled;
@@ -27166,7 +27042,7 @@
       lastRenderedLocked = locked;
       lastRenderedShowPrice = showPrice;
       needsRepositionRender = false;
-      updatePanels(root, selectors, markerClass, formatCoins(value), locked, showPrice);
+      updatePanels(root4, selectors, markerClass, formatCoins(value), locked, showPrice);
       logger("render", { value, locked, showPrice });
     };
     let lockerReadyTimeout = null;
@@ -27486,8 +27362,8 @@
   function removeLockIcon(tooltip) {
     tooltip.querySelectorAll(`:scope > span.${LOCK_ICON_CLASS}`).forEach((node) => node.remove());
   }
-  function stripLockPrefix(content) {
-    return content.replace(LOCK_PREFIX_REGEX, "");
+  function stripLockPrefix(content2) {
+    return content2.replace(LOCK_PREFIX_REGEX, "");
   }
   function ensureSpanAtEnd(inner, text2, markerClass) {
     const spans = Array.from(
@@ -27981,8 +27857,8 @@
       return fallback;
     }
   }
-  function findAnyTextStyle(root, limit = 5e3) {
-    const stack = [root];
+  function findAnyTextStyle(root4, limit = 5e3) {
+    const stack = [root4];
     const seen = /* @__PURE__ */ new Set();
     let n = 0;
     while (stack.length && n++ < limit) {
@@ -30217,14 +30093,14 @@
       void updatePetHutchSections();
     }, 120);
     const maybeInitPetHutch = () => {
-      const root = document.querySelector(PET_HUTCH_ROOT_SELECTOR);
-      if (!root) {
+      const root4 = document.querySelector(PET_HUTCH_ROOT_SELECTOR);
+      if (!root4) {
         lastPetHutchRoot = null;
         petHutchNeedsInit = true;
         return;
       }
-      if (root !== lastPetHutchRoot) {
-        lastPetHutchRoot = root;
+      if (root4 !== lastPetHutchRoot) {
+        lastPetHutchRoot = root4;
         petHutchNeedsInit = true;
       }
       if (!petHutchNeedsInit) return;
@@ -30252,9 +30128,9 @@
       }
     };
     const startObservers = () => {
-      const root = document.body || document.documentElement;
-      if (root) {
-        bodyObserver.observe(root, { childList: true, subtree: true });
+      const root4 = document.body || document.documentElement;
+      if (root4) {
+        bodyObserver.observe(root4, { childList: true, subtree: true });
       }
       setGrid(document.querySelector(cfg.gridSelector));
       document.addEventListener("change", changeHandler, true);
@@ -31393,9 +31269,9 @@
       };
       updatePetHutchSections = async (options = {}) => {
         const hideDuringUpdate = options.hideDuringUpdate === true;
-        const root = document.querySelector(PET_HUTCH_ROOT_SELECTOR) ?? document.body;
-        const hutchContainer = root.querySelector(PET_HUTCH_LIST_SELECTOR) ?? findSectionContainerByHeaderText(PET_HUTCH_HEADER_TEXT);
-        const inventoryContainer = root.querySelector(PET_HUTCH_INVENTORY_LIST_SELECTOR) ?? findSectionContainerByHeaderText(PET_INVENTORY_HEADER_TEXT);
+        const root4 = document.querySelector(PET_HUTCH_ROOT_SELECTOR) ?? document.body;
+        const hutchContainer = root4.querySelector(PET_HUTCH_LIST_SELECTOR) ?? findSectionContainerByHeaderText(PET_HUTCH_HEADER_TEXT);
+        const inventoryContainer = root4.querySelector(PET_HUTCH_INVENTORY_LIST_SELECTOR) ?? findSectionContainerByHeaderText(PET_INVENTORY_HEADER_TEXT);
         const containers = [hutchContainer, inventoryContainer];
         if (!hutchContainer && !inventoryContainer) return false;
         if (hideDuringUpdate) {
@@ -31403,7 +31279,7 @@
         }
         try {
           console.log("[InventorySorting] Hutch detect", {
-            root: root.className,
+            root: root4.className,
             hutchContainer: hutchContainer?.className ?? null,
             inventoryContainer: inventoryContainer?.className ?? null
           });
@@ -32026,9 +31902,9 @@
     return key2 === "all" ? total : counts.get(key2) ?? 0;
   }
   function closedButtonLabel(counts, total) {
-    const active2 = getActiveFilter();
-    const count = countFor(active2, counts, total);
-    return `${CLOSED_LABEL_PREFIX}${getActionLabel(active2)}${count ? ` (${count})` : ""}`;
+    const active3 = getActiveFilter();
+    const count = countFor(active3, counts, total);
+    return `${CLOSED_LABEL_PREFIX}${getActionLabel(active3)}${count ? ` (${count})` : ""}`;
   }
   function buildClosedButton(graphicsCtor, textCtor, containerCtor, counts, total) {
     const text2 = new textCtor({ text: closedButtonLabel(counts, total), style: BUTTON_TEXT_STYLE2 });
@@ -32057,7 +31933,7 @@
     const buttons = [];
     let x = 0;
     let y = 0;
-    const active2 = getActiveFilter();
+    const active3 = getActiveFilter();
     for (const key2 of keys) {
       const count = countFor(key2, counts, total);
       const label2 = `${getActionLabel(key2)}${count ? ` (${count})` : ""}`;
@@ -32068,7 +31944,7 @@
         y += BUTTON_HEIGHT + BUTTON_GAP2;
       }
       const bg = new graphicsCtor();
-      bg.roundRect(0, 0, width, BUTTON_HEIGHT, BUTTON_RADIUS2).fill({ color: key2 === active2 ? BUTTON_FILL_ACTIVE : BUTTON_FILL_INACTIVE, alpha: key2 === active2 ? BUTTON_ALPHA_ACTIVE : BUTTON_ALPHA_INACTIVE });
+      bg.roundRect(0, 0, width, BUTTON_HEIGHT, BUTTON_RADIUS2).fill({ color: key2 === active3 ? BUTTON_FILL_ACTIVE : BUTTON_FILL_INACTIVE, alpha: key2 === active3 ? BUTTON_ALPHA_ACTIVE : BUTTON_ALPHA_INACTIVE });
       text2.position.set(BUTTON_PADDING_X2, (BUTTON_HEIGHT - text2.height) / 2);
       const button3 = new containerCtor();
       button3.addChild(bg);
@@ -32126,10 +32002,10 @@
     return toolbarState2;
   }
   function refreshToolbarHighlight(toolbarState2) {
-    const active2 = getActiveFilter();
+    const active3 = getActiveFilter();
     for (const button3 of toolbarState2.panel.buttons) {
       if (button3.bg.destroyed) continue;
-      const isActive = button3.key === active2;
+      const isActive = button3.key === active3;
       const bounds = button3.bg.getLocalBounds();
       button3.bg.clear();
       button3.bg.roundRect(0, 0, bounds.width, BUTTON_HEIGHT, BUTTON_RADIUS2).fill({ color: isActive ? BUTTON_FILL_ACTIVE : BUTTON_FILL_INACTIVE, alpha: isActive ? BUTTON_ALPHA_ACTIVE : BUTTON_ALPHA_INACTIVE });
@@ -32178,8 +32054,8 @@
       console.warn("[activityLogFilterPixi] syncToolbar failed", error);
     }
   }
-  function shiftLogRows(content, toolbarSpace) {
-    const children = content.children;
+  function shiftLogRows(content2, toolbarSpace) {
+    const children = content2.children;
     const first = children[0];
     if (!first) return;
     if (first !== plannedFirst) {
@@ -32399,7 +32275,7 @@
     const entry = mutationCatalog2[mutationId];
     return isRecord3(entry) ? entry : null;
   }
-  function mutationIcon(mutationId) {
+  function mutationIcon2(mutationId) {
     const sprite = mutationEntry(mutationId)?.sprite;
     return typeof sprite === "string" && sprite ? sprite : `sprite/ui/Mutation${mutationId}`;
   }
@@ -32414,7 +32290,7 @@
       targets.push({
         key: key2,
         label: `${mutationId} pet`,
-        icon: mutationIcon(mutationId),
+        icon: mutationIcon2(mutationId),
         chance,
         threshold: thresholdForChance(chance),
         kind: "mutation"
@@ -32573,7 +32449,7 @@
       writeAriesPath(STATE_PATH, state5);
     } catch {
     }
-    for (const listener of listeners7) {
+    for (const listener of listeners6) {
       try {
         listener(state5);
       } catch {
@@ -32708,7 +32584,7 @@
       }
     };
   }
-  var STATE_PATH, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, listeners7, cachedState, HatchTracker;
+  var STATE_PATH, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, listeners6, cachedState, HatchTracker;
   var init_tracker = __esm({
     "src/features/hatch/tracker.ts"() {
       "use strict";
@@ -32721,7 +32597,7 @@
       HATCH_ACTION = "hatchEgg";
       DOUBLE_HATCH_ACTIONS = /* @__PURE__ */ new Set(["doublehatch", "doublehatchii"]);
       SEEN_LIMIT = 4e3;
-      listeners7 = /* @__PURE__ */ new Set();
+      listeners6 = /* @__PURE__ */ new Set();
       cachedState = null;
       HatchTracker = {
         getState() {
@@ -32753,640 +32629,12 @@
         // since the server's own never resets except on the outcome itself. Only
         // `setOffset` moves a counter by hand.
         subscribe(listener) {
-          listeners7.add(listener);
+          listeners6.add(listener);
           return () => {
-            listeners7.delete(listener);
+            listeners6.delete(listener);
           };
         }
       };
-    }
-  });
-
-  // src/ui/kit/theme.ts
-  function group(prefix, values, unit = "") {
-    return Object.entries(values).map(([key2, value]) => `--qmm-${prefix}${kebab(key2)}:${value}${unit};`);
-  }
-  function themeVariables() {
-    return [
-      ":root{",
-      ...group("", color),
-      ...group("gradient-", gradient),
-      ...group("shadow-", shadow),
-      ...group("radius-", radius, "px"),
-      ...group("space-", space, "px"),
-      ...group("fs-", fontSize, "px"),
-      `--qmm-font-mono:${fontMono};`,
-      // Compatibility names read by feature code that predates the tokens.
-      // Remove each once nothing outside the kit references it.
-      "--qmm-border-2:var(--qmm-border);",
-      "--qws-text:var(--qmm-text);",
-      "--qws-text-dim:var(--qmm-text-soft);",
-      "--qws-border:var(--qmm-border-strong);",
-      "--qws-border-2:var(--qmm-border);",
-      "--qws-panel:var(--qmm-panel-bg);",
-      "--qws-accent:var(--qmm-accent);",
-      "--qws-shadow:var(--qmm-shadow-window);",
-      "--qws-blur:8px;",
-      "}"
-    ].join("\n");
-  }
-  var color, gradient, shadow, radius, space, fontSize, fontMono, layer, kebab;
-  var init_theme = __esm({
-    "src/ui/kit/theme.ts"() {
-      "use strict";
-      color = {
-        accent: "#5eead4",
-        accentSoft: "rgba(94,234,212,0.12)",
-        accentHover: "rgba(94,234,212,0.22)",
-        accentBorder: "rgba(94,234,212,0.3)",
-        accentBorderHover: "rgba(94,234,212,0.55)",
-        text: "#e7eef7",
-        textSoft: "rgba(226,232,240,0.75)",
-        textDim: "rgba(226,232,240,0.45)",
-        border: "rgba(255,255,255,0.08)",
-        borderHover: "rgba(255,255,255,0.16)",
-        borderStrong: "rgba(255,255,255,0.14)",
-        cardBg: "rgba(255,255,255,0.03)",
-        hoverBg: "rgba(255,255,255,0.06)",
-        mutedBg: "rgba(0,0,0,0.18)",
-        fieldBg: "rgba(0,0,0,0.3)",
-        fieldBorder: "rgba(255,255,255,0.12)",
-        track: "rgba(255,255,255,0.1)",
-        sunken: "#080c12",
-        surface: "#101620",
-        panelBg: "rgba(17,24,35,0.8)",
-        scrollbar: "rgba(94,234,212,0.2)",
-        scrim: "rgba(0,0,0,0.55)",
-        danger: "#ef4444",
-        dangerSoft: "rgba(239,68,68,0.12)",
-        dangerHover: "rgba(239,68,68,0.2)",
-        dangerBorder: "rgba(239,68,68,0.3)",
-        dangerBorderHover: "rgba(239,68,68,0.55)",
-        warn: "#fbbf24",
-        warnSoft: "rgba(251,191,36,0.12)",
-        warnBorder: "rgba(251,191,36,0.55)",
-        gold: "#FFC734",
-        rainbow: "#c084fc"
-      };
-      gradient = {
-        panel: "linear-gradient(160deg, rgba(15,20,30,0.95) 0%, rgba(10,14,20,0.95) 60%, rgba(8,12,18,0.96) 100%)",
-        tabBar: "linear-gradient(120deg, rgba(22,28,40,0.9), rgba(12,17,26,0.92))",
-        head: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))"
-      };
-      shadow = {
-        panel: "0 18px 44px rgba(0,0,0,0.45)",
-        window: "0 10px 36px rgba(0,0,0,0.45)",
-        modal: "0 24px 64px rgba(0,0,0,0.55)"
-      };
-      radius = { sm: 6, md: 9, lg: 12, xl: 16, pill: 999 };
-      space = { xs: 4, sm: 6, md: 8, lg: 10, xl: 12 };
-      fontSize = { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 };
-      fontMono = "ui-monospace, SFMono-Regular, Consolas, monospace";
-      layer = { hud: 1000010, window: 2000001 };
-      kebab = (key2) => key2.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
-    }
-  });
-
-  // src/ui/kit/styles/chrome.ts
-  var chromeCss;
-  var init_chrome = __esm({
-    "src/ui/kit/styles/chrome.ts"() {
-      "use strict";
-      init_theme();
-      chromeCss = `
-.qmm-scroll, .qws-pnl-scroll, .qmm-views {
-  scrollbar-width: thin; scrollbar-color: var(--qmm-scrollbar) transparent;
-}
-.qmm-scroll::-webkit-scrollbar, .qws-pnl-scroll::-webkit-scrollbar, .qmm-views::-webkit-scrollbar { width: 6px; }
-.qmm-scroll::-webkit-scrollbar-track, .qws-pnl-scroll::-webkit-scrollbar-track, .qmm-views::-webkit-scrollbar-track { background: transparent; }
-.qmm-scroll::-webkit-scrollbar-thumb, .qws-pnl-scroll::-webkit-scrollbar-thumb, .qmm-views::-webkit-scrollbar-thumb {
-  background: var(--qmm-scrollbar); border-radius: 3px;
-}
-.qmm-scroll::-webkit-scrollbar-thumb:hover, .qws-pnl-scroll::-webkit-scrollbar-thumb:hover, .qmm-views::-webkit-scrollbar-thumb:hover {
-  background: var(--qmm-accent-border);
-}
-
-.qmm { display: flex; flex-direction: column; gap: var(--qmm-space-lg); color: var(--qmm-text); }
-.qmm-compact { gap: var(--qmm-space-sm); }
-.qmm.qmm-alt-drag { cursor: grab; }
-.qmm.qmm-alt-drag:active { cursor: grabbing; }
-
-.qmm-tabs {
-  display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-xs); padding: 8px 10px;
-  border-bottom: 1px solid var(--qmm-border);
-  border-radius: var(--qmm-radius-xl) var(--qmm-radius-xl) 0 0;
-  background: var(--qmm-gradient-tab-bar);
-}
-.qmm-tab {
-  flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: var(--qmm-space-md);
-  margin: 0; padding: 8px 12px; border: 1px solid transparent; border-radius: var(--qmm-radius-lg);
-  background: transparent; color: var(--qmm-text-soft); font-size: var(--qmm-fs-md); cursor: pointer;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
-}
-.qmm-compact .qmm-tab { padding: 6px 10px; }
-.qmm-tab:hover { background: var(--qmm-hover-bg); color: var(--qmm-text); }
-.qmm-tab:active { transform: translateY(1px); }
-.qmm-tab:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
-.qmm-tab.active { background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); color: var(--qmm-accent); }
-
-.qmm-views {
-  display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; padding: 14px;
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-xl);
-  background: var(--qmm-gradient-panel); backdrop-filter: blur(10px); box-shadow: var(--qmm-shadow-panel);
-}
-.qmm-compact .qmm-views { padding: 8px; }
-.qmm-tabs + .qmm-views { border-top: none; border-top-left-radius: 0; border-top-right-radius: 0; }
-.qmm-view { display: none; min-width: 0; min-height: 0; }
-.qmm-view.active { display: block; }
-
-.qmm-spacer { flex: 1; }
-
-.qws-win {
-  position: fixed; z-index: ${layer.window}; min-width: 260px; max-width: 900px; max-height: 90vh; overflow: auto;
-  color: var(--qmm-text); background: var(--qmm-panel-bg);
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-lg);
-  box-shadow: var(--qmm-shadow-window); backdrop-filter: blur(8px);
-}
-.qws-win.is-hidden { display: none !important; }
-.qws-win .w-head {
-  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 10px 12px; cursor: move;
-  border-bottom: 1px solid var(--qmm-border-strong);
-  border-radius: var(--qmm-radius-lg) var(--qmm-radius-lg) 0 0;
-  background: var(--qmm-gradient-head);
-}
-.qws-win .w-title { font-weight: 700; }
-.qws-win .w-body { padding: 12px; }
-
-/* Bare text and number inputs a feature builds inside a window get the field look too. */
-.qws-win input:is([type="text"], [type="number"]):not(.qmm-input, .qws-pnl-input) {
-  padding: 8px 10px; border: 1px solid var(--qmm-field-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-field-bg); color: var(--qmm-text);
-}
-.qws-win input:is([type="text"], [type="number"]):not(.qmm-input, .qws-pnl-input):focus {
-  outline: none; border-color: var(--qmm-accent-border-hover);
-}
-/* Windows give text and number fields one width; an inline width still wins. */
-.qws-win input[type="text"], .qws-win input[type="number"] { width: 120px; }
-
-.qws2 {
-  position: fixed; right: 16px; bottom: 16px; z-index: ${layer.hud};
-  display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 160px; padding: 10px 12px;
-  font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: var(--qmm-text);
-  background: var(--qmm-panel-bg); border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-lg);
-  box-shadow: var(--qmm-shadow-window); backdrop-filter: blur(8px);
-}
-.qws2.hidden { display: none; }
-.qws2 .row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
-.qws2 .title { font-weight: 700; letter-spacing: .2px; }
-.qws2 .drag { cursor: move; opacity: .9; }
-.qws2 .mini { display: none; }
-.qws2.min .mini { display: inline-flex; }
-.qws2.min .body { display: none; }
-.qws2 .is-link { cursor: pointer; }
-
-.qws-launch { margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--qmm-border-strong); }
-.qws-launch .launch-item { display: flex; align-items: center; gap: var(--qmm-space-md); margin: 4px 0; }
-.qws-launch .launch-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-`;
-    }
-  });
-
-  // src/ui/kit/styles/containers.ts
-  var containersCss;
-  var init_containers = __esm({
-    "src/ui/kit/styles/containers.ts"() {
-      "use strict";
-      containersCss = `
-.qmm-card {
-  display: grid; gap: var(--qmm-space-xl); width: 100%; padding: 14px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
-}
-.qmm-card--plain { display: flex; flex-direction: column; gap: var(--qmm-space-lg); width: auto; min-height: 0; padding: 10px; }
-.qmm-card.is-center { text-align: center; align-items: center; }
-.qmm-card.is-stretch { align-items: stretch; }
-.qmm-card[data-tone="muted"] { background: var(--qmm-muted-bg); }
-.qmm-card[data-tone="accent"] { border-color: var(--qmm-accent-border); }
-.qmm-card__header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--qmm-space-lg); }
-.qmm-card__header.is-compact { gap: var(--qmm-space-sm); }
-.qmm-card__icon { font-size: 18px; }
-.qmm-card__title { font-size: var(--qmm-fs-xl); font-weight: 700; letter-spacing: .01em; }
-.qmm-card__subtitle { flex-basis: 100%; font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
-.qmm-card__actions { display: flex; gap: var(--qmm-space-sm); margin-left: auto; }
-.qmm-card__body { display: grid; gap: var(--qmm-space-lg); }
-
-.qmm-section-label {
-  font-size: var(--qmm-fs-xs); font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--qmm-text-dim);
-}
-
-.qmm-collapse { flex-shrink: 0; min-height: auto; }
-.qmm-collapse__head {
-  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 0; border: none; background: none;
-  color: inherit; font: inherit; text-align: left; cursor: pointer;
-}
-.qmm-collapse__titles { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-width: 0; }
-.qmm-collapse__desc { font-size: var(--qmm-fs-sm); line-height: 1.45; color: var(--qmm-text-dim); }
-.qmm-collapse__chevron {
-  flex: 0 0 auto; margin-left: auto; font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim);
-  transition: transform 140ms ease, color 120ms ease;
-}
-.qmm-collapse__head:hover .qmm-collapse__chevron { color: var(--qmm-accent); }
-.qmm-collapse__head[aria-expanded="true"] .qmm-collapse__chevron { transform: rotate(90deg); }
-.qmm-collapse__body { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
-.qmm-collapse.is-collapsed > .qmm-collapse__body { display: none; }
-
-.qmm-setting-row {
-  display: flex; align-items: center; gap: var(--qmm-space-lg); flex-shrink: 0; padding: 8px 10px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md); background: var(--qmm-card-bg);
-}
-.qmm-setting-row__text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
-.qmm-setting-row__title { font-size: var(--qmm-fs-md); color: var(--qmm-text); }
-.qmm-setting-row__hint { font-size: var(--qmm-fs-xs); line-height: 1.4; color: var(--qmm-text-dim); }
-.qmm-setting-row__controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--qmm-space-md); flex: 0 0 auto; }
-
-.qmm-label { opacity: .9; }
-.qmm-flex { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
-.qmm-form-row { display: grid; align-items: center; width: 100%; }
-.qmm-form-row.is-top { align-items: start; }
-.qmm-form-row__label { justify-self: start; margin: 0; font-weight: 600; }
-.qmm-form-row.is-top .qmm-form-row__label { align-self: start; }
-
-.qmm-error {
-  padding: 10px; border: 1px solid var(--qmm-danger-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-danger-soft); color: #fecaca; font-size: var(--qmm-fs-lg); line-height: 1.4;
-}
-.qmm-error[hidden] { display: none; }
-
-.qmm-pill {
-  display: inline-flex; align-items: center; gap: var(--qmm-space-sm); padding: 4px 9px; white-space: nowrap;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-pill);
-  background: var(--qmm-field-bg); color: var(--qmm-text); font-size: var(--qmm-fs-sm); font-weight: 600;
-}
-.qmm-pill.is-ok { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
-.qmm-pill.is-warn { color: var(--qmm-warn); background: var(--qmm-warn-soft); border-color: var(--qmm-warn-border); }
-.qmm-pill.is-bad { color: var(--qmm-danger); background: var(--qmm-danger-soft); border-color: var(--qmm-danger-border); }
-.qmm-badge {
-  align-self: flex-start; padding: 2px 7px; border-radius: var(--qmm-radius-pill);
-  font-size: var(--qmm-fs-xs); font-weight: 600;
-}
-.qmm-badge.is-ok { color: var(--qmm-accent); background: var(--qmm-accent-soft); }
-.qmm-badge.is-warn { color: var(--qmm-warn); background: var(--qmm-warn-soft); }
-.qmm-meter {
-  position: relative; flex: 1 1 auto; min-width: 60px; height: 5px; overflow: hidden;
-  border-radius: var(--qmm-radius-pill); background: var(--qmm-border);
-}
-.qmm-meter__fill {
-  position: absolute; inset: 0 auto 0 0; width: 0%; border-radius: var(--qmm-radius-pill);
-  background: var(--qmm-accent); transition: width 200ms ease, background 200ms ease;
-}
-.qmm-meter__fill.is-warn { background: var(--qmm-warn); }
-
-.qmm-vtabs { display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 0; }
-.qmm-vtabs .filter input { width: 100%; }
-.qmm-vlist-wrap { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; width: 100%; }
-.qmm-vlist {
-  flex: 0 0 auto; min-width: 0; padding: 6px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
-}
-.qmm-vlist.is-scroll { flex: 1 1 auto; overflow: auto; }
-.qmm-vlist__items { display: flex; flex-direction: column; gap: var(--qmm-space-xs); margin: 0; padding: 0; list-style: none; }
-.qmm-vlist__empty { opacity: .75; }
-.qmm-vtab {
-  display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: var(--qmm-space-lg); width: 100%;
-  padding: 8px 10px; border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-card-bg); color: inherit; text-align: left; cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
-}
-.qmm-vtab:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); }
-.qmm-vtab:active { transform: translateY(1px); }
-.qmm-vtab.active { background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
-.qmm-dot { width: 10px; height: 10px; justify-self: center; border-radius: 50%; box-shadow: 0 0 0 1px #0006 inset; }
-.qmm-chip { display: flex; align-items: center; gap: var(--qmm-space-md); min-width: 0; }
-.qmm-chip img { width: 20px; height: 20px; object-fit: cover; border: 1px solid var(--qmm-border); border-radius: 50%; }
-.qmm-chip__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.qmm-chip .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.qmm-chip__sub { font-size: var(--qmm-fs-md); opacity: .7; }
-.qmm-tag {
-  padding: 3px 7px; font-size: var(--qmm-fs-sm); line-height: 1;
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-hover-bg);
-}
-
-/* Drag handle for reorderable lists. */
-.qmm-grab {
-  display: grid; grid-template-columns: repeat(2, 3px); grid-template-rows: repeat(3, 3px);
-  align-content: center; justify-content: center; gap: 2px; margin-left: auto; padding: 4px 3px;
-  opacity: .8; cursor: grab; user-select: none;
-}
-.qmm-grab:active { cursor: grabbing; }
-.qmm-grab-dot { width: 3px; height: 3px; border-radius: 999px; background: var(--qmm-text-soft); }
-.qmm-dragging { opacity: .6; }
-
-/* Selectable tile of the skins grid. */
-.qws-pnl-cell {
-  position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 1; cursor: pointer;
-  border: 1px solid var(--qmm-border); border-radius: 10px; background: var(--qmm-card-bg);
-  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
-}
-.qws-pnl-cell:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); transform: translateY(-1px); }
-.qws-pnl-cell.is-active { border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft); }
-.qws-pnl-cell.is-skinned::after {
-  content: ''; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%;
-  background: var(--qmm-accent);
-}
-
-.qmm-icon-box { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
-.qmm-icon-box > img { max-width: 100%; max-height: 100%; image-rendering: auto; }
-
-.qmm-modal-scrim {
-  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px;
-  background: var(--qmm-scrim); backdrop-filter: blur(4px);
-}
-.qmm-modal {
-  display: flex; flex-direction: column; overflow: hidden; color: var(--qmm-text);
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-xl);
-  background: var(--qmm-surface); box-shadow: var(--qmm-shadow-modal);
-}
-.qmm-modal__head {
-  display: flex; align-items: center; gap: var(--qmm-space-lg); flex: 0 0 auto; padding: 12px 14px;
-  border-bottom: 1px solid var(--qmm-border);
-}
-.qmm-modal__title { flex: 1; min-width: 0; font-size: var(--qmm-fs-xl); font-weight: 600; color: var(--qmm-text); }
-.qmm-modal__close {
-  flex: 0 0 auto; width: 28px; height: 28px; cursor: pointer;
-  border: 1px solid var(--qmm-border); border-radius: 8px; background: var(--qmm-card-bg);
-  color: var(--qmm-text-dim); font-size: var(--qmm-fs-md); line-height: 1;
-}
-.qmm-modal__close:hover { color: var(--qmm-text); border-color: var(--qmm-border-hover); }
-.qmm-modal__body {
-  display: flex; flex-direction: column; gap: var(--qmm-space-lg); flex: 1 1 auto; min-height: 0;
-  padding: 12px 14px; overflow-y: auto;
-}
-.qmm-modal__foot {
-  display: flex; align-items: center; gap: var(--qmm-space-lg); flex: 0 0 auto; padding: 12px 14px;
-  border-top: 1px solid var(--qmm-border);
-}
-.qmm-modal__foot:empty { display: none; }
-
-.qmm-menu-card {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 11px 12px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
-  font: inherit; text-align: left; cursor: pointer; transition: background 120ms ease, border-color 120ms ease;
-}
-.qmm-menu-card:hover:not(:disabled) { background: var(--qmm-hover-bg); }
-.qmm-menu-card:disabled { opacity: .55; cursor: default; }
-.qmm-menu-card__name { font-size: var(--qmm-fs-lg); font-weight: 600; color: var(--qmm-text); }
-.qmm-menu-card__detail { font-size: 11.5px; line-height: 1.45; color: var(--qmm-text-dim); }
-.qmm-menu-card:disabled .qmm-menu-card__name { color: var(--qmm-text-dim); }
-.qmm-menu-card:disabled .qmm-menu-card__detail { color: var(--qmm-accent); }
-`;
-    }
-  });
-
-  // src/ui/kit/styles/controls.ts
-  var controlsCss;
-  var init_controls = __esm({
-    "src/ui/kit/styles/controls.ts"() {
-      "use strict";
-      controlsCss = `
-.qmm-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: var(--qmm-space-sm); padding: 8px 14px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-card-bg); color: var(--qmm-text);
-  font-size: var(--qmm-fs-lg); font-weight: 600; line-height: 1.2; cursor: pointer; user-select: none;
-  transition: background 120ms ease, border-color 120ms ease, color 120ms ease, opacity 120ms ease, transform 100ms ease;
-}
-.qmm-compact .qmm-btn:where(:not(.qmm-btn--sm, .qmm-btn--xs, .qmm-btn--icon)) { padding: 6px 10px; }
-.qmm-btn:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); }
-.qmm-btn:active { transform: translateY(1px); }
-.qmm-btn:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
-.qmm-btn:disabled, .qmm-btn.is-disabled { opacity: .4; pointer-events: none; }
-.qmm-btn.is-busy { opacity: .6; pointer-events: none; }
-.qmm-btn--sm { padding: 7px 12px; font-size: var(--qmm-fs-sm); white-space: nowrap; }
-.qmm-btn--xs { padding: 4px 8px; font-size: var(--qmm-fs-sm); }
-.qmm-btn--full { width: 100%; }
-.qmm-btn--block { display: flex; }
-.qmm-btn--icon { width: 34px; height: 34px; padding: 6px; gap: 0; border-radius: 50%; }
-.qmm-btn__icon { display: inline-flex; align-items: center; justify-content: center; font-size: 1.1em; }
-.qmm-btn__icon.is-right { order: 2; }
-.qmm-btn--primary { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
-.qmm-btn--primary:hover { background: var(--qmm-accent-hover); border-color: var(--qmm-accent-border-hover); }
-.qmm-btn--danger { color: var(--qmm-danger); background: var(--qmm-danger-soft); border-color: var(--qmm-danger-border); }
-.qmm-btn--danger:hover { background: var(--qmm-danger-hover); border-color: var(--qmm-danger-border-hover); }
-.qmm-btn--ghost { background: transparent; border-color: transparent; }
-.qmm-btn--ghost:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border); }
-.qmm-btn.active { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
-
-.qmm-input, .qws-pnl-input {
-  padding: 8px 10px; border: 1px solid var(--qmm-field-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-field-bg); color: var(--qmm-text); outline: none;
-  transition: border-color 120ms ease, background 120ms ease;
-}
-.qmm-input { min-width: 90px; }
-.qws-pnl-input { font-size: var(--qmm-fs-md); }
-.qmm-input::placeholder, .qws-pnl-input::placeholder { color: var(--qmm-text-dim); }
-.qmm-input:focus, .qws-pnl-input:focus { border-color: var(--qmm-accent-border-hover); }
-.qmm-input option, .qws-pnl-input option { background: var(--qmm-surface); color: var(--qmm-text); }
-.qmm-input--sm { min-width: 0; padding: 6px 9px; font-size: 11.5px; }
-.qmm-select { cursor: pointer; }
-
-.qmm-input-number { display: inline-flex; align-items: center; gap: var(--qmm-space-sm); }
-.qmm-input-number-input { width: 70px; text-align: center; }
-.qmm-spin { display: inline-flex; flex-direction: column; gap: 2px; }
-.qmm-step {
-  display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 16px; padding: 0;
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-sm);
-  background: var(--qmm-hover-bg); color: var(--qmm-text); font-size: 11px; line-height: 1;
-  cursor: pointer; user-select: none; transition: border-color 120ms ease, color 120ms ease;
-}
-.qmm-step:hover { border-color: var(--qmm-accent-border); color: var(--qmm-accent); }
-.qmm-step:active { transform: translateY(1px); }
-
-.qmm-radio { transform: scale(1.1); accent-color: var(--qmm-accent); }
-
-.qmm-switch {
-  -webkit-appearance: none; appearance: none; position: relative; flex-shrink: 0;
-  width: 36px; height: 20px; margin: 0; vertical-align: middle; cursor: pointer;
-  border: 1px solid var(--qmm-field-border); border-radius: 10px; background: var(--qmm-track);
-  transition: background 150ms ease, border-color 150ms ease;
-}
-.qmm-switch::before {
-  content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%;
-  background: var(--qmm-text-dim); transition: transform 150ms ease, background 150ms ease;
-}
-.qmm-switch:checked { background: var(--qmm-accent-hover); border-color: var(--qmm-accent-border-hover); }
-.qmm-switch:checked::before { transform: translateX(16px); background: var(--qmm-accent); }
-.qmm-switch:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
-.qmm-switch:disabled { opacity: .4; cursor: not-allowed; }
-
-.qmm-chip-toggle {
-  display: inline-flex; align-items: stretch; cursor: pointer;
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-card-bg);
-  transition: border-color 120ms ease, background 120ms ease;
-}
-.qmm-chip-toggle:hover { border-color: var(--qmm-accent-border); }
-.qmm-chip-toggle input { display: none; }
-.qmm-chip-toggle__face { display: flex; align-items: center; gap: var(--qmm-space-md); padding: 6px 12px; border-radius: var(--qmm-radius-pill); }
-.qmm-chip-toggle input:checked + .qmm-chip-toggle__face {
-  color: var(--qmm-accent); background: var(--qmm-accent-soft); box-shadow: inset 0 0 0 1px var(--qmm-accent-border);
-}
-.qmm-chip-toggle__icon { font-size: 14px; }
-.qmm-chip-toggle__label { font-weight: 600; }
-.qmm-chip-toggle__desc { font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
-.qmm-chip-toggle__badge {
-  padding: 2px 6px; font-size: var(--qmm-fs-sm);
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-hover-bg);
-}
-
-.qmm-range, .qws-pnl-range {
-  -webkit-appearance: none; appearance: none; height: 16px; margin: 0; padding: 0;
-  border: none; background: transparent; outline: none; cursor: pointer;
-}
-.qmm-range { width: 180px; }
-.qws-pnl-range { width: 100%; }
-.qmm-range::-webkit-slider-runnable-track, .qws-pnl-range::-webkit-slider-runnable-track {
-  height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
-}
-.qmm-range::-moz-range-track, .qws-pnl-range::-moz-range-track {
-  height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
-}
-.qmm-range::-webkit-slider-thumb, .qws-pnl-range::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none; width: 13px; height: 13px; margin-top: -4.5px;
-  border: none; border-radius: 50%; background: var(--qmm-accent); cursor: pointer;
-  transition: transform 120ms ease, box-shadow 120ms ease;
-}
-.qmm-range::-moz-range-thumb, .qws-pnl-range::-moz-range-thumb {
-  width: 13px; height: 13px; border: none; border-radius: 50%; background: var(--qmm-accent); cursor: pointer;
-}
-.qmm-range:hover::-webkit-slider-thumb, .qws-pnl-range:hover::-webkit-slider-thumb {
-  transform: scale(1.15); box-shadow: 0 0 0 4px var(--qmm-accent-soft);
-}
-.qmm-range:disabled, .qws-pnl-range:disabled { opacity: .4; cursor: not-allowed; }
-.qmm-range:disabled::-webkit-slider-thumb, .qws-pnl-range:disabled::-webkit-slider-thumb { background: var(--qmm-text-dim); }
-.qmm-range:disabled::-moz-range-thumb, .qws-pnl-range:disabled::-moz-range-thumb { background: var(--qmm-text-dim); }
-
-.qmm-range-dual { position: relative; width: 100%; padding: 18px 0 10px; }
-.qmm-range-dual-track {
-  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
-  height: 6px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
-}
-.qmm-range-dual-fill {
-  position: absolute; top: 50%; transform: translateY(-50%); height: 6px;
-  border-radius: var(--qmm-radius-pill); background: var(--qmm-accent); transition: left .12s ease, right .12s ease;
-}
-.qmm-range-dual-input {
-  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
-  width: 100%; height: 28px; pointer-events: none;
-}
-.qmm-range-dual-input::-webkit-slider-runnable-track { background: none; }
-.qmm-range-dual-input::-moz-range-track { background: none; }
-.qmm-range-dual-input::-webkit-slider-thumb {
-  pointer-events: auto; width: 16px; height: 16px; margin-top: -6px;
-  background: var(--qmm-accent); border: 2px solid var(--qmm-surface); box-shadow: 0 2px 8px rgba(0,0,0,.35);
-}
-.qmm-range-dual-input::-moz-range-thumb {
-  pointer-events: auto; width: 16px; height: 16px;
-  background: var(--qmm-accent); border: 2px solid var(--qmm-surface); box-shadow: 0 2px 8px rgba(0,0,0,.35);
-}
-.qmm-range-dual-input--min { z-index: 2; }
-.qmm-range-dual-input--max { z-index: 3; }
-
-/* --seg-pad, --seg-fill and --seg-stroke-color let a caller tint one control (the calculator does). */
-.qmm-seg {
-  position: relative; display: inline-flex; align-items: center; gap: var(--qmm-space-sm); overflow: hidden;
-  padding: var(--seg-pad, 8px); border-radius: var(--qmm-radius-pill);
-  background: var(--qmm-bg-soft, var(--qmm-sunken)); background-clip: padding-box;
-  border: 1px solid var(--qmm-border-2, var(--qmm-border));
-}
-.qmm-seg--full { display: flex; width: 100%; }
-.qmm-seg__btn {
-  position: relative; z-index: 1; padding: 8px 14px; border: 0; border-radius: var(--qmm-radius-pill);
-  appearance: none; background: transparent; color: var(--qmm-text-dim);
-  font: inherit; line-height: 1; white-space: nowrap; cursor: pointer;
-  transition: color .15s ease, transform .06s ease;
-}
-.qmm-seg__btn-label { display: inline-flex; align-items: center; justify-content: center; white-space: inherit; }
-.qmm-compact .qmm-seg__btn { padding: 6px 10px; }
-.qmm-seg__btn:hover { color: var(--qmm-text); }
-.qmm-seg__btn.active { color: var(--qmm-text); font-weight: 600; }
-.qmm-seg__btn:active { transform: translateY(1px); }
-.qmm-seg__btn[disabled] { opacity: .5; cursor: not-allowed; }
-.qmm-seg__indicator {
-  position: absolute; top: 0; left: 0; width: 40px; height: 100%; border-radius: inherit; pointer-events: none;
-  background: var(--seg-fill, var(--qmm-accent-soft));
-  outline: 1.2px solid var(--seg-stroke-color, var(--qmm-accent-border-hover)); outline-offset: -1.2px;
-  transform-origin: left center; will-change: transform, width, opacity;
-  transition: transform .18s cubic-bezier(.2,.8,.2,1), width .18s cubic-bezier(.2,.8,.2,1), opacity .18s ease-out;
-}
-@media (prefers-reduced-motion: reduce) {
-  .qmm-seg__indicator, .qmm-seg__btn { transition: none; }
-}
-
-.qmm-hotkey {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: var(--qmm-hotkey-w, 180px); min-width: 104px; padding: 7px 12px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-field-bg); color: var(--qmm-text);
-  font-family: inherit; font-size: var(--qmm-fs-sm); font-weight: 600; white-space: nowrap;
-  cursor: pointer; user-select: none; transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
-}
-.qmm-hotkey:hover { border-color: var(--qmm-border-hover); }
-.qmm-hotkey:focus-visible { outline: none; }
-.qmm-hotkey.is-assigned { color: var(--qmm-accent); border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft); }
-.qmm-hotkey.is-empty { color: var(--qmm-text-dim); font-weight: 500; }
-.qmm-hotkey.is-recording {
-  color: var(--qmm-warn); border-color: var(--qmm-warn-border); background: var(--qmm-warn-soft);
-  animation: qmm-hotkey-breathe 1.2s ease-in-out infinite;
-}
-@keyframes qmm-hotkey-breathe {
-  0% { box-shadow: 0 0 0 0 rgba(251,191,36,.45); }
-  60% { box-shadow: 0 0 0 10px rgba(251,191,36,0); }
-  100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
-}
-`;
-    }
-  });
-
-  // src/ui/kit/styles/index.ts
-  function ensureKitStyles() {
-    if (injected) return;
-    if (typeof document === "undefined" || typeof document.getElementById !== "function") return;
-    injected = true;
-    if (document.getElementById(STYLE_ID3)) return;
-    const style2 = document.createElement("style");
-    style2.id = STYLE_ID3;
-    style2.textContent = [themeVariables(), chromeCss, controlsCss, containersCss].join("\n");
-    (document.head || document.documentElement).appendChild(style2);
-  }
-  var STYLE_ID3, injected;
-  var init_styles = __esm({
-    "src/ui/kit/styles/index.ts"() {
-      "use strict";
-      init_theme();
-      init_chrome();
-      init_containers();
-      init_controls();
-      STYLE_ID3 = "qmm-kit-css";
-      injected = false;
-    }
-  });
-
-  // src/ui/kit/dom.ts
-  function h(tag, className, text2) {
-    ensureKitStyles();
-    const el = document.createElement(tag);
-    if (className) el.className = className;
-    if (text2 != null) el.textContent = text2;
-    return el;
-  }
-  function iconNode(icon, className) {
-    const node = typeof icon === "string" ? h("span", void 0, icon) : icon;
-    node.classList.add(className);
-    return node;
-  }
-  var init_dom = __esm({
-    "src/ui/kit/dom.ts"() {
-      "use strict";
-      init_styles();
     }
   });
 
@@ -33404,11 +32652,11 @@
     return h("span", `qmm-badge is-${tone}`, text2);
   }
   function meter() {
-    const root = h("div", "qmm-meter");
+    const root4 = h("div", "qmm-meter");
     const fill = h("div", "qmm-meter__fill");
-    root.appendChild(fill);
+    root4.appendChild(fill);
     return {
-      root,
+      root: root4,
       set(ratio, tone = "accent") {
         fill.style.width = `${clampFinite(ratio, 0, 1, 0) * 100}%`;
         fill.classList.toggle("is-warn", tone === "warn");
@@ -33419,59 +32667,6 @@
     "src/ui/kit/badges.ts"() {
       "use strict";
       init_math();
-      init_dom();
-    }
-  });
-
-  // src/ui/kit/button.ts
-  function button(label2, opts = {}) {
-    const btn = h("button", "qmm-btn");
-    btn.type = "button";
-    const text2 = (label2 ?? "").trim();
-    const labelEl = !opts.icon || text2 ? h("span", "label", label2) : null;
-    if (opts.icon) {
-      const icon = iconNode(opts.icon, "qmm-btn__icon");
-      if (opts.iconPosition === "right") icon.classList.add("is-right");
-      if (!text2) btn.classList.add("qmm-btn--icon");
-      btn.append(icon);
-    }
-    if (labelEl) btn.append(labelEl);
-    if (opts.variant && opts.variant !== "default" && opts.variant !== "secondary") {
-      btn.classList.add(`qmm-btn--${opts.variant}`);
-    }
-    if (opts.size && opts.size !== "md") btn.classList.add(`qmm-btn--${opts.size}`);
-    if (opts.fullWidth) btn.classList.add("qmm-btn--full");
-    if (opts.block) btn.classList.add("qmm-btn--block");
-    if (opts.active) btn.classList.add("active");
-    if (opts.tooltip || opts.title) btn.title = opts.tooltip || opts.title || "";
-    if (opts.ariaLabel) btn.setAttribute("aria-label", opts.ariaLabel);
-    const onClick = opts.onClick;
-    if (onClick && opts.lockWhilePending) {
-      btn.addEventListener("click", async () => {
-        if (btn.disabled) return;
-        btn.classList.add("is-busy");
-        try {
-          await onClick();
-        } finally {
-          btn.classList.remove("is-busy");
-        }
-      });
-    } else if (onClick) {
-      btn.addEventListener("click", () => void onClick());
-    }
-    btn.setEnabled = (enabled5) => setButtonEnabled(btn, enabled5);
-    btn.setActive = (active2) => btn.classList.toggle("active", !!active2);
-    if (opts.disabled) setButtonEnabled(btn, false);
-    return btn;
-  }
-  function setButtonEnabled(btn, enabled5) {
-    btn.disabled = !enabled5;
-    btn.classList.toggle("is-disabled", !enabled5);
-    btn.setAttribute("aria-disabled", String(!enabled5));
-  }
-  var init_button = __esm({
-    "src/ui/kit/button.ts"() {
-      "use strict";
       init_dom();
     }
   });
@@ -33556,8 +32751,8 @@
     const ours = (el) => !!el?.closest?.(".qws-win, .qws2");
     const trap = (ev) => {
       const target = ev.target;
-      const active2 = document.activeElement;
-      if (!(ours(target) && isTextField(target) || ours(active2) && isTextField(active2))) return;
+      const active3 = document.activeElement;
+      if (!(ours(target) && isTextField(target) || ours(active3) && isTextField(active3))) return;
       ev.stopPropagation();
       ev.stopImmediatePropagation();
     };
@@ -33780,11 +32975,11 @@
       let drag = null;
       window.addEventListener("mousedown", (e) => {
         if (!isModifierActive(e) || e.button !== 0) return;
-        const root = e.target?.closest?.(".qws-win, .qws2");
-        if (!root || root.style.display === "none") return;
-        drag = { el: root, x: e.clientX, y: e.clientY, pos: currentPos(root) };
+        const root4 = e.target?.closest?.(".qws-win, .qws2");
+        if (!root4 || root4.style.display === "none") return;
+        drag = { el: root4, x: e.clientX, y: e.clientY, pos: currentPos(root4) };
         document.body.style.userSelect = "none";
-        bumpZ(root);
+        bumpZ(root4);
         e.preventDefault();
         e.stopPropagation();
       }, true);
@@ -34064,172 +33259,6 @@
     }
   });
 
-  // src/ui/kit/card.ts
-  function card(title, opts = {}) {
-    const root = h("div", "qmm-card");
-    root.dataset.tone = opts.tone || "default";
-    if (opts.align === "center") root.classList.add("is-center");
-    if (opts.align === "stretch") root.classList.add("is-stretch");
-    if (opts.padding) root.style.padding = opts.padding;
-    if (opts.gap != null) root.style.gap = `${opts.gap}px`;
-    if (opts.maxWidth) {
-      const max = typeof opts.maxWidth === "number" ? `${opts.maxWidth}px` : opts.maxWidth;
-      root.style.width = `min(${max}, 100%)`;
-    }
-    const header = h("div", opts.compactHeader ? "qmm-card__header is-compact" : "qmm-card__header");
-    if (opts.icon) header.appendChild(iconNode(opts.icon, "qmm-card__icon"));
-    const titleEl = h("div", "qmm-card__title", title);
-    header.appendChild(titleEl);
-    const subtitle = opts.subtitle || opts.description;
-    if (subtitle) header.appendChild(h("div", "qmm-card__subtitle", subtitle));
-    if (opts.actions?.length) {
-      const actions = h("div", "qmm-card__actions");
-      actions.append(...opts.actions);
-      header.appendChild(actions);
-    }
-    const body = h("div", "qmm-card__body");
-    root.append(header, body);
-    return { root, header, body, setTitle: (next) => titleEl.textContent = next };
-  }
-  function plainCard() {
-    return h("div", "qmm-card qmm-card--plain");
-  }
-  function sectionLabel(text2) {
-    return h("div", "qmm-section-label", text2);
-  }
-  function errorBar() {
-    const el = h("div", "qmm-error");
-    el.hidden = true;
-    return {
-      el,
-      show(message) {
-        el.textContent = message;
-        el.hidden = false;
-      },
-      clear() {
-        el.textContent = "";
-        el.hidden = true;
-      }
-    };
-  }
-  var init_card = __esm({
-    "src/ui/kit/card.ts"() {
-      "use strict";
-      init_dom();
-    }
-  });
-
-  // src/ui/kit/fields.ts
-  function textInput(placeholder = "", value = "", opts = {}) {
-    const input = h("input", opts.small ? "qmm-input qmm-input--sm" : "qmm-input");
-    input.type = "text";
-    input.placeholder = placeholder;
-    input.value = value;
-    return input;
-  }
-  function numberInput(min = 0, max = 9999, step = 1, value = 0) {
-    const wrap = h("div", "qmm-input-number");
-    const input = h("input", "qmm-input qmm-input-number-input");
-    input.type = "number";
-    input.min = String(min);
-    input.max = String(max);
-    input.step = String(step);
-    input.value = String(value);
-    input.inputMode = "numeric";
-    const clampValue = () => {
-      const n = Number(input.value);
-      if (!Number.isFinite(n)) return;
-      const clamped = clamp(n, Number(input.min), Number(input.max));
-      if (clamped !== n) input.value = String(clamped);
-    };
-    const bump = (dir) => {
-      if (dir < 0) input.stepDown();
-      else input.stepUp();
-      clampValue();
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-    };
-    const spin = h("div", "qmm-spin");
-    spin.append(stepButton("\u25B2", () => bump(1)), stepButton("\u25BC", () => bump(-1)));
-    input.addEventListener("change", clampValue);
-    wrap.append(input, spin);
-    input.wrap = wrap;
-    return input;
-  }
-  function stepButton(glyph, bump) {
-    const btn = h("button", "qmm-step", glyph);
-    btn.type = "button";
-    let pressTimer = null;
-    let repeatTimer = null;
-    let repeated = false;
-    const stop2 = () => {
-      if (pressTimer != null) clearTimeout(pressTimer);
-      if (repeatTimer != null) clearInterval(repeatTimer);
-      pressTimer = repeatTimer = null;
-    };
-    btn.addEventListener("pointerdown", (ev) => {
-      repeated = false;
-      pressTimer = window.setTimeout(() => {
-        repeated = true;
-        bump();
-        repeatTimer = window.setInterval(bump, 60);
-      }, 300);
-      btn.setPointerCapture?.(ev.pointerId);
-    });
-    for (const type of ["pointerup", "pointercancel", "pointerleave", "blur"]) btn.addEventListener(type, stop2);
-    btn.addEventListener("click", (e) => {
-      if (repeated) {
-        e.preventDefault();
-        e.stopPropagation();
-        repeated = false;
-        return;
-      }
-      bump();
-    });
-    return btn;
-  }
-  function select2(opts = {}) {
-    const sel = h("select", opts.small ? "qmm-input qmm-input--sm qmm-select" : "qmm-input qmm-select");
-    if (opts.id) sel.id = opts.id;
-    if (opts.width) sel.style.minWidth = opts.width;
-    if (opts.placeholder) {
-      const opt = h("option", void 0, opts.placeholder);
-      opt.value = "";
-      opt.disabled = true;
-      opt.selected = true;
-      sel.appendChild(opt);
-    }
-    return sel;
-  }
-  function radio(name, value, checked = false) {
-    const input = h("input", "qmm-radio");
-    input.type = "radio";
-    input.name = name;
-    input.value = value;
-    input.checked = checked;
-    return input;
-  }
-  function radioGroup(name, options, selected, onChange) {
-    const wrap = h("div", "qmm-radio-group");
-    for (const { value, label: label2 } of options) {
-      const input = radio(name, value, selected === value);
-      input.onchange = () => {
-        if (input.checked) onChange(value);
-      };
-      const row = h("label", "qmm-radio-label");
-      row.append(input, label2);
-      wrap.appendChild(row);
-    }
-    return wrap;
-  }
-  var init_fields = __esm({
-    "src/ui/kit/fields.ts"() {
-      "use strict";
-      init_math();
-      init_dom();
-    }
-  });
-
   // src/ui/kit/hotkey.ts
   function hotkeyButton(initial, onChange, opts = {}) {
     const emptyLabel = opts.emptyLabel ?? "None";
@@ -34456,20 +33485,20 @@
   });
 
   // src/ui/kit/layout.ts
-  function settingRow(title, hint, control, opts = {}) {
+  function settingRow(title, hint2, control, opts = {}) {
     const row = h("div", "qmm-setting-row");
     if (opts.icon) row.appendChild(iconBox(opts.icon, ROW_ICON_PX, opts.iconTag ?? "panel"));
     const text2 = h("div", "qmm-setting-row__text");
     text2.appendChild(h("div", "qmm-setting-row__title", title));
-    if (hint) text2.appendChild(h("div", "qmm-setting-row__hint", hint));
+    if (hint2) text2.appendChild(h("div", "qmm-setting-row__hint", hint2));
     const controls = h("div", "qmm-setting-row__controls");
     controls.appendChild(control);
     row.append(text2, controls);
     return { row, controls };
   }
   function collapsibleCard(opts) {
-    const root = plainCard();
-    root.classList.add("qmm-collapse");
+    const root4 = plainCard();
+    root4.classList.add("qmm-collapse");
     const head = h("button", "qmm-collapse__head");
     head.type = "button";
     const titles = h("div", "qmm-collapse__titles");
@@ -34484,7 +33513,7 @@
     const body = h("div", "qmm-collapse__body");
     let collapsed = opts.collapsed;
     const apply2 = () => {
-      root.classList.toggle("is-collapsed", collapsed);
+      root4.classList.toggle("is-collapsed", collapsed);
       head.setAttribute("aria-expanded", collapsed ? "false" : "true");
     };
     apply2();
@@ -34493,16 +33522,16 @@
       apply2();
       opts.onToggle(collapsed);
     });
-    root.append(head, body);
-    return { root, body };
+    root4.append(head, body);
+    return { root: root4, body };
   }
   function formRow(labelText, control, opts = {}) {
-    const root = h("div", opts.alignTop ? "qmm-form-row is-top" : "qmm-form-row");
-    root.style.gridTemplateColumns = `${opts.labelWidth || "160px"} 1fr`;
-    root.style.columnGap = `${opts.gap ?? 10}px`;
+    const root4 = h("div", opts.alignTop ? "qmm-form-row is-top" : "qmm-form-row");
+    root4.style.gridTemplateColumns = `${opts.labelWidth || "160px"} 1fr`;
+    root4.style.columnGap = `${opts.gap ?? 10}px`;
     const label2 = h("label", "qmm-label qmm-form-row__label", labelText);
-    root.append(label2, control);
-    return { root, label: label2 };
+    root4.append(label2, control);
+    return { root: root4, label: label2 };
   }
   function flexRow(opts = {}) {
     const row = h("div", ["qmm-flex", opts.className].filter(Boolean).join(" "));
@@ -34523,237 +33552,6 @@
       ROW_ICON_PX = 26;
       JUSTIFY = { start: "flex-start", center: "center", end: "flex-end", between: "space-between", around: "space-around" };
       ALIGN = { start: "flex-start", center: "center", end: "flex-end", stretch: "stretch" };
-    }
-  });
-
-  // src/ui/kit/segmented.ts
-  function segmented(items, selected, onChange, opts = {}) {
-    const root = h("div", "qmm-seg");
-    if (opts.fullWidth) root.classList.add("qmm-seg--full");
-    if (opts.id) root.id = opts.id;
-    root.setAttribute("role", "radiogroup");
-    if (opts.ariaLabel) root.setAttribute("aria-label", opts.ariaLabel);
-    const rail = h("div", "qmm-seg__indicator");
-    root.appendChild(rail);
-    const indicator = slidingIndicator(root, rail);
-    let value = selected;
-    const buttons = [];
-    const activeButton = () => buttons.find((b) => b.dataset.value === value);
-    const select3 = (next, focus) => {
-      if (next !== value) {
-        value = next;
-        for (const b of buttons) {
-          const active2 = b.dataset.value === next;
-          b.setAttribute("aria-checked", active2 ? "true" : "false");
-          b.tabIndex = active2 ? 0 : -1;
-          b.classList.toggle("active", active2);
-        }
-        indicator.moveTo(activeButton(), buttons, true);
-      }
-      if (focus) activeButton()?.focus();
-      onChange?.(value);
-    };
-    for (const item of items) {
-      const btn = h("button", "qmm-seg__btn");
-      btn.type = "button";
-      btn.dataset.value = String(item.value);
-      btn.setAttribute("role", "radio");
-      btn.setAttribute("aria-checked", item.value === selected ? "true" : "false");
-      btn.tabIndex = item.value === selected ? 0 : -1;
-      btn.classList.toggle("active", item.value === selected);
-      btn.disabled = !!item.disabled;
-      btn.appendChild(h("span", "qmm-seg__btn-label", item.label));
-      btn.addEventListener("click", () => {
-        if (!btn.disabled) select3(item.value, false);
-      });
-      btn.addEventListener("keydown", (e) => {
-        if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(e.key)) return;
-        e.preventDefault();
-        if (e.key === "Home") return select3(items[0].value, true);
-        if (e.key === "End") return select3(items[items.length - 1].value, true);
-        const dir = e.key === "ArrowRight" ? 1 : -1;
-        let j = items.findIndex((it) => it.value === value);
-        for (let k = 0; k < items.length; k++) {
-          j = (j + dir + items.length) % items.length;
-          if (!items[j].disabled) return select3(items[j].value, true);
-        }
-      });
-      buttons.push(btn);
-      root.appendChild(btn);
-    }
-    const relayout = () => indicator.moveTo(activeButton(), buttons, false);
-    if (typeof ResizeObserver !== "undefined") new ResizeObserver(relayout).observe(root);
-    window.addEventListener("resize", relayout);
-    queueMicrotask(relayout);
-    root.get = () => value;
-    root.set = (next) => select3(next, false);
-    return root;
-  }
-  function slidingIndicator(root, rail) {
-    const reduceMotion = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
-    const canAnimate = typeof rail.animate === "function";
-    if (canAnimate) rail.style.transition = "none";
-    let current = null;
-    let animation = null;
-    const apply2 = (left, width) => {
-      rail.style.transform = `translate3d(${left}px,0,0)`;
-      rail.style.width = `${width}px`;
-    };
-    return {
-      moveTo(active2, buttons, animate) {
-        if (!active2) return;
-        const i = buttons.indexOf(active2);
-        const n = buttons.length;
-        const cs = getComputedStyle(root);
-        const gap = parseFloat(cs.gap || cs.columnGap || "0") || 0;
-        const borderLeft = parseFloat(cs.borderLeftWidth || "0") || 0;
-        const borderRight = parseFloat(cs.borderRightWidth || "0") || 0;
-        const rootRect = root.getBoundingClientRect();
-        const btnRect = active2.getBoundingClientRect();
-        let left = btnRect.left - rootRect.left - borderLeft;
-        let width = btnRect.width;
-        const inner = rootRect.width - borderLeft - borderRight;
-        if (n === 1) {
-          left = 0;
-          width = inner;
-        } else if (i === 0) {
-          width = left + width + gap / 2;
-          left = 0;
-        } else if (i === n - 1) {
-          left -= gap / 2;
-          width = inner - left;
-        } else {
-          left -= gap / 2;
-          width += gap;
-        }
-        const dpr = window.devicePixelRatio || 1;
-        const snap = (x) => Math.round(x * dpr) / dpr;
-        const target = { left: snap(left), width: snap(width) };
-        const previous = current;
-        current = target;
-        animation?.cancel();
-        animation = null;
-        const shouldAnimate = animate && canAnimate && !reduceMotion?.matches && previous != null && previous.width > 0 && target.width > 0;
-        if (!shouldAnimate) {
-          apply2(target.left, target.width);
-          return;
-        }
-        apply2(previous.left, previous.width);
-        animation = rail.animate(
-          [
-            { transform: `translate3d(${previous.left}px,0,0)`, width: `${previous.width}px`, opacity: 0.92 },
-            { transform: `translate3d(${target.left}px,0,0)`, width: `${target.width}px`, opacity: 1 }
-          ],
-          { duration: 260, easing: "cubic-bezier(.22,.7,.28,1)", fill: "forwards" }
-        );
-        const finish = () => {
-          apply2(target.left, target.width);
-          animation = null;
-        };
-        animation.addEventListener("finish", finish, { once: true });
-        animation.addEventListener("cancel", finish, { once: true });
-      }
-    };
-  }
-  var init_segmented = __esm({
-    "src/ui/kit/segmented.ts"() {
-      "use strict";
-      init_dom();
-    }
-  });
-
-  // src/ui/kit/sliders.ts
-  function slider(min = 0, max = 100, step = 1, value = 0, opts = {}) {
-    const input = h("input", opts.fill ? "qws-pnl-range" : "qmm-range");
-    input.type = "range";
-    input.min = String(min);
-    input.max = String(max);
-    input.step = String(step);
-    input.value = String(value);
-    return input;
-  }
-  function rangeDual(min = 0, max = 100, step = 1, valueMin = min, valueMax = max) {
-    const root = h("div", "qmm-range-dual");
-    const track = h("div", "qmm-range-dual-track");
-    const fill = h("div", "qmm-range-dual-fill");
-    track.appendChild(fill);
-    root.appendChild(track);
-    const thumb = (value, side) => {
-      const input = slider(min, max, step, value);
-      input.classList.add("qmm-range-dual-input", `qmm-range-dual-input--${side}`);
-      root.appendChild(input);
-      return input;
-    };
-    const minInput = thumb(valueMin, "min");
-    const maxInput = thumb(valueMax, "max");
-    const refresh = () => {
-      const total = max - min;
-      if (!Number.isFinite(total) || total <= 0) {
-        fill.style.left = "0%";
-        fill.style.right = "100%";
-        return;
-      }
-      const a = Number(minInput.value);
-      const b = Number(maxInput.value);
-      const pct = (v) => clamp(v, 0, 100);
-      fill.style.left = `${pct((Math.min(a, b) - min) / total * 100)}%`;
-      fill.style.right = `${pct(100 - (Math.max(a, b) - min) / total * 100)}%`;
-    };
-    minInput.addEventListener("input", refresh);
-    maxInput.addEventListener("input", refresh);
-    refresh();
-    return {
-      root,
-      min: minInput,
-      max: maxInput,
-      setValues(minValue, maxValue) {
-        minInput.value = String(minValue);
-        maxInput.value = String(maxValue);
-        refresh();
-      },
-      refresh
-    };
-  }
-  var init_sliders = __esm({
-    "src/ui/kit/sliders.ts"() {
-      "use strict";
-      init_math();
-      init_dom();
-    }
-  });
-
-  // src/ui/kit/toggles.ts
-  function switchInput(checked = false, onChange) {
-    const input = h("input", "qmm-switch");
-    input.type = "checkbox";
-    input.checked = checked;
-    input.setChecked = (value) => {
-      input.checked = value;
-    };
-    if (onChange) input.addEventListener("change", () => onChange(input.checked));
-    return input;
-  }
-  function toggleChip(labelText, opts = {}) {
-    const root = h("label", "qmm-chip-toggle");
-    if (opts.tooltip) root.title = opts.tooltip;
-    const input = h("input");
-    input.type = opts.type || "checkbox";
-    if (opts.name) input.name = opts.name;
-    if (opts.value) input.value = opts.value;
-    input.checked = !!opts.checked;
-    const face = h("div", "qmm-chip-toggle__face");
-    if (opts.icon) face.appendChild(iconNode(opts.icon, "qmm-chip-toggle__icon"));
-    const label2 = h("span", "qmm-chip-toggle__label", labelText);
-    face.appendChild(label2);
-    if (opts.description) face.appendChild(h("span", "qmm-chip-toggle__desc", opts.description));
-    if (opts.badge) face.appendChild(h("span", "qmm-chip-toggle__badge", opts.badge));
-    root.append(input, face);
-    return { root, input, label: label2 };
-  }
-  var init_toggles = __esm({
-    "src/ui/kit/toggles.ts"() {
-      "use strict";
-      init_dom();
     }
   });
 
@@ -36798,11 +35596,11 @@ next: ${next}`;
       previewArea.appendChild(empty);
     };
     const getActiveMutations = () => {
-      const active2 = [];
-      if (mutationFilters.color !== "None") active2.push(mutationFilters.color);
-      if (mutationFilters.condition !== "None") active2.push(mutationFilters.condition);
-      if (mutationFilters.lighting !== "None") active2.push(mutationFilters.lighting);
-      return active2;
+      const active3 = [];
+      if (mutationFilters.color !== "None") active3.push(mutationFilters.color);
+      if (mutationFilters.condition !== "None") active3.push(mutationFilters.condition);
+      if (mutationFilters.lighting !== "None") active3.push(mutationFilters.lighting);
+      return active3;
     };
     function renderMutationControls() {
       renderMutationGroup("color", COLOR_SELECTIONS, "Color", mutationGroupContainers.color);
@@ -37261,10 +36059,10 @@ next: ${next}`;
   `;
     document.head.appendChild(style2);
   }
-  async function renderDebugDataMenu(root) {
+  async function renderDebugDataMenu(root4) {
     ensureStyles();
     const ui = new Menu({ id: "debug-tools", compact: true });
-    ui.mount(root);
+    ui.mount(root4);
     ui.addTab("jotai", "Jotai", (view) => renderJotaiTab(view, ui));
     ui.addTab("atoms-live", "Live atoms", (view) => renderLiveAtomsTab(view, ui));
     ui.addTab("sprite-assets", "Sprites", (view) => renderSpritesTab(view, ui));
@@ -37379,8 +36177,8 @@ next: ${next}`;
     };
     const smallBtn2 = (txt) => ui.btn(txt, { size: "sm" });
     const errorBar2 = () => ui.errorBar();
-    const root = document.createElement("div");
-    Object.assign(root.style, {
+    const root4 = document.createElement("div");
+    Object.assign(root4.style, {
       display: "grid",
       gridTemplateRows: "1fr",
       gap: "12px",
@@ -37388,9 +36186,9 @@ next: ${next}`;
       minHeight: "0",
       overflow: "hidden"
     });
-    view.appendChild(root);
+    view.appendChild(root4);
     const bellSection = section2("Notification bell");
-    root.appendChild(bellSection.root);
+    root4.appendChild(bellSection.root);
     const bellRow = document.createElement("label");
     Object.assign(bellRow.style, {
       display: "flex",
@@ -37416,7 +36214,7 @@ next: ${next}`;
     });
     bellSection.body.appendChild(bellHint);
     const s1 = section2("Audio & Playback");
-    root.appendChild(s1.root);
+    root4.appendChild(s1.root);
     const contextControls = {};
     const contextOrder = [
       { key: "shops", label: "Shops", allowPurchase: true, showStop: true },
@@ -37548,7 +36346,7 @@ next: ${next}`;
     const s1Err = errorBar2();
     s1.body.appendChild(s1Err.el);
     const s2 = section2("Sound library");
-    root.appendChild(s2.root);
+    root4.appendChild(s2.root);
     const importRow = document.createElement("div");
     Object.assign(importRow.style, {
       display: "flex",
@@ -37596,8 +36394,8 @@ next: ${next}`;
       opacity: "0.75"
     });
     fileCard.append(fileCardTitle, fileStatus);
-    const setFileCardActive = (active2) => {
-      if (active2) {
+    const setFileCardActive = (active3) => {
+      if (active3) {
         fileCard.style.borderColor = "#6fc3ff";
         fileCard.style.boxShadow = "0 0 0 3px #6fc3ff22";
         fileCard.style.background = "linear-gradient(180deg, #102030, #0b1826)";
@@ -37647,8 +36445,8 @@ next: ${next}`;
     tip.style.opacity = "0.75";
     tip.style.fontSize = "12px";
     s2.body.appendChild(tip);
-    const listWrap = document.createElement("div");
-    Object.assign(listWrap.style, {
+    const listWrap2 = document.createElement("div");
+    Object.assign(listWrap2.style, {
       display: "grid",
       gridTemplateRows: "auto 1fr",
       gap: "6px",
@@ -37686,8 +36484,8 @@ next: ${next}`;
       minHeight: "0",
       padding: "4px 0"
     });
-    listWrap.append(listHeader, listBody);
-    s2.body.appendChild(listWrap);
+    listWrap2.append(listHeader, listBody);
+    s2.body.appendChild(listWrap2);
     const s2Err = errorBar2();
     s2.body.appendChild(s2Err.el);
     const sanitizeLoopInput = (input, fallback) => {
@@ -38002,7 +36800,7 @@ next: ${next}`;
       gap: "12px"
     });
     scroller.append(s1.root, s2.root);
-    root.appendChild(scroller);
+    root4.appendChild(scroller);
     view.__cleanup__ = (() => {
       const prev = view.__cleanup__;
       return () => {
@@ -38545,8 +37343,8 @@ next: ${next}`;
     let unsubPets2 = null;
     let generalEnabled = PetAlertService.isGeneralEnabled();
     const formRow2 = (labelTxt, control) => {
-      const { root } = ui.formRow(labelTxt, control, { labelWidth: "180px" });
-      return root;
+      const { root: root4 } = ui.formRow(labelTxt, control, { labelWidth: "180px" });
+      return root4;
     };
     const generalCard = ui.card("General notifications", { tone: "muted", align: "stretch" });
     generalCard.body.style.display = "grid";
@@ -39062,13 +37860,13 @@ next: ${next}`;
       };
     })();
   }
-  function renderNotifierMenu(root) {
+  function renderNotifierMenu(root4) {
     const ui = new Menu({ id: "alerts", compact: true, windowSelector: ".qws-win" });
     ui.addTab("shops", "\u{1F6D2} Shops", (view) => renderShopTab(view, ui));
     ui.addTab("weather", "\u{1F326} Weather", (view) => renderWeatherTab(view, ui));
     ui.addTab("pets", "\u{1F43E} Pets", (view) => renderPetAlertsTab(view, ui));
     ui.addTab("settings", "\u2699\uFE0F Settings", (view) => renderSettingsTab(view, ui));
-    ui.mount(root);
+    ui.mount(root4);
   }
   var rulePopover, detachRuleDocHandler, detachRuleKeyBlocker, detachRuleWheelBlocker, detachRuleDragHandler, closeRuleEditor, setSwitchCapState, createSwitch, setSwitchVisual, wrapCell, mkHeadCell, applyRuleState, openRuleEditor;
   var init_menu3 = __esm({
@@ -39235,20 +38033,20 @@ next: ${next}`;
       };
       applyRuleState = (itemCell, ruleCell, rule) => {
         const gearBtn = ruleCell?.querySelector("button[data-role='rule']") ?? null;
-        const hint = itemCell.querySelector('[data-role="rule-hint"]');
+        const hint2 = itemCell.querySelector('[data-role="rule-hint"]');
         const hasRule = !!(rule && (rule.sound || rule.volume != null || rule.playbackMode || rule.stopMode || rule.loopIntervalMs != null));
         const summary = hasRule ? formatRuleSummary(rule) : "";
         if (gearBtn) {
           gearBtn.dataset.active = hasRule ? "1" : "0";
           gearBtn.title = hasRule && summary ? `Custom rule \u2014 ${summary}` : "Custom rule";
         }
-        if (hint) {
+        if (hint2) {
           if (hasRule && summary) {
-            hint.textContent = summary;
-            hint.style.visibility = "visible";
+            hint2.textContent = summary;
+            hint2.style.visibility = "visible";
           } else {
-            hint.textContent = "";
-            hint.style.visibility = "hidden";
+            hint2.textContent = "";
+            hint2.style.visibility = "hidden";
           }
         }
       };
@@ -39553,11 +38351,11 @@ next: ${next}`;
         }
         if (allowPurchase) intervalInput.addEventListener("input", forceLoopMode);
         updateLoopVisibility();
-        const hint = document.createElement("div");
-        hint.textContent = "Use defaults by leaving values unchanged (matching the default volume keeps it inherited).";
-        hint.style.opacity = "0.7";
-        hint.style.fontSize = "12px";
-        pop.appendChild(hint);
+        const hint2 = document.createElement("div");
+        hint2.textContent = "Use defaults by leaving values unchanged (matching the default volume keeps it inherited).";
+        hint2.style.opacity = "0.7";
+        hint2.style.fontSize = "12px";
+        pop.appendChild(hint2);
         const actions = document.createElement("div");
         actions.className = "qws-rule-actions";
         const clearBtn = ui.btn("Clear", { variant: "ghost", size: "sm" });
@@ -40087,7 +38885,7 @@ next: ${next}`;
       const prefix = state5.lockMode === "ALLOW" ? "Allow" : "Lock";
       recipesTitleElement.textContent = `${prefix} when any recipe row matches (OR between rows)`;
     };
-    const makeSection = (titleText, content) => {
+    const makeSection = (titleText, content2) => {
       const section2 = document.createElement("div");
       section2.style.display = "grid";
       section2.style.justifyItems = "center";
@@ -40103,7 +38901,7 @@ next: ${next}`;
       heading.textContent = titleText;
       heading.style.fontWeight = "600";
       heading.style.opacity = "0.95";
-      section2.append(heading, content);
+      section2.append(heading, content2);
       return section2;
     };
     const centerRow = () => {
@@ -40297,7 +39095,7 @@ next: ${next}`;
     });
     rangeControls.append(scaleSlider.root, scaleValues);
     scaleRow.append(scaleModeRow, minControls, maxControls, rangeControls);
-    const applyScaleRange = (commit, notify3 = commit) => {
+    const applyScaleRange = (commit, notify2 = commit) => {
       let minValue = parseInt(scaleMinSlider.value, 10);
       let maxValue = parseInt(scaleMaxSlider.value, 10);
       if (!Number.isFinite(minValue)) minValue = state5.minScalePct;
@@ -40319,10 +39117,10 @@ next: ${next}`;
         state5.minScalePct = minValue;
         state5.maxScalePct = maxValue;
         updateLockWarning();
-        if (notify3) opts.onChange?.();
+        if (notify2) opts.onChange?.();
       }
     };
-    const applyScaleMinimum = (commit, notify3 = commit) => {
+    const applyScaleMinimum = (commit, notify2 = commit) => {
       let minValue = parseInt(minSlider.value, 10);
       if (!Number.isFinite(minValue)) minValue = state5.minScalePct;
       minValue = Math.max(50, Math.min(100, minValue));
@@ -40331,10 +39129,10 @@ next: ${next}`;
       if (commit) {
         state5.minScalePct = minValue;
         updateLockWarning();
-        if (notify3) opts.onChange?.();
+        if (notify2) opts.onChange?.();
       }
     };
-    const applyScaleMaximum = (commit, notify3 = commit) => {
+    const applyScaleMaximum = (commit, notify2 = commit) => {
       let maxValue = parseInt(maxSlider.value, 10);
       if (!Number.isFinite(maxValue)) maxValue = state5.maxScalePct;
       maxValue = Math.max(50, Math.min(100, maxValue));
@@ -40343,7 +39141,7 @@ next: ${next}`;
       if (commit) {
         state5.maxScalePct = maxValue;
         updateLockWarning();
-        if (notify3) opts.onChange?.();
+        if (notify2) opts.onChange?.();
       }
     };
     const updateScaleModeUI = () => {
@@ -40364,7 +39162,7 @@ next: ${next}`;
       }
       updateLockWarning();
     };
-    const applyScaleMode = (mode, notify3) => {
+    const applyScaleMode = (mode, notify2) => {
       const prevMode = state5.scaleLockMode;
       state5.scaleLockMode = mode;
       if (mode === "RANGE") {
@@ -40378,7 +39176,7 @@ next: ${next}`;
         applyScaleMaximum(prevMode !== mode, false);
       }
       updateScaleModeUI();
-      if (notify3 && prevMode !== mode) {
+      if (notify2 && prevMode !== mode) {
         opts.onChange?.();
       }
     };
@@ -40450,11 +39248,11 @@ next: ${next}`;
       "Rainbow",
       "linear-gradient(90deg, #ff6b6b, #f7d35c, #3fd3ff, #9b6bff, #ff6b6b)"
     );
-    const updateColorButtonVisual = (button3, active2) => {
-      button3.dataset.active = active2 ? "1" : "0";
-      button3.style.borderColor = active2 ? "rgba(94,234,212,0.40)" : "rgba(255,255,255,0.10)";
-      button3.style.boxShadow = active2 ? "0 0 0 1px rgba(94,234,212,0.25) inset, 0 2px 6px rgba(0, 0, 0, 0.45)" : "none";
-      button3.style.background = active2 ? "rgba(94,234,212,0.12)" : "rgba(255,255,255,0.04)";
+    const updateColorButtonVisual = (button3, active3) => {
+      button3.dataset.active = active3 ? "1" : "0";
+      button3.style.borderColor = active3 ? "rgba(94,234,212,0.40)" : "rgba(255,255,255,0.10)";
+      button3.style.boxShadow = active3 ? "0 0 0 1px rgba(94,234,212,0.25) inset, 0 2px 6px rgba(0, 0, 0, 0.45)" : "none";
+      button3.style.background = active3 ? "rgba(94,234,212,0.12)" : "rgba(255,255,255,0.04)";
       button3.style.opacity = button3.disabled ? "0.55" : "";
       button3.style.cursor = button3.disabled ? "default" : "pointer";
     };
@@ -42106,7 +40904,7 @@ next: ${next}`;
     const filename = str.split("/").pop() || "";
     return filename.replace(/\.[a-z0-9]+(\?.*)?$/i, "") || null;
   }
-  function buildSpriteCandidates2(primary, option) {
+  function buildSpriteCandidates(primary, option) {
     const candidates = /* @__PURE__ */ new Set();
     const addCandidate = (value) => {
       if (!value) return;
@@ -42178,7 +40976,7 @@ next: ${next}`;
       justifyContent: "center"
     });
     wrap.textContent = fallback && fallback.trim().length > 0 ? fallback : "??";
-    const candidates = buildSpriteCandidates2(option.key, option);
+    const candidates = buildSpriteCandidates(option.key, option);
     const categories = getSpriteCategoriesForKey(option?.key, option?.seedName, option?.cropName);
     attachSpriteIcon(wrap, categories, candidates, size, logTag);
     return wrap;
@@ -42192,7 +40990,7 @@ next: ${next}`;
       syncCropSpriteLoadedState(el, layer2);
       return;
     }
-    const candidates = options.candidates && options.candidates.length ? options.candidates : buildSpriteCandidates2(speciesKey);
+    const candidates = options.candidates && options.candidates.length ? options.candidates : buildSpriteCandidates(speciesKey);
     const mutations = Array.isArray(options.mutations) && options.mutations.length ? options.mutations : void 0;
     const categories = options.categories && options.categories.length ? options.categories : getSpriteCategoriesForKey(speciesKey);
     const updateLoadedState = () => syncCropSpriteLoadedState(el, layer2);
@@ -42398,13 +41196,13 @@ next: ${next}`;
   async function renderCalculatorMenu(container) {
     ensureCalculatorStyles();
     const ui = new Menu({ id: "calculator", compact: true });
-    ui.addTab("crops", "Crops", (root) => {
-      root.innerHTML = "";
-      root.style.padding = "8px";
-      root.style.boxSizing = "border-box";
-      root.style.height = "66vh";
-      root.style.overflow = "auto";
-      root.style.display = "grid";
+    ui.addTab("crops", "Crops", (root4) => {
+      root4.innerHTML = "";
+      root4.style.padding = "8px";
+      root4.style.boxSizing = "border-box";
+      root4.style.height = "66vh";
+      root4.style.overflow = "auto";
+      root4.style.display = "grid";
       const layout = applyStyles2(document.createElement("div"), {
         display: "grid",
         gridTemplateColumns: "minmax(220px, 280px) minmax(0, 1fr)",
@@ -42413,7 +41211,7 @@ next: ${next}`;
         height: "100%",
         overflow: "hidden"
       });
-      root.appendChild(layout);
+      root4.appendChild(layout);
       const left = applyStyles2(document.createElement("div"), {
         display: "grid",
         gridTemplateRows: "minmax(0, 1fr)",
@@ -42542,7 +41340,7 @@ next: ${next}`;
         Daserix&apos; Magic Garden Calculators
       </a>
     `;
-      root.appendChild(sourceHint);
+      root4.appendChild(sourceHint);
       const refs = {
         root: simulationRoot,
         sprite,
@@ -42576,10 +41374,10 @@ next: ${next}`;
         });
       };
       function renderColorSegment(state5, interactive) {
-        const active2 = state5?.color ?? COLOR_MUTATION_LABELS[0];
+        const active3 = state5?.color ?? COLOR_MUTATION_LABELS[0];
         const segmented3 = createSegmentedControl(
           COLOR_MUTATION_LABELS,
-          active2,
+          active3,
           interactive,
           interactive ? (label2) => {
             if (!selectedKey) return;
@@ -42598,10 +41396,10 @@ next: ${next}`;
         refs.colorMutations.appendChild(segmented3);
       }
       function renderWeatherConditions(state5, interactive) {
-        const active2 = state5?.weatherCondition ?? WEATHER_CONDITION_LABELS[0];
+        const active3 = state5?.weatherCondition ?? WEATHER_CONDITION_LABELS[0];
         const segmented3 = createSegmentedControl(
           WEATHER_CONDITION_LABELS,
-          active2,
+          active3,
           interactive,
           interactive ? (label2) => {
             if (!selectedKey) return;
@@ -42618,10 +41416,10 @@ next: ${next}`;
         refs.weatherConditions.appendChild(segmented3);
       }
       function renderWeatherLighting(state5, interactive) {
-        const active2 = state5?.weatherLighting ?? WEATHER_LIGHTING_LABELS[0];
+        const active3 = state5?.weatherLighting ?? WEATHER_LIGHTING_LABELS[0];
         const segmented3 = createSegmentedControl(
           WEATHER_LIGHTING_LABELS,
-          active2,
+          active3,
           interactive,
           interactive ? (label2) => {
             if (!selectedKey) return;
@@ -42638,10 +41436,10 @@ next: ${next}`;
         refs.weatherLighting.appendChild(segmented3);
       }
       function renderFriendBonus(state5, interactive) {
-        const active2 = friendPlayersToLabel(state5?.friendPlayers ?? FRIEND_BONUS_MIN_PLAYERS);
+        const active3 = friendPlayersToLabel(state5?.friendPlayers ?? FRIEND_BONUS_MIN_PLAYERS);
         const segmented3 = createSegmentedControl(
           FRIEND_BONUS_LABELS,
-          active2,
+          active3,
           interactive,
           interactive ? (label2) => {
             if (!selectedKey) return;
@@ -42674,7 +41472,7 @@ next: ${next}`;
         const option = optionByKey.get(key2);
         const fallbackEmoji = getLockerSeedEmojiForKey(key2) || (option?.seedName ? getLockerSeedEmojiForSeedName(option.seedName) : void 0) || "\u{1F331}";
         const mutations = getMutationsForState(state5);
-        const candidates = buildSpriteCandidates2(key2, option);
+        const candidates = buildSpriteCandidates(key2, option);
         const categories = getSpriteCategoriesForKey(key2, option?.seedName, option?.cropName);
         applyCropSimulationSprite(refs.sprite, key2, {
           fallback: fallbackEmoji,
@@ -43321,7 +42119,7 @@ next: ${next}`;
     const cell = document.createElement("span");
     css(cell, { display: "flex", justifyContent: "center" });
     cell.title = mutationId;
-    cell.appendChild(iconBox(mutationIcon(mutationId), HEADER_ICON_PX, "hatch"));
+    cell.appendChild(iconBox(mutationIcon2(mutationId), HEADER_ICON_PX, "hatch"));
     return cell;
   }
   function numberCell(value, color2, strong = false) {
@@ -45331,7 +44129,7 @@ Not a sum \u2014 it is 1 minus the product of every pet missing.${perHour}
     paint();
     return host;
   }
-  function renderDetails(stats, groups, showAllGroups) {
+  function renderDetails2(stats, groups, showAllGroups) {
     const details = document.createElement("div");
     details.style.paddingTop = "4px";
     if (stats.unknownSpecies.length) {
@@ -45422,7 +44220,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const stats = computeTeamStats(realPets);
     const groups = options.focusAbilityIds?.length ? focusGroups(stats.groups, options.focusAbilityIds) : stats.groups;
-    wrap.appendChild(renderDetails(stats, groups, options.showAllGroups === true));
+    wrap.appendChild(renderDetails2(stats, groups, options.showAllGroups === true));
     return wrap;
   }
   var PARAMETER_LABELS, MUTED, ACCENT, DIM, CONTINUOUS_ROLLS_PER_HOUR, TRIGGER_UNITS;
@@ -45795,36 +44593,36 @@ Restore figures are averages; unlucky streaks do worse.`;
     const refreshBtn = ui.btn("\u{1F504} Refresh", { size: "sm" });
     header.appendChild(refreshBtn);
     wrap.appendChild(header);
-    const content = document.createElement("div");
-    content.style.display = "grid";
-    content.style.gridTemplateColumns = "repeat(3, minmax(0, 1fr))";
-    content.style.gap = "8px";
-    wrap.appendChild(content);
+    const content2 = document.createElement("div");
+    content2.style.display = "grid";
+    content2.style.gridTemplateColumns = "repeat(3, minmax(0, 1fr))";
+    content2.style.gap = "8px";
+    wrap.appendChild(content2);
     let destroyed = false;
     view.__cleanup__ = () => {
       destroyed = true;
     };
     async function repaint() {
-      content.innerHTML = "";
+      content2.innerHTML = "";
       const loading = document.createElement("div");
       loading.textContent = "Loading\u2026";
       loading.style.opacity = "0.6";
-      content.appendChild(loading);
+      content2.appendChild(loading);
       const { teams, unusedPets, petsById } = await loadTeams2();
       if (destroyed || !view.isConnected) return;
-      content.innerHTML = "";
+      content2.innerHTML = "";
       if (!teams.length) {
         const empty = document.createElement("div");
         empty.textContent = "No useful team found \u2014 hatch pets with offensive abilities.";
         empty.style.opacity = "0.7";
-        content.appendChild(empty);
+        content2.appendChild(empty);
         return;
       }
       for (const team of teams) {
-        content.appendChild(renderTeamCard(team, petsById, ui));
+        content2.appendChild(renderTeamCard(team, petsById, ui));
       }
       if (unusedPets.length) {
-        content.appendChild(renderUnusedSection(unusedPets, ui));
+        content2.appendChild(renderUnusedSection(unusedPets, ui));
       }
     }
     refreshBtn.addEventListener("click", () => {
@@ -46323,9 +45121,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       return holder2;
     };
-    const framed = (title, content) => {
+    const framed = (title, content2) => {
       const cardSection = ui.card(title, { tone: "muted", align: "center" });
-      cardSection.body.append(content);
+      cardSection.body.append(content2);
       cardSection.root.style.maxWidth = "720px";
       return cardSection.root;
     };
@@ -46791,18 +45589,18 @@ Restore figures are averages; unlucky streaks do worse.`;
       grid.style.rowGap = "10px";
       grid.style.justifyItems = "center";
       const mkRow = (idx) => {
-        const root = document.createElement("div");
+        const root4 = document.createElement("div");
         const BTN = 34;
         const ICON = 40;
-        root.style.display = "grid";
-        root.style.gridTemplateColumns = `${ICON}px minmax(0,1fr) ${BTN}px ${BTN}px`;
-        root.style.alignItems = "center";
-        root.style.gap = "8px";
-        root.style.width = "min(560px, 100%)";
-        root.style.border = "1px solid var(--qmm-border-2)";
-        root.style.borderRadius = "10px";
-        root.style.padding = "8px 10px";
-        root.style.background = "rgba(255,255,255,0.03)";
+        root4.style.display = "grid";
+        root4.style.gridTemplateColumns = `${ICON}px minmax(0,1fr) ${BTN}px ${BTN}px`;
+        root4.style.alignItems = "center";
+        root4.style.gap = "8px";
+        root4.style.width = "min(560px, 100%)";
+        root4.style.border = "1px solid var(--qmm-border-2)";
+        root4.style.borderRadius = "10px";
+        root4.style.padding = "8px 10px";
+        root4.style.background = "rgba(255,255,255,0.03)";
         const iconContainer = document.createElement("div");
         Object.assign(iconContainer.style, {
           display: "flex",
@@ -46889,7 +45687,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           tooltip: "Remove this pet",
           ariaLabel: "Remove this pet"
         });
-        root.append(iconContainer, left2, btnChoose, btnClear2);
+        root4.append(iconContainer, left2, btnChoose, btnClear2);
         function update(p) {
           if (!p) {
             nameEl.textContent = "None";
@@ -46944,7 +45742,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           const saved = PetsService.saveTeam({ id: t.id, slots: next });
           await repaintSlots(saved ?? getSelectedTeam());
         };
-        return { root, nameEl, abilitiesEl, btnChoose, btnClear: btnClear2, update };
+        return { root: root4, nameEl, abilitiesEl, btnChoose, btnClear: btnClear2, update };
       };
       const r0 = mkRow(0);
       const r1 = mkRow(1);
@@ -47341,9 +46139,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     renderCrops(petItems[0]?.id ?? null);
   }
-  function renderPetsMenu(root) {
+  function renderPetsMenu(root4) {
     const ui = new Menu({ id: "pets", compact: true, windowSelector: ".qws-win" });
-    ui.mount(root);
+    ui.mount(root4);
     ui.addTab("manager", "\u{1F9F0} Manager", (view) => renderManagerTab(view, ui));
     ui.addTab("teambuilder", "\u{1F9E9} Team Builder", (view) => renderTeamBuilderTab(view, ui));
     ui.addTab("feeding", "\u{1F356} Feeding", (view) => renderFeedingTab(view, ui));
@@ -47382,8 +46180,8 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/deleters/section.ts
   function statTile() {
-    const root = document.createElement("div");
-    css(root, {
+    const root4 = document.createElement("div");
+    css(root4, {
       flex: "1 1 0",
       minWidth: "0",
       display: "flex",
@@ -47405,9 +46203,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       letterSpacing: "0.06em",
       whiteSpace: "nowrap"
     });
-    root.append(value, caption);
+    root4.append(value, caption);
     return {
-      root,
+      root: root4,
       set: (nextValue, nextCaption, tone) => {
         value.textContent = nextValue;
         caption.textContent = nextCaption;
@@ -47630,21 +46428,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       updateSummary2();
     };
     const onPauseState = () => updateControls();
-    const listeners9 = [
+    const listeners8 = [
       [`${config.eventPrefix}:progress`, onProgress],
       [`${config.eventPrefix}:done`, onComplete],
       [`${config.eventPrefix}:error`, onComplete],
       [`${config.eventPrefix}:paused`, onPauseState],
       [`${config.eventPrefix}:resumed`, onPauseState]
     ];
-    for (const [type, handler] of listeners9) window.addEventListener(type, handler);
+    for (const [type, handler] of listeners8) window.addEventListener(type, handler);
     updateSummary2();
     updateControls();
     return {
       root: section2.root,
       cleanup: () => {
         clearSummaryTimer();
-        for (const [type, handler] of listeners9) window.removeEventListener(type, handler);
+        for (const [type, handler] of listeners8) window.removeEventListener(type, handler);
       }
     };
   }
@@ -47958,7 +46756,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function readMySlotIdx() {
     try {
-      const slot = Number(await myUserSlotIdx.get());
+      const slot = Number(await myUserSlotIdx2.get());
       return Number.isInteger(slot) && slot >= 0 ? slot : null;
     } catch {
       return null;
@@ -47985,12 +46783,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return { ...best };
   }
-  var myUserSlotIdx;
+  var myUserSlotIdx2;
   var init_anchors = __esm({
     "src/features/companion/anchors.ts"() {
       "use strict";
       init_hub();
-      myUserSlotIdx = makeAtom("myUserSlotIdxAtom");
+      myUserSlotIdx2 = makeAtom("myUserSlotIdxAtom");
     }
   });
 
@@ -48538,7 +47336,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       border: `1px solid ${BORDER}`
     });
     for (const option of options) {
-      const active2 = option.value === selected;
+      const active3 = option.value === selected;
       const button3 = document.createElement("button");
       button3.type = "button";
       if (option.title) button3.title = option.title;
@@ -48550,8 +47348,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         cursor: "pointer",
         fontSize: "11px",
         lineHeight: "1",
-        background: active2 ? TEAL_DIM : "transparent",
-        color: active2 ? TEAL : TEXT_DIM
+        background: active3 ? TEAL_DIM : "transparent",
+        color: active3 ? TEAL : TEXT_DIM
       });
       button3.addEventListener("click", () => onSelect(option.value));
       wrap.append(button3);
@@ -48693,12 +47491,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return null;
   }
-  function contentIcon(content, sizePx) {
-    if (content.kind === "plant") return speciesIcon(content.id, sizePx);
-    if (content.kind === "egg") return plantItemIcon({ kind: "egg", id: content.id, name: content.name }, sizePx);
+  function contentIcon(content2, sizePx) {
+    if (content2.kind === "plant") return speciesIcon(content2.id, sizePx);
+    if (content2.kind === "egg") return plantItemIcon({ kind: "egg", id: content2.id, name: content2.name }, sizePx);
     const box = document.createElement("div");
     css(box, { width: `${sizePx}px`, height: `${sizePx}px`, display: "flex", alignItems: "center", justifyContent: "center" });
-    attachSpriteIcon(box, ["decor"], [content.id, content.name.replace(/\s+/g, "")], sizePx, "garden-view");
+    attachSpriteIcon(box, ["decor"], [content2.id, content2.name.replace(/\s+/g, "")], sizePx, "garden-view");
     return box;
   }
   function openGardenView(host) {
@@ -48738,10 +47536,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       background: "rgba(0,0,0,0.28)",
       boxSizing: "border-box"
     });
-    const hint = document.createElement("div");
-    css(hint, { fontSize: "10.5px", color: TEXT_DIM, lineHeight: "1.45" });
-    hint.textContent = "Every tile gets the same space here, so nothing hides behind a taller plant. Hover a tile for its name.";
-    modal.body.append(toolbar, grid, hint);
+    const hint2 = document.createElement("div");
+    css(hint2, { fontSize: "10.5px", color: TEXT_DIM, lineHeight: "1.45" });
+    hint2.textContent = "Every tile gets the same space here, so nothing hides behind a taller plant. Hover a tile for its name.";
+    modal.body.append(toolbar, grid, hint2);
     const cells = /* @__PURE__ */ new Map();
     for (let row = 0; row < GARDEN_ROWS; row++) {
       for (let col = 0; col < GARDEN_COLS; col++) {
@@ -48769,10 +47567,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     let owned2 = /* @__PURE__ */ new Set();
     let tileObjects = {};
-    function matches(content, query) {
+    function matches(content2, query) {
       if (!query) return true;
-      if (!content) return false;
-      return content.name.toLowerCase().includes(query) || content.id.toLowerCase().includes(query);
+      if (!content2) return false;
+      return content2.name.toLowerCase().includes(query) || content2.id.toLowerCase().includes(query);
     }
     function applyFilter() {
       const query = search2.value.trim().toLowerCase();
@@ -48793,9 +47591,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       for (let tileIndex = 0; tileIndex < GARDEN_TILE_COUNT; tileIndex++) {
         const cell = cells.get(tileIndex);
         if (!cell) continue;
-        const content = owned2.has(tileIndex) ? readContent(tileObjects[String(tileIndex)]) : null;
-        const key2 = !owned2.has(tileIndex) ? "absent" : content ? `${content.kind}:${content.id}` : "free";
-        cell.content = content;
+        const content2 = owned2.has(tileIndex) ? readContent(tileObjects[String(tileIndex)]) : null;
+        const key2 = !owned2.has(tileIndex) ? "absent" : content2 ? `${content2.kind}:${content2.id}` : "free";
+        cell.content = content2;
         if (key2 === cell.shown) continue;
         cell.shown = key2;
         cell.el.replaceChildren();
@@ -48804,14 +47602,14 @@ Restore figures are averages; unlucky streaks do worse.`;
           cell.el.title = "";
           continue;
         }
-        if (!content) {
+        if (!content2) {
           css(cell.el, { background: "rgba(255,255,255,0.05)", borderColor: BORDER });
           cell.el.title = "Empty";
           continue;
         }
         css(cell.el, { background: TEAL_DIM, borderColor: TEAL_BORDER });
-        cell.el.title = content.kind === "plant" ? content.name : `${content.name} (${content.kind})`;
-        const icon = contentIcon(content, CELL_ICON_PX);
+        cell.el.title = content2.kind === "plant" ? content2.name : `${content2.name} (${content2.kind})`;
+        const icon = contentIcon(content2, CELL_ICON_PX);
         css(icon, { pointerEvents: "none", maxWidth: "100%", maxHeight: "100%" });
         cell.el.append(icon);
       }
@@ -49208,8 +48006,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     );
     const featureDisabled = MiscService.AUTO_RECO_TEMPORARILY_DISABLED;
     const initialSeconds = Math.round(MiscService.getAutoRecoDelayMs() / 1e3);
-    const hint = document.createElement("div");
-    css(hint, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.45", padding: "0 2px" });
+    const hint2 = document.createElement("div");
+    css(hint2, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.45", padding: "0 2px" });
     const slider2 = range(0, AUTO_RECO_MAX_SECONDS, AUTO_RECO_STEP_SECONDS, initialSeconds);
     css(slider2, { width: "150px" });
     const sliderValue = pill2(formatShortDuration(initialSeconds));
@@ -49220,23 +48018,23 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     function syncEnabled(on) {
       slider2.disabled = featureDisabled || !on;
-      hint.textContent = on ? "Automatically log back in if this account is disconnected because it was opened in another session." : "Auto reconnect on session conflict is turned off.";
+      hint2.textContent = on ? "Automatically log back in if this account is disconnected because it was opened in another session." : "Auto reconnect on session conflict is turned off.";
     }
     if (featureDisabled) {
       const input = enabledToggle.querySelector("input");
       if (input) input.disabled = true;
       css(enabledToggle, { opacity: "0.4", pointerEvents: "none" });
       slider2.disabled = true;
-      hint.textContent = "Auto reconnect has been temporarily disabled at the request of the game developers. It will most likely come back later.";
+      hint2.textContent = "Auto reconnect has been temporarily disabled at the request of the game developers. It will most likely come back later.";
     } else {
       syncEnabled(MiscService.readAutoRecoEnabled(false));
     }
     const clampSeconds = (value) => Math.max(0, Math.min(AUTO_RECO_MAX_SECONDS, Math.round(value / AUTO_RECO_STEP_SECONDS) * AUTO_RECO_STEP_SECONDS));
-    const applySeconds = (raw, persist3) => {
+    const applySeconds = (raw, persist2) => {
       const seconds = clampSeconds(raw);
       slider2.value = String(seconds);
       sliderValue.textContent = formatShortDuration(seconds);
-      if (persist3) MiscService.setAutoRecoDelayMs(seconds * 1e3);
+      if (persist2) MiscService.setAutoRecoDelayMs(seconds * 1e3);
     };
     slider2.addEventListener("input", () => applySeconds(Number(slider2.value), false));
     slider2.addEventListener("change", () => applySeconds(Number(slider2.value), true));
@@ -49246,7 +48044,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     card5.body.append(
       settingRow("Enabled", "Attempts to log back in after a session conflict.", enabledToggle).row,
       settingRow("Delay", "Wait time before reconnecting.", delayControl).row,
-      hint
+      hint2
     );
     return card5.root;
   }
@@ -49379,10 +48177,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     ensurePanelStyles();
     const ui = new Menu({ id: "misc", compact: true });
     ui.mount(container);
-    const root = ui.root.querySelector(".qmm-views") ?? ui.root;
-    root.innerHTML = "";
-    root.classList.add("qws-pnl-root", "qws-pnl-scroll");
-    css(root, {
+    const root4 = ui.root.querySelector(".qmm-views") ?? ui.root;
+    root4.innerHTML = "";
+    root4.classList.add("qws-pnl-root", "qws-pnl-scroll");
+    css(root4, {
       display: "flex",
       flexDirection: "column",
       gap: "12px",
@@ -49497,7 +48295,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       resume: () => decorDeleter.resume(),
       cancel: () => decorDeleter.cancel()
     });
-    root.append(
+    root4.append(
       panelHeader(),
       buildAutoRecoSection(),
       player2.root,
@@ -49507,7 +48305,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       seedDeleterSection.root,
       decorDeleterSection.root
     );
-    root.__cleanup__ = () => {
+    root4.__cleanup__ = () => {
       try {
         player2.cleanup();
       } catch {
@@ -49752,19 +48550,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     try {
       const doc = win.document || document;
-      const root = doc.body || doc.documentElement || document.body;
+      const root4 = doc.body || doc.documentElement || document.body;
       const blob = new Blob([payload], { type: "application/json" });
       const url = (win.URL || URL).createObjectURL(blob);
       const a = doc.createElement("a");
       a.href = url;
       a.download = filename;
       a.style.display = "none";
-      if (root) {
-        root.appendChild(a);
+      if (root4) {
+        root4.appendChild(a);
       }
       a.click();
-      if (root) {
-        root.removeChild(a);
+      if (root4) {
+        root4.removeChild(a);
       }
       (win.URL || URL).revokeObjectURL(url);
     } catch {
@@ -49949,8 +48747,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       opacity: "0.75"
     });
     fileCard.append(fileCardTitle, fileStatus);
-    const setFileCardActive = (active2) => {
-      if (active2) {
+    const setFileCardActive = (active3) => {
+      if (active3) {
         fileCard.style.borderColor = "#6fc3ff";
         fileCard.style.boxShadow = "0 0 0 3px #6fc3ff22";
         fileCard.style.background = "linear-gradient(180deg, #102030, #0b1826)";
@@ -50238,8 +49036,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     const ui = new Menu({ id: "settings", compact: true });
     ui.mount(container);
     ui.addTabs([
-      { id: "settings-data", title: "Settings", render: (root) => renderDataTab(root, ui) },
-      { id: "settings-infos", title: "Infos", render: (root) => renderInfosTab(root, ui) }
+      { id: "settings-data", title: "Settings", render: (root4) => renderDataTab(root4, ui) },
+      { id: "settings-infos", title: "Infos", render: (root4) => renderInfosTab(root4, ui) }
     ]);
     ui.switchTo("settings-data");
   }
@@ -50511,8 +49309,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return card5;
   }
   function renderListView(tools, onSelectTool) {
-    const root = document.createElement("div");
-    root.className = "mgt-list";
+    const root4 = document.createElement("div");
+    root4.className = "mgt-list";
     const allTags = Array.from(new Set(tools.flatMap((tool) => tool.tags ?? [])));
     const selectedTags = /* @__PURE__ */ new Set();
     const grid = document.createElement("div");
@@ -50578,11 +49376,11 @@ Restore figures are averages; unlucky streaks do worse.`;
         tagButtons.set(tag, button3);
       });
       refreshStates();
-      root.appendChild(filters);
+      root4.appendChild(filters);
     }
     renderCards();
-    root.appendChild(grid);
-    return { root };
+    root4.appendChild(grid);
+    return { root: root4 };
   }
   var ALL_FILTER_LABEL;
   var init_listView = __esm({
@@ -50597,10 +49395,10 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/tools/carousel.ts
   function renderCarousel(images) {
-    const root = document.createElement("div");
-    root.className = "mgt-carousel";
+    const root4 = document.createElement("div");
+    root4.className = "mgt-carousel";
     if (!images.length) {
-      return { root };
+      return { root: root4 };
     }
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const stage = document.createElement("div");
@@ -50807,9 +49605,9 @@ Restore figures are averages; unlucky streaks do worse.`;
         dot.onclick = () => void goTo(index, index > currentIndex ? "next" : "prev");
         dots.appendChild(dot);
       });
-      root.append(stage, dots);
+      root4.append(stage, dots);
     } else {
-      root.appendChild(stage);
+      root4.appendChild(stage);
     }
     void (async () => {
       try {
@@ -50818,7 +49616,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         console.warn("[Carousel] Failed to load image:", images[0], error);
       }
     })();
-    return { root };
+    return { root: root4 };
   }
   var OVERLAY_Z_INDEX, SWAP_DURATION_MS, SWAP_EASING, SWAP_OFFSET_PX, ZOOM_SCALE;
   var init_carousel = __esm({
@@ -50906,8 +49704,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return row;
   }
   function renderDetailView(tool, onBack) {
-    const root = document.createElement("div");
-    root.className = "mgt-detail";
+    const root4 = document.createElement("div");
+    root4.className = "mgt-detail";
     const back = document.createElement("button");
     back.type = "button";
     back.className = "mgt-back";
@@ -50917,14 +49715,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     backArrow.textContent = "\u2190";
     backArrow.setAttribute("aria-hidden", "true");
     back.append(backArrow, document.createTextNode("All tools"));
-    root.appendChild(back);
-    root.appendChild(createHero(tool));
+    root4.appendChild(back);
+    root4.appendChild(createHero(tool));
     if (tool.images?.length) {
-      root.appendChild(renderCarousel(tool.images).root);
+      root4.appendChild(renderCarousel(tool.images).root);
     }
     const actions = createActions(tool.actions);
-    if (actions) root.appendChild(actions);
-    return { root };
+    if (actions) root4.appendChild(actions);
+    return { root: root4 };
   }
   var init_detailView = __esm({
     "src/features/tools/detailView.ts"() {
@@ -51672,10 +50470,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     fileInput.accept = ".json,application/json,text/plain";
     fileInput.multiple = true;
     css2(fileInput, { display: "none" });
-    const setDropActive = (active2) => {
+    const setDropActive = (active3) => {
       css2(dropZone, {
-        borderColor: active2 ? TEAL_BRD_HI : BORDER_HI,
-        background: active2 ? TEAL_DIM2 : "rgba(255,255,255,0.03)"
+        borderColor: active3 ? TEAL_BRD_HI : BORDER_HI,
+        background: active3 ? TEAL_DIM2 : "rgba(255,255,255,0.03)"
       });
     };
     const importFiles = async (files) => {
@@ -51726,20 +50524,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     wrap.appendChild(
       card3([sectionLabel3("Import"), dropZone, fileInput])
     );
-    const listWrap = document.createElement("div");
-    css2(listWrap, { display: "flex", flexDirection: "column", gap: "6px" });
+    const listWrap2 = document.createElement("div");
+    css2(listWrap2, { display: "flex", flexDirection: "column", gap: "6px" });
     const renderSavedList = () => {
       const listFn = window.qwsEditorListSavedGardens;
       const loadFn = window.qwsEditorLoadGarden;
       const delFn = window.qwsEditorDeleteGarden;
       const expFn = window.qwsEditorExportGarden;
-      listWrap.innerHTML = "";
+      listWrap2.innerHTML = "";
       const items = typeof listFn === "function" ? listFn() : [];
       if (!items.length) {
         const empty = document.createElement("div");
         css2(empty, { fontSize: "12px", color: TEXT_DIM3, padding: "4px 0" });
         empty.textContent = "No saved gardens yet.";
-        listWrap.appendChild(empty);
+        listWrap2.appendChild(empty);
         return;
       }
       const editorOn = EditorService.isEnabled();
@@ -51805,12 +50603,12 @@ Restore figures are averages; unlucky streaks do worse.`;
           }
         });
         row.append(nameEl, loadBtn, expBtn, delBtn);
-        listWrap.appendChild(row);
+        listWrap2.appendChild(row);
       }
     };
     renderSavedList();
     wrap.appendChild(
-      card3([sectionLabel3("Saved gardens"), statusEl, listWrap])
+      card3([sectionLabel3("Saved gardens"), statusEl, listWrap2])
     );
     const unsubChange = EditorService.onChange((enabled5) => {
       toggle2.querySelector("input").checked = enabled5;
@@ -51909,10 +50707,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     name.textContent = action2.label;
     labelCol.appendChild(name);
     if (action2.hint) {
-      const hint = document.createElement("div");
-      css(hint, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.4" });
-      hint.textContent = action2.hint;
-      labelCol.appendChild(hint);
+      const hint2 = document.createElement("div");
+      css(hint2, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.4" });
+      hint2.textContent = action2.hint;
+      labelCol.appendChild(hint2);
     }
     const controls = document.createElement("div");
     css(controls, { display: "flex", alignItems: "center", gap: "8px", flex: "0 0 auto" });
@@ -51977,10 +50775,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     ensurePanelStyles();
     const ui = new Menu({ id: "keybinds", compact: true });
     ui.mount(container);
-    const root = ui.root.querySelector(".qmm-views") ?? ui.root;
-    root.innerHTML = "";
-    root.classList.add("qws-pnl-root");
-    css(root, {
+    const root4 = ui.root.querySelector(".qmm-views") ?? ui.root;
+    root4.innerHTML = "";
+    root4.classList.add("qws-pnl-root");
+    css(root4, {
       display: "flex",
       flexDirection: "column",
       gap: "12px",
@@ -52049,7 +50847,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         applyCollapsed();
         setSectionCollapsed2(section2.id, collapsed);
       });
-      root.appendChild(sectionCard);
+      root4.appendChild(sectionCard);
     }
   }
   var ICON_BOX_PX;
@@ -52865,8 +51663,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     return btn;
   }
-  function toggleBtn(label2, iconSvg, active2, onToggle) {
-    let isActive = active2;
+  function toggleBtn(label2, iconSvg, active3, onToggle) {
+    let isActive = active3;
     const btn = document.createElement("button");
     const applyState2 = () => {
       css3(btn, {
@@ -52915,8 +51713,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     return btn;
   }
-  function markUnavailable(btn, hint) {
-    btn.title = hint;
+  function markUnavailable(btn, hint2) {
+    btn.title = hint2;
     css3(btn, {
       opacity: "0.45",
       cursor: "not-allowed",
@@ -52928,7 +51726,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     btn.onmouseenter = null;
     btn.onmouseleave = null;
     btn.onclick = () => {
-      void toastSimple("Unavailable", hint, "info");
+      void toastSimple("Unavailable", hint2, "info");
     };
     return btn;
   }
@@ -52966,9 +51764,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     return btn;
   }
-  async function renderRoomMenu(root) {
+  async function renderRoomMenu(root4) {
     ensureStyles3();
-    css3(root, { padding: "0", overflow: "hidden" });
+    css3(root4, { padding: "0", overflow: "hidden" });
     const wrap = document.createElement("div");
     css3(wrap, {
       display: "flex",
@@ -52998,8 +51796,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       minWidth: "0"
     });
     wrap.append(leftPane, rightPane);
-    root.appendChild(wrap);
-    const getWin = () => root.closest(".qws-win");
+    root4.appendChild(wrap);
+    const getWin = () => root4.closest(".qws-win");
     const hideWin = () => {
       const w = getWin();
       if (w) w.style.display = "none";
@@ -53014,8 +51812,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       rightPane.innerHTML = "";
       const player2 = playerId2 ? players.find((p) => p.id === playerId2) ?? null : null;
       if (!player2) {
-        const hint = document.createElement("div");
-        css3(hint, {
+        const hint2 = document.createElement("div");
+        css3(hint2, {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -53029,12 +51827,12 @@ Restore figures are averages; unlucky streaks do worse.`;
         const iconWrap = document.createElement("div");
         iconWrap.innerHTML = ICONS.user.replace("13", "28").replace("13", "28");
         css3(iconWrap, { opacity: "0.35" });
-        hint.append(iconWrap, document.createTextNode("Select a player"));
-        rightPane.appendChild(hint);
+        hint2.append(iconWrap, document.createTextNode("Select a player"));
+        rightPane.appendChild(hint2);
         return;
       }
-      const content = document.createElement("div");
-      css3(content, { display: "flex", flexDirection: "column", gap: "18px" });
+      const content2 = document.createElement("div");
+      css3(content2, { display: "flex", flexDirection: "column", gap: "18px" });
       const profileCard = document.createElement("div");
       css3(profileCard, {
         display: "flex",
@@ -53060,7 +51858,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       nameEl.textContent = player2.name || player2.id;
       infoBlock.append(nameEl, statusPill(player2.isConnected ?? false));
       profileCard.append(av, infoBlock);
-      content.appendChild(profileCard);
+      content2.appendChild(profileCard);
       const teleSection = document.createElement("div");
       teleSection.appendChild(sectionLabel4("Teleport"));
       const teleRow = document.createElement("div");
@@ -53077,7 +51875,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         primaryBtn2("To garden", ICONS.garden, () => PlayersService.teleportToGarden(player2.id))
       );
       teleSection.appendChild(teleRow);
-      content.appendChild(teleSection);
+      content2.appendChild(teleSection);
       const followSection = document.createElement("div");
       followSection.appendChild(sectionLabel4("Follow"));
       const followRow = document.createElement("div");
@@ -53101,7 +51899,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       followRow.append(followPlayerBtn);
       followSection.appendChild(followRow);
-      content.appendChild(followSection);
+      content2.appendChild(followSection);
       const inspectSection = document.createElement("div");
       inspectSection.appendChild(sectionLabel4("Inspect"));
       const inspectGrid = document.createElement("div");
@@ -53145,7 +51943,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         })
       );
       inspectSection.appendChild(inspectGrid);
-      content.appendChild(inspectSection);
+      content2.appendChild(inspectSection);
       const editorSection = document.createElement("div");
       editorSection.appendChild(sectionLabel4("Editor"));
       editorSection.appendChild(
@@ -53160,7 +51958,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           else await toastSimple(`Saved "${saved.name}".`, "success");
         })
       );
-      content.appendChild(editorSection);
+      content2.appendChild(editorSection);
       const valSection = document.createElement("div");
       valSection.appendChild(sectionLabel4("Crop values"));
       const valRow = document.createElement("div");
@@ -53190,8 +51988,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       const { card: gardenCard, val: gardenVal } = makeValCard("Garden");
       valRow.append(invCard, gardenCard);
       valSection.appendChild(valRow);
-      content.appendChild(valSection);
-      rightPane.appendChild(content);
+      content2.appendChild(valSection);
+      rightPane.appendChild(content2);
       void (async () => {
         try {
           invVal.textContent = formatPrice(Math.round(await PlayersService.getInventoryValue(player2.id))) ?? "\u2014";
@@ -53361,9 +52159,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (!match.textures.includes(texture)) match.textures.push(texture);
       if (!match.nodes.includes(node)) match.nodes.push(node);
     };
-    for (const root of roots) {
-      if (!root) continue;
-      const stack = [root];
+    for (const root4 of roots) {
+      if (!root4) continue;
+      const stack = [root4];
       while (stack.length && visited < MAX_WALK_NODES) {
         const node = stack.pop();
         if (!node || seenNodes.has(node)) continue;
@@ -53396,8 +52194,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       } catch {
       }
     }
-    const root = globalThis.unsafeWindow || globalThis;
-    const pixi = root.PIXI;
+    const root4 = globalThis.unsafeWindow || globalThis;
+    const pixi = root4.PIXI;
     for (const holder2 of [pixi?.Assets, pixi?.Cache]) {
       if (typeof holder2?.get !== "function") continue;
       try {
@@ -53599,8 +52397,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         lastApply: {}
       };
       {
-        const root = globalThis.unsafeWindow || globalThis;
-        root.__MG_SKINS_DEBUG__ = debugState3;
+        const root4 = globalThis.unsafeWindow || globalThis;
+        root4.__MG_SKINS_DEBUG__ = debugState3;
       }
       frameRectOf = (texture) => texture?.frame ?? texture?._frame ?? null;
       sourceOf = (texture) => texture?.source ?? texture?._source ?? texture?.baseTexture ?? null;
@@ -53682,15 +52480,15 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/skins/gameCaches.ts
   function holders() {
     const state5 = getSpriteState();
-    const root = globalThis.unsafeWindow || globalThis;
+    const root4 = globalThis.unsafeWindow || globalThis;
     return [
       getPixiApp(),
       state5.app,
       state5.app?.app,
       state5.renderer,
       state5.renderer?.app,
-      root.__PIXI_APP__,
-      root.app
+      root4.__PIXI_APP__,
+      root4.app
     ].filter(Boolean);
   }
   function search(property, matches) {
@@ -53818,8 +52616,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function installSkinsDebug() {
-    const root = globalThis.unsafeWindow || globalThis;
-    const target = root.__MG_SKINS_DEBUG__;
+    const root4 = globalThis.unsafeWindow || globalThis;
+    const target = root4.__MG_SKINS_DEBUG__;
     if (!target) return;
     target.inspect = inspectFrame;
     target.find = findOnStage;
@@ -54431,8 +53229,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     void initSkins();
     css(container, { padding: "0", overflow: "hidden" });
     container.innerHTML = "";
-    const root = document.createElement("div");
-    css(root, {
+    const root4 = document.createElement("div");
+    css(root4, {
       display: "grid",
       gridTemplateColumns: "minmax(0,1fr) 300px",
       gap: "12px",
@@ -54448,12 +53246,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       boxSizing: "border-box",
       background: "linear-gradient(160deg, rgba(15,20,30,0.95) 0%, rgba(10,14,20,0.95) 60%, rgba(8,12,18,0.96) 100%)"
     });
-    container.appendChild(root);
+    container.appendChild(root4);
     const browser = card2();
     const detail = card2();
     css(browser, { overflow: "hidden" });
     css(detail, { overflow: "hidden" });
-    root.append(browser, detail);
+    root4.append(browser, detail);
     const header = document.createElement("div");
     css(header, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" });
     const enableWrap = document.createElement("div");
@@ -54934,35 +53732,35 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   }
   async function installInjection() {
-    if (active) return;
+    if (active2) return;
     ensureTickAtom();
     await fakeShow(COMPANION_PATCH, currentPayload);
-    active = true;
+    active2 = true;
   }
   async function setCompanionTile(playerId2, tileIndex) {
     if (!Number.isInteger(tileIndex) || tileIndex < 0) return;
     currentPayload = { npcs: { [playerId2]: tileIndex } };
-    if (!active) {
+    if (!active2) {
       ensureTickAtom();
       await fakeShow(COMPANION_PATCH, currentPayload);
-      active = true;
+      active2 = true;
       return;
     }
     await fakeUpdate(QUINOA_DATA_LABEL, currentPayload);
     await bumpTick();
   }
   async function hideCompanion() {
-    if (!active) return;
+    if (!active2) return;
     currentPayload = { npcs: {} };
-    active = false;
+    active2 = false;
     await fakeHide(QUINOA_DATA_LABEL);
   }
   async function disposeInjection() {
     currentPayload = { npcs: {} };
-    active = false;
+    active2 = false;
     await fakeDispose(QUINOA_DATA_LABEL);
   }
-  var NPC_ID_PREFIX, QUINOA_DATA_LABEL, quinoaData, COMPANION_PATCH, active, currentPayload;
+  var NPC_ID_PREFIX, QUINOA_DATA_LABEL, quinoaData, COMPANION_PATCH, active2, currentPayload;
   var init_injection = __esm({
     "src/features/companion/injection.ts"() {
       "use strict";
@@ -54985,7 +53783,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           return { ...base, npcs: { ...realNpcs, ...fakeNpcs } };
         }
       };
-      active = false;
+      active2 = false;
       currentPayload = { npcs: {} };
     }
   });
@@ -58334,8 +57132,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/chat/index.ts
-  function notify2() {
-    for (const listener of [...listeners8]) {
+  function notify() {
+    for (const listener of [...listeners7]) {
       try {
         listener();
       } catch {
@@ -58367,7 +57165,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         });
       }
     }
-    notify2();
+    notify();
   }
   function speak(line, force = false) {
     const spoken = forGame(line);
@@ -58379,7 +57177,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const proposal = state2.proposal;
     if (!proposal || !isExpired(proposal, Date.now())) return;
     state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposal.id) };
-    notify2();
+    notify();
   }
   function harvestBubble(rows, sentence) {
     const top = groupVariants(rows)[0];
@@ -58503,7 +57301,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       stopped: () => state2.cancelRequested,
       progress: (done, total) => {
         state2 = { ...state2, run: { done, total } };
-        notify2();
+        notify();
       }
     };
   }
@@ -58514,7 +57312,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     } finally {
       stopped = state2.cancelRequested;
       state2 = { ...state2, run: null, cancelRequested: false };
-      notify2();
+      notify();
     }
     return stopped;
   }
@@ -58576,7 +57374,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (captured.kind === "sell") return captured.plan.sell.length;
     return captured.picks.length;
   }
-  var ALERT_DEDUPE_MS, state2, listeners8, nextProposalSeq, ACCEPTANCE, CompanionChat;
+  var ALERT_DEDUPE_MS, state2, listeners7, nextProposalSeq, ACCEPTANCE, CompanionChat;
   var init_chat = __esm({
     "src/features/companion/chat/index.ts"() {
       "use strict";
@@ -58609,7 +57407,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         run: null,
         cancelRequested: false
       };
-      listeners8 = /* @__PURE__ */ new Set();
+      listeners7 = /* @__PURE__ */ new Set();
       nextProposalSeq = 1;
       ACCEPTANCE = {
         harvest: "Yes, go ahead",
@@ -58639,7 +57437,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           const proposal = state2.proposal;
           if (!proposal) return;
           state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposal.id) };
-          notify2();
+          notify();
         },
         /**
          * Retire la question de nourrissage quand elle n'a plus d'objet.
@@ -58671,8 +57469,8 @@ Restore figures are averages; unlucky streaks do worse.`;
           return state2.run !== null;
         },
         subscribe(listener) {
-          listeners8.add(listener);
-          return () => listeners8.delete(listener);
+          listeners7.add(listener);
+          return () => listeners7.delete(listener);
         },
         /** Alerte poussée par une source ; ignorée si identique et récente. */
         alert(text2) {
@@ -58680,7 +57478,7 @@ Restore figures are averages; unlucky streaks do worse.`;
             ...state2,
             log: appendAlertOnce(state2.log, { from: "companion", kind: "alert", text: text2, atMs: Date.now() }, ALERT_DEDUPE_MS)
           };
-          notify2();
+          notify();
         },
         /**
          * Demande émise par le joueur. N'exécute rien : pose la question.
@@ -58769,7 +57567,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         cancelRun() {
           if (!state2.run) return;
           state2 = { ...state2, cancelRequested: true };
-          notify2();
+          notify();
         }
       };
     }
@@ -59355,8 +58153,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return row;
   }
   function chatHeader(name) {
-    const root = document.createElement("div");
-    css(root, {
+    const root4 = document.createElement("div");
+    css(root4, {
       display: "flex",
       alignItems: "center",
       gap: "10px",
@@ -59374,10 +58172,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     const status2 = document.createElement("div");
     css(status2, { fontSize: "11px", color: TEXT_DIM });
     info.append(title, status2);
-    root.append(portraitSlot, info);
+    root4.append(portraitSlot, info);
     let shownIdentity = null;
     return {
-      root,
+      root: root4,
       setStatus(text2, busy4) {
         status2.textContent = text2;
         css(status2, { color: busy4 ? TEAL : TEXT_DIM });
@@ -59433,10 +58231,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     return bar;
   }
   function barHint(text2, tone = "dim") {
-    const hint = document.createElement("div");
-    css(hint, { fontSize: "11px", color: tone === "warn" ? WARN : TEXT_DIM, marginLeft: "auto" });
-    hint.textContent = text2;
-    return hint;
+    const hint2 = document.createElement("div");
+    css(hint2, { fontSize: "11px", color: tone === "warn" ? WARN : TEXT_DIM, marginLeft: "auto" });
+    hint2.textContent = text2;
+    return hint2;
   }
   var GROUP_WINDOW_MS, AVATAR_PX, BUBBLE_ICON_PX2, SYSTEM_ICON_PX, OUTGOING_BG, OUTGOING_BORDER, OUTGOING_TEXT, INCOMING_BG, ALERT_BG, ALERT_BORDER;
   var init_chatView = __esm({
@@ -59474,15 +58272,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     const header = document.createElement("div");
     css(header, { display: "flex", alignItems: "center", gap: "8px", width: "100%" });
     header.append(sectionLabel2(icon ? `${icon} ${title}` : title), summary);
-    const { root, body } = collapsibleCard({ header, collapsed: true, onToggle: () => {
+    const { root: root4, body } = collapsibleCard({ header, collapsed: true, onToggle: () => {
     } });
-    css(root, { padding: "9px 11px", gap: "9px", flex: "0 0 auto" });
+    css(root4, { padding: "9px 11px", gap: "9px", flex: "0 0 auto" });
     return {
-      root,
+      root: root4,
       body,
-      setSummary(text2, active2) {
+      setSummary(text2, active3) {
         summary.textContent = text2;
-        css(summary, { color: active2 ? TEAL : TEXT_DIM });
+        css(summary, { color: active3 ? TEAL : TEXT_DIM });
       }
     };
   }
@@ -59537,8 +58335,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return filters.minSizePct > 50 ? `${filters.minSizePct}% and up` : "Any size";
   }
   function resultStrip() {
-    const root = document.createElement("div");
-    css(root, {
+    const root4 = document.createElement("div");
+    css(root4, {
       display: "flex",
       flexDirection: "column",
       gap: "8px",
@@ -59552,9 +58350,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     css(count, { fontSize: "13px", fontWeight: "600", color: TEAL });
     const sprites = document.createElement("div");
     css(sprites, { display: "flex", alignItems: "flex-end", gap: "10px", flexWrap: "wrap" });
-    root.append(count, sprites);
+    root4.append(count, sprites);
     return {
-      root,
+      root: root4,
       update(total, entries2, hidden) {
         count.textContent = total === 0 ? "Nothing to pick" : `${total} crop${total === 1 ? "" : "s"}`;
         sprites.innerHTML = "";
@@ -59579,18 +58377,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function lockedNote() {
-    const root = document.createElement("div");
-    css(root, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
+    const root4 = document.createElement("div");
+    css(root4, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
     return {
-      root,
+      root: root4,
       update(lockedOut) {
         if (lockedOut === 0) {
-          root.textContent = "Your Locker decides what I leave alone.";
-          css(root, { color: TEXT_DIM });
+          root4.textContent = "Your Locker decides what I leave alone.";
+          css(root4, { color: TEXT_DIM });
           return;
         }
-        root.textContent = `Leaving ${lockedOut} locked crop${lockedOut === 1 ? "" : "s"} alone.`;
-        css(root, { color: WARN });
+        root4.textContent = `Leaving ${lockedOut} locked crop${lockedOut === 1 ? "" : "s"} alone.`;
+        css(root4, { color: WARN });
       }
     };
   }
@@ -59605,12 +58403,12 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/menu/settingsNotice.ts
   function settingsNotice(group2, what, onOpen) {
-    const root = document.createElement("div");
+    const root4 = document.createElement("div");
     if (!isUnreviewed(group2)) {
-      root.style.display = "none";
-      return { root };
+      root4.style.display = "none";
+      return { root: root4 };
     }
-    css(root, {
+    css(root4, {
       display: "flex",
       alignItems: "center",
       gap: "10px",
@@ -59638,8 +58436,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       lineHeight: "1"
     });
     open.addEventListener("click", onOpen);
-    root.append(text2, open);
-    return { root };
+    root4.append(text2, open);
+    return { root: root4 };
   }
   var init_settingsNotice = __esm({
     "src/features/companion/menu/settingsNotice.ts"() {
@@ -60191,8 +58989,8 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/menu/plantGrid.ts
   function plantGrid(options) {
-    const root = document.createElement("div");
-    css(root, {
+    const root4 = document.createElement("div");
+    css(root4, {
       display: "grid",
       gridTemplateColumns: `repeat(${GARDEN_COLS / 2}, 1fr) ${HALF_GAP_PX2}px repeat(${GARDEN_COLS / 2}, 1fr)`,
       gridTemplateRows: `repeat(${GARDEN_ROWS}, 1fr)`,
@@ -60208,7 +59006,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       boxSizing: "border-box",
       flex: "0 0 auto"
     });
-    root.addEventListener("contextmenu", (event) => event.preventDefault());
+    root4.addEventListener("contextmenu", (event) => event.preventDefault());
     const cells = /* @__PURE__ */ new Map();
     let painting = false;
     let mode = "assign";
@@ -60244,12 +59042,12 @@ Restore figures are averages; unlucky streaks do worse.`;
         if (col === GARDEN_COLS / 2) {
           const spacer2 = document.createElement("div");
           css(spacer2, { pointerEvents: "none" });
-          root.append(spacer2);
+          root4.append(spacer2);
         }
         const tileIndex = row * GARDEN_COLS + col;
         const el = buildCell(tileIndex);
         cells.set(tileIndex, { el, shown: null });
-        root.append(el);
+        root4.append(el);
       }
     }
     function stateKey(tileIndex, owned2, occupied) {
@@ -60290,7 +59088,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     }
     return {
-      root,
+      root: root4,
       update() {
         const owned2 = options.owned();
         const occupied = options.occupied();
@@ -60337,21 +59135,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     });
     function paletteGroup(title) {
-      const root = document.createElement("div");
-      css(root, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
+      const root4 = document.createElement("div");
+      css(root4, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
       const row = document.createElement("div");
       css(row, { display: "flex", flexWrap: "wrap", gap: "5px" });
-      root.append(sectionLabel2(title), row);
-      return { root, row };
+      root4.append(sectionLabel2(title), row);
+      return { root: root4, row };
     }
     const seedGroup = paletteGroup("Seeds");
     const eggGroup = paletteGroup("Eggs");
     const paletteEmpty = document.createElement("div");
     css(paletteEmpty, { fontSize: "12px", color: TEXT_DIM, lineHeight: "1.5" });
     paletteEmpty.textContent = "Nothing to plant. No seeds, no eggs.";
-    const hint = document.createElement("div");
-    css(hint, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.5" });
-    hint.textContent = "Pick one and draw. Right click erases, red is taken.";
+    const hint2 = document.createElement("div");
+    css(hint2, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.5" });
+    hint2.textContent = "Pick one and draw. Right click erases, red is taken.";
     const grid = plantGrid({
       owned: () => owned2,
       occupied: () => scope.occupied,
@@ -60392,7 +59190,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       modal.close();
     });
     css(askButton, { marginLeft: "auto" });
-    modal.body.append(seedGroup.root, eggGroup.root, paletteEmpty, hint, grid.root, strip);
+    modal.body.append(seedGroup.root, eggGroup.root, paletteEmpty, hint2, grid.root, strip);
     modal.footer.append(clearButton, askButton);
     function remainingFor(item) {
       return stockLeft([...plan.values()], scope.items).get(itemKey(item)) ?? 0;
@@ -60473,7 +59271,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         group2.root.style.display = group2.row.childElementCount > 0 ? "flex" : "none";
       }
       paletteEmpty.style.display = hasItems ? "none" : "";
-      hint.style.display = hasItems ? "" : "none";
+      hint2.style.display = hasItems ? "" : "none";
       grid.root.style.display = hasItems ? "grid" : "none";
       grid.update();
       renderStrip();
@@ -60879,9 +59677,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function renderChatTab(view) {
     view.innerHTML = "";
-    const root = document.createElement("div");
-    css(root, { display: "flex", flexDirection: "column", gap: "8px" });
-    view.append(root);
+    const root4 = document.createElement("div");
+    css(root4, { display: "flex", flexDirection: "column", gap: "8px" });
+    view.append(root4);
     const header = chatHeader("Companion");
     const thread = threadBody();
     const bar = actionBar();
@@ -60973,19 +59771,19 @@ Restore figures are averages; unlucky streaks do worse.`;
       renderBar();
       renderStatus();
     }
-    root.append(header.root, thread, bar);
+    root4.append(header.root, thread, bar);
     renderAll();
     let unsubscribe2 = () => {
     };
     unsubscribe2 = CompanionChat.subscribe(() => {
-      if (!root.isConnected) {
+      if (!root4.isConnected) {
         unsubscribe2();
         return;
       }
       renderAll();
     });
     const identityTimer = window.setInterval(() => {
-      if (!root.isConnected) {
+      if (!root4.isConnected) {
         clearInterval(identityTimer);
         return;
       }
@@ -61012,16 +59810,16 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/menu/index.ts
-  function renderCompanionMenu(root) {
+  function renderCompanionMenu(root4) {
     ensurePanelStyles();
     const ui = new Menu({ id: "companion", compact: true, windowSelector: ".qws-win" });
-    ui.mount(root);
-    css(root, { minWidth: `${MIN_WIDTH_PX}px` });
+    ui.mount(root4);
+    css(root4, { minWidth: `${MIN_WIDTH_PX}px` });
     const TABS = ["behavior", "chat"];
     ui.addTab("behavior", "Behavior", (view) => renderBehaviorTab(view));
     ui.addTab("chat", "Chat", (view) => renderChatTab(view));
     const onTabRequest = (event) => {
-      if (!root.isConnected) {
+      if (!root4.isConnected) {
         window.removeEventListener(COMPANION_TAB_EVENT, onTabRequest);
         return;
       }
@@ -61046,7 +59844,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/antiAfk/antiAfk.ts
   function createAntiAfkController(deps) {
     const STOP_EVENTS = ["visibilitychange", "blur", "focus", "focusout", "pagehide", "freeze", "resume"];
-    const listeners9 = [];
+    const listeners8 = [];
     function swallowAll() {
       const add = (target, t) => {
         const h2 = (e) => {
@@ -61054,7 +59852,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           e.preventDefault?.();
         };
         target.addEventListener(t, h2, { capture: true });
-        listeners9.push({ t, h: h2, target });
+        listeners8.push({ t, h: h2, target });
       };
       STOP_EVENTS.forEach((t) => {
         add(document, t);
@@ -61062,11 +59860,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
     }
     function unswallowAll() {
-      for (const { t, h: h2, target } of listeners9) try {
+      for (const { t, h: h2, target } of listeners8) try {
         target.removeEventListener(t, h2, { capture: true });
       } catch {
       }
-      listeners9.length = 0;
+      listeners8.length = 0;
     }
     const docProto = Object.getPrototypeOf(document);
     const saved = {
@@ -61207,35 +60005,38 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/editor/pointerControls.ts
-  function tileKeyOf(target) {
-    return `${target.tileType}|${target.localTileIndex}`;
+  async function resolveOwnTile(tx, ty) {
+    try {
+      const [mapData, ownSlotIdx] = await Promise.all([readMapData(), readUserSlotIdx()]);
+      return ownTileAt(mapData, tx, ty, ownSlotIdx);
+    } catch {
+      return null;
+    }
   }
-  function hitTestOwnTile(ev) {
+  function hitTestTile(ev) {
     if (!tos.isReady()) return null;
     const canvas = tos.getCanvas();
     if (!canvas || ev.target !== canvas) return null;
     const info = tos.pointerToFarmTile(ev);
-    if (!info) return null;
-    return { tx: info.tx, ty: info.ty };
+    return info ? { tx: info.tx, ty: info.ty } : null;
   }
   async function handlePrimary(target, tx, ty) {
-    const occupied = await readTileObjectAt(target);
+    const occupied = readTileObjectAt(target);
     setCurrentEditorTile(target);
     if (occupied) {
       tos.flashTileGreen(tx, ty, { startAlpha: 0.55, durationMs: 400 });
       return;
     }
-    await placeSelectedItemInGardenAtCurrentTile();
+    await placeBrushAtCurrentTile();
   }
   async function handleRemove(target) {
-    const occupied = await readTileObjectAt(target);
-    if (!occupied) return;
+    if (!readTileObjectAt(target)) return;
     setCurrentEditorTile(target);
     await removeGardenObjectAtCurrentTile();
   }
   async function handlePointerDown(ev) {
     if (!EditorService.isEnabled() || ev.button !== 0 && ev.button !== 2) return;
-    const hit = hitTestOwnTile(ev);
+    const hit = hitTestTile(ev);
     if (!hit) return;
     const target = await resolveOwnTile(hit.tx, hit.ty);
     if (!target) return;
@@ -61252,7 +60053,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function handlePointerMove(ev) {
     if (!dragMode || !EditorService.isEnabled()) return;
-    const hit = hitTestOwnTile(ev);
+    const hit = hitTestTile(ev);
     if (!hit) return;
     const target = await resolveOwnTile(hit.tx, hit.ty);
     if (!target) return;
@@ -61276,25 +60077,26 @@ Restore figures are averages; unlucky streaks do worse.`;
   function installEditorPointerControls() {
     if (installed3 || typeof window === "undefined") return;
     installed3 = true;
-    window.addEventListener("pointerdown", (ev) => {
-      void handlePointerDown(ev);
-    }, true);
-    window.addEventListener("pointermove", (ev) => {
-      void handlePointerMove(ev);
-    }, true);
+    window.addEventListener("pointerdown", (ev) => void handlePointerDown(ev), true);
+    window.addEventListener("pointermove", (ev) => void handlePointerMove(ev), true);
     window.addEventListener("pointerup", handlePointerUp, true);
     window.addEventListener("pointercancel", handlePointerUp, true);
     window.addEventListener("contextmenu", handleContextMenu, true);
   }
-  var installed3, dragMode, lastTileKey;
+  var installed3, dragMode, lastTileKey, tileKeyOf;
   var init_pointerControls = __esm({
     "src/features/editor/pointerControls.ts"() {
       "use strict";
       init_tileObjects();
       init_editor();
+      init_liveGarden();
+      init_planEdits();
+      init_session();
+      init_tileMap();
       installed3 = false;
       dragMode = null;
       lastTileKey = null;
+      tileKeyOf = (target) => `${target.tileType}|${target.localTileIndex}`;
     }
   });
 
@@ -62462,8 +61264,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function build(proposal) {
     ensureStyle3();
-    const root = document.createElement("div");
-    root.id = CARD_ID;
+    const root4 = document.createElement("div");
+    root4.id = CARD_ID;
     const face = document.createElement("div");
     face.className = "mgask-face";
     face.textContent = "\u{1F916}";
@@ -62502,9 +61304,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     clock.className = "mgask-clock";
     const fill = document.createElement("i");
     clock.append(fill);
-    root.append(body, clock);
-    document.body.appendChild(root);
-    card4 = root;
+    root4.append(body, clock);
+    document.body.appendChild(root4);
+    card4 = root4;
     clockBar = fill;
     shownId = proposal.id;
     timer = window.setInterval(() => {
