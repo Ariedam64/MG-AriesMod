@@ -246,14 +246,14 @@ function renderPlayerDetail(root: HTMLElement, player: Player): HTMLElement {
 
   void (async () => {
     try {
-      inventory.value.textContent = formatPrice(Math.round(await inventoryValue(player.id))) ?? "—";
+      inventory.value.textContent = formatPrice(Math.round(await inventoryValue(player.id))) ?? "-";
     } catch {
-      inventory.value.textContent = "—";
+      inventory.value.textContent = "-";
     }
     try {
-      garden.value.textContent = formatPrice(Math.round(await gardenValue(player.id))) ?? "—";
+      garden.value.textContent = formatPrice(Math.round(await gardenValue(player.id))) ?? "-";
     } catch {
-      garden.value.textContent = "—";
+      garden.value.textContent = "-";
     }
   })();
 

@@ -62,7 +62,7 @@ for (const [species, size] of [["Carrot", 50], ["Carrot", 100], ["Banana", 77]] 
 check("unknown species has no weight", calculatorWeight("NotACrop", 60), null);
 
 check("coins format", formatCoins(1234567.6), "1,234,568");
-check("no coins", formatCoins(null), "—");
+check("no coins", formatCoins(null), "-");
 check("weight format drops trailing zeros", formatWeight(1.5), "1.5 kg");
 check("weight format keeps three decimals", formatWeight(0.12345), "0.123 kg");
 check("whole weight", formatWeight(2), "2 kg");

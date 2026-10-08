@@ -19369,7 +19369,7 @@
       VALUE_DATASET_KEY = "tmInventoryValue";
       GAME_YELLOW2 = "var(--chakra-colors-Yellow-Magic, #F3D32B)";
       LOADING = "\u2026";
-      UNKNOWN = "\u2014";
+      UNKNOWN = "-";
       COMPACT_UNITS = [
         { threshold: 1e12, suffix: "T" },
         { threshold: 1e9, suffix: "B" },
@@ -30936,11 +30936,11 @@ next: ${next}`;
     return Number.isFinite(value) && value > 0 ? value : null;
   }
   function formatCoins(value) {
-    if (typeof value !== "number" || !Number.isFinite(value)) return "\u2014";
+    if (typeof value !== "number" || !Number.isFinite(value)) return "-";
     return formatInteger(value, "round");
   }
   function formatWeight(value) {
-    if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return "\u2014";
+    if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return "-";
     const text2 = WEIGHT_FORMAT.format(value).replace(/(\.\d*?[1-9])0+$/u, "$1").replace(/\.0+$/u, "");
     return `${text2} kg`;
   }
@@ -31171,7 +31171,7 @@ next: ${next}`;
     icon2.draggable = false;
     icon2.setAttribute("aria-hidden", "true");
     Object.assign(icon2.style, { width: "20px", height: "20px", pointerEvents: "none", userSelect: "none" });
-    const value = h("span", void 0, "\u2014");
+    const value = h("span", void 0, "-");
     value.style.lineHeight = "1";
     root4.append(icon2, value);
     return { root: root4, value };
@@ -31233,7 +31233,7 @@ next: ${next}`;
     const sizeRow = h("div");
     Object.assign(sizeRow.style, { display: "flex", alignItems: "center", gap: "8px" });
     sizeRow.append(sizeLabel, sizeSlider, sizeValue);
-    const weight = h("div", void 0, "\u2014");
+    const weight = h("div", void 0, "-");
     Object.assign(weight.style, { fontSize: "11px", color: color.textDim, textAlign: "center", fontVariantNumeric: "tabular-nums" });
     const previewCard = section2(null);
     previewCard.append(spriteBox, sizeRow, weight);
@@ -31256,7 +31256,7 @@ next: ${next}`;
       return state5;
     };
     function refreshPrice() {
-      price.value.textContent = selectedKey ? formatCoins(calculatorPrice(selectedKey, stateFor(selectedKey))) : "\u2014";
+      price.value.textContent = selectedKey ? formatCoins(calculatorPrice(selectedKey, stateFor(selectedKey))) : "-";
     }
     function refreshSize(size) {
       sizeSlider.value = String(size);
@@ -40925,14 +40925,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     );
     void (async () => {
       try {
-        inventory.value.textContent = formatPrice(Math.round(await inventoryValue(player2.id))) ?? "\u2014";
+        inventory.value.textContent = formatPrice(Math.round(await inventoryValue(player2.id))) ?? "-";
       } catch {
-        inventory.value.textContent = "\u2014";
+        inventory.value.textContent = "-";
       }
       try {
-        garden3.value.textContent = formatPrice(Math.round(await gardenValue(player2.id))) ?? "\u2014";
+        garden3.value.textContent = formatPrice(Math.round(await gardenValue(player2.id))) ?? "-";
       } catch {
-        garden3.value.textContent = "\u2014";
+        garden3.value.textContent = "-";
       }
     })();
     return content2;

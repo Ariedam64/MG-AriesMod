@@ -13,7 +13,7 @@ const VALUE_DATASET_KEY = "tmInventoryValue";
 const GAME_YELLOW = "var(--chakra-colors-Yellow-Magic, #F3D32B)";
 
 const LOADING = "…";
-const UNKNOWN = "—";
+const UNKNOWN = "-";
 
 const COMPACT_UNITS: Array<{ threshold: number; suffix: string }> = [
   { threshold: 1e12, suffix: "T" },

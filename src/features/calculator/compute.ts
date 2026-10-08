@@ -61,7 +61,7 @@ export function calculatorPrice(species: string, state: CalculatorState): number
 export const calculatorWeight = (species: string, size: number): number | null => cropWeight(species, size);
 
 export function formatCoins(value: number | null): string {
-  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+  if (typeof value !== "number" || !Number.isFinite(value)) return "-";
   return formatInteger(value, "round");
 }
 
@@ -69,7 +69,7 @@ const WEIGHT_FORMAT = new Intl.NumberFormat("en-US", { minimumFractionDigits: 3,
 
 /** `1.25` -> `"1.25 kg"`: three decimals at most, trailing zeros dropped. */
 export function formatWeight(value: number | null): string {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return "—";
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return "-";
   const text = WEIGHT_FORMAT.format(value)
     .replace(/(\.\d*?[1-9])0+$/u, "$1")
     .replace(/\.0+$/u, "");

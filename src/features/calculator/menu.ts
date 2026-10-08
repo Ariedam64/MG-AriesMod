@@ -74,7 +74,7 @@ function priceDisplay(): { root: HTMLElement; value: HTMLElement } {
   icon.draggable = false;
   icon.setAttribute("aria-hidden", "true");
   Object.assign(icon.style, { width: "20px", height: "20px", pointerEvents: "none", userSelect: "none" });
-  const value = h("span", undefined, "—");
+  const value = h("span", undefined, "-");
   value.style.lineHeight = "1";
   root.append(icon, value);
   return { root, value };
@@ -145,7 +145,7 @@ function renderCropsTab(root: HTMLElement): void {
   const sizeRow = h("div");
   Object.assign(sizeRow.style, { display: "flex", alignItems: "center", gap: "8px" });
   sizeRow.append(sizeLabel, sizeSlider, sizeValue);
-  const weight = h("div", undefined, "—");
+  const weight = h("div", undefined, "-");
   Object.assign(weight.style, { fontSize: "11px", color: color.textDim, textAlign: "center", fontVariantNumeric: "tabular-nums" });
 
   const previewCard = section(null);
@@ -176,7 +176,7 @@ function renderCropsTab(root: HTMLElement): void {
   };
 
   function refreshPrice(): void {
-    price.value.textContent = selectedKey ? formatCoins(calculatorPrice(selectedKey, stateFor(selectedKey))) : "—";
+    price.value.textContent = selectedKey ? formatCoins(calculatorPrice(selectedKey, stateFor(selectedKey))) : "-";
   }
 
   function refreshSize(size: number): void {
