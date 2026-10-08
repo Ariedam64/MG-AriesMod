@@ -54,7 +54,8 @@
     "check:editorpanels": "esbuild scripts/checkEditorPanels.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkEditorPanels.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkEditorPanels.cjs",
     "check:shopalerts": "esbuild scripts/checkShopAlerts.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkShopAlerts.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkShopAlerts.cjs",
     "check:alertsounds": "esbuild scripts/checkAlertSounds.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkAlertSounds.cjs --log-level=error && node node_modules/.cache/checkAlertSounds.cjs",
-    "check:kithidden": "esbuild scripts/checkKitHidden.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkKitHidden.cjs --log-level=error && node node_modules/.cache/checkKitHidden.cjs"
+    "check:kithidden": "esbuild scripts/checkKitHidden.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkKitHidden.cjs --log-level=error && node node_modules/.cache/checkKitHidden.cjs",
+    "check:toastcalls": "esbuild scripts/checkToastCalls.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkToastCalls.cjs --log-level=error && node node_modules/.cache/checkToastCalls.cjs"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",

@@ -41170,7 +41170,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const saved = await fn(player2.id, `${player2.name || player2.id}'s garden`);
     if (!saved) await toastSimple("Save garden", "Save failed (no garden state).", "error");
-    else await toastSimple(`Saved "${saved.name}".`, "success");
+    else await toastSimple("Save garden", `Saved "${saved.name}".`, "success");
   }
   function renderPlayerDetail(root4, player2) {
     const content2 = h("div");
