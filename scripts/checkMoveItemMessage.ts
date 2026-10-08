@@ -9,8 +9,8 @@
 //
 // Run with: npm run check:moveitem
 
-import { buildMoveItemCommand } from "../src/utils/moveItemMessage";
-import { buildQuinoaMessage, isQuinoaCommandType, seedCommandSequence } from "../src/core/quinoaCommands";
+import { buildMoveItemCommand } from "../src/game/ws/moveItemMessage";
+import { buildQuinoaMessage, isQuinoaCommandType, seedCommandSequence } from "../src/game/ws/commands";
 
 let failures = 0;
 

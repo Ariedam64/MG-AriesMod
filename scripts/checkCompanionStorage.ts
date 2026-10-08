@@ -38,13 +38,13 @@ stored.set(
   })
 );
 
-import { readAriesPath } from "../src/utils/localStorage";
+import { readAriesPath } from "../src/platform/storage";
 import {
   isUnreviewed,
   loadCompanionSettings,
   markReviewed,
   patchCompanionSettings,
-} from "../src/services/companion/state";
+} from "../src/features/companion/state";
 
 let fails = 0;
 const check = (label: string, got: unknown, want: unknown) => {

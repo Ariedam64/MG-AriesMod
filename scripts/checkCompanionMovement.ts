@@ -15,9 +15,9 @@ import {
   type PickInterest,
   type WanderArea,
   type XY,
-} from "../src/services/companion/movement";
-import { findFirstStep } from "../src/services/companion/pathfinding";
-import { matchBuildingName } from "../src/services/companion/buildings";
+} from "../src/features/companion/movement";
+import { findFirstStep } from "../src/features/companion/pathfinding";
+import { matchBuildingName } from "../src/features/companion/buildings";
 
 let fails = 0;
 const check = (label: string, got: unknown, want: unknown) => {

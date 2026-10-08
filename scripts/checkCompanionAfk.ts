@@ -29,8 +29,8 @@ import {
   snoreLine,
   type AfkEffect,
   type AfkState,
-} from "../src/services/companion/afk";
-import { EmoteType } from "../src/services/companion/emoteTypes";
+} from "../src/features/companion/afk";
+import { EmoteType } from "../src/features/companion/emoteTypes";
 
 let fails = 0;
 const check = (label: string, got: unknown, want: unknown) => {

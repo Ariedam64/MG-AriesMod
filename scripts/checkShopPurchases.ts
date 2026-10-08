@@ -5,7 +5,7 @@
 //   same restockId            -> entry.purchases
 //   entry older than the shop -> {}   (a new restock started)
 //   otherwise                 -> null (unknown, counted as nothing bought)
-import { playerShopView, purchasesForCurrentRestock, type ShopKind } from "../src/utils/shopPurchases";
+import { playerShopView, purchasesForCurrentRestock, type ShopKind } from "../src/features/shops/purchases";
 
 let failed = 0;
 const check = (label: string, got: unknown, want: unknown) => {

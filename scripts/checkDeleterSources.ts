@@ -8,7 +8,7 @@ import {
   planWithdrawal,
   tallyById,
   type DeleterEntry,
-} from "../src/services/deleterSources";
+} from "../src/features/deleters/sources";
 
 let failed = 0;
 const check = (label: string, got: unknown, want: unknown) => {

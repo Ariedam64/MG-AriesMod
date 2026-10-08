@@ -1,46 +1,46 @@
 // src/main.ts
-import "./sprite";
-import { installPageWebSocketHook } from "./hooks/ws-hook";
+import "./game/sprites";
+import { installPageWebSocketHook } from "./game/ws/socketHook";
 import { mountHUD, initWatchers } from "./ui/hud";
 
-import { renderDebugDataMenu } from "./ui/menus/debug-data";
-import { renderLockerMenu } from "./ui/menus/locker";
-import { renderCalculatorMenu } from "./ui/menus/calculator";
-import { renderPetsMenu } from "./ui/menus/pets";
-import { renderMiscMenu } from "./ui/menus/misc";
-import { renderSettingsMenu } from "./ui/menus/settings";
-import { renderNotifierMenu } from "./ui/menus/notifier";
-import { renderToolsMenu } from "./ui/menus/tools";
-import { renderEditorMenu } from "./ui/menus/editor";
-import { renderKeybindsMenu } from "./ui/menus/keybinds";
-import { renderRoomMenu } from "./ui/menus/room";
-import { renderSkinsMenu } from "./ui/menus/skins";
-import { renderCompanionMenu } from "./ui/menus/companion/companion";
-import { initSkins } from "./skins/index";
+import { renderDebugDataMenu } from "./features/debug/menu";
+import { renderLockerMenu } from "./features/locker/menu";
+import { renderCalculatorMenu } from "./features/calculator/menu";
+import { renderPetsMenu } from "./features/pets/menu";
+import { renderMiscMenu } from "./features/misc/menu";
+import { renderSettingsMenu } from "./features/settings/menu";
+import { renderNotifierMenu } from "./features/notifier/menu";
+import { renderToolsMenu } from "./features/tools/menu";
+import { renderEditorMenu } from "./features/editor/menu";
+import { renderKeybindsMenu } from "./features/keybinds/menu";
+import { renderRoomMenu } from "./features/room/menu";
+import { renderSkinsMenu } from "./features/skins/menu";
+import { renderCompanionMenu } from "./features/companion/menu";
+import { initSkins } from "./features/skins/index";
 
-import { PlayerService } from "./services/player";
-import { createAntiAfkController } from "./utils/antiafk";
-import { EditorService } from "./services/editor";
-import { installEditorPointerControls } from "./services/editorPointerControls";
-import { CompanionService } from "./services/companion";
-import { startFeedWatch } from "./services/companion/chat/feedWatch";
-import { startReactionWatch } from "./services/companion/reactionWatch";
-import { startWanderWatch } from "./services/companion/wanderWatch";
-import { startEmoteMirror } from "./services/companion/emoteMirrorWatch";
-import { startAfkWatch } from "./services/companion/afkWatch";
-import { mountCompanionAsk } from "./ui/companionAsk";
+import { PlayerService } from "./game/player";
+import { createAntiAfkController } from "./features/antiAfk/antiAfk";
+import { EditorService } from "./features/editor/editor";
+import { installEditorPointerControls } from "./features/editor/pointerControls";
+import { CompanionService } from "./features/companion";
+import { startFeedWatch } from "./features/companion/chat/feedWatch";
+import { startReactionWatch } from "./features/companion/reactionWatch";
+import { startWanderWatch } from "./features/companion/wanderWatch";
+import { startEmoteMirror } from "./features/companion/emoteMirrorWatch";
+import { startAfkWatch } from "./features/companion/afkWatch";
+import { mountCompanionAsk } from "./features/companion/menu/askBanner";
 
-import { initGameVersion } from "./utils/gameVersion";
-import { MGVersion } from "./utils/mgVersion";
-import { MGData } from "./data/dynamic";
-import { shareGlobal } from "./utils/page-context";
+import { initGameVersion } from "./game/gameVersion";
+import { MGVersion } from "./game/mgVersion";
+import { MGData } from "./data/live";
+import { shareGlobal } from "./platform/pageContext";
 
-import { warmupSpriteCache } from "./ui/spriteIconCache";
-import { showAutoRecoDisabledNoticeOnce } from "./ui/autoRecoDisabledNotice";
-import { showRoomPrivacyNoticeOnce } from "./ui/roomPrivacyNotice";
-import { showChangelogNoticeOnce } from "./ui/changelogNotice";
-import { tos } from "./utils/tileObjectSystemApi";
-import { installEmojiDataFetchInterceptor, isDiscordActivityContext } from "./utils/discordCsp";
+import { warmupSpriteCache } from "./ui/kit/sprites/iconCache";
+import { showAutoRecoDisabledNoticeOnce } from "./features/autoReco/disabledNotice";
+import { showRoomPrivacyNoticeOnce } from "./features/room/privacyNotice";
+import { showChangelogNoticeOnce } from "./features/changelog/notice";
+import { tos } from "./game/pixi/tileObjects";
+import { installEmojiDataFetchInterceptor, isDiscordActivityContext } from "./platform/discordCsp";
 
 
 
@@ -48,8 +48,8 @@ import { installEmojiDataFetchInterceptor, isDiscordActivityContext } from "./ut
 // re-exports the whole API layer (streams, endpoints) which would drag that
 // dead code into the bundle. The standalone Community Hub owns everything
 // except the collect-state heartbeat, which stays here.
-import { initAuthBridgeIfNeeded } from "./ariesModAPI/auth/bridge";
-import { startPlayerStateReportingWhenGameReady } from "./ariesModAPI/endpoints/state";
+import { initAuthBridgeIfNeeded } from "./platform/ariesApi/authBridge";
+import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/playerStateReport";
 
 
 

@@ -20,7 +20,7 @@ import {
   resetCommandSequence,
   seedCommandSequence,
   takeCommandSequenceForGame,
-} from "../src/core/quinoaCommands";
+} from "../src/game/ws/commands";
 
 let failures = 0;
 

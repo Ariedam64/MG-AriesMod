@@ -5,7 +5,7 @@
 // so in LOCK mode it locked the whole species outright while the sliders sat at
 // their extremes and read as no filter at all. Someone reported exactly that:
 // Aloe became unharvestable with no visible reason.
-import { lockerService, type LockerSettingsPersisted } from "../src/services/locker";
+import { lockerService, type LockerSettingsPersisted } from "../src/features/locker/locker";
 
 let failed = 0;
 const check = (label: string, got: unknown, want: unknown) => {

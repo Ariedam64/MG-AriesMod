@@ -1,13 +1,13 @@
 // src/data/index.ts
 // Unified data access layer: dynamic capture first, hardcoded fallback.
 
-import { MGData } from "./dynamic";
-import * as hardcoded from "./hardcoded-data.clean.js";
+import { MGData } from "./live";
+import * as hardcoded from "./bundledCatalogs.js";
 
 ;
 ;
 ;
-export { formatAbilityLog, isPetAbilityAction } from "./dynamic";
+export { formatAbilityLog, isPetAbilityAction } from "./live";
 
 /* ------------------------------------------------------------------ */
 /*  Helper: create a proxy that reads dynamic data first, then static */

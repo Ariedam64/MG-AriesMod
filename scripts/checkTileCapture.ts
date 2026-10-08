@@ -6,7 +6,7 @@
 // and the tile system is `{ name: "tileObject", tileViews, getOrCreateTileView }`.
 // Crucially the scope has no `start`, no `destroy` and nothing calls `.bind()`
 // on it, which is exactly what the old capture waited for.
-import { tos } from "../src/utils/tileObjectSystemApi";
+import { tos } from "../src/game/pixi/tileObjects";
 
 let failed = 0;
 const check = (label: string, got: unknown, want: unknown) => {

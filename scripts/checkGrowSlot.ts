@@ -1,6 +1,6 @@
 // Mirrors the game's own grow-slot resolution (`Vv` in the v1125 bundle):
 //   exact slotId match, else the next id upwards, else the lowest id.
-import { resolveGrowSlot, resolveGrowSlotIndex } from "../src/utils/growSlot";
+import { resolveGrowSlot, resolveGrowSlotIndex } from "../src/data/rules/growSlot";
 
 const slots = [{ slotId: 68 }, { slotId: 61 }, { slotId: 75 }]; // deliberately unsorted
 

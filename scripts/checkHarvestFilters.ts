@@ -4,8 +4,8 @@
 // own "at least N% size" filter, and the Locker's size range. Both were seeing
 // 100% for every crop because the scan still read the pre-rework `targetScale`
 // on the slot and `maxScale` on the catalog, and the game renamed both.
-import { scanGarden } from "../src/services/workflowScan";
-import { DEFAULT_FILTERS, filterRows, type HarvestRow } from "../src/services/companion/chat/harvest";
+import { scanGarden } from "../src/features/companion/chat/gardenScan";
+import { DEFAULT_FILTERS, filterRows, type HarvestRow } from "../src/features/companion/chat/harvest";
 import { plantCatalog } from "../src/data";
 
 let failed = 0;

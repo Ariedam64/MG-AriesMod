@@ -7,7 +7,7 @@
 //
 // Run with: npm run check:shopmessage
 
-import { buildShopPurchaseCommand, readShopViewMode } from "../src/utils/shopPurchaseMessage";
+import { buildShopPurchaseCommand, readShopViewMode } from "../src/game/ws/shopPurchaseMessage";
 
 let failures = 0;
 

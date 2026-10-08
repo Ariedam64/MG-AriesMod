@@ -1,5 +1,5 @@
 // src/ui/toast.ts
-import { getAtomByLabel, jGet, jSet } from "../store/jotai";
+import { getAtomByLabel, jGet, jSet } from "../game/store/jotai";
 
 export type ToastVariant = "success" | "error" | "info" | "warn";
 type SimpleToast = { title: any; description?: any; variant?: ToastVariant; duration?: number };

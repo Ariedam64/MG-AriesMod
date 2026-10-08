@@ -6,9 +6,9 @@
 // the live one has not arrived, so the set was pinned to the bundled copy for
 // the whole session. Every ability shipped since that copy was taken was
 // dropped on arrival: Double Hatch II among them, which is how someone noticed.
-import { captureState } from "../src/data/dynamic/state";
-import { getLoggablePetAbilityIds } from "../src/services/pets";
-import { formatAbilityLog, isPetAbilityAction } from "../src/data/dynamic/logic/abilityFormatter";
+import { captureState } from "../src/data/live/state";
+import { getLoggablePetAbilityIds } from "../src/features/pets/pets";
+import { formatAbilityLog, isPetAbilityAction } from "../src/data/live/abilityFormatter";
 
 let failed = 0;
 const check = (label: string, got: unknown, want: unknown) => {

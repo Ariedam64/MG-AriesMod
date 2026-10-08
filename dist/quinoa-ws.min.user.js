@@ -53,10 +53,10 @@
   };
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-  // src/sprite/settings.ts
+  // src/game/sprites/settings.ts
   var DEFAULT_CFG, MUT_META, MUT_G1, MUT_G2, MUT_G3;
   var init_settings = __esm({
-    "src/sprite/settings.ts"() {
+    "src/game/sprites/settings.ts"() {
       "use strict";
       DEFAULT_CFG = {
         origin: "https://magicgarden.gg",
@@ -92,7 +92,7 @@
     }
   });
 
-  // src/sprite/state.ts
+  // src/game/sprites/state.ts
   function createInitialState() {
     return {
       started: false,
@@ -141,13 +141,13 @@
     };
   }
   var init_state = __esm({
-    "src/sprite/state.ts"() {
+    "src/game/sprites/state.ts"() {
       "use strict";
       init_settings();
     }
   });
 
-  // src/sprite/utils/async.ts
+  // src/game/sprites/utils/async.ts
   async function waitWithTimeout(p, ms, label2) {
     const t0 = performance.now();
     while (performance.now() - t0 < ms) {
@@ -158,14 +158,14 @@
   }
   var pageWin, sleep;
   var init_async = __esm({
-    "src/sprite/utils/async.ts"() {
+    "src/game/sprites/utils/async.ts"() {
       "use strict";
       pageWin = globalThis.unsafeWindow || globalThis;
       sleep = (ms) => new Promise((resolve) => pageWin.setTimeout(resolve, ms));
     }
   });
 
-  // src/sprite/pixi/hooks.ts
+  // src/game/sprites/pixi/hooks.ts
   function mkSyntheticApp(renderer) {
     const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
     const listeners9 = /* @__PURE__ */ new Set();
@@ -288,13 +288,13 @@
     return { app, renderer, version: handles.pixiVersion };
   }
   var init_hooks = __esm({
-    "src/sprite/pixi/hooks.ts"() {
+    "src/game/sprites/pixi/hooks.ts"() {
       "use strict";
       init_async();
     }
   });
 
-  // src/sprite/utils/pixi.ts
+  // src/game/sprites/utils/pixi.ts
   function findAny(root, pred, lim = 25e3) {
     const stack = [root];
     const seen = /* @__PURE__ */ new Set();
@@ -357,13 +357,13 @@
   }
   var baseTexOf;
   var init_pixi = __esm({
-    "src/sprite/utils/pixi.ts"() {
+    "src/game/sprites/utils/pixi.ts"() {
       "use strict";
       baseTexOf = (tex) => tex?.baseTexture ?? tex?.source?.baseTexture ?? tex?.source ?? tex?._baseTexture ?? null;
     }
   });
 
-  // src/sprite/utils/path.ts
+  // src/game/sprites/utils/path.ts
   function normalizeSegments(path) {
     const out = [];
     for (const part of path.split("/")) {
@@ -393,7 +393,7 @@
   }
   var splitKey, joinPath, dirOf, relPath;
   var init_path = __esm({
-    "src/sprite/utils/path.ts"() {
+    "src/game/sprites/utils/path.ts"() {
       "use strict";
       splitKey = (key2) => String(key2 || "").split("/").filter(Boolean);
       joinPath = (base, path) => base.replace(/\/?$/, "/") + String(path || "").replace(/^\//, "");
@@ -402,7 +402,7 @@
     }
   });
 
-  // src/sprite/data/assetFetcher.ts
+  // src/game/sprites/data/assetFetcher.ts
   function recordNetDebug(entry) {
     netDebugLog.push(entry);
     if (netDebugLog.length > 200) netDebugLog.shift();
@@ -614,7 +614,7 @@
   }
   var GM_TIMEOUT_MS, netDebugLog, getJSON, getBlob;
   var init_assetFetcher = __esm({
-    "src/sprite/data/assetFetcher.ts"() {
+    "src/game/sprites/data/assetFetcher.ts"() {
       "use strict";
       init_path();
       GM_TIMEOUT_MS = 5e3;
@@ -628,7 +628,7 @@
     }
   });
 
-  // src/sprite/pixi/atlasToTextures.ts
+  // src/game/sprites/pixi/atlasToTextures.ts
   function mkRect(Rectangle, x, y, w, h) {
     return new Rectangle(x, y, w, h);
   }
@@ -701,14 +701,14 @@
   }
   var isAtlas;
   var init_atlasToTextures = __esm({
-    "src/sprite/pixi/atlasToTextures.ts"() {
+    "src/game/sprites/pixi/atlasToTextures.ts"() {
       "use strict";
       init_pixi();
       isAtlas = (j) => j && typeof j === "object" && j.frames && j.meta && typeof j.meta.image === "string";
     }
   });
 
-  // src/sprite/data/catalogIndexer.ts
+  // src/game/sprites/data/catalogIndexer.ts
   function buildItemsFromTextures(tex) {
     const keys = [...tex.keys()].sort((a, b) => a.localeCompare(b));
     const used = /* @__PURE__ */ new Set();
@@ -759,13 +759,13 @@
     return { items, cats };
   }
   var init_catalogIndexer = __esm({
-    "src/sprite/data/catalogIndexer.ts"() {
+    "src/game/sprites/data/catalogIndexer.ts"() {
       "use strict";
       init_path();
     }
   });
 
-  // src/sprite/mutations/variantBuilder.ts
+  // src/game/sprites/mutations/variantBuilder.ts
   function buildVariantFromMutations(list) {
     const raw = list.filter((value) => hasMutationFilter(value));
     const selected = sortMutations(raw);
@@ -1185,7 +1185,7 @@
   }
   var TILE_SIZE_WORLD, BASE_ICON_SCALE, TALL_PLANT_MUTATION_ICON_SCALE_BOOST, FLOATING_MUTATION_ICONS, MUT_ICON_Y_EXCEPT, MUT_ICON_X_EXCEPT, TALL_OVERLAY_OFFSETS, MUTATION_ORDER, MUTATION_INDEX, sortMutations, SUPPORTED_BLEND_OPS, pickBlendOp, FILTERS, hasMutationFilter, isTallKey, computeVariantSignature, curVariant, normalizeMutListColor, normalizeMutListOverlay, buildMutationPipeline, angleGrad, fillGrad, baseNameOf, entryCost, processJobs;
   var init_variantBuilder = __esm({
-    "src/sprite/mutations/variantBuilder.ts"() {
+    "src/game/sprites/mutations/variantBuilder.ts"() {
       "use strict";
       init_settings();
       TILE_SIZE_WORLD = 256;
@@ -1325,7 +1325,7 @@
     }
   });
 
-  // src/sprite/api/expose.ts
+  // src/game/sprites/api/expose.ts
   function exposeApi(state6, hud) {
     const root = globalThis.unsafeWindow || globalThis;
     const api = {
@@ -1373,13 +1373,13 @@
     return api;
   }
   var init_expose = __esm({
-    "src/sprite/api/expose.ts"() {
+    "src/game/sprites/api/expose.ts"() {
       "use strict";
       init_variantBuilder();
     }
   });
 
-  // src/utils/mgCommon.ts
+  // src/platform/gm.ts
   function gmGet(url, responseType = "text") {
     return new Promise((resolve, reject) => {
       if (typeof GM_xmlhttpRequest !== "function") {
@@ -1400,8 +1400,8 @@
     });
   }
   var ORIGIN, sleep2, getJSON2, getBlob2;
-  var init_mgCommon = __esm({
-    "src/utils/mgCommon.ts"() {
+  var init_gm = __esm({
+    "src/platform/gm.ts"() {
       "use strict";
       ORIGIN = "https://magicgarden.gg";
       sleep2 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -1410,7 +1410,7 @@
     }
   });
 
-  // src/utils/discordCsp.ts
+  // src/platform/discordCsp.ts
   function isDiscordActivityContext() {
     try {
       return window.location.hostname.endsWith("discordsays.com");
@@ -1590,9 +1590,9 @@
   }
   var _SAFE_IMG_HOSTS, _gmImgCache, _gmImgPending, _extMimeMap, _gmAudioCache, _gmAudioPending, EMOJI_DATA_CDN_PREFIX, _emojiJson, _emojiPending, _emojiInterceptorInstalled;
   var init_discordCsp = __esm({
-    "src/utils/discordCsp.ts"() {
+    "src/platform/discordCsp.ts"() {
       "use strict";
-      init_events();
+      init_discordPolls();
       _SAFE_IMG_HOSTS = ["cdn.discordapp.com", "media.discordapp.net"];
       _gmImgCache = /* @__PURE__ */ new Map();
       _gmImgPending = /* @__PURE__ */ new Map();
@@ -1613,7 +1613,7 @@
     }
   });
 
-  // src/ariesModAPI/client/events.ts
+  // src/platform/ariesApi/discordPolls.ts
   function pauseDiscordLongPolls() {
     if (!isDiscordActivityContext()) return;
     _pollPauseDepth += 1;
@@ -1645,8 +1645,8 @@
     }
   }
   var _unifiedConnections, _pollPauseDepth;
-  var init_events = __esm({
-    "src/ariesModAPI/client/events.ts"() {
+  var init_discordPolls = __esm({
+    "src/platform/ariesApi/discordPolls.ts"() {
       "use strict";
       init_discordCsp();
       _unifiedConnections = /* @__PURE__ */ new Map();
@@ -1654,7 +1654,7 @@
     }
   });
 
-  // src/utils/page-context.ts
+  // src/platform/pageContext.ts
   function shareGlobal(name, value) {
     try {
       pageWin2[name] = value;
@@ -1675,8 +1675,8 @@
     return pageWin2[name];
   }
   var sandboxWin, pageWin2, pageWindow, isIsolatedContext;
-  var init_page_context = __esm({
-    "src/utils/page-context.ts"() {
+  var init_pageContext = __esm({
+    "src/platform/pageContext.ts"() {
       "use strict";
       sandboxWin = window;
       pageWin2 = typeof unsafeWindow !== "undefined" && unsafeWindow ? unsafeWindow : sandboxWin;
@@ -1685,7 +1685,7 @@
     }
   });
 
-  // src/data/dynamic/state.ts
+  // src/data/live/state.ts
   function createInitialState2() {
     return {
       data: {
@@ -1707,9 +1707,9 @@
   }
   var STATE_GLOBAL_KEY, globals, captureState;
   var init_state2 = __esm({
-    "src/data/dynamic/state.ts"() {
+    "src/data/live/state.ts"() {
       "use strict";
-      init_page_context();
+      init_pageContext();
       STATE_GLOBAL_KEY = "__MG_DATA_STATE__";
       globals = pageWindow;
       captureState = globals[STATE_GLOBAL_KEY] ?? createInitialState2();
@@ -1717,10 +1717,10 @@
     }
   });
 
-  // src/data/dynamic/logic/constants.ts
+  // src/data/live/constants.ts
   var MAIN_BUNDLE_PATTERN, QUINOA_VIEW_PATTERN, MAX_COLOR_POLL_ATTEMPTS, COLOR_POLL_INTERVAL_MS, ABILITY_COLOR_ANCHOR;
   var init_constants = __esm({
-    "src/data/dynamic/logic/constants.ts"() {
+    "src/data/live/constants.ts"() {
       "use strict";
       MAIN_BUNDLE_PATTERN = /main-[^/]+\.js(\?|$)/;
       QUINOA_VIEW_PATTERN = /QuinoaView-[^/]+\.js(\?|$)/;
@@ -1730,7 +1730,7 @@
     }
   });
 
-  // src/data/dynamic/logic/bundleParser.ts
+  // src/data/live/bundleParser.ts
   function findBundleUrl(pattern) {
     const docs = [
       pageContext.document,
@@ -1849,9 +1849,9 @@
   }
   var pageContext, mainBundleCache, quinoaViewCache;
   var init_bundleParser = __esm({
-    "src/data/dynamic/logic/bundleParser.ts"() {
+    "src/data/live/bundleParser.ts"() {
       "use strict";
-      init_page_context();
+      init_pageContext();
       init_constants();
       pageContext = pageWindow;
       mainBundleCache = { value: null, inFlight: null };
@@ -1859,7 +1859,7 @@
     }
   });
 
-  // src/data/dynamic/logic/abilityColors.ts
+  // src/data/live/abilityColors.ts
   function findAbilityColorSwitchBlock(bundleText) {
     const indices = findAllIndices(bundleText, ABILITY_COLOR_ANCHOR);
     if (!indices.length) return null;
@@ -2031,7 +2031,7 @@
   }
   var DEFAULT_COLOR, STATIC_ABILITY_COLORS;
   var init_abilityColors = __esm({
-    "src/data/dynamic/logic/abilityColors.ts"() {
+    "src/data/live/abilityColors.ts"() {
       "use strict";
       init_state2();
       init_constants();
@@ -2126,7 +2126,7 @@
     }
   });
 
-  // src/data/dynamic/logic/accessors.ts
+  // src/data/live/accessors.ts
   function sleep3(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
@@ -2160,7 +2160,7 @@
   }
   var DEFAULT_WAIT_TIMEOUT_MS, WAIT_POLL_INTERVAL_MS;
   var init_accessors = __esm({
-    "src/data/dynamic/logic/accessors.ts"() {
+    "src/data/live/accessors.ts"() {
       "use strict";
       init_state2();
       DEFAULT_WAIT_TIMEOUT_MS = 5e3;
@@ -2168,7 +2168,7 @@
     }
   });
 
-  // src/data/dynamic/logic/capture.ts
+  // src/data/live/capture.ts
   function setCapturedData(key2, value) {
     if (captureState.data[key2] != null) return;
     captureState.data[key2] = value;
@@ -2212,16 +2212,16 @@
   }
   var API_BASE;
   var init_capture = __esm({
-    "src/data/dynamic/logic/capture.ts"() {
+    "src/data/live/capture.ts"() {
       "use strict";
       init_state2();
-      init_mgCommon();
-      init_events();
+      init_gm();
+      init_discordPolls();
       API_BASE = "https://mg-api.ariedam.fr";
     }
   });
 
-  // src/data/dynamic/logic/abilityFormatter.ts
+  // src/data/live/abilityFormatter.ts
   function isPetAbilityAction(action2) {
     return PET_ABILITY_ACTIONS.includes(action2);
   }
@@ -2367,7 +2367,7 @@
   }
   var PET_ABILITY_ACTIONS;
   var init_abilityFormatter = __esm({
-    "src/data/dynamic/logic/abilityFormatter.ts"() {
+    "src/data/live/abilityFormatter.ts"() {
       "use strict";
       PET_ABILITY_ACTIONS = [
         "CoinFinderI",
@@ -2437,10 +2437,10 @@
     }
   });
 
-  // src/data/dynamic/index.ts
+  // src/data/live/index.ts
   var MGData;
-  var init_dynamic = __esm({
-    "src/data/dynamic/index.ts"() {
+  var init_live = __esm({
+    "src/data/live/index.ts"() {
       "use strict";
       init_abilityColors();
       init_accessors();
@@ -2475,7 +2475,7 @@
     }
   });
 
-  // src/ui/spriteResolver.ts
+  // src/ui/kit/sprites/resolver.ts
   function normalizeSpriteName(value) {
     let str = String(value || "").trim();
     if (str.includes("/")) {
@@ -2615,8 +2615,8 @@
     return null;
   }
   var INTERNAL_TO_API, API_TO_INTERNAL, SEARCH_CATS, indexEntries, nameIndex, CATALOG_SOURCES, catalogIndex, catalogSourcesIndexed, catalogReader;
-  var init_spriteResolver = __esm({
-    "src/ui/spriteResolver.ts"() {
+  var init_resolver = __esm({
+    "src/ui/kit/sprites/resolver.ts"() {
       "use strict";
       INTERNAL_TO_API = {
         plant: "plants",
@@ -2690,7 +2690,7 @@
     }
   });
 
-  // src/ui/spriteIconCache.ts
+  // src/ui/kit/sprites/iconCache.ts
   function fetchIndex() {
     if (indexReady) return indexReady;
     indexReady = withDiscordPollPause(
@@ -3004,13 +3004,13 @@
     }
   }
   var API_BASE2, indexReady, MUTATION_ICONS, MUTATION_FILTERS, SUPPORTED_BLEND_OPS2, imageCache, objectUrlCache, spriteDataUrlCache, spriteDataUrlResolved, warmupState, warmupListeners;
-  var init_spriteIconCache = __esm({
-    "src/ui/spriteIconCache.ts"() {
+  var init_iconCache = __esm({
+    "src/ui/kit/sprites/iconCache.ts"() {
       "use strict";
-      init_mgCommon();
-      init_events();
-      init_dynamic();
-      init_spriteResolver();
+      init_gm();
+      init_discordPolls();
+      init_live();
+      init_resolver();
       API_BASE2 = "https://mg-api.ariedam.fr";
       indexReady = null;
       setCatalogReader((key2) => MGData.get(key2));
@@ -3066,7 +3066,7 @@
     }
   });
 
-  // src/utils/gameVersion.ts
+  // src/game/gameVersion.ts
   function initGameVersion(doc) {
     if (gameVersion !== null) {
       return;
@@ -3090,13 +3090,13 @@
   }
   var gameVersion;
   var init_gameVersion = __esm({
-    "src/utils/gameVersion.ts"() {
+    "src/game/gameVersion.ts"() {
       "use strict";
       gameVersion = null;
     }
   });
 
-  // src/sprite/api/spriteApi.ts
+  // src/game/sprites/api/spriteApi.ts
   var spriteApi_exports = {};
   __export(spriteApi_exports, {
     buildVariant: () => buildVariant,
@@ -3135,7 +3135,7 @@
   }
   var normalizeKey, categoryAlias, keyCategoryOf, matchesCategory, baseNameOf2;
   var init_spriteApi = __esm({
-    "src/sprite/api/spriteApi.ts"() {
+    "src/game/sprites/api/spriteApi.ts"() {
       "use strict";
       init_variantBuilder();
       normalizeKey = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -3169,7 +3169,7 @@
     }
   });
 
-  // src/sprite/index.ts
+  // src/game/sprites/index.ts
   async function warmupSpritesFromAtlases(atlasJsons, blobs) {
     const FRAME_YIELD_EVERY = 6;
     const MAX_CHUNK_MS = 10;
@@ -3785,8 +3785,8 @@
     }
   }
   var ctx, hooks, parseFrameCategory, yieldToBrowser, prefetchPromise, atlasBundle, atlasBundleResolve, atlasBundleReady, SKIPPED_ATLAS_PATTERNS;
-  var init_sprite = __esm({
-    "src/sprite/index.ts"() {
+  var init_sprites = __esm({
+    "src/game/sprites/index.ts"() {
       "use strict";
       init_state();
       init_hooks();
@@ -3798,7 +3798,7 @@
       init_path();
       init_expose();
       init_variantBuilder();
-      init_spriteIconCache();
+      init_iconCache();
       init_gameVersion();
       ctx = createSpriteContext();
       hooks = createPixiHooks();
@@ -3834,7 +3834,7 @@
     }
   });
 
-  // src/core/state.ts
+  // src/game/ws/sockets.ts
   function setQWS(ws, why) {
     if (!quinoaWS) {
       quinoaWS = ws;
@@ -3849,10 +3849,10 @@
     return ["CONNECTING", "OPEN", "CLOSING", "CLOSED"][rs ?? -1] || "none";
   }
   var NativeWS, sockets, quinoaWS, workerFound, Workers;
-  var init_state3 = __esm({
-    "src/core/state.ts"() {
+  var init_sockets = __esm({
+    "src/game/ws/sockets.ts"() {
       "use strict";
-      init_page_context();
+      init_pageContext();
       NativeWS = pageWindow.WebSocket;
       sockets = [];
       quinoaWS = null;
@@ -3873,7 +3873,7 @@
     }
   });
 
-  // src/core/parse.ts
+  // src/lib/parse.ts
   async function parseWSData(d) {
     try {
       if (typeof d === "string") return JSON.parse(d);
@@ -3884,12 +3884,12 @@
     return null;
   }
   var init_parse = __esm({
-    "src/core/parse.ts"() {
+    "src/lib/parse.ts"() {
       "use strict";
     }
   });
 
-  // src/core/quinoaCommands.ts
+  // src/game/ws/commands.ts
   function isQuinoaCommandType(type) {
     return typeof type === "string" && COMMAND_TYPES.has(type);
   }
@@ -3959,8 +3959,8 @@
     };
   }
   var QUINOA_SCOPE, COMMAND_ENVELOPE_TYPE, COMMAND_TYPES, FIRST_COMMAND_SEQUENCE, MAX_TRACKED_REQUEST_IDS, nextCommandSequence, modCommandsSent, ownRequestIds, randomRequestId;
-  var init_quinoaCommands = __esm({
-    "src/core/quinoaCommands.ts"() {
+  var init_commands = __esm({
+    "src/game/ws/commands.ts"() {
       "use strict";
       QUINOA_SCOPE = ["Room", "Quinoa"];
       COMMAND_ENVELOPE_TYPE = "QuinoaCommand";
@@ -4024,7 +4024,7 @@
     }
   });
 
-  // src/store/bridge.ts
+  // src/game/store/bridge.ts
   function getBridge() {
     const bridge = pageWindow[STORE_BRIDGE_GLOBAL];
     if (bridge && typeof bridge === "object" && typeof bridge.promise?.then === "function") {
@@ -4053,14 +4053,14 @@
   }
   var STORE_BRIDGE_GLOBAL;
   var init_bridge = __esm({
-    "src/store/bridge.ts"() {
+    "src/game/store/bridge.ts"() {
       "use strict";
-      init_page_context();
+      init_pageContext();
       STORE_BRIDGE_GLOBAL = "__MG_STORE_BRIDGE__";
     }
   });
 
-  // src/store/jotai.ts
+  // src/game/store/jotai.ts
   async function waitForAtomCache() {
     const t0 = Date.now();
     while (Date.now() - t0 < ATOM_CACHE_WAIT_MS) {
@@ -4262,9 +4262,9 @@
   }
   var _store, _captureInProgress, _captureError, _lastCapturedVia, ATOM_CACHE_WAIT_MS, WRITE_ONCE_MS, getAtomCache, STORE_OWNER;
   var init_jotai = __esm({
-    "src/store/jotai.ts"() {
+    "src/game/store/jotai.ts"() {
       "use strict";
-      init_page_context();
+      init_pageContext();
       init_bridge();
       _store = null;
       _captureInProgress = false;
@@ -4277,7 +4277,7 @@
     }
   });
 
-  // src/store/api.ts
+  // src/game/store/api.ts
   function stopPoller() {
     if (pollTimer === null) return;
     clearInterval(pollTimer);
@@ -4433,7 +4433,7 @@
   }
   var ATOM_POLL_MS, ATOM_WAIT_TIMEOUT_MS, pendingWaiters, pollTimer, Store;
   var init_api = __esm({
-    "src/store/api.ts"() {
+    "src/game/store/api.ts"() {
       "use strict";
       init_jotai();
       ATOM_POLL_MS = 250;
@@ -4444,7 +4444,7 @@
     }
   });
 
-  // src/store/hub.ts
+  // src/game/store/hub.ts
   function toPathArray(path) {
     if (!path) return [];
     return Array.isArray(path) ? path.slice() : path.split(".").map((k) => k.match(/^\d+$/) ? Number(k) : k);
@@ -4636,7 +4636,7 @@
   }
   var eq, HubEq;
   var init_hub = __esm({
-    "src/store/hub.ts"() {
+    "src/game/store/hub.ts"() {
       "use strict";
       init_api();
       eq = {
@@ -4661,7 +4661,7 @@
     }
   });
 
-  // src/utils/modalState.ts
+  // src/game/modalState.ts
   function isStateObject(raw) {
     return !!raw && typeof raw === "object" && "modal" in raw;
   }
@@ -4678,12 +4678,12 @@
     return next;
   }
   var init_modalState = __esm({
-    "src/utils/modalState.ts"() {
+    "src/game/modalState.ts"() {
       "use strict";
     }
   });
 
-  // src/store/atoms.ts
+  // src/game/store/atoms.ts
   function activePetStableSig(p) {
     const s = p?.slot ?? {};
     const muts = Array.isArray(s.mutations) ? s.mutations.slice().sort().join(",") : "";
@@ -4726,7 +4726,7 @@
   }
   var position, state, map, player, action, myData, myInventory, gardensWithBackfills, myCropInventory, mySeedInventory, myToolInventory, myEggInventory, myDecorInventory, mySeedSiloItems, myDecorShedItems, myToolShackItems, myFeedingTroughItems, myPetInfos, myPetSlotInfos, myPrimitivePetSlots, myPetIdOnSameTile, totalPetSellPrice, myCropItemsToSell, myPetHutchPetItems, isMyInventoryAtMaxLength, myNumPetHutchItems, myPetHutchCapacitySlots, shops, myShopPurchases, myUserSlot, numPlayers, totalCropSellPrice, myValidatedSelectedItemIndex, setSelectedIndexToEnd, mySelectedItemName, mySelectedItemId, myPossiblyNoLongerValidSelectedItemIndex, myCurrentGardenObject, myCurrentSortedGrowSlotIndices, myCurrentGrowSlotIndex, myOwnCurrentGardenObject, isCurrentGrowSlotMature, myOwnCurrentDirtTileIndex, mySelectedItemRotation, weather, activeModalRaw, sameModal, activeModal, inventoryModalIsActive, activityLogTab, avatarTriggerAnimationAtom, friendBonusMultiplier, garden, gardenTileObjects, favoriteIds, playerId, myOwnCurrentGardenObjectType, stateUserSlots, myActivityLog, seedShop, toolShop, eggShop, decorShop, Atoms;
   var init_atoms = __esm({
-    "src/store/atoms.ts"() {
+    "src/game/store/atoms.ts"() {
       "use strict";
       init_hub();
       init_modalState();
@@ -4891,10 +4891,10 @@
     }
   });
 
-  // src/data/hardcoded-data.clean.js
+  // src/data/bundledCatalogs.js
   var rarity, harvestType, tileRefsPlants, tileRefsTallPlants, tileRefsSeeds, tileRefsItems, tileRefsPets, tileRefsMutations, tileRefsMutationLabels, tileRefsDecor, plantCatalog, mutationCatalog, eggCatalog, petCatalog, petAbilities, toolCatalog, decorCatalog, weatherCatalog, petHungerDepletionMinutes, coin;
-  var init_hardcoded_data_clean = __esm({
-    "src/data/hardcoded-data.clean.js"() {
+  var init_bundledCatalogs = __esm({
+    "src/data/bundledCatalogs.js"() {
       "use strict";
       rarity = {
         Common: "Common",
@@ -8268,9 +8268,9 @@
   var init_data = __esm({
     "src/data/index.ts"() {
       "use strict";
-      init_dynamic();
-      init_hardcoded_data_clean();
-      init_dynamic();
+      init_live();
+      init_bundledCatalogs();
+      init_live();
       plantCatalog2 = makeCatalogProxy("plants", plantCatalog);
       petCatalog2 = makeCatalogProxy("pets", petCatalog);
       petAbilities2 = makeCatalogProxy("abilities", petAbilities);
@@ -8288,7 +8288,7 @@
     }
   });
 
-  // src/utils/cropSize.ts
+  // src/data/rules/cropSize.ts
   function toFinite(value) {
     const numeric = typeof value === "number" ? value : Number(value);
     return Number.isFinite(numeric) ? numeric : null;
@@ -8348,7 +8348,7 @@
   }
   var CROP_SIZE_MIN, CROP_SIZE_MAX, SIZE_SPAN, LEGACY_SCALE_MIN, LEGACY_FALLBACK_MAX_SCALE;
   var init_cropSize = __esm({
-    "src/utils/cropSize.ts"() {
+    "src/data/rules/cropSize.ts"() {
       "use strict";
       init_data();
       CROP_SIZE_MIN = 50;
@@ -8359,10 +8359,10 @@
     }
   });
 
-  // src/utils/friendSettingsSchema.ts
+  // src/platform/friendSettingsSchema.ts
   var DEFAULT_FRIEND_SETTINGS;
   var init_friendSettingsSchema = __esm({
-    "src/utils/friendSettingsSchema.ts"() {
+    "src/platform/friendSettingsSchema.ts"() {
       "use strict";
       DEFAULT_FRIEND_SETTINGS = {
         showOnlineFriendsOnly: false,
@@ -8379,7 +8379,7 @@
     }
   });
 
-  // src/utils/localStorage.ts
+  // src/platform/storage.ts
   function getHostStorage() {
     if (typeof window === "undefined") return null;
     try {
@@ -8730,8 +8730,8 @@
     }
   }
   var ARIES_STORAGE_KEY, ARIES_STORAGE_VERSION, API_KEY_STORAGE_KEY, AUTH_DECLINED_STORAGE_KEY, SEEN_ROOM_PRIVACY_NOTICE_KEY, SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, SEEN_CHANGELOG_VERSION_KEY, DEFAULT_ARIES_STORAGE, ARIES_FLUSH_DELAY_MS, cachedAriesStorage, ariesFlushTimer, ariesFlushPending, ariesLifecycleHooksInstalled;
-  var init_localStorage = __esm({
-    "src/utils/localStorage.ts"() {
+  var init_storage = __esm({
+    "src/platform/storage.ts"() {
       "use strict";
       init_friendSettingsSchema();
       ARIES_STORAGE_KEY = "aries_mod";
@@ -8758,7 +8758,7 @@
     }
   });
 
-  // src/services/locker.ts
+  // src/features/locker/locker.ts
   function startLockerSlotWatcherViaGardenObject() {
     if (typeof window === "undefined") {
       return {
@@ -9178,11 +9178,11 @@
   }
   var VISUAL_MUTATIONS, LOCKER_NO_WEATHER_TAG, normalizeMutationTag, canonicalizeWeatherTag, normalizeMutationsList, emptySlotInfo, now, shallowEqualStrings, slotInfosEqual, isPlantObject, slotSignature, gardenObjectSignature, arraySignature, defaultOrder, clamp, extractSeedKey, clampPercent, extractSizePercent, ARIES_LOCKER_STATE_PATH, clampNumber, LockerService, lockerService;
   var init_locker = __esm({
-    "src/services/locker.ts"() {
+    "src/features/locker/locker.ts"() {
       "use strict";
       init_atoms();
       init_cropSize();
-      init_localStorage();
+      init_storage();
       VISUAL_MUTATIONS = /* @__PURE__ */ new Set(["Gold", "Rainbow"]);
       LOCKER_NO_WEATHER_TAG = "NoWeatherEffect";
       normalizeMutationTag = (value) => {
@@ -9717,7 +9717,7 @@
     }
   });
 
-  // src/services/stats.ts
+  // src/features/stats/stats.ts
   function createDefaultStats(createdAt = Date.now()) {
     const hatchedByType = {};
     for (const species of Object.keys(petCatalog2)) {
@@ -9894,10 +9894,10 @@
   }
   var GARDEN_INT_KEYS, SHOP_INT_KEYS, ABILITY_INT_KEYS, WEATHER_INT_KEYS, memoryStore, listeners, isRecord, toNumber, toPositiveNumber, toPositiveInt, toPositiveTimestamp, cloneStats, unwrapMaybeNestedSnapshot, StatsService;
   var init_stats = __esm({
-    "src/services/stats.ts"() {
+    "src/features/stats/stats.ts"() {
       "use strict";
       init_data();
-      init_localStorage();
+      init_storage();
       GARDEN_INT_KEYS = {
         totalPlanted: true,
         totalHarvested: true,
@@ -10025,7 +10025,7 @@
     }
   });
 
-  // src/services/lockerRestrictions.ts
+  // src/features/locker/restrictions.ts
   function friendBonusPercentFromMultiplier(raw) {
     const n = Number(raw);
     if (!Number.isFinite(n)) return null;
@@ -10047,10 +10047,10 @@
     return Math.max(1, Math.min(6, Math.round(pct / 10) + 1));
   }
   var ARIES_LOCKER_RESTRICTIONS_PATH, clampPercent2, roundToStep, VALID_RARITIES, DEFAULT_SELL_ALL_PETS_RULES, DEFAULT_STATE, FRIEND_BONUS_STEP, FRIEND_BONUS_MAX, sanitizePercent, sanitizePlayers, sanitizeEggLocks, sanitizeSellAllPetsRules, requiredPercentFromPlayers, LockerRestrictionsService, lockerRestrictionsService;
-  var init_lockerRestrictions = __esm({
-    "src/services/lockerRestrictions.ts"() {
+  var init_restrictions = __esm({
+    "src/features/locker/restrictions.ts"() {
       "use strict";
-      init_localStorage();
+      init_storage();
       ARIES_LOCKER_RESTRICTIONS_PATH = "locker.restrictions";
       clampPercent2 = (value) => Math.max(0, Math.min(50, Math.round(value)));
       roundToStep = (value, step) => Math.round(value / step) * step;
@@ -10231,7 +10231,7 @@
     }
   });
 
-  // src/utils/api.ts
+  // src/platform/environment.ts
   function detectEnvironment() {
     const isInIframe = (() => {
       try {
@@ -10264,13 +10264,13 @@
       return null;
     }
   }
-  var init_api2 = __esm({
-    "src/utils/api.ts"() {
+  var init_environment = __esm({
+    "src/platform/environment.ts"() {
       "use strict";
     }
   });
 
-  // src/core/webSocketBridge.ts
+  // src/game/ws/send.ts
   function postAllToWorkers(msg) {
     if (Workers.forEach) Workers.forEach((w) => {
       try {
@@ -10312,15 +10312,15 @@
       return true;
     }
   }
-  var init_webSocketBridge = __esm({
-    "src/core/webSocketBridge.ts"() {
+  var init_send = __esm({
+    "src/game/ws/send.ts"() {
       "use strict";
-      init_state3();
-      init_quinoaCommands();
+      init_sockets();
+      init_commands();
     }
   });
 
-  // src/services/fakeAtoms.ts
+  // src/game/fakeAtoms.ts
   function _atomsByExactLabel(label2) {
     try {
       return findAtomsByLabel(new RegExp("^" + label2 + "$"));
@@ -10475,14 +10475,14 @@
   }
   var _fakeRegistry;
   var init_fakeAtoms = __esm({
-    "src/services/fakeAtoms.ts"() {
+    "src/game/fakeAtoms.ts"() {
       "use strict";
       init_jotai();
       _fakeRegistry = /* @__PURE__ */ new Map();
     }
   });
 
-  // src/utils/activityLogModalLayout.ts
+  // src/game/activityLogModalLayout.ts
   function locateActivityLogAnchors(modalNode2) {
     const modalContainer = modalNode2?.children?.[0];
     if (!modalContainer || modalContainer.destroyed) return null;
@@ -10533,7 +10533,7 @@
   }
   var ACTIVITY_LOG_MODAL_ID, ACTIVITY_LOG_MODAL_LABEL, FILTER_TOOLBAR_LABEL, TAB_BAR_LABELS, LOG_ROW_LABEL, STAT_CARD_LABEL;
   var init_activityLogModalLayout = __esm({
-    "src/utils/activityLogModalLayout.ts"() {
+    "src/game/activityLogModalLayout.ts"() {
       "use strict";
       ACTIVITY_LOG_MODAL_ID = "activityLog";
       ACTIVITY_LOG_MODAL_LABEL = "ActivityLogModal";
@@ -10544,7 +10544,7 @@
     }
   });
 
-  // src/services/fakeModal.ts
+  // src/game/fakeModal.ts
   async function openModal(modalId) {
     try {
       const current = await Atoms.ui.activeModal.get();
@@ -10701,7 +10701,7 @@
   }
   var mergeMyData, SHARED_MYDATA_PATCH, INVENTORY_ATOM_PATCH, INVENTORY_MODAL_ID, JOURNAL_MODAL_ID, ACTIVITY_LOG_MODAL_ID2;
   var init_fakeModal = __esm({
-    "src/services/fakeModal.ts"() {
+    "src/game/fakeModal.ts"() {
       "use strict";
       init_fakeAtoms();
       init_atoms();
@@ -10736,7 +10736,7 @@
     }
   });
 
-  // src/core/ingameHotkeys.ts
+  // src/game/ingameHotkeys.ts
   function parseRapid(c) {
     const parts = String(c).split("+").map((s) => s.trim()).filter(Boolean);
     let code = "";
@@ -10762,9 +10762,9 @@
   }
   var resolveContext, KEYCODE_TABLE, codeToKey, isEditableTarget, normalizeCombo, parseCombo, evToCombo, REMAP_FLAG, RAPID_SYN_FLAG, InGameHotkeys, defaultContext, inGameHotkeys;
   var init_ingameHotkeys = __esm({
-    "src/core/ingameHotkeys.ts"() {
+    "src/game/ingameHotkeys.ts"() {
       "use strict";
-      init_page_context();
+      init_pageContext();
       resolveContext = (context) => {
         if (context) return context;
         const win = pageWindow ?? window;
@@ -11240,7 +11240,7 @@
     }
   });
 
-  // src/utils/keyboard.ts
+  // src/lib/keyboard.ts
   function isKeybindCaptureActive() {
     return keybindCaptureCount > 0;
   }
@@ -11258,13 +11258,13 @@
   }
   var keybindCaptureCount;
   var init_keyboard = __esm({
-    "src/utils/keyboard.ts"() {
+    "src/lib/keyboard.ts"() {
       "use strict";
       keybindCaptureCount = 0;
     }
   });
 
-  // src/ui/menu.ts
+  // src/ui/kit/menu.ts
   function el(tag, cls, html) {
     const e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -11409,9 +11409,9 @@
   }
   var activeHotkeyRecorder, HOTKEY_RECORDING_TIMEOUT_MS, Menu, VTabs, _MOD_CODES, CANONICAL_CODES;
   var init_menu = __esm({
-    "src/ui/menu.ts"() {
+    "src/ui/kit/menu.ts"() {
       "use strict";
-      init_localStorage();
+      init_storage();
       init_keyboard();
       activeHotkeyRecorder = null;
       HOTKEY_RECORDING_TIMEOUT_MS = 8e3;
@@ -13464,7 +13464,7 @@
     }
   });
 
-  // src/services/keybinds.ts
+  // src/features/keybinds/keybinds.ts
   function getPetTeamActionId(teamId2) {
     return `${PET_TEAM_ACTION_PREFIX}${teamId2}`;
   }
@@ -13871,11 +13871,11 @@
   }
   var SECTION_CONFIG, KEYBINDS_BINDINGS_PATH, KEYBINDS_HOLD_PATH, ARIES_ROOT_KEY, STORED_NONE, actionMap, defaultMap, cache, listeners2, holdDefaultMap, holdCache, holdListeners, keybindSections, PET_SECTION_ID, PET_TEAM_ACTION_PREFIX, PET_TEAM_NEXT_ID, PET_TEAM_PREV_ID, petSection, petActionIds, GAME_KEYBIND_TARGETS, GAME_KEYBIND_IDS, gameActiveStates, gameKeybindsInstalled, GAME_ACTION_ID, gameActionBlockers, gameActionBlockedCombos;
   var init_keybinds = __esm({
-    "src/services/keybinds.ts"() {
+    "src/features/keybinds/keybinds.ts"() {
       "use strict";
       init_ingameHotkeys();
       init_menu();
-      init_localStorage();
+      init_storage();
       SECTION_CONFIG = [
         {
           id: "gui",
@@ -14162,7 +14162,7 @@
     }
   });
 
-  // src/utils/shopPurchaseMessage.ts
+  // src/game/ws/shopPurchaseMessage.ts
   function parseViewMode(raw) {
     if (raw == null) return null;
     let value = raw;
@@ -14199,13 +14199,13 @@
   }
   var VIEW_MODE_KEY;
   var init_shopPurchaseMessage = __esm({
-    "src/utils/shopPurchaseMessage.ts"() {
+    "src/game/ws/shopPurchaseMessage.ts"() {
       "use strict";
       VIEW_MODE_KEY = /^shop:.*:(.+):viewMode$/;
     }
   });
 
-  // src/utils/shopPurchases.ts
+  // src/features/shops/purchases.ts
   function isCurrentRestock(entry, shop) {
     if (!("restockId" in entry)) return true;
     const current = shop?.restockId;
@@ -14263,15 +14263,15 @@
     return { shops: open, purchases: purchasesForCurrentRestock(open, shopPurchases, kindOf) };
   }
   var DIRECT_KIND, CUSTOM_RESTOCK_SHOPS;
-  var init_shopPurchases = __esm({
-    "src/utils/shopPurchases.ts"() {
+  var init_purchases = __esm({
+    "src/features/shops/purchases.ts"() {
       "use strict";
       DIRECT_KIND = { seed: "seed", egg: "egg", tool: "tool", decor: "decor" };
       CUSTOM_RESTOCK_SHOPS = /* @__PURE__ */ new Set(["seed", "egg", "tool", "decor"]);
     }
   });
 
-  // src/services/shops.ts
+  // src/features/shops/shops.ts
   function installShopKeybindsOnce() {
     if (shopKeybindsInstalled || typeof window === "undefined") return;
     shopKeybindsInstalled = true;
@@ -14339,17 +14339,17 @@
   }
   var SHOP_KEYBINDS, shopKeybindsInstalled, BASE_SHOP_KEYS, ShopsService;
   var init_shops = __esm({
-    "src/services/shops.ts"() {
+    "src/features/shops/shops.ts"() {
       "use strict";
       init_fakeModal();
       init_keybinds();
       init_keyboard();
       init_stats();
-      init_webSocketBridge();
+      init_send();
       init_atoms();
-      init_page_context();
+      init_pageContext();
       init_shopPurchaseMessage();
-      init_shopPurchases();
+      init_purchases();
       SHOP_KEYBINDS = [
         { id: "shops.seeds", modal: "seedShop" },
         { id: "shops.eggs", modal: "eggShop" },
@@ -14390,7 +14390,7 @@
     }
   });
 
-  // src/utils/moveItemMessage.ts
+  // src/game/ws/moveItemMessage.ts
   function buildMoveItemCommand(params) {
     const { from, to, itemId } = params;
     if (!nonEmpty(from) || !nonEmpty(to) || !nonEmpty(itemId)) return null;
@@ -14410,14 +14410,14 @@
   }
   var INVENTORY, nonEmpty;
   var init_moveItemMessage = __esm({
-    "src/utils/moveItemMessage.ts"() {
+    "src/game/ws/moveItemMessage.ts"() {
       "use strict";
       INVENTORY = "inventory";
       nonEmpty = (value) => typeof value === "string" && value.length > 0;
     }
   });
 
-  // src/services/player.ts
+  // src/game/player.ts
   function slotSig(o) {
     if (!o) return "\u2205";
     return [
@@ -14583,10 +14583,10 @@
   }
   var PlayerService;
   var init_player = __esm({
-    "src/services/player.ts"() {
+    "src/game/player.ts"() {
       "use strict";
-      init_webSocketBridge();
-      init_quinoaCommands();
+      init_send();
+      init_commands();
       init_atoms();
       init_shops();
       init_cropSize();
@@ -15081,7 +15081,7 @@
     }
   });
 
-  // src/services/autoStore.ts
+  // src/features/autoStore/autoStore.ts
   async function waitForAtoms(storage, inventory, keepGoing) {
     const startedAt = Date.now();
     while (keepGoing() && Date.now() - startedAt < ATOM_TIMEOUT_MS) {
@@ -15272,11 +15272,11 @@
   }
   var LOG_PREFIX, log, DEBOUNCE_MS, RECENT_REMOVE_MS, ATOM_POLL_MS2, ATOM_TIMEOUT_MS, normalizeKey3, normalizeQty, buildQtyMap, buildKeySet, diffIncreases, diffSet, pruneRecentMap, summarizeQtyDelta, readEnabledFlag, storageKeyFromSpecies, storageKeyFromDecorId, storageKeyFromToolId;
   var init_autoStore = __esm({
-    "src/services/autoStore.ts"() {
+    "src/features/autoStore/autoStore.ts"() {
       "use strict";
       init_player();
       init_api();
-      init_localStorage();
+      init_storage();
       LOG_PREFIX = "[Misc][AutoStore]";
       log = (...args) => {
         try {
@@ -15359,7 +15359,7 @@
     }
   });
 
-  // src/services/misc.ts
+  // src/features/misc/misc.ts
   function createGhostController() {
     let DELAY_MS = getGhostDelayMs();
     const KEYS = /* @__PURE__ */ new Set();
@@ -16513,7 +16513,7 @@
   }
   var PATH_GHOST_MODE, PATH_GHOST_DELAY, DEFAULT_DELAY_MS, PATH_AUTO_RECO_ENABLED, PATH_AUTO_RECO_DELAY, AUTO_RECO_MIN_MS, AUTO_RECO_MAX_MS, AUTO_RECO_DEFAULT_MS, AUTO_RECO_TEMPORARILY_DISABLED, PATH_KEEP_INVENTORY_SLOT_FREE, PATH_AUTO_STORE_SEED_SILO_ENABLED, PATH_AUTO_STORE_DECOR_SHED_ENABLED, PATH_AUTO_STORE_TOOL_SHACK_ENABLED, readGhostEnabled, writeGhostEnabled, getGhostDelayMs, setGhostDelayMs, clampAutoRecoDelay, readAutoRecoEnabled, writeAutoRecoEnabled, getAutoRecoDelayMs, setAutoRecoDelayMs, readInventorySlotReserveEnabled, writeInventorySlotReserveEnabled, readAutoStoreSeedSiloEnabled, readAutoStoreDecorShedEnabled, readAutoStoreToolShackEnabled, seedSiloAutoStore, decorShedAutoStore, toolShackAutoStore, selectedMap, seedStockByName, seedSourceCache, selectedDecorMap, decorStockByName, decorSourceCache, _decorDeleteAbort, _decorDeleteBusy, _decorDeletePaused, _decorDeletePauseResolver, NF_US, formatNum, OVERLAY_ID, LIST_ID, SUMMARY_ID, OVERLAY_DECOR_ID, LIST_DECOR_ID, SUMMARY_DECOR_ID, _seedDeleteAbort, _seedDeleteBusy, _seedDeletePaused, _seedDeletePauseResolver, DEFAULT_SEED_DELETE_DELAY_MS, overlayKeyGuardsOn, _btnConfirm, unsubSelectedName, unsubDecorSelectedName, DEFAULT_DECOR_DELETE_DELAY_MS, MiscService;
   var init_misc = __esm({
-    "src/services/misc.ts"() {
+    "src/features/misc/misc.ts"() {
       "use strict";
       init_player();
       init_data();
@@ -16521,7 +16521,7 @@
       init_autoStore();
       init_fakeModal();
       init_toast();
-      init_localStorage();
+      init_storage();
       PATH_GHOST_MODE = "misc.ghostMode";
       PATH_GHOST_DELAY = "misc.ghostDelayMs";
       DEFAULT_DELAY_MS = 50;
@@ -16775,7 +16775,7 @@
     }
   });
 
-  // src/services/editor/decorRotation.ts
+  // src/features/editor/decorRotation.ts
   function ensureSliderStyle() {
     if (document.getElementById(STYLE_ID)) return;
     const style2 = document.createElement("style");
@@ -16984,10 +16984,10 @@
   }
   var ANGLE_NONE, ANGLE_MIRRORED_NONE, FULL_TURN_DEGREES, PREVIEW_SIZE_PX, CONTENT_MAX_WIDTH_PX, TRACK_INSET_PX, SPRITE_LOG_TAG, THUMB_SIZE_PX, SLIDER_CLASS, STYLE_ID;
   var init_decorRotation = __esm({
-    "src/services/editor/decorRotation.ts"() {
+    "src/features/editor/decorRotation.ts"() {
       "use strict";
       init_data();
-      init_spriteIconCache();
+      init_iconCache();
       ANGLE_NONE = 0;
       ANGLE_MIRRORED_NONE = -360;
       FULL_TURN_DEGREES = 360;
@@ -17001,10 +17001,10 @@
     }
   });
 
-  // src/core/audioPlayer.ts
+  // src/game/audioPlayer.ts
   var AudioPlayer, audioPlayer;
   var init_audioPlayer = __esm({
-    "src/core/audioPlayer.ts"() {
+    "src/game/audioPlayer.ts"() {
       "use strict";
       AudioPlayer = class {
         constructor(opts = {}) {
@@ -17408,7 +17408,7 @@
     }
   });
 
-  // src/utils/tileObjectSystemApi.ts
+  // src/game/pixi/tileObjects.ts
   function looksLikeTileObjectSystem(o) {
     return !!(o && typeof o === "object" && o.name === TILE_OBJECT_SYSTEM_NAME && o.tileViews && typeof o.tileViews.get === "function" && typeof o.getOrCreateTileView === "function");
   }
@@ -17854,10 +17854,10 @@
     return system && typeof system === "object" && system.destroyed !== true ? system : null;
   }
   var state2, TILE_OBJECT_SYSTEM_NAME, SCOPE_SEARCH_DEPTH, FARM_TILE_SIZE, activeFlashes, FLASH_DEFAULT_COLOR, FLASH_DEFAULT_MIX, FLASH_DEFAULT_DURATION_MS, tos;
-  var init_tileObjectSystemApi = __esm({
-    "src/utils/tileObjectSystemApi.ts"() {
+  var init_tileObjects = __esm({
+    "src/game/pixi/tileObjects.ts"() {
       "use strict";
-      init_page_context();
+      init_pageContext();
       state2 = {
         /**
          * The old monolithic engine. Current builds have none, so this stays null
@@ -18014,7 +18014,7 @@
     }
   });
 
-  // src/services/editor.ts
+  // src/features/editor/editor.ts
   function ensureItemPanelStyles() {
     if (document.getElementById(ITEM_PANEL_STYLE_ID)) return;
     const style2 = document.createElement("style");
@@ -21203,19 +21203,19 @@
   }
   var ARIES_SAVED_GARDENS_PATH, FIXED_SLOT_START, FIXED_SLOT_END, DEFAULT_SIZE_PERCENT, ITEM_PANEL_STYLE_ID, mutationColorMap, MUTATION_ICON_CATEGORIES, MUT_PLUS_BG_CLOSED, MUT_PLUS_BG_OPEN, MUTATION_GROUP_COLOR, MUTATION_GROUP_HYDRO, MUTATION_GROUP_LUNAR, MUTATION_GROUP_OTHER, MUTATION_STEM_MIN_PREFIX, overlayEl, hudToggleBtnEl, currentEnabled, listeners3, savedGardensListeners, sideOverlayEl, sideListWrap, sideRightWrap, currentSideMode, sideSearchQuery, selectedPlantId, selectedDecorId, currentItemOverlayEl, currentItemUnsub, currentItemApplyAll, currentItemSlotModes, overlaysVisible, currentEditorTile, plannedGarden, plannedUserSlotIdx, editorDecorRotation, overlayOwner, overlayHolds, friendGardenPreviewActive, friendPreviewUserSlotIdx, friendPreviewPlayerId, friendPreviewGarden, OVERLAY_MYDATA_PATCH, EditorService, EMPTY_GARDEN, editorPlantSlotsState;
   var init_editor = __esm({
-    "src/services/editor.ts"() {
+    "src/features/editor/editor.ts"() {
       "use strict";
       init_atoms();
       init_data();
       init_decorRotation();
       init_jotai();
-      init_page_context();
+      init_pageContext();
       init_audioPlayer();
       init_cropSize();
-      init_localStorage();
-      init_tileObjectSystemApi();
+      init_storage();
+      init_tileObjects();
       init_fakeAtoms();
-      init_spriteIconCache();
+      init_iconCache();
       ARIES_SAVED_GARDENS_PATH = "editor.savedGardens";
       FIXED_SLOT_START = 1760866288723;
       FIXED_SLOT_END = 1760867858782;
@@ -21354,7 +21354,7 @@
     }
   });
 
-  // src/hooks/ws-hook.ts
+  // src/game/ws/socketHook.ts
   function onWebSocketClose(cb) {
     wsCloseListeners.push(cb);
     return () => {
@@ -22205,24 +22205,24 @@
     }
   }
   var wsCloseListeners, versionReloadScheduled, autoRecoTimer, autoRecoCountdownInterval, autoRecoOverlay, interceptorsByType, interceptorStatus, interceptorPoll, interceptorTimeout;
-  var init_ws_hook = __esm({
-    "src/hooks/ws-hook.ts"() {
+  var init_socketHook = __esm({
+    "src/game/ws/socketHook.ts"() {
       "use strict";
-      init_state3();
-      init_page_context();
+      init_sockets();
+      init_pageContext();
       init_parse();
-      init_quinoaCommands();
+      init_commands();
       init_atoms();
       init_locker();
       init_cropSize();
       init_stats();
-      init_lockerRestrictions();
+      init_restrictions();
       init_toast();
       init_jotai();
-      init_api2();
+      init_environment();
       init_misc();
       init_editor();
-      init_tileObjectSystemApi();
+      init_tileObjects();
       wsCloseListeners = [];
       versionReloadScheduled = false;
       autoRecoTimer = null;
@@ -22237,7 +22237,7 @@
     }
   });
 
-  // src/utils/playerIdentity.ts
+  // src/game/playerIdentity.ts
   function asRecord(value) {
     return value && typeof value === "object" ? value : null;
   }
@@ -22316,7 +22316,7 @@
   }
   var ACCOUNT_ID_KEYS, SLOT_ID_KEYS, ROOM_ID_KEYS, ROOM_ID_PREFIX;
   var init_playerIdentity = __esm({
-    "src/utils/playerIdentity.ts"() {
+    "src/game/playerIdentity.ts"() {
       "use strict";
       ACCOUNT_ID_KEYS = ["userId", "id", "discordUserId", "databaseUserId"];
       SLOT_ID_KEYS = [...ACCOUNT_ID_KEYS, "playerId"];
@@ -22325,7 +22325,7 @@
     }
   });
 
-  // src/services/petTeamReconcile.ts
+  // src/features/pets/teamReconcile.ts
   function serverMemberIds(team) {
     return Array.isArray(team?.members) ? team.members.map((m) => String(m?.petId || "")).filter(Boolean) : [];
   }
@@ -22427,14 +22427,14 @@
     return result;
   }
   var PET_TEAM_NAME_MAX_CLUSTERS;
-  var init_petTeamReconcile = __esm({
-    "src/services/petTeamReconcile.ts"() {
+  var init_teamReconcile = __esm({
+    "src/features/pets/teamReconcile.ts"() {
       "use strict";
       PET_TEAM_NAME_MAX_CLUSTERS = 16;
     }
   });
 
-  // src/services/pets.ts
+  // src/features/pets/pets.ts
   function syncTeamHotkey(teamId2) {
     const hk = getKeybind(getPetTeamActionId(teamId2));
     if (hk) TEAM_HK_MAP.set(teamId2, hk);
@@ -23637,7 +23637,7 @@
   }
   var PATH_PETS_OVERRIDES, PATH_PETS_INSTANT_FEED, PATH_PETS_UI, PATH_PETS_TEAMS, PATH_PETS_TEAM_SEARCH, PATH_PETS_TEAM_SYNC, PATH_PETS_HOTKEYS, PATH_PETS_ABILITY_LOGS, WEATHER_MUTATION_BOOST_IDS, TEAM_HK_MAP, TEAM_HK_UNSUBS, hkNextTeam, hkPrevTeam, unsubNextHotkey, unsubPrevHotkey, orderedTeamIds, lastUsedTeamId, _AB, _abilityIdsCache, _s, _sOpt, _n, _sArr, _petCatalogKeyByLc, _teamSearch, _teamSyncEnabled, _localTeamIdByServerId, _serverTeams, _teamSyncStarted, _lastServerTeamsSig, _reconcilingTeams, _reconcileTeamsQueued, _pendingServerCreates, _pendingCreateTimeouts, _pendingCreateSentName, PENDING_CREATE_TIMEOUT_MS, _lastCreateAttemptSig, _invRaw, _activeRaw, _hutchRaw, _invPetsCache, _invUnsub, _activeUnsub, _hutchUnsub, _invSig, _activeSig, _lastAutofeedAttemptAt, _belowThreshold, AUTOF_FEED_MIN_INTERVAL_MS, DEFAULT_OVERRIDE, DEFAULT_UI, DEFAULT_INSTANT_FEED, _currentPets, _userTriggerCb, PetsService, HUTCH_DEFAULT_CAPACITY, MAX_TEAM_SLOTS;
   var init_pets = __esm({
-    "src/services/pets.ts"() {
+    "src/features/pets/pets.ts"() {
       "use strict";
       init_player();
       init_data();
@@ -23649,10 +23649,10 @@
       init_keybinds();
       init_keyboard();
       init_stats();
-      init_localStorage();
-      init_page_context();
-      init_webSocketBridge();
-      init_petTeamReconcile();
+      init_storage();
+      init_pageContext();
+      init_send();
+      init_teamReconcile();
       PATH_PETS_OVERRIDES = "pets.overrides";
       PATH_PETS_INSTANT_FEED = "pets.instantFeed";
       PATH_PETS_UI = "pets.ui";
@@ -24480,7 +24480,7 @@
     }
   });
 
-  // src/services/companionKeybind.ts
+  // src/features/companion/keybind.ts
   function openCompanionChat() {
     window.dispatchEvent(new CustomEvent("qws:open-panel", { detail: { id: COMPANION_PANEL_ID } }));
     window.dispatchEvent(new CustomEvent(COMPANION_TAB_EVENT, { detail: { tab: CHAT_TAB_ID } }));
@@ -24501,8 +24501,8 @@
     );
   }
   var COMPANION_PANEL_ID, CHAT_TAB_ID, COMPANION_TAB_EVENT, installed;
-  var init_companionKeybind = __esm({
-    "src/services/companionKeybind.ts"() {
+  var init_keybind = __esm({
+    "src/features/companion/keybind.ts"() {
       "use strict";
       init_keybinds();
       init_keyboard();
@@ -24513,10 +24513,10 @@
     }
   });
 
-  // src/utils/petCalcul.ts
+  // src/data/rules/petValue.ts
   var SEC_PER_HOUR, XP_STRENGTH_MAX, BASE_STRENGTH_FLOOR, getCatalogEntry, getMutationEntry, getTargetScale, getXp, getPetMaxStrength, getBaseStrength, getPetStrength, getPetCoinMultiplier, getPetValue, getPetInfo;
-  var init_petCalcul = __esm({
-    "src/utils/petCalcul.ts"() {
+  var init_petValue = __esm({
+    "src/data/rules/petValue.ts"() {
       "use strict";
       init_data();
       SEC_PER_HOUR = 3600;
@@ -24599,7 +24599,7 @@
     }
   });
 
-  // src/utils/calculators.ts
+  // src/data/rules/cropValue.ts
   function resolveSpeciesKey(species) {
     const wanted = key(species).toLowerCase();
     if (!wanted) return null;
@@ -24857,8 +24857,8 @@
     return sum;
   }
   var key, lowerKey, MUTATION_MULTIPLIER_BY_KEY, DefaultPricing;
-  var init_calculators = __esm({
-    "src/utils/calculators.ts"() {
+  var init_cropValue = __esm({
+    "src/data/rules/cropValue.ts"() {
       "use strict";
       init_data();
       init_cropSize();
@@ -24885,7 +24885,7 @@
     }
   });
 
-  // src/utils/inventoryValue.ts
+  // src/features/inventory/value.ts
   function getFiniteNumber(value) {
     if (typeof value === "number") {
       return Number.isFinite(value) ? value : null;
@@ -25157,13 +25157,13 @@
     };
   }
   var INVENTORY_VALUE_CATEGORIES, currentSnapshot, watcherPromise, computeCounter, listeners4;
-  var init_inventoryValue = __esm({
-    "src/utils/inventoryValue.ts"() {
+  var init_value = __esm({
+    "src/features/inventory/value.ts"() {
       "use strict";
       init_atoms();
       init_data();
-      init_petCalcul();
-      init_calculators();
+      init_petValue();
+      init_cropValue();
       init_cropSize();
       INVENTORY_VALUE_CATEGORIES = [
         {
@@ -25246,7 +25246,7 @@
     }
   });
 
-  // src/utils/sellAllPets.ts
+  // src/features/sellAllPets/domButton.ts
   function startInjectSellAllPets(options = {}) {
     if (!isBrowser()) return noSSRController();
     const ROOT_SEL = options.rootSelector ?? DEFAULTS.rootSelector;
@@ -25869,8 +25869,8 @@
     };
   }
   var SELL_ALL_PETS_EVENT, SELL_ALL_PETS_DRY_RUN, SELL_ALL_PETS_CONFIRM_MODAL_ID, DEFAULT_THEME, DEFAULTS;
-  var init_sellAllPets = __esm({
-    "src/utils/sellAllPets.ts"() {
+  var init_domButton = __esm({
+    "src/features/sellAllPets/domButton.ts"() {
       "use strict";
       init_atoms();
       init_jotai();
@@ -25878,10 +25878,10 @@
       init_toast();
       init_audioPlayer();
       init_stats();
-      init_inventoryValue();
-      init_petCalcul();
-      init_spriteIconCache();
-      init_lockerRestrictions();
+      init_value();
+      init_petValue();
+      init_iconCache();
+      init_restrictions();
       init_data();
       SELL_ALL_PETS_EVENT = "sell-all-pets:list";
       SELL_ALL_PETS_DRY_RUN = false;
@@ -25912,7 +25912,7 @@
     }
   });
 
-  // src/services/sell.ts
+  // src/features/sellAllPets/keybind.ts
   function installSellKeybindsOnce() {
     if (sellKeybindsInstalled || typeof window === "undefined") return;
     sellKeybindsInstalled = true;
@@ -25936,18 +25936,18 @@
     );
   }
   var sellKeybindsInstalled;
-  var init_sell = __esm({
-    "src/services/sell.ts"() {
+  var init_keybind2 = __esm({
+    "src/features/sellAllPets/keybind.ts"() {
       "use strict";
       init_player();
       init_keybinds();
       init_keyboard();
-      init_sellAllPets();
+      init_domButton();
       sellKeybindsInstalled = false;
     }
   });
 
-  // src/services/petHutchKeybind.ts
+  // src/features/keybinds/modalToggles/petHutch.ts
   async function togglePetHutchModal() {
     try {
       const current = await Atoms.ui.activeModal.get();
@@ -25975,8 +25975,8 @@
     );
   }
   var ACTION_ID, PET_HUTCH_MODAL_ID, petHutchKeybindsInstalled;
-  var init_petHutchKeybind = __esm({
-    "src/services/petHutchKeybind.ts"() {
+  var init_petHutch = __esm({
+    "src/features/keybinds/modalToggles/petHutch.ts"() {
       "use strict";
       init_atoms();
       init_fakeModal();
@@ -25988,7 +25988,7 @@
     }
   });
 
-  // src/services/journalKeybind.ts
+  // src/features/keybinds/modalToggles/journal.ts
   async function toggleJournalModal() {
     try {
       const current = await Atoms.ui.activeModal.get();
@@ -26016,8 +26016,8 @@
     );
   }
   var ACTION_ID2, journalKeybindsInstalled;
-  var init_journalKeybind = __esm({
-    "src/services/journalKeybind.ts"() {
+  var init_journal = __esm({
+    "src/features/keybinds/modalToggles/journal.ts"() {
       "use strict";
       init_atoms();
       init_fakeModal();
@@ -26028,7 +26028,7 @@
     }
   });
 
-  // src/services/decorShedKeybind.ts
+  // src/features/keybinds/modalToggles/decorShed.ts
   async function toggleDecorShedModal() {
     try {
       const current = await Atoms.ui.activeModal.get();
@@ -26056,8 +26056,8 @@
     );
   }
   var ACTION_ID3, DECOR_SHED_MODAL_ID, decorShedKeybindsInstalled;
-  var init_decorShedKeybind = __esm({
-    "src/services/decorShedKeybind.ts"() {
+  var init_decorShed = __esm({
+    "src/features/keybinds/modalToggles/decorShed.ts"() {
       "use strict";
       init_atoms();
       init_fakeModal();
@@ -26069,7 +26069,7 @@
     }
   });
 
-  // src/services/toolShackKeybind.ts
+  // src/features/keybinds/modalToggles/toolShack.ts
   async function toggleToolShackModal() {
     try {
       const current = await Atoms.ui.activeModal.get();
@@ -26097,8 +26097,8 @@
     );
   }
   var ACTION_ID4, TOOL_SHACK_MODAL_ID, toolShackKeybindsInstalled;
-  var init_toolShackKeybind = __esm({
-    "src/services/toolShackKeybind.ts"() {
+  var init_toolShack = __esm({
+    "src/features/keybinds/modalToggles/toolShack.ts"() {
       "use strict";
       init_atoms();
       init_fakeModal();
@@ -26110,7 +26110,7 @@
     }
   });
 
-  // src/services/seedSiloKeybind.ts
+  // src/features/keybinds/modalToggles/seedSilo.ts
   async function toggleSeedSiloModal() {
     try {
       const current = await Atoms.ui.activeModal.get();
@@ -26138,8 +26138,8 @@
     );
   }
   var ACTION_ID5, SEED_SILO_MODAL_ID, seedSiloKeybindsInstalled;
-  var init_seedSiloKeybind = __esm({
-    "src/services/seedSiloKeybind.ts"() {
+  var init_seedSilo = __esm({
+    "src/features/keybinds/modalToggles/seedSilo.ts"() {
       "use strict";
       init_atoms();
       init_fakeModal();
@@ -26151,7 +26151,7 @@
     }
   });
 
-  // src/services/feedingTroughKeybind.ts
+  // src/features/keybinds/modalToggles/feedingTrough.ts
   async function toggleFeedingTroughModal() {
     try {
       const current = await Atoms.ui.activeModal.get();
@@ -26179,8 +26179,8 @@
     );
   }
   var ACTION_ID6, FEEDING_TROUGH_MODAL_ID, feedingTroughKeybindsInstalled;
-  var init_feedingTroughKeybind = __esm({
-    "src/services/feedingTroughKeybind.ts"() {
+  var init_feedingTrough = __esm({
+    "src/features/keybinds/modalToggles/feedingTrough.ts"() {
       "use strict";
       init_atoms();
       init_fakeModal();
@@ -26192,7 +26192,7 @@
     }
   });
 
-  // src/services/weatherStationKeybind.ts
+  // src/features/keybinds/modalToggles/weatherStation.ts
   async function toggleWeatherStationModal() {
     try {
       const current = await Atoms.ui.activeModal.get();
@@ -26220,8 +26220,8 @@
     );
   }
   var ACTION_ID7, WEATHER_STATION_MODAL_ID, weatherStationKeybindsInstalled;
-  var init_weatherStationKeybind = __esm({
-    "src/services/weatherStationKeybind.ts"() {
+  var init_weatherStation = __esm({
+    "src/features/keybinds/modalToggles/weatherStation.ts"() {
       "use strict";
       init_atoms();
       init_fakeModal();
@@ -26233,7 +26233,7 @@
     }
   });
 
-  // src/utils/audio.ts
+  // src/features/notifier/audio.ts
   function clamp01(v) {
     return Math.max(0, Math.min(1, v));
   }
@@ -26248,10 +26248,10 @@
   }
   var EMBED_DEFAULT_MP3_BASE64, AUDIO_SETTINGS_PATH, AUDIO_LIBRARY_PATH, AudioNotifier, audio;
   var init_audio = __esm({
-    "src/utils/audio.ts"() {
+    "src/features/notifier/audio.ts"() {
       "use strict";
       init_toast();
-      init_localStorage();
+      init_storage();
       EMBED_DEFAULT_MP3_BASE64 = "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yWIx4QmQjniP/DFmXUHhpXgYKiwj0jItaDYoKCJwwYeA8MCCDGJuOoIQJFQEHjhJiW1NwKgKQTnbpNVZyKIIqeEtci87LqvPjrDXFvdx/v/r9eT//////////8X/O/34YjQv//nbVV62e+zRaNdv5k3Nlkv54MsiVZJ2XPNImgx6LJVuEpwRk5xtEkjOFydK6U44SZKtPgOpWFyUrA5KVwmCTAGQasapCi+pBXrShYhskHhSRHScOBoQjCMWFSqaA+hRJoD6EhSXc0qk25kNUMSzoQpY4x2EatYayUjWUjakatczs/X6ssMtcmvSZausPNb1Z7MvsZNtBRrR1vBf8Fl4/xpo2gYAPVqmZh3Zqv0o3AwpxomhWHeCsQjJYtDR7Oz09UeaGmZLiY9UBT1bvBXDXLaLg7lpUq79eJRnBoGZcjQTIU2QmlCpBRpZLpk6gKKER4ApYROtLHiXKhLWJYoV9Wv/+5RE9I8C3GLBgyFE8lsMeDBkI54KgY8CDATVwgApIWj0jpl1oLeWDtoUPes6hly6zueDsS8io9hriUNB3GPDCgoloBCgoCpRstUAnAQHUSTcAmVGcv2VV/9aWqqu212q5xjVZI4mG8LIwk8L0T/zXdc6WGAln0Kv8/jUBpZGq6nVUmNf89VL2oCVJjqk2qiS//YwrDQXEBQxI1VUaWqnglaJ0ZnIUsbjOFEozLLDhrJUFUmZpqv9Vv9mjF7HV2XZv9s/2Paeaw1JVh3NZ3alqp89m2L6vxi1jBjFS8S7FguQVjiwFeb/8O/5ZkxBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr/+5Rk3QDBygs8yCEYED0hV4IEJgwLEY7GIYR+QVyl2chTDDGqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo=";
       AUDIO_SETTINGS_PATH = "audio.settings";
       AUDIO_LIBRARY_PATH = "audio.library";
@@ -27233,7 +27233,7 @@
     }
   });
 
-  // src/services/pet-alerts.ts
+  // src/features/notifier/petAlerts.ts
   function loadPrefs() {
     try {
       const parsed = readAriesPath("pets.alerts");
@@ -27330,12 +27330,12 @@
     seenBelow.clear();
   }
   var clampPct2, prefs, started, unsubPets, lastPets, seenBelow, PetAlertService;
-  var init_pet_alerts = __esm({
-    "src/services/pet-alerts.ts"() {
+  var init_petAlerts = __esm({
+    "src/features/notifier/petAlerts.ts"() {
       "use strict";
       init_pets();
       init_audio();
-      init_localStorage();
+      init_storage();
       clampPct2 = (v) => Math.max(1, Math.min(100, Math.round(v)));
       prefs = {
         globalEnabled: true,
@@ -27414,7 +27414,7 @@
     }
   });
 
-  // src/services/notifier.ts
+  // src/features/notifier/notifier.ts
   function _ensureRulesLoaded() {
     if (_rulesLoaded) return;
     _rulesLoaded = true;
@@ -28148,15 +28148,15 @@
   }
   var PATH_NOTIFIER_PREFS, PATH_NOTIFIER_RULES, PATH_NOTIFIER_WEATHER, PATH_NOTIFIER_DEFAULTS, DISPLAY_RARITY, norm2, formatRuleSummary, formatLastSeen, weatherStateSignature, formatWeatherMutation, normalizeNumber, normalizeCycle, normalizeMutations2, WEATHER_DEFS, WEATHER_BY_ID, WEATHER_BY_ATOM, WEATHER_BY_NAME, _prefs, _weatherPrefs, _weatherPrefsLoaded, _contextDefaults, _contextDefaultsLoaded, _rules, _rulesLoaded, _rulesSubs, _hasOwn, _weatherState, _weatherSig, _weatherSubs, _currentWeatherId, _currentWeatherValue, _unsubWeather, _getPrefBits, _setPrefBits, _rowsById, _lastSig, _state, _unsubShops, _unsubPurchases, _watchGeneration, _subs, _toolInv, _decorInv, _unsubToolInv, _unsubDecorInv, _purchasesSubs, _itemKind, _rawShops, _rawSlot, _viewOf, _sameShopParts, _shopsSubs, BASE_SHOPS_SET, _onDataUpdated, ATOM_WAIT_POLL_MS, ATOM_WAIT_TIMEOUT_MS2, STATE_ATOM_LABEL, MY_USER_SLOT_ATOM_LABEL, _started, NotifierService;
   var init_notifier = __esm({
-    "src/services/notifier.ts"() {
+    "src/features/notifier/notifier.ts"() {
       "use strict";
       init_atoms();
       init_api();
       init_data();
       init_audio();
       init_stats();
-      init_localStorage();
-      init_shopPurchases();
+      init_storage();
+      init_purchases();
       PATH_NOTIFIER_PREFS = "notifier.prefs";
       PATH_NOTIFIER_RULES = "notifier.rules";
       PATH_NOTIFIER_WEATHER = "notifier.weatherPrefs";
@@ -28585,7 +28585,7 @@
     }
   });
 
-  // src/utils/catalogIndex.ts
+  // src/data/names.ts
   function seedNameFromSpecies(species, cat = plantCatalog2) {
     const e = cat?.[species];
     return e?.seed?.name ?? e?.plant?.name ?? e?.crop?.name ?? void 0;
@@ -28599,14 +28599,14 @@
   function decorNameFromId(decorId, cat = decorCatalog2) {
     return cat?.[decorId]?.name ?? void 0;
   }
-  var init_catalogIndex = __esm({
-    "src/utils/catalogIndex.ts"() {
+  var init_names = __esm({
+    "src/data/names.ts"() {
       "use strict";
       init_data();
     }
   });
 
-  // src/utils/gardenInfoCardPixi.ts
+  // src/game/pixi/gardenInfoCard.ts
   function getSpriteState2() {
     const state6 = readSharedGlobal("__MG_SPRITE_STATE__");
     if (!state6?.renderer || !state6.ctors?.Text) return null;
@@ -28767,10 +28767,10 @@
     };
   }
   var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, CARD_SYSTEM_FIND_RETRY_MS, CARD_SYSTEM_FIND_LOG_EVERY, cachedGraphicsCtor, cardSystem, currentCard, findAttempts, findRafId, lastFindCheckAt, listeners5, debugState, raf;
-  var init_gardenInfoCardPixi = __esm({
-    "src/utils/gardenInfoCardPixi.ts"() {
+  var init_gardenInfoCard = __esm({
+    "src/game/pixi/gardenInfoCard.ts"() {
       "use strict";
-      init_page_context();
+      init_pageContext();
       CARD_SYSTEM_LABEL = "GardenInfoCardSystem";
       CARD_ROW_LABEL = "GardenInfoCardRow";
       OBJECT_CARD_LABEL = "GardenInfoObjectCard";
@@ -28798,7 +28798,7 @@
     }
   });
 
-  // src/utils/notificationBellPixi.ts
+  // src/features/notifier/bellPixi.ts
   function bellRingAngleAt(cycleOffset) {
     for (let i = 1; i < BELL_RING_SEQUENCE.length; i++) {
       const next = BELL_RING_SEQUENCE[i];
@@ -29177,11 +29177,11 @@
     };
   }
   var RAIL_LABEL, RAIL_FIND_RETRY_MS, RAIL_FIND_LOG_EVERY, RAIL_REACHABILITY_CHECK_MS, RAIL_REACHABILITY_MAX_HOPS, CHAT_SLOT_MARKER_LABEL, DEFAULT_ICON_GLYPH, DEFAULT_SLOT_SIZE, DEFAULT_SLOT_SPACING, SLOT_OCCUPIED_TOLERANCE_RATIO, MAX_SLOT_SEARCH_STEPS, BELL_RING_SEQUENCE, BELL_RING_DURATION_MS, DEG_TO_RAD;
-  var init_notificationBellPixi = __esm({
-    "src/utils/notificationBellPixi.ts"() {
+  var init_bellPixi = __esm({
+    "src/features/notifier/bellPixi.ts"() {
       "use strict";
-      init_gardenInfoCardPixi();
-      init_page_context();
+      init_gardenInfoCard();
+      init_pageContext();
       RAIL_LABEL = "RightSideRail";
       RAIL_FIND_RETRY_MS = 1e3;
       RAIL_FIND_LOG_EVERY = 30;
@@ -29212,7 +29212,7 @@
     }
   });
 
-  // src/utils/notificationBellFloating.ts
+  // src/features/notifier/bellFloating.ts
   function isFloatingBellEnabled() {
     return readAriesPath(ENABLED_PATH, false) === true;
   }
@@ -29433,11 +29433,11 @@
     };
   }
   var ENABLED_PATH, POS_PATH, BELL_MODE_EVENT, BELL_GLYPH, BUTTON_SIZE, ICON_FONT_SIZE, BELL_WIDGET_Z_INDEX, SCREEN_MARGIN, DEFAULT_RIGHT_GAP, DEFAULT_TOP_RATIO, SETTLE_REAPPLY_DELAYS_MS, DRAG_THRESHOLD_PX, RING_KEYFRAMES;
-  var init_notificationBellFloating = __esm({
-    "src/utils/notificationBellFloating.ts"() {
+  var init_bellFloating = __esm({
+    "src/features/notifier/bellFloating.ts"() {
       "use strict";
-      init_notificationBellPixi();
-      init_localStorage();
+      init_bellPixi();
+      init_storage();
       ENABLED_PATH = "notifier.floatingBell.enabled";
       POS_PATH = "notifier.floatingBell.pos";
       BELL_MODE_EVENT = "qws:alerts-bell-mode-changed";
@@ -29457,7 +29457,7 @@
     }
   });
 
-  // src/ui/menus/notificationOverlay.ts
+  // src/features/notifier/overlay.ts
   function iconOf(id, size = 24) {
     const wrap = document.createElement("div");
     Object.assign(wrap.style, {
@@ -29556,16 +29556,16 @@
     };
   }
   var OVERLAY_REPOSITION_INTERVAL_MS, style, setProps, OverlayBarebone;
-  var init_notificationOverlay = __esm({
-    "src/ui/menus/notificationOverlay.ts"() {
+  var init_overlay = __esm({
+    "src/features/notifier/overlay.ts"() {
       "use strict";
       init_notifier();
       init_shops();
       init_audio();
-      init_catalogIndex();
-      init_spriteIconCache();
-      init_notificationBellPixi();
-      init_notificationBellFloating();
+      init_names();
+      init_iconCache();
+      init_bellPixi();
+      init_bellFloating();
       OVERLAY_REPOSITION_INTERVAL_MS = 1e3;
       style = (el2, s) => Object.assign(el2.style, s);
       setProps = (el2, props) => {
@@ -30176,7 +30176,7 @@
     }
   });
 
-  // src/utils/instantFeedWidget.ts
+  // src/features/pets/feedWidget.ts
   function isInstantFeedWidgetEnabled() {
     return readAriesPath(ENABLED_PATH2, true) !== false;
   }
@@ -30662,16 +30662,16 @@
     }
   }
   var DEFAULT_LABEL, MAX_BUTTONS, ICON_SIZE, WIDGET_Z_INDEX, SCREEN_MARGIN2, DEFAULT_TOP, GLOBAL_START_FLAG, INVENTORY_CARD_ATOM, ENABLED_PATH2, POS_PATH2, started2, enabled, modalOpen, inventoryCardOpen, activePets, activePetsSig, widget, widgetButtons, savedPos, positioned;
-  var init_instantFeedWidget = __esm({
-    "src/utils/instantFeedWidget.ts"() {
+  var init_feedWidget = __esm({
+    "src/features/pets/feedWidget.ts"() {
       "use strict";
       init_pets();
       init_player();
       init_api();
       init_atoms();
-      init_spriteIconCache();
-      init_localStorage();
-      init_petCalcul();
+      init_iconCache();
+      init_storage();
+      init_petValue();
       DEFAULT_LABEL = "Instant Feed";
       MAX_BUTTONS = 3;
       ICON_SIZE = 18;
@@ -30695,7 +30695,7 @@
     }
   });
 
-  // src/utils/growSlot.ts
+  // src/data/rules/growSlot.ts
   function resolveGrowSlot(slots, selectedSlotId) {
     if (!Array.isArray(slots) || slots.length === 0) return null;
     if (selectedSlotId != null && Number.isFinite(selectedSlotId)) {
@@ -30708,14 +30708,14 @@
   }
   var slotIdOf, bySlotId;
   var init_growSlot = __esm({
-    "src/utils/growSlot.ts"() {
+    "src/data/rules/growSlot.ts"() {
       "use strict";
       slotIdOf = (slot) => Number.isFinite(slot?.slotId) ? slot.slotId : 0;
       bySlotId = (a, b) => slotIdOf(a) - slotIdOf(b);
     }
   });
 
-  // src/utils/cropPrice.ts
+  // src/features/cropPrice/priceWatcher.ts
   function startCropPriceWatcherViaGardenObject() {
     let cur = null;
     let players = void 0;
@@ -30799,17 +30799,17 @@
     };
   }
   var isPlantObject2;
-  var init_cropPrice = __esm({
-    "src/utils/cropPrice.ts"() {
+  var init_priceWatcher = __esm({
+    "src/features/cropPrice/priceWatcher.ts"() {
       "use strict";
       init_atoms();
-      init_calculators();
+      init_cropValue();
       init_growSlot();
       isPlantObject2 = (o) => !!o && o.objectType === "plant";
     }
   });
 
-  // src/utils/cropPriceSetting.ts
+  // src/features/cropPrice/setting.ts
   function readShowCropPrice() {
     try {
       return readAriesPath(PATH_SHOW_CROP_PRICE) !== false;
@@ -30838,16 +30838,16 @@
     };
   }
   var PATH_SHOW_CROP_PRICE, listeners6;
-  var init_cropPriceSetting = __esm({
-    "src/utils/cropPriceSetting.ts"() {
+  var init_setting = __esm({
+    "src/features/cropPrice/setting.ts"() {
       "use strict";
-      init_localStorage();
+      init_storage();
       PATH_SHOW_CROP_PRICE = "misc.showCropPrice";
       listeners6 = /* @__PURE__ */ new Set();
     }
   });
 
-  // src/utils/cropValues.ts
+  // src/features/cropPrice/domTooltip.ts
   function getQpmGlobal() {
     return readSharedGlobal("QPM");
   }
@@ -31314,14 +31314,14 @@
     }
   }
   var DEFAULTS2, OMA_SEL, ICON_CLASS, LABEL_CLASS, LOCK_TEXT_SELECTOR, LOCK_EMOJI, LOCK_BORDER_STYLE, LOCK_BORDER_RADIUS, TOOLTIP_ROOT_CLASSES, LOCK_ICON_CLASS, DATASET_KEY_COLOR, DATASET_KEY_DISPLAY, DATASET_KEY_ALIGN, DATASET_KEY_TEXT, DATASET_KEY_BORDER, DATASET_KEY_BORDER_RADIUS, DATASET_KEY_POSITION, DATASET_KEY_OVERFLOW, LOCK_PREFIX_REGEX, PRICE_FALLBACK, nfUS, formatCoins, hasDOM;
-  var init_cropValues = __esm({
-    "src/utils/cropValues.ts"() {
+  var init_domTooltip = __esm({
+    "src/features/cropPrice/domTooltip.ts"() {
       "use strict";
-      init_cropPrice();
-      init_cropPriceSetting();
+      init_priceWatcher();
+      init_setting();
       init_data();
       init_locker();
-      init_page_context();
+      init_pageContext();
       DEFAULTS2 = {
         rootSelector: ".McFlex.css-fsggty, .McFlex.css-6prrn",
         innerSelector: ".McFlex.css-1l3zq7, .McFlex.css-11dqzw",
@@ -31352,7 +31352,7 @@
     }
   });
 
-  // src/utils/cropValuePixi.ts
+  // src/features/cropPrice/badge.ts
   function isPlantObject3(obj) {
     return !!obj && typeof obj === "object" && obj.objectType === "plant";
   }
@@ -31547,15 +31547,15 @@
     };
   }
   var VALUE_TEXT_STYLE, VALUE_BADGE_GAP, VALUE_ICON_SIZE, VALUE_ICON_GAP, BADGE_PADDING_X, BADGE_PADDING_Y, BADGE_RADIUS, BADGE_COLOR, BADGE_ALPHA, PRICE_FALLBACK2, nfUS2, formatCoins2, coinTexture, coinTexturePromise;
-  var init_cropValuePixi = __esm({
-    "src/utils/cropValuePixi.ts"() {
+  var init_badge = __esm({
+    "src/features/cropPrice/badge.ts"() {
       "use strict";
-      init_cropPrice();
-      init_cropPriceSetting();
-      init_page_context();
+      init_priceWatcher();
+      init_setting();
+      init_pageContext();
       init_data();
       init_atoms();
-      init_gardenInfoCardPixi();
+      init_gardenInfoCard();
       VALUE_TEXT_STYLE = { fontFamily: "Arial", fontSize: 14, fontWeight: "700", fill: "#FFD84D" };
       VALUE_BADGE_GAP = 20;
       VALUE_ICON_SIZE = 16;
@@ -31573,7 +31573,7 @@
     }
   });
 
-  // src/utils/lockerIndicatorPixi.ts
+  // src/features/locker/indicator.ts
   function extractEggId2(obj) {
     if (!obj || typeof obj !== "object" || obj.objectType !== "egg") return null;
     const eggId = obj.eggId;
@@ -31701,14 +31701,14 @@
     };
   }
   var BORDER_COLOR, BORDER_WIDTH, BORDER_RADIUS, BORDER_EXPAND, LOCK_ICON_TEXT, LOCK_ICON_STYLE, LOCK_ICON_X_NUDGE, LOCK_ICON_Y_NUDGE;
-  var init_lockerIndicatorPixi = __esm({
-    "src/utils/lockerIndicatorPixi.ts"() {
+  var init_indicator = __esm({
+    "src/features/locker/indicator.ts"() {
       "use strict";
       init_locker();
-      init_lockerRestrictions();
+      init_restrictions();
       init_atoms();
-      init_page_context();
-      init_gardenInfoCardPixi();
+      init_pageContext();
+      init_gardenInfoCard();
       BORDER_COLOR = 12334551;
       BORDER_WIDTH = 3;
       BORDER_RADIUS = 12;
@@ -31720,7 +31720,7 @@
     }
   });
 
-  // src/utils/sellAllPetsPixi.ts
+  // src/features/sellAllPets/pixiButton.ts
   function isSellPetAction(action2) {
     if (typeof action2 === "string") return SELL_PET_ACTION_TYPES.has(action2);
     if (action2 && typeof action2 === "object") {
@@ -32056,12 +32056,12 @@
     };
   }
   var ACTION_HUD_LABEL, BUTTON_FACE_LABEL, ACTION_HUD_FIND_RETRY_MS, ACTION_HUD_FIND_LOG_EVERY, SELL_PET_ACTION_TYPES, BUTTON_GAP, BUTTON_TEXT, BUTTON_TEXT_STYLE, BUTTON_PADDING_X, BUTTON_RADIUS, BUTTON_FILL_COLOR, BUTTON_BORDER_COLOR, BUTTON_BORDER_WIDTH, HOVER_SCALE, HOVER_SCALE_EASE, HOVER_SCALE_SETTLE_EPSILON;
-  var init_sellAllPetsPixi = __esm({
-    "src/utils/sellAllPetsPixi.ts"() {
+  var init_pixiButton = __esm({
+    "src/features/sellAllPets/pixiButton.ts"() {
       "use strict";
-      init_gardenInfoCardPixi();
-      init_page_context();
-      init_sellAllPets();
+      init_gardenInfoCard();
+      init_pageContext();
+      init_domButton();
       init_atoms();
       ACTION_HUD_LABEL = "ActionHud";
       BUTTON_FACE_LABEL = "McButtonFace";
@@ -32082,7 +32082,7 @@
     }
   });
 
-  // src/utils/sellCropsLock.ts
+  // src/features/locker/sellCropsLock.ts
   function startSellCropsLockWatcher() {
     if (typeof window === "undefined" || typeof document === "undefined") {
       return { stop() {
@@ -32243,10 +32243,10 @@
   }
   var CONTAINER_SELECTOR, LOCK_ICON_CLASS2, DATA_BORDER, DATA_RADIUS, DATA_POSITION, DATA_PADDING, DATA_BOX, DATA_SHADOW, DATA_OVERFLOW;
   var init_sellCropsLock = __esm({
-    "src/utils/sellCropsLock.ts"() {
+    "src/features/locker/sellCropsLock.ts"() {
       "use strict";
       init_atoms();
-      init_lockerRestrictions();
+      init_restrictions();
       CONTAINER_SELECTOR = ".css-vmnhaw";
       LOCK_ICON_CLASS2 = "tm-sell-crops-lock";
       DATA_BORDER = "tmSellLockBorder";
@@ -32259,7 +32259,7 @@
     }
   });
 
-  // src/utils/eggHatchLockIndicator.ts
+  // src/features/locker/eggHatchLockIndicator.ts
   function startEggHatchLockIndicator() {
     if (typeof window === "undefined" || typeof document === "undefined") {
       return { stop() {
@@ -32394,10 +32394,10 @@
   }
   var CONTAINER_SELECTOR2, LOCK_CLASS, BORDER_COLOR2, DATA_BORDER2, DATA_RADIUS2, DATA_POSITION2, DATA_OVERFLOW2;
   var init_eggHatchLockIndicator = __esm({
-    "src/utils/eggHatchLockIndicator.ts"() {
+    "src/features/locker/eggHatchLockIndicator.ts"() {
       "use strict";
       init_atoms();
-      init_lockerRestrictions();
+      init_restrictions();
       CONTAINER_SELECTOR2 = ".css-502lyi";
       LOCK_CLASS = "tm-egg-lock";
       BORDER_COLOR2 = "rgb(188, 53, 215)";
@@ -32408,7 +32408,7 @@
     }
   });
 
-  // src/utils/decorPickupLockIndicator.ts
+  // src/features/locker/decorPickupLockIndicator.ts
   function startDecorPickupLockIndicator() {
     if (typeof window === "undefined" || typeof document === "undefined") {
       return { stop() {
@@ -32525,10 +32525,10 @@
   }
   var CONTAINER_SELECTOR3, LOCK_CLASS2, BORDER_COLOR3, DATA_BORDER3, DATA_RADIUS3, DATA_POSITION3, DATA_OVERFLOW3, DECOR_LABELS;
   var init_decorPickupLockIndicator = __esm({
-    "src/utils/decorPickupLockIndicator.ts"() {
+    "src/features/locker/decorPickupLockIndicator.ts"() {
       "use strict";
       init_data();
-      init_lockerRestrictions();
+      init_restrictions();
       CONTAINER_SELECTOR3 = ".css-502lyi";
       LOCK_CLASS2 = "tm-decor-lock";
       BORDER_COLOR3 = "rgb(188, 53, 215)";
@@ -32553,7 +32553,7 @@
     }
   });
 
-  // src/utils/version.ts
+  // src/platform/modVersion.ts
   async function fetchTextWithFetch(url, options) {
     const response = await fetch(url, { cache: "no-store", ...options });
     if (!response.ok) {
@@ -32660,10 +32660,10 @@
     return void 0;
   }
   var REPO_OWNER, REPO_NAME, REPO_BRANCH, SCRIPT_FILE_PATH, RAW_BASE_URL, COMMITS_API_URL;
-  var init_version = __esm({
-    "src/utils/version.ts"() {
+  var init_modVersion = __esm({
+    "src/platform/modVersion.ts"() {
       "use strict";
-      init_api2();
+      init_environment();
       REPO_OWNER = "Ariedam64";
       REPO_NAME = "MG-AriesMod";
       REPO_BRANCH = "main";
@@ -32673,7 +32673,7 @@
     }
   });
 
-  // src/utils/inventorySorting.ts
+  // src/features/inventory/sorting.ts
   function createDomSnapshot(entries2) {
     return entries2.map((entry) => entry.wrapper);
   }
@@ -34274,14 +34274,14 @@
     };
   }
   var DEFAULTS3, INVENTORY_SEARCH_INPUT_SELECTOR, BASE_SORT, ORDER, SORT_KEY_PATH, SORT_KEY_SET, SORT_DIRECTION_PATH, SORT_DIRECTION_SET, DEFAULT_DIRECTION_LABEL, DIRECTION_LABELS_DEFAULT, getPetAbilityDisplayName, INVENTORY_VALUE_VISIBILITY_PATH, resolveVisibilityFromStoredValue, loadPersistedInventoryValueVisibility, persistInventoryValueVisibility, shouldDisplayInventoryValues, setShouldDisplayInventoryValues, getShouldDisplayInventoryValues, DEFAULT_DIRECTION_BY_SORT_KEY, DIRECTION_ORDER, isPersistedSortKey, isPersistedSortDirection, loadPersistedSortKey, persistSortKey, loadPersistedSortDirection, persistSortDirection, MAP_EXTRA_BY_FILTER_DEFAULT, FILTER_CONTEXT_ITEM_TYPES_CACHE, FILTER_CONTEXT_LISTENERS, addFilterContextListener, notifyFilterContextListeners, LABEL_BY_VALUE_DEFAULT, INVENTORY_BASE_INDEX_DATASET_KEY, INVENTORY_ITEM_CARD_SELECTORS, INVENTORY_ITEMS_CONTAINER_SELECTOR, INVENTORY_NOISE_SELECTOR, INVENTORY_STRENGTH_WRAPPER_SELECTOR, INVENTORY_STRENGTH_TEXT_SELECTOR, INVENTORY_FAVORITE_BUTTON_SELECTOR, INVENTORY_ITEM_CARD_SELECTOR, INVENTORY_VALUE_CONTAINER_SELECTOR, INVENTORY_VALUE_ELEMENT_CLASS, INVENTORY_VALUE_TEXT_CLASS, INVENTORY_VALUE_DATASET_KEY, FILTERED_VALUE_LOADING, FILTERED_VALUE_UNKNOWN, VALUE_SUMMARY_ICON_CLASS, VALUE_SUMMARY_TEXT_CLASS, VALUE_SUMMARY_ICON_SRC, VALUE_SUMMARY_ICON_BACKGROUND, debounce, labelIsChecked, normalize, createFilterContextKey, areSetsEqual, getCachedItemTypesForKey, getCachedItemTypesForContext, setCachedItemTypesForKey, getInventorySearchInput, getInventorySearchQuery, getNormalizedInventorySearchQuery, logFilteredInventorySearchResults, RARITY_ORDER, RARITY_RANK, getRarityRank, SPECIES_FIELDS, normalizeSpeciesKey, clampNumber2, collectSpeciesCandidates, getInventoryItemSizePercent, collectMutations, getInventoryItemMutations, FILTER_LABEL_TO_ITEM_TYPES, ITEM_TYPE_TO_FILTER_KEYS, getExtrasForFilterKey, getExtrasForItemType, getInventoryCardElement, clearInventoryNoiseText, findAncestorWithDescendant, alignInventoryStrengthText, INVENTORY_COMPACT_VALUE_UNITS, INVENTORY_FULL_VALUE_FORMATTER, formatInventoryItemCompactValue, formatInventoryItemFullValue, getInventoryItemValue, parseStrengthValue, TM_STRENGTH_LABEL_CLASS, TM_STRENGTH_CURRENT_CLASS, TM_STRENGTH_MAX_CLASS, TM_STRENGTH_BADGE_CLASS, TM_STRENGTH_IS_MAX_DATASET_KEY, PET_HUTCH_HEADER_TEXT, PET_INVENTORY_HEADER_TEXT, PET_NAME_SELECTOR, PET_HUTCH_ROOT_SELECTOR, PET_HUTCH_LIST_SELECTOR, PET_HUTCH_INVENTORY_LIST_SELECTOR, PET_HUTCH_VISIBILITY_STYLE, RAINBOW_BADGE_TEXT_GRADIENT, getPetMutationTone, applyStrengthBadgeTone, ensureStrengthBadge, ensureStrengthTextParts, getValueSummaryElement, ensureValueSummaryContent, setValueSummaryText, stringOrEmpty, pickNestedString, pickFirstNestedString, plantCatalogEntry, petCatalogEntry, eggCatalogEntry, toolCatalogEntry, decorCatalogEntry, SEED_NAME_PATHS, SEED_RARITY_PATHS, CROP_NAME_PATHS, CROP_RARITY_PATHS, PLANT_NAME_PATHS, PLANT_RARITY_PATHS, createPlantLookup, CATALOG_LOOKUPS, getCatalogLookup, getInventoryItemName, QUANTITY_ONE_TYPES, getInventoryItemQuantity, getInventoryItemRarity, readNestedValue, readNestedStringField, readNestedNumberField, findSectionContainerByHeaderText, getPetCardName, getPetNameCandidates, isPetItem, applyPetItemsToContainer, setPetHutchContainersHidden, updatePetHutchSections, PET_STATS_BY_SPECIES, lookupPetStats, getPetStrengthInfo, getPetStrength2, compareByNameThenTypeThenId;
-  var init_inventorySorting = __esm({
-    "src/utils/inventorySorting.ts"() {
+  var init_sorting = __esm({
+    "src/features/inventory/sorting.ts"() {
       "use strict";
       init_atoms();
       init_data();
-      init_inventoryValue();
+      init_value();
       init_cropSize();
-      init_localStorage();
+      init_storage();
       DEFAULTS3 = {
         // Updated to new Inventory root grid container (game UI update)
         gridSelector: "div.McGrid.css-1kv58ap",
@@ -35329,7 +35329,7 @@
     }
   });
 
-  // src/utils/activityLogClassification.ts
+  // src/features/activityLog/classification.ts
   function normalizeAbilityAction(raw) {
     const trimmed = String(raw || "").trim();
     if (!trimmed) return null;
@@ -35378,8 +35378,8 @@
     return ordered;
   }
   var ACTION_ORDER, ACTION_LABELS, ACTION_MAP, ACTION_MAP_LOWER;
-  var init_activityLogClassification = __esm({
-    "src/utils/activityLogClassification.ts"() {
+  var init_classification = __esm({
+    "src/features/activityLog/classification.ts"() {
       "use strict";
       ACTION_ORDER = [
         "all",
@@ -35527,7 +35527,7 @@
     }
   });
 
-  // src/services/activityLogHistory.ts
+  // src/features/activityLog/history.ts
   function skipNextActivityLogHistoryReopen() {
     skipNextHistoryReopen = true;
   }
@@ -35765,14 +35765,14 @@
     };
   }
   var SKIP_NEXT_ACTIVITY_LOG_REOPEN_GLOBAL, HISTORY_STORAGE_KEY, HISTORY_LIMIT, skipNextHistoryReopen;
-  var init_activityLogHistory = __esm({
-    "src/services/activityLogHistory.ts"() {
+  var init_history = __esm({
+    "src/features/activityLog/history.ts"() {
       "use strict";
       init_fakeModal();
       init_atoms();
-      init_localStorage();
-      init_page_context();
-      init_activityLogFilterPixi();
+      init_storage();
+      init_pageContext();
+      init_filterBar();
       SKIP_NEXT_ACTIVITY_LOG_REOPEN_GLOBAL = "__MG_SKIP_NEXT_ACTIVITY_LOG_REOPEN__";
       HISTORY_STORAGE_KEY = "activityLog.history";
       HISTORY_LIMIT = 500;
@@ -35780,7 +35780,7 @@
     }
   });
 
-  // src/utils/activityLogFilterPixi.ts
+  // src/features/activityLog/filterBar.ts
   function loadPersistedFilter() {
     try {
       const stored = readAriesPath(FILTER_STORAGE_KEY);
@@ -36107,16 +36107,16 @@
     })();
   }
   var FILTER_STORAGE_KEY, FIND_RETRY_MS, BUTTON_HEIGHT, BUTTON_PADDING_X2, BUTTON_GAP2, TOOLBAR_GAP_BELOW, BUTTON_FILL_INACTIVE, BUTTON_FILL_ACTIVE, BUTTON_ALPHA_INACTIVE, BUTTON_ALPHA_ACTIVE, BUTTON_TEXT_STYLE2, BUTTON_RADIUS2, CLOSED_LABEL_PREFIX, CARET_GAP, CARET_CLOSED, CARET_OPEN, CARET_TEXT_STYLE, PANEL_GAP, raf2, activeFilter, modalOpen2, activeTab, debugState2, modalNode, toolbarState, findRafId2, lastFindCheckAt2, touchedScroll, shiftedRows, plannedFirst, plannedShift, debugSyncState;
-  var init_activityLogFilterPixi = __esm({
-    "src/utils/activityLogFilterPixi.ts"() {
+  var init_filterBar = __esm({
+    "src/features/activityLog/filterBar.ts"() {
       "use strict";
-      init_localStorage();
-      init_page_context();
-      init_activityLogClassification();
-      init_activityLogHistory();
+      init_storage();
+      init_pageContext();
+      init_classification();
+      init_history();
       init_fakeModal();
       init_atoms();
-      init_gardenInfoCardPixi();
+      init_gardenInfoCard();
       init_activityLogModalLayout();
       FILTER_STORAGE_KEY = "activityLog.filter";
       FIND_RETRY_MS = 1e3;
@@ -36196,7 +36196,7 @@
     }
   });
 
-  // src/services/hatchPity.ts
+  // src/features/hatch/pity.ts
   function isRecord2(value) {
     return typeof value === "object" && value !== null;
   }
@@ -36310,8 +36310,8 @@
     return pity.targets.filter((target) => target.kind === "species").map((target) => target.key);
   }
   var PITY_MULTIPLIER, MAX_PROTECTED_CHANCE, GOLD_MUTATION, RAINBOW_MUTATION;
-  var init_hatchPity = __esm({
-    "src/services/hatchPity.ts"() {
+  var init_pity = __esm({
+    "src/features/hatch/pity.ts"() {
       "use strict";
       init_data();
       PITY_MULTIPLIER = 2;
@@ -36321,7 +36321,7 @@
     }
   });
 
-  // src/services/hatchTracker.ts
+  // src/features/hatch/tracker.ts
   function emptyCounters() {
     return { species: {}, gold: 0, rainbow: 0, pulls: 0 };
   }
@@ -36522,14 +36522,14 @@
     };
   }
   var STATE_PATH, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, listeners7, cachedState, HatchTracker;
-  var init_hatchTracker = __esm({
-    "src/services/hatchTracker.ts"() {
+  var init_tracker = __esm({
+    "src/features/hatch/tracker.ts"() {
       "use strict";
-      init_activityLogHistory();
+      init_history();
       init_atoms();
       init_stats();
-      init_hatchPity();
-      init_localStorage();
+      init_pity();
+      init_storage();
       STATE_PATH = "hatch.tracker";
       HATCH_ACTION = "hatchEgg";
       DOUBLE_HATCH_ACTIONS = /* @__PURE__ */ new Set(["doublehatch", "doublehatchii"]);
@@ -37552,44 +37552,44 @@
   var init_hud = __esm({
     "src/ui/hud.ts"() {
       "use strict";
-      init_state3();
+      init_sockets();
       init_jotai();
       init_pets();
       init_shops();
-      init_companionKeybind();
-      init_sell();
-      init_petHutchKeybind();
-      init_journalKeybind();
-      init_decorShedKeybind();
-      init_toolShackKeybind();
-      init_seedSiloKeybind();
-      init_feedingTroughKeybind();
-      init_weatherStationKeybind();
-      init_pet_alerts();
+      init_keybind();
+      init_keybind2();
+      init_petHutch();
+      init_journal();
+      init_decorShed();
+      init_toolShack();
+      init_seedSilo();
+      init_feedingTrough();
+      init_weatherStation();
+      init_petAlerts();
       init_keybinds();
       init_keyboard();
-      init_notificationOverlay();
-      init_instantFeedWidget();
-      init_spriteIconCache();
-      init_cropValues();
-      init_cropValuePixi();
-      init_lockerIndicatorPixi();
-      init_sellAllPets();
-      init_sellAllPetsPixi();
+      init_overlay();
+      init_feedWidget();
+      init_iconCache();
+      init_domTooltip();
+      init_badge();
+      init_indicator();
+      init_domButton();
+      init_pixiButton();
       init_sellCropsLock();
       init_eggHatchLockIndicator();
       init_decorPickupLockIndicator();
-      init_version();
-      init_api2();
-      init_inventorySorting();
-      init_activityLogFilterPixi();
-      init_localStorage();
-      init_activityLogHistory();
-      init_hatchTracker();
+      init_modVersion();
+      init_environment();
+      init_sorting();
+      init_filterBar();
+      init_storage();
+      init_history();
+      init_tracker();
     }
   });
 
-  // src/ui/menus/debug-data-shared.ts
+  // src/features/debug/shared.ts
   function setBtnLabel(btn, text) {
     const label2 = btn.querySelector(".label");
     if (label2) label2.textContent = text;
@@ -37667,22 +37667,22 @@
     pre.style.color = "#dbe4ff";
     pre.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,.04)";
   }
-  var init_debug_data_shared = __esm({
-    "src/ui/menus/debug-data-shared.ts"() {
+  var init_shared = __esm({
+    "src/features/debug/shared.ts"() {
       "use strict";
     }
   });
 
-  // src/mgApi/config.ts
+  // src/platform/mgApi/config.ts
   var API_BASE_URL;
   var init_config = __esm({
-    "src/mgApi/config.ts"() {
+    "src/platform/mgApi/config.ts"() {
       "use strict";
       API_BASE_URL = "https://mg-api.ariedam.fr";
     }
   });
 
-  // src/mgApi/client/http.ts
+  // src/platform/mgApi/http.ts
   function buildMgApiUrl(path, query) {
     const url = new URL(path, API_BASE_URL);
     if (query) {
@@ -37765,14 +37765,14 @@
     }
   }
   var init_http = __esm({
-    "src/mgApi/client/http.ts"() {
+    "src/platform/mgApi/http.ts"() {
       "use strict";
       init_discordCsp();
       init_config();
     }
   });
 
-  // src/mgApi/endpoints/sprites.ts
+  // src/platform/mgApi/sprites.ts
   async function fetchSpriteCatalog() {
     return mgApiGetJson("/assets/sprites");
   }
@@ -37787,8 +37787,8 @@
     });
   }
   var COMPOSE_KEY_PREFIX;
-  var init_sprites = __esm({
-    "src/mgApi/endpoints/sprites.ts"() {
+  var init_sprites2 = __esm({
+    "src/platform/mgApi/sprites.ts"() {
       "use strict";
       init_http();
       COMPOSE_KEY_PREFIX = {
@@ -37808,28 +37808,28 @@
     }
   });
 
-  // src/mgApi/endpoints/audio.ts
+  // src/platform/mgApi/audio.ts
   async function fetchAudioCatalog() {
     return mgApiGetJson("/assets/audios");
   }
   var init_audio2 = __esm({
-    "src/mgApi/endpoints/audio.ts"() {
+    "src/platform/mgApi/audio.ts"() {
       "use strict";
       init_http();
     }
   });
 
-  // src/mgApi/index.ts
+  // src/platform/mgApi/index.ts
   var init_mgApi = __esm({
-    "src/mgApi/index.ts"() {
+    "src/platform/mgApi/index.ts"() {
       "use strict";
       init_http();
-      init_sprites();
+      init_sprites2();
       init_audio2();
     }
   });
 
-  // src/ui/menus/debug-data-audio.ts
+  // src/features/debug/audioTab.ts
   async function loadCatalog(force = false) {
     if (force) catalogPromise = null;
     if (!catalogPromise) catalogPromise = fetchAudioCatalog();
@@ -38085,17 +38085,17 @@
     void refreshAll();
   }
   var catalogPromise;
-  var init_debug_data_audio = __esm({
-    "src/ui/menus/debug-data-audio.ts"() {
+  var init_audioTab = __esm({
+    "src/features/debug/audioTab.ts"() {
       "use strict";
-      init_debug_data_shared();
+      init_shared();
       init_discordCsp();
       init_mgApi();
       catalogPromise = null;
     }
   });
 
-  // src/ui/menus/debug-data-jotai.ts
+  // src/features/debug/jotaiTab.ts
   function renderJotaiTab(view, ui) {
     view.innerHTML = "";
     view.classList.add("dd-debug-view");
@@ -38280,15 +38280,15 @@
       el2.textContent = typeof v === "string" ? v : JSON.stringify(v, null, 2);
     }
   }
-  var init_debug_data_jotai = __esm({
-    "src/ui/menus/debug-data-jotai.ts"() {
+  var init_jotaiTab = __esm({
+    "src/features/debug/jotaiTab.ts"() {
       "use strict";
       init_jotai();
-      init_debug_data_shared();
+      init_shared();
     }
   });
 
-  // src/services/debug-data.ts
+  // src/features/debug/wsCapture.ts
   function getWSInfos() {
     return Array.from(registry.values());
   }
@@ -38371,10 +38371,10 @@
     registry.set(ws, info);
   }
   var fmtTime, escapeLite, FrameBuffer, registry, HOOKED_CTOR_FLAG, WS_PATCHED_SEND, hookedOnce;
-  var init_debug_data = __esm({
-    "src/services/debug-data.ts"() {
+  var init_wsCapture = __esm({
+    "src/features/debug/wsCapture.ts"() {
       "use strict";
-      init_state3();
+      init_sockets();
       fmtTime = (ms) => {
         const d = new Date(ms);
         const pad = (n, s = 2) => String(n).padStart(s, "0");
@@ -38404,7 +38404,7 @@
     }
   });
 
-  // src/ui/menus/debug-data-live-atoms.ts
+  // src/features/debug/liveAtomsTab.ts
   function renderLiveAtomsTab(view, ui) {
     if (typeof view.__atoms_live_cleanup__ === "function") {
       try {
@@ -38898,16 +38898,16 @@ next: ${next}`;
       selectedRecord = null;
     };
   }
-  var init_debug_data_live_atoms = __esm({
-    "src/ui/menus/debug-data-live-atoms.ts"() {
+  var init_liveAtomsTab = __esm({
+    "src/features/debug/liveAtomsTab.ts"() {
       "use strict";
       init_jotai();
-      init_debug_data();
-      init_debug_data_shared();
+      init_wsCapture();
+      init_shared();
     }
   });
 
-  // src/ui/menus/debug-data-ws.ts
+  // src/features/debug/wsTab.ts
   function renderWSTab(view, ui) {
     if (typeof view.__ws_cleanup__ === "function") {
       try {
@@ -39246,15 +39246,15 @@ next: ${next}`;
       window.clearInterval(pollId);
     };
   }
-  var init_debug_data_ws = __esm({
-    "src/ui/menus/debug-data-ws.ts"() {
+  var init_wsTab = __esm({
+    "src/features/debug/wsTab.ts"() {
       "use strict";
-      init_debug_data();
-      init_debug_data_shared();
+      init_wsCapture();
+      init_shared();
     }
   });
 
-  // src/ui/menus/debug-data-sprites.ts
+  // src/features/debug/spritesTab.ts
   async function loadCatalog2(force = false) {
     if (force) catalogPromise2 = null;
     if (!catalogPromise2) catalogPromise2 = fetchSpriteCatalog();
@@ -39704,10 +39704,10 @@ next: ${next}`;
     return wrapper;
   }
   var ANY_CATEGORY, MAX_VISIBLE_SPRITES, SPRITE_ICON_SIZE, catalogPromise2, sanitizeFileComponent, buildSpriteFilename, COLOR_SELECTIONS, CONDITION_SELECTIONS, LIGHTING_SELECTIONS, LOCAL_HEADER_SIGNATURE, CENTRAL_DIR_SIGNATURE, END_SIGNATURE, ZIP_VERSION, ZIP_FLAGS, ZIP_METHOD_STORE, CRC_TABLE;
-  var init_debug_data_sprites = __esm({
-    "src/ui/menus/debug-data-sprites.ts"() {
+  var init_spritesTab = __esm({
+    "src/features/debug/spritesTab.ts"() {
       "use strict";
-      init_debug_data_shared();
+      init_shared();
       init_discordCsp();
       init_settings();
       init_mgApi();
@@ -39743,7 +39743,7 @@ next: ${next}`;
     }
   });
 
-  // src/ui/menus/debug-data.ts
+  // src/features/debug/menu.ts
   function ensureStyles() {
     if (stylesInjected) return;
     stylesInjected = true;
@@ -39855,20 +39855,20 @@ next: ${next}`;
     ui.addTab("websocket", "WebSocket", (view) => renderWSTab(view, ui));
   }
   var stylesInjected;
-  var init_debug_data2 = __esm({
-    "src/ui/menus/debug-data.ts"() {
+  var init_menu2 = __esm({
+    "src/features/debug/menu.ts"() {
       "use strict";
       init_menu();
-      init_debug_data_audio();
-      init_debug_data_jotai();
-      init_debug_data_live_atoms();
-      init_debug_data_ws();
-      init_debug_data_sprites();
+      init_audioTab();
+      init_jotaiTab();
+      init_liveAtomsTab();
+      init_wsTab();
+      init_spritesTab();
       stylesInjected = false;
     }
   });
 
-  // src/ui/menus/notifier.ts
+  // src/features/notifier/menu.ts
   function rarityBadge(raw) {
     const rarity3 = String(raw || "").trim();
     const key2 = (() => {
@@ -41654,16 +41654,16 @@ next: ${next}`;
     ui.mount(root);
   }
   var rulePopover, detachRuleDocHandler, detachRuleKeyBlocker, detachRuleWheelBlocker, detachRuleDragHandler, closeRuleEditor, setSwitchCapState, createSwitch, setSwitchVisual, wrapCell, mkHeadCell, applyRuleState, openRuleEditor;
-  var init_notifier2 = __esm({
-    "src/ui/menus/notifier.ts"() {
+  var init_menu3 = __esm({
+    "src/features/notifier/menu.ts"() {
       "use strict";
       init_menu();
       init_notifier();
       init_audio();
-      init_pet_alerts();
+      init_petAlerts();
       init_pets();
-      init_spriteIconCache();
-      init_notificationBellFloating();
+      init_iconCache();
+      init_bellFloating();
       rulePopover = null;
       detachRuleDocHandler = null;
       detachRuleKeyBlocker = null;
@@ -42235,7 +42235,7 @@ next: ${next}`;
     }
   });
 
-  // src/ui/menus/locker.ts
+  // src/features/locker/menu.ts
   function buildLockerSeedOptions() {
     return Object.entries(plantCatalog2).map(([key2, def]) => ({
       key: key2,
@@ -44433,16 +44433,16 @@ next: ${next}`;
     ui.on("unmounted", cleanup2);
   }
   var NO_WEATHER_TAG, SEED_EMOJIS, _lockerOptionsCache, _lockerEmojiByKey, _lockerEmojisBySeedName, getLockerSeedOptions, getLockerSeedEmojiForKey, getLockerSeedEmojiForSeedName, WEATHER_MUTATION_LABELS, WEATHER_MUTATIONS, createNoWeatherIcon, isWeatherMutationAvailable, WEATHER_RECIPE_GROUPS, WEATHER_RECIPE_GROUP_MEMBERS, applyStyles, weatherModeNameSeq, LockerMenuStore;
-  var init_locker2 = __esm({
-    "src/ui/menus/locker.ts"() {
+  var init_menu4 = __esm({
+    "src/features/locker/menu.ts"() {
       "use strict";
       init_menu();
       init_data();
       init_locker();
-      init_lockerRestrictions();
+      init_restrictions();
       init_atoms();
-      init_spriteIconCache();
-      init_notifier2();
+      init_iconCache();
+      init_menu3();
       NO_WEATHER_TAG = "NoWeatherEffect";
       SEED_EMOJIS = [
         "\u{1F955}",
@@ -44665,7 +44665,7 @@ next: ${next}`;
     }
   });
 
-  // src/core/dom.ts
+  // src/lib/dom.ts
   function addStyle(css5) {
     const s = document.createElement("style");
     s.textContent = css5;
@@ -44673,12 +44673,12 @@ next: ${next}`;
     return s;
   }
   var init_dom = __esm({
-    "src/core/dom.ts"() {
+    "src/lib/dom.ts"() {
       "use strict";
     }
   });
 
-  // src/ui/menus/calculator.ts
+  // src/features/calculator/menu.ts
   function ensureCropSimulationStyles() {
     if (cropSimulationStyleEl) return;
     cropSimulationStyleEl = addStyle(CROP_SIMULATION_CSS);
@@ -45379,16 +45379,16 @@ next: ${next}`;
     ui.mount(container);
   }
   var ROOT_CLASS, SIZE_MIN, SIZE_MAX, COLOR_MUTATION_LABELS, WEATHER_CONDITION_LABELS, WEATHER_LIGHTING_LABELS, FRIEND_BONUS_LABELS, FRIEND_BONUS_MIN_PLAYERS, FRIEND_BONUS_MAX_PLAYERS, COLOR_SEGMENT_METADATA, WEATHER_CONDITION_SEGMENT_METADATA, WEATHER_LIGHTING_SEGMENT_METADATA, MUTATION_SPRITE_OVERRIDES, segmentedUi, ensureMenuStyles, priceFormatter, weightFormatter, DEFAULT_STATE2, BASE_SPRITE_SIZE_PX, DEFAULT_SPRITE_CATEGORIES, PLANT_PRIORITY_IDENTIFIERS, CROP_SIMULATION_CSS, cropSimulationStyleEl, applyStyles2, calculatorStyleEl, MUTATION_UI_SPRITE_NAMES;
-  var init_calculator = __esm({
-    "src/ui/menus/calculator.ts"() {
+  var init_menu5 = __esm({
+    "src/features/calculator/menu.ts"() {
       "use strict";
       init_dom();
       init_data();
-      init_calculators();
+      init_cropValue();
       init_cropSize();
-      init_locker2();
+      init_menu4();
       init_menu();
-      init_spriteIconCache();
+      init_iconCache();
       ROOT_CLASS = "mg-crop-simulation";
       SIZE_MIN = CROP_SIZE_MIN;
       SIZE_MAX = CROP_SIZE_MAX;
@@ -45793,7 +45793,7 @@ next: ${next}`;
     }
   });
 
-  // src/ui/menus/panel-icons.ts
+  // src/ui/kit/icons.ts
   function spriteLookup(frameKey) {
     const parts = frameKey.split("/").filter(Boolean);
     const name = parts[parts.length - 1] ?? frameKey;
@@ -45826,16 +45826,16 @@ next: ${next}`;
     return box;
   }
   var css;
-  var init_panel_icons = __esm({
-    "src/ui/menus/panel-icons.ts"() {
+  var init_icons = __esm({
+    "src/ui/kit/icons.ts"() {
       "use strict";
-      init_spriteIconCache();
+      init_iconCache();
       init_discordCsp();
       css = (el2, style2) => Object.assign(el2.style, style2);
     }
   });
 
-  // src/ui/menus/panel-ui.ts
+  // src/ui/kit/panel.ts
   function ensurePanelStyles() {
     if (document.getElementById(STYLE_ID2)) return;
     const st = document.createElement("style");
@@ -46107,10 +46107,10 @@ next: ${next}`;
     return el2;
   }
   var STYLE_ID2, ROW_ICON_PX, TEAL, TEAL_DIM, TEAL_BORDER, BORDER, CARD_BG, TEXT, TEXT_DIM, DANGER, WARN, css2, GOLD, RAINBOW, TONES;
-  var init_panel_ui = __esm({
-    "src/ui/menus/panel-ui.ts"() {
+  var init_panel = __esm({
+    "src/ui/kit/panel.ts"() {
       "use strict";
-      init_panel_icons();
+      init_icons();
       STYLE_ID2 = "qws-panel-ui-css";
       ROW_ICON_PX = 26;
       TEAL = "#5eead4";
@@ -46151,7 +46151,7 @@ next: ${next}`;
     }
   });
 
-  // src/ui/menus/pets/hatch-counts.ts
+  // src/features/hatch/counts.ts
   function countsFor(stats, species) {
     return stats.pets.hatchedByType[species.toLowerCase()] ?? { normal: 0, gold: 0, rainbow: 0 };
   }
@@ -46281,12 +46281,12 @@ next: ${next}`;
     return wrap;
   }
   var NF_INT, formatInt, SPECIES_ICON_PX, HEADER_ICON_PX, GRID_TEMPLATE;
-  var init_hatch_counts = __esm({
-    "src/ui/menus/pets/hatch-counts.ts"() {
+  var init_counts = __esm({
+    "src/features/hatch/counts.ts"() {
       "use strict";
       init_data();
-      init_hatchPity();
-      init_panel_ui();
+      init_pity();
+      init_panel();
       NF_INT = new Intl.NumberFormat("en-US");
       formatInt = (value) => NF_INT.format(Math.max(0, Math.floor(value || 0)));
       SPECIES_ICON_PX = 24;
@@ -46295,7 +46295,7 @@ next: ${next}`;
     }
   });
 
-  // src/ui/menus/panel-layout.ts
+  // src/ui/kit/layout.ts
   function settingRow(title, hint, control, opts = {}) {
     const row = document.createElement("div");
     css2(row, {
@@ -46394,15 +46394,15 @@ next: ${next}`;
     root.append(head, body);
     return { root, body };
   }
-  var init_panel_layout = __esm({
-    "src/ui/menus/panel-layout.ts"() {
+  var init_layout = __esm({
+    "src/ui/kit/layout.ts"() {
       "use strict";
-      init_panel_ui();
-      init_panel_icons();
+      init_panel();
+      init_icons();
     }
   });
 
-  // src/ui/menus/pets/hatch-egg-card.ts
+  // src/features/hatch/eggCard.ts
   function formatChance(chance) {
     if (!Number.isFinite(chance) || chance <= 0) return "";
     const percent = chance * 100;
@@ -46553,14 +46553,14 @@ next: ${next}`;
     return card4.root;
   }
   var NF_INT2, formatInt2, EGG_ICON_PX, TARGET_ICON_PX, RARITY_ICON_PX, ROW_TEMPLATE, NEAR_GUARANTEE_PULLS;
-  var init_hatch_egg_card = __esm({
-    "src/ui/menus/pets/hatch-egg-card.ts"() {
+  var init_eggCard = __esm({
+    "src/features/hatch/eggCard.ts"() {
       "use strict";
       init_data();
-      init_hatchTracker();
-      init_hatch_counts();
-      init_panel_ui();
-      init_panel_layout();
+      init_tracker();
+      init_counts();
+      init_panel();
+      init_layout();
       NF_INT2 = new Intl.NumberFormat("en-US");
       formatInt2 = (value) => NF_INT2.format(Math.max(0, Math.floor(value || 0)));
       EGG_ICON_PX = 30;
@@ -46571,7 +46571,7 @@ next: ${next}`;
     }
   });
 
-  // src/ui/menus/petsHatch.ts
+  // src/features/hatch/tab.ts
   function isCollapsed(sectionId) {
     return getAriesStorage().hatch?.expanded?.[sectionId] !== true;
   }
@@ -46791,24 +46791,24 @@ next: ${next}`;
     repaint();
   }
   var OTHER_SECTION_ID;
-  var init_petsHatch = __esm({
-    "src/ui/menus/petsHatch.ts"() {
+  var init_tab = __esm({
+    "src/features/hatch/tab.ts"() {
       "use strict";
       init_data();
-      init_hatchTracker();
-      init_hatchPity();
+      init_tracker();
+      init_pity();
       init_stats();
       init_atoms();
-      init_hatch_egg_card();
-      init_hatch_counts();
-      init_panel_ui();
-      init_panel_layout();
-      init_localStorage();
+      init_eggCard();
+      init_counts();
+      init_panel();
+      init_layout();
+      init_storage();
       OTHER_SECTION_ID = "__other__";
     }
   });
 
-  // src/services/petAbilityStats.ts
+  // src/features/pets/abilityStats.ts
   function getDefinition(abilityId) {
     const entry = petAbilities2[abilityId];
     return entry ?? null;
@@ -46861,11 +46861,11 @@ next: ${next}`;
     };
   }
   var MAX_PROBABILITY_PERCENT, MIN_COOLDOWN_RATIO, STRENGTH_SCALE, SCALED_PARAMETER_KEYS, COOLDOWN_PARAMETER_KEY;
-  var init_petAbilityStats = __esm({
-    "src/services/petAbilityStats.ts"() {
+  var init_abilityStats = __esm({
+    "src/features/pets/abilityStats.ts"() {
       "use strict";
       init_data();
-      init_petCalcul();
+      init_petValue();
       MAX_PROBABILITY_PERCENT = 100;
       MIN_COOLDOWN_RATIO = 0.01;
       STRENGTH_SCALE = 100;
@@ -46894,7 +46894,7 @@ next: ${next}`;
     }
   });
 
-  // src/services/petTeamStats.ts
+  // src/features/pets/teamStats.ts
   function stripTierSuffix(text) {
     return text.replace(/\s*(?:_NEW)?(?:IV|I{1,3})$/, "").trim() || text;
   }
@@ -47108,12 +47108,12 @@ next: ${next}`;
     };
   }
   var PERCENT, DRAIN_REDUCTION_KEYS, RESTORE_AMOUNT_KEY, SECONDS_PER_MINUTE, TIER_SUFFIX;
-  var init_petTeamStats = __esm({
-    "src/services/petTeamStats.ts"() {
+  var init_teamStats = __esm({
+    "src/features/pets/teamStats.ts"() {
       "use strict";
       init_data();
-      init_petCalcul();
-      init_petAbilityStats();
+      init_petValue();
+      init_abilityStats();
       PERCENT = 100;
       DRAIN_REDUCTION_KEYS = ["hungerRefundPercentage", "hungerDepletionRateDecreasePercentage"];
       RESTORE_AMOUNT_KEY = "hungerRestorePercentage";
@@ -47122,7 +47122,7 @@ next: ${next}`;
     }
   });
 
-  // src/services/petTeamBuilder.ts
+  // src/features/pets/teamBuilder.ts
   function abilityTrigger(id) {
     return petAbilities2[id]?.trigger;
   }
@@ -47457,13 +47457,13 @@ next: ${next}`;
     };
   }
   var CATEGORIES, HARD_AVOID_MUTATIONS, SOFT_AVOID_MUTATIONS, GRANTER_STRENGTH_PENALTY, AFK_POOL_LIMIT, AFK_FEEDER_LIMIT, CATEGORIES_BY_ID;
-  var init_petTeamBuilder = __esm({
-    "src/services/petTeamBuilder.ts"() {
+  var init_teamBuilder = __esm({
+    "src/features/pets/teamBuilder.ts"() {
       "use strict";
       init_data();
-      init_petCalcul();
-      init_petAbilityStats();
-      init_petTeamStats();
+      init_petValue();
+      init_abilityStats();
+      init_teamStats();
       CATEGORIES = [
         {
           id: "cropSize",
@@ -47910,7 +47910,7 @@ next: ${next}`;
     }
   });
 
-  // src/ui/menus/pets-ability-colors.ts
+  // src/features/pets/abilityColorsTab.ts
   function getAbilityChipColors(id) {
     const key2 = String(id || "");
     const apiColor = petAbilities2?.[key2]?.color;
@@ -48045,15 +48045,15 @@ next: ${next}`;
       hover: "rgba(150,150,150,1)"
     };
   }
-  var init_pets_ability_colors = __esm({
-    "src/ui/menus/pets-ability-colors.ts"() {
+  var init_abilityColorsTab = __esm({
+    "src/features/pets/abilityColorsTab.ts"() {
       "use strict";
       init_pets();
       init_data();
     }
   });
 
-  // src/ui/menus/petsTeamStats.ts
+  // src/features/pets/teamStatsView.ts
   function triggerUnit(trigger) {
     return trigger && TRIGGER_UNITS[trigger] || "/roll";
   }
@@ -48405,10 +48405,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     return wrap;
   }
   var PARAMETER_LABELS, MUTED, ACCENT, DIM, CONTINUOUS_ROLLS_PER_HOUR, TRIGGER_UNITS;
-  var init_petsTeamStats = __esm({
-    "src/ui/menus/petsTeamStats.ts"() {
+  var init_teamStatsView = __esm({
+    "src/features/pets/teamStatsView.ts"() {
       "use strict";
-      init_petTeamStats();
+      init_teamStats();
       PARAMETER_LABELS = {
         // Crop Size is a whole number in [50, 100]; the boost adds points, not a percentage.
         sizeIncrease: { label: "Crop size", unit: "" },
@@ -48441,7 +48441,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/petsTeamBuilder.ts
+  // src/features/pets/teamBuilderTab.ts
   function mkMiniIcon(pet, size = 24) {
     const holder2 = document.createElement("div");
     Object.assign(holder2.style, {
@@ -48812,16 +48812,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     void repaint();
   }
   var miniSpriteCache, TEAM_NAME_MAX_LENGTH, SHORT_WEATHER;
-  var init_petsTeamBuilder = __esm({
-    "src/ui/menus/petsTeamBuilder.ts"() {
+  var init_teamBuilderTab = __esm({
+    "src/features/pets/teamBuilderTab.ts"() {
       "use strict";
       init_pets();
-      init_petTeamBuilder();
-      init_pets_ability_colors();
-      init_spriteIconCache();
+      init_teamBuilder();
+      init_abilityColorsTab();
+      init_iconCache();
       init_toast();
-      init_petCalcul();
-      init_petsTeamStats();
+      init_petValue();
+      init_teamStatsView();
       miniSpriteCache = /* @__PURE__ */ new Map();
       TEAM_NAME_MAX_LENGTH = 16;
       SHORT_WEATHER = {
@@ -48833,7 +48833,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/pets/logs-tab.ts
+  // src/features/pets/logsTab.ts
   function formatDateMMDDYY(timestamp) {
     const value = Number(timestamp);
     if (!Number.isFinite(value)) return "";
@@ -49186,13 +49186,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   var PANEL_WIDTH, LIST_MAX_HEIGHT, PET_ICON_PX, ROW_TEMPLATE2, normalizeAbilityKey;
-  var init_logs_tab = __esm({
-    "src/ui/menus/pets/logs-tab.ts"() {
+  var init_logsTab = __esm({
+    "src/features/pets/logsTab.ts"() {
       "use strict";
       init_pets();
-      init_spriteIconCache();
-      init_pets_ability_colors();
-      init_panel_ui();
+      init_iconCache();
+      init_abilityColorsTab();
+      init_panel();
       PANEL_WIDTH = "min(760px, 88vw)";
       LIST_MAX_HEIGHT = "min(56vh, 520px)";
       PET_ICON_PX = 24;
@@ -49201,7 +49201,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/pets.ts
+  // src/features/pets/menu.ts
   function renderManagerTab(view, ui) {
     view.innerHTML = "";
     let teams = [];
@@ -50338,28 +50338,28 @@ Restore figures are averages; unlucky streaks do worse.`;
     detachPetsOpenTabListener = () => window.removeEventListener("qws:pets-open-tab", onOpenTab);
   }
   var detachPetsOpenTabListener;
-  var init_pets2 = __esm({
-    "src/ui/menus/pets.ts"() {
+  var init_menu6 = __esm({
+    "src/features/pets/menu.ts"() {
       "use strict";
       init_menu();
       init_pets();
-      init_petTeamReconcile();
+      init_teamReconcile();
       init_atoms();
-      init_spriteIconCache();
-      init_notifier2();
+      init_iconCache();
+      init_menu3();
       init_data();
-      init_petCalcul();
-      init_instantFeedWidget();
-      init_petsHatch();
-      init_petsTeamBuilder();
-      init_petsTeamStats();
-      init_logs_tab();
-      init_pets_ability_colors();
+      init_petValue();
+      init_feedWidget();
+      init_tab();
+      init_teamBuilderTab();
+      init_teamStatsView();
+      init_logsTab();
+      init_abilityColorsTab();
       detachPetsOpenTabListener = null;
     }
   });
 
-  // src/ui/menus/misc/deleter-section.ts
+  // src/features/deleters/section.ts
   function statTile() {
     const root = document.createElement("div");
     css2(root, {
@@ -50628,13 +50628,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   var NF_US2, formatNum2, EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS, MAX_VISIBLE_CHIPS, CHIP_SPRITE_PX, formatDurationShort, formatFinishTime;
-  var init_deleter_section = __esm({
-    "src/ui/menus/misc/deleter-section.ts"() {
+  var init_section = __esm({
+    "src/features/deleters/section.ts"() {
       "use strict";
-      init_spriteIconCache();
-      init_panel_ui();
-      init_panel_icons();
-      init_panel_layout();
+      init_iconCache();
+      init_panel();
+      init_icons();
+      init_layout();
       NF_US2 = new Intl.NumberFormat("en-US");
       formatNum2 = (n) => NF_US2.format(Math.max(0, Math.floor(n || 0)));
       EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS = 10;
@@ -50653,7 +50653,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/companion/modal.ts
+  // src/ui/kit/modal.ts
   function menuCard(options) {
     const disabled = options.disabled === true;
     const card4 = document.createElement("button");
@@ -50803,13 +50803,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   var init_modal = __esm({
-    "src/ui/menus/companion/modal.ts"() {
+    "src/ui/kit/modal.ts"() {
       "use strict";
-      init_panel_ui();
+      init_panel();
     }
   });
 
-  // src/ui/menus/misc/deleter-picker.ts
+  // src/features/deleters/picker.ts
   function openDeleterPicker(options) {
     const modal = openModal2({
       host: options.host,
@@ -50986,11 +50986,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
   }
   var ROW_SPRITE_PX, NF_US3, formatNum3;
-  var init_deleter_picker = __esm({
-    "src/ui/menus/misc/deleter-picker.ts"() {
+  var init_picker = __esm({
+    "src/features/deleters/picker.ts"() {
       "use strict";
-      init_spriteIconCache();
-      init_panel_ui();
+      init_iconCache();
+      init_panel();
       init_modal();
       ROW_SPRITE_PX = 36;
       NF_US3 = new Intl.NumberFormat("en-US");
@@ -50998,7 +50998,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/anchors.ts
+  // src/features/companion/anchors.ts
   async function resolveAnchor(request2) {
     const { mode, map: map2, player: player2 } = request2;
     if (mode === "garden") {
@@ -51064,14 +51064,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var myUserSlotIdx;
   var init_anchors = __esm({
-    "src/services/companion/anchors.ts"() {
+    "src/features/companion/anchors.ts"() {
       "use strict";
       init_hub();
       myUserSlotIdx = makeAtom("myUserSlotIdxAtom");
     }
   });
 
-  // src/services/companion/buildings.ts
+  // src/features/companion/buildings.ts
   function matchBuildingName(names, required, alternatives) {
     const wanted = required.map((word) => word.toLowerCase());
     const either = alternatives.map((word) => word.toLowerCase());
@@ -51084,12 +51084,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     return null;
   }
   var init_buildings = __esm({
-    "src/services/companion/buildings.ts"() {
+    "src/features/companion/buildings.ts"() {
       "use strict";
     }
   });
 
-  // src/services/companion/map.ts
+  // src/features/companion/map.ts
   function toSet(source) {
     if (!source) return /* @__PURE__ */ new Set();
     if (source instanceof Set) return source;
@@ -51176,7 +51176,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var mapAtom;
   var init_map = __esm({
-    "src/services/companion/map.ts"() {
+    "src/features/companion/map.ts"() {
       "use strict";
       init_hub();
       init_buildings();
@@ -51184,7 +51184,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/chat/harvest.ts
+  // src/features/companion/chat/harvest.ts
   function mutationsOf(row) {
     return row.mutations;
   }
@@ -51282,7 +51282,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var DEFAULT_FILTERS;
   var init_harvest = __esm({
-    "src/services/companion/chat/harvest.ts"() {
+    "src/features/companion/chat/harvest.ts"() {
       "use strict";
       DEFAULT_FILTERS = {
         species: null,
@@ -51294,7 +51294,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/chat/plant.ts
+  // src/features/companion/chat/plant.ts
   function itemKey(item) {
     return `${item.kind}:${item.id}`;
   }
@@ -51357,7 +51357,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var GARDEN_COLS, GARDEN_ROWS, GARDEN_TILE_COUNT, EMPTY_SCOPE;
   var init_plant = __esm({
-    "src/services/companion/chat/plant.ts"() {
+    "src/features/companion/chat/plant.ts"() {
       "use strict";
       init_harvest();
       GARDEN_COLS = 20;
@@ -51367,7 +51367,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/chat/plantRead.ts
+  // src/features/companion/chat/plantRead.ts
   async function readOwnedTiles() {
     let count = 0;
     try {
@@ -51433,7 +51433,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { tiles, occupied, items };
   }
   var init_plantRead = __esm({
-    "src/services/companion/chat/plantRead.ts"() {
+    "src/features/companion/chat/plantRead.ts"() {
       "use strict";
       init_atoms();
       init_data();
@@ -51443,7 +51443,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/companion/harvest-chips.ts
+  // src/features/companion/menu/harvestChips.ts
   function iconHolder(sizePx) {
     const box = document.createElement("div");
     css2(box, {
@@ -51643,21 +51643,21 @@ Restore figures are averages; unlucky streaks do worse.`;
     return wrap;
   }
   var SPRITE_LOG_TAG2, ICON_PX;
-  var init_harvest_chips = __esm({
-    "src/ui/menus/companion/harvest-chips.ts"() {
+  var init_harvestChips = __esm({
+    "src/features/companion/menu/harvestChips.ts"() {
       "use strict";
       init_data();
-      init_sprites();
-      init_spriteIconCache();
-      init_spriteResolver();
+      init_sprites2();
+      init_iconCache();
+      init_resolver();
       init_discordCsp();
-      init_panel_ui();
+      init_panel();
       SPRITE_LOG_TAG2 = "companion-harvest";
       ICON_PX = 26;
     }
   });
 
-  // src/ui/menus/companion/plant-chips.ts
+  // src/features/companion/menu/plantChips.ts
   function iconHolder2(sizePx) {
     const box = document.createElement("div");
     css2(box, {
@@ -51740,18 +51740,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   var SPRITE_LOG_TAG3, ICON_PX2;
-  var init_plant_chips = __esm({
-    "src/ui/menus/companion/plant-chips.ts"() {
+  var init_plantChips = __esm({
+    "src/features/companion/menu/plantChips.ts"() {
       "use strict";
       init_data();
-      init_spriteIconCache();
-      init_panel_ui();
+      init_iconCache();
+      init_panel();
       SPRITE_LOG_TAG3 = "companion-plant";
       ICON_PX2 = 24;
     }
   });
 
-  // src/ui/menus/misc/garden-view.ts
+  // src/features/misc/gardenView.ts
   function nameOf(record, id, ...paths) {
     const entry = record?.[id];
     for (const path of paths) {
@@ -51926,24 +51926,24 @@ Restore figures are averages; unlucky streaks do worse.`;
     search2.focus();
   }
   var HALF_GAP_PX, CELL_ICON_PX;
-  var init_garden_view = __esm({
-    "src/ui/menus/misc/garden-view.ts"() {
+  var init_gardenView = __esm({
+    "src/features/misc/gardenView.ts"() {
       "use strict";
       init_atoms();
       init_data();
       init_plantRead();
       init_plant();
-      init_spriteIconCache();
+      init_iconCache();
       init_modal();
-      init_harvest_chips();
-      init_plant_chips();
-      init_panel_ui();
+      init_harvestChips();
+      init_plantChips();
+      init_panel();
       HALF_GAP_PX = 12;
       CELL_ICON_PX = 30;
     }
   });
 
-  // src/services/deleterSources.ts
+  // src/features/deleters/sources.ts
   function tallyById(items, idKey) {
     const out = /* @__PURE__ */ new Map();
     if (!Array.isArray(items)) return out;
@@ -52019,8 +52019,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return Array.isArray(items) ? items.length : 0;
   }
   var SEED_STORAGE_ID, DECOR_STORAGE_ID, INVENTORY_ENTRY_LIMIT, INVENTORY_ENTRY_LIMIT_GUARDED, toQty, toId, seedLabel, decorLabel;
-  var init_deleterSources = __esm({
-    "src/services/deleterSources.ts"() {
+  var init_sources = __esm({
+    "src/features/deleters/sources.ts"() {
       "use strict";
       init_atoms();
       init_data();
@@ -52052,7 +52052,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/deleterRun.ts
+  // src/features/deleters/run.ts
   function createDeleterController(kind) {
     const selection = /* @__PURE__ */ new Map();
     let running6 = false;
@@ -52200,23 +52200,23 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   var WITHDRAW_SETTLE_MS, sleep5, formatNum4;
-  var init_deleterRun = __esm({
-    "src/services/deleterRun.ts"() {
+  var init_run = __esm({
+    "src/features/deleters/run.ts"() {
       "use strict";
-      init_deleterSources();
+      init_sources();
       WITHDRAW_SETTLE_MS = 180;
       sleep5 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       formatNum4 = (n) => new Intl.NumberFormat("en-US").format(Math.max(0, Math.floor(n || 0)));
     }
   });
 
-  // src/services/deleters.ts
+  // src/features/deleters/deleters.ts
   var sleep6, toast2, guardEnabled, withdraw, seedDeleter, decorDeleter;
   var init_deleters = __esm({
-    "src/services/deleters.ts"() {
+    "src/features/deleters/deleters.ts"() {
       "use strict";
-      init_deleterRun();
-      init_deleterSources();
+      init_run();
+      init_sources();
       init_misc();
       init_player();
       init_toast();
@@ -52269,7 +52269,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/misc.ts
+  // src/features/misc/menu.ts
   function isSectionCollapsed(sectionId) {
     return getAriesStorage().misc?.collapsed?.[sectionId] === true;
   }
@@ -52626,20 +52626,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   var PANEL_WIDTH_PX, AUTO_RECO_MAX_SECONDS, AUTO_RECO_STEP_SECONDS, MOVE_DELAY_MIN_MS, MOVE_DELAY_MAX_MS, MOVE_DELAY_DEFAULT_MS, formatShortDuration;
-  var init_misc2 = __esm({
-    "src/ui/menus/misc.ts"() {
+  var init_menu7 = __esm({
+    "src/features/misc/menu.ts"() {
       "use strict";
       init_menu();
       init_misc();
-      init_localStorage();
-      init_cropPriceSetting();
-      init_deleter_section();
-      init_deleter_picker();
-      init_garden_view();
+      init_storage();
+      init_setting();
+      init_section();
+      init_picker();
+      init_gardenView();
       init_deleters();
-      init_deleterSources();
-      init_panel_ui();
-      init_panel_layout();
+      init_sources();
+      init_panel();
+      init_layout();
       PANEL_WIDTH_PX = 620;
       AUTO_RECO_MAX_SECONDS = 300;
       AUTO_RECO_STEP_SECONDS = 30;
@@ -52657,7 +52657,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/settings.ts
+  // src/features/settings/backup.ts
   function generateId() {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
       return crypto.randomUUID();
@@ -52801,17 +52801,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   }
   var STORAGE_KEY, MAX_BACKUPS, DEFAULT_VERSION;
-  var init_settings2 = __esm({
-    "src/services/settings.ts"() {
+  var init_backup = __esm({
+    "src/features/settings/backup.ts"() {
       "use strict";
-      init_localStorage();
+      init_storage();
       STORAGE_KEY = "aries_backups";
       MAX_BACKUPS = 25;
       DEFAULT_VERSION = 1;
     }
   });
 
-  // src/utils/download.ts
+  // src/lib/download.ts
   function copyTextToClipboard(text) {
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(text);
@@ -52875,13 +52875,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   }
   var init_download = __esm({
-    "src/utils/download.ts"() {
+    "src/lib/download.ts"() {
       "use strict";
-      init_page_context();
+      init_pageContext();
     }
   });
 
-  // src/ui/menus/settings.ts
+  // src/features/settings/menu.ts
   function createActionButton(label2) {
     const button2 = document.createElement("button");
     button2.type = "button";
@@ -53346,19 +53346,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     ]);
     ui.switchTo("settings-data");
   }
-  var init_settings3 = __esm({
-    "src/ui/menus/settings.ts"() {
+  var init_menu8 = __esm({
+    "src/features/settings/menu.ts"() {
       "use strict";
       init_menu();
-      init_api2();
-      init_version();
+      init_environment();
+      init_modVersion();
       init_gameVersion();
-      init_settings2();
+      init_backup();
       init_download();
     }
   });
 
-  // src/services/tools.ts
+  // src/features/tools/fetchTools.ts
   function parseToolsPayload(raw) {
     if (!raw || typeof raw !== "object") {
       throw new Error("Invalid tools payload: not an object");
@@ -53453,10 +53453,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     return openUrl(url);
   }
   var REPO_OWNER2, REPO_NAME2, REPO_BRANCH2, TOOLS_FILE_PATH, RAW_BASE_URL2;
-  var init_tools = __esm({
-    "src/services/tools.ts"() {
+  var init_fetchTools = __esm({
+    "src/features/tools/fetchTools.ts"() {
       "use strict";
-      init_version();
+      init_modVersion();
       REPO_OWNER2 = "Ariedam64";
       REPO_NAME2 = "MG-AriesMod";
       REPO_BRANCH2 = "main";
@@ -53465,7 +53465,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/utils/markdown.ts
+  // src/lib/markdown.ts
   function escapeHtml2(text) {
     const div = document.createElement("div");
     div.textContent = text;
@@ -53502,12 +53502,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     return source.replace(/`([^`]+)`/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/\*\*([^\*]+)\*\*/g, "$1").replace(/\*([^\*]+)\*/g, "$1").replace(/^\s*-\s+/gm, "").replace(/\s+/g, " ").trim();
   }
   var init_markdown = __esm({
-    "src/utils/markdown.ts"() {
+    "src/lib/markdown.ts"() {
       "use strict";
     }
   });
 
-  // src/ui/menus/tools/image.ts
+  // src/features/tools/image.ts
   async function fetchImageBlob(url) {
     try {
       return await getBlob2(url);
@@ -53558,13 +53558,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     })();
   }
   var init_image = __esm({
-    "src/ui/menus/tools/image.ts"() {
+    "src/features/tools/image.ts"() {
       "use strict";
-      init_mgCommon();
+      init_gm();
     }
   });
 
-  // src/ui/menus/tools/tag.ts
+  // src/features/tools/tag.ts
   function createTagChip(tag) {
     const chip2 = document.createElement("span");
     chip2.className = "mgt-tag";
@@ -53578,12 +53578,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     return row;
   }
   var init_tag = __esm({
-    "src/ui/menus/tools/tag.ts"() {
+    "src/features/tools/tag.ts"() {
       "use strict";
     }
   });
 
-  // src/ui/menus/tools/list-view.ts
+  // src/features/tools/listView.ts
   function createCard(tool, onSelect) {
     const card4 = document.createElement("div");
     card4.className = "mgt-card";
@@ -53697,8 +53697,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { root };
   }
   var ALL_FILTER_LABEL;
-  var init_list_view = __esm({
-    "src/ui/menus/tools/list-view.ts"() {
+  var init_listView = __esm({
+    "src/features/tools/listView.ts"() {
       "use strict";
       init_markdown();
       init_image();
@@ -53707,7 +53707,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/tools/carousel.ts
+  // src/features/tools/carousel.ts
   function renderCarousel(images) {
     const root = document.createElement("div");
     root.className = "mgt-carousel";
@@ -53934,7 +53934,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var OVERLAY_Z_INDEX, SWAP_DURATION_MS, SWAP_EASING, SWAP_OFFSET_PX, ZOOM_SCALE;
   var init_carousel = __esm({
-    "src/ui/menus/tools/carousel.ts"() {
+    "src/features/tools/carousel.ts"() {
       "use strict";
       init_image();
       OVERLAY_Z_INDEX = "2147483647";
@@ -53945,7 +53945,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/tools/detail-view.ts
+  // src/features/tools/detailView.ts
   function createCreatorChip(creator) {
     const chip2 = document.createElement("div");
     chip2.className = creator.avatar ? "mgt-creator" : "mgt-creator mgt-creator--plain";
@@ -54038,10 +54038,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (actions) root.appendChild(actions);
     return { root };
   }
-  var init_detail_view = __esm({
-    "src/ui/menus/tools/detail-view.ts"() {
+  var init_detailView = __esm({
+    "src/features/tools/detailView.ts"() {
       "use strict";
-      init_tools();
+      init_fetchTools();
       init_markdown();
       init_carousel();
       init_image();
@@ -54049,7 +54049,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/tools/styles.ts
+  // src/features/tools/styles.ts
   function ensureToolsStyles() {
     if (document.getElementById(STYLE_ID3)) return;
     const style2 = document.createElement("style");
@@ -54297,7 +54297,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var STYLE_ID3, ACCENT2, ACCENT_2, TEXT2, TEXT_DIM2, BORDER2, SURFACE;
   var init_styles = __esm({
-    "src/ui/menus/tools/styles.ts"() {
+    "src/features/tools/styles.ts"() {
       "use strict";
       STYLE_ID3 = "gemini-tools-styles";
       ACCENT2 = "#5eead4";
@@ -54309,7 +54309,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/tools/transition.ts
+  // src/features/tools/transition.ts
   async function swapViews(container, from, to, direction) {
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) {
@@ -54356,12 +54356,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     to.style.opacity = "";
   }
   var init_transition = __esm({
-    "src/ui/menus/tools/transition.ts"() {
+    "src/features/tools/transition.ts"() {
       "use strict";
     }
   });
 
-  // src/ui/menus/tools.ts
+  // src/features/tools/menu.ts
   async function renderToolsMenu(container) {
     ensureToolsStyles();
     const ui = new Menu({ id: "tools", compact: true });
@@ -54454,20 +54454,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     await init2();
   }
   var WRAPPER_WIDTH_PX;
-  var init_tools2 = __esm({
-    "src/ui/menus/tools.ts"() {
+  var init_menu9 = __esm({
+    "src/features/tools/menu.ts"() {
       "use strict";
       init_menu();
-      init_tools();
-      init_list_view();
-      init_detail_view();
+      init_fetchTools();
+      init_listView();
+      init_detailView();
       init_styles();
       init_transition();
       WRAPPER_WIDTH_PX = 720;
     }
   });
 
-  // src/ui/menus/editor.ts
+  // src/features/editor/menu.ts
   function ensureStyles2() {
     if (document.getElementById(STYLE_ID4)) return;
     const st = document.createElement("style");
@@ -54941,8 +54941,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   var STYLE_ID4, TEAL2, TEAL_DIM2, TEAL_MID, TEAL_BORDER2, TEAL_BRD_HI, BORDER3, BORDER_HI, CARD_BG2, CARD_BG_HI, TEXT3, TEXT_DIM3, DANGER2, DANGER_DIM, DANGER_BRD, DANGER_HI, DANGER_BRD_HI, css3;
-  var init_editor2 = __esm({
-    "src/ui/menus/editor.ts"() {
+  var init_menu10 = __esm({
+    "src/features/editor/menu.ts"() {
       "use strict";
       init_toast();
       init_editor();
@@ -54968,7 +54968,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/keybinds.ts
+  // src/features/keybinds/menu.ts
   function isSectionCollapsed2(sectionId) {
     return getAriesStorage().keybinds?.collapsed?.[sectionId] === true;
   }
@@ -55165,18 +55165,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   }
   var ICON_BOX_PX;
-  var init_keybinds2 = __esm({
-    "src/ui/menus/keybinds.ts"() {
+  var init_menu11 = __esm({
+    "src/features/keybinds/menu.ts"() {
       "use strict";
       init_menu();
-      init_localStorage();
-      init_panel_ui();
+      init_storage();
+      init_panel();
       init_keybinds();
       ICON_BOX_PX = 26;
     }
   });
 
-  // src/services/players.ts
+  // src/features/room/players.ts
   function findPlayersDeep(state6) {
     if (!state6 || typeof state6 !== "object") return [];
     const out = [];
@@ -55445,14 +55445,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var __cachedSpawnTiles, __spawnLoadPromise, followingState, PET_FOLLOW_INTERVAL_MS, PET_HISTORY_FACTOR, PET_SPACING_STEPS, petFollowState, PlayersService;
   var init_players = __esm({
-    "src/services/players.ts"() {
+    "src/features/room/players.ts"() {
       "use strict";
       init_toast();
       init_fakeModal();
-      init_activityLogHistory();
+      init_history();
       init_player();
       init_atoms();
-      init_calculators();
+      init_cropValue();
       __cachedSpawnTiles = null;
       __spawnLoadPromise = null;
       followingState = {
@@ -55862,7 +55862,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/utils/format.ts
+  // src/lib/format.ts
   function formatPrice(val) {
     const n = typeof val === "number" ? val : Number(val);
     if (!Number.isFinite(n)) return n === Infinity ? "\u221E" : null;
@@ -55875,12 +55875,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     return String(n);
   }
   var init_format = __esm({
-    "src/utils/format.ts"() {
+    "src/lib/format.ts"() {
       "use strict";
     }
   });
 
-  // src/ui/menus/room.ts
+  // src/features/room/menu.ts
   function ensureStyles3() {
     if (document.getElementById(STYLE_ID5)) return;
     const st = document.createElement("style");
@@ -56433,14 +56433,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     await refresh(true);
   }
   var STYLE_ID5, TEAL3, TEAL_DIM3, TEAL_MID2, TEAL_BORDER3, TEAL_BORDER_HI, BORDER4, BORDER_HI2, CARD_BG3, CARD_BG_HI2, TEXT4, TEXT_DIM4, GREEN, PLAYER_POSITION_AVAILABLE, PLAYER_POSITION_UNAVAILABLE_HINT, css4, ICO, ICONS;
-  var init_room = __esm({
-    "src/ui/menus/room.ts"() {
+  var init_menu12 = __esm({
+    "src/features/room/menu.ts"() {
       "use strict";
       init_players();
       init_toast();
       init_format();
       init_fakeModal();
-      init_page_context();
+      init_pageContext();
       STYLE_ID5 = "qws-room-menu-css";
       TEAL3 = "#5eead4";
       TEAL_DIM3 = "rgba(94,234,212,0.12)";
@@ -56472,7 +56472,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/skins/applier.ts
+  // src/features/skins/applier.ts
   function collectGameMatches() {
     const state6 = getSpriteState();
     const roots = [state6.app?.stage, state6.renderer?.lastObjectRendered, state6.renderer?.stage];
@@ -56715,9 +56715,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var MAX_WALK_NODES, applied, rectKey, debugState3, frameRectOf, sourceOf;
   var init_applier = __esm({
-    "src/skins/applier.ts"() {
+    "src/features/skins/applier.ts"() {
       "use strict";
-      init_sprite();
+      init_sprites();
       MAX_WALK_NODES = 4e4;
       applied = /* @__PURE__ */ new Map();
       rectKey = (x, y, w, h) => `${x}|${y}|${w}|${h}`;
@@ -56736,7 +56736,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/sprite/api/frameCanvas.ts
+  // src/game/sprites/api/frameCanvas.ts
   function renderFrameToCanvas(frameKey) {
     const cached = canvasCache.get(frameKey);
     if (cached) return cached;
@@ -56765,15 +56765,15 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var canvasCache, CACHE_MAX;
   var init_frameCanvas = __esm({
-    "src/sprite/api/frameCanvas.ts"() {
+    "src/game/sprites/api/frameCanvas.ts"() {
       "use strict";
-      init_sprite();
+      init_sprites();
       canvasCache = /* @__PURE__ */ new Map();
       CACHE_MAX = 600;
     }
   });
 
-  // src/skins/compositor.ts
+  // src/features/skins/compositor.ts
   function drawContained(ctx2, source, boxW, boxH) {
     const scale = Math.min(boxW / source.width, boxH / source.height);
     const drawW = Math.max(1, Math.round(source.width * scale));
@@ -56802,13 +56802,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     return renderFrameToCanvas(target.frameKey);
   }
   var init_compositor = __esm({
-    "src/skins/compositor.ts"() {
+    "src/features/skins/compositor.ts"() {
       "use strict";
       init_frameCanvas();
     }
   });
 
-  // src/skins/gameCaches.ts
+  // src/features/skins/gameCaches.ts
   function holders() {
     const state6 = getSpriteState();
     const root = globalThis.unsafeWindow || globalThis;
@@ -56864,14 +56864,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var hasRebake;
   var init_gameCaches = __esm({
-    "src/skins/gameCaches.ts"() {
+    "src/features/skins/gameCaches.ts"() {
       "use strict";
-      init_sprite();
+      init_sprites();
       hasRebake = (value) => !!value && typeof value.rebakeAll === "function";
     }
   });
 
-  // src/skins/debug.ts
+  // src/features/skins/debug.ts
   function inspectFrame(frameKey, occupiedRect) {
     const state6 = getSpriteState();
     const stage = collectGameMatches();
@@ -56956,9 +56956,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var frameRectOf2, sourceOf2, rectKey2;
   var init_debug = __esm({
-    "src/skins/debug.ts"() {
+    "src/features/skins/debug.ts"() {
       "use strict";
-      init_sprite();
+      init_sprites();
       init_applier();
       init_gameCaches();
       frameRectOf2 = (texture) => texture?.frame ?? texture?._frame ?? null;
@@ -56967,7 +56967,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/skins/store.ts
+  // src/features/skins/store.ts
   function openDb() {
     if (dbPromise) return dbPromise;
     dbPromise = new Promise((resolve, reject) => {
@@ -57013,7 +57013,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var DB_NAME, DB_VERSION, STORE_NAME, MAX_SKIN_FILE_BYTES, dbPromise;
   var init_store = __esm({
-    "src/skins/store.ts"() {
+    "src/features/skins/store.ts"() {
       "use strict";
       DB_NAME = "aries_skins";
       DB_VERSION = 1;
@@ -57023,7 +57023,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/skins/targets.ts
+  // src/features/skins/targets.ts
   function buildTargets(bundle) {
     const targets = /* @__PURE__ */ new Map();
     for (const data of Object.values(bundle.atlasJsons)) {
@@ -57076,9 +57076,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var targetCache, categoryOfKey, labelOfKey;
   var init_targets = __esm({
-    "src/skins/targets.ts"() {
+    "src/features/skins/targets.ts"() {
       "use strict";
-      init_sprite();
+      init_sprites();
       init_atlasToTextures();
       init_path();
       targetCache = null;
@@ -57094,7 +57094,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/skins/index.ts
+  // src/features/skins/index.ts
   function getSkinsSnapshot() {
     return snapshot;
   }
@@ -57271,10 +57271,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var SKINS_CHANGED_EVENT, RENDERER_WATCH_MS, RETRY_PASS_MS, MAX_RETRY_PASSES, snapshot, skinCanvases, started3, watchId, retryId, lastRenderer, applyChain, retriesLeft;
   var init_skins = __esm({
-    "src/skins/index.ts"() {
+    "src/features/skins/index.ts"() {
       "use strict";
-      init_sprite();
-      init_localStorage();
+      init_sprites();
+      init_storage();
       init_applier();
       init_compositor();
       init_gameCaches();
@@ -57304,7 +57304,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/skins-thumb.ts
+  // src/features/skins/thumb.ts
   function ensureObserver() {
     if (observer) return observer;
     if (typeof IntersectionObserver === "undefined") return null;
@@ -57354,8 +57354,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     io.observe(host);
   }
   var observer, pending;
-  var init_skins_thumb = __esm({
-    "src/ui/menus/skins-thumb.ts"() {
+  var init_thumb = __esm({
+    "src/features/skins/thumb.ts"() {
       "use strict";
       init_compositor();
       observer = null;
@@ -57363,7 +57363,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/skins-detail.ts
+  // src/features/skins/detail.ts
   function pickImageFile() {
     return new Promise((resolve) => {
       const input = document.createElement("input");
@@ -57537,17 +57537,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     return host;
   }
   var SLOT_THUMB_PX;
-  var init_skins_detail = __esm({
-    "src/ui/menus/skins-detail.ts"() {
+  var init_detail = __esm({
+    "src/features/skins/detail.ts"() {
       "use strict";
       init_skins();
-      init_skins_thumb();
-      init_panel_ui();
+      init_thumb();
+      init_panel();
       SLOT_THUMB_PX = 46;
     }
   });
 
-  // src/ui/menus/skins.ts
+  // src/features/skins/menu.ts
   function filterObjects(objects) {
     const needle = menuState.query.trim().toLowerCase();
     return objects.filter((object) => {
@@ -57745,12 +57745,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     renderAll();
   }
   var ALL_CATEGORIES, MAX_VISIBLE, GRID_THUMB_PX, CONFIRM_RESET_MS, menuState;
-  var init_skins2 = __esm({
-    "src/ui/menus/skins.ts"() {
+  var init_menu13 = __esm({
+    "src/features/skins/menu.ts"() {
       "use strict";
-      init_skins_detail();
-      init_skins_thumb();
-      init_panel_ui();
+      init_detail();
+      init_thumb();
+      init_panel();
       init_skins();
       ALL_CATEGORIES = "__all__";
       MAX_VISIBLE = 400;
@@ -57760,7 +57760,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/pathfinding.ts
+  // src/features/companion/pathfinding.ts
   function findFirstStep(from, isGoal, isWalkable, maxExploredNodes = MAX_EXPLORED_NODES) {
     if (isGoal(from.x, from.y)) return null;
     const firstStepTo = /* @__PURE__ */ new Map();
@@ -57791,7 +57791,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var MAX_EXPLORED_NODES, STEPS, keyOf;
   var init_pathfinding = __esm({
-    "src/services/companion/pathfinding.ts"() {
+    "src/features/companion/pathfinding.ts"() {
       "use strict";
       MAX_EXPLORED_NODES = 12e3;
       STEPS = [
@@ -57804,7 +57804,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/movement.ts
+  // src/features/companion/movement.ts
   function initialMovementState() {
     return {
       activity: "pursue",
@@ -57962,7 +57962,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var STEP_INTERVAL_MS, DEFAULT_MOVEMENT_CONFIG, TASK_MOVEMENT_CONFIG, ATTENTION_MOVEMENT_CONFIG, SPAWN_SEARCH_RADIUS, wanderRadiusOf;
   var init_movement = __esm({
-    "src/services/companion/movement.ts"() {
+    "src/features/companion/movement.ts"() {
       "use strict";
       init_pathfinding();
       STEP_INTERVAL_MS = 150;
@@ -57988,7 +57988,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/tick.ts
+  // src/features/companion/tick.ts
   function createTickAtom() {
     const atom = {};
     atom.init = 0;
@@ -58019,9 +58019,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var COMPANION_TICK_LABEL, CACHE_KEY, tickAtom, counter;
   var init_tick = __esm({
-    "src/services/companion/tick.ts"() {
+    "src/features/companion/tick.ts"() {
       "use strict";
-      init_page_context();
+      init_pageContext();
       init_jotai();
       COMPANION_TICK_LABEL = "ariesCompanionTickAtom";
       CACHE_KEY = `aries/companion/${COMPANION_TICK_LABEL}`;
@@ -58030,7 +58030,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/injection.ts
+  // src/features/companion/injection.ts
   async function listNpcIdentities() {
     const map2 = await readCompanionMap();
     const presentIds = new Set(await readPresentNpcIds());
@@ -58093,7 +58093,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var NPC_ID_PREFIX, QUINOA_DATA_LABEL, quinoaData, COMPANION_PATCH, active, currentPayload;
   var init_injection = __esm({
-    "src/services/companion/injection.ts"() {
+    "src/features/companion/injection.ts"() {
       "use strict";
       init_fakeAtoms();
       init_hub();
@@ -58119,7 +58119,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/emoteTypes.ts
+  // src/features/companion/emoteTypes.ts
   function companionEmoteEntry(playerId2, emote, now2) {
     return { kind: "emote", playerId: playerId2, emoteType: emote, lastTimestampMs: now2 + ENTRY_LEAD_MS };
   }
@@ -58154,7 +58154,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var EmoteType, ENTRY_LEAD_MS, NPC_TALKING_MS, TALKING_MARGIN_MS;
   var init_emoteTypes = __esm({
-    "src/services/companion/emoteTypes.ts"() {
+    "src/features/companion/emoteTypes.ts"() {
       "use strict";
       EmoteType = {
         Idle: -1,
@@ -58171,7 +58171,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/reactions.ts
+  // src/features/companion/reactions.ts
   function pickOne(options, random) {
     return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
   }
@@ -58571,7 +58571,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var fmt, MILESTONES, sumHatched, sumAbilityTriggers, num, STAT_DEFS, WEATHER_EMOTES, SHOP_ID, DROUGHT_STEPS, RELIEF_MIN, RARITY_LABEL, DAY_PART_LINES, HOLIDAY_LINES, HOLIDAY_GREETINGS, WEEKEND_LINES, SUNDAY_LINES, TIME_LINE_EMOTES, SESSION_GAP_MS, DAY_MS, REACTION_GAP_MS, REACTION_TTL_MS, FAMILY_COOLDOWN_MS, familyOf;
   var init_reactions = __esm({
-    "src/services/companion/reactions.ts"() {
+    "src/features/companion/reactions.ts"() {
       "use strict";
       init_emoteTypes();
       fmt = (n) => Math.round(n).toLocaleString("en-US");
@@ -58754,7 +58754,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/dialogueLines.ts
+  // src/features/companion/dialogueLines.ts
   function lineEmote(line) {
     return LINE_EMOTES[line] ?? null;
   }
@@ -58853,7 +58853,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var LEGACY_DEFAULT_LINES, DEFAULT_CUSTOM_LINES, LINE_EMOTES, POKE_WINDOW_MS, POKE_THRESHOLD, plural, WEATHER_LINES, GENERIC_WEATHER_TEMPLATES;
   var init_dialogueLines = __esm({
-    "src/services/companion/dialogueLines.ts"() {
+    "src/features/companion/dialogueLines.ts"() {
       "use strict";
       init_emoteTypes();
       init_reactions();
@@ -58985,7 +58985,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/chat/hatch.ts
+  // src/features/companion/chat/hatch.ts
   function hasAnyRule(rules) {
     return rules.species.length > 0 || rules.mutations.length > 0 || rules.abilities.length > 0 || rules.minMaxStr !== null;
   }
@@ -59058,7 +59058,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var DEFAULT_KEEP_RULES, CHEERED_MUTATIONS;
   var init_hatch = __esm({
-    "src/services/companion/chat/hatch.ts"() {
+    "src/features/companion/chat/hatch.ts"() {
       "use strict";
       init_harvest();
       init_emoteTypes();
@@ -59072,7 +59072,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/settingsShape.ts
+  // src/features/companion/settingsShape.ts
   function sanitizeLines(raw) {
     if (!Array.isArray(raw)) return [...DEFAULT_CUSTOM_LINES];
     return raw.filter((line) => typeof line === "string").map((line) => line.trim().slice(0, MAX_LINE_LENGTH)).filter((line) => line.length > 0).slice(0, MAX_LINES);
@@ -59129,7 +59129,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var COMPANION_MODES, MAX_LINE_LENGTH, MAX_LINES, SETTINGS_GROUPS, DEFAULT_COMPANION_SETTINGS;
   var init_settingsShape = __esm({
-    "src/services/companion/settingsShape.ts"() {
+    "src/features/companion/settingsShape.ts"() {
       "use strict";
       init_dialogueLines();
       init_hatch();
@@ -59157,7 +59157,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/state.ts
+  // src/features/companion/state.ts
   function loadCompanionSettings() {
     return coerceSettings(readAriesPath(STORAGE_PATH, void 0));
   }
@@ -59177,17 +59177,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     patchCompanionSettings({ reviewedSettings: [...current, group] });
   }
   var STORAGE_PATH;
-  var init_state4 = __esm({
-    "src/services/companion/state.ts"() {
+  var init_state3 = __esm({
+    "src/features/companion/state.ts"() {
       "use strict";
-      init_localStorage();
+      init_storage();
       init_settingsShape();
       init_settingsShape();
       STORAGE_PATH = "companion";
     }
   });
 
-  // src/services/companion/diagnostics.ts
+  // src/features/companion/diagnostics.ts
   function median(values) {
     if (values.length === 0) return null;
     const sorted = [...values].sort((a, b) => a - b);
@@ -59255,7 +59255,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var DEFAULT_SAMPLE_MS, npcQuinoaUsers;
   var init_diagnostics = __esm({
-    "src/services/companion/diagnostics.ts"() {
+    "src/features/companion/diagnostics.ts"() {
       "use strict";
       init_hub();
       DEFAULT_SAMPLE_MS = 6e3;
@@ -59265,7 +59265,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/dialogue.ts
+  // src/features/companion/dialogue.ts
   function nextBubbleTimestamp(last, proposed) {
     if (!Number.isFinite(proposed) || last === null || !Number.isFinite(last)) return proposed;
     return Math.max(proposed, last + 1);
@@ -59300,14 +59300,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var CONTEXTUAL_CHANCE, DEFAULT_CONTEXTUAL_COOLDOWN_MS;
   var init_dialogue = __esm({
-    "src/services/companion/dialogue.ts"() {
+    "src/features/companion/dialogue.ts"() {
       "use strict";
       CONTEXTUAL_CHANCE = 0.25;
       DEFAULT_CONTEXTUAL_COOLDOWN_MS = 12e4;
     }
   });
 
-  // src/services/companion/dialogueContext.ts
+  // src/features/companion/dialogueContext.ts
   async function collectContextualLines() {
     const providers = [
       readyHarvestLine,
@@ -59353,7 +59353,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var HUNGRY_PET_THRESHOLD_PCT;
   var init_dialogueContext = __esm({
-    "src/services/companion/dialogueContext.ts"() {
+    "src/features/companion/dialogueContext.ts"() {
       "use strict";
       init_data();
       init_atoms();
@@ -59365,7 +59365,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/emote.ts
+  // src/features/companion/emote.ts
   function avatarSystem() {
     try {
       return getWorldSystem("avatar");
@@ -59456,11 +59456,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var EMOTE_SOURCE_LABEL, EMOTE_PATCH, EMOTE_DURATION_MS, installed2, releaseTimer, posing, startTimer, lastSpokeAt;
   var init_emote = __esm({
-    "src/services/companion/emote.ts"() {
+    "src/features/companion/emote.ts"() {
       "use strict";
       init_fakeAtoms();
       init_tick();
-      init_tileObjectSystemApi();
+      init_tileObjects();
       init_emoteTypes();
       EMOTE_SOURCE_LABEL = "emoteSourceAtom";
       EMOTE_PATCH = {
@@ -59479,7 +59479,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/speech.ts
+  // src/features/companion/speech.ts
   function rewritePayload(payload) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
     if (!targetNpcId || !resolver) return payload;
@@ -59533,7 +59533,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var CHAT_BUBBLES_LABEL, AUTHORED_BY_MOD, wrapped, resolver, targetNpcId, lastTimestamp;
   var init_speech = __esm({
-    "src/services/companion/speech.ts"() {
+    "src/features/companion/speech.ts"() {
       "use strict";
       init_jotai();
       init_dialogue();
@@ -59547,7 +59547,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/index.ts
+  // src/features/companion/index.ts
   function roundTile(pos) {
     const x = Number(pos?.x);
     const y = Number(pos?.y);
@@ -59731,7 +59731,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var CHAT_BUBBLE_MIN_INTERVAL_MS, RENDER_WAIT_TIMEOUT_MS, CONTEXTUAL_REFRESH_MS, npcChatBubbles, npcQuinoaUsers2, runtime, starting, wanderHooks, WALK_TIMEOUT_MS, ARRIVAL_POLL_MS, NEARBY_DISTANCE, STILL_POLL_MS, STILL_TIMEOUT_MS, stillToken, CompanionService;
   var init_companion = __esm({
-    "src/services/companion/index.ts"() {
+    "src/features/companion/index.ts"() {
       "use strict";
       init_atoms();
       init_hub();
@@ -59739,7 +59739,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_map();
       init_anchors();
       init_injection();
-      init_state4();
+      init_state3();
       init_diagnostics();
       init_tick();
       init_dialogue();
@@ -60030,7 +60030,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/chat/attend.ts
+  // src/features/companion/chat/attend.ts
   async function walkOver() {
     try {
       await CompanionService.comeToPlayer();
@@ -60052,14 +60052,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var attending;
   var init_attend = __esm({
-    "src/services/companion/chat/attend.ts"() {
+    "src/features/companion/chat/attend.ts"() {
       "use strict";
       init_companion();
       attending = null;
     }
   });
 
-  // src/services/companion/chat/bubbleTags.ts
+  // src/features/companion/chat/bubbleTags.ts
   function compose(...fragments) {
     const tags = {};
     let message = "";
@@ -60101,12 +60101,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     return Object.keys(kept).length > 0 ? { message, tags: kept } : { message };
   }
   var init_bubbleTags = __esm({
-    "src/services/companion/chat/bubbleTags.ts"() {
+    "src/features/companion/chat/bubbleTags.ts"() {
       "use strict";
     }
   });
 
-  // src/services/companion/chat/bubbleIcons.ts
+  // src/features/companion/chat/bubbleIcons.ts
   function spriteKeyOf(entry) {
     if (typeof entry?.tileRef === "string" && entry.tileRef) return entry.tileRef;
     const url = entry?.sprite;
@@ -60164,17 +60164,17 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var BUBBLE_ICON_PX, PET_ICON_PX2;
   var init_bubbleIcons = __esm({
-    "src/services/companion/chat/bubbleIcons.ts"() {
+    "src/features/companion/chat/bubbleIcons.ts"() {
       "use strict";
       init_data();
       init_bubbleTags();
-      init_spriteResolver();
+      init_resolver();
       BUBBLE_ICON_PX = 28;
       PET_ICON_PX2 = 20;
     }
   });
 
-  // src/services/companion/chat/log.ts
+  // src/features/companion/chat/log.ts
   function emptyLog() {
     return { messages: [], nextSeq: 1 };
   }
@@ -60214,13 +60214,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var MAX_MESSAGES;
   var init_log = __esm({
-    "src/services/companion/chat/log.ts"() {
+    "src/features/companion/chat/log.ts"() {
       "use strict";
       MAX_MESSAGES = 200;
     }
   });
 
-  // src/services/companion/chat/batch.ts
+  // src/features/companion/chat/batch.ts
   function pacer(minGapMs = ACTION_DELAY_MS) {
     let lastAt = 0;
     return {
@@ -60237,7 +60237,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var ACTION_DELAY_MS, SETTLE_MS, PROGRESS_EVERY, sleep7;
   var init_batch = __esm({
-    "src/services/companion/chat/batch.ts"() {
+    "src/features/companion/chat/batch.ts"() {
       "use strict";
       ACTION_DELAY_MS = 400;
       SETTLE_MS = 700;
@@ -60246,7 +60246,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/chat/teamSwap.ts
+  // src/features/companion/chat/teamSwap.ts
   function teamName(teamId2) {
     if (!teamId2) return null;
     try {
@@ -60293,7 +60293,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var AFTER_TEAM_SWAP_MS, NOT_SWAPPED;
   var init_teamSwap = __esm({
-    "src/services/companion/chat/teamSwap.ts"() {
+    "src/features/companion/chat/teamSwap.ts"() {
       "use strict";
       init_pets();
       init_batch();
@@ -60306,7 +60306,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/chat/walk.ts
+  // src/features/companion/chat/walk.ts
   async function createWalker(onGiveUp) {
     if (!CompanionService.isRunning()) return IDLE;
     const slotIdx2 = await readMySlotIdx();
@@ -60365,7 +60365,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var GIVE_UP_AFTER, IDLE;
   var init_walk = __esm({
-    "src/services/companion/chat/walk.ts"() {
+    "src/features/companion/chat/walk.ts"() {
       "use strict";
       init_companion();
       init_anchors();
@@ -60386,7 +60386,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/workflowScan.ts
+  // src/features/companion/chat/gardenScan.ts
   function slotCropSize(slot, species) {
     const size = readCropSize({ ...slot, species: slot.species ?? species });
     if (size != null) return size;
@@ -60508,8 +60508,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   var COLOR_MUTATIONS, WEATHER_MUTATIONS2, TIME_MUTATIONS;
-  var init_workflowScan = __esm({
-    "src/services/workflowScan.ts"() {
+  var init_gardenScan = __esm({
+    "src/features/companion/chat/gardenScan.ts"() {
       "use strict";
       init_data();
       init_cropSize();
@@ -60524,7 +60524,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/chat/gardenRead.ts
+  // src/features/companion/chat/gardenRead.ts
   function speciesInGarden(tileObjects) {
     const species = /* @__PURE__ */ new Set();
     for (const raw of Object.values(tileObjects)) {
@@ -60582,16 +60582,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { rows: allowed, lockedOut: ripe.length - allowed.length };
   }
   var init_gardenRead = __esm({
-    "src/services/companion/chat/gardenRead.ts"() {
+    "src/features/companion/chat/gardenRead.ts"() {
       "use strict";
       init_atoms();
       init_locker();
-      init_workflowScan();
+      init_gardenScan();
       init_harvest();
     }
   });
 
-  // src/services/companion/chat/harvestRun.ts
+  // src/features/companion/chat/harvestRun.ts
   function topCrop(rows) {
     const top = groupVariants(rows)[0];
     return top ? cropIcon(top.species) : null;
@@ -60659,11 +60659,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     await report(attempted, reporter2.stopped(), reporter2);
   }
   var init_harvestRun = __esm({
-    "src/services/companion/chat/harvestRun.ts"() {
+    "src/features/companion/chat/harvestRun.ts"() {
       "use strict";
       init_player();
       init_stats();
-      init_state4();
+      init_state3();
       init_batch();
       init_teamSwap();
       init_walk();
@@ -60674,7 +60674,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/chat/feedScope.ts
+  // src/features/companion/chat/feedScope.ts
   function feedSignature(candidates) {
     return candidates.map((candidate) => candidate.petId).sort().join("|");
   }
@@ -60710,12 +60710,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     return `${candidates.length} pets are hungry: ${head}${rest2}`;
   }
   var init_feedScope = __esm({
-    "src/services/companion/chat/feedScope.ts"() {
+    "src/features/companion/chat/feedScope.ts"() {
       "use strict";
     }
   });
 
-  // src/services/companion/chat/petFeed.ts
+  // src/features/companion/chat/petFeed.ts
   function petIdOf(pet) {
     return String(pet?.slot?.id ?? "");
   }
@@ -60832,9 +60832,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     );
   }
   var init_petFeed = __esm({
-    "src/services/companion/chat/petFeed.ts"() {
+    "src/features/companion/chat/petFeed.ts"() {
       "use strict";
-      init_state4();
+      init_state3();
       init_pets();
       init_player();
       init_gardenRead();
@@ -60846,7 +60846,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/chat/feedRun.ts
+  // src/features/companion/chat/feedRun.ts
   function petIcons(picks) {
     const seen = /* @__PURE__ */ new Set();
     const icons = [];
@@ -60924,9 +60924,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var AFTER_HARVEST_MS, AFTER_FEED_MS, sleep8;
   var init_feedRun = __esm({
-    "src/services/companion/chat/feedRun.ts"() {
+    "src/features/companion/chat/feedRun.ts"() {
       "use strict";
-      init_quinoaCommands();
+      init_commands();
       init_pets();
       init_player();
       init_stats();
@@ -60939,7 +60939,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/chat/plantRun.ts
+  // src/features/companion/chat/plantRun.ts
   function topSeed(plan) {
     const most = countByItem(plan)[0];
     return most?.kind === "seed" ? seedIcon(most.id) : null;
@@ -61013,7 +61013,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     await report2(attempted, reporter2.stopped(), reporter2);
   }
   var init_plantRun = __esm({
-    "src/services/companion/chat/plantRun.ts"() {
+    "src/features/companion/chat/plantRun.ts"() {
       "use strict";
       init_player();
       init_stats();
@@ -61026,7 +61026,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/chat/hatchRead.ts
+  // src/features/companion/chat/hatchRead.ts
   function normalizeTs(value) {
     const raw = typeof value === "number" ? value : Number(value);
     if (!Number.isFinite(raw) || raw <= 0) return null;
@@ -61155,11 +61155,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var INVENTORY_CAPACITY, EMPTY_HATCH_SCOPE;
   var init_hatchRead = __esm({
-    "src/services/companion/chat/hatchRead.ts"() {
+    "src/features/companion/chat/hatchRead.ts"() {
       "use strict";
       init_atoms();
       init_data();
-      init_petCalcul();
+      init_petValue();
       init_pets();
       INVENTORY_CAPACITY = 98;
       EMPTY_HATCH_SCOPE = {
@@ -61176,7 +61176,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/chat/hatchRun.ts
+  // src/features/companion/chat/hatchRun.ts
   async function countHatched(slots) {
     try {
       const still = new Set((await readHatchScope()).readySlots);
@@ -61369,12 +61369,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var RECOUNT_EVERY, NEAR_CAPACITY, CHEER_TIMING, CHEER_LINES, SELL_BUILDING_WORDS, SELL_BUILDING_ALTERNATIVES;
   var init_hatchRun = __esm({
-    "src/services/companion/chat/hatchRun.ts"() {
+    "src/features/companion/chat/hatchRun.ts"() {
       "use strict";
       init_player();
       init_pets();
       init_map();
-      init_state4();
+      init_state3();
       init_batch();
       init_teamSwap();
       init_walk();
@@ -61398,7 +61398,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/chat/hatchFlow.ts
+  // src/features/companion/chat/hatchFlow.ts
   function hatchProvider() {
     return async () => (await readHatchScope()).readySlots;
   }
@@ -61422,15 +61422,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     return sellable.length > 0 ? "All open. Now the ones you did not want." : null;
   }
   var init_hatchFlow = __esm({
-    "src/services/companion/chat/hatchFlow.ts"() {
+    "src/features/companion/chat/hatchFlow.ts"() {
       "use strict";
-      init_state4();
+      init_state3();
       init_hatch();
       init_hatchRead();
     }
   });
 
-  // src/services/companion/chat/proposals.ts
+  // src/features/companion/chat/proposals.ts
   function isExpired(proposal, nowMs2, ttlMs = PROPOSAL_TTL_MS) {
     return nowMs2 - proposal.createdAtMs >= ttlMs;
   }
@@ -61455,13 +61455,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var PROPOSAL_TTL_MS;
   var init_proposals = __esm({
-    "src/services/companion/chat/proposals.ts"() {
+    "src/features/companion/chat/proposals.ts"() {
       "use strict";
       PROPOSAL_TTL_MS = 3e4;
     }
   });
 
-  // src/services/companion/chat/index.ts
+  // src/features/companion/chat/index.ts
   function notify2() {
     for (const listener of [...listeners8]) {
       try {
@@ -61706,12 +61706,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var ALERT_DEDUPE_MS, state3, listeners8, nextProposalSeq, ACCEPTANCE, CompanionChat;
   var init_chat = __esm({
-    "src/services/companion/chat/index.ts"() {
+    "src/features/companion/chat/index.ts"() {
       "use strict";
       init_companion();
       init_attend();
       init_emoteTypes();
-      init_state4();
+      init_state3();
       init_bubbleTags();
       init_bubbleIcons();
       init_log();
@@ -61727,7 +61727,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_hatchRun();
       init_hatchFlow();
       init_teamSwap();
-      init_state4();
+      init_state3();
       init_proposals();
       ALERT_DEDUPE_MS = 6e4;
       state3 = {
@@ -61903,7 +61903,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/chat/feedWatch.ts
+  // src/features/companion/chat/feedWatch.ts
   async function speakInPerson(picks) {
     try {
       const line = forGame(feedBubble(picks));
@@ -61982,11 +61982,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var SETTLE_MS2, REASK_COOLDOWN_MS, settleTimer, unsubscribers, running, lastOfferedSignature, lastOfferedAtMs, announcedProposalId, runTick;
   var init_feedWatch = __esm({
-    "src/services/companion/chat/feedWatch.ts"() {
+    "src/features/companion/chat/feedWatch.ts"() {
       "use strict";
       init_companion();
       init_pets();
-      init_state4();
+      init_state3();
       init_chat();
       init_petFeed();
       init_attend();
@@ -62004,7 +62004,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/companion/behavior-tab.ts
+  // src/features/companion/menu/behaviorTab.ts
   function renderBehaviorTab(view) {
     view.innerHTML = "";
     const settings = CompanionService.getSettings();
@@ -62092,13 +62092,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   var STATUS_REFRESH_MS, MODE_LABELS;
-  var init_behavior_tab = __esm({
-    "src/ui/menus/companion/behavior-tab.ts"() {
+  var init_behaviorTab = __esm({
+    "src/features/companion/menu/behaviorTab.ts"() {
       "use strict";
       init_companion();
       init_feedWatch();
-      init_panel_ui();
-      init_panel_layout();
+      init_panel();
+      init_layout();
       STATUS_REFRESH_MS = 1e3;
       MODE_LABELS = [
         ["follow", "Follow me"],
@@ -62107,7 +62107,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/avatar.ts
+  // src/features/companion/avatar.ts
   function layerRank(filename) {
     const prefix = filename.split("_")[0];
     return LAYER_ORDER.indexOf(prefix);
@@ -62143,7 +62143,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var npcAvatarData, LAYER_ORDER;
   var init_avatar = __esm({
-    "src/services/companion/avatar.ts"() {
+    "src/features/companion/avatar.ts"() {
       "use strict";
       init_hub();
       init_gameVersion();
@@ -62152,7 +62152,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/companion/npc-avatar.ts
+  // src/features/companion/menu/npcAvatar.ts
   function loadImage2(url) {
     return new Promise((resolve) => {
       const img = new Image();
@@ -62254,8 +62254,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
   }
   var CANVAS_PX, PORTRAIT_PX, HEAD_PADDING, FALLBACK_CROP, pending2;
-  var init_npc_avatar = __esm({
-    "src/ui/menus/companion/npc-avatar.ts"() {
+  var init_npcAvatar = __esm({
+    "src/features/companion/menu/npcAvatar.ts"() {
       "use strict";
       init_avatar();
       init_discordCsp();
@@ -62267,7 +62267,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/companion/chat-icons.ts
+  // src/features/companion/menu/chatIcons.ts
   function splitSpriteKey(key2) {
     const parts = key2.split(/[?#]/)[0].split("/").filter(Boolean);
     if (parts.length < 2) return null;
@@ -62331,17 +62331,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     return out;
   }
   var SPRITE_LOG_TAG4, TAG_MARKER;
-  var init_chat_icons = __esm({
-    "src/ui/menus/companion/chat-icons.ts"() {
+  var init_chatIcons = __esm({
+    "src/features/companion/menu/chatIcons.ts"() {
       "use strict";
-      init_spriteIconCache();
-      init_panel_ui();
+      init_iconCache();
+      init_panel();
       SPRITE_LOG_TAG4 = "companion-thread";
       TAG_MARKER = /<(\d+)\/>/g;
     }
   });
 
-  // src/ui/menus/companion/chat-view.ts
+  // src/features/companion/menu/chatView.ts
   function contentOf(text, icons, positioned2, sizePx) {
     if (positioned2) return renderTagged(text, icons, sizePx);
     const label2 = document.createElement("span");
@@ -62567,12 +62567,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     return hint;
   }
   var GROUP_WINDOW_MS, AVATAR_PX, BUBBLE_ICON_PX2, SYSTEM_ICON_PX, OUTGOING_BG, OUTGOING_BORDER, OUTGOING_TEXT, INCOMING_BG, ALERT_BG, ALERT_BORDER;
-  var init_chat_view = __esm({
-    "src/ui/menus/companion/chat-view.ts"() {
+  var init_chatView = __esm({
+    "src/features/companion/menu/chatView.ts"() {
       "use strict";
-      init_panel_ui();
-      init_npc_avatar();
-      init_chat_icons();
+      init_panel();
+      init_npcAvatar();
+      init_chatIcons();
       GROUP_WINDOW_MS = 2 * 60 * 1e3;
       AVATAR_PX = 26;
       BUBBLE_ICON_PX2 = 18;
@@ -62586,7 +62586,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/companion/harvest-fields.ts
+  // src/features/companion/menu/harvestFields.ts
   function filterCard(icon, title) {
     const summary = document.createElement("div");
     css2(summary, {
@@ -62722,16 +62722,16 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
   }
-  var init_harvest_fields = __esm({
-    "src/ui/menus/companion/harvest-fields.ts"() {
+  var init_harvestFields = __esm({
+    "src/features/companion/menu/harvestFields.ts"() {
       "use strict";
-      init_panel_ui();
-      init_panel_layout();
-      init_harvest_chips();
+      init_panel();
+      init_layout();
+      init_harvestChips();
     }
   });
 
-  // src/ui/menus/companion/settings-notice.ts
+  // src/features/companion/menu/settingsNotice.ts
   function settingsNotice(group, what, onOpen) {
     const root = document.createElement("div");
     if (!isUnreviewed(group)) {
@@ -62769,15 +62769,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     root.append(text, open);
     return { root };
   }
-  var init_settings_notice = __esm({
-    "src/ui/menus/companion/settings-notice.ts"() {
+  var init_settingsNotice = __esm({
+    "src/features/companion/menu/settingsNotice.ts"() {
       "use strict";
-      init_state4();
-      init_panel_ui();
+      init_state3();
+      init_panel();
     }
   });
 
-  // src/ui/menus/companion/team-select.ts
+  // src/features/companion/menu/teamSelect.ts
   function teamSelect(current, onPick) {
     const el2 = document.createElement("select");
     el2.className = "qws-pnl-select";
@@ -62803,17 +62803,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { el: el2, empty: teams.length === 0 };
   }
   var NO_TEAM, NO_TEAMS_HINT;
-  var init_team_select = __esm({
-    "src/ui/menus/companion/team-select.ts"() {
+  var init_teamSelect = __esm({
+    "src/features/companion/menu/teamSelect.ts"() {
       "use strict";
       init_pets();
-      init_panel_ui();
+      init_panel();
       NO_TEAM = "";
       NO_TEAMS_HINT = "No pet teams yet. Build one in the Pets tab.";
     }
   });
 
-  // src/ui/menus/companion/feed-settings-modal.ts
+  // src/features/companion/menu/feedSettingsModal.ts
   function openFeedSettingsModal(host) {
     markReviewed("feed");
     const modal = openModal2({ host, title: "Pet feed", widthPx: 440 });
@@ -62851,22 +62851,22 @@ Restore figures are averages; unlucky streaks do worse.`;
     );
   }
   var MIN_PCT, MAX_PCT;
-  var init_feed_settings_modal = __esm({
-    "src/ui/menus/companion/feed-settings-modal.ts"() {
+  var init_feedSettingsModal = __esm({
+    "src/features/companion/menu/feedSettingsModal.ts"() {
       "use strict";
       init_companion();
       init_feedWatch();
-      init_state4();
-      init_panel_ui();
-      init_panel_layout();
+      init_state3();
+      init_panel();
+      init_layout();
       init_modal();
-      init_settings_modal();
+      init_settingsModal();
       MIN_PCT = 1;
       MAX_PCT = 90;
     }
   });
 
-  // src/ui/menus/companion/hatch-settings-modal.ts
+  // src/features/companion/menu/hatchSettingsModal.ts
   function openHatchSettingsModal(host) {
     markReviewed("hatch");
     const modal = openModal2({ host, title: "Hatching", widthPx: 460 });
@@ -62892,20 +62892,20 @@ Restore figures are averages; unlucky streaks do worse.`;
       })
     );
   }
-  var init_hatch_settings_modal = __esm({
-    "src/ui/menus/companion/hatch-settings-modal.ts"() {
+  var init_hatchSettingsModal = __esm({
+    "src/features/companion/menu/hatchSettingsModal.ts"() {
       "use strict";
       init_companion();
-      init_state4();
-      init_panel_ui();
-      init_panel_layout();
-      init_team_select();
+      init_state3();
+      init_panel();
+      init_layout();
+      init_teamSelect();
       init_modal();
-      init_settings_modal();
+      init_settingsModal();
     }
   });
 
-  // src/ui/menus/companion/settings-modal.ts
+  // src/features/companion/menu/settingsModal.ts
   function teamLine(teamId2, verb) {
     const name = teamName(teamId2);
     return name ? `Wears ${name} to ${verb}.` : `Keeps your team on while ${verb}.`;
@@ -62943,20 +62943,20 @@ Restore figures are averages; unlucky streaks do worse.`;
       })
     );
   }
-  var init_settings_modal = __esm({
-    "src/ui/menus/companion/settings-modal.ts"() {
+  var init_settingsModal = __esm({
+    "src/features/companion/menu/settingsModal.ts"() {
       "use strict";
-      init_state4();
+      init_state3();
       init_hatch();
       init_teamSwap();
-      init_feed_settings_modal();
-      init_harvest_settings_modal();
-      init_hatch_settings_modal();
+      init_feedSettingsModal();
+      init_harvestSettingsModal();
+      init_hatchSettingsModal();
       init_modal();
     }
   });
 
-  // src/ui/menus/companion/harvest-settings-modal.ts
+  // src/features/companion/menu/harvestSettingsModal.ts
   function openHarvestSettingsModal(host) {
     markReviewed("harvest");
     const modal = openModal2({ host, title: "Harvest", widthPx: 460 });
@@ -62982,20 +62982,20 @@ Restore figures are averages; unlucky streaks do worse.`;
       })
     );
   }
-  var init_harvest_settings_modal = __esm({
-    "src/ui/menus/companion/harvest-settings-modal.ts"() {
+  var init_harvestSettingsModal = __esm({
+    "src/features/companion/menu/harvestSettingsModal.ts"() {
       "use strict";
       init_companion();
-      init_state4();
-      init_panel_ui();
-      init_panel_layout();
-      init_team_select();
+      init_state3();
+      init_panel();
+      init_layout();
+      init_teamSelect();
       init_modal();
-      init_settings_modal();
+      init_settingsModal();
     }
   });
 
-  // src/ui/menus/companion/harvest-modal.ts
+  // src/features/companion/menu/harvestModal.ts
   function openHarvestModal(host, onAsk) {
     let scope = { rows: [], lockedOut: 0 };
     let filters = { ...DEFAULT_FILTERS };
@@ -63207,17 +63207,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { close: modal.close };
   }
   var REFRESH_MS, PREVIEW_ICON_PX, TILE_ICON_PX, MAX_PREVIEW_VARIANTS;
-  var init_harvest_modal = __esm({
-    "src/ui/menus/companion/harvest-modal.ts"() {
+  var init_harvestModal = __esm({
+    "src/features/companion/menu/harvestModal.ts"() {
       "use strict";
       init_gardenRead();
       init_harvest();
-      init_panel_ui();
-      init_harvest_chips();
-      init_harvest_fields();
+      init_panel();
+      init_harvestChips();
+      init_harvestFields();
       init_modal();
-      init_settings_notice();
-      init_harvest_settings_modal();
+      init_settingsNotice();
+      init_harvestSettingsModal();
       REFRESH_MS = 4e3;
       PREVIEW_ICON_PX = 30;
       TILE_ICON_PX = 26;
@@ -63225,7 +63225,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/companion/feed-modal.ts
+  // src/features/companion/menu/feedModal.ts
   function openFeedModal(host, onAsk) {
     let picks = [];
     const modal = openModal2({
@@ -63303,21 +63303,21 @@ Restore figures are averages; unlucky streaks do worse.`;
     void refresh();
   }
   var REFRESH_MS2, CROP_ICON_PX;
-  var init_feed_modal = __esm({
-    "src/ui/menus/companion/feed-modal.ts"() {
+  var init_feedModal = __esm({
+    "src/features/companion/menu/feedModal.ts"() {
       "use strict";
       init_petFeed();
-      init_panel_ui();
-      init_harvest_chips();
+      init_panel();
+      init_harvestChips();
       init_modal();
-      init_settings_notice();
-      init_feed_settings_modal();
+      init_settingsNotice();
+      init_feedSettingsModal();
       REFRESH_MS2 = 5e3;
       CROP_ICON_PX = 26;
     }
   });
 
-  // src/ui/menus/companion/plant-grid.ts
+  // src/features/companion/menu/plantGrid.ts
   function plantGrid(options) {
     const root = document.createElement("div");
     css2(root, {
@@ -63435,18 +63435,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   var MAX_GRID_HEIGHT_PX, CELL_ICON_PX2, HALF_GAP_PX2;
-  var init_plant_grid = __esm({
-    "src/ui/menus/companion/plant-grid.ts"() {
+  var init_plantGrid = __esm({
+    "src/features/companion/menu/plantGrid.ts"() {
       "use strict";
       init_plant();
-      init_panel_ui();
+      init_panel();
       MAX_GRID_HEIGHT_PX = 300;
       CELL_ICON_PX2 = 20;
       HALF_GAP_PX2 = 12;
     }
   });
 
-  // src/ui/menus/companion/plant-modal.ts
+  // src/features/companion/menu/plantModal.ts
   function openPlantModal(host, onAsk) {
     let scope = EMPTY_SCOPE;
     let plan = /* @__PURE__ */ new Map();
@@ -63620,21 +63620,21 @@ Restore figures are averages; unlucky streaks do worse.`;
     void refresh();
   }
   var REFRESH_MS3, STRIP_ICON_PX;
-  var init_plant_modal = __esm({
-    "src/ui/menus/companion/plant-modal.ts"() {
+  var init_plantModal = __esm({
+    "src/features/companion/menu/plantModal.ts"() {
       "use strict";
       init_plantRead();
       init_plant();
-      init_panel_ui();
-      init_plant_chips();
-      init_plant_grid();
+      init_panel();
+      init_plantChips();
+      init_plantGrid();
       init_modal();
       REFRESH_MS3 = 4e3;
       STRIP_ICON_PX = 24;
     }
   });
 
-  // src/ui/menus/companion/hatch-chips.ts
+  // src/features/companion/menu/hatchChips.ts
   function iconHolder3(sizePx) {
     const box = document.createElement("div");
     css2(box, {
@@ -63674,18 +63674,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     return box;
   }
   var SPRITE_LOG_TAG5, ICON_PX3;
-  var init_hatch_chips = __esm({
-    "src/ui/menus/companion/hatch-chips.ts"() {
+  var init_hatchChips = __esm({
+    "src/features/companion/menu/hatchChips.ts"() {
       "use strict";
-      init_spriteIconCache();
-      init_pets_ability_colors();
-      init_panel_ui();
+      init_iconCache();
+      init_abilityColorsTab();
+      init_panel();
       SPRITE_LOG_TAG5 = "companion-hatch";
       ICON_PX3 = 26;
     }
   });
 
-  // src/ui/menus/companion/hatch-modal.ts
+  // src/features/companion/menu/hatchModal.ts
   function openHatchModal(host, onAsk) {
     let scope = EMPTY_HATCH_SCOPE;
     let rules = { ...loadCompanionSettings().hatchKeepRules };
@@ -63883,20 +63883,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     void refresh();
   }
   var REFRESH_MS4, TILE_ICON_PX2, ABILITY_ICON_PX, ABILITY_LIST_MAX_PX, MIN_STR, MAX_STR, DEFAULT_STR;
-  var init_hatch_modal = __esm({
-    "src/ui/menus/companion/hatch-modal.ts"() {
+  var init_hatchModal = __esm({
+    "src/features/companion/menu/hatchModal.ts"() {
       "use strict";
       init_hatchFlow();
       init_hatch();
       init_hatchRead();
-      init_state4();
-      init_panel_ui();
-      init_harvest_chips();
-      init_harvest_fields();
-      init_hatch_chips();
+      init_state3();
+      init_panel();
+      init_harvestChips();
+      init_harvestFields();
+      init_hatchChips();
       init_modal();
-      init_settings_notice();
-      init_hatch_settings_modal();
+      init_settingsNotice();
+      init_hatchSettingsModal();
       REFRESH_MS4 = 4e3;
       TILE_ICON_PX2 = 26;
       ABILITY_ICON_PX = 16;
@@ -63907,7 +63907,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/menus/companion/actions-modal.ts
+  // src/features/companion/menu/actionsModal.ts
   function openActionsModal(host, onAsk) {
     const modal = openModal2({ host, title: "What can you do?", widthPx: 420 });
     const list = document.createElement("div");
@@ -63983,24 +63983,24 @@ Restore figures are averages; unlucky streaks do worse.`;
     ]);
     void refresh();
   }
-  var init_actions_modal = __esm({
-    "src/ui/menus/companion/actions-modal.ts"() {
+  var init_actionsModal = __esm({
+    "src/features/companion/menu/actionsModal.ts"() {
       "use strict";
       init_gardenRead();
       init_petFeed();
       init_plantRead();
       init_plant();
       init_hatchRead();
-      init_panel_ui();
-      init_harvest_modal();
-      init_feed_modal();
-      init_plant_modal();
-      init_hatch_modal();
+      init_panel();
+      init_harvestModal();
+      init_feedModal();
+      init_plantModal();
+      init_hatchModal();
       init_modal();
     }
   });
 
-  // src/ui/menus/companion/chat-tab.ts
+  // src/features/companion/menu/chatTab.ts
   function borrowed() {
     const npcId = CompanionService.getNpcId();
     return { npcId, name: npcId ? npcId.replace(/^NPC_/, "") : null };
@@ -64125,21 +64125,21 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   var EMPTY_HINT, IDENTITY_REFRESH_MS;
-  var init_chat_tab = __esm({
-    "src/ui/menus/companion/chat-tab.ts"() {
+  var init_chatTab = __esm({
+    "src/features/companion/menu/chatTab.ts"() {
       "use strict";
       init_chat();
       init_companion();
-      init_panel_ui();
-      init_chat_view();
-      init_actions_modal();
-      init_settings_modal();
+      init_panel();
+      init_chatView();
+      init_actionsModal();
+      init_settingsModal();
       EMPTY_HINT = "Pick something below. I always ask first.";
       IDENTITY_REFRESH_MS = 2e3;
     }
   });
 
-  // src/ui/menus/companion/companion.ts
+  // src/features/companion/menu/index.ts
   function renderCompanionMenu(root) {
     ensurePanelStyles();
     const ui = new Menu({ id: "companion", compact: true, windowSelector: ".qws-win" });
@@ -64159,19 +64159,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     window.addEventListener(COMPANION_TAB_EVENT, onTabRequest);
   }
   var MIN_WIDTH_PX;
-  var init_companion2 = __esm({
-    "src/ui/menus/companion/companion.ts"() {
+  var init_menu14 = __esm({
+    "src/features/companion/menu/index.ts"() {
       "use strict";
       init_menu();
-      init_companionKeybind();
-      init_panel_ui();
-      init_behavior_tab();
-      init_chat_tab();
+      init_keybind();
+      init_panel();
+      init_behaviorTab();
+      init_chatTab();
       MIN_WIDTH_PX = 460;
     }
   });
 
-  // src/utils/antiafk.ts
+  // src/features/antiAfk/antiAfk.ts
   function createAntiAfkController(deps) {
     const STOP_EVENTS = ["visibilitychange", "blur", "focus", "focusout", "pagehide", "freeze", "resume"];
     const listeners9 = [];
@@ -64328,13 +64328,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
   }
-  var init_antiafk = __esm({
-    "src/utils/antiafk.ts"() {
+  var init_antiAfk = __esm({
+    "src/features/antiAfk/antiAfk.ts"() {
       "use strict";
     }
   });
 
-  // src/services/editorPointerControls.ts
+  // src/features/editor/pointerControls.ts
   function tileKeyOf(target) {
     return `${target.tileType}|${target.localTileIndex}`;
   }
@@ -64415,10 +64415,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     window.addEventListener("contextmenu", handleContextMenu, true);
   }
   var installed3, dragMode, lastTileKey;
-  var init_editorPointerControls = __esm({
-    "src/services/editorPointerControls.ts"() {
+  var init_pointerControls = __esm({
+    "src/features/editor/pointerControls.ts"() {
       "use strict";
-      init_tileObjectSystemApi();
+      init_tileObjects();
       init_editor();
       installed3 = false;
       dragMode = null;
@@ -64426,7 +64426,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/reactionWatch.ts
+  // src/features/companion/reactionWatch.ts
   function enabled2() {
     try {
       const settings = loadCompanionSettings();
@@ -64692,12 +64692,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var SESSION_PATH, DRAIN_MS, SLOW_TICK_MS, LOW_PRIORITY_MAX_DISTANCE, running2, unsubscribers2, timers, gate, speaking, session, lastHour, prevStats, prevWeather, lastAbilityAt, prevShops, prevLuck, prevGarden, latestGarden, announcedEggs, eggsPrimed, clone;
   var init_reactionWatch = __esm({
-    "src/services/companion/reactionWatch.ts"() {
+    "src/features/companion/reactionWatch.ts"() {
       "use strict";
       init_data();
       init_atoms();
-      init_localStorage();
-      init_hatchTracker();
+      init_storage();
+      init_tracker();
       init_notifier();
       init_pets();
       init_stats();
@@ -64705,7 +64705,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_chat();
       init_dialogueLines();
       init_reactions();
-      init_state4();
+      init_state3();
       SESSION_PATH = "companionSession";
       DRAIN_MS = 2e3;
       SLOW_TICK_MS = 3e4;
@@ -64730,7 +64730,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/wanderInterest.ts
+  // src/features/companion/wanderInterest.ts
   function pickOne3(options, random) {
     return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
   }
@@ -64854,7 +64854,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var INTEREST_CHANCE, ALMOST_READY_MS, ALMOST_READY_GROWTH, KIND_WEIGHT, KIND_EMOTE, KIND_RANK, withArticle, LINES, NEIGHBOURS, COMMENT_CHANCE, COMMENT_COOLDOWN_MS, COMMENT_MAX_DISTANCE;
   var init_wanderInterest = __esm({
-    "src/services/companion/wanderInterest.ts"() {
+    "src/features/companion/wanderInterest.ts"() {
       "use strict";
       init_emoteTypes();
       INTEREST_CHANCE = 0.5;
@@ -64926,7 +64926,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/wanderWatch.ts
+  // src/features/companion/wanderWatch.ts
   function busy2() {
     if (!CompanionService.isRunning()) return true;
     if (CompanionService.isBusy()) return true;
@@ -65052,14 +65052,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var SLOT_REFRESH_MS, PENDING_TTL_MS, running3, unsubscribers3, timers2, latestGarden2, slotIdx, pending3, lastCommentAt, spaced2, hooks2;
   var init_wanderWatch = __esm({
-    "src/services/companion/wanderWatch.ts"() {
+    "src/features/companion/wanderWatch.ts"() {
       "use strict";
       init_data();
       init_atoms();
       init_companion();
       init_anchors();
       init_chat();
-      init_state4();
+      init_state3();
       init_wanderInterest();
       SLOT_REFRESH_MS = 3e4;
       PENDING_TTL_MS = 6e4;
@@ -65075,7 +65075,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/emoteMirror.ts
+  // src/features/companion/emoteMirror.ts
   function latestOwnEmote(entries2, playerId2, ignoreIds = []) {
     if (!playerId2 || !Array.isArray(entries2) || ignoreIds.includes(playerId2)) return null;
     let best = null;
@@ -65170,7 +65170,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var MIRROR_MAX_DISTANCE, MIRROR_COOLDOWN_MS, MIRROR_DELAY_MIN_MS, MIRROR_DELAY_MAX_MS, STREAK_GAP_MS, STREAK_MAX_ANSWERS, SECOND_ANSWER_CHANCE, LINE_CHANCE, LINE_COOLDOWN_MS, SPAM_THRESHOLD, SPAM_LINE_CHANCE, SPAM_LINE_COOLDOWN_MS, PLAYABLE, MIRROR_LINES, SPAM_LINES;
   var init_emoteMirror = __esm({
-    "src/services/companion/emoteMirror.ts"() {
+    "src/features/companion/emoteMirror.ts"() {
       "use strict";
       init_emoteTypes();
       MIRROR_MAX_DISTANCE = 8;
@@ -65200,7 +65200,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/emoteMirrorWatch.ts
+  // src/features/companion/emoteMirrorWatch.ts
   function enabled3() {
     try {
       const settings = loadCompanionSettings();
@@ -65314,13 +65314,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var running4, generation, unsubscribers4, state4, pending4, localId, roomId, entries;
   var init_emoteMirrorWatch = __esm({
-    "src/services/companion/emoteMirrorWatch.ts"() {
+    "src/features/companion/emoteMirrorWatch.ts"() {
       "use strict";
       init_atoms();
       init_companion();
       init_chat();
       init_emoteMirror();
-      init_state4();
+      init_state3();
       running4 = false;
       generation = 0;
       unsubscribers4 = [];
@@ -65332,7 +65332,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/afk.ts
+  // src/features/companion/afk.ts
   function pickOne4(options, random) {
     return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
   }
@@ -65360,7 +65360,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var AFK_IDLE_AFTER_MS, AFK_ASLEEP_AFTER_MS, SNORE_SLOW_AFTER_MS, SNORE_SLOW_MIN_MS, SNORE_SLOW_MAX_MS, WAKE_LINE_MIN_ASLEEP_MS, RETURN_LINE_CHANCE, IDLE_LINES, RETURN_LINES, WAKE_LINES, LONG_WAKE_LINES, say;
   var init_afk = __esm({
-    "src/services/companion/afk.ts"() {
+    "src/features/companion/afk.ts"() {
       "use strict";
       init_emoteTypes();
       AFK_IDLE_AFTER_MS = 3 * 6e4;
@@ -65401,7 +65401,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/afkWatch.ts
+  // src/features/companion/afkWatch.ts
   function enabled4() {
     try {
       const settings = loadCompanionSettings();
@@ -65532,13 +65532,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var ACTIVITY_THROTTLE_MS, NEAR_DISTANCE, INPUT_EVENTS, running5, generation2, state5, unsubscribers5, ownHold, pending5, chain, lastNotedAt, lastTile;
   var init_afkWatch = __esm({
-    "src/services/companion/afkWatch.ts"() {
+    "src/features/companion/afkWatch.ts"() {
       "use strict";
       init_atoms();
       init_companion();
       init_chat();
       init_afk();
-      init_state4();
+      init_state3();
       ACTIVITY_THROTTLE_MS = 1e3;
       NEAR_DISTANCE = 8;
       INPUT_EVENTS = ["keydown", "pointerdown", "pointermove", "wheel", "touchstart"];
@@ -65554,7 +65554,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/companionAsk.ts
+  // src/features/companion/menu/askBanner.ts
   function ensureStyle2() {
     if (document.getElementById(STYLE_ID6)) return;
     const style2 = document.createElement("style");
@@ -65706,15 +65706,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     sync();
   }
   var CARD_ID, STYLE_ID6, Z_INDEX, ICON_PX4, TICK_MS, ACCENT3, TEXT5, TEXT_DIM5, card3, clockBar, timer, shownId, unsubscribe;
-  var init_companionAsk = __esm({
-    "src/ui/companionAsk.ts"() {
+  var init_askBanner = __esm({
+    "src/features/companion/menu/askBanner.ts"() {
       "use strict";
       init_chat();
       init_proposals();
       init_companion();
-      init_state4();
-      init_chat_icons();
-      init_npc_avatar();
+      init_state3();
+      init_chatIcons();
+      init_npcAvatar();
       CARD_ID = "mgCompanionAsk";
       STYLE_ID6 = "mgCompanionAskStyle";
       Z_INDEX = "2000050";
@@ -65731,7 +65731,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/utils/mgVersion.ts
+  // src/game/mgVersion.ts
   function nowMs() {
     return Date.now();
   }
@@ -65858,9 +65858,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var VERSION_PATH, VERSION_CACHE_TTL, pendingPromise, cachedVersion, cachedAt, MGVersion;
   var init_mgVersion = __esm({
-    "src/utils/mgVersion.ts"() {
+    "src/game/mgVersion.ts"() {
       "use strict";
-      init_mgCommon();
+      init_gm();
       VERSION_PATH = "/platform/v1/version";
       VERSION_CACHE_TTL = 60 * 1e3;
       pendingPromise = null;
@@ -65877,7 +65877,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/autoRecoDisabledNotice.ts
+  // src/features/autoReco/disabledNotice.ts
   function ensureStyle3() {
     if (document.getElementById(STYLE_ID7)) return;
     const style2 = document.createElement("style");
@@ -65926,16 +65926,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     button2?.focus();
   }
   var OVERLAY_ID2, STYLE_ID7;
-  var init_autoRecoDisabledNotice = __esm({
-    "src/ui/autoRecoDisabledNotice.ts"() {
+  var init_disabledNotice = __esm({
+    "src/features/autoReco/disabledNotice.ts"() {
       "use strict";
-      init_localStorage();
+      init_storage();
       OVERLAY_ID2 = "mgAutoRecoDisabledNotice";
       STYLE_ID7 = "mgAutoRecoDisabledNoticeStyle";
     }
   });
 
-  // src/ui/roomPrivacyNotice.ts
+  // src/features/room/privacyNotice.ts
   function ensureStyle4() {
     if (document.getElementById(STYLE_ID8)) return;
     const style2 = document.createElement("style");
@@ -65994,17 +65994,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     document.body.appendChild(overlay);
   }
   var OVERLAY_ID3, STYLE_ID8, HUB_INSTALL_URL;
-  var init_roomPrivacyNotice = __esm({
-    "src/ui/roomPrivacyNotice.ts"() {
+  var init_privacyNotice = __esm({
+    "src/features/room/privacyNotice.ts"() {
       "use strict";
-      init_localStorage();
+      init_storage();
       OVERLAY_ID3 = "mgRoomPrivacyNotice";
       STYLE_ID8 = "mgRoomPrivacyNoticeStyle";
       HUB_INSTALL_URL = "https://github.com/Ariedam64/MG-CommunityHub/raw/refs/heads/main/dist/mg-community-hub.user.js";
     }
   });
 
-  // src/services/changelog.ts
+  // src/features/changelog/fetchChangelog.ts
   function parseChangelogPayload(raw) {
     if (!raw || typeof raw !== "object") {
       throw new Error("Invalid changelog payload: not an object");
@@ -66054,10 +66054,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     return entries2.find((entry) => entry.version === version) ?? null;
   }
   var REPO_OWNER3, REPO_NAME3, REPO_BRANCH3, CHANGELOG_FILE_PATH, RAW_BASE_URL3;
-  var init_changelog = __esm({
-    "src/services/changelog.ts"() {
+  var init_fetchChangelog = __esm({
+    "src/features/changelog/fetchChangelog.ts"() {
       "use strict";
-      init_version();
+      init_modVersion();
       REPO_OWNER3 = "Ariedam64";
       REPO_NAME3 = "MG-AriesMod";
       REPO_BRANCH3 = "main";
@@ -66066,7 +66066,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/changelogNotice.ts
+  // src/features/changelog/notice.ts
   function ensureStyle5() {
     if (document.getElementById(STYLE_ID9)) return;
     const style2 = document.createElement("style");
@@ -66183,12 +66183,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     document.body.appendChild(buildOverlay(entry));
   }
   var OVERLAY_ID4, STYLE_ID9, OVERLAY_Z_INDEX2, ACCENT4, ACCENT_22, TEXT6, TEXT_DIM6;
-  var init_changelogNotice = __esm({
-    "src/ui/changelogNotice.ts"() {
+  var init_notice = __esm({
+    "src/features/changelog/notice.ts"() {
       "use strict";
-      init_version();
-      init_localStorage();
-      init_changelog();
+      init_modVersion();
+      init_storage();
+      init_fetchChangelog();
       init_markdown();
       init_carousel();
       init_styles();
@@ -66202,10 +66202,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ariesModAPI/config.ts
+  // src/platform/ariesApi/config.ts
   var API_BASE_URL2, API_ORIGIN, MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND, DEFAULT_HEARTBEAT_INTERVAL;
   var init_config2 = __esm({
-    "src/ariesModAPI/config.ts"() {
+    "src/platform/ariesApi/config.ts"() {
       "use strict";
       API_BASE_URL2 = "https://ariesmod-api.ariedam.fr/";
       API_ORIGIN = API_BASE_URL2.replace(/\/$/, "");
@@ -66214,7 +66214,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ariesModAPI/auth/bridge.ts
+  // src/platform/ariesApi/authBridge.ts
   function normalizeAuthPayload(data) {
     if (!data || data.type !== "aries_discord_auth" || !data.apiKey) return null;
     return {
@@ -66266,15 +66266,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return true;
   }
-  var init_bridge2 = __esm({
-    "src/ariesModAPI/auth/bridge.ts"() {
+  var init_authBridge = __esm({
+    "src/platform/ariesApi/authBridge.ts"() {
       "use strict";
-      init_localStorage();
+      init_storage();
       init_config2();
     }
   });
 
-  // src/ariesModAPI/client/http.ts
+  // src/platform/ariesApi/http.ts
   function buildUrl(path, query) {
     const url = new URL(path, API_BASE_URL2);
     if (query) {
@@ -66365,16 +66365,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     return request("POST", path, { body });
   }
   var init_http2 = __esm({
-    "src/ariesModAPI/client/http.ts"() {
+    "src/platform/ariesApi/http.ts"() {
       "use strict";
       init_discordCsp();
-      init_localStorage();
+      init_storage();
       init_config2();
-      init_events();
+      init_discordPolls();
     }
   });
 
-  // src/ariesModAPI/endpoints/state.ts
+  // src/platform/ariesApi/playerStateReport.ts
   function clampPlayers2(n) {
     const value = Math.floor(Number(n));
     if (!Number.isFinite(value)) return 1;
@@ -66671,13 +66671,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     await buildAndSendPlayerState();
   }
   var gameReadyWatcherInitialized, gameReadyTriggered, preferredReportingIntervalMs, payloadReportingTimer, isPayloadReporting, lastSentPayloadSnapshot, unchangedSnapshotCount, initialSendRetries, MAX_INITIAL_RETRIES;
-  var init_state5 = __esm({
-    "src/ariesModAPI/endpoints/state.ts"() {
+  var init_playerStateReport = __esm({
+    "src/platform/ariesApi/playerStateReport.ts"() {
       "use strict";
       init_atoms();
-      init_page_context();
-      init_localStorage();
-      init_version();
+      init_pageContext();
+      init_storage();
+      init_modVersion();
       init_playerIdentity();
       init_http2();
       init_config2();
@@ -66704,46 +66704,46 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_main = __esm({
     "src/main.ts"() {
       "use strict";
-      init_sprite();
-      init_ws_hook();
+      init_sprites();
+      init_socketHook();
       init_hud();
-      init_debug_data2();
-      init_locker2();
-      init_calculator();
-      init_pets2();
-      init_misc2();
-      init_settings3();
-      init_notifier2();
-      init_tools2();
-      init_editor2();
-      init_keybinds2();
-      init_room();
-      init_skins2();
-      init_companion2();
+      init_menu2();
+      init_menu4();
+      init_menu5();
+      init_menu6();
+      init_menu7();
+      init_menu8();
+      init_menu3();
+      init_menu9();
+      init_menu10();
+      init_menu11();
+      init_menu12();
+      init_menu13();
+      init_menu14();
       init_skins();
       init_player();
-      init_antiafk();
+      init_antiAfk();
       init_editor();
-      init_editorPointerControls();
+      init_pointerControls();
       init_companion();
       init_feedWatch();
       init_reactionWatch();
       init_wanderWatch();
       init_emoteMirrorWatch();
       init_afkWatch();
-      init_companionAsk();
+      init_askBanner();
       init_gameVersion();
       init_mgVersion();
-      init_dynamic();
-      init_page_context();
-      init_spriteIconCache();
-      init_autoRecoDisabledNotice();
-      init_roomPrivacyNotice();
-      init_changelogNotice();
-      init_tileObjectSystemApi();
+      init_live();
+      init_pageContext();
+      init_iconCache();
+      init_disabledNotice();
+      init_privacyNotice();
+      init_notice();
+      init_tileObjects();
       init_discordCsp();
-      init_bridge2();
-      init_state5();
+      init_authBridge();
+      init_playerStateReport();
       (async function() {
         "use strict";
         if (initAuthBridgeIfNeeded()) return;
@@ -66802,7 +66802,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/utils/discordFrame.ts
+  // src/platform/discordFrame.ts
   var DISCORD_SHELL_FRAME_PARAM = "mc_shell_frame";
   function isDiscordHostFrame(loc) {
     if (!loc.hostname.endsWith("discordsays.com")) return false;

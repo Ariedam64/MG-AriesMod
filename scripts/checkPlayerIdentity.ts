@@ -15,7 +15,7 @@ import {
   selectSlotForAccount,
   findPlayerByAccountId,
   findSlotIndex,
-} from "../src/utils/playerIdentity";
+} from "../src/game/playerIdentity";
 
 let failures = 0;
 

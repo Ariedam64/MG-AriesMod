@@ -7,7 +7,7 @@
 //
 // Run with: npm run check:modalstate
 
-import { modalNameOf, nextModalState } from "../src/utils/modalState";
+import { modalNameOf, nextModalState } from "../src/game/modalState";
 
 let failures = 0;
 

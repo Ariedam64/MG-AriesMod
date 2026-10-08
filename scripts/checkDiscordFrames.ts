@@ -15,7 +15,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { isDiscordHostFrame } from "../src/utils/discordFrame";
+import { isDiscordHostFrame } from "../src/platform/discordFrame";
 
 let failures = 0;
 

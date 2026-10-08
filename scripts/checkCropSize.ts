@@ -1,7 +1,7 @@
 // Sanity check for the Crop Size rework: value/weight must match the game's own
 // `1 + (maxSizeMultiplier - 1) * (size - 50) / 50` formula.
-import { cropSizeMultiplier, cropWeight, readCropSize } from "../src/utils/cropSize";
-import { estimateProduceValue } from "../src/utils/calculators";
+import { cropSizeMultiplier, cropWeight, readCropSize } from "../src/data/rules/cropSize";
+import { estimateProduceValue } from "../src/data/rules/cropValue";
 
 const cases: Array<[string, number, number]> = [
   // species, size, expected coins (baseSellPrice * multiplier)

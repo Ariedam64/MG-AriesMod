@@ -19,7 +19,7 @@ import {
   shouldComment,
   type InterestKind,
   type WanderInterestInput,
-} from "../src/services/companion/wanderInterest";
+} from "../src/features/companion/wanderInterest";
 import {
   DEFAULT_MOVEMENT_CONFIG,
   drawWanderPause,
@@ -31,8 +31,8 @@ import {
   type MovementState,
   type WanderArea,
   type XY,
-} from "../src/services/companion/movement";
-import { EmoteType } from "../src/services/companion/emoteTypes";
+} from "../src/features/companion/movement";
+import { EmoteType } from "../src/features/companion/emoteTypes";
 
 let fails = 0;
 const check = (label: string, got: unknown, want: unknown) => {

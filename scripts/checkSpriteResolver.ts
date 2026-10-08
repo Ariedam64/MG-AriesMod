@@ -20,7 +20,7 @@ import {
   setCatalogReader,
   setSpriteIndex,
   type SpriteCatalogKey,
-} from "../src/ui/spriteResolver";
+} from "../src/ui/kit/sprites/resolver";
 
 const API = "https://mg-api.ariedam.fr";
 const sprite = (path: string) => `${API}/assets/sprites/${path}?v=1029`;

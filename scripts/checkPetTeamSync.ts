@@ -5,7 +5,7 @@
 // The server side is simulated from the game's own SavePetTeam reducer
 // (v1284): the name is trimmed and cut to 16 grapheme clusters, and a created
 // team is put at the FRONT of `petTeams`.
-import { reconcilePetTeams, type PetTeam, type ServerPetTeam } from "../src/services/petTeamReconcile";
+import { reconcilePetTeams, type PetTeam, type ServerPetTeam } from "../src/features/pets/teamReconcile";
 
 let failed = 0;
 const check = (label: string, got: unknown, want: unknown) => {

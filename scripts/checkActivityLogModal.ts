@@ -20,7 +20,7 @@ import {
   logsContentKind,
   maskTransformFor,
   planLogRowsShift,
-} from "../src/utils/activityLogModalLayout";
+} from "../src/game/activityLogModalLayout";
 
 let failures = 0;
 

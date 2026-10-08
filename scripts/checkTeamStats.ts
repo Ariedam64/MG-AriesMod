@@ -1,8 +1,8 @@
-import { computeAbilityStatsAtRatio } from "../src/services/petAbilityStats";
-import { computeTeamStats, effectGroupKeyForAbility } from "../src/services/petTeamStats";
-import { getPetStrength, getPetMaxStrength } from "../src/utils/petCalcul";
-import { captureState } from "../src/data/dynamic/state";
-import { buildSuggestedTeams } from "../src/services/petTeamBuilder";
+import { computeAbilityStatsAtRatio } from "../src/features/pets/abilityStats";
+import { computeTeamStats, effectGroupKeyForAbility } from "../src/features/pets/teamStats";
+import { getPetStrength, getPetMaxStrength } from "../src/data/rules/petValue";
+import { captureState } from "../src/data/live/state";
+import { buildSuggestedTeams } from "../src/features/pets/teamBuilder";
 
 const mkPet = (id: string, species: string, targetScale: number, xp: number, abilities: string[], hunger = 1e9) =>
   ({ id, itemType: "Pet" as const, petSpecies: species, name: id, xp, hunger, mutations: [], targetScale, abilities });

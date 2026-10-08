@@ -23,8 +23,8 @@ import {
   type MirrorAction,
   type MirrorState,
   type OwnEmote,
-} from "../src/services/companion/emoteMirror";
-import { EmoteType } from "../src/services/companion/emoteTypes";
+} from "../src/features/companion/emoteMirror";
+import { EmoteType } from "../src/features/companion/emoteTypes";
 
 let fails = 0;
 const check = (label: string, got: unknown, want: unknown) => {

@@ -1,18 +1,18 @@
 // src/ui/hud.ts
-import { NativeWS, sockets, workerFound } from "../core/state";
-import { ensureStore, isStoreCaptured, getCapturedInfo } from "../store/jotai";
-import { PetsService, installPetTeamHotkeysOnce, setTeamsForHotkeys } from "../services/pets";
-import { installShopKeybindsOnce } from "../services/shops";
-import { installCompanionKeybindsOnce } from "../services/companionKeybind";
-import { installSellKeybindsOnce } from "../services/sell";
-import { installPetHutchKeybindsOnce } from "../services/petHutchKeybind";
-import { installJournalKeybindsOnce } from "../services/journalKeybind";
-import { installDecorShedKeybindsOnce } from "../services/decorShedKeybind";
-import { installToolShackKeybindsOnce } from "../services/toolShackKeybind";
-import { installSeedSiloKeybindsOnce } from "../services/seedSiloKeybind";
-import { installFeedingTroughKeybindsOnce } from "../services/feedingTroughKeybind";
-import { installWeatherStationKeybindsOnce } from "../services/weatherStationKeybind";
-import { PetAlertService } from "../services/pet-alerts";
+import { NativeWS, sockets, workerFound } from "../game/ws/sockets";
+import { ensureStore, isStoreCaptured, getCapturedInfo } from "../game/store/jotai";
+import { PetsService, installPetTeamHotkeysOnce, setTeamsForHotkeys } from "../features/pets/pets";
+import { installShopKeybindsOnce } from "../features/shops/shops";
+import { installCompanionKeybindsOnce } from "../features/companion/keybind";
+import { installSellKeybindsOnce } from "../features/sellAllPets/keybind";
+import { installPetHutchKeybindsOnce } from "../features/keybinds/modalToggles/petHutch";
+import { installJournalKeybindsOnce } from "../features/keybinds/modalToggles/journal";
+import { installDecorShedKeybindsOnce } from "../features/keybinds/modalToggles/decorShed";
+import { installToolShackKeybindsOnce } from "../features/keybinds/modalToggles/toolShack";
+import { installSeedSiloKeybindsOnce } from "../features/keybinds/modalToggles/seedSilo";
+import { installFeedingTroughKeybindsOnce } from "../features/keybinds/modalToggles/feedingTrough";
+import { installWeatherStationKeybindsOnce } from "../features/keybinds/modalToggles/weatherStation";
+import { PetAlertService } from "../features/notifier/petAlerts";
 import {
   getKeybind,
   getKeybindLabel,
@@ -20,26 +20,26 @@ import {
   onKeybindChange,
   type Hotkey,
   type KeybindId,
-} from "../services/keybinds";
-import { isKeybindCaptureActive } from "../utils/keyboard";
-import { renderOverlay } from "./menus/notificationOverlay";
-import { startInstantFeedWidget } from "../utils/instantFeedWidget";
-import { getSpriteWarmupState, onSpriteWarmupProgress } from "./spriteIconCache";
-import { startCropValuesObserverFromGardenAtom } from "../utils/cropValues";
-import { startCropValueOverlayInPixi } from "../utils/cropValuePixi";
-import { startLockerIndicatorInPixi } from "../utils/lockerIndicatorPixi";
-import { startInjectSellAllPets } from "../utils/sellAllPets";
-import { startSellAllPetsPixi } from "../utils/sellAllPetsPixi";
-import { startSellCropsLockWatcher } from "../utils/sellCropsLock";
-import { startEggHatchLockIndicator } from "../utils/eggHatchLockIndicator";
-import { startDecorPickupLockIndicator } from "../utils/decorPickupLockIndicator";
-import { fetchRemoteVersion, getLocalVersion } from "../utils/version";
-import { isDiscordSurface } from "../utils/api";
-import { startInventorySortingObserver } from "../utils/inventorySorting";
-import { startActivityLogFilterPixi } from "../utils/activityLogFilterPixi";
-import { readAriesPath, writeAriesPath } from "../utils/localStorage";
-import { startActivityLogHistoryWatcher } from "../services/activityLogHistory";
-import { startHatchTracker } from "../services/hatchTracker";
+} from "../features/keybinds/keybinds";
+import { isKeybindCaptureActive } from "../lib/keyboard";
+import { renderOverlay } from "../features/notifier/overlay";
+import { startInstantFeedWidget } from "../features/pets/feedWidget";
+import { getSpriteWarmupState, onSpriteWarmupProgress } from "./kit/sprites/iconCache";
+import { startCropValuesObserverFromGardenAtom } from "../features/cropPrice/domTooltip";
+import { startCropValueOverlayInPixi } from "../features/cropPrice/badge";
+import { startLockerIndicatorInPixi } from "../features/locker/indicator";
+import { startInjectSellAllPets } from "../features/sellAllPets/domButton";
+import { startSellAllPetsPixi } from "../features/sellAllPets/pixiButton";
+import { startSellCropsLockWatcher } from "../features/locker/sellCropsLock";
+import { startEggHatchLockIndicator } from "../features/locker/eggHatchLockIndicator";
+import { startDecorPickupLockIndicator } from "../features/locker/decorPickupLockIndicator";
+import { fetchRemoteVersion, getLocalVersion } from "../platform/modVersion";
+import { isDiscordSurface } from "../platform/environment";
+import { startInventorySortingObserver } from "../features/inventory/sorting";
+import { startActivityLogFilterPixi } from "../features/activityLog/filterBar";
+import { readAriesPath, writeAriesPath } from "../platform/storage";
+import { startActivityLogHistoryWatcher } from "../features/activityLog/history";
+import { startHatchTracker } from "../features/hatch/tracker";
 
 // ========================
 // Types d’intégration

@@ -6,7 +6,7 @@
 // load synchronous: in every other frame the mod starts exactly as before, at
 // document-start.
 
-import { isDiscordHostFrame } from "./utils/discordFrame";
+import { isDiscordHostFrame } from "./platform/discordFrame";
 
 declare const require: (path: string) => unknown;
 

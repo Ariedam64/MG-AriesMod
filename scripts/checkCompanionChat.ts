@@ -9,15 +9,15 @@ import {
   rowKey,
   selectionSignature,
   type HarvestRow,
-} from "../src/services/companion/chat/harvest";
-import { compose, forGame } from "../src/services/companion/chat/bubbleTags";
+} from "../src/features/companion/chat/harvest";
+import { compose, forGame } from "../src/features/companion/chat/bubbleTags";
 import {
   describeFeed,
   disambiguate,
   feedSignature,
   isSettled,
   type FeedCandidate,
-} from "../src/services/companion/chat/feedScope";
+} from "../src/features/companion/chat/feedScope";
 import {
   countByItem,
   describePlan,
@@ -28,7 +28,7 @@ import {
   viablePlan,
   type PlantAssignment,
   type PlantScope,
-} from "../src/services/companion/chat/plant";
+} from "../src/features/companion/chat/plant";
 import {
   DEFAULT_KEEP_RULES,
   describeKeep,
@@ -43,21 +43,21 @@ import {
   toSell,
   type KeepRules,
   type PetRow,
-} from "../src/services/companion/chat/hatch";
-import { EmoteType } from "../src/services/companion/emoteTypes";
+} from "../src/features/companion/chat/hatch";
+import { EmoteType } from "../src/features/companion/emoteTypes";
 import {
   MAX_MESSAGES,
   append,
   appendAlertOnce,
   clearProposal,
   emptyLog,
-} from "../src/services/companion/chat/log";
+} from "../src/features/companion/chat/log";
 import {
   PROPOSAL_TTL_MS,
   isExpired,
   verdict,
   type Proposal,
-} from "../src/services/companion/chat/proposals";
+} from "../src/features/companion/chat/proposals";
 
 let fails = 0;
 const check = (label: string, got: unknown, want: unknown) => {

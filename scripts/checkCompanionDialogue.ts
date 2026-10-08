@@ -6,7 +6,7 @@ import {
   pickDialogueLine,
   type ContextualLine,
   type DialogueState,
-} from "../src/services/companion/dialogue";
+} from "../src/features/companion/dialogue";
 import {
   DEFAULT_CUSTOM_LINES,
   GENERIC_WEATHER_TEMPLATES,
@@ -17,8 +17,8 @@ import {
   ripeCropCount,
   sellMessage,
   weatherMessage,
-} from "../src/services/companion/dialogueLines";
-import { MAX_LINE_LENGTH, coerceSettings } from "../src/services/companion/settingsShape";
+} from "../src/features/companion/dialogueLines";
+import { MAX_LINE_LENGTH, coerceSettings } from "../src/features/companion/settingsShape";
 
 let fails = 0;
 const check = (label: string, got: unknown, want: unknown) => {

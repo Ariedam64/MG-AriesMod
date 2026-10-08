@@ -27,8 +27,8 @@ globalAny.localStorage = storage;
 // Un joueur qui a déjà des réglages Misc, mais jamais touché à celui-ci.
 stored.set("aries_mod", JSON.stringify({ version: 2, misc: { ghostMode: true } }));
 
-import { readAriesPath } from "../src/utils/localStorage";
-import { onShowCropPriceChange, readShowCropPrice, writeShowCropPrice } from "../src/utils/cropPriceSetting";
+import { readAriesPath } from "../src/platform/storage";
+import { onShowCropPriceChange, readShowCropPrice, writeShowCropPrice } from "../src/features/cropPrice/setting";
 
 let fails = 0;
 const check = (label: string, got: unknown, want: unknown) => {

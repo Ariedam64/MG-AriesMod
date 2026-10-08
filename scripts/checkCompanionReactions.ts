@@ -33,8 +33,8 @@ import {
   takeReaction,
   weatherChangeReaction,
   type Reaction,
-} from "../src/services/companion/reactions";
-import { DEFAULT_CUSTOM_LINES, POKE_WINDOW_MS, lineEmote, pokeLine } from "../src/services/companion/dialogueLines";
+} from "../src/features/companion/reactions";
+import { DEFAULT_CUSTOM_LINES, POKE_WINDOW_MS, lineEmote, pokeLine } from "../src/features/companion/dialogueLines";
 import {
   EmoteType,
   NPC_TALKING_MS,
@@ -42,8 +42,8 @@ import {
   cutTalking,
   emoteStartDelay,
   mergeEmoteSource,
-} from "../src/services/companion/emoteTypes";
-import type { StatsSnapshot } from "../src/services/stats";
+} from "../src/features/companion/emoteTypes";
+import type { StatsSnapshot } from "../src/features/stats/stats";
 
 let fails = 0;
 const check = (label: string, got: unknown, want: unknown) => {
