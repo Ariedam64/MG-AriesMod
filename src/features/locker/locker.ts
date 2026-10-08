@@ -13,6 +13,7 @@ import {
 } from "../../game/store/atoms";
 import { CROP_SIZE_MAX, readCropSize } from "../../data/rules/cropSize";
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
+import { clamp } from "../../lib/math";
 
 /** Référence des mutations visuelles reconnues par le locker. */
 const VISUAL_MUTATIONS = new Set(["Gold", "Rainbow"] as const);
@@ -52,7 +53,8 @@ const canonicalizeWeatherTag = (value: unknown): string | null => {
   return normalized || null;
 };
 
-const normalizeMutationsList = (raw: unknown): string[] => {
+/** Mutation tags in the locker's canonical spelling, empty ones dropped. */
+export const normalizeMutationsList = (raw: unknown): string[] => {
   if (!Array.isArray(raw)) return [];
   const out: string[] = [];
   for (let i = 0; i < raw.length; i++) {
@@ -217,36 +219,25 @@ const arraySignature = (arr: number[] | null): string =>
   Array.isArray(arr) ? arr.join(",") : "∅";
 
 const defaultOrder = (n: number) => Array.from({ length: n }, (_, i) => i);
-const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
-
-const extractSeedKey = (obj: CGO | null | undefined): string | null => {
+/** The species a garden object or grow slot names, under whichever field carries it. */
+export const extractSeedKey = (obj: unknown): string | null => {
   if (!obj || typeof obj !== "object") return null;
-  if (typeof (obj as Record<string, unknown>).seedKey === "string") {
-    return (obj as Record<string, unknown>).seedKey as string;
-  }
-  if (typeof obj.species === "string" && obj.species) {
-    return obj.species;
-  }
-  const asAny = obj as Record<string, unknown>;
-  const fallbacks = ["seedSpecies", "plantSpecies", "cropSpecies", "speciesId"];
-  for (const key of fallbacks) {
-    const value = asAny[key];
+  const fields = obj as Record<string, unknown>;
+  for (const key of ["seedKey", "species", "seedSpecies", "plantSpecies", "cropSpecies", "speciesId"]) {
+    const value = fields[key];
     if (typeof value === "string" && value) return value;
   }
   return null;
 };
 
-const clampPercent = (value: number, min: number, max: number): number =>
-  Math.max(min, Math.min(max, value));
-
 /** Crop Size of a grow slot, in [50, 100]. Falls back to a full-size slot. */
-const extractSizePercent = (slot: any): number => {
+export const extractSizePercent = (slot: any): number => {
   if (!slot || typeof slot !== "object") return CROP_SIZE_MAX;
 
   // Percent-shaped aliases some callers hand us in place of a raw slot.
   const alias = Number(slot.sizePercent ?? slot.sizePct ?? slot.percent ?? slot.progressPercent);
   if (Number.isFinite(alias)) {
-    return clampPercent(Math.round(alias), 0, CROP_SIZE_MAX);
+    return clamp(Math.round(alias), 0, CROP_SIZE_MAX);
   }
 
   const size = readCropSize(slot);
@@ -338,10 +329,6 @@ function startLockerSlotWatcherViaGardenObject(): LockerSlotWatcher {
     return pos >= 0 ? pos : 0;
   }
 
-  function sanitizeMutations(raw: unknown): string[] {
-    return normalizeMutationsList(raw);
-  }
-
   function computeSlotInfo(): LockerSlotInfo {
     const seedKey = extractSeedKey(cur);
     if (!isPlantObject(cur)) {
@@ -419,7 +406,7 @@ function startLockerSlotWatcherViaGardenObject(): LockerSlotWatcher {
     }
     const slot = typeof originalIndex === "number" ? slots[originalIndex] ?? null : null;
     const sizePercent = slot ? extractSizePercent(slot) : null;
-    const mutations = slot ? sanitizeMutations(slot.mutations) : [];
+    const mutations = slot ? normalizeMutationsList(slot.mutations) : [];
 
     // If the slot has its own species (e.g. "FourLeafClover" from a Clover plant),
     // prefer it as the seedKey so per-crop overrides resolve correctly.

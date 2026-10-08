@@ -9,7 +9,7 @@
     "typecheck": "npx -y -p typescript@5 tsc -p .",
     "check:stats": "esbuild scripts/checkTeamStats.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkTeamStats.cjs --log-level=error && node -e \"globalThis.window=globalThis;globalThis.document={};require('./node_modules/.cache/checkTeamStats.cjs')\"",
     "check:identity": "esbuild scripts/checkPlayerIdentity.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkPlayerIdentity.cjs --log-level=error && node node_modules/.cache/checkPlayerIdentity.cjs",
-    "check:commands": "esbuild scripts/checkQuinoaCommands.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkQuinoaCommands.cjs --log-level=error && node node_modules/.cache/checkQuinoaCommands.cjs",
+    "check:commands": "esbuild scripts/checkQuinoaCommands.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkQuinoaCommands.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkQuinoaCommands.cjs",
     "check:sprites": "esbuild scripts/checkSpriteResolver.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkSpriteResolver.cjs --log-level=error && node node_modules/.cache/checkSpriteResolver.cjs",
     "check:cropsize": "esbuild scripts/checkCropSize.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkCropSize.cjs --log-level=error && node -e \"globalThis.window=globalThis;globalThis.document={};require('./node_modules/.cache/checkCropSize.cjs')\"",
     "check:harvestfilters": "esbuild scripts/checkHarvestFilters.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkHarvestFilters.cjs --log-level=error && node -e \"globalThis.window=globalThis;globalThis.document={};require('./node_modules/.cache/checkHarvestFilters.cjs')\"",
@@ -35,6 +35,7 @@
     "check:activitylogmodal": "esbuild scripts/checkActivityLogModal.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkActivityLogModal.cjs --log-level=error && node node_modules/.cache/checkActivityLogModal.cjs",
     "check:discordframes": "esbuild scripts/checkDiscordFrames.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkDiscordFrames.cjs --log-level=error && node node_modules/.cache/checkDiscordFrames.cjs",
     "serve": "npx http-server dist -p 5174 --cors",
+    "check:outgoing": "esbuild scripts/checkOutgoingRules.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkOutgoingRules.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkOutgoingRules.cjs",
     "check:lib": "esbuild scripts/checkLib.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkLib.cjs --log-level=error && node node_modules/.cache/checkLib.cjs"
   },
   "devDependencies": {

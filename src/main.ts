@@ -1,6 +1,11 @@
 // src/main.ts
 import "./game/sprites";
 import { installPageWebSocketHook } from "./game/ws/socketHook";
+import { startAutoReco } from "./features/autoReco/autoReco";
+import { installEditorOutgoingRules } from "./features/editor/outgoingRules";
+import { installInventoryReserve } from "./features/misc/inventoryReserve";
+import { installLockerOutgoingRules } from "./features/locker/outgoingRules";
+import { installStatsCounters } from "./features/stats/outgoingCounters";
 import { mountHUD, initWatchers } from "./ui/hud";
 
 import { renderDebugDataMenu } from "./features/debug/menu";
@@ -63,6 +68,14 @@ import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/play
   }
 
   installPageWebSocketHook();
+  startAutoReco();
+  // Rules for one message type run in this order and the first drop wins: the
+  // editor handles its own garden first, then the inventory reserve, then the
+  // locker. Stats only count what all of them let through.
+  installEditorOutgoingRules();
+  installInventoryReserve();
+  installLockerOutgoingRules();
+  installStatsCounters();
   MGData.init();
   shareGlobal("MGData", MGData);
   initGameVersion();

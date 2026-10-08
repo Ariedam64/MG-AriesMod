@@ -307,3 +307,17 @@ export function makeAliasedAtom<T = any>(labels: string[]): View<T> {
     asSignature: opts => makeView<T, T>(resolved?.label ?? labels[0]).asSignature(opts),
   };
 }
+
+/**
+ * Reads a view once, then follows its changes. Unlike `onChangeNow`, the first
+ * read answers at once (with whatever the store holds, possibly nothing) rather
+ * than waiting for the atom to exist. Errors are swallowed on both steps.
+ */
+export async function readAndFollow<T>(view: View<T>, cb: (value: T) => void): Promise<void> {
+  try {
+    cb(await view.get());
+  } catch {}
+  try {
+    await view.onChange((next) => cb(next));
+  } catch {}
+}

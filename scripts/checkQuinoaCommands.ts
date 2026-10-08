@@ -14,13 +14,10 @@
 
 import {
   buildQuinoaMessage,
-  consumeOwnRequestId,
-  hasInjectedCommands,
-  observeGameCommandSequence,
   resetCommandSequence,
   seedCommandSequence,
-  takeCommandSequenceForGame,
 } from "../src/game/ws/commands";
+import { processOutgoingFrame } from "../src/game/ws/socketHook";
 
 let failures = 0;
 
@@ -35,14 +32,10 @@ function check(label: string, actual: unknown, expected: unknown): void {
   console.error(`FAIL ${label}\n  expected ${e}\n  actual   ${a}`);
 }
 
-/** Mirrors installQuinoaCommandSendInterceptor in src/hooks/ws-hook.ts. */
+/** Runs an envelope the game wrote through the real socket send hook. */
 function sendFromGame(envelope: any): any {
-  if (consumeOwnRequestId(envelope.requestId)) return envelope;
-  if (!hasInjectedCommands()) {
-    observeGameCommandSequence(envelope.commandSequence);
-    return envelope;
-  }
-  return { ...envelope, commandSequence: takeCommandSequenceForGame() };
+  const frame = processOutgoingFrame(JSON.stringify(envelope));
+  return typeof frame === "string" ? JSON.parse(frame) : frame;
 }
 
 const gameEnvelope = (commandSequence: number, type: string) => ({
