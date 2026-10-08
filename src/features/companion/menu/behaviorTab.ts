@@ -1,16 +1,17 @@
-// src/ui/menus/companion/behavior-tab.ts
-// Onglet Behavior : activation, comportement, et apparence empruntée.
+// The Behavior tab: on or off, where he stays, and whose look he borrows.
 //
-// Volontairement dépouillé. Les valeurs de déplacement (cadence, distances,
-// temporisations) sont des constantes de `movement.ts` : elles sont calées sur
-// le moteur de rendu du jeu, pas sur des préférences, et les exposer inviterait
-// à casser la marche sans comprendre pourquoi.
+// Kept bare on purpose. Movement values (pace, distances, delays) are
+// constants in `movement.ts`, tuned to the game's renderer rather than to
+// preferences.
 
 import { CompanionService } from "..";
 import { checkFeedNow } from "../feedWatch";
 import type { CompanionMode } from "../anchors";
-import { TEXT_DIM, css, selectField, toggle } from "../../../ui/kit/panel";
+import { select } from "../../../ui/kit/fields";
 import { collapsibleCard, settingRow } from "../../../ui/kit/layout";
+import { color } from "../../../ui/kit/theme";
+import { switchInput } from "../../../ui/kit/toggles";
+import { styled } from "./dom";
 
 const STATUS_REFRESH_MS = 1000;
 
@@ -18,6 +19,12 @@ const MODE_LABELS: Array<[CompanionMode, string]> = [
   ["follow", "Follow me"],
   ["garden", "Stay in my garden"],
 ];
+
+function selectWith(options: Array<[value: string, label: string]>): HTMLSelectElement {
+  const el = select({ small: true });
+  for (const [value, label] of options) el.append(new Option(label, value));
+  return el;
+}
 
 export function renderBehaviorTab(view: HTMLElement): void {
   view.innerHTML = "";
@@ -32,18 +39,18 @@ export function renderBehaviorTab(view: HTMLElement): void {
     onToggle: () => {},
   });
 
-  const enableToggle = toggle(settings.enabled, (on) => {
+  const enableToggle = switchInput(settings.enabled, (on) => {
     void CompanionService.applySettings({ enabled: on })
       .then(() => {
-        // Le couper doit retirer sa question tout de suite, pas au prochain
-        // battement de la veille, qui peut être à trente secondes.
+        // Switching him off must drop his question at once, not at the
+        // watch's next poll.
         checkFeedNow();
         refresh();
       })
       .catch(() => {});
   });
 
-  const modeSelect = selectField(MODE_LABELS.map(([value, label]) => [value, label]));
+  const modeSelect = selectWith(MODE_LABELS);
   modeSelect.value = settings.mode;
   modeSelect.addEventListener("change", () => {
     void CompanionService.applySettings({ mode: modeSelect.value as CompanionMode })
@@ -51,7 +58,7 @@ export function renderBehaviorTab(view: HTMLElement): void {
       .catch(() => {});
   });
 
-  const npcSelect = selectField([["", "Loading…"]]);
+  const npcSelect = selectWith([["", "Loading…"]]);
   npcSelect.disabled = true;
   npcSelect.addEventListener("change", () => {
     void CompanionService.applySettings({ npcId: npcSelect.value || null })
@@ -69,7 +76,7 @@ export function renderBehaviorTab(view: HTMLElement): void {
       }
       npcSelect.append(new Option("Automatic (an absent NPC)", ""));
       for (const npc of roster) {
-        // On signale les PNJ présents : les détourner les déplace à l'écran.
+        // NPCs already out are marked: borrowing them moves them on screen.
         npcSelect.append(new Option(npc.present ? `${npc.name} (in game)` : npc.name, npc.playerId));
       }
       npcSelect.value = CompanionService.getNpcId() ?? settings.npcId ?? "";
@@ -81,8 +88,7 @@ export function renderBehaviorTab(view: HTMLElement): void {
       npcSelect.append(new Option("Unavailable", ""));
     });
 
-  const status = document.createElement("div");
-  css(status, { fontSize: "12px", color: TEXT_DIM, padding: "2px 2px 0" });
+  const status = styled("div", { fontSize: "12px", color: color.textDim, padding: "2px 2px 0" });
 
   function refresh(): void {
     if (disposed) return;
@@ -94,17 +100,16 @@ export function renderBehaviorTab(view: HTMLElement): void {
     const name = npcId ? npcId.replace(/^NPC_/, "") : "?";
     const wanted = CompanionService.getSettings().mode;
     const actual = CompanionService.getEffectiveMode();
-    // Un repli silencieux serait incompréhensible : on le dit.
-    const fallback =
-      actual && actual !== wanted ? " (no garden found, following you)" : "";
+    // A silent fallback would make no sense to the player: it is said.
+    const fallback = actual && actual !== wanted ? " (no garden found, following you)" : "";
     status.textContent = `Active as ${name}${fallback}. Only you can see it.`;
   }
 
-  const askToggle = toggle(settings.askOnScreen, (on) => {
+  const askToggle = switchInput(settings.askOnScreen, (on) => {
     void CompanionService.applySettings({ askOnScreen: on });
   });
 
-  const reactionsToggle = toggle(settings.reactions, (on) => {
+  const reactionsToggle = switchInput(settings.reactions, (on) => {
     void CompanionService.applySettings({ reactions: on });
   });
 
@@ -114,7 +119,7 @@ export function renderBehaviorTab(view: HTMLElement): void {
     settingRow("Borrowed NPC", 'Whose look it takes. "In game" means already spawned.', npcSelect).row,
     settingRow("Ask on screen", "Shows his questions at the top, portrait and all.", askToggle).row,
     settingRow("Reactions", "Comments on weather, sales, milestones and how long you've played.", reactionsToggle).row,
-    status
+    status,
   );
 
   refresh();

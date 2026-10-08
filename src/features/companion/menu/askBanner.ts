@@ -1,37 +1,34 @@
-// src/ui/companionAsk.ts
-// La question du companion, en haut de l'écran.
+// The companion's question, at the top of the screen.
 //
-// Le fil du menu porte déjà toutes ses questions, mais il faut l'avoir ouvert.
-// Cette carte les montre là où le regard est, avec l'avatar de celui qui
-// demande et le même rendu tagué que le fil — donc les sprites.
+// The menu thread already carries every question, but it has to be open. This
+// card shows them where the eyes are, with the asker's portrait and the same
+// tagged rendering as the thread, sprites included.
 //
-// Ce qu'elle N'EST PAS : un raccourci vers l'action. Les deux boutons appellent
-// `CompanionChat.confirm` et `.decline`, exactement ce que fait le fil. C'est
-// la même confirmation par un autre chemin, jamais une seconde porte d'entrée
-// (cf. `services/companion/chat/proposals.ts`).
+// What it is NOT: a shortcut to the action. Its two buttons call
+// `CompanionChat.confirm` and `.decline`, exactly what the thread does. The
+// same confirmation by another path, never a second way in (see
+// `chat/proposals.ts`).
 //
-// Aucun effet à l'import : rien ne s'affiche tant que `mountCompanionAsk` n'a
-// pas été appelé.
+// Nothing happens at import: nothing shows until `mountCompanionAsk` is called.
 
+import { button } from "../../../ui/kit/button";
+import { h } from "../../../ui/kit/dom";
+import { layer } from "../../../ui/kit/theme";
+import { CompanionService } from "..";
 import { CompanionChat } from "../chat";
 import { PROPOSAL_TTL_MS, type Proposal } from "../chat/proposals";
-import { CompanionService } from "..";
 import { loadCompanionSettings } from "../state";
 import { renderTagged } from "./chatIcons";
 import { fillWithPortrait } from "./npcAvatar";
 
 const CARD_ID = "mgCompanionAsk";
 const STYLE_ID = "mgCompanionAskStyle";
-/** Sous les overlays plein écran, au-dessus du HUD et de ses fenêtres. */
-const Z_INDEX = "2000050";
+/** Under full-screen overlays, above the HUD and its windows. */
+const Z_INDEX = layer.window + 49;
 
 const ICON_PX = 17;
-/** Cadence du compte à rebours : assez fine pour que la barre coule. */
+/** The countdown's period: fine enough for the bar to flow. */
 const TICK_MS = 100;
-
-const ACCENT = "#5eead4";
-const TEXT = "#e7eef7";
-const TEXT_DIM = "rgba(231,238,247,0.68)";
 
 function ensureStyle(): void {
   if (document.getElementById(STYLE_ID)) return;
@@ -43,14 +40,14 @@ function ensureStyle(): void {
   z-index: ${Z_INDEX};
   width: 430px; max-width: calc(100vw - 24px);
   border-radius: 14px; overflow: hidden;
-  border: 1px solid rgba(94,234,212,0.22);
+  border: 1px solid var(--qmm-accent-border);
   background:
-    radial-gradient(120% 140% at 0% 0%, rgba(94,234,212,0.10), transparent 55%),
-    rgba(15,20,26,0.94);
+    radial-gradient(120% 140% at 0% 0%, var(--qmm-accent-soft), transparent 55%),
+    var(--qmm-gradient-panel);
   backdrop-filter: blur(8px);
-  box-shadow: 0 12px 38px rgba(0,0,0,0.48);
+  box-shadow: var(--qmm-shadow-modal);
   font: 12.5px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  color: ${TEXT};
+  color: var(--qmm-text);
   animation: mgAskIn 160ms ease-out;
 }
 @keyframes mgAskIn {
@@ -61,44 +58,31 @@ function ensureStyle(): void {
 #${CARD_ID} .mgask-face {
   width: 46px; height: 46px; flex: 0 0 auto;
   border-radius: 11px; overflow: hidden;
-  border: 1px solid rgba(94,234,212,0.22);
-  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--qmm-accent-border);
+  background: var(--qmm-hover-bg);
   display: grid; place-items: center;
   font-size: 22px; line-height: 1;
 }
 #${CARD_ID} .mgask-right { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
-#${CARD_ID} .mgask-who { font-size: 11px; font-weight: 700; color: ${ACCENT}; letter-spacing: 0.02em; }
+#${CARD_ID} .mgask-who { font-size: 11px; font-weight: 700; color: var(--qmm-accent); letter-spacing: 0.02em; }
 #${CARD_ID} .mgask-text { display: block; overflow-wrap: anywhere; }
 #${CARD_ID} .mgask-text img, #${CARD_ID} .mgask-text canvas { vertical-align: -3px; }
 #${CARD_ID} .mgask-buttons { display: flex; gap: 8px; }
-#${CARD_ID} button {
-  flex: 0 0 auto; padding: 6px 13px; border-radius: 9px; cursor: pointer;
-  font: 600 12px/1 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  transition: background 120ms ease, border-color 120ms ease;
-}
-#${CARD_ID} button.mgask-yes {
-  border: 1px solid rgba(94,234,212,0.45); background: rgba(94,234,212,0.16); color: ${ACCENT};
-}
-#${CARD_ID} button.mgask-yes:hover { background: rgba(94,234,212,0.26); }
-#${CARD_ID} button.mgask-no {
-  border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.05); color: ${TEXT_DIM};
-}
-#${CARD_ID} button.mgask-no:hover { background: rgba(255,255,255,0.10); }
-#${CARD_ID} .mgask-clock { height: 3px; background: rgba(255,255,255,0.07); }
+#${CARD_ID} .mgask-clock { height: 3px; background: var(--qmm-hover-bg); }
 #${CARD_ID} .mgask-clock > i {
   display: block; height: 100%; width: 100%;
-  background: linear-gradient(90deg, ${ACCENT}, rgba(94,234,212,0.45));
+  background: linear-gradient(90deg, var(--qmm-accent), var(--qmm-accent-border-hover));
 }
 `;
   document.head.appendChild(style);
 }
 
-/* --------------------------------- État ---------------------------------- */
+/* ---------------------------------- state --------------------------------- */
 
 let card: HTMLElement | null = null;
 let clockBar: HTMLElement | null = null;
 let timer: number | null = null;
-/** Question actuellement affichée : de quoi ne pas la redessiner à chaque tick. */
+/** The question on screen: so it is not redrawn on every tick. */
 let shownId: string | null = null;
 let unsubscribe: (() => void) | null = null;
 
@@ -114,74 +98,61 @@ function hide(): void {
 }
 
 /**
- * Le texte de la question, tel que le fil l'affiche.
+ * The question's text, as the thread shows it.
  *
- * On le reprend du journal plutôt que du résumé de la proposition : c'est la
- * même phrase, mais avec son balisage et ses vignettes. Une seule source pour
- * les deux rendus, sinon l'un dirait un jour autre chose que l'autre.
+ * Taken from the log rather than the proposal's summary: the same sentence,
+ * but with its markup and thumbnails. One source for both renderings, or one
+ * would end up saying something else.
  */
 function questionOf(proposal: Proposal): Node[] {
   const message = CompanionChat.getLog().messages.find((entry) => entry.proposalId === proposal.id);
   if (!message) return [document.createTextNode(proposal.summary)];
-  return message.positioned
-    ? renderTagged(message.text, message.icons, ICON_PX)
-    : [document.createTextNode(message.text)];
+  return message.positioned ? renderTagged(message.text, message.icons, ICON_PX) : [document.createTextNode(message.text)];
 }
 
 function build(proposal: Proposal): void {
   ensureStyle();
 
-  const root = document.createElement("div");
+  const root = h("div");
   root.id = CARD_ID;
 
-  const face = document.createElement("div");
-  face.className = "mgask-face";
-  // Repli visible tant que le portrait se compose, et définitif si le PNJ
-  // n'est pas rendu : une case vide passerait pour un bug.
-  face.textContent = "🤖";
+  // A visible fallback while the portrait is composed, and for good if the NPC
+  // is not drawn: an empty box would look like a bug.
+  const face = h("div", "mgask-face", "🤖");
   fillWithPortrait(face, CompanionService.getNpcId());
 
-  const who = document.createElement("div");
-  who.className = "mgask-who";
-  who.textContent = "Companion";
-
-  const text = document.createElement("div");
-  text.className = "mgask-text";
+  const text = h("div", "mgask-text");
   text.append(...questionOf(proposal));
 
-  const yes = document.createElement("button");
-  yes.className = "mgask-yes";
-  yes.textContent = "Yes, go ahead";
-  yes.addEventListener("click", () => {
-    // On retire tout de suite : la confirmation est asynchrone, et laisser la
-    // carte sous le curseur invite à cliquer deux fois.
-    hide();
-    void CompanionChat.confirm(proposal.id).catch(() => {});
+  // Hidden at once: the confirmation is asynchronous, and leaving the card
+  // under the cursor invites a second click.
+  const yes = button("Yes, go ahead", {
+    size: "sm",
+    variant: "primary",
+    onClick: () => {
+      hide();
+      void CompanionChat.confirm(proposal.id).catch(() => {});
+    },
+  });
+  const no = button("Not now", {
+    size: "sm",
+    onClick: () => {
+      hide();
+      CompanionChat.decline(proposal.id);
+    },
   });
 
-  const no = document.createElement("button");
-  no.className = "mgask-no";
-  no.textContent = "Not now";
-  no.addEventListener("click", () => {
-    hide();
-    CompanionChat.decline(proposal.id);
-  });
-
-  const buttons = document.createElement("div");
-  buttons.className = "mgask-buttons";
+  const buttons = h("div", "mgask-buttons");
   buttons.append(yes, no);
 
-  const right = document.createElement("div");
-  right.className = "mgask-right";
-  right.append(who, text, buttons);
+  const right = h("div", "mgask-right");
+  right.append(h("div", "mgask-who", "Companion"), text, buttons);
 
-  const body = document.createElement("div");
-  body.className = "mgask-body";
+  const body = h("div", "mgask-body");
   body.append(face, right);
 
-  const clock = document.createElement("div");
-  clock.className = "mgask-clock";
-  const fill = document.createElement("i");
+  const clock = h("div", "mgask-clock");
+  const fill = h("i");
   clock.append(fill);
 
   root.append(body, clock);
@@ -191,8 +162,8 @@ function build(proposal: Proposal): void {
   clockBar = fill;
   shownId = proposal.id;
 
-  // Le service laisse une question périmée en place jusqu'à son prochain
-  // battement ; la carte, elle, doit disparaître à l'heure dite.
+  // The chat leaves a stale question in place until its next check; the card
+  // must go on time.
   timer = window.setInterval(() => {
     const left = PROPOSAL_TTL_MS - (Date.now() - proposal.createdAtMs);
     if (left <= 0) {
@@ -205,14 +176,13 @@ function build(proposal: Proposal): void {
 
 function sync(): void {
   const proposal = CompanionChat.getProposal();
-
   if (!proposal) {
     hide();
     return;
   }
-  // Companion coupé, ou carte coupée dans les réglages. Le premier cas n'est
-  // pas qu'une précaution : une question restée en attente au moment où on le
-  // désactive s'afficherait sinon jusqu'à ce que la veille la retire.
+  // Companion off, or the card off in the settings. The first is not just a
+  // precaution: a question still waiting when he is switched off would
+  // otherwise stay on screen until the watch drops it.
   const settings = loadCompanionSettings();
   if (!settings.enabled || !settings.askOnScreen) {
     hide();
@@ -224,10 +194,9 @@ function sync(): void {
   build(proposal);
 }
 
-/** Affiche les questions du companion à l'écran. Idempotent. */
+/** Shows the companion's questions on screen. Idempotent. */
 export function mountCompanionAsk(): void {
   if (unsubscribe) return;
   unsubscribe = CompanionChat.subscribe(sync);
   sync();
 }
-

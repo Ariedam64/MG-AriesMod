@@ -1,17 +1,18 @@
-// src/ui/menus/companion/chat-tab.ts
-// Onglet Chat : le fil du companion, et la barre d'actions qui remplace la saisie.
+// The Chat tab: the companion's thread, and the action bar in place of an
+// input.
 //
-// On n'écrit pas au companion. Le fil sert à deux choses : recevoir ce qu'il
-// signale (alertes, réponses, avancement), et déclencher des actions depuis la
-// barre du bas. Chaque action passe par une question à confirmer — c'est la
-// règle du mod, l'automatisation n'est pas autorisée (cf. `chat/proposals.ts`).
+// Nobody writes to the companion. The thread does two things: receive what he
+// reports (answers, progress), and trigger actions from the bar. Every action
+// goes through a question to confirm: that is the mod's rule, automation is
+// not allowed (see `chat/proposals.ts`).
 //
-// Ce fichier assemble seulement : le rendu des bulles est dans `chat-view.ts`,
-// les actions dans `actions-modal.ts`.
+// This file only assembles: drawing the bubbles is `chatView.ts`, the actions
+// are `actionsModal.ts`.
 
+import { button, type ButtonOptions } from "../../../ui/kit/button";
 import { CompanionChat } from "../chat";
 import { CompanionService } from "..";
-import { button, css } from "../../../ui/kit/panel";
+import { openActionsModal } from "./actionsModal";
 import {
   actionBar,
   barHint,
@@ -24,15 +25,17 @@ import {
   threadBody,
   type NpcIdentityView,
 } from "./chatView";
-import { openActionsModal } from "./actionsModal";
+import { styled } from "./dom";
 import { openSettingsModal } from "./settingsModal";
 
 const EMPTY_HINT = "Pick something below. I always ask first.";
 
-/** Le companion démarre sans bruit : on regarde régulièrement qui il est devenu. */
+/** The companion starts quietly: who he became is looked at regularly. */
 const IDENTITY_REFRESH_MS = 2000;
 
-/** Le PNJ emprunté : son identifiant pour la tenue, son nom pour le repli. */
+const SMALL: ButtonOptions = { size: "sm", block: true, lockWhilePending: true };
+
+/** The borrowed NPC: its id for the outfit, its name for the fallback. */
 function borrowed(): NpcIdentityView {
   const npcId = CompanionService.getNpcId();
   return { npcId, name: npcId ? npcId.replace(/^NPC_/, "") : null };
@@ -41,18 +44,30 @@ function borrowed(): NpcIdentityView {
 export function renderChatTab(view: HTMLElement): void {
   view.innerHTML = "";
 
-  const root = document.createElement("div");
-  css(root, { display: "flex", flexDirection: "column", gap: "8px" });
+  const root = styled("div", { display: "flex", flexDirection: "column", gap: "8px" });
   view.append(root);
 
   const header = chatHeader("Companion");
   const thread = threadBody();
   const bar = actionBar();
 
-  // Les popups se placent au-dessus de la fenêtre du HUD qui porte l'onglet.
+  // Popups sit above the HUD window that holds the tab.
   const host = (view.closest(".qws-win") as HTMLElement | null) ?? view;
 
-  /* -------------------------------- Fil ----------------------------------- */
+  /* --------------------------------- thread --------------------------------- */
+
+  function confirmRow(proposalId: string): HTMLElement {
+    const row = styled("div", { display: "flex", gap: "6px", alignSelf: "flex-start", marginLeft: "34px", marginTop: "2px" });
+    row.append(
+      button("Yes, go ahead", {
+        ...SMALL,
+        variant: "primary",
+        onClick: () => void CompanionChat.confirm(proposalId).catch(() => {}),
+      }),
+      button("Not now", { ...SMALL, onClick: () => CompanionChat.decline(proposalId) }),
+    );
+    return row;
+  }
 
   function renderThread(): void {
     thread.innerHTML = "";
@@ -86,12 +101,12 @@ export function renderChatTab(view: HTMLElement): void {
             isFirstInGroup: !previous || startsDay || !isSameGroup(previous, message),
             isLastInGroup: !next || !isSameGroup(message, next),
           },
-          identity
-        )
+          identity,
+        ),
       );
 
-      // Les boutons ne suivent que la proposition *courante* : une question
-      // déjà tranchée reste lisible dans le fil, mais n'est plus actionnable.
+      // The buttons only follow the *current* proposal: a question already
+      // answered stays readable in the thread, but no longer actionable.
       if (message.proposalId && proposal && proposal.id === message.proposalId) {
         thread.append(confirmRow(message.proposalId));
       }
@@ -100,25 +115,13 @@ export function renderChatTab(view: HTMLElement): void {
     thread.scrollTop = thread.scrollHeight;
   }
 
-  function confirmRow(proposalId: string): HTMLElement {
-    const row = document.createElement("div");
-    css(row, { display: "flex", gap: "6px", alignSelf: "flex-start", marginLeft: "34px", marginTop: "2px" });
-    row.append(
-      button("Yes, go ahead", "accent", () => void CompanionChat.confirm(proposalId).catch(() => {})),
-      button("Not now", "neutral", () => CompanionChat.decline(proposalId))
-    );
-    return row;
-  }
+  /* ------------------------------- action bar ------------------------------- */
 
-  /* ---------------------------- Barre d'actions --------------------------- */
-
-  const actionsButton = button("Actions", "neutral", () => {
-    openActionsModal(host, (request) => {
-      void CompanionChat.ask(request).catch(() => {});
-    });
+  const actionsButton = button("Actions", {
+    ...SMALL,
+    onClick: () => openActionsModal(host, (request) => void CompanionChat.ask(request).catch(() => {})),
   });
-
-  const settingsButton = button("Settings", "neutral", () => openSettingsModal(host));
+  const settingsButton = button("Settings", { ...SMALL, onClick: () => openSettingsModal(host) });
 
   function renderBar(): void {
     bar.innerHTML = "";
@@ -126,8 +129,8 @@ export function renderChatTab(view: HTMLElement): void {
 
     if (run) {
       bar.append(
-        button(`Stop (${run.done}/${run.total})`, "danger", () => CompanionChat.cancelRun()),
-        barHint("Working on it", "warn")
+        button(`Stop (${run.done}/${run.total})`, { ...SMALL, variant: "danger", onClick: () => CompanionChat.cancelRun() }),
+        barHint("Working on it", "warn"),
       );
       return;
     }
@@ -135,13 +138,13 @@ export function renderChatTab(view: HTMLElement): void {
     bar.append(actionsButton, settingsButton);
   }
 
-  /* ------------------------------- En-tête -------------------------------- */
+  /* --------------------------------- header --------------------------------- */
 
   function renderStatus(): void {
     header.setIdentity(borrowed());
     const run = CompanionChat.getRun();
     if (run) {
-      // Neutre : le même bandeau sert à récolter, planter, faire éclore et vendre.
+      // Neutral: the same line serves harvesting, planting, hatching and selling.
       header.setStatus(`On it, ${run.done} of ${run.total}`, true);
       return;
     }
@@ -149,10 +152,7 @@ export function renderChatTab(view: HTMLElement): void {
       header.setStatus("Waiting on you", true);
       return;
     }
-    header.setStatus(
-      CompanionService.isRunning() ? "Ready when you are" : "Not out yet, but I can still help",
-      false
-    );
+    header.setStatus(CompanionService.isRunning() ? "Ready when you are" : "Not out yet, but I can still help", false);
   }
 
   function renderAll(): void {
@@ -164,12 +164,11 @@ export function renderChatTab(view: HTMLElement): void {
   root.append(header.root, thread, bar);
   renderAll();
 
-  /* ------------------------------ Cycle de vie ---------------------------- */
+  /* -------------------------------- lifecycle ------------------------------- */
 
-  // Le menu redessine un onglet en vidant sa vue, sans appeler de nettoyage :
-  // on se désabonne donc sur détachement, pour qu'un ré-affichage n'empile pas
-  // un second abonnement. La popup, elle, se referme d'elle-même quand la
-  // fenêtre qui la porte disparaît.
+  // The menu redraws a tab by emptying its view without calling any cleanup:
+  // the subscription goes once the view is detached, so a redraw does not
+  // stack a second one. The popup closes by itself when its window goes.
   let unsubscribe = () => {};
   unsubscribe = CompanionChat.subscribe(() => {
     if (!root.isConnected) {
@@ -179,9 +178,9 @@ export function renderChatTab(view: HTMLElement): void {
     renderAll();
   });
 
-  // Le PNJ n'est connu qu'une fois le companion démarré, ce qui n'émet aucun
-  // message : sans ce battement, le portrait resterait anonyme jusqu'au premier
-  // échange. `setIdentity` ne refait rien quand l'identité n'a pas changé.
+  // The NPC is only known once the companion has started, which posts no
+  // message: without this beat the portrait would stay anonymous until the
+  // first exchange. `setIdentity` does nothing when the identity is unchanged.
   const identityTimer = window.setInterval(() => {
     if (!root.isConnected) {
       clearInterval(identityTimer);

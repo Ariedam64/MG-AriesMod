@@ -1,25 +1,27 @@
-// src/ui/menus/companion/plant-modal.ts
-// Dessiner un plan de plantation, ouvert depuis le menu des actions.
+// Drawing a planting plan, opened from the actions menu.
 //
-// On choisit une graine ou un œuf dans la palette, on peint les cases où on le
-// veut, et on demande. Les cases occupées sont rouges et refusent le clic : le
-// jeu n'y accepterait rien, autant le dire tout de suite plutôt que d'envoyer
-// une commande vouée à être ignorée.
+// Pick a seed or an egg from the palette, paint the tiles where it should go,
+// and ask. Taken tiles are red and refuse the click: the game would accept
+// nothing there, so it is said at once rather than sending a command bound to
+// be ignored.
 //
-// La palette compte à rebours : on ne peut pas poser plus de cases qu'on n'a
-// d'exemplaires. Un plan de quarante carottes quand on en a douze ne veut rien
-// dire, et se solderait par un rapport d'échec évitable.
+// The palette counts down: no more tiles than copies in stock. A plan of forty
+// carrots with twelve in the bag means nothing and would end in an avoidable
+// failure report.
 //
-// La popup ne plante rien. Elle produit une *demande*, que le chat transforme
-// en question à confirmer : l'automatisation n'est pas autorisée sur le mod
-// (cf. `chat/proposals.ts`). Le plan n'est pas conservé d'une ouverture à
-// l'autre — c'est une demande ponctuelle, pas un réglage.
+// The popup plants nothing. It makes a *request*, which the chat turns into a
+// question to confirm (see `chat/proposals.ts`). The plan is not kept from one
+// opening to the next: it is a one-off request, not a setting.
 
+import { button } from "../../../ui/kit/button";
+import { sectionLabel } from "../../../ui/kit/card";
+import { openModal } from "../../../ui/kit/modal";
+import { color } from "../../../ui/kit/theme";
 import type { ChatRequest } from "../chat";
 import { plantRequest } from "../chat/commands/plant";
-import { readPlantScope } from "../chat/plantRead";
 import {
   EMPTY_SCOPE,
+  countByItem,
   describePlan,
   itemKey,
   stockLeft,
@@ -28,30 +30,46 @@ import {
   type PlantItem,
   type PlantScope,
 } from "../chat/plant";
-import { BORDER, TEAL, TEXT_DIM, button, css, sectionLabel } from "../../../ui/kit/panel";
+import { readPlantScope } from "../chat/plantRead";
+import { styled } from "./dom";
+import { countedIcon, resultBox } from "./harvestFields";
 import { plantItemIcon, plantTile, type PlantTile } from "./plantChips";
 import { plantGrid } from "./plantGrid";
-import { openModal } from "../../../ui/kit/modal";
 
-/** Le jardin bouge tout seul : une case peut se remplir pendant qu'on dessine. */
+/** The garden moves on its own: a tile can fill up while the plan is drawn. */
 const REFRESH_MS = 4000;
 const STRIP_ICON_PX = 24;
+
+/**
+ * Two stocks, two sections.
+ *
+ * A seed and an egg go on the same tile, but they are not the same objects and
+ * are not looked for in the same frame of mind. Mixed in one row, the few eggs
+ * got lost among thirty seeds. An empty section hides: "Eggs" over nothing
+ * says nothing.
+ */
+function paletteGroup(title: string): { root: HTMLElement; row: HTMLElement } {
+  const root = styled("div", { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
+  const row = styled("div", { display: "flex", flexWrap: "wrap", gap: "5px" });
+  root.append(sectionLabel(title), row);
+  return { root, row };
+}
 
 export function openPlantModal(host: HTMLElement, onAsk: (request: ChatRequest) => void): void {
   let scope: PlantScope = EMPTY_SCOPE;
   /**
-   * Le plan, indexé par tuile. L'ordre d'insertion est celui du dessin, et il
-   * compte : c'est lui qui départage les cases quand la réserve ne suffit plus.
+   * The plan, by tile. Insertion order is drawing order, and it matters: it
+   * breaks ties when the stock runs short.
    */
   let plan = new Map<number, PlantAssignment>();
   let held: PlantItem | null = null;
-  /** `scope.tiles` en Set : la grille l'interroge deux cents fois par passe. */
+  /** `scope.tiles` as a Set: the grid asks it two hundred times per pass. */
   let owned = new Set<number>();
 
-  /** Palette montée, reconstruite seulement quand la réserve change de composition. */
+  /** The palette, rebuilt only when the stock changes make-up. */
   let tiles = new Map<string, PlantTile>();
   let paletteSignature = "";
-  /** Vignettes du bandeau, réutilisées d'une passe à l'autre pour ne pas clignoter. */
+  /** The strip's thumbnails, reused from one pass to the next so they do not flicker. */
   const stripIcons = new Map<string, HTMLElement>();
 
   const modal = openModal({
@@ -64,37 +82,15 @@ export function openPlantModal(host: HTMLElement, onAsk: (request: ChatRequest) 
     },
   });
 
-  /* -------------------------------- Palette ------------------------------- */
-
-  /**
-   * Deux réserves, deux rubriques.
-   *
-   * Une graine et un œuf se posent sur la même case, mais ce ne sont pas les
-   * mêmes objets et on ne les cherche pas dans le même état d'esprit. Mêlés
-   * dans une seule rangée, les rares œufs se perdaient parmi trente graines.
-   * Une rubrique vide disparaît : titrer « Eggs » sous rien n'apprend rien.
-   */
-  function paletteGroup(title: string): { root: HTMLElement; row: HTMLElement } {
-    const root = document.createElement("div");
-    css(root, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
-    const row = document.createElement("div");
-    css(row, { display: "flex", flexWrap: "wrap", gap: "5px" });
-    root.append(sectionLabel(title), row);
-    return { root, row };
-  }
-
   const seedGroup = paletteGroup("Seeds");
   const eggGroup = paletteGroup("Eggs");
 
-  const paletteEmpty = document.createElement("div");
-  css(paletteEmpty, { fontSize: "12px", color: TEXT_DIM, lineHeight: "1.5" });
-  paletteEmpty.textContent = "Nothing to plant. No seeds, no eggs.";
-
-  const hint = document.createElement("div");
-  css(hint, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.5" });
-  hint.textContent = "Pick one and draw. Right click erases, red is taken.";
-
-  /* --------------------------------- Grille -------------------------------- */
+  const paletteEmpty = styled("div", { fontSize: "12px", color: color.textDim, lineHeight: "1.5" }, "Nothing to plant. No seeds, no eggs.");
+  const hint = styled(
+    "div",
+    { fontSize: "11px", color: color.textDim, lineHeight: "1.5" },
+    "Pick one and draw. Right click erases, red is taken.",
+  );
 
   const grid = plantGrid({
     owned: () => owned,
@@ -104,48 +100,37 @@ export function openPlantModal(host: HTMLElement, onAsk: (request: ChatRequest) 
     onPaint: (tileIndex, mode) => paint(tileIndex, mode),
   });
 
-  /* -------------------------------- Bandeau -------------------------------- */
+  const strip = resultBox();
+  const stripIconRow = styled("div", { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" });
+  strip.root.append(stripIconRow);
 
-  const strip = document.createElement("div");
-  css(strip, {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-    padding: "11px 12px",
-    borderRadius: "12px",
-    background: "rgba(94,234,212,0.07)",
-    border: `1px solid ${BORDER}`,
-    flex: "0 0 auto",
+  const clearButton = button("Clear", {
+    size: "sm",
+    block: true,
+    onClick: () => {
+      plan = new Map();
+      render();
+    },
   });
 
-  const stripCount = document.createElement("div");
-  css(stripCount, { fontSize: "13px", fontWeight: "600", color: TEAL });
-
-  const stripIconRow = document.createElement("div");
-  css(stripIconRow, { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" });
-
-  strip.append(stripCount, stripIconRow);
-
-  /* --------------------------------- Pied ---------------------------------- */
-
-  const clearButton = button("Clear", "neutral", () => {
-    plan = new Map();
-    render();
+  const askButton = button("Ask to plant these", {
+    size: "sm",
+    block: true,
+    variant: "primary",
+    onClick: () => {
+      const drawn = [...plan.values()];
+      // The drawn plan stays put; the garden is read again at confirmation to
+      // notice a tile that filled up or a seed spent elsewhere.
+      onAsk(plantRequest(describePlan(drawn), async () => viablePlan(drawn, await readPlantScope())));
+      modal.close();
+    },
   });
+  askButton.style.marginLeft = "auto";
 
-  const askButton = button("Ask to plant these", "accent", () => {
-    const drawn = [...plan.values()];
-    // The drawn plan stays put; the garden is read again at confirmation to
-    // notice a tile that filled up or a seed spent elsewhere.
-    onAsk(plantRequest(describePlan(drawn), async () => viablePlan(drawn, await readPlantScope())));
-    modal.close();
-  });
-  css(askButton, { marginLeft: "auto" });
-
-  modal.body.append(seedGroup.root, eggGroup.root, paletteEmpty, hint, grid.root, strip);
+  modal.body.append(seedGroup.root, eggGroup.root, paletteEmpty, hint, grid.root, strip.root);
   modal.footer.append(clearButton, askButton);
 
-  /* -------------------------------- Dessin --------------------------------- */
+  /* --------------------------------- drawing -------------------------------- */
 
   function remainingFor(item: { kind: PlantItem["kind"]; id: string }): number {
     return stockLeft([...plan.values()], scope.items).get(itemKey(item)) ?? 0;
@@ -161,8 +146,8 @@ export function openPlantModal(host: HTMLElement, onAsk: (request: ChatRequest) 
 
     const current = plan.get(tileIndex);
     if (current && itemKey(current) === itemKey(held)) return;
-    // Repeindre par-dessus une autre sorte rend son exemplaire à la réserve :
-    // on compte donc après retrait, pas avant.
+    // Painting over another kind gives its copy back to the stock: count
+    // after removing it, not before.
     if (current) plan.delete(tileIndex);
     if (remainingFor(held) <= 0) {
       if (current) plan.set(tileIndex, current);
@@ -173,9 +158,9 @@ export function openPlantModal(host: HTMLElement, onAsk: (request: ChatRequest) 
     render();
   }
 
-  /* --------------------------------- Rendu --------------------------------- */
+  /* --------------------------------- render --------------------------------- */
 
-  /** Reconstruit la palette quand la réserve change de composition, pas de compte. */
+  /** Rebuilds the palette when the stock changes make-up, not count. */
   function syncPalette(): void {
     const signature = scope.items.map(itemKey).join("|");
     if (signature === paletteSignature) return;
@@ -193,42 +178,27 @@ export function openPlantModal(host: HTMLElement, onAsk: (request: ChatRequest) 
       (item.kind === "egg" ? eggGroup : seedGroup).row.append(tile.el);
     }
 
-    // La sorte tenue en main a pu disparaître de la réserve entre deux lectures.
+    // The kind in hand may have left the stock between two reads.
     if (held && !tiles.has(itemKey(held))) held = null;
     if (!held) held = scope.items[0] ?? null;
   }
 
   function renderStrip(): void {
     const drawn = [...plan.values()];
-    stripCount.textContent =
-      drawn.length === 0 ? "Nothing to plant yet" : `${drawn.length} tile${drawn.length === 1 ? "" : "s"}`;
-
-    stripIconRow.replaceChildren();
+    strip.headline.textContent = drawn.length === 0 ? "Nothing to plant yet" : `${drawn.length} tile${drawn.length === 1 ? "" : "s"}`;
     stripIconRow.style.display = drawn.length === 0 ? "none" : "flex";
 
-    const counts = new Map<string, { item: PlantAssignment; count: number }>();
-    for (const assignment of drawn) {
-      const key = itemKey(assignment);
-      const known = counts.get(key);
-      if (known) known.count++;
-      else counts.set(key, { item: assignment, count: 1 });
-    }
-
-    for (const [key, entry] of [...counts.entries()].sort((a, b) => b[1].count - a[1].count)) {
-      let icon = stripIcons.get(key);
-      if (!icon) {
-        icon = plantItemIcon(entry.item, STRIP_ICON_PX);
-        stripIcons.set(key, icon);
-      }
-      const pair = document.createElement("div");
-      pair.title = entry.item.name;
-      css(pair, { display: "flex", alignItems: "center", gap: "3px" });
-      const tally = document.createElement("span");
-      css(tally, { fontSize: "11px", color: TEXT_DIM });
-      tally.textContent = String(entry.count);
-      pair.append(icon, tally);
-      stripIconRow.append(pair);
-    }
+    stripIconRow.replaceChildren(
+      ...countByItem(drawn).map((entry) => {
+        const key = itemKey(entry);
+        let icon = stripIcons.get(key);
+        if (!icon) {
+          icon = plantItemIcon(entry, STRIP_ICON_PX);
+          stripIcons.set(key, icon);
+        }
+        return countedIcon(icon, entry.name, entry.count);
+      }),
+    );
   }
 
   function render(): void {
@@ -251,7 +221,7 @@ export function openPlantModal(host: HTMLElement, onAsk: (request: ChatRequest) 
 
     grid.update();
     renderStrip();
-    askButton.disabled = plan.size === 0;
+    askButton.setEnabled(plan.size > 0);
   }
 
   async function refresh(): Promise<void> {
@@ -260,8 +230,8 @@ export function openPlantModal(host: HTMLElement, onAsk: (request: ChatRequest) 
     if (!modal.isOpen()) return;
     owned = new Set(scope.tiles);
 
-    // Une case peinte qui vient d'être occupée, ou une graine partie ailleurs :
-    // le dessin perd la case plutôt que de promettre ce qui n'est plus possible.
+    // A painted tile just taken, or a seed gone elsewhere: the drawing loses
+    // the tile rather than promise what is no longer possible.
     plan = new Map(viablePlan([...plan.values()], scope).map((entry) => [entry.tileIndex, entry]));
     render();
   }

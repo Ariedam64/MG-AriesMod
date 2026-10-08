@@ -1,32 +1,31 @@
-// src/ui/menus/companion/npc-avatar.ts
-// Compose le portrait du PNJ à partir de ses cosmétiques, cadré sur la tête.
+// Composes the NPC's portrait from its cosmetics, framed on the head.
 //
-// Le jeu empile des PNG pour dessiner un personnage ; on fait la même chose
-// dans un canvas. Les images passent par `setImageSafe`, qui les route via GM
-// dans l'Activity Discord où le chargement direct est bloqué.
+// The game stacks PNGs to draw a character; the same is done here in a
+// canvas. Images go through `setImageSafe`, which routes them through GM in the
+// Discord Activity, where direct loading is blocked.
 
 import { readNpcOutfit, cosmeticUrl } from "../avatar";
 import { setImageSafe } from "../../../platform/discordCsp";
 
-/** Les calques sont carrés ; cette taille sert de toile, pas d'affichage. */
+/** The layers are square; this size is the canvas, not the display. */
 const CANVAS_PX = 128;
-/** Côté du portrait découpé. Assez grand pour rester net à 32 px. */
+/** The cropped portrait's side. Big enough to stay sharp at 32 px. */
 const PORTRAIT_PX = 64;
 
 /**
- * Marge autour de la tête, en fraction de sa largeur.
+ * The margin around the head, as a share of its width.
  *
- * Un cadrage collé au personnage donne un portrait étouffé ; un peu d'air
- * autour, et ça ressemble à une photo de profil.
+ * A frame tight on the character gives a cramped portrait; a little air
+ * around it and it looks like a profile picture.
  */
 const HEAD_PADDING = 0.22;
 
 /**
- * Cadrage de repli, en fractions de la toile.
+ * The fallback frame, as shares of the canvas.
  *
- * Sert quand la mesure est impossible — un canvas teinté par une image
- * cross-origin refuse de rendre ses pixels. Un personnage debout a la tête en
- * haut et au centre : c'est tout ce que suppose ce repli.
+ * Used when measuring is impossible: a canvas tainted by a cross-origin image
+ * refuses to give its pixels back. A standing character has its head at the
+ * top and in the middle, and that is all this fallback assumes.
  */
 const FALLBACK_CROP = { x: 0.28, y: 0.04, size: 0.44 };
 
@@ -35,8 +34,8 @@ const pending = new Map<string, Promise<HTMLCanvasElement | null>>();
 function loadImage(url: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image();
-    // Sans ça, une image d'une autre origine teinte le canvas et interdit d'en
-    // relire les pixels — donc de mesurer où se trouve la tête.
+    // Without it, an image from another origin taints the canvas and forbids
+    // reading its pixels, so measuring where the head is.
     img.crossOrigin = "anonymous";
     img.addEventListener("load", () => resolve(img));
     img.addEventListener("error", () => resolve(null));
@@ -47,11 +46,10 @@ function loadImage(url: string): Promise<HTMLImageElement | null> {
 type Box = { x: number; y: number; width: number; height: number };
 
 /**
- * Boîte englobante des pixels visibles.
+ * The bounding box of the visible pixels.
  *
- * Les calques de cosmétiques sont très majoritairement transparents : leur
- * partie opaque, c'est le personnage. Rend `null` si la mesure est refusée ou
- * si rien n'est visible.
+ * Cosmetic layers are mostly transparent: their opaque part is the character.
+ * `null` when measuring is refused or nothing is visible.
  */
 function opaqueBounds(canvas: HTMLCanvasElement): Box | null {
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
@@ -71,7 +69,7 @@ function opaqueBounds(canvas: HTMLCanvasElement): Box | null {
 
   for (let y = 0; y < canvas.height; y++) {
     for (let x = 0; x < canvas.width; x++) {
-      // Un alpha résiduel n'est pas du dessin : on ignore le quasi-transparent.
+      // A leftover alpha is not drawing: near-transparent pixels are skipped.
       if (pixels[(y * canvas.width + x) * 4 + 3] < 16) continue;
       if (x < minX) minX = x;
       if (x > maxX) maxX = x;
@@ -85,12 +83,12 @@ function opaqueBounds(canvas: HTMLCanvasElement): Box | null {
 }
 
 /**
- * Le carré à découper pour obtenir un portrait.
+ * The square to cut out for a portrait.
  *
- * La tête d'un personnage debout occupe le haut de sa silhouette, et sa largeur
- * d'épaules donne l'échelle : un carré de ce côté, posé sur le sommet et centré
- * horizontalement, cadre la tête et les épaules. Rien n'est mesuré en dur — le
- * cadrage suit le dessin, quel qu'il soit.
+ * A standing character's head fills the top of its outline, and its shoulder
+ * width gives the scale: a square of that side, set on the top and centred
+ * horizontally, frames the head and shoulders. Nothing is measured by hand:
+ * the frame follows the drawing, whatever it is.
  */
 function headCrop(canvas: HTMLCanvasElement): Box {
   const bounds = opaqueBounds(canvas);
@@ -105,7 +103,7 @@ function headCrop(canvas: HTMLCanvasElement): Box {
 
   const side = Math.min(bounds.width * (1 + HEAD_PADDING * 2), bounds.height, canvas.height);
   const centreX = bounds.x + bounds.width / 2;
-  // Ancré sur le sommet du personnage, remonté d'un souffle pour l'air du haut.
+  // Anchored on the character's top, raised a touch for some air above.
   const top = Math.max(0, bounds.y - side * (HEAD_PADDING / 2));
 
   return {
@@ -125,7 +123,7 @@ async function compose(npcId: string): Promise<HTMLCanvasElement | null> {
 
   const layers = await Promise.all(urls.map(loadImage));
   const drawable = layers.filter((img): img is HTMLImageElement => img !== null);
-  // Rien n'a chargé : on rend la main au repli plutôt qu'un carré vide.
+  // Nothing loaded: back to the fallback rather than an empty square.
   if (drawable.length === 0) return null;
 
   const full = document.createElement("canvas");
@@ -142,18 +140,18 @@ async function compose(npcId: string): Promise<HTMLCanvasElement | null> {
   portrait.height = PORTRAIT_PX;
   const out = portrait.getContext("2d");
   if (!out) return null;
-  // Le dessin est petit et agrandi : lissé, il baverait.
+  // The drawing is small and scaled up: smoothed, it would blur.
   out.imageSmoothingEnabled = false;
   out.drawImage(full, crop.x, crop.y, crop.width, crop.height, 0, 0, PORTRAIT_PX, PORTRAIT_PX);
   return portrait;
 }
 
 /**
- * Le portrait d'un PNJ, composé une seule fois par identité.
+ * An NPC's portrait, composed once per identity.
  *
- * Le résultat est mémorisé : le fil redessine ses bulles à chaque message, et
- * recomposer quatre PNG à chaque fois serait du gâchis. Rend `null` quand la
- * tenue n'est pas connue — l'appelant garde alors son repli.
+ * The result is kept: the thread redraws its bubbles on every message, and
+ * composing four PNGs each time would be waste. `null` when the outfit is not
+ * known, and the caller keeps its fallback.
  */
 function npcPortrait(npcId: string): Promise<HTMLCanvasElement | null> {
   let known = pending.get(npcId);
@@ -164,13 +162,13 @@ function npcPortrait(npcId: string): Promise<HTMLCanvasElement | null> {
   return known;
 }
 
-/** Pose le portrait dans un conteneur, en gardant ce qu'il contient s'il n'y en a pas. */
+/** Puts the portrait in a box, keeping what it holds when there is none. */
 export function fillWithPortrait(box: HTMLElement, npcId: string | null): void {
   if (!npcId) return;
   void npcPortrait(npcId).then((source) => {
     if (!source || !box.isConnected) return;
 
-    // Un canvas ne peut être qu'à un endroit : chaque bulle a besoin du sien.
+    // A canvas can only be in one place: every bubble needs its own.
     const view = document.createElement("canvas");
     view.width = source.width;
     view.height = source.height;

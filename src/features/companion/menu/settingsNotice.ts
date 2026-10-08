@@ -1,62 +1,40 @@
-// src/ui/menus/companion/settings-notice.ts
-// L'avertissement d'une action dont les réglages n'ont jamais été ouverts.
+// The warning on an action whose settings were never opened.
 //
-// Il ne bloque rien : l'action marche très bien avec ses valeurs par défaut, et
-// barrer la route de quelqu'un qui veut juste essayer serait pénible. Il dit ce
-// que le companion fera faute d'instruction, et met l'écran de réglages à un
-// clic — puis disparaît définitivement une fois cet écran ouvert.
+// It blocks nothing: the action works fine with its defaults, and barring the
+// way of someone who just wants to try would be a nuisance. It says what the
+// companion will do without instructions and puts the settings screen one click
+// away, then goes for good once that screen has been opened.
 
+import { button } from "../../../ui/kit/button";
+import { color } from "../../../ui/kit/theme";
 import { isUnreviewed, type SettingsGroup } from "../state";
-import { BORDER, TEXT, WARN, css } from "../../../ui/kit/panel";
-
-export type SettingsNotice = { root: HTMLElement };
+import { styled } from "./dom";
 
 /**
- * Rend un bandeau, ou un élément vide si le groupe a déjà été consulté.
+ * A banner, or an empty element if the group was already looked at.
  *
- * L'appelant l'ajoute sans condition : décider ici plutôt qu'au point d'appel
- * évite que trois popups oublient chacune de leur côté de poser la question.
+ * The caller adds it unconditionally: deciding here rather than at the call
+ * site keeps three popups from each forgetting to ask.
  */
-export function settingsNotice(group: SettingsGroup, what: string, onOpen: () => void): SettingsNotice {
-  const root = document.createElement("div");
+export function settingsNotice(group: SettingsGroup, what: string, onOpen: () => void): HTMLElement {
   if (!isUnreviewed(group)) {
-    // Un élément vide compte quand même dans une colonne flex : sans ça il
-    // laisserait un espace de la taille du `gap` en haut de chaque popup.
-    root.style.display = "none";
-    return { root };
+    // An empty element still counts in a flex column: without this it would
+    // leave a gap the size of `gap` at the top of every popup.
+    return styled("div", { display: "none" });
   }
 
-  css(root, {
+  const root = styled("div", {
     display: "flex",
     alignItems: "center",
     gap: "10px",
     padding: "10px 12px",
     borderRadius: "12px",
-    background: "rgba(251,191,36,0.08)",
-    border: `1px solid ${BORDER}`,
+    background: color.warnSoft,
+    border: `1px solid ${color.border}`,
     flex: "0 0 auto",
   });
-
-  const text = document.createElement("div");
-  css(text, { fontSize: "11.5px", lineHeight: "1.5", color: TEXT, flex: "1", minWidth: "0" });
-  text.textContent = what;
-
-  const open = document.createElement("button");
-  open.type = "button";
-  open.textContent = "Set up";
-  css(open, {
-    flex: "0 0 auto",
-    padding: "6px 11px",
-    borderRadius: "9px",
-    border: `1px solid ${WARN}`,
-    background: "transparent",
-    color: WARN,
-    cursor: "pointer",
-    fontSize: "11.5px",
-    lineHeight: "1",
-  });
-  open.addEventListener("click", onOpen);
-
-  root.append(text, open);
-  return { root };
+  const open = button("Set up", { size: "sm", onClick: onOpen });
+  open.style.flex = "0 0 auto";
+  root.append(styled("div", { fontSize: "11.5px", lineHeight: "1.5", color: color.text, flex: "1", minWidth: "0" }, what), open);
+  return root;
 }

@@ -1,62 +1,48 @@
-// src/ui/menus/companion/hatch-chips.ts
-// Vignettes des critères de conservation : espèces, capacités.
+// Thumbnails for the keep rules: species and abilities.
 //
-// Une capacité n'a pas de sprite — elle a une couleur, celle que le gestionnaire
-// d'animaux lui donne déjà. On reprend la même plutôt que d'en inventer une
-// seconde : c'est le repère que le joueur a déjà en tête.
+// An ability has no sprite, it has a colour: the one the pet manager already
+// gives it. That one is reused rather than inventing a second: it is the cue
+// the player already has in mind.
 
 import { attachSpriteIcon } from "../../../ui/kit/sprites/iconCache";
+import { color } from "../../../ui/kit/theme";
 import { getAbilityChipColors } from "../../pets/abilityColorsTab";
-import { TEXT_DIM, css } from "../../../ui/kit/panel";
+import { iconSlot, styled } from "./dom";
 
 const SPRITE_LOG_TAG = "companion-hatch";
 const ICON_PX = 26;
 
-function iconHolder(sizePx: number): HTMLElement {
-  const box = document.createElement("div");
-  css(box, {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: `${sizePx}px`,
-    height: `${sizePx}px`,
-    flex: "0 0 auto",
-  });
-  return box;
-}
-
 /**
- * L'animal d'une espèce.
+ * A species' pet.
  *
- * Le repli sur l'initiale n'est pas décoratif : certaines espèces récentes
- * n'ont pas encore d'entrée dans l'atlas embarqué, et une case vide ne se
- * distinguerait pas d'un bug.
+ * The initial as a fallback is not decoration: some recent species have no
+ * entry in the bundled atlas yet, and an empty box would look like a bug.
  */
 export function petSpeciesIcon(species: string, sizePx = ICON_PX): HTMLElement {
-  const box = iconHolder(sizePx);
+  const box = iconSlot(sizePx);
   const candidates = [species, species.replace(/\s+/g, "")].filter(Boolean);
   attachSpriteIcon(box, ["pet"], candidates, sizePx, SPRITE_LOG_TAG, {
     onNoSpriteFound: () => {
-      css(box, { fontSize: "12px", fontWeight: "700", color: TEXT_DIM });
+      Object.assign(box.style, { fontSize: "12px", fontWeight: "700", color: color.textDim });
       box.textContent = species.charAt(0).toUpperCase();
     },
   });
   return box;
 }
 
-/** La pastille colorée d'une capacité, dans les couleurs du gestionnaire d'animaux. */
+/** An ability's coloured chip, in the pet manager's colours. */
 export function abilityIcon(abilityId: string, sizePx = ICON_PX): HTMLElement {
-  const box = iconHolder(sizePx);
-  const square = document.createElement("span");
+  const box = iconSlot(sizePx);
   const { bg } = getAbilityChipColors(abilityId);
-  css(square, {
-    display: "inline-block",
-    width: "13px",
-    height: "13px",
-    borderRadius: "4px",
-    background: bg,
-    boxShadow: "0 0 0 1px rgba(0,0,0,0.4) inset, 0 0 0 1px rgba(255,255,255,0.1)",
-  });
-  box.append(square);
+  box.append(
+    styled("span", {
+      display: "inline-block",
+      width: "13px",
+      height: "13px",
+      borderRadius: "4px",
+      background: bg,
+      boxShadow: `0 0 0 1px ${color.fieldBg} inset, 0 0 0 1px ${color.track}`,
+    }),
+  );
   return box;
 }

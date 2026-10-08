@@ -1,18 +1,15 @@
-// src/ui/menus/companion/harvest-settings-modal.ts
-// Réglages de la récolte : avec quelle équipe il cueille.
+// Harvest settings: which team he picks with.
 //
-// Ce qu'il récolte se choisit dans la popup Harvest, demande par demande. Ici
-// ne vit que ce qui vaut pour toutes les récoltes.
+// What he harvests is chosen in the Harvest popup, request by request. Only
+// what holds for every harvest lives here.
 
 import { CompanionService } from "..";
-import { loadCompanionSettings, markReviewed } from "../state";
-import { TEXT_DIM, button, css } from "../../../ui/kit/panel";
 import { settingRow } from "../../../ui/kit/layout";
-import { NO_TEAMS_HINT, teamSelect } from "./teamSelect";
 import { openModal } from "../../../ui/kit/modal";
-import { openSettingsModal } from "./settingsModal";
+import { loadCompanionSettings, markReviewed } from "../state";
+import { NO_TEAMS_HINT, addBackButton, settingsHint, teamSelect } from "./settingsParts";
 
-export function openHarvestSettingsModal(host: HTMLElement): void {
+export function openHarvestSettingsModal(host: HTMLElement, back: () => void): void {
   markReviewed("harvest");
 
   const modal = openModal({ host, title: "Harvest", widthPx: 460 });
@@ -22,25 +19,13 @@ export function openHarvestSettingsModal(host: HTMLElement): void {
     void CompanionService.applySettings({ harvestTeamId: teamId });
   });
 
-  const note = document.createElement("div");
-  css(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
-  note.textContent = team.empty
-    ? NO_TEAMS_HINT
-    : "He names the team before he picks, and puts yours back after. What he may pick still comes from your Locker.";
-
   modal.body.append(
-    settingRow(
-      "Team to wear while harvesting",
-      "For abilities that pay off on harvest.",
-      team.el
-    ).row,
-    note
+    settingRow("Team to wear while harvesting", "For abilities that pay off on harvest.", team.el).row,
+    settingsHint(
+      team.empty
+        ? NO_TEAMS_HINT
+        : "He names the team before he picks, and puts yours back after. What he may pick still comes from your Locker.",
+    ),
   );
-
-  modal.footer.append(
-    button("Back", "neutral", () => {
-      modal.close();
-      openSettingsModal(host);
-    })
-  );
+  addBackButton(modal, back);
 }
