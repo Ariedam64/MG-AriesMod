@@ -1,21 +1,16 @@
 import { NativeWS, sockets, workerFound } from "../game/ws/sockets";
 import { ensureStore, isStoreCaptured, getCapturedInfo } from "../game/store/jotai";
-import { PetsService, installPetTeamHotkeysOnce, setTeamsForHotkeys } from "../features/pets/pets";
+import { PetsService } from "../features/pets/pets";
+import { installPetTeamHotkeys } from "../features/pets/teamHotkeys";
 import { installShopKeybindsOnce } from "../features/shops/shops";
 import { installCompanionKeybindsOnce } from "../features/companion/keybind";
 import { installSellKeybindsOnce } from "../features/sellAllPets/keybind";
-import { installPetHutchKeybindsOnce } from "../features/keybinds/modalToggles/petHutch";
-import { installJournalKeybindsOnce } from "../features/keybinds/modalToggles/journal";
-import { installDecorShedKeybindsOnce } from "../features/keybinds/modalToggles/decorShed";
-import { installToolShackKeybindsOnce } from "../features/keybinds/modalToggles/toolShack";
-import { installSeedSiloKeybindsOnce } from "../features/keybinds/modalToggles/seedSilo";
-import { installFeedingTroughKeybindsOnce } from "../features/keybinds/modalToggles/feedingTrough";
-import { installWeatherStationKeybindsOnce } from "../features/keybinds/modalToggles/weatherStation";
+import { installModalToggleKeybinds } from "../features/keybinds/modalToggles";
+import { installGameKeybindsOnce } from "../features/keybinds/gameRemap";
 import { PetAlertService } from "../features/notifier/petAlerts";
 import {
   getKeybind,
   getKeybindLabel,
-  installGameKeybindsOnce,
   onKeybindChange,
   type Hotkey,
   type KeybindId,
@@ -616,14 +611,8 @@ function startStatusLoop(full: HTMLElement, mini: HTMLElement): void {
 export function initWatchers(){
     installShopKeybindsOnce();
     installSellKeybindsOnce();
-    installPetHutchKeybindsOnce();
+    installModalToggleKeybinds();
     installGameKeybindsOnce();
-    installJournalKeybindsOnce();
-    installSeedSiloKeybindsOnce();
-    installDecorShedKeybindsOnce();
-    installToolShackKeybindsOnce();
-    installFeedingTroughKeybindsOnce();
-    installWeatherStationKeybindsOnce();
     installCompanionKeybindsOnce();
 
     const bootToolbar = async () => {
@@ -637,16 +626,9 @@ export function initWatchers(){
 
     (async () => {
         try { await PetAlertService.start(); } catch {}
-        try { setTeamsForHotkeys(PetsService.getTeams()); } catch {}
         try {
-          await PetsService.onTeamsChangeNow((teams) => {
-            try { setTeamsForHotkeys(teams); } catch {}
-          });
-        } catch {}
-        try {
-          installPetTeamHotkeysOnce(async (teamId) => {
-            try { await PetsService.useTeam(teamId); }
-            catch (e) { console.warn("[Pets] hotkey useTeam failed:", e); }
+          installPetTeamHotkeys((teamId) => {
+            PetsService.useTeam(teamId).catch((e) => console.warn("[Pets] hotkey useTeam failed:", e));
           });
         } catch {}
         try { await PetsService.startPetTeamSync(); } catch {}

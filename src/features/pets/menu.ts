@@ -2,10 +2,7 @@
 // UI UNIQUEMENT (aucune logique). Aligné sur le style/layout de garden.ts.
 
 import { Menu} from "../../ui/kit/menu";
-import { PetsService,
-  InventoryPet,
-  installPetTeamHotkeysOnce,
-  setTeamsForHotkeys } from "./pets";
+import { PetsService, InventoryPet } from "./pets";
 import type { PetTeam } from "./pets";
 import { petTeamName } from "./teamReconcile";
 import { onActivePetsStructuralChangeNow } from "../../game/store/atoms";
@@ -616,7 +613,6 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
         if (!selectedId && teams.length) selectedId = teams[0].id;
 
         void scheduleTeamListRefresh();
-        setTeamsForHotkeys(teams);
 
         // prime cache inventaire (sécurisé par le mute côté service)
         await PetsService.getInventoryPets().catch(() => []);
@@ -1094,27 +1090,6 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
       });
     } catch {}
   })();
-
-  // ----- hotkeys après init du state -----
-  installPetTeamHotkeysOnce(async (teamId) => {
-    const t = teams.find(tt => tt.id === teamId) || null;
-    try {
-      isApplyingTeam = true;
-      if (t) {
-        activeTeamId = t.id;
-        await refreshTeamList(true);
-      }
-      await PetsService.useTeam(teamId);
-      if (t) await waitForActiveTeam(t);
-      await hydrateEditor(getSelectedTeam());
-      await refreshTeamList();
-    } catch (e) {
-      console.warn("[Pets] hotkey useTeam failed:", e);
-      await refreshTeamList();
-    } finally {
-      isApplyingTeam = false;
-    }
-  });
 
   // cleanup on tab unmount
   (view as any).__cleanup__ = (() => {

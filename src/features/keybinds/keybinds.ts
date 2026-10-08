@@ -1,710 +1,114 @@
-// src/services/keybinds.ts
-import { inGameHotkeys } from "../../game/ingameHotkeys";
-import { hotkeyToString, matchHotkey, stringToHotkey, type Hotkey } from "../../lib/hotkey";
+// The shortcut registry: which actions exist, the key each one is bound to,
+// and who to tell when that changes. Bindings persist under `keybinds.*` in the
+// mod's storage; an action never rebound keeps its catalog default.
+
+import { Emitter } from "../../lib/emitter";
+import { hotkeyToPretty, hotkeyToString, matchHotkey, stringToHotkey, type Hotkey } from "../../lib/hotkey";
 import { readAriesPath, updateAriesPath } from "../../platform/storage";
+import {
+  SECTION_CONFIG,
+  type KeybindAction,
+  type KeybindActionConfig,
+  type KeybindId,
+  type KeybindSection,
+} from "./catalog";
 
 export type { Hotkey } from "../../lib/hotkey";
+export type { KeybindAction, KeybindActionConfig, KeybindId, KeybindSection } from "./catalog";
 
-export type KeybindId =
-  | "gui.toggle"
-  | "gui.drag"
-  | "shops.seeds"
-  | "shops.eggs"
-  | "shops.decors"
-  | "shops.tools"
-  | "sell.sell-all"
-  | "sell.sell-all-pets"
-  | "companion.chat"
-  | "game.action"
-  | "game.inventory"
-  | "game.journal"
-  | "game.pet-hutch"
-  | "game.decor-shed"
-  | "game.tool-shack"
-  | "game.seed-silo"
-  | "game.feeding-trough"
-  | "game.weather-station"
-  | "game.move-up"
-  | "game.move-down"
-  | "game.move-left"
-  | "game.move-right"
-  | `pets.team.${string}`
-  | "pets.team.next"
-  | "pets.team.prev";
-
-
-type GameKeybindId =
-  | "game.action"
-  | "game.inventory"
-  | "game.move-up"
-  | "game.move-down"
-  | "game.move-left"
-  | "game.move-right";
-
-
-export interface KeybindAction {
-  id: KeybindId;
-  sectionId: string;
-  label: string;
-  /** Atlas frame key rendered in place of a leading emoji, e.g. `sprite/ui/SeedIcon`. */
-  icon?: string;
-  hint?: string;
-  defaultHotkey: Hotkey | null;
-  allowModifierOnly?: boolean;
-  holdDetection?: KeybindHoldDetectionConfig;
-  allowClear?: boolean;
-}
-
-export interface KeybindSection {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  actions: KeybindAction[];
-}
-
-
-interface KeybindHoldDetectionConfig {
-  label: string;
-  description?: string;
-  defaultEnabled?: boolean;
-}
-
-interface KeybindActionConfig {
-  id: KeybindId;
-  label: string;
-  /** Atlas frame key rendered in place of a leading emoji, e.g. `sprite/ui/SeedIcon`. */
-  icon?: string;
-  hint?: string;
-  defaultHotkey: Hotkey | null;
-  allowModifierOnly?: boolean;
-  allowClear?: boolean;
-  holdDetection?: KeybindHoldDetectionConfig;
-}
-
-interface KeybindSectionConfig {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  actions: KeybindActionConfig[];
-}
-
-const SECTION_CONFIG: KeybindSectionConfig[] = [
-  {
-    id: "gui",
-    title: "GUI",
-    icon: "🖥️",
-    description: "Choose how you open and move the overlay.",
-    actions: [
-      {
-        id: "gui.toggle",
-        label: "Toggle menu visibility",
-        icon: "sprite/ui/CameraOff",
-        hint: "Opens or closes the Arie's Mod overlay.",
-        defaultHotkey: { alt: true, code: "KeyX" },
-      },
-      {
-        id: "gui.drag",
-        label: "Drag HUD",
-        icon: "sprite/ui/Touchpad",
-        hint: "Hold to drag menus interfaces around the screen.",
-        defaultHotkey: { alt: true, code: "AltLeft" },
-        allowModifierOnly: true,
-      },
-    ],
-  },
-  {
-    id: "shops",
-    title: "Shops",
-    icon: "🛒",
-    description: "Quick shortcuts to every shop tab.",
-    actions: [
-      {
-        id: "shops.seeds",
-        label: "Seeds shop",
-        icon: "sprite/ui/SeedIcon",
-        defaultHotkey: { alt: true, code: "KeyS" },
-      },
-      {
-        id: "shops.eggs",
-        label: "Eggs shop",
-        icon: "sprite/ui/EggIcon",
-        defaultHotkey: { alt: true, code: "KeyE" },
-      },
-      {
-        id: "shops.decors",
-        label: "Decors shop",
-        icon: "sprite/ui/DecorIcon",
-        defaultHotkey: { alt: true, code: "KeyD" },
-      },
-      {
-        id: "shops.tools",
-        label: "Tools shop",
-        icon: "sprite/ui/ToolIcon",
-        defaultHotkey: { alt: true, code: "KeyT" },
-      },
-    ],
-  },
-  {
-    id: "game",
-    title: "Game",
-    icon: "🎮",
-    description: "Remap the in-game actions",
-    actions: [
-      {
-        id: "game.action",
-        label: "Action",
-        icon: "sprite/ui/PickupPin",
-        defaultHotkey: { code: "Space" },
-        holdDetection: {
-          label: "Rapid fire",
-          defaultEnabled: false,
-        },
-      },
-      {
-        id: "game.inventory",
-        label: "Inventory",
-        icon: "sprite/ui/InventoryBag",
-        defaultHotkey: { code: "KeyE" },
-      },
-      {
-        id: "game.pet-hutch",
-        label: "Pet hutch",
-        icon: "sprite/decor/PetHutch_1",
-        defaultHotkey: null,
-        allowClear: true,
-      },
-      {
-        id: "game.decor-shed",
-        label: "Decor shed",
-        icon: "sprite/decor/DecorShed",
-        defaultHotkey: null,
-        allowClear: true,
-      },
-      {
-        id: "game.tool-shack",
-        label: "Tool shack",
-        icon: "sprite/decor/ToolShack",
-        defaultHotkey: null,
-        allowClear: true,
-      },
-      {
-        id: "game.seed-silo",
-        label: "Seed silo",
-        icon: "sprite/decor/SeedSilo",
-        defaultHotkey: null,
-        allowClear: true,
-      },
-      {
-        id: "game.feeding-trough",
-        label: "Feeding trough",
-        icon: "sprite/decor/FeedingTrough",
-        defaultHotkey: null,
-        allowClear: true,
-      },
-      {
-        id: "game.weather-station",
-        label: "Weather station",
-        icon: "sprite/object/WeatherStation",
-        defaultHotkey: null,
-        allowClear: true,
-      },
-      {
-        id: "game.journal",
-        label: "Journal",
-        icon: "sprite/ui/JournalStamp",
-        defaultHotkey: null,
-        allowClear: true,
-      },
-      {
-        id: "game.move-up",
-        label: "Move up",
-        icon: "https://i.imgur.com/EkbKUgi.png",
-        defaultHotkey: { code: "KeyW" },
-      },
-      {
-        id: "game.move-down",
-        label: "Move down",
-        icon: "https://i.imgur.com/tdJ7IGP.png",
-        defaultHotkey: { code: "KeyS" },
-      },
-      {
-        id: "game.move-left",
-        label: "Move left",
-        icon: "https://i.imgur.com/86VbR70.png",
-        defaultHotkey: { code: "KeyA" },
-      },
-      {
-        id: "game.move-right",
-        label: "Move right",
-        icon: "https://i.imgur.com/Ljzz6td.png",
-        defaultHotkey: { code: "KeyD" },
-      },
-    ],
-  },
-  {
-    id: "sell",
-    title: "Sell",
-    icon: "💰",
-    description: "Streamline selling actions.",
-    actions: [
-      {
-        id: "sell.sell-all",
-        label: "All crops",
-        icon: "sprite/ui/IconSell",
-        hint: "Trigger the sell-all flow for harvested crops.",
-        defaultHotkey: null,
-      },
-      {
-        id: "sell.sell-all-pets",
-        label: "All pets",
-        icon: "sprite/ui/IconShop",
-        hint: "Sell every non-favorited pet in your inventory.",
-        defaultHotkey: null,
-      },
-    ],
-  },
-  {
-    id: "companion",
-    title: "Companion",
-    icon: "🤖",
-    description: "Reach your companion without going through the launcher.",
-    actions: [
-      {
-        id: "companion.chat",
-        label: "Open the chat",
-        // Sans icône : l'atlas `ui` n'a pas de pictogramme de conversation, et
-        // en inventer une clé afficherait une case vide (`icon` est optionnel).
-        hint: "Opens the Companion window straight on its Chat tab.",
-        defaultHotkey: { alt: true, code: "KeyC" },
-      },
-    ],
-  },
-];
-
-const KEYBINDS_BINDINGS_PATH = "keybinds.bindings";
-const KEYBINDS_HOLD_PATH = "keybinds.hold";
+const BINDINGS_PATH = "keybinds.bindings";
+const HOLD_PATH = "keybinds.hold";
+/** The storage key the `storage` event reports when another tab saves. */
 const ARIES_ROOT_KEY = "aries_mod";
+/** Stored for an action the player cleared, so its default does not come back. */
 const STORED_NONE = "__none__";
 
-const actionMap = new Map<KeybindId, KeybindAction>();
-const defaultMap = new Map<KeybindId, Hotkey | null>();
+/** What an unbound action reads as in a label. */
+const UNBOUND_LABEL = "None";
+
+const sections: KeybindSection[] = SECTION_CONFIG.map((section) => ({ ...section, actions: [] }));
+const actions = new Map<KeybindId, KeybindAction>();
+const holdDefaults = new Map<KeybindId, boolean>();
+
 const cache = new Map<KeybindId, Hotkey | null>();
-const listeners = new Map<KeybindId, Set<(hk: Hotkey | null) => void>>();
-const holdDefaultMap = new Map<KeybindId, boolean>();
 const holdCache = new Map<KeybindId, boolean>();
-const holdListeners = new Map<KeybindId, Set<(enabled: boolean) => void>>();
+const changes = new Map<KeybindId, Emitter<Hotkey | null>>();
+const holdChanges = new Map<KeybindId, Emitter<boolean>>();
 
-const keybindSections: KeybindSection[] = SECTION_CONFIG.map((section) => {
-  const actions = section.actions.map<KeybindAction>((action) => {
-  const normalized: KeybindAction = {
-    id: action.id,
+const cloneHotkey = (hk: Hotkey | null | undefined): Hotkey | null => (hk ? { ...hk } : null);
+
+/* -------------------------------- registry -------------------------------- */
+
+function register(section: KeybindSection, config: KeybindActionConfig): void {
+  const action: KeybindAction = {
+    ...config,
     sectionId: section.id,
-    label: action.label,
-    icon: action.icon,
-    hint: action.hint,
-    allowModifierOnly: action.allowModifierOnly,
-    allowClear: action.allowClear,
-    defaultHotkey: cloneHotkey(action.defaultHotkey),
-      holdDetection: action.holdDetection
-        ? {
-            label: action.holdDetection.label,
-            description: action.holdDetection.description,
-            defaultEnabled: action.holdDetection.defaultEnabled,
-          }
-        : undefined,
-    };
-    actionMap.set(normalized.id, normalized);
-    defaultMap.set(normalized.id, cloneHotkey(action.defaultHotkey));
-    if (action.holdDetection) {
-      holdDefaultMap.set(normalized.id, !!action.holdDetection.defaultEnabled);
-    }
-    return normalized;
-  });
-  return {
-    id: section.id,
-    title: section.title,
-    description: section.description,
-    icon: section.icon,
-    actions,
+    defaultHotkey: cloneHotkey(config.defaultHotkey),
+    holdDetection: config.holdDetection ? { ...config.holdDetection } : undefined,
   };
-});
-
-const PET_SECTION_ID = "pets";
-const PET_TEAM_ACTION_PREFIX = "pets.team.";
-export const PET_TEAM_NEXT_ID = "pets.team.next" as const;
-export const PET_TEAM_PREV_ID = "pets.team.prev" as const;
-
-type PetTeamActionId = `${typeof PET_TEAM_ACTION_PREFIX}${string}`;
-
-const petSection: KeybindSection = {
-  id: PET_SECTION_ID,
-  title: "Pets",
-  icon: "🐷",
-  description: "Assign shortcuts to your pet teams and cycle through them instantly.",
-  actions: [],
-};
-
-keybindSections.push(petSection);
-
-const petActionIds = new Set<KeybindId>();
-
-export interface PetTeamKeybindInfo {
-  id: string;
-  name?: string | null;
+  actions.set(action.id, action);
+  if (action.holdDetection) holdDefaults.set(action.id, !!action.holdDetection.defaultEnabled);
+  section.actions.push(action);
 }
 
-export function getPetTeamActionId(teamId: string): PetTeamActionId {
-  return `${PET_TEAM_ACTION_PREFIX}${teamId}` as PetTeamActionId;
+for (let i = 0; i < SECTION_CONFIG.length; i++) {
+  for (const config of SECTION_CONFIG[i].actions) register(sections[i], config);
 }
 
-function disposePetAction(id: KeybindId): void {
-  actionMap.delete(id);
-  defaultMap.delete(id);
-  cache.delete(id);
-  listeners.delete(id);
-  holdDefaultMap.delete(id);
-  holdCache.delete(id);
-  holdListeners.delete(id);
-}
-
-function registerPetAction(action: KeybindAction, defaultHotkey: Hotkey | null): void {
-  const normalized: KeybindAction = {
-    id: action.id,
-    sectionId: PET_SECTION_ID,
-    label: action.label,
-    hint: action.hint,
-    allowModifierOnly: action.allowModifierOnly,
-    defaultHotkey: cloneHotkey(defaultHotkey),
-    holdDetection: action.holdDetection
-      ? {
-          label: action.holdDetection.label,
-          description: action.holdDetection.description,
-          defaultEnabled: action.holdDetection.defaultEnabled,
-        }
-      : undefined,
-  };
-  actionMap.set(normalized.id, normalized);
-  defaultMap.set(normalized.id, cloneHotkey(defaultHotkey));
-  petActionIds.add(normalized.id);
-  petSection.actions.push(normalized);
-}
-
-export function updatePetKeybinds(teams: PetTeamKeybindInfo[]): void {
-  for (const id of petActionIds) {
-    disposePetAction(id);
+/**
+ * Replaces the runtime actions of a section, the ones that follow the player's
+ * data, like one action per pet team. The section's catalog actions stay
+ * first. Bindings are stored by id, so an action that comes back keeps its key.
+ */
+export function setDynamicActions(sectionId: string, configs: KeybindActionConfig[]): void {
+  const index = SECTION_CONFIG.findIndex((s) => s.id === sectionId);
+  if (index < 0) return;
+  const section = sections[index];
+  const fixed = new Set(SECTION_CONFIG[index].actions.map((a) => a.id));
+  for (const old of section.actions) {
+    if (fixed.has(old.id)) continue;
+    actions.delete(old.id);
+    holdDefaults.delete(old.id);
+    cache.delete(old.id);
+    holdCache.delete(old.id);
   }
-  petActionIds.clear();
-  petSection.actions = [];
-
-  registerPetAction(
-    {
-      id: PET_TEAM_PREV_ID,
-      sectionId: PET_SECTION_ID,
-      label: "Previous team",
-      defaultHotkey: null,
-    },
-    null
-  );
-
-  registerPetAction(
-    {
-      id: PET_TEAM_NEXT_ID,
-      sectionId: PET_SECTION_ID,
-      label: "Next team",
-      defaultHotkey: null,
-    },
-    null
-  );
-
-  teams.forEach((team, index) => {
-    const name = String(team?.name || "").trim();
-    const labelName = name.length ? name : `Team ${index + 1}`;
-    registerPetAction(
-      {
-        id: getPetTeamActionId(team.id),
-        sectionId: PET_SECTION_ID,
-        label: `Use team — ${labelName}`,
-        defaultHotkey: null,
-      },
-      null
-    );
-  });
-}
-
-updatePetKeybinds([]);
-
-const GAME_KEYBIND_TARGETS: Record<GameKeybindId, string> = {
-  "game.action": "Space",
-  "game.inventory": "KeyE",
-  "game.move-up": "KeyW",    // Z (AZERTY) == KeyW
-  "game.move-down": "KeyS",  // S
-  "game.move-left": "KeyA",  // Q (AZERTY) == KeyA
-  "game.move-right": "KeyD", // D
-};
-
-const GAME_KEYBIND_IDS: GameKeybindId[] = [
-  "game.action",
-  "game.inventory",
-  "game.move-up",
-  "game.move-down",
-  "game.move-left",
-  "game.move-right",
-];
-
-interface GameKeybindState {
-  combo: string;
-  replaced: boolean;
-  rapidFire: boolean;
-}
-
-const gameActiveStates = new Map<GameKeybindId, GameKeybindState>();
-let gameKeybindsInstalled = false;
-
-const GAME_ACTION_ID: GameKeybindId = "game.action";
-
-const gameActionBlockers = new Set<string>();
-const gameActionBlockedCombos = new Set<string>();
-
-function getCombosForGameAction(): string[] {
-  const state = gameActiveStates.get(GAME_ACTION_ID);
-  if (!state) return [];
-  const combo = state.combo;
-  return typeof combo === "string" && combo.length ? [combo] : [];
-}
-
-function applyGameActionBlockers(): void {
-  const shouldBlock = gameActionBlockers.size > 0;
-  const desired = new Set<string>();
-
-  if (shouldBlock) {
-    for (const combo of getCombosForGameAction()) {
-      if (combo) desired.add(combo);
-    }
-  }
-
-  for (const combo of gameActionBlockedCombos) {
-    if (!desired.has(combo)) {
-      try {
-        inGameHotkeys.unblock(combo);
-      } catch {
-        /* ignore */
-      }
-    }
-  }
-
-  if (shouldBlock) {
-    for (const combo of desired) {
-      if (!gameActionBlockedCombos.has(combo)) {
-        try {
-          inGameHotkeys.block(combo);
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-  }
-
-  gameActionBlockedCombos.clear();
-  if (shouldBlock) {
-    for (const combo of desired) gameActionBlockedCombos.add(combo);
+  section.actions = section.actions.filter((a) => fixed.has(a.id));
+  for (const config of configs) {
+    if (!fixed.has(config.id)) register(section, config);
   }
 }
 
-
-function hotkeyToCombo(hk: Hotkey | null): string | null {
-  if (!hk) return null;
-  const combo = hotkeyToString(hk);
-  return combo.length ? combo : null;
+export function getKeybindSections(): KeybindSection[] {
+  return sections.map((section) => ({
+    ...section,
+    actions: section.actions.map((action) => ({
+      ...action,
+      defaultHotkey: cloneHotkey(action.defaultHotkey),
+      holdDetection: action.holdDetection ? { ...action.holdDetection } : undefined,
+    })),
+  }));
 }
 
-function purgeTargetBindings(emitCombo: string): void {
-  try { inGameHotkeys.unblock(emitCombo); } catch {}
-  try {
-    const curr = inGameHotkeys.current(); // { fromCombo: "Ctrl+KeyX" | "KeyX" | ... â†’ "KeyY" | "Space" | ... }
-    for (const [from, to] of Object.entries(curr)) {
-      // isole le dernier token (le code destination)
-      const toCode = String(to).split("+").pop();
-      if (toCode === emitCombo) {
-        try { inGameHotkeys.remove(from); } catch {}
-      }
-    }
-  } catch {}
-}
-
-function isMac(): boolean {
-  // petit heuristique OS
-  return typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.platform || "");
-}
-
-function codeToDisplay(code?: string): string {
-  if (!code) return "";
-  // Lettres & chiffres physiques
-  const mKey = code.match(/^Key([A-Z])$/);
-  if (mKey) return mKey[1];                      // "KeyE" -> "E"
-  const mDigit = code.match(/^Digit([0-9])$/);
-  if (mDigit) return mDigit[1];                  // "Digit5" -> "5"
-
-  // Modifiers (cÃ´tÃ© â€œkeyâ€ principal, pas besoin de prÃ©ciser Left/Right)
-  if (code === "ControlLeft" || code === "ControlRight") return "Ctrl";
-  if (code === "AltLeft"     || code === "AltRight")     return "Alt";
-  if (code === "ShiftLeft"   || code === "ShiftRight")   return "Shift";
-  if (code === "MetaLeft"    || code === "MetaRight")    return isMac() ? "âŒ˜" : "Win";
-
-  // SpÃ©ciaux / navigation
-  if (code === "Space")     return "Space";   // ou "âŽµ"
-  if (code === "Enter")     return "Enter";   // ou "â†µ"
-  if (code === "Escape")    return "Esc";
-  if (code === "Tab")       return "Tab";
-  if (code === "Backspace") return "Backspace"; // ou "âŒ«"
-  if (code === "Delete")    return "Del";
-  if (code === "Insert")    return "Ins";
-  if (code === "ArrowUp")   return "â†‘";
-  if (code === "ArrowDown") return "â†“";
-  if (code === "ArrowLeft") return "â†";
-  if (code === "ArrowRight")return "â†’";
-
-  // Par dÃ©faut, on garde tel quel (rare)
-  return code;
-}
-
-function prettyHotkey(hk: Hotkey | null): string {
-  if (!hk) return "â€”";
-
-  const mods: string[] = [];
-  if ((hk as any).ctrl)  mods.push("Ctrl");
-  if ((hk as any).shift) mods.push("Shift");
-  if ((hk as any).alt)   mods.push("Alt");
-  if ((hk as any).meta)  mods.push(isMac() ? "âŒ˜" : "Win");
-
-  // base: on prÃ©fÃ¨re hk.key si câ€™est un seul caractÃ¨re (ex: "e"), sinon on dÃ©rive de hk.code
-  let base = "";
-  const k = (hk as any).key;
-  if (typeof k === "string" && k.length === 1) {
-    base = k.toUpperCase();
-  } else {
-    base = codeToDisplay((hk as any).code);
-  }
-
-  // Ã©viter â€œAlt + Altâ€ si { alt: true, code: "AltLeft" } etc.
-  const baseIsModifier = base && ["Ctrl", "Shift", "Alt", "âŒ˜", "Win"].includes(base);
-  const parts = baseIsModifier ? mods : (mods.concat(base ? [base] : []));
-
-  return parts.join(" + ");
-}
-
-
-function syncGameKeybind(id: GameKeybindId): void {
-  if (typeof window === "undefined") return;
-
-  const emitCombo = GAME_KEYBIND_TARGETS[id]; // ex. "Space" ou "KeyW"
-
-  // 0) Nettoyage complet de TOUT ce qui cible la touche in-game (blocages + remaps rÃ©siduels)
-  purgeTargetBindings(emitCombo);
-
-  // 1) Nettoyage de l'Ã©tat prÃ©cÃ©dent (si on en avait un suivi)
-  const prev = gameActiveStates.get(id);
-  if (prev) {
-    if (prev.rapidFire) {
-      try { inGameHotkeys.stopRapidFire(prev.combo); } catch {}
-    }
-    // NB: pas besoin de remove/unblock ici : purgeTargetBindings l'a dÃ©jÃ  fait pour nous
-    gameActiveStates.delete(id);
-  }
-
-  // 2) RÃ©cupÃ¨re le combo utilisateur choisi dans lâ€™UI
-  const combo = hotkeyToCombo(getKeybind(id));
-  if (!combo) {
-    if (id === GAME_ACTION_ID) {
-      applyGameActionBlockers();
-    }
-    return;
-  }
-
-  const holdEnabled = getKeybindHoldDetection(id);
-
-  // 3) Si lâ€™utilisateur a choisi la mÃªme touche que le jeu attend â†’ rien Ã  remapper
-  let replaced = false;
-  if (combo !== emitCombo) {
-    try {
-      // oldBase = la touche que le jeu attend (emitCombo), newPhysical = touche physique utilisateur (combo)
-      inGameHotkeys.replace(emitCombo, combo);
-      replaced = true;
-    } catch {}
-  }
-  // sinon: aucun replace, et Space (ou KeyW, etc.) n'est plus bloquÃ© grÃ¢ce Ã  purgeTargetBindings()
-
-  // 4) Rapid-fire uniquement si lâ€™option Hold est activÃ©e pour cette action
-  let rapidFire = false;
-  if (holdEnabled) {
-    try {
-      inGameHotkeys.startRapidFire({
-        trigger: combo, // on tient la touche choisie
-        emit: combo,    // remapper convertira en emitCombo si replace() actif
-        mode: "tap",
-        rateHz: 10,
-      });
-      rapidFire = true;
-    } catch {}
-  }
-
-  gameActiveStates.set(id, { combo, replaced, rapidFire });
-
-  if (id === GAME_ACTION_ID) {
-    applyGameActionBlockers();
-  }
-}
-
-
-function cloneHotkey(hk: Hotkey | null): Hotkey | null {
-  return hk ? { ...hk } : null;
-}
-
-function hotkeysEqual(a: Hotkey | null, b: Hotkey | null): boolean {
-  if (!a && !b) return true;
-  if (!a || !b) return false;
-  return hotkeyToString(a) === hotkeyToString(b);
-}
+/* --------------------------------- storage -------------------------------- */
 
 function readStored(id: KeybindId): Hotkey | null | undefined {
-  if (typeof window === "undefined") return undefined;
-  const map = readAriesPath<Record<string, unknown>>(KEYBINDS_BINDINGS_PATH);
-  const raw = map?.[id];
+  const raw = readAriesPath<Record<string, unknown>>(BINDINGS_PATH)?.[id];
   if (raw == null) return undefined;
-  if (raw === STORED_NONE) return null;
-  if (typeof raw !== "string") return null;
-  const parsed = stringToHotkey(raw);
-  return parsed ?? null;
+  if (raw === STORED_NONE || typeof raw !== "string") return null;
+  return stringToHotkey(raw) ?? null;
 }
 
-function writeStored(id: KeybindId, hk: Hotkey | null): void {
-  if (typeof window === "undefined") return;
-  updateAriesPath<Record<string, unknown>>(KEYBINDS_BINDINGS_PATH, (current) => {
-    const base = current && typeof current === "object" ? { ...current } : {};
-    if (hk) {
-      base[id] = hotkeyToString(hk);
-    } else {
-      base[id] = STORED_NONE;
-    }
-    return base;
-  });
-}
-
-function removeStored(id: KeybindId): void {
-  if (typeof window === "undefined") return;
-  updateAriesPath<Record<string, unknown>>(KEYBINDS_BINDINGS_PATH, (current) => {
-    const base = current && typeof current === "object" ? { ...current } : {};
-    delete base[id];
-    return base;
+function writeStored(id: KeybindId, hk: Hotkey | null | undefined): void {
+  updateAriesPath<Record<string, unknown>>(BINDINGS_PATH, (current) => {
+    const next = current && typeof current === "object" ? { ...current } : {};
+    if (hk === undefined) delete next[id];
+    else next[id] = hk ? hotkeyToString(hk) : STORED_NONE;
+    return next;
   });
 }
 
 function readHoldStored(id: KeybindId): boolean | undefined {
-  if (typeof window === "undefined") return undefined;
-  const map = readAriesPath<Record<string, unknown>>(KEYBINDS_HOLD_PATH);
-  const raw = map?.[id];
-  if (raw == null) return undefined;
+  const raw = readAriesPath<Record<string, unknown>>(HOLD_PATH)?.[id];
   if (typeof raw === "string") return raw === "1";
   if (typeof raw === "number") return raw === 1;
   if (typeof raw === "boolean") return raw;
@@ -712,72 +116,64 @@ function readHoldStored(id: KeybindId): boolean | undefined {
 }
 
 function writeHoldStored(id: KeybindId, enabled: boolean): void {
-  if (typeof window === "undefined") return;
-  updateAriesPath<Record<string, unknown>>(KEYBINDS_HOLD_PATH, (current) => {
-    const base = current && typeof current === "object" ? { ...current } : {};
-    base[id] = !!enabled;
-    return base;
+  updateAriesPath<Record<string, unknown>>(HOLD_PATH, (current) => {
+    const next = current && typeof current === "object" ? { ...current } : {};
+    next[id] = enabled;
+    return next;
   });
 }
 
-function emitHoldChange(id: KeybindId): void {
-  const set = holdListeners.get(id);
-  if (!set || set.size === 0) return;
-  const current = getKeybindHoldDetection(id);
-  for (const cb of set) cb(current);
+/* ------------------------------ change events ----------------------------- */
+
+function emitterFor<T>(map: Map<KeybindId, Emitter<T>>, id: KeybindId): Emitter<T> {
+  let emitter = map.get(id);
+  if (!emitter) {
+    emitter = new Emitter<T>();
+    map.set(id, emitter);
+  }
+  return emitter;
 }
 
 function emitChange(id: KeybindId): void {
-  const set = listeners.get(id);
-  if (!set || set.size === 0) return;
-  const current = cloneHotkey(getKeybind(id));
-  for (const cb of set) cb(current);
+  changes.get(id)?.emit(getKeybind(id));
 }
 
-function ensureCache(id: KeybindId): Hotkey | null {
-  if (cache.has(id)) {
-    return cloneHotkey(cache.get(id) ?? null);
-  }
-  const stored = readStored(id);
-  const resolved = stored === undefined ? cloneHotkey(defaultMap.get(id) ?? null) : cloneHotkey(stored);
-  cache.set(id, resolved);
-  return cloneHotkey(resolved);
+function emitHoldChange(id: KeybindId): void {
+  holdChanges.get(id)?.emit(getKeybindHoldDetection(id));
 }
 
-
-function ensureHoldCache(id: KeybindId): boolean {
-  if (!holdDefaultMap.has(id)) return false;
-  if (holdCache.has(id)) {
-    return holdCache.get(id) ?? false;
-  }
-  const stored = readHoldStored(id);
-  const resolved = stored === undefined ? !!holdDefaultMap.get(id) : stored;
-  holdCache.set(id, resolved);
-  return resolved;
+export function onKeybindChange(id: KeybindId, cb: (hk: Hotkey | null) => void): () => void {
+  return emitterFor(changes, id).on(cb);
 }
 
+export function onKeybindHoldDetectionChange(id: KeybindId, cb: (enabled: boolean) => void): () => void {
+  if (!holdDefaults.has(id)) return () => {};
+  return emitterFor(holdChanges, id).on(cb);
+}
+
+/* -------------------------------- bindings -------------------------------- */
 
 export function getKeybind(id: KeybindId): Hotkey | null {
-  return ensureCache(id);
+  if (!cache.has(id)) {
+    const stored = readStored(id);
+    cache.set(id, stored === undefined ? cloneHotkey(actions.get(id)?.defaultHotkey) : stored);
+  }
+  return cloneHotkey(cache.get(id));
 }
 
 export function getDefaultKeybind(id: KeybindId): Hotkey | null {
-  return cloneHotkey(defaultMap.get(id) ?? null);
+  return cloneHotkey(actions.get(id)?.defaultHotkey);
 }
 
+/** Binds an action. Any other action holding the same key loses it. */
 export function setKeybind(id: KeybindId, hk: Hotkey | null): void {
-  const current = getKeybind(id);
-  if (hotkeysEqual(current, hk)) return;
-
   const next = cloneHotkey(hk);
+  const wanted = hotkeyToString(next);
+  if (hotkeyToString(getKeybind(id)) === wanted) return;
 
   if (next) {
-    const asString = hotkeyToString(next);
-    for (const otherId of actionMap.keys()) {
-      if (otherId === id) continue;
-      const other = getKeybind(otherId);
-      if (!other) continue;
-      if (hotkeyToString(other) !== asString) continue;
+    for (const otherId of actions.keys()) {
+      if (otherId === id || hotkeyToString(getKeybind(otherId)) !== wanted) continue;
       cache.set(otherId, null);
       writeStored(otherId, null);
       emitChange(otherId);
@@ -791,88 +187,43 @@ export function setKeybind(id: KeybindId, hk: Hotkey | null): void {
 
 export function resetKeybind(id: KeybindId): void {
   cache.delete(id);
-  removeStored(id);
+  writeStored(id, undefined);
   emitChange(id);
 }
 
 export function getKeybindHoldDetection(id: KeybindId): boolean {
-  return ensureHoldCache(id);
+  if (!holdDefaults.has(id)) return false;
+  if (!holdCache.has(id)) {
+    const stored = readHoldStored(id);
+    holdCache.set(id, stored === undefined ? !!holdDefaults.get(id) : stored);
+  }
+  return holdCache.get(id) ?? false;
 }
 
 export function setKeybindHoldDetection(id: KeybindId, enabled: boolean): void {
-  if (!holdDefaultMap.has(id)) return;
-  const current = ensureHoldCache(id);
-  if (current === enabled) return;
+  if (!holdDefaults.has(id) || getKeybindHoldDetection(id) === enabled) return;
   holdCache.set(id, enabled);
   writeHoldStored(id, enabled);
   emitHoldChange(id);
-}
-
-export function onKeybindHoldDetectionChange(id: KeybindId, cb: (enabled: boolean) => void): () => void {
-  if (!holdDefaultMap.has(id)) {
-    return () => {};
-  }
-  const set = holdListeners.get(id) ?? new Set<(enabled: boolean) => void>();
-  if (!holdListeners.has(id)) holdListeners.set(id, set);
-  set.add(cb);
-  return () => {
-    set.delete(cb);
-    if (set.size === 0) holdListeners.delete(id);
-  };
-}
-
-export function onKeybindChange(id: KeybindId, cb: (hk: Hotkey | null) => void): () => void {
-  const set = listeners.get(id) ?? new Set();
-  if (!listeners.has(id)) listeners.set(id, set);
-  set.add(cb);
-  return () => {
-    set.delete(cb);
-    if (set.size === 0) listeners.delete(id);
-  };
 }
 
 export function eventMatchesKeybind(id: KeybindId, e: KeyboardEvent): boolean {
   return matchHotkey(e, getKeybind(id));
 }
 
-export function installGameKeybindsOnce(): void {
-  if (gameKeybindsInstalled || typeof window === "undefined") return;
-  gameKeybindsInstalled = true;
-
-  for (const id of GAME_KEYBIND_IDS) {
-    syncGameKeybind(id);
-    onKeybindChange(id, () => syncGameKeybind(id));
-    onKeybindHoldDetectionChange(id, () => syncGameKeybind(id));
-  }
-}
-
+/** The binding as a player reads it, the same way the Keybinds menu shows it. */
 export function getKeybindLabel(id: KeybindId): string {
-  return prettyHotkey(getKeybind(id));
+  const hk = getKeybind(id);
+  return hk ? hotkeyToPretty(hk) : UNBOUND_LABEL;
 }
 
-export function getKeybindSections(): KeybindSection[] {
-  return keybindSections.map((section) => ({
-    ...section,
-    actions: section.actions.map((action) => ({
-      ...action,
-      defaultHotkey: cloneHotkey(action.defaultHotkey),
-      holdDetection: action.holdDetection
-        ? {
-            label: action.holdDetection.label,
-            description: action.holdDetection.description,
-            defaultEnabled: action.holdDetection.defaultEnabled,
-          }
-        : undefined,
-    })),
-  }));
-}
-
+// Another tab saved: drop the cached bindings and let every listener re-read.
 if (typeof window !== "undefined") {
   window.addEventListener("storage", (event) => {
     if (event.key !== ARIES_ROOT_KEY) return;
     cache.clear();
     holdCache.clear();
-    for (const id of actionMap.keys()) emitChange(id);
-    for (const id of holdDefaultMap.keys()) emitHoldChange(id as KeybindId);
+    for (const id of actions.keys()) emitChange(id);
+    for (const id of holdDefaults.keys()) emitHoldChange(id);
   });
 }

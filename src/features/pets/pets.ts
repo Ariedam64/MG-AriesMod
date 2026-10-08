@@ -11,17 +11,6 @@ import { fakeInventory, isInventoryOpen } from "../../game/fakeModal";
 import { Atoms, myPetHutchPetItems, myNumPetHutchItems, myPetHutchCapacitySlots, isMyInventoryAtMaxLength, stateUserSlots, playerId, player as playerAtom, myActivityLog } from "../../game/store/atoms";
 import { readAccountId, findSlotIndex } from "../../game/playerIdentity";
 import { toastSimple } from "../../ui/toast";
-import { Hotkey, matchHotkey, stringToHotkey } from "../../lib/hotkey";
-import {
-  getKeybind,
-  getPetTeamActionId,
-  onKeybindChange,
-  setKeybind,
-  updatePetKeybinds,
-  PET_TEAM_NEXT_ID,
-  PET_TEAM_PREV_ID,
-} from "../keybinds/keybinds";
-import { shouldIgnoreKeydown } from "../../lib/keyboard";
 import { StatsService } from "../stats/stats";
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
 import { shareGlobal } from "../../platform/pageContext";
@@ -80,7 +69,6 @@ const PATH_PETS_UI = "pets.ui";
 const PATH_PETS_TEAMS = "pets.teams";
 const PATH_PETS_TEAM_SEARCH = "pets.teamSearch";
 const PATH_PETS_TEAM_SYNC = "pets.teamSync";
-const PATH_PETS_HOTKEYS = "pets.hotkeys";
 const PATH_PETS_ABILITY_LOGS = "pets.abilityLogs";
 
 /** Abilities that boost mutation chance based on weather — excluded from the pets logs. */
@@ -99,180 +87,11 @@ const WEATHER_MUTATION_BOOST_IDS = new Set([
   "DawnbinderBoost",
 ]);
 
-/* -------------------------------- HOTKEYS ----------------------------------- */
-
-const TEAM_HK_MAP = new Map<string, Hotkey>();
-const TEAM_HK_UNSUBS = new Map<string, () => void>();
-let hkNextTeam: Hotkey | null = null;
-let hkPrevTeam: Hotkey | null = null;
-let unsubNextHotkey: (() => void) | null = null;
-let unsubPrevHotkey: (() => void) | null = null;
-let orderedTeamIds: string[] = [];
+/** The team last switched to, for Previous and Next when the equipped pets form no team. */
 let lastUsedTeamId: string | null = null;
-
-export type TeamLite = { id: string; name?: string | null };
-
-function syncTeamHotkey(teamId: string): void {
-  const hk = getKeybind(getPetTeamActionId(teamId));
-  if (hk) TEAM_HK_MAP.set(teamId, hk);
-  else TEAM_HK_MAP.delete(teamId);
-}
-
-function syncNextTeamHotkey(): void {
-  hkNextTeam = getKeybind(PET_TEAM_NEXT_ID);
-}
-
-function syncPrevTeamHotkey(): void {
-  hkPrevTeam = getKeybind(PET_TEAM_PREV_ID);
-}
-
-function ensureLegacyTeamHotkeyMigration(teamId: string): void {
-  const hotkeys = readAriesPath<Record<string, string>>(PATH_PETS_HOTKEYS) ?? {};
-  const legacy = hotkeys[teamId];
-  if (!legacy) return;
-  const actionId = getPetTeamActionId(teamId);
-  const existing = getKeybind(actionId);
-  if (!existing) {
-    const hk = stringToHotkey(legacy);
-    if (hk) {
-      setKeybind(actionId, hk);
-    }
-  }
-  const clone = { ...hotkeys };
-  delete clone[teamId];
-  writeAriesPath(PATH_PETS_HOTKEYS, clone);
-}
-
-function normalizeTeamList(teams: TeamLite[]): TeamLite[] {
-  if (!Array.isArray(teams)) return [];
-  const seen = new Set<string>();
-  const out: TeamLite[] = [];
-  for (const t of teams) {
-    const id = String(t?.id ?? "");
-    if (!id || seen.has(id)) continue;
-    seen.add(id);
-    out.push({ id, name: t?.name ?? null });
-  }
-  return out;
-}
-
-function ensureLastUsedTeamIsValid(): void {
-  if (!orderedTeamIds.length) {
-    lastUsedTeamId = null;
-    return;
-  }
-  if (!lastUsedTeamId || !orderedTeamIds.includes(lastUsedTeamId)) {
-    lastUsedTeamId = orderedTeamIds[0] ?? null;
-  }
-}
-
 
 function markTeamAsUsed(teamId: string | null): void {
   lastUsedTeamId = teamId ? String(teamId) : null;
-}
-
-export function setTeamsForHotkeys(rawTeams: TeamLite[]) {
-  for (const unsub of TEAM_HK_UNSUBS.values()) {
-    try { unsub(); } catch {}
-  }
-  TEAM_HK_UNSUBS.clear();
-  if (unsubNextHotkey) {
-    try { unsubNextHotkey(); } catch {}
-    unsubNextHotkey = null;
-  }
-  if (unsubPrevHotkey) {
-    try { unsubPrevHotkey(); } catch {}
-    unsubPrevHotkey = null;
-  }
-
-  const teams = normalizeTeamList(rawTeams);
-  updatePetKeybinds(teams);
-
-  orderedTeamIds = teams.map(t => t.id);
-  ensureLastUsedTeamIsValid();
-
-  const keep = new Set(orderedTeamIds);
-  for (const teamId of Array.from(TEAM_HK_MAP.keys())) {
-    if (!keep.has(teamId)) TEAM_HK_MAP.delete(teamId);
-  }
-
-  teams.forEach((team) => {
-    ensureLegacyTeamHotkeyMigration(team.id);
-    syncTeamHotkey(team.id);
-    const unsub = onKeybindChange(getPetTeamActionId(team.id), () => syncTeamHotkey(team.id));
-    TEAM_HK_UNSUBS.set(team.id, unsub);
-  });
-
-  syncNextTeamHotkey();
-  syncPrevTeamHotkey();
-  unsubNextHotkey = onKeybindChange(PET_TEAM_NEXT_ID, () => syncNextTeamHotkey());
-  unsubPrevHotkey = onKeybindChange(PET_TEAM_PREV_ID, () => syncPrevTeamHotkey());
-}
-
-export function installPetTeamHotkeysOnce(onUseTeam: (teamId: string) => void) {
-  const FLAG = "__qws_pet_team_hk_installed";
-  if ((window as any)[FLAG]) return;
-  window.addEventListener(
-    "keydown",
-    async (e) => {
-      if (shouldIgnoreKeydown(e)) return;
-
-      const teamsList = orderedTeamIds.slice();
-      if (!teamsList.length) return;
-
-      // Anchor the pointer to the actual active team if possible
-      const activeTid = await _currentActiveTeamId();
-      if (activeTid && teamsList.includes(activeTid)) {
-        lastUsedTeamId = activeTid;
-      } else if (!lastUsedTeamId || !teamsList.includes(lastUsedTeamId)) {
-        lastUsedTeamId = teamsList[0] ?? null;
-      }
-      ensureLastUsedTeamIsValid();
-
-      const useTeam = (teamId: string | null) => {
-        if (!teamId) return;
-        markTeamAsUsed(teamId);
-        onUseTeam(teamId);
-      };
-
-      if (hkPrevTeam && matchHotkey(e, hkPrevTeam)) {
-        const baseId = lastUsedTeamId && teamsList.includes(lastUsedTeamId) ? lastUsedTeamId : teamsList[teamsList.length - 1] ?? null;
-        const curIdx = baseId ? teamsList.indexOf(baseId) : -1;
-        const nextIdx = curIdx >= 0 ? (curIdx - 1 + teamsList.length) % teamsList.length : teamsList.length - 1;
-        const target = teamsList[nextIdx] ?? null;
-        if (target) {
-          e.preventDefault();
-          e.stopPropagation();
-          useTeam(target);
-          return;
-        }
-      }
-
-      if (hkNextTeam && matchHotkey(e, hkNextTeam)) {
-        const baseId = lastUsedTeamId && teamsList.includes(lastUsedTeamId) ? lastUsedTeamId : teamsList[0] ?? null;
-        const curIdx = baseId ? teamsList.indexOf(baseId) : -1;
-        const nextIdx = curIdx >= 0 ? (curIdx + 1) % teamsList.length : 0;
-        const target = teamsList[nextIdx] ?? null;
-        if (target) {
-          e.preventDefault();
-          e.stopPropagation();
-          useTeam(target);
-          return;
-        }
-      }
-
-      for (const [teamId, hk] of TEAM_HK_MAP) {
-        if (matchHotkey(e, hk)) {
-          e.preventDefault();
-          e.stopPropagation();
-          useTeam(teamId);
-          break;
-        }
-      }
-    },
-    true
-  );
-  (window as any)[FLAG] = true;
 }
 
 /* --------------------------------- Abilities -------------------------------- */
@@ -1617,6 +1436,15 @@ export const PetsService = {
 
   async getActivePetIds(): Promise<string[]> {
     return _getActivePetSlotIds();
+  },
+
+  /** The team the equipped pets form, if any. */
+  getActiveTeamId(): Promise<string | null> {
+    return _currentActiveTeamId();
+  },
+
+  getLastUsedTeamId(): string | null {
+    return lastUsedTeamId;
   },
 
   /* ------------------------- Ability logs ------------------------- */

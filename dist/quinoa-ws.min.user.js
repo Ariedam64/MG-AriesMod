@@ -221,13 +221,13 @@
   // src/game/sprites/pixi/hooks.ts
   function mkSyntheticApp(renderer) {
     const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
-    const listeners9 = /* @__PURE__ */ new Set();
+    const listeners8 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
     const tick3 = (now2) => {
       const delta = last ? (now2 - last) / (1e3 / 60) : 1;
       last = now2;
-      for (const fn of listeners9) {
+      for (const fn of listeners8) {
         try {
           fn(delta);
         } catch {
@@ -237,14 +237,14 @@
     };
     const ticker = {
       add(fn) {
-        if (!listeners9.size) {
+        if (!listeners8.size) {
           rafId = requestAnimationFrame(tick3);
         }
-        listeners9.add(fn);
+        listeners8.add(fn);
       },
       remove(fn) {
-        listeners9.delete(fn);
-        if (!listeners9.size) {
+        listeners8.delete(fn);
+        if (!listeners8.size) {
           cancelAnimationFrame(rafId);
         }
       },
@@ -9114,8 +9114,8 @@
       background: "rgba(15,19,24,0.84)",
       userSelect: "text"
     });
-    const actions = document.createElement("div");
-    setStyles(actions, { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" });
+    const actions2 = document.createElement("div");
+    setStyles(actions2, { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" });
     const summary = document.createElement("div");
     summary.id = SUMMARY_ID;
     setStyles(summary, { fontWeight: "600" });
@@ -9135,8 +9135,8 @@
       await closeSeedInventoryPanel();
     };
     header.append(title);
-    actions.append(summary, btnClear, _btnConfirm);
-    box.append(header, hint, hr, list, actions);
+    actions2.append(summary, btnClear, _btnConfirm);
+    box.append(header, hint, hr, list, actions2);
     makeDraggable(box, header);
     return box;
   }
@@ -9377,8 +9377,8 @@
       background: "rgba(15,19,24,0.84)",
       userSelect: "text"
     });
-    const actions = document.createElement("div");
-    setStyles(actions, { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" });
+    const actions2 = document.createElement("div");
+    setStyles(actions2, { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" });
     const summary = document.createElement("div");
     summary.id = SUMMARY_DECOR_ID;
     setStyles(summary, { fontWeight: "600" });
@@ -9398,8 +9398,8 @@
       await closeSeedInventoryPanel();
     };
     header.append(title);
-    actions.append(summary, btnClear, btnConfirm);
-    box.append(header, hint, hr, list, actions);
+    actions2.append(summary, btnClear, btnConfirm);
+    box.append(header, hint, hr, list, actions2);
     makeDraggable(box, header);
     box.__btnConfirm = btnConfirm;
     return box;
@@ -14219,12 +14219,12 @@
       if (!slotMatch || !slotMatch.matchSlot) return false;
       const userSlotIdx = slotMatchToIndex(slotMatch);
       friendPreviewGarden = sanitizeGarden(garden3);
-      const installed4 = await installGardenOverlay(
+      const installed6 = await installGardenOverlay(
         "friend",
         userSlotIdx,
         makeGardenTileResolver(() => friendPreviewGarden)
       );
-      if (!installed4) return false;
+      if (!installed6) return false;
       await setOverlayMyDataGarden(friendPreviewGarden);
       friendPreviewUserSlotIdx = userSlotIdx;
       friendPreviewPlayerId = pid;
@@ -15237,9 +15237,9 @@
     let selectedIdx = null;
     let lastInfo = emptySlotInfo();
     let curSig = gardenObjectSignature(cur);
-    const listeners9 = /* @__PURE__ */ new Set();
+    const listeners8 = /* @__PURE__ */ new Set();
     const notify3 = () => {
-      for (const fn of listeners9) {
+      for (const fn of listeners8) {
         try {
           fn(lastInfo);
         } catch {
@@ -15474,11 +15474,11 @@
         return lastInfo;
       },
       onChange(cb) {
-        listeners9.add(cb);
-        return () => listeners9.delete(cb);
+        listeners8.add(cb);
+        return () => listeners8.delete(cb);
       },
       stop() {
-        listeners9.clear();
+        listeners8.clear();
       },
       recompute() {
         recomputeAndNotify();
@@ -16963,1385 +16963,6 @@
     }
   });
 
-  // src/lib/hotkey.ts
-  function codesMatch(expected, actual) {
-    if (expected === actual) return true;
-    return MODIFIER_PAIRS.some((pair) => pair.includes(expected) && pair.includes(actual));
-  }
-  function isMac() {
-    return navigator.platform?.toLowerCase().includes("mac") || /mac|iphone|ipad|ipod/i.test(navigator.userAgent);
-  }
-  function eventToHotkey(e, allowModifierOnly = false) {
-    const isModifier = MODIFIER_CODES.has(e.code) || ["Shift", "Control", "Alt", "Meta"].includes(e.key);
-    if (isModifier && !allowModifierOnly) return null;
-    return { code: e.code, ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey, meta: e.metaKey };
-  }
-  function matchHotkey(e, h2) {
-    if (!h2) return false;
-    if (!!h2.ctrl !== e.ctrlKey) return false;
-    if (!!h2.shift !== e.shiftKey) return false;
-    if (!!h2.alt !== e.altKey) return false;
-    if (!!h2.meta !== e.metaKey) return false;
-    return codesMatch(h2.code, e.code);
-  }
-  function hotkeyToString(hk) {
-    if (!hk) return "";
-    const parts = [];
-    if (hk.ctrl) parts.push("Ctrl");
-    if (hk.shift) parts.push("Shift");
-    if (hk.alt) parts.push("Alt");
-    if (hk.meta) parts.push("Meta");
-    if (hk.code) parts.push(hk.code);
-    return parts.join("+");
-  }
-  function stringToHotkey(s) {
-    if (!s) return null;
-    const parts = s.split("+").map((p) => p.trim()).filter(Boolean);
-    if (!parts.length) return null;
-    const hk = { code: canonicalizeCode(parts.pop() || "") };
-    for (const p of parts) {
-      const mod = p.toLowerCase();
-      if (mod === "ctrl" || mod === "control") hk.ctrl = true;
-      else if (mod === "shift") hk.shift = true;
-      else if (mod === "alt") hk.alt = true;
-      else if (mod === "meta" || mod === "cmd" || mod === "command") hk.meta = true;
-    }
-    return hk.code ? hk : null;
-  }
-  function canonicalizeCode(rawCode) {
-    const trimmed = rawCode.trim();
-    if (!trimmed) return "";
-    const lower = trimmed.toLowerCase();
-    const letter = lower.match(/^key([a-z])$/);
-    if (letter) return `Key${letter[1].toUpperCase()}`;
-    const digit = lower.match(/^digit([0-9])$/);
-    if (digit) return `Digit${digit[1]}`;
-    const numpadDigit = lower.match(/^numpad([0-9])$/);
-    if (numpadDigit) return `Numpad${numpadDigit[1]}`;
-    if (lower.startsWith("numpad")) {
-      const suffix = lower.slice(6);
-      return suffix ? `Numpad${CANONICAL_CODES[suffix] ?? capitalize(suffix)}` : "Numpad";
-    }
-    const fKey = lower.match(/^f([0-9]{1,2})$/);
-    if (fKey) return `F${fKey[1]}`;
-    const arrow = lower.match(/^arrow([a-z]+)$/);
-    if (arrow) return `Arrow${CANONICAL_CODES[arrow[1]] ?? capitalize(arrow[1])}`;
-    return CANONICAL_CODES[lower] ?? capitalize(trimmed);
-  }
-  function prettyCode(code) {
-    if (code === "AltLeft" || code === "AltRight") return "Alt";
-    if (code === "ControlLeft" || code === "ControlRight") return "Ctrl";
-    if (code === "ShiftLeft" || code === "ShiftRight") return "Shift";
-    if (code === "MetaLeft" || code === "MetaRight") return isMac() ? "\u2318" : "Meta";
-    if (code.startsWith("Key")) return code.slice(3);
-    if (code.startsWith("Digit")) return code.slice(5);
-    if (code.startsWith("Numpad")) return "Numpad " + code.slice(6);
-    const arrows = { ArrowUp: "\u2191", ArrowDown: "\u2193", ArrowLeft: "\u2190", ArrowRight: "\u2192" };
-    return arrows[code] ?? code;
-  }
-  function hotkeyToPretty(h2) {
-    const mac = isMac();
-    const mods = [];
-    if (h2.ctrl) mods.push(mac ? "\u2303" : "Ctrl");
-    if (h2.alt) mods.push(mac ? "\u2325" : "Alt");
-    if (h2.shift) mods.push(mac ? "\u21E7" : "Shift");
-    if (h2.meta) mods.push(mac ? "\u2318" : "Meta");
-    const modifierAlone = h2.alt && (h2.code === "AltLeft" || h2.code === "AltRight") || h2.ctrl && (h2.code === "ControlLeft" || h2.code === "ControlRight") || h2.shift && (h2.code === "ShiftLeft" || h2.code === "ShiftRight") || h2.meta && (h2.code === "MetaLeft" || h2.code === "MetaRight");
-    const parts = mods.slice();
-    if (!modifierAlone || parts.length === 0) parts.push(prettyCode(h2.code));
-    return parts.join(mac ? "" : " + ");
-  }
-  var MODIFIER_CODES, MODIFIER_PAIRS, CANONICAL_CODES, capitalize;
-  var init_hotkey = __esm({
-    "src/lib/hotkey.ts"() {
-      "use strict";
-      MODIFIER_CODES = /* @__PURE__ */ new Set([
-        "ShiftLeft",
-        "ShiftRight",
-        "ControlLeft",
-        "ControlRight",
-        "AltLeft",
-        "AltRight",
-        "MetaLeft",
-        "MetaRight"
-      ]);
-      MODIFIER_PAIRS = [
-        ["AltLeft", "AltRight"],
-        ["ControlLeft", "ControlRight"],
-        ["ShiftLeft", "ShiftRight"],
-        ["MetaLeft", "MetaRight"]
-      ];
-      CANONICAL_CODES = {
-        space: "Space",
-        enter: "Enter",
-        escape: "Escape",
-        tab: "Tab",
-        backspace: "Backspace",
-        delete: "Delete",
-        insert: "Insert",
-        home: "Home",
-        end: "End",
-        pageup: "PageUp",
-        pagedown: "PageDown",
-        arrowup: "ArrowUp",
-        arrowdown: "ArrowDown",
-        arrowleft: "ArrowLeft",
-        arrowright: "ArrowRight",
-        bracketleft: "BracketLeft",
-        bracketright: "BracketRight",
-        backslash: "Backslash",
-        slash: "Slash",
-        minus: "Minus",
-        equal: "Equal",
-        semicolon: "Semicolon",
-        quote: "Quote",
-        backquote: "Backquote",
-        comma: "Comma",
-        period: "Period",
-        dot: "Period",
-        capslock: "CapsLock",
-        numlock: "NumLock",
-        scrolllock: "ScrollLock",
-        pause: "Pause",
-        contextmenu: "ContextMenu",
-        printscreen: "PrintScreen",
-        metaleft: "MetaLeft",
-        metaright: "MetaRight",
-        altleft: "AltLeft",
-        altright: "AltRight",
-        controlleft: "ControlLeft",
-        controlright: "ControlRight",
-        shiftleft: "ShiftLeft",
-        shiftright: "ShiftRight"
-      };
-      capitalize = (word) => word ? word[0].toUpperCase() + word.slice(1) : "";
-    }
-  });
-
-  // src/game/keyCombos.ts
-  function modifierOf(part) {
-    const p = part.toLowerCase();
-    if (p === "ctrl" || p === "control") return "ctrl";
-    if (p === "shift") return "shift";
-    if (p === "alt") return "alt";
-    if (p === "meta" || p === "cmd" || p === "command" || p === "win") return "meta";
-    return null;
-  }
-  function parseComboSpec(c) {
-    const spec = { code: "", ctrl: false, shift: false, alt: false, meta: false };
-    for (const part of String(c).split("+").map((s) => s.trim()).filter(Boolean)) {
-      const mod = modifierOf(part);
-      if (mod) spec[mod] = true;
-      else spec.code = part;
-    }
-    return spec;
-  }
-  function parseCombo(c) {
-    const parsed = parseComboSpec(c);
-    const spec = {};
-    for (const mod of MODIFIER_ORDER) {
-      if (parsed[mod]) spec[mod] = true;
-    }
-    if (parsed.code) {
-      spec.code = parsed.code;
-      spec.key = codeToKey(parsed.code, !!spec.shift);
-    }
-    return spec;
-  }
-  function joinModifiers(mods, code) {
-    mods.sort((a, b) => MODIFIER_ORDER.indexOf(a) - MODIFIER_ORDER.indexOf(b));
-    return (mods.length ? mods.join("+") + "+" : "") + code;
-  }
-  function normalizeCombo(c) {
-    const mods = [];
-    let code = "";
-    for (const part of String(c).split("+").map((s) => s.trim()).filter(Boolean)) {
-      const mod = modifierOf(part);
-      if (mod) mods.push(mod);
-      else code = part;
-    }
-    return joinModifiers(mods, code);
-  }
-  function eventToCombo(e) {
-    const mods = [];
-    if (e.ctrlKey) mods.push("ctrl");
-    if (e.shiftKey) mods.push("shift");
-    if (e.altKey) mods.push("alt");
-    if (e.metaKey) mods.push("meta");
-    return joinModifiers(mods, e.code || "");
-  }
-  function formatCombo(c) {
-    const mods = [];
-    if (c.ctrl) mods.push("Ctrl");
-    if (c.shift) mods.push("Shift");
-    if (c.alt) mods.push("Alt");
-    if (c.meta) mods.push("Meta");
-    return (mods.length ? mods.join("+") + "+" : "") + (c.code || "");
-  }
-  var MODIFIER_ORDER, KEYCODE_TABLE, codeToKey, keyCodeOf, isEditableTarget;
-  var init_keyCombos = __esm({
-    "src/game/keyCombos.ts"() {
-      "use strict";
-      MODIFIER_ORDER = ["ctrl", "shift", "alt", "meta"];
-      KEYCODE_TABLE = {
-        KeyA: 65,
-        KeyB: 66,
-        KeyC: 67,
-        KeyD: 68,
-        KeyE: 69,
-        KeyF: 70,
-        KeyG: 71,
-        KeyH: 72,
-        KeyI: 73,
-        KeyJ: 74,
-        KeyK: 75,
-        KeyL: 76,
-        KeyM: 77,
-        KeyN: 78,
-        KeyO: 79,
-        KeyP: 80,
-        KeyQ: 81,
-        KeyR: 82,
-        KeyS: 83,
-        KeyT: 84,
-        KeyU: 85,
-        KeyV: 86,
-        KeyW: 87,
-        KeyX: 88,
-        KeyY: 89,
-        KeyZ: 90,
-        Digit0: 48,
-        Digit1: 49,
-        Digit2: 50,
-        Digit3: 51,
-        Digit4: 52,
-        Digit5: 53,
-        Digit6: 54,
-        Digit7: 55,
-        Digit8: 56,
-        Digit9: 57,
-        Space: 32,
-        Enter: 13,
-        Escape: 27,
-        Tab: 9,
-        Backspace: 8,
-        Delete: 46,
-        Insert: 45,
-        ArrowLeft: 37,
-        ArrowUp: 38,
-        ArrowRight: 39,
-        ArrowDown: 40
-      };
-      codeToKey = (code, shift = false) => {
-        if (!code) return "";
-        if (/^Key[A-Z]$/.test(code)) return shift ? code.slice(3).toUpperCase() : code.slice(3).toLowerCase();
-        if (/^Digit[0-9]$/.test(code)) return code.slice(5);
-        if (code === "Space") return " ";
-        return code;
-      };
-      keyCodeOf = (code, key2) => KEYCODE_TABLE[code] ?? (key2 && key2.length === 1 ? key2.toUpperCase().charCodeAt(0) : 0);
-      isEditableTarget = (t) => {
-        const el = t;
-        if (!el || !el.tagName) return false;
-        const tag = el.tagName.toLowerCase();
-        if (tag === "input" || tag === "textarea") return true;
-        const ce = el.getAttribute && el.getAttribute("contenteditable");
-        return !!(ce && ce !== "false");
-      };
-    }
-  });
-
-  // src/game/ingameHotkeys.ts
-  var resolveContext, REMAP_FLAG, RAPID_SYN_FLAG, InGameHotkeys, defaultContext, inGameHotkeys;
-  var init_ingameHotkeys = __esm({
-    "src/game/ingameHotkeys.ts"() {
-      "use strict";
-      init_pageContext();
-      init_keyCombos();
-      resolveContext = (context) => {
-        if (context) return context;
-        const win = pageWindow ?? window;
-        const doc = win.document ?? document;
-        return { window: win, document: doc };
-      };
-      REMAP_FLAG = "__inGameHotkeysRemapped__";
-      RAPID_SYN_FLAG = "__inGameHotkeysRapidSynthetic__";
-      InGameHotkeys = class {
-        constructor(autoAttach = true, context) {
-          // remapper
-          this.enabled = true;
-          this.map = /* @__PURE__ */ new Map();
-          // normalised combo -> target spec
-          this.blockedSet = /* @__PURE__ */ new Set();
-          // blocked combos
-          this.eventBlockers = /* @__PURE__ */ new Set();
-          this.attachedDocs = /* @__PURE__ */ new WeakSet();
-          // documents already hooked
-          this.observers = [];
-          this.handlers = /* @__PURE__ */ new Map();
-          this.passthrough = /* @__PURE__ */ new Set(["F5", "F12"]);
-          // rapid-fire manager
-          this.sessions = /* @__PURE__ */ new Map();
-          const ctx2 = resolveContext(context);
-          this.win = ctx2.window;
-          this.doc = ctx2.document;
-          if (autoAttach) {
-            this.attachDoc(this.doc);
-            this.attachAllFrames();
-            if (this.win.MutationObserver) {
-              const mo = new this.win.MutationObserver(() => this.attachAllFrames());
-              mo.observe(this.doc.documentElement || this.doc, { childList: true, subtree: true });
-              this.observers.push(mo);
-            }
-          }
-        }
-        /* --------- remapper on/off --------- */
-        enable(flag = true) {
-          this.enabled = !!flag;
-        }
-        disable() {
-          this.enabled = false;
-        }
-        isEnabled() {
-          return this.enabled;
-        }
-        /* --------- remaps --------- */
-        setMap(m) {
-          this.map.clear();
-          for (const [from, to] of Object.entries(m || {})) this.map.set(normalizeCombo(from), parseCombo(to));
-        }
-        add(from, to) {
-          this.map.set(normalizeCombo(from), parseCombo(to));
-        }
-        remove(from) {
-          this.map.delete(normalizeCombo(from));
-        }
-        clear() {
-          this.map.clear();
-        }
-        current() {
-          const out = {};
-          for (const [k, v] of this.map.entries()) out[k] = formatCombo(v);
-          return out;
-        }
-        /* --------- blocking --------- */
-        block(combo) {
-          this.blockedSet.add(normalizeCombo(combo));
-        }
-        unblock(combo) {
-          this.blockedSet.delete(normalizeCombo(combo));
-        }
-        blocked() {
-          return Array.from(this.blockedSet);
-        }
-        addEventBlocker(blocker) {
-          if (typeof blocker !== "function") {
-            return () => {
-            };
-          }
-          this.eventBlockers.add(blocker);
-          return () => {
-            this.eventBlockers.delete(blocker);
-          };
-        }
-        /* --------- binding helpers --------- */
-        /** Moves the action bound to oldBase onto newPhysical and disables oldBase. */
-        replace(oldBase, newPhysical) {
-          const oldN = normalizeCombo(oldBase);
-          const newN = normalizeCombo(newPhysical);
-          this.blockedSet.add(oldN);
-          this.map.set(newN, parseCombo(oldN));
-        }
-        /** Swaps two keys both ways (blocks neither). */
-        swap(a, b) {
-          const an = normalizeCombo(a), bn = normalizeCombo(b);
-          this.map.set(an, parseCombo(bn));
-          this.map.set(bn, parseCombo(an));
-        }
-        /* --------- frames & cleanup --------- */
-        attachAllFrames() {
-          this.doc.querySelectorAll("iframe").forEach((f) => {
-            try {
-              const d = f.contentDocument;
-              const origin = d?.location?.origin;
-              if (d && origin && origin === this.win.location.origin) this.attachDoc(d);
-            } catch {
-            }
-          });
-        }
-        destroy() {
-          for (const [doc, handler] of this.handlers.entries()) {
-            try {
-              const win = doc.defaultView || this.win;
-              win.removeEventListener("keydown", handler, true);
-              win.removeEventListener("keypress", handler, true);
-              win.removeEventListener("keyup", handler, true);
-            } catch {
-            }
-          }
-          this.handlers.clear();
-          this.attachedDocs = /* @__PURE__ */ new WeakSet();
-          for (const mo of this.observers) mo.disconnect();
-          this.observers = [];
-          this.stopAllRapidFires();
-          this.eventBlockers.clear();
-        }
-        /* --------- rapid-fire (API) --------- */
-        startRapidFire(opts) {
-          const trigger = normalizeCombo(opts.trigger);
-          const emit = normalizeCombo(opts.emit ?? opts.trigger);
-          const rateMs = 1e3 / Math.max(1, opts.rateHz ?? 12);
-          const mode = opts.mode ?? "tap";
-          const keyupDelayMs = opts.keyupDelayMs ?? 20;
-          this.sessions.set(trigger, {
-            trigger: parseComboSpec(trigger),
-            emit: parseComboSpec(emit),
-            rateMs,
-            mode,
-            keyupDelayMs,
-            pressed: false,
-            lastTarget: null,
-            tickTimer: null,
-            upTimer: null
-          });
-        }
-        stopRapidFire(trigger) {
-          if (!trigger) {
-            this.stopAllRapidFires();
-            return;
-          }
-          const key2 = normalizeCombo(trigger);
-          const s = this.sessions.get(key2);
-          if (!s) return;
-          this.endSession(s);
-          this.sessions.delete(key2);
-        }
-        stopAllRapidFires() {
-          for (const s of this.sessions.values()) this.endSession(s);
-          this.sessions.clear();
-        }
-        isRapidFireActive(trigger) {
-          const s = this.sessions.get(normalizeCombo(trigger));
-          return !!(s && s.pressed);
-        }
-        setRapidFireRate(trigger, hz) {
-          const s = this.sessions.get(normalizeCombo(trigger));
-          if (!s) return;
-          s.rateMs = 1e3 / Math.max(1, hz);
-          if (s.pressed) this.restartLoop(s);
-        }
-        setRapidFireMode(trigger, mode) {
-          const s = this.sessions.get(normalizeCombo(trigger));
-          if (!s) return;
-          s.mode = mode;
-        }
-        listRapidFires() {
-          const out = [];
-          for (const [key2, s] of this.sessions.entries()) {
-            out.push({
-              trigger: key2,
-              emit: formatCombo(s.emit),
-              rateHz: Math.round(1e3 / s.rateMs),
-              mode: s.mode
-            });
-          }
-          return out;
-        }
-        /* ================= internals ================= */
-        attachDoc(doc) {
-          if (!doc || this.attachedDocs.has(doc)) return;
-          const handler = this.makeHandler(doc);
-          const win = doc.defaultView || this.win;
-          win.addEventListener("keydown", handler, true);
-          win.addEventListener("keypress", handler, true);
-          win.addEventListener("keyup", handler, true);
-          this.handlers.set(doc, handler);
-          this.attachedDocs.add(doc);
-        }
-        makeHandler(doc) {
-          return (evt) => {
-            const e = evt;
-            if (e[REMAP_FLAG]) return;
-            const isRapidSynthetic = !!e[RAPID_SYN_FLAG];
-            if (!isRapidSynthetic) this.handleRapidFireInput(doc, e);
-            if (!isRapidSynthetic && this.eventBlockers.size) {
-              for (const blocker of Array.from(this.eventBlockers)) {
-                let shouldBlock = false;
-                try {
-                  shouldBlock = blocker(e);
-                } catch {
-                  shouldBlock = false;
-                }
-                if (shouldBlock) {
-                  e.stopImmediatePropagation();
-                  e.preventDefault();
-                  return;
-                }
-              }
-            }
-            if (!this.enabled) return;
-            if (isEditableTarget(e.target)) return;
-            if (this.passthrough.has(e.code)) return;
-            const combo = eventToCombo(e);
-            if (this.blockedSet.has(combo)) {
-              e.stopImmediatePropagation();
-              e.preventDefault();
-              return;
-            }
-            const spec = this.map.get(combo);
-            if (!spec) return;
-            e.stopImmediatePropagation();
-            e.preventDefault();
-            const code = spec.code || "";
-            const key2 = spec.key !== void 0 ? spec.key : codeToKey(code, e.shiftKey);
-            const ctrl = spec.ctrl ?? e.ctrlKey;
-            const shift = spec.shift ?? e.shiftKey;
-            const alt = spec.alt ?? e.altKey;
-            const meta = spec.meta ?? e.metaKey;
-            const kc = keyCodeOf(code, key2);
-            const eventWindow = doc.defaultView || this.win;
-            const ne = new eventWindow.KeyboardEvent(e.type, {
-              bubbles: true,
-              cancelable: true,
-              composed: true,
-              key: key2,
-              code,
-              ctrlKey: ctrl,
-              shiftKey: shift,
-              altKey: alt,
-              metaKey: meta,
-              repeat: e.repeat,
-              location: e.location
-            });
-            Object.defineProperties(ne, {
-              keyCode: { get: () => kc },
-              which: { get: () => kc },
-              charCode: { get: () => kc },
-              [REMAP_FLAG]: { value: true }
-            });
-            const target = e.target || doc;
-            target.dispatchEvent(ne);
-          };
-        }
-        /* ---------- rapid fire internals ---------- */
-        handleRapidFireInput(doc, e) {
-          if (isEditableTarget(e.target)) return;
-          if (e.type === "keydown" && !e.repeat) {
-            for (const s of this.sessions.values()) {
-              if (this.matches(e, s.trigger)) {
-                s.pressed = true;
-                s.lastTarget = e.target || doc;
-                this.startLoop(doc, s);
-              }
-            }
-          } else if (e.type === "keyup") {
-            for (const s of this.sessions.values()) {
-              if (this.matches(e, s.trigger)) {
-                s.pressed = false;
-                this.stopLoop(doc, s);
-              }
-            }
-          }
-        }
-        matches(e, c) {
-          return e.code === c.code && !!e.ctrlKey === !!c.ctrl && !!e.shiftKey === !!c.shift && !!e.altKey === !!c.alt && !!e.metaKey === !!c.meta;
-        }
-        startLoop(doc, s) {
-          this.stopLoop(doc, s);
-          const tick3 = () => {
-            if (!s.pressed) return;
-            this.dispatchKey(doc, s.lastTarget || doc, "keydown", s.emit, true);
-            if (s.mode === "tap") {
-              if (s.upTimer) this.win.clearTimeout(s.upTimer);
-              s.upTimer = this.win.setTimeout(() => {
-                this.dispatchKey(doc, s.lastTarget || doc, "keyup", s.emit, false);
-              }, s.keyupDelayMs);
-            }
-          };
-          tick3();
-          s.tickTimer = this.win.setInterval(tick3, s.rateMs);
-        }
-        stopLoop(doc, s) {
-          if (s.tickTimer) {
-            this.win.clearInterval(s.tickTimer);
-            s.tickTimer = null;
-          }
-          if (s.upTimer) {
-            this.win.clearTimeout(s.upTimer);
-            s.upTimer = null;
-          }
-          if (s.mode === "hold" && s.lastTarget) {
-            this.dispatchKey(doc, s.lastTarget, "keyup", s.emit, false);
-          }
-        }
-        restartLoop(s) {
-          if (!s.pressed) return;
-          const anyDoc = this.doc;
-          this.startLoop(anyDoc, s);
-        }
-        endSession(s) {
-          this.stopLoop(this.doc, s);
-          s.pressed = false;
-          s.lastTarget = null;
-        }
-        dispatchKey(doc, target, type, c, repeat) {
-          const code = c.code;
-          const key2 = codeToKey(code, c.shift);
-          const kc = keyCodeOf(code, key2);
-          const eventWindow = doc.defaultView || this.win;
-          const ev = new eventWindow.KeyboardEvent(type, {
-            bubbles: true,
-            cancelable: true,
-            composed: true,
-            key: key2,
-            code,
-            ctrlKey: c.ctrl,
-            shiftKey: c.shift,
-            altKey: c.alt,
-            metaKey: c.meta,
-            repeat
-          });
-          Object.defineProperties(ev, {
-            keyCode: { get: () => kc },
-            which: { get: () => kc },
-            charCode: { get: () => kc },
-            [RAPID_SYN_FLAG]: { value: true }
-          });
-          try {
-            target.dispatchEvent(ev);
-          } catch {
-            doc.dispatchEvent(ev);
-          }
-        }
-      };
-      defaultContext = resolveContext();
-      inGameHotkeys = new InGameHotkeys(true, defaultContext);
-      shareGlobal("inGameHotkeys", inGameHotkeys);
-    }
-  });
-
-  // src/features/keybinds/keybinds.ts
-  function getPetTeamActionId(teamId2) {
-    return `${PET_TEAM_ACTION_PREFIX}${teamId2}`;
-  }
-  function disposePetAction(id) {
-    actionMap.delete(id);
-    defaultMap.delete(id);
-    cache.delete(id);
-    listeners3.delete(id);
-    holdDefaultMap.delete(id);
-    holdCache.delete(id);
-    holdListeners.delete(id);
-  }
-  function registerPetAction(action2, defaultHotkey) {
-    const normalized = {
-      id: action2.id,
-      sectionId: PET_SECTION_ID,
-      label: action2.label,
-      hint: action2.hint,
-      allowModifierOnly: action2.allowModifierOnly,
-      defaultHotkey: cloneHotkey(defaultHotkey),
-      holdDetection: action2.holdDetection ? {
-        label: action2.holdDetection.label,
-        description: action2.holdDetection.description,
-        defaultEnabled: action2.holdDetection.defaultEnabled
-      } : void 0
-    };
-    actionMap.set(normalized.id, normalized);
-    defaultMap.set(normalized.id, cloneHotkey(defaultHotkey));
-    petActionIds.add(normalized.id);
-    petSection.actions.push(normalized);
-  }
-  function updatePetKeybinds(teams) {
-    for (const id of petActionIds) {
-      disposePetAction(id);
-    }
-    petActionIds.clear();
-    petSection.actions = [];
-    registerPetAction(
-      {
-        id: PET_TEAM_PREV_ID,
-        sectionId: PET_SECTION_ID,
-        label: "Previous team",
-        defaultHotkey: null
-      },
-      null
-    );
-    registerPetAction(
-      {
-        id: PET_TEAM_NEXT_ID,
-        sectionId: PET_SECTION_ID,
-        label: "Next team",
-        defaultHotkey: null
-      },
-      null
-    );
-    teams.forEach((team, index) => {
-      const name = String(team?.name || "").trim();
-      const labelName = name.length ? name : `Team ${index + 1}`;
-      registerPetAction(
-        {
-          id: getPetTeamActionId(team.id),
-          sectionId: PET_SECTION_ID,
-          label: `Use team \u2014 ${labelName}`,
-          defaultHotkey: null
-        },
-        null
-      );
-    });
-  }
-  function getCombosForGameAction() {
-    const state5 = gameActiveStates.get(GAME_ACTION_ID);
-    if (!state5) return [];
-    const combo = state5.combo;
-    return typeof combo === "string" && combo.length ? [combo] : [];
-  }
-  function applyGameActionBlockers() {
-    const shouldBlock = gameActionBlockers.size > 0;
-    const desired = /* @__PURE__ */ new Set();
-    if (shouldBlock) {
-      for (const combo of getCombosForGameAction()) {
-        if (combo) desired.add(combo);
-      }
-    }
-    for (const combo of gameActionBlockedCombos) {
-      if (!desired.has(combo)) {
-        try {
-          inGameHotkeys.unblock(combo);
-        } catch {
-        }
-      }
-    }
-    if (shouldBlock) {
-      for (const combo of desired) {
-        if (!gameActionBlockedCombos.has(combo)) {
-          try {
-            inGameHotkeys.block(combo);
-          } catch {
-          }
-        }
-      }
-    }
-    gameActionBlockedCombos.clear();
-    if (shouldBlock) {
-      for (const combo of desired) gameActionBlockedCombos.add(combo);
-    }
-  }
-  function hotkeyToCombo(hk) {
-    if (!hk) return null;
-    const combo = hotkeyToString(hk);
-    return combo.length ? combo : null;
-  }
-  function purgeTargetBindings(emitCombo) {
-    try {
-      inGameHotkeys.unblock(emitCombo);
-    } catch {
-    }
-    try {
-      const curr = inGameHotkeys.current();
-      for (const [from, to] of Object.entries(curr)) {
-        const toCode = String(to).split("+").pop();
-        if (toCode === emitCombo) {
-          try {
-            inGameHotkeys.remove(from);
-          } catch {
-          }
-        }
-      }
-    } catch {
-    }
-  }
-  function isMac2() {
-    return typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.platform || "");
-  }
-  function codeToDisplay(code) {
-    if (!code) return "";
-    const mKey = code.match(/^Key([A-Z])$/);
-    if (mKey) return mKey[1];
-    const mDigit = code.match(/^Digit([0-9])$/);
-    if (mDigit) return mDigit[1];
-    if (code === "ControlLeft" || code === "ControlRight") return "Ctrl";
-    if (code === "AltLeft" || code === "AltRight") return "Alt";
-    if (code === "ShiftLeft" || code === "ShiftRight") return "Shift";
-    if (code === "MetaLeft" || code === "MetaRight") return isMac2() ? "\xE2\u0152\u02DC" : "Win";
-    if (code === "Space") return "Space";
-    if (code === "Enter") return "Enter";
-    if (code === "Escape") return "Esc";
-    if (code === "Tab") return "Tab";
-    if (code === "Backspace") return "Backspace";
-    if (code === "Delete") return "Del";
-    if (code === "Insert") return "Ins";
-    if (code === "ArrowUp") return "\xE2\u2020\u2018";
-    if (code === "ArrowDown") return "\xE2\u2020\u201C";
-    if (code === "ArrowLeft") return "\xE2\u2020\x90";
-    if (code === "ArrowRight") return "\xE2\u2020\u2019";
-    return code;
-  }
-  function prettyHotkey(hk) {
-    if (!hk) return "\xE2\u20AC\u201D";
-    const mods = [];
-    if (hk.ctrl) mods.push("Ctrl");
-    if (hk.shift) mods.push("Shift");
-    if (hk.alt) mods.push("Alt");
-    if (hk.meta) mods.push(isMac2() ? "\xE2\u0152\u02DC" : "Win");
-    let base = "";
-    const k = hk.key;
-    if (typeof k === "string" && k.length === 1) {
-      base = k.toUpperCase();
-    } else {
-      base = codeToDisplay(hk.code);
-    }
-    const baseIsModifier = base && ["Ctrl", "Shift", "Alt", "\xE2\u0152\u02DC", "Win"].includes(base);
-    const parts = baseIsModifier ? mods : mods.concat(base ? [base] : []);
-    return parts.join(" + ");
-  }
-  function syncGameKeybind(id) {
-    if (typeof window === "undefined") return;
-    const emitCombo = GAME_KEYBIND_TARGETS[id];
-    purgeTargetBindings(emitCombo);
-    const prev = gameActiveStates.get(id);
-    if (prev) {
-      if (prev.rapidFire) {
-        try {
-          inGameHotkeys.stopRapidFire(prev.combo);
-        } catch {
-        }
-      }
-      gameActiveStates.delete(id);
-    }
-    const combo = hotkeyToCombo(getKeybind(id));
-    if (!combo) {
-      if (id === GAME_ACTION_ID) {
-        applyGameActionBlockers();
-      }
-      return;
-    }
-    const holdEnabled = getKeybindHoldDetection(id);
-    let replaced = false;
-    if (combo !== emitCombo) {
-      try {
-        inGameHotkeys.replace(emitCombo, combo);
-        replaced = true;
-      } catch {
-      }
-    }
-    let rapidFire = false;
-    if (holdEnabled) {
-      try {
-        inGameHotkeys.startRapidFire({
-          trigger: combo,
-          // on tient la touche choisie
-          emit: combo,
-          // remapper convertira en emitCombo si replace() actif
-          mode: "tap",
-          rateHz: 10
-        });
-        rapidFire = true;
-      } catch {
-      }
-    }
-    gameActiveStates.set(id, { combo, replaced, rapidFire });
-    if (id === GAME_ACTION_ID) {
-      applyGameActionBlockers();
-    }
-  }
-  function cloneHotkey(hk) {
-    return hk ? { ...hk } : null;
-  }
-  function hotkeysEqual(a, b) {
-    if (!a && !b) return true;
-    if (!a || !b) return false;
-    return hotkeyToString(a) === hotkeyToString(b);
-  }
-  function readStored(id) {
-    if (typeof window === "undefined") return void 0;
-    const map2 = readAriesPath(KEYBINDS_BINDINGS_PATH);
-    const raw = map2?.[id];
-    if (raw == null) return void 0;
-    if (raw === STORED_NONE) return null;
-    if (typeof raw !== "string") return null;
-    const parsed = stringToHotkey(raw);
-    return parsed ?? null;
-  }
-  function writeStored(id, hk) {
-    if (typeof window === "undefined") return;
-    updateAriesPath(KEYBINDS_BINDINGS_PATH, (current) => {
-      const base = current && typeof current === "object" ? { ...current } : {};
-      if (hk) {
-        base[id] = hotkeyToString(hk);
-      } else {
-        base[id] = STORED_NONE;
-      }
-      return base;
-    });
-  }
-  function removeStored(id) {
-    if (typeof window === "undefined") return;
-    updateAriesPath(KEYBINDS_BINDINGS_PATH, (current) => {
-      const base = current && typeof current === "object" ? { ...current } : {};
-      delete base[id];
-      return base;
-    });
-  }
-  function readHoldStored(id) {
-    if (typeof window === "undefined") return void 0;
-    const map2 = readAriesPath(KEYBINDS_HOLD_PATH);
-    const raw = map2?.[id];
-    if (raw == null) return void 0;
-    if (typeof raw === "string") return raw === "1";
-    if (typeof raw === "number") return raw === 1;
-    if (typeof raw === "boolean") return raw;
-    return void 0;
-  }
-  function writeHoldStored(id, enabled5) {
-    if (typeof window === "undefined") return;
-    updateAriesPath(KEYBINDS_HOLD_PATH, (current) => {
-      const base = current && typeof current === "object" ? { ...current } : {};
-      base[id] = !!enabled5;
-      return base;
-    });
-  }
-  function emitHoldChange(id) {
-    const set2 = holdListeners.get(id);
-    if (!set2 || set2.size === 0) return;
-    const current = getKeybindHoldDetection(id);
-    for (const cb of set2) cb(current);
-  }
-  function emitChange(id) {
-    const set2 = listeners3.get(id);
-    if (!set2 || set2.size === 0) return;
-    const current = cloneHotkey(getKeybind(id));
-    for (const cb of set2) cb(current);
-  }
-  function ensureCache(id) {
-    if (cache.has(id)) {
-      return cloneHotkey(cache.get(id) ?? null);
-    }
-    const stored = readStored(id);
-    const resolved = stored === void 0 ? cloneHotkey(defaultMap.get(id) ?? null) : cloneHotkey(stored);
-    cache.set(id, resolved);
-    return cloneHotkey(resolved);
-  }
-  function ensureHoldCache(id) {
-    if (!holdDefaultMap.has(id)) return false;
-    if (holdCache.has(id)) {
-      return holdCache.get(id) ?? false;
-    }
-    const stored = readHoldStored(id);
-    const resolved = stored === void 0 ? !!holdDefaultMap.get(id) : stored;
-    holdCache.set(id, resolved);
-    return resolved;
-  }
-  function getKeybind(id) {
-    return ensureCache(id);
-  }
-  function getDefaultKeybind(id) {
-    return cloneHotkey(defaultMap.get(id) ?? null);
-  }
-  function setKeybind(id, hk) {
-    const current = getKeybind(id);
-    if (hotkeysEqual(current, hk)) return;
-    const next = cloneHotkey(hk);
-    if (next) {
-      const asString = hotkeyToString(next);
-      for (const otherId of actionMap.keys()) {
-        if (otherId === id) continue;
-        const other = getKeybind(otherId);
-        if (!other) continue;
-        if (hotkeyToString(other) !== asString) continue;
-        cache.set(otherId, null);
-        writeStored(otherId, null);
-        emitChange(otherId);
-      }
-    }
-    cache.set(id, next);
-    writeStored(id, next);
-    emitChange(id);
-  }
-  function resetKeybind(id) {
-    cache.delete(id);
-    removeStored(id);
-    emitChange(id);
-  }
-  function getKeybindHoldDetection(id) {
-    return ensureHoldCache(id);
-  }
-  function setKeybindHoldDetection(id, enabled5) {
-    if (!holdDefaultMap.has(id)) return;
-    const current = ensureHoldCache(id);
-    if (current === enabled5) return;
-    holdCache.set(id, enabled5);
-    writeHoldStored(id, enabled5);
-    emitHoldChange(id);
-  }
-  function onKeybindHoldDetectionChange(id, cb) {
-    if (!holdDefaultMap.has(id)) {
-      return () => {
-      };
-    }
-    const set2 = holdListeners.get(id) ?? /* @__PURE__ */ new Set();
-    if (!holdListeners.has(id)) holdListeners.set(id, set2);
-    set2.add(cb);
-    return () => {
-      set2.delete(cb);
-      if (set2.size === 0) holdListeners.delete(id);
-    };
-  }
-  function onKeybindChange(id, cb) {
-    const set2 = listeners3.get(id) ?? /* @__PURE__ */ new Set();
-    if (!listeners3.has(id)) listeners3.set(id, set2);
-    set2.add(cb);
-    return () => {
-      set2.delete(cb);
-      if (set2.size === 0) listeners3.delete(id);
-    };
-  }
-  function eventMatchesKeybind(id, e) {
-    return matchHotkey(e, getKeybind(id));
-  }
-  function installGameKeybindsOnce() {
-    if (gameKeybindsInstalled || typeof window === "undefined") return;
-    gameKeybindsInstalled = true;
-    for (const id of GAME_KEYBIND_IDS) {
-      syncGameKeybind(id);
-      onKeybindChange(id, () => syncGameKeybind(id));
-      onKeybindHoldDetectionChange(id, () => syncGameKeybind(id));
-    }
-  }
-  function getKeybindLabel(id) {
-    return prettyHotkey(getKeybind(id));
-  }
-  function getKeybindSections() {
-    return keybindSections.map((section2) => ({
-      ...section2,
-      actions: section2.actions.map((action2) => ({
-        ...action2,
-        defaultHotkey: cloneHotkey(action2.defaultHotkey),
-        holdDetection: action2.holdDetection ? {
-          label: action2.holdDetection.label,
-          description: action2.holdDetection.description,
-          defaultEnabled: action2.holdDetection.defaultEnabled
-        } : void 0
-      }))
-    }));
-  }
-  var SECTION_CONFIG, KEYBINDS_BINDINGS_PATH, KEYBINDS_HOLD_PATH, ARIES_ROOT_KEY, STORED_NONE, actionMap, defaultMap, cache, listeners3, holdDefaultMap, holdCache, holdListeners, keybindSections, PET_SECTION_ID, PET_TEAM_ACTION_PREFIX, PET_TEAM_NEXT_ID, PET_TEAM_PREV_ID, petSection, petActionIds, GAME_KEYBIND_TARGETS, GAME_KEYBIND_IDS, gameActiveStates, gameKeybindsInstalled, GAME_ACTION_ID, gameActionBlockers, gameActionBlockedCombos;
-  var init_keybinds = __esm({
-    "src/features/keybinds/keybinds.ts"() {
-      "use strict";
-      init_ingameHotkeys();
-      init_hotkey();
-      init_storage();
-      SECTION_CONFIG = [
-        {
-          id: "gui",
-          title: "GUI",
-          icon: "\u{1F5A5}\uFE0F",
-          description: "Choose how you open and move the overlay.",
-          actions: [
-            {
-              id: "gui.toggle",
-              label: "Toggle menu visibility",
-              icon: "sprite/ui/CameraOff",
-              hint: "Opens or closes the Arie's Mod overlay.",
-              defaultHotkey: { alt: true, code: "KeyX" }
-            },
-            {
-              id: "gui.drag",
-              label: "Drag HUD",
-              icon: "sprite/ui/Touchpad",
-              hint: "Hold to drag menus interfaces around the screen.",
-              defaultHotkey: { alt: true, code: "AltLeft" },
-              allowModifierOnly: true
-            }
-          ]
-        },
-        {
-          id: "shops",
-          title: "Shops",
-          icon: "\u{1F6D2}",
-          description: "Quick shortcuts to every shop tab.",
-          actions: [
-            {
-              id: "shops.seeds",
-              label: "Seeds shop",
-              icon: "sprite/ui/SeedIcon",
-              defaultHotkey: { alt: true, code: "KeyS" }
-            },
-            {
-              id: "shops.eggs",
-              label: "Eggs shop",
-              icon: "sprite/ui/EggIcon",
-              defaultHotkey: { alt: true, code: "KeyE" }
-            },
-            {
-              id: "shops.decors",
-              label: "Decors shop",
-              icon: "sprite/ui/DecorIcon",
-              defaultHotkey: { alt: true, code: "KeyD" }
-            },
-            {
-              id: "shops.tools",
-              label: "Tools shop",
-              icon: "sprite/ui/ToolIcon",
-              defaultHotkey: { alt: true, code: "KeyT" }
-            }
-          ]
-        },
-        {
-          id: "game",
-          title: "Game",
-          icon: "\u{1F3AE}",
-          description: "Remap the in-game actions",
-          actions: [
-            {
-              id: "game.action",
-              label: "Action",
-              icon: "sprite/ui/PickupPin",
-              defaultHotkey: { code: "Space" },
-              holdDetection: {
-                label: "Rapid fire",
-                defaultEnabled: false
-              }
-            },
-            {
-              id: "game.inventory",
-              label: "Inventory",
-              icon: "sprite/ui/InventoryBag",
-              defaultHotkey: { code: "KeyE" }
-            },
-            {
-              id: "game.pet-hutch",
-              label: "Pet hutch",
-              icon: "sprite/decor/PetHutch_1",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.decor-shed",
-              label: "Decor shed",
-              icon: "sprite/decor/DecorShed",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.tool-shack",
-              label: "Tool shack",
-              icon: "sprite/decor/ToolShack",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.seed-silo",
-              label: "Seed silo",
-              icon: "sprite/decor/SeedSilo",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.feeding-trough",
-              label: "Feeding trough",
-              icon: "sprite/decor/FeedingTrough",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.weather-station",
-              label: "Weather station",
-              icon: "sprite/object/WeatherStation",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.journal",
-              label: "Journal",
-              icon: "sprite/ui/JournalStamp",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.move-up",
-              label: "Move up",
-              icon: "https://i.imgur.com/EkbKUgi.png",
-              defaultHotkey: { code: "KeyW" }
-            },
-            {
-              id: "game.move-down",
-              label: "Move down",
-              icon: "https://i.imgur.com/tdJ7IGP.png",
-              defaultHotkey: { code: "KeyS" }
-            },
-            {
-              id: "game.move-left",
-              label: "Move left",
-              icon: "https://i.imgur.com/86VbR70.png",
-              defaultHotkey: { code: "KeyA" }
-            },
-            {
-              id: "game.move-right",
-              label: "Move right",
-              icon: "https://i.imgur.com/Ljzz6td.png",
-              defaultHotkey: { code: "KeyD" }
-            }
-          ]
-        },
-        {
-          id: "sell",
-          title: "Sell",
-          icon: "\u{1F4B0}",
-          description: "Streamline selling actions.",
-          actions: [
-            {
-              id: "sell.sell-all",
-              label: "All crops",
-              icon: "sprite/ui/IconSell",
-              hint: "Trigger the sell-all flow for harvested crops.",
-              defaultHotkey: null
-            },
-            {
-              id: "sell.sell-all-pets",
-              label: "All pets",
-              icon: "sprite/ui/IconShop",
-              hint: "Sell every non-favorited pet in your inventory.",
-              defaultHotkey: null
-            }
-          ]
-        },
-        {
-          id: "companion",
-          title: "Companion",
-          icon: "\u{1F916}",
-          description: "Reach your companion without going through the launcher.",
-          actions: [
-            {
-              id: "companion.chat",
-              label: "Open the chat",
-              // Sans icône : l'atlas `ui` n'a pas de pictogramme de conversation, et
-              // en inventer une clé afficherait une case vide (`icon` est optionnel).
-              hint: "Opens the Companion window straight on its Chat tab.",
-              defaultHotkey: { alt: true, code: "KeyC" }
-            }
-          ]
-        }
-      ];
-      KEYBINDS_BINDINGS_PATH = "keybinds.bindings";
-      KEYBINDS_HOLD_PATH = "keybinds.hold";
-      ARIES_ROOT_KEY = "aries_mod";
-      STORED_NONE = "__none__";
-      actionMap = /* @__PURE__ */ new Map();
-      defaultMap = /* @__PURE__ */ new Map();
-      cache = /* @__PURE__ */ new Map();
-      listeners3 = /* @__PURE__ */ new Map();
-      holdDefaultMap = /* @__PURE__ */ new Map();
-      holdCache = /* @__PURE__ */ new Map();
-      holdListeners = /* @__PURE__ */ new Map();
-      keybindSections = SECTION_CONFIG.map((section2) => {
-        const actions = section2.actions.map((action2) => {
-          const normalized = {
-            id: action2.id,
-            sectionId: section2.id,
-            label: action2.label,
-            icon: action2.icon,
-            hint: action2.hint,
-            allowModifierOnly: action2.allowModifierOnly,
-            allowClear: action2.allowClear,
-            defaultHotkey: cloneHotkey(action2.defaultHotkey),
-            holdDetection: action2.holdDetection ? {
-              label: action2.holdDetection.label,
-              description: action2.holdDetection.description,
-              defaultEnabled: action2.holdDetection.defaultEnabled
-            } : void 0
-          };
-          actionMap.set(normalized.id, normalized);
-          defaultMap.set(normalized.id, cloneHotkey(action2.defaultHotkey));
-          if (action2.holdDetection) {
-            holdDefaultMap.set(normalized.id, !!action2.holdDetection.defaultEnabled);
-          }
-          return normalized;
-        });
-        return {
-          id: section2.id,
-          title: section2.title,
-          description: section2.description,
-          icon: section2.icon,
-          actions
-        };
-      });
-      PET_SECTION_ID = "pets";
-      PET_TEAM_ACTION_PREFIX = "pets.team.";
-      PET_TEAM_NEXT_ID = "pets.team.next";
-      PET_TEAM_PREV_ID = "pets.team.prev";
-      petSection = {
-        id: PET_SECTION_ID,
-        title: "Pets",
-        icon: "\u{1F437}",
-        description: "Assign shortcuts to your pet teams and cycle through them instantly.",
-        actions: []
-      };
-      keybindSections.push(petSection);
-      petActionIds = /* @__PURE__ */ new Set();
-      updatePetKeybinds([]);
-      GAME_KEYBIND_TARGETS = {
-        "game.action": "Space",
-        "game.inventory": "KeyE",
-        "game.move-up": "KeyW",
-        // Z (AZERTY) == KeyW
-        "game.move-down": "KeyS",
-        // S
-        "game.move-left": "KeyA",
-        // Q (AZERTY) == KeyA
-        "game.move-right": "KeyD"
-        // D
-      };
-      GAME_KEYBIND_IDS = [
-        "game.action",
-        "game.inventory",
-        "game.move-up",
-        "game.move-down",
-        "game.move-left",
-        "game.move-right"
-      ];
-      gameActiveStates = /* @__PURE__ */ new Map();
-      gameKeybindsInstalled = false;
-      GAME_ACTION_ID = "game.action";
-      gameActionBlockers = /* @__PURE__ */ new Set();
-      gameActionBlockedCombos = /* @__PURE__ */ new Set();
-      if (typeof window !== "undefined") {
-        window.addEventListener("storage", (event) => {
-          if (event.key !== ARIES_ROOT_KEY) return;
-          cache.clear();
-          holdCache.clear();
-          for (const id of actionMap.keys()) emitChange(id);
-          for (const id of holdDefaultMap.keys()) emitHoldChange(id);
-        });
-      }
-    }
-  });
-
-  // src/lib/keyboard.ts
-  function isKeybindCaptureActive() {
-    return keybindCaptureCount > 0;
-  }
-  function beginKeybindCapture() {
-    keybindCaptureCount++;
-  }
-  function endKeybindCapture() {
-    keybindCaptureCount = Math.max(0, keybindCaptureCount - 1);
-  }
-  function shouldIgnoreKeydown(e) {
-    if (isKeybindCaptureActive()) return true;
-    const el = e.target;
-    if (!el) return false;
-    return el.isContentEditable || el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT";
-  }
-  var keybindCaptureCount;
-  var init_keyboard = __esm({
-    "src/lib/keyboard.ts"() {
-      "use strict";
-      keybindCaptureCount = 0;
-    }
-  });
-
   // src/features/pets/teamReconcile.ts
   function serverMemberIds(team) {
     return Array.isArray(team?.members) ? team.members.map((m) => String(m?.petId || "")).filter(Boolean) : [];
@@ -18452,155 +17073,8 @@
   });
 
   // src/features/pets/pets.ts
-  function syncTeamHotkey(teamId2) {
-    const hk = getKeybind(getPetTeamActionId(teamId2));
-    if (hk) TEAM_HK_MAP.set(teamId2, hk);
-    else TEAM_HK_MAP.delete(teamId2);
-  }
-  function syncNextTeamHotkey() {
-    hkNextTeam = getKeybind(PET_TEAM_NEXT_ID);
-  }
-  function syncPrevTeamHotkey() {
-    hkPrevTeam = getKeybind(PET_TEAM_PREV_ID);
-  }
-  function ensureLegacyTeamHotkeyMigration(teamId2) {
-    const hotkeys = readAriesPath(PATH_PETS_HOTKEYS) ?? {};
-    const legacy = hotkeys[teamId2];
-    if (!legacy) return;
-    const actionId = getPetTeamActionId(teamId2);
-    const existing = getKeybind(actionId);
-    if (!existing) {
-      const hk = stringToHotkey(legacy);
-      if (hk) {
-        setKeybind(actionId, hk);
-      }
-    }
-    const clone2 = { ...hotkeys };
-    delete clone2[teamId2];
-    writeAriesPath(PATH_PETS_HOTKEYS, clone2);
-  }
-  function normalizeTeamList(teams) {
-    if (!Array.isArray(teams)) return [];
-    const seen = /* @__PURE__ */ new Set();
-    const out = [];
-    for (const t of teams) {
-      const id = String(t?.id ?? "");
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
-      out.push({ id, name: t?.name ?? null });
-    }
-    return out;
-  }
-  function ensureLastUsedTeamIsValid() {
-    if (!orderedTeamIds.length) {
-      lastUsedTeamId = null;
-      return;
-    }
-    if (!lastUsedTeamId || !orderedTeamIds.includes(lastUsedTeamId)) {
-      lastUsedTeamId = orderedTeamIds[0] ?? null;
-    }
-  }
   function markTeamAsUsed(teamId2) {
     lastUsedTeamId = teamId2 ? String(teamId2) : null;
-  }
-  function setTeamsForHotkeys(rawTeams) {
-    for (const unsub of TEAM_HK_UNSUBS.values()) {
-      try {
-        unsub();
-      } catch {
-      }
-    }
-    TEAM_HK_UNSUBS.clear();
-    if (unsubNextHotkey) {
-      try {
-        unsubNextHotkey();
-      } catch {
-      }
-      unsubNextHotkey = null;
-    }
-    if (unsubPrevHotkey) {
-      try {
-        unsubPrevHotkey();
-      } catch {
-      }
-      unsubPrevHotkey = null;
-    }
-    const teams = normalizeTeamList(rawTeams);
-    updatePetKeybinds(teams);
-    orderedTeamIds = teams.map((t) => t.id);
-    ensureLastUsedTeamIsValid();
-    const keep = new Set(orderedTeamIds);
-    for (const teamId2 of Array.from(TEAM_HK_MAP.keys())) {
-      if (!keep.has(teamId2)) TEAM_HK_MAP.delete(teamId2);
-    }
-    teams.forEach((team) => {
-      ensureLegacyTeamHotkeyMigration(team.id);
-      syncTeamHotkey(team.id);
-      const unsub = onKeybindChange(getPetTeamActionId(team.id), () => syncTeamHotkey(team.id));
-      TEAM_HK_UNSUBS.set(team.id, unsub);
-    });
-    syncNextTeamHotkey();
-    syncPrevTeamHotkey();
-    unsubNextHotkey = onKeybindChange(PET_TEAM_NEXT_ID, () => syncNextTeamHotkey());
-    unsubPrevHotkey = onKeybindChange(PET_TEAM_PREV_ID, () => syncPrevTeamHotkey());
-  }
-  function installPetTeamHotkeysOnce(onUseTeam) {
-    const FLAG = "__qws_pet_team_hk_installed";
-    if (window[FLAG]) return;
-    window.addEventListener(
-      "keydown",
-      async (e) => {
-        if (shouldIgnoreKeydown(e)) return;
-        const teamsList = orderedTeamIds.slice();
-        if (!teamsList.length) return;
-        const activeTid = await _currentActiveTeamId();
-        if (activeTid && teamsList.includes(activeTid)) {
-          lastUsedTeamId = activeTid;
-        } else if (!lastUsedTeamId || !teamsList.includes(lastUsedTeamId)) {
-          lastUsedTeamId = teamsList[0] ?? null;
-        }
-        ensureLastUsedTeamIsValid();
-        const useTeam = (teamId2) => {
-          if (!teamId2) return;
-          markTeamAsUsed(teamId2);
-          onUseTeam(teamId2);
-        };
-        if (hkPrevTeam && matchHotkey(e, hkPrevTeam)) {
-          const baseId = lastUsedTeamId && teamsList.includes(lastUsedTeamId) ? lastUsedTeamId : teamsList[teamsList.length - 1] ?? null;
-          const curIdx = baseId ? teamsList.indexOf(baseId) : -1;
-          const nextIdx = curIdx >= 0 ? (curIdx - 1 + teamsList.length) % teamsList.length : teamsList.length - 1;
-          const target = teamsList[nextIdx] ?? null;
-          if (target) {
-            e.preventDefault();
-            e.stopPropagation();
-            useTeam(target);
-            return;
-          }
-        }
-        if (hkNextTeam && matchHotkey(e, hkNextTeam)) {
-          const baseId = lastUsedTeamId && teamsList.includes(lastUsedTeamId) ? lastUsedTeamId : teamsList[0] ?? null;
-          const curIdx = baseId ? teamsList.indexOf(baseId) : -1;
-          const nextIdx = curIdx >= 0 ? (curIdx + 1) % teamsList.length : 0;
-          const target = teamsList[nextIdx] ?? null;
-          if (target) {
-            e.preventDefault();
-            e.stopPropagation();
-            useTeam(target);
-            return;
-          }
-        }
-        for (const [teamId2, hk] of TEAM_HK_MAP) {
-          if (matchHotkey(e, hk)) {
-            e.preventDefault();
-            e.stopPropagation();
-            useTeam(teamId2);
-            break;
-          }
-        }
-      },
-      true
-    );
-    window[FLAG] = true;
   }
   function _abilityName(id) {
     const key2 = String(id ?? "");
@@ -19652,7 +18126,7 @@
     }
     return finish({ swapped, placed, skipped });
   }
-  var PATH_PETS_OVERRIDES, PATH_PETS_INSTANT_FEED, PATH_PETS_UI, PATH_PETS_TEAMS, PATH_PETS_TEAM_SEARCH, PATH_PETS_TEAM_SYNC, PATH_PETS_HOTKEYS, PATH_PETS_ABILITY_LOGS, WEATHER_MUTATION_BOOST_IDS, TEAM_HK_MAP, TEAM_HK_UNSUBS, hkNextTeam, hkPrevTeam, unsubNextHotkey, unsubPrevHotkey, orderedTeamIds, lastUsedTeamId, _AB, _abilityIdsCache, _s, _sOpt, _n, _sArr, _petCatalogKeyByLc, _teamSearch, _teamSyncEnabled, _localTeamIdByServerId, _serverTeams, _teamSyncStarted, _lastServerTeamsSig, _reconcilingTeams, _reconcileTeamsQueued, _pendingServerCreates, _pendingCreateTimeouts, _pendingCreateSentName, PENDING_CREATE_TIMEOUT_MS, _lastCreateAttemptSig, _invRaw, _activeRaw, _hutchRaw, _invPetsCache, _invUnsub, _activeUnsub, _hutchUnsub, _invSig, _activeSig, _lastAutofeedAttemptAt, _belowThreshold, AUTOF_FEED_MIN_INTERVAL_MS, DEFAULT_OVERRIDE, DEFAULT_UI, DEFAULT_INSTANT_FEED, _currentPets, _userTriggerCb, PetsService, HUTCH_DEFAULT_CAPACITY, MAX_TEAM_SLOTS;
+  var PATH_PETS_OVERRIDES, PATH_PETS_INSTANT_FEED, PATH_PETS_UI, PATH_PETS_TEAMS, PATH_PETS_TEAM_SEARCH, PATH_PETS_TEAM_SYNC, PATH_PETS_ABILITY_LOGS, WEATHER_MUTATION_BOOST_IDS, lastUsedTeamId, _AB, _abilityIdsCache, _s, _sOpt, _n, _sArr, _petCatalogKeyByLc, _teamSearch, _teamSyncEnabled, _localTeamIdByServerId, _serverTeams, _teamSyncStarted, _lastServerTeamsSig, _reconcilingTeams, _reconcileTeamsQueued, _pendingServerCreates, _pendingCreateTimeouts, _pendingCreateSentName, PENDING_CREATE_TIMEOUT_MS, _lastCreateAttemptSig, _invRaw, _activeRaw, _hutchRaw, _invPetsCache, _invUnsub, _activeUnsub, _hutchUnsub, _invSig, _activeSig, _lastAutofeedAttemptAt, _belowThreshold, AUTOF_FEED_MIN_INTERVAL_MS, DEFAULT_OVERRIDE, DEFAULT_UI, DEFAULT_INSTANT_FEED, _currentPets, _userTriggerCb, PetsService, HUTCH_DEFAULT_CAPACITY, MAX_TEAM_SLOTS;
   var init_pets = __esm({
     "src/features/pets/pets.ts"() {
       "use strict";
@@ -19662,9 +18136,6 @@
       init_atoms();
       init_playerIdentity();
       init_toast();
-      init_hotkey();
-      init_keybinds();
-      init_keyboard();
       init_stats();
       init_storage();
       init_pageContext();
@@ -19676,7 +18147,6 @@
       PATH_PETS_TEAMS = "pets.teams";
       PATH_PETS_TEAM_SEARCH = "pets.teamSearch";
       PATH_PETS_TEAM_SYNC = "pets.teamSync";
-      PATH_PETS_HOTKEYS = "pets.hotkeys";
       PATH_PETS_ABILITY_LOGS = "pets.abilityLogs";
       WEATHER_MUTATION_BOOST_IDS = /* @__PURE__ */ new Set([
         "ProduceMutationBoost",
@@ -19692,13 +18162,6 @@
         // Passive chance boost; the game itself never logs it (returns nothing).
         "DawnbinderBoost"
       ]);
-      TEAM_HK_MAP = /* @__PURE__ */ new Map();
-      TEAM_HK_UNSUBS = /* @__PURE__ */ new Map();
-      hkNextTeam = null;
-      hkPrevTeam = null;
-      unsubNextHotkey = null;
-      unsubPrevHotkey = null;
-      orderedTeamIds = [];
       lastUsedTeamId = null;
       _AB = petAbilities2 ?? {};
       _abilityIdsCache = null;
@@ -20184,6 +18647,13 @@
         async getActivePetIds() {
           return _getActivePetSlotIds();
         },
+        /** The team the equipped pets form, if any. */
+        getActiveTeamId() {
+          return _currentActiveTeamId();
+        },
+        getLastUsedTeamId() {
+          return lastUsedTeamId;
+        },
         /* ------------------------- Ability logs ------------------------- */
         _logs: [],
         _logsMax: 500,
@@ -20497,6 +18967,602 @@
     }
   });
 
+  // src/lib/hotkey.ts
+  function codesMatch(expected, actual) {
+    if (expected === actual) return true;
+    return MODIFIER_PAIRS.some((pair) => pair.includes(expected) && pair.includes(actual));
+  }
+  function isMac() {
+    return navigator.platform?.toLowerCase().includes("mac") || /mac|iphone|ipad|ipod/i.test(navigator.userAgent);
+  }
+  function eventToHotkey(e, allowModifierOnly = false) {
+    const isModifier = MODIFIER_CODES.has(e.code) || ["Shift", "Control", "Alt", "Meta"].includes(e.key);
+    if (isModifier && !allowModifierOnly) return null;
+    return { code: e.code, ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey, meta: e.metaKey };
+  }
+  function matchHotkey(e, h2) {
+    if (!h2) return false;
+    if (!!h2.ctrl !== e.ctrlKey) return false;
+    if (!!h2.shift !== e.shiftKey) return false;
+    if (!!h2.alt !== e.altKey) return false;
+    if (!!h2.meta !== e.metaKey) return false;
+    return codesMatch(h2.code, e.code);
+  }
+  function hotkeyToString(hk) {
+    if (!hk) return "";
+    const parts = [];
+    if (hk.ctrl) parts.push("Ctrl");
+    if (hk.shift) parts.push("Shift");
+    if (hk.alt) parts.push("Alt");
+    if (hk.meta) parts.push("Meta");
+    if (hk.code) parts.push(hk.code);
+    return parts.join("+");
+  }
+  function stringToHotkey(s) {
+    if (!s) return null;
+    const parts = s.split("+").map((p) => p.trim()).filter(Boolean);
+    if (!parts.length) return null;
+    const hk = { code: canonicalizeCode(parts.pop() || "") };
+    for (const p of parts) {
+      const mod = p.toLowerCase();
+      if (mod === "ctrl" || mod === "control") hk.ctrl = true;
+      else if (mod === "shift") hk.shift = true;
+      else if (mod === "alt") hk.alt = true;
+      else if (mod === "meta" || mod === "cmd" || mod === "command") hk.meta = true;
+    }
+    return hk.code ? hk : null;
+  }
+  function canonicalizeCode(rawCode) {
+    const trimmed = rawCode.trim();
+    if (!trimmed) return "";
+    const lower = trimmed.toLowerCase();
+    const letter = lower.match(/^key([a-z])$/);
+    if (letter) return `Key${letter[1].toUpperCase()}`;
+    const digit = lower.match(/^digit([0-9])$/);
+    if (digit) return `Digit${digit[1]}`;
+    const numpadDigit = lower.match(/^numpad([0-9])$/);
+    if (numpadDigit) return `Numpad${numpadDigit[1]}`;
+    if (lower.startsWith("numpad")) {
+      const suffix = lower.slice(6);
+      return suffix ? `Numpad${CANONICAL_CODES[suffix] ?? capitalize(suffix)}` : "Numpad";
+    }
+    const fKey = lower.match(/^f([0-9]{1,2})$/);
+    if (fKey) return `F${fKey[1]}`;
+    const arrow = lower.match(/^arrow([a-z]+)$/);
+    if (arrow) return `Arrow${CANONICAL_CODES[arrow[1]] ?? capitalize(arrow[1])}`;
+    return CANONICAL_CODES[lower] ?? capitalize(trimmed);
+  }
+  function prettyCode(code) {
+    if (code === "AltLeft" || code === "AltRight") return "Alt";
+    if (code === "ControlLeft" || code === "ControlRight") return "Ctrl";
+    if (code === "ShiftLeft" || code === "ShiftRight") return "Shift";
+    if (code === "MetaLeft" || code === "MetaRight") return isMac() ? "\u2318" : "Meta";
+    if (code.startsWith("Key")) return code.slice(3);
+    if (code.startsWith("Digit")) return code.slice(5);
+    if (code.startsWith("Numpad")) return "Numpad " + code.slice(6);
+    const arrows = { ArrowUp: "\u2191", ArrowDown: "\u2193", ArrowLeft: "\u2190", ArrowRight: "\u2192" };
+    return arrows[code] ?? code;
+  }
+  function hotkeyToPretty(h2) {
+    const mac = isMac();
+    const mods = [];
+    if (h2.ctrl) mods.push(mac ? "\u2303" : "Ctrl");
+    if (h2.alt) mods.push(mac ? "\u2325" : "Alt");
+    if (h2.shift) mods.push(mac ? "\u21E7" : "Shift");
+    if (h2.meta) mods.push(mac ? "\u2318" : "Meta");
+    const modifierAlone = h2.alt && (h2.code === "AltLeft" || h2.code === "AltRight") || h2.ctrl && (h2.code === "ControlLeft" || h2.code === "ControlRight") || h2.shift && (h2.code === "ShiftLeft" || h2.code === "ShiftRight") || h2.meta && (h2.code === "MetaLeft" || h2.code === "MetaRight");
+    const parts = mods.slice();
+    if (!modifierAlone || parts.length === 0) parts.push(prettyCode(h2.code));
+    return parts.join(mac ? "" : " + ");
+  }
+  var MODIFIER_CODES, MODIFIER_PAIRS, CANONICAL_CODES, capitalize;
+  var init_hotkey = __esm({
+    "src/lib/hotkey.ts"() {
+      "use strict";
+      MODIFIER_CODES = /* @__PURE__ */ new Set([
+        "ShiftLeft",
+        "ShiftRight",
+        "ControlLeft",
+        "ControlRight",
+        "AltLeft",
+        "AltRight",
+        "MetaLeft",
+        "MetaRight"
+      ]);
+      MODIFIER_PAIRS = [
+        ["AltLeft", "AltRight"],
+        ["ControlLeft", "ControlRight"],
+        ["ShiftLeft", "ShiftRight"],
+        ["MetaLeft", "MetaRight"]
+      ];
+      CANONICAL_CODES = {
+        space: "Space",
+        enter: "Enter",
+        escape: "Escape",
+        tab: "Tab",
+        backspace: "Backspace",
+        delete: "Delete",
+        insert: "Insert",
+        home: "Home",
+        end: "End",
+        pageup: "PageUp",
+        pagedown: "PageDown",
+        arrowup: "ArrowUp",
+        arrowdown: "ArrowDown",
+        arrowleft: "ArrowLeft",
+        arrowright: "ArrowRight",
+        bracketleft: "BracketLeft",
+        bracketright: "BracketRight",
+        backslash: "Backslash",
+        slash: "Slash",
+        minus: "Minus",
+        equal: "Equal",
+        semicolon: "Semicolon",
+        quote: "Quote",
+        backquote: "Backquote",
+        comma: "Comma",
+        period: "Period",
+        dot: "Period",
+        capslock: "CapsLock",
+        numlock: "NumLock",
+        scrolllock: "ScrollLock",
+        pause: "Pause",
+        contextmenu: "ContextMenu",
+        printscreen: "PrintScreen",
+        metaleft: "MetaLeft",
+        metaright: "MetaRight",
+        altleft: "AltLeft",
+        altright: "AltRight",
+        controlleft: "ControlLeft",
+        controlright: "ControlRight",
+        shiftleft: "ShiftLeft",
+        shiftright: "ShiftRight"
+      };
+      capitalize = (word) => word ? word[0].toUpperCase() + word.slice(1) : "";
+    }
+  });
+
+  // src/lib/keyboard.ts
+  function isKeybindCaptureActive() {
+    return keybindCaptureCount > 0;
+  }
+  function beginKeybindCapture() {
+    keybindCaptureCount++;
+  }
+  function endKeybindCapture() {
+    keybindCaptureCount = Math.max(0, keybindCaptureCount - 1);
+  }
+  function shouldIgnoreKeydown(e) {
+    if (isKeybindCaptureActive()) return true;
+    const el = e.target;
+    if (!el) return false;
+    return el.isContentEditable || el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT";
+  }
+  var keybindCaptureCount;
+  var init_keyboard = __esm({
+    "src/lib/keyboard.ts"() {
+      "use strict";
+      keybindCaptureCount = 0;
+    }
+  });
+
+  // src/features/keybinds/catalog.ts
+  var PET_SECTION_ID, SECTION_CONFIG;
+  var init_catalog = __esm({
+    "src/features/keybinds/catalog.ts"() {
+      "use strict";
+      PET_SECTION_ID = "pets";
+      SECTION_CONFIG = [
+        {
+          id: "gui",
+          title: "GUI",
+          icon: "\u{1F5A5}\uFE0F",
+          description: "Choose how you open and move the overlay.",
+          actions: [
+            {
+              id: "gui.toggle",
+              label: "Toggle menu visibility",
+              icon: "sprite/ui/CameraOff",
+              hint: "Opens or closes the Arie's Mod overlay.",
+              defaultHotkey: { alt: true, code: "KeyX" }
+            },
+            {
+              id: "gui.drag",
+              label: "Drag HUD",
+              icon: "sprite/ui/Touchpad",
+              hint: "Hold to drag menus interfaces around the screen.",
+              defaultHotkey: { alt: true, code: "AltLeft" },
+              allowModifierOnly: true
+            }
+          ]
+        },
+        {
+          id: "shops",
+          title: "Shops",
+          icon: "\u{1F6D2}",
+          description: "Quick shortcuts to every shop tab.",
+          actions: [
+            { id: "shops.seeds", label: "Seeds shop", icon: "sprite/ui/SeedIcon", defaultHotkey: { alt: true, code: "KeyS" } },
+            { id: "shops.eggs", label: "Eggs shop", icon: "sprite/ui/EggIcon", defaultHotkey: { alt: true, code: "KeyE" } },
+            { id: "shops.decors", label: "Decors shop", icon: "sprite/ui/DecorIcon", defaultHotkey: { alt: true, code: "KeyD" } },
+            { id: "shops.tools", label: "Tools shop", icon: "sprite/ui/ToolIcon", defaultHotkey: { alt: true, code: "KeyT" } }
+          ]
+        },
+        {
+          id: "game",
+          title: "Game",
+          icon: "\u{1F3AE}",
+          description: "Remap the in-game actions",
+          actions: [
+            {
+              id: "game.action",
+              label: "Action",
+              icon: "sprite/ui/PickupPin",
+              defaultHotkey: { code: "Space" },
+              holdDetection: { label: "Rapid fire", defaultEnabled: false }
+            },
+            { id: "game.inventory", label: "Inventory", icon: "sprite/ui/InventoryBag", defaultHotkey: { code: "KeyE" } },
+            { id: "game.pet-hutch", label: "Pet hutch", icon: "sprite/decor/PetHutch_1", defaultHotkey: null, allowClear: true },
+            { id: "game.decor-shed", label: "Decor shed", icon: "sprite/decor/DecorShed", defaultHotkey: null, allowClear: true },
+            { id: "game.tool-shack", label: "Tool shack", icon: "sprite/decor/ToolShack", defaultHotkey: null, allowClear: true },
+            { id: "game.seed-silo", label: "Seed silo", icon: "sprite/decor/SeedSilo", defaultHotkey: null, allowClear: true },
+            { id: "game.feeding-trough", label: "Feeding trough", icon: "sprite/decor/FeedingTrough", defaultHotkey: null, allowClear: true },
+            { id: "game.weather-station", label: "Weather station", icon: "sprite/object/WeatherStation", defaultHotkey: null, allowClear: true },
+            { id: "game.journal", label: "Journal", icon: "sprite/ui/JournalStamp", defaultHotkey: null, allowClear: true },
+            { id: "game.move-up", label: "Move up", icon: "https://i.imgur.com/EkbKUgi.png", defaultHotkey: { code: "KeyW" } },
+            { id: "game.move-down", label: "Move down", icon: "https://i.imgur.com/tdJ7IGP.png", defaultHotkey: { code: "KeyS" } },
+            { id: "game.move-left", label: "Move left", icon: "https://i.imgur.com/86VbR70.png", defaultHotkey: { code: "KeyA" } },
+            { id: "game.move-right", label: "Move right", icon: "https://i.imgur.com/Ljzz6td.png", defaultHotkey: { code: "KeyD" } }
+          ]
+        },
+        {
+          id: "sell",
+          title: "Sell",
+          icon: "\u{1F4B0}",
+          description: "Streamline selling actions.",
+          actions: [
+            {
+              id: "sell.sell-all",
+              label: "All crops",
+              icon: "sprite/ui/IconSell",
+              hint: "Trigger the sell-all flow for harvested crops.",
+              defaultHotkey: null
+            },
+            {
+              id: "sell.sell-all-pets",
+              label: "All pets",
+              icon: "sprite/ui/IconShop",
+              hint: "Sell every non-favorited pet in your inventory.",
+              defaultHotkey: null
+            }
+          ]
+        },
+        {
+          id: "companion",
+          title: "Companion",
+          icon: "\u{1F916}",
+          description: "Reach your companion without going through the launcher.",
+          actions: [
+            {
+              id: "companion.chat",
+              label: "Open the chat",
+              // No icon: the `ui` atlas has no chat pictogram, and a made-up key
+              // would show an empty box.
+              hint: "Opens the Companion window straight on its Chat tab.",
+              defaultHotkey: { alt: true, code: "KeyC" }
+            }
+          ]
+        },
+        {
+          id: PET_SECTION_ID,
+          title: "Pets",
+          icon: "\u{1F437}",
+          description: "Assign shortcuts to your pet teams and cycle through them instantly.",
+          actions: [
+            { id: "pets.team.prev", label: "Previous team", defaultHotkey: null },
+            { id: "pets.team.next", label: "Next team", defaultHotkey: null }
+          ]
+        }
+      ];
+    }
+  });
+
+  // src/lib/emitter.ts
+  var Emitter;
+  var init_emitter = __esm({
+    "src/lib/emitter.ts"() {
+      "use strict";
+      Emitter = class {
+        constructor() {
+          this.listeners = /* @__PURE__ */ new Set();
+        }
+        on(listener) {
+          this.listeners.add(listener);
+          return () => {
+            this.listeners.delete(listener);
+          };
+        }
+        emit(value) {
+          for (const listener of [...this.listeners]) {
+            try {
+              listener(value);
+            } catch (error) {
+              console.error("[Aries] listener failed", error);
+            }
+          }
+        }
+        get size() {
+          return this.listeners.size;
+        }
+        clear() {
+          this.listeners.clear();
+        }
+      };
+    }
+  });
+
+  // src/features/keybinds/keybinds.ts
+  function register(section2, config) {
+    const action2 = {
+      ...config,
+      sectionId: section2.id,
+      defaultHotkey: cloneHotkey(config.defaultHotkey),
+      holdDetection: config.holdDetection ? { ...config.holdDetection } : void 0
+    };
+    actions.set(action2.id, action2);
+    if (action2.holdDetection) holdDefaults.set(action2.id, !!action2.holdDetection.defaultEnabled);
+    section2.actions.push(action2);
+  }
+  function setDynamicActions(sectionId, configs) {
+    const index = SECTION_CONFIG.findIndex((s) => s.id === sectionId);
+    if (index < 0) return;
+    const section2 = sections[index];
+    const fixed = new Set(SECTION_CONFIG[index].actions.map((a) => a.id));
+    for (const old of section2.actions) {
+      if (fixed.has(old.id)) continue;
+      actions.delete(old.id);
+      holdDefaults.delete(old.id);
+      cache.delete(old.id);
+      holdCache.delete(old.id);
+    }
+    section2.actions = section2.actions.filter((a) => fixed.has(a.id));
+    for (const config of configs) {
+      if (!fixed.has(config.id)) register(section2, config);
+    }
+  }
+  function getKeybindSections() {
+    return sections.map((section2) => ({
+      ...section2,
+      actions: section2.actions.map((action2) => ({
+        ...action2,
+        defaultHotkey: cloneHotkey(action2.defaultHotkey),
+        holdDetection: action2.holdDetection ? { ...action2.holdDetection } : void 0
+      }))
+    }));
+  }
+  function readStored(id) {
+    const raw = readAriesPath(BINDINGS_PATH)?.[id];
+    if (raw == null) return void 0;
+    if (raw === STORED_NONE || typeof raw !== "string") return null;
+    return stringToHotkey(raw) ?? null;
+  }
+  function writeStored(id, hk) {
+    updateAriesPath(BINDINGS_PATH, (current) => {
+      const next = current && typeof current === "object" ? { ...current } : {};
+      if (hk === void 0) delete next[id];
+      else next[id] = hk ? hotkeyToString(hk) : STORED_NONE;
+      return next;
+    });
+  }
+  function readHoldStored(id) {
+    const raw = readAriesPath(HOLD_PATH)?.[id];
+    if (typeof raw === "string") return raw === "1";
+    if (typeof raw === "number") return raw === 1;
+    if (typeof raw === "boolean") return raw;
+    return void 0;
+  }
+  function writeHoldStored(id, enabled5) {
+    updateAriesPath(HOLD_PATH, (current) => {
+      const next = current && typeof current === "object" ? { ...current } : {};
+      next[id] = enabled5;
+      return next;
+    });
+  }
+  function emitterFor(map2, id) {
+    let emitter = map2.get(id);
+    if (!emitter) {
+      emitter = new Emitter();
+      map2.set(id, emitter);
+    }
+    return emitter;
+  }
+  function emitChange(id) {
+    changes.get(id)?.emit(getKeybind(id));
+  }
+  function emitHoldChange(id) {
+    holdChanges.get(id)?.emit(getKeybindHoldDetection(id));
+  }
+  function onKeybindChange(id, cb) {
+    return emitterFor(changes, id).on(cb);
+  }
+  function onKeybindHoldDetectionChange(id, cb) {
+    if (!holdDefaults.has(id)) return () => {
+    };
+    return emitterFor(holdChanges, id).on(cb);
+  }
+  function getKeybind(id) {
+    if (!cache.has(id)) {
+      const stored = readStored(id);
+      cache.set(id, stored === void 0 ? cloneHotkey(actions.get(id)?.defaultHotkey) : stored);
+    }
+    return cloneHotkey(cache.get(id));
+  }
+  function getDefaultKeybind(id) {
+    return cloneHotkey(actions.get(id)?.defaultHotkey);
+  }
+  function setKeybind(id, hk) {
+    const next = cloneHotkey(hk);
+    const wanted = hotkeyToString(next);
+    if (hotkeyToString(getKeybind(id)) === wanted) return;
+    if (next) {
+      for (const otherId of actions.keys()) {
+        if (otherId === id || hotkeyToString(getKeybind(otherId)) !== wanted) continue;
+        cache.set(otherId, null);
+        writeStored(otherId, null);
+        emitChange(otherId);
+      }
+    }
+    cache.set(id, next);
+    writeStored(id, next);
+    emitChange(id);
+  }
+  function resetKeybind(id) {
+    cache.delete(id);
+    writeStored(id, void 0);
+    emitChange(id);
+  }
+  function getKeybindHoldDetection(id) {
+    if (!holdDefaults.has(id)) return false;
+    if (!holdCache.has(id)) {
+      const stored = readHoldStored(id);
+      holdCache.set(id, stored === void 0 ? !!holdDefaults.get(id) : stored);
+    }
+    return holdCache.get(id) ?? false;
+  }
+  function setKeybindHoldDetection(id, enabled5) {
+    if (!holdDefaults.has(id) || getKeybindHoldDetection(id) === enabled5) return;
+    holdCache.set(id, enabled5);
+    writeHoldStored(id, enabled5);
+    emitHoldChange(id);
+  }
+  function eventMatchesKeybind(id, e) {
+    return matchHotkey(e, getKeybind(id));
+  }
+  function getKeybindLabel(id) {
+    const hk = getKeybind(id);
+    return hk ? hotkeyToPretty(hk) : UNBOUND_LABEL;
+  }
+  var BINDINGS_PATH, HOLD_PATH, ARIES_ROOT_KEY, STORED_NONE, UNBOUND_LABEL, sections, actions, holdDefaults, cache, holdCache, changes, holdChanges, cloneHotkey;
+  var init_keybinds = __esm({
+    "src/features/keybinds/keybinds.ts"() {
+      "use strict";
+      init_emitter();
+      init_hotkey();
+      init_storage();
+      init_catalog();
+      BINDINGS_PATH = "keybinds.bindings";
+      HOLD_PATH = "keybinds.hold";
+      ARIES_ROOT_KEY = "aries_mod";
+      STORED_NONE = "__none__";
+      UNBOUND_LABEL = "None";
+      sections = SECTION_CONFIG.map((section2) => ({ ...section2, actions: [] }));
+      actions = /* @__PURE__ */ new Map();
+      holdDefaults = /* @__PURE__ */ new Map();
+      cache = /* @__PURE__ */ new Map();
+      holdCache = /* @__PURE__ */ new Map();
+      changes = /* @__PURE__ */ new Map();
+      holdChanges = /* @__PURE__ */ new Map();
+      cloneHotkey = (hk) => hk ? { ...hk } : null;
+      for (let i = 0; i < SECTION_CONFIG.length; i++) {
+        for (const config of SECTION_CONFIG[i].actions) register(sections[i], config);
+      }
+      if (typeof window !== "undefined") {
+        window.addEventListener("storage", (event) => {
+          if (event.key !== ARIES_ROOT_KEY) return;
+          cache.clear();
+          holdCache.clear();
+          for (const id of actions.keys()) emitChange(id);
+          for (const id of holdDefaults.keys()) emitHoldChange(id);
+        });
+      }
+    }
+  });
+
+  // src/features/pets/teamHotkeys.ts
+  function migrateLegacyHotkey(teamId2) {
+    const legacy = readAriesPath(LEGACY_HOTKEYS_PATH) ?? {};
+    if (!legacy[teamId2]) return;
+    const actionId = teamActionId(teamId2);
+    if (!getKeybind(actionId)) {
+      const hk = stringToHotkey(legacy[teamId2]);
+      if (hk) setKeybind(actionId, hk);
+    }
+    const rest2 = { ...legacy };
+    delete rest2[teamId2];
+    writeAriesPath(LEGACY_HOTKEYS_PATH, rest2);
+  }
+  function setPetTeamKeybinds(teams) {
+    const seen = /* @__PURE__ */ new Set();
+    const unique = teams.filter((team) => {
+      const id = String(team?.id ?? "");
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+    teamIds = unique.map((team) => String(team.id));
+    setDynamicActions(
+      PET_SECTION_ID,
+      unique.map((team, index) => ({
+        id: teamActionId(String(team.id)),
+        label: `Use team: ${String(team.name ?? "").trim() || `Team ${index + 1}`}`,
+        defaultHotkey: null
+      }))
+    );
+    for (const id of teamIds) migrateLegacyHotkey(id);
+  }
+  async function teamAfterStep(ids, step) {
+    if (!ids.length) return null;
+    let current = null;
+    try {
+      current = await PetsService.getActiveTeamId();
+    } catch {
+    }
+    if (!current || !ids.includes(current)) current = PetsService.getLastUsedTeamId();
+    const index = current ? ids.indexOf(current) : -1;
+    if (index < 0) return ids[0];
+    return ids[(index + step + ids.length) % ids.length];
+  }
+  function onKeyDown(e, useTeam) {
+    if (shouldIgnoreKeydown(e) || !teamIds.length) return;
+    const ids = teamIds.slice();
+    const step = eventMatchesKeybind(PET_TEAM_PREV_ID, e) ? -1 : eventMatchesKeybind(PET_TEAM_NEXT_ID, e) ? 1 : 0;
+    const direct = step ? null : ids.find((id) => eventMatchesKeybind(teamActionId(id), e)) ?? null;
+    if (!step && !direct) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (direct) {
+      useTeam(direct);
+      return;
+    }
+    void teamAfterStep(ids, step).then((target) => {
+      if (target) useTeam(target);
+    });
+  }
+  function installPetTeamHotkeys(useTeam) {
+    if (installed || typeof window === "undefined") return;
+    installed = true;
+    PetsService.onTeamsChange((teams) => setPetTeamKeybinds(teams));
+    window.addEventListener("keydown", (e) => onKeyDown(e, useTeam), true);
+  }
+  var PET_TEAM_PREV_ID, PET_TEAM_NEXT_ID, LEGACY_HOTKEYS_PATH, teamIds, installed, teamActionId;
+  var init_teamHotkeys = __esm({
+    "src/features/pets/teamHotkeys.ts"() {
+      "use strict";
+      init_hotkey();
+      init_keyboard();
+      init_storage();
+      init_catalog();
+      init_keybinds();
+      init_pets();
+      PET_TEAM_PREV_ID = "pets.team.prev";
+      PET_TEAM_NEXT_ID = "pets.team.next";
+      LEGACY_HOTKEYS_PATH = "pets.hotkeys";
+      teamIds = [];
+      installed = false;
+      teamActionId = (teamId2) => `pets.team.${teamId2}`;
+    }
+  });
+
   // src/game/ws/shopPurchaseMessage.ts
   function parseViewMode(raw) {
     if (raw == null) return null;
@@ -20731,8 +19797,8 @@
     window.dispatchEvent(new CustomEvent(COMPANION_TAB_EVENT, { detail: { tab: CHAT_TAB_ID } }));
   }
   function installCompanionKeybindsOnce() {
-    if (installed || typeof window === "undefined") return;
-    installed = true;
+    if (installed2 || typeof window === "undefined") return;
+    installed2 = true;
     window.addEventListener(
       "keydown",
       (event) => {
@@ -20745,7 +19811,7 @@
       true
     );
   }
-  var COMPANION_PANEL_ID, CHAT_TAB_ID, COMPANION_TAB_EVENT, installed;
+  var COMPANION_PANEL_ID, CHAT_TAB_ID, COMPANION_TAB_EVENT, installed2;
   var init_keybind = __esm({
     "src/features/companion/keybind.ts"() {
       "use strict";
@@ -20754,7 +19820,7 @@
       COMPANION_PANEL_ID = "companion";
       CHAT_TAB_ID = "chat";
       COMPANION_TAB_EVENT = "qws:companion-tab";
-      installed = false;
+      installed2 = false;
     }
   });
 
@@ -21354,7 +20420,7 @@
     };
   }
   function notifyListeners(snapshot2) {
-    for (const listener of listeners4) {
+    for (const listener of listeners3) {
       try {
         listener(snapshot2);
       } catch (error) {
@@ -21396,12 +20462,12 @@
     return currentSnapshot;
   }
   function onInventoryValueChange(listener) {
-    listeners4.add(listener);
+    listeners3.add(listener);
     return () => {
-      listeners4.delete(listener);
+      listeners3.delete(listener);
     };
   }
-  var INVENTORY_VALUE_CATEGORIES, currentSnapshot, watcherPromise, computeCounter, listeners4;
+  var INVENTORY_VALUE_CATEGORIES, currentSnapshot, watcherPromise, computeCounter, listeners3;
   var init_value = __esm({
     "src/features/inventory/value.ts"() {
       "use strict";
@@ -21487,7 +20553,7 @@
       currentSnapshot = null;
       watcherPromise = null;
       computeCounter = 0;
-      listeners4 = /* @__PURE__ */ new Set();
+      listeners3 = /* @__PURE__ */ new Set();
     }
   });
 
@@ -21891,10 +20957,10 @@
       for (const entry of flagged) {
         list.appendChild(buildPetRow(entry));
       }
-      const actions = document.createElement("div");
-      actions.style.display = "flex";
-      actions.style.justifyContent = "flex-end";
-      actions.style.gap = "8px";
+      const actions2 = document.createElement("div");
+      actions2.style.display = "flex";
+      actions2.style.justifyContent = "flex-end";
+      actions2.style.gap = "8px";
       const btnCancel = document.createElement("button");
       btnCancel.type = "button";
       btnCancel.textContent = "Cancel";
@@ -21919,10 +20985,10 @@
         if (settled) return;
         settled = true;
         overlay2.remove();
-        document.removeEventListener("keydown", onKeyDown, true);
+        document.removeEventListener("keydown", onKeyDown2, true);
         resolve(value);
       };
-      const onKeyDown = (ev) => {
+      const onKeyDown2 = (ev) => {
         if (ev.key === "Escape") {
           ev.preventDefault();
           close(false);
@@ -21933,11 +20999,11 @@
       overlay2.addEventListener("click", (ev) => {
         if (ev.target === overlay2) close(false);
       });
-      actions.append(btnCancel, btnConfirm);
-      box.append(title, body, list, actions);
+      actions2.append(btnCancel, btnConfirm);
+      box.append(title, body, list, actions2);
       overlay2.appendChild(box);
       document.body.appendChild(overlay2);
-      document.addEventListener("keydown", onKeyDown, true);
+      document.addEventListener("keydown", onKeyDown2, true);
       btnConfirm.focus();
     });
   }
@@ -22192,289 +21258,626 @@
     }
   });
 
-  // src/features/keybinds/modalToggles/petHutch.ts
-  async function togglePetHutchModal() {
+  // src/features/keybinds/modalToggles.ts
+  async function toggleModal(modalId) {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === PET_HUTCH_MODAL_ID) {
-        await closeModal(PET_HUTCH_MODAL_ID);
-        return;
-      }
-      await openModal(PET_HUTCH_MODAL_ID);
+      if (await Atoms.ui.activeModal.get() === modalId) await closeModal(modalId);
+      else await openModal(modalId);
     } catch {
     }
   }
-  function installPetHutchKeybindsOnce() {
-    if (petHutchKeybindsInstalled || typeof window === "undefined") return;
-    petHutchKeybindsInstalled = true;
+  function installModalToggleKeybind(actionId, modalId) {
+    if (installedActions.has(actionId) || typeof window === "undefined") return;
+    installedActions.add(actionId);
     window.addEventListener(
       "keydown",
       (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind(ACTION_ID, event)) return;
+        if (shouldIgnoreKeydown(event) || !eventMatchesKeybind(actionId, event)) return;
         event.preventDefault();
         event.stopPropagation();
-        void togglePetHutchModal();
+        void toggleModal(modalId);
       },
       true
     );
   }
-  var ACTION_ID, PET_HUTCH_MODAL_ID, petHutchKeybindsInstalled;
-  var init_petHutch = __esm({
-    "src/features/keybinds/modalToggles/petHutch.ts"() {
+  function installModalToggleKeybinds() {
+    for (const [actionId, modalId] of MODAL_TOGGLES) installModalToggleKeybind(actionId, modalId);
+  }
+  var MODAL_TOGGLES, installedActions;
+  var init_modalToggles = __esm({
+    "src/features/keybinds/modalToggles.ts"() {
       "use strict";
       init_atoms();
       init_fakeModal();
-      init_keybinds();
       init_keyboard();
-      ACTION_ID = "game.pet-hutch";
-      PET_HUTCH_MODAL_ID = "petHutch";
-      petHutchKeybindsInstalled = false;
+      init_keybinds();
+      MODAL_TOGGLES = [
+        ["game.pet-hutch", "petHutch"],
+        ["game.journal", JOURNAL_MODAL_ID],
+        ["game.seed-silo", "seedSilo"],
+        ["game.decor-shed", "decorShed"],
+        ["game.tool-shack", "toolShack"],
+        ["game.feeding-trough", "feedingTrough"],
+        ["game.weather-station", "weatherStation"]
+      ];
+      installedActions = /* @__PURE__ */ new Set();
     }
   });
 
-  // src/features/keybinds/modalToggles/journal.ts
-  async function toggleJournalModal() {
-    try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === JOURNAL_MODAL_ID) {
-        await closeModal(JOURNAL_MODAL_ID);
-        return;
-      }
-      await openModal(JOURNAL_MODAL_ID);
-    } catch {
+  // src/game/keyCombos.ts
+  function modifierOf(part) {
+    const p = part.toLowerCase();
+    if (p === "ctrl" || p === "control") return "ctrl";
+    if (p === "shift") return "shift";
+    if (p === "alt") return "alt";
+    if (p === "meta" || p === "cmd" || p === "command" || p === "win") return "meta";
+    return null;
+  }
+  function parseComboSpec(c) {
+    const spec = { code: "", ctrl: false, shift: false, alt: false, meta: false };
+    for (const part of String(c).split("+").map((s) => s.trim()).filter(Boolean)) {
+      const mod = modifierOf(part);
+      if (mod) spec[mod] = true;
+      else spec.code = part;
     }
+    return spec;
   }
-  function installJournalKeybindsOnce() {
-    if (journalKeybindsInstalled || typeof window === "undefined") return;
-    journalKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind(ACTION_ID2, event)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void toggleJournalModal();
-      },
-      true
-    );
+  function parseCombo(c) {
+    const parsed = parseComboSpec(c);
+    const spec = {};
+    for (const mod of MODIFIER_ORDER) {
+      if (parsed[mod]) spec[mod] = true;
+    }
+    if (parsed.code) {
+      spec.code = parsed.code;
+      spec.key = codeToKey(parsed.code, !!spec.shift);
+    }
+    return spec;
   }
-  var ACTION_ID2, journalKeybindsInstalled;
-  var init_journal = __esm({
-    "src/features/keybinds/modalToggles/journal.ts"() {
+  function joinModifiers(mods, code) {
+    mods.sort((a, b) => MODIFIER_ORDER.indexOf(a) - MODIFIER_ORDER.indexOf(b));
+    return (mods.length ? mods.join("+") + "+" : "") + code;
+  }
+  function normalizeCombo(c) {
+    const mods = [];
+    let code = "";
+    for (const part of String(c).split("+").map((s) => s.trim()).filter(Boolean)) {
+      const mod = modifierOf(part);
+      if (mod) mods.push(mod);
+      else code = part;
+    }
+    return joinModifiers(mods, code);
+  }
+  function eventToCombo(e) {
+    const mods = [];
+    if (e.ctrlKey) mods.push("ctrl");
+    if (e.shiftKey) mods.push("shift");
+    if (e.altKey) mods.push("alt");
+    if (e.metaKey) mods.push("meta");
+    return joinModifiers(mods, e.code || "");
+  }
+  function formatCombo(c) {
+    const mods = [];
+    if (c.ctrl) mods.push("Ctrl");
+    if (c.shift) mods.push("Shift");
+    if (c.alt) mods.push("Alt");
+    if (c.meta) mods.push("Meta");
+    return (mods.length ? mods.join("+") + "+" : "") + (c.code || "");
+  }
+  var MODIFIER_ORDER, KEYCODE_TABLE, codeToKey, keyCodeOf, isEditableTarget;
+  var init_keyCombos = __esm({
+    "src/game/keyCombos.ts"() {
       "use strict";
-      init_atoms();
-      init_fakeModal();
-      init_keybinds();
-      init_keyboard();
-      ACTION_ID2 = "game.journal";
-      journalKeybindsInstalled = false;
+      MODIFIER_ORDER = ["ctrl", "shift", "alt", "meta"];
+      KEYCODE_TABLE = {
+        KeyA: 65,
+        KeyB: 66,
+        KeyC: 67,
+        KeyD: 68,
+        KeyE: 69,
+        KeyF: 70,
+        KeyG: 71,
+        KeyH: 72,
+        KeyI: 73,
+        KeyJ: 74,
+        KeyK: 75,
+        KeyL: 76,
+        KeyM: 77,
+        KeyN: 78,
+        KeyO: 79,
+        KeyP: 80,
+        KeyQ: 81,
+        KeyR: 82,
+        KeyS: 83,
+        KeyT: 84,
+        KeyU: 85,
+        KeyV: 86,
+        KeyW: 87,
+        KeyX: 88,
+        KeyY: 89,
+        KeyZ: 90,
+        Digit0: 48,
+        Digit1: 49,
+        Digit2: 50,
+        Digit3: 51,
+        Digit4: 52,
+        Digit5: 53,
+        Digit6: 54,
+        Digit7: 55,
+        Digit8: 56,
+        Digit9: 57,
+        Space: 32,
+        Enter: 13,
+        Escape: 27,
+        Tab: 9,
+        Backspace: 8,
+        Delete: 46,
+        Insert: 45,
+        ArrowLeft: 37,
+        ArrowUp: 38,
+        ArrowRight: 39,
+        ArrowDown: 40
+      };
+      codeToKey = (code, shift = false) => {
+        if (!code) return "";
+        if (/^Key[A-Z]$/.test(code)) return shift ? code.slice(3).toUpperCase() : code.slice(3).toLowerCase();
+        if (/^Digit[0-9]$/.test(code)) return code.slice(5);
+        if (code === "Space") return " ";
+        return code;
+      };
+      keyCodeOf = (code, key2) => KEYCODE_TABLE[code] ?? (key2 && key2.length === 1 ? key2.toUpperCase().charCodeAt(0) : 0);
+      isEditableTarget = (t) => {
+        const el = t;
+        if (!el || !el.tagName) return false;
+        const tag = el.tagName.toLowerCase();
+        if (tag === "input" || tag === "textarea") return true;
+        const ce = el.getAttribute && el.getAttribute("contenteditable");
+        return !!(ce && ce !== "false");
+      };
     }
   });
 
-  // src/features/keybinds/modalToggles/decorShed.ts
-  async function toggleDecorShedModal() {
-    try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === DECOR_SHED_MODAL_ID) {
-        await closeModal(DECOR_SHED_MODAL_ID);
-        return;
-      }
-      await openModal(DECOR_SHED_MODAL_ID);
-    } catch {
-    }
-  }
-  function installDecorShedKeybindsOnce() {
-    if (decorShedKeybindsInstalled || typeof window === "undefined") return;
-    decorShedKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind(ACTION_ID3, event)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void toggleDecorShedModal();
-      },
-      true
-    );
-  }
-  var ACTION_ID3, DECOR_SHED_MODAL_ID, decorShedKeybindsInstalled;
-  var init_decorShed = __esm({
-    "src/features/keybinds/modalToggles/decorShed.ts"() {
+  // src/game/ingameHotkeys.ts
+  var resolveContext, REMAP_FLAG, RAPID_SYN_FLAG, InGameHotkeys, defaultContext, inGameHotkeys;
+  var init_ingameHotkeys = __esm({
+    "src/game/ingameHotkeys.ts"() {
       "use strict";
-      init_atoms();
-      init_fakeModal();
-      init_keybinds();
-      init_keyboard();
-      ACTION_ID3 = "game.decor-shed";
-      DECOR_SHED_MODAL_ID = "decorShed";
-      decorShedKeybindsInstalled = false;
+      init_pageContext();
+      init_keyCombos();
+      resolveContext = (context) => {
+        if (context) return context;
+        const win = pageWindow ?? window;
+        const doc = win.document ?? document;
+        return { window: win, document: doc };
+      };
+      REMAP_FLAG = "__inGameHotkeysRemapped__";
+      RAPID_SYN_FLAG = "__inGameHotkeysRapidSynthetic__";
+      InGameHotkeys = class {
+        constructor(autoAttach = true, context) {
+          // remapper
+          this.enabled = true;
+          this.map = /* @__PURE__ */ new Map();
+          // normalised combo -> target spec
+          this.blockedSet = /* @__PURE__ */ new Set();
+          // blocked combos
+          this.eventBlockers = /* @__PURE__ */ new Set();
+          this.attachedDocs = /* @__PURE__ */ new WeakSet();
+          // documents already hooked
+          this.observers = [];
+          this.handlers = /* @__PURE__ */ new Map();
+          this.passthrough = /* @__PURE__ */ new Set(["F5", "F12"]);
+          // rapid-fire manager
+          this.sessions = /* @__PURE__ */ new Map();
+          const ctx2 = resolveContext(context);
+          this.win = ctx2.window;
+          this.doc = ctx2.document;
+          if (autoAttach) {
+            this.attachDoc(this.doc);
+            this.attachAllFrames();
+            if (this.win.MutationObserver) {
+              const mo = new this.win.MutationObserver(() => this.attachAllFrames());
+              mo.observe(this.doc.documentElement || this.doc, { childList: true, subtree: true });
+              this.observers.push(mo);
+            }
+          }
+        }
+        /* --------- remapper on/off --------- */
+        enable(flag = true) {
+          this.enabled = !!flag;
+        }
+        disable() {
+          this.enabled = false;
+        }
+        isEnabled() {
+          return this.enabled;
+        }
+        /* --------- remaps --------- */
+        setMap(m) {
+          this.map.clear();
+          for (const [from, to] of Object.entries(m || {})) this.map.set(normalizeCombo(from), parseCombo(to));
+        }
+        add(from, to) {
+          this.map.set(normalizeCombo(from), parseCombo(to));
+        }
+        remove(from) {
+          this.map.delete(normalizeCombo(from));
+        }
+        clear() {
+          this.map.clear();
+        }
+        current() {
+          const out = {};
+          for (const [k, v] of this.map.entries()) out[k] = formatCombo(v);
+          return out;
+        }
+        /* --------- blocking --------- */
+        block(combo) {
+          this.blockedSet.add(normalizeCombo(combo));
+        }
+        unblock(combo) {
+          this.blockedSet.delete(normalizeCombo(combo));
+        }
+        blocked() {
+          return Array.from(this.blockedSet);
+        }
+        addEventBlocker(blocker) {
+          if (typeof blocker !== "function") {
+            return () => {
+            };
+          }
+          this.eventBlockers.add(blocker);
+          return () => {
+            this.eventBlockers.delete(blocker);
+          };
+        }
+        /* --------- binding helpers --------- */
+        /** Moves the action bound to oldBase onto newPhysical and disables oldBase. */
+        replace(oldBase, newPhysical) {
+          const oldN = normalizeCombo(oldBase);
+          const newN = normalizeCombo(newPhysical);
+          this.blockedSet.add(oldN);
+          this.map.set(newN, parseCombo(oldN));
+        }
+        /** Swaps two keys both ways (blocks neither). */
+        swap(a, b) {
+          const an = normalizeCombo(a), bn = normalizeCombo(b);
+          this.map.set(an, parseCombo(bn));
+          this.map.set(bn, parseCombo(an));
+        }
+        /* --------- frames & cleanup --------- */
+        attachAllFrames() {
+          this.doc.querySelectorAll("iframe").forEach((f) => {
+            try {
+              const d = f.contentDocument;
+              const origin = d?.location?.origin;
+              if (d && origin && origin === this.win.location.origin) this.attachDoc(d);
+            } catch {
+            }
+          });
+        }
+        destroy() {
+          for (const [doc, handler] of this.handlers.entries()) {
+            try {
+              const win = doc.defaultView || this.win;
+              win.removeEventListener("keydown", handler, true);
+              win.removeEventListener("keypress", handler, true);
+              win.removeEventListener("keyup", handler, true);
+            } catch {
+            }
+          }
+          this.handlers.clear();
+          this.attachedDocs = /* @__PURE__ */ new WeakSet();
+          for (const mo of this.observers) mo.disconnect();
+          this.observers = [];
+          this.stopAllRapidFires();
+          this.eventBlockers.clear();
+        }
+        /* --------- rapid-fire (API) --------- */
+        startRapidFire(opts) {
+          const trigger = normalizeCombo(opts.trigger);
+          const emit = normalizeCombo(opts.emit ?? opts.trigger);
+          const rateMs = 1e3 / Math.max(1, opts.rateHz ?? 12);
+          const mode = opts.mode ?? "tap";
+          const keyupDelayMs = opts.keyupDelayMs ?? 20;
+          this.sessions.set(trigger, {
+            trigger: parseComboSpec(trigger),
+            emit: parseComboSpec(emit),
+            rateMs,
+            mode,
+            keyupDelayMs,
+            pressed: false,
+            lastTarget: null,
+            tickTimer: null,
+            upTimer: null
+          });
+        }
+        stopRapidFire(trigger) {
+          if (!trigger) {
+            this.stopAllRapidFires();
+            return;
+          }
+          const key2 = normalizeCombo(trigger);
+          const s = this.sessions.get(key2);
+          if (!s) return;
+          this.endSession(s);
+          this.sessions.delete(key2);
+        }
+        stopAllRapidFires() {
+          for (const s of this.sessions.values()) this.endSession(s);
+          this.sessions.clear();
+        }
+        isRapidFireActive(trigger) {
+          const s = this.sessions.get(normalizeCombo(trigger));
+          return !!(s && s.pressed);
+        }
+        setRapidFireRate(trigger, hz) {
+          const s = this.sessions.get(normalizeCombo(trigger));
+          if (!s) return;
+          s.rateMs = 1e3 / Math.max(1, hz);
+          if (s.pressed) this.restartLoop(s);
+        }
+        setRapidFireMode(trigger, mode) {
+          const s = this.sessions.get(normalizeCombo(trigger));
+          if (!s) return;
+          s.mode = mode;
+        }
+        listRapidFires() {
+          const out = [];
+          for (const [key2, s] of this.sessions.entries()) {
+            out.push({
+              trigger: key2,
+              emit: formatCombo(s.emit),
+              rateHz: Math.round(1e3 / s.rateMs),
+              mode: s.mode
+            });
+          }
+          return out;
+        }
+        /* ================= internals ================= */
+        attachDoc(doc) {
+          if (!doc || this.attachedDocs.has(doc)) return;
+          const handler = this.makeHandler(doc);
+          const win = doc.defaultView || this.win;
+          win.addEventListener("keydown", handler, true);
+          win.addEventListener("keypress", handler, true);
+          win.addEventListener("keyup", handler, true);
+          this.handlers.set(doc, handler);
+          this.attachedDocs.add(doc);
+        }
+        makeHandler(doc) {
+          return (evt) => {
+            const e = evt;
+            if (e[REMAP_FLAG]) return;
+            const isRapidSynthetic = !!e[RAPID_SYN_FLAG];
+            if (!isRapidSynthetic) this.handleRapidFireInput(doc, e);
+            if (!isRapidSynthetic && this.eventBlockers.size) {
+              for (const blocker of Array.from(this.eventBlockers)) {
+                let shouldBlock = false;
+                try {
+                  shouldBlock = blocker(e);
+                } catch {
+                  shouldBlock = false;
+                }
+                if (shouldBlock) {
+                  e.stopImmediatePropagation();
+                  e.preventDefault();
+                  return;
+                }
+              }
+            }
+            if (!this.enabled) return;
+            if (isEditableTarget(e.target)) return;
+            if (this.passthrough.has(e.code)) return;
+            const combo = eventToCombo(e);
+            if (this.blockedSet.has(combo)) {
+              e.stopImmediatePropagation();
+              e.preventDefault();
+              return;
+            }
+            const spec = this.map.get(combo);
+            if (!spec) return;
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            const code = spec.code || "";
+            const key2 = spec.key !== void 0 ? spec.key : codeToKey(code, e.shiftKey);
+            const ctrl = spec.ctrl ?? e.ctrlKey;
+            const shift = spec.shift ?? e.shiftKey;
+            const alt = spec.alt ?? e.altKey;
+            const meta = spec.meta ?? e.metaKey;
+            const kc = keyCodeOf(code, key2);
+            const eventWindow = doc.defaultView || this.win;
+            const ne = new eventWindow.KeyboardEvent(e.type, {
+              bubbles: true,
+              cancelable: true,
+              composed: true,
+              key: key2,
+              code,
+              ctrlKey: ctrl,
+              shiftKey: shift,
+              altKey: alt,
+              metaKey: meta,
+              repeat: e.repeat,
+              location: e.location
+            });
+            Object.defineProperties(ne, {
+              keyCode: { get: () => kc },
+              which: { get: () => kc },
+              charCode: { get: () => kc },
+              [REMAP_FLAG]: { value: true }
+            });
+            const target = e.target || doc;
+            target.dispatchEvent(ne);
+          };
+        }
+        /* ---------- rapid fire internals ---------- */
+        handleRapidFireInput(doc, e) {
+          if (isEditableTarget(e.target)) return;
+          if (e.type === "keydown" && !e.repeat) {
+            for (const s of this.sessions.values()) {
+              if (this.matches(e, s.trigger)) {
+                s.pressed = true;
+                s.lastTarget = e.target || doc;
+                this.startLoop(doc, s);
+              }
+            }
+          } else if (e.type === "keyup") {
+            for (const s of this.sessions.values()) {
+              if (this.matches(e, s.trigger)) {
+                s.pressed = false;
+                this.stopLoop(doc, s);
+              }
+            }
+          }
+        }
+        matches(e, c) {
+          return e.code === c.code && !!e.ctrlKey === !!c.ctrl && !!e.shiftKey === !!c.shift && !!e.altKey === !!c.alt && !!e.metaKey === !!c.meta;
+        }
+        startLoop(doc, s) {
+          this.stopLoop(doc, s);
+          const tick3 = () => {
+            if (!s.pressed) return;
+            this.dispatchKey(doc, s.lastTarget || doc, "keydown", s.emit, true);
+            if (s.mode === "tap") {
+              if (s.upTimer) this.win.clearTimeout(s.upTimer);
+              s.upTimer = this.win.setTimeout(() => {
+                this.dispatchKey(doc, s.lastTarget || doc, "keyup", s.emit, false);
+              }, s.keyupDelayMs);
+            }
+          };
+          tick3();
+          s.tickTimer = this.win.setInterval(tick3, s.rateMs);
+        }
+        stopLoop(doc, s) {
+          if (s.tickTimer) {
+            this.win.clearInterval(s.tickTimer);
+            s.tickTimer = null;
+          }
+          if (s.upTimer) {
+            this.win.clearTimeout(s.upTimer);
+            s.upTimer = null;
+          }
+          if (s.mode === "hold" && s.lastTarget) {
+            this.dispatchKey(doc, s.lastTarget, "keyup", s.emit, false);
+          }
+        }
+        restartLoop(s) {
+          if (!s.pressed) return;
+          const anyDoc = this.doc;
+          this.startLoop(anyDoc, s);
+        }
+        endSession(s) {
+          this.stopLoop(this.doc, s);
+          s.pressed = false;
+          s.lastTarget = null;
+        }
+        dispatchKey(doc, target, type, c, repeat) {
+          const code = c.code;
+          const key2 = codeToKey(code, c.shift);
+          const kc = keyCodeOf(code, key2);
+          const eventWindow = doc.defaultView || this.win;
+          const ev = new eventWindow.KeyboardEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: key2,
+            code,
+            ctrlKey: c.ctrl,
+            shiftKey: c.shift,
+            altKey: c.alt,
+            metaKey: c.meta,
+            repeat
+          });
+          Object.defineProperties(ev, {
+            keyCode: { get: () => kc },
+            which: { get: () => kc },
+            charCode: { get: () => kc },
+            [RAPID_SYN_FLAG]: { value: true }
+          });
+          try {
+            target.dispatchEvent(ev);
+          } catch {
+            doc.dispatchEvent(ev);
+          }
+        }
+      };
+      defaultContext = resolveContext();
+      inGameHotkeys = new InGameHotkeys(true, defaultContext);
+      shareGlobal("inGameHotkeys", inGameHotkeys);
     }
   });
 
-  // src/features/keybinds/modalToggles/toolShack.ts
-  async function toggleToolShackModal() {
+  // src/features/keybinds/gameRemap.ts
+  function clearRemapsTo(gameKey) {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === TOOL_SHACK_MODAL_ID) {
-        await closeModal(TOOL_SHACK_MODAL_ID);
-        return;
+      inGameHotkeys.unblock(gameKey);
+    } catch {
+    }
+    try {
+      for (const [from, to] of Object.entries(inGameHotkeys.current())) {
+        if (String(to).split("+").pop() === gameKey) {
+          try {
+            inGameHotkeys.remove(from);
+          } catch {
+          }
+        }
       }
-      await openModal(TOOL_SHACK_MODAL_ID);
     } catch {
     }
   }
-  function installToolShackKeybindsOnce() {
-    if (toolShackKeybindsInstalled || typeof window === "undefined") return;
-    toolShackKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind(ACTION_ID4, event)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void toggleToolShackModal();
-      },
-      true
-    );
-  }
-  var ACTION_ID4, TOOL_SHACK_MODAL_ID, toolShackKeybindsInstalled;
-  var init_toolShack = __esm({
-    "src/features/keybinds/modalToggles/toolShack.ts"() {
-      "use strict";
-      init_atoms();
-      init_fakeModal();
-      init_keybinds();
-      init_keyboard();
-      ACTION_ID4 = "game.tool-shack";
-      TOOL_SHACK_MODAL_ID = "toolShack";
-      toolShackKeybindsInstalled = false;
-    }
-  });
-
-  // src/features/keybinds/modalToggles/seedSilo.ts
-  async function toggleSeedSiloModal() {
-    try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === SEED_SILO_MODAL_ID) {
-        await closeModal(SEED_SILO_MODAL_ID);
-        return;
+  function syncGameKeybind(id) {
+    const gameKey = GAME_KEYS[id];
+    clearRemapsTo(gameKey);
+    const previousRapidFire = rapidFireCombos.get(id);
+    if (previousRapidFire) {
+      try {
+        inGameHotkeys.stopRapidFire(previousRapidFire);
+      } catch {
       }
-      await openModal(SEED_SILO_MODAL_ID);
-    } catch {
+      rapidFireCombos.delete(id);
     }
-  }
-  function installSeedSiloKeybindsOnce() {
-    if (seedSiloKeybindsInstalled || typeof window === "undefined") return;
-    seedSiloKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind(ACTION_ID5, event)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void toggleSeedSiloModal();
-      },
-      true
-    );
-  }
-  var ACTION_ID5, SEED_SILO_MODAL_ID, seedSiloKeybindsInstalled;
-  var init_seedSilo = __esm({
-    "src/features/keybinds/modalToggles/seedSilo.ts"() {
-      "use strict";
-      init_atoms();
-      init_fakeModal();
-      init_keybinds();
-      init_keyboard();
-      ACTION_ID5 = "game.seed-silo";
-      SEED_SILO_MODAL_ID = "seedSilo";
-      seedSiloKeybindsInstalled = false;
-    }
-  });
-
-  // src/features/keybinds/modalToggles/feedingTrough.ts
-  async function toggleFeedingTroughModal() {
-    try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === FEEDING_TROUGH_MODAL_ID) {
-        await closeModal(FEEDING_TROUGH_MODAL_ID);
-        return;
+    const hk = getKeybind(id);
+    const combo = hk ? hotkeyToString(hk) : "";
+    if (!combo) return;
+    if (combo !== gameKey) {
+      try {
+        inGameHotkeys.replace(gameKey, combo);
+      } catch {
       }
-      await openModal(FEEDING_TROUGH_MODAL_ID);
-    } catch {
     }
-  }
-  function installFeedingTroughKeybindsOnce() {
-    if (feedingTroughKeybindsInstalled || typeof window === "undefined") return;
-    feedingTroughKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind(ACTION_ID6, event)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void toggleFeedingTroughModal();
-      },
-      true
-    );
-  }
-  var ACTION_ID6, FEEDING_TROUGH_MODAL_ID, feedingTroughKeybindsInstalled;
-  var init_feedingTrough = __esm({
-    "src/features/keybinds/modalToggles/feedingTrough.ts"() {
-      "use strict";
-      init_atoms();
-      init_fakeModal();
-      init_keybinds();
-      init_keyboard();
-      ACTION_ID6 = "game.feeding-trough";
-      FEEDING_TROUGH_MODAL_ID = "feedingTrough";
-      feedingTroughKeybindsInstalled = false;
-    }
-  });
-
-  // src/features/keybinds/modalToggles/weatherStation.ts
-  async function toggleWeatherStationModal() {
-    try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === WEATHER_STATION_MODAL_ID) {
-        await closeModal(WEATHER_STATION_MODAL_ID);
-        return;
+    if (getKeybindHoldDetection(id)) {
+      try {
+        inGameHotkeys.startRapidFire({ trigger: combo, emit: combo, mode: "tap", rateHz: 10 });
+        rapidFireCombos.set(id, combo);
+      } catch {
       }
-      await openModal(WEATHER_STATION_MODAL_ID);
-    } catch {
     }
   }
-  function installWeatherStationKeybindsOnce() {
-    if (weatherStationKeybindsInstalled || typeof window === "undefined") return;
-    weatherStationKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind(ACTION_ID7, event)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void toggleWeatherStationModal();
-      },
-      true
-    );
+  function installGameKeybindsOnce() {
+    if (installed3 || typeof window === "undefined") return;
+    installed3 = true;
+    for (const id of Object.keys(GAME_KEYS)) {
+      syncGameKeybind(id);
+      onKeybindChange(id, () => syncGameKeybind(id));
+      onKeybindHoldDetectionChange(id, () => syncGameKeybind(id));
+    }
   }
-  var ACTION_ID7, WEATHER_STATION_MODAL_ID, weatherStationKeybindsInstalled;
-  var init_weatherStation = __esm({
-    "src/features/keybinds/modalToggles/weatherStation.ts"() {
+  var GAME_KEYS, rapidFireCombos, installed3;
+  var init_gameRemap = __esm({
+    "src/features/keybinds/gameRemap.ts"() {
       "use strict";
-      init_atoms();
-      init_fakeModal();
+      init_ingameHotkeys();
+      init_hotkey();
       init_keybinds();
-      init_keyboard();
-      ACTION_ID7 = "game.weather-station";
-      WEATHER_STATION_MODAL_ID = "weatherStation";
-      weatherStationKeybindsInstalled = false;
+      GAME_KEYS = {
+        "game.action": "Space",
+        "game.inventory": "KeyE",
+        "game.move-up": "KeyW",
+        "game.move-down": "KeyS",
+        "game.move-left": "KeyA",
+        "game.move-right": "KeyD"
+      };
+      rapidFireCombos = /* @__PURE__ */ new Map();
+      installed3 = false;
     }
   });
 
@@ -24902,7 +24305,7 @@
     return { top: contentTop - extraTopOffset, width, height };
   }
   function notifyListeners2(card5, geometry) {
-    for (const listener of listeners5) {
+    for (const listener of listeners4) {
       try {
         listener(card5, geometry);
       } catch (error) {
@@ -24967,24 +24370,24 @@
   function scheduleFind(now2) {
     findRafId = null;
     debugState.rafTicks += 1;
-    if (!listeners5.size || cardSystem) return;
+    if (!listeners4.size || cardSystem) return;
     if (now2 - lastFindCheckAt >= CARD_SYSTEM_FIND_RETRY_MS) {
       lastFindCheckAt = now2;
       tryFindCardSystem();
     }
-    if (!listeners5.size || cardSystem) return;
+    if (!listeners4.size || cardSystem) return;
     findRafId = raf(scheduleFind);
   }
   function restartSearchIfNeeded() {
-    if (!listeners5.size || cardSystem) return;
+    if (!listeners4.size || cardSystem) return;
     tryFindCardSystem();
     if (!cardSystem && findRafId == null) {
       findRafId = raf(scheduleFind);
     }
   }
   function watchGardenInfoCard(listener) {
-    listeners5.add(listener);
-    debugState.listenerCount = listeners5.size;
+    listeners4.add(listener);
+    debugState.listenerCount = listeners4.size;
     restartSearchIfNeeded();
     if (currentCard) {
       try {
@@ -24994,11 +24397,11 @@
       }
     }
     return () => {
-      listeners5.delete(listener);
-      debugState.listenerCount = listeners5.size;
+      listeners4.delete(listener);
+      debugState.listenerCount = listeners4.size;
     };
   }
-  var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, CARD_SYSTEM_FIND_RETRY_MS, CARD_SYSTEM_FIND_LOG_EVERY, cachedGraphicsCtor, cardSystem, currentCard, findAttempts, findRafId, lastFindCheckAt, listeners5, debugState, raf;
+  var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, CARD_SYSTEM_FIND_RETRY_MS, CARD_SYSTEM_FIND_LOG_EVERY, cachedGraphicsCtor, cardSystem, currentCard, findAttempts, findRafId, lastFindCheckAt, listeners4, debugState, raf;
   var init_gardenInfoCard = __esm({
     "src/game/pixi/gardenInfoCard.ts"() {
       "use strict";
@@ -25018,7 +24421,7 @@
       findAttempts = 0;
       findRafId = null;
       lastFindCheckAt = 0;
-      listeners5 = /* @__PURE__ */ new Set();
+      listeners4 = /* @__PURE__ */ new Set();
       debugState = {
         findAttempts: 0,
         attached: false,
@@ -26955,9 +26358,9 @@
     let players = void 0;
     let selectedSlotId = null;
     let lastPrice = null;
-    const listeners9 = /* @__PURE__ */ new Set();
+    const listeners8 = /* @__PURE__ */ new Set();
     const notify3 = () => {
-      for (const fn of listeners9) try {
+      for (const fn of listeners8) try {
         fn();
       } catch {
       }
@@ -27024,11 +26427,11 @@
         return lastPrice;
       },
       onChange(cb) {
-        listeners9.add(cb);
-        return () => listeners9.delete(cb);
+        listeners8.add(cb);
+        return () => listeners8.delete(cb);
       },
       stop() {
-        listeners9.clear();
+        listeners8.clear();
       }
     };
   }
@@ -27058,7 +26461,7 @@
       writeAriesPath(PATH_SHOW_CROP_PRICE, next);
     } catch {
     }
-    for (const listener of listeners6) {
+    for (const listener of listeners5) {
       try {
         listener(next);
       } catch {
@@ -27066,18 +26469,18 @@
     }
   }
   function onShowCropPriceChange(cb) {
-    listeners6.add(cb);
+    listeners5.add(cb);
     return () => {
-      listeners6.delete(cb);
+      listeners5.delete(cb);
     };
   }
-  var PATH_SHOW_CROP_PRICE, listeners6;
+  var PATH_SHOW_CROP_PRICE, listeners5;
   var init_setting = __esm({
     "src/features/cropPrice/setting.ts"() {
       "use strict";
       init_storage();
       PATH_SHOW_CROP_PRICE = "misc.showCropPrice";
-      listeners6 = /* @__PURE__ */ new Set();
+      listeners5 = /* @__PURE__ */ new Set();
     }
   });
 
@@ -31431,7 +30834,7 @@
       };
       petStatsBySpecies = memoOnCatalogs(() => {
         const map2 = /* @__PURE__ */ new Map();
-        const register = (key2, maxScale, hoursToMature) => {
+        const register2 = (key2, maxScale, hoursToMature) => {
           if (typeof key2 !== "string") return;
           const normalized = normalizeSpeciesKey(key2);
           if (!normalized || map2.has(normalized)) return;
@@ -31442,8 +30845,8 @@
           const hoursToMature = Number(entry?.hoursToMature);
           if (!Number.isFinite(maxScale) || maxScale <= 1) continue;
           if (!Number.isFinite(hoursToMature) || hoursToMature <= 0) continue;
-          register(species, maxScale, hoursToMature);
-          register(entry?.name, maxScale, hoursToMature);
+          register2(species, maxScale, hoursToMature);
+          register2(entry?.name, maxScale, hoursToMature);
         }
         return map2;
       });
@@ -31543,17 +30946,17 @@
     if (!spaced2) return String(action2 || "");
     return spaced2.split(" ").map((word) => word ? word.charAt(0).toUpperCase() + word.slice(1) : word).join(" ");
   }
-  function mergeActions(actions) {
+  function mergeActions(actions2) {
     const seen = /* @__PURE__ */ new Set();
     const ordered = [];
     for (const key2 of ACTION_ORDER) {
       if (key2 === "all") continue;
-      if (actions.includes(key2) && !seen.has(key2)) {
+      if (actions2.includes(key2) && !seen.has(key2)) {
         seen.add(key2);
         ordered.push(key2);
       }
     }
-    for (const action2 of actions) {
+    for (const action2 of actions2) {
       if (action2 === "all") continue;
       if (!seen.has(action2)) {
         seen.add(action2);
@@ -32573,7 +31976,7 @@
       writeAriesPath(STATE_PATH, state5);
     } catch {
     }
-    for (const listener of listeners7) {
+    for (const listener of listeners6) {
       try {
         listener(state5);
       } catch {
@@ -32708,7 +32111,7 @@
       }
     };
   }
-  var STATE_PATH, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, listeners7, cachedState, HatchTracker;
+  var STATE_PATH, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, listeners6, cachedState, HatchTracker;
   var init_tracker = __esm({
     "src/features/hatch/tracker.ts"() {
       "use strict";
@@ -32721,7 +32124,7 @@
       HATCH_ACTION = "hatchEgg";
       DOUBLE_HATCH_ACTIONS = /* @__PURE__ */ new Set(["doublehatch", "doublehatchii"]);
       SEEN_LIMIT = 4e3;
-      listeners7 = /* @__PURE__ */ new Set();
+      listeners6 = /* @__PURE__ */ new Set();
       cachedState = null;
       HatchTracker = {
         getState() {
@@ -32753,9 +32156,9 @@
         // since the server's own never resets except on the outcome itself. Only
         // `setOffset` moves a counter by hand.
         subscribe(listener) {
-          listeners7.add(listener);
+          listeners6.add(listener);
           return () => {
-            listeners7.delete(listener);
+            listeners6.delete(listener);
           };
         }
       };
@@ -33817,7 +33220,7 @@
       btn.dataset.open = open ? "1" : "0";
       btn.classList.toggle("active", open);
     }
-    function register(id, title, render) {
+    function register2(id, title, render) {
       registry2.push({ id, title, render });
       const openBtn = button("Open", { size: "sm" });
       openBtn.dataset.open = "0";
@@ -33836,7 +33239,7 @@
       launch.appendChild(item);
     }
     try {
-      opts?.onRegister?.(register);
+      opts?.onRegister?.(register2);
     } catch (error) {
       console.error("[HUD] panel registration failed:", error);
     }
@@ -33931,14 +33334,8 @@
   function initWatchers() {
     installShopKeybindsOnce();
     installSellKeybindsOnce();
-    installPetHutchKeybindsOnce();
+    installModalToggleKeybinds();
     installGameKeybindsOnce();
-    installJournalKeybindsOnce();
-    installSeedSiloKeybindsOnce();
-    installDecorShedKeybindsOnce();
-    installToolShackKeybindsOnce();
-    installFeedingTroughKeybindsOnce();
-    installWeatherStationKeybindsOnce();
     installCompanionKeybindsOnce();
     const bootToolbar = async () => {
       try {
@@ -33958,25 +33355,8 @@
       } catch {
       }
       try {
-        setTeamsForHotkeys(PetsService.getTeams());
-      } catch {
-      }
-      try {
-        await PetsService.onTeamsChangeNow((teams) => {
-          try {
-            setTeamsForHotkeys(teams);
-          } catch {
-          }
-        });
-      } catch {
-      }
-      try {
-        installPetTeamHotkeysOnce(async (teamId2) => {
-          try {
-            await PetsService.useTeam(teamId2);
-          } catch (e) {
-            console.warn("[Pets] hotkey useTeam failed:", e);
-          }
+        installPetTeamHotkeys((teamId2) => {
+          PetsService.useTeam(teamId2).catch((e) => console.warn("[Pets] hotkey useTeam failed:", e));
         });
       } catch {
       }
@@ -34016,16 +33396,12 @@
       init_sockets();
       init_jotai();
       init_pets();
+      init_teamHotkeys();
       init_shops();
       init_keybind();
       init_keybind2();
-      init_petHutch();
-      init_journal();
-      init_decorShed();
-      init_toolShack();
-      init_seedSilo();
-      init_feedingTrough();
-      init_weatherStation();
+      init_modalToggles();
+      init_gameRemap();
       init_petAlerts();
       init_keybinds();
       init_keyboard();
@@ -34083,9 +33459,9 @@
     const subtitle = opts.subtitle || opts.description;
     if (subtitle) header.appendChild(h("div", "qmm-card__subtitle", subtitle));
     if (opts.actions?.length) {
-      const actions = h("div", "qmm-card__actions");
-      actions.append(...opts.actions);
-      header.appendChild(actions);
+      const actions2 = h("div", "qmm-card__actions");
+      actions2.append(...opts.actions);
+      header.appendChild(actions2);
     }
     const body = h("div", "qmm-card__body");
     root.append(header, body);
@@ -34271,7 +33647,7 @@
       if (!recording) return;
       recording = false;
       if (activeRecorder === stopRecording) activeRecorder = null;
-      window.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("keydown", onKeyDown2, true);
       document.removeEventListener("pointerdown", onPointerDown, true);
       window.removeEventListener("blur", onWindowBlur);
       if (recordingTimeout !== null) clearTimeout(recordingTimeout);
@@ -34285,7 +33661,7 @@
       recording = true;
       activeRecorder = stopRecording;
       beginKeybindCapture();
-      window.addEventListener("keydown", onKeyDown, true);
+      window.addEventListener("keydown", onKeyDown2, true);
       document.addEventListener("pointerdown", onPointerDown, true);
       window.addEventListener("blur", onWindowBlur);
       recordingTimeout = window.setTimeout(stopRecording, RECORDING_TIMEOUT_MS);
@@ -34298,7 +33674,7 @@
     const onWindowBlur = (e) => {
       if (e.target === window) stopRecording();
     };
-    function onKeyDown(e) {
+    function onKeyDown2(e) {
       if (!recording) return;
       if (!btn.isConnected) {
         stopRecording();
@@ -35402,10 +34778,10 @@
         urlEl.textContent = [theme.music && "music", theme.ambience && "ambience"].filter(Boolean).join(" \xB7 ") || "(no tracks)";
         infoWrap.append(title, urlEl);
         row.appendChild(infoWrap);
-        const actions = ui.flexRow({ gap: 6, wrap: true, align: "center" });
-        actions.className = "dd-audio-actions";
+        const actions2 = ui.flexRow({ gap: 6, wrap: true, align: "center" });
+        actions2.className = "dd-audio-actions";
         if (theme.music) {
-          actions.appendChild(ui.btn("Play music", {
+          actions2.appendChild(ui.btn("Play music", {
             icon: "\u25B6\uFE0F",
             size: "sm",
             onClick: () => {
@@ -35414,7 +34790,7 @@
           }));
         }
         if (theme.ambience) {
-          actions.appendChild(ui.btn("Play ambience", {
+          actions2.appendChild(ui.btn("Play ambience", {
             icon: "\u25B6\uFE0F",
             size: "sm",
             onClick: () => {
@@ -35422,12 +34798,12 @@
             }
           }));
         }
-        actions.appendChild(ui.btn("Copy URLs", {
+        actions2.appendChild(ui.btn("Copy URLs", {
           icon: "\u{1F4CB}",
           size: "sm",
           onClick: () => copy([theme.music, theme.ambience].filter(Boolean).join("\n"))
         }));
-        row.appendChild(actions);
+        row.appendChild(actions2);
         themeList.appendChild(row);
       });
       themeList.style.display = themes.length ? "" : "none";
@@ -35455,8 +34831,8 @@
         meta.textContent = `${formatTime2(item.start)} \u2192 ${formatTime2(item.end)} (${item.duration.toFixed(2)}s)`;
         infoWrap.append(title, meta);
         row.appendChild(infoWrap);
-        const actions = ui.flexRow({ gap: 6, wrap: false, align: "center" });
-        actions.className = "dd-audio-actions";
+        const actions2 = ui.flexRow({ gap: 6, wrap: false, align: "center" });
+        actions2.className = "dd-audio-actions";
         const playBtn = ui.btn("Play", {
           icon: "\u25B6\uFE0F",
           size: "sm",
@@ -35469,8 +34845,8 @@
           size: "sm",
           onClick: () => copy(atlasUrl)
         });
-        actions.append(playBtn, copyBtn);
-        row.appendChild(actions);
+        actions2.append(playBtn, copyBtn);
+        row.appendChild(actions2);
         sfxList.appendChild(row);
       }
       sfxInfo.textContent = items.length ? `${visibleSfx.length} / ${items.length} SFX shown.` : "No SFX loaded yet.";
@@ -35532,7 +34908,7 @@
         status2.classList.toggle("is-warn", !captured);
       };
       refreshStatus();
-      const actions = ui.flexRow({ gap: 10, align: "center", wrap: true });
+      const actions2 = ui.flexRow({ gap: 10, align: "center", wrap: true });
       const btnCap = ui.btn("Capture store", {
         variant: "primary",
         icon: "\u23FA",
@@ -35544,8 +34920,8 @@
           refreshStatus();
         }
       });
-      actions.append(btnCap, status2);
-      card5.body.appendChild(actions);
+      actions2.append(btnCap, status2);
+      card5.body.appendChild(actions2);
     }
     {
       const card5 = ui.card("\u{1F50D} Explore atoms", {
@@ -37860,8 +37236,8 @@ next: ${next}`;
           row2.style.borderColor = "#2b5cff99";
           row2.style.boxShadow = "0 0 0 1px #2b5cff33";
         }
-        const actions = document.createElement("div");
-        Object.assign(actions.style, {
+        const actions2 = document.createElement("div");
+        Object.assign(actions2.style, {
           display: "flex",
           gap: "6px",
           justifyContent: "flex-end",
@@ -37906,8 +37282,8 @@ next: ${next}`;
           refreshAllSoundSelects();
           renderLibList();
         };
-        actions.append(btnPlay, btnSetShops, btnSetWeather, btnSetPets, btnDel);
-        row2.append(info, actions);
+        actions2.append(btnPlay, btnSetShops, btnSetWeather, btnSetPets, btnDel);
+        row2.append(info, actions2);
         listBody.appendChild(row2);
       }
     };
@@ -39558,8 +38934,8 @@ next: ${next}`;
         hint.style.opacity = "0.7";
         hint.style.fontSize = "12px";
         pop.appendChild(hint);
-        const actions = document.createElement("div");
-        actions.className = "qws-rule-actions";
+        const actions2 = document.createElement("div");
+        actions2.className = "qws-rule-actions";
         const clearBtn = ui.btn("Clear", { variant: "ghost", size: "sm" });
         clearBtn.addEventListener("click", (ev) => {
           ev.preventDefault();
@@ -39608,8 +38984,8 @@ next: ${next}`;
           });
           closeRuleEditor();
         });
-        actions.append(clearBtn, saveBtn);
-        pop.appendChild(actions);
+        actions2.append(clearBtn, saveBtn);
+        pop.appendChild(actions2);
         document.body.appendChild(pop);
         const anchorRect = anchor.getBoundingClientRect();
         const width = pop.offsetWidth;
@@ -40778,7 +40154,7 @@ next: ${next}`;
         if (isEditing2) {
           const toggleGrid = buildRecipeToggleGrid(selection, () => renderRecipeSummary(summary, selection));
           row.appendChild(toggleGrid);
-          const actions = applyStyles(document.createElement("div"), {
+          const actions2 = applyStyles(document.createElement("div"), {
             display: "flex",
             gap: "8px",
             width: "100%"
@@ -40789,25 +40165,25 @@ next: ${next}`;
           const btnValidate = document.createElement("button");
           styleBtnFullWidth(btnValidate, "\u2714\uFE0F");
           btnValidate.onclick = commitEditingRecipe;
-          actions.append(btnCancel, btnValidate);
+          actions2.append(btnCancel, btnValidate);
           if (editingRecipeIndex !== null && editingRecipeIndex < state5.weatherRecipes.length) {
             const btnDelete = document.createElement("button");
             styleBtnFullWidth(btnDelete, "\u{1F5D1}\uFE0F");
             btnDelete.title = "Delete";
             btnDelete.setAttribute("aria-label", "Delete");
             btnDelete.onclick = () => deleteRecipeAt(index);
-            actions.append(btnDelete);
+            actions2.append(btnDelete);
           }
-          row.appendChild(actions);
+          row.appendChild(actions2);
         } else {
-          const actions = applyStyles(document.createElement("div"), {
+          const actions2 = applyStyles(document.createElement("div"), {
             display: "flex",
             gap: "6px",
             alignItems: "center",
             justifyContent: "flex-end",
             flex: "0 0 auto"
           });
-          actions.style.flexWrap = "nowrap";
+          actions2.style.flexWrap = "nowrap";
           const btnEdit = document.createElement("button");
           styleBtnCompact(btnEdit, "\u270F\uFE0F");
           btnEdit.title = "Edit";
@@ -40818,8 +40194,8 @@ next: ${next}`;
           btnDelete.title = "Delete";
           btnDelete.setAttribute("aria-label", "Delete");
           btnDelete.onclick = () => deleteRecipeAt(index);
-          actions.append(btnEdit, btnDelete);
-          row.appendChild(actions);
+          actions2.append(btnEdit, btnDelete);
+          row.appendChild(actions2);
         }
         recipesList.appendChild(row);
       });
@@ -40841,7 +40217,7 @@ next: ${next}`;
         row.appendChild(summary);
         const toggleGrid = buildRecipeToggleGrid(selection, () => renderRecipeSummary(summary, selection));
         row.appendChild(toggleGrid);
-        const actions = applyStyles(document.createElement("div"), {
+        const actions2 = applyStyles(document.createElement("div"), {
           display: "flex",
           gap: "8px",
           width: "100%"
@@ -40852,8 +40228,8 @@ next: ${next}`;
         const btnValidate = document.createElement("button");
         styleBtnFullWidth(btnValidate, "\u2714\uFE0F");
         btnValidate.onclick = commitEditingRecipe;
-        actions.append(btnCancel, btnValidate);
-        row.appendChild(actions);
+        actions2.append(btnCancel, btnValidate);
+        row.appendChild(actions2);
         recipesList.appendChild(row);
       }
       applyDisabled();
@@ -46736,7 +46112,6 @@ Restore figures are averages; unlucky streaks do worse.`;
           }
           if (!selectedId && teams.length) selectedId = teams[0].id;
           void scheduleTeamListRefresh();
-          setTeamsForHotkeys(teams);
           await PetsService.getInventoryPets().catch(() => []);
           await hydrateEditor(getSelectedTeam());
         });
@@ -47126,25 +46501,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       } catch {
       }
     })();
-    installPetTeamHotkeysOnce(async (teamId2) => {
-      const t = teams.find((tt) => tt.id === teamId2) || null;
-      try {
-        isApplyingTeam = true;
-        if (t) {
-          activeTeamId = t.id;
-          await refreshTeamList(true);
-        }
-        await PetsService.useTeam(teamId2);
-        if (t) await waitForActiveTeam(t);
-        await hydrateEditor(getSelectedTeam());
-        await refreshTeamList();
-      } catch (e) {
-        console.warn("[Pets] hotkey useTeam failed:", e);
-        await refreshTeamList();
-      } finally {
-        isApplyingTeam = false;
-      }
-    });
     view.__cleanup__ = (() => {
       const prev = view.__cleanup__;
       return () => {
@@ -47452,8 +46808,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     css(progressCount, { color: TEXT_DIM, flex: "0 0 auto" });
     progressLine.append(progressTargetEl, progressCount);
     progressWrap.append(bar.root, progressLine);
-    const actions = document.createElement("div");
-    css(actions, { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" });
+    const actions2 = document.createElement("div");
+    css(actions2, { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" });
     const btnSelect = button2(config.selectLabel, "accent", () => runSelect());
     const btnClear = button2(config.clearLabel, "neutral", () => {
       try {
@@ -47477,8 +46833,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       config.cancel();
       updateControls();
     });
-    actions.append(btnSelect, btnClear, spacer2, btnDelete, btnPause, btnPlay, btnStop);
-    section2.body.append(stats, chips, estimate, progressWrap, actions);
+    actions2.append(btnSelect, btnClear, spacer2, btnDelete, btnPause, btnPlay, btnStop);
+    section2.body.append(stats, chips, estimate, progressWrap, actions2);
     const progress = { target: "-", done: 0, total: 0 };
     function buildChip(item) {
       const chip2 = document.createElement("div");
@@ -47630,21 +46986,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       updateSummary2();
     };
     const onPauseState = () => updateControls();
-    const listeners9 = [
+    const listeners8 = [
       [`${config.eventPrefix}:progress`, onProgress],
       [`${config.eventPrefix}:done`, onComplete],
       [`${config.eventPrefix}:error`, onComplete],
       [`${config.eventPrefix}:paused`, onPauseState],
       [`${config.eventPrefix}:resumed`, onPauseState]
     ];
-    for (const [type, handler] of listeners9) window.addEventListener(type, handler);
+    for (const [type, handler] of listeners8) window.addEventListener(type, handler);
     updateSummary2();
     updateControls();
     return {
       root: section2.root,
       cleanup: () => {
         clearSummaryTimer();
-        for (const [type, handler] of listeners9) window.removeEventListener(type, handler);
+        for (const [type, handler] of listeners8) window.removeEventListener(type, handler);
       }
     };
   }
@@ -47702,7 +47058,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const footer = h("div", "qmm-modal__foot");
     panel.append(header, body, footer);
     scrim.append(panel);
-    function onKeyDown(event) {
+    function onKeyDown2(event) {
       if (event.key === "Escape") {
         event.stopPropagation();
         close();
@@ -47712,7 +47068,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (closed) return;
       closed = true;
       clearInterval(hostWatch);
-      document.removeEventListener("keydown", onKeyDown, true);
+      document.removeEventListener("keydown", onKeyDown2, true);
       scrim.remove();
       options.onClose?.();
     }
@@ -47720,7 +47076,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (!options.host.isConnected) close();
     }, 1e3);
     scrim.addEventListener("click", () => close());
-    document.addEventListener("keydown", onKeyDown, true);
+    document.addEventListener("keydown", onKeyDown2, true);
     (document.documentElement || document.body).appendChild(scrim);
     return { body, footer, close, isOpen: () => !closed };
   }
@@ -49838,10 +49194,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     date.style.fontSize = "11px";
     date.style.opacity = "0.65";
     header.append(title, date);
-    const actions = document.createElement("div");
-    actions.style.display = "flex";
-    actions.style.gap = "6px";
-    actions.style.flexWrap = "wrap";
+    const actions2 = document.createElement("div");
+    actions2.style.display = "flex";
+    actions2.style.gap = "6px";
+    actions2.style.flexWrap = "wrap";
     const loadButton = createActionButton("Load");
     loadButton.addEventListener("click", () => {
       const result = loadBackup(entry.id);
@@ -49858,9 +49214,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       exportBackupData(entry);
       showStatus(statusLine, { success: true, message: "Backup exported." });
     });
-    actions.append(loadButton, deleteButton);
-    actions.append(exportButton);
-    container.append(header, actions);
+    actions2.append(loadButton, deleteButton);
+    actions2.append(exportButton);
+    container.append(header, actions2);
     return container;
   }
   function refreshBackupList(statusLine, listHolder) {
@@ -50289,7 +49645,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const tags = Array.isArray(e.tags) ? e.tags.filter((t) => typeof t === "string").map((t) => t) : void 0;
       const images = Array.isArray(e.images) ? e.images.filter((img) => typeof img === "string").map((img) => img) : void 0;
       const icon = typeof e.icon === "string" ? e.icon : void 0;
-      const actions = Array.isArray(e.actions) ? e.actions.filter((a) => a && typeof a === "object").map((a) => {
+      const actions2 = Array.isArray(e.actions) ? e.actions.filter((a) => a && typeof a === "object").map((a) => {
         const action2 = a;
         return {
           label: typeof action2.label === "string" ? action2.label : "Open",
@@ -50310,7 +49666,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         tags,
         images,
         icon,
-        actions,
+        actions: actions2,
         creators
       });
     }
@@ -50649,13 +50005,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       const dismiss4 = () => {
         if (closed) return;
         closed = true;
-        document.removeEventListener("keydown", onKeyDown);
+        document.removeEventListener("keydown", onKeyDown2);
         overlay2.remove();
       };
-      const onKeyDown = (event) => {
+      const onKeyDown2 = (event) => {
         if (event.key === "Escape") dismiss4();
       };
-      document.addEventListener("keydown", onKeyDown);
+      document.addEventListener("keydown", onKeyDown2);
       const close = document.createElement("button");
       close.type = "button";
       close.className = "mgt-nav";
@@ -50886,11 +50242,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     hero.appendChild(description);
     return hero;
   }
-  function createActions(actions) {
-    if (!actions?.length) return null;
+  function createActions(actions2) {
+    if (!actions2?.length) return null;
     const row = document.createElement("div");
     row.className = "mgt-actions";
-    actions.forEach((action2, index) => {
+    actions2.forEach((action2, index) => {
       const button3 = document.createElement("button");
       button3.type = "button";
       button3.className = index === 0 ? "mgt-action is-primary" : "mgt-action";
@@ -50922,8 +50278,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (tool.images?.length) {
       root.appendChild(renderCarousel(tool.images).root);
     }
-    const actions = createActions(tool.actions);
-    if (actions) root.appendChild(actions);
+    const actions2 = createActions(tool.actions);
+    if (actions2) root.appendChild(actions2);
     return { root };
   }
   var init_detailView = __esm({
@@ -51868,200 +51224,99 @@ Restore figures are averages; unlucky streaks do worse.`;
       else delete map2[sectionId];
     });
   }
-  function createHoldControl(action2) {
-    const holdDetection = action2.holdDetection;
-    const wrap = document.createElement("div");
-    css(wrap, { display: "flex", alignItems: "center", gap: "7px", flex: "0 0 auto" });
-    const label2 = document.createElement("span");
-    css(label2, { fontSize: "11px", color: TEXT_DIM, whiteSpace: "nowrap" });
-    label2.textContent = holdDetection.label;
-    if (holdDetection.description) label2.title = holdDetection.description;
-    const control = toggle(
-      getKeybindHoldDetection(action2.id),
-      (on) => setKeybindHoldDetection(action2.id, on)
-    );
-    control.title = holdDetection.description || holdDetection.label;
-    const detach = onKeybindHoldDetectionChange(action2.id, (enabled5) => {
-      control.setChecked?.(enabled5);
+  function whileConnected(owner, subscribe5, cb) {
+    const stop2 = subscribe5((value) => {
+      if (owner.isConnected) cb(value);
+      else stop2();
     });
-    wrap.append(label2, control);
-    return { root: wrap, detach };
   }
-  function createKeybindRow(ui, action2) {
-    const row = document.createElement("div");
-    css(row, {
-      display: "flex",
-      alignItems: "center",
-      gap: "10px",
-      padding: "8px 10px",
-      borderRadius: "10px",
-      background: CARD_BG,
-      border: `1px solid ${BORDER}`,
-      flexShrink: "0"
+  function holdControl(action2) {
+    const hold = action2.holdDetection;
+    const wrap = h("div", "qmm-flex");
+    wrap.style.flexWrap = "nowrap";
+    const label2 = h("span", "qmm-setting-row__hint", hold.label);
+    label2.style.whiteSpace = "nowrap";
+    if (hold.description) label2.title = hold.description;
+    const toggle2 = switchInput(getKeybindHoldDetection(action2.id), (on) => setKeybindHoldDetection(action2.id, on));
+    toggle2.title = hold.description || hold.label;
+    whileConnected(wrap, (cb) => onKeybindHoldDetectionChange(action2.id, cb), (on) => toggle2.setChecked(on));
+    wrap.append(label2, toggle2);
+    return wrap;
+  }
+  function keybindRow(action2) {
+    const keyButton = hotkeyButton(getKeybind(action2.id), (hk) => setKeybind(action2.id, hk), {
+      emptyLabel: "Unassigned",
+      listeningLabel: "Press a key",
+      clearable: true,
+      allowModifierOnly: action2.allowModifierOnly
     });
-    if (action2.icon) {
-      row.appendChild(iconBox(action2.icon, ICON_BOX_PX, "keybinds"));
-    }
-    const labelCol = document.createElement("div");
-    css(labelCol, { display: "flex", flexDirection: "column", gap: "2px", flex: "1 1 auto", minWidth: "0" });
-    const name = document.createElement("div");
-    css(name, { fontSize: "12px", color: TEXT, overflow: "hidden", textOverflow: "ellipsis" });
-    name.textContent = action2.label;
-    labelCol.appendChild(name);
-    if (action2.hint) {
-      const hint = document.createElement("div");
-      css(hint, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.4" });
-      hint.textContent = action2.hint;
-      labelCol.appendChild(hint);
-    }
-    const controls = document.createElement("div");
-    css(controls, { display: "flex", alignItems: "center", gap: "8px", flex: "0 0 auto" });
-    const hotkeyButton2 = ui.hotkeyButton(
-      getKeybind(action2.id),
-      (hk) => setKeybind(action2.id, hk),
-      {
-        emptyLabel: "Unassigned",
-        listeningLabel: "Press a key",
-        clearable: true,
-        allowModifierOnly: action2.allowModifierOnly
-      }
-    );
-    css(hotkeyButton2, { flexShrink: "0" });
-    let detachHold = null;
-    if (action2.holdDetection) {
-      const hold = createHoldControl(action2);
-      detachHold = hold.detach;
-      controls.appendChild(hold.root);
-    }
-    controls.appendChild(hotkeyButton2);
-    const clearBtn = action2.sectionId === "game" && !action2.allowClear ? null : button2("\u2715", "danger", () => {
-      setKeybind(action2.id, null);
-      const refreshed = getKeybind(action2.id);
-      hotkeyButton2.refreshHotkey(refreshed);
-      updateButtons2(refreshed);
+    keyButton.style.flexShrink = "0";
+    const { row, controls } = settingRow(action2.label, action2.hint ?? null, keyButton, {
+      icon: action2.icon,
+      iconTag: "keybinds"
     });
-    if (clearBtn) {
-      clearBtn.title = "Remove this shortcut";
-      controls.appendChild(clearBtn);
-    }
-    const defaultHotkey = getDefaultKeybind(action2.id);
-    const defaultString = hotkeyToString(defaultHotkey);
-    const resetBtn = defaultHotkey ? button2("\u27F2", "neutral", () => {
-      resetKeybind(action2.id);
-      const refreshed = getKeybind(action2.id);
-      hotkeyButton2.refreshHotkey(refreshed);
-      updateButtons2(refreshed);
-    }) : null;
-    if (resetBtn) {
-      resetBtn.title = "Restore default shortcut";
-      controls.appendChild(resetBtn);
-    }
-    function setEnabled(btn, enabled5) {
-      if (btn) setButtonEnabled2(btn, enabled5);
-    }
-    function updateButtons2(current) {
-      setEnabled(clearBtn, hotkeyToString(current).length > 0);
-      setEnabled(resetBtn, hotkeyToString(current) !== defaultString);
-    }
-    updateButtons2(getKeybind(action2.id));
-    const stop2 = onKeybindChange(action2.id, (hk) => {
-      hotkeyButton2.refreshHotkey(hk);
-      updateButtons2(hk);
+    if (action2.holdDetection) controls.insertBefore(holdControl(action2), keyButton);
+    const defaultString = hotkeyToString(getDefaultKeybind(action2.id));
+    const refresh = (hk) => {
+      keyButton.refreshHotkey(hk);
+      clearButton?.setEnabled(hotkeyToString(hk).length > 0);
+      resetButton?.setEnabled(hotkeyToString(hk) !== defaultString);
+    };
+    const clearButton = action2.sectionId === "game" && !action2.allowClear ? null : button("\u2715", {
+      variant: "danger",
+      size: "sm",
+      title: "Remove this shortcut",
+      onClick: () => setKeybind(action2.id, null)
     });
-    ui.on("unmounted", stop2);
-    if (detachHold) ui.on("unmounted", detachHold);
-    row.append(labelCol, controls);
+    if (clearButton) controls.appendChild(clearButton);
+    const resetButton = defaultString ? button("\u27F2", { size: "sm", title: "Restore default shortcut", onClick: () => resetKeybind(action2.id) }) : null;
+    if (resetButton) controls.appendChild(resetButton);
+    refresh(getKeybind(action2.id));
+    whileConnected(row, (cb) => onKeybindChange(action2.id, cb), refresh);
     return row;
   }
-  async function renderKeybindsMenu(container) {
-    ensurePanelStyles();
+  function renderKeybindsMenu(container) {
     const ui = new Menu({ id: "keybinds", compact: true });
     ui.mount(container);
     const root = ui.root.querySelector(".qmm-views") ?? ui.root;
-    root.innerHTML = "";
-    root.classList.add("qws-pnl-root");
-    css(root, {
+    root.replaceChildren();
+    Object.assign(root.style, {
       display: "flex",
       flexDirection: "column",
       gap: "12px",
       width: "620px",
       maxWidth: "100%",
-      // A definite height, not 100%: the HUD window is itself a scroller and has
-      // no fixed height, so `height:100%` would collapse onto the content and
-      // hand the scrollbar back to the whole window.
+      // A definite height, not 100%: the HUD window scrolls itself and has no
+      // fixed height, so 100% would collapse onto the content.
       height: "min(70vh, 600px)",
       overflowY: "auto",
       boxSizing: "border-box"
     });
     for (const section2 of getKeybindSections()) {
-      const sectionCard = card2();
-      sectionCard.dataset.section = section2.id;
-      css(sectionCard, { flexShrink: "0", minHeight: "auto" });
-      const head = document.createElement("button");
-      head.type = "button";
-      css(head, {
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        padding: "0",
-        border: "none",
-        background: "none",
-        cursor: "pointer",
-        textAlign: "left",
-        font: "inherit",
-        color: "inherit"
+      const card5 = collapsibleCard({
+        icon: section2.icon,
+        title: section2.title,
+        description: section2.description,
+        collapsed: isSectionCollapsed2(section2.id),
+        onToggle: (collapsed) => setSectionCollapsed2(section2.id, collapsed)
       });
-      const chevron = document.createElement("span");
-      css(chevron, {
-        color: TEXT_DIM,
-        fontSize: "10px",
-        transition: "transform 140ms ease",
-        flex: "0 0 auto",
-        marginLeft: "auto"
-      });
-      chevron.textContent = "\u25B6";
-      const titles = document.createElement("div");
-      css(titles, { display: "flex", flexDirection: "column", gap: "3px", minWidth: "0", flex: "1 1 auto" });
-      titles.appendChild(sectionLabel2(`${section2.icon} ${section2.title}`));
-      if (section2.description) {
-        const desc = document.createElement("div");
-        css(desc, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.45" });
-        desc.textContent = section2.description;
-        titles.appendChild(desc);
-      }
-      head.append(titles, chevron);
-      sectionCard.appendChild(head);
-      const body = document.createElement("div");
-      css(body, { display: "flex", flexDirection: "column", gap: "8px" });
-      for (const action2 of section2.actions) {
-        body.appendChild(createKeybindRow(ui, action2));
-      }
-      sectionCard.appendChild(body);
-      let collapsed = isSectionCollapsed2(section2.id);
-      const applyCollapsed = () => {
-        body.style.display = collapsed ? "none" : "flex";
-        chevron.style.transform = collapsed ? "rotate(0deg)" : "rotate(90deg)";
-        head.setAttribute("aria-expanded", collapsed ? "false" : "true");
-      };
-      applyCollapsed();
-      head.addEventListener("click", () => {
-        collapsed = !collapsed;
-        applyCollapsed();
-        setSectionCollapsed2(section2.id, collapsed);
-      });
-      root.appendChild(sectionCard);
+      card5.root.dataset.section = section2.id;
+      for (const action2 of section2.actions) card5.body.appendChild(keybindRow(action2));
+      root.appendChild(card5.root);
     }
   }
-  var ICON_BOX_PX;
   var init_menu11 = __esm({
     "src/features/keybinds/menu.ts"() {
       "use strict";
-      init_menu();
       init_hotkey();
       init_storage();
-      init_panel();
+      init_button();
+      init_dom();
+      init_hotkey2();
+      init_layout();
+      init_menu();
+      init_toggles();
       init_keybinds();
-      ICON_BOX_PX = 26;
     }
   });
 
@@ -54319,12 +53574,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     dims.title = "Ideal image size for this slot";
     const spacer2 = document.createElement("div");
     css(spacer2, { flex: "1 1 auto" });
-    const actions = document.createElement("div");
-    css(actions, { display: "flex", gap: "5px", flex: "0 0 auto" });
+    const actions2 = document.createElement("div");
+    css(actions2, { display: "flex", gap: "5px", flex: "0 0 auto" });
     if (!target.skinnable) {
-      actions.appendChild(chip(target.blockedReason || "Unavailable", "warn"));
+      actions2.appendChild(chip(target.blockedReason || "Unavailable", "warn"));
     } else {
-      actions.appendChild(
+      actions2.appendChild(
         button2(entry ? "Replace" : "Set", entry ? "neutral" : "accent", async () => {
           const file = await pickImageFile();
           if (!file) return;
@@ -54346,10 +53601,10 @@ Restore figures are averages; unlucky streaks do worse.`;
           }
         });
         remove.title = "Remove this skin";
-        actions.appendChild(remove);
+        actions2.appendChild(remove);
       }
     }
-    body.append(before, arrow, after, dims, spacer2, actions);
+    body.append(before, arrow, after, dims, spacer2, actions2);
     row.append(head, body);
     return row;
   }
@@ -56251,10 +55506,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function writeEntries(entries2) {
     const payload = { entries: entries2 };
     try {
-      if (!installed2) {
+      if (!installed4) {
         ensureTickAtom();
         await fakeShow(EMOTE_PATCH, payload);
-        installed2 = true;
+        installed4 = true;
       } else {
         await fakeUpdate(EMOTE_SOURCE_LABEL, payload);
       }
@@ -56265,7 +55520,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   }
   async function rest() {
-    if (!installed2) return;
+    if (!installed4) return;
     await writeEntries([]);
   }
   function cancelPending() {
@@ -56318,15 +55573,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     cancelStart();
     cancelPending();
     posing = null;
-    if (!installed2) return;
+    if (!installed4) return;
     try {
       await fakeHide(EMOTE_SOURCE_LABEL);
       await bumpTick();
     } catch {
     }
-    installed2 = false;
+    installed4 = false;
   }
-  var EMOTE_SOURCE_LABEL, EMOTE_PATCH, EMOTE_DURATION_MS, installed2, releaseTimer, posing, startTimer, lastSpokeAt;
+  var EMOTE_SOURCE_LABEL, EMOTE_PATCH, EMOTE_DURATION_MS, installed4, releaseTimer, posing, startTimer, lastSpokeAt;
   var init_emote = __esm({
     "src/features/companion/emote.ts"() {
       "use strict";
@@ -56343,7 +55598,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         merge: (real, fake) => mergeEmoteSource(real, fake)
       };
       EMOTE_DURATION_MS = 1500;
-      installed2 = false;
+      installed4 = false;
       releaseTimer = null;
       posing = null;
       startTimer = null;
@@ -58335,7 +57590,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/chat/index.ts
   function notify2() {
-    for (const listener of [...listeners8]) {
+    for (const listener of [...listeners7]) {
       try {
         listener();
       } catch {
@@ -58576,7 +57831,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (captured.kind === "sell") return captured.plan.sell.length;
     return captured.picks.length;
   }
-  var ALERT_DEDUPE_MS, state2, listeners8, nextProposalSeq, ACCEPTANCE, CompanionChat;
+  var ALERT_DEDUPE_MS, state2, listeners7, nextProposalSeq, ACCEPTANCE, CompanionChat;
   var init_chat = __esm({
     "src/features/companion/chat/index.ts"() {
       "use strict";
@@ -58609,7 +57864,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         run: null,
         cancelRequested: false
       };
-      listeners8 = /* @__PURE__ */ new Set();
+      listeners7 = /* @__PURE__ */ new Set();
       nextProposalSeq = 1;
       ACCEPTANCE = {
         harvest: "Yes, go ahead",
@@ -58671,8 +57926,8 @@ Restore figures are averages; unlucky streaks do worse.`;
           return state2.run !== null;
         },
         subscribe(listener) {
-          listeners8.add(listener);
-          return () => listeners8.delete(listener);
+          listeners7.add(listener);
+          return () => listeners7.delete(listener);
         },
         /** Alerte poussée par une source ; ignorée si identique et récente. */
         alert(text2) {
@@ -61046,7 +60301,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/antiAfk/antiAfk.ts
   function createAntiAfkController(deps) {
     const STOP_EVENTS = ["visibilitychange", "blur", "focus", "focusout", "pagehide", "freeze", "resume"];
-    const listeners9 = [];
+    const listeners8 = [];
     function swallowAll() {
       const add = (target, t) => {
         const h2 = (e) => {
@@ -61054,7 +60309,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           e.preventDefault?.();
         };
         target.addEventListener(t, h2, { capture: true });
-        listeners9.push({ t, h: h2, target });
+        listeners8.push({ t, h: h2, target });
       };
       STOP_EVENTS.forEach((t) => {
         add(document, t);
@@ -61062,11 +60317,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
     }
     function unswallowAll() {
-      for (const { t, h: h2, target } of listeners9) try {
+      for (const { t, h: h2, target } of listeners8) try {
         target.removeEventListener(t, h2, { capture: true });
       } catch {
       }
-      listeners9.length = 0;
+      listeners8.length = 0;
     }
     const docProto = Object.getPrototypeOf(document);
     const saved = {
@@ -61274,8 +60529,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     ev.preventDefault();
   }
   function installEditorPointerControls() {
-    if (installed3 || typeof window === "undefined") return;
-    installed3 = true;
+    if (installed5 || typeof window === "undefined") return;
+    installed5 = true;
     window.addEventListener("pointerdown", (ev) => {
       void handlePointerDown(ev);
     }, true);
@@ -61286,13 +60541,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     window.addEventListener("pointercancel", handlePointerUp, true);
     window.addEventListener("contextmenu", handleContextMenu, true);
   }
-  var installed3, dragMode, lastTileKey;
+  var installed5, dragMode, lastTileKey;
   var init_pointerControls = __esm({
     "src/features/editor/pointerControls.ts"() {
       "use strict";
       init_tileObjects();
       init_editor();
-      installed3 = false;
+      installed5 = false;
       dragMode = null;
       lastTileKey = null;
     }
@@ -63334,20 +62589,20 @@ Restore figures are averages; unlucky streaks do worse.`;
         installEditorPointerControls();
         void initSkins();
         mountHUD({
-          onRegister(register) {
-            register("pets", "\u{1F43E} Pets", renderPetsMenu);
-            register("locker", "\u{1F512} Locker", renderLockerMenu);
-            register("alerts", "\u{1F514} Alerts", renderNotifierMenu);
-            register("calculator", "\u{1F913} Calculator", renderCalculatorMenu);
-            register("room", "\u{1F3E0} Room", renderRoomMenu);
-            register("editor", "\u{1F4DD} Editor", renderEditorMenu);
-            register("skins", "\u{1F3A8} Skins", renderSkinsMenu);
-            register("misc", "\u{1F9E9} Misc", renderMiscMenu);
-            register("keybinds", "\u2328\uFE0F Keybinds", renderKeybindsMenu);
-            register("tools", "\u{1F6E0}\uFE0F Tools", renderToolsMenu);
-            register("settings", "\u2699\uFE0F Settings", renderSettingsMenu);
-            register("companion", "\u{1F916} Companion", renderCompanionMenu);
-            register("debug-data", "\u{1F41E} Debug", renderDebugDataMenu);
+          onRegister(register2) {
+            register2("pets", "\u{1F43E} Pets", renderPetsMenu);
+            register2("locker", "\u{1F512} Locker", renderLockerMenu);
+            register2("alerts", "\u{1F514} Alerts", renderNotifierMenu);
+            register2("calculator", "\u{1F913} Calculator", renderCalculatorMenu);
+            register2("room", "\u{1F3E0} Room", renderRoomMenu);
+            register2("editor", "\u{1F4DD} Editor", renderEditorMenu);
+            register2("skins", "\u{1F3A8} Skins", renderSkinsMenu);
+            register2("misc", "\u{1F9E9} Misc", renderMiscMenu);
+            register2("keybinds", "\u2328\uFE0F Keybinds", renderKeybindsMenu);
+            register2("tools", "\u{1F6E0}\uFE0F Tools", renderToolsMenu);
+            register2("settings", "\u2699\uFE0F Settings", renderSettingsMenu);
+            register2("companion", "\u{1F916} Companion", renderCompanionMenu);
+            register2("debug-data", "\u{1F41E} Debug", renderDebugDataMenu);
           }
         });
         initWatchers();
