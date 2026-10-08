@@ -36,7 +36,7 @@ function isSupersededSessionClose(ev: CloseEvent): boolean {
 }
 
 function getRoomConnection(): any {
-  return (pageWindow as any).MagicCircle_RoomConnection;
+  return pageWindow.MagicCircle_RoomConnection;
 }
 
 function getRoomConnectionSocket(): WebSocket | null {
