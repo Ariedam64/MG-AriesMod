@@ -7,7 +7,6 @@
 // from the websocket: the log names the egg and the pet outright, and tells a
 // Double Hatch bonus pet apart from a real pull.
 
-import { Menu } from "../../ui/kit/menu";
 import { petCatalog } from "../../data";
 import { HatchTracker } from "./tracker";
 import { listEggPity } from "./pity";
@@ -161,7 +160,7 @@ function otherSpecies(stats: StatsSnapshot, fromEggs: Set<string>): string[] {
 
 /* ----------------------------------- tab ----------------------------------- */
 
-export function renderHatchTab(view: HTMLElement, _ui: Menu): void {
+export function renderHatchTab(view: HTMLElement): void {
   const prevCleanup = (view as any).__cleanup__;
   if (typeof prevCleanup === "function") {
     try { prevCleanup(); } catch {}

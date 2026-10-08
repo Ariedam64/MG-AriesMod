@@ -6,7 +6,7 @@
 // seconde : c'est le repère que le joueur a déjà en tête.
 
 import { attachSpriteIcon } from "../../../ui/kit/sprites/iconCache";
-import { getAbilityChipColors } from "../../pets/abilityColorsTab";
+import { getAbilityChipColors } from "../../pets/abilityChipColors";
 import { TEXT_DIM, css } from "../../../ui/kit/panel";
 
 const SPRITE_LOG_TAG = "companion-hatch";

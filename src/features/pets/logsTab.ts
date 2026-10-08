@@ -1,24 +1,26 @@
-// src/ui/menus/pets/logs-tab.ts
-// "Logs" tab of the Pets menu: recorded pet-ability triggers, in the panel-ui
-// language the rest of the mod's panels use.
+// The Logs tab of the Pets menu: every pet ability proc recorded, with
+// filters by ability, sort order and free text.
 
+import { button } from "../../ui/kit/button";
+import { plainCard, sectionLabel } from "../../ui/kit/card";
+import { select, textInput } from "../../ui/kit/fields";
+import { color } from "../../ui/kit/theme";
+import { abilityPill } from "./abilityChips";
 import { PetsService } from "./pets";
-import { attachSpriteIcon } from "../../ui/kit/sprites/iconCache";
-import { getAbilityChipColors } from "./abilityColorsTab";
-import {
-  BORDER,
-  CARD_BG,
-  TEAL,
-  TEXT,
-  TEXT_DIM,
-  button,
-  card,
-  css,
-  ensurePanelStyles,
-  selectField,
-  sectionLabel,
-  textField,
-} from "../../ui/kit/panel";
+import { petIcon } from "./petIcon";
+
+const css = (el: HTMLElement, style: Partial<CSSStyleDeclaration>) => Object.assign(el.style, style);
+
+function options(el: HTMLSelectElement, entries: Array<[value: string, label: string]>): void {
+  el.replaceChildren(
+    ...entries.map(([value, label]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      return option;
+    }),
+  );
+}
 
 const PANEL_WIDTH = "min(760px, 88vw)";
 const LIST_MAX_HEIGHT = "min(56vh, 520px)";
@@ -75,13 +77,11 @@ export function renderLogsTab(view: HTMLElement): void {
     (view as any).__cleanup__ = undefined;
   }
 
-  ensurePanelStyles();
-  view.innerHTML = "";
+  view.replaceChildren();
 
   // Style an inner wrapper, never the tab view itself: an inline display on
   // the view would override the menu's .qmm-view show/hide rule.
   const wrap = document.createElement("div");
-  wrap.classList.add("qws-pnl-root");
   css(wrap, {
     display: "flex",
     flexDirection: "column",
@@ -93,7 +93,7 @@ export function renderLogsTab(view: HTMLElement): void {
   });
   view.appendChild(wrap);
 
-  const panel = card();
+  const panel = plainCard();
   css(panel, { minHeight: "0" });
   wrap.appendChild(panel);
 
@@ -102,12 +102,12 @@ export function renderLogsTab(view: HTMLElement): void {
   css(head, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
 
   const title = document.createElement("div");
-  css(title, { fontSize: "14.5px", fontWeight: "700", color: TEXT, flex: "1 1 auto" });
+  css(title, { fontSize: "14.5px", fontWeight: "700", color: color.text, flex: "1 1 auto" });
   title.textContent = "📝 Ability logs";
   head.appendChild(title);
 
   const count = document.createElement("span");
-  css(count, { fontSize: "11px", color: TEXT_DIM, whiteSpace: "nowrap" });
+  css(count, { fontSize: "11px", color: color.textDim, whiteSpace: "nowrap" });
   head.appendChild(count);
 
   panel.appendChild(head);
@@ -115,19 +115,23 @@ export function renderLogsTab(view: HTMLElement): void {
   const toolbar = document.createElement("div");
   css(toolbar, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
 
-  const selAbility = selectField([["", "All abilities"]]);
+  const selAbility = select({ small: true });
+  options(selAbility, [["", "All abilities"]]);
   css(selAbility, { minWidth: "170px" });
 
-  const selSort = selectField([["desc", "Newest first"], ["asc", "Oldest first"]]);
+  const selSort = select({ small: true });
+  options(selSort, [["desc", "Newest first"], ["asc", "Oldest first"]]);
   selSort.value = "desc";
 
-  const inputSearch = textField("Search pet / ability / details");
+  const inputSearch = textInput("Search pet / ability / details", "", { small: true });
   css(inputSearch, { flex: "1 1 200px", minWidth: "160px" });
 
-  const btnClear = button("🧹 Clear", "danger", () => {
-    try { PetsService.clearAbilityLogs(); } catch {}
+  const btnClear = button("🧹 Clear", {
+    variant: "danger",
+    size: "sm",
+    title: "Clear all recorded logs",
+    onClick: () => PetsService.clearAbilityLogs(),
   });
-  btnClear.title = "Clear all recorded logs";
 
   toolbar.append(selAbility, selSort, inputSearch, btnClear);
   panel.appendChild(toolbar);
@@ -160,7 +164,6 @@ export function renderLogsTab(view: HTMLElement): void {
 
   /* ----- State ----- */
   const sessionStart = PetsService.getAbilityLogsSessionStart?.() ?? 0;
-  const petSpriteCache = new Map<string, string>();
 
   let logs: UILog[] = [];
   let abilityFilter = "";
@@ -168,66 +171,13 @@ export function renderLogsTab(view: HTMLElement): void {
   let search = "";
 
   /* ----- Cells ----- */
-  function petIcon(log: UILog): HTMLElement {
-    const holder = document.createElement("div");
-    css(holder, {
-      width: `${PET_ICON_PX}px`,
-      height: `${PET_ICON_PX}px`,
-      borderRadius: "7px",
-      background: "rgba(0,0,0,0.22)",
-      border: `1px solid ${BORDER}`,
-      display: "grid",
-      placeItems: "center",
-      overflow: "hidden",
-      fontSize: "11px",
-      color: TEXT,
-      flex: "0 0 auto",
-    });
-
-    const species = String(log.species || "").trim();
-    const mutations = Array.isArray(log.mutations)
-      ? log.mutations.map(m => String(m ?? "").trim()).filter(Boolean)
-      : [];
-    const mutationKey = mutations.length ? mutations.map(m => m.toLowerCase()).sort().join(",") : "";
-    const cacheKey = mutationKey ? `${species}|${mutationKey}` : species;
-
-    const applyImg = (src: string) => {
-      const img = document.createElement("img");
-      img.src = src;
-      img.alt = "";
-      img.draggable = false;
-      css(img, {
-        width: `${PET_ICON_PX}px`,
-        height: `${PET_ICON_PX}px`,
-        objectFit: "contain",
-        imageRendering: "auto",
-      });
-      holder.replaceChildren(img);
-    };
-
-    const cached = cacheKey ? petSpriteCache.get(cacheKey) : undefined;
-    if (cached) {
-      applyImg(cached);
-      return holder;
-    }
-
-    holder.textContent = (log.petName || species || "pet").charAt(0).toUpperCase() || "🐾";
-    if (species) {
-      attachSpriteIcon(holder, ["pet"], species, PET_ICON_PX, "pet-log", {
-        mutations,
-        onSpriteApplied: img => { petSpriteCache.set(cacheKey, img.src); },
-      });
-    }
-    return holder;
-  }
-
   function whenCell(log: UILog): HTMLElement {
     const cell = document.createElement("div");
     css(cell, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
 
     if (log.date) {
       const date = document.createElement("span");
-      css(date, { fontSize: "10px", color: TEXT_DIM, fontVariantNumeric: "tabular-nums" });
+      css(date, { fontSize: "10px", color: color.textDim, fontVariantNumeric: "tabular-nums" });
       date.textContent = log.date;
       cell.appendChild(date);
     }
@@ -235,7 +185,7 @@ export function renderLogsTab(view: HTMLElement): void {
     const time = document.createElement("span");
     css(time, {
       fontSize: "11.5px",
-      color: log.isActiveSession ? TEAL : TEXT,
+      color: log.isActiveSession ? color.accent : color.text,
       fontWeight: log.isActiveSession ? "600" : "500",
       fontVariantNumeric: "tabular-nums",
       whiteSpace: "nowrap",
@@ -253,7 +203,7 @@ export function renderLogsTab(view: HTMLElement): void {
     const name = document.createElement("span");
     css(name, {
       fontSize: "12px",
-      color: TEXT,
+      color: color.text,
       whiteSpace: "nowrap",
       overflow: "hidden",
       textOverflow: "ellipsis",
@@ -261,7 +211,8 @@ export function renderLogsTab(view: HTMLElement): void {
     name.textContent = log.petName || log.species || "Pet";
     name.title = name.textContent;
 
-    cell.append(petIcon(log), name);
+    const icon = petIcon({ petSpecies: log.species, mutations: log.mutations, name: log.petName }, PET_ICON_PX);
+    cell.append(icon, name);
     return cell;
   }
 
@@ -269,32 +220,7 @@ export function renderLogsTab(view: HTMLElement): void {
     const cell = document.createElement("div");
     css(cell, { display: "flex", minWidth: "0" });
 
-    const text = log.abilityName || log.abilityId || "—";
-    const chip = document.createElement("span");
-    chip.textContent = text;
-    chip.title = text;
-    const { bg, hover } = getAbilityChipColors(log.abilityId);
-    css(chip, {
-      display: "inline-block",
-      maxWidth: "100%",
-      padding: "3px 9px",
-      borderRadius: "999px",
-      fontSize: "11px",
-      fontWeight: "700",
-      lineHeight: "1.5",
-      color: "#fff",
-      textShadow: "0 1px 2px rgba(0,0,0,.45)",
-      background: bg,
-      boxShadow: "0 0 0 1px rgba(0,0,0,.35) inset",
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      transition: "background 120ms ease",
-    });
-    chip.onmouseenter = () => { chip.style.background = hover; };
-    chip.onmouseleave = () => { chip.style.background = bg; };
-
-    cell.appendChild(chip);
+    cell.appendChild(abilityPill(log.abilityId, log.abilityName || log.abilityId || "-"));
     return cell;
   }
 
@@ -303,7 +229,7 @@ export function renderLogsTab(view: HTMLElement): void {
     const text = detailsOf(log);
     css(cell, {
       fontSize: "11.5px",
-      color: TEXT_DIM,
+      color: color.textDim,
       whiteSpace: "nowrap",
       overflow: "hidden",
       textOverflow: "ellipsis",
@@ -323,10 +249,10 @@ export function renderLogsTab(view: HTMLElement): void {
       gap: "10px",
       padding: "5px 8px",
       borderRadius: "8px",
-      background: log.isActiveSession ? "rgba(94,234,212,0.06)" : CARD_BG,
-      border: `1px solid ${BORDER}`,
-      // A tick from this session reads at a glance without a legend.
-      borderLeft: log.isActiveSession ? `2px solid ${TEAL}` : `1px solid ${BORDER}`,
+      background: log.isActiveSession ? color.accentSoft : color.cardBg,
+      border: `1px solid ${color.border}`,
+      // A proc from this session reads at a glance without a legend.
+      borderLeft: log.isActiveSession ? `2px solid ${color.accent}` : `1px solid ${color.border}`,
     });
     row.append(whenCell(log), petCell(log), abilityCell(log), detailsCell(log));
     return row;
@@ -362,18 +288,12 @@ export function renderLogsTab(view: HTMLElement): void {
 
   function rebuildAbilityOptions(): void {
     const current = selAbility.value;
-    const options: Array<[string, string]> = [
+    const entries: Array<[string, string]> = [
       ["", "All abilities"],
-      ...PetsService.getSeenAbilityIds().map(id => [id, id] as [string, string]),
+      ...PetsService.getSeenAbilityIds().map((id) => [id, id] as [string, string]),
     ];
-    selAbility.innerHTML = "";
-    for (const [value, label] of options) {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = label;
-      selAbility.appendChild(option);
-    }
-    selAbility.value = options.some(([value]) => value === current) ? current : "";
+    options(selAbility, entries);
+    selAbility.value = entries.some(([value]) => value === current) ? current : "";
   }
 
   function repaint(): void {
@@ -388,7 +308,7 @@ export function renderLogsTab(view: HTMLElement): void {
       const empty = document.createElement("div");
       css(empty, {
         fontSize: "12px",
-        color: TEXT_DIM,
+        color: color.textDim,
         textAlign: "center",
         padding: "24px 8px",
       });

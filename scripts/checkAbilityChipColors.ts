@@ -10,7 +10,7 @@
 
 import { captureState } from "../src/data/live/state";
 import { startColorPolling } from "../src/data/live/abilityColors";
-import { getAbilityChipColors } from "../src/features/pets/abilityColorsTab";
+import { getAbilityChipColors } from "../src/features/pets/abilityChipColors";
 
 let failures = 0;
 

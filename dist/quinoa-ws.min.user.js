@@ -650,14 +650,14 @@
     }
   }
   function detectEnvironment() {
-    const framed = isInIframe();
+    const framed2 = isInIframe();
     const referrerHost = hostOf(document.referrer);
-    const embeddedInDiscord = framed && !!referrerHost && /(^|\.)discord(app)?\.com$/i.test(referrerHost);
+    const embeddedInDiscord = framed2 && !!referrerHost && /(^|\.)discord(app)?\.com$/i.test(referrerHost);
     return {
       surface: isDiscordActivityContext() || embeddedInDiscord ? "discord" : "web",
       host: location.hostname,
       origin: location.origin,
-      isInIframe: framed,
+      isInIframe: framed2,
       platform: /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) ? "mobile" : "desktop"
     };
   }
@@ -742,13 +742,13 @@
       return gmRequest(req, kind);
     }
   }
-  async function getOk(url, kind, options) {
-    const res = await request({ ...options, url }, kind);
+  async function getOk(url, kind, options2) {
+    const res = await request({ ...options2, url }, kind);
     if (!res.ok || res.body == null) throw new Error(`HTTP ${res.status} for ${url}`);
     return res.body;
   }
-  async function getJSON(url, options) {
-    return JSON.parse(await getText(url, options));
+  async function getJSON(url, options2) {
+    return JSON.parse(await getText(url, options2));
   }
   var HARD_DEADLINE_GRACE_MS, isOk, getText, getBlob;
   var init_http = __esm({
@@ -757,8 +757,8 @@
       init_environment();
       HARD_DEADLINE_GRACE_MS = 2e3;
       isOk = (status2) => status2 >= 200 && status2 < 300;
-      getText = (url, options) => getOk(url, "text", options);
-      getBlob = (url, options) => getOk(url, "blob", options);
+      getText = (url, options2) => getOk(url, "text", options2);
+      getBlob = (url, options2) => getOk(url, "blob", options2);
     }
   });
 
@@ -2287,10 +2287,10 @@
   function observeOutgoing(type, observer2) {
     return addHandler(observers, type, observer2);
   }
-  function runOutgoing(message) {
-    const type = message?.type;
-    if (typeof type !== "string" || !type) return message;
-    let current = message;
+  function runOutgoing(message2) {
+    const type = message2?.type;
+    if (typeof type !== "string" || !type) return message2;
+    let current = message2;
     for (const rule of [...rules.get(type) ?? []]) {
       try {
         const verdict2 = rule(current);
@@ -2328,17 +2328,17 @@
     if (!conn) return false;
     const original = resolveSendMessage(conn);
     if (!original) return false;
-    original.owner.sendMessage = function(message, ...rest2) {
-      let current = message;
+    original.owner.sendMessage = function(message2, ...rest2) {
+      let current = message2;
       try {
-        const isEnvelope = message?.type === "QuinoaCommand" && message?.command && typeof message.command === "object";
-        if (!isEnvelope && message?.type) {
-          current = runOutgoing(message);
+        const isEnvelope = message2?.type === "QuinoaCommand" && message2?.command && typeof message2.command === "object";
+        if (!isEnvelope && message2?.type) {
+          current = runOutgoing(message2);
           if (current === null) return;
         }
       } catch (error) {
         console.error("[MG-mod] sendMessage hook failed:", error);
-        current = message;
+        current = message2;
       }
       return original.fn.call(this, current, ...rest2);
     };
@@ -8300,24 +8300,24 @@
       }
     }
   }
-  async function fakeShow(config, payload, options) {
+  async function fakeShow(config, payload, options2) {
     await ensureStore();
     const st = await _ensureFakeInstalled(config);
     st.payload = payload;
     st.enabled = true;
-    if (options?.merge && !config.merge) {
+    if (options2?.merge && !config.merge) {
       config.merge = (_real, fake) => fake;
     }
     await _primePatched(st);
-    if (options?.openGate && config.gate?.openAction) await config.gate.openAction();
+    if (options2?.openGate && config.gate?.openAction) await config.gate.openAction();
     if (st.autoTimer) {
       clearTimeout(st.autoTimer);
       st.autoTimer = null;
     }
-    if (options?.autoRestoreMs && options.autoRestoreMs > 0) {
+    if (options2?.autoRestoreMs && options2.autoRestoreMs > 0) {
       st.autoTimer = setTimeout(() => {
         void fakeHide(config.label);
-      }, options.autoRestoreMs);
+      }, options2.autoRestoreMs);
     }
   }
   async function fakeUpdate(label2, nextPayload) {
@@ -10615,10 +10615,10 @@
     img.dataset.spriteId = spriteId;
     return img;
   }
-  function attachSpriteIcon(target, categories, id, size, _logTag, options) {
+  function attachSpriteIcon(target, categories, id, size, _logTag, options2) {
     const candidateIds = Array.isArray(id) ? id.map((value) => String(value ?? "").trim()).filter(Boolean) : [String(id ?? "").trim()].filter(Boolean);
     if (!candidateIds.length) return;
-    const mutations = knownMutations(options?.mutations);
+    const mutations = knownMutations(options2?.mutations);
     const mutKey = mutationKeyStr(mutations);
     const hasMutations = mutations.length > 0;
     fetchIndex().then(() => {
@@ -10633,7 +10633,7 @@
         }
       }
       if (!selectedEntry) {
-        options?.onNoSpriteFound?.({ categories, candidates: candidateIds });
+        options2?.onNoSpriteFound?.({ categories, candidates: candidateIds });
         return;
       }
       const entry = selectedEntry;
@@ -10645,7 +10645,7 @@
         requestAnimationFrame(() => {
           if (onlyIfConnected && !target.isConnected) return;
           target.replaceChildren(img);
-          options?.onSpriteApplied?.(img, { category: entry.internalCat, spriteId: entry.name, candidate: selectedCandidate });
+          options2?.onSpriteApplied?.(img, { category: entry.internalCat, spriteId: entry.name, candidate: selectedCandidate });
         });
       };
       if (!hasMutations) {
@@ -15136,27 +15136,27 @@
       return "drop";
     };
   }
-  function purchaseTarget(message) {
-    const item = message?.item ?? {};
-    switch (message?.shop) {
+  function purchaseTarget(message2) {
+    const item = message2?.item ?? {};
+    switch (message2?.shop) {
       case "seed":
-        return { kind: "seed", id: item.species ?? message?.species ?? message?.id };
+        return { kind: "seed", id: item.species ?? message2?.species ?? message2?.id };
       case "egg":
-        return { kind: "egg", id: item.eggId ?? message?.eggId ?? message?.id };
+        return { kind: "egg", id: item.eggId ?? message2?.eggId ?? message2?.id };
       case "tool":
-        return { kind: "tool", id: item.toolId ?? message?.toolId ?? message?.id };
+        return { kind: "tool", id: item.toolId ?? message2?.toolId ?? message2?.id };
       case "decor":
-        return { kind: "decor", id: item.decorId ?? message?.decorId ?? message?.id };
+        return { kind: "decor", id: item.decorId ?? message2?.decorId ?? message2?.id };
       default:
         return null;
     }
   }
-  function checkPurchase(message) {
-    const target = purchaseTarget(message);
+  function checkPurchase(message2) {
+    const target = purchaseTarget(message2);
     if (!target || !inventoryFull()) return;
     const key2 = target.id == null ? "" : String(target.id);
     if (key2 && owned[target.kind].has(key2)) return;
-    console.log(`[PurchaseShopItem:${message.shop}] Blocked by inventory reserve`, { id: target.id });
+    console.log(`[PurchaseShopItem:${message2.shop}] Blocked by inventory reserve`, { id: target.id });
     return "drop";
   }
   function installInventoryReserve() {
@@ -16381,8 +16381,8 @@
     const list = Array.isArray(slots) ? slots : [];
     return list.find((s) => s && typeof s === "object" && s.slotId === slotId) ?? list[slotId] ?? null;
   }
-  function checkHarvest(message) {
-    const { slot, slotsIndex } = message;
+  function checkHarvest(message2) {
+    const { slot, slotsIndex } = message2;
     if (!Number.isInteger(slot) || !Number.isInteger(slotsIndex)) return;
     const tile = harvestedTile(slot);
     if (!tile || typeof tile !== "object" || tile.objectType !== "plant") {
@@ -16814,14 +16814,14 @@
     const value = Number(await read());
     if (Number.isFinite(value) && value > 0) StatsService.incrementShopStat(stat, value);
   }
-  function countHarvest(message) {
-    if (!Number.isInteger(message?.slot) || !Number.isInteger(message?.slotsIndex)) return;
+  function countHarvest(message2) {
+    if (!Number.isInteger(message2?.slot) || !Number.isInteger(message2?.slotsIndex)) return;
     StatsService.incrementGardenStat("totalHarvested");
   }
-  function countPurchase(message) {
-    const stat = PURCHASE_STATS[message?.shop];
+  function countPurchase(message2) {
+    const stat = PURCHASE_STATS[message2?.shop];
     if (!stat) return;
-    const quantity = Math.max(1, Math.floor(Number(message?.quantity) || 1));
+    const quantity = Math.max(1, Math.floor(Number(message2?.quantity) || 1));
     StatsService.incrementShopStat(stat, quantity);
   }
   function countCropSale() {
@@ -17805,10 +17805,10 @@
   function isTeamSyncEnabled() {
     return syncEnabled;
   }
-  function send(message) {
+  function send(message2) {
     if (!syncEnabled) return;
     try {
-      sendToGame(message);
+      sendToGame(message2);
     } catch {
     }
   }
@@ -20048,20 +20048,20 @@
   });
 
   // src/features/sellAllPets/domButton.ts
-  function startInjectSellAllPets(options = {}) {
+  function startInjectSellAllPets(options2 = {}) {
     if (!isBrowser()) return noSSRController();
-    const ROOT_SEL = options.rootSelector ?? DEFAULTS.rootSelector;
-    const CHECK_SEL = options.checkSelector ?? DEFAULTS.checkSelector;
-    const BTN_WIDE = options.buttonSelectorWide ?? DEFAULTS.buttonSelectorWide;
-    const BTN_STRICT = options.buttonSelectorStrict ?? DEFAULTS.buttonSelectorStrict;
-    const BTN_TEXT = options.targetText ?? DEFAULTS.targetText;
-    const INJ_TEXT = options.injectText ?? DEFAULTS.injectText;
-    const INJ_CLASS = options.injectedClass ?? DEFAULTS.injectedClass;
-    const THEME = options.theme ?? DEFAULT_THEME;
-    const OBS_HIST = options.observeHistory ?? true;
-    const logger = typeof options.log === "function" ? options.log : options.log ? (...a) => console.debug("[injectSellAllPets]", ...a) : () => {
+    const ROOT_SEL = options2.rootSelector ?? DEFAULTS.rootSelector;
+    const CHECK_SEL = options2.checkSelector ?? DEFAULTS.checkSelector;
+    const BTN_WIDE = options2.buttonSelectorWide ?? DEFAULTS.buttonSelectorWide;
+    const BTN_STRICT = options2.buttonSelectorStrict ?? DEFAULTS.buttonSelectorStrict;
+    const BTN_TEXT = options2.targetText ?? DEFAULTS.targetText;
+    const INJ_TEXT = options2.injectText ?? DEFAULTS.injectText;
+    const INJ_CLASS = options2.injectedClass ?? DEFAULTS.injectedClass;
+    const THEME = options2.theme ?? DEFAULT_THEME;
+    const OBS_HIST = options2.observeHistory ?? true;
+    const logger = typeof options2.log === "function" ? options2.log : options2.log ? (...a) => console.debug("[injectSellAllPets]", ...a) : () => {
     };
-    const HANDLE = options.onClick ?? createDefaultClickHandler(logger);
+    const HANDLE = options2.onClick ?? createDefaultClickHandler(logger);
     ensureStyle2(INJ_CLASS, THEME);
     let running6 = true;
     let pending6 = false;
@@ -20593,7 +20593,7 @@
   function ensureStyle2(injectedClass, theme) {
     const STYLE_ID11 = `${injectedClass}-style`;
     if (document.getElementById(STYLE_ID11)) return;
-    const css4 = `
+    const css5 = `
 .${injectedClass}{
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
@@ -20648,7 +20648,7 @@
 `.trim();
     const s = document.createElement("style");
     s.id = STYLE_ID11;
-    s.textContent = css4;
+    s.textContent = css5;
     document.head.appendChild(s);
   }
   function hookHistory(onNavigate) {
@@ -26022,19 +26022,19 @@
       return null;
     }
   }
-  function startCropValuesObserverFromGardenAtom(options = {}) {
+  function startCropValuesObserverFromGardenAtom(options2 = {}) {
     if (!hasDOM) {
       return { stop() {
       }, runOnce() {
       }, isRunning: () => false };
     }
     const selectors = {
-      rootSelector: options.rootSelector ?? DEFAULTS2.rootSelector,
-      innerSelector: options.innerSelector ?? DEFAULTS2.innerSelector
+      rootSelector: options2.rootSelector ?? DEFAULTS2.rootSelector,
+      innerSelector: options2.innerSelector ?? DEFAULTS2.innerSelector
     };
-    const markerClass = options.markerClass ?? DEFAULTS2.markerClass;
-    const root = options.root ?? document;
-    const logger = createLogger(options.log);
+    const markerClass = options2.markerClass ?? DEFAULTS2.markerClass;
+    const root = options2.root ?? document;
+    const logger = createLogger(options2.log);
     const priceWatcher = startCropPriceWatcherViaGardenObject();
     const shouldWaitForLocker = lockerService.getState().enabled;
     let running6 = true;
@@ -28418,7 +28418,7 @@
   }
   function injectDarkSelectStyles(id = "inv-sort-dark-styles") {
     if (document.getElementById(id)) return;
-    const css4 = `
+    const css5 = `
     .tm-sort-select {
       color: #e7eef7 !important;
       background-color: rgba(17,17,17,0.98) !important;
@@ -28443,7 +28443,7 @@
   `;
     const style2 = document.createElement("style");
     style2.id = id;
-    style2.textContent = css4;
+    style2.textContent = css5;
     document.head.appendChild(style2);
   }
   function createSortingBar(useCustomSelectStyles) {
@@ -28765,19 +28765,19 @@
     wrap.__showValues = valueToggleInput?.checked ?? showValues;
     return { wrap, select: select3, directionSelect, valueToggleInput, valueSummary: valueSummaryEl };
   }
-  function renderSelectOptions(select3, options, prevValue) {
+  function renderSelectOptions(select3, options2, prevValue) {
     const prev = prevValue ?? select3.value;
     select3.innerHTML = "";
-    for (const opt of options) {
+    for (const opt of options2) {
       const o = document.createElement("option");
       o.value = opt.value;
       o.textContent = opt.label;
       select3.appendChild(o);
     }
-    if (options.some((o) => o.value === "none")) {
+    if (options2.some((o) => o.value === "none")) {
       select3.value = "none";
     }
-    if (prev && options.some((o) => o.value === prev) && prev !== "none") {
+    if (prev && options2.some((o) => o.value === prev) && prev !== "none") {
       select3.value = prev;
     }
   }
@@ -29049,7 +29049,7 @@
           searchQueryForGrid
         );
       }
-      const options = computeSortOptions(
+      const options2 = computeSortOptions(
         activeFilters,
         labelByValue,
         mapExtraByFilter,
@@ -29057,9 +29057,9 @@
       );
       const wrapPrevValue = typeof currentWrap.__prevValue === "string" ? currentWrap.__prevValue : null;
       const persistedSortKey = loadPersistedSortKey();
-      const preferredValue = (wrapPrevValue && options.some((o) => o.value === wrapPrevValue) ? wrapPrevValue : null) || (persistedSortKey && options.some((o) => o.value === persistedSortKey) ? persistedSortKey : null);
+      const preferredValue = (wrapPrevValue && options2.some((o) => o.value === wrapPrevValue) ? wrapPrevValue : null) || (persistedSortKey && options2.some((o) => o.value === persistedSortKey) ? persistedSortKey : null);
       if (shouldRenderSelectOptions) {
-        renderSelectOptions(currentSelect, options, preferredValue);
+        renderSelectOptions(currentSelect, options2, preferredValue);
         lastRenderedInventoryEntryCount = currentEntries.length;
       }
       currentWrap.__prevValue = currentSelect.value;
@@ -29268,7 +29268,7 @@
       }
     };
   }
-  function startInventorySortingObserver(options = {}) {
+  function startInventorySortingObserver(options2 = {}) {
     if (typeof window === "undefined" || typeof document === "undefined") {
       return {
         stop() {
@@ -29280,7 +29280,7 @@
         }
       };
     }
-    const { waitForGrid = true, log: log2, ...config } = options;
+    const { waitForGrid = true, log: log2, ...config } = options2;
     const cfg = config;
     let controller = null;
     let observer2 = null;
@@ -30284,8 +30284,8 @@
           }
         }
       };
-      updatePetHutchSections = async (options = {}) => {
-        const hideDuringUpdate = options.hideDuringUpdate === true;
+      updatePetHutchSections = async (options2 = {}) => {
+        const hideDuringUpdate = options2.hideDuringUpdate === true;
         const root = document.querySelector(PET_HUTCH_ROOT_SELECTOR) ?? document.body;
         const hutchContainer = root.querySelector(PET_HUTCH_LIST_SELECTOR) ?? findSectionContainerByHeaderText(PET_HUTCH_HEADER_TEXT);
         const inventoryContainer = root.querySelector(PET_HUTCH_INVENTORY_LIST_SELECTOR) ?? findSectionContainerByHeaderText(PET_INVENTORY_HEADER_TEXT);
@@ -32968,8 +32968,8 @@
     el.hidden = true;
     return {
       el,
-      show(message) {
-        el.textContent = message;
+      show(message2) {
+        el.textContent = message2;
         el.hidden = false;
       },
       clear() {
@@ -33075,9 +33075,9 @@
     input.checked = checked;
     return input;
   }
-  function radioGroup(name, options, selected, onChange) {
+  function radioGroup(name, options2, selected, onChange) {
     const wrap = h("div", "qmm-radio-group");
-    for (const { value, label: label2 } of options) {
+    for (const { value, label: label2 } of options2) {
       const input = radio(name, value, selected === value);
       input.onchange = () => {
         if (input.checked) onChange(value);
@@ -33940,8 +33940,8 @@
           return radio(name, value, checked);
         }
         /** Compat: use `radioGroup()` from ./fields. */
-        radioGroup(name, options, selected, onChange) {
-          return radioGroup(name, options, selected, onChange);
+        radioGroup(name, options2, selected, onChange) {
+          return radioGroup(name, options2, selected, onChange);
         }
         /** Compat: use `segmented()` from ./segmented. */
         segmented(items, selected, onChange, opts) {
@@ -33960,8 +33960,8 @@
           return switchInput(checked);
         }
         /** Compat: use `new VTabs()` from ./vtabs. */
-        vtabs(options) {
-          return new VTabs(options);
+        vtabs(options2) {
+          return new VTabs(options2);
         }
         /** Compat: use `hotkeyButton()` from ./hotkey. */
         hotkeyButton(initial, onChange, opts) {
@@ -35656,11 +35656,11 @@ next: ${next}`;
       categorySelect.value = selectedCategory;
       categorySelect.disabled = !categories.length;
     };
-    const renderEmptyState = (message) => {
+    const renderEmptyState = (message2) => {
       previewArea.innerHTML = "";
       const empty = document.createElement("div");
       empty.className = "dd-sprite-grid__empty";
-      empty.textContent = message;
+      empty.textContent = message2;
       previewArea.appendChild(empty);
     };
     const getActiveMutations = () => {
@@ -35675,14 +35675,14 @@ next: ${next}`;
       renderMutationGroup("condition", CONDITION_SELECTIONS, "Weather", mutationGroupContainers.condition);
       renderMutationGroup("lighting", LIGHTING_SELECTIONS, "Lighting", mutationGroupContainers.lighting);
     }
-    function renderMutationGroup(key2, options, label2, container) {
+    function renderMutationGroup(key2, options2, label2, container) {
       container.innerHTML = "";
       const heading = document.createElement("span");
       heading.className = "dd-sprite-mutation-group-title";
       heading.textContent = label2;
       const row = document.createElement("div");
       row.className = "dd-sprite-mutation-buttons";
-      options.forEach((option) => {
+      options2.forEach((option) => {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "dd-sprite-mutation-btn";
@@ -38527,10 +38527,10 @@ next: ${next}`;
       spriteKey: def?.crop?.sprite ?? def?.plant?.sprite ?? void 0
     }));
   }
-  function buildLockerEmojiMaps(options) {
+  function buildLockerEmojiMaps(options2) {
     const byKey = /* @__PURE__ */ new Map();
     const bySeedName = /* @__PURE__ */ new Map();
-    options.forEach((opt, index) => {
+    options2.forEach((opt, index) => {
       const emoji = SEED_EMOJIS[index % SEED_EMOJIS.length];
       byKey.set(opt.key, emoji);
       if (opt.seedName) bySeedName.set(opt.seedName, emoji);
@@ -38538,10 +38538,10 @@ next: ${next}`;
     return { byKey, bySeedName };
   }
   function getLockerCache() {
-    const options = buildLockerSeedOptions();
-    if (!_lockerOptionsCache || options.length !== _lockerOptionsCache.length) {
-      _lockerOptionsCache = options;
-      const maps = buildLockerEmojiMaps(options);
+    const options2 = buildLockerSeedOptions();
+    if (!_lockerOptionsCache || options2.length !== _lockerOptionsCache.length) {
+      _lockerOptionsCache = options2;
+      const maps = buildLockerEmojiMaps(options2);
       _lockerEmojiByKey = maps.byKey;
       _lockerEmojisBySeedName = maps.bySeedName;
     }
@@ -38587,9 +38587,9 @@ next: ${next}`;
     wrap.setAttribute("aria-hidden", "true");
     return wrap;
   }
-  function createSeedIcon(seedKey, options = {}) {
-    const size = Math.max(12, options.size ?? 24);
-    const fallback = options.fallback ?? getLockerSeedEmojiForKey(seedKey) ?? getLockerSeedEmojiForSeedName(seedKey) ?? "\u{1F331}";
+  function createSeedIcon(seedKey, options2 = {}) {
+    const size = Math.max(12, options2.size ?? 24);
+    const fallback = options2.fallback ?? getLockerSeedEmojiForKey(seedKey) ?? getLockerSeedEmojiForSeedName(seedKey) ?? "\u{1F331}";
     const wrap = applyStyles(document.createElement("span"), {
       width: `${size}px`,
       height: `${size}px`,
@@ -38598,7 +38598,7 @@ next: ${next}`;
       justifyContent: "center"
     });
     wrap.appendChild(createEmojiIcon(fallback, size));
-    const spriteBaseName2 = options.spriteKey?.split("/").pop();
+    const spriteBaseName2 = options2.spriteKey?.split("/").pop();
     const candidates = spriteBaseName2 ? [spriteBaseName2, seedKey] : seedKey;
     attachSpriteIcon(wrap, ["plant", "tallplant", "crop"], candidates, size, "plant");
     return wrap;
@@ -38633,11 +38633,11 @@ next: ${next}`;
     }
     return wrap;
   }
-  function createWeatherBadge(tag, options = {}) {
+  function createWeatherBadge(tag, options2 = {}) {
     if (tag === NO_WEATHER_TAG) {
-      return createNoWeatherIcon(options);
+      return createNoWeatherIcon(options2);
     }
-    const size = Math.max(16, options.size ?? 32);
+    const size = Math.max(16, options2.size ?? 32);
     const wrap = applyStyles(document.createElement("span"), {
       width: `${size}px`,
       height: `${size}px`,
@@ -38652,7 +38652,7 @@ next: ${next}`;
       lineHeight: "1"
     });
     const label2 = weatherMutationLabel(tag);
-    const fallback = options.fallback ?? label2.charAt(0);
+    const fallback = options2.fallback ?? label2.charAt(0);
     wrap.textContent = fallback || "?";
     wrap.title = label2;
     wrap.setAttribute("aria-label", label2);
@@ -40302,13 +40302,13 @@ next: ${next}`;
   }
   function extractEggOptions(raw) {
     const seen = /* @__PURE__ */ new Set();
-    const options = [];
+    const options2 = [];
     const add = (id, name) => {
       if (typeof id !== "string" || !id) return;
       if (seen.has(id)) return;
       seen.add(id);
       const label2 = typeof name === "string" && name || typeof raw?.names?.[id] === "string" && raw.names[id] || id;
-      options.push({ id, name: label2 });
+      options2.push({ id, name: label2 });
     };
     const walk = (node) => {
       if (!node || typeof node !== "object") return;
@@ -40323,18 +40323,18 @@ next: ${next}`;
       }
     };
     walk(raw);
-    return options;
+    return options2;
   }
   function extractEggOptionsFromCatalog() {
-    const options = [];
+    const options2 = [];
     const seen = /* @__PURE__ */ new Set();
     for (const [id, raw] of Object.entries(eggCatalog2)) {
       if (!id || seen.has(id)) continue;
       seen.add(id);
       const name = typeof raw?.name === "string" && raw.name || id;
-      options.push({ id, name });
+      options2.push({ id, name });
     }
-    return options;
+    return options2;
   }
   function mergeEggOptions(base, extra) {
     const seen = new Set(base.map((o) => o.id));
@@ -40788,11 +40788,11 @@ next: ${next}`;
           key: key2,
           label: weatherMutationLabel(key2),
           tileRef: value,
-          iconFactory: (options) => createWeatherBadge(key2, options)
+          iconFactory: (options2) => createWeatherBadge(key2, options2)
         }))
       ]);
-      createNoWeatherIcon = (options) => {
-        const size = Math.max(24, options?.size ?? 48);
+      createNoWeatherIcon = (options2) => {
+        const size = Math.max(24, options2?.size ?? 48);
         const wrap = applyStyles(document.createElement("div"), {
           width: `${size}px`,
           height: `${size}px`,
@@ -40949,9 +40949,9 @@ next: ${next}`;
   });
 
   // src/lib/dom.ts
-  function addStyle(css4) {
+  function addStyle(css5) {
     const style2 = document.createElement("style");
-    style2.textContent = css4;
+    style2.textContent = css5;
     document.head.appendChild(style2);
     return style2;
   }
@@ -41049,18 +41049,18 @@ next: ${next}`;
     attachSpriteIcon(wrap, categories, candidates, size, logTag);
     return wrap;
   }
-  function applyCropSimulationSprite(el, speciesKey, options = {}) {
+  function applyCropSimulationSprite(el, speciesKey, options2 = {}) {
     const { fallback, layer: layer2 } = ensureCropSpriteLayers(el);
-    const fallbackText2 = typeof options.fallback === "string" && options.fallback.trim().length > 0 ? options.fallback : "??";
+    const fallbackText2 = typeof options2.fallback === "string" && options2.fallback.trim().length > 0 ? options2.fallback : "??";
     fallback.textContent = fallbackText2;
     if (!speciesKey) {
       layer2.replaceChildren();
       syncCropSpriteLoadedState(el, layer2);
       return;
     }
-    const candidates = options.candidates && options.candidates.length ? options.candidates : buildSpriteCandidates2(speciesKey);
-    const mutations = Array.isArray(options.mutations) && options.mutations.length ? options.mutations : void 0;
-    const categories = options.categories && options.categories.length ? options.categories : getSpriteCategoriesForKey(speciesKey);
+    const candidates = options2.candidates && options2.candidates.length ? options2.candidates : buildSpriteCandidates2(speciesKey);
+    const mutations = Array.isArray(options2.mutations) && options2.mutations.length ? options2.mutations : void 0;
+    const categories = options2.categories && options2.categories.length ? options2.categories : getSpriteCategoriesForKey(speciesKey);
     const updateLoadedState = () => syncCropSpriteLoadedState(el, layer2);
     updateLoadedState();
     attachSpriteIcon(
@@ -41584,13 +41584,13 @@ next: ${next}`;
         updateOutputs();
       });
       function renderList() {
-        const options = getLockerSeedOptions();
+        const options2 = getLockerSeedOptions();
         optionByKey.clear();
-        options.forEach((opt) => optionByKey.set(opt.key, opt));
+        options2.forEach((opt) => optionByKey.set(opt.key, opt));
         const previous = list.scrollTop;
         list.innerHTML = "";
         listButtons.clear();
-        if (!options.length) {
+        if (!options2.length) {
           const empty = document.createElement("div");
           empty.className = "mg-crop-calculator__placeholder";
           empty.textContent = "No crops available.";
@@ -41599,14 +41599,14 @@ next: ${next}`;
           renderDetail();
           return;
         }
-        if (selectedKey && !options.some((opt) => opt.key === selectedKey)) {
-          selectedKey = options[0].key;
+        if (selectedKey && !options2.some((opt) => opt.key === selectedKey)) {
+          selectedKey = options2[0].key;
         }
         if (!selectedKey) {
-          selectedKey = options[0].key;
+          selectedKey = options2[0].key;
         }
         const fragment = document.createDocumentFragment();
-        options.forEach((opt) => {
+        options2.forEach((opt) => {
           const button3 = document.createElement("button");
           button3.className = "qmm-vtab";
           button3.style.display = "grid";
@@ -42087,9 +42087,9 @@ next: ${next}`;
   function textField(placeholder, value = "") {
     return textInput(placeholder, value, { small: true });
   }
-  function selectField(options) {
+  function selectField(options2) {
     const el = select2({ small: true });
-    for (const [value, label2] of options) {
+    for (const [value, label2] of options2) {
       const option = document.createElement("option");
       option.value = value;
       option.textContent = label2;
@@ -42402,13 +42402,13 @@ next: ${next}`;
     head.appendChild(seen);
     return head;
   }
-  function createEggCard(options) {
-    const { egg, stats, showOffsets } = options;
+  function createEggCard(options2) {
+    const { egg, stats, showOffsets } = options2;
     const counters = HatchTracker.getCounters(egg.eggId);
     const card5 = collapsibleCard({
       header: eggHeader(egg, counters.pulls),
-      collapsed: options.collapsed,
-      onToggle: options.onToggle
+      collapsed: options2.collapsed,
+      onToggle: options2.onToggle
     });
     const panel = document.createElement("div");
     css(panel, {
@@ -42555,7 +42555,7 @@ next: ${next}`;
     }
     return sortSpeciesByRarity(out);
   }
-  function renderHatchTab(view, _ui) {
+  function renderHatchTab(view) {
     const prevCleanup = view.__cleanup__;
     if (typeof prevCleanup === "function") {
       try {
@@ -42692,6 +42692,656 @@ next: ${next}`;
       init_layout();
       init_storage();
       OTHER_SECTION_ID = "__other__";
+    }
+  });
+
+  // src/features/pets/petIcon.ts
+  function spriteImg(src, size) {
+    const img = document.createElement("img");
+    img.src = src;
+    img.width = size;
+    img.height = size;
+    img.alt = "";
+    img.draggable = false;
+    Object.assign(img.style, { width: `${size}px`, height: `${size}px`, objectFit: "contain" });
+    return img;
+  }
+  function petIcon(pet, size) {
+    const holder2 = document.createElement("div");
+    Object.assign(holder2.style, {
+      width: `${size}px`,
+      height: `${size}px`,
+      flex: "0 0 auto",
+      display: "grid",
+      placeItems: "center",
+      overflow: "hidden",
+      borderRadius: `${Math.round(size / 3.5)}px`,
+      background: color.surface,
+      border: `1px solid ${color.border}`,
+      fontSize: `${Math.max(9, Math.round(size * 0.45))}px`,
+      color: color.text
+    });
+    if (!pet) {
+      holder2.style.opacity = "0.35";
+      holder2.textContent = "\xB7";
+      return holder2;
+    }
+    const species = String(pet.petSpecies ?? "").trim();
+    const mutations = Array.isArray(pet.mutations) ? pet.mutations : [];
+    const cacheKey = `${species}|${mutations.join(",")}`;
+    const cached2 = resolvedSprites.get(cacheKey);
+    if (cached2) {
+      holder2.appendChild(spriteImg(cached2, size));
+      return holder2;
+    }
+    holder2.textContent = (pet.name || species || "pet").charAt(0).toUpperCase();
+    if (species) {
+      attachSpriteIcon(holder2, ["pet"], species, size, "pet-icon", {
+        mutations,
+        onSpriteApplied: (img) => resolvedSprites.set(cacheKey, img.src)
+      });
+    }
+    return holder2;
+  }
+  var resolvedSprites;
+  var init_petIcon = __esm({
+    "src/features/pets/petIcon.ts"() {
+      "use strict";
+      init_theme();
+      init_iconCache();
+      resolvedSprites = /* @__PURE__ */ new Map();
+    }
+  });
+
+  // src/features/pets/feedingTab.ts
+  function speciesItems() {
+    return Object.keys(petCatalog2).map((species) => {
+      const entry = petCatalog2[species];
+      return { id: species, title: String(entry?.name || species), rarity: entry?.rarity };
+    });
+  }
+  function renderSpeciesItem(item, btn) {
+    btn.replaceChildren();
+    btn.style.gridTemplateColumns = "24px 1fr auto";
+    btn.style.gap = "10px";
+    const title = document.createElement("div");
+    title.textContent = item.title || "Pet";
+    Object.assign(title.style, { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: "0" });
+    btn.append(petIcon({ petSpecies: item.id, name: item.title }, LIST_ICON_PX), title);
+    const rarity3 = String(item.rarity || "").trim();
+    if (rarity3) {
+      const badge2 = rarityBadge(rarity3);
+      badge2.style.margin = "0";
+      badge2.style.alignSelf = "center";
+      btn.appendChild(badge2);
+    }
+  }
+  function message(text2) {
+    const el = document.createElement("div");
+    el.textContent = text2;
+    el.style.opacity = "0.75";
+    return el;
+  }
+  function cropRow(species, crop, name) {
+    const row = document.createElement("div");
+    Object.assign(row.style, {
+      display: "grid",
+      gridTemplateColumns: "1fr auto",
+      alignItems: "center",
+      gap: "8px",
+      padding: "6px 4px",
+      borderBottom: `1px solid ${color.border}`
+    });
+    const label2 = document.createElement("div");
+    Object.assign(label2.style, { display: "flex", flexDirection: "column", gap: "2px" });
+    const nameEl = document.createElement("div");
+    nameEl.textContent = name;
+    nameEl.style.fontSize = "13px";
+    label2.appendChild(nameEl);
+    if (name !== crop) {
+      const idEl = document.createElement("div");
+      idEl.textContent = crop;
+      Object.assign(idEl.style, { fontSize: "11px", opacity: "0.6" });
+      label2.appendChild(idEl);
+    }
+    const toggle2 = switchInput(
+      PetsService.isInstantFeedCropAllowed(species, crop),
+      (on) => PetsService.setInstantFeedCropAllowed(species, crop, on)
+    );
+    row.append(label2, toggle2);
+    return row;
+  }
+  function renderFeedingTab(view) {
+    view.replaceChildren();
+    const layout = document.createElement("div");
+    Object.assign(layout.style, {
+      display: "grid",
+      gridTemplateColumns: "minmax(220px, 280px) minmax(0, 1fr)",
+      gap: "10px",
+      alignItems: "stretch",
+      height: "54vh",
+      minHeight: "0"
+    });
+    view.appendChild(layout);
+    const left = document.createElement("div");
+    Object.assign(left.style, { display: "flex", flexDirection: "column", height: "100%", minHeight: "0" });
+    const tabs = new VTabs({
+      emptyText: "No pets found.",
+      fillAvailableHeight: true,
+      renderItem: (item, btn) => renderSpeciesItem(item, btn)
+    });
+    Object.assign(tabs.root.style, { flex: "1 1 auto", minHeight: "0" });
+    left.appendChild(tabs.root);
+    const right = document.createElement("div");
+    Object.assign(right.style, { display: "flex", flexDirection: "column", gap: "10px", minHeight: "0" });
+    const panel = card("\u{1F356} Instant Feed", { tone: "muted", subtitle: "Allow or block crops for the Instant Feed button." });
+    Object.assign(panel.root.style, { display: "grid", gridTemplateRows: "auto 1fr", minHeight: "0", height: "100%" });
+    Object.assign(panel.body.style, { gridTemplateRows: "auto 1fr", minHeight: "0" });
+    right.appendChild(panel.root);
+    layout.append(left, right);
+    const widgetRow = document.createElement("label");
+    Object.assign(widgetRow.style, { display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" });
+    const widgetLabel = document.createElement("span");
+    widgetLabel.textContent = "Show floating Instant Feed widget";
+    widgetLabel.style.fontSize = "13px";
+    widgetRow.append(switchInput(isInstantFeedWidgetEnabled(), setInstantFeedWidgetEnabled), widgetLabel);
+    panel.body.appendChild(widgetRow);
+    const crops = document.createElement("div");
+    Object.assign(crops.style, { display: "flex", flexDirection: "column", gap: "6px", overflow: "auto", minHeight: "0" });
+    panel.body.appendChild(crops);
+    const renderCrops = (species) => {
+      crops.replaceChildren();
+      if (!species) {
+        crops.appendChild(message("Select a pet to configure instant feed crops."));
+        return;
+      }
+      const compatible = Array.from(new Set(PetsService.getCompatibleCropsForSpecies(species).map(String).filter(Boolean)));
+      if (!compatible.length) {
+        crops.appendChild(message("No compatible crops for this pet."));
+        return;
+      }
+      compatible.map((crop) => ({ crop, name: String(plantCatalog2[crop]?.name || crop) })).sort((a, b) => a.name.localeCompare(b.name)).forEach(({ crop, name }) => crops.appendChild(cropRow(species, crop, name)));
+    };
+    const items = speciesItems();
+    tabs.setItems(items);
+    if (items.length) tabs.select(items[0].id);
+    tabs.onSelect((id) => renderCrops(id));
+    renderCrops(items[0]?.id ?? null);
+  }
+  var LIST_ICON_PX;
+  var init_feedingTab = __esm({
+    "src/features/pets/feedingTab.ts"() {
+      "use strict";
+      init_data();
+      init_card();
+      init_theme();
+      init_toggles();
+      init_vtabs();
+      init_menu3();
+      init_feedWidget();
+      init_pets();
+      init_petIcon();
+      LIST_ICON_PX = 22;
+    }
+  });
+
+  // src/features/pets/abilityChipColors.ts
+  function getAbilityChipColors(id) {
+    const key2 = String(id || "");
+    const live = petAbilities2[key2]?.color;
+    if (live && typeof live.bg === "string" && live.bg) {
+      return { bg: live.bg, hover: typeof live.hover === "string" && live.hover ? live.hover : live.bg };
+    }
+    const base = abilityNameWithoutLevel(key2).replace(/[\s\-_]+/g, "").toLowerCase();
+    const matches = (family) => key2.startsWith(family) || base === family.toLowerCase();
+    for (const [families, colors] of FALLBACK_COLORS) {
+      if (families.some(matches)) return colors;
+    }
+    return NEUTRAL;
+  }
+  var solid, NEUTRAL, FALLBACK_COLORS;
+  var init_abilityChipColors = __esm({
+    "src/features/pets/abilityChipColors.ts"() {
+      "use strict";
+      init_data();
+      init_abilityNames();
+      solid = (r, g, b) => ({
+        bg: `rgba(${r},${g},${b},0.9)`,
+        hover: `rgba(${r},${g},${b},1)`
+      });
+      NEUTRAL = { bg: "rgba(100,100,100,0.9)", hover: "rgba(150,150,150,1)" };
+      FALLBACK_COLORS = [
+        [["MoonKisser"], solid(250, 166, 35)],
+        [["DawnKisser"], solid(162, 92, 242)],
+        [["DawnCapture"], solid(178, 90, 158)],
+        [["DawnbinderBoost"], solid(180, 104, 160)],
+        [["ProduceScaleBoost", "SnowyCropSizeBoost"], solid(34, 139, 34)],
+        [["PlantGrowthBoost", "SnowyPlantGrowthBoost", "DawnPlantGrowthBoost", "AmberPlantGrowthBoost", "ThunderPlantGrowthBoost"], solid(0, 128, 128)],
+        [["EggGrowthBoost", "SnowyEggGrowthBoost", "ThunderEggGrowthBoost"], solid(180, 90, 240)],
+        [["PetAgeBoost"], solid(147, 112, 219)],
+        [["PetHatchSizeBoost"], solid(128, 0, 128)],
+        [["PetXpBoost", "SnowyPetXpBoost", "DawnXpBoost", "ThunderXpBoost"], solid(30, 144, 255)],
+        [["HungerBoost", "SnowyHungerBoost"], solid(255, 20, 147)],
+        [["HungerRestore", "SnowyHungerRestore"], solid(255, 105, 180)],
+        [["SellBoost"], solid(220, 20, 60)],
+        [["CoinFinder", "SnowyCoinFinder", "DawnCoinFinder", "ThunderCoinFinder"], solid(180, 150, 0)],
+        [["SeedFinder"], solid(168, 102, 38)],
+        [["ProduceMutationBoost", "SnowyCropMutationBoost", "DawnBoost", "AmberMoonBoost", "ThunderBoost"], solid(140, 15, 70)],
+        [["PetMutationBoost"], solid(160, 50, 100)],
+        [["DoubleHarvest"], solid(0, 120, 180)],
+        [["DoubleHatch"], solid(60, 90, 180)],
+        [["ProduceEater"], solid(255, 69, 0)],
+        [["ProduceRefund"], solid(255, 99, 71)],
+        [["PetRefund"], solid(0, 80, 120)],
+        [["Copycat"], solid(255, 140, 0)],
+        [
+          ["GoldGranter"],
+          {
+            bg: "linear-gradient(135deg, rgba(225,200,55,0.9) 0%, rgba(225,180,10,0.9) 40%, rgba(215,185,45,0.9) 70%, rgba(210,185,45,0.9) 100%)",
+            hover: "linear-gradient(135deg, rgba(220,200,70,1) 0%, rgba(210,175,5,1) 40%, rgba(210,185,55,1) 70%, rgba(200,175,30,1) 100%)"
+          }
+        ],
+        [
+          ["RainbowGranter"],
+          {
+            bg: "linear-gradient(45deg, rgba(200,0,0,0.9), rgba(200,120,0,0.9), rgba(160,170,30,0.9), rgba(60,170,60,0.9), rgba(50,170,170,0.9), rgba(40,150,180,0.9), rgba(20,90,180,0.9), rgba(70,30,150,0.9))",
+            hover: "linear-gradient(45deg, rgba(200,0,0,1), rgba(200,120,0,1), rgba(160,170,30,1), rgba(60,170,60,1), rgba(50,170,170,1), rgba(40,150,180,1), rgba(20,90,180,1), rgba(70,30,150,1))"
+          }
+        ],
+        [["RainDance"], solid(76, 204, 204)],
+        [["SnowGranter"], solid(144, 184, 204)],
+        [["FrostGranter"], solid(148, 160, 204)],
+        [["DawnlitGranter"], solid(196, 124, 180)],
+        [["AmberlitGranter"], solid(204, 144, 96)],
+        [["ThunderstruckGranter"], solid(194, 184, 60)],
+        [["Thundercharger"], solid(31, 163, 130)],
+        [["Thunderbloom"], solid(112, 246, 203)]
+      ];
+    }
+  });
+
+  // src/features/pets/abilityChips.ts
+  function paintOnHover(el, colors, grow) {
+    el.onmouseenter = () => {
+      el.style.background = colors.hover;
+      if (grow) {
+        el.style.transform = "scale(1.08)";
+        el.style.boxShadow = RING_HOVER;
+      }
+    };
+    el.onmouseleave = () => {
+      el.style.background = colors.bg;
+      if (grow) {
+        el.style.transform = "none";
+        el.style.boxShadow = RING;
+      }
+    };
+  }
+  function abilityDots(abilityIds, opts = {}) {
+    const size = opts.size ?? 12;
+    const wrap = document.createElement("span");
+    Object.assign(wrap.style, { display: "inline-flex", alignItems: "center", gap: `${opts.gap ?? 8}px`, lineHeight: "1" });
+    const ids = abilityIds.filter(Boolean);
+    if (!ids.length && opts.emptyText) {
+      const empty = document.createElement("span");
+      empty.textContent = opts.emptyText;
+      Object.assign(empty.style, { opacity: "0.75", fontSize: "12px" });
+      wrap.appendChild(empty);
+      return wrap;
+    }
+    for (const id of ids) {
+      const colors = getAbilityChipColors(id);
+      const dot = document.createElement("span");
+      dot.title = abilityName(id) || id;
+      dot.setAttribute("aria-label", dot.title);
+      Object.assign(dot.style, {
+        display: "inline-block",
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: "3px",
+        background: colors.bg,
+        boxShadow: RING,
+        cursor: "default",
+        transition: "transform 80ms ease, box-shadow 120ms ease, background 120ms ease"
+      });
+      paintOnHover(dot, colors, true);
+      wrap.appendChild(dot);
+    }
+    return wrap;
+  }
+  function abilityPill(abilityId, label2) {
+    const colors = getAbilityChipColors(abilityId);
+    const pill3 = document.createElement("span");
+    pill3.textContent = label2;
+    pill3.title = label2;
+    Object.assign(pill3.style, {
+      display: "inline-block",
+      maxWidth: "100%",
+      padding: "3px 9px",
+      borderRadius: "999px",
+      fontSize: "11px",
+      fontWeight: "700",
+      lineHeight: "1.5",
+      color: "#fff",
+      textShadow: "0 1px 2px rgba(0,0,0,.45)",
+      background: colors.bg,
+      boxShadow: "0 0 0 1px rgba(0,0,0,.35) inset",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      transition: "background 120ms ease"
+    });
+    paintOnHover(pill3, colors, false);
+    return pill3;
+  }
+  var RING, RING_HOVER;
+  var init_abilityChips = __esm({
+    "src/features/pets/abilityChips.ts"() {
+      "use strict";
+      init_theme();
+      init_abilityChipColors();
+      init_abilityNames();
+      RING = `0 0 0 1px rgba(0,0,0,0.4) inset, 0 0 0 1px ${color.border}`;
+      RING_HOVER = `0 0 0 1px rgba(0,0,0,0.4) inset, 0 0 0 1px ${color.borderHover}`;
+    }
+  });
+
+  // src/features/pets/logsTab.ts
+  function options(el, entries2) {
+    el.replaceChildren(
+      ...entries2.map(([value, label2]) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label2;
+        return option;
+      })
+    );
+  }
+  function formatDateMMDDYY(timestamp) {
+    const value = Number(timestamp);
+    if (!Number.isFinite(value)) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    const yy = String(date.getFullYear() % 100).padStart(2, "0");
+    return `${mm}/${dd}/${yy}`;
+  }
+  function detailsOf(log2) {
+    if (typeof log2.data === "string") return log2.data;
+    try {
+      return JSON.stringify(log2.data) ?? "";
+    } catch {
+      return "";
+    }
+  }
+  function renderLogsTab(view) {
+    const prevCleanup = view.__cleanup__;
+    if (typeof prevCleanup === "function") {
+      try {
+        prevCleanup();
+      } catch {
+      }
+      view.__cleanup__ = void 0;
+    }
+    view.replaceChildren();
+    const wrap = document.createElement("div");
+    css2(wrap, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px",
+      width: PANEL_WIDTH,
+      maxWidth: "100%",
+      minHeight: "0",
+      boxSizing: "border-box"
+    });
+    view.appendChild(wrap);
+    const panel = plainCard();
+    css2(panel, { minHeight: "0" });
+    wrap.appendChild(panel);
+    const head = document.createElement("div");
+    css2(head, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
+    const title = document.createElement("div");
+    css2(title, { fontSize: "14.5px", fontWeight: "700", color: color.text, flex: "1 1 auto" });
+    title.textContent = "\u{1F4DD} Ability logs";
+    head.appendChild(title);
+    const count = document.createElement("span");
+    css2(count, { fontSize: "11px", color: color.textDim, whiteSpace: "nowrap" });
+    head.appendChild(count);
+    panel.appendChild(head);
+    const toolbar = document.createElement("div");
+    css2(toolbar, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
+    const selAbility = select2({ small: true });
+    options(selAbility, [["", "All abilities"]]);
+    css2(selAbility, { minWidth: "170px" });
+    const selSort = select2({ small: true });
+    options(selSort, [["desc", "Newest first"], ["asc", "Oldest first"]]);
+    selSort.value = "desc";
+    const inputSearch = textInput("Search pet / ability / details", "", { small: true });
+    css2(inputSearch, { flex: "1 1 200px", minWidth: "160px" });
+    const btnClear = button("\u{1F9F9} Clear", {
+      variant: "danger",
+      size: "sm",
+      title: "Clear all recorded logs",
+      onClick: () => PetsService.clearAbilityLogs()
+    });
+    toolbar.append(selAbility, selSort, inputSearch, btnClear);
+    panel.appendChild(toolbar);
+    const columns = document.createElement("div");
+    css2(columns, {
+      display: "grid",
+      gridTemplateColumns: ROW_TEMPLATE2,
+      gap: "10px",
+      padding: "0 8px"
+    });
+    for (const label2 of ["When", "Pet", "Ability", "Details"]) {
+      columns.appendChild(sectionLabel(label2));
+    }
+    panel.appendChild(columns);
+    const list = document.createElement("div");
+    list.classList.add("qws-pnl-scroll");
+    css2(list, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "3px",
+      maxHeight: LIST_MAX_HEIGHT,
+      overflowY: "auto",
+      minHeight: "0"
+    });
+    panel.appendChild(list);
+    const sessionStart2 = PetsService.getAbilityLogsSessionStart?.() ?? 0;
+    let logs2 = [];
+    let abilityFilter = "";
+    let sortDir = "desc";
+    let search2 = "";
+    function whenCell(log2) {
+      const cell = document.createElement("div");
+      css2(cell, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
+      if (log2.date) {
+        const date = document.createElement("span");
+        css2(date, { fontSize: "10px", color: color.textDim, fontVariantNumeric: "tabular-nums" });
+        date.textContent = log2.date;
+        cell.appendChild(date);
+      }
+      const time = document.createElement("span");
+      css2(time, {
+        fontSize: "11.5px",
+        color: log2.isActiveSession ? color.accent : color.text,
+        fontWeight: log2.isActiveSession ? "600" : "500",
+        fontVariantNumeric: "tabular-nums",
+        whiteSpace: "nowrap"
+      });
+      time.textContent = log2.time12;
+      cell.appendChild(time);
+      return cell;
+    }
+    function petCell(log2) {
+      const cell = document.createElement("div");
+      css2(cell, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
+      const name = document.createElement("span");
+      css2(name, {
+        fontSize: "12px",
+        color: color.text,
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis"
+      });
+      name.textContent = log2.petName || log2.species || "Pet";
+      name.title = name.textContent;
+      const icon = petIcon({ petSpecies: log2.species, mutations: log2.mutations, name: log2.petName }, PET_ICON_PX);
+      cell.append(icon, name);
+      return cell;
+    }
+    function abilityCell(log2) {
+      const cell = document.createElement("div");
+      css2(cell, { display: "flex", minWidth: "0" });
+      cell.appendChild(abilityPill(log2.abilityId, log2.abilityName || log2.abilityId || "-"));
+      return cell;
+    }
+    function detailsCell(log2) {
+      const cell = document.createElement("div");
+      const text2 = detailsOf(log2);
+      css2(cell, {
+        fontSize: "11.5px",
+        color: color.textDim,
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        minWidth: "0"
+      });
+      cell.textContent = text2;
+      cell.title = text2;
+      return cell;
+    }
+    function logRow(log2) {
+      const row = document.createElement("div");
+      css2(row, {
+        display: "grid",
+        gridTemplateColumns: ROW_TEMPLATE2,
+        alignItems: "center",
+        gap: "10px",
+        padding: "5px 8px",
+        borderRadius: "8px",
+        background: log2.isActiveSession ? color.accentSoft : color.cardBg,
+        border: `1px solid ${color.border}`,
+        // A proc from this session reads at a glance without a legend.
+        borderLeft: log2.isActiveSession ? `2px solid ${color.accent}` : `1px solid ${color.border}`
+      });
+      row.append(whenCell(log2), petCell(log2), abilityCell(log2), detailsCell(log2));
+      return row;
+    }
+    function applyFilters() {
+      let result = logs2.slice();
+      if (abilityFilter.trim()) {
+        const wanted = normalizeAbilityKey(abilityFilter);
+        result = result.filter((log2) => {
+          const byId = normalizeAbilityKey(log2.abilityId);
+          const byName = normalizeAbilityKey(PetsService.getAbilityNameWithoutLevel(log2.abilityId));
+          return byId === wanted || byName === wanted;
+        });
+      }
+      if (search2.trim()) {
+        const needle = search2.toLowerCase();
+        result = result.filter((log2) => (log2.petName || log2.species || "").toLowerCase().includes(needle) || (log2.abilityName || "").toLowerCase().includes(needle) || (log2.abilityId || "").toLowerCase().includes(needle) || detailsOf(log2).toLowerCase().includes(needle) || (log2.petId || "").toLowerCase().includes(needle));
+      }
+      result.sort((a, b) => sortDir === "asc" ? a.performedAt - b.performedAt : b.performedAt - a.performedAt);
+      return result;
+    }
+    function rebuildAbilityOptions() {
+      const current = selAbility.value;
+      const entries2 = [
+        ["", "All abilities"],
+        ...PetsService.getSeenAbilityIds().map((id) => [id, id])
+      ];
+      options(selAbility, entries2);
+      selAbility.value = entries2.some(([value]) => value === current) ? current : "";
+    }
+    function repaint() {
+      const visible = applyFilters();
+      count.textContent = visible.length === logs2.length ? `${logs2.length} entries` : `${visible.length} of ${logs2.length} entries`;
+      list.innerHTML = "";
+      if (!visible.length) {
+        const empty = document.createElement("div");
+        css2(empty, {
+          fontSize: "12px",
+          color: color.textDim,
+          textAlign: "center",
+          padding: "24px 8px"
+        });
+        empty.textContent = logs2.length ? "No log matches these filters." : "\u{1F5D2}\uFE0F No logs yet.";
+        list.appendChild(empty);
+        return;
+      }
+      for (const log2 of visible) list.appendChild(logRow(log2));
+      list.scrollTop = sortDir === "asc" ? list.scrollHeight : 0;
+    }
+    selAbility.onchange = () => {
+      abilityFilter = selAbility.value;
+      repaint();
+    };
+    selSort.onchange = () => {
+      sortDir = selSort.value || "desc";
+      repaint();
+    };
+    inputSearch.addEventListener("input", () => {
+      search2 = inputSearch.value.trim();
+      repaint();
+    });
+    let stopWatcher = null;
+    let unsubLogs = null;
+    void (async () => {
+      try {
+        stopWatcher = await PetsService.startAbilityLogsWatcher();
+        rebuildAbilityOptions();
+        unsubLogs = PetsService.onAbilityLogs((all) => {
+          logs2 = all.map((entry) => ({
+            petId: entry.petId,
+            petName: entry.name ?? null,
+            species: entry.species ?? null,
+            mutations: Array.isArray(entry.mutations) ? entry.mutations.slice() : void 0,
+            abilityId: entry.abilityId,
+            abilityName: entry.abilityName,
+            data: entry.data,
+            performedAt: entry.performedAt,
+            date: formatDateMMDDYY(entry.performedAt),
+            time12: entry.time12,
+            isActiveSession: sessionStart2 > 0 && entry.performedAt >= sessionStart2
+          }));
+          rebuildAbilityOptions();
+          repaint();
+        });
+      } catch {
+      }
+    })();
+    repaint();
+    view.__cleanup__ = () => {
+      try {
+        unsubLogs?.();
+      } catch {
+      }
+      try {
+        stopWatcher?.();
+      } catch {
+      }
+    };
+  }
+  var css2, PANEL_WIDTH, LIST_MAX_HEIGHT, PET_ICON_PX, ROW_TEMPLATE2, normalizeAbilityKey;
+  var init_logsTab = __esm({
+    "src/features/pets/logsTab.ts"() {
+      "use strict";
+      init_button();
+      init_card();
+      init_fields();
+      init_theme();
+      init_abilityChips();
+      init_pets();
+      init_petIcon();
+      css2 = (el, style2) => Object.assign(el.style, style2);
+      PANEL_WIDTH = "min(760px, 88vw)";
+      LIST_MAX_HEIGHT = "min(56vh, 520px)";
+      PET_ICON_PX = 24;
+      ROW_TEMPLATE2 = "104px minmax(120px, 1.2fr) minmax(110px, 0.9fr) minmax(0, 2fr)";
+      normalizeAbilityKey = (value) => String(value ?? "").toLowerCase().replace(/\s+/g, "").replace(/([ivx]+)$/i, "");
     }
   });
 
@@ -43006,6 +43656,1031 @@ next: ${next}`;
       RESTORE_AMOUNT_KEY = "hungerRestorePercentage";
       SECONDS_PER_MINUTE = 60;
       TIER_SUFFIX2 = /(?:_NEW)?(?:IV|I{1,3})$/;
+    }
+  });
+
+  // src/features/pets/teamStatsView.ts
+  function triggerUnit(trigger) {
+    return trigger && TRIGGER_UNITS[trigger] || "/roll";
+  }
+  function fillRatioColor(ratio) {
+    if (ratio >= 0.99) return "#34d399";
+    if (ratio >= 0.9) return "#a3e635";
+    if (ratio >= 0.75) return "#fbbf24";
+    return "#f87171";
+  }
+  function mkBar(current, atMax) {
+    const ratio = atMax > 0 ? Math.max(0, Math.min(1, current / atMax)) : 0;
+    const track = document.createElement("div");
+    Object.assign(track.style, {
+      height: "3px",
+      borderRadius: "999px",
+      background: "rgba(255,255,255,0.07)",
+      overflow: "hidden",
+      margin: "3px 0 1px"
+    });
+    const fill = document.createElement("div");
+    Object.assign(fill.style, {
+      height: "100%",
+      width: `${Math.max(1.5, ratio * 100)}%`,
+      borderRadius: "999px",
+      background: fillRatioColor(ratio),
+      opacity: "0.85"
+    });
+    track.appendChild(fill);
+    return track;
+  }
+  function formatPercent(value) {
+    if (value >= 10) return `${value.toFixed(1)}%`;
+    if (value >= 1) return `${value.toFixed(2)}%`;
+    return `${value.toFixed(3)}%`;
+  }
+  function formatAmount(value, unit) {
+    const decimals = Math.abs(value) >= 10 ? 0 : 1;
+    const text2 = value.toLocaleString("en-US", {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    });
+    return unit ? `${text2}${unit === "%" ? "%" : ` ${unit}`}` : text2;
+  }
+  function formatDuration(minutes) {
+    const total = Math.max(0, Math.round(minutes));
+    const hours = Math.floor(total / 60);
+    const mins = total % 60;
+    if (hours > 0) return `${hours}h${String(mins).padStart(2, "0")}`;
+    return `${mins}m`;
+  }
+  function primaryParameterKey(group2) {
+    for (const contributor of group2.contributors) {
+      for (const key2 of Object.keys(contributor.scaledParameters)) {
+        if (PARAMETER_LABELS[key2]) return key2;
+      }
+    }
+    return null;
+  }
+  function groupTitle(group2) {
+    const key2 = primaryParameterKey(group2);
+    return key2 ? PARAMETER_LABELS[key2].label : group2.label;
+  }
+  function perProcMagnitude(group2) {
+    const key2 = primaryParameterKey(group2);
+    if (!key2) return null;
+    const meta = PARAMETER_LABELS[key2];
+    const values = group2.contributors.map((contributor) => contributor.scaledParameters[key2]).filter((value) => typeof value === "number" && value !== 0);
+    if (!values.length) return null;
+    const low = formatAmount(Math.min(...values), meta.unit);
+    const high = formatAmount(Math.max(...values), meta.unit);
+    return low === high ? high : `${low} \u2013 ${high}`;
+  }
+  function mkNav(nav) {
+    const wrap = document.createElement("div");
+    Object.assign(wrap.style, {
+      display: "flex",
+      alignItems: "center",
+      gap: "2px",
+      flex: "0 0 auto"
+    });
+    const mkArrow = (glyph, delta, label2) => {
+      const button3 = document.createElement("button");
+      button3.type = "button";
+      button3.textContent = glyph;
+      button3.title = label2;
+      Object.assign(button3.style, {
+        border: "none",
+        background: "transparent",
+        color: MUTED,
+        font: "inherit",
+        fontSize: "11px",
+        lineHeight: "1",
+        padding: "0 3px",
+        cursor: "pointer",
+        borderRadius: "3px"
+      });
+      button3.onmouseenter = () => {
+        button3.style.color = "#e2e8f0";
+      };
+      button3.onmouseleave = () => {
+        button3.style.color = MUTED;
+      };
+      button3.addEventListener("click", (event) => {
+        event.stopPropagation();
+        event.preventDefault();
+        nav.onStep(delta);
+      });
+      return button3;
+    };
+    const counter2 = document.createElement("span");
+    counter2.textContent = `${nav.index + 1}/${nav.total}`;
+    counter2.style.fontSize = "9px";
+    counter2.style.color = DIM;
+    counter2.style.fontVariantNumeric = "tabular-nums";
+    wrap.append(mkArrow("\u2039", -1, "Previous effect"), counter2, mkArrow("\u203A", 1, "Next effect"));
+    return wrap;
+  }
+  function renderGroup(group2, nav) {
+    const block = document.createElement("div");
+    Object.assign(block.style, {
+      padding: "5px 7px",
+      borderRadius: "7px",
+      background: "rgba(255,255,255,0.025)",
+      border: "1px solid rgba(255,255,255,0.05)",
+      marginBottom: "4px"
+    });
+    const nameRow = document.createElement("div");
+    Object.assign(nameRow.style, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "6px",
+      minHeight: "13px"
+    });
+    const name = document.createElement("div");
+    const weatherSuffix2 = group2.requiredWeathers.length ? ` \xB7 ${group2.requiredWeathers.join("/")}` : "";
+    name.textContent = `${groupTitle(group2)}${weatherSuffix2}`;
+    Object.assign(name.style, {
+      fontSize: "9px",
+      fontWeight: "600",
+      letterSpacing: "0.05em",
+      textTransform: "uppercase",
+      color: DIM,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    });
+    if (weatherSuffix2) name.title = "Only fires while this weather is active.";
+    nameRow.appendChild(name);
+    if (nav) nameRow.appendChild(mkNav(nav));
+    block.appendChild(nameRow);
+    const value = document.createElement("div");
+    Object.assign(value.style, {
+      display: "flex",
+      alignItems: "baseline",
+      gap: "3px",
+      fontVariantNumeric: "tabular-nums"
+    });
+    if (group2.combinedProbability === null) {
+      const always = document.createElement("span");
+      always.textContent = "always on";
+      always.style.fontSize = "12px";
+      always.style.color = MUTED;
+      always.title = "This ability has no proc chance \u2014 it applies continuously.";
+      value.appendChild(always);
+      block.appendChild(value);
+    } else {
+      const atMax = group2.combinedProbabilityAtMax ?? group2.combinedProbability;
+      const ratio = atMax > 0 ? Math.min(1, group2.combinedProbability / atMax) : 1;
+      const isMaxed = ratio >= 0.995;
+      const big = document.createElement("span");
+      big.textContent = formatPercent(group2.combinedProbability);
+      big.style.fontSize = "15px";
+      big.style.fontWeight = "700";
+      big.style.color = fillRatioColor(ratio);
+      big.style.lineHeight = "1.1";
+      const unit = document.createElement("span");
+      unit.textContent = triggerUnit(group2.trigger);
+      unit.style.fontSize = "9px";
+      unit.style.color = DIM;
+      value.append(big, unit);
+      if (!isMaxed) {
+        const ceiling = document.createElement("span");
+        ceiling.textContent = `max ${formatPercent(atMax)}`;
+        ceiling.style.fontSize = "9px";
+        ceiling.style.color = DIM;
+        ceiling.style.marginLeft = "auto";
+        value.appendChild(ceiling);
+      }
+      const perHour = group2.trigger === "continuous" ? `
+About ${(group2.combinedProbability / 100 * CONTINUOUS_ROLLS_PER_HOUR).toFixed(1)} procs per hour.` : "";
+      value.title = `Chance at least one of ${group2.contributors.length} pet(s) procs.
+Not a sum \u2014 it is 1 minus the product of every pet missing.${perHour}
+
+` + (isMaxed ? "Every pet is at max strength \u2014 this is the most this team can do." : `At ${(ratio * 100).toFixed(0)}% of what these same pets would do at max strength (${formatPercent(atMax)}).`);
+      block.appendChild(value);
+      block.appendChild(mkBar(group2.combinedProbability, atMax));
+    }
+    const magnitude = perProcMagnitude(group2);
+    if (magnitude) {
+      const row = document.createElement("div");
+      Object.assign(row.style, {
+        display: "flex",
+        alignItems: "baseline",
+        justifyContent: "space-between",
+        gap: "8px",
+        fontSize: "10px",
+        marginTop: "1px"
+      });
+      row.title = group2.contributors.length > 1 ? "What a single proc gives. Each pet applies its own value, so this is\na range across the team \u2014 the values never add up." : "What a single proc gives.";
+      const label2 = document.createElement("span");
+      label2.textContent = "per proc";
+      label2.style.color = MUTED;
+      const amount = document.createElement("span");
+      amount.textContent = magnitude;
+      amount.style.fontWeight = "600";
+      amount.style.flex = "0 0 auto";
+      amount.style.fontVariantNumeric = "tabular-nums";
+      row.append(label2, amount);
+      block.appendChild(row);
+    }
+    return block;
+  }
+  function focusGroups(groups, focusAbilityIds) {
+    const wanted = /* @__PURE__ */ new Set();
+    for (const abilityId of focusAbilityIds) {
+      const key2 = effectGroupKeyForAbility(abilityId);
+      if (key2) wanted.add(key2);
+    }
+    if (!wanted.size) return groups;
+    const focused = groups.filter((group2) => wanted.has(group2.key));
+    return focused.length ? focused : groups;
+  }
+  function renderGroupCarousel(groups) {
+    const host = document.createElement("div");
+    if (!groups.length) return host;
+    if (groups.length === 1) {
+      host.appendChild(renderGroup(groups[0]));
+      return host;
+    }
+    let index = 0;
+    const paint = () => {
+      host.replaceChildren(
+        renderGroup(groups[index], {
+          index,
+          total: groups.length,
+          onStep: (delta) => {
+            index = (index + delta + groups.length) % groups.length;
+            paint();
+          }
+        })
+      );
+    };
+    paint();
+    return host;
+  }
+  function renderDetails(stats, groups, showAllGroups) {
+    const details = document.createElement("div");
+    details.style.paddingTop = "4px";
+    if (stats.unknownSpecies.length) {
+      const warn = document.createElement("div");
+      warn.textContent = `\u26A0 unknown species: ${stats.unknownSpecies.join(", ")}`;
+      warn.style.fontSize = "10px";
+      warn.style.color = "#fbbf24";
+      details.appendChild(warn);
+    }
+    if (showAllGroups) {
+      for (const group2 of groups) details.appendChild(renderGroup(group2));
+    } else {
+      details.appendChild(renderGroupCarousel(groups));
+    }
+    details.appendChild(renderFeedRow(stats));
+    return details;
+  }
+  function renderFeedRow(stats) {
+    const autonomy = stats.autonomy;
+    let text2;
+    let color2;
+    let title;
+    const boostLine = autonomy.drainReductionPercent > 0 ? `
+Hunger Boost removes ${autonomy.drainReductionPercent.toFixed(0)}% of the drain.` : "";
+    const restoreLine = autonomy.restoreActivationsPerMinute > 0 ? `
+Hunger Restore fires ~${autonomy.restoreActivationsPerMinute.toFixed(2)}\xD7/min on average.` : "";
+    const weatherLine2 = autonomy.weatherGatedHungerAbilities.length ? `
+Not counted (needs a specific weather): ${autonomy.weatherGatedHungerAbilities.join(", ")}.` : "";
+    if (autonomy.status === "sustained") {
+      text2 = "indefinitely";
+      color2 = ACCENT;
+      title = `Expected hunger restore covers the drain for every pet, so the team
+feeds itself.${boostLine}${restoreLine}${weatherLine2}
+
+This is an average \u2014 a bad run of Restore luck can still empty a pet.`;
+    } else if (autonomy.status === "runs-out" && autonomy.minutesFromFull !== null) {
+      text2 = `~${formatDuration(autonomy.minutesFromFull)}`;
+      color2 = autonomy.minutesFromFull < 60 ? "#fbbf24" : ACCENT;
+      title = `Starting from full, ${autonomy.limitingPetName ?? "the first pet"} empties first.
+Rates the team itself \u2014 current hunger is not taken into account.${boostLine}${restoreLine}${weatherLine2}
+
+Restore figures are averages; unlucky streaks do worse.`;
+    } else {
+      text2 = "unknown";
+      color2 = MUTED;
+      title = `No known hunger data for: ${autonomy.speciesMissingDepletion.join(", ")}.`;
+    }
+    const row = document.createElement("div");
+    Object.assign(row.style, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "8px",
+      padding: "4px 7px",
+      borderRadius: "7px",
+      background: "rgba(255,255,255,0.02)",
+      border: "1px solid rgba(255,255,255,0.05)",
+      fontSize: "10px"
+    });
+    row.title = title;
+    const label2 = document.createElement("span");
+    label2.textContent = "\u{1F356} Lasts without feeding (from full)";
+    label2.style.color = MUTED;
+    label2.style.overflow = "hidden";
+    label2.style.textOverflow = "ellipsis";
+    label2.style.whiteSpace = "nowrap";
+    const valueSpan = document.createElement("span");
+    valueSpan.textContent = text2;
+    valueSpan.style.color = color2;
+    valueSpan.style.fontWeight = "600";
+    valueSpan.style.flex = "0 0 auto";
+    valueSpan.style.fontVariantNumeric = "tabular-nums";
+    row.append(label2, valueSpan);
+    return row;
+  }
+  function renderTeamStats(pets, options2 = {}) {
+    const wrap = document.createElement("div");
+    wrap.style.display = "grid";
+    wrap.style.gap = "2px";
+    const realPets = pets.filter(Boolean);
+    if (!realPets.length) {
+      const empty = document.createElement("div");
+      empty.textContent = "No pets in this team.";
+      empty.style.fontSize = "10px";
+      empty.style.color = MUTED;
+      wrap.appendChild(empty);
+      return wrap;
+    }
+    const stats = computeTeamStats(realPets);
+    const groups = options2.focusAbilityIds?.length ? focusGroups(stats.groups, options2.focusAbilityIds) : stats.groups;
+    wrap.appendChild(renderDetails(stats, groups, options2.showAllGroups === true));
+    return wrap;
+  }
+  var PARAMETER_LABELS, MUTED, ACCENT, DIM, CONTINUOUS_ROLLS_PER_HOUR, TRIGGER_UNITS;
+  var init_teamStatsView = __esm({
+    "src/features/pets/teamStatsView.ts"() {
+      "use strict";
+      init_teamStats();
+      PARAMETER_LABELS = {
+        // Crop Size is a whole number in [50, 100]; the boost adds points, not a percentage.
+        sizeIncrease: { label: "Crop size", unit: "" },
+        scaleIncreasePercentage: { label: "Crop size", unit: "%" },
+        cropSellPriceIncreasePercentage: { label: "Sell price", unit: "%" },
+        mutationChanceIncreasePercentage: { label: "Mutation chance", unit: "%" },
+        hungerRestorePercentage: { label: "Hunger restore", unit: "%" },
+        hungerRefundPercentage: { label: "Hunger refund", unit: "%" },
+        hungerDepletionRateDecreasePercentage: { label: "Hunger drain", unit: "%" },
+        plantGrowthReductionMinutes: { label: "Plant growth", unit: "min" },
+        eggGrowthTimeReductionMinutes: { label: "Egg growth", unit: "min" },
+        baseMaxCoinsFindable: { label: "Coins (max)", unit: "" },
+        bonusXp: { label: "Bonus XP", unit: "" },
+        maxStrengthIncreasePercentage: { label: "Max STR", unit: "%" },
+        plantAbilityChanceBoostPercentage: { label: "Plant ability", unit: "%" }
+      };
+      MUTED = "#94a3b8";
+      ACCENT = "#34d399";
+      DIM = "#64748b";
+      CONTINUOUS_ROLLS_PER_HOUR = 60;
+      TRIGGER_UNITS = {
+        continuous: "/min",
+        harvest: "/harvest",
+        sellAllCrops: "/sale",
+        sellPet: "/pet sold",
+        hatchEgg: "/hatch",
+        playerActivated: "/use",
+        weather: "/weather"
+      };
+    }
+  });
+
+  // src/features/pets/teamEditor.ts
+  function framed(title, content) {
+    const section2 = card(title, { tone: "muted", align: "center" });
+    section2.body.append(content);
+    section2.root.style.maxWidth = "720px";
+    return section2.root;
+  }
+  function slotRow(onChoose, onClear) {
+    const root = document.createElement("div");
+    Object.assign(root.style, {
+      display: "grid",
+      gridTemplateColumns: `${SLOT_ICON_PX}px minmax(0,1fr) ${SLOT_BUTTON_PX}px ${SLOT_BUTTON_PX}px`,
+      alignItems: "center",
+      gap: "8px",
+      width: "min(560px, 100%)",
+      border: `1px solid ${color.border}`,
+      borderRadius: "10px",
+      padding: "8px 10px",
+      background: color.cardBg
+    });
+    const iconColumn = document.createElement("div");
+    Object.assign(iconColumn.style, { display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", flexShrink: "0" });
+    const iconWrap = document.createElement("div");
+    Object.assign(iconWrap.style, {
+      width: `${SLOT_ICON_PX}px`,
+      height: `${SLOT_ICON_PX}px`,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center"
+    });
+    const strengthBadge = document.createElement("div");
+    Object.assign(strengthBadge.style, {
+      fontSize: "9px",
+      fontWeight: "700",
+      lineHeight: "1",
+      padding: "1px 4px",
+      borderRadius: "4px",
+      background: "rgba(0,0,0,0.75)",
+      color: "#fff",
+      whiteSpace: "nowrap",
+      display: "none",
+      pointerEvents: "none"
+    });
+    iconColumn.append(iconWrap, strengthBadge);
+    const pawFallback = () => {
+      const paw = document.createElement("span");
+      paw.textContent = "\u{1F43E}";
+      paw.style.fontSize = `${SLOT_ICON_PX - 6}px`;
+      paw.setAttribute("aria-hidden", "true");
+      iconWrap.replaceChildren(paw);
+    };
+    const setIcon = (species, mutations) => {
+      if (!species) {
+        iconWrap.dataset.iconKey = "";
+        pawFallback();
+        return;
+      }
+      const key2 = `${species}|${mutations.join(",")}`;
+      if (iconWrap.dataset.iconKey === key2 && iconWrap.querySelector("img")) return;
+      iconWrap.dataset.iconKey = key2;
+      attachSpriteIcon(iconWrap, ["pet"], species, SLOT_ICON_PX, "pet-slot", { mutations, onNoSpriteFound: pawFallback });
+    };
+    const text2 = document.createElement("div");
+    Object.assign(text2.style, { display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" });
+    const nameEl = document.createElement("div");
+    Object.assign(nameEl.style, { fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
+    text2.append(nameEl, abilityDots([], { emptyText: "No ability" }));
+    const btnChoose = button("", { icon: "+", tooltip: "Choose a pet", ariaLabel: "Choose a pet" });
+    const btnClear = button("", { icon: "\u2212", variant: "danger", tooltip: "Remove this pet", ariaLabel: "Remove this pet" });
+    const setBusy = (busy4) => {
+      btnChoose.disabled = busy4;
+      btnClear.disabled = busy4;
+    };
+    btnChoose.onclick = async () => {
+      setBusy(true);
+      try {
+        await onChoose();
+      } finally {
+        setBusy(false);
+      }
+    };
+    btnClear.onclick = () => void onClear();
+    root.append(iconColumn, text2, btnChoose, btnClear);
+    function update(pet) {
+      const species = String(pet?.petSpecies || "").trim();
+      setIcon(species, pet?.mutations ?? []);
+      const maxStrength = pet ? getPetMaxStrength(pet) : 0;
+      if (pet && maxStrength > 0) {
+        const strength = getPetStrength(pet);
+        const maxed = strength >= maxStrength;
+        strengthBadge.textContent = maxed ? `${maxStrength}` : `${strength}/${maxStrength}`;
+        strengthBadge.style.color = maxed ? MAX_STRENGTH_COLOR : "#fff";
+        strengthBadge.style.display = "block";
+      } else {
+        strengthBadge.style.display = "none";
+      }
+      const speciesLabel = species ? species.charAt(0).toUpperCase() + species.slice(1) : "";
+      nameEl.textContent = pet ? pet.name?.trim() || speciesLabel || "Pet" : "None";
+      text2.lastElementChild.replaceWith(abilityDots(pet?.abilities ?? [], { emptyText: "No ability" }));
+    }
+    update(null);
+    return { root, update };
+  }
+  function createTeamEditor(handlers) {
+    const root = document.createElement("div");
+    Object.assign(root.style, { display: "grid", gridTemplateRows: "auto 1fr", gap: "10px", minHeight: "0" });
+    const header = document.createElement("div");
+    Object.assign(header.style, { display: "flex", alignItems: "center", gap: "8px" });
+    const title = document.createElement("div");
+    title.textContent = "Team editor";
+    Object.assign(title.style, {
+      fontWeight: "700",
+      fontSize: "14px",
+      flex: "1 1 0",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    });
+    const btnUseTeam = button("Use this team", {
+      variant: "primary",
+      size: "sm",
+      disabled: true,
+      onClick: async () => {
+        const team = handlers.selectedTeam();
+        if (team) await handlers.onUseTeam(team);
+      }
+    });
+    header.append(title, btnUseTeam);
+    const body = document.createElement("div");
+    Object.assign(body.style, { display: "flex", flexDirection: "column", gap: "12px", overflow: "auto", minHeight: "0" });
+    root.append(header, body);
+    const nameRow = flexRow({ justify: "center", fullWidth: true });
+    const nameInput = textInput("Team name", "");
+    Object.assign(nameInput.style, { flex: "1", minWidth: "0" });
+    nameRow.append(nameInput);
+    body.appendChild(framed("\u{1F3F7}\uFE0F Team name", nameRow));
+    const saveName = () => {
+      const team = handlers.selectedTeam();
+      if (!team) return;
+      const name = petTeamName(nameInput.value);
+      if (nameInput.value.trim().length > name.length) nameInput.value = name;
+      if (name === team.name) return;
+      PetsService.saveTeam({ id: team.id, name });
+      handlers.onRenamed();
+    };
+    nameInput.addEventListener("input", saveName);
+    nameInput.addEventListener("blur", saveName);
+    nameInput.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") nameInput.blur();
+    });
+    const saveSlots = async (slots) => {
+      const team = handlers.selectedTeam();
+      if (!team) return;
+      const saved = PetsService.saveTeam({ id: team.id, slots });
+      await repaint(saved ?? handlers.selectedTeam());
+    };
+    const rows = [0, 1, 2].map(
+      (index) => slotRow(
+        async () => {
+          const team = handlers.selectedTeam();
+          if (!team) return;
+          handlers.setWindowVisible(false);
+          try {
+            await PetsService.chooseSlotPet(team.id, index);
+            await repaint(handlers.selectedTeam());
+          } finally {
+            handlers.setWindowVisible(true);
+          }
+        },
+        async () => {
+          const team = handlers.selectedTeam();
+          if (!team) return;
+          const slots = team.slots.slice(0, 3);
+          slots[index] = null;
+          await saveSlots(slots);
+        }
+      )
+    );
+    const slotGrid = document.createElement("div");
+    Object.assign(slotGrid.style, { display: "grid", gridTemplateColumns: "1fr", rowGap: "10px", justifyItems: "center" });
+    slotGrid.append(...rows.map((r) => r.root));
+    const btnUseCurrent = button("Current active", {
+      variant: "primary",
+      onClick: async () => {
+        try {
+          const ids = await PetsService.getActivePetIds();
+          await saveSlots([ids[0] || null, ids[1] || null, ids[2] || null]);
+        } catch {
+        }
+      }
+    });
+    const btnClearSlots = button("Clear slots", { onClick: () => saveSlots([null, null, null]) });
+    btnUseCurrent.style.minWidth = btnClearSlots.style.minWidth = "140px";
+    const slotActions = flexRow({ gap: 6, justify: "center" });
+    slotActions.append(btnUseCurrent, btnClearSlots);
+    const slotsColumn = document.createElement("div");
+    Object.assign(slotsColumn.style, { display: "flex", flexDirection: "column", gap: "8px" });
+    slotsColumn.append(slotGrid, slotActions);
+    body.appendChild(framed("\u26A1 Active pets (3 slots)", slotsColumn));
+    const statsHost = document.createElement("div");
+    statsHost.style.width = "100%";
+    body.appendChild(framed("\u{1F4CA} Team stats", statsHost));
+    const statsMessage = (message2) => {
+      const empty = document.createElement("div");
+      empty.textContent = message2;
+      Object.assign(empty.style, { opacity: "0.7", fontSize: "11px" });
+      statsHost.replaceChildren(empty);
+    };
+    const drawnSlotIds = [null, null, null];
+    async function repaint(team) {
+      if (!team) return;
+      const pets = await PetsService.getPetLookup();
+      team.slots.slice(0, 3).forEach((id, i) => {
+        const slotId = id || null;
+        if (drawnSlotIds[i] === slotId) return;
+        drawnSlotIds[i] = slotId;
+        rows[i].update(slotId ? pets.get(slotId) ?? emptyPet(slotId) : null);
+      });
+      const teamPets = team.slots.map((id) => id ? pets.get(String(id)) : void 0).filter((pet) => Boolean(pet));
+      if (teamPets.length) statsHost.replaceChildren(renderTeamStats(teamPets, { showAllGroups: true }));
+      else statsMessage("No pets in this team.");
+    }
+    async function show(team) {
+      const has = !!team;
+      nameInput.disabled = !has;
+      btnClearSlots.setEnabled(has);
+      btnUseCurrent.setEnabled(has);
+      btnUseTeam.setEnabled(has);
+      if (!team) {
+        rows.forEach((r, i) => {
+          r.update(null);
+          drawnSlotIds[i] = null;
+        });
+        nameInput.value = "";
+        statsMessage("No team selected.");
+        return;
+      }
+      nameInput.value = String(team.name || "");
+      await repaint(team);
+    }
+    return { root, show, repaint };
+  }
+  var SLOT_ICON_PX, SLOT_BUTTON_PX, MAX_STRENGTH_COLOR, emptyPet;
+  var init_teamEditor = __esm({
+    "src/features/pets/teamEditor.ts"() {
+      "use strict";
+      init_petValue();
+      init_button();
+      init_card();
+      init_fields();
+      init_layout();
+      init_theme();
+      init_iconCache();
+      init_abilityChips();
+      init_pets();
+      init_teamReconcile();
+      init_teamStatsView();
+      SLOT_ICON_PX = 40;
+      SLOT_BUTTON_PX = 34;
+      MAX_STRENGTH_COLOR = "#facc15";
+      emptyPet = (id) => ({
+        id,
+        itemType: "Pet",
+        petSpecies: "",
+        name: null,
+        xp: 0,
+        hunger: 0,
+        mutations: [],
+        abilities: []
+      });
+    }
+  });
+
+  // src/features/pets/teamList.ts
+  function grabHandle() {
+    const grab = document.createElement("span");
+    grab.className = "qmm-grab";
+    grab.title = "Drag to reorder";
+    grab.setAttribute("aria-label", "Drag to reorder");
+    for (let i = 0; i < 6; i += 1) {
+      const dot = document.createElement("span");
+      dot.className = "qmm-grab-dot";
+      grab.appendChild(dot);
+    }
+    grab.draggable = true;
+    return grab;
+  }
+  function createTeamList(handlers) {
+    const root = document.createElement("div");
+    Object.assign(root.style, { display: "grid", gridTemplateRows: "auto 1fr auto", gap: "8px", minHeight: "0" });
+    const syncRow = document.createElement("label");
+    Object.assign(syncRow.style, { display: "flex", alignItems: "center", gap: "8px", padding: "2px 7px", cursor: "pointer" });
+    const syncSwitch = switchInput(handlers.isSyncEnabled(), (on) => handlers.setSyncEnabled(on));
+    syncSwitch.style.flexShrink = "0";
+    const syncLabel = document.createElement("span");
+    syncLabel.textContent = "Sync teams with the game";
+    syncLabel.style.fontSize = "13px";
+    syncRow.append(syncSwitch, syncLabel);
+    const list = document.createElement("div");
+    Object.assign(list.style, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "6px",
+      overflow: "auto",
+      padding: "6px",
+      border: `1px solid ${color.border}`,
+      borderRadius: "10px",
+      background: color.cardBg,
+      scrollBehavior: "smooth",
+      minHeight: "0"
+    });
+    const footer = flexRow({ gap: 6 });
+    const btnNew = button("\u2795 New", { variant: "primary", size: "sm", fullWidth: true, onClick: handlers.onCreate });
+    const btnDelete = button("\u{1F5D1}\uFE0F Delete", { variant: "danger", size: "sm", fullWidth: true, onClick: handlers.onDelete });
+    btnNew.style.flex = btnDelete.style.flex = "1 1 0";
+    footer.append(btnNew, btnDelete);
+    root.append(syncRow, list, footer);
+    let teams2 = [];
+    let draggingIndex = null;
+    let insertIndex = null;
+    let draggingHeight = 0;
+    const rows = () => Array.from(list.children);
+    function insertIndexAt(clientY) {
+      const children = rows();
+      for (let i = 0; i < children.length; i++) {
+        const rect = children[i].getBoundingClientRect();
+        if (clientY < rect.top + rect.height / 2) return i;
+      }
+      return children.length;
+    }
+    function showDropPreview() {
+      const children = rows();
+      children.forEach((el) => el.style.transform = "");
+      if (draggingIndex === null || insertIndex === null) return;
+      const from = draggingIndex;
+      const to = insertIndex;
+      children.forEach((el, i) => {
+        el.style.transition = "transform 120ms ease";
+        if (i === from) return;
+        if (to > from && i > from && i < to) el.style.transform = `translateY(${-draggingHeight}px)`;
+        if (to < from && i >= to && i < from) el.style.transform = `translateY(${draggingHeight}px)`;
+      });
+    }
+    function resetDrag() {
+      for (const el of rows()) {
+        el.style.transform = "";
+        el.style.transition = "";
+      }
+      draggingIndex = null;
+      insertIndex = null;
+      draggingHeight = 0;
+    }
+    function trackDrag(ev, nextInsertIndex) {
+      ev.preventDefault();
+      if (ev.dataTransfer) ev.dataTransfer.dropEffect = "move";
+      if (draggingIndex === null) return;
+      const clamped = Math.max(0, Math.min(teams2.length, nextInsertIndex));
+      if (insertIndex !== clamped) {
+        insertIndex = clamped;
+        showDropPreview();
+      }
+      const bounds = list.getBoundingClientRect();
+      if (ev.clientY < bounds.top + AUTOSCROLL_EDGE_PX) list.scrollTop -= AUTOSCROLL_STEP_PX;
+      else if (ev.clientY > bounds.bottom - AUTOSCROLL_EDGE_PX) list.scrollTop += AUTOSCROLL_STEP_PX;
+    }
+    function drop(ev) {
+      ev.preventDefault();
+      if (draggingIndex === null) return;
+      let target = insertIndex ?? insertIndexAt(ev.clientY);
+      if (target > draggingIndex) target -= 1;
+      target = Math.max(0, Math.min(teams2.length - 1, target));
+      const from = draggingIndex;
+      resetDrag();
+      if (target === from) return;
+      const order = teams2.map((t) => t.id);
+      const [moved] = order.splice(from, 1);
+      order.splice(target, 0, moved);
+      handlers.onReorder(order);
+    }
+    list.addEventListener("dragover", (ev) => trackDrag(ev, insertIndexAt(ev.clientY)));
+    list.addEventListener("drop", drop);
+    function teamRow(team, index, view) {
+      const selected = team.id === view.selectedId;
+      const active2 = team.id === view.activeTeamId;
+      const row = document.createElement("div");
+      row.dataset.index = String(index);
+      row.dataset.teamId = team.id;
+      Object.assign(row.style, {
+        height: "36px",
+        padding: "0 10px",
+        borderRadius: "8px",
+        cursor: "pointer",
+        fontSize: "13px",
+        overflow: "hidden",
+        whiteSpace: "nowrap",
+        display: "flex",
+        flex: "0 0 auto",
+        gap: "8px",
+        alignItems: "center",
+        transition: "background 120ms ease, border-color 120ms ease",
+        border: `1px solid ${selected ? color.accentBorderHover : color.border}`,
+        background: selected ? color.accentSoft : color.cardBg
+      });
+      const dot = document.createElement("span");
+      Object.assign(dot.style, {
+        width: "10px",
+        height: "10px",
+        borderRadius: "50%",
+        flex: "0 0 auto",
+        boxShadow: "0 0 0 1px rgba(0,0,0,0.4) inset",
+        background: active2 ? ACTIVE_DOT : INACTIVE_DOT
+      });
+      dot.title = active2 ? "This team is currently active" : "Inactive team";
+      const label2 = document.createElement("span");
+      label2.textContent = team.name || "(unnamed)";
+      Object.assign(label2.style, { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 0" });
+      const minis = document.createElement("div");
+      Object.assign(minis.style, { display: "flex", gap: "4px", alignItems: "center", marginLeft: "auto" });
+      for (let i = 0; i < 3; i++) {
+        const id = team.slots[i];
+        minis.appendChild(petIcon(id ? view.pets.get(String(id)) ?? null : null, MINI_ICON_PX));
+      }
+      const grab = grabHandle();
+      row.append(dot, label2, minis, grab);
+      row.onmouseenter = () => {
+        if (!selected) row.style.borderColor = color.accentBorder;
+      };
+      row.onmouseleave = () => {
+        if (!selected) row.style.borderColor = color.border;
+      };
+      row.onclick = () => handlers.onSelect(team.id);
+      grab.addEventListener("dragstart", (ev) => {
+        draggingIndex = index;
+        draggingHeight = row.getBoundingClientRect().height;
+        row.classList.add("qmm-dragging");
+        ev.dataTransfer?.setData("text/plain", String(index));
+        if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "move";
+        try {
+          const ghost = row.cloneNode(true);
+          Object.assign(ghost.style, { width: `${row.getBoundingClientRect().width}px`, position: "absolute", top: "-9999px" });
+          document.body.appendChild(ghost);
+          ev.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
+          setTimeout(() => ghost.remove(), 0);
+        } catch {
+        }
+      });
+      grab.addEventListener("dragend", () => {
+        row.classList.remove("qmm-dragging");
+        resetDrag();
+      });
+      row.addEventListener("dragover", (ev) => {
+        const bounds = row.getBoundingClientRect();
+        trackDrag(ev, ev.clientY < bounds.top + bounds.height / 2 ? index : index + 1);
+      });
+      row.addEventListener("drop", (ev) => {
+        ev.stopPropagation();
+        drop(ev);
+      });
+      return row;
+    }
+    function render(view) {
+      teams2 = view.teams;
+      resetDrag();
+      list.replaceChildren();
+      if (!teams2.length) {
+        const empty = document.createElement("div");
+        empty.textContent = "No teams yet. Create one!";
+        Object.assign(empty.style, { opacity: "0.75", textAlign: "center", padding: "8px" });
+        list.appendChild(empty);
+        return;
+      }
+      teams2.forEach((team, index) => list.appendChild(teamRow(team, index, view)));
+    }
+    return { root, render };
+  }
+  var ACTIVE_DOT, INACTIVE_DOT, AUTOSCROLL_EDGE_PX, AUTOSCROLL_STEP_PX, MINI_ICON_PX;
+  var init_teamList = __esm({
+    "src/features/pets/teamList.ts"() {
+      "use strict";
+      init_button();
+      init_layout();
+      init_theme();
+      init_toggles();
+      init_petIcon();
+      ACTIVE_DOT = "#48d170";
+      INACTIVE_DOT = "#64748b";
+      AUTOSCROLL_EDGE_PX = 28;
+      AUTOSCROLL_STEP_PX = 18;
+      MINI_ICON_PX = 18;
+    }
+  });
+
+  // src/features/pets/managerTab.ts
+  function renderManagerTab(view, ui) {
+    view.replaceChildren();
+    let teams2 = [];
+    let selectedId = null;
+    let activeTeamId = null;
+    let applyingTeam = false;
+    const selectedTeam = () => teams2.find((t) => t.id === selectedId) ?? null;
+    const layout = document.createElement("div");
+    Object.assign(layout.style, {
+      display: "grid",
+      gridTemplateColumns: "minmax(220px, 280px) minmax(0, 1fr)",
+      gap: "10px",
+      alignItems: "stretch",
+      height: "54vh",
+      overflow: "hidden"
+    });
+    view.appendChild(layout);
+    const list = createTeamList({
+      onSelect(teamId2) {
+        if (selectedId !== teamId2) {
+          selectedId = teamId2;
+          void refreshList2(true);
+        }
+        void editor.show(selectedTeam());
+      },
+      onReorder(teamIds2) {
+        PetsService.setTeamsOrder(teamIds2);
+      },
+      onCreate() {
+        selectedId = PetsService.createTeam("New Team").id;
+        void refreshList2();
+        void editor.show(selectedTeam());
+      },
+      onDelete() {
+        if (selectedId) PetsService.deleteTeam(selectedId);
+      },
+      isSyncEnabled: () => PetsService.isTeamSyncEnabled(),
+      setSyncEnabled: (on) => PetsService.setTeamSyncEnabled(on)
+    });
+    const editor = createTeamEditor({
+      selectedTeam,
+      onRenamed: () => void refreshList2(true),
+      onUseTeam: useTeam2,
+      setWindowVisible: (visible) => ui.setWindowVisible(visible)
+    });
+    layout.append(list.root, editor.root);
+    async function detectActiveTeam() {
+      activeTeamId = null;
+      try {
+        const pets = await PetsService.getPets();
+        const equipped = new Set((Array.isArray(pets) ? pets : []).map((p) => String(p?.slot?.id || "")).filter(Boolean));
+        const match = teams2.find((t) => {
+          const ids = t.slots.filter((x) => !!x);
+          return ids.length === equipped.size && ids.every((id) => equipped.has(id));
+        });
+        activeTeamId = match?.id ?? null;
+      } catch {
+      }
+    }
+    async function refreshList2(keepActiveTeam = false) {
+      if (!keepActiveTeam) await detectActiveTeam();
+      const pets = await PetsService.getPetLookup();
+      list.render({ teams: teams2, selectedId, activeTeamId, pets });
+      if (!teams2.length) void editor.show(null);
+    }
+    let refreshing = null;
+    let refreshQueued = false;
+    function scheduleRefresh() {
+      if (refreshing) {
+        refreshQueued = true;
+        return refreshing;
+      }
+      const run = async () => {
+        await refreshList2();
+        while (refreshQueued) {
+          refreshQueued = false;
+          await refreshList2();
+        }
+      };
+      refreshing = run().finally(() => {
+        refreshing = null;
+      });
+      return refreshing;
+    }
+    async function useTeam2(team) {
+      try {
+        applyingTeam = true;
+        activeTeamId = team.id;
+        await refreshList2(true);
+        await PetsService.useTeam(team.id);
+        await PetsService.waitForTeamEquipped(team.id);
+        await editor.show(selectedTeam());
+        await refreshList2();
+      } catch (e) {
+        console.warn("[Pets] Use this team failed:", e);
+        await refreshList2();
+      } finally {
+        applyingTeam = false;
+      }
+    }
+    const stopTeams = PetsService.onTeamsChange((all) => {
+      teams2 = all.slice();
+      if (selectedId && !teams2.some((t) => t.id === selectedId)) selectedId = null;
+      if (!selectedId && teams2.length) selectedId = teams2[0].id;
+      void scheduleRefresh();
+      void editor.show(selectedTeam());
+    });
+    let stopPets = null;
+    void (async () => {
+      try {
+        stopPets = await onActivePetsStructuralChangeNow(async () => {
+          if (applyingTeam) return;
+          await editor.repaint(selectedTeam());
+          await scheduleRefresh();
+        });
+      } catch {
+      }
+    })();
+    const previousCleanup = view.__cleanup__;
+    view.__cleanup__ = () => {
+      try {
+        stopTeams();
+      } catch {
+      }
+      try {
+        stopPets?.();
+      } catch {
+      }
+      try {
+        previousCleanup?.();
+      } catch {
+      }
+    };
+  }
+  var init_managerTab = __esm({
+    "src/features/pets/managerTab.ts"() {
+      "use strict";
+      init_atoms();
+      init_pets();
+      init_teamEditor();
+      init_teamList();
     }
   });
 
@@ -43797,619 +45472,7 @@ next: ${next}`;
     }
   });
 
-  // src/features/pets/abilityColorsTab.ts
-  function getAbilityChipColors(id) {
-    const key2 = String(id || "");
-    const apiColor = petAbilities2?.[key2]?.color;
-    if (apiColor && typeof apiColor.bg === "string" && apiColor.bg) {
-      const hover = typeof apiColor.hover === "string" && apiColor.hover ? apiColor.hover : apiColor.bg;
-      return { bg: apiColor.bg, hover };
-    }
-    const base = (PetsService.getAbilityNameWithoutLevel?.(key2) || "").replace(/[\s\-_]+/g, "").toLowerCase();
-    const is = (prefix) => key2.startsWith(prefix) || base === prefix.toLowerCase();
-    if (is("MoonKisser")) {
-      return {
-        bg: "rgba(250,166,35,0.9)",
-        hover: "rgba(250,166,35,1)"
-      };
-    }
-    if (is("DawnKisser")) {
-      return {
-        bg: "rgba(162,92,242,0.9)",
-        hover: "rgba(162,92,242,1)"
-      };
-    }
-    if (is("DawnCapture")) {
-      return {
-        bg: "rgba(178,90,158,0.9)",
-        hover: "rgba(178,90,158,1)"
-      };
-    }
-    if (is("DawnbinderBoost")) {
-      return {
-        bg: "rgba(180,104,160,0.9)",
-        hover: "rgba(180,104,160,1)"
-      };
-    }
-    if (is("ProduceScaleBoost") || is("SnowyCropSizeBoost")) {
-      return { bg: "rgba(34,139,34,0.9)", hover: "rgba(34,139,34,1)" };
-    }
-    if (is("PlantGrowthBoost") || is("SnowyPlantGrowthBoost") || is("DawnPlantGrowthBoost") || is("AmberPlantGrowthBoost") || is("ThunderPlantGrowthBoost")) {
-      return { bg: "rgba(0,128,128,0.9)", hover: "rgba(0,128,128,1)" };
-    }
-    if (is("EggGrowthBoost") || is("SnowyEggGrowthBoost") || is("ThunderEggGrowthBoost")) {
-      return { bg: "rgba(180,90,240,0.9)", hover: "rgba(180,90,240,1)" };
-    }
-    if (is("PetAgeBoost")) {
-      return { bg: "rgba(147,112,219,0.9)", hover: "rgba(147,112,219,1)" };
-    }
-    if (is("PetHatchSizeBoost")) {
-      return { bg: "rgba(128,0,128,0.9)", hover: "rgba(128,0,128,1)" };
-    }
-    if (is("PetXpBoost") || is("SnowyPetXpBoost") || is("DawnXpBoost") || is("ThunderXpBoost")) {
-      return { bg: "rgba(30,144,255,0.9)", hover: "rgba(30,144,255,1)" };
-    }
-    if (is("HungerBoost") || is("SnowyHungerBoost")) {
-      return { bg: "rgba(255,20,147,0.9)", hover: "rgba(255,20,147,1)" };
-    }
-    if (is("HungerRestore") || is("SnowyHungerRestore")) {
-      return { bg: "rgba(255,105,180,0.9)", hover: "rgba(255,105,180,1)" };
-    }
-    if (is("SellBoost")) {
-      return { bg: "rgba(220,20,60,0.9)", hover: "rgba(220,20,60,1)" };
-    }
-    if (is("CoinFinder") || is("SnowyCoinFinder") || is("DawnCoinFinder") || is("ThunderCoinFinder")) {
-      return { bg: "rgba(180,150,0,0.9)", hover: "rgba(180,150,0,1)" };
-    }
-    if (is("SeedFinder")) {
-      return {
-        bg: "rgba(168,102,38,0.9)",
-        hover: "rgba(168,102,38,1)"
-      };
-    }
-    if (is("ProduceMutationBoost") || is("SnowyCropMutationBoost") || is("DawnBoost") || is("AmberMoonBoost") || is("ThunderBoost")) {
-      return { bg: "rgba(140,15,70,0.9)", hover: "rgba(140,15,70,1)" };
-    }
-    if (is("PetMutationBoost")) {
-      return { bg: "rgba(160,50,100,0.9)", hover: "rgba(160,50,100,1)" };
-    }
-    if (is("DoubleHarvest")) {
-      return { bg: "rgba(0,120,180,0.9)", hover: "rgba(0,120,180,1)" };
-    }
-    if (is("DoubleHatch")) {
-      return { bg: "rgba(60,90,180,0.9)", hover: "rgba(60,90,180,1)" };
-    }
-    if (is("ProduceEater")) {
-      return { bg: "rgba(255,69,0,0.9)", hover: "rgba(255,69,0,1)" };
-    }
-    if (is("ProduceRefund")) {
-      return { bg: "rgba(255,99,71,0.9)", hover: "rgba(255,99,71,1)" };
-    }
-    if (is("PetRefund")) {
-      return { bg: "rgba(0,80,120,0.9)", hover: "rgba(0,80,120,1)" };
-    }
-    if (is("Copycat")) {
-      return { bg: "rgba(255,140,0,0.9)", hover: "rgba(255,140,0,1)" };
-    }
-    if (is("GoldGranter")) {
-      return {
-        bg: "linear-gradient(135deg, rgba(225,200,55,0.9) 0%, rgba(225,180,10,0.9) 40%, rgba(215,185,45,0.9) 70%, rgba(210,185,45,0.9) 100%)",
-        hover: "linear-gradient(135deg, rgba(220,200,70,1) 0%, rgba(210,175,5,1) 40%, rgba(210,185,55,1) 70%, rgba(200,175,30,1) 100%)"
-      };
-    }
-    if (is("RainbowGranter")) {
-      return {
-        bg: "linear-gradient(45deg, rgba(200,0,0,0.9), rgba(200,120,0,0.9), rgba(160,170,30,0.9), rgba(60,170,60,0.9), rgba(50,170,170,0.9), rgba(40,150,180,0.9), rgba(20,90,180,0.9), rgba(70,30,150,0.9))",
-        hover: "linear-gradient(45deg, rgba(200,0,0,1), rgba(200,120,0,1), rgba(160,170,30,1), rgba(60,170,60,1), rgba(50,170,170,1), rgba(40,150,180,1), rgba(20,90,180,1), rgba(70,30,150,1))"
-      };
-    }
-    if (is("RainDance")) {
-      return { bg: "rgba(76,204,204,0.9)", hover: "rgba(76,204,204,1)" };
-    }
-    if (is("SnowGranter")) {
-      return { bg: "rgba(144,184,204,0.9)", hover: "rgba(144,184,204,1)" };
-    }
-    if (is("FrostGranter")) {
-      return { bg: "rgba(148,160,204,0.9)", hover: "rgba(148,160,204,1)" };
-    }
-    if (is("DawnlitGranter")) {
-      return { bg: "rgba(196,124,180,0.9)", hover: "rgba(196,124,180,1)" };
-    }
-    if (is("AmberlitGranter")) {
-      return { bg: "rgba(204,144,96,0.9)", hover: "rgba(204,144,96,1)" };
-    }
-    if (is("ThunderstruckGranter")) {
-      return { bg: "rgba(194,184,60,0.9)", hover: "rgba(194,184,60,1)" };
-    }
-    if (is("Thundercharger")) {
-      return { bg: "rgba(31,163,130,0.9)", hover: "rgba(31,163,130,1)" };
-    }
-    if (is("Thunderbloom")) {
-      return { bg: "rgba(112,246,203,0.9)", hover: "rgba(112,246,203,1)" };
-    }
-    return {
-      bg: "rgba(100,100,100,0.9)",
-      hover: "rgba(150,150,150,1)"
-    };
-  }
-  var init_abilityColorsTab = __esm({
-    "src/features/pets/abilityColorsTab.ts"() {
-      "use strict";
-      init_pets();
-      init_data();
-    }
-  });
-
-  // src/features/pets/teamStatsView.ts
-  function triggerUnit(trigger) {
-    return trigger && TRIGGER_UNITS[trigger] || "/roll";
-  }
-  function fillRatioColor(ratio) {
-    if (ratio >= 0.99) return "#34d399";
-    if (ratio >= 0.9) return "#a3e635";
-    if (ratio >= 0.75) return "#fbbf24";
-    return "#f87171";
-  }
-  function mkBar(current, atMax) {
-    const ratio = atMax > 0 ? Math.max(0, Math.min(1, current / atMax)) : 0;
-    const track = document.createElement("div");
-    Object.assign(track.style, {
-      height: "3px",
-      borderRadius: "999px",
-      background: "rgba(255,255,255,0.07)",
-      overflow: "hidden",
-      margin: "3px 0 1px"
-    });
-    const fill = document.createElement("div");
-    Object.assign(fill.style, {
-      height: "100%",
-      width: `${Math.max(1.5, ratio * 100)}%`,
-      borderRadius: "999px",
-      background: fillRatioColor(ratio),
-      opacity: "0.85"
-    });
-    track.appendChild(fill);
-    return track;
-  }
-  function formatPercent(value) {
-    if (value >= 10) return `${value.toFixed(1)}%`;
-    if (value >= 1) return `${value.toFixed(2)}%`;
-    return `${value.toFixed(3)}%`;
-  }
-  function formatAmount(value, unit) {
-    const decimals = Math.abs(value) >= 10 ? 0 : 1;
-    const text2 = value.toLocaleString("en-US", {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals
-    });
-    return unit ? `${text2}${unit === "%" ? "%" : ` ${unit}`}` : text2;
-  }
-  function formatDuration(minutes) {
-    const total = Math.max(0, Math.round(minutes));
-    const hours = Math.floor(total / 60);
-    const mins = total % 60;
-    if (hours > 0) return `${hours}h${String(mins).padStart(2, "0")}`;
-    return `${mins}m`;
-  }
-  function primaryParameterKey(group2) {
-    for (const contributor of group2.contributors) {
-      for (const key2 of Object.keys(contributor.scaledParameters)) {
-        if (PARAMETER_LABELS[key2]) return key2;
-      }
-    }
-    return null;
-  }
-  function groupTitle(group2) {
-    const key2 = primaryParameterKey(group2);
-    return key2 ? PARAMETER_LABELS[key2].label : group2.label;
-  }
-  function perProcMagnitude(group2) {
-    const key2 = primaryParameterKey(group2);
-    if (!key2) return null;
-    const meta = PARAMETER_LABELS[key2];
-    const values = group2.contributors.map((contributor) => contributor.scaledParameters[key2]).filter((value) => typeof value === "number" && value !== 0);
-    if (!values.length) return null;
-    const low = formatAmount(Math.min(...values), meta.unit);
-    const high = formatAmount(Math.max(...values), meta.unit);
-    return low === high ? high : `${low} \u2013 ${high}`;
-  }
-  function mkNav(nav) {
-    const wrap = document.createElement("div");
-    Object.assign(wrap.style, {
-      display: "flex",
-      alignItems: "center",
-      gap: "2px",
-      flex: "0 0 auto"
-    });
-    const mkArrow = (glyph, delta, label2) => {
-      const button3 = document.createElement("button");
-      button3.type = "button";
-      button3.textContent = glyph;
-      button3.title = label2;
-      Object.assign(button3.style, {
-        border: "none",
-        background: "transparent",
-        color: MUTED,
-        font: "inherit",
-        fontSize: "11px",
-        lineHeight: "1",
-        padding: "0 3px",
-        cursor: "pointer",
-        borderRadius: "3px"
-      });
-      button3.onmouseenter = () => {
-        button3.style.color = "#e2e8f0";
-      };
-      button3.onmouseleave = () => {
-        button3.style.color = MUTED;
-      };
-      button3.addEventListener("click", (event) => {
-        event.stopPropagation();
-        event.preventDefault();
-        nav.onStep(delta);
-      });
-      return button3;
-    };
-    const counter2 = document.createElement("span");
-    counter2.textContent = `${nav.index + 1}/${nav.total}`;
-    counter2.style.fontSize = "9px";
-    counter2.style.color = DIM;
-    counter2.style.fontVariantNumeric = "tabular-nums";
-    wrap.append(mkArrow("\u2039", -1, "Previous effect"), counter2, mkArrow("\u203A", 1, "Next effect"));
-    return wrap;
-  }
-  function renderGroup(group2, nav) {
-    const block = document.createElement("div");
-    Object.assign(block.style, {
-      padding: "5px 7px",
-      borderRadius: "7px",
-      background: "rgba(255,255,255,0.025)",
-      border: "1px solid rgba(255,255,255,0.05)",
-      marginBottom: "4px"
-    });
-    const nameRow = document.createElement("div");
-    Object.assign(nameRow.style, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "6px",
-      minHeight: "13px"
-    });
-    const name = document.createElement("div");
-    const weatherSuffix2 = group2.requiredWeathers.length ? ` \xB7 ${group2.requiredWeathers.join("/")}` : "";
-    name.textContent = `${groupTitle(group2)}${weatherSuffix2}`;
-    Object.assign(name.style, {
-      fontSize: "9px",
-      fontWeight: "600",
-      letterSpacing: "0.05em",
-      textTransform: "uppercase",
-      color: DIM,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    });
-    if (weatherSuffix2) name.title = "Only fires while this weather is active.";
-    nameRow.appendChild(name);
-    if (nav) nameRow.appendChild(mkNav(nav));
-    block.appendChild(nameRow);
-    const value = document.createElement("div");
-    Object.assign(value.style, {
-      display: "flex",
-      alignItems: "baseline",
-      gap: "3px",
-      fontVariantNumeric: "tabular-nums"
-    });
-    if (group2.combinedProbability === null) {
-      const always = document.createElement("span");
-      always.textContent = "always on";
-      always.style.fontSize = "12px";
-      always.style.color = MUTED;
-      always.title = "This ability has no proc chance \u2014 it applies continuously.";
-      value.appendChild(always);
-      block.appendChild(value);
-    } else {
-      const atMax = group2.combinedProbabilityAtMax ?? group2.combinedProbability;
-      const ratio = atMax > 0 ? Math.min(1, group2.combinedProbability / atMax) : 1;
-      const isMaxed = ratio >= 0.995;
-      const big = document.createElement("span");
-      big.textContent = formatPercent(group2.combinedProbability);
-      big.style.fontSize = "15px";
-      big.style.fontWeight = "700";
-      big.style.color = fillRatioColor(ratio);
-      big.style.lineHeight = "1.1";
-      const unit = document.createElement("span");
-      unit.textContent = triggerUnit(group2.trigger);
-      unit.style.fontSize = "9px";
-      unit.style.color = DIM;
-      value.append(big, unit);
-      if (!isMaxed) {
-        const ceiling = document.createElement("span");
-        ceiling.textContent = `max ${formatPercent(atMax)}`;
-        ceiling.style.fontSize = "9px";
-        ceiling.style.color = DIM;
-        ceiling.style.marginLeft = "auto";
-        value.appendChild(ceiling);
-      }
-      const perHour = group2.trigger === "continuous" ? `
-About ${(group2.combinedProbability / 100 * CONTINUOUS_ROLLS_PER_HOUR).toFixed(1)} procs per hour.` : "";
-      value.title = `Chance at least one of ${group2.contributors.length} pet(s) procs.
-Not a sum \u2014 it is 1 minus the product of every pet missing.${perHour}
-
-` + (isMaxed ? "Every pet is at max strength \u2014 this is the most this team can do." : `At ${(ratio * 100).toFixed(0)}% of what these same pets would do at max strength (${formatPercent(atMax)}).`);
-      block.appendChild(value);
-      block.appendChild(mkBar(group2.combinedProbability, atMax));
-    }
-    const magnitude = perProcMagnitude(group2);
-    if (magnitude) {
-      const row = document.createElement("div");
-      Object.assign(row.style, {
-        display: "flex",
-        alignItems: "baseline",
-        justifyContent: "space-between",
-        gap: "8px",
-        fontSize: "10px",
-        marginTop: "1px"
-      });
-      row.title = group2.contributors.length > 1 ? "What a single proc gives. Each pet applies its own value, so this is\na range across the team \u2014 the values never add up." : "What a single proc gives.";
-      const label2 = document.createElement("span");
-      label2.textContent = "per proc";
-      label2.style.color = MUTED;
-      const amount = document.createElement("span");
-      amount.textContent = magnitude;
-      amount.style.fontWeight = "600";
-      amount.style.flex = "0 0 auto";
-      amount.style.fontVariantNumeric = "tabular-nums";
-      row.append(label2, amount);
-      block.appendChild(row);
-    }
-    return block;
-  }
-  function focusGroups(groups, focusAbilityIds) {
-    const wanted = /* @__PURE__ */ new Set();
-    for (const abilityId of focusAbilityIds) {
-      const key2 = effectGroupKeyForAbility(abilityId);
-      if (key2) wanted.add(key2);
-    }
-    if (!wanted.size) return groups;
-    const focused = groups.filter((group2) => wanted.has(group2.key));
-    return focused.length ? focused : groups;
-  }
-  function renderGroupCarousel(groups) {
-    const host = document.createElement("div");
-    if (!groups.length) return host;
-    if (groups.length === 1) {
-      host.appendChild(renderGroup(groups[0]));
-      return host;
-    }
-    let index = 0;
-    const paint = () => {
-      host.replaceChildren(
-        renderGroup(groups[index], {
-          index,
-          total: groups.length,
-          onStep: (delta) => {
-            index = (index + delta + groups.length) % groups.length;
-            paint();
-          }
-        })
-      );
-    };
-    paint();
-    return host;
-  }
-  function renderDetails(stats, groups, showAllGroups) {
-    const details = document.createElement("div");
-    details.style.paddingTop = "4px";
-    if (stats.unknownSpecies.length) {
-      const warn = document.createElement("div");
-      warn.textContent = `\u26A0 unknown species: ${stats.unknownSpecies.join(", ")}`;
-      warn.style.fontSize = "10px";
-      warn.style.color = "#fbbf24";
-      details.appendChild(warn);
-    }
-    if (showAllGroups) {
-      for (const group2 of groups) details.appendChild(renderGroup(group2));
-    } else {
-      details.appendChild(renderGroupCarousel(groups));
-    }
-    details.appendChild(renderFeedRow(stats));
-    return details;
-  }
-  function renderFeedRow(stats) {
-    const autonomy = stats.autonomy;
-    let text2;
-    let color2;
-    let title;
-    const boostLine = autonomy.drainReductionPercent > 0 ? `
-Hunger Boost removes ${autonomy.drainReductionPercent.toFixed(0)}% of the drain.` : "";
-    const restoreLine = autonomy.restoreActivationsPerMinute > 0 ? `
-Hunger Restore fires ~${autonomy.restoreActivationsPerMinute.toFixed(2)}\xD7/min on average.` : "";
-    const weatherLine2 = autonomy.weatherGatedHungerAbilities.length ? `
-Not counted (needs a specific weather): ${autonomy.weatherGatedHungerAbilities.join(", ")}.` : "";
-    if (autonomy.status === "sustained") {
-      text2 = "indefinitely";
-      color2 = ACCENT;
-      title = `Expected hunger restore covers the drain for every pet, so the team
-feeds itself.${boostLine}${restoreLine}${weatherLine2}
-
-This is an average \u2014 a bad run of Restore luck can still empty a pet.`;
-    } else if (autonomy.status === "runs-out" && autonomy.minutesFromFull !== null) {
-      text2 = `~${formatDuration(autonomy.minutesFromFull)}`;
-      color2 = autonomy.minutesFromFull < 60 ? "#fbbf24" : ACCENT;
-      title = `Starting from full, ${autonomy.limitingPetName ?? "the first pet"} empties first.
-Rates the team itself \u2014 current hunger is not taken into account.${boostLine}${restoreLine}${weatherLine2}
-
-Restore figures are averages; unlucky streaks do worse.`;
-    } else {
-      text2 = "unknown";
-      color2 = MUTED;
-      title = `No known hunger data for: ${autonomy.speciesMissingDepletion.join(", ")}.`;
-    }
-    const row = document.createElement("div");
-    Object.assign(row.style, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "8px",
-      padding: "4px 7px",
-      borderRadius: "7px",
-      background: "rgba(255,255,255,0.02)",
-      border: "1px solid rgba(255,255,255,0.05)",
-      fontSize: "10px"
-    });
-    row.title = title;
-    const label2 = document.createElement("span");
-    label2.textContent = "\u{1F356} Lasts without feeding (from full)";
-    label2.style.color = MUTED;
-    label2.style.overflow = "hidden";
-    label2.style.textOverflow = "ellipsis";
-    label2.style.whiteSpace = "nowrap";
-    const valueSpan = document.createElement("span");
-    valueSpan.textContent = text2;
-    valueSpan.style.color = color2;
-    valueSpan.style.fontWeight = "600";
-    valueSpan.style.flex = "0 0 auto";
-    valueSpan.style.fontVariantNumeric = "tabular-nums";
-    row.append(label2, valueSpan);
-    return row;
-  }
-  function renderTeamStats(pets, options = {}) {
-    const wrap = document.createElement("div");
-    wrap.style.display = "grid";
-    wrap.style.gap = "2px";
-    const realPets = pets.filter(Boolean);
-    if (!realPets.length) {
-      const empty = document.createElement("div");
-      empty.textContent = "No pets in this team.";
-      empty.style.fontSize = "10px";
-      empty.style.color = MUTED;
-      wrap.appendChild(empty);
-      return wrap;
-    }
-    const stats = computeTeamStats(realPets);
-    const groups = options.focusAbilityIds?.length ? focusGroups(stats.groups, options.focusAbilityIds) : stats.groups;
-    wrap.appendChild(renderDetails(stats, groups, options.showAllGroups === true));
-    return wrap;
-  }
-  var PARAMETER_LABELS, MUTED, ACCENT, DIM, CONTINUOUS_ROLLS_PER_HOUR, TRIGGER_UNITS;
-  var init_teamStatsView = __esm({
-    "src/features/pets/teamStatsView.ts"() {
-      "use strict";
-      init_teamStats();
-      PARAMETER_LABELS = {
-        // Crop Size is a whole number in [50, 100]; the boost adds points, not a percentage.
-        sizeIncrease: { label: "Crop size", unit: "" },
-        scaleIncreasePercentage: { label: "Crop size", unit: "%" },
-        cropSellPriceIncreasePercentage: { label: "Sell price", unit: "%" },
-        mutationChanceIncreasePercentage: { label: "Mutation chance", unit: "%" },
-        hungerRestorePercentage: { label: "Hunger restore", unit: "%" },
-        hungerRefundPercentage: { label: "Hunger refund", unit: "%" },
-        hungerDepletionRateDecreasePercentage: { label: "Hunger drain", unit: "%" },
-        plantGrowthReductionMinutes: { label: "Plant growth", unit: "min" },
-        eggGrowthTimeReductionMinutes: { label: "Egg growth", unit: "min" },
-        baseMaxCoinsFindable: { label: "Coins (max)", unit: "" },
-        bonusXp: { label: "Bonus XP", unit: "" },
-        maxStrengthIncreasePercentage: { label: "Max STR", unit: "%" },
-        plantAbilityChanceBoostPercentage: { label: "Plant ability", unit: "%" }
-      };
-      MUTED = "#94a3b8";
-      ACCENT = "#34d399";
-      DIM = "#64748b";
-      CONTINUOUS_ROLLS_PER_HOUR = 60;
-      TRIGGER_UNITS = {
-        continuous: "/min",
-        harvest: "/harvest",
-        sellAllCrops: "/sale",
-        sellPet: "/pet sold",
-        hatchEgg: "/hatch",
-        playerActivated: "/use",
-        weather: "/weather"
-      };
-    }
-  });
-
   // src/features/pets/teamBuilderTab.ts
-  function mkMiniIcon(pet, size = 24) {
-    const holder2 = document.createElement("div");
-    Object.assign(holder2.style, {
-      width: `${size}px`,
-      height: `${size}px`,
-      borderRadius: "9px",
-      background: "linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01) 60%), #161b22",
-      border: "1px solid rgba(255,255,255,0.08)",
-      display: "grid",
-      placeItems: "center",
-      overflow: "hidden",
-      boxShadow: "0 1px 0 #000 inset, 0 1px 2px rgba(0,0,0,0.3)",
-      fontSize: "11px",
-      color: "#e2e8f0",
-      flex: "0 0 auto"
-    });
-    if (!pet) {
-      holder2.style.opacity = "0.35";
-      holder2.textContent = "\xB7";
-      return holder2;
-    }
-    const species = pet.petSpecies || "";
-    const mutKey = Array.isArray(pet.mutations) ? pet.mutations.join(",") : "";
-    const cacheKey = `${species}|${mutKey}`;
-    const applyImg = (dataUrl) => {
-      const img = document.createElement("img");
-      img.src = dataUrl;
-      img.width = size;
-      img.height = size;
-      img.alt = "";
-      img.draggable = false;
-      img.style.width = `${size}px`;
-      img.style.height = `${size}px`;
-      img.style.objectFit = "contain";
-      holder2.replaceChildren(img);
-    };
-    const cached2 = miniSpriteCache.get(cacheKey);
-    if (cached2) {
-      applyImg(cached2);
-      return holder2;
-    }
-    attachSpriteIcon(holder2, ["pet"], species, size, "pet-teambuilder-mini", {
-      mutations: pet.mutations,
-      onSpriteApplied: (img) => {
-        miniSpriteCache.set(cacheKey, img.src);
-      },
-      onNoSpriteFound: () => {
-        holder2.textContent = (species || pet.name || "pet").charAt(0).toUpperCase();
-      }
-    });
-    return holder2;
-  }
-  function abilityChipsFor(pet) {
-    const wrap = document.createElement("span");
-    wrap.style.display = "inline-flex";
-    wrap.style.alignItems = "center";
-    wrap.style.gap = "4px";
-    const ids = Array.isArray(pet.abilities) ? pet.abilities.filter(Boolean) : [];
-    for (const id of ids) {
-      const chip2 = document.createElement("span");
-      const { bg, hover } = getAbilityChipColors(id);
-      chip2.title = PetsService.getAbilityName(id) || id;
-      Object.assign(chip2.style, {
-        display: "inline-block",
-        width: "9px",
-        height: "9px",
-        borderRadius: "3px",
-        background: bg,
-        boxShadow: "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff1a",
-        cursor: "default"
-      });
-      chip2.onmouseenter = () => {
-        chip2.style.background = hover;
-      };
-      chip2.onmouseleave = () => {
-        chip2.style.background = bg;
-      };
-      wrap.appendChild(chip2);
-    }
-    return wrap;
-  }
   function renderPetChip(pet) {
     const chip2 = document.createElement("div");
     Object.assign(chip2.style, {
@@ -44422,12 +45485,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       transition: "background 100ms ease"
     });
     chip2.onmouseenter = () => {
-      chip2.style.background = "rgba(255,255,255,0.04)";
+      chip2.style.background = color.hoverBg;
     };
     chip2.onmouseleave = () => {
       chip2.style.background = "transparent";
     };
-    chip2.appendChild(mkMiniIcon(pet ?? null));
+    chip2.appendChild(petIcon(pet ?? null, MINI_ICON_PX2));
     const nameSpan = document.createElement("span");
     nameSpan.style.fontSize = "11px";
     nameSpan.style.fontWeight = "600";
@@ -44436,23 +45499,23 @@ Restore figures are averages; unlucky streaks do worse.`;
     nameSpan.style.whiteSpace = "nowrap";
     nameSpan.style.flex = "1 1 auto";
     nameSpan.style.minWidth = "0";
-    nameSpan.textContent = pet ? pet.name || pet.petSpecies || "?" : "\u2014";
+    nameSpan.textContent = pet ? pet.name || pet.petSpecies || "?" : "-";
     chip2.appendChild(nameSpan);
     if (pet) {
       const strBadge = document.createElement("span");
       strBadge.textContent = `${getPetStrength(pet)}/${getPetMaxStrength(pet)}`;
-      strBadge.title = "Strength (current/max) \u2014 teams rank by max strength";
+      strBadge.title = "Strength (current/max). Teams rank by max strength.";
       Object.assign(strBadge.style, {
         fontSize: "10px",
         fontVariantNumeric: "tabular-nums",
-        color: "#94a3b8",
-        background: "rgba(255,255,255,0.05)",
+        color: color.textSoft,
+        background: color.hoverBg,
         padding: "1px 6px",
         borderRadius: "999px",
         flex: "0 0 auto"
       });
       chip2.appendChild(strBadge);
-      chip2.appendChild(abilityChipsFor(pet));
+      chip2.appendChild(abilityDots(pet.abilities, { size: 9, gap: 4 }));
     }
     return chip2;
   }
@@ -44507,28 +45570,28 @@ Restore figures are averages; unlucky streaks do worse.`;
     const icons = team.categories.map((c) => c.icon).join("");
     return `${truncateChars(icons, budget)}${suffix}`;
   }
-  function renderTeamCard(team, petsById, ui) {
+  function renderTeamCard(team, petsById) {
     const isAfk = team.mode === "afk";
     const glow = isAfk ? "#38bdf8" : "#34d399";
     const title = isAfk ? `${abilityLabel(team)} (AFK)` : abilityLabel(team);
-    const card5 = ui.card(title, {
+    const teamCard = card(title, {
       tone: isAfk ? "accent" : "default",
       compactHeader: true,
       gap: 6
     });
-    Object.assign(card5.root.style, {
+    Object.assign(teamCard.root.style, {
       padding: "8px 10px 10px",
       position: "relative",
       overflow: "hidden",
       transition: "transform 140ms ease, box-shadow 140ms ease"
     });
-    card5.root.onmouseenter = () => {
-      card5.root.style.transform = "translateY(-2px)";
-      card5.root.style.boxShadow = `0 10px 24px rgba(0,0,0,0.35), 0 0 0 1px ${glow}33`;
+    teamCard.root.onmouseenter = () => {
+      teamCard.root.style.transform = "translateY(-2px)";
+      teamCard.root.style.boxShadow = `0 10px 24px rgba(0,0,0,0.35), 0 0 0 1px ${glow}33`;
     };
-    card5.root.onmouseleave = () => {
-      card5.root.style.transform = "none";
-      card5.root.style.boxShadow = "";
+    teamCard.root.onmouseleave = () => {
+      teamCard.root.style.transform = "none";
+      teamCard.root.style.boxShadow = "";
     };
     const stripColors = team.categories.map((c) => getAbilityChipColors(c.abilityId).bg);
     const strip = document.createElement("div");
@@ -44540,17 +45603,17 @@ Restore figures are averages; unlucky streaks do worse.`;
       width: "4px",
       background: stripColors.length > 1 ? `linear-gradient(180deg, ${stripColors.join(", ")})` : stripColors[0]
     });
-    card5.root.appendChild(strip);
+    teamCard.root.appendChild(strip);
     const petsCol = document.createElement("div");
     petsCol.style.display = "grid";
     petsCol.style.gap = "1px";
     for (const id of team.petIds) {
       petsCol.appendChild(renderPetChip(petsById.get(id)));
     }
-    card5.body.appendChild(petsCol);
+    teamCard.body.appendChild(petsCol);
     const teamPets = team.petIds.map((id) => petsById.get(id)).filter((pet) => Boolean(pet));
-    card5.body.appendChild(renderTeamStats(teamPets, { focusAbilityIds: team.focusAbilityIds }));
-    const saveBtn = ui.btn("\u{1F4BE} Save", {
+    teamCard.body.appendChild(renderTeamStats(teamPets, { focusAbilityIds: team.focusAbilityIds }));
+    const saveBtn = button("\u{1F4BE} Save", {
       variant: "primary",
       size: "sm",
       onClick: () => {
@@ -44574,8 +45637,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       alignSelf: "center",
       flexShrink: "0"
     });
-    card5.body.appendChild(saveBtn);
-    return card5.root;
+    teamCard.body.appendChild(saveBtn);
+    return teamCard.root;
   }
   function unusedReasonText(info) {
     if (info.untracked) return "no tracked ability";
@@ -44603,33 +45666,33 @@ Restore figures are averages; unlucky streaks do worse.`;
     row.appendChild(reason);
     return row;
   }
-  function renderUnusedSection(unusedPets, ui) {
-    const card5 = ui.card(`\u{1F5D1}\uFE0F Not used in any team (${unusedPets.length})`, { tone: "muted", compactHeader: true, gap: 4 });
-    card5.root.style.gridColumn = "1 / -1";
-    card5.root.style.padding = "8px 10px";
+  function renderUnusedSection(unusedPets) {
+    const section2 = card(`\u{1F5D1}\uFE0F Not used in any team (${unusedPets.length})`, { tone: "muted", compactHeader: true, gap: 4 });
+    section2.root.style.gridColumn = "1 / -1";
+    section2.root.style.padding = "8px 10px";
     const chevron = document.createElement("span");
     chevron.textContent = "\u25B8";
     chevron.style.display = "inline-block";
     chevron.style.marginLeft = "8px";
     chevron.style.opacity = "0.6";
     chevron.style.transition = "transform 120ms ease";
-    card5.header.appendChild(chevron);
-    card5.header.style.cursor = "pointer";
-    card5.header.style.userSelect = "none";
+    section2.header.appendChild(chevron);
+    section2.header.style.cursor = "pointer";
+    section2.header.style.userSelect = "none";
     const list = document.createElement("div");
     list.style.display = "none";
     list.style.gap = "1px";
     for (const info of unusedPets) {
       list.appendChild(renderUnusedRow(info));
     }
-    card5.body.appendChild(list);
+    section2.body.appendChild(list);
     let expanded = false;
-    card5.header.addEventListener("click", () => {
+    section2.header.addEventListener("click", () => {
       expanded = !expanded;
       list.style.display = expanded ? "grid" : "none";
       chevron.style.transform = expanded ? "rotate(90deg)" : "none";
     });
-    return card5.root;
+    return section2.root;
   }
   async function loadTeams() {
     const pets = await PetsService.getInventoryPets();
@@ -44637,7 +45700,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const { teams: teams2, sustainPet, unusedPets } = buildSuggestedTeams(pets);
     return { teams: teams2, sustainPet, unusedPets, petsById };
   }
-  function renderTeamBuilderTab(view, ui) {
+  function renderTeamBuilderTab(view) {
     const prevCleanup = view.__cleanup__;
     if (typeof prevCleanup === "function") {
       try {
@@ -44655,10 +45718,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     wrap.style.maxHeight = "54vh";
     wrap.style.overflow = "auto";
     view.appendChild(wrap);
-    const header = ui.flexRow({ justify: "end", fullWidth: true });
+    const header = flexRow({ justify: "end", fullWidth: true });
     header.style.paddingBottom = "8px";
-    header.style.borderBottom = "1px solid rgba(255,255,255,0.06)";
-    const refreshBtn = ui.btn("\u{1F504} Refresh", { size: "sm" });
+    header.style.borderBottom = `1px solid ${color.border}`;
+    const refreshBtn = button("\u{1F504} Refresh", { size: "sm" });
     header.appendChild(refreshBtn);
     wrap.appendChild(header);
     const content = document.createElement("div");
@@ -44681,16 +45744,16 @@ Restore figures are averages; unlucky streaks do worse.`;
       content.innerHTML = "";
       if (!teams2.length) {
         const empty = document.createElement("div");
-        empty.textContent = "No useful team found \u2014 hatch pets with offensive abilities.";
+        empty.textContent = "No useful team found. Hatch pets with offensive abilities.";
         empty.style.opacity = "0.7";
         content.appendChild(empty);
         return;
       }
       for (const team of teams2) {
-        content.appendChild(renderTeamCard(team, petsById, ui));
+        content.appendChild(renderTeamCard(team, petsById));
       }
       if (unusedPets.length) {
-        content.appendChild(renderUnusedSection(unusedPets, ui));
+        content.appendChild(renderUnusedSection(unusedPets));
       }
     }
     refreshBtn.addEventListener("click", () => {
@@ -44698,18 +45761,23 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     void repaint();
   }
-  var miniSpriteCache, TEAM_NAME_MAX_LENGTH, SHORT_WEATHER;
+  var MINI_ICON_PX2, TEAM_NAME_MAX_LENGTH, SHORT_WEATHER;
   var init_teamBuilderTab = __esm({
     "src/features/pets/teamBuilderTab.ts"() {
       "use strict";
-      init_pets();
-      init_teamBuilder();
-      init_abilityColorsTab();
-      init_iconCache();
-      init_toast();
       init_petValue();
+      init_button();
+      init_card();
+      init_layout();
+      init_theme();
+      init_toast();
+      init_abilityChips();
+      init_abilityChipColors();
+      init_pets();
+      init_petIcon();
+      init_teamBuilder();
       init_teamStatsView();
-      miniSpriteCache = /* @__PURE__ */ new Map();
+      MINI_ICON_PX2 = 24;
       TEAM_NAME_MAX_LENGTH = 16;
       SHORT_WEATHER = {
         Frost: "Frost",
@@ -44720,1509 +45788,36 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/pets/logsTab.ts
-  function formatDateMMDDYY(timestamp) {
-    const value = Number(timestamp);
-    if (!Number.isFinite(value)) return "";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "";
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const dd = String(date.getDate()).padStart(2, "0");
-    const yy = String(date.getFullYear() % 100).padStart(2, "0");
-    return `${mm}/${dd}/${yy}`;
-  }
-  function detailsOf(log2) {
-    if (typeof log2.data === "string") return log2.data;
-    try {
-      return JSON.stringify(log2.data) ?? "";
-    } catch {
-      return "";
-    }
-  }
-  function renderLogsTab(view) {
-    const prevCleanup = view.__cleanup__;
-    if (typeof prevCleanup === "function") {
-      try {
-        prevCleanup();
-      } catch {
-      }
-      view.__cleanup__ = void 0;
-    }
-    ensurePanelStyles();
-    view.innerHTML = "";
-    const wrap = document.createElement("div");
-    wrap.classList.add("qws-pnl-root");
-    css(wrap, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-      width: PANEL_WIDTH,
-      maxWidth: "100%",
-      minHeight: "0",
-      boxSizing: "border-box"
-    });
-    view.appendChild(wrap);
-    const panel = card2();
-    css(panel, { minHeight: "0" });
-    wrap.appendChild(panel);
-    const head = document.createElement("div");
-    css(head, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
-    const title = document.createElement("div");
-    css(title, { fontSize: "14.5px", fontWeight: "700", color: TEXT, flex: "1 1 auto" });
-    title.textContent = "\u{1F4DD} Ability logs";
-    head.appendChild(title);
-    const count = document.createElement("span");
-    css(count, { fontSize: "11px", color: TEXT_DIM, whiteSpace: "nowrap" });
-    head.appendChild(count);
-    panel.appendChild(head);
-    const toolbar = document.createElement("div");
-    css(toolbar, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
-    const selAbility = selectField([["", "All abilities"]]);
-    css(selAbility, { minWidth: "170px" });
-    const selSort = selectField([["desc", "Newest first"], ["asc", "Oldest first"]]);
-    selSort.value = "desc";
-    const inputSearch = textField("Search pet / ability / details");
-    css(inputSearch, { flex: "1 1 200px", minWidth: "160px" });
-    const btnClear = button2("\u{1F9F9} Clear", "danger", () => {
-      try {
-        PetsService.clearAbilityLogs();
-      } catch {
-      }
-    });
-    btnClear.title = "Clear all recorded logs";
-    toolbar.append(selAbility, selSort, inputSearch, btnClear);
-    panel.appendChild(toolbar);
-    const columns = document.createElement("div");
-    css(columns, {
-      display: "grid",
-      gridTemplateColumns: ROW_TEMPLATE2,
-      gap: "10px",
-      padding: "0 8px"
-    });
-    for (const label2 of ["When", "Pet", "Ability", "Details"]) {
-      columns.appendChild(sectionLabel2(label2));
-    }
-    panel.appendChild(columns);
-    const list = document.createElement("div");
-    list.classList.add("qws-pnl-scroll");
-    css(list, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "3px",
-      maxHeight: LIST_MAX_HEIGHT,
-      overflowY: "auto",
-      minHeight: "0"
-    });
-    panel.appendChild(list);
-    const sessionStart2 = PetsService.getAbilityLogsSessionStart?.() ?? 0;
-    const petSpriteCache = /* @__PURE__ */ new Map();
-    let logs2 = [];
-    let abilityFilter = "";
-    let sortDir = "desc";
-    let search2 = "";
-    function petIcon(log2) {
-      const holder2 = document.createElement("div");
-      css(holder2, {
-        width: `${PET_ICON_PX}px`,
-        height: `${PET_ICON_PX}px`,
-        borderRadius: "7px",
-        background: "rgba(0,0,0,0.22)",
-        border: `1px solid ${BORDER}`,
-        display: "grid",
-        placeItems: "center",
-        overflow: "hidden",
-        fontSize: "11px",
-        color: TEXT,
-        flex: "0 0 auto"
-      });
-      const species = String(log2.species || "").trim();
-      const mutations = Array.isArray(log2.mutations) ? log2.mutations.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
-      const mutationKey = mutations.length ? mutations.map((m) => m.toLowerCase()).sort().join(",") : "";
-      const cacheKey = mutationKey ? `${species}|${mutationKey}` : species;
-      const applyImg = (src) => {
-        const img = document.createElement("img");
-        img.src = src;
-        img.alt = "";
-        img.draggable = false;
-        css(img, {
-          width: `${PET_ICON_PX}px`,
-          height: `${PET_ICON_PX}px`,
-          objectFit: "contain",
-          imageRendering: "auto"
-        });
-        holder2.replaceChildren(img);
-      };
-      const cached2 = cacheKey ? petSpriteCache.get(cacheKey) : void 0;
-      if (cached2) {
-        applyImg(cached2);
-        return holder2;
-      }
-      holder2.textContent = (log2.petName || species || "pet").charAt(0).toUpperCase() || "\u{1F43E}";
-      if (species) {
-        attachSpriteIcon(holder2, ["pet"], species, PET_ICON_PX, "pet-log", {
-          mutations,
-          onSpriteApplied: (img) => {
-            petSpriteCache.set(cacheKey, img.src);
-          }
-        });
-      }
-      return holder2;
-    }
-    function whenCell(log2) {
-      const cell = document.createElement("div");
-      css(cell, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
-      if (log2.date) {
-        const date = document.createElement("span");
-        css(date, { fontSize: "10px", color: TEXT_DIM, fontVariantNumeric: "tabular-nums" });
-        date.textContent = log2.date;
-        cell.appendChild(date);
-      }
-      const time = document.createElement("span");
-      css(time, {
-        fontSize: "11.5px",
-        color: log2.isActiveSession ? TEAL : TEXT,
-        fontWeight: log2.isActiveSession ? "600" : "500",
-        fontVariantNumeric: "tabular-nums",
-        whiteSpace: "nowrap"
-      });
-      time.textContent = log2.time12;
-      cell.appendChild(time);
-      return cell;
-    }
-    function petCell(log2) {
-      const cell = document.createElement("div");
-      css(cell, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
-      const name = document.createElement("span");
-      css(name, {
-        fontSize: "12px",
-        color: TEXT,
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis"
-      });
-      name.textContent = log2.petName || log2.species || "Pet";
-      name.title = name.textContent;
-      cell.append(petIcon(log2), name);
-      return cell;
-    }
-    function abilityCell(log2) {
-      const cell = document.createElement("div");
-      css(cell, { display: "flex", minWidth: "0" });
-      const text2 = log2.abilityName || log2.abilityId || "\u2014";
-      const chip2 = document.createElement("span");
-      chip2.textContent = text2;
-      chip2.title = text2;
-      const { bg, hover } = getAbilityChipColors(log2.abilityId);
-      css(chip2, {
-        display: "inline-block",
-        maxWidth: "100%",
-        padding: "3px 9px",
-        borderRadius: "999px",
-        fontSize: "11px",
-        fontWeight: "700",
-        lineHeight: "1.5",
-        color: "#fff",
-        textShadow: "0 1px 2px rgba(0,0,0,.45)",
-        background: bg,
-        boxShadow: "0 0 0 1px rgba(0,0,0,.35) inset",
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        transition: "background 120ms ease"
-      });
-      chip2.onmouseenter = () => {
-        chip2.style.background = hover;
-      };
-      chip2.onmouseleave = () => {
-        chip2.style.background = bg;
-      };
-      cell.appendChild(chip2);
-      return cell;
-    }
-    function detailsCell(log2) {
-      const cell = document.createElement("div");
-      const text2 = detailsOf(log2);
-      css(cell, {
-        fontSize: "11.5px",
-        color: TEXT_DIM,
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        minWidth: "0"
-      });
-      cell.textContent = text2;
-      cell.title = text2;
-      return cell;
-    }
-    function logRow(log2) {
-      const row = document.createElement("div");
-      css(row, {
-        display: "grid",
-        gridTemplateColumns: ROW_TEMPLATE2,
-        alignItems: "center",
-        gap: "10px",
-        padding: "5px 8px",
-        borderRadius: "8px",
-        background: log2.isActiveSession ? "rgba(94,234,212,0.06)" : CARD_BG,
-        border: `1px solid ${BORDER}`,
-        // A tick from this session reads at a glance without a legend.
-        borderLeft: log2.isActiveSession ? `2px solid ${TEAL}` : `1px solid ${BORDER}`
-      });
-      row.append(whenCell(log2), petCell(log2), abilityCell(log2), detailsCell(log2));
-      return row;
-    }
-    function applyFilters() {
-      let result = logs2.slice();
-      if (abilityFilter.trim()) {
-        const wanted = normalizeAbilityKey(abilityFilter);
-        result = result.filter((log2) => {
-          const byId = normalizeAbilityKey(log2.abilityId);
-          const byName = normalizeAbilityKey(PetsService.getAbilityNameWithoutLevel(log2.abilityId));
-          return byId === wanted || byName === wanted;
-        });
-      }
-      if (search2.trim()) {
-        const needle = search2.toLowerCase();
-        result = result.filter((log2) => (log2.petName || log2.species || "").toLowerCase().includes(needle) || (log2.abilityName || "").toLowerCase().includes(needle) || (log2.abilityId || "").toLowerCase().includes(needle) || detailsOf(log2).toLowerCase().includes(needle) || (log2.petId || "").toLowerCase().includes(needle));
-      }
-      result.sort((a, b) => sortDir === "asc" ? a.performedAt - b.performedAt : b.performedAt - a.performedAt);
-      return result;
-    }
-    function rebuildAbilityOptions() {
-      const current = selAbility.value;
-      const options = [
-        ["", "All abilities"],
-        ...PetsService.getSeenAbilityIds().map((id) => [id, id])
-      ];
-      selAbility.innerHTML = "";
-      for (const [value, label2] of options) {
-        const option = document.createElement("option");
-        option.value = value;
-        option.textContent = label2;
-        selAbility.appendChild(option);
-      }
-      selAbility.value = options.some(([value]) => value === current) ? current : "";
-    }
-    function repaint() {
-      const visible = applyFilters();
-      count.textContent = visible.length === logs2.length ? `${logs2.length} entries` : `${visible.length} of ${logs2.length} entries`;
-      list.innerHTML = "";
-      if (!visible.length) {
-        const empty = document.createElement("div");
-        css(empty, {
-          fontSize: "12px",
-          color: TEXT_DIM,
-          textAlign: "center",
-          padding: "24px 8px"
-        });
-        empty.textContent = logs2.length ? "No log matches these filters." : "\u{1F5D2}\uFE0F No logs yet.";
-        list.appendChild(empty);
-        return;
-      }
-      for (const log2 of visible) list.appendChild(logRow(log2));
-      list.scrollTop = sortDir === "asc" ? list.scrollHeight : 0;
-    }
-    selAbility.onchange = () => {
-      abilityFilter = selAbility.value;
-      repaint();
-    };
-    selSort.onchange = () => {
-      sortDir = selSort.value || "desc";
-      repaint();
-    };
-    inputSearch.addEventListener("input", () => {
-      search2 = inputSearch.value.trim();
-      repaint();
-    });
-    let stopWatcher = null;
-    let unsubLogs = null;
-    void (async () => {
-      try {
-        stopWatcher = await PetsService.startAbilityLogsWatcher();
-        rebuildAbilityOptions();
-        unsubLogs = PetsService.onAbilityLogs((all) => {
-          logs2 = all.map((entry) => ({
-            petId: entry.petId,
-            petName: entry.name ?? null,
-            species: entry.species ?? null,
-            mutations: Array.isArray(entry.mutations) ? entry.mutations.slice() : void 0,
-            abilityId: entry.abilityId,
-            abilityName: entry.abilityName,
-            data: entry.data,
-            performedAt: entry.performedAt,
-            date: formatDateMMDDYY(entry.performedAt),
-            time12: entry.time12,
-            isActiveSession: sessionStart2 > 0 && entry.performedAt >= sessionStart2
-          }));
-          rebuildAbilityOptions();
-          repaint();
-        });
-      } catch {
-      }
-    })();
-    repaint();
-    view.__cleanup__ = () => {
-      try {
-        unsubLogs?.();
-      } catch {
-      }
-      try {
-        stopWatcher?.();
-      } catch {
-      }
-    };
-  }
-  var PANEL_WIDTH, LIST_MAX_HEIGHT, PET_ICON_PX, ROW_TEMPLATE2, normalizeAbilityKey;
-  var init_logsTab = __esm({
-    "src/features/pets/logsTab.ts"() {
-      "use strict";
-      init_pets();
-      init_iconCache();
-      init_abilityColorsTab();
-      init_panel();
-      PANEL_WIDTH = "min(760px, 88vw)";
-      LIST_MAX_HEIGHT = "min(56vh, 520px)";
-      PET_ICON_PX = 24;
-      ROW_TEMPLATE2 = "104px minmax(120px, 1.2fr) minmax(110px, 0.9fr) minmax(0, 2fr)";
-      normalizeAbilityKey = (value) => String(value ?? "").toLowerCase().replace(/\s+/g, "").replace(/([ivx]+)$/i, "");
-    }
-  });
-
   // src/features/pets/menu.ts
-  function renderManagerTab(view, ui) {
-    view.innerHTML = "";
-    let teams2 = [];
-    let selectedId = null;
-    let activeTeamId = null;
-    let activePetIdSet = /* @__PURE__ */ new Set();
-    let isApplyingTeam = false;
-    let draggingIdx = null;
-    let overInsertIdx = null;
-    let draggingHeight = 0;
-    let invCacheMap = null;
-    const lastRenderedSlotIds = [null, null, null];
-    const miniSpriteCache2 = /* @__PURE__ */ new Map();
-    async function buildPetRenderMap() {
-      let inv = await PetsService.getInventoryPets().catch(() => null);
-      if (!inv || inv.length === 0) {
-      } else {
-        invCacheMap = /* @__PURE__ */ new Map();
-        for (const p of inv) {
-          const id = p?.id != null ? String(p.id) : "";
-          if (id) invCacheMap.set(id, p);
-        }
-      }
-      const map2 = new Map(invCacheMap ?? /* @__PURE__ */ new Map());
-      try {
-        const pets = await PetsService.getPets();
-        const list = Array.isArray(pets) ? pets : [];
-        for (const p of list) {
-          const slot = p?.slot ?? null;
-          const id = String(slot?.id || "");
-          if (!id || map2.has(id)) continue;
-          map2.set(id, {
-            id,
-            itemType: "Pet",
-            petSpecies: String(slot?.petSpecies || "").trim(),
-            name: slot?.name ?? null,
-            xp: Number.isFinite(slot?.xp) ? Number(slot.xp) : 0,
-            hunger: Number.isFinite(slot?.hunger) ? Number(slot.hunger) : 0,
-            mutations: Array.isArray(slot?.mutations) ? slot.mutations.slice() : [],
-            targetScale: Number.isFinite(slot?.targetScale) ? Number(slot.targetScale) : void 0,
-            abilities: Array.isArray(slot?.abilities) ? slot.abilities.slice() : []
-          });
-        }
-      } catch {
-      }
-      return map2;
-    }
-    const mkMiniIcon2 = (pet) => {
-      const size = 18;
-      const holder2 = document.createElement("div");
-      Object.assign(holder2.style, {
-        width: `${size}px`,
-        height: `${size}px`,
-        borderRadius: "6px",
-        background: "#161b22",
-        border: "1px solid #ffffff10",
-        display: "grid",
-        placeItems: "center",
-        overflow: "hidden",
-        boxShadow: "0 1px 0 #000 inset",
-        fontSize: "10px",
-        color: "#e2e8f0"
-      });
-      if (!pet) {
-        holder2.style.opacity = "0.35";
-        holder2.textContent = "\xB7";
-        return holder2;
-      }
-      const species = pet.petSpecies || "";
-      const mutKey = Array.isArray(pet.mutations) ? pet.mutations.join(",") : "";
-      const cacheKey = `${species}|${mutKey}`;
-      const applyImg = (dataUrl) => {
-        const img = document.createElement("img");
-        img.src = dataUrl;
-        img.width = size;
-        img.height = size;
-        img.alt = "";
-        img.draggable = false;
-        img.style.width = `${size}px`;
-        img.style.height = `${size}px`;
-        img.style.objectFit = "contain";
-        img.style.imageRendering = "auto";
-        holder2.replaceChildren(img);
-      };
-      const cached2 = miniSpriteCache2.get(cacheKey);
-      if (cached2) {
-        applyImg(cached2);
-        return holder2;
-      }
-      attachSpriteIcon(holder2, ["pet"], species, size, "pet-team-mini", {
-        mutations: pet.mutations,
-        onSpriteApplied: (img) => {
-          miniSpriteCache2.set(cacheKey, img.src);
-        },
-        onNoSpriteFound: () => {
-          holder2.textContent = (species || pet.name || "pet").charAt(0).toUpperCase();
-        }
-      });
-      return holder2;
-    };
-    const framed = (title, content) => {
-      const cardSection = ui.card(title, { tone: "muted", align: "center" });
-      cardSection.body.append(content);
-      cardSection.root.style.maxWidth = "720px";
-      return cardSection.root;
-    };
-    const row = (opts) => ui.flexRow({ justify: opts?.justify ?? "center" });
-    const wrap = document.createElement("div");
-    wrap.style.display = "grid";
-    wrap.style.gridTemplateColumns = "minmax(220px, 280px) minmax(0, 1fr)";
-    wrap.style.gap = "10px";
-    wrap.style.alignItems = "stretch";
-    wrap.style.height = "54vh";
-    wrap.style.overflow = "hidden";
-    view.appendChild(wrap);
-    const left = document.createElement("div");
-    left.style.display = "grid";
-    left.style.gridTemplateRows = "auto 1fr auto";
-    left.style.gap = "8px";
-    left.style.minHeight = "0";
-    wrap.appendChild(left);
-    const syncRow = document.createElement("label");
-    syncRow.style.display = "flex";
-    syncRow.style.alignItems = "center";
-    syncRow.style.gap = "8px";
-    syncRow.style.padding = "2px 7px";
-    syncRow.style.cursor = "pointer";
-    left.appendChild(syncRow);
-    const syncSwitch = ui.switch(PetsService.isTeamSyncEnabled());
-    syncSwitch.style.flexShrink = "0";
-    syncSwitch.addEventListener("change", () => {
-      PetsService.setTeamSyncEnabled(syncSwitch.checked);
-    });
-    const syncLabel = document.createElement("span");
-    syncLabel.textContent = "Sync teams with the game";
-    syncLabel.style.fontSize = "13px";
-    syncRow.append(syncSwitch, syncLabel);
-    const teamList = document.createElement("div");
-    teamList.style.display = "flex";
-    teamList.style.flexDirection = "column";
-    teamList.style.gap = "6px";
-    teamList.style.overflow = "auto";
-    teamList.style.padding = "6px";
-    teamList.style.border = "1px solid var(--qmm-border)";
-    teamList.style.borderRadius = "10px";
-    teamList.style.background = "rgba(255,255,255,0.03)";
-    teamList.style.scrollBehavior = "smooth";
-    teamList.style.minHeight = "0";
-    left.appendChild(teamList);
-    const footer = ui.flexRow({ gap: 6 });
-    left.appendChild(footer);
-    const btnNew = ui.btn("\u2795 New", { variant: "primary", size: "sm", fullWidth: true });
-    btnNew.id = "pets.teams.new";
-    btnNew.style.flex = "1 1 0";
-    const btnDel = ui.btn("\u{1F5D1}\uFE0F Delete", { variant: "danger", size: "sm", fullWidth: true });
-    btnDel.id = "pets.teams.delete";
-    btnDel.style.flex = "1 1 0";
-    footer.append(btnNew, btnDel);
-    function getSelectedTeam() {
-      return teams2.find((t) => t.id === selectedId) || null;
-    }
-    function computeInsertIndex(clientY) {
-      const children = Array.from(teamList.children);
-      if (!children.length) return 0;
-      const first = children[0].getBoundingClientRect();
-      if (clientY < first.top + first.height / 2) return 0;
-      for (let i = 0; i < children.length; i++) {
-        const rect = children[i].getBoundingClientRect();
-        const mid = rect.top + rect.height / 2;
-        if (clientY < mid) return i;
-      }
-      return children.length;
-    }
-    function abilitiesBadge(abilities) {
-      const wrap2 = document.createElement("span");
-      wrap2.style.display = "inline-flex";
-      wrap2.style.alignItems = "center";
-      wrap2.style.lineHeight = "1";
-      const SPACING_PX = 8;
-      const SIZE_PX = 12;
-      const RADIUS_PX = 3;
-      const ids = Array.isArray(abilities) ? abilities.filter(Boolean) : [];
-      if (!ids.length) {
-        const empty = document.createElement("span");
-        empty.textContent = "No ability";
-        empty.style.opacity = "0.75";
-        empty.style.fontSize = "12px";
-        wrap2.appendChild(empty);
-        return wrap2;
-      }
-      ids.forEach((id, i) => {
-        const chip2 = document.createElement("span");
-        const { bg, hover } = getAbilityChipColors(id);
-        chip2.title = PetsService.getAbilityName(id) || id;
-        chip2.setAttribute("aria-label", chip2.title);
-        Object.assign(chip2.style, {
-          display: "inline-block",
-          width: `${SIZE_PX}px`,
-          height: `${SIZE_PX}px`,
-          borderRadius: `${RADIUS_PX}px`,
-          marginRight: i === ids.length - 1 ? "0" : `${SPACING_PX}px`,
-          background: bg,
-          transition: "transform 80ms ease, box-shadow 120ms ease, background 120ms ease",
-          cursor: "default",
-          boxShadow: "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff1a"
-        });
-        chip2.onmouseenter = () => {
-          chip2.style.background = hover;
-          chip2.style.transform = "scale(1.08)";
-          chip2.style.boxShadow = "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff33";
-        };
-        chip2.onmouseleave = () => {
-          chip2.style.background = bg;
-          chip2.style.transform = "none";
-          chip2.style.boxShadow = "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff1a";
-        };
-        wrap2.appendChild(chip2);
-      });
-      return wrap2;
-    }
-    function applyLiveTransforms() {
-      const children = Array.from(teamList.children);
-      children.forEach((el) => el.style.transform = "");
-      if (draggingIdx === null || overInsertIdx === null) return;
-      const from = draggingIdx;
-      const to = overInsertIdx;
-      children.forEach((el, idx) => {
-        el.style.transition = "transform 120ms ease";
-        if (idx === from) return;
-        if (to > from && idx > from && idx < to) {
-          el.style.transform = `translateY(${-draggingHeight}px)`;
-        }
-        if (to < from && idx >= to && idx < from) {
-          el.style.transform = `translateY(${draggingHeight}px)`;
-        }
-      });
-    }
-    function clearLiveTransforms() {
-      Array.from(teamList.children).forEach((el) => {
-        el.style.transform = "";
-        el.style.transition = "";
-      });
-    }
-    async function refreshActiveIds() {
-      activeTeamId = null;
-      activePetIdSet = /* @__PURE__ */ new Set();
-      try {
-        const pets = await PetsService.getPets();
-        const equipIds = Array.isArray(pets) ? pets.map((p) => String(p?.slot?.id || "")).filter(Boolean) : [];
-        activePetIdSet = new Set(equipIds);
-        for (const t of teams2) {
-          const tIds = (t.slots || []).filter(Boolean);
-          if (tIds.length !== equipIds.length) continue;
-          let same = true;
-          for (const id of tIds) {
-            if (!activePetIdSet.has(id)) {
-              same = false;
-              break;
-            }
-          }
-          if (same) {
-            activeTeamId = t.id;
-            break;
-          }
-        }
-      } catch {
-      }
-    }
-    async function refreshTeamList(skipDetectActive = false) {
-      if (!skipDetectActive) {
-        await refreshActiveIds();
-      }
-      const renderMap = await buildPetRenderMap();
-      clearLiveTransforms();
-      draggingIdx = null;
-      overInsertIdx = null;
-      draggingHeight = 0;
-      teamList.innerHTML = "";
-      if (!teams2.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No teams yet. Create one!";
-        empty.style.opacity = "0.75";
-        empty.style.textAlign = "center";
-        empty.style.padding = "8px";
-        teamList.appendChild(empty);
-        hydrateEditor(null);
-        return;
-      }
-      teams2.forEach((t, idx) => {
-        const item = document.createElement("div");
-        const isActive = t.id === activeTeamId;
-        item.dataset.index = String(idx);
-        item.dataset.teamId = t.id;
-        item.textContent = "";
-        item.style.height = "36px";
-        item.style.lineHeight = "36px";
-        item.style.padding = "0 10px";
-        item.style.borderRadius = "8px";
-        item.style.cursor = "pointer";
-        item.style.fontSize = "13px";
-        item.style.overflow = "hidden";
-        item.style.whiteSpace = "nowrap";
-        item.style.textOverflow = "ellipsis";
-        item.style.display = "flex";
-        item.style.flex = "0 0 auto";
-        item.style.gap = "8px";
-        item.style.alignItems = "center";
-        item.style.transition = "background 120ms ease, border-color 120ms ease";
-        if (t.id === selectedId) {
-          item.style.border = "1px solid rgba(94,234,212,0.40)";
-          item.style.background = "rgba(94,234,212,0.14)";
-        } else {
-          item.style.border = "1px solid var(--qmm-border-2)";
-          item.style.background = "rgba(255,255,255,0.035)";
-        }
-        const dot = document.createElement("span");
-        dot.style.width = "10px";
-        dot.style.height = "10px";
-        dot.style.borderRadius = "50%";
-        dot.style.boxShadow = "0 0 0 1px #0006 inset";
-        dot.style.background = isActive ? "#48d170" : "#64748b";
-        dot.title = isActive ? "This team is currently active" : "Inactive team";
-        const label2 = document.createElement("span");
-        label2.textContent = t.name || "(unnamed)";
-        label2.style.overflow = "hidden";
-        label2.style.textOverflow = "ellipsis";
-        label2.style.whiteSpace = "nowrap";
-        label2.style.flex = "1 1 0";
-        const minis = document.createElement("div");
-        minis.style.display = "flex";
-        minis.style.gap = "4px";
-        minis.style.alignItems = "center";
-        minis.style.marginLeft = "auto";
-        const slots = Array.isArray(t.slots) ? t.slots.slice(0, 3) : [];
-        slots.forEach((id) => {
-          const pet = id != null ? renderMap.get(String(id)) ?? null : null;
-          minis.appendChild(mkMiniIcon2(pet));
-        });
-        if (slots.length < 3) {
-          for (let i = slots.length; i < 3; i += 1) minis.appendChild(mkMiniIcon2(null));
-        }
-        item.append(dot, label2, minis);
-        const grab = document.createElement("span");
-        grab.className = "qmm-grab";
-        grab.title = "Drag to reorder";
-        grab.setAttribute("aria-label", "Drag to reorder");
-        grab.innerHTML = "";
-        for (let i = 0; i < 6; i += 1) {
-          const dot2 = document.createElement("span");
-          dot2.className = "qmm-grab-dot";
-          grab.appendChild(dot2);
-        }
-        grab.draggable = true;
-        item.onmouseenter = () => {
-          if (t.id !== selectedId) item.style.borderColor = "rgba(94,234,212,0.30)";
-        };
-        item.onmouseleave = () => {
-          if (t.id !== selectedId) item.style.borderColor = "var(--qmm-border-2)";
-        };
-        item.onclick = (ev) => {
-          if (ev.__byDrag) return;
-          const changed = selectedId !== t.id;
-          if (changed) {
-            selectedId = t.id;
-            refreshTeamList(true);
-          }
-          void hydrateEditor(getSelectedTeam());
-        };
-        grab.addEventListener("dragstart", (ev) => {
-          draggingIdx = idx;
-          draggingHeight = item.getBoundingClientRect().height;
-          item.classList.add("qmm-dragging");
-          ev.dataTransfer?.setData("text/plain", String(idx));
-          if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "move";
-          try {
-            const ghost = item.cloneNode(true);
-            ghost.style.width = `${item.getBoundingClientRect().width}px`;
-            ghost.style.position = "absolute";
-            ghost.style.top = "-9999px";
-            document.body.appendChild(ghost);
-            ev.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
-            setTimeout(() => document.body.removeChild(ghost), 0);
-          } catch {
-          }
-        });
-        grab.addEventListener("dragend", () => {
-          item.classList.remove("qmm-dragging");
-          clearLiveTransforms();
-          draggingIdx = null;
-          overInsertIdx = null;
-        });
-        item.addEventListener("dragover", (ev) => {
-          ev.preventDefault();
-          if (ev.dataTransfer) ev.dataTransfer.dropEffect = "move";
-          if (draggingIdx === null) return;
-          const idxOver = Number(ev.currentTarget.dataset.index || -1);
-          if (idxOver < 0) return;
-          const rect = item.getBoundingClientRect();
-          const mid = rect.top + rect.height / 2;
-          const insertIdx = ev.clientY < mid ? idxOver : idxOver + 1;
-          const clamped = Math.max(0, Math.min(teams2.length, insertIdx));
-          if (overInsertIdx !== clamped) {
-            overInsertIdx = clamped;
-            applyLiveTransforms();
-          }
-          const edge = 28;
-          const listRect = teamList.getBoundingClientRect();
-          if (ev.clientY < listRect.top + edge) teamList.scrollTop -= 18;
-          else if (ev.clientY > listRect.bottom - edge) teamList.scrollTop += 18;
-        });
-        item.addEventListener("drop", (ev) => {
-          ev.preventDefault();
-          ev.__byDrag = true;
-          if (draggingIdx === null) return;
-          let target = overInsertIdx ?? computeInsertIndex(ev.clientY);
-          if (target > draggingIdx) target -= 1;
-          target = Math.max(0, Math.min(teams2.length - 1, target));
-          if (target !== draggingIdx) {
-            const a = teams2.slice();
-            const [it] = a.splice(draggingIdx, 1);
-            a.splice(target, 0, it);
-            teams2 = a;
-            try {
-              PetsService.setTeamsOrder(teams2.map((x) => x.id));
-            } catch {
-            }
-          }
-          clearLiveTransforms();
-          draggingIdx = null;
-          overInsertIdx = null;
-          draggingHeight = 0;
-          refreshTeamList();
-        });
-        item.appendChild(grab);
-        teamList.appendChild(item);
-      });
-    }
-    teamList.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-      if (draggingIdx === null) return;
-      const idx = computeInsertIndex(e.clientY);
-      if (overInsertIdx !== idx) {
-        overInsertIdx = idx;
-        applyLiveTransforms();
-      }
-      const edge = 28;
-      const listRect = teamList.getBoundingClientRect();
-      if (e.clientY < listRect.top + edge) teamList.scrollTop -= 18;
-      else if (e.clientY > listRect.bottom - edge) teamList.scrollTop += 18;
-    });
-    teamList.addEventListener("drop", (e) => {
-      e.preventDefault();
-      if (draggingIdx === null) return;
-      let target = overInsertIdx ?? computeInsertIndex(e.clientY);
-      if (target > draggingIdx) target -= 1;
-      target = Math.max(0, Math.min(teams2.length - 1, target));
-      if (target !== draggingIdx) {
-        const a = teams2.slice();
-        const [it] = a.splice(draggingIdx, 1);
-        a.splice(target, 0, it);
-        teams2 = a;
-        try {
-          PetsService.setTeamsOrder(teams2.map((x) => x.id));
-        } catch {
-        }
-      }
-      clearLiveTransforms();
-      draggingIdx = null;
-      overInsertIdx = null;
-      draggingHeight = 0;
-      refreshTeamList();
-    });
-    btnNew.onclick = () => {
-      const created = PetsService.createTeam("New Team");
-      selectedId = created.id;
-      refreshTeamList();
-      hydrateEditor(getSelectedTeam());
-    };
-    btnDel.onclick = () => {
-      if (!selectedId) return;
-      const ok = PetsService.deleteTeam(selectedId);
-      if (!ok) return;
-    };
-    let teamListRefreshInFlight = null;
-    let teamListRefreshQueued = false;
-    function scheduleTeamListRefresh() {
-      if (teamListRefreshInFlight) {
-        teamListRefreshQueued = true;
-        return teamListRefreshInFlight;
-      }
-      const run = async () => {
-        await refreshTeamList();
-        while (teamListRefreshQueued) {
-          teamListRefreshQueued = false;
-          await refreshTeamList();
-        }
-      };
-      teamListRefreshInFlight = run().finally(() => {
-        teamListRefreshInFlight = null;
-      });
-      return teamListRefreshInFlight;
-    }
-    let unsubTeams = null;
-    (async () => {
-      try {
-        unsubTeams = await PetsService.onTeamsChangeNow(async (all) => {
-          teams2 = Array.isArray(all) ? all.slice() : [];
-          if (selectedId && !teams2.some((t) => t.id === selectedId)) {
-            selectedId = teams2[0]?.id ?? null;
-          }
-          if (!selectedId && teams2.length) selectedId = teams2[0].id;
-          void scheduleTeamListRefresh();
-          await PetsService.getInventoryPets().catch(() => []);
-          await hydrateEditor(getSelectedTeam());
-        });
-      } catch {
-      }
-    })();
-    const right = document.createElement("div");
-    right.style.display = "grid";
-    right.style.gridTemplateRows = "auto 1fr";
-    right.style.gap = "10px";
-    right.style.minHeight = "0";
-    wrap.appendChild(right);
-    const header = document.createElement("div");
-    header.style.display = "flex";
-    header.style.alignItems = "center";
-    header.style.gap = "8px";
-    const headerTitle = document.createElement("div");
-    headerTitle.textContent = "Team editor";
-    headerTitle.style.fontWeight = "700";
-    headerTitle.style.fontSize = "14px";
-    headerTitle.style.flex = "1 1 0";
-    headerTitle.style.overflow = "hidden";
-    headerTitle.style.textOverflow = "ellipsis";
-    headerTitle.style.whiteSpace = "nowrap";
-    const btnUseTeam = ui.btn("Use this team", { variant: "primary", size: "sm" });
-    btnUseTeam.id = "pets.teams.useThisTeam";
-    btnUseTeam.disabled = true;
-    header.append(headerTitle, btnUseTeam);
-    right.appendChild(header);
-    const card5 = document.createElement("div");
-    card5.style.display = "flex";
-    card5.style.flexDirection = "column";
-    card5.style.gap = "12px";
-    card5.style.overflow = "auto";
-    card5.style.minHeight = "0";
-    right.appendChild(card5);
-    const secName = (() => {
-      const r = row();
-      r.style.width = "100%";
-      const nameInput = ui.inputText("Team name", "");
-      nameInput.id = "pets.teams.editor.name";
-      nameInput.style.flex = "1";
-      nameInput.style.minWidth = "0";
-      r.append(nameInput);
-      card5.appendChild(framed("\u{1F3F7}\uFE0F Team name", r));
-      return { nameInput };
-    })();
-    const secSlots = (() => {
-      const grid = document.createElement("div");
-      grid.style.display = "grid";
-      grid.style.gridTemplateColumns = "1fr";
-      grid.style.rowGap = "10px";
-      grid.style.justifyItems = "center";
-      const mkRow = (idx) => {
-        const root = document.createElement("div");
-        const BTN = 34;
-        const ICON = 40;
-        root.style.display = "grid";
-        root.style.gridTemplateColumns = `${ICON}px minmax(0,1fr) ${BTN}px ${BTN}px`;
-        root.style.alignItems = "center";
-        root.style.gap = "8px";
-        root.style.width = "min(560px, 100%)";
-        root.style.border = "1px solid var(--qmm-border-2)";
-        root.style.borderRadius = "10px";
-        root.style.padding = "8px 10px";
-        root.style.background = "rgba(255,255,255,0.03)";
-        const iconContainer = document.createElement("div");
-        Object.assign(iconContainer.style, {
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "2px",
-          flexShrink: "0"
-        });
-        const iconWrap = document.createElement("div");
-        Object.assign(iconWrap.style, {
-          width: `${ICON}px`,
-          height: `${ICON}px`,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center"
-        });
-        const strBadge = document.createElement("div");
-        Object.assign(strBadge.style, {
-          fontSize: "9px",
-          fontWeight: "700",
-          lineHeight: "1",
-          padding: "1px 4px",
-          borderRadius: "4px",
-          background: "rgba(0,0,0,0.75)",
-          color: "#fff",
-          whiteSpace: "nowrap",
-          display: "none",
-          pointerEvents: "none"
-        });
-        iconContainer.append(iconWrap, strBadge);
-        const useEmojiFallback = () => {
-          iconWrap.replaceChildren();
-          const span = document.createElement("span");
-          span.textContent = "\u{1F43E}";
-          span.style.fontSize = `${Math.max(ICON - 6, 12)}px`;
-          span.setAttribute("aria-hidden", "true");
-          iconWrap.appendChild(span);
-        };
-        const setIcon = (species, mutations) => {
-          const speciesLabel = String(species ?? "").trim();
-          if (!speciesLabel) {
-            iconWrap.replaceChildren();
-            iconWrap.dataset.iconKey = "";
-            useEmojiFallback();
-            return;
-          }
-          const mutKey = Array.isArray(mutations) ? mutations.join(",") : "";
-          const key2 = `${speciesLabel}|${mutKey}`;
-          if (iconWrap.dataset.iconKey === key2 && iconWrap.querySelector("img")) {
-            return;
-          }
-          iconWrap.dataset.iconKey = key2;
-          attachSpriteIcon(iconWrap, ["pet"], speciesLabel, ICON, "pet-slot", {
-            mutations,
-            onNoSpriteFound: () => {
-              iconWrap.replaceChildren();
-              useEmojiFallback();
-            }
-          });
-        };
-        const left2 = document.createElement("div");
-        left2.style.display = "flex";
-        left2.style.flexDirection = "column";
-        left2.style.gap = "6px";
-        left2.style.minWidth = "0";
-        const nameEl = document.createElement("div");
-        nameEl.style.fontWeight = "700";
-        nameEl.textContent = "None";
-        nameEl.style.overflow = "hidden";
-        nameEl.style.textOverflow = "ellipsis";
-        nameEl.style.whiteSpace = "nowrap";
-        let abilitiesEl = abilitiesBadge([]);
-        abilitiesEl.style.display = "inline-block";
-        left2.append(nameEl, abilitiesEl);
-        const btnChoose = ui.btn("", {
-          icon: "+",
-          variant: "secondary",
-          tooltip: "Choose a pet",
-          ariaLabel: "Choose a pet"
-        });
-        const btnClear2 = ui.btn("", {
-          icon: "\u2212",
-          variant: "danger",
-          tooltip: "Remove this pet",
-          ariaLabel: "Remove this pet"
-        });
-        root.append(iconContainer, left2, btnChoose, btnClear2);
-        function update(p) {
-          if (!p) {
-            nameEl.textContent = "None";
-            setIcon(void 0);
-            strBadge.style.display = "none";
-            const fresh2 = abilitiesBadge([]);
-            fresh2.style.display = "inline-block";
-            left2.replaceChild(fresh2, left2.children[1]);
-            abilitiesEl = fresh2;
-            return;
-          }
-          const species = String(p.petSpecies || "").trim();
-          const muts = Array.isArray(p.mutations) ? p.mutations : [];
-          setIcon(species, muts);
-          const str = getPetStrength(p);
-          const maxStr = getPetMaxStrength(p);
-          if (maxStr > 0) {
-            strBadge.textContent = str >= maxStr ? `${maxStr}` : `${str}/${maxStr}`;
-            strBadge.style.color = str >= maxStr ? "#facc15" : "#fff";
-            strBadge.style.display = "block";
-          } else {
-            strBadge.style.display = "none";
-          }
-          const speciesLabel = species ? species.charAt(0).toUpperCase() + species.slice(1) : "";
-          nameEl.textContent = p.name?.trim() || speciesLabel || "Pet";
-          const abs = Array.isArray(p.abilities) ? p.abilities.filter(Boolean) : [];
-          const fresh = abilitiesBadge(abs);
-          fresh.style.display = "inline-block";
-          left2.replaceChild(fresh, left2.children[1]);
-          abilitiesEl = fresh;
-        }
-        btnChoose.onclick = async () => {
-          const t = getSelectedTeam();
-          if (!t) return;
-          btnChoose.disabled = true;
-          btnClear2.disabled = true;
-          ui.setWindowVisible(false);
-          try {
-            await PetsService.chooseSlotPet(t.id, idx);
-            await repaintSlots(getSelectedTeam());
-          } finally {
-            ui.setWindowVisible(true);
-            btnChoose.disabled = false;
-            btnClear2.disabled = false;
-          }
-        };
-        btnClear2.onclick = async () => {
-          const t = getSelectedTeam();
-          if (!t) return;
-          const next = t.slots.slice(0, 3);
-          next[idx] = null;
-          const saved = PetsService.saveTeam({ id: t.id, slots: next });
-          await repaintSlots(saved ?? getSelectedTeam());
-        };
-        return { root, nameEl, abilitiesEl, btnChoose, btnClear: btnClear2, update };
-      };
-      const r0 = mkRow(0);
-      const r1 = mkRow(1);
-      const r2 = mkRow(2);
-      grid.append(r0.root, r1.root, r2.root);
-      const extra = ui.flexRow({ gap: 6, justify: "center" });
-      const btnUseCurrent = ui.btn("Current active", { variant: "primary" });
-      btnUseCurrent.id = "pets.teams.useCurrent";
-      btnUseCurrent.style.minWidth = "140px";
-      const btnClear = ui.btn("Clear slots", { variant: "secondary" });
-      btnClear.id = "pets.teams.clearSlots";
-      btnClear.style.minWidth = "140px";
-      extra.append(btnUseCurrent, btnClear);
-      const wrapSlots = document.createElement("div");
-      wrapSlots.style.display = "flex";
-      wrapSlots.style.flexDirection = "column";
-      wrapSlots.style.gap = "8px";
-      wrapSlots.append(grid, extra);
-      card5.appendChild(framed("\u26A1 Active pets (3 slots)", wrapSlots));
-      return {
-        rows: [r0, r1, r2],
-        btnUseCurrent,
-        btnClear
-      };
-    })();
-    const teamStatsHost = document.createElement("div");
-    teamStatsHost.style.width = "100%";
-    card5.appendChild(framed("\u{1F4CA} Team stats", teamStatsHost));
-    function showTeamStatsMessage(message) {
-      const empty = document.createElement("div");
-      empty.textContent = message;
-      empty.style.opacity = "0.7";
-      empty.style.fontSize = "11px";
-      teamStatsHost.replaceChildren(empty);
-    }
-    async function refreshTeamStats(team) {
-      if (!team) {
-        showTeamStatsMessage("No team selected.");
-        return;
-      }
-      const map2 = await buildPetRenderMap();
-      const pets = (team.slots || []).map((id) => id ? map2.get(String(id)) : void 0).filter((pet) => Boolean(pet));
-      if (!pets.length) {
-        showTeamStatsMessage("No pets in this team.");
-        return;
-      }
-      teamStatsHost.replaceChildren(renderTeamStats(pets, { showAllGroups: true }));
-    }
-    async function repaintSlots(sourceTeam) {
-      const t = sourceTeam ?? getSelectedTeam();
-      if (!t) return;
-      const map2 = await buildPetRenderMap();
-      [0, 1, 2].forEach((i) => {
-        const id = t.slots[i] || null;
-        if (!id) {
-          if (lastRenderedSlotIds[i] !== null) {
-            secSlots.rows[i].update(null);
-            lastRenderedSlotIds[i] = null;
-          }
-          return;
-        }
-        const pet = map2.get(id);
-        if (!pet) {
-          if (lastRenderedSlotIds[i] !== id) {
-            secSlots.rows[i].update({
-              id,
-              itemType: "Pet",
-              petSpecies: "",
-              name: null,
-              xp: 0,
-              hunger: 0,
-              mutations: [],
-              abilities: []
-            });
-            lastRenderedSlotIds[i] = id;
-          }
-          return;
-        }
-        if (lastRenderedSlotIds[i] !== id) {
-          secSlots.rows[i].update(pet);
-          lastRenderedSlotIds[i] = id;
-        }
-      });
-      void refreshTeamStats(t);
-    }
-    async function hydrateEditor(team) {
-      const has = !!team;
-      secName.nameInput.disabled = !has;
-      secSlots.btnClear.disabled = !has;
-      secSlots.btnUseCurrent.disabled = !has;
-      btnUseTeam.disabled = !has;
-      if (!has) {
-        secSlots.rows.forEach((r) => r.update(null));
-        secName.nameInput.value = "";
-        void refreshTeamStats(null);
-        return;
-      }
-      secName.nameInput.value = String(team.name || "");
-      await repaintSlots(team);
-    }
-    const saveNameNow = () => {
-      const t = getSelectedTeam();
-      if (!t) return;
-      const nextName = petTeamName(secName.nameInput.value);
-      if (secName.nameInput.value.trim().length > nextName.length) secName.nameInput.value = nextName;
-      if (nextName === t.name) return;
-      t.name = nextName;
-      PetsService.saveTeam({ id: t.id, name: nextName });
-      refreshTeamList(true);
-    };
-    secName.nameInput.addEventListener("input", () => saveNameNow());
-    secName.nameInput.addEventListener("keydown", (ev) => {
-      if (ev.key === "Enter") {
-        ev.currentTarget.blur();
-        saveNameNow();
-      }
-    });
-    secName.nameInput.addEventListener("blur", () => saveNameNow());
-    secSlots.btnUseCurrent.onclick = async () => {
-      const t = getSelectedTeam();
-      if (!t) return;
-      try {
-        const ids = await PetsService.getActivePetIds();
-        const nextSlots = [ids[0] || null, ids[1] || null, ids[2] || null];
-        const saved = PetsService.saveTeam({ id: t.id, slots: nextSlots });
-        await repaintSlots(saved ?? getSelectedTeam());
-      } catch {
-      }
-    };
-    secSlots.btnClear.onclick = async () => {
-      const t = getSelectedTeam();
-      if (!t) return;
-      const saved = PetsService.saveTeam({ id: t.id, slots: [null, null, null] });
-      await repaintSlots(saved ?? getSelectedTeam());
-    };
-    function sameSet2(a, b) {
-      if (a.length !== b.length) return false;
-      const s = new Set(a);
-      for (const x of b) if (!s.has(x)) return false;
-      return true;
-    }
-    async function waitForActiveTeam(team, timeoutMs = 2e3) {
-      const target = (team.slots || []).filter(Boolean);
-      const t0 = performance.now();
-      while (performance.now() - t0 < timeoutMs) {
-        const pets = await PetsService.getPets().catch(() => null);
-        const equip = Array.isArray(pets) ? pets.map((p) => String(p?.slot?.id || "")).filter(Boolean) : [];
-        if (sameSet2(equip, target)) return true;
-        await new Promise((r) => setTimeout(r, 80));
-      }
-      return false;
-    }
-    btnUseTeam.onclick = async () => {
-      const t = getSelectedTeam();
-      if (!t) return;
-      try {
-        isApplyingTeam = true;
-        activeTeamId = t.id;
-        await refreshTeamList(true);
-        await PetsService.useTeam(t.id);
-        await waitForActiveTeam(t);
-        await hydrateEditor(getSelectedTeam());
-        await refreshTeamList();
-      } catch (e) {
-        console.warn("[Pets] Use this team failed:", e);
-        await refreshTeamList();
-      } finally {
-        isApplyingTeam = false;
-      }
-    };
-    let unsubPets2 = null;
-    (async () => {
-      try {
-        unsubPets2 = await onActivePetsStructuralChangeNow(async () => {
-          if (isApplyingTeam) return;
-          await repaintSlots(getSelectedTeam());
-          await scheduleTeamListRefresh();
-        });
-      } catch {
-      }
-    })();
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          unsubTeams?.();
-        } catch {
-        }
-        try {
-          unsubPets2?.();
-        } catch {
-        }
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-  }
-  function renderFeedingTab(view, ui) {
-    view.innerHTML = "";
-    const wrap = document.createElement("div");
-    wrap.style.display = "grid";
-    wrap.style.gridTemplateColumns = "minmax(220px, 280px) minmax(0, 1fr)";
-    wrap.style.gap = "10px";
-    wrap.style.alignItems = "stretch";
-    wrap.style.height = "54vh";
-    wrap.style.minHeight = "0";
-    view.appendChild(wrap);
-    const left = document.createElement("div");
-    left.style.display = "flex";
-    left.style.flexDirection = "column";
-    left.style.height = "100%";
-    left.style.minHeight = "0";
-    wrap.appendChild(left);
-    const vtabs = ui.vtabs({
-      emptyText: "No pets found.",
-      fillAvailableHeight: true,
-      renderItem: (item, btn) => {
-        btn.innerHTML = "";
-        btn.style.gridTemplateColumns = "24px 1fr auto";
-        btn.style.gap = "10px";
-        const size = 22;
-        const iconWrap = document.createElement("div");
-        Object.assign(iconWrap.style, {
-          width: `${size}px`,
-          height: `${size}px`,
-          borderRadius: "6px",
-          background: "#161b22",
-          border: "1px solid #ffffff10",
-          display: "grid",
-          placeItems: "center",
-          overflow: "hidden",
-          boxShadow: "0 1px 0 #000 inset",
-          fontSize: "11px",
-          color: "#e2e8f0"
-        });
-        const label2 = String(item.title || "Pet");
-        iconWrap.textContent = label2.charAt(0).toUpperCase();
-        attachSpriteIcon(iconWrap, ["pet"], item.id, size, "pet-feeding-list", {
-          onNoSpriteFound: () => {
-            iconWrap.textContent = label2.charAt(0).toUpperCase();
-          }
-        });
-        const textWrap = document.createElement("div");
-        textWrap.style.display = "flex";
-        textWrap.style.flexDirection = "column";
-        textWrap.style.gap = "2px";
-        textWrap.style.minWidth = "0";
-        const titleEl = document.createElement("div");
-        titleEl.textContent = label2;
-        titleEl.style.whiteSpace = "nowrap";
-        titleEl.style.overflow = "hidden";
-        titleEl.style.textOverflow = "ellipsis";
-        textWrap.appendChild(titleEl);
-        const rarity3 = String(item.rarity || "").trim();
-        const badge2 = rarity3 ? rarityBadge(rarity3) : null;
-        if (badge2) {
-          badge2.style.margin = "0";
-          badge2.style.alignSelf = "center";
-        }
-        btn.append(iconWrap, textWrap);
-        if (badge2) btn.appendChild(badge2);
-      }
-    });
-    vtabs.root.style.flex = "1 1 auto";
-    vtabs.root.style.minHeight = "0";
-    left.appendChild(vtabs.root);
-    const right = document.createElement("div");
-    right.style.display = "flex";
-    right.style.flexDirection = "column";
-    right.style.gap = "10px";
-    right.style.minHeight = "0";
-    wrap.appendChild(right);
-    const card5 = ui.card("\u{1F356} Instant Feed", {
-      tone: "muted",
-      subtitle: "Allow or block crops for the Instant Feed button."
-    });
-    card5.root.style.display = "grid";
-    card5.root.style.gridTemplateRows = "auto 1fr";
-    card5.root.style.minHeight = "0";
-    card5.root.style.height = "100%";
-    card5.body.style.gridTemplateRows = "auto 1fr";
-    card5.body.style.minHeight = "0";
-    right.appendChild(card5.root);
-    const widgetRow = document.createElement("label");
-    widgetRow.style.display = "flex";
-    widgetRow.style.alignItems = "center";
-    widgetRow.style.gap = "8px";
-    widgetRow.style.cursor = "pointer";
-    const widgetSwitch = ui.switch(isInstantFeedWidgetEnabled());
-    widgetSwitch.addEventListener("change", () => {
-      setInstantFeedWidgetEnabled(widgetSwitch.checked);
-    });
-    const widgetLabel = document.createElement("span");
-    widgetLabel.textContent = "Show floating Instant Feed widget";
-    widgetLabel.style.fontSize = "13px";
-    widgetRow.append(widgetSwitch, widgetLabel);
-    card5.body.appendChild(widgetRow);
-    const body = document.createElement("div");
-    body.style.display = "flex";
-    body.style.flexDirection = "column";
-    body.style.gap = "6px";
-    body.style.overflow = "auto";
-    body.style.minHeight = "0";
-    card5.body.appendChild(body);
-    const petItems = Object.keys(petCatalog2).map((species) => {
-      const entry = petCatalog2[species];
-      const name = String(entry?.name || species);
-      return {
-        id: species,
-        title: name,
-        rarity: entry?.rarity
-      };
-    });
-    vtabs.setItems(petItems);
-    if (petItems.length) vtabs.select(petItems[0].id);
-    const renderCrops = (species) => {
-      body.innerHTML = "";
-      if (!species) {
-        const empty = document.createElement("div");
-        empty.textContent = "Select a pet to configure instant feed crops.";
-        empty.style.opacity = "0.75";
-        body.appendChild(empty);
-        return;
-      }
-      const compatibles = PetsService.getCompatibleCropsForSpecies(species) ?? [];
-      const seen = /* @__PURE__ */ new Set();
-      const list = compatibles.map((c) => String(c || "")).filter((c) => c && !seen.has(c) && seen.add(c));
-      if (!list.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No compatible crops for this pet.";
-        empty.style.opacity = "0.75";
-        body.appendChild(empty);
-        return;
-      }
-      const cropEntries = list.map((crop) => {
-        const entry = plantCatalog2[crop];
-        const name = String(entry?.name || crop);
-        return { crop, name };
-      }).sort((a, b) => a.name.localeCompare(b.name));
-      cropEntries.forEach(({ crop, name }) => {
-        const row = document.createElement("div");
-        row.style.display = "grid";
-        row.style.gridTemplateColumns = "1fr auto";
-        row.style.alignItems = "center";
-        row.style.gap = "8px";
-        row.style.padding = "6px 4px";
-        row.style.borderBottom = "1px solid #ffffff12";
-        const labelWrap = document.createElement("div");
-        labelWrap.style.display = "flex";
-        labelWrap.style.flexDirection = "column";
-        labelWrap.style.gap = "2px";
-        const nameEl = document.createElement("div");
-        nameEl.textContent = name;
-        nameEl.style.fontSize = "13px";
-        labelWrap.appendChild(nameEl);
-        if (name !== crop) {
-          const idEl = document.createElement("div");
-          idEl.textContent = crop;
-          idEl.style.fontSize = "11px";
-          idEl.style.opacity = "0.6";
-          labelWrap.appendChild(idEl);
-        }
-        const sw = ui.switch(PetsService.isInstantFeedCropAllowed(species, crop));
-        sw.addEventListener("change", () => {
-          PetsService.setInstantFeedCropAllowed(species, crop, sw.checked);
-        });
-        row.append(labelWrap, sw);
-        body.appendChild(row);
-      });
-    };
-    vtabs.onSelect((id) => {
-      renderCrops(id);
-    });
-    renderCrops(petItems[0]?.id ?? null);
-  }
   function renderPetsMenu(root) {
     const ui = new Menu({ id: "pets", compact: true, windowSelector: ".qws-win" });
     ui.mount(root);
     ui.addTab("manager", "\u{1F9F0} Manager", (view) => renderManagerTab(view, ui));
-    ui.addTab("teambuilder", "\u{1F9E9} Team Builder", (view) => renderTeamBuilderTab(view, ui));
-    ui.addTab("feeding", "\u{1F356} Feeding", (view) => renderFeedingTab(view, ui));
-    ui.addTab("hatch", "\u{1F95A} Hatch", (view) => renderHatchTab(view, ui));
+    ui.addTab("teambuilder", "\u{1F9E9} Team Builder", (view) => renderTeamBuilderTab(view));
+    ui.addTab("feeding", "\u{1F356} Feeding", (view) => renderFeedingTab(view));
+    ui.addTab("hatch", "\u{1F95A} Hatch", (view) => renderHatchTab(view));
     ui.addTab("logs", "\u{1F4DD} Logs", (view) => renderLogsTab(view));
-    const knownTabs = /* @__PURE__ */ new Set(["manager", "feeding", "hatch", "teambuilder", "logs"]);
     const onOpenTab = (ev) => {
       const tab = String(ev.detail?.tab || "");
-      if (knownTabs.has(tab)) ui.switchTo(tab);
+      if (TABS.has(tab)) ui.switchTo(tab);
     };
-    detachPetsOpenTabListener?.();
-    window.addEventListener("qws:pets-open-tab", onOpenTab);
-    detachPetsOpenTabListener = () => window.removeEventListener("qws:pets-open-tab", onOpenTab);
+    detachOpenTabListener?.();
+    window.addEventListener(OPEN_TAB_EVENT, onOpenTab);
+    detachOpenTabListener = () => window.removeEventListener(OPEN_TAB_EVENT, onOpenTab);
   }
-  var detachPetsOpenTabListener;
+  var OPEN_TAB_EVENT, TABS, detachOpenTabListener;
   var init_menu6 = __esm({
     "src/features/pets/menu.ts"() {
       "use strict";
       init_menu();
-      init_pets();
-      init_teamReconcile();
-      init_atoms();
-      init_iconCache();
-      init_menu3();
-      init_data();
-      init_petValue();
-      init_feedWidget();
       init_tab();
-      init_teamBuilderTab();
-      init_teamStatsView();
+      init_feedingTab();
       init_logsTab();
-      init_abilityColorsTab();
-      detachPetsOpenTabListener = null;
+      init_managerTab();
+      init_teamBuilderTab();
+      OPEN_TAB_EVENT = "qws:pets-open-tab";
+      TABS = /* @__PURE__ */ new Set(["manager", "teambuilder", "feeding", "hatch", "logs"]);
+      detachOpenTabListener = null;
     }
   });
 
@@ -46521,29 +46116,29 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/ui/kit/modal.ts
-  function menuCard(options) {
+  function menuCard(options2) {
     const card5 = h("button", "qmm-menu-card");
     card5.type = "button";
-    card5.disabled = options.disabled === true;
-    card5.append(h("div", "qmm-menu-card__name", options.name), h("div", "qmm-menu-card__detail", options.detail));
-    if (!card5.disabled) card5.addEventListener("click", options.onClick);
+    card5.disabled = options2.disabled === true;
+    card5.append(h("div", "qmm-menu-card__name", options2.name), h("div", "qmm-menu-card__detail", options2.detail));
+    if (!card5.disabled) card5.addEventListener("click", options2.onClick);
     return card5;
   }
-  function openModal2(options) {
+  function openModal2(options2) {
     let closed = false;
     const scrim = h("div", "qmm-modal-scrim");
-    const hostZ = Number.parseInt(getComputedStyle(options.host).zIndex, 10);
+    const hostZ = Number.parseInt(getComputedStyle(options2.host).zIndex, 10);
     scrim.style.zIndex = String((Number.isFinite(hostZ) ? hostZ : layer.window) + 1);
     const panel = h("div", "qmm-modal");
-    panel.style.width = `min(${options.widthPx ?? 420}px, 100%)`;
-    panel.style.maxHeight = `min(${options.maxHeightPx ?? 520}px, 88vh)`;
+    panel.style.width = `min(${options2.widthPx ?? 420}px, 100%)`;
+    panel.style.maxHeight = `min(${options2.maxHeightPx ?? 520}px, 88vh)`;
     panel.addEventListener("click", (event) => event.stopPropagation());
     const closeButton = h("button", "qmm-modal__close", "\u2715");
     closeButton.type = "button";
     closeButton.title = "Close";
     closeButton.addEventListener("click", () => close());
     const header = h("div", "qmm-modal__head");
-    header.append(h("div", "qmm-modal__title", options.title), closeButton);
+    header.append(h("div", "qmm-modal__title", options2.title), closeButton);
     const body = h("div", "qmm-modal__body qmm-scroll");
     const footer = h("div", "qmm-modal__foot");
     panel.append(header, body, footer);
@@ -46560,10 +46155,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       clearInterval(hostWatch);
       document.removeEventListener("keydown", onKeyDown2, true);
       scrim.remove();
-      options.onClose?.();
+      options2.onClose?.();
     }
     const hostWatch = window.setInterval(() => {
-      if (!options.host.isConnected) close();
+      if (!options2.host.isConnected) close();
     }, 1e3);
     scrim.addEventListener("click", () => close());
     document.addEventListener("keydown", onKeyDown2, true);
@@ -46579,19 +46174,19 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/deleters/picker.ts
-  function openDeleterPicker(options) {
+  function openDeleterPicker(options2) {
     const modal = openModal2({
-      host: options.host,
-      title: options.title,
+      host: options2.host,
+      title: options2.title,
       widthPx: 460,
-      onClose: options.onClose
+      onClose: options2.onClose
     });
-    const picked = new Map(options.initial);
+    const picked = new Map(options2.initial);
     let entries2 = [];
     let filter = "";
     const controls = document.createElement("div");
     css(controls, { display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", marginBottom: "10px" });
-    const search2 = textField(`Search ${options.unitNoun}\u2026`);
+    const search2 = textField(`Search ${options2.unitNoun}\u2026`);
     css(search2, { flex: "1 1 160px", minWidth: "120px" });
     search2.addEventListener("input", () => {
       filter = search2.value.trim().toLowerCase();
@@ -46619,7 +46214,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const btnConfirm = button2("Confirm selection", "accent", () => {
       const out = /* @__PURE__ */ new Map();
       for (const [id, qty] of picked) if (qty > 0) out.set(id, qty);
-      options.onConfirm(out);
+      options2.onConfirm(out);
       modal.close();
     });
     css(modal.footer, { display: "flex", alignItems: "center", gap: "8px" });
@@ -46636,8 +46231,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         fontSize: "22px",
         lineHeight: "1"
       });
-      box.textContent = options.fallbackIcon;
-      attachSpriteIcon(box, options.spriteCategories, [id], ROW_SPRITE_PX, "deleter-picker");
+      box.textContent = options2.fallbackIcon;
+      attachSpriteIcon(box, options2.spriteCategories, [id], ROW_SPRITE_PX, "deleter-picker");
       return box;
     }
     function visibleEntries() {
@@ -46657,8 +46252,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         units += qty;
         fromStorage += Math.max(0, qty - entry.invQty);
       }
-      const storagePart = fromStorage > 0 ? ` \xB7 ${formatNum3(fromStorage)} from the ${options.storageNoun}` : "";
-      summary.textContent = groups === 0 ? "Nothing selected." : `${groups} selected \xB7 ${formatNum3(units)} ${options.unitNoun}${storagePart}`;
+      const storagePart = fromStorage > 0 ? ` \xB7 ${formatNum3(fromStorage)} from the ${options2.storageNoun}` : "";
+      summary.textContent = groups === 0 ? "Nothing selected." : `${groups} selected \xB7 ${formatNum3(units)} ${options2.unitNoun}${storagePart}`;
       btnConfirm.disabled = groups === 0;
       css(btnConfirm, { opacity: groups === 0 ? "0.45" : "1", cursor: groups === 0 ? "default" : "pointer" });
     }
@@ -46688,7 +46283,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       name.textContent = entry.label;
       const detail = document.createElement("div");
       css(detail, { fontSize: "10.5px", color: TEXT_DIM });
-      detail.textContent = entry.storeQty > 0 ? `${formatNum3(entry.total)} \xB7 ${formatNum3(entry.invQty)} held, ${formatNum3(entry.storeQty)} in ${options.storageNoun}` : `${formatNum3(entry.total)} held`;
+      detail.textContent = entry.storeQty > 0 ? `${formatNum3(entry.total)} \xB7 ${formatNum3(entry.invQty)} held, ${formatNum3(entry.storeQty)} in ${options2.storageNoun}` : `${formatNum3(entry.total)} held`;
       label2.append(name, detail);
       const amount = document.createElement("input");
       amount.type = "number";
@@ -46725,7 +46320,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (rows.length === 0) {
         const empty = document.createElement("div");
         css(empty, { padding: "14px", textAlign: "center", fontSize: "12px", color: TEXT_DIM });
-        empty.textContent = entries2.length === 0 ? `You have no ${options.unitNoun} to delete, in your inventory or your ${options.storageNoun}.` : "No match.";
+        empty.textContent = entries2.length === 0 ? `You have no ${options2.unitNoun} to delete, in your inventory or your ${options2.storageNoun}.` : "No match.";
         list.append(empty);
       } else {
         for (const entry of rows) list.append(buildRow(entry));
@@ -46737,7 +46332,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     loading.textContent = "Reading inventory\u2026";
     list.append(loading);
     updateSummary2();
-    void options.loadEntries().then((loaded) => {
+    void options2.loadEntries().then((loaded) => {
       if (!modal.isOpen()) return;
       entries2 = loaded;
       for (const [id, qty] of [...picked]) {
@@ -47279,10 +46874,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     attachSpriteIcon(box, ["ui", "mutation"], candidates, sizePx, SPRITE_LOG_TAG2);
     return box;
   }
-  function spriteTile(options) {
+  function spriteTile(options2) {
     const tile = document.createElement("button");
     tile.type = "button";
-    tile.title = options.title;
+    tile.title = options2.title;
     css(tile, {
       display: "inline-flex",
       flexDirection: "column",
@@ -47293,29 +46888,29 @@ Restore figures are averages; unlucky streaks do worse.`;
       cursor: "pointer",
       lineHeight: "1",
       transition: "background 120ms ease, border-color 120ms ease",
-      background: options.selected ? TEAL_DIM : CARD_BG,
-      border: `1px solid ${options.selected ? TEAL_BORDER : BORDER}`
+      background: options2.selected ? TEAL_DIM : CARD_BG,
+      border: `1px solid ${options2.selected ? TEAL_BORDER : BORDER}`
     });
-    tile.append(options.icon);
-    if (options.count !== void 0) {
+    tile.append(options2.icon);
+    if (options2.count !== void 0) {
       const count = document.createElement("span");
-      css(count, { fontSize: "10px", color: options.selected ? TEAL : TEXT_DIM });
-      count.textContent = String(options.count);
+      css(count, { fontSize: "10px", color: options2.selected ? TEAL : TEXT_DIM });
+      count.textContent = String(options2.count);
       tile.append(count);
     }
-    tile.addEventListener("click", options.onClick);
+    tile.addEventListener("click", options2.onClick);
     tile.addEventListener("mouseenter", () => {
-      if (!options.selected) css(tile, { background: "rgba(255,255,255,0.06)" });
+      if (!options2.selected) css(tile, { background: "rgba(255,255,255,0.06)" });
     });
     tile.addEventListener("mouseleave", () => {
-      if (!options.selected) css(tile, { background: CARD_BG });
+      if (!options2.selected) css(tile, { background: CARD_BG });
     });
     return tile;
   }
-  function labelledTile(options) {
+  function labelledTile(options2) {
     const tile = document.createElement("button");
     tile.type = "button";
-    tile.title = options.label;
+    tile.title = options2.label;
     css(tile, {
       display: "inline-flex",
       alignItems: "center",
@@ -47325,24 +46920,24 @@ Restore figures are averages; unlucky streaks do worse.`;
       cursor: "pointer",
       lineHeight: "1",
       transition: "background 120ms ease, border-color 120ms ease",
-      background: options.selected ? TEAL_DIM : CARD_BG,
-      border: `1px solid ${options.selected ? TEAL_BORDER : BORDER}`
+      background: options2.selected ? TEAL_DIM : CARD_BG,
+      border: `1px solid ${options2.selected ? TEAL_BORDER : BORDER}`
     });
     const name = document.createElement("span");
     css(name, {
       fontSize: "11.5px",
-      fontWeight: options.selected ? "600" : "500",
-      color: options.selected ? TEAL : TEXT,
+      fontWeight: options2.selected ? "600" : "500",
+      color: options2.selected ? TEAL : TEXT,
       whiteSpace: "nowrap"
     });
-    name.textContent = options.label;
-    tile.append(options.icon, name);
-    tile.addEventListener("click", options.onClick);
+    name.textContent = options2.label;
+    tile.append(options2.icon, name);
+    tile.addEventListener("click", options2.onClick);
     tile.addEventListener("mouseenter", () => {
-      if (!options.selected) css(tile, { background: "rgba(255,255,255,0.06)" });
+      if (!options2.selected) css(tile, { background: "rgba(255,255,255,0.06)" });
     });
     tile.addEventListener("mouseleave", () => {
-      if (!options.selected) css(tile, { background: CARD_BG });
+      if (!options2.selected) css(tile, { background: CARD_BG });
     });
     return tile;
   }
@@ -47373,7 +46968,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     css(row, { display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: "5px" });
     return row;
   }
-  function segmented2(options, selected, onSelect) {
+  function segmented2(options2, selected, onSelect) {
     const wrap = document.createElement("div");
     css(wrap, {
       display: "inline-flex",
@@ -47383,7 +46978,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       background: "rgba(0,0,0,0.22)",
       border: `1px solid ${BORDER}`
     });
-    for (const option of options) {
+    for (const option of options2) {
       const active2 = option.value === selected;
       const button3 = document.createElement("button");
       button3.type = "button";
@@ -47901,9 +47496,9 @@ Restore figures are averages; unlucky streaks do worse.`;
           done > 0 ? "success" : "info"
         );
       } catch (error) {
-        const message = error?.message === "cancelled" ? `Cancelled after ${formatNum4(done)} ${kind.unitNoun}.` : error?.message || "Deletion failed.";
-        emit("error", { message });
-        kind.toast(kind.toastTitle, message, "error");
+        const message2 = error?.message === "cancelled" ? `Cancelled after ${formatNum4(done)} ${kind.unitNoun}.` : error?.message || "Deletion failed.";
+        emit("error", { message: message2 });
+        kind.toast(kind.toastTitle, message2, "error");
       } finally {
         running6 = false;
         paused = false;
@@ -47964,8 +47559,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_player();
       init_toast();
       sleep5 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-      toast2 = (title, message, kind) => {
-        void toastSimple(title, message, kind);
+      toast2 = (title, message2, kind) => {
+        void toastSimple(title, message2, kind);
       };
       guardEnabled = () => {
         try {
@@ -50131,7 +49726,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       state5.append(spinner, text2);
       viewContainer.appendChild(state5);
     };
-    const showError = (message) => {
+    const showError = (message2) => {
       viewContainer.innerHTML = "";
       const state5 = document.createElement("div");
       state5.className = "mgt-state";
@@ -50140,7 +49735,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       title.textContent = "Couldn't load the tools";
       const text2 = document.createElement("p");
       text2.className = "mgt-state__text";
-      text2.textContent = message;
+      text2.textContent = message2;
       const retry = document.createElement("button");
       retry.type = "button";
       retry.className = "mgt-action is-primary";
@@ -50238,7 +49833,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function sectionLabel3(text2) {
     const el = document.createElement("div");
-    css2(el, {
+    css3(el, {
       fontSize: "10px",
       fontWeight: "700",
       letterSpacing: "0.08em",
@@ -50251,7 +49846,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function card3(children) {
     const el = document.createElement("div");
-    css2(el, {
+    css3(el, {
       padding: "14px",
       background: CARD_BG2,
       borderRadius: "12px",
@@ -50265,7 +49860,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function primaryBtn(label2, onClick) {
     const btn = document.createElement("button");
-    css2(btn, {
+    css3(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -50282,21 +49877,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "1"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css2(btn, { background: TEAL_MID, borderColor: TEAL_BRD_HI });
-    btn.onmouseleave = () => css2(btn, { background: TEAL_DIM2, borderColor: TEAL_BORDER2 });
+    btn.onmouseenter = () => css3(btn, { background: TEAL_MID, borderColor: TEAL_BRD_HI });
+    btn.onmouseleave = () => css3(btn, { background: TEAL_DIM2, borderColor: TEAL_BORDER2 });
     btn.onclick = async () => {
-      css2(btn, { opacity: "0.6", pointerEvents: "none" });
+      css3(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css2(btn, { opacity: "1", pointerEvents: "auto" });
+        css3(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
   }
   function secondaryBtn(label2, onClick) {
     const btn = document.createElement("button");
-    css2(btn, {
+    css3(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -50312,21 +49907,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "1"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css2(btn, { background: CARD_BG_HI, borderColor: BORDER_HI });
-    btn.onmouseleave = () => css2(btn, { background: CARD_BG2, borderColor: BORDER3 });
+    btn.onmouseenter = () => css3(btn, { background: CARD_BG_HI, borderColor: BORDER_HI });
+    btn.onmouseleave = () => css3(btn, { background: CARD_BG2, borderColor: BORDER3 });
     btn.onclick = async () => {
-      css2(btn, { opacity: "0.6", pointerEvents: "none" });
+      css3(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css2(btn, { opacity: "1", pointerEvents: "auto" });
+        css3(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
   }
   function dangerBtn(label2, onClick) {
     const btn = document.createElement("button");
-    css2(btn, {
+    css3(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -50342,21 +49937,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       flexShrink: "0"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css2(btn, { background: DANGER_HI, borderColor: DANGER_BRD_HI });
-    btn.onmouseleave = () => css2(btn, { background: DANGER_DIM, borderColor: DANGER_BRD });
+    btn.onmouseenter = () => css3(btn, { background: DANGER_HI, borderColor: DANGER_BRD_HI });
+    btn.onmouseleave = () => css3(btn, { background: DANGER_DIM, borderColor: DANGER_BRD });
     btn.onclick = async () => {
-      css2(btn, { opacity: "0.6", pointerEvents: "none" });
+      css3(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css2(btn, { opacity: "1", pointerEvents: "auto" });
+        css3(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
   }
   function smallBtn(label2, teal, onClick) {
     const btn = document.createElement("button");
-    css2(btn, {
+    css3(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -50372,14 +49967,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       flexShrink: "0"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css2(btn, { background: teal ? TEAL_MID : CARD_BG_HI, borderColor: teal ? TEAL_BRD_HI : BORDER_HI });
-    btn.onmouseleave = () => css2(btn, { background: teal ? TEAL_DIM2 : CARD_BG2, borderColor: teal ? TEAL_BORDER2 : BORDER3 });
+    btn.onmouseenter = () => css3(btn, { background: teal ? TEAL_MID : CARD_BG_HI, borderColor: teal ? TEAL_BRD_HI : BORDER_HI });
+    btn.onmouseleave = () => css3(btn, { background: teal ? TEAL_DIM2 : CARD_BG2, borderColor: teal ? TEAL_BORDER2 : BORDER3 });
     btn.onclick = async () => {
-      css2(btn, { opacity: "0.6", pointerEvents: "none" });
+      css3(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css2(btn, { opacity: "1", pointerEvents: "auto" });
+        css3(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
@@ -50388,7 +49983,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const input = document.createElement("input");
     input.type = "text";
     input.placeholder = placeholder;
-    css2(input, {
+    css3(input, {
       width: "100%",
       padding: "9px 12px",
       border: `1px solid ${BORDER3}`,
@@ -50400,8 +49995,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       transition: "border-color 150ms ease",
       boxSizing: "border-box"
     });
-    input.addEventListener("focus", () => css2(input, { borderColor: TEAL_BORDER2 }));
-    input.addEventListener("blur", () => css2(input, { borderColor: BORDER3 }));
+    input.addEventListener("focus", () => css3(input, { borderColor: TEAL_BORDER2 }));
+    input.addEventListener("blur", () => css3(input, { borderColor: BORDER3 }));
     return input;
   }
   function createToggle(checked, onChange) {
@@ -50421,10 +50016,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function renderEditorMenu(container) {
     ensureStyles2();
-    css2(container, { padding: "0", overflow: "hidden" });
+    css3(container, { padding: "0", overflow: "hidden" });
     const wrap = document.createElement("div");
     wrap.className = "qws-ed-scroll";
-    css2(wrap, {
+    css3(wrap, {
       display: "flex",
       flexDirection: "column",
       gap: "12px",
@@ -50437,7 +50032,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     container.appendChild(wrap);
     const statusEl = document.createElement("div");
-    css2(statusEl, {
+    css3(statusEl, {
       fontSize: "11px",
       color: TEXT_DIM3,
       minHeight: "16px",
@@ -50454,21 +50049,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       }, 4e3);
     }
     const toggleRow = document.createElement("div");
-    css2(toggleRow, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" });
+    css3(toggleRow, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" });
     const toggleLabel = document.createElement("div");
-    css2(toggleLabel, { fontSize: "13px", fontWeight: "600", color: TEXT3 });
+    css3(toggleLabel, { fontSize: "13px", fontWeight: "600", color: TEXT3 });
     toggleLabel.textContent = "Editor mode";
     const toggle2 = createToggle(EditorService.isEnabled(), (on) => {
       EditorService.setEnabled(on);
     });
     toggleRow.append(toggleLabel, toggle2);
     const desc = document.createElement("div");
-    css2(desc, { fontSize: "11px", color: TEXT_DIM3, lineHeight: "1.5" });
+    css3(desc, { fontSize: "11px", color: TEXT_DIM3, lineHeight: "1.5" });
     desc.textContent = "Sandbox garden with every plant and decor unlocked. Left click to place, right click to remove, drag to paint.";
     wrap.appendChild(card3([toggleRow, desc]));
     const nameInput = styledInput("Garden name\u2026");
     const actRow = document.createElement("div");
-    css2(actRow, { display: "flex", gap: "8px" });
+    css3(actRow, { display: "flex", gap: "8px" });
     actRow.append(
       primaryBtn("Save current garden", async () => {
         const fn = window.qwsEditorSaveGarden;
@@ -50491,7 +50086,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       card3([sectionLabel3("Current garden"), nameInput, actRow])
     );
     const dropZone = document.createElement("div");
-    css2(dropZone, {
+    css3(dropZone, {
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
@@ -50508,7 +50103,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       transition: "border-color 150ms ease, background 150ms ease"
     });
     const dropTitle = document.createElement("div");
-    css2(dropTitle, { fontWeight: "600", fontSize: "12px", color: TEXT3 });
+    css3(dropTitle, { fontWeight: "600", fontSize: "12px", color: TEXT3 });
     dropTitle.textContent = "Drop a garden JSON file here";
     const dropHint = document.createElement("div");
     dropHint.textContent = "\u2026or click to browse";
@@ -50517,9 +50112,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     fileInput.type = "file";
     fileInput.accept = ".json,application/json,text/plain";
     fileInput.multiple = true;
-    css2(fileInput, { display: "none" });
+    css3(fileInput, { display: "none" });
     const setDropActive = (active2) => {
-      css2(dropZone, {
+      css3(dropZone, {
         borderColor: active2 ? TEAL_BRD_HI : BORDER_HI,
         background: active2 ? TEAL_DIM2 : "rgba(255,255,255,0.03)"
       });
@@ -50573,7 +50168,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       card3([sectionLabel3("Import"), dropZone, fileInput])
     );
     const listWrap = document.createElement("div");
-    css2(listWrap, { display: "flex", flexDirection: "column", gap: "6px" });
+    css3(listWrap, { display: "flex", flexDirection: "column", gap: "6px" });
     const renderSavedList = () => {
       const listFn = window.qwsEditorListSavedGardens;
       const loadFn = window.qwsEditorLoadGarden;
@@ -50583,7 +50178,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const items = typeof listFn === "function" ? listFn() : [];
       if (!items.length) {
         const empty = document.createElement("div");
-        css2(empty, { fontSize: "12px", color: TEXT_DIM3, padding: "4px 0" });
+        css3(empty, { fontSize: "12px", color: TEXT_DIM3, padding: "4px 0" });
         empty.textContent = "No saved gardens yet.";
         listWrap.appendChild(empty);
         return;
@@ -50591,7 +50186,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const editorOn = EditorService.isEnabled();
       for (const g of items) {
         const row = document.createElement("div");
-        css2(row, {
+        css3(row, {
           display: "flex",
           alignItems: "center",
           gap: "8px",
@@ -50601,10 +50196,10 @@ Restore figures are averages; unlucky streaks do worse.`;
           border: `1px solid ${BORDER3}`,
           transition: "border-color 120ms ease"
         });
-        row.onmouseenter = () => css2(row, { borderColor: BORDER_HI });
-        row.onmouseleave = () => css2(row, { borderColor: BORDER3 });
+        row.onmouseenter = () => css3(row, { borderColor: BORDER_HI });
+        row.onmouseleave = () => css3(row, { borderColor: BORDER3 });
         const nameEl = document.createElement("div");
-        css2(nameEl, {
+        css3(nameEl, {
           flex: "1",
           fontSize: "12px",
           fontWeight: "600",
@@ -50627,7 +50222,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         });
         loadBtn.disabled = !editorOn;
         if (!editorOn) {
-          css2(loadBtn, { opacity: "0.4", cursor: "not-allowed" });
+          css3(loadBtn, { opacity: "0.4", cursor: "not-allowed" });
           loadBtn.title = "Enable editor mode to load";
         }
         const expBtn = smallBtn("Export", false, async () => {
@@ -50674,7 +50269,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
   }
-  var STYLE_ID5, TEAL2, TEAL_DIM2, TEAL_MID, TEAL_BORDER2, TEAL_BRD_HI, BORDER3, BORDER_HI, CARD_BG2, CARD_BG_HI, TEXT3, TEXT_DIM3, DANGER2, DANGER_DIM, DANGER_BRD, DANGER_HI, DANGER_BRD_HI, css2;
+  var STYLE_ID5, TEAL2, TEAL_DIM2, TEAL_MID, TEAL_BORDER2, TEAL_BRD_HI, BORDER3, BORDER_HI, CARD_BG2, CARD_BG_HI, TEXT3, TEXT_DIM3, DANGER2, DANGER_DIM, DANGER_BRD, DANGER_HI, DANGER_BRD_HI, css3;
   var init_menu10 = __esm({
     "src/features/editor/menu.ts"() {
       "use strict";
@@ -50698,7 +50293,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       DANGER_BRD = "rgba(239,68,68,0.3)";
       DANGER_HI = "rgba(239,68,68,0.2)";
       DANGER_BRD_HI = "rgba(239,68,68,0.55)";
-      css2 = (el, s) => Object.assign(el.style, s);
+      css3 = (el, s) => Object.assign(el.style, s);
     }
   });
 
@@ -51513,7 +51108,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function sectionLabel4(text2) {
     const el = document.createElement("div");
-    css3(el, {
+    css4(el, {
       fontSize: "10px",
       fontWeight: "700",
       letterSpacing: "0.08em",
@@ -51526,7 +51121,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function avatar(player2, size) {
     const el = document.createElement("div");
-    css3(el, {
+    css4(el, {
       width: `${size}px`,
       height: `${size}px`,
       borderRadius: "50%",
@@ -51540,14 +51135,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       overflow: "hidden"
     });
     if (player2.discordAvatarUrl) {
-      css3(el, {
+      css4(el, {
         backgroundImage: `url(${player2.discordAvatarUrl})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         border: `2px solid ${TEAL_BORDER3}`
       });
     } else {
-      css3(el, {
+      css4(el, {
         background: "linear-gradient(135deg, rgba(94,234,212,0.22), rgba(59,130,246,0.22))",
         border: `2px solid rgba(94,234,212,0.2)`
       });
@@ -51557,7 +51152,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function statusPill(online) {
     const wrap = document.createElement("div");
-    css3(wrap, {
+    css4(wrap, {
       display: "flex",
       alignItems: "center",
       gap: "4px",
@@ -51565,7 +51160,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       color: online ? GREEN : TEXT_DIM4
     });
     const dot = document.createElement("span");
-    css3(dot, {
+    css4(dot, {
       width: "6px",
       height: "6px",
       borderRadius: "50%",
@@ -51577,7 +51172,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function primaryBtn2(label2, iconSvg, onClick) {
     const btn = document.createElement("button");
-    css3(btn, {
+    css4(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -51596,16 +51191,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const icon = document.createElement("span");
     icon.innerHTML = iconSvg;
-    css3(icon, { display: "flex", alignItems: "center", flexShrink: "0" });
+    css4(icon, { display: "flex", alignItems: "center", flexShrink: "0" });
     btn.append(icon, document.createTextNode(label2));
-    btn.onmouseenter = () => css3(btn, { background: TEAL_MID2, borderColor: TEAL_BORDER_HI });
-    btn.onmouseleave = () => css3(btn, { background: TEAL_DIM3, borderColor: TEAL_BORDER3 });
+    btn.onmouseenter = () => css4(btn, { background: TEAL_MID2, borderColor: TEAL_BORDER_HI });
+    btn.onmouseleave = () => css4(btn, { background: TEAL_DIM3, borderColor: TEAL_BORDER3 });
     btn.onclick = async () => {
-      css3(btn, { opacity: "0.6", pointerEvents: "none" });
+      css4(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css3(btn, { opacity: "1", pointerEvents: "auto" });
+        css4(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
@@ -51614,13 +51209,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     let isActive = active2;
     const btn = document.createElement("button");
     const applyState2 = () => {
-      css3(btn, {
+      css4(btn, {
         border: `1px solid ${isActive ? TEAL_BORDER_HI : BORDER4}`,
         background: isActive ? TEAL_MID2 : CARD_BG3,
         color: isActive ? TEAL3 : TEXT4
       });
     };
-    css3(btn, {
+    css4(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -51636,22 +51231,22 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const icon = document.createElement("span");
     icon.innerHTML = iconSvg;
-    css3(icon, { display: "flex", alignItems: "center", flexShrink: "0" });
+    css4(icon, { display: "flex", alignItems: "center", flexShrink: "0" });
     btn.append(icon, document.createTextNode(label2));
     applyState2();
     btn.onmouseenter = () => {
-      if (!isActive) css3(btn, { background: CARD_BG_HI2, borderColor: TEAL_BORDER3 });
+      if (!isActive) css4(btn, { background: CARD_BG_HI2, borderColor: TEAL_BORDER3 });
     };
     btn.onmouseleave = applyState2;
     btn.onclick = async () => {
-      css3(btn, { opacity: "0.6", pointerEvents: "none" });
+      css4(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         const next = !isActive;
         await onToggle(next);
         isActive = next;
         applyState2();
       } finally {
-        css3(btn, { opacity: "1", pointerEvents: "auto" });
+        css4(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     btn.__setActive = (v) => {
@@ -51662,7 +51257,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function markUnavailable(btn, hint) {
     btn.title = hint;
-    css3(btn, {
+    css4(btn, {
       opacity: "0.45",
       cursor: "not-allowed",
       filter: "grayscale(1)",
@@ -51679,7 +51274,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function secondaryBtn2(label2, iconSvg, onClick) {
     const btn = document.createElement("button");
-    css3(btn, {
+    css4(btn, {
       display: "flex",
       alignItems: "center",
       gap: "7px",
@@ -51697,25 +51292,25 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const icon = document.createElement("span");
     icon.innerHTML = iconSvg;
-    css3(icon, { display: "flex", alignItems: "center", flexShrink: "0", opacity: "0.7" });
+    css4(icon, { display: "flex", alignItems: "center", flexShrink: "0", opacity: "0.7" });
     btn.append(icon, document.createTextNode(label2));
-    btn.onmouseenter = () => css3(btn, { background: CARD_BG_HI2, borderColor: BORDER_HI2 });
-    btn.onmouseleave = () => css3(btn, { background: CARD_BG3, borderColor: BORDER4 });
+    btn.onmouseenter = () => css4(btn, { background: CARD_BG_HI2, borderColor: BORDER_HI2 });
+    btn.onmouseleave = () => css4(btn, { background: CARD_BG3, borderColor: BORDER4 });
     btn.onclick = async () => {
-      css3(btn, { opacity: "0.6", pointerEvents: "none" });
+      css4(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css3(btn, { opacity: "1", pointerEvents: "auto" });
+        css4(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
   }
   async function renderRoomMenu(root) {
     ensureStyles3();
-    css3(root, { padding: "0", overflow: "hidden" });
+    css4(root, { padding: "0", overflow: "hidden" });
     const wrap = document.createElement("div");
-    css3(wrap, {
+    css4(wrap, {
       display: "flex",
       flexDirection: "row",
       minHeight: "400px",
@@ -51724,7 +51319,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const leftPane = document.createElement("div");
     leftPane.className = "qws-rm-scroll";
-    css3(leftPane, {
+    css4(leftPane, {
       width: "200px",
       flexShrink: "0",
       display: "flex",
@@ -51736,7 +51331,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const rightPane = document.createElement("div");
     rightPane.className = "qws-rm-scroll";
-    css3(rightPane, {
+    css4(rightPane, {
       flex: "1",
       overflowY: "auto",
       padding: "14px 14px 14px 16px",
@@ -51760,7 +51355,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const player2 = playerId2 ? players.find((p) => p.id === playerId2) ?? null : null;
       if (!player2) {
         const hint = document.createElement("div");
-        css3(hint, {
+        css4(hint, {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -51773,15 +51368,15 @@ Restore figures are averages; unlucky streaks do worse.`;
         });
         const iconWrap = document.createElement("div");
         iconWrap.innerHTML = ICONS.user.replace("13", "28").replace("13", "28");
-        css3(iconWrap, { opacity: "0.35" });
+        css4(iconWrap, { opacity: "0.35" });
         hint.append(iconWrap, document.createTextNode("Select a player"));
         rightPane.appendChild(hint);
         return;
       }
       const content = document.createElement("div");
-      css3(content, { display: "flex", flexDirection: "column", gap: "18px" });
+      css4(content, { display: "flex", flexDirection: "column", gap: "18px" });
       const profileCard = document.createElement("div");
-      css3(profileCard, {
+      css4(profileCard, {
         display: "flex",
         alignItems: "center",
         gap: "12px",
@@ -51792,9 +51387,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       const av = avatar(player2, 46);
       const infoBlock = document.createElement("div");
-      css3(infoBlock, { display: "flex", flexDirection: "column", gap: "4px", minWidth: "0", flex: "1" });
+      css4(infoBlock, { display: "flex", flexDirection: "column", gap: "4px", minWidth: "0", flex: "1" });
       const nameEl = document.createElement("div");
-      css3(nameEl, {
+      css4(nameEl, {
         fontSize: "15px",
         fontWeight: "700",
         color: TEXT4,
@@ -51809,7 +51404,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const teleSection = document.createElement("div");
       teleSection.appendChild(sectionLabel4("Teleport"));
       const teleRow = document.createElement("div");
-      css3(teleRow, { display: "flex", gap: "8px" });
+      css4(teleRow, { display: "flex", gap: "8px" });
       const toPlayerBtn = primaryBtn2(
         "To player",
         ICONS.teleport,
@@ -51826,7 +51421,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const followSection = document.createElement("div");
       followSection.appendChild(sectionLabel4("Follow"));
       const followRow = document.createElement("div");
-      css3(followRow, { display: "flex", gap: "8px" });
+      css4(followRow, { display: "flex", gap: "8px" });
       const followPlayerBtn = toggleBtn(
         "Follow player",
         ICONS.follow,
@@ -51850,7 +51445,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const inspectSection = document.createElement("div");
       inspectSection.appendChild(sectionLabel4("Inspect"));
       const inspectGrid = document.createElement("div");
-      css3(inspectGrid, { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" });
+      css4(inspectGrid, { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" });
       inspectGrid.append(
         secondaryBtn2("Inventory", ICONS.inventory, async () => {
           hideWin();
@@ -51909,10 +51504,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       const valSection = document.createElement("div");
       valSection.appendChild(sectionLabel4("Crop values"));
       const valRow = document.createElement("div");
-      css3(valRow, { display: "flex", gap: "8px" });
+      css4(valRow, { display: "flex", gap: "8px" });
       const makeValCard = (label2) => {
         const card5 = document.createElement("div");
-        css3(card5, {
+        css4(card5, {
           flex: "1",
           padding: "11px 14px",
           background: CARD_BG3,
@@ -51923,10 +51518,10 @@ Restore figures are averages; unlucky streaks do worse.`;
           gap: "4px"
         });
         const lbl = document.createElement("div");
-        css3(lbl, { fontSize: "10px", color: TEXT_DIM4, fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" });
+        css4(lbl, { fontSize: "10px", color: TEXT_DIM4, fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" });
         lbl.textContent = label2;
         const val = document.createElement("div");
-        css3(val, { fontSize: "15px", fontWeight: "700", color: "#FFD84D" });
+        css4(val, { fontSize: "15px", fontWeight: "700", color: "#FFD84D" });
         val.textContent = "\u2026";
         card5.append(lbl, val);
         return { card: card5, val };
@@ -51953,7 +51548,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     function createPlayerCard(player2) {
       const isSelected = selectedId === player2.id;
       const card5 = document.createElement("div");
-      css3(card5, {
+      css4(card5, {
         display: "flex",
         alignItems: "center",
         gap: "10px",
@@ -51965,8 +51560,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         transition: "all 120ms ease"
       });
       if (!isSelected) {
-        card5.onmouseenter = () => css3(card5, { background: CARD_BG_HI2, borderColor: "rgba(94,234,212,0.18)" });
-        card5.onmouseleave = () => css3(card5, { background: "rgba(255,255,255,0.02)", borderColor: BORDER4 });
+        card5.onmouseenter = () => css4(card5, { background: CARD_BG_HI2, borderColor: "rgba(94,234,212,0.18)" });
+        card5.onmouseleave = () => css4(card5, { background: "rgba(255,255,255,0.02)", borderColor: BORDER4 });
       }
       card5.onclick = () => {
         selectedId = player2.id;
@@ -51975,9 +51570,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       };
       const av = avatar(player2, 32);
       const info = document.createElement("div");
-      css3(info, { flex: "1", minWidth: "0" });
+      css4(info, { flex: "1", minWidth: "0" });
       const nameEl = document.createElement("div");
-      css3(nameEl, {
+      css4(nameEl, {
         fontSize: "12px",
         fontWeight: "600",
         color: TEXT4,
@@ -51987,7 +51582,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       nameEl.textContent = player2.name || player2.id;
       const st = document.createElement("div");
-      css3(st, {
+      css4(st, {
         display: "flex",
         alignItems: "center",
         gap: "4px",
@@ -51996,7 +51591,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         color: player2.isConnected ? GREEN : TEXT_DIM4
       });
       const dot = document.createElement("span");
-      css3(dot, { width: "5px", height: "5px", borderRadius: "50%", background: player2.isConnected ? GREEN : "rgba(226,232,240,0.3)", flexShrink: "0" });
+      css4(dot, { width: "5px", height: "5px", borderRadius: "50%", background: player2.isConnected ? GREEN : "rgba(226,232,240,0.3)", flexShrink: "0" });
       st.append(dot, document.createTextNode(player2.isConnected ? "Online" : "Offline"));
       info.append(nameEl, st);
       card5.append(av, info);
@@ -52005,20 +51600,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     function renderPlayerList() {
       leftPane.innerHTML = "";
       const header = document.createElement("div");
-      css3(header, {
+      css4(header, {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         marginBottom: "6px"
       });
       const countEl = document.createElement("div");
-      css3(countEl, { fontSize: "10px", fontWeight: "700", letterSpacing: "0.07em", color: TEXT_DIM4, textTransform: "uppercase" });
+      css4(countEl, { fontSize: "10px", fontWeight: "700", letterSpacing: "0.07em", color: TEXT_DIM4, textTransform: "uppercase" });
       countEl.textContent = `${players.length} player${players.length !== 1 ? "s" : ""}`;
       header.appendChild(countEl);
       leftPane.appendChild(header);
       if (players.length === 0) {
         const empty = document.createElement("div");
-        css3(empty, { paddingTop: "16px", textAlign: "center", color: TEXT_DIM4, fontSize: "12px" });
+        css4(empty, { paddingTop: "16px", textAlign: "center", color: TEXT_DIM4, fontSize: "12px" });
         empty.textContent = "No players in room";
         leftPane.appendChild(empty);
         return;
@@ -52048,7 +51643,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     await refresh(true);
   }
-  var STYLE_ID6, TEAL3, TEAL_DIM3, TEAL_MID2, TEAL_BORDER3, TEAL_BORDER_HI, BORDER4, BORDER_HI2, CARD_BG3, CARD_BG_HI2, TEXT4, TEXT_DIM4, GREEN, PLAYER_POSITION_AVAILABLE, PLAYER_POSITION_UNAVAILABLE_HINT, css3, ICO, ICONS;
+  var STYLE_ID6, TEAL3, TEAL_DIM3, TEAL_MID2, TEAL_BORDER3, TEAL_BORDER_HI, BORDER4, BORDER_HI2, CARD_BG3, CARD_BG_HI2, TEXT4, TEXT_DIM4, GREEN, PLAYER_POSITION_AVAILABLE, PLAYER_POSITION_UNAVAILABLE_HINT, css4, ICO, ICONS;
   var init_menu12 = __esm({
     "src/features/room/menu.ts"() {
       "use strict";
@@ -52072,7 +51667,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       GREEN = "#10b981";
       PLAYER_POSITION_AVAILABLE = false;
       PLAYER_POSITION_UNAVAILABLE_HINT = "Temporarily unavailable: the game no longer exposes player positions.";
-      css3 = (el, s) => Object.assign(el.style, s);
+      css4 = (el, s) => Object.assign(el.style, s);
       ICO = (d) => `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
       ICONS = {
         teleport: ICO(`<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/>`),
@@ -53098,8 +52693,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     row.append(head, body);
     return row;
   }
-  function buildDetail(options) {
-    const { object, entries: entries2, results, onError, onChanged } = options;
+  function buildDetail(options2) {
+    const { object, entries: entries2, results, onError, onChanged } = options2;
     const host = document.createElement("div");
     css(host, { display: "flex", flexDirection: "column", gap: "10px", minHeight: "0" });
     if (!object) {
@@ -53260,8 +52855,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     const detailHost = document.createElement("div");
     css(detailHost, { display: "flex", flexDirection: "column", minHeight: "0", flex: "1 1 auto" });
     detail.appendChild(detailHost);
-    const showError = (message) => {
-      errorEl.textContent = message;
+    const showError = (message2) => {
+      errorEl.textContent = message2;
       errorEl.style.display = "block";
     };
     const renderCategories = (objects) => {
@@ -53788,8 +53383,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/reactions.ts
-  function pickOne(options, random) {
-    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
+  function pickOne(options2, random) {
+    return options2[Math.min(options2.length - 1, Math.floor(random() * options2.length))];
   }
   function crossedMilestone(prev, next) {
     if (!Number.isFinite(prev) || !Number.isFinite(next) || next <= prev) return null;
@@ -53933,8 +53528,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   function rareCropReaction(crops, random) {
     if (crops.length === 0) return null;
     const first = crops[0];
-    const message = crops.length === 1 ? pickOne([`A ${first.mutation} ${first.species}! Look at that!`, `Whoa, a ${first.mutation} ${first.species} just showed up!`, `${first.mutation}! Your ${first.species} is special.`], random) : pickOne([`${crops.length} rare crops just appeared! Look!`, `Whoa, ${crops.length} special crops at once!`], random);
-    return { key: "rarecrop", message, emote: EmoteType.Love, priority: "high" };
+    const message2 = crops.length === 1 ? pickOne([`A ${first.mutation} ${first.species}! Look at that!`, `Whoa, a ${first.mutation} ${first.species} just showed up!`, `${first.mutation}! Your ${first.species} is special.`], random) : pickOne([`${crops.length} rare crops just appeared! Look!`, `Whoa, ${crops.length} special crops at once!`], random);
+    return { key: "rarecrop", message: message2, emote: EmoteType.Love, priority: "high" };
   }
   function badLuckReactions(prev, next, eggName3, random) {
     const out = [];
@@ -54409,8 +54004,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return count;
   }
-  function pickOne2(options, random) {
-    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
+  function pickOne2(options2, random) {
+    return options2[Math.min(options2.length - 1, Math.floor(random() * options2.length))];
   }
   function harvestMessage(ready, random) {
     const crops = `${ready} ${plural2(ready, "crop", "crops")}`;
@@ -55627,9 +55222,9 @@ Restore figures are averages; unlucky streaks do worse.`;
          * annonce venant juste après le message qui l'a déclenchée se faisait jeter,
          * et le companion restait muet au moment précis où il avait à parler.
          */
-        async say(message, opts = {}) {
+        async say(message2, opts = {}) {
           const rt = runtime;
-          if (!rt || !message.trim()) return;
+          if (!rt || !message2.trim()) return;
           const now2 = Date.now();
           if (!opts.force && now2 - rt.lastBubbleAt < CHAT_BUBBLE_MIN_INTERVAL_MS) return;
           rt.lastBubbleAt = now2;
@@ -55638,7 +55233,7 @@ Restore figures are averages; unlucky streaks do worse.`;
             await npcChatBubbles.set({
               // Marqué comme écrit par le mod : sans ça, l'interception réécrirait
               // notre propre message avec une réplique tirée au hasard.
-              [rt.npcId]: { seq: 0, playerId: rt.npcId, message, timestamp: now2, ...tagged, [AUTHORED_BY_MOD]: true }
+              [rt.npcId]: { seq: 0, playerId: rt.npcId, message: message2, timestamp: now2, ...tagged, [AUTHORED_BY_MOD]: true }
             });
           } catch {
           }
@@ -55679,23 +55274,23 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/chat/bubbleTags.ts
   function compose(...fragments) {
     const tags = {};
-    let message = "";
+    let message2 = "";
     let next = 0;
     for (const fragment of fragments) {
       if (fragment === null || fragment === void 0) continue;
       if (typeof fragment === "string") {
-        message += fragment;
+        message2 += fragment;
         continue;
       }
       tags[next] = fragment;
-      message += `<${next}/>`;
+      message2 += `<${next}/>`;
       next += 1;
     }
-    const tidy = tidySpacing(message);
+    const tidy = tidySpacing(message2);
     return next === 0 ? { message: tidy } : { message: tidy, tags };
   }
-  function tidySpacing(message) {
-    return message.replace(/[ \t]{2,}/g, " ").replace(/\s+([.,!?])/g, "$1").trim();
+  function tidySpacing(message2) {
+    return message2.replace(/[ \t]{2,}/g, " ").replace(/\s+([.,!?])/g, "$1").trim();
   }
   function spaced(tags) {
     return tags.flatMap((tag, index) => index === 0 ? [tag] : [" ", tag]);
@@ -55712,10 +55307,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       else kept[Number(index)] = tag;
     }
     if (dropped.size === 0) return line;
-    const message = tidySpacing(
+    const message2 = tidySpacing(
       line.message.replace(/<(\d+)\/>/g, (marker, index) => dropped.has(Number(index)) ? "" : marker)
     );
-    return Object.keys(kept).length > 0 ? { message, tags: kept } : { message };
+    return Object.keys(kept).length > 0 ? { message: message2, tags: kept } : { message: message2 };
   }
   var init_bubbleTags = __esm({
     "src/features/companion/chat/bubbleTags.ts"() {
@@ -55795,16 +55390,16 @@ Restore figures are averages; unlucky streaks do worse.`;
   function emptyLog() {
     return { messages: [], nextSeq: 1 };
   }
-  function append(log2, message) {
+  function append(log2, message2) {
     const entry = {
       id: `m${log2.nextSeq}`,
-      atMs: message.atMs,
-      from: message.from,
-      kind: message.kind,
-      text: message.text,
-      ...message.proposalId ? { proposalId: message.proposalId } : {},
-      ...message.icons && message.icons.length > 0 ? { icons: message.icons } : {},
-      ...message.positioned ? { positioned: true } : {}
+      atMs: message2.atMs,
+      from: message2.from,
+      kind: message2.kind,
+      text: message2.text,
+      ...message2.proposalId ? { proposalId: message2.proposalId } : {},
+      ...message2.icons && message2.icons.length > 0 ? { icons: message2.icons } : {},
+      ...message2.positioned ? { positioned: true } : {}
     };
     const messages = [...log2.messages, entry];
     return {
@@ -55812,12 +55407,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       nextSeq: log2.nextSeq + 1
     };
   }
-  function appendAlertOnce(log2, message, withinMs) {
-    const cutoff = message.atMs - withinMs;
+  function appendAlertOnce(log2, message2, withinMs) {
+    const cutoff = message2.atMs - withinMs;
     const duplicate = log2.messages.some(
-      (entry) => entry.kind === "alert" && entry.text === message.text && entry.atMs >= cutoff
+      (entry) => entry.kind === "alert" && entry.text === message2.text && entry.atMs >= cutoff
     );
-    return duplicate ? log2 : append(log2, message);
+    return duplicate ? log2 : append(log2, message2);
   }
   function clearProposal(log2, proposalId) {
     let changed = false;
@@ -56255,7 +55850,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const opening = `On it. Picking ${rows.length} now.`;
     reporter2.say("reply", opening, compose(topCrop(rows), " ", opening));
     const team = await wearTeam(loadCompanionSettings().harvestTeamId, reporter2);
-    const walker = await createWalker((message) => reporter2.say("system", message));
+    const walker = await createWalker((message2) => reporter2.say("system", message2));
     const attempted = [];
     const pace = pacer();
     for (const row of rows) {
@@ -56512,7 +56107,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const who = petIcons(picks);
     const opening = picks.length === 1 ? "On it." : `On it. Feeding ${picks.length} of them.`;
     reporter2.say("reply", opening, compose(...spaced(who), " ", opening));
-    const walker = await createWalker((message) => reporter2.say("system", message));
+    const walker = await createWalker((message2) => reporter2.say("system", message2));
     const fed = [];
     const failures = [];
     for (const pick2 of picks) {
@@ -56610,7 +56205,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const what = countByItem(plan);
     const opening = what.length === 1 ? `On it. Planting ${plan.length} ${what[0].name} now.` : `On it. Planting ${listPlantItems(plan)} now.`;
     reporter2.say("reply", opening, compose(topSeed(plan), " ", opening));
-    const walker = await createWalker((message) => reporter2.say("system", message));
+    const walker = await createWalker((message2) => reporter2.say("system", message2));
     const attempted = [];
     const pace = pacer();
     for (const assignment of plan) {
@@ -56856,7 +56451,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     reporter2.say("reply", opening, compose(kinds.length === 1 ? eggIcon(kinds[0]) : null, " ", opening));
     const settings = loadCompanionSettings();
     const team = await wearTeam(settings.hatchTeamId, reporter2);
-    const walker = await createWalker((message) => reporter2.say("system", message));
+    const walker = await createWalker((message2) => reporter2.say("system", message2));
     const attempted = [];
     let count = await readInventoryCount();
     let stop2 = "done";
@@ -56928,7 +56523,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         )
       );
     }
-    const walker = await createWalker((message) => reporter2.say("system", message));
+    const walker = await createWalker((message2) => reporter2.say("system", message2));
     await goToSellShop(walker, reporter2);
     const team = await wearTeam(plan.teamId, reporter2);
     let nowOnTeam = /* @__PURE__ */ new Set();
@@ -57116,8 +56711,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function speak(line, force = false) {
     const spoken = forGame(line);
-    const message = !spoken.tags && spoken.message.length > MAX_LINE_LENGTH ? `${spoken.message.slice(0, MAX_LINE_LENGTH - 1).trimEnd()}\u2026` : spoken.message;
-    void CompanionService.say(message, { tags: spoken.tags, force }).catch(() => {
+    const message2 = !spoken.tags && spoken.message.length > MAX_LINE_LENGTH ? `${spoken.message.slice(0, MAX_LINE_LENGTH - 1).trimEnd()}\u2026` : spoken.message;
+    void CompanionService.say(message2, { tags: spoken.tags, force }).catch(() => {
     });
   }
   function dropStaleProposal() {
@@ -57965,8 +57560,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     label2.textContent = text2;
     return [...tagIcons(icons, sizePx), label2];
   }
-  function isCentered(message) {
-    return message.kind === "system";
+  function isCentered(message2) {
+    return message2.kind === "system";
   }
   function isSameGroup(previous, current) {
     if (isCentered(previous) || isCentered(current)) return false;
@@ -58055,10 +57650,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     css(el, { width: `${AVATAR_PX}px`, flexShrink: "0" });
     return el;
   }
-  function messageRow(message, flags, identity = null) {
-    if (isCentered(message)) return systemLine(message.text, message.icons, message.positioned);
-    const outgoing = message.from === "you";
-    const alerting = message.kind === "alert";
+  function messageRow(message2, flags, identity = null) {
+    if (isCentered(message2)) return systemLine(message2.text, message2.icons, message2.positioned);
+    const outgoing = message2.from === "you";
+    const alerting = message2.kind === "alert";
     const row = document.createElement("div");
     css(row, {
       display: "flex",
@@ -58088,12 +57683,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       border: `1px solid ${outgoing ? OUTGOING_BORDER : alerting ? ALERT_BORDER : BORDER}`,
       color: outgoing ? OUTGOING_TEXT : TEXT
     });
-    bubble.append(...contentOf(message.text, message.icons, message.positioned, BUBBLE_ICON_PX2));
+    bubble.append(...contentOf(message2.text, message2.icons, message2.positioned, BUBBLE_ICON_PX2));
     column.append(bubble);
     if (flags.isLastInGroup) {
       const stamp = document.createElement("div");
       css(stamp, { fontSize: "10px", color: TEXT_DIM });
-      stamp.textContent = formatMessageTime(message.atMs);
+      stamp.textContent = formatMessageTime(message2.atMs);
       column.append(stamp);
     }
     row.append(column);
@@ -58246,17 +57841,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     else next.add(value);
     return next.size === 0 ? null : [...next];
   }
-  function selectionRow(options) {
+  function selectionRow(options2) {
     const row = tileRow();
-    row.append(allTile(options.allLabel, options.selected === null, options.onClear));
-    for (const value of options.values) {
+    row.append(allTile(options2.allLabel, options2.selected === null, options2.onClear));
+    for (const value of options2.values) {
       row.append(
         spriteTile({
-          icon: options.iconFor(value),
+          icon: options2.iconFor(value),
           title: value,
-          count: options.counts.get(value) ?? 0,
-          selected: options.selected?.includes(value) ?? false,
-          onClick: () => options.onPick(value)
+          count: options2.counts.get(value) ?? 0,
+          selected: options2.selected?.includes(value) ?? false,
+          onClick: () => options2.onPick(value)
         })
       );
     }
@@ -58935,7 +58530,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/menu/plantGrid.ts
-  function plantGrid(options) {
+  function plantGrid(options2) {
     const root = document.createElement("div");
     css(root, {
       display: "grid",
@@ -58977,10 +58572,10 @@ Restore figures are averages; unlucky streaks do worse.`;
         event.preventDefault();
         painting = true;
         mode = event.button === 2 ? "erase" : "assign";
-        options.onPaint(tileIndex, mode);
+        options2.onPaint(tileIndex, mode);
       });
       cell.addEventListener("mouseenter", () => {
-        if (painting) options.onPaint(tileIndex, mode);
+        if (painting) options2.onPaint(tileIndex, mode);
       });
       return cell;
     }
@@ -59000,7 +58595,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     function stateKey(tileIndex, owned2, occupied) {
       if (!owned2.has(tileIndex)) return "absent";
       if (occupied.has(tileIndex)) return "occupied";
-      const assignment = options.assignmentAt(tileIndex);
+      const assignment = options2.assignmentAt(tileIndex);
       return assignment ? `set:${assignment.kind}:${assignment.id}` : "free";
     }
     function paintCell(cell, tileIndex, key2) {
@@ -59025,11 +58620,11 @@ Restore figures are averages; unlucky streaks do worse.`;
         cell.el.title = "";
         return;
       }
-      const assignment = options.assignmentAt(tileIndex);
+      const assignment = options2.assignmentAt(tileIndex);
       css(cell.el, { background: TEAL_DIM, borderColor: TEAL_BORDER, cursor: "pointer" });
       cell.el.title = assignment?.name ?? "";
       if (assignment) {
-        const icon = options.iconFor(assignment, CELL_ICON_PX2);
+        const icon = options2.iconFor(assignment, CELL_ICON_PX2);
         css(icon, { pointerEvents: "none" });
         cell.el.append(icon);
       }
@@ -59037,8 +58632,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return {
       root,
       update() {
-        const owned2 = options.owned();
-        const occupied = options.occupied();
+        const owned2 = options2.owned();
+        const occupied = options2.occupied();
         for (let tileIndex = 0; tileIndex < GARDEN_TILE_COUNT; tileIndex++) {
           const cell = cells.get(tileIndex);
           if (!cell) continue;
@@ -59295,7 +58890,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/features/companion/menu/hatchChips.ts"() {
       "use strict";
       init_iconCache();
-      init_abilityColorsTab();
+      init_abilityChipColors();
       init_panel();
       SPRITE_LOG_TAG5 = "companion-hatch";
       ICON_PX3 = 26;
@@ -59643,8 +59238,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       const now2 = Date.now();
       let lastDayLabel = "";
       for (let i = 0; i < messages.length; i++) {
-        const message = messages[i];
-        const dayLabel = formatDayLabel(message.atMs, now2);
+        const message2 = messages[i];
+        const dayLabel = formatDayLabel(message2.atMs, now2);
         const startsDay = dayLabel !== "" && dayLabel !== lastDayLabel;
         if (startsDay) {
           thread.append(dateSeparator(dayLabel));
@@ -59654,16 +59249,16 @@ Restore figures are averages; unlucky streaks do worse.`;
         const next = i < messages.length - 1 ? messages[i + 1] : null;
         thread.append(
           messageRow(
-            message,
+            message2,
             {
-              isFirstInGroup: !previous || startsDay || !isSameGroup(previous, message),
-              isLastInGroup: !next || !isSameGroup(message, next)
+              isFirstInGroup: !previous || startsDay || !isSameGroup(previous, message2),
+              isLastInGroup: !next || !isSameGroup(message2, next)
             },
             identity
           )
         );
-        if (message.proposalId && proposal && proposal.id === message.proposalId) {
-          thread.append(confirmRow(message.proposalId));
+        if (message2.proposalId && proposal && proposal.id === message2.proposalId) {
+          thread.append(confirmRow(message2.proposalId));
         }
       }
       thread.scrollTop = thread.scrollHeight;
@@ -59762,7 +59357,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const ui = new Menu({ id: "companion", compact: true, windowSelector: ".qws-win" });
     ui.mount(root);
     css(root, { minWidth: `${MIN_WIDTH_PX}px` });
-    const TABS = ["behavior", "chat"];
+    const TABS2 = ["behavior", "chat"];
     ui.addTab("behavior", "Behavior", (view) => renderBehaviorTab(view));
     ui.addTab("chat", "Chat", (view) => renderChatTab(view));
     const onTabRequest = (event) => {
@@ -59771,7 +59366,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         return;
       }
       const tab = String(event.detail?.tab ?? "");
-      if (TABS.includes(tab)) ui.switchTo(tab);
+      if (TABS2.includes(tab)) ui.switchTo(tab);
     };
     window.addEventListener(COMPANION_TAB_EVENT, onTabRequest);
   }
@@ -60332,8 +59927,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/wanderInterest.ts
-  function pickOne3(options, random) {
-    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
+  function pickOne3(options2, random) {
+    return options2[Math.min(options2.length - 1, Math.floor(random() * options2.length))];
   }
   function normalizeTs2(value) {
     const raw = typeof value === "number" ? value : Number(value);
@@ -60909,8 +60504,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/afk.ts
-  function pickOne4(options, random) {
-    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
+  function pickOne4(options2, random) {
+    return options2[Math.min(options2.length - 1, Math.floor(random() * options2.length))];
   }
   function initialAfkState(now2) {
     return { phase: "active", quietSince: now2, phaseSince: now2, asked: false, nextSnoreAt: null, lastSnore: null };
@@ -61201,9 +60796,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     shownId = null;
   }
   function questionOf(proposal) {
-    const message = CompanionChat.getLog().messages.find((entry) => entry.proposalId === proposal.id);
-    if (!message) return [document.createTextNode(proposal.summary)];
-    return message.positioned ? renderTagged(message.text, message.icons, ICON_PX4) : [document.createTextNode(message.text)];
+    const message2 = CompanionChat.getLog().messages.find((entry) => entry.proposalId === proposal.id);
+    if (!message2) return [document.createTextNode(proposal.summary)];
+    return message2.positioned ? renderTagged(message2.text, message2.icons, ICON_PX4) : [document.createTextNode(message2.text)];
   }
   function build(proposal) {
     ensureStyle3();
@@ -61792,7 +61387,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const logs2 = slotData?.activityLog ?? slotData?.activityLogs ?? slotData?.activitylog;
     return Array.isArray(logs2) ? logs2 : null;
   }
-  async function buildPlayerStatePayload(options = {}) {
+  async function buildPlayerStatePayload(options2 = {}) {
     try {
       const state5 = await Atoms.root.state.get();
       if (!state5 || typeof state5 !== "object") return null;
@@ -61819,9 +61414,9 @@ Restore figures are averages; unlucky streaks do worse.`;
         };
       });
       if (slots.length === 0) return null;
-      const myAccountId = options.playerId ?? await getMyAccountId(state5);
+      const myAccountId = options2.playerId ?? await getMyAccountId(state5);
       const slot = selectSlotForAccount(slots, {
-        slotIndex: options.slotIndex,
+        slotIndex: options2.slotIndex,
         accountId: myAccountId
       });
       if (!slot || typeof slot !== "object") {
@@ -61855,7 +61450,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         coins: coinsRaw,
         room: {
           id: roomId2,
-          isPrivate: options.roomIsPrivate ?? null,
+          isPrivate: options2.roomIsPrivate ?? null,
           playersCount,
           userSlots
         },
