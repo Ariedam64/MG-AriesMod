@@ -1,4 +1,3 @@
-// src/store/bridge.ts
 // Cross-mod jotai store sharing protocol.
 //
 // Problem: two userscripts (this mod + the standalone Community Hub) must NOT

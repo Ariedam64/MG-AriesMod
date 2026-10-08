@@ -4303,6 +4303,27 @@
     }
   });
 
+  // src/lib/async.ts
+  async function waitUntil(probe, { timeoutMs = 1e4, intervalMs = 100 } = {}) {
+    const deadline = timeoutMs > 0 ? Date.now() + timeoutMs : Infinity;
+    for (; ; ) {
+      try {
+        const value = await probe();
+        if (value) return value;
+      } catch {
+      }
+      if (Date.now() >= deadline) return null;
+      await sleep4(intervalMs);
+    }
+  }
+  var sleep4;
+  var init_async2 = __esm({
+    "src/lib/async.ts"() {
+      "use strict";
+      sleep4 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    }
+  });
+
   // src/game/store/bridge.ts
   function getBridge() {
     const bridge = pageWindow[STORE_BRIDGE_GLOBAL];
@@ -4340,15 +4361,6 @@
   });
 
   // src/game/store/jotai.ts
-  async function waitForAtomCache() {
-    const t0 = Date.now();
-    while (Date.now() - t0 < ATOM_CACHE_WAIT_MS) {
-      const cache2 = getAtomCache();
-      if (cache2) return cache2;
-      await new Promise((r) => setTimeout(r, 100));
-    }
-    return null;
-  }
   function findStoreViaFiber() {
     const hook = pageWindow.__REACT_DEVTOOLS_GLOBAL_HOOK__;
     if (!hook?.renderers?.size) return null;
@@ -4376,12 +4388,13 @@
     return null;
   }
   function makePolyfillStore() {
+    _lastCapturedVia = "polyfill";
     return {
       get: () => {
-        throw new Error("Store non captur\xE9: get indisponible");
+        throw new Error("Store not captured: get unavailable");
       },
       set: () => {
-        throw new Error("Store non captur\xE9: set indisponible");
+        throw new Error("Store not captured: set unavailable");
       },
       sub: () => () => {
       },
@@ -4392,11 +4405,10 @@
     let cache2 = getAtomCache() ?? null;
     if (!cache2) {
       console.log("[jotai-bridge] Waiting for jotaiAtomCache...");
-      cache2 = await waitForAtomCache();
+      cache2 = await waitUntil(getAtomCache, { timeoutMs: ATOM_CACHE_WAIT_MS, intervalMs: 100 });
     }
     if (!cache2) {
-      console.warn("[jotai-bridge] jotaiAtomCache.cache introuvable");
-      _lastCapturedVia = "polyfill";
+      console.warn("[jotai-bridge] jotaiAtomCache.cache not found");
       return makePolyfillStore();
     }
     let capturedGet = null;
@@ -4427,30 +4439,18 @@
       };
       patched.push(atom);
     }
-    const wait2 = (ms) => new Promise((r) => setTimeout(r, ms));
-    const t0 = Date.now();
     try {
       pageWindow.dispatchEvent?.(new pageWindow.Event("visibilitychange"));
     } catch {
     }
+    const t0 = Date.now();
     while (!capturedSet && Date.now() - t0 < WRITE_ONCE_MS) {
-      await wait2(50);
+      await sleep4(50);
     }
     if (!capturedSet) {
       restorePatched();
-      _lastCapturedVia = "polyfill";
-      console.warn("[jotai-bridge] write-once: timeout \u2192 polyfill");
-      return {
-        get: () => {
-          throw new Error("Store non captur\xE9: get indisponible");
-        },
-        set: () => {
-          throw new Error("Store non captur\xE9: set indisponible");
-        },
-        sub: () => () => {
-        },
-        __polyfill: true
-      };
+      console.warn("[jotai-bridge] write-once: timeout, using a polyfill");
+      return makePolyfillStore();
     }
     _lastCapturedVia = "write";
     return {
@@ -4482,18 +4482,12 @@
     };
   }
   async function rawCapture() {
-    const viaFiber = findStoreViaFiber();
-    if (viaFiber) return viaFiber;
-    return captureViaWriteOnce();
+    return findStoreViaFiber() ?? captureViaWriteOnce();
   }
   async function ensureStore() {
     if (_store && !_store.__polyfill) return _store;
     if (_captureInProgress) {
-      const t0 = Date.now();
-      const maxWait = ATOM_CACHE_WAIT_MS + WRITE_ONCE_MS + 1e3;
-      while (!_store && Date.now() - t0 < maxWait) {
-        await new Promise((r) => setTimeout(r, 25));
-      }
+      await waitUntil(() => _store, { timeoutMs: ATOM_CACHE_WAIT_MS + WRITE_ONCE_MS + 1e3, intervalMs: 25 });
       if (_store && !_store.__polyfill) return _store;
     }
     _captureInProgress = true;
@@ -4539,11 +4533,38 @@
     const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     return findAtomsByLabel(new RegExp("^" + escape(label2) + "$"))[0] || null;
   }
-  var _store, _captureInProgress, _captureError, _lastCapturedVia, ATOM_CACHE_WAIT_MS, WRITE_ONCE_MS, getAtomCache, STORE_OWNER;
+  function pollPendingWaiters() {
+    const now2 = Date.now();
+    for (const waiter of Array.from(pendingWaiters)) {
+      const atom = getAtomByLabel(waiter.label);
+      const givenUp = now2 >= waiter.expiresAt || waiter.keepGoing && !waiter.keepGoing();
+      if (atom || givenUp) {
+        pendingWaiters.delete(waiter);
+        waiter.resolve(atom ?? null);
+      }
+    }
+    if (!pendingWaiters.size && pollTimer !== null) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+  function waitForAtom(label2, opts = {}) {
+    return new Promise((resolve) => {
+      pendingWaiters.add({
+        label: label2,
+        expiresAt: Date.now() + (opts.timeoutMs ?? DEFAULT_ATOM_WAIT_MS),
+        keepGoing: opts.keepGoing,
+        resolve
+      });
+      if (pollTimer === null) pollTimer = setInterval(pollPendingWaiters, ATOM_POLL_MS);
+    });
+  }
+  var _store, _captureInProgress, _captureError, _lastCapturedVia, ATOM_CACHE_WAIT_MS, WRITE_ONCE_MS, getAtomCache, STORE_OWNER, ATOM_POLL_MS, DEFAULT_ATOM_WAIT_MS, pendingWaiters, pollTimer;
   var init_jotai = __esm({
     "src/game/store/jotai.ts"() {
       "use strict";
       init_pageContext();
+      init_async2();
       init_bridge();
       _store = null;
       _captureInProgress = false;
@@ -4553,54 +4574,22 @@
       WRITE_ONCE_MS = 5e3;
       getAtomCache = () => pageWindow.jotaiAtomCache?.cache;
       STORE_OWNER = "aries-mod";
+      ATOM_POLL_MS = 250;
+      DEFAULT_ATOM_WAIT_MS = 10 * 6e4;
+      pendingWaiters = /* @__PURE__ */ new Set();
+      pollTimer = null;
     }
   });
 
   // src/game/store/api.ts
-  function stopPoller() {
-    if (pollTimer === null) return;
-    clearInterval(pollTimer);
-    pollTimer = null;
-  }
-  function pollPendingWaiters() {
-    const now2 = Date.now();
-    for (const waiter of Array.from(pendingWaiters)) {
-      const atom = getAtomByLabel(waiter.label);
-      if (atom) {
-        pendingWaiters.delete(waiter);
-        waiter.resolve(atom);
-        continue;
-      }
-      if (now2 >= waiter.expiresAt) {
-        pendingWaiters.delete(waiter);
-        waiter.resolve(null);
-      }
-    }
-    if (!pendingWaiters.size) stopPoller();
-  }
-  function ensurePoller() {
-    if (pollTimer !== null) return;
-    pollTimer = setInterval(pollPendingWaiters, ATOM_POLL_MS);
-  }
-  function waitForAtom(label2) {
-    return new Promise((resolve) => {
-      const waiter = {
-        label: label2,
-        expiresAt: Date.now() + ATOM_WAIT_TIMEOUT_MS,
-        resolve
-      };
-      pendingWaiters.add(waiter);
-      ensurePoller();
-    });
-  }
-  async function ensureStore2() {
+  async function ensureStoreQuietly() {
     try {
       await ensureStore();
     } catch {
     }
   }
   async function select(label2, fallback) {
-    await ensureStore2();
+    await ensureStoreQuietly();
     const atom = getAtomByLabel(label2);
     if (!atom) return fallback;
     try {
@@ -4610,14 +4599,14 @@
     }
   }
   async function hasAtom(label2) {
-    await ensureStore2();
+    await ensureStoreQuietly();
     return !!getAtomByLabel(label2);
   }
-  async function subscribe(label2, cb) {
-    await ensureStore2();
+  async function attach(label2, cb, immediate) {
+    await ensureStoreQuietly();
     let cancelled = false;
     let attachedUnsub = null;
-    const attach = async (atom2) => {
+    const attachTo = async (atom2) => {
       const unsub = await jSub(atom2, async () => {
         try {
           cb(await jGet(atom2));
@@ -4632,49 +4621,7 @@
         return;
       }
       attachedUnsub = unsub;
-    };
-    const atom = getAtomByLabel(label2);
-    if (atom) {
-      await attach(atom);
-    } else {
-      void (async () => {
-        const found = await waitForAtom(label2);
-        if (!found || cancelled) return;
-        try {
-          await attach(found);
-        } catch {
-        }
-      })();
-    }
-    return () => {
-      cancelled = true;
-      const unsub = attachedUnsub;
-      attachedUnsub = null;
-      try {
-        unsub?.();
-      } catch {
-      }
-    };
-  }
-  async function subscribeImmediate(label2, cb) {
-    await ensureStore2();
-    let cancelled = false;
-    let attachedUnsub = null;
-    const attach = async (atom2) => {
-      const unsub = await jSub(atom2, async () => {
-        try {
-          cb(await jGet(atom2));
-        } catch {
-        }
-      });
-      if (cancelled) {
-        try {
-          unsub();
-        } catch {
-        }
-        return;
-      }
-      attachedUnsub = unsub;
+      if (!immediate) return;
       try {
         const current = await jGet(atom2);
         if (!cancelled && current !== void 0) cb(current);
@@ -4683,13 +4630,13 @@
     };
     const atom = getAtomByLabel(label2);
     if (atom) {
-      await attach(atom);
+      await attachTo(atom);
     } else {
       void (async () => {
         const found = await waitForAtom(label2);
         if (!found || cancelled) return;
         try {
-          await attach(found);
+          await attachTo(found);
         } catch {
         }
       })();
@@ -4705,21 +4652,25 @@
     };
   }
   async function set(label2, value) {
-    await ensureStore2();
+    await ensureStoreQuietly();
     const atom = getAtomByLabel(label2);
     if (!atom) return;
     await jSet(atom, value);
   }
-  var ATOM_POLL_MS, ATOM_WAIT_TIMEOUT_MS, pendingWaiters, pollTimer, Store;
+  var Store;
   var init_api = __esm({
     "src/game/store/api.ts"() {
       "use strict";
       init_jotai();
-      ATOM_POLL_MS = 250;
-      ATOM_WAIT_TIMEOUT_MS = 10 * 6e4;
-      pendingWaiters = /* @__PURE__ */ new Set();
-      pollTimer = null;
-      Store = { ensure: ensureStore2, select, subscribe, subscribeImmediate, set, hasAtom };
+      Store = {
+        select,
+        /** Calls `cb` on every change, once the atom exists. */
+        subscribe: (label2, cb) => attach(label2, cb, false),
+        /** Same, plus one call with the current value as soon as the atom exists. */
+        subscribeImmediate: (label2, cb) => attach(label2, cb, true),
+        set,
+        hasAtom
+      };
     }
   });
 
@@ -4729,11 +4680,10 @@
     return Array.isArray(path) ? path.slice() : path.split(".").map((k) => k.match(/^\d+$/) ? Number(k) : k);
   }
   function getAtPath(root, path) {
-    const segs = toPathArray(path);
     let cur = root;
-    for (const s of segs) {
+    for (const seg of toPathArray(path)) {
       if (cur == null) return void 0;
-      cur = cur[s];
+      cur = cur[seg];
     }
     return cur;
   }
@@ -4743,150 +4693,40 @@
     const clone2 = Array.isArray(root) ? root.slice() : { ...root ?? {} };
     let cur = clone2;
     for (let i = 0; i < segs.length - 1; i++) {
-      const key2 = segs[i];
-      const src = cur[key2];
+      const src = cur[segs[i]];
       const obj = typeof src === "object" && src !== null ? Array.isArray(src) ? src.slice() : { ...src } : {};
-      cur[key2] = obj;
+      cur[segs[i]] = obj;
       cur = obj;
     }
     cur[segs[segs.length - 1]] = nextValue;
     return clone2;
   }
   function makeView(sourceLabel, opts = {}) {
-    const { path, write = "replace" } = opts;
-    async function get2() {
-      const src = await Store.select(sourceLabel);
-      return path ? getAtPath(src, path) : src;
-    }
-    async function set2(next) {
-      if (typeof write === "function") {
-        const prev2 = await Store.select(sourceLabel);
-        const raw2 = write(next, prev2);
-        return Store.set(sourceLabel, raw2);
-      }
-      const prev = await Store.select(sourceLabel);
-      const raw = path ? setAtPath(prev, path, next) : next;
-      if (write === "merge-shallow" && !path && prev && typeof prev === "object" && typeof next === "object") {
-        return Store.set(sourceLabel, { ...prev, ...next });
-      }
-      return Store.set(sourceLabel, raw);
-    }
-    async function update(fn) {
-      const prev = await get2();
-      const next = fn(prev);
-      await set2(next);
-      return next;
-    }
-    async function onChange(cb, isEqual = Object.is) {
+    const { path } = opts;
+    const pick2 = (src) => path ? getAtPath(src, path) : src;
+    const listen = (subscribe5) => async (cb, isEqual = Object.is) => {
       let prev;
-      return Store.subscribe(sourceLabel, (src) => {
-        const v = path ? getAtPath(src, path) : src;
+      return subscribe5(sourceLabel, (src) => {
+        const v = pick2(src);
         if (typeof prev === "undefined" || !isEqual(prev, v)) {
           const p = prev;
           prev = v;
           cb(v, p);
         }
       });
-    }
-    async function onChangeNow(cb, isEqual = Object.is) {
-      let prev;
-      return Store.subscribeImmediate(sourceLabel, (src) => {
-        const v = path ? getAtPath(src, path) : src;
-        if (typeof prev === "undefined" || !isEqual(prev, v)) {
-          const p = prev;
-          prev = v;
-          cb(v, p);
-        }
-      });
-    }
-    function asSignature(opts2) {
-      return makeSignatureChannel(sourceLabel, path, opts2);
-    }
-    return { label: sourceLabel + (path ? ":" + toPathArray(path).join(".") : ""), get: get2, set: set2, update, onChange, onChangeNow, asSignature };
-  }
-  function stablePick(obj, fields) {
-    const out = {};
-    for (const f of fields) {
-      const v = getAtPath(obj, f.includes(".") ? f : [f]);
-      out[f] = v;
-    }
-    try {
-      return JSON.stringify(out);
-    } catch {
-      return String(out);
-    }
-  }
-  function makeSignatureChannel(sourceLabel, path, opts) {
-    const mode = opts.mode ?? "auto";
-    function computeSig(whole) {
-      const base = whole;
-      const value = path ? getAtPath(base, path) : base;
-      const sig = /* @__PURE__ */ new Map();
-      if (value == null) return { sig, keys: [] };
-      if ((mode === "array" || mode === "auto" && Array.isArray(value)) && Array.isArray(value)) {
-        for (let i = 0; i < value.length; i++) {
-          const item = value[i];
-          const key2 = opts.key ? opts.key(item, i, whole) : i;
-          const s = opts.sig ? opts.sig(item, i, whole) : opts.fields ? stablePick(item, opts.fields) : (() => {
-            try {
-              return JSON.stringify(item);
-            } catch {
-              return String(item);
-            }
-          })();
-          sig.set(key2, s);
-        }
-      } else {
-        for (const [k, item] of Object.entries(value)) {
-          const key2 = opts.key ? opts.key(item, k, whole) : k;
-          const s = opts.sig ? opts.sig(item, k, whole) : opts.fields ? stablePick(item, opts.fields) : (() => {
-            try {
-              return JSON.stringify(item);
-            } catch {
-              return String(item);
-            }
-          })();
-          sig.set(key2, s);
-        }
-      }
-      return { sig, keys: Array.from(sig.keys()) };
-    }
-    function mapEqual(a, b) {
-      if (a === b) return true;
-      if (!a || !b || a.size !== b.size) return false;
-      for (const [k, v] of a) if (b.get(k) !== v) return false;
-      return true;
-    }
-    async function sub(cb) {
-      let prevSig = null;
-      return Store.subscribeImmediate(sourceLabel, (src) => {
-        const whole = path ? getAtPath(src, path) : src;
-        const { sig } = computeSig(whole);
-        if (!mapEqual(prevSig, sig)) {
-          const allKeys = /* @__PURE__ */ new Set([
-            ...prevSig ? Array.from(prevSig.keys()) : [],
-            ...Array.from(sig.keys())
-          ]);
-          const changed = [];
-          for (const k of allKeys) if ((prevSig?.get(k) ?? "__NONE__") !== (sig.get(k) ?? "__NONE__")) changed.push(k);
-          prevSig = sig;
-          cb({ value: whole, changedKeys: changed });
-        }
-      });
-    }
-    async function subKey(key2, cb) {
-      return sub(({ value, changedKeys }) => {
-        if (changedKeys.includes(key2)) cb({ value });
-      });
-    }
-    async function subKeys(keys, cb) {
-      const wanted = new Set(keys);
-      return sub(({ value, changedKeys }) => {
-        const hit = changedKeys.filter((k) => wanted.has(k));
-        if (hit.length) cb({ value, changedKeys: hit });
-      });
-    }
-    return { sub, subKey, subKeys };
+    };
+    return {
+      label: sourceLabel + (path ? ":" + toPathArray(path).join(".") : ""),
+      async get() {
+        return pick2(await Store.select(sourceLabel));
+      },
+      async set(next) {
+        const prev = await Store.select(sourceLabel);
+        return Store.set(sourceLabel, path ? setAtPath(prev, path, next) : next);
+      },
+      onChange: listen(Store.subscribe),
+      onChangeNow: listen(Store.subscribeImmediate)
+    };
   }
   function makeAtom(label2) {
     return makeView(label2);
@@ -4907,10 +4747,8 @@
       label: labels[0],
       get: async () => (await pick2()).get(),
       set: async (next) => (await pick2()).set(next),
-      update: async (fn) => (await pick2()).update(fn),
       onChange: async (cb, isEqual) => (await pick2()).onChange(cb, isEqual),
-      onChangeNow: async (cb, isEqual) => (await pick2()).onChangeNow(cb, isEqual),
-      asSignature: (opts) => makeView(resolved?.label ?? labels[0]).asSignature(opts)
+      onChangeNow: async (cb, isEqual) => (await pick2()).onChangeNow(cb, isEqual)
     };
   }
   async function readAndFollow(view, cb) {
@@ -4923,30 +4761,10 @@
     } catch {
     }
   }
-  var eq, HubEq;
   var init_hub = __esm({
     "src/game/store/hub.ts"() {
       "use strict";
       init_api();
-      eq = {
-        shallow(a, b) {
-          if (Object.is(a, b)) return true;
-          if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
-          const ka = Object.keys(a);
-          const kb = Object.keys(b);
-          if (ka.length !== kb.length) return false;
-          for (const k of ka) if (!Object.is(a[k], b[k])) return false;
-          return true;
-        },
-        idSet(a, b) {
-          if (a === b) return true;
-          if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
-          const sa = new Set(a);
-          for (const id of b) if (!sa.has(id)) return false;
-          return true;
-        }
-      };
-      HubEq = eq;
     }
   });
 
@@ -4977,23 +4795,13 @@
     const s = p?.slot ?? {};
     const muts = Array.isArray(s.mutations) ? s.mutations.slice().sort().join(",") : "";
     const ab = Array.isArray(s.abilities) ? s.abilities.slice().sort().join(",") : "";
-    const name = s.name ?? "";
-    const species = s.petSpecies ?? "";
     const scale = Number.isFinite(s.targetScale) ? Math.round(s.targetScale * 1e3) : 0;
-    return `${species}|${name}|sc:${scale}|m:${muts}|a:${ab}`;
-  }
-  function onFavoriteIds(cb) {
-    return favoriteIds.onChange((next) => cb(Array.isArray(next) ? next : []), HubEq.idSet);
-  }
-  async function onFavoriteIdsNow(cb) {
-    cb(Array.isArray(await favoriteIds.get()) ? await favoriteIds.get() : []);
-    return onFavoriteIds(cb);
+    return `${s.petSpecies ?? ""}|${s.name ?? ""}|sc:${scale}|m:${muts}|a:${ab}`;
   }
   function activePetsStructuralEq(a, b) {
     const snap = (st) => {
       const m = /* @__PURE__ */ new Map();
-      const arr = Array.isArray(st) ? st : [];
-      for (const it of arr) {
+      for (const it of Array.isArray(st) ? st : []) {
         const id = String(it?.slot?.id ?? "");
         if (id) m.set(id, activePetStableSig(it));
       }
@@ -5009,11 +4817,7 @@
     cb(await myPetInfos.get());
     return myPetInfos.onChange(cb, activePetsStructuralEq);
   }
-  async function getFavoriteIdSet() {
-    const arr = await favoriteIds.get();
-    return new Set(Array.isArray(arr) ? arr : []);
-  }
-  var position, state, map, player, action, myData, myInventory, gardensWithBackfills, myCropInventory, mySeedInventory, myToolInventory, myEggInventory, myDecorInventory, mySeedSiloItems, myDecorShedItems, myToolShackItems, myFeedingTroughItems, myPetInfos, myPetSlotInfos, myPrimitivePetSlots, myPetIdOnSameTile, totalPetSellPrice, myCropItemsToSell, myPetHutchPetItems, isMyInventoryAtMaxLength, myNumPetHutchItems, myPetHutchCapacitySlots, shops, myShopPurchases, myUserSlot, numPlayers, totalCropSellPrice, myValidatedSelectedItemIndex, setSelectedIndexToEnd, mySelectedItemName, mySelectedItemId, myPossiblyNoLongerValidSelectedItemIndex, myCurrentGardenObject, myCurrentSortedGrowSlotIndices, myCurrentGrowSlotIndex, myOwnCurrentGardenObject, isCurrentGrowSlotMature, myOwnCurrentDirtTileIndex, mySelectedItemRotation, weather, activeModalRaw, sameModal, activeModal, inventoryModalIsActive, activityLogTab, avatarTriggerAnimationAtom, friendBonusMultiplier, garden, gardenTileObjects, favoriteIds, playerId, myOwnCurrentGardenObjectType, stateUserSlots, myActivityLog, seedShop, toolShop, eggShop, decorShop, Atoms;
+  var position, state, map, player, action, myData, myInventory, myCropInventory, mySeedInventory, myToolInventory, myEggInventory, myDecorInventory, mySeedSiloItems, myDecorShedItems, myToolShackItems, myPetInfos, myPrimitivePetSlots, totalPetSellPrice, myCropItemsToSell, myPetHutchPetItems, isMyInventoryAtMaxLength, myNumPetHutchItems, myPetHutchCapacitySlots, myUserSlot, numPlayers, totalCropSellPrice, friendBonusMultiplier, myValidatedSelectedItemIndex, setSelectedIndexToEnd, mySelectedItemName, mySelectedItemId, myPossiblyNoLongerValidSelectedItemIndex, mySelectedItemRotation, myCurrentGardenObject, myCurrentSortedGrowSlotIndices, myCurrentGrowSlotIndex, weather, activeModalRaw, sameModal, activeModal, inventoryModalIsActive, activityLogTab, avatarTriggerAnimationAtom, garden, gardenTileObjects, favoriteIds, playerId, stateUserSlots, myActivityLog, shops, eggShop, Atoms;
   var init_atoms = __esm({
     "src/game/store/atoms.ts"() {
       "use strict";
@@ -5026,7 +4830,6 @@
       action = makeAtom("actionAtom");
       myData = makeAtom("myDataAtom");
       myInventory = makeAtom("myInventoryAtom");
-      gardensWithBackfills = makeAtom("gardensWithBackfillsAtom");
       myCropInventory = makeAtom("myCropInventoryAtom");
       mySeedInventory = makeAtom("mySeedInventoryAtom");
       myToolInventory = makeAtom("myToolInventoryAtom");
@@ -5035,30 +4838,27 @@
       mySeedSiloItems = makeAtom("mySeedSiloItemsAtom");
       myDecorShedItems = makeAtom("myDecorShedItemsAtom");
       myToolShackItems = makeAtom("myToolShackItemsAtom");
-      myFeedingTroughItems = makeAtom("myFeedingTroughItemsAtom");
       myPetInfos = makeAtom("myPetInfosAtom");
-      myPetSlotInfos = makeAtom("myPetSlotInfosAtom");
       myPrimitivePetSlots = makeAliasedAtom([
         "myPredictedPetSlotsAtom",
         "myPrimitivePetSlotsAtom"
       ]);
-      myPetIdOnSameTile = makeAtom("myPetIdOnSameTileAtom");
       totalPetSellPrice = makeAtom("totalPetSellPriceAtom");
       myCropItemsToSell = makeAtom("myCropItemsToSellAtom");
       myPetHutchPetItems = makeAtom("myPetHutchPetItemsAtom");
       isMyInventoryAtMaxLength = makeAtom("isMyInventoryAtMaxLengthAtom");
       myNumPetHutchItems = makeAtom("myNumPetHutchItemsAtom");
       myPetHutchCapacitySlots = makeAtom("myPetHutchCapacitySlotsAtom");
-      shops = makeView("stateAtom", { path: "child.data.shops" });
-      myShopPurchases = makeView("myDataAtom", { path: "shopPurchases" });
       myUserSlot = makeAtom("myUserSlotAtom");
       numPlayers = makeAtom("numPlayersAtom");
       totalCropSellPrice = makeAtom("totalCropSellPriceAtom");
+      friendBonusMultiplier = makeAtom("friendBonusMultiplierAtom");
       myValidatedSelectedItemIndex = makeAtom("myValidatedSelectedItemIndexAtom");
       setSelectedIndexToEnd = makeAtom("setSelectedIndexToEndAtom");
       mySelectedItemName = makeAtom("mySelectedItemNameAtom");
       mySelectedItemId = makeAtom("mySelectedItemIdAtom");
       myPossiblyNoLongerValidSelectedItemIndex = makeAtom("myPossiblyNoLongerValidSelectedItemIndexAtom");
+      mySelectedItemRotation = makeAtom("mySelectedItemRotationAtom");
       myCurrentGardenObject = makeAtom("myCurrentGardenObjectAtom");
       myCurrentSortedGrowSlotIndices = makeAliasedAtom([
         "myCurrentSortedGrowSlotIdsAtom",
@@ -5069,15 +4869,8 @@
         "myCurrentGrowSlotIdAtom",
         "mySelectedSlotIdAtom"
       ]);
-      myOwnCurrentGardenObject = makeAtom("myOwnCurrentGardenObjectAtom");
-      isCurrentGrowSlotMature = makeAtom("isCurrentGrowSlotMatureAtom");
-      myOwnCurrentDirtTileIndex = makeAtom("myOwnCurrentDirtTileIndexAtom");
-      mySelectedItemRotation = makeAtom("mySelectedItemRotationAtom");
       weather = makeAtom("weatherAtom");
-      activeModalRaw = makeAliasedAtom([
-        "activeModalStateAtom",
-        "activeModalAtom"
-      ]);
+      activeModalRaw = makeAliasedAtom(["activeModalStateAtom", "activeModalAtom"]);
       sameModal = (a, b) => modalNameOf(a) === modalNameOf(b);
       activeModal = {
         label: activeModalRaw.label,
@@ -5087,58 +4880,26 @@
           const value = nextModalState(raw, next);
           if (value !== void 0) await activeModalRaw.set(value);
         },
-        update: async (fn) => {
-          const next = fn(modalNameOf(await activeModalRaw.get()));
-          await activeModal.set(next);
-          return next;
-        },
         onChange: (cb) => activeModalRaw.onChange((next, prev) => cb(modalNameOf(next), modalNameOf(prev)), sameModal),
-        onChangeNow: (cb) => activeModalRaw.onChangeNow((next, prev) => cb(modalNameOf(next), modalNameOf(prev)), sameModal),
-        asSignature: (opts) => activeModalRaw.asSignature(opts)
+        onChangeNow: (cb) => activeModalRaw.onChangeNow((next, prev) => cb(modalNameOf(next), modalNameOf(prev)), sameModal)
       };
       inventoryModalIsActive = makeAtom("inventoryModalIsActiveAtom");
       activityLogTab = makeAtom("activityLogTabAtom");
       avatarTriggerAnimationAtom = makeAtom("avatarTriggerAnimationAtom");
-      friendBonusMultiplier = makeAtom("friendBonusMultiplierAtom");
       garden = makeView("myDataAtom", { path: "garden" });
       gardenTileObjects = makeView("myDataAtom", { path: "garden.tileObjects" });
       favoriteIds = makeView("myInventoryAtom", { path: "favoritedItemIds" });
       playerId = makeView("playerAtom", { path: "id" });
-      myOwnCurrentGardenObjectType = makeView("myOwnCurrentGardenObjectAtom", { path: "objectType" });
       stateUserSlots = makeView("stateAtom", { path: "child.data.userSlots" });
       myActivityLog = makeView("myDataAtom", { path: "activityLogs" });
-      seedShop = makeView("stateAtom", { path: "child.data.shops.seed" });
-      toolShop = makeView("stateAtom", { path: "child.data.shops.tool" });
+      shops = makeView("stateAtom", { path: "child.data.shops" });
       eggShop = makeView("stateAtom", { path: "child.data.shops.egg" });
-      decorShop = makeView("stateAtom", { path: "child.data.shops.decor" });
       Atoms = {
         ui: { activeModal, inventoryModalIsActive, activityLogTab },
         server: { numPlayers, friendBonusMultiplier },
-        player: {
-          position,
-          avatarTriggerAnimationAtom,
-          player,
-          action,
-          playerId
-        },
-        garden: {
-          myOwnCurrentGardenObject,
-          isCurrentGrowSlotMature,
-          myOwnCurrentGardenObjectType,
-          myOwnCurrentDirtTileIndex,
-          myCurrentGrowSlotIndex
-        },
+        player: { position, avatarTriggerAnimationAtom, player, action, playerId },
         root: { state, map },
-        data: {
-          myData,
-          garden,
-          gardensWithBackfills,
-          gardenTileObjects,
-          myCurrentGardenObject,
-          myCurrentSortedGrowSlotIndices,
-          myCurrentGrowSlotIndex,
-          weather
-        },
+        data: { myData, garden, gardenTileObjects, myCurrentGardenObject, weather },
         inventory: {
           myInventory,
           myCropInventory,
@@ -5148,8 +4909,6 @@
           myDecorInventory,
           mySeedSiloItems,
           myDecorShedItems,
-          myToolShackItems,
-          myFeedingTroughItems,
           favoriteIds,
           mySelectedItemId,
           mySelectedItemName,
@@ -5159,4265 +4918,352 @@
           setSelectedIndexToEnd,
           myCropItemsToSell
         },
-        pets: {
-          myPetInfos,
-          myPetSlotInfos,
-          myPrimitivePetSlots,
-          myPetIdOnSameTile,
-          totalPetSellPrice
-        },
-        shop: {
-          shops,
-          myShopPurchases,
-          myUserSlot,
-          totalCropSellPrice,
-          seedShop,
-          toolShop,
-          eggShop,
-          decorShop
-        }
+        pets: { myPetInfos, myPrimitivePetSlots, totalPetSellPrice },
+        shop: { shops, myUserSlot, totalCropSellPrice, eggShop }
       };
     }
   });
 
-  // src/game/fakeAtoms.ts
-  function _atomsByExactLabel(label2) {
-    try {
-      return findAtomsByLabel(new RegExp("^" + label2 + "$"));
-    } catch {
-      return [];
+  // src/game/ws/moveItemMessage.ts
+  function buildMoveItemCommand(params) {
+    const { from, to, itemId } = params;
+    if (!nonEmpty(from) || !nonEmpty(to) || !nonEmpty(itemId)) return null;
+    if (from !== to && from !== INVENTORY && to !== INVENTORY) return null;
+    const command = { type: "MoveItem", from, to, itemId };
+    const quantity = Math.floor(Number(params.quantity));
+    if (params.quantity !== void 0 && Number.isFinite(quantity) && quantity >= 1) {
+      command.quantity = quantity;
     }
-  }
-  function _findReadKey(atom) {
-    if (atom && typeof atom.read === "function") return "read";
-    for (const k of Object.keys(atom || {})) {
-      const v = atom[k];
-      if (typeof v === "function" && k !== "write" && k !== "onMount" && k !== "toString") {
-        const ar = v.length;
-        if (ar === 1 || ar === 2) return k;
-      }
+    if (nonEmpty(params.beforeItemId) && params.beforeItemId !== itemId) {
+      command.beforeItemId = params.beforeItemId;
     }
-    throw new Error("Impossible de localiser la fonction read() de l'atom");
-  }
-  function _getState(label2) {
-    return _fakeRegistry.get(label2) || null;
-  }
-  async function _forceRepaintViaGate(gate2) {
-    if (!gate2?.closeAction || !gate2?.openAction) return;
-    await gate2.closeAction();
-    await new Promise((r) => setTimeout(r, 0));
-    await gate2.openAction();
-  }
-  async function _ensureFakeInstalled(config) {
-    const key2 = config.label;
-    const existing = _fakeRegistry.get(key2);
-    if (existing?.installed) return existing;
-    const atoms = _atomsByExactLabel(config.label);
-    if (!atoms.length) {
-      throw new Error(`${config.label} introuvable`);
+    if (nonEmpty(params.evictionItemId) && params.evictionItemId !== itemId) {
+      command.evictionItemId = params.evictionItemId;
     }
-    const state6 = existing ?? {
-      config,
-      enabled: false,
-      payload: null,
-      patched: /* @__PURE__ */ new Map(),
-      installed: false
+    return command;
+  }
+  var INVENTORY, nonEmpty;
+  var init_moveItemMessage = __esm({
+    "src/game/ws/moveItemMessage.ts"() {
+      "use strict";
+      INVENTORY = "inventory";
+      nonEmpty = (value) => typeof value === "string" && value.length > 0;
+    }
+  });
+
+  // src/game/player.ts
+  function petSig(p) {
+    const s = p?.slot ?? {};
+    const muts = Array.isArray(s.mutations) ? s.mutations.slice().sort().join(",") : "";
+    const ab = Array.isArray(s.abilities) ? s.abilities.slice().sort().join(",") : "";
+    const name = s.name ?? "";
+    const species = s.petSpecies ?? "";
+    const xp = Number.isFinite(s.xp) ? Math.round(s.xp) : 0;
+    const hunger = Number.isFinite(s.hunger) ? Math.round(s.hunger * 1e3) : 0;
+    const scale = Number.isFinite(s.targetScale) ? Math.round(s.targetScale * 1e3) : 0;
+    const x = Number.isFinite(p?.position?.x) ? Math.round(p.position.x) : 0;
+    const y = Number.isFinite(p?.position?.y) ? Math.round(p.position.y) : 0;
+    return `${species}|${name}|xp:${xp}|hg:${hunger}|sc:${scale}|m:${muts}|a:${ab}|pos:${x},${y}`;
+  }
+  function toPetInfoFromPrimitive(entry) {
+    if (!entry || typeof entry !== "object") return null;
+    if (entry.slot && typeof entry.slot === "object" && entry.slot.id) {
+      return entry;
+    }
+    const id = String(entry.id ?? entry.petId ?? entry.petItemId ?? entry.itemId ?? entry.slot?.id ?? "").trim();
+    if (!id) return null;
+    const slot = {
+      id,
+      petSpecies: String(entry.petSpecies ?? entry.species ?? entry.slot?.petSpecies ?? "").trim(),
+      name: entry.name ?? entry.petName ?? entry.slot?.name ?? null,
+      xp: Number.isFinite(entry.xp) ? Number(entry.xp) : void 0,
+      hunger: Number.isFinite(entry.hunger) ? Number(entry.hunger) : void 0,
+      mutations: Array.isArray(entry.mutations) ? entry.mutations.slice() : void 0,
+      targetScale: Number.isFinite(entry.targetScale) ? Number(entry.targetScale) : void 0,
+      abilities: Array.isArray(entry.abilities) ? entry.abilities.slice() : void 0
     };
-    let gateAtom = null;
-    if (config.gate?.label) gateAtom = getAtomByLabel(config.gate.label);
-    for (const a of atoms) {
-      const readKey = _findReadKey(a);
-      const orig = a[readKey];
-      a[readKey] = (get2) => {
-        try {
-          if (gateAtom) get2(gateAtom);
-        } catch (err) {
-        }
-        for (const dep of config.extraDeps || []) {
-          try {
-            const d = getAtomByLabel(dep);
-            d && get2(d);
-          } catch (err) {
-          }
-        }
-        const real = orig(get2);
-        if (!state6.enabled || state6.payload == null) return real;
-        return config.merge ? config.merge(real, state6.payload) : state6.payload;
-      };
-      state6.patched.set(a, { readKey, orig });
+    const info = { slot };
+    const pos = entry.position;
+    if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.y)) {
+      info.position = { x: Number(pos.x), y: Number(pos.y) };
     }
-    if (gateAtom && config.gate?.autoDisableOnClose) {
-      state6.unsubGate = await jSub(gateAtom, async () => {
-        let v;
-        try {
-          v = await jGet(gateAtom);
-        } catch (err) {
-          v = null;
-        }
-        const isOpen = config.gate?.isOpen ? config.gate.isOpen(v) : !!v;
-        if (!isOpen && state6.enabled) state6.enabled = false;
+    return info;
+  }
+  function normalizePetsState(petInfosRaw, primitiveRaw) {
+    const infos = Array.isArray(petInfosRaw) ? petInfosRaw : null;
+    if (infos && infos.length) return infos;
+    const prim = Array.isArray(primitiveRaw) ? primitiveRaw : null;
+    if (prim && prim.length) {
+      const mapped = prim.map(toPetInfoFromPrimitive).filter(Boolean);
+      if (mapped.length) return mapped;
+    }
+    return infos;
+  }
+  function petsStateSig(state6) {
+    if (!Array.isArray(state6)) return "null";
+    if (!state6.length) return "empty";
+    return state6.map((p) => `${String(p?.slot?.id ?? "")}:${petSig(p)}`).join("|");
+  }
+  function watchPets(cb, seed) {
+    let lastInfos = seed?.infos ?? null;
+    let lastPrimitives = seed?.primitives ?? null;
+    let prevSig = null;
+    const emit = () => {
+      const next = normalizePetsState(lastInfos, lastPrimitives);
+      const sig = petsStateSig(next);
+      if (sig === prevSig) return;
+      prevSig = sig;
+      cb(next);
+    };
+    if (seed) emit();
+    const subs = [
+      Atoms.pets.myPetInfos.onChange((next) => {
+        lastInfos = next;
+        emit();
+      }),
+      Atoms.pets.myPrimitivePetSlots.onChange((next) => {
+        lastPrimitives = next;
+        emit();
+      })
+    ];
+    return () => {
+      for (const sub of subs) Promise.resolve(sub).then((off) => off?.()).catch(() => {
       });
-    }
-    state6.installed = true;
-    _fakeRegistry.set(key2, state6);
-    return state6;
+    };
   }
-  async function _primePatched(st) {
-    const store = await ensureStore();
-    for (const atom of st.patched.keys()) {
-      try {
-        store.get(atom);
-      } catch {
-      }
-    }
-  }
-  async function fakeShow(config, payload, options) {
-    await ensureStore();
-    const st = await _ensureFakeInstalled(config);
-    st.payload = payload;
-    st.enabled = true;
-    if (options?.merge && !config.merge) {
-      config.merge = (_real, fake) => fake;
-    }
-    await _primePatched(st);
-    if (options?.openGate && config.gate?.openAction) await config.gate.openAction();
-    if (st.autoTimer) {
-      clearTimeout(st.autoTimer);
-      st.autoTimer = null;
-    }
-    if (options?.autoRestoreMs && options.autoRestoreMs > 0) {
-      st.autoTimer = setTimeout(() => {
-        void fakeHide(config.label);
-      }, options.autoRestoreMs);
-    }
-  }
-  async function fakeUpdate(label2, nextPayload) {
-    const st = _getState(label2);
-    if (!st?.installed) throw new Error(`Fake ${label2} non install\xE9`);
-    st.payload = nextPayload;
-    await _forceRepaintViaGate(st.config.gate);
-  }
-  async function fakeHide(label2) {
-    const st = _getState(label2);
-    if (!st) return;
-    st.enabled = false;
-    st.payload = null;
-    if (st.autoTimer) {
-      clearTimeout(st.autoTimer);
-      st.autoTimer = null;
-    }
-    await _forceRepaintViaGate(st.config.gate);
-  }
-  async function fakeDispose(label2) {
-    const st = _getState(label2);
-    if (!st) return;
-    for (const [a, meta] of st.patched) {
-      try {
-        a[meta.readKey] = meta.orig;
-      } catch (err) {
-      }
-    }
-    st.patched.clear();
-    st.enabled = false;
-    st.payload = null;
-    if (st.unsubGate) {
-      try {
-        st.unsubGate();
-      } catch (err) {
-      }
-      st.unsubGate = void 0;
-    }
-    if (st.autoTimer) {
-      clearTimeout(st.autoTimer);
-      st.autoTimer = void 0;
-    }
-    _fakeRegistry.delete(label2);
-  }
-  var _fakeRegistry;
-  var init_fakeAtoms = __esm({
-    "src/game/fakeAtoms.ts"() {
+  var PlayerService;
+  var init_player = __esm({
+    "src/game/player.ts"() {
       "use strict";
-      init_jotai();
-      _fakeRegistry = /* @__PURE__ */ new Map();
-    }
-  });
-
-  // src/game/activityLogModalLayout.ts
-  function locateActivityLogAnchors(modalNode2) {
-    const modalContainer = modalNode2?.children?.[0];
-    if (!modalContainer || modalContainer.destroyed) return null;
-    const children = modalContainer.children;
-    if (!Array.isArray(children) || children.length < 3) return null;
-    const backgroundSprite = children[0];
-    if (!children.some((child) => TAB_BAR_LABELS.has(child?.label))) return null;
-    const scrollViewContainer = children.find(
-      (child, index) => index > 0 && child && !TAB_BAR_LABELS.has(child.label) && child.label !== FILTER_TOOLBAR_LABEL
-    );
-    if (!backgroundSprite || !scrollViewContainer) return null;
-    return { modalContainer, backgroundSprite, scrollViewContainer };
-  }
-  function activityLogOpenTarget(tab) {
-    return { modal: ACTIVITY_LOG_MODAL_ID, tab };
-  }
-  function activityLogTabOf(value) {
-    return value === "stats" ? "stats" : "logs";
-  }
-  function locateScrollParts(scrollViewContainer) {
-    const children = scrollViewContainer?.children;
-    if (!Array.isArray(children)) return null;
-    const viewport = children.find((child) => child?.mask && Array.isArray(child.children));
-    const content = viewport?.children?.[0];
-    if (!viewport || !content || !Array.isArray(content.children)) return null;
-    return { mask: viewport.mask, content };
-  }
-  function logsContentKind(contentChildren) {
-    let kind = "unknown";
-    for (const child of contentChildren) {
-      if (child?.label === STAT_CARD_LABEL) return "stats";
-      if (child?.label === LOG_ROW_LABEL) kind = "logs";
-    }
-    return kind;
-  }
-  function planLogRowsShift(contentChildren, toolbarSpace) {
-    const first = contentChildren[0];
-    const isNote = !!first && first.label !== LOG_ROW_LABEL && (typeof first.textComponent?.text === "string" || typeof first.text === "string" && !(first.children?.length > 0));
-    if (!isNote) return { hideFirst: false, shift: toolbarSpace };
-    const next = contentChildren[1];
-    const firstY = first.position?.y ?? first.y ?? 0;
-    const noteSpace = next ? (next.position?.y ?? next.y ?? firstY) - firstY : first.height ?? 0;
-    return { hideFirst: true, shift: toolbarSpace - noteSpace };
-  }
-  function maskTransformFor(maskGeometryHeight, toolbarSpace) {
-    if (!(maskGeometryHeight > toolbarSpace) || toolbarSpace <= 0) return { y: 0, scaleY: 1 };
-    return { y: toolbarSpace, scaleY: (maskGeometryHeight - toolbarSpace) / maskGeometryHeight };
-  }
-  var ACTIVITY_LOG_MODAL_ID, ACTIVITY_LOG_MODAL_LABEL, FILTER_TOOLBAR_LABEL, TAB_BAR_LABELS, LOG_ROW_LABEL, STAT_CARD_LABEL;
-  var init_activityLogModalLayout = __esm({
-    "src/game/activityLogModalLayout.ts"() {
-      "use strict";
-      ACTIVITY_LOG_MODAL_ID = "activityLog";
-      ACTIVITY_LOG_MODAL_LABEL = "ActivityLogModal";
-      FILTER_TOOLBAR_LABEL = "AriesActivityLogFilter";
-      TAB_BAR_LABELS = /* @__PURE__ */ new Set(["JournalTabs", "JournalTabTaps"]);
-      LOG_ROW_LABEL = "ActivityLogRow";
-      STAT_CARD_LABEL = "StatCard";
-    }
-  });
-
-  // src/game/fakeModal.ts
-  async function openModal(modalId) {
-    try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current && current !== modalId) {
-        await Atoms.ui.activeModal.set(null);
-        await Atoms.ui.inventoryModalIsActive.set(false);
-        await new Promise((r) => requestAnimationFrame(r));
-      }
-      await Atoms.ui.activeModal.set(modalId);
-      await Atoms.ui.inventoryModalIsActive.set(modalId === "inventory");
-    } catch (err) {
-    }
-  }
-  async function closeModal(modalId) {
-    try {
-      if (modalId) {
-        const current = await Atoms.ui.activeModal.get();
-        if (current !== modalId) return;
-      }
-      await Atoms.ui.activeModal.set(null);
-      if (modalId === "inventory" || !modalId) {
-        await Atoms.ui.inventoryModalIsActive.set(false);
-      }
-    } catch (err) {
-    }
-  }
-  function isModalOpen(value, modalId) {
-    return modalNameOf(value) === modalId;
-  }
-  async function isModalOpenAsync(modalId) {
-    try {
-      const v = await Atoms.ui.activeModal.get();
-      return isModalOpen(v, modalId);
-    } catch (err) {
-      return false;
-    }
-  }
-  async function waitModalClosed(modalId, timeoutMs = 12e4) {
-    const t0 = performance.now();
-    while (performance.now() - t0 < timeoutMs) {
-      try {
-        const v = await Atoms.ui.activeModal.get();
-        if (!isModalOpen(v, modalId)) return true;
-      } catch {
-        return true;
-      }
-      await new Promise((r) => setTimeout(r, 80));
-    }
-    return false;
-  }
-  async function openInventoryPanel() {
-    return openModal(INVENTORY_MODAL_ID);
-  }
-  async function closeInventoryPanel() {
-    return closeModal(INVENTORY_MODAL_ID);
-  }
-  function isInventoryOpen(v) {
-    return isModalOpen(v, INVENTORY_MODAL_ID);
-  }
-  async function isInventoryPanelOpen() {
-    return isModalOpenAsync(INVENTORY_MODAL_ID);
-  }
-  async function waitInventoryPanelClosed(timeoutMs = 12e4) {
-    return waitModalClosed(INVENTORY_MODAL_ID, timeoutMs);
-  }
-  async function fakeInventoryShow(payload, opts) {
-    const shouldOpen = opts?.open !== false;
-    await fakeShow(SHARED_MYDATA_PATCH, { inventory: payload }, {
-      openGate: false,
-      autoRestoreMs: opts?.autoRestoreMs
-    });
-    await fakeShow(INVENTORY_ATOM_PATCH, payload, {
-      openGate: false,
-      autoRestoreMs: opts?.autoRestoreMs
-    });
-    if (shouldOpen) await openInventoryPanel();
-  }
-  async function fakeInventoryHide() {
-    await fakeHide(INVENTORY_ATOM_PATCH.label);
-    await fakeHide(SHARED_MYDATA_PATCH.label);
-    await closeInventoryPanel();
-  }
-  async function fakeInventoryDisable() {
-    await fakeHide(INVENTORY_ATOM_PATCH.label);
-    await fakeHide(SHARED_MYDATA_PATCH.label);
-  }
-  async function openJournalModal() {
-    return openModal(JOURNAL_MODAL_ID);
-  }
-  async function isJournalModalOpen() {
-    return isModalOpenAsync(JOURNAL_MODAL_ID);
-  }
-  async function waitJournalModalClosed(timeoutMs = 12e4) {
-    return waitModalClosed(JOURNAL_MODAL_ID, timeoutMs);
-  }
-  async function fakeJournalShow(payload, opts) {
-    const shouldOpen = opts?.open !== false;
-    await fakeHide(INVENTORY_ATOM_PATCH.label);
-    await fakeShow(SHARED_MYDATA_PATCH, { journal: payload ?? {} }, {
-      openGate: false,
-      autoRestoreMs: opts?.autoRestoreMs
-    });
-    if (shouldOpen) await openJournalModal();
-  }
-  async function openActivityLogTab(tab) {
-    const target = activityLogOpenTarget(tab);
-    try {
-      await Atoms.ui.activityLogTab.set(target.tab);
-    } catch {
-    }
-    return openModal(target.modal);
-  }
-  async function isActivityLogTabOpen(tab) {
-    if (!await isModalOpenAsync(ACTIVITY_LOG_MODAL_ID2)) return false;
-    try {
-      return activityLogTabOf(await Atoms.ui.activityLogTab.get()) === tab;
-    } catch {
-      return false;
-    }
-  }
-  async function openStatsModal() {
-    return openActivityLogTab("stats");
-  }
-  async function isStatsModalOpenAsync() {
-    return isActivityLogTabOpen("stats");
-  }
-  async function waitStatsModalClosed(timeoutMs = 12e4) {
-    return waitModalClosed(ACTIVITY_LOG_MODAL_ID2, timeoutMs);
-  }
-  async function fakeStatsShow(payload, opts) {
-    const shouldOpen = opts?.open !== false;
-    await fakeShow(SHARED_MYDATA_PATCH, { stats: payload ?? {} }, {
-      openGate: false,
-      autoRestoreMs: opts?.autoRestoreMs
-    });
-    if (shouldOpen) await openStatsModal();
-  }
-  async function openActivityLogModal() {
-    return openActivityLogTab("logs");
-  }
-  async function isActivityLogModalOpenAsync() {
-    return isModalOpenAsync(ACTIVITY_LOG_MODAL_ID2);
-  }
-  async function waitActivityLogModalClosed(timeoutMs = 12e4) {
-    return waitModalClosed(ACTIVITY_LOG_MODAL_ID2, timeoutMs);
-  }
-  async function fakeActivityLogShow(payload, opts) {
-    const shouldOpen = opts?.open !== false;
-    await fakeShow(SHARED_MYDATA_PATCH, { activityLogs: payload ?? [] }, {
-      openGate: false,
-      autoRestoreMs: opts?.autoRestoreMs
-    });
-    if (shouldOpen) await openActivityLogModal();
-  }
-  var mergeMyData, SHARED_MYDATA_PATCH, INVENTORY_ATOM_PATCH, INVENTORY_MODAL_ID, JOURNAL_MODAL_ID, ACTIVITY_LOG_MODAL_ID2;
-  var init_fakeModal = __esm({
-    "src/game/fakeModal.ts"() {
-      "use strict";
-      init_fakeAtoms();
+      init_send();
+      init_commands();
       init_atoms();
-      init_modalState();
-      init_activityLogModalLayout();
-      mergeMyData = (real, patch) => {
-        const base = real && typeof real === "object" ? real : {};
-        const add = patch && typeof patch === "object" ? patch : {};
-        return { ...base, ...add };
-      };
-      SHARED_MYDATA_PATCH = {
-        label: Atoms.data.myData.label,
-        merge: mergeMyData,
-        gate: {
-          label: Atoms.ui.activeModal.label,
-          isOpen: (v) => ["inventory", "journal", "activityLog"].includes(modalNameOf(v) ?? ""),
-          autoDisableOnClose: true
-        }
-      };
-      INVENTORY_ATOM_PATCH = {
-        label: Atoms.inventory.myInventory.label,
-        merge: (_real, fake) => fake,
-        gate: {
-          label: Atoms.ui.activeModal.label,
-          isOpen: (v) => modalNameOf(v) === "inventory",
-          autoDisableOnClose: true
-        }
-      };
-      INVENTORY_MODAL_ID = "inventory";
-      JOURNAL_MODAL_ID = "journal";
-      ACTIVITY_LOG_MODAL_ID2 = "activityLog";
-    }
-  });
-
-  // src/game/ingameHotkeys.ts
-  function parseRapid(c) {
-    const parts = String(c).split("+").map((s) => s.trim()).filter(Boolean);
-    let code = "";
-    let ctrl = false, shift = false, alt = false, meta = false;
-    for (const p of parts) {
-      const P = p.toLowerCase();
-      if (P === "ctrl" || P === "control") ctrl = true;
-      else if (P === "shift") shift = true;
-      else if (P === "alt") alt = true;
-      else if (P === "meta" || P === "cmd" || P === "command" || P === "win") meta = true;
-      else code = p;
-    }
-    return { code, ctrl, shift, alt, meta };
-  }
-  function joinRapid(c) {
-    const mods = [];
-    if (c.ctrl) mods.push("Ctrl");
-    if (c.shift) mods.push("Shift");
-    if (c.alt) mods.push("Alt");
-    if (c.meta) mods.push("Meta");
-    mods.push(c.code);
-    return mods.join("+");
-  }
-  var resolveContext, KEYCODE_TABLE, codeToKey, isEditableTarget, normalizeCombo, parseCombo, evToCombo, REMAP_FLAG, RAPID_SYN_FLAG, InGameHotkeys, defaultContext, inGameHotkeys;
-  var init_ingameHotkeys = __esm({
-    "src/game/ingameHotkeys.ts"() {
-      "use strict";
-      init_pageContext();
-      resolveContext = (context) => {
-        if (context) return context;
-        const win = pageWindow ?? window;
-        const doc = win.document ?? document;
-        return { window: win, document: doc };
-      };
-      KEYCODE_TABLE = {
-        KeyA: 65,
-        KeyB: 66,
-        KeyC: 67,
-        KeyD: 68,
-        KeyE: 69,
-        KeyF: 70,
-        KeyG: 71,
-        KeyH: 72,
-        KeyI: 73,
-        KeyJ: 74,
-        KeyK: 75,
-        KeyL: 76,
-        KeyM: 77,
-        KeyN: 78,
-        KeyO: 79,
-        KeyP: 80,
-        KeyQ: 81,
-        KeyR: 82,
-        KeyS: 83,
-        KeyT: 84,
-        KeyU: 85,
-        KeyV: 86,
-        KeyW: 87,
-        KeyX: 88,
-        KeyY: 89,
-        KeyZ: 90,
-        Digit0: 48,
-        Digit1: 49,
-        Digit2: 50,
-        Digit3: 51,
-        Digit4: 52,
-        Digit5: 53,
-        Digit6: 54,
-        Digit7: 55,
-        Digit8: 56,
-        Digit9: 57,
-        Space: 32,
-        Enter: 13,
-        Escape: 27,
-        Tab: 9,
-        Backspace: 8,
-        Delete: 46,
-        Insert: 45,
-        ArrowLeft: 37,
-        ArrowUp: 38,
-        ArrowRight: 39,
-        ArrowDown: 40
-      };
-      codeToKey = (code, shift = false) => {
-        if (!code) return "";
-        if (/^Key[A-Z]$/.test(code)) return shift ? code.slice(3).toUpperCase() : code.slice(3).toLowerCase();
-        if (/^Digit[0-9]$/.test(code)) return code.slice(5);
-        if (code === "Space") return " ";
-        return code;
-      };
-      isEditableTarget = (t) => {
-        const el2 = t;
-        if (!el2 || !el2.tagName) return false;
-        const tag = el2.tagName.toLowerCase();
-        if (tag === "input" || tag === "textarea") return true;
-        const ce = el2.getAttribute && el2.getAttribute("contenteditable");
-        return !!(ce && ce !== "false");
-      };
-      normalizeCombo = (c) => {
-        const parts = String(c).split("+").map((s) => s.trim()).filter(Boolean);
-        const mods = [];
-        let code = "";
-        for (const p of parts) {
-          const P = p.toLowerCase();
-          if (P === "ctrl" || P === "control") mods.push("ctrl");
-          else if (P === "shift") mods.push("shift");
-          else if (P === "alt") mods.push("alt");
-          else if (P === "meta" || P === "cmd" || P === "command" || P === "win") mods.push("meta");
-          else code = p;
-        }
-        mods.sort((a, b) => ["ctrl", "shift", "alt", "meta"].indexOf(a) - ["ctrl", "shift", "alt", "meta"].indexOf(b));
-        return (mods.length ? mods.join("+") + "+" : "") + code;
-      };
-      parseCombo = (c) => {
-        const parts = String(c).split("+").map((s) => s.trim()).filter(Boolean);
-        const spec = {};
-        for (const p of parts) {
-          const P = p.toLowerCase();
-          if (P === "ctrl" || P === "control") spec.ctrl = true;
-          else if (P === "shift") spec.shift = true;
-          else if (P === "alt") spec.alt = true;
-          else if (P === "meta" || P === "cmd" || P === "command" || P === "win") spec.meta = true;
-          else spec.code = p;
-        }
-        if (spec.code && spec.key === void 0) spec.key = codeToKey(spec.code, !!spec.shift);
-        return spec;
-      };
-      evToCombo = (e) => {
-        const mods = [];
-        if (e.ctrlKey) mods.push("ctrl");
-        if (e.shiftKey) mods.push("shift");
-        if (e.altKey) mods.push("alt");
-        if (e.metaKey) mods.push("meta");
-        mods.sort((a, b) => ["ctrl", "shift", "alt", "meta"].indexOf(a) - ["ctrl", "shift", "alt", "meta"].indexOf(b));
-        return (mods.length ? mods.join("+") + "+" : "") + (e.code || "");
-      };
-      REMAP_FLAG = "__inGameHotkeysRemapped__";
-      RAPID_SYN_FLAG = "__inGameHotkeysRapidSynthetic__";
-      InGameHotkeys = class {
-        constructor(autoAttach = true, context) {
-          // remapper
-          this.enabled = true;
-          this.map = /* @__PURE__ */ new Map();
-          // combo normalisé -> spec destination
-          this.blockedSet = /* @__PURE__ */ new Set();
-          // combos bloqués
-          this.eventBlockers = /* @__PURE__ */ new Set();
-          this.attachedDocs = /* @__PURE__ */ new WeakSet();
-          // docs déjà hookés
-          this.observers = [];
-          this.handlers = /* @__PURE__ */ new Map();
-          this.passthrough = /* @__PURE__ */ new Set(["F5", "F12"]);
-          // rapid-fire manager
-          this.sessions = /* @__PURE__ */ new Map();
-          const ctx2 = resolveContext(context);
-          this.win = ctx2.window;
-          this.doc = ctx2.document;
-          if (autoAttach) {
-            this.attachDoc(this.doc);
-            this.attachAllFrames();
-            if (this.win.MutationObserver) {
-              const mo = new this.win.MutationObserver(() => this.attachAllFrames());
-              mo.observe(this.doc.documentElement || this.doc, { childList: true, subtree: true });
-              this.observers.push(mo);
-            }
-          }
-        }
-        /* --------- on/off remapper --------- */
-        enable(flag = true) {
-          this.enabled = !!flag;
-        }
-        disable() {
-          this.enabled = false;
-        }
-        isEnabled() {
-          return this.enabled;
-        }
-        /* --------- remaps --------- */
-        setMap(m) {
-          this.map.clear();
-          for (const [from, to] of Object.entries(m || {})) this.map.set(normalizeCombo(from), parseCombo(to));
-        }
-        add(from, to) {
-          this.map.set(normalizeCombo(from), parseCombo(to));
-        }
-        remove(from) {
-          this.map.delete(normalizeCombo(from));
-        }
-        clear() {
-          this.map.clear();
-        }
-        current() {
-          const out = {};
-          for (const [k, v] of this.map.entries()) {
-            const mods = [];
-            if (v.ctrl) mods.push("Ctrl");
-            if (v.shift) mods.push("Shift");
-            if (v.alt) mods.push("Alt");
-            if (v.meta) mods.push("Meta");
-            out[k] = (mods.length ? mods.join("+") + "+" : "") + (v.code || "");
-          }
-          return out;
-        }
-        /* --------- blocages --------- */
-        block(combo) {
-          this.blockedSet.add(normalizeCombo(combo));
-        }
-        unblock(combo) {
-          this.blockedSet.delete(normalizeCombo(combo));
-        }
-        blocked() {
-          return Array.from(this.blockedSet);
-        }
-        addEventBlocker(blocker) {
-          if (typeof blocker !== "function") {
-            return () => {
-            };
-          }
-          this.eventBlockers.add(blocker);
-          return () => {
-            this.eventBlockers.delete(blocker);
-          };
-        }
-        /* --------- helpers de binding --------- */
-        /** Déplace l’action bindée sur oldBase vers newPhysical et désactive oldBase. */
-        replace(oldBase, newPhysical) {
-          const oldN = normalizeCombo(oldBase);
-          const newN = normalizeCombo(newPhysical);
-          this.blockedSet.add(oldN);
-          this.map.set(newN, parseCombo(oldN));
-        }
-        /** Échange réciproquement deux touches (ne bloque pas). */
-        swap(a, b) {
-          const an = normalizeCombo(a), bn = normalizeCombo(b);
-          this.map.set(an, parseCombo(bn));
-          this.map.set(bn, parseCombo(an));
-        }
-        /* --------- frames & cleanup --------- */
-        attachAllFrames() {
-          this.doc.querySelectorAll("iframe").forEach((f) => {
-            try {
-              const d = f.contentDocument;
-              const origin = d?.location?.origin;
-              if (d && origin && origin === this.win.location.origin) this.attachDoc(d);
-            } catch {
-            }
-          });
-        }
-        destroy() {
-          for (const [doc, handler] of this.handlers.entries()) {
-            try {
-              const win = doc.defaultView || this.win;
-              win.removeEventListener("keydown", handler, true);
-              win.removeEventListener("keypress", handler, true);
-              win.removeEventListener("keyup", handler, true);
-            } catch {
-            }
-          }
-          this.handlers.clear();
-          this.attachedDocs = /* @__PURE__ */ new WeakSet();
-          for (const mo of this.observers) mo.disconnect();
-          this.observers = [];
-          this.stopAllRapidFires();
-          this.eventBlockers.clear();
-        }
-        /* --------- rapid-fire (API) --------- */
-        startRapidFire(opts) {
-          const trigger = normalizeCombo(opts.trigger);
-          const emit = normalizeCombo(opts.emit ?? opts.trigger);
-          const rateMs = 1e3 / Math.max(1, opts.rateHz ?? 12);
-          const mode = opts.mode ?? "tap";
-          const keyupDelayMs = opts.keyupDelayMs ?? 20;
-          this.sessions.set(trigger, {
-            trigger: parseRapid(trigger),
-            emit: parseRapid(emit),
-            rateMs,
-            mode,
-            keyupDelayMs,
-            pressed: false,
-            lastTarget: null,
-            tickTimer: null,
-            upTimer: null
-          });
-        }
-        stopRapidFire(trigger) {
-          if (!trigger) {
-            this.stopAllRapidFires();
-            return;
-          }
-          const key2 = normalizeCombo(trigger);
-          const s = this.sessions.get(key2);
-          if (!s) return;
-          this.endSession(s);
-          this.sessions.delete(key2);
-        }
-        stopAllRapidFires() {
-          for (const s of this.sessions.values()) this.endSession(s);
-          this.sessions.clear();
-        }
-        isRapidFireActive(trigger) {
-          const s = this.sessions.get(normalizeCombo(trigger));
-          return !!(s && s.pressed);
-        }
-        setRapidFireRate(trigger, hz) {
-          const s = this.sessions.get(normalizeCombo(trigger));
-          if (!s) return;
-          s.rateMs = 1e3 / Math.max(1, hz);
-          if (s.pressed) this.restartLoop(s);
-        }
-        setRapidFireMode(trigger, mode) {
-          const s = this.sessions.get(normalizeCombo(trigger));
-          if (!s) return;
-          s.mode = mode;
-        }
-        listRapidFires() {
-          const out = [];
-          for (const [key2, s] of this.sessions.entries()) {
-            out.push({
-              trigger: key2,
-              emit: joinRapid(s.emit),
-              rateHz: Math.round(1e3 / s.rateMs),
-              mode: s.mode
-            });
-          }
-          return out;
-        }
-        /* ================= internes ================= */
-        attachDoc(doc) {
-          if (!doc || this.attachedDocs.has(doc)) return;
-          const handler = this.makeHandler(doc);
-          const win = doc.defaultView || this.win;
-          win.addEventListener("keydown", handler, true);
-          win.addEventListener("keypress", handler, true);
-          win.addEventListener("keyup", handler, true);
-          this.handlers.set(doc, handler);
-          this.attachedDocs.add(doc);
-        }
-        makeHandler(doc) {
-          return (evt) => {
-            const e = evt;
-            if (e[REMAP_FLAG]) return;
-            const isRapidSynthetic = !!e[RAPID_SYN_FLAG];
-            if (!isRapidSynthetic) this.handleRapidFireInput(doc, e);
-            if (!isRapidSynthetic && this.eventBlockers.size) {
-              for (const blocker of Array.from(this.eventBlockers)) {
-                let shouldBlock = false;
-                try {
-                  shouldBlock = blocker(e);
-                } catch {
-                  shouldBlock = false;
-                }
-                if (shouldBlock) {
-                  e.stopImmediatePropagation();
-                  e.preventDefault();
-                  return;
-                }
-              }
-            }
-            if (!this.enabled) return;
-            if (isEditableTarget(e.target)) return;
-            if (this.passthrough.has(e.code)) return;
-            const combo = evToCombo(e);
-            if (this.blockedSet.has(combo)) {
-              e.stopImmediatePropagation();
-              e.preventDefault();
-              return;
-            }
-            const spec = this.map.get(combo);
-            if (!spec) return;
-            e.stopImmediatePropagation();
-            e.preventDefault();
-            const code = spec.code || "";
-            const key2 = spec.key !== void 0 ? spec.key : codeToKey(code, e.shiftKey);
-            const ctrl = spec.ctrl ?? e.ctrlKey;
-            const shift = spec.shift ?? e.shiftKey;
-            const alt = spec.alt ?? e.altKey;
-            const meta = spec.meta ?? e.metaKey;
-            const kc = KEYCODE_TABLE[code] ?? (key2 && key2.length === 1 ? key2.toUpperCase().charCodeAt(0) : 0);
-            const eventWindow = doc.defaultView || this.win;
-            const ne = new eventWindow.KeyboardEvent(e.type, {
-              bubbles: true,
-              cancelable: true,
-              composed: true,
-              key: key2,
-              code,
-              ctrlKey: ctrl,
-              shiftKey: shift,
-              altKey: alt,
-              metaKey: meta,
-              repeat: e.repeat,
-              location: e.location
-            });
-            Object.defineProperties(ne, {
-              keyCode: { get: () => kc },
-              which: { get: () => kc },
-              charCode: { get: () => kc },
-              [REMAP_FLAG]: { value: true }
-            });
-            const target = e.target || doc;
-            target.dispatchEvent(ne);
-          };
-        }
-        /* ---------- Rapid-fire internes ---------- */
-        handleRapidFireInput(doc, e) {
-          if (isEditableTarget(e.target)) return;
-          if (e.type === "keydown" && !e.repeat) {
-            for (const s of this.sessions.values()) {
-              if (this.matches(e, s.trigger)) {
-                s.pressed = true;
-                s.lastTarget = e.target || doc;
-                this.startLoop(doc, s);
-              }
-            }
-          } else if (e.type === "keyup") {
-            for (const s of this.sessions.values()) {
-              if (this.matches(e, s.trigger)) {
-                s.pressed = false;
-                this.stopLoop(doc, s);
-              }
-            }
-          }
-        }
-        matches(e, c) {
-          return e.code === c.code && !!e.ctrlKey === !!c.ctrl && !!e.shiftKey === !!c.shift && !!e.altKey === !!c.alt && !!e.metaKey === !!c.meta;
-        }
-        startLoop(doc, s) {
-          this.stopLoop(doc, s);
-          const tick3 = () => {
-            if (!s.pressed) return;
-            this.dispatchKey(doc, s.lastTarget || doc, "keydown", s.emit, true);
-            if (s.mode === "tap") {
-              if (s.upTimer) this.win.clearTimeout(s.upTimer);
-              s.upTimer = this.win.setTimeout(() => {
-                this.dispatchKey(doc, s.lastTarget || doc, "keyup", s.emit, false);
-              }, s.keyupDelayMs);
-            }
-          };
-          tick3();
-          s.tickTimer = this.win.setInterval(tick3, s.rateMs);
-        }
-        stopLoop(doc, s) {
-          if (s.tickTimer) {
-            this.win.clearInterval(s.tickTimer);
-            s.tickTimer = null;
-          }
-          if (s.upTimer) {
-            this.win.clearTimeout(s.upTimer);
-            s.upTimer = null;
-          }
-          if (s.mode === "hold" && s.lastTarget) {
-            this.dispatchKey(doc, s.lastTarget, "keyup", s.emit, false);
-          }
-        }
-        restartLoop(s) {
-          if (!s.pressed) return;
-          const anyDoc = this.doc;
-          this.startLoop(anyDoc, s);
-        }
-        endSession(s) {
-          this.stopLoop(this.doc, s);
-          s.pressed = false;
-          s.lastTarget = null;
-        }
-        dispatchKey(doc, target, type, c, repeat) {
-          const code = c.code;
-          const key2 = codeToKey(code, c.shift);
-          const kc = KEYCODE_TABLE[code] ?? (key2 && key2.length === 1 ? key2.toUpperCase().charCodeAt(0) : 0);
-          const eventWindow = doc.defaultView || this.win;
-          const ev = new eventWindow.KeyboardEvent(type, {
-            bubbles: true,
-            cancelable: true,
-            composed: true,
-            key: key2,
-            code,
-            ctrlKey: c.ctrl,
-            shiftKey: c.shift,
-            altKey: c.alt,
-            metaKey: c.meta,
-            repeat
-          });
-          Object.defineProperties(ev, {
-            keyCode: { get: () => kc },
-            which: { get: () => kc },
-            charCode: { get: () => kc },
-            [RAPID_SYN_FLAG]: { value: true }
-          });
-          try {
-            target.dispatchEvent(ev);
-          } catch {
-            doc.dispatchEvent(ev);
-          }
-        }
-      };
-      defaultContext = resolveContext();
-      inGameHotkeys = new InGameHotkeys(true, defaultContext);
-      shareGlobal("inGameHotkeys", inGameHotkeys);
-      try {
-        window.inGameHotkeys = inGameHotkeys;
-      } catch {
-      }
-    }
-  });
-
-  // src/platform/friendSettingsSchema.ts
-  var DEFAULT_FRIEND_SETTINGS;
-  var init_friendSettingsSchema = __esm({
-    "src/platform/friendSettingsSchema.ts"() {
-      "use strict";
-      DEFAULT_FRIEND_SETTINGS = {
-        showOnlineFriendsOnly: false,
-        hideRoomFromPublicList: false,
-        messageSoundEnabled: true,
-        friendRequestSoundEnabled: true,
-        showGarden: true,
-        showInventory: true,
-        showCoins: true,
-        showActivityLog: true,
-        showJournal: true,
-        showStats: true
-      };
-    }
-  });
-
-  // src/platform/storage.ts
-  function getHostStorage() {
-    if (typeof window === "undefined") return null;
-    try {
-      if (typeof window.localStorage === "undefined") return null;
-      return window.localStorage;
-    } catch {
-      return null;
-    }
-  }
-  function parseSafe(raw) {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return raw;
-    }
-  }
-  function mergeSection(existing, next) {
-    const base = { ...existing ?? {} };
-    for (const [k, v] of Object.entries(next)) {
-      if (base[k] === void 0) {
-        base[k] = v;
-      }
-    }
-    return base;
-  }
-  function unwrapNestedSnapshot(raw) {
-    let cur = raw;
-    let guard = 0;
-    while (guard++ < 10 && cur && typeof cur === "object" && "snapshot" in cur && typeof cur.snapshot === "object") {
-      cur = cur.snapshot;
-    }
-    return cur ?? raw;
-  }
-  function coerceLegacyAggregate(raw) {
-    const out = { ...DEFAULT_ARIES_STORAGE };
-    if (!raw || typeof raw !== "object") return out;
-    const data = raw;
-    if (typeof data.version === "number") out.version = data.version;
-    if (typeof data.migratedAt === "number") out.migratedAt = data.migratedAt;
-    if ("stats" in data) out.stats = unwrapNestedSnapshot(data.stats);
-    if ("customRooms" in data) out.room = mergeSection(out.room, { customRooms: data.customRooms });
-    if ("pets" in data && typeof data.pets === "object") {
-      out.pets = mergeSection(out.pets, data.pets);
-    }
-    if ("petsOverrides" in data) out.pets = mergeSection(out.pets, { overrides: data.petsOverrides });
-    if ("petsUI" in data) out.pets = mergeSection(out.pets, { ui: data.petsUI });
-    if ("petTeams" in data) out.pets = mergeSection(out.pets, { teams: data.petTeams });
-    if ("petTeamSearch" in data) out.pets = mergeSection(out.pets, { teamSearch: data.petTeamSearch });
-    if ("petTeamHotkeys" in data) out.pets = mergeSection(out.pets, { hotkeys: data.petTeamHotkeys });
-    if ("petAlerts" in data) out.pets = mergeSection(out.pets, { alerts: data.petAlerts });
-    if ("notifier" in data && typeof data.notifier === "object") {
-      out.notifier = mergeSection(out.notifier, data.notifier);
-    }
-    if ("notifierPrefs" in data) out.notifier = mergeSection(out.notifier, { prefs: data.notifierPrefs });
-    if ("notifierRules" in data) out.notifier = mergeSection(out.notifier, { rules: data.notifierRules });
-    if ("weatherNotifierPrefs" in data) out.notifier = mergeSection(out.notifier, { weatherPrefs: data.weatherNotifierPrefs });
-    if ("notifierLoopDefaults" in data) out.notifier = mergeSection(out.notifier, { loopDefaults: data.notifierLoopDefaults });
-    if ("misc" in data && typeof data.misc === "object") {
-      out.misc = mergeSection(out.misc, data.misc);
-    }
-    if ("ghostMode" in data) out.misc = mergeSection(out.misc, { ghostMode: data.ghostMode });
-    if ("ghostDelayMs" in data) out.misc = mergeSection(out.misc, { ghostDelayMs: data.ghostDelayMs });
-    if ("autoRecoEnabled" in data) out.misc = mergeSection(out.misc, { autoRecoEnabled: data.autoRecoEnabled });
-    if ("autoRecoDelayMs" in data) out.misc = mergeSection(out.misc, { autoRecoDelayMs: data.autoRecoDelayMs });
-    if ("locker" in data && typeof data.locker === "object") {
-      out.locker = mergeSection(out.locker, data.locker);
-    }
-    if ("lockerRestrictions" in data) out.locker = mergeSection(out.locker, { restrictions: data.lockerRestrictions });
-    if ("lockerState" in data) out.locker = mergeSection(out.locker, { state: data.lockerState });
-    if ("keybinds" in data && typeof data.keybinds === "object") {
-      out.keybinds = mergeSection(out.keybinds, data.keybinds);
-    }
-    if ("editorSavedGardens" in data) out.editor = mergeSection(out.editor, { savedGardens: data.editorSavedGardens });
-    if ("editor" in data && typeof data.editor === "object") {
-      out.editor = mergeSection(out.editor, data.editor);
-    }
-    if ("activityLog" in data && typeof data.activityLog === "object") {
-      out.activityLog = mergeSection(out.activityLog, data.activityLog);
-    }
-    if ("companion" in data && typeof data.companion === "object") {
-      out.companion = mergeSection(out.companion, data.companion);
-    }
-    if ("companionSession" in data && typeof data.companionSession === "object") {
-      out.companionSession = mergeSection(out.companionSession, data.companionSession);
-    }
-    if ("activityLogHistory" in data) out.activityLog = mergeSection(out.activityLog, { history: data.activityLogHistory });
-    if ("activityLogFilter" in data) out.activityLog = mergeSection(out.activityLog, { filter: data.activityLogFilter });
-    if ("hud" in data && typeof data.hud === "object") {
-      out.hud = mergeSection(out.hud, data.hud);
-    }
-    if ("menu" in data && typeof data.menu === "object") {
-      out.menu = mergeSection(out.menu, data.menu);
-    }
-    if ("inventory" in data && typeof data.inventory === "object") {
-      out.inventory = mergeSection(out.inventory, data.inventory);
-    }
-    if ("audio" in data && typeof data.audio === "object") {
-      out.audio = mergeSection(out.audio, data.audio);
-    }
-    if ("audioSettings" in data) out.audio = mergeSection(out.audio, { settings: data.audioSettings });
-    if ("audioLibrary" in data) out.audio = mergeSection(out.audio, { library: data.audioLibrary });
-    if ("soundEffectsVolumeAtom" in data) out.audio = mergeSection(out.audio, { sfxVolumeAtom: data.soundEffectsVolumeAtom });
-    if ("friends" in data && typeof data.friends === "object") {
-      out.friends = {
-        ...out.friends ?? {},
-        ...data.friends
-      };
-    }
-    if ("eggAutomation" in data && typeof data.eggAutomation === "object") {
-      out.eggAutomation = mergeSection(out.eggAutomation, data.eggAutomation);
-    }
-    if ("weatherTeams" in data && typeof data.weatherTeams === "object") {
-      out.weatherTeams = mergeSection(out.weatherTeams, data.weatherTeams);
-    }
-    if ("workflowStudio" in data) {
-      out.workflowStudio = data.workflowStudio;
-    }
-    if ("workflow" in data && typeof data.workflow === "object") {
-      out.workflow = mergeSection(out.workflow, data.workflow);
-    }
-    return out;
-  }
-  function installAriesLifecycleHooksOnce() {
-    if (ariesLifecycleHooksInstalled || typeof window === "undefined") return;
-    ariesLifecycleHooksInstalled = true;
-    const flush = () => flushAriesStorageNow();
-    window.addEventListener("pagehide", flush);
-    window.addEventListener("beforeunload", flush);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") flush();
-    });
-    window.addEventListener("storage", (event) => {
-      if (event.key !== ARIES_STORAGE_KEY) return;
-      if (ariesFlushPending) return;
-      cachedAriesStorage = null;
-    });
-  }
-  function flushAriesStorageNow() {
-    if (ariesFlushTimer !== null) {
-      clearTimeout(ariesFlushTimer);
-      ariesFlushTimer = null;
-    }
-    if (!ariesFlushPending || !cachedAriesStorage) return;
-    ariesFlushPending = false;
-    const storage = getHostStorage();
-    if (!storage) return;
-    try {
-      storage.setItem(ARIES_STORAGE_KEY, JSON.stringify(cachedAriesStorage));
-    } catch {
-    }
-  }
-  function scheduleAriesFlush() {
-    installAriesLifecycleHooksOnce();
-    ariesFlushPending = true;
-    if (ariesFlushTimer !== null) return;
-    ariesFlushTimer = window.setTimeout(() => {
-      ariesFlushTimer = null;
-      flushAriesStorageNow();
-    }, ARIES_FLUSH_DELAY_MS);
-  }
-  function loadAriesStorage() {
-    if (cachedAriesStorage) return cachedAriesStorage;
-    installAriesLifecycleHooksOnce();
-    const storage = getHostStorage();
-    const raw = storage?.getItem(ARIES_STORAGE_KEY);
-    if (raw) {
-      const parsed = parseSafe(raw);
-      if (parsed && typeof parsed === "object") {
-        cachedAriesStorage = coerceLegacyAggregate(parsed);
-        return cachedAriesStorage;
-      }
-    }
-    cachedAriesStorage = { ...DEFAULT_ARIES_STORAGE };
-    return cachedAriesStorage;
-  }
-  function persistAriesStorage(data) {
-    cachedAriesStorage = data;
-    scheduleAriesFlush();
-  }
-  function getValueAtPath(obj, path) {
-    let cur = obj;
-    for (const segment of path) {
-      if (!cur || typeof cur !== "object") return void 0;
-      cur = cur[segment];
-    }
-    return cur;
-  }
-  function setValueAtPath(obj, path, value) {
-    if (!path.length) return;
-    let cur = obj;
-    for (let i = 0; i < path.length - 1; i++) {
-      const key2 = path[i];
-      if (!cur[key2] || typeof cur[key2] !== "object") {
-        cur[key2] = {};
-      }
-      cur = cur[key2];
-    }
-    const last = path[path.length - 1];
-    if (value === void 0) {
-      if (cur && typeof cur === "object") {
-        delete cur[last];
-      }
-    } else {
-      cur[last] = value;
-    }
-  }
-  function getAriesStorage() {
-    return loadAriesStorage();
-  }
-  function saveAriesStorage(data) {
-    persistAriesStorage(data);
-  }
-  function updateAriesStorage(mutator) {
-    const current = loadAriesStorage();
-    mutator(current);
-    current.version = ARIES_STORAGE_VERSION;
-    persistAriesStorage(current);
-    return current;
-  }
-  function readAriesPath(path, fallback) {
-    const parts = path.split(".").filter(Boolean);
-    const value = getValueAtPath(loadAriesStorage(), parts);
-    if (value === void 0) return fallback;
-    return value;
-  }
-  function writeAriesPath(path, value) {
-    return updateAriesStorage((state6) => {
-      setValueAtPath(state6, path.split(".").filter(Boolean), value);
-    });
-  }
-  function updateAriesPath(path, updater) {
-    return updateAriesStorage((state6) => {
-      const parts = path.split(".").filter(Boolean);
-      const currentValue = getValueAtPath(state6, parts);
-      const next = updater(currentValue);
-      setValueAtPath(state6, parts, next);
-    });
-  }
-  function setApiKey(apiKey) {
-    try {
-      if (typeof GM_setValue === "function") {
-        GM_setValue(API_KEY_STORAGE_KEY, apiKey);
-        return;
-      }
-      getHostStorage()?.setItem(API_KEY_STORAGE_KEY, apiKey);
-    } catch (e) {
-      console.error("Failed to store API key:", e);
-    }
-  }
-  function getApiKey() {
-    try {
-      if (typeof GM_getValue === "function") {
-        return GM_getValue(API_KEY_STORAGE_KEY, null) ?? null;
-      }
-      return getHostStorage()?.getItem(API_KEY_STORAGE_KEY) ?? null;
-    } catch (e) {
-      console.error("Failed to retrieve API key:", e);
-      return null;
-    }
-  }
-  function hasApiKey() {
-    const key2 = getApiKey();
-    return key2 !== null && key2.length > 0;
-  }
-  function hasSeenRoomPrivacyNotice() {
-    try {
-      if (typeof GM_getValue === "function") {
-        const raw = GM_getValue(SEEN_ROOM_PRIVACY_NOTICE_KEY, null);
-        if (raw == null) return false;
-        if (typeof raw === "boolean") return raw;
-        return String(raw).trim() === "1";
-      }
-      return getHostStorage()?.getItem(SEEN_ROOM_PRIVACY_NOTICE_KEY) === "1";
-    } catch {
-      return false;
-    }
-  }
-  function markRoomPrivacyNoticeSeen() {
-    try {
-      if (typeof GM_setValue === "function") {
-        GM_setValue(SEEN_ROOM_PRIVACY_NOTICE_KEY, "1");
-        return;
-      }
-      getHostStorage()?.setItem(SEEN_ROOM_PRIVACY_NOTICE_KEY, "1");
-    } catch {
-    }
-  }
-  function hasSeenAutoRecoDisabledNotice() {
-    try {
-      if (typeof GM_getValue === "function") {
-        const raw = GM_getValue(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, null);
-        if (raw == null) return false;
-        if (typeof raw === "boolean") return raw;
-        return String(raw).trim() === "1";
-      }
-      return getHostStorage()?.getItem(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY) === "1";
-    } catch {
-      return false;
-    }
-  }
-  function markAutoRecoDisabledNoticeSeen() {
-    try {
-      if (typeof GM_setValue === "function") {
-        GM_setValue(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, "1");
-        return;
-      }
-      getHostStorage()?.setItem(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, "1");
-    } catch {
-    }
-  }
-  function getSeenChangelogVersion() {
-    try {
-      if (typeof GM_getValue === "function") {
-        const raw = GM_getValue(SEEN_CHANGELOG_VERSION_KEY, null);
-        return typeof raw === "string" && raw ? raw : null;
-      }
-      return getHostStorage()?.getItem(SEEN_CHANGELOG_VERSION_KEY) ?? null;
-    } catch {
-      return null;
-    }
-  }
-  function markChangelogVersionSeen(version) {
-    try {
-      if (typeof GM_setValue === "function") {
-        GM_setValue(SEEN_CHANGELOG_VERSION_KEY, version);
-        return;
-      }
-      getHostStorage()?.setItem(SEEN_CHANGELOG_VERSION_KEY, version);
-    } catch {
-    }
-  }
-  function setDeclinedApiAuth(declined) {
-    try {
-      if (declined) {
-        if (typeof GM_setValue === "function") {
-          GM_setValue(AUTH_DECLINED_STORAGE_KEY, "1");
-          return;
-        }
-        getHostStorage()?.setItem(AUTH_DECLINED_STORAGE_KEY, "1");
-        return;
-      }
-      if (typeof GM_deleteValue === "function") {
-        GM_deleteValue(AUTH_DECLINED_STORAGE_KEY);
-        return;
-      }
-      getHostStorage()?.removeItem(AUTH_DECLINED_STORAGE_KEY);
-    } catch {
-    }
-  }
-  var ARIES_STORAGE_KEY, ARIES_STORAGE_VERSION, API_KEY_STORAGE_KEY, AUTH_DECLINED_STORAGE_KEY, SEEN_ROOM_PRIVACY_NOTICE_KEY, SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, SEEN_CHANGELOG_VERSION_KEY, DEFAULT_ARIES_STORAGE, ARIES_FLUSH_DELAY_MS, cachedAriesStorage, ariesFlushTimer, ariesFlushPending, ariesLifecycleHooksInstalled;
-  var init_storage = __esm({
-    "src/platform/storage.ts"() {
-      "use strict";
-      init_friendSettingsSchema();
-      ARIES_STORAGE_KEY = "aries_mod";
-      ARIES_STORAGE_VERSION = 1;
-      API_KEY_STORAGE_KEY = "aries_api_key";
-      AUTH_DECLINED_STORAGE_KEY = "aries_auth_declined";
-      SEEN_ROOM_PRIVACY_NOTICE_KEY = "aries_seen_room_privacy_notice_v2";
-      SEEN_AUTO_RECO_DISABLED_NOTICE_KEY = "aries_seen_autoreco_disabled_notice";
-      SEEN_CHANGELOG_VERSION_KEY = "aries_seen_changelog_version";
-      DEFAULT_ARIES_STORAGE = {
-        version: ARIES_STORAGE_VERSION,
-        friends: {
-          settings: DEFAULT_FRIEND_SETTINGS
+      init_moveItemMessage();
+      PlayerService = {
+        /* -------------------------------- Position -------------------------------- */
+        getPosition() {
+          return Atoms.player.position.get();
         },
-        notifications: {
-          soundEnabled: true
-        }
-      };
-      ARIES_FLUSH_DELAY_MS = 500;
-      cachedAriesStorage = null;
-      ariesFlushTimer = null;
-      ariesFlushPending = false;
-      ariesLifecycleHooksInstalled = false;
-    }
-  });
-
-  // src/lib/keyboard.ts
-  function isKeybindCaptureActive() {
-    return keybindCaptureCount > 0;
-  }
-  function beginKeybindCapture() {
-    keybindCaptureCount++;
-  }
-  function endKeybindCapture() {
-    keybindCaptureCount = Math.max(0, keybindCaptureCount - 1);
-  }
-  function shouldIgnoreKeydown(e) {
-    if (isKeybindCaptureActive()) return true;
-    const el2 = e.target;
-    if (!el2) return false;
-    return el2.isContentEditable || el2.tagName === "INPUT" || el2.tagName === "TEXTAREA" || el2.tagName === "SELECT";
-  }
-  var keybindCaptureCount;
-  var init_keyboard = __esm({
-    "src/lib/keyboard.ts"() {
-      "use strict";
-      keybindCaptureCount = 0;
-    }
-  });
-
-  // src/ui/kit/menu.ts
-  function el(tag, cls, html) {
-    const e = document.createElement(tag);
-    if (cls) e.className = cls;
-    if (html != null) e.innerHTML = html;
-    return e;
-  }
-  function cssq(s) {
-    return s.replace(/"/g, '\\"');
-  }
-  function escapeHtml(s) {
-    return s.replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[m]);
-  }
-  function codesMatch(expected, actual) {
-    if (expected === actual) return true;
-    const altCodes = expected === "AltLeft" || expected === "AltRight";
-    const ctrlCodes = expected === "ControlLeft" || expected === "ControlRight";
-    const shiftCodes = expected === "ShiftLeft" || expected === "ShiftRight";
-    const metaCodes = expected === "MetaLeft" || expected === "MetaRight";
-    if (altCodes && (actual === "AltLeft" || actual === "AltRight")) return true;
-    if (ctrlCodes && (actual === "ControlLeft" || actual === "ControlRight")) return true;
-    if (shiftCodes && (actual === "ShiftLeft" || actual === "ShiftRight")) return true;
-    if (metaCodes && (actual === "MetaLeft" || actual === "MetaRight")) return true;
-    return false;
-  }
-  function isMac() {
-    return navigator.platform?.toLowerCase().includes("mac") || /mac|iphone|ipad|ipod/i.test(navigator.userAgent);
-  }
-  function eventToHotkey(e, allowModifierOnly = false) {
-    const isModifier = _MOD_CODES.has(e.code) || e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta";
-    if (isModifier && !allowModifierOnly) {
-      return null;
-    }
-    return {
-      code: e.code,
-      ctrl: e.ctrlKey,
-      alt: e.altKey,
-      shift: e.shiftKey,
-      meta: e.metaKey
-    };
-  }
-  function matchHotkey(e, h) {
-    if (!h) return false;
-    if (!!h.ctrl !== e.ctrlKey) return false;
-    if (!!h.shift !== e.shiftKey) return false;
-    if (!!h.alt !== e.altKey) return false;
-    if (!!h.meta !== e.metaKey) return false;
-    return codesMatch(h.code, e.code);
-  }
-  function hotkeyToString(hk) {
-    if (!hk) return "";
-    const parts = [];
-    if (hk.ctrl) parts.push("Ctrl");
-    if (hk.shift) parts.push("Shift");
-    if (hk.alt) parts.push("Alt");
-    if (hk.meta) parts.push("Meta");
-    if (hk.code) parts.push(hk.code);
-    return parts.join("+");
-  }
-  function stringToHotkey(s) {
-    if (!s) return null;
-    const parts = s.split("+").map((p) => p.trim()).filter(Boolean);
-    if (!parts.length) return null;
-    const code = canonicalizeCode(parts.pop() || "");
-    const hk = { code };
-    for (const p of parts) {
-      const P = p.toLowerCase();
-      if (P === "ctrl" || P === "control") hk.ctrl = true;
-      else if (P === "shift") hk.shift = true;
-      else if (P === "alt") hk.alt = true;
-      else if (P === "meta" || P === "cmd" || P === "command") hk.meta = true;
-    }
-    return hk.code ? hk : null;
-  }
-  function canonicalizeCode(rawCode) {
-    const trimmed = rawCode.trim();
-    if (!trimmed) return "";
-    const lower = trimmed.toLowerCase();
-    const keyMatch = lower.match(/^key([a-z])$/);
-    if (keyMatch) return `Key${keyMatch[1].toUpperCase()}`;
-    const digitMatch = lower.match(/^digit([0-9])$/);
-    if (digitMatch) return `Digit${digitMatch[1]}`;
-    const numpadDigitMatch = lower.match(/^numpad([0-9])$/);
-    if (numpadDigitMatch) return `Numpad${numpadDigitMatch[1]}`;
-    if (lower.startsWith("numpad")) {
-      const suffix = lower.slice(6);
-      if (!suffix) return "Numpad";
-      const mappedSuffix = CANONICAL_CODES[suffix] ?? capitalizeWord(suffix);
-      return `Numpad${mappedSuffix}`;
-    }
-    const fMatch = lower.match(/^f([0-9]{1,2})$/);
-    if (fMatch) return `F${fMatch[1]}`;
-    const arrowMatch = lower.match(/^arrow([a-z]+)$/);
-    if (arrowMatch) {
-      const suffix = arrowMatch[1];
-      const mappedSuffix = CANONICAL_CODES[suffix] ?? capitalizeWord(suffix);
-      return `Arrow${mappedSuffix}`;
-    }
-    if (CANONICAL_CODES[lower]) {
-      return CANONICAL_CODES[lower];
-    }
-    return trimmed[0].toUpperCase() + trimmed.slice(1);
-  }
-  function capitalizeWord(word) {
-    if (!word) return "";
-    return word[0].toUpperCase() + word.slice(1);
-  }
-  function prettyCode(code) {
-    if (code === "AltLeft" || code === "AltRight") return "Alt";
-    if (code === "ControlLeft" || code === "ControlRight") return "Ctrl";
-    if (code === "ShiftLeft" || code === "ShiftRight") return "Shift";
-    if (code === "MetaLeft" || code === "MetaRight") return isMac() ? "\u2318" : "Meta";
-    if (code.startsWith("Key")) return code.slice(3);
-    if (code.startsWith("Digit")) return code.slice(5);
-    if (code.startsWith("Numpad")) return "Numpad " + code.slice(6);
-    const arrows = { ArrowUp: "\u2191", ArrowDown: "\u2193", ArrowLeft: "\u2190", ArrowRight: "\u2192" };
-    if (arrows[code]) return arrows[code];
-    return code;
-  }
-  function hotkeyToPretty(h) {
-    if (!h) return "\u2014";
-    const mac = isMac();
-    const mods = [];
-    if (mac) {
-      if (h.ctrl) mods.push("\u2303");
-      if (h.alt) mods.push("\u2325");
-      if (h.shift) mods.push("\u21E7");
-      if (h.meta) mods.push("\u2318");
-    } else {
-      if (h.ctrl) mods.push("Ctrl");
-      if (h.alt) mods.push("Alt");
-      if (h.shift) mods.push("Shift");
-      if (h.meta) mods.push("Meta");
-    }
-    const modifierCode = h.alt && (h.code === "AltLeft" || h.code === "AltRight") || h.ctrl && (h.code === "ControlLeft" || h.code === "ControlRight") || h.shift && (h.code === "ShiftLeft" || h.code === "ShiftRight") || h.meta && (h.code === "MetaLeft" || h.code === "MetaRight");
-    const parts = mods.slice();
-    const codePretty = prettyCode(h.code);
-    if (!modifierCode || parts.length === 0) {
-      parts.push(codePretty);
-    }
-    if (!parts.length) return codePretty;
-    return parts.join(mac ? "" : " + ");
-  }
-  var activeHotkeyRecorder, HOTKEY_RECORDING_TIMEOUT_MS, Menu, VTabs, _MOD_CODES, CANONICAL_CODES;
-  var init_menu = __esm({
-    "src/ui/kit/menu.ts"() {
-      "use strict";
-      init_storage();
-      init_keyboard();
-      activeHotkeyRecorder = null;
-      HOTKEY_RECORDING_TIMEOUT_MS = 8e3;
-      Menu = class {
-        constructor(opts = {}) {
-          this.opts = opts;
-          this.tabs = /* @__PURE__ */ new Map();
-          this.events = /* @__PURE__ */ new Map();
-          this.currentId = null;
-          this._altDown = false;
-          this._insertDown = false;
-          this._hovering = false;
-          this._onKey = (e) => {
-            if (e.code === "Insert" || e.key === "Insert") {
-              this._insertDown = e.type === "keydown";
-            }
-            const alt = e.altKey || this._insertDown;
-            if (alt !== this._altDown) {
-              this._altDown = alt;
-              this._updateAltCursor();
-            }
-          };
-          this._onBlur = () => {
-            this._altDown = false;
-            this._insertDown = false;
-            this._updateAltCursor();
-          };
-          this._onEnter = () => {
-            this._hovering = true;
-            this._updateAltCursor();
-          };
-          this._onLeave = () => {
-            this._hovering = false;
-            this._updateAltCursor();
-          };
-          this.menuId = this.opts.id || "default";
-          this.lsKeyActive = `menu:${this.menuId}:activeTab`;
-        }
-        /** Monte le menu dans un conteneur */
-        mount(container) {
-          this.ensureStyles();
-          container.innerHTML = "";
-          this.root = el("div", `qmm ${this.opts.classes || ""} ${this.opts.compact ? "qmm-compact" : ""}`);
-          if (this.opts.startHidden) this.root.style.display = "none";
-          this.tabBar = el("div", "qmm-tabs");
-          this.views = el("div", "qmm-views");
-          this.root.appendChild(this.tabBar);
-          this.root.appendChild(this.views);
-          container.appendChild(this.root);
-          if (this.tabs.size) {
-            for (const [id, def] of this.tabs) this.createTabView(id, def);
-            this.restoreActive();
-          }
-          this.updateTabsBarVisibility();
-          this.root.addEventListener("pointerenter", this._onEnter);
-          this.root.addEventListener("pointerleave", this._onLeave);
-          window.addEventListener("keydown", this._onKey, true);
-          window.addEventListener("keyup", this._onKey, true);
-          window.addEventListener("blur", this._onBlur);
-          document.addEventListener("visibilitychange", this._onBlur);
-          if (this.opts.startWindowHidden) this.setWindowVisible(false);
-          this.emit("mounted");
-        }
-        /** Démonte le menu (optionnel) */
-        unmount() {
-          this.root?.removeEventListener("pointerenter", this._onEnter);
-          this.root?.removeEventListener("pointerleave", this._onLeave);
-          window.removeEventListener("keydown", this._onKey, true);
-          window.removeEventListener("keyup", this._onKey, true);
-          window.removeEventListener("blur", this._onBlur);
-          document.removeEventListener("visibilitychange", this._onBlur);
-          if (this.root?.parentElement) this.root.parentElement.removeChild(this.root);
-          this.emit("unmounted");
-        }
-        /** Retourne l'élément fenêtre englobant (barre – / ×) */
-        getWindowEl() {
-          if (!this.root) return null;
-          const sel = this.opts.windowSelector || ".qws-win";
-          return this.root.closest(sel);
-        }
-        /** Affiche/masque la FENÊTRE (barre incluse) */
-        setWindowVisible(visible) {
-          const win = this.getWindowEl();
-          if (!win) return;
-          win.classList.toggle("is-hidden", !visible);
-          this.emit(visible ? "window:show" : "window:hide");
-        }
-        /** Bascule l’état de la fenêtre. Retourne true si maintenant visible. */
-        toggleWindow() {
-          const win = this.getWindowEl();
-          if (!win) return false;
-          const willShow = win.classList.contains("is-hidden");
-          this.setWindowVisible(willShow);
-          return willShow;
-        }
-        /** Donne l’état courant de la fenêtre (true = visible) */
-        isWindowVisible() {
-          const win = this.getWindowEl();
-          if (!win) return true;
-          return !win.classList.contains("is-hidden") && getComputedStyle(win).display !== "none";
-        }
-        /** Affiche/masque le root */
-        setVisible(visible) {
-          if (!this.root) return;
-          this.root.style.display = visible ? "" : "none";
-          this.emit(visible ? "show" : "hide");
-        }
-        toggle() {
-          if (!this.root) return false;
-          const v = this.root.style.display === "none";
-          this.setVisible(v);
-          return v;
-        }
-        /** Ajoute un onglet (peut être appelé avant ou après mount) */
-        addTab(id, title, render) {
-          this.tabs.set(id, { title, render, badge: null });
-          if (this.root) {
-            this.createTabView(id, this.tabs.get(id));
-            this.updateTabsBarVisibility();
-          }
-          return this;
-        }
-        /** Ajoute plusieurs onglets en une fois */
-        addTabs(defs) {
-          defs.forEach((d) => this.addTab(d.id, d.title, d.render));
-          return this;
-        }
-        /** Met à jour le titre de l’onglet (ex: compteur, libellé) */
-        setTabTitle(id, title) {
-          const def = this.tabs.get(id);
-          if (!def) return;
-          def.title = title;
-          if (def.btn) {
-            const label2 = def.btn.querySelector(".label");
-            if (label2) label2.textContent = title;
-          }
-        }
-        /** Ajoute/retire un badge à droite du titre (ex: “3”, “NEW”, “!”) */
-        setTabBadge(id, text) {
-          const def = this.tabs.get(id);
-          if (!def || !def.btn) return;
-          if (!def.badge) {
-            def.badge = document.createElement("span");
-            def.badge.className = "badge";
-            def.btn.appendChild(def.badge);
-          }
-          if (text == null || text === "") {
-            def.badge.style.display = "none";
-          } else {
-            def.badge.textContent = text;
-            def.badge.style.display = "";
-          }
-        }
-        /** Force le re-render d’un onglet (ré-exécute son render) */
-        refreshTab(id) {
-          const def = this.tabs.get(id);
-          if (!def?.view) return;
-          const scroller = this.findScrollableAncestor(def.view);
-          const st = scroller ? scroller.scrollTop : null;
-          const sl = scroller ? scroller.scrollLeft : null;
-          const activeId = document.activeElement?.id || null;
-          def.view.innerHTML = "";
-          try {
-            def.render(def.view, this);
-          } catch (e) {
-            def.view.textContent = String(e);
-          }
-          if (this.currentId === id) this.switchTo(id);
-          this.emit("tab:render", id);
-          if (scroller && st != null) {
-            requestAnimationFrame(() => {
-              try {
-                scroller.scrollTop = st;
-                scroller.scrollLeft = sl ?? 0;
-              } catch {
-              }
-              if (activeId) {
-                const n = document.getElementById(activeId);
-                if (n && n.focus) try {
-                  n.focus();
-                } catch {
-                }
-              }
-            });
-          }
-        }
-        findScrollableAncestor(start2) {
-          function isScrollable(el3) {
-            const s = getComputedStyle(el3);
-            const oy = s.overflowY || s.overflow;
-            return /(auto|scroll)/.test(oy) && el3.scrollHeight > el3.clientHeight;
-          }
-          let el2 = start2;
-          while (el2) {
-            if (isScrollable(el2)) return el2;
-            el2 = el2.parentElement;
-          }
-          return document.querySelector(".qws-win");
-        }
-        firstTabId() {
-          const it = this.tabs.keys().next();
-          return it.done ? null : it.value ?? null;
-        }
-        _updateAltCursor() {
-          if (!this.root) return;
-          this.root.classList.toggle("qmm-alt-drag", this._altDown && this._hovering);
-        }
-        /** Récupère la vue DOM d’un onglet (pratique pour updates ciblées) */
-        getTabView(id) {
-          return this.tabs.get(id)?.view ?? null;
-        }
-        /** Retire un onglet */
-        removeTab(id) {
-          const def = this.tabs.get(id);
-          if (!def) return;
-          this.tabs.delete(id);
-          const btn = this.tabBar?.querySelector(`button[data-id="${cssq(id)}"]`);
-          if (btn && btn.parentElement) btn.parentElement.removeChild(btn);
-          if (def.view && def.view.parentElement) def.view.parentElement.removeChild(def.view);
-          if (this.currentId === id) {
-            const first = this.tabs.keys().next().value || null;
-            this.switchTo(first);
-          }
-          this.updateTabsBarVisibility();
-        }
-        /** Active un onglet (id=null => affiche toutes les vues) */
-        switchTo(id) {
-          this.currentId = id;
-          [...this.tabBar.children].forEach((ch) => ch.classList.toggle("active", ch.dataset.id === id || id === null));
-          [...this.views.children].forEach((ch) => ch.classList.toggle("active", ch.dataset.id === id || id === null));
-          this.persistActive();
-          this.emit("tab:change", id);
-        }
-        /** Événements */
-        on(event, handler) {
-          if (!this.events.has(event)) this.events.set(event, /* @__PURE__ */ new Set());
-          this.events.get(event).add(handler);
-          return () => this.off(event, handler);
-        }
-        off(event, handler) {
-          this.events.get(event)?.delete(handler);
-        }
-        emit(event, ...args) {
-          this.events.get(event)?.forEach((h) => {
-            try {
-              h(...args);
-            } catch {
-            }
-          });
-        }
-        // ---------- Helpers UI publics (réutilisables dans tes tabs) ----------
-        btn(label2, onClickOrOpts) {
-          const opts = typeof onClickOrOpts === "function" ? { onClick: onClickOrOpts } : { ...onClickOrOpts || {} };
-          const b = el("button", "qmm-btn");
-          b.type = "button";
-          let iconEl = null;
-          if (opts.icon) {
-            iconEl = typeof opts.icon === "string" ? document.createElement("span") : opts.icon;
-            if (typeof opts.icon === "string" && iconEl) {
-              iconEl.textContent = opts.icon;
-            }
-            if (iconEl) {
-              iconEl.classList.add("qmm-btn__icon");
-            }
-          }
-          const trimmedLabel = (label2 ?? "").trim();
-          const shouldRenderLabel = !iconEl || trimmedLabel.length > 0;
-          const labelSpan = shouldRenderLabel ? document.createElement("span") : null;
-          if (labelSpan) {
-            labelSpan.className = "label";
-            labelSpan.textContent = label2;
-          }
-          if (iconEl) {
-            if (trimmedLabel.length === 0) {
-              b.classList.add("qmm-btn--icon");
-            }
-            if (opts.iconPosition === "right") {
-              iconEl.classList.add("is-right");
-              if (labelSpan) b.append(labelSpan);
-              b.append(iconEl);
-            } else {
-              iconEl.classList.add("is-left");
-              b.append(iconEl);
-              if (labelSpan) b.append(labelSpan);
-            }
-          } else {
-            if (labelSpan) b.append(labelSpan);
-          }
-          const variant = opts.variant && opts.variant !== "default" ? opts.variant : null;
-          if (variant) b.classList.add(`qmm-btn--${variant}`);
-          if (opts.fullWidth) b.classList.add("qmm-btn--full");
-          if (opts.size === "sm") b.classList.add("qmm-btn--sm");
-          if (opts.active) b.classList.add("active");
-          if (opts.tooltip || opts.title) b.title = opts.tooltip || opts.title || "";
-          if (opts.ariaLabel) b.setAttribute("aria-label", opts.ariaLabel);
-          if (opts.onClick) b.addEventListener("click", opts.onClick);
-          if (opts.disabled) this.setButtonEnabled(b, false);
-          b.setEnabled = (enabled5) => this.setButtonEnabled(b, enabled5);
-          b.setActive = (active2) => b.classList.toggle("active", !!active2);
-          return b;
-        }
-        setButtonEnabled(button2, enabled5) {
-          button2.disabled = !enabled5;
-          button2.classList.toggle("is-disabled", !enabled5);
-          button2.setAttribute("aria-disabled", (!enabled5).toString());
-        }
-        flexRow(opts = {}) {
-          const row = document.createElement("div");
-          row.className = ["qmm-flex", opts.className || ""].filter(Boolean).join(" ").trim();
-          row.style.display = "flex";
-          row.style.alignItems = this.mapAlign(opts.align ?? "center");
-          row.style.justifyContent = this.mapJustify(opts.justify ?? "start");
-          row.style.gap = `${opts.gap ?? 8}px`;
-          row.style.flexWrap = opts.wrap === false ? "nowrap" : "wrap";
-          if (opts.fullWidth) row.style.width = "100%";
-          return row;
-        }
-        formGrid(opts = {}) {
-          const grid = document.createElement("div");
-          grid.className = "qmm-form-grid";
-          grid.style.display = "grid";
-          grid.style.gridTemplateColumns = opts.columns || "max-content 1fr";
-          grid.style.columnGap = `${opts.columnGap ?? 8}px`;
-          grid.style.rowGap = `${opts.rowGap ?? 8}px`;
-          grid.style.alignItems = opts.align ? opts.align : "center";
-          return grid;
-        }
-        formRow(labelText, control, opts = {}) {
-          const wrap = document.createElement("div");
-          wrap.className = "qmm-form-row";
-          wrap.style.display = "grid";
-          wrap.style.gridTemplateColumns = `${opts.labelWidth || "160px"} 1fr`;
-          wrap.style.columnGap = `${opts.gap ?? 10}px`;
-          wrap.style.alignItems = opts.alignTop ? "start" : "center";
-          if (opts.wrap) wrap.classList.add("is-wrap");
-          const lab = this.label(labelText);
-          lab.classList.add("qmm-form-row__label");
-          lab.style.margin = "0";
-          lab.style.justifySelf = "start";
-          if (opts.alignTop) lab.style.alignSelf = "start";
-          wrap.append(lab, control);
-          return { root: wrap, label: lab };
-        }
-        card(title, opts = {}) {
-          const root = document.createElement("div");
-          root.className = "qmm-card";
-          root.dataset.tone = opts.tone || "default";
-          if (opts.align === "center") root.classList.add("is-center");
-          if (opts.align === "stretch") root.classList.add("is-stretch");
-          if (opts.padding) root.style.padding = opts.padding;
-          if (opts.gap != null) root.style.gap = `${opts.gap}px`;
-          if (opts.maxWidth) {
-            const max = typeof opts.maxWidth === "number" ? `${opts.maxWidth}px` : opts.maxWidth;
-            root.style.width = `min(${max}, 100%)`;
-          }
-          const header = document.createElement("div");
-          header.className = "qmm-card__header";
-          if (opts.compactHeader) header.classList.add("is-compact");
-          const titleWrap = document.createElement("div");
-          titleWrap.className = "qmm-card__title";
-          titleWrap.textContent = title;
-          if (opts.icon) {
-            const icon = typeof opts.icon === "string" ? document.createElement("span") : opts.icon;
-            if (typeof opts.icon === "string" && icon) icon.textContent = opts.icon;
-            if (icon) {
-              icon.classList.add("qmm-card__icon");
-              header.appendChild(icon);
-            }
-          }
-          header.appendChild(titleWrap);
-          if (opts.subtitle || opts.description) {
-            const sub = document.createElement("div");
-            sub.className = "qmm-card__subtitle";
-            sub.textContent = opts.subtitle || opts.description || "";
-            header.appendChild(sub);
-          }
-          if (opts.actions?.length) {
-            const actions = document.createElement("div");
-            actions.className = "qmm-card__actions";
-            opts.actions.forEach((a) => actions.appendChild(a));
-            header.appendChild(actions);
-          }
-          const body = document.createElement("div");
-          body.className = "qmm-card__body";
-          root.append(header, body);
-          return {
-            root,
-            header,
-            body,
-            setTitle(next) {
-              titleWrap.textContent = next;
-            }
-          };
-        }
-        toggleChip(labelText, opts = {}) {
-          const wrap = document.createElement("label");
-          wrap.className = "qmm-chip-toggle";
-          if (opts.tooltip) wrap.title = opts.tooltip;
-          const input = document.createElement("input");
-          input.type = opts.type || "checkbox";
-          if (opts.name) input.name = opts.name;
-          if (opts.value) input.value = opts.value;
-          input.checked = !!opts.checked;
-          const face = document.createElement("div");
-          face.className = "qmm-chip-toggle__face";
-          if (opts.icon) {
-            const icon = typeof opts.icon === "string" ? document.createElement("span") : opts.icon;
-            if (typeof opts.icon === "string" && icon) icon.textContent = opts.icon;
-            if (icon) {
-              icon.classList.add("qmm-chip-toggle__icon");
-              face.appendChild(icon);
-            }
-          }
-          const labelEl = document.createElement("span");
-          labelEl.className = "qmm-chip-toggle__label";
-          labelEl.textContent = labelText;
-          face.appendChild(labelEl);
-          if (opts.description) {
-            const desc = document.createElement("span");
-            desc.className = "qmm-chip-toggle__desc";
-            desc.textContent = opts.description;
-            face.appendChild(desc);
-          }
-          if (opts.badge) {
-            const badge = document.createElement("span");
-            badge.className = "qmm-chip-toggle__badge";
-            badge.textContent = opts.badge;
-            face.appendChild(badge);
-          }
-          wrap.append(input, face);
-          return { root: wrap, input, label: labelEl };
-        }
-        select(opts = {}) {
-          const sel = document.createElement("select");
-          sel.className = "qmm-input qmm-select";
-          if (opts.id) sel.id = opts.id;
-          if (opts.width) sel.style.minWidth = opts.width;
-          if (opts.placeholder) {
-            const opt = document.createElement("option");
-            opt.value = "";
-            opt.textContent = opts.placeholder;
-            opt.disabled = true;
-            opt.selected = true;
-            sel.appendChild(opt);
-          }
-          return sel;
-        }
-        errorBar() {
-          const el2 = document.createElement("div");
-          el2.className = "qmm-error";
-          el2.style.display = "none";
-          return {
-            el: el2,
-            show(message) {
-              el2.textContent = message;
-              el2.style.display = "block";
-            },
-            clear() {
-              el2.textContent = "";
-              el2.style.display = "none";
-            }
-          };
-        }
-        mapAlign(al) {
-          if (al === "start") return "flex-start";
-          if (al === "end") return "flex-end";
-          if (al === "stretch") return "stretch";
-          return "center";
-        }
-        mapJustify(j) {
-          if (j === "center") return "center";
-          if (j === "end") return "flex-end";
-          if (j === "between") return "space-between";
-          if (j === "around") return "space-around";
-          return "flex-start";
-        }
-        label(text) {
-          const l = el("label", "qmm-label");
-          l.textContent = text;
-          return l;
-        }
-        row(...children) {
-          const r = el("div", "qmm-row");
-          children.forEach((c) => r.appendChild(c));
-          return r;
-        }
-        section(title) {
-          const s = el("div", "qmm-section");
-          s.appendChild(el("div", "qmm-section-title", escapeHtml(title)));
-          return s;
-        }
-        inputNumber(min = 0, max = 9999, step = 1, value = 0) {
-          const wrap = el("div", "qmm-input-number");
-          const i = el("input", "qmm-input qmm-input-number-input");
-          i.type = "number";
-          i.min = String(min);
-          i.max = String(max);
-          i.step = String(step);
-          i.value = String(value);
-          i.inputMode = "numeric";
-          const spin = el("div", "qmm-spin");
-          const up = el("button", "qmm-step qmm-step--up", "\u25B2");
-          const down = el("button", "qmm-step qmm-step--down", "\u25BC");
-          up.type = down.type = "button";
-          const clamp3 = () => {
-            const n = Number(i.value);
-            if (Number.isFinite(n)) {
-              const lo = Number(i.min), hi = Number(i.max);
-              const clamped = Math.max(lo, Math.min(hi, n));
-              if (clamped !== n) i.value = String(clamped);
-            }
-          };
-          const bump = (dir) => {
-            if (dir < 0) i.stepDown();
-            else i.stepUp();
-            clamp3();
-            i.dispatchEvent(new Event("input", { bubbles: true }));
-            i.dispatchEvent(new Event("change", { bubbles: true }));
-          };
-          const addSpin = (btn, dir) => {
-            let pressTimer = null;
-            let repeatTimer = null;
-            let suppressNextClick = false;
-            const start2 = (ev) => {
-              suppressNextClick = false;
-              pressTimer = window.setTimeout(() => {
-                suppressNextClick = true;
-                bump(dir);
-                repeatTimer = window.setInterval(() => bump(dir), 60);
-              }, 300);
-              btn.setPointerCapture?.(ev.pointerId);
-            };
-            const stop2 = () => {
-              if (pressTimer != null) {
-                clearTimeout(pressTimer);
-                pressTimer = null;
-              }
-              if (repeatTimer != null) {
-                clearInterval(repeatTimer);
-                repeatTimer = null;
-              }
-            };
-            btn.addEventListener("pointerdown", start2);
-            ["pointerup", "pointercancel", "pointerleave", "blur"].forEach(
-              (ev) => btn.addEventListener(ev, stop2)
-            );
-            btn.addEventListener("click", (e) => {
-              if (suppressNextClick) {
-                e.preventDefault();
-                e.stopPropagation();
-                suppressNextClick = false;
-                return;
-              }
-              bump(dir);
-            });
-          };
-          addSpin(up, 1);
-          addSpin(down, -1);
-          i.addEventListener("change", clamp3);
-          spin.append(up, down);
-          wrap.append(i, spin);
-          i.wrap = wrap;
-          return i;
-        }
-        inputText(placeholder = "", value = "") {
-          const i = el("input", "qmm-input");
-          i.type = "text";
-          i.placeholder = placeholder;
-          i.value = value;
-          return i;
-        }
-        checkbox(checked = false) {
-          const i = el("input", "qmm-check");
-          i.type = "checkbox";
-          i.checked = checked;
-          return i;
-        }
-        radio(name, value, checked = false) {
-          const i = el("input", "qmm-radio");
-          i.type = "radio";
-          i.name = name;
-          i.value = value;
-          i.checked = checked;
-          return i;
-        }
-        slider(min = 0, max = 100, step = 1, value = 0) {
-          const i = el("input", "qmm-range");
-          i.type = "range";
-          i.min = String(min);
-          i.max = String(max);
-          i.step = String(step);
-          i.value = String(value);
-          return i;
-        }
-        rangeDual(min = 0, max = 100, step = 1, valueMin = min, valueMax = max) {
-          const wrap = el("div", "qmm-range-dual");
-          const track = el("div", "qmm-range-dual-track");
-          const fill = el("div", "qmm-range-dual-fill");
-          track.appendChild(fill);
-          wrap.appendChild(track);
-          const createHandle = (value, extraClass) => {
-            const input = this.slider(min, max, step, value);
-            input.classList.add("qmm-range-dual-input", extraClass);
-            wrap.appendChild(input);
-            return input;
-          };
-          const minInput = createHandle(valueMin, "qmm-range-dual-input--min");
-          const maxInput = createHandle(valueMax, "qmm-range-dual-input--max");
-          const updateFill = () => {
-            const minValue = Number(minInput.value);
-            const maxValue = Number(maxInput.value);
-            const total = max - min;
-            if (!Number.isFinite(total) || total <= 0) {
-              fill.style.left = "0%";
-              fill.style.right = "100%";
-              return;
-            }
-            const clampPercent2 = (value) => Math.max(0, Math.min(100, value));
-            const start2 = (Math.min(minValue, maxValue) - min) / total * 100;
-            const end = (Math.max(minValue, maxValue) - min) / total * 100;
-            fill.style.left = `${clampPercent2(start2)}%`;
-            fill.style.right = `${clampPercent2(100 - end)}%`;
-          };
-          minInput.addEventListener("input", updateFill);
-          maxInput.addEventListener("input", updateFill);
-          const handle = {
-            root: wrap,
-            min: minInput,
-            max: maxInput,
-            setValues(minValue, maxValue) {
-              minInput.value = String(minValue);
-              maxInput.value = String(maxValue);
-              updateFill();
-            },
-            refresh: updateFill
-          };
-          handle.refresh();
-          return handle;
-        }
-        switch(checked = false) {
-          const i = this.checkbox(checked);
-          i.classList.add("qmm-switch");
-          return i;
-        }
-        // Helpers “tableau simple” pour lister les items
-        table(headers, opts) {
-          const wrap = document.createElement("div");
-          wrap.className = "qmm-table-wrap";
-          if (opts?.minimal) wrap.classList.add("qmm-table-wrap--minimal");
-          const scroller = document.createElement("div");
-          scroller.className = "qmm-table-scroll";
-          if (opts?.maxHeight) scroller.style.maxHeight = opts.maxHeight;
-          wrap.appendChild(scroller);
-          const t = document.createElement("table");
-          t.className = "qmm-table";
-          if (opts?.minimal) t.classList.add("qmm-table--minimal");
-          if (opts?.compact) t.classList.add("qmm-table--compact");
-          if (opts?.fixed) t.style.tableLayout = "fixed";
-          const thead = document.createElement("thead");
-          const trh = document.createElement("tr");
-          headers.forEach((h) => {
-            const th = document.createElement("th");
-            if (typeof h === "string") {
-              th.textContent = h;
-            } else {
-              th.textContent = h.label ?? "";
-              if (h.align) th.classList.add(`is-${h.align}`);
-              if (h.width) th.style.width = h.width;
-            }
-            trh.appendChild(th);
-          });
-          thead.appendChild(trh);
-          const tbody = document.createElement("tbody");
-          t.append(thead, tbody);
-          scroller.appendChild(t);
-          return { root: wrap, tbody };
-        }
-        segmented(items, selected, onChange, opts) {
-          const root = document.createElement("div");
-          root.className = "qmm-seg";
-          if (opts?.fullWidth) root.classList.add("qmm-seg--full");
-          if (opts?.id) root.id = opts.id;
-          root.setAttribute("role", "radiogroup");
-          if (opts?.ariaLabel) root.setAttribute("aria-label", opts.ariaLabel);
-          const rail = document.createElement("div");
-          rail.className = "qmm-seg__indicator";
-          root.appendChild(rail);
-          const reduceMotionQuery = typeof window !== "undefined" && "matchMedia" in window ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
-          const canAnimateIndicator = typeof rail.animate === "function";
-          if (canAnimateIndicator) {
-            rail.style.transition = "none";
-          }
-          let indicatorMetrics = null;
-          let indicatorAnimation = null;
-          const applyIndicatorStyles = (left, width) => {
-            rail.style.transform = `translate3d(${left}px,0,0)`;
-            rail.style.width = `${width}px`;
-          };
-          const cancelIndicatorAnimation = () => {
-            if (!indicatorAnimation) return;
-            indicatorAnimation.cancel();
-            indicatorAnimation = null;
-          };
-          let value = selected;
-          const btns = [];
-          const setSelected = (v, focus = false) => {
-            if (v === value) {
-              if (focus) {
-                const alreadyActive = btns.find((b) => b.dataset.value === v);
-                alreadyActive?.focus();
-              }
-              onChange?.(value);
-              return;
-            }
-            value = v;
-            for (const b of btns) {
-              const active2 = b.dataset.value === v;
-              b.setAttribute("aria-checked", active2 ? "true" : "false");
-              b.tabIndex = active2 ? 0 : -1;
-              b.classList.toggle("active", active2);
-              if (active2 && focus) b.focus();
-            }
-            moveIndicator(true);
-            onChange?.(value);
-          };
-          const moveIndicator = (animate = false) => {
-            const active2 = btns.find((b) => b.dataset.value === value);
-            if (!active2) return;
-            const i = btns.indexOf(active2);
-            const n = btns.length;
-            const cs = getComputedStyle(root);
-            const gap = parseFloat(cs.gap || cs.columnGap || "0") || 0;
-            const bL = parseFloat(cs.borderLeftWidth || "0") || 0;
-            const bR = parseFloat(cs.borderRightWidth || "0") || 0;
-            const rRoot = root.getBoundingClientRect();
-            const rBtn = active2.getBoundingClientRect();
-            let left = rBtn.left - rRoot.left - bL;
-            let width = rBtn.width;
-            const padW = rRoot.width - bL - bR;
-            if (n === 1) {
-              left = 0;
-              width = padW;
-            } else if (i === 0) {
-              const rightEdge = left + width + gap / 2;
-              left = 0;
-              width = rightEdge - left;
-            } else if (i === n - 1) {
-              left = left - gap / 2;
-              width = padW - left;
-            } else {
-              left = left - gap / 2;
-              width = width + gap;
-            }
-            const dpr = window.devicePixelRatio || 1;
-            const snap = (x) => Math.round(x * dpr) / dpr;
-            const targetLeft = snap(left);
-            const targetWidth = snap(width);
-            const previous = indicatorMetrics;
-            indicatorMetrics = { left: targetLeft, width: targetWidth };
-            const applyFinal = () => applyIndicatorStyles(targetLeft, targetWidth);
-            const shouldAnimate = animate && canAnimateIndicator && !reduceMotionQuery?.matches && previous != null && previous.width > 0 && Number.isFinite(previous.width) && targetWidth > 0 && Number.isFinite(targetWidth);
-            if (!shouldAnimate) {
-              cancelIndicatorAnimation();
-              applyFinal();
-              return;
-            }
-            cancelIndicatorAnimation();
-            applyIndicatorStyles(previous.left, previous.width);
-            indicatorAnimation = rail.animate(
-              [
-                {
-                  transform: `translate3d(${previous.left}px,0,0)`,
-                  width: `${previous.width}px`,
-                  opacity: 0.92,
-                  offset: 0
-                },
-                {
-                  transform: `translate3d(${targetLeft}px,0,0)`,
-                  width: `${targetWidth}px`,
-                  opacity: 1,
-                  offset: 1
-                }
-              ],
-              {
-                duration: 260,
-                easing: "cubic-bezier(.22,.7,.28,1)",
-                fill: "forwards"
-              }
-            );
-            const finalize = () => {
-              applyFinal();
-              indicatorAnimation = null;
-            };
-            indicatorAnimation.addEventListener("finish", finalize, { once: true });
-            indicatorAnimation.addEventListener("cancel", finalize, { once: true });
-          };
-          items.forEach(({ value: v, label: label2, disabled }) => {
-            const b = document.createElement("button");
-            b.type = "button";
-            b.className = "qmm-seg__btn";
-            b.dataset.value = String(v);
-            b.setAttribute("role", "radio");
-            b.setAttribute("aria-checked", v === selected ? "true" : "false");
-            b.tabIndex = v === selected ? 0 : -1;
-            b.disabled = !!disabled;
-            const labelSpan = document.createElement("span");
-            labelSpan.className = "qmm-seg__btn-label";
-            labelSpan.textContent = label2;
-            b.appendChild(labelSpan);
-            b.addEventListener("click", () => {
-              if (!b.disabled) setSelected(v, false);
-            });
-            b.addEventListener("keydown", (e) => {
-              if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(e.key)) return;
-              e.preventDefault();
-              const idx = items.findIndex((it) => it.value === value);
-              if (e.key === "Home") {
-                setSelected(items[0].value, true);
-                return;
-              }
-              if (e.key === "End") {
-                setSelected(items[items.length - 1].value, true);
-                return;
-              }
-              const dir = e.key === "ArrowRight" ? 1 : -1;
-              let j = idx;
-              for (let k = 0; k < items.length; k++) {
-                j = (j + dir + items.length) % items.length;
-                if (!items[j].disabled) {
-                  setSelected(items[j].value, true);
-                  break;
-                }
-              }
-            });
-            btns.push(b);
-            root.appendChild(b);
-          });
-          const ro = window.ResizeObserver ? new ResizeObserver(() => moveIndicator(false)) : null;
-          if (ro) ro.observe(root);
-          window.addEventListener("resize", () => moveIndicator(false));
-          queueMicrotask(() => moveIndicator(false));
-          root.get = () => value;
-          root.set = (v) => setSelected(v, false);
-          return root;
-        }
-        radioGroup(name, options, selected, onChange) {
-          const wrap = el("div", "qmm-radio-group");
-          for (const { value, label: label2 } of options) {
-            const r = this.radio(name, value, selected === value);
-            const lab = document.createElement("label");
-            lab.className = "qmm-radio-label";
-            lab.appendChild(r);
-            lab.appendChild(document.createTextNode(label2));
-            r.onchange = () => {
-              if (r.checked) onChange(value);
-            };
-            wrap.appendChild(lab);
-          }
-          return wrap;
-        }
-        /** Bind LS: sauvegarde automatique via toStr/parse */
-        bindLS(key2, read, write, parse, toStr) {
-          try {
-            const raw = localStorage.getItem(key2);
-            if (raw != null) write(parse(raw));
-          } catch {
-          }
-          return { save: () => {
-            try {
-              localStorage.setItem(key2, toStr(read()));
-            } catch {
-            }
-          } };
-        }
-        /* -------------------------- split2 helper -------------------------- */
-        /** Crée un layout 2 colonnes (gauche/droite) en CSS Grid.
-         *  leftWidth: ex "200px" | "18rem" | "minmax(160px, 30%)" */
-        split2(leftWidth = "260px") {
-          const root = el("div", "qmm-split");
-          root.style.gridTemplateColumns = "minmax(160px, max-content) 1fr";
-          const left = el("div", "qmm-split-left");
-          const right = el("div", "qmm-split-right");
-          root.appendChild(left);
-          root.appendChild(right);
-          return { root, left, right };
-        }
-        /* -------------------------- VTabs factory -------------------------- */
-        /** Crée des “tabs verticaux” génériques (liste sélectionnable + filtre). */
-        vtabs(options = {}) {
-          return new VTabs(options);
-        }
-        hotkeyButton(initial, onChange, opts) {
-          const emptyLabel = opts?.emptyLabel ?? "None";
-          const listeningLabel = opts?.listeningLabel ?? "Press a key\u2026";
-          const clearable = opts?.clearable ?? true;
-          let hk = initial ?? null;
-          let recording = false;
-          let recordingTimeout = null;
-          if (opts?.storageKey) {
-            try {
-              hk = stringToHotkey(localStorage.getItem(opts.storageKey) || "") ?? initial ?? null;
-            } catch {
-            }
-          }
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.className = "qmm-hotkey";
-          btn.setAttribute("aria-live", "polite");
-          const render = () => {
-            btn.classList.toggle("is-recording", recording);
-            btn.classList.toggle("is-empty", !hk);
-            btn.classList.toggle("is-assigned", !recording && !!hk);
-            if (recording) {
-              btn.textContent = listeningLabel;
-              btn.title = "Listening\u2026 press a key (Esc to cancel, Backspace to clear)";
-            } else if (!hk) {
-              btn.textContent = emptyLabel;
-              btn.title = "No key assigned";
-            } else {
-              btn.textContent = hotkeyToPretty(hk);
-              btn.title = "Click to rebind \u2022 Right-click to clear";
-            }
-          };
-          const applyHotkey = (value, skipRender = false) => {
-            hk = value ? { ...value } : null;
-            if (!skipRender) render();
-          };
-          btn.refreshHotkey = (value) => {
-            applyHotkey(value);
-          };
-          const stopRecording = () => {
-            if (!recording) return;
-            recording = false;
-            if (activeHotkeyRecorder === stopRecording) activeHotkeyRecorder = null;
-            window.removeEventListener("keydown", handleKeyDown, true);
-            document.removeEventListener("pointerdown", handlePointerDown2, true);
-            window.removeEventListener("blur", handleWindowBlur);
-            if (recordingTimeout !== null) {
-              clearTimeout(recordingTimeout);
-              recordingTimeout = null;
-            }
-            endKeybindCapture();
-            render();
-          };
-          const startRecording = () => {
-            if (recording) return;
-            activeHotkeyRecorder?.();
-            recording = true;
-            activeHotkeyRecorder = stopRecording;
-            beginKeybindCapture();
-            window.addEventListener("keydown", handleKeyDown, true);
-            document.addEventListener("pointerdown", handlePointerDown2, true);
-            window.addEventListener("blur", handleWindowBlur);
-            recordingTimeout = window.setTimeout(stopRecording, HOTKEY_RECORDING_TIMEOUT_MS);
-            render();
-          };
-          const save = () => {
-            if (opts?.storageKey) {
-              const str = hotkeyToString(hk);
-              try {
-                if (str) localStorage.setItem(opts.storageKey, str);
-                else localStorage.removeItem(opts.storageKey);
-              } catch {
-              }
-            }
-            onChange?.(hk, opts?.storageKey ? hotkeyToString(hk) : void 0);
-          };
-          const handlePointerDown2 = (e) => {
-            if (e.target instanceof Node && btn.contains(e.target)) return;
-            stopRecording();
-          };
-          const handleWindowBlur = (e) => {
-            if (e.target !== window) return;
-            stopRecording();
-          };
-          function handleKeyDown(e) {
-            if (!recording) return;
-            if (!btn.isConnected) {
-              stopRecording();
-              return;
-            }
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            if (e.key === "Escape") {
-              stopRecording();
-              return;
-            }
-            if ((e.key === "Backspace" || e.key === "Delete") && clearable) {
-              applyHotkey(null, true);
-              save();
-              stopRecording();
-              return;
-            }
-            const next = eventToHotkey(e, opts?.allowModifierOnly ?? false);
-            if (!next) {
-              return;
-            }
-            applyHotkey(next, true);
-            save();
-            stopRecording();
-          }
-          btn.addEventListener("click", (e) => {
-            e.preventDefault();
-            if (recording) {
-              stopRecording();
-              return;
-            }
-            startRecording();
-            btn.focus();
-          });
-          if (clearable) {
-            btn.addEventListener("contextmenu", (e) => {
-              e.preventDefault();
-              if (hk) {
-                applyHotkey(null, true);
-                save();
-                render();
-              }
-            });
-          }
-          render();
-          return btn;
-        }
-        // ---------- internes ----------
-        createTabView(id, def) {
-          const b = document.createElement("button");
-          b.className = "qmm-tab";
-          b.dataset.id = id;
-          b.innerHTML = `<span class="label">${escapeHtml(def.title)}</span><span class="badge" style="display:none"></span>`;
-          const badgeEl = b.querySelector(".badge");
-          def.btn = b;
-          def.badge = badgeEl;
-          b.onclick = () => this.switchTo(id);
-          this.tabBar.appendChild(b);
-          const view = el("div", "qmm-view");
-          view.dataset.id = id;
-          def.view = view;
-          this.views.appendChild(view);
-          try {
-            def.render(view, this);
-          } catch (e) {
-            view.textContent = String(e);
-          }
-          if (!this.currentId) this.switchTo(id);
-        }
-        persistActive() {
-          if (!this.currentId) return;
-          try {
-            writeAriesPath(`menu.activeTabs.${this.menuId}`, this.currentId);
-            try {
-              localStorage.removeItem(this.lsKeyActive);
-            } catch {
-            }
-          } catch {
-          }
-        }
-        restoreActive() {
-          let id = null;
-          try {
-            const stored = readAriesPath(`menu.activeTabs.${this.menuId}`);
-            if (typeof stored === "string" && stored) id = stored;
-          } catch {
-          }
-          try {
-            id = localStorage.getItem(this.lsKeyActive);
-          } catch {
-          }
-          if (id && this.tabs.has(id)) this.switchTo(id);
-          else if (this.tabs.size) this.switchTo(this.firstTabId());
-        }
-        updateTabsBarVisibility() {
-          if (!this.tabBar || !this.root) return;
-          const hasTabs = this.tabs.size > 0;
-          if (hasTabs) {
-            if (!this.tabBar.parentElement) {
-              this.root.insertBefore(this.tabBar, this.views);
-            }
-            this.tabBar.style.display = "flex";
-            this.root.classList.remove("qmm-no-tabs");
-          } else {
-            if (this.tabBar.parentElement) {
-              this.tabBar.parentElement.removeChild(this.tabBar);
-            }
-            this.root.classList.add("qmm-no-tabs");
-          }
-        }
-        ensureStyles() {
-          if (document.getElementById("__qmm_css__")) return;
-          const css5 = `
-    /* ================= Modern UI for qmm ================= */
-.qmm{
-  --qmm-bg:        #0a0e14;
-  --qmm-bg-soft:   #080c12;
-  --qmm-panel:     rgba(10,14,20,0.96);
-  --qmm-border:    rgba(255,255,255,0.14);
-  --qmm-border-2:  rgba(255,255,255,0.08);
-  --qmm-accent:    #5eead4;
-  --qmm-accent-2:  #2dd4bf;
-  --qmm-text:      #e7eef7;
-  --qmm-text-dim:  #b9c3cf;
-  --qmm-shadow:    0 18px 44px rgba(0,0,0,.45);
-  --qmm-blur:      10px;
-
-  display:flex; flex-direction:column; gap:10px; color:var(--qmm-text);
-}
-.qmm-compact{ gap:6px }
-
-/* ---------- Tabs (pill nav) ---------- */
-.qmm-tabs{
-  display:flex; gap:4px; flex-wrap:wrap; align-items:center;
-  padding:8px 10px; position:relative; isolation:isolate;
-  border-bottom:1px solid rgba(255,255,255,0.08);
-  background:linear-gradient(120deg, rgba(22,28,40,0.9), rgba(12,17,26,0.92));
-  border-top-left-radius:18px; border-top-right-radius:18px;
-}
-.qmm-no-tabs .qmm-views{ margin-top:0; border-radius:18px; }
-
-.qmm-tab{
-  flex:1 1 0; min-width:0; cursor:pointer;
-  display:inline-flex; justify-content:center; align-items:center; gap:8px;
-  padding:8px 12px; color:#c9d4e6;
-  background:transparent; border:1px solid transparent;
-  border-radius:12px;
-  position:relative; margin:0;
-  font-size:12px;
-  transition:background 120ms ease, color 120ms ease, border-color 120ms ease;
-}
-.qmm-compact .qmm-tab{ padding:6px 10px }
-.qmm-tab:hover{ background:rgba(94,234,212,0.08); color:#e7eef7; }
-.qmm-tab:active{ transform:translateY(1px) }
-.qmm-tab:focus-visible{ outline:2px solid var(--qmm-accent); outline-offset:2px; border-radius:12px }
-
-.qmm-tab .badge{
-  font-size:11px; line-height:1; padding:2px 6px; border-radius:999px;
-  background:rgba(94,234,212,0.12); border:1px solid rgba(94,234,212,0.25);
-  color:#5eead4;
-}
-
-.qmm-tab.active{
-  background:rgba(94,234,212,0.18);
-  border-color:rgba(94,234,212,0.35);
-  color:#ecfdf5;
-}
-
-/* ---------- Views panel ---------- */
-.qmm-views{
-  border:1px solid rgba(255,255,255,0.14); border-radius:18px; padding:14px;
-  background:linear-gradient(160deg, rgba(15,20,30,0.95) 0%, rgba(10,14,20,0.95) 60%, rgba(8,12,18,0.96) 100%);
-  backdrop-filter:blur(10px);
-  display:flex; flex-direction:column;
-  min-width:0; min-height:0; overflow:auto; box-shadow:0 18px 44px rgba(0,0,0,.45);
-  scrollbar-width:thin;
-  scrollbar-color:rgba(94,234,212,0.20) rgba(255,255,255,0.03);
-}
-.qmm-views::-webkit-scrollbar{ width:8px; }
-.qmm-views::-webkit-scrollbar-track{ background:rgba(255,255,255,0.03); border-radius:4px; }
-.qmm-views::-webkit-scrollbar-thumb{ background:rgba(94,234,212,0.20); border-radius:4px; }
-.qmm-views::-webkit-scrollbar-thumb:hover{ background:rgba(94,234,212,0.35); }
-.qmm-compact .qmm-views{ padding:8px }
-.qmm-tabs + .qmm-views{ margin-top:0; border-top:none; border-top-left-radius:0; border-top-right-radius:0; }
-
-.qmm-view{ display:none; min-width:0; min-height:0; }
-.qmm-view.active{ display:block; }
-
-/* ---------- Basic controls ---------- */
-.qmm-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:6px 0 }
-.qmm-section{ margin-top:8px }
-.qmm-section-title{ font-weight:650; margin:2px 0 8px 0; color:var(--qmm-text) }
-
-.qmm-label{ opacity:.9 }
-.qmm-val{ min-width:24px; text-align:center }
-
-/* Buttons */
-.qmm-btn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  padding:8px 14px;
-  border-radius:10px;
-  border:1px solid var(--qmm-border);
-  background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
-  color:var(--qmm-text);
-  font-weight:600;
-  font-size:13px;
-  line-height:1.2;
-  cursor:pointer;
-  user-select:none;
-  transition:background 120ms ease, border-color 120ms ease, transform 100ms ease, box-shadow 120ms ease, color 120ms ease;
-}
-.qmm-compact .qmm-btn{ padding:6px 10px }
-.qmm-btn:hover{ background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04)); border-color:rgba(255,255,255,0.24) }
-.qmm-btn:active{ transform:translateY(1px) }
-.qmm-btn:focus-visible{ outline:2px solid var(--qmm-accent); outline-offset:2px; }
-.qmm-btn:disabled,
-.qmm-btn.is-disabled{
-  opacity:.55;
-  cursor:not-allowed;
-  filter:saturate(.6);
-  box-shadow:none;
-}
-.qmm-btn--full{ width:100%; justify-content:center; }
-.qmm-btn--sm{ padding:6px 10px; font-size:12px; border-radius:8px; }
-.qmm-btn--icon{ padding:6px; width:34px; height:34px; border-radius:50%; gap:0; }
-.qmm-btn__icon{ display:inline-flex; align-items:center; justify-content:center; font-size:1.1em; }
-.qmm-btn__icon.is-right{ order:2; }
-.qmm-btn__icon.is-left{ order:0; }
-
-/* Button variants */
-.qmm-btn--primary,
-.qmm-btn.qmm-primary{
-  background:linear-gradient(180deg, rgba(94,234,212,.32), rgba(45,212,191,.14));
-  border-color:rgba(94,234,212,0.45);
-  box-shadow:0 4px 14px rgba(94,234,212,.18);
-}
-.qmm-btn--primary:hover,
-.qmm-btn.qmm-primary:hover{ border-color:rgba(94,234,212,0.65); background:linear-gradient(180deg, rgba(94,234,212,.42), rgba(45,212,191,.22)); }
-.qmm-btn--secondary{
-  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.01));
-}
-.qmm-btn--danger,
-.qmm-btn.qmm-danger{
-  background:linear-gradient(180deg, rgba(255,86,86,.32), rgba(255,86,86,.14));
-  border-color:#ff6a6a55;
-  box-shadow:0 4px 14px rgba(255,86,86,.25);
-}
-.qmm-btn--ghost{ background:transparent; border-color:transparent; }
-.qmm-btn--ghost:hover{ background:rgba(255,255,255,.06); border-color:#ffffff2a; }
-.qmm-btn.active{
-  background:rgba(94,234,212,0.14);
-  border-color:rgba(94,234,212,0.40);
-  box-shadow:inset 0 0 0 1px rgba(94,234,212,0.20);
-}
-
-.qmm-flex{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
-
-.qmm-form-grid{ width:100%; }
-
-.qmm-form-row{ width:100%; }
-.qmm-form-row.is-wrap{ grid-template-columns:1fr; }
-.qmm-form-row__label{ font-weight:600; opacity:.9; }
-
-.qmm-card{
-  display:grid;
-  gap:12px;
-  border:1px solid rgba(255,255,255,0.12);
-  border-radius:14px;
-  padding:14px;
-  background:linear-gradient(160deg, rgba(18,24,34,0.95), rgba(12,17,26,0.96));
-  backdrop-filter:blur(10px);
-  box-shadow:0 8px 24px rgba(0,0,0,.35);
-  width:100%;
-  transition:border-color 120ms ease, box-shadow 120ms ease;
-}
-.qmm-card.is-center{ text-align:center; align-items:center; }
-.qmm-card.is-stretch{ align-items:stretch; }
-.qmm-card__header{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
-  justify-content:space-between;
-}
-.qmm-card__header.is-compact{ gap:6px; }
-.qmm-card__icon{ font-size:18px; }
-.qmm-card__title{ font-weight:700; font-size:14px; letter-spacing:.01em; }
-.qmm-card__subtitle{ font-size:12px; opacity:.75; flex-basis:100%; }
-.qmm-card__actions{ display:flex; gap:6px; margin-left:auto; }
-.qmm-card__body{ display:grid; gap:10px; }
-.qmm-card[data-tone="muted"]{
-  background:rgba(10,14,20,.92);
-  border-color:rgba(255,255,255,0.08);
-  box-shadow:none;
-}
-.qmm-card[data-tone="accent"]{
-  border-color:rgba(94,234,212,0.45);
-  box-shadow:0 10px 26px rgba(94,234,212,.15);
-}
-
-.qmm .stats-collapse-toggle{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  padding:6px 12px;
-  min-height:32px;
-  border-radius:999px;
-  border:1px solid rgba(94,234,212,.40);
-  background:linear-gradient(135deg, rgba(94,234,212,.14), rgba(15,30,30,.18));
-  color:rgba(220,240,236,.92);
-  font-size:12px;
-  font-weight:600;
-  letter-spacing:.01em;
-  text-transform:uppercase;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 10px 24px rgba(9,13,27,.28);
-  transition:background .26s ease, border-color .26s ease, box-shadow .26s ease, color .26s ease, transform .16s ease;
-}
-.qmm .stats-collapse-toggle:hover{
-  background:linear-gradient(135deg, rgba(94,234,212,.22), rgba(20,100,90,.22));
-  border-color:rgba(94,234,212,.55);
-  color:#fff;
-  box-shadow:0 14px 30px rgba(45,212,191,.25), inset 0 1px 0 rgba(255,255,255,.18);
-}
-.qmm .stats-collapse-toggle:active{
-  transform:translateY(1px) scale(.99);
-}
-.qmm-card--collapsible[data-collapsed="true"] .stats-collapse-toggle{
-  background:linear-gradient(135deg, rgba(94,234,212,.08), rgba(8,30,28,.12));
-  border-color:rgba(94,234,212,.25);
-  color:rgba(196,240,236,.85);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.1), 0 6px 18px rgba(9,13,27,.22);
-}
-.qmm-card--collapsible[data-collapsed="false"] .stats-collapse-toggle{
-  background:linear-gradient(135deg, rgba(94,234,212,.30), rgba(45,212,191,.25));
-  border-color:rgba(94,234,212,.72);
-  color:#fff;
-  box-shadow:0 16px 32px rgba(45,212,191,.28), inset 0 1px 0 rgba(255,255,255,.22);
-}
-.qmm .stats-collapse-toggle__icon{
-  width:16px;
-  height:16px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  position:relative;
-  color:inherit;
-  transition:transform .24s ease;
-}
-.qmm .stats-collapse-toggle__icon::before{
-  content:"";
-  position:absolute;
-  width:8px;
-  height:8px;
-  border-right:2px solid currentColor;
-  border-bottom:2px solid currentColor;
-  transform:rotate(45deg);
-  transition:transform .24s ease;
-}
-.qmm .stats-collapse-toggle__label{
-  color:inherit;
-  font-size:11px;
-  letter-spacing:.08em;
-  font-weight:700;
-}
-.qmm-card--collapsible[data-collapsed="false"] .stats-collapse-toggle__icon::before{
-  transform:rotate(-135deg);
-}
-.qmm-card--collapsible[data-collapsed="true"] .stats-collapse-toggle__icon::before{
-  transform:rotate(45deg);
-}
-
-.qmm-chip-toggle{
-  display:inline-flex;
-  align-items:stretch;
-  border-radius:999px;
-  border:1px solid #ffffff1f;
-  background:rgba(255,255,255,.05);
-  cursor:pointer;
-  transition:border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .1s ease;
-}
-.qmm-chip-toggle input{ display:none; }
-.qmm-chip-toggle__face{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  padding:6px 12px;
-  border-radius:999px;
-}
-.qmm-chip-toggle__icon{ font-size:14px; }
-.qmm-chip-toggle__label{ font-weight:600; }
-.qmm-chip-toggle__desc{ font-size:12px; opacity:.75; }
-.qmm-chip-toggle__badge{ font-size:11px; padding:2px 6px; border-radius:999px; background:#ffffff1a; border:1px solid #ffffff22; }
-.qmm-chip-toggle:hover{ border-color:rgba(94,234,212,0.30); background:rgba(94,234,212,0.09); }
-.qmm-chip-toggle input:checked + .qmm-chip-toggle__face{
-  background:linear-gradient(180deg, rgba(94,234,212,.22), rgba(94,234,212,.08));
-  box-shadow:0 0 0 1px rgba(94,234,212,0.35) inset, 0 6px 18px rgba(94,234,212,.15);
-}
-
-.qmm-error{
-  border:1px solid #ff6a6a55;
-  background:rgba(120,20,20,.35);
-  border-radius:10px;
-  color:#ffdada;
-  padding:10px;
-  font-size:13px;
-  line-height:1.4;
-}
-
-.qmm-select{
-  background-image:linear-gradient(45deg, transparent 50%, #ffffff80 50%), linear-gradient(135deg, #ffffff80 50%, transparent 50%), linear-gradient(90deg, transparent 50%, rgba(255,255,255,.1) 50%);
-  background-position:calc(100% - 18px) 50%, calc(100% - 13px) 50%, 100% 0;
-  background-size:5px 5px, 5px 5px, 2.5rem 2.5rem;
-  background-repeat:no-repeat;
-  padding-right:34px;
-}
-
-.qmm-vlist-wrap{ display:flex; flex-direction:column; width:100%; }
-
-/* Inputs */
-.qmm-input{
-  min-width:90px; background:rgba(255,255,255,0.04); color:#fff;
-  border:1px solid rgba(255,255,255,0.12); border-radius:10px;
-  padding:8px 10px; box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
-  transition:border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
-}
-.qmm-input::placeholder{ color:#cbd6e780 }
-.qmm-input:focus{ outline:none; border-color:var(--qmm-accent); background:rgba(8,12,20,0.9); box-shadow:0 0 0 2px rgba(94,234,212,0.20) }
-
-/* Number input + spinner (unchanged API) */
-.qmm-input-number{ display:inline-flex; align-items:center; gap:6px }
-.qmm-input-number-input{ width:70px; text-align:center; padding-right:8px }
-.qmm-spin{ display:inline-flex; flex-direction:column; gap:2px }
-.qmm-step{
-  width:22px; height:16px; font-size:11px; line-height:1;
-  display:inline-flex; align-items:center; justify-content:center;
-  border-radius:6px; border:1px solid var(--qmm-border);
-  background:rgba(255,255,255,.08); color:#fff; cursor:pointer; user-select:none;
-  transition:background .18s ease, border-color .18s ease, transform .08s ease;
-}
-.qmm-step:hover{ background:#ffffff18; border-color:#ffffff40 }
-.qmm-step:active{ transform:translateY(1px) }
-
-/* Switch (checkbox) */
-.qmm-switch{
-  appearance:none; width:42px; height:24px; background:#6c7488aa; border-radius:999px;
-  position:relative; outline:none; cursor:pointer; transition:background .18s ease, box-shadow .18s ease;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.12);
-}
-.qmm-switch::before{
-  content:""; position:absolute; top:2px; left:2px; width:20px; height:20px;
-  background:#fff; border-radius:50%; transition:transform .2s ease;
-  box-shadow:0 2px 8px rgba(0,0,0,.35);
-}
-.qmm-switch:checked{ background:linear-gradient(180deg, rgba(94,234,212,.90), rgba(45,212,191,.65)) }
-.qmm-switch:checked::before{ transform:translateX(18px) }
-.qmm-switch:focus-visible{ outline:2px solid var(--qmm-accent); outline-offset:2px }
-
-/* Checkbox & radio (native inputs skinned lightly) */
-.qmm-check, .qmm-radio{ transform:scale(1.1); accent-color: var(--qmm-accent) }
-
-/* Slider */
-.qmm-range{
-  width:180px; appearance:none; background:transparent; height:22px;
-}
-.qmm-range:focus{ outline:none }
-.qmm-range::-webkit-slider-runnable-track{
-  height:6px; background:linear-gradient(90deg, var(--qmm-accent), rgba(94,234,212,0.25));
-  border-radius:999px; box-shadow:inset 0 1px 0 rgba(255,255,255,.14);
-}
-.qmm-range::-moz-range-track{
-  height:6px; background:linear-gradient(90deg, var(--qmm-accent), rgba(94,234,212,0.25));
-  border-radius:999px; box-shadow:inset 0 1px 0 rgba(255,255,255,.14);
-}
-.qmm-range::-webkit-slider-thumb{
-  appearance:none; width:16px; height:16px; border-radius:50%; margin-top:-5px;
-  background:#fff; box-shadow:0 2px 10px rgba(0,0,0,.35), 0 0 0 2px #ffffff66 inset;
-  transition:transform .1s ease;
-}
-.qmm-range:active::-webkit-slider-thumb{ transform:scale(1.04) }
-.qmm-range::-moz-range-thumb{
-  width:16px; height:16px; border-radius:50%; background:#fff; border:none;
-  box-shadow:0 2px 10px rgba(0,0,0,.35), 0 0 0 2px #ffffff66 inset;
-}
-
-.qmm-range-dual{
-  position:relative;
-  width:100%;
-  padding:18px 0 10px;
-}
-.qmm-range-dual-track{
-  position:absolute;
-  left:0;
-  right:0;
-  top:50%;
-  transform:translateY(-50%);
-  height:8px;
-  border-radius:999px;
-  background:linear-gradient(90deg, rgba(8,19,33,.8), rgba(27,43,68,.9));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.08), inset 0 0 0 1px rgba(94,234,212,.08);
-}
-.qmm-range-dual-fill{
-  position:absolute;
-  top:50%;
-  transform:translateY(-50%);
-  height:8px;
-  border-radius:999px;
-  background:linear-gradient(90deg, var(--qmm-accent), rgba(94,234,212,0.55));
-  box-shadow:0 4px 14px rgba(94,234,212,.22);
-  transition:left .12s ease, right .12s ease;
-}
-.qmm-range-dual-input{
-  position:absolute;
-  left:0;
-  right:0;
-  top:50%;
-  transform:translateY(-50%);
-  width:100%;
-  height:28px;
-  margin:0;
-  background:transparent;
-  pointer-events:none;
-}
-.qmm-range-dual-input::-webkit-slider-runnable-track{ background:none; }
-.qmm-range-dual-input::-moz-range-track{ background:none; }
-.qmm-range-dual-input::-webkit-slider-thumb{
-  pointer-events:auto;
-  width:18px;
-  height:18px;
-  border-radius:50%;
-  background:linear-gradient(145deg, #fff, #d6f5ef);
-  border:2px solid rgba(94,234,212,.65);
-  box-shadow:0 4px 12px rgba(0,0,0,.35);
-  transition:transform .12s ease, box-shadow .12s ease;
-}
-.qmm-range-dual-input:active::-webkit-slider-thumb,
-.qmm-range-dual-input:focus-visible::-webkit-slider-thumb{
-  transform:scale(1.05);
-  box-shadow:0 6px 16px rgba(0,0,0,.4);
-}
-.qmm-range-dual-input::-moz-range-thumb{
-  pointer-events:auto;
-  width:18px;
-  height:18px;
-  border-radius:50%;
-  background:linear-gradient(145deg, #fff, #d6f5ef);
-  border:2px solid rgba(94,234,212,.65);
-  box-shadow:0 4px 12px rgba(0,0,0,.35);
-  transition:transform .12s ease, box-shadow .12s ease;
-}
-.qmm-range-dual-input:active::-moz-range-thumb,
-.qmm-range-dual-input:focus-visible::-moz-range-thumb{
-  transform:scale(1.05);
-  box-shadow:0 6px 16px rgba(0,0,0,.4);
-}
-.qmm-range-dual-input--min{ z-index:2; }
-.qmm-range-dual-input--max{ z-index:3; }
-.qmm-range-dual-bubble{
-  position:absolute;
-  top:14px;
-  transform:translate(-50%, -100%);
-  padding:4px 8px;
-  border-radius:6px;
-  font-size:11px;
-  line-height:1;
-  font-weight:600;
-  color:#d6f5ef;
-  background:rgba(17,28,46,.9);
-  box-shadow:0 4px 14px rgba(0,0,0,.35);
-  pointer-events:none;
-  transition:opacity .12s ease, transform .12s ease;
-  opacity:.85;
-}
-.qmm-range-dual-bubble::after{
-  content:"";
-  position:absolute;
-  left:50%;
-  bottom:-4px;
-  width:8px;
-  height:8px;
-  background:inherit;
-  transform:translateX(-50%) rotate(45deg);
-  border-radius:2px;
-  box-shadow:0 4px 14px rgba(0,0,0,.35);
-}
-.qmm-range-dual-input--min:focus-visible + .qmm-range-dual-bubble--min,
-.qmm-range-dual-input--max:focus-visible + .qmm-range-dual-bubble--max,
-.qmm-range-dual-input--min:active + .qmm-range-dual-bubble--min,
-.qmm-range-dual-input--max:active + .qmm-range-dual-bubble--max{
-  opacity:1;
-  transform:translate(-50%, -110%) scale(1.02);
-}
-
-/* ---------- Minimal table ---------- */
-/* container */
-.qmm-table-wrap--minimal{
-  border:1px solid #263040; border-radius:8px; background:#0b0f14; box-shadow:none;
-}
-/* scroller (height cap) */
-.qmm-table-scroll{
-  overflow:auto; max-height:44vh; /* override via opts.maxHeight */
-}
-
-/* base */
-.qmm-table--minimal{
-  width:100%;
-  border-collapse:collapse;
-  background:transparent;
-  font-size:13px; line-height:1.35; color:var(--qmm-text, #cdd6e3);
-}
-
-/* header */
-.qmm-table--minimal thead th{
-  position:sticky; top:0; z-index:1;
-  text-align:left; font-weight:600;
-  padding:8px 10px;
-  color:#cbd5e1; background:#0f1318;
-  border-bottom:1px solid #263040;
-  text-transform:none; letter-spacing:0;
-}
-.qmm-table--minimal thead th.is-center { text-align: center; }
-.qmm-table--minimal thead th.is-left   { text-align: left; }   /* d\xE9j\xE0 pr\xE9sent, ok */
-.qmm-table--minimal thead th.is-right  { text-align: right; }
-.qmm-table--minimal thead th,
-.qmm-table--minimal td { vertical-align: middle; }
-
-/* cells */
-.qmm-table--minimal td{
-  padding:8px 10px; border-bottom:1px solid #1f2937; vertical-align:middle;
-}
-.qmm-table--minimal tbody tr:hover{ background:#0f1824; }
-
-/* compact variant */
-.qmm-table--compact thead th,
-.qmm-table--compact td{ padding:6px 8px; font-size:12px }
-
-/* utils */
-.qmm-table--minimal td.is-num{ text-align:right; font-variant-numeric:tabular-nums }
-.qmm-table--minimal td.is-center{ text-align:center }
-.qmm-ellipsis{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-.qmm-prewrap{ white-space:pre-wrap; word-break:break-word }
-
-
-/* ---------- Split panels ---------- */
-.qmm-split{
-  display:grid; gap:12px;
-  grid-template-columns:minmax(180px,260px) minmax(0,1fr);
-  align-items:start;
-}
-.qmm-split-left{ display:flex; flex-direction:column; gap:10px }
-.qmm-split-right{
-  border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:12px;
-  display:flex; flex-direction:column; gap:12px;
-  background:linear-gradient(160deg, rgba(15,20,30,0.95), rgba(10,14,20,0.95));
-  backdrop-filter:blur(10px);
-  box-shadow:0 8px 24px rgba(0,0,0,.35);
-}
-
-/* ---------- VTabs (vertical list + filter) ---------- */
-.qmm-vtabs{ display:flex; flex-direction:column; gap:8px; min-width:0 }
-.qmm-vtabs .filter{ display:block }
-.qmm-vtabs .filter input{ width:100% }
-
-.qmm-vlist{
-  flex:0 0 auto; overflow:visible;
-  border:1px solid var(--qmm-border); border-radius:12px; padding:6px;
-  background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
-}
-
-.qmm-vtab{
-  width:100%; text-align:left; cursor:pointer;
-  display:grid; grid-template-columns:28px 1fr auto; align-items:center; gap:10px;
-  padding:8px 10px; border-radius:10px; border:1px solid #ffffff18;
-  background:rgba(255,255,255,.03); color:inherit;
-  transition:background .18s ease, border-color .18s ease, transform .08s ease;
-}
-.qmm-vtab:hover{ background:rgba(255,255,255,.07); border-color:#ffffff34 }
-.qmm-vtab:active{ transform:translateY(1px) }
-.qmm-vtab.active{
-  background:linear-gradient(180deg, rgba(94,234,212,.16), rgba(94,234,212,.07));
-  border-color:rgba(94,234,212,0.35);
-  box-shadow:0 1px 14px rgba(94,234,212,.14) inset;
-}
-
-.qmm-dot{ width:10px; height:10px; border-radius:50%; justify-self:center; box-shadow:0 0 0 1px #0006 inset }
-.qmm-chip{ display:flex; align-items:center; gap:8px; min-width:0 }
-.qmm-chip img{
-  width:20px; height:20px; border-radius:50%; object-fit:cover; border:1px solid #4446;
-  box-shadow:0 1px 0 rgba(255,255,255,.08) inset;
-}
-.qmm-chip .t{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-.qmm-tag{
-  font-size:11px; line-height:1; padding:3px 7px; border-radius:999px;
-  background:#ffffff14; border:1px solid #ffffff26;
-}
-
-/* ---------- Small helpers (optional) ---------- */
-  .qmm .qmm-help{ font-size:12px; color:var(--qmm-text-dim) }
-  .qmm .qmm-sep{ height:1px; background:linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent); width:100%; border:none; }
-
-/* drag handle */
-.qmm-grab {
-  margin-left:auto; opacity:.8; cursor:grab; user-select:none;
-  display:grid; grid-template-columns:repeat(2, 3px); grid-template-rows:repeat(3, 3px);
-  gap:2px; padding:4px 3px; align-content:center; justify-content:center;
-}
-.qmm-grab:active { cursor:grabbing; }
-.qmm-grab-dot {
-  width:3px; height:3px; border-radius:999px;
-  background:rgba(255,255,255,.82); box-shadow:0 0 0 1px #0005 inset;
-}
-.qmm-dragging { opacity:.6; }
-
-/* items animables */
-.qmm-team-item {
-  will-change: transform;
-  transition: transform 160ms ease;
-}
-.qmm-team-item.drag-ghost {
-  opacity: .4;
-}
-
-.qmm.qmm-alt-drag { cursor: grab; }
-.qmm.qmm-alt-drag:active { cursor: grabbing; }
-
-.qws-win.is-hidden { display: none !important; }
-
-.qmm-hotkey{
-  cursor:pointer; user-select:none;
-  border:1px solid var(--qmm-border); border-radius:10px;
-  padding:8px 12px;
-  background:linear-gradient(180deg, #ffffff10, #ffffff06);
-  color:var(--qmm-text);
-  box-shadow:0 1px 0 #000 inset, 0 1px 16px rgba(0,0,0,.18);
-  transition:
-    background .18s ease,
-    border-color .18s ease,
-    box-shadow .18s ease,
-    transform .08s ease,
-    color .18s ease;
-}
-.qmm-hotkey{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  white-space:nowrap;
-  width: var(--qmm-hotkey-w, 180px); 
-}
-.qmm-hotkey:hover{ background:linear-gradient(180deg, #ffffff16, #ffffff08); border-color:#ffffff40 }
-.qmm-hotkey:active{ transform:translateY(1px) }
-
-.qmm-hotkey:focus-visible{ outline:none }
-
-.qmm-hotkey.is-empty{
-  color:var(--qmm-text-dim);
-  font-style:italic;
-}
-
-.qmm-hotkey.is-assigned{
-  border-color:rgba(94,234,212,0.40);
-  box-shadow:0 1px 0 #000 inset, 0 1px 16px rgba(0,0,0,.18), 0 0 0 2px rgba(94,234,212,0.20);
-}
-
-.qmm-hotkey.is-recording{
-  outline:2px solid var(--qmm-accent);
-  outline-offset:2px;
-  border-color:var(--qmm-accent);
-  background:linear-gradient(180deg, rgba(94,234,212,.22), rgba(94,234,212,.08));
-  animation:qmm-hotkey-breathe 1.2s ease-in-out infinite;
-}
-
-@keyframes qmm-hotkey-breathe{
-  0%   { box-shadow: 0 0 0 0 rgba(94,234,212,.50), 0 1px 16px rgba(0,0,0,.25); }
-  60%  { box-shadow: 0 0 0 12px rgba(94,234,212,0), 0 1px 16px rgba(0,0,0,.25); }
-  100% { box-shadow: 0 0 0 0 rgba(94,234,212,0),  0 1px 16px rgba(0,0,0,.25); }
-}
-
-/* ---------- Segmented (minimal, modern) ---------- */
-.qmm-seg{
-  --seg-pad: 8px;
-  --seg-radius: 999px;
-  --seg-stroke: 1.2px;      /* \xE9paisseur du trait */
-  --seg-nudge-x: 0px;       /* micro-ajustements optionnels */
-  --seg-nudge-w: 0px;
-  --seg-fill: rgba(94,234,212,.07);
-  --seg-stroke-color: rgba(94,234,212,.55);
-
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: var(--seg-pad);
-  border-radius: var(--seg-radius);
-  background: var(--qmm-bg-soft);
-  border: 1px solid var(--qmm-border-2);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
-  overflow: hidden;
-  background-clip: padding-box; /* important pour que le fond ne passe pas sous la bordure */
-}
-
-.qmm-seg--full{ display:flex; width:100% }
-
-.qmm-seg__btn{
-  position: relative;
-  z-index: 1;
-  appearance: none; background: transparent; border: 0; cursor: pointer;
-  padding: 8px 14px;
-  border-radius: 999px;
-  color: var(--qmm-text-dim);
-  font: inherit; line-height: 1; white-space: nowrap;
-  transition: color .15s ease, transform .06s ease;
-}
-.qmm-seg__btn-label{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  white-space: inherit;
-}
-.qmm-compact .qmm-seg__btn{ padding: 6px 10px }
-.qmm-seg__btn:hover{ color: var(--qmm-text); }
-.qmm-seg__btn.active{ color:#fff; font-weight:600; }
-.qmm-seg__btn:active{ transform: translateY(1px); }
-.qmm-seg__btn[disabled]{ opacity:.5; cursor:not-allowed; }
-
-.qmm-seg__indicator{
-  position: absolute;
-  top: 0; left: 0;
-  height: 100%;
-  width: 40px;                      /* maj en JS */
-  border-radius: inherit;
-  background: var(--seg-fill);              /* \u2B05\uFE0F applique la couleur */
-  outline: var(--seg-stroke,1.2px) solid var(--seg-stroke-color);
-  outline-offset: calc(-1 * var(--seg-stroke));
-
-  box-shadow: 0 1px 4px rgba(94,234,212,.08);
-  transform-origin: left center;
-  will-change: transform, width, opacity;
-  transition: transform .18s cubic-bezier(.2,.8,.2,1),
-              width .18s cubic-bezier(.2,.8,.2,1),
-              opacity .18s ease-out;
-  pointer-events: none;
-}
-
-/* Accessibilit\xE9 */
-@media (prefers-reduced-motion: reduce){
-  .qmm-seg__indicator, .qmm-seg__btn { transition: none; }
-}
-
-/* ---------- Card bounce utility ---------- */
-@keyframes qmm-card-bounce{
-  0%   { transform:translateY(0); }
-  30%  { transform:translateY(-4px); }
-  60%  { transform:translateY(1px); }
-  100% { transform:translateY(0); }
-}
-.qmm-card.is-bouncing{ animation:qmm-card-bounce 320ms ease; }
-
-    `;
-          const st = document.createElement("style");
-          st.id = "__qmm_css__";
-          st.textContent = css5;
-          (document.documentElement || document.body).appendChild(st);
-        }
-      };
-      VTabs = class {
-        constructor(opts = {}) {
-          this.filterWrap = null;
-          this.filterInput = null;
-          this.listWrap = null;
-          this.items = [];
-          this.selectedId = null;
-          this.root = el("div", "qmm-vtabs");
-          this.root.style.minWidth = "0";
-          this.emptyText = opts.emptyText || "Aucun \xE9l\xE9ment.";
-          this.renderItemCustom = opts.renderItem;
-          if (opts.filterPlaceholder) {
-            this.filterWrap = el("div", "filter");
-            this.filterInput = document.createElement("input");
-            this.filterInput.type = "search";
-            this.filterInput.placeholder = opts.filterPlaceholder;
-            this.filterInput.className = "qmm-input";
-            this.filterInput.oninput = () => this.renderList();
-            this.filterWrap.appendChild(this.filterInput);
-            this.root.appendChild(this.filterWrap);
-          }
-          this.list = el("div", "qmm-vlist");
-          this.list.style.minWidth = "0";
-          if (opts.maxHeightPx) {
-            this.list.style.maxHeight = `${opts.maxHeightPx}px`;
-            this.list.style.overflow = "auto";
-            this.list.style.flex = "1 1 auto";
-          }
-          if (opts.fillAvailableHeight) {
-            this.listWrap = document.createElement("div");
-            this.listWrap.className = "qmm-vlist-wrap";
-            Object.assign(this.listWrap.style, {
-              flex: "1 1 auto",
-              minHeight: "0",
-              display: "flex",
-              flexDirection: "column"
-            });
-            this.list.style.flex = "1 1 auto";
-            if (!opts.maxHeightPx) this.list.style.overflow = "auto";
-            this.listWrap.appendChild(this.list);
-            this.root.appendChild(this.listWrap);
-          } else {
-            this.root.appendChild(this.list);
-          }
-          this.selectedId = opts.initialId ?? null;
-          this.onSelectCb = opts.onSelect;
-        }
-        setItems(items) {
-          this.items = Array.isArray(items) ? items.slice() : [];
-          if (this.selectedId && !this.items.some((i) => i.id === this.selectedId)) {
-            this.selectedId = this.items[0]?.id ?? null;
-          }
-          this.renderList();
-        }
-        getSelected() {
-          return this.items.find((i) => i.id === this.selectedId) ?? null;
-        }
-        select(id) {
-          this.selectedId = id;
-          this.renderList();
-          this.onSelectCb?.(this.selectedId, this.getSelected());
-        }
-        onSelect(cb) {
-          this.onSelectCb = cb;
-        }
-        setBadge(id, text) {
-          const btn = this.list.querySelector(`button[data-id="${cssq(id)}"]`);
-          if (!btn) return;
-          let tag = btn.querySelector(".qmm-tag");
-          if (!tag && text != null) {
-            tag = el("span", "qmm-tag");
-            btn.appendChild(tag);
-          }
-          if (!tag) return;
-          if (text == null || text === "") tag.style.display = "none";
-          else {
-            tag.textContent = text;
-            tag.style.display = "";
-          }
-        }
-        getFilter() {
-          return (this.filterInput?.value || "").trim().toLowerCase();
-        }
-        renderList() {
-          const keepScroll = this.list.scrollTop;
-          this.list.innerHTML = "";
-          const q = this.getFilter();
-          const filtered = q ? this.items.filter((it) => (it.title || "").toLowerCase().includes(q) || (it.subtitle || "").toLowerCase().includes(q)) : this.items;
-          if (!filtered.length) {
-            const empty = document.createElement("div");
-            empty.style.opacity = "0.75";
-            empty.textContent = this.emptyText;
-            this.list.appendChild(empty);
-            return;
-          }
-          const ul = document.createElement("ul");
-          ul.style.listStyle = "none";
-          ul.style.margin = "0";
-          ul.style.padding = "0";
-          ul.style.display = "flex";
-          ul.style.flexDirection = "column";
-          ul.style.gap = "4px";
-          for (const it of filtered) {
-            const li = document.createElement("li");
-            const btn = document.createElement("button");
-            btn.className = "qmm-vtab";
-            btn.dataset.id = it.id;
-            btn.disabled = !!it.disabled;
-            if (this.renderItemCustom) {
-              this.renderItemCustom(it, btn);
-            } else {
-              const dot = el("div", "qmm-dot");
-              dot.style.background = it.statusColor || "#999a";
-              const chip2 = el("div", "qmm-chip");
-              const img = document.createElement("img");
-              img.src = it.avatarUrl || "";
-              img.alt = it.title;
-              const wrap = document.createElement("div");
-              wrap.style.display = "flex";
-              wrap.style.flexDirection = "column";
-              wrap.style.gap = "2px";
-              const t = el("div", "t");
-              t.textContent = it.title;
-              const sub = document.createElement("div");
-              sub.textContent = it.subtitle || "";
-              sub.style.opacity = "0.7";
-              sub.style.fontSize = "12px";
-              if (!it.subtitle) sub.style.display = "none";
-              wrap.appendChild(t);
-              wrap.appendChild(sub);
-              chip2.appendChild(img);
-              chip2.appendChild(wrap);
-              btn.appendChild(dot);
-              btn.appendChild(chip2);
-              if (it.badge != null) {
-                const tag = el("span", "qmm-tag", escapeHtml(String(it.badge)));
-                btn.appendChild(tag);
-              } else {
-                const spacer2 = document.createElement("div");
-                spacer2.style.width = "0";
-                btn.appendChild(spacer2);
-              }
-            }
-            btn.classList.toggle("active", it.id === this.selectedId);
-            btn.onclick = () => this.select(it.id);
-            li.appendChild(btn);
-            ul.appendChild(li);
-          }
-          this.list.appendChild(ul);
-          this.list.scrollTop = keepScroll;
-        }
-      };
-      _MOD_CODES = /* @__PURE__ */ new Set([
-        "ShiftLeft",
-        "ShiftRight",
-        "ControlLeft",
-        "ControlRight",
-        "AltLeft",
-        "AltRight",
-        "MetaLeft",
-        "MetaRight"
-      ]);
-      CANONICAL_CODES = {
-        space: "Space",
-        enter: "Enter",
-        escape: "Escape",
-        tab: "Tab",
-        backspace: "Backspace",
-        delete: "Delete",
-        insert: "Insert",
-        home: "Home",
-        end: "End",
-        pageup: "PageUp",
-        pagedown: "PageDown",
-        arrowup: "ArrowUp",
-        arrowdown: "ArrowDown",
-        arrowleft: "ArrowLeft",
-        arrowright: "ArrowRight",
-        bracketleft: "BracketLeft",
-        bracketright: "BracketRight",
-        backslash: "Backslash",
-        slash: "Slash",
-        minus: "Minus",
-        equal: "Equal",
-        semicolon: "Semicolon",
-        quote: "Quote",
-        backquote: "Backquote",
-        comma: "Comma",
-        period: "Period",
-        dot: "Period",
-        capslock: "CapsLock",
-        numlock: "NumLock",
-        scrolllock: "ScrollLock",
-        pause: "Pause",
-        contextmenu: "ContextMenu",
-        printscreen: "PrintScreen",
-        metaleft: "MetaLeft",
-        metaright: "MetaRight",
-        altleft: "AltLeft",
-        altright: "AltRight",
-        controlleft: "ControlLeft",
-        controlright: "ControlRight",
-        shiftleft: "ShiftLeft",
-        shiftright: "ShiftRight"
-      };
-    }
-  });
-
-  // src/features/keybinds/keybinds.ts
-  function getPetTeamActionId(teamId2) {
-    return `${PET_TEAM_ACTION_PREFIX}${teamId2}`;
-  }
-  function disposePetAction(id) {
-    actionMap.delete(id);
-    defaultMap.delete(id);
-    cache.delete(id);
-    listeners.delete(id);
-    holdDefaultMap.delete(id);
-    holdCache.delete(id);
-    holdListeners.delete(id);
-  }
-  function registerPetAction(action2, defaultHotkey) {
-    const normalized = {
-      id: action2.id,
-      sectionId: PET_SECTION_ID,
-      label: action2.label,
-      hint: action2.hint,
-      allowModifierOnly: action2.allowModifierOnly,
-      defaultHotkey: cloneHotkey(defaultHotkey),
-      holdDetection: action2.holdDetection ? {
-        label: action2.holdDetection.label,
-        description: action2.holdDetection.description,
-        defaultEnabled: action2.holdDetection.defaultEnabled
-      } : void 0
-    };
-    actionMap.set(normalized.id, normalized);
-    defaultMap.set(normalized.id, cloneHotkey(defaultHotkey));
-    petActionIds.add(normalized.id);
-    petSection.actions.push(normalized);
-  }
-  function updatePetKeybinds(teams) {
-    for (const id of petActionIds) {
-      disposePetAction(id);
-    }
-    petActionIds.clear();
-    petSection.actions = [];
-    registerPetAction(
-      {
-        id: PET_TEAM_PREV_ID,
-        sectionId: PET_SECTION_ID,
-        label: "Previous team",
-        defaultHotkey: null
-      },
-      null
-    );
-    registerPetAction(
-      {
-        id: PET_TEAM_NEXT_ID,
-        sectionId: PET_SECTION_ID,
-        label: "Next team",
-        defaultHotkey: null
-      },
-      null
-    );
-    teams.forEach((team, index) => {
-      const name = String(team?.name || "").trim();
-      const labelName = name.length ? name : `Team ${index + 1}`;
-      registerPetAction(
-        {
-          id: getPetTeamActionId(team.id),
-          sectionId: PET_SECTION_ID,
-          label: `Use team \u2014 ${labelName}`,
-          defaultHotkey: null
+        async setPosition(x, y) {
+          await Atoms.player.position.set({ x, y });
         },
-        null
-      );
-    });
-  }
-  function getCombosForGameAction() {
-    const state6 = gameActiveStates.get(GAME_ACTION_ID);
-    if (!state6) return [];
-    const combo = state6.combo;
-    return typeof combo === "string" && combo.length ? [combo] : [];
-  }
-  function applyGameActionBlockers() {
-    const shouldBlock = gameActionBlockers.size > 0;
-    const desired = /* @__PURE__ */ new Set();
-    if (shouldBlock) {
-      for (const combo of getCombosForGameAction()) {
-        if (combo) desired.add(combo);
-      }
-    }
-    for (const combo of gameActionBlockedCombos) {
-      if (!desired.has(combo)) {
-        try {
-          inGameHotkeys.unblock(combo);
-        } catch {
-        }
-      }
-    }
-    if (shouldBlock) {
-      for (const combo of desired) {
-        if (!gameActionBlockedCombos.has(combo)) {
+        async teleport(x, y) {
           try {
-            inGameHotkeys.block(combo);
+            await this.setPosition(x, y);
           } catch {
           }
-        }
-      }
-    }
-    gameActionBlockedCombos.clear();
-    if (shouldBlock) {
-      for (const combo of desired) gameActionBlockedCombos.add(combo);
-    }
-  }
-  function hotkeyToCombo(hk) {
-    if (!hk) return null;
-    const combo = hotkeyToString(hk);
-    return combo.length ? combo : null;
-  }
-  function purgeTargetBindings(emitCombo) {
-    try {
-      inGameHotkeys.unblock(emitCombo);
-    } catch {
-    }
-    try {
-      const curr = inGameHotkeys.current();
-      for (const [from, to] of Object.entries(curr)) {
-        const toCode = String(to).split("+").pop();
-        if (toCode === emitCombo) {
           try {
-            inGameHotkeys.remove(from);
+            sendToGame({ type: "Teleport", position: { x, y } });
           } catch {
           }
-        }
-      }
-    } catch {
-    }
-  }
-  function isMac2() {
-    return typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.platform || "");
-  }
-  function codeToDisplay(code) {
-    if (!code) return "";
-    const mKey = code.match(/^Key([A-Z])$/);
-    if (mKey) return mKey[1];
-    const mDigit = code.match(/^Digit([0-9])$/);
-    if (mDigit) return mDigit[1];
-    if (code === "ControlLeft" || code === "ControlRight") return "Ctrl";
-    if (code === "AltLeft" || code === "AltRight") return "Alt";
-    if (code === "ShiftLeft" || code === "ShiftRight") return "Shift";
-    if (code === "MetaLeft" || code === "MetaRight") return isMac2() ? "\xE2\u0152\u02DC" : "Win";
-    if (code === "Space") return "Space";
-    if (code === "Enter") return "Enter";
-    if (code === "Escape") return "Esc";
-    if (code === "Tab") return "Tab";
-    if (code === "Backspace") return "Backspace";
-    if (code === "Delete") return "Del";
-    if (code === "Insert") return "Ins";
-    if (code === "ArrowUp") return "\xE2\u2020\u2018";
-    if (code === "ArrowDown") return "\xE2\u2020\u201C";
-    if (code === "ArrowLeft") return "\xE2\u2020\x90";
-    if (code === "ArrowRight") return "\xE2\u2020\u2019";
-    return code;
-  }
-  function prettyHotkey(hk) {
-    if (!hk) return "\xE2\u20AC\u201D";
-    const mods = [];
-    if (hk.ctrl) mods.push("Ctrl");
-    if (hk.shift) mods.push("Shift");
-    if (hk.alt) mods.push("Alt");
-    if (hk.meta) mods.push(isMac2() ? "\xE2\u0152\u02DC" : "Win");
-    let base = "";
-    const k = hk.key;
-    if (typeof k === "string" && k.length === 1) {
-      base = k.toUpperCase();
-    } else {
-      base = codeToDisplay(hk.code);
-    }
-    const baseIsModifier = base && ["Ctrl", "Shift", "Alt", "\xE2\u0152\u02DC", "Win"].includes(base);
-    const parts = baseIsModifier ? mods : mods.concat(base ? [base] : []);
-    return parts.join(" + ");
-  }
-  function syncGameKeybind(id) {
-    if (typeof window === "undefined") return;
-    const emitCombo = GAME_KEYBIND_TARGETS[id];
-    purgeTargetBindings(emitCombo);
-    const prev = gameActiveStates.get(id);
-    if (prev) {
-      if (prev.rapidFire) {
-        try {
-          inGameHotkeys.stopRapidFire(prev.combo);
-        } catch {
-        }
-      }
-      gameActiveStates.delete(id);
-    }
-    const combo = hotkeyToCombo(getKeybind(id));
-    if (!combo) {
-      if (id === GAME_ACTION_ID) {
-        applyGameActionBlockers();
-      }
-      return;
-    }
-    const holdEnabled = getKeybindHoldDetection(id);
-    let replaced = false;
-    if (combo !== emitCombo) {
-      try {
-        inGameHotkeys.replace(emitCombo, combo);
-        replaced = true;
-      } catch {
-      }
-    }
-    let rapidFire = false;
-    if (holdEnabled) {
-      try {
-        inGameHotkeys.startRapidFire({
-          trigger: combo,
-          // on tient la touche choisie
-          emit: combo,
-          // remapper convertira en emitCombo si replace() actif
-          mode: "tap",
-          rateHz: 10
-        });
-        rapidFire = true;
-      } catch {
-      }
-    }
-    gameActiveStates.set(id, { combo, replaced, rapidFire });
-    if (id === GAME_ACTION_ID) {
-      applyGameActionBlockers();
-    }
-  }
-  function cloneHotkey(hk) {
-    return hk ? { ...hk } : null;
-  }
-  function hotkeysEqual(a, b) {
-    if (!a && !b) return true;
-    if (!a || !b) return false;
-    return hotkeyToString(a) === hotkeyToString(b);
-  }
-  function readStored(id) {
-    if (typeof window === "undefined") return void 0;
-    const map2 = readAriesPath(KEYBINDS_BINDINGS_PATH);
-    const raw = map2?.[id];
-    if (raw == null) return void 0;
-    if (raw === STORED_NONE) return null;
-    if (typeof raw !== "string") return null;
-    const parsed = stringToHotkey(raw);
-    return parsed ?? null;
-  }
-  function writeStored(id, hk) {
-    if (typeof window === "undefined") return;
-    updateAriesPath(KEYBINDS_BINDINGS_PATH, (current) => {
-      const base = current && typeof current === "object" ? { ...current } : {};
-      if (hk) {
-        base[id] = hotkeyToString(hk);
-      } else {
-        base[id] = STORED_NONE;
-      }
-      return base;
-    });
-  }
-  function removeStored(id) {
-    if (typeof window === "undefined") return;
-    updateAriesPath(KEYBINDS_BINDINGS_PATH, (current) => {
-      const base = current && typeof current === "object" ? { ...current } : {};
-      delete base[id];
-      return base;
-    });
-  }
-  function readHoldStored(id) {
-    if (typeof window === "undefined") return void 0;
-    const map2 = readAriesPath(KEYBINDS_HOLD_PATH);
-    const raw = map2?.[id];
-    if (raw == null) return void 0;
-    if (typeof raw === "string") return raw === "1";
-    if (typeof raw === "number") return raw === 1;
-    if (typeof raw === "boolean") return raw;
-    return void 0;
-  }
-  function writeHoldStored(id, enabled5) {
-    if (typeof window === "undefined") return;
-    updateAriesPath(KEYBINDS_HOLD_PATH, (current) => {
-      const base = current && typeof current === "object" ? { ...current } : {};
-      base[id] = !!enabled5;
-      return base;
-    });
-  }
-  function emitHoldChange(id) {
-    const set2 = holdListeners.get(id);
-    if (!set2 || set2.size === 0) return;
-    const current = getKeybindHoldDetection(id);
-    for (const cb of set2) cb(current);
-  }
-  function emitChange(id) {
-    const set2 = listeners.get(id);
-    if (!set2 || set2.size === 0) return;
-    const current = cloneHotkey(getKeybind(id));
-    for (const cb of set2) cb(current);
-  }
-  function ensureCache(id) {
-    if (cache.has(id)) {
-      return cloneHotkey(cache.get(id) ?? null);
-    }
-    const stored = readStored(id);
-    const resolved = stored === void 0 ? cloneHotkey(defaultMap.get(id) ?? null) : cloneHotkey(stored);
-    cache.set(id, resolved);
-    return cloneHotkey(resolved);
-  }
-  function ensureHoldCache(id) {
-    if (!holdDefaultMap.has(id)) return false;
-    if (holdCache.has(id)) {
-      return holdCache.get(id) ?? false;
-    }
-    const stored = readHoldStored(id);
-    const resolved = stored === void 0 ? !!holdDefaultMap.get(id) : stored;
-    holdCache.set(id, resolved);
-    return resolved;
-  }
-  function getKeybind(id) {
-    return ensureCache(id);
-  }
-  function getDefaultKeybind(id) {
-    return cloneHotkey(defaultMap.get(id) ?? null);
-  }
-  function setKeybind(id, hk) {
-    const current = getKeybind(id);
-    if (hotkeysEqual(current, hk)) return;
-    const next = cloneHotkey(hk);
-    if (next) {
-      const asString = hotkeyToString(next);
-      for (const otherId of actionMap.keys()) {
-        if (otherId === id) continue;
-        const other = getKeybind(otherId);
-        if (!other) continue;
-        if (hotkeyToString(other) !== asString) continue;
-        cache.set(otherId, null);
-        writeStored(otherId, null);
-        emitChange(otherId);
-      }
-    }
-    cache.set(id, next);
-    writeStored(id, next);
-    emitChange(id);
-  }
-  function resetKeybind(id) {
-    cache.delete(id);
-    removeStored(id);
-    emitChange(id);
-  }
-  function getKeybindHoldDetection(id) {
-    return ensureHoldCache(id);
-  }
-  function setKeybindHoldDetection(id, enabled5) {
-    if (!holdDefaultMap.has(id)) return;
-    const current = ensureHoldCache(id);
-    if (current === enabled5) return;
-    holdCache.set(id, enabled5);
-    writeHoldStored(id, enabled5);
-    emitHoldChange(id);
-  }
-  function onKeybindHoldDetectionChange(id, cb) {
-    if (!holdDefaultMap.has(id)) {
-      return () => {
-      };
-    }
-    const set2 = holdListeners.get(id) ?? /* @__PURE__ */ new Set();
-    if (!holdListeners.has(id)) holdListeners.set(id, set2);
-    set2.add(cb);
-    return () => {
-      set2.delete(cb);
-      if (set2.size === 0) holdListeners.delete(id);
-    };
-  }
-  function onKeybindChange(id, cb) {
-    const set2 = listeners.get(id) ?? /* @__PURE__ */ new Set();
-    if (!listeners.has(id)) listeners.set(id, set2);
-    set2.add(cb);
-    return () => {
-      set2.delete(cb);
-      if (set2.size === 0) listeners.delete(id);
-    };
-  }
-  function eventMatchesKeybind(id, e) {
-    return matchHotkey(e, getKeybind(id));
-  }
-  function installGameKeybindsOnce() {
-    if (gameKeybindsInstalled || typeof window === "undefined") return;
-    gameKeybindsInstalled = true;
-    for (const id of GAME_KEYBIND_IDS) {
-      syncGameKeybind(id);
-      onKeybindChange(id, () => syncGameKeybind(id));
-      onKeybindHoldDetectionChange(id, () => syncGameKeybind(id));
-    }
-  }
-  function getKeybindLabel(id) {
-    return prettyHotkey(getKeybind(id));
-  }
-  function getKeybindSections() {
-    return keybindSections.map((section2) => ({
-      ...section2,
-      actions: section2.actions.map((action2) => ({
-        ...action2,
-        defaultHotkey: cloneHotkey(action2.defaultHotkey),
-        holdDetection: action2.holdDetection ? {
-          label: action2.holdDetection.label,
-          description: action2.holdDetection.description,
-          defaultEnabled: action2.holdDetection.defaultEnabled
-        } : void 0
-      }))
-    }));
-  }
-  var SECTION_CONFIG, KEYBINDS_BINDINGS_PATH, KEYBINDS_HOLD_PATH, ARIES_ROOT_KEY, STORED_NONE, actionMap, defaultMap, cache, listeners, holdDefaultMap, holdCache, holdListeners, keybindSections, PET_SECTION_ID, PET_TEAM_ACTION_PREFIX, PET_TEAM_NEXT_ID, PET_TEAM_PREV_ID, petSection, petActionIds, GAME_KEYBIND_TARGETS, GAME_KEYBIND_IDS, gameActiveStates, gameKeybindsInstalled, GAME_ACTION_ID, gameActionBlockers, gameActionBlockedCombos;
-  var init_keybinds = __esm({
-    "src/features/keybinds/keybinds.ts"() {
-      "use strict";
-      init_ingameHotkeys();
-      init_menu();
-      init_storage();
-      SECTION_CONFIG = [
-        {
-          id: "gui",
-          title: "GUI",
-          icon: "\u{1F5A5}\uFE0F",
-          description: "Choose how you open and move the overlay.",
-          actions: [
-            {
-              id: "gui.toggle",
-              label: "Toggle menu visibility",
-              icon: "sprite/ui/CameraOff",
-              hint: "Opens or closes the Arie's Mod overlay.",
-              defaultHotkey: { alt: true, code: "KeyX" }
-            },
-            {
-              id: "gui.drag",
-              label: "Drag HUD",
-              icon: "sprite/ui/Touchpad",
-              hint: "Hold to drag menus interfaces around the screen.",
-              defaultHotkey: { alt: true, code: "AltLeft" },
-              allowModifierOnly: true
-            }
-          ]
         },
-        {
-          id: "shops",
-          title: "Shops",
-          icon: "\u{1F6D2}",
-          description: "Quick shortcuts to every shop tab.",
-          actions: [
-            {
-              id: "shops.seeds",
-              label: "Seeds shop",
-              icon: "sprite/ui/SeedIcon",
-              defaultHotkey: { alt: true, code: "KeyS" }
-            },
-            {
-              id: "shops.eggs",
-              label: "Eggs shop",
-              icon: "sprite/ui/EggIcon",
-              defaultHotkey: { alt: true, code: "KeyE" }
-            },
-            {
-              id: "shops.decors",
-              label: "Decors shop",
-              icon: "sprite/ui/DecorIcon",
-              defaultHotkey: { alt: true, code: "KeyD" }
-            },
-            {
-              id: "shops.tools",
-              label: "Tools shop",
-              icon: "sprite/ui/ToolIcon",
-              defaultHotkey: { alt: true, code: "KeyT" }
-            }
-          ]
-        },
-        {
-          id: "game",
-          title: "Game",
-          icon: "\u{1F3AE}",
-          description: "Remap the in-game actions",
-          actions: [
-            {
-              id: "game.action",
-              label: "Action",
-              icon: "sprite/ui/PickupPin",
-              defaultHotkey: { code: "Space" },
-              holdDetection: {
-                label: "Rapid fire",
-                defaultEnabled: false
-              }
-            },
-            {
-              id: "game.inventory",
-              label: "Inventory",
-              icon: "sprite/ui/InventoryBag",
-              defaultHotkey: { code: "KeyE" }
-            },
-            {
-              id: "game.pet-hutch",
-              label: "Pet hutch",
-              icon: "sprite/decor/PetHutch_1",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.decor-shed",
-              label: "Decor shed",
-              icon: "sprite/decor/DecorShed",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.tool-shack",
-              label: "Tool shack",
-              icon: "sprite/decor/ToolShack",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.seed-silo",
-              label: "Seed silo",
-              icon: "sprite/decor/SeedSilo",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.feeding-trough",
-              label: "Feeding trough",
-              icon: "sprite/decor/FeedingTrough",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.weather-station",
-              label: "Weather station",
-              icon: "sprite/object/WeatherStation",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.journal",
-              label: "Journal",
-              icon: "sprite/ui/JournalStamp",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.move-up",
-              label: "Move up",
-              icon: "https://i.imgur.com/EkbKUgi.png",
-              defaultHotkey: { code: "KeyW" }
-            },
-            {
-              id: "game.move-down",
-              label: "Move down",
-              icon: "https://i.imgur.com/tdJ7IGP.png",
-              defaultHotkey: { code: "KeyS" }
-            },
-            {
-              id: "game.move-left",
-              label: "Move left",
-              icon: "https://i.imgur.com/86VbR70.png",
-              defaultHotkey: { code: "KeyA" }
-            },
-            {
-              id: "game.move-right",
-              label: "Move right",
-              icon: "https://i.imgur.com/Ljzz6td.png",
-              defaultHotkey: { code: "KeyD" }
-            }
-          ]
-        },
-        {
-          id: "sell",
-          title: "Sell",
-          icon: "\u{1F4B0}",
-          description: "Streamline selling actions.",
-          actions: [
-            {
-              id: "sell.sell-all",
-              label: "All crops",
-              icon: "sprite/ui/IconSell",
-              hint: "Trigger the sell-all flow for harvested crops.",
-              defaultHotkey: null
-            },
-            {
-              id: "sell.sell-all-pets",
-              label: "All pets",
-              icon: "sprite/ui/IconShop",
-              hint: "Sell every non-favorited pet in your inventory.",
-              defaultHotkey: null
-            }
-          ]
-        },
-        {
-          id: "companion",
-          title: "Companion",
-          icon: "\u{1F916}",
-          description: "Reach your companion without going through the launcher.",
-          actions: [
-            {
-              id: "companion.chat",
-              label: "Open the chat",
-              // Sans icône : l'atlas `ui` n'a pas de pictogramme de conversation, et
-              // en inventer une clé afficherait une case vide (`icon` est optionnel).
-              hint: "Opens the Companion window straight on its Chat tab.",
-              defaultHotkey: { alt: true, code: "KeyC" }
-            }
-          ]
-        }
-      ];
-      KEYBINDS_BINDINGS_PATH = "keybinds.bindings";
-      KEYBINDS_HOLD_PATH = "keybinds.hold";
-      ARIES_ROOT_KEY = "aries_mod";
-      STORED_NONE = "__none__";
-      actionMap = /* @__PURE__ */ new Map();
-      defaultMap = /* @__PURE__ */ new Map();
-      cache = /* @__PURE__ */ new Map();
-      listeners = /* @__PURE__ */ new Map();
-      holdDefaultMap = /* @__PURE__ */ new Map();
-      holdCache = /* @__PURE__ */ new Map();
-      holdListeners = /* @__PURE__ */ new Map();
-      keybindSections = SECTION_CONFIG.map((section2) => {
-        const actions = section2.actions.map((action2) => {
-          const normalized = {
-            id: action2.id,
-            sectionId: section2.id,
-            label: action2.label,
-            icon: action2.icon,
-            hint: action2.hint,
-            allowModifierOnly: action2.allowModifierOnly,
-            allowClear: action2.allowClear,
-            defaultHotkey: cloneHotkey(action2.defaultHotkey),
-            holdDetection: action2.holdDetection ? {
-              label: action2.holdDetection.label,
-              description: action2.holdDetection.description,
-              defaultEnabled: action2.holdDetection.defaultEnabled
-            } : void 0
-          };
-          actionMap.set(normalized.id, normalized);
-          defaultMap.set(normalized.id, cloneHotkey(action2.defaultHotkey));
-          if (action2.holdDetection) {
-            holdDefaultMap.set(normalized.id, !!action2.holdDetection.defaultEnabled);
+        async move(x, y) {
+          try {
+            await this.setPosition(x, y);
+          } catch {
           }
-          return normalized;
-        });
-        return {
-          id: section2.id,
-          title: section2.title,
-          description: section2.description,
-          icon: section2.icon,
-          actions
-        };
-      });
-      PET_SECTION_ID = "pets";
-      PET_TEAM_ACTION_PREFIX = "pets.team.";
-      PET_TEAM_NEXT_ID = "pets.team.next";
-      PET_TEAM_PREV_ID = "pets.team.prev";
-      petSection = {
-        id: PET_SECTION_ID,
-        title: "Pets",
-        icon: "\u{1F437}",
-        description: "Assign shortcuts to your pet teams and cycle through them instantly.",
-        actions: []
+          try {
+            sendToGame({ type: "PlayerPosition", position: { x, y } });
+          } catch {
+          }
+        },
+        // Anti-AFK keepalive: resends the current position to the server without
+        // touching the local position atom. Writing a fresh {x,y} object there
+        // (even with unchanged coordinates) makes the game close any open
+        // storage-building modal (pet hutch/decor shed/seed silo/feeding trough),
+        // so the no-op ping must go over the wire only.
+        async pingPosition(x, y) {
+          try {
+            sendToGame({ type: "PlayerPosition", position: { x, y } });
+          } catch {
+          }
+        },
+        /* ------------------------------ Game actions ------------------------------ */
+        async plantSeed(slot, species) {
+          try {
+            sendToGame({ type: "PlantSeed", slot, species });
+          } catch {
+          }
+        },
+        async logItems() {
+          try {
+            sendToGame({ type: "LogItems" });
+          } catch {
+          }
+        },
+        async sellAllCrops() {
+          try {
+            sendToGame({ type: "SellAllCrops" });
+          } catch {
+          }
+        },
+        async sellPet(itemId) {
+          try {
+            sendToGame({ type: "SellPet", itemId });
+          } catch {
+          }
+        },
+        async removeGardenObject(slot, slotType) {
+          try {
+            sendToGame({ type: "RemoveGardenObject", slot, slotType });
+          } catch {
+          }
+        },
+        async setSelectedItem(itemIndex) {
+          try {
+            sendToGame({ type: "SetSelectedItem", itemIndex });
+          } catch {
+          }
+        },
+        async dropObject() {
+          try {
+            sendToGame({ type: "DropObject" });
+          } catch {
+          }
+        },
+        // `cropItemId` is the id of the produce about to exist, which the client
+        // makes up itself (bundle 1125: `cropItemId: crypto.randomUUID()`). It feeds
+        // the game's local prediction; without it the server ignores the harvest.
+        async harvestCrop(slot, slotsIndex = 0, cropItemId = randomClientId()) {
+          try {
+            sendToGame({ scopePath: ["Room", "Quinoa"], type: "HarvestCrop", slot, slotsIndex, cropItemId });
+          } catch {
+          }
+        },
+        async feedPet(petItemId, cropItemId) {
+          try {
+            sendToGame({ type: "FeedPet", petItemId, cropItemId });
+          } catch {
+          }
+        },
+        async hatchEgg(slot) {
+          try {
+            sendToGame({ type: "HatchEgg", slot });
+          } catch {
+          }
+        },
+        // The message is named `GrowEgg` on the wire: `PlantEgg` no longer exists
+        // anywhere in the client, so it could only ever have been rejected.
+        async plantEgg(slot, eggId) {
+          try {
+            sendToGame({ type: "GrowEgg", slot, eggId });
+          } catch {
+          }
+        },
+        async placeDecor(tileType, localTileIndex, decorId, rotation) {
+          try {
+            sendToGame({ type: "PlaceDecor", tileType, localTileIndex, decorId, rotation });
+          } catch {
+          }
+        },
+        async swapPet(petSlotId, petInventoryId) {
+          try {
+            sendToGame({ type: "SwapPet", petSlotId, petInventoryId });
+          } catch {
+          }
+        },
+        async swapPetFromStorage(petSlotId, storagePetId, storageId) {
+          try {
+            sendToGame({ type: "SwapPetFromStorage", petSlotId, storagePetId, storageId });
+          } catch {
+          }
+        },
+        async placePet(itemId, position2, tileType, localTileIndex) {
+          try {
+            sendToGame({ type: "PlacePet", itemId, position: position2, tileType, localTileIndex });
+          } catch {
+          }
+        },
+        async storePet(petId) {
+          try {
+            sendToGame({ type: "PickupPet", petId });
+          } catch {
+          }
+        },
+        async wish(itemId) {
+          try {
+            sendToGame({ type: "Wish", itemId });
+          } catch {
+          }
+        },
+        async petPositions(petPositions) {
+          const sanitized = {};
+          for (const [id, pos] of Object.entries(petPositions ?? {})) {
+            const x = Number(pos?.x);
+            const y = Number(pos?.y);
+            if (Number.isFinite(x) && Number.isFinite(y)) sanitized[String(id)] = { x, y };
+          }
+          if (!Object.keys(sanitized).length) return;
+          try {
+            sendToGame({ type: "PetPositions", petPositions: sanitized });
+          } catch {
+          }
+        },
+        /* --------------------------------- Storage -------------------------------- */
+        /** Every item move goes through here: see `ws/moveItemMessage.ts`. */
+        async moveItem(params) {
+          const command = buildMoveItemCommand(params);
+          if (!command) return;
+          try {
+            sendToGame(command);
+          } catch {
+          }
+        },
+        /**
+         * `quantity` pulls back part of a stack; omitting it takes the whole entry
+         * (the game's own drag-and-drop leaves it out for unique items).
+         */
+        async retrieveItemFromStorage(itemId, storageId, quantity) {
+          await this.moveItem({ from: storageId, to: INVENTORY, itemId, quantity });
+        },
+        async putItemInStorage(itemId, storageId) {
+          await this.moveItem({ from: INVENTORY, to: storageId, itemId });
+        },
+        /* -------------------------------- Favorites ------------------------------- */
+        // The game renamed the action to `ToggleLockItem` (the padlock in the
+        // inventory); the state field it toggles is still `favoritedItemIds`, which
+        // is what `Atoms.inventory.favoriteIds` reads.
+        async toggleFavoriteItem(itemId) {
+          try {
+            sendToGame({ type: "ToggleLockItem", itemId });
+          } catch {
+          }
+        },
+        async getFavoriteIds() {
+          const ids = await Atoms.inventory.favoriteIds.get();
+          return Array.isArray(ids) ? ids.slice() : [];
+        },
+        async getFavoriteIdSet() {
+          return new Set(await this.getFavoriteIds());
+        },
+        /** Locks or unlocks an item to match `shouldBeFavorite`, and returns the state it ends in. */
+        async ensureFavoriteItem(itemId, shouldBeFavorite) {
+          const current = (await this.getFavoriteIdSet()).has(itemId);
+          if (current === shouldBeFavorite) return current;
+          await this.toggleFavoriteItem(itemId);
+          return shouldBeFavorite;
+        },
+        /* ------------------------------ Garden, pets ------------------------------ */
+        async getGardenState() {
+          return await Atoms.data.garden.get() ?? null;
+        },
+        async getPets() {
+          const infos = await Atoms.pets.myPetInfos.get();
+          const primitives = await Atoms.pets.myPrimitivePetSlots.get();
+          return normalizePetsState(infos, primitives);
+        },
+        onPetsChange(cb) {
+          return watchPets(cb);
+        },
+        async onPetsChangeNow(cb) {
+          const infos = await Atoms.pets.myPetInfos.get();
+          const primitives = await Atoms.pets.myPrimitivePetSlots.get();
+          return watchPets(cb, { infos, primitives });
+        },
+        async getCropInventoryState() {
+          return Atoms.inventory.myCropInventory.get();
+        }
       };
-      keybindSections.push(petSection);
-      petActionIds = /* @__PURE__ */ new Set();
-      updatePetKeybinds([]);
-      GAME_KEYBIND_TARGETS = {
-        "game.action": "Space",
-        "game.inventory": "KeyE",
-        "game.move-up": "KeyW",
-        // Z (AZERTY) == KeyW
-        "game.move-down": "KeyS",
-        // S
-        "game.move-left": "KeyA",
-        // Q (AZERTY) == KeyA
-        "game.move-right": "KeyD"
-        // D
-      };
-      GAME_KEYBIND_IDS = [
-        "game.action",
-        "game.inventory",
-        "game.move-up",
-        "game.move-down",
-        "game.move-left",
-        "game.move-right"
-      ];
-      gameActiveStates = /* @__PURE__ */ new Map();
-      gameKeybindsInstalled = false;
-      GAME_ACTION_ID = "game.action";
-      gameActionBlockers = /* @__PURE__ */ new Set();
-      gameActionBlockedCombos = /* @__PURE__ */ new Set();
-      if (typeof window !== "undefined") {
-        window.addEventListener("storage", (event) => {
-          if (event.key !== ARIES_ROOT_KEY) return;
-          cache.clear();
-          holdCache.clear();
-          for (const id of actionMap.keys()) emitChange(id);
-          for (const id of holdDefaultMap.keys()) emitHoldChange(id);
-        });
-      }
     }
   });
 
@@ -12818,1301 +8664,402 @@
     }
   });
 
-  // src/features/stats/stats.ts
-  function createDefaultStats(createdAt = Date.now()) {
-    const hatchedByType = {};
-    for (const species of Object.keys(petCatalog2)) {
-      hatchedByType[species.toLowerCase()] = { normal: 0, gold: 0, rainbow: 0 };
-    }
-    const abilities = {};
-    for (const abilityId of Object.keys(petAbilities2)) {
-      abilities[abilityId] = { triggers: 0, totalValue: 0 };
-    }
-    const weather2 = {};
-    for (const key2 of Object.keys(weatherCatalog2)) {
-      weather2[key2.toLowerCase()] = { triggers: 0 };
-    }
-    return {
-      createdAt,
-      garden: {
-        totalPlanted: 0,
-        totalHarvested: 0,
-        totalDestroyed: 0,
-        watercanUsed: 0,
-        waterTimeSavedMs: 0
-      },
-      shops: {
-        seedsBought: 0,
-        decorBought: 0,
-        eggsBought: 0,
-        toolsBought: 0,
-        cropsSoldCount: 0,
-        cropsSoldValue: 0,
-        petsSoldCount: 0,
-        petsSoldValue: 0
-      },
-      pets: { hatchedByType },
-      abilities,
-      weather: weather2
-    };
-  }
-  function normalizeHatchedCounts(value, fallback) {
-    if (!isRecord(value)) return { ...fallback };
-    return {
-      normal: toPositiveInt(value.normal, fallback.normal),
-      gold: toPositiveInt(value.gold, fallback.gold),
-      rainbow: toPositiveInt(value.rainbow, fallback.rainbow)
-    };
-  }
-  function normalizeStats(raw) {
-    const fallbackCreatedAt = Date.now();
-    const base = createDefaultStats(fallbackCreatedAt);
-    if (!isRecord(raw)) return base;
-    if (Object.prototype.hasOwnProperty.call(raw, "createdAt")) {
-      base.createdAt = toPositiveTimestamp(raw.createdAt, fallbackCreatedAt);
-    }
-    if (isRecord(raw.garden)) {
-      base.garden = {
-        totalPlanted: toPositiveInt(raw.garden.totalPlanted, base.garden.totalPlanted),
-        totalHarvested: toPositiveInt(raw.garden.totalHarvested, base.garden.totalHarvested),
-        totalDestroyed: toPositiveInt(raw.garden.totalDestroyed, base.garden.totalDestroyed),
-        watercanUsed: toPositiveInt(raw.garden.watercanUsed, base.garden.watercanUsed),
-        waterTimeSavedMs: toPositiveInt(raw.garden.waterTimeSavedMs, base.garden.waterTimeSavedMs)
+  // src/platform/friendSettingsSchema.ts
+  var DEFAULT_FRIEND_SETTINGS;
+  var init_friendSettingsSchema = __esm({
+    "src/platform/friendSettingsSchema.ts"() {
+      "use strict";
+      DEFAULT_FRIEND_SETTINGS = {
+        showOnlineFriendsOnly: false,
+        hideRoomFromPublicList: false,
+        messageSoundEnabled: true,
+        friendRequestSoundEnabled: true,
+        showGarden: true,
+        showInventory: true,
+        showCoins: true,
+        showActivityLog: true,
+        showJournal: true,
+        showStats: true
       };
     }
-    if (isRecord(raw.shops)) {
-      base.shops = {
-        seedsBought: toPositiveInt(raw.shops.seedsBought, base.shops.seedsBought),
-        decorBought: toPositiveInt(raw.shops.decorBought, base.shops.decorBought),
-        eggsBought: toPositiveInt(raw.shops.eggsBought, base.shops.eggsBought),
-        toolsBought: toPositiveInt(raw.shops.toolsBought, base.shops.toolsBought),
-        cropsSoldCount: toPositiveInt(raw.shops.cropsSoldCount, base.shops.cropsSoldCount),
-        cropsSoldValue: toPositiveNumber(raw.shops.cropsSoldValue, base.shops.cropsSoldValue),
-        petsSoldCount: toPositiveInt(raw.shops.petsSoldCount, base.shops.petsSoldCount),
-        petsSoldValue: toPositiveNumber(raw.shops.petsSoldValue, base.shops.petsSoldValue)
-      };
+  });
+
+  // src/platform/storage.ts
+  function getHostStorage() {
+    if (typeof window === "undefined") return null;
+    try {
+      if (typeof window.localStorage === "undefined") return null;
+      return window.localStorage;
+    } catch {
+      return null;
     }
-    if (isRecord(raw.pets) && isRecord(raw.pets.hatchedByType)) {
-      for (const [key2, counts] of Object.entries(raw.pets.hatchedByType)) {
-        if (typeof key2 !== "string") continue;
-        const normalizedKey = key2.toLowerCase();
-        const fallback = base.pets.hatchedByType[normalizedKey] ?? { normal: 0, gold: 0, rainbow: 0 };
-        base.pets.hatchedByType[normalizedKey] = normalizeHatchedCounts(counts, fallback);
-      }
+  }
+  function parseSafe(raw) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return raw;
     }
-    if (isRecord(raw.abilities)) {
-      for (const [key2, value] of Object.entries(raw.abilities)) {
-        if (typeof key2 !== "string" || !isRecord(value)) continue;
-        base.abilities[key2] = {
-          triggers: toPositiveInt(value.triggers, base.abilities[key2]?.triggers ?? 0),
-          totalValue: toPositiveNumber(value.totalValue, base.abilities[key2]?.totalValue ?? 0)
-        };
-      }
-    }
-    if (isRecord(raw.weather)) {
-      for (const [key2, value] of Object.entries(raw.weather)) {
-        if (typeof key2 !== "string" || !isRecord(value)) continue;
-        const normalizedKey = key2.toLowerCase();
-        const fallback = base.weather[normalizedKey] ?? { triggers: 0 };
-        base.weather[normalizedKey] = {
-          triggers: toPositiveInt(value.triggers, fallback.triggers)
-        };
+  }
+  function mergeSection(existing, next) {
+    const base = { ...existing ?? {} };
+    for (const [k, v] of Object.entries(next)) {
+      if (base[k] === void 0) {
+        base[k] = v;
       }
     }
     return base;
   }
-  function readFromStorage() {
-    if (memoryStore) return cloneStats(memoryStore);
-    const rawWrapped = readAriesPath("stats");
-    const raw = unwrapMaybeNestedSnapshot(rawWrapped);
-    if (!raw) {
-      const fresh = createDefaultStats();
-      memoryStore = cloneStats(fresh);
-      writeAriesPath("stats", memoryStore);
-      return fresh;
+  function unwrapNestedSnapshot(raw) {
+    let cur = raw;
+    let guard = 0;
+    while (guard++ < 10 && cur && typeof cur === "object" && "snapshot" in cur && typeof cur.snapshot === "object") {
+      cur = cur.snapshot;
     }
-    const normalized = normalizeStats(raw);
-    memoryStore = cloneStats(normalized);
-    if (rawWrapped !== raw) {
-      writeAriesPath("stats", memoryStore);
+    return cur ?? raw;
+  }
+  function coerceLegacyAggregate(raw) {
+    const out = { ...DEFAULT_ARIES_STORAGE };
+    if (!raw || typeof raw !== "object") return out;
+    const data = raw;
+    if (typeof data.version === "number") out.version = data.version;
+    if (typeof data.migratedAt === "number") out.migratedAt = data.migratedAt;
+    if ("stats" in data) out.stats = unwrapNestedSnapshot(data.stats);
+    if ("customRooms" in data) out.room = mergeSection(out.room, { customRooms: data.customRooms });
+    if ("pets" in data && typeof data.pets === "object") {
+      out.pets = mergeSection(out.pets, data.pets);
     }
-    return normalized;
-  }
-  function emitUpdate(stats) {
-    const snapshot2 = cloneStats(stats);
-    for (const listener of listeners2) {
-      try {
-        listener(snapshot2);
-      } catch (error) {
-        console.error("[StatsService] Listener error", error);
-      }
+    if ("petsOverrides" in data) out.pets = mergeSection(out.pets, { overrides: data.petsOverrides });
+    if ("petsUI" in data) out.pets = mergeSection(out.pets, { ui: data.petsUI });
+    if ("petTeams" in data) out.pets = mergeSection(out.pets, { teams: data.petTeams });
+    if ("petTeamSearch" in data) out.pets = mergeSection(out.pets, { teamSearch: data.petTeamSearch });
+    if ("petTeamHotkeys" in data) out.pets = mergeSection(out.pets, { hotkeys: data.petTeamHotkeys });
+    if ("petAlerts" in data) out.pets = mergeSection(out.pets, { alerts: data.petAlerts });
+    if ("notifier" in data && typeof data.notifier === "object") {
+      out.notifier = mergeSection(out.notifier, data.notifier);
     }
-  }
-  function writeToStorage(stats) {
-    const snapshot2 = cloneStats(stats);
-    memoryStore = snapshot2;
-    writeAriesPath("stats", snapshot2);
-    return snapshot2;
-  }
-  function adjustValue(current, delta, integer) {
-    const a = Number(current);
-    const b = Number(delta);
-    const sum = Number.isFinite(a) ? a : 0;
-    const next = sum + (Number.isFinite(b) ? b : 0);
-    const clamped = Math.max(0, next);
-    return integer ? Math.floor(clamped) : clamped;
-  }
-  function updateStats(mutator) {
-    const current = readFromStorage();
-    const before = JSON.stringify(current);
-    const draft = cloneStats(current);
-    mutator(draft);
-    const after = JSON.stringify(draft);
-    if (before === after) return current;
-    const stored = writeToStorage(draft);
-    emitUpdate(stored);
-    return stored;
-  }
-  function requireAbilityEntry(stats, abilityId) {
-    if (!stats.abilities[abilityId]) {
-      stats.abilities[abilityId] = { triggers: 0, totalValue: 0 };
+    if ("notifierPrefs" in data) out.notifier = mergeSection(out.notifier, { prefs: data.notifierPrefs });
+    if ("notifierRules" in data) out.notifier = mergeSection(out.notifier, { rules: data.notifierRules });
+    if ("weatherNotifierPrefs" in data) out.notifier = mergeSection(out.notifier, { weatherPrefs: data.weatherNotifierPrefs });
+    if ("notifierLoopDefaults" in data) out.notifier = mergeSection(out.notifier, { loopDefaults: data.notifierLoopDefaults });
+    if ("misc" in data && typeof data.misc === "object") {
+      out.misc = mergeSection(out.misc, data.misc);
     }
-    return stats.abilities[abilityId];
-  }
-  function requireWeatherEntry(stats, weatherId) {
-    const key2 = weatherId.toLowerCase();
-    if (!stats.weather[key2]) {
-      stats.weather[key2] = { triggers: 0 };
+    if ("ghostMode" in data) out.misc = mergeSection(out.misc, { ghostMode: data.ghostMode });
+    if ("ghostDelayMs" in data) out.misc = mergeSection(out.misc, { ghostDelayMs: data.ghostDelayMs });
+    if ("autoRecoEnabled" in data) out.misc = mergeSection(out.misc, { autoRecoEnabled: data.autoRecoEnabled });
+    if ("autoRecoDelayMs" in data) out.misc = mergeSection(out.misc, { autoRecoDelayMs: data.autoRecoDelayMs });
+    if ("locker" in data && typeof data.locker === "object") {
+      out.locker = mergeSection(out.locker, data.locker);
     }
-    return stats.weather[key2];
-  }
-  function requirePetEntry(stats, species) {
-    const key2 = species.toLowerCase();
-    if (!stats.pets.hatchedByType[key2]) {
-      stats.pets.hatchedByType[key2] = { normal: 0, gold: 0, rainbow: 0 };
+    if ("lockerRestrictions" in data) out.locker = mergeSection(out.locker, { restrictions: data.lockerRestrictions });
+    if ("lockerState" in data) out.locker = mergeSection(out.locker, { state: data.lockerState });
+    if ("keybinds" in data && typeof data.keybinds === "object") {
+      out.keybinds = mergeSection(out.keybinds, data.keybinds);
     }
-    return stats.pets.hatchedByType[key2];
-  }
-  var GARDEN_INT_KEYS, SHOP_INT_KEYS, ABILITY_INT_KEYS, WEATHER_INT_KEYS, memoryStore, listeners2, isRecord, toNumber, toPositiveNumber, toPositiveInt, toPositiveTimestamp, cloneStats, unwrapMaybeNestedSnapshot, StatsService;
-  var init_stats = __esm({
-    "src/features/stats/stats.ts"() {
-      "use strict";
-      init_data();
-      init_storage();
-      GARDEN_INT_KEYS = {
-        totalPlanted: true,
-        totalHarvested: true,
-        totalDestroyed: true,
-        watercanUsed: true,
-        waterTimeSavedMs: true
-      };
-      SHOP_INT_KEYS = {
-        seedsBought: true,
-        decorBought: true,
-        eggsBought: true,
-        toolsBought: true,
-        cropsSoldCount: true,
-        cropsSoldValue: false,
-        petsSoldCount: true,
-        petsSoldValue: false
-      };
-      ABILITY_INT_KEYS = {
-        triggers: true,
-        totalValue: false
-      };
-      WEATHER_INT_KEYS = {
-        triggers: true
-      };
-      memoryStore = null;
-      listeners2 = /* @__PURE__ */ new Set();
-      isRecord = (value) => typeof value === "object" && value !== null;
-      toNumber = (value, fallback = 0) => {
-        const num2 = Number(value);
-        if (!Number.isFinite(num2)) return fallback;
-        return num2;
-      };
-      toPositiveNumber = (value, fallback = 0) => {
-        const num2 = toNumber(value, fallback);
-        return Math.max(0, num2);
-      };
-      toPositiveInt = (value, fallback = 0) => {
-        const num2 = toPositiveNumber(value, fallback);
-        return Math.floor(num2);
-      };
-      toPositiveTimestamp = (value, fallback) => {
-        const num2 = Number(value);
-        if (!Number.isFinite(num2) || num2 <= 0) return fallback;
-        return Math.floor(num2);
-      };
-      cloneStats = (stats) => ({
-        createdAt: stats.createdAt,
-        garden: { ...stats.garden },
-        shops: { ...stats.shops },
-        pets: {
-          hatchedByType: Object.fromEntries(
-            Object.entries(stats.pets.hatchedByType).map(([key2, counts]) => [key2, { ...counts }])
-          )
-        },
-        abilities: Object.fromEntries(
-          Object.entries(stats.abilities).map(([key2, value]) => [key2, { ...value }])
-        ),
-        weather: Object.fromEntries(
-          Object.entries(stats.weather).map(([key2, value]) => [key2, { ...value }])
-        )
-      });
-      unwrapMaybeNestedSnapshot = (raw) => {
-        let cur = raw;
-        let guard = 0;
-        while (guard++ < 10 && isRecord(cur) && "snapshot" in cur && isRecord(cur.snapshot)) {
-          cur = cur.snapshot;
-        }
-        return cur;
-      };
-      StatsService = {
-        storageKey: "stats",
-        getSnapshot() {
-          return readFromStorage();
-        },
-        setSnapshot(snapshot2) {
-          const normalized = normalizeStats(unwrapMaybeNestedSnapshot(snapshot2));
-          const stored = writeToStorage(normalized);
-          emitUpdate(stored);
-          return stored;
-        },
-        reset() {
-          const fresh = createDefaultStats();
-          const stored = writeToStorage(fresh);
-          emitUpdate(stored);
-          return stored;
-        },
-        update(mutator) {
-          return updateStats(mutator);
-        },
-        incrementGardenStat(key2, amount = 1) {
-          return updateStats((draft) => {
-            draft.garden[key2] = adjustValue(draft.garden[key2], amount, GARDEN_INT_KEYS[key2]);
-          });
-        },
-        incrementShopStat(key2, amount = 1) {
-          return updateStats((draft) => {
-            draft.shops[key2] = adjustValue(draft.shops[key2], amount, SHOP_INT_KEYS[key2]);
-          });
-        },
-        incrementPetHatched(species, rarityKey = "normal", amount = 1) {
-          return updateStats((draft) => {
-            const entry = requirePetEntry(draft, species);
-            entry[rarityKey] = adjustValue(entry[rarityKey], amount, true);
-          });
-        },
-        incrementAbilityStat(abilityId, key2, amount = 1) {
-          return updateStats((draft) => {
-            const entry = requireAbilityEntry(draft, abilityId);
-            entry[key2] = adjustValue(entry[key2], amount, ABILITY_INT_KEYS[key2]);
-          });
-        },
-        incrementWeatherStat(weatherId, key2 = "triggers", amount = 1) {
-          return updateStats((draft) => {
-            const entry = requireWeatherEntry(draft, weatherId);
-            entry[key2] = adjustValue(entry[key2], amount, WEATHER_INT_KEYS[key2]);
-          });
-        },
-        subscribe(listener) {
-          listeners2.add(listener);
-          return () => {
-            listeners2.delete(listener);
-          };
-        }
+    if ("editorSavedGardens" in data) out.editor = mergeSection(out.editor, { savedGardens: data.editorSavedGardens });
+    if ("editor" in data && typeof data.editor === "object") {
+      out.editor = mergeSection(out.editor, data.editor);
+    }
+    if ("activityLog" in data && typeof data.activityLog === "object") {
+      out.activityLog = mergeSection(out.activityLog, data.activityLog);
+    }
+    if ("companion" in data && typeof data.companion === "object") {
+      out.companion = mergeSection(out.companion, data.companion);
+    }
+    if ("companionSession" in data && typeof data.companionSession === "object") {
+      out.companionSession = mergeSection(out.companionSession, data.companionSession);
+    }
+    if ("activityLogHistory" in data) out.activityLog = mergeSection(out.activityLog, { history: data.activityLogHistory });
+    if ("activityLogFilter" in data) out.activityLog = mergeSection(out.activityLog, { filter: data.activityLogFilter });
+    if ("hud" in data && typeof data.hud === "object") {
+      out.hud = mergeSection(out.hud, data.hud);
+    }
+    if ("menu" in data && typeof data.menu === "object") {
+      out.menu = mergeSection(out.menu, data.menu);
+    }
+    if ("inventory" in data && typeof data.inventory === "object") {
+      out.inventory = mergeSection(out.inventory, data.inventory);
+    }
+    if ("audio" in data && typeof data.audio === "object") {
+      out.audio = mergeSection(out.audio, data.audio);
+    }
+    if ("audioSettings" in data) out.audio = mergeSection(out.audio, { settings: data.audioSettings });
+    if ("audioLibrary" in data) out.audio = mergeSection(out.audio, { library: data.audioLibrary });
+    if ("soundEffectsVolumeAtom" in data) out.audio = mergeSection(out.audio, { sfxVolumeAtom: data.soundEffectsVolumeAtom });
+    if ("friends" in data && typeof data.friends === "object") {
+      out.friends = {
+        ...out.friends ?? {},
+        ...data.friends
       };
     }
-  });
-
-  // src/game/ws/shopPurchaseMessage.ts
-  function parseViewMode(raw) {
-    if (raw == null) return null;
-    let value = raw;
-    try {
-      value = JSON.parse(raw);
-    } catch {
+    if ("eggAutomation" in data && typeof data.eggAutomation === "object") {
+      out.eggAutomation = mergeSection(out.eggAutomation, data.eggAutomation);
     }
-    return value === "list" || value === "grid" ? value : null;
-  }
-  function readShopViewMode(shop, storage) {
-    if (!storage) return "list";
-    try {
-      for (let i = 0; i < storage.length; i++) {
-        const key2 = storage.key(i);
-        if (!key2) continue;
-        const match = VIEW_MODE_KEY.exec(key2);
-        if (!match || match[1] !== shop) continue;
-        const mode = parseViewMode(storage.getItem(key2));
-        if (mode) return mode;
-      }
-    } catch {
+    if ("weatherTeams" in data && typeof data.weatherTeams === "object") {
+      out.weatherTeams = mergeSection(out.weatherTeams, data.weatherTeams);
     }
-    return "list";
-  }
-  function buildShopPurchaseCommand(shop, item, viewMode, quantity = 1) {
-    const q = Math.max(1, Math.floor(Number(quantity) || 1));
-    return {
-      type: "PurchaseShopItem",
-      shop,
-      viewMode,
-      item,
-      ...q === 1 ? {} : { quantity: q }
-    };
-  }
-  var VIEW_MODE_KEY;
-  var init_shopPurchaseMessage = __esm({
-    "src/game/ws/shopPurchaseMessage.ts"() {
-      "use strict";
-      VIEW_MODE_KEY = /^shop:.*:(.+):viewMode$/;
+    if ("workflowStudio" in data) {
+      out.workflowStudio = data.workflowStudio;
     }
-  });
-
-  // src/features/shops/purchases.ts
-  function isCurrentRestock(entry, shop) {
-    if (!("restockId" in entry)) return true;
-    const current = shop?.restockId;
-    return current != null && entry.restockId === current;
-  }
-  function purchasesForCurrentRestock(shops2, shopPurchases, kindOf) {
-    const out = { seed: {}, egg: {}, tool: {}, decor: {} };
-    if (!shopPurchases || typeof shopPurchases !== "object") return out;
-    for (const shopKey of Object.keys(shopPurchases)) {
-      const entry = shopPurchases[shopKey];
-      if (!entry || typeof entry !== "object") continue;
-      if (!isCurrentRestock(entry, shops2?.[shopKey])) continue;
-      const purch = entry.purchases;
-      if (!purch || typeof purch !== "object") continue;
-      for (const [itemId, count] of Object.entries(purch)) {
-        const n = Number(count) || 0;
-        const kind = DIRECT_KIND[shopKey] ?? kindOf(itemId);
-        if (!kind) continue;
-        out[kind][itemId] = (out[kind][itemId] ?? 0) + n;
-      }
+    if ("workflow" in data && typeof data.workflow === "object") {
+      out.workflow = mergeSection(out.workflow, data.workflow);
     }
     return out;
   }
-  function resolveShop(key2, shops2, mySlot) {
-    if (CUSTOM_RESTOCK_SHOPS.has(key2)) {
-      const custom = mySlot?.data?.customRestocks?.[key2];
-      if (custom) {
-        const inv = mySlot?.customRestockInventories?.[key2];
-        return inv && inv.restockId === `${key2}:custom:${custom.purchasedAt}` ? inv : null;
+  function installAriesLifecycleHooksOnce() {
+    if (ariesLifecycleHooksInstalled || typeof window === "undefined") return;
+    ariesLifecycleHooksInstalled = true;
+    const flush = () => flushAriesStorageNow();
+    window.addEventListener("pagehide", flush);
+    window.addEventListener("beforeunload", flush);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") flush();
+    });
+    window.addEventListener("storage", (event) => {
+      if (event.key !== ARIES_STORAGE_KEY) return;
+      if (ariesFlushPending) return;
+      cachedAriesStorage = null;
+    });
+  }
+  function flushAriesStorageNow() {
+    if (ariesFlushTimer !== null) {
+      clearTimeout(ariesFlushTimer);
+      ariesFlushTimer = null;
+    }
+    if (!ariesFlushPending || !cachedAriesStorage) return;
+    ariesFlushPending = false;
+    const storage = getHostStorage();
+    if (!storage) return;
+    try {
+      storage.setItem(ARIES_STORAGE_KEY, JSON.stringify(cachedAriesStorage));
+    } catch {
+    }
+  }
+  function scheduleAriesFlush() {
+    installAriesLifecycleHooksOnce();
+    ariesFlushPending = true;
+    if (ariesFlushTimer !== null) return;
+    ariesFlushTimer = window.setTimeout(() => {
+      ariesFlushTimer = null;
+      flushAriesStorageNow();
+    }, ARIES_FLUSH_DELAY_MS);
+  }
+  function loadAriesStorage() {
+    if (cachedAriesStorage) return cachedAriesStorage;
+    installAriesLifecycleHooksOnce();
+    const storage = getHostStorage();
+    const raw = storage?.getItem(ARIES_STORAGE_KEY);
+    if (raw) {
+      const parsed = parseSafe(raw);
+      if (parsed && typeof parsed === "object") {
+        cachedAriesStorage = coerceLegacyAggregate(parsed);
+        return cachedAriesStorage;
       }
     }
-    const shop = shops2?.[key2];
-    if (!shop || typeof shop !== "object") return null;
-    if ("restockId" in shop && shop.restockId == null) return null;
-    return shop;
+    cachedAriesStorage = { ...DEFAULT_ARIES_STORAGE };
+    return cachedAriesStorage;
   }
-  function purchasesKnown(entry, shop) {
-    if (!entry || typeof entry !== "object" || !("restockId" in entry)) return true;
-    if (entry.restockId === shop?.restockId) return true;
-    return Number(entry.startedAtMs) < Number(shop?.startedAtMs);
+  function persistAriesStorage(data) {
+    cachedAriesStorage = data;
+    scheduleAriesFlush();
   }
-  function playerShopView(shops2, mySlot, kindOf) {
-    const shopPurchases = mySlot?.data?.shopPurchases;
-    const open = {};
-    const keys = new Set(shops2 && typeof shops2 === "object" ? Object.keys(shops2) : []);
-    for (const key2 of CUSTOM_RESTOCK_SHOPS) {
-      if (mySlot?.data?.customRestocks?.[key2]) keys.add(key2);
+  function getValueAtPath(obj, path) {
+    let cur = obj;
+    for (const segment of path) {
+      if (!cur || typeof cur !== "object") return void 0;
+      cur = cur[segment];
     }
-    for (const key2 of keys) {
-      const shop = resolveShop(key2, shops2, mySlot);
-      if (!shop) continue;
-      if (!purchasesKnown(shopPurchases?.[key2], shop)) continue;
-      open[key2] = shop;
-    }
-    return { shops: open, purchases: purchasesForCurrentRestock(open, shopPurchases, kindOf) };
+    return cur;
   }
-  var DIRECT_KIND, CUSTOM_RESTOCK_SHOPS;
-  var init_purchases = __esm({
-    "src/features/shops/purchases.ts"() {
-      "use strict";
-      DIRECT_KIND = { seed: "seed", egg: "egg", tool: "tool", decor: "decor" };
-      CUSTOM_RESTOCK_SHOPS = /* @__PURE__ */ new Set(["seed", "egg", "tool", "decor"]);
+  function setValueAtPath(obj, path, value) {
+    if (!path.length) return;
+    let cur = obj;
+    for (let i = 0; i < path.length - 1; i++) {
+      const key2 = path[i];
+      if (!cur[key2] || typeof cur[key2] !== "object") {
+        cur[key2] = {};
+      }
+      cur = cur[key2];
     }
-  });
-
-  // src/features/shops/shops.ts
-  function installShopKeybindsOnce() {
-    if (shopKeybindsInstalled || typeof window === "undefined") return;
-    shopKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        for (const { id, modal } of SHOP_KEYBINDS) {
-          if (!eventMatchesKeybind(id, event)) continue;
-          event.preventDefault();
-          event.stopPropagation();
-          void openModal(modal);
-          break;
-        }
-      },
-      true
-    );
+    const last = path[path.length - 1];
+    if (value === void 0) {
+      if (cur && typeof cur === "object") {
+        delete cur[last];
+      }
+    } else {
+      cur[last] = value;
+    }
   }
-  function _fallbackShopFor(kind) {
-    return kind === "seeds" ? "seed" : kind === "tools" ? "tool" : kind === "eggs" ? "egg" : "decor";
+  function getAriesStorage() {
+    return loadAriesStorage();
   }
-  function _buildPurchasePayload(kind, it) {
-    if (kind === "seeds") {
-      const species = it.species ?? it.name;
-      return species ? { item: { itemType: "Seed", species: String(species) }, stat: "seedsBought" } : null;
-    }
-    if (kind === "tools") {
-      const toolId = it.toolId ?? it.id;
-      return toolId ? { item: { itemType: "Tool", toolId: String(toolId) }, stat: "toolsBought" } : null;
-    }
-    if (kind === "eggs") {
-      const eggId = it.eggId ?? it.id;
-      return eggId ? { item: { itemType: "Egg", eggId: String(eggId) }, stat: "eggsBought" } : null;
-    }
-    if (kind === "decor") {
-      const decorId = it.decorId ?? it.id;
-      return decorId ? { item: { itemType: "Decor", decorId: String(decorId) }, stat: "decorBought" } : null;
-    }
-    return null;
+  function saveAriesStorage(data) {
+    persistAriesStorage(data);
   }
-  function _findShopForItem(snap, kind, it) {
-    if (!snap || typeof snap !== "object") return null;
-    const keys = Object.keys(snap);
-    const weatherKeys = keys.filter((k) => !BASE_SHOP_KEYS.includes(k));
-    const baseKeys = keys.filter((k) => BASE_SHOP_KEYS.includes(k));
-    const ordered = [...weatherKeys, ...baseKeys];
-    const targetSpecies = it.species ?? it.name;
-    const targetToolId = it.toolId ?? it.id;
-    const targetEggId = it.eggId ?? it.id;
-    const targetDecorId = it.decorId ?? it.id;
-    const matches = (entry) => {
-      if (!entry || typeof entry !== "object") return false;
-      if (kind === "seeds") return targetSpecies != null && entry.species === targetSpecies;
-      if (kind === "tools") return targetToolId != null && entry.toolId === targetToolId;
-      if (kind === "eggs") return targetEggId != null && entry.eggId === targetEggId;
-      if (kind === "decor") return targetDecorId != null && entry.decorId === targetDecorId;
+  function updateAriesStorage(mutator) {
+    const current = loadAriesStorage();
+    mutator(current);
+    current.version = ARIES_STORAGE_VERSION;
+    persistAriesStorage(current);
+    return current;
+  }
+  function readAriesPath(path, fallback) {
+    const parts = path.split(".").filter(Boolean);
+    const value = getValueAtPath(loadAriesStorage(), parts);
+    if (value === void 0) return fallback;
+    return value;
+  }
+  function writeAriesPath(path, value) {
+    return updateAriesStorage((state6) => {
+      setValueAtPath(state6, path.split(".").filter(Boolean), value);
+    });
+  }
+  function updateAriesPath(path, updater) {
+    return updateAriesStorage((state6) => {
+      const parts = path.split(".").filter(Boolean);
+      const currentValue = getValueAtPath(state6, parts);
+      const next = updater(currentValue);
+      setValueAtPath(state6, parts, next);
+    });
+  }
+  function setApiKey(apiKey) {
+    try {
+      if (typeof GM_setValue === "function") {
+        GM_setValue(API_KEY_STORAGE_KEY, apiKey);
+        return;
+      }
+      getHostStorage()?.setItem(API_KEY_STORAGE_KEY, apiKey);
+    } catch (e) {
+      console.error("Failed to store API key:", e);
+    }
+  }
+  function getApiKey() {
+    try {
+      if (typeof GM_getValue === "function") {
+        return GM_getValue(API_KEY_STORAGE_KEY, null) ?? null;
+      }
+      return getHostStorage()?.getItem(API_KEY_STORAGE_KEY) ?? null;
+    } catch (e) {
+      console.error("Failed to retrieve API key:", e);
+      return null;
+    }
+  }
+  function hasApiKey() {
+    const key2 = getApiKey();
+    return key2 !== null && key2.length > 0;
+  }
+  function hasSeenRoomPrivacyNotice() {
+    try {
+      if (typeof GM_getValue === "function") {
+        const raw = GM_getValue(SEEN_ROOM_PRIVACY_NOTICE_KEY, null);
+        if (raw == null) return false;
+        if (typeof raw === "boolean") return raw;
+        return String(raw).trim() === "1";
+      }
+      return getHostStorage()?.getItem(SEEN_ROOM_PRIVACY_NOTICE_KEY) === "1";
+    } catch {
       return false;
-    };
-    for (const k of ordered) {
-      const inv = snap[k]?.inventory;
-      if (!Array.isArray(inv)) continue;
-      if (inv.some(matches)) return k;
     }
-    return null;
   }
-  var SHOP_KEYBINDS, shopKeybindsInstalled, BASE_SHOP_KEYS, ShopsService;
-  var init_shops = __esm({
-    "src/features/shops/shops.ts"() {
+  function markRoomPrivacyNoticeSeen() {
+    try {
+      if (typeof GM_setValue === "function") {
+        GM_setValue(SEEN_ROOM_PRIVACY_NOTICE_KEY, "1");
+        return;
+      }
+      getHostStorage()?.setItem(SEEN_ROOM_PRIVACY_NOTICE_KEY, "1");
+    } catch {
+    }
+  }
+  function hasSeenAutoRecoDisabledNotice() {
+    try {
+      if (typeof GM_getValue === "function") {
+        const raw = GM_getValue(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, null);
+        if (raw == null) return false;
+        if (typeof raw === "boolean") return raw;
+        return String(raw).trim() === "1";
+      }
+      return getHostStorage()?.getItem(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+  function markAutoRecoDisabledNoticeSeen() {
+    try {
+      if (typeof GM_setValue === "function") {
+        GM_setValue(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, "1");
+        return;
+      }
+      getHostStorage()?.setItem(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, "1");
+    } catch {
+    }
+  }
+  function getSeenChangelogVersion() {
+    try {
+      if (typeof GM_getValue === "function") {
+        const raw = GM_getValue(SEEN_CHANGELOG_VERSION_KEY, null);
+        return typeof raw === "string" && raw ? raw : null;
+      }
+      return getHostStorage()?.getItem(SEEN_CHANGELOG_VERSION_KEY) ?? null;
+    } catch {
+      return null;
+    }
+  }
+  function markChangelogVersionSeen(version) {
+    try {
+      if (typeof GM_setValue === "function") {
+        GM_setValue(SEEN_CHANGELOG_VERSION_KEY, version);
+        return;
+      }
+      getHostStorage()?.setItem(SEEN_CHANGELOG_VERSION_KEY, version);
+    } catch {
+    }
+  }
+  function setDeclinedApiAuth(declined) {
+    try {
+      if (declined) {
+        if (typeof GM_setValue === "function") {
+          GM_setValue(AUTH_DECLINED_STORAGE_KEY, "1");
+          return;
+        }
+        getHostStorage()?.setItem(AUTH_DECLINED_STORAGE_KEY, "1");
+        return;
+      }
+      if (typeof GM_deleteValue === "function") {
+        GM_deleteValue(AUTH_DECLINED_STORAGE_KEY);
+        return;
+      }
+      getHostStorage()?.removeItem(AUTH_DECLINED_STORAGE_KEY);
+    } catch {
+    }
+  }
+  var ARIES_STORAGE_KEY, ARIES_STORAGE_VERSION, API_KEY_STORAGE_KEY, AUTH_DECLINED_STORAGE_KEY, SEEN_ROOM_PRIVACY_NOTICE_KEY, SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, SEEN_CHANGELOG_VERSION_KEY, DEFAULT_ARIES_STORAGE, ARIES_FLUSH_DELAY_MS, cachedAriesStorage, ariesFlushTimer, ariesFlushPending, ariesLifecycleHooksInstalled;
+  var init_storage = __esm({
+    "src/platform/storage.ts"() {
       "use strict";
-      init_fakeModal();
-      init_keybinds();
-      init_keyboard();
-      init_stats();
-      init_send();
-      init_atoms();
-      init_pageContext();
-      init_shopPurchaseMessage();
-      init_purchases();
-      SHOP_KEYBINDS = [
-        { id: "shops.seeds", modal: "seedShop" },
-        { id: "shops.eggs", modal: "eggShop" },
-        { id: "shops.decors", modal: "decorShop" },
-        { id: "shops.tools", modal: "toolShop" }
-      ];
-      shopKeybindsInstalled = false;
-      BASE_SHOP_KEYS = ["seed", "egg", "tool", "decor"];
-      ShopsService = {
-        /** Achat unitaire : envoie le bon message au jeu. */
-        async buyOne(kind, it) {
-          return ShopsService.buy(kind, it, 1);
+      init_friendSettingsSchema();
+      ARIES_STORAGE_KEY = "aries_mod";
+      ARIES_STORAGE_VERSION = 1;
+      API_KEY_STORAGE_KEY = "aries_api_key";
+      AUTH_DECLINED_STORAGE_KEY = "aries_auth_declined";
+      SEEN_ROOM_PRIVACY_NOTICE_KEY = "aries_seen_room_privacy_notice_v2";
+      SEEN_AUTO_RECO_DISABLED_NOTICE_KEY = "aries_seen_autoreco_disabled_notice";
+      SEEN_CHANGELOG_VERSION_KEY = "aries_seen_changelog_version";
+      DEFAULT_ARIES_STORAGE = {
+        version: ARIES_STORAGE_VERSION,
+        friends: {
+          settings: DEFAULT_FRIEND_SETTINGS
         },
-        /** Achete `quantity` exemplaires en une seule commande, comme le Buy All du jeu. */
-        async buy(kind, it, quantity) {
-          const built = _buildPurchasePayload(kind, it);
-          if (!built) return;
-          let shop = null;
-          try {
-            const [shops2, slot] = await Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
-            shop = _findShopForItem(playerShopView(shops2, slot, () => null).shops, kind, it);
-          } catch {
-          }
-          if (!shop) shop = _fallbackShopFor(kind);
-          try {
-            let storage = null;
-            try {
-              storage = pageWindow.localStorage;
-            } catch {
-            }
-            const command = buildShopPurchaseCommand(shop, built.item, readShopViewMode(shop, storage), quantity);
-            sendToGame(command);
-            StatsService.incrementShopStat(built.stat, Number(command.quantity ?? 1));
-          } catch {
-          }
+        notifications: {
+          soundEnabled: true
         }
       };
-    }
-  });
-
-  // src/data/rules/cropSize.ts
-  function toFinite(value) {
-    const numeric = typeof value === "number" ? value : Number(value);
-    return Number.isFinite(numeric) ? numeric : null;
-  }
-  function normalizeKey2(value) {
-    return String(value ?? "").trim().toLowerCase();
-  }
-  function clampCropSize(value) {
-    const numeric = toFinite(value);
-    if (numeric == null) return CROP_SIZE_MIN;
-    return Math.min(CROP_SIZE_MAX, Math.max(CROP_SIZE_MIN, Math.round(numeric)));
-  }
-  function findPlantCatalogEntry(species) {
-    const wanted = normalizeKey2(species);
-    if (!wanted) return null;
-    const catalog = plantCatalog2;
-    const direct = typeof species === "string" ? catalog[species] : void 0;
-    if (direct) return direct;
-    for (const key2 of Object.keys(catalog)) {
-      const entry = catalog[key2];
-      if (!entry) continue;
-      if (normalizeKey2(key2) === wanted) return entry;
-      if (normalizeKey2(entry.crop?.name) === wanted) return entry;
-      if (normalizeKey2(entry.plant?.name) === wanted) return entry;
-      if (normalizeKey2(entry.seed?.name) === wanted) return entry;
-    }
-    return null;
-  }
-  function getMaxSizeMultiplier(species) {
-    const crop = findPlantCatalogEntry(species)?.crop;
-    if (!crop) return null;
-    const value = toFinite(crop.maxSizeMultiplier) ?? toFinite(crop.maxScale);
-    return value != null && value > 0 ? value : null;
-  }
-  function cropSizeMultiplier(species, size) {
-    const maxMultiplier = getMaxSizeMultiplier(species);
-    if (maxMultiplier == null || maxMultiplier <= 1) return 1;
-    const ratio = (clampCropSize(size) - CROP_SIZE_MIN) / SIZE_SPAN;
-    return 1 + (maxMultiplier - 1) * ratio;
-  }
-  function legacyScaleToCropSize(scale, maxScale) {
-    const numeric = toFinite(scale);
-    if (numeric == null) return null;
-    const upper = maxScale != null && maxScale > LEGACY_SCALE_MIN ? maxScale : LEGACY_FALLBACK_MAX_SCALE;
-    const clamped = Math.min(upper, Math.max(LEGACY_SCALE_MIN, numeric));
-    const ratio = (clamped - LEGACY_SCALE_MIN) / (upper - LEGACY_SCALE_MIN);
-    return clampCropSize(CROP_SIZE_MIN + ratio * SIZE_SPAN);
-  }
-  function readCropSize(source) {
-    if (!source || typeof source !== "object") return null;
-    const record = source;
-    const direct = toFinite(record.size);
-    if (direct != null) return clampCropSize(direct);
-    const legacy = toFinite(record.targetScale) ?? toFinite(record.scale);
-    if (legacy == null) return null;
-    return legacyScaleToCropSize(legacy, getMaxSizeMultiplier(record.species));
-  }
-  var CROP_SIZE_MIN, CROP_SIZE_MAX, SIZE_SPAN, LEGACY_SCALE_MIN, LEGACY_FALLBACK_MAX_SCALE;
-  var init_cropSize = __esm({
-    "src/data/rules/cropSize.ts"() {
-      "use strict";
-      init_data();
-      CROP_SIZE_MIN = 50;
-      CROP_SIZE_MAX = 100;
-      SIZE_SPAN = CROP_SIZE_MAX - CROP_SIZE_MIN;
-      LEGACY_SCALE_MIN = 1;
-      LEGACY_FALLBACK_MAX_SCALE = 2;
-    }
-  });
-
-  // src/game/ws/moveItemMessage.ts
-  function buildMoveItemCommand(params) {
-    const { from, to, itemId } = params;
-    if (!nonEmpty(from) || !nonEmpty(to) || !nonEmpty(itemId)) return null;
-    if (from !== to && from !== INVENTORY && to !== INVENTORY) return null;
-    const command = { type: "MoveItem", from, to, itemId };
-    const quantity = Math.floor(Number(params.quantity));
-    if (params.quantity !== void 0 && Number.isFinite(quantity) && quantity >= 1) {
-      command.quantity = quantity;
-    }
-    if (nonEmpty(params.beforeItemId) && params.beforeItemId !== itemId) {
-      command.beforeItemId = params.beforeItemId;
-    }
-    if (nonEmpty(params.evictionItemId) && params.evictionItemId !== itemId) {
-      command.evictionItemId = params.evictionItemId;
-    }
-    return command;
-  }
-  var INVENTORY, nonEmpty;
-  var init_moveItemMessage = __esm({
-    "src/game/ws/moveItemMessage.ts"() {
-      "use strict";
-      INVENTORY = "inventory";
-      nonEmpty = (value) => typeof value === "string" && value.length > 0;
-    }
-  });
-
-  // src/game/player.ts
-  function slotSig(o) {
-    if (!o) return "\u2205";
-    return [
-      o.objectType ?? o.type ?? "",
-      o.species ?? o.seedSpecies ?? o.plantSpecies ?? o.eggId ?? o.decorId ?? "",
-      o.plantedAt ?? o.startTime ?? 0,
-      o.maturedAt ?? o.endTime ?? 0
-    ].join("|");
-  }
-  function diffGarden(prev, next) {
-    const p = prev?.tileObjects ?? {};
-    const n = next?.tileObjects ?? {};
-    const added = [];
-    const updated = [];
-    const removed = [];
-    const changes = [];
-    const seen = /* @__PURE__ */ new Set();
-    for (const k of Object.keys(n)) {
-      seen.add(k);
-      if (!(k in p)) {
-        added.push(+k);
-        changes.push({ kind: "added", slot: +k, next: n[k] });
-      } else if (slotSig(p[k]) !== slotSig(n[k])) {
-        updated.push(+k);
-        changes.push({ kind: "updated", slot: +k, prev: p[k], next: n[k] });
-      }
-    }
-    for (const k of Object.keys(p)) {
-      if (!seen.has(k)) {
-        removed.push(+k);
-        changes.push({ kind: "removed", slot: +k, prev: p[k] });
-      }
-    }
-    return { added, updated, removed, changes };
-  }
-  function petSig(p) {
-    const s = p?.slot ?? {};
-    const muts = Array.isArray(s.mutations) ? s.mutations.slice().sort().join(",") : "";
-    const ab = Array.isArray(s.abilities) ? s.abilities.slice().sort().join(",") : "";
-    const name = s.name ?? "";
-    const species = s.petSpecies ?? "";
-    const xp = Number.isFinite(s.xp) ? Math.round(s.xp) : 0;
-    const hunger = Number.isFinite(s.hunger) ? Math.round(s.hunger * 1e3) : 0;
-    const scale = Number.isFinite(s.targetScale) ? Math.round(s.targetScale * 1e3) : 0;
-    const x = Number.isFinite(p?.position?.x) ? Math.round(p.position.x) : 0;
-    const y = Number.isFinite(p?.position?.y) ? Math.round(p.position.y) : 0;
-    return `${species}|${name}|xp:${xp}|hg:${hunger}|sc:${scale}|m:${muts}|a:${ab}|pos:${x},${y}`;
-  }
-  function snapshotPets(state6) {
-    const snap = /* @__PURE__ */ new Map();
-    const arr = Array.isArray(state6) ? state6 : [];
-    for (const it of arr) {
-      const id = String(it?.slot?.id ?? "");
-      if (!id) continue;
-      snap.set(id, petSig(it));
-    }
-    return snap;
-  }
-  function diffPetsSnapshot(prev, next) {
-    const added = [];
-    const updated = [];
-    const removed = [];
-    const changes = [];
-    for (const [id, sig] of next) {
-      if (!prev.has(id)) {
-        added.push(id);
-        changes.push({ kind: "added", id });
-      } else if (prev.get(id) !== sig) {
-        updated.push(id);
-        changes.push({ kind: "updated", id });
-      }
-    }
-    for (const id of prev.keys()) {
-      if (!next.has(id)) {
-        removed.push(id);
-        changes.push({ kind: "removed", id });
-      }
-    }
-    return { added, updated, removed, changes };
-  }
-  function toPetInfoFromPrimitive(entry) {
-    if (!entry || typeof entry !== "object") return null;
-    if (entry.slot && typeof entry.slot === "object" && entry.slot.id) {
-      return entry;
-    }
-    const id = String(
-      entry.id ?? entry.petId ?? entry.petItemId ?? entry.itemId ?? entry.slot?.id ?? ""
-    ).trim();
-    if (!id) return null;
-    const species = String(entry.petSpecies ?? entry.species ?? entry.slot?.petSpecies ?? "").trim();
-    const name = entry.name ?? entry.petName ?? entry.slot?.name ?? null;
-    const slot = {
-      id,
-      petSpecies: species,
-      name,
-      xp: Number.isFinite(entry.xp) ? Number(entry.xp) : void 0,
-      hunger: Number.isFinite(entry.hunger) ? Number(entry.hunger) : void 0,
-      mutations: Array.isArray(entry.mutations) ? entry.mutations.slice() : void 0,
-      targetScale: Number.isFinite(entry.targetScale) ? Number(entry.targetScale) : void 0,
-      abilities: Array.isArray(entry.abilities) ? entry.abilities.slice() : void 0
-    };
-    const info = { slot };
-    const pos = entry.position;
-    if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.y)) {
-      info.position = { x: Number(pos.x), y: Number(pos.y) };
-    }
-    return info;
-  }
-  function normalizePetsState(petInfosRaw, primitiveRaw) {
-    const infos = Array.isArray(petInfosRaw) ? petInfosRaw : null;
-    if (infos && infos.length) return infos;
-    const prim = Array.isArray(primitiveRaw) ? primitiveRaw : null;
-    if (prim && prim.length) {
-      const mapped = prim.map(toPetInfoFromPrimitive).filter(Boolean);
-      if (mapped.length) return mapped;
-    }
-    return infos;
-  }
-  function petsStateSig(state6) {
-    if (!Array.isArray(state6)) return "null";
-    if (!state6.length) return "empty";
-    return state6.map((p) => {
-      const id = String(p?.slot?.id ?? "");
-      return `${id}:${petSig(p)}`;
-    }).join("|");
-  }
-  function cropSig(it) {
-    const muts = Array.isArray(it.mutations) ? it.mutations.slice().sort().join(",") : "";
-    const size = readCropSize(it) ?? 0;
-    return `${it.species ?? ""}|${it.itemType ?? ""}|${size}|${muts}`;
-  }
-  function snapshotInventory(inv) {
-    const snap = /* @__PURE__ */ new Map();
-    const arr = Array.isArray(inv) ? inv : [];
-    for (const it of arr) {
-      const id = String(it?.id ?? "");
-      if (!id) continue;
-      snap.set(id, cropSig(it));
-    }
-    return snap;
-  }
-  function diffCropInventorySnapshot(prev, next) {
-    const added = [];
-    const updated = [];
-    const removed = [];
-    const changes = [];
-    for (const [id, sig] of next) {
-      if (!prev.has(id)) {
-        added.push(id);
-        changes.push({ kind: "added", key: id });
-      } else if (prev.get(id) !== sig) {
-        updated.push(id);
-        changes.push({ kind: "updated", key: id });
-      }
-    }
-    for (const id of prev.keys()) {
-      if (!next.has(id)) {
-        removed.push(id);
-        changes.push({ kind: "removed", key: id });
-      }
-    }
-    return { added, updated, removed, changes };
-  }
-  var PlayerService;
-  var init_player = __esm({
-    "src/game/player.ts"() {
-      "use strict";
-      init_send();
-      init_commands();
-      init_atoms();
-      init_shops();
-      init_cropSize();
-      init_moveItemMessage();
-      PlayerService = {
-        /* ------------------------- Position / Déplacement ------------------------- */
-        getPosition() {
-          return Atoms.player.position.get();
-        },
-        onPosition(cb) {
-          return Atoms.player.position.onChange(cb);
-        },
-        onPositionNow(cb) {
-          return Atoms.player.position.onChangeNow(cb);
-        },
-        async setPosition(x, y) {
-          await Atoms.player.position.set({ x, y });
-        },
-        async teleport(x, y) {
-          try {
-            await this.setPosition(x, y);
-          } catch (err) {
-          }
-          try {
-            sendToGame({ type: "Teleport", position: { x, y } });
-          } catch (err) {
-          }
-        },
-        async move(x, y) {
-          try {
-            await this.setPosition(x, y);
-          } catch (err) {
-          }
-          try {
-            sendToGame({ type: "PlayerPosition", position: { x, y } });
-          } catch (err) {
-          }
-        },
-        // Anti-AFK keepalive: resends the current position to the server without
-        // touching the local position atom. Writing a fresh {x,y} object there
-        // (even with unchanged coordinates) makes the game close any open
-        // storage-building modal (pet hutch/decor shed/seed silo/feeding trough),
-        // so the no-op ping must go over the wire only.
-        async pingPosition(x, y) {
-          try {
-            sendToGame({ type: "PlayerPosition", position: { x, y } });
-          } catch (err) {
-          }
-        },
-        /* ------------------------------ Actions jeu ------------------------------ */
-        async plantSeed(slot, species) {
-          try {
-            sendToGame({ type: "PlantSeed", slot, species });
-          } catch (err) {
-          }
-        },
-        async logItems() {
-          try {
-            sendToGame({ type: "LogItems" });
-          } catch (err) {
-          }
-        },
-        async sellAllCrops() {
-          try {
-            sendToGame({ type: "SellAllCrops" });
-          } catch (err) {
-          }
-        },
-        async sellPet(itemId) {
-          try {
-            sendToGame({ type: "SellPet", itemId });
-          } catch (err) {
-          }
-        },
-        async removeGardenObject(slot, slotType) {
-          try {
-            sendToGame({ type: "RemoveGardenObject", slot, slotType });
-          } catch (err) {
-          }
-        },
-        async waterPlant(slot) {
-          try {
-            sendToGame({ type: "WaterPlant", slot });
-          } catch (err) {
-          }
-        },
-        async setSelectedItem(itemIndex) {
-          try {
-            sendToGame({ type: "SetSelectedItem", itemIndex });
-          } catch (err) {
-          }
-        },
-        async pickupObject() {
-          try {
-            sendToGame({ type: "PickupObject" });
-          } catch (err) {
-          }
-        },
-        async dropObject() {
-          try {
-            sendToGame({ type: "DropObject" });
-          } catch (err) {
-          }
-        },
-        // `cropItemId` est l'id de la produce à naître, que le client forge lui-même
-        // (bundle 1125 : `cropItemId: crypto.randomUUID()`). Il alimente la prédiction
-        // locale du jeu ; sans lui le serveur ignore la récolte en silence.
-        async harvestCrop(slot, slotsIndex = 0, cropItemId = randomClientId()) {
-          try {
-            sendToGame({ scopePath: ["Room", "Quinoa"], type: "HarvestCrop", slot, slotsIndex, cropItemId });
-          } catch (err) {
-          }
-        },
-        async feedPet(petItemId, cropItemId) {
-          try {
-            sendToGame({ type: "FeedPet", petItemId, cropItemId });
-          } catch (err) {
-          }
-        },
-        async hatchEgg(slot) {
-          try {
-            sendToGame({ type: "HatchEgg", slot });
-          } catch (err) {
-          }
-        },
-        // The message is named `GrowEgg` on the wire — `PlantEgg` no longer exists
-        // anywhere in the client, so it could only ever have been rejected.
-        async plantEgg(slot, eggId) {
-          try {
-            sendToGame({ type: "GrowEgg", slot, eggId });
-          } catch (err) {
-          }
-        },
-        async placeDecor(tileType, localTileIndex, decorId, rotation) {
-          try {
-            sendToGame({ type: "PlaceDecor", tileType, localTileIndex, decorId, rotation });
-          } catch (err) {
-          }
-        },
-        async swapPet(petSlotId, petInventoryId) {
-          try {
-            sendToGame({ type: "SwapPet", petSlotId, petInventoryId });
-          } catch (err) {
-          }
-        },
-        async swapPetFromStorage(petSlotId, storagePetId, storageId) {
-          try {
-            sendToGame({ type: "SwapPetFromStorage", petSlotId, storagePetId, storageId });
-          } catch (err) {
-          }
-        },
-        async placePet(itemId, position2, tileType, localTileIndex) {
-          try {
-            sendToGame({ type: "PlacePet", itemId, position: position2, tileType, localTileIndex });
-          } catch (err) {
-          }
-        },
-        /** Every item move goes through here: see `utils/moveItemMessage.ts`. */
-        async moveItem(params) {
-          const command = buildMoveItemCommand(params);
-          if (!command) return;
-          try {
-            sendToGame(command);
-          } catch (err) {
-          }
-        },
-        /**
-         * `quantity` pulls back part of a stack; omitting it takes the whole entry
-         * (the game's own drag-and-drop leaves it out for unique items).
-         */
-        async retrieveItemFromStorage(itemId, storageId, quantity) {
-          await this.moveItem({ from: storageId, to: INVENTORY, itemId, quantity });
-        },
-        async putItemInStorage(itemId, storageId) {
-          await this.moveItem({ from: INVENTORY, to: storageId, itemId });
-        },
-        async putItemInFeedingTrough(itemId) {
-          await this.putItemInStorage(itemId, "FeedingTrough");
-        },
-        async retrieveItemFromFeedingTrough(itemId) {
-          await this.retrieveItemFromStorage(itemId, "FeedingTrough");
-        },
-        async petPositions(petPositions) {
-          const entries2 = Object.entries(petPositions ?? {});
-          if (!entries2.length) {
-            return;
-          }
-          const sanitized = {};
-          for (const [id, pos] of entries2) {
-            const x = Number(pos?.x);
-            const y = Number(pos?.y);
-            if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-            sanitized[String(id)] = { x, y };
-          }
-          const validCount = Object.keys(sanitized).length;
-          if (!validCount) {
-            return;
-          }
-          try {
-            sendToGame({ type: "PetPositions", petPositions: sanitized });
-          } catch (err) {
-          }
-        },
-        async storePet(petId) {
-          try {
-            sendToGame({ type: "PickupPet", petId });
-          } catch (err) {
-          }
-        },
-        async wish(itemId) {
-          try {
-            sendToGame({ type: "Wish", itemId });
-          } catch (err) {
-          }
-        },
-        async purchaseSeed(species) {
-          try {
-            await ShopsService.buyOne("seeds", { species });
-          } catch (err) {
-          }
-        },
-        async purchaseDecor(decorId) {
-          try {
-            await ShopsService.buyOne("decor", { decorId });
-          } catch (err) {
-          }
-        },
-        async purchaseEgg(eggId) {
-          try {
-            await ShopsService.buyOne("eggs", { eggId });
-          } catch (err) {
-          }
-        },
-        async purchaseTool(toolId) {
-          try {
-            await ShopsService.buyOne("tools", { toolId });
-          } catch (err) {
-          }
-        },
-        async triggerAnimation(playerId2, animation) {
-          Atoms.player.avatarTriggerAnimationAtom.set({ playerId: playerId2, animation });
-        },
-        /* -------------------------------- Favorites ------------------------------ */
-        // The game renamed the action to `ToggleLockItem` (the padlock in the
-        // inventory); the state field it toggles is still `favoritedItemIds`, which
-        // is what `Atoms.inventory.favoriteIds` reads.
-        async toggleFavoriteItem(itemId) {
-          try {
-            sendToGame({ type: "ToggleLockItem", itemId });
-          } catch (err) {
-          }
-        },
-        async getFavoriteIds() {
-          const ids = await Atoms.inventory.favoriteIds.get();
-          return Array.isArray(ids) ? ids.slice() : [];
-        },
-        async getFavoriteIdSet() {
-          return getFavoriteIdSet();
-        },
-        async isFavoriteItem(itemId) {
-          const set2 = await getFavoriteIdSet();
-          return set2.has(itemId);
-        },
-        async ensureFavoriteItem(itemId, shouldBeFavorite) {
-          const cur = await this.isFavoriteItem(itemId);
-          if (cur !== shouldBeFavorite) {
-            await this.toggleFavoriteItem(itemId);
-            return shouldBeFavorite;
-          }
-          return cur;
-        },
-        async ensureFavorites(items, shouldBeFavorite) {
-          const set2 = await getFavoriteIdSet();
-          for (const id of items) {
-            const cur = set2.has(id);
-            if (cur !== shouldBeFavorite) {
-              try {
-                await this.toggleFavoriteItem(id);
-              } catch {
-              }
-            }
-          }
-        },
-        onFavoriteIdsChange(cb) {
-          return onFavoriteIds((ids) => cb(Array.isArray(ids) ? ids : []));
-        },
-        async onFavoriteIdsChangeNow(cb) {
-          return onFavoriteIdsNow((ids) => cb(Array.isArray(ids) ? ids : []));
-        },
-        onFavoriteSetChange(cb) {
-          return onFavoriteIds((ids) => cb(new Set(Array.isArray(ids) ? ids : [])));
-        },
-        async onFavoriteSetChangeNow(cb) {
-          const cur = await getFavoriteIdSet();
-          cb(cur);
-          return onFavoriteIds((ids) => cb(new Set(Array.isArray(ids) ? ids : [])));
-        },
-        /* --------------------------------- Garden -------------------------------- */
-        async getGardenState() {
-          return await Atoms.data.garden.get() ?? null;
-        },
-        onGardenChange(cb) {
-          return Atoms.data.garden.onChange(cb);
-        },
-        onGardenChangeNow(cb) {
-          return Atoms.data.garden.onChangeNow(cb);
-        },
-        onGardenDiff(cb) {
-          let prev = null;
-          return Atoms.data.garden.onChange((g) => {
-            const d = diffGarden(prev, g);
-            if (d.added.length || d.updated.length || d.removed.length || g !== prev) {
-              prev = g;
-              cb(g, d);
-            }
-          });
-        },
-        async onGardenDiffNow(cb) {
-          let prev = await Atoms.data.garden.get() ?? null;
-          cb(prev, diffGarden(null, prev));
-          return Atoms.data.garden.onChange((next) => {
-            const d = diffGarden(prev, next);
-            if (d.added.length || d.updated.length || d.removed.length) {
-              prev = next;
-              cb(next, d);
-            }
-          });
-        },
-        /* ------------------------------------ Pets ------------------------------------ */
-        async getPets() {
-          const infos = await Atoms.pets.myPetInfos.get();
-          const primitives = await Atoms.pets.myPrimitivePetSlots.get();
-          return normalizePetsState(infos, primitives);
-        },
-        onPetsChange(cb) {
-          let prevSig = null;
-          let lastInfos = null;
-          let lastPrimitives = null;
-          const emit = () => {
-            const next = normalizePetsState(lastInfos, lastPrimitives);
-            const sig = petsStateSig(next);
-            if (sig !== prevSig) {
-              prevSig = sig;
-              cb(next);
-            }
-          };
-          const unsubInfos = Atoms.pets.myPetInfos.onChange((next) => {
-            lastInfos = next;
-            emit();
-          });
-          const unsubPrimitives = Atoms.pets.myPrimitivePetSlots.onChange((next) => {
-            lastPrimitives = next;
-            emit();
-          });
-          return () => {
-            for (const sub of [unsubInfos, unsubPrimitives]) {
-              Promise.resolve(sub).then((off) => off?.()).catch(() => {
-              });
-            }
-          };
-        },
-        async onPetsChangeNow(cb) {
-          let lastInfos = await Atoms.pets.myPetInfos.get();
-          let lastPrimitives = await Atoms.pets.myPrimitivePetSlots.get();
-          let prevSig = null;
-          const emit = () => {
-            const next = normalizePetsState(lastInfos, lastPrimitives);
-            const sig = petsStateSig(next);
-            if (sig !== prevSig) {
-              prevSig = sig;
-              cb(next);
-            }
-          };
-          emit();
-          const unsubInfos = Atoms.pets.myPetInfos.onChange((next) => {
-            lastInfos = next;
-            emit();
-          });
-          const unsubPrimitives = Atoms.pets.myPrimitivePetSlots.onChange((next) => {
-            lastPrimitives = next;
-            emit();
-          });
-          return () => {
-            for (const sub of [unsubInfos, unsubPrimitives]) {
-              Promise.resolve(sub).then((off) => off?.()).catch(() => {
-              });
-            }
-          };
-        },
-        onPetsDiff(cb) {
-          let prevSnap = snapshotPets(null);
-          return this.onPetsChange((state6) => {
-            const nextSnap = snapshotPets(state6);
-            const d = diffPetsSnapshot(prevSnap, nextSnap);
-            if (d.added.length || d.updated.length || d.removed.length) {
-              cb(state6, d);
-              prevSnap = nextSnap;
-            }
-          });
-        },
-        async onPetsDiffNow(cb) {
-          let cur = await this.getPets();
-          let prevSnap = snapshotPets(null);
-          let nextSnap = snapshotPets(cur);
-          const first = diffPetsSnapshot(prevSnap, nextSnap);
-          cb(cur, first);
-          prevSnap = nextSnap;
-          return this.onPetsChange((state6) => {
-            nextSnap = snapshotPets(state6);
-            const d = diffPetsSnapshot(prevSnap, nextSnap);
-            if (d.added.length || d.updated.length || d.removed.length) {
-              cb(state6, d);
-              prevSnap = nextSnap;
-            }
-          });
-        },
-        /* ------------------------- Crop Inventory (crops) ------------------------- */
-        async getCropInventoryState() {
-          return Atoms.inventory.myCropInventory.get();
-        },
-        onCropInventoryChange(cb) {
-          let prev = null;
-          return Atoms.inventory.myCropInventory.onChange((inv) => {
-            if (inv !== prev) {
-              prev = inv;
-              cb(inv);
-            }
-          });
-        },
-        async onCropInventoryChangeNow(cb) {
-          let prev = await Atoms.inventory.myCropInventory.get();
-          cb(prev);
-          return Atoms.inventory.myCropInventory.onChange((inv) => {
-            if (inv !== prev) {
-              prev = inv;
-              cb(inv);
-            }
-          });
-        },
-        onCropInventoryDiff(cb) {
-          let prevSnap = snapshotInventory(null);
-          return Atoms.inventory.myCropInventory.onChange((inv) => {
-            const nextSnap = snapshotInventory(inv);
-            const d = diffCropInventorySnapshot(prevSnap, nextSnap);
-            if (d.added.length || d.updated.length || d.removed.length) {
-              cb(inv, d);
-              prevSnap = nextSnap;
-            }
-          });
-        },
-        async onCropInventoryDiffNow(cb) {
-          let cur = await Atoms.inventory.myCropInventory.get();
-          let prevSnap = snapshotInventory(null);
-          let nextSnap = snapshotInventory(cur);
-          const firstDiff = diffCropInventorySnapshot(prevSnap, nextSnap);
-          cb(cur, firstDiff);
-          prevSnap = nextSnap;
-          return Atoms.inventory.myCropInventory.onChange((inv) => {
-            nextSnap = snapshotInventory(inv);
-            const d = diffCropInventorySnapshot(prevSnap, nextSnap);
-            if (d.added.length || d.updated.length || d.removed.length) {
-              cb(inv, d);
-              prevSnap = nextSnap;
-            }
-          });
-        },
-        /* --------------------------- Players in room --------------------------- */
-        async getNumPlayers() {
-          const n = await Atoms.server.numPlayers.get();
-          return typeof n === "number" ? n : 0;
-        },
-        onNumPlayersChange(cb) {
-          let prev = void 0;
-          return Atoms.server.numPlayers.onChange((n) => {
-            if (n !== prev) {
-              prev = n;
-              cb(n);
-            }
-          });
-        },
-        async onNumPlayersChangeNow(cb) {
-          let prev = await this.getNumPlayers();
-          cb(prev);
-          return Atoms.server.numPlayers.onChange((n) => {
-            if (n !== prev) {
-              prev = n;
-              cb(n);
-            }
-          });
-        }
-      };
+      ARIES_FLUSH_DELAY_MS = 500;
+      cachedAriesStorage = null;
+      ariesFlushTimer = null;
+      ariesFlushPending = false;
+      ariesLifecycleHooksInstalled = false;
     }
   });
 
@@ -14305,7 +9252,7 @@
       }
     };
   }
-  var LOG_PREFIX, log, DEBOUNCE_MS, RECENT_REMOVE_MS, ATOM_POLL_MS2, ATOM_TIMEOUT_MS, normalizeKey3, normalizeQty, buildQtyMap, buildKeySet, diffIncreases, diffSet, pruneRecentMap, summarizeQtyDelta, readEnabledFlag, storageKeyFromSpecies, storageKeyFromDecorId, storageKeyFromToolId;
+  var LOG_PREFIX, log, DEBOUNCE_MS, RECENT_REMOVE_MS, ATOM_POLL_MS2, ATOM_TIMEOUT_MS, normalizeKey2, normalizeQty, buildQtyMap, buildKeySet, diffIncreases, diffSet, pruneRecentMap, summarizeQtyDelta, readEnabledFlag, storageKeyFromSpecies, storageKeyFromDecorId, storageKeyFromToolId;
   var init_autoStore = __esm({
     "src/features/autoStore/autoStore.ts"() {
       "use strict";
@@ -14323,7 +9270,7 @@
       RECENT_REMOVE_MS = 2e3;
       ATOM_POLL_MS2 = 400;
       ATOM_TIMEOUT_MS = 10 * 6e4;
-      normalizeKey3 = (value) => typeof value === "string" ? value.trim() : "";
+      normalizeKey2 = (value) => typeof value === "string" ? value.trim() : "";
       normalizeQty = (value) => {
         const n = Number(value);
         return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
@@ -14388,9 +9335,425 @@
           return def;
         }
       };
-      storageKeyFromSpecies = (item) => normalizeKey3(item?.species);
-      storageKeyFromDecorId = (item) => normalizeKey3(item?.decorId);
-      storageKeyFromToolId = (item) => normalizeKey3(item?.toolId);
+      storageKeyFromSpecies = (item) => normalizeKey2(item?.species);
+      storageKeyFromDecorId = (item) => normalizeKey2(item?.decorId);
+      storageKeyFromToolId = (item) => normalizeKey2(item?.toolId);
+    }
+  });
+
+  // src/game/fakeAtoms.ts
+  function _atomsByExactLabel(label2) {
+    try {
+      return findAtomsByLabel(new RegExp("^" + label2 + "$"));
+    } catch {
+      return [];
+    }
+  }
+  function _findReadKey(atom) {
+    if (atom && typeof atom.read === "function") return "read";
+    for (const k of Object.keys(atom || {})) {
+      const v = atom[k];
+      if (typeof v === "function" && k !== "write" && k !== "onMount" && k !== "toString") {
+        const ar = v.length;
+        if (ar === 1 || ar === 2) return k;
+      }
+    }
+    throw new Error("Impossible de localiser la fonction read() de l'atom");
+  }
+  function _getState(label2) {
+    return _fakeRegistry.get(label2) || null;
+  }
+  async function _forceRepaintViaGate(gate2) {
+    if (!gate2?.closeAction || !gate2?.openAction) return;
+    await gate2.closeAction();
+    await new Promise((r) => setTimeout(r, 0));
+    await gate2.openAction();
+  }
+  async function _ensureFakeInstalled(config) {
+    const key2 = config.label;
+    const existing = _fakeRegistry.get(key2);
+    if (existing?.installed) return existing;
+    const atoms = _atomsByExactLabel(config.label);
+    if (!atoms.length) {
+      throw new Error(`${config.label} introuvable`);
+    }
+    const state6 = existing ?? {
+      config,
+      enabled: false,
+      payload: null,
+      patched: /* @__PURE__ */ new Map(),
+      installed: false
+    };
+    let gateAtom = null;
+    if (config.gate?.label) gateAtom = getAtomByLabel(config.gate.label);
+    for (const a of atoms) {
+      const readKey = _findReadKey(a);
+      const orig = a[readKey];
+      a[readKey] = (get2) => {
+        try {
+          if (gateAtom) get2(gateAtom);
+        } catch (err) {
+        }
+        for (const dep of config.extraDeps || []) {
+          try {
+            const d = getAtomByLabel(dep);
+            d && get2(d);
+          } catch (err) {
+          }
+        }
+        const real = orig(get2);
+        if (!state6.enabled || state6.payload == null) return real;
+        return config.merge ? config.merge(real, state6.payload) : state6.payload;
+      };
+      state6.patched.set(a, { readKey, orig });
+    }
+    if (gateAtom && config.gate?.autoDisableOnClose) {
+      state6.unsubGate = await jSub(gateAtom, async () => {
+        let v;
+        try {
+          v = await jGet(gateAtom);
+        } catch (err) {
+          v = null;
+        }
+        const isOpen = config.gate?.isOpen ? config.gate.isOpen(v) : !!v;
+        if (!isOpen && state6.enabled) state6.enabled = false;
+      });
+    }
+    state6.installed = true;
+    _fakeRegistry.set(key2, state6);
+    return state6;
+  }
+  async function _primePatched(st) {
+    const store = await ensureStore();
+    for (const atom of st.patched.keys()) {
+      try {
+        store.get(atom);
+      } catch {
+      }
+    }
+  }
+  async function fakeShow(config, payload, options) {
+    await ensureStore();
+    const st = await _ensureFakeInstalled(config);
+    st.payload = payload;
+    st.enabled = true;
+    if (options?.merge && !config.merge) {
+      config.merge = (_real, fake) => fake;
+    }
+    await _primePatched(st);
+    if (options?.openGate && config.gate?.openAction) await config.gate.openAction();
+    if (st.autoTimer) {
+      clearTimeout(st.autoTimer);
+      st.autoTimer = null;
+    }
+    if (options?.autoRestoreMs && options.autoRestoreMs > 0) {
+      st.autoTimer = setTimeout(() => {
+        void fakeHide(config.label);
+      }, options.autoRestoreMs);
+    }
+  }
+  async function fakeUpdate(label2, nextPayload) {
+    const st = _getState(label2);
+    if (!st?.installed) throw new Error(`Fake ${label2} non install\xE9`);
+    st.payload = nextPayload;
+    await _forceRepaintViaGate(st.config.gate);
+  }
+  async function fakeHide(label2) {
+    const st = _getState(label2);
+    if (!st) return;
+    st.enabled = false;
+    st.payload = null;
+    if (st.autoTimer) {
+      clearTimeout(st.autoTimer);
+      st.autoTimer = null;
+    }
+    await _forceRepaintViaGate(st.config.gate);
+  }
+  async function fakeDispose(label2) {
+    const st = _getState(label2);
+    if (!st) return;
+    for (const [a, meta] of st.patched) {
+      try {
+        a[meta.readKey] = meta.orig;
+      } catch (err) {
+      }
+    }
+    st.patched.clear();
+    st.enabled = false;
+    st.payload = null;
+    if (st.unsubGate) {
+      try {
+        st.unsubGate();
+      } catch (err) {
+      }
+      st.unsubGate = void 0;
+    }
+    if (st.autoTimer) {
+      clearTimeout(st.autoTimer);
+      st.autoTimer = void 0;
+    }
+    _fakeRegistry.delete(label2);
+  }
+  var _fakeRegistry;
+  var init_fakeAtoms = __esm({
+    "src/game/fakeAtoms.ts"() {
+      "use strict";
+      init_jotai();
+      _fakeRegistry = /* @__PURE__ */ new Map();
+    }
+  });
+
+  // src/game/activityLogModalLayout.ts
+  function locateActivityLogAnchors(modalNode2) {
+    const modalContainer = modalNode2?.children?.[0];
+    if (!modalContainer || modalContainer.destroyed) return null;
+    const children = modalContainer.children;
+    if (!Array.isArray(children) || children.length < 3) return null;
+    const backgroundSprite = children[0];
+    if (!children.some((child) => TAB_BAR_LABELS.has(child?.label))) return null;
+    const scrollViewContainer = children.find(
+      (child, index) => index > 0 && child && !TAB_BAR_LABELS.has(child.label) && child.label !== FILTER_TOOLBAR_LABEL
+    );
+    if (!backgroundSprite || !scrollViewContainer) return null;
+    return { modalContainer, backgroundSprite, scrollViewContainer };
+  }
+  function activityLogOpenTarget(tab) {
+    return { modal: ACTIVITY_LOG_MODAL_ID, tab };
+  }
+  function activityLogTabOf(value) {
+    return value === "stats" ? "stats" : "logs";
+  }
+  function locateScrollParts(scrollViewContainer) {
+    const children = scrollViewContainer?.children;
+    if (!Array.isArray(children)) return null;
+    const viewport = children.find((child) => child?.mask && Array.isArray(child.children));
+    const content = viewport?.children?.[0];
+    if (!viewport || !content || !Array.isArray(content.children)) return null;
+    return { mask: viewport.mask, content };
+  }
+  function logsContentKind(contentChildren) {
+    let kind = "unknown";
+    for (const child of contentChildren) {
+      if (child?.label === STAT_CARD_LABEL) return "stats";
+      if (child?.label === LOG_ROW_LABEL) kind = "logs";
+    }
+    return kind;
+  }
+  function planLogRowsShift(contentChildren, toolbarSpace) {
+    const first = contentChildren[0];
+    const isNote = !!first && first.label !== LOG_ROW_LABEL && (typeof first.textComponent?.text === "string" || typeof first.text === "string" && !(first.children?.length > 0));
+    if (!isNote) return { hideFirst: false, shift: toolbarSpace };
+    const next = contentChildren[1];
+    const firstY = first.position?.y ?? first.y ?? 0;
+    const noteSpace = next ? (next.position?.y ?? next.y ?? firstY) - firstY : first.height ?? 0;
+    return { hideFirst: true, shift: toolbarSpace - noteSpace };
+  }
+  function maskTransformFor(maskGeometryHeight, toolbarSpace) {
+    if (!(maskGeometryHeight > toolbarSpace) || toolbarSpace <= 0) return { y: 0, scaleY: 1 };
+    return { y: toolbarSpace, scaleY: (maskGeometryHeight - toolbarSpace) / maskGeometryHeight };
+  }
+  var ACTIVITY_LOG_MODAL_ID, ACTIVITY_LOG_MODAL_LABEL, FILTER_TOOLBAR_LABEL, TAB_BAR_LABELS, LOG_ROW_LABEL, STAT_CARD_LABEL;
+  var init_activityLogModalLayout = __esm({
+    "src/game/activityLogModalLayout.ts"() {
+      "use strict";
+      ACTIVITY_LOG_MODAL_ID = "activityLog";
+      ACTIVITY_LOG_MODAL_LABEL = "ActivityLogModal";
+      FILTER_TOOLBAR_LABEL = "AriesActivityLogFilter";
+      TAB_BAR_LABELS = /* @__PURE__ */ new Set(["JournalTabs", "JournalTabTaps"]);
+      LOG_ROW_LABEL = "ActivityLogRow";
+      STAT_CARD_LABEL = "StatCard";
+    }
+  });
+
+  // src/game/fakeModal.ts
+  async function openModal(modalId) {
+    try {
+      const current = await Atoms.ui.activeModal.get();
+      if (current && current !== modalId) {
+        await Atoms.ui.activeModal.set(null);
+        await Atoms.ui.inventoryModalIsActive.set(false);
+        await new Promise((r) => requestAnimationFrame(r));
+      }
+      await Atoms.ui.activeModal.set(modalId);
+      await Atoms.ui.inventoryModalIsActive.set(modalId === "inventory");
+    } catch (err) {
+    }
+  }
+  async function closeModal(modalId) {
+    try {
+      if (modalId) {
+        const current = await Atoms.ui.activeModal.get();
+        if (current !== modalId) return;
+      }
+      await Atoms.ui.activeModal.set(null);
+      if (modalId === "inventory" || !modalId) {
+        await Atoms.ui.inventoryModalIsActive.set(false);
+      }
+    } catch (err) {
+    }
+  }
+  function isModalOpen(value, modalId) {
+    return modalNameOf(value) === modalId;
+  }
+  async function isModalOpenAsync(modalId) {
+    try {
+      const v = await Atoms.ui.activeModal.get();
+      return isModalOpen(v, modalId);
+    } catch (err) {
+      return false;
+    }
+  }
+  async function waitModalClosed(modalId, timeoutMs = 12e4) {
+    const t0 = performance.now();
+    while (performance.now() - t0 < timeoutMs) {
+      try {
+        const v = await Atoms.ui.activeModal.get();
+        if (!isModalOpen(v, modalId)) return true;
+      } catch {
+        return true;
+      }
+      await new Promise((r) => setTimeout(r, 80));
+    }
+    return false;
+  }
+  async function openInventoryPanel() {
+    return openModal(INVENTORY_MODAL_ID);
+  }
+  async function closeInventoryPanel() {
+    return closeModal(INVENTORY_MODAL_ID);
+  }
+  function isInventoryOpen(v) {
+    return isModalOpen(v, INVENTORY_MODAL_ID);
+  }
+  async function isInventoryPanelOpen() {
+    return isModalOpenAsync(INVENTORY_MODAL_ID);
+  }
+  async function waitInventoryPanelClosed(timeoutMs = 12e4) {
+    return waitModalClosed(INVENTORY_MODAL_ID, timeoutMs);
+  }
+  async function fakeInventoryShow(payload, opts) {
+    const shouldOpen = opts?.open !== false;
+    await fakeShow(SHARED_MYDATA_PATCH, { inventory: payload }, {
+      openGate: false,
+      autoRestoreMs: opts?.autoRestoreMs
+    });
+    await fakeShow(INVENTORY_ATOM_PATCH, payload, {
+      openGate: false,
+      autoRestoreMs: opts?.autoRestoreMs
+    });
+    if (shouldOpen) await openInventoryPanel();
+  }
+  async function fakeInventoryHide() {
+    await fakeHide(INVENTORY_ATOM_PATCH.label);
+    await fakeHide(SHARED_MYDATA_PATCH.label);
+    await closeInventoryPanel();
+  }
+  async function fakeInventoryDisable() {
+    await fakeHide(INVENTORY_ATOM_PATCH.label);
+    await fakeHide(SHARED_MYDATA_PATCH.label);
+  }
+  async function openJournalModal() {
+    return openModal(JOURNAL_MODAL_ID);
+  }
+  async function isJournalModalOpen() {
+    return isModalOpenAsync(JOURNAL_MODAL_ID);
+  }
+  async function waitJournalModalClosed(timeoutMs = 12e4) {
+    return waitModalClosed(JOURNAL_MODAL_ID, timeoutMs);
+  }
+  async function fakeJournalShow(payload, opts) {
+    const shouldOpen = opts?.open !== false;
+    await fakeHide(INVENTORY_ATOM_PATCH.label);
+    await fakeShow(SHARED_MYDATA_PATCH, { journal: payload ?? {} }, {
+      openGate: false,
+      autoRestoreMs: opts?.autoRestoreMs
+    });
+    if (shouldOpen) await openJournalModal();
+  }
+  async function openActivityLogTab(tab) {
+    const target = activityLogOpenTarget(tab);
+    try {
+      await Atoms.ui.activityLogTab.set(target.tab);
+    } catch {
+    }
+    return openModal(target.modal);
+  }
+  async function isActivityLogTabOpen(tab) {
+    if (!await isModalOpenAsync(ACTIVITY_LOG_MODAL_ID2)) return false;
+    try {
+      return activityLogTabOf(await Atoms.ui.activityLogTab.get()) === tab;
+    } catch {
+      return false;
+    }
+  }
+  async function openStatsModal() {
+    return openActivityLogTab("stats");
+  }
+  async function isStatsModalOpenAsync() {
+    return isActivityLogTabOpen("stats");
+  }
+  async function waitStatsModalClosed(timeoutMs = 12e4) {
+    return waitModalClosed(ACTIVITY_LOG_MODAL_ID2, timeoutMs);
+  }
+  async function fakeStatsShow(payload, opts) {
+    const shouldOpen = opts?.open !== false;
+    await fakeShow(SHARED_MYDATA_PATCH, { stats: payload ?? {} }, {
+      openGate: false,
+      autoRestoreMs: opts?.autoRestoreMs
+    });
+    if (shouldOpen) await openStatsModal();
+  }
+  async function openActivityLogModal() {
+    return openActivityLogTab("logs");
+  }
+  async function isActivityLogModalOpenAsync() {
+    return isModalOpenAsync(ACTIVITY_LOG_MODAL_ID2);
+  }
+  async function waitActivityLogModalClosed(timeoutMs = 12e4) {
+    return waitModalClosed(ACTIVITY_LOG_MODAL_ID2, timeoutMs);
+  }
+  async function fakeActivityLogShow(payload, opts) {
+    const shouldOpen = opts?.open !== false;
+    await fakeShow(SHARED_MYDATA_PATCH, { activityLogs: payload ?? [] }, {
+      openGate: false,
+      autoRestoreMs: opts?.autoRestoreMs
+    });
+    if (shouldOpen) await openActivityLogModal();
+  }
+  var mergeMyData, SHARED_MYDATA_PATCH, INVENTORY_ATOM_PATCH, INVENTORY_MODAL_ID, JOURNAL_MODAL_ID, ACTIVITY_LOG_MODAL_ID2;
+  var init_fakeModal = __esm({
+    "src/game/fakeModal.ts"() {
+      "use strict";
+      init_fakeAtoms();
+      init_atoms();
+      init_modalState();
+      init_activityLogModalLayout();
+      mergeMyData = (real, patch) => {
+        const base = real && typeof real === "object" ? real : {};
+        const add = patch && typeof patch === "object" ? patch : {};
+        return { ...base, ...add };
+      };
+      SHARED_MYDATA_PATCH = {
+        label: Atoms.data.myData.label,
+        merge: mergeMyData,
+        gate: {
+          label: Atoms.ui.activeModal.label,
+          isOpen: (v) => ["inventory", "journal", "activityLog"].includes(modalNameOf(v) ?? ""),
+          autoDisableOnClose: true
+        }
+      };
+      INVENTORY_ATOM_PATCH = {
+        label: Atoms.inventory.myInventory.label,
+        merge: (_real, fake) => fake,
+        gate: {
+          label: Atoms.ui.activeModal.label,
+          isOpen: (v) => modalNameOf(v) === "inventory",
+          autoDisableOnClose: true
+        }
+      };
+      INVENTORY_MODAL_ID = "inventory";
+      JOURNAL_MODAL_ID = "journal";
+      ACTIVITY_LOG_MODAL_ID2 = "activityLog";
     }
   });
 
@@ -14556,7 +9919,7 @@
     } catch {
     }
   }
-  function sleep4(ms) {
+  function sleep5(ms) {
     return new Promise((r) => setTimeout(r, ms));
   }
   function buildDisplayNameToSpeciesFromCatalog() {
@@ -14680,7 +10043,7 @@
             }));
           } catch {
           }
-          if (delayMs > 0 && remaining > 0) await sleep4(delayMs);
+          if (delayMs > 0 && remaining > 0) await sleep5(delayMs);
         }
       }
       if (!opts.keepSelection) selectedMap.clear();
@@ -15474,12 +10837,12 @@
             await PlayerService.placeDecor(emptySlot.tileType, emptySlot.index, t.decorId, 0);
           } catch {
           }
-          if (delayMs > 0) await sleep4(delayMs);
+          if (delayMs > 0) await sleep5(delayMs);
           try {
             await PlayerService.removeGardenObject(emptySlot.index, emptySlot.tileType);
           } catch {
           }
-          if (delayMs > 0) await sleep4(delayMs);
+          if (delayMs > 0) await sleep5(delayMs);
           done += 1;
           remaining -= 1;
           try {
@@ -16638,6 +12001,77 @@
         }
       };
       audioPlayer = new AudioPlayer({ autoScan: true });
+    }
+  });
+
+  // src/data/rules/cropSize.ts
+  function toFinite(value) {
+    const numeric = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+  function normalizeKey3(value) {
+    return String(value ?? "").trim().toLowerCase();
+  }
+  function clampCropSize(value) {
+    const numeric = toFinite(value);
+    if (numeric == null) return CROP_SIZE_MIN;
+    return Math.min(CROP_SIZE_MAX, Math.max(CROP_SIZE_MIN, Math.round(numeric)));
+  }
+  function findPlantCatalogEntry(species) {
+    const wanted = normalizeKey3(species);
+    if (!wanted) return null;
+    const catalog = plantCatalog2;
+    const direct = typeof species === "string" ? catalog[species] : void 0;
+    if (direct) return direct;
+    for (const key2 of Object.keys(catalog)) {
+      const entry = catalog[key2];
+      if (!entry) continue;
+      if (normalizeKey3(key2) === wanted) return entry;
+      if (normalizeKey3(entry.crop?.name) === wanted) return entry;
+      if (normalizeKey3(entry.plant?.name) === wanted) return entry;
+      if (normalizeKey3(entry.seed?.name) === wanted) return entry;
+    }
+    return null;
+  }
+  function getMaxSizeMultiplier(species) {
+    const crop = findPlantCatalogEntry(species)?.crop;
+    if (!crop) return null;
+    const value = toFinite(crop.maxSizeMultiplier) ?? toFinite(crop.maxScale);
+    return value != null && value > 0 ? value : null;
+  }
+  function cropSizeMultiplier(species, size) {
+    const maxMultiplier = getMaxSizeMultiplier(species);
+    if (maxMultiplier == null || maxMultiplier <= 1) return 1;
+    const ratio = (clampCropSize(size) - CROP_SIZE_MIN) / SIZE_SPAN;
+    return 1 + (maxMultiplier - 1) * ratio;
+  }
+  function legacyScaleToCropSize(scale, maxScale) {
+    const numeric = toFinite(scale);
+    if (numeric == null) return null;
+    const upper = maxScale != null && maxScale > LEGACY_SCALE_MIN ? maxScale : LEGACY_FALLBACK_MAX_SCALE;
+    const clamped = Math.min(upper, Math.max(LEGACY_SCALE_MIN, numeric));
+    const ratio = (clamped - LEGACY_SCALE_MIN) / (upper - LEGACY_SCALE_MIN);
+    return clampCropSize(CROP_SIZE_MIN + ratio * SIZE_SPAN);
+  }
+  function readCropSize(source) {
+    if (!source || typeof source !== "object") return null;
+    const record = source;
+    const direct = toFinite(record.size);
+    if (direct != null) return clampCropSize(direct);
+    const legacy = toFinite(record.targetScale) ?? toFinite(record.scale);
+    if (legacy == null) return null;
+    return legacyScaleToCropSize(legacy, getMaxSizeMultiplier(record.species));
+  }
+  var CROP_SIZE_MIN, CROP_SIZE_MAX, SIZE_SPAN, LEGACY_SCALE_MIN, LEGACY_FALLBACK_MAX_SCALE;
+  var init_cropSize = __esm({
+    "src/data/rules/cropSize.ts"() {
+      "use strict";
+      init_data();
+      CROP_SIZE_MIN = 50;
+      CROP_SIZE_MAX = 100;
+      SIZE_SPAN = CROP_SIZE_MAX - CROP_SIZE_MIN;
+      LEGACY_SCALE_MIN = 1;
+      LEGACY_FALLBACK_MAX_SCALE = 2;
     }
   });
 
@@ -18453,7 +13887,7 @@
           ev.stopImmediatePropagation?.();
           ev.stopPropagation();
         };
-        const attach = () => {
+        const attach2 = () => {
           window.addEventListener("keydown", stop2, true);
           window.addEventListener("keyup", stop2, true);
         };
@@ -18461,7 +13895,7 @@
           window.removeEventListener("keydown", stop2, true);
           window.removeEventListener("keyup", stop2, true);
         };
-        inp.addEventListener("focus", attach);
+        inp.addEventListener("focus", attach2);
         inp.addEventListener("blur", detach);
         inp.addEventListener("keydown", stop2);
       };
@@ -19063,7 +14497,7 @@
             ev.stopImmediatePropagation?.();
             ev.stopPropagation();
           };
-          const attach = () => {
+          const attach2 = () => {
             window.addEventListener("keydown", stop2, true);
             window.addEventListener("keyup", stop2, true);
           };
@@ -19071,7 +14505,7 @@
             window.removeEventListener("keydown", stop2, true);
             window.removeEventListener("keyup", stop2, true);
           };
-          inp.addEventListener("focus", attach);
+          inp.addEventListener("focus", attach2);
           inp.addEventListener("blur", detach);
           inp.addEventListener("keydown", stop2);
         };
@@ -19395,7 +14829,7 @@
     };
   }
   function notify(enabled5) {
-    listeners3.forEach((cb) => {
+    listeners.forEach((cb) => {
       try {
         cb(enabled5);
       } catch {
@@ -20434,7 +15868,7 @@
     }
     return editorPlantSlotsState;
   }
-  var ARIES_SAVED_GARDENS_PATH, FIXED_SLOT_START, FIXED_SLOT_END, DEFAULT_SIZE_PERCENT, ITEM_PANEL_STYLE_ID, mutationColorMap, MUTATION_ICON_CATEGORIES, MUT_PLUS_BG_CLOSED, MUT_PLUS_BG_OPEN, MUTATION_GROUP_COLOR, MUTATION_GROUP_HYDRO, MUTATION_GROUP_LUNAR, MUTATION_GROUP_OTHER, MUTATION_STEM_MIN_PREFIX, overlayEl, hudToggleBtnEl, currentEnabled, listeners3, savedGardensListeners, sideOverlayEl, sideListWrap, sideRightWrap, currentSideMode, sideSearchQuery, selectedPlantId, selectedDecorId, currentItemOverlayEl, currentItemUnsub, currentItemApplyAll, currentItemSlotModes, overlaysVisible, currentEditorTile, plannedGarden, plannedUserSlotIdx, editorDecorRotation, overlayOwner, overlayHolds, friendGardenPreviewActive, friendPreviewUserSlotIdx, friendPreviewPlayerId, friendPreviewGarden, OVERLAY_MYDATA_PATCH, EditorService, EMPTY_GARDEN, editorPlantSlotsState;
+  var ARIES_SAVED_GARDENS_PATH, FIXED_SLOT_START, FIXED_SLOT_END, DEFAULT_SIZE_PERCENT, ITEM_PANEL_STYLE_ID, mutationColorMap, MUTATION_ICON_CATEGORIES, MUT_PLUS_BG_CLOSED, MUT_PLUS_BG_OPEN, MUTATION_GROUP_COLOR, MUTATION_GROUP_HYDRO, MUTATION_GROUP_LUNAR, MUTATION_GROUP_OTHER, MUTATION_STEM_MIN_PREFIX, overlayEl, hudToggleBtnEl, currentEnabled, listeners, savedGardensListeners, sideOverlayEl, sideListWrap, sideRightWrap, currentSideMode, sideSearchQuery, selectedPlantId, selectedDecorId, currentItemOverlayEl, currentItemUnsub, currentItemApplyAll, currentItemSlotModes, overlaysVisible, currentEditorTile, plannedGarden, plannedUserSlotIdx, editorDecorRotation, overlayOwner, overlayHolds, friendGardenPreviewActive, friendPreviewUserSlotIdx, friendPreviewPlayerId, friendPreviewGarden, OVERLAY_MYDATA_PATCH, EditorService, EMPTY_GARDEN, editorPlantSlotsState;
   var init_editor = __esm({
     "src/features/editor/editor.ts"() {
       "use strict";
@@ -20479,7 +15913,7 @@
       overlayEl = null;
       hudToggleBtnEl = null;
       currentEnabled = false;
-      listeners3 = /* @__PURE__ */ new Set();
+      listeners = /* @__PURE__ */ new Set();
       savedGardensListeners = /* @__PURE__ */ new Set();
       sideOverlayEl = null;
       sideListWrap = null;
@@ -20521,8 +15955,8 @@
           applyState(enabled5, { persist: true, emit: true });
         },
         onChange(listener) {
-          listeners3.add(listener);
-          return () => listeners3.delete(listener);
+          listeners.add(listener);
+          return () => listeners.delete(listener);
         },
         onSavedGardensChange(listener) {
           savedGardensListeners.add(listener);
@@ -21999,6 +17433,314 @@
     }
   });
 
+  // src/features/stats/stats.ts
+  function createDefaultStats(createdAt = Date.now()) {
+    const hatchedByType = {};
+    for (const species of Object.keys(petCatalog2)) {
+      hatchedByType[species.toLowerCase()] = { normal: 0, gold: 0, rainbow: 0 };
+    }
+    const abilities = {};
+    for (const abilityId of Object.keys(petAbilities2)) {
+      abilities[abilityId] = { triggers: 0, totalValue: 0 };
+    }
+    const weather2 = {};
+    for (const key2 of Object.keys(weatherCatalog2)) {
+      weather2[key2.toLowerCase()] = { triggers: 0 };
+    }
+    return {
+      createdAt,
+      garden: {
+        totalPlanted: 0,
+        totalHarvested: 0,
+        totalDestroyed: 0,
+        watercanUsed: 0,
+        waterTimeSavedMs: 0
+      },
+      shops: {
+        seedsBought: 0,
+        decorBought: 0,
+        eggsBought: 0,
+        toolsBought: 0,
+        cropsSoldCount: 0,
+        cropsSoldValue: 0,
+        petsSoldCount: 0,
+        petsSoldValue: 0
+      },
+      pets: { hatchedByType },
+      abilities,
+      weather: weather2
+    };
+  }
+  function normalizeHatchedCounts(value, fallback) {
+    if (!isRecord(value)) return { ...fallback };
+    return {
+      normal: toPositiveInt(value.normal, fallback.normal),
+      gold: toPositiveInt(value.gold, fallback.gold),
+      rainbow: toPositiveInt(value.rainbow, fallback.rainbow)
+    };
+  }
+  function normalizeStats(raw) {
+    const fallbackCreatedAt = Date.now();
+    const base = createDefaultStats(fallbackCreatedAt);
+    if (!isRecord(raw)) return base;
+    if (Object.prototype.hasOwnProperty.call(raw, "createdAt")) {
+      base.createdAt = toPositiveTimestamp(raw.createdAt, fallbackCreatedAt);
+    }
+    if (isRecord(raw.garden)) {
+      base.garden = {
+        totalPlanted: toPositiveInt(raw.garden.totalPlanted, base.garden.totalPlanted),
+        totalHarvested: toPositiveInt(raw.garden.totalHarvested, base.garden.totalHarvested),
+        totalDestroyed: toPositiveInt(raw.garden.totalDestroyed, base.garden.totalDestroyed),
+        watercanUsed: toPositiveInt(raw.garden.watercanUsed, base.garden.watercanUsed),
+        waterTimeSavedMs: toPositiveInt(raw.garden.waterTimeSavedMs, base.garden.waterTimeSavedMs)
+      };
+    }
+    if (isRecord(raw.shops)) {
+      base.shops = {
+        seedsBought: toPositiveInt(raw.shops.seedsBought, base.shops.seedsBought),
+        decorBought: toPositiveInt(raw.shops.decorBought, base.shops.decorBought),
+        eggsBought: toPositiveInt(raw.shops.eggsBought, base.shops.eggsBought),
+        toolsBought: toPositiveInt(raw.shops.toolsBought, base.shops.toolsBought),
+        cropsSoldCount: toPositiveInt(raw.shops.cropsSoldCount, base.shops.cropsSoldCount),
+        cropsSoldValue: toPositiveNumber(raw.shops.cropsSoldValue, base.shops.cropsSoldValue),
+        petsSoldCount: toPositiveInt(raw.shops.petsSoldCount, base.shops.petsSoldCount),
+        petsSoldValue: toPositiveNumber(raw.shops.petsSoldValue, base.shops.petsSoldValue)
+      };
+    }
+    if (isRecord(raw.pets) && isRecord(raw.pets.hatchedByType)) {
+      for (const [key2, counts] of Object.entries(raw.pets.hatchedByType)) {
+        if (typeof key2 !== "string") continue;
+        const normalizedKey = key2.toLowerCase();
+        const fallback = base.pets.hatchedByType[normalizedKey] ?? { normal: 0, gold: 0, rainbow: 0 };
+        base.pets.hatchedByType[normalizedKey] = normalizeHatchedCounts(counts, fallback);
+      }
+    }
+    if (isRecord(raw.abilities)) {
+      for (const [key2, value] of Object.entries(raw.abilities)) {
+        if (typeof key2 !== "string" || !isRecord(value)) continue;
+        base.abilities[key2] = {
+          triggers: toPositiveInt(value.triggers, base.abilities[key2]?.triggers ?? 0),
+          totalValue: toPositiveNumber(value.totalValue, base.abilities[key2]?.totalValue ?? 0)
+        };
+      }
+    }
+    if (isRecord(raw.weather)) {
+      for (const [key2, value] of Object.entries(raw.weather)) {
+        if (typeof key2 !== "string" || !isRecord(value)) continue;
+        const normalizedKey = key2.toLowerCase();
+        const fallback = base.weather[normalizedKey] ?? { triggers: 0 };
+        base.weather[normalizedKey] = {
+          triggers: toPositiveInt(value.triggers, fallback.triggers)
+        };
+      }
+    }
+    return base;
+  }
+  function readFromStorage() {
+    if (memoryStore) return cloneStats(memoryStore);
+    const rawWrapped = readAriesPath("stats");
+    const raw = unwrapMaybeNestedSnapshot(rawWrapped);
+    if (!raw) {
+      const fresh = createDefaultStats();
+      memoryStore = cloneStats(fresh);
+      writeAriesPath("stats", memoryStore);
+      return fresh;
+    }
+    const normalized = normalizeStats(raw);
+    memoryStore = cloneStats(normalized);
+    if (rawWrapped !== raw) {
+      writeAriesPath("stats", memoryStore);
+    }
+    return normalized;
+  }
+  function emitUpdate(stats) {
+    const snapshot2 = cloneStats(stats);
+    for (const listener of listeners2) {
+      try {
+        listener(snapshot2);
+      } catch (error) {
+        console.error("[StatsService] Listener error", error);
+      }
+    }
+  }
+  function writeToStorage(stats) {
+    const snapshot2 = cloneStats(stats);
+    memoryStore = snapshot2;
+    writeAriesPath("stats", snapshot2);
+    return snapshot2;
+  }
+  function adjustValue(current, delta, integer) {
+    const a = Number(current);
+    const b = Number(delta);
+    const sum = Number.isFinite(a) ? a : 0;
+    const next = sum + (Number.isFinite(b) ? b : 0);
+    const clamped = Math.max(0, next);
+    return integer ? Math.floor(clamped) : clamped;
+  }
+  function updateStats(mutator) {
+    const current = readFromStorage();
+    const before = JSON.stringify(current);
+    const draft = cloneStats(current);
+    mutator(draft);
+    const after = JSON.stringify(draft);
+    if (before === after) return current;
+    const stored = writeToStorage(draft);
+    emitUpdate(stored);
+    return stored;
+  }
+  function requireAbilityEntry(stats, abilityId) {
+    if (!stats.abilities[abilityId]) {
+      stats.abilities[abilityId] = { triggers: 0, totalValue: 0 };
+    }
+    return stats.abilities[abilityId];
+  }
+  function requireWeatherEntry(stats, weatherId) {
+    const key2 = weatherId.toLowerCase();
+    if (!stats.weather[key2]) {
+      stats.weather[key2] = { triggers: 0 };
+    }
+    return stats.weather[key2];
+  }
+  function requirePetEntry(stats, species) {
+    const key2 = species.toLowerCase();
+    if (!stats.pets.hatchedByType[key2]) {
+      stats.pets.hatchedByType[key2] = { normal: 0, gold: 0, rainbow: 0 };
+    }
+    return stats.pets.hatchedByType[key2];
+  }
+  var GARDEN_INT_KEYS, SHOP_INT_KEYS, ABILITY_INT_KEYS, WEATHER_INT_KEYS, memoryStore, listeners2, isRecord, toNumber, toPositiveNumber, toPositiveInt, toPositiveTimestamp, cloneStats, unwrapMaybeNestedSnapshot, StatsService;
+  var init_stats = __esm({
+    "src/features/stats/stats.ts"() {
+      "use strict";
+      init_data();
+      init_storage();
+      GARDEN_INT_KEYS = {
+        totalPlanted: true,
+        totalHarvested: true,
+        totalDestroyed: true,
+        watercanUsed: true,
+        waterTimeSavedMs: true
+      };
+      SHOP_INT_KEYS = {
+        seedsBought: true,
+        decorBought: true,
+        eggsBought: true,
+        toolsBought: true,
+        cropsSoldCount: true,
+        cropsSoldValue: false,
+        petsSoldCount: true,
+        petsSoldValue: false
+      };
+      ABILITY_INT_KEYS = {
+        triggers: true,
+        totalValue: false
+      };
+      WEATHER_INT_KEYS = {
+        triggers: true
+      };
+      memoryStore = null;
+      listeners2 = /* @__PURE__ */ new Set();
+      isRecord = (value) => typeof value === "object" && value !== null;
+      toNumber = (value, fallback = 0) => {
+        const num2 = Number(value);
+        if (!Number.isFinite(num2)) return fallback;
+        return num2;
+      };
+      toPositiveNumber = (value, fallback = 0) => {
+        const num2 = toNumber(value, fallback);
+        return Math.max(0, num2);
+      };
+      toPositiveInt = (value, fallback = 0) => {
+        const num2 = toPositiveNumber(value, fallback);
+        return Math.floor(num2);
+      };
+      toPositiveTimestamp = (value, fallback) => {
+        const num2 = Number(value);
+        if (!Number.isFinite(num2) || num2 <= 0) return fallback;
+        return Math.floor(num2);
+      };
+      cloneStats = (stats) => ({
+        createdAt: stats.createdAt,
+        garden: { ...stats.garden },
+        shops: { ...stats.shops },
+        pets: {
+          hatchedByType: Object.fromEntries(
+            Object.entries(stats.pets.hatchedByType).map(([key2, counts]) => [key2, { ...counts }])
+          )
+        },
+        abilities: Object.fromEntries(
+          Object.entries(stats.abilities).map(([key2, value]) => [key2, { ...value }])
+        ),
+        weather: Object.fromEntries(
+          Object.entries(stats.weather).map(([key2, value]) => [key2, { ...value }])
+        )
+      });
+      unwrapMaybeNestedSnapshot = (raw) => {
+        let cur = raw;
+        let guard = 0;
+        while (guard++ < 10 && isRecord(cur) && "snapshot" in cur && isRecord(cur.snapshot)) {
+          cur = cur.snapshot;
+        }
+        return cur;
+      };
+      StatsService = {
+        storageKey: "stats",
+        getSnapshot() {
+          return readFromStorage();
+        },
+        setSnapshot(snapshot2) {
+          const normalized = normalizeStats(unwrapMaybeNestedSnapshot(snapshot2));
+          const stored = writeToStorage(normalized);
+          emitUpdate(stored);
+          return stored;
+        },
+        reset() {
+          const fresh = createDefaultStats();
+          const stored = writeToStorage(fresh);
+          emitUpdate(stored);
+          return stored;
+        },
+        update(mutator) {
+          return updateStats(mutator);
+        },
+        incrementGardenStat(key2, amount = 1) {
+          return updateStats((draft) => {
+            draft.garden[key2] = adjustValue(draft.garden[key2], amount, GARDEN_INT_KEYS[key2]);
+          });
+        },
+        incrementShopStat(key2, amount = 1) {
+          return updateStats((draft) => {
+            draft.shops[key2] = adjustValue(draft.shops[key2], amount, SHOP_INT_KEYS[key2]);
+          });
+        },
+        incrementPetHatched(species, rarityKey = "normal", amount = 1) {
+          return updateStats((draft) => {
+            const entry = requirePetEntry(draft, species);
+            entry[rarityKey] = adjustValue(entry[rarityKey], amount, true);
+          });
+        },
+        incrementAbilityStat(abilityId, key2, amount = 1) {
+          return updateStats((draft) => {
+            const entry = requireAbilityEntry(draft, abilityId);
+            entry[key2] = adjustValue(entry[key2], amount, ABILITY_INT_KEYS[key2]);
+          });
+        },
+        incrementWeatherStat(weatherId, key2 = "triggers", amount = 1) {
+          return updateStats((draft) => {
+            const entry = requireWeatherEntry(draft, weatherId);
+            entry[key2] = adjustValue(entry[key2], amount, WEATHER_INT_KEYS[key2]);
+          });
+        },
+        subscribe(listener) {
+          listeners2.add(listener);
+          return () => {
+            listeners2.delete(listener);
+          };
+        }
+      };
+    }
+  });
+
   // src/features/stats/outgoingCounters.ts
   async function addPositive(read, stat) {
     const value = Number(await read());
@@ -22150,6 +17892,3432 @@
       SLOT_ID_KEYS = [...ACCOUNT_ID_KEYS, "playerId"];
       ROOM_ID_KEYS = ["id"];
       ROOM_ID_PREFIX = "p_";
+    }
+  });
+
+  // src/lib/keyboard.ts
+  function isKeybindCaptureActive() {
+    return keybindCaptureCount > 0;
+  }
+  function beginKeybindCapture() {
+    keybindCaptureCount++;
+  }
+  function endKeybindCapture() {
+    keybindCaptureCount = Math.max(0, keybindCaptureCount - 1);
+  }
+  function shouldIgnoreKeydown(e) {
+    if (isKeybindCaptureActive()) return true;
+    const el2 = e.target;
+    if (!el2) return false;
+    return el2.isContentEditable || el2.tagName === "INPUT" || el2.tagName === "TEXTAREA" || el2.tagName === "SELECT";
+  }
+  var keybindCaptureCount;
+  var init_keyboard = __esm({
+    "src/lib/keyboard.ts"() {
+      "use strict";
+      keybindCaptureCount = 0;
+    }
+  });
+
+  // src/ui/kit/menu.ts
+  function el(tag, cls, html) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html != null) e.innerHTML = html;
+    return e;
+  }
+  function cssq(s) {
+    return s.replace(/"/g, '\\"');
+  }
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[m]);
+  }
+  function codesMatch(expected, actual) {
+    if (expected === actual) return true;
+    const altCodes = expected === "AltLeft" || expected === "AltRight";
+    const ctrlCodes = expected === "ControlLeft" || expected === "ControlRight";
+    const shiftCodes = expected === "ShiftLeft" || expected === "ShiftRight";
+    const metaCodes = expected === "MetaLeft" || expected === "MetaRight";
+    if (altCodes && (actual === "AltLeft" || actual === "AltRight")) return true;
+    if (ctrlCodes && (actual === "ControlLeft" || actual === "ControlRight")) return true;
+    if (shiftCodes && (actual === "ShiftLeft" || actual === "ShiftRight")) return true;
+    if (metaCodes && (actual === "MetaLeft" || actual === "MetaRight")) return true;
+    return false;
+  }
+  function isMac() {
+    return navigator.platform?.toLowerCase().includes("mac") || /mac|iphone|ipad|ipod/i.test(navigator.userAgent);
+  }
+  function eventToHotkey(e, allowModifierOnly = false) {
+    const isModifier = _MOD_CODES.has(e.code) || e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta";
+    if (isModifier && !allowModifierOnly) {
+      return null;
+    }
+    return {
+      code: e.code,
+      ctrl: e.ctrlKey,
+      alt: e.altKey,
+      shift: e.shiftKey,
+      meta: e.metaKey
+    };
+  }
+  function matchHotkey(e, h) {
+    if (!h) return false;
+    if (!!h.ctrl !== e.ctrlKey) return false;
+    if (!!h.shift !== e.shiftKey) return false;
+    if (!!h.alt !== e.altKey) return false;
+    if (!!h.meta !== e.metaKey) return false;
+    return codesMatch(h.code, e.code);
+  }
+  function hotkeyToString(hk) {
+    if (!hk) return "";
+    const parts = [];
+    if (hk.ctrl) parts.push("Ctrl");
+    if (hk.shift) parts.push("Shift");
+    if (hk.alt) parts.push("Alt");
+    if (hk.meta) parts.push("Meta");
+    if (hk.code) parts.push(hk.code);
+    return parts.join("+");
+  }
+  function stringToHotkey(s) {
+    if (!s) return null;
+    const parts = s.split("+").map((p) => p.trim()).filter(Boolean);
+    if (!parts.length) return null;
+    const code = canonicalizeCode(parts.pop() || "");
+    const hk = { code };
+    for (const p of parts) {
+      const P = p.toLowerCase();
+      if (P === "ctrl" || P === "control") hk.ctrl = true;
+      else if (P === "shift") hk.shift = true;
+      else if (P === "alt") hk.alt = true;
+      else if (P === "meta" || P === "cmd" || P === "command") hk.meta = true;
+    }
+    return hk.code ? hk : null;
+  }
+  function canonicalizeCode(rawCode) {
+    const trimmed = rawCode.trim();
+    if (!trimmed) return "";
+    const lower = trimmed.toLowerCase();
+    const keyMatch = lower.match(/^key([a-z])$/);
+    if (keyMatch) return `Key${keyMatch[1].toUpperCase()}`;
+    const digitMatch = lower.match(/^digit([0-9])$/);
+    if (digitMatch) return `Digit${digitMatch[1]}`;
+    const numpadDigitMatch = lower.match(/^numpad([0-9])$/);
+    if (numpadDigitMatch) return `Numpad${numpadDigitMatch[1]}`;
+    if (lower.startsWith("numpad")) {
+      const suffix = lower.slice(6);
+      if (!suffix) return "Numpad";
+      const mappedSuffix = CANONICAL_CODES[suffix] ?? capitalizeWord(suffix);
+      return `Numpad${mappedSuffix}`;
+    }
+    const fMatch = lower.match(/^f([0-9]{1,2})$/);
+    if (fMatch) return `F${fMatch[1]}`;
+    const arrowMatch = lower.match(/^arrow([a-z]+)$/);
+    if (arrowMatch) {
+      const suffix = arrowMatch[1];
+      const mappedSuffix = CANONICAL_CODES[suffix] ?? capitalizeWord(suffix);
+      return `Arrow${mappedSuffix}`;
+    }
+    if (CANONICAL_CODES[lower]) {
+      return CANONICAL_CODES[lower];
+    }
+    return trimmed[0].toUpperCase() + trimmed.slice(1);
+  }
+  function capitalizeWord(word) {
+    if (!word) return "";
+    return word[0].toUpperCase() + word.slice(1);
+  }
+  function prettyCode(code) {
+    if (code === "AltLeft" || code === "AltRight") return "Alt";
+    if (code === "ControlLeft" || code === "ControlRight") return "Ctrl";
+    if (code === "ShiftLeft" || code === "ShiftRight") return "Shift";
+    if (code === "MetaLeft" || code === "MetaRight") return isMac() ? "\u2318" : "Meta";
+    if (code.startsWith("Key")) return code.slice(3);
+    if (code.startsWith("Digit")) return code.slice(5);
+    if (code.startsWith("Numpad")) return "Numpad " + code.slice(6);
+    const arrows = { ArrowUp: "\u2191", ArrowDown: "\u2193", ArrowLeft: "\u2190", ArrowRight: "\u2192" };
+    if (arrows[code]) return arrows[code];
+    return code;
+  }
+  function hotkeyToPretty(h) {
+    if (!h) return "\u2014";
+    const mac = isMac();
+    const mods = [];
+    if (mac) {
+      if (h.ctrl) mods.push("\u2303");
+      if (h.alt) mods.push("\u2325");
+      if (h.shift) mods.push("\u21E7");
+      if (h.meta) mods.push("\u2318");
+    } else {
+      if (h.ctrl) mods.push("Ctrl");
+      if (h.alt) mods.push("Alt");
+      if (h.shift) mods.push("Shift");
+      if (h.meta) mods.push("Meta");
+    }
+    const modifierCode = h.alt && (h.code === "AltLeft" || h.code === "AltRight") || h.ctrl && (h.code === "ControlLeft" || h.code === "ControlRight") || h.shift && (h.code === "ShiftLeft" || h.code === "ShiftRight") || h.meta && (h.code === "MetaLeft" || h.code === "MetaRight");
+    const parts = mods.slice();
+    const codePretty = prettyCode(h.code);
+    if (!modifierCode || parts.length === 0) {
+      parts.push(codePretty);
+    }
+    if (!parts.length) return codePretty;
+    return parts.join(mac ? "" : " + ");
+  }
+  var activeHotkeyRecorder, HOTKEY_RECORDING_TIMEOUT_MS, Menu, VTabs, _MOD_CODES, CANONICAL_CODES;
+  var init_menu = __esm({
+    "src/ui/kit/menu.ts"() {
+      "use strict";
+      init_storage();
+      init_keyboard();
+      activeHotkeyRecorder = null;
+      HOTKEY_RECORDING_TIMEOUT_MS = 8e3;
+      Menu = class {
+        constructor(opts = {}) {
+          this.opts = opts;
+          this.tabs = /* @__PURE__ */ new Map();
+          this.events = /* @__PURE__ */ new Map();
+          this.currentId = null;
+          this._altDown = false;
+          this._insertDown = false;
+          this._hovering = false;
+          this._onKey = (e) => {
+            if (e.code === "Insert" || e.key === "Insert") {
+              this._insertDown = e.type === "keydown";
+            }
+            const alt = e.altKey || this._insertDown;
+            if (alt !== this._altDown) {
+              this._altDown = alt;
+              this._updateAltCursor();
+            }
+          };
+          this._onBlur = () => {
+            this._altDown = false;
+            this._insertDown = false;
+            this._updateAltCursor();
+          };
+          this._onEnter = () => {
+            this._hovering = true;
+            this._updateAltCursor();
+          };
+          this._onLeave = () => {
+            this._hovering = false;
+            this._updateAltCursor();
+          };
+          this.menuId = this.opts.id || "default";
+          this.lsKeyActive = `menu:${this.menuId}:activeTab`;
+        }
+        /** Monte le menu dans un conteneur */
+        mount(container) {
+          this.ensureStyles();
+          container.innerHTML = "";
+          this.root = el("div", `qmm ${this.opts.classes || ""} ${this.opts.compact ? "qmm-compact" : ""}`);
+          if (this.opts.startHidden) this.root.style.display = "none";
+          this.tabBar = el("div", "qmm-tabs");
+          this.views = el("div", "qmm-views");
+          this.root.appendChild(this.tabBar);
+          this.root.appendChild(this.views);
+          container.appendChild(this.root);
+          if (this.tabs.size) {
+            for (const [id, def] of this.tabs) this.createTabView(id, def);
+            this.restoreActive();
+          }
+          this.updateTabsBarVisibility();
+          this.root.addEventListener("pointerenter", this._onEnter);
+          this.root.addEventListener("pointerleave", this._onLeave);
+          window.addEventListener("keydown", this._onKey, true);
+          window.addEventListener("keyup", this._onKey, true);
+          window.addEventListener("blur", this._onBlur);
+          document.addEventListener("visibilitychange", this._onBlur);
+          if (this.opts.startWindowHidden) this.setWindowVisible(false);
+          this.emit("mounted");
+        }
+        /** Démonte le menu (optionnel) */
+        unmount() {
+          this.root?.removeEventListener("pointerenter", this._onEnter);
+          this.root?.removeEventListener("pointerleave", this._onLeave);
+          window.removeEventListener("keydown", this._onKey, true);
+          window.removeEventListener("keyup", this._onKey, true);
+          window.removeEventListener("blur", this._onBlur);
+          document.removeEventListener("visibilitychange", this._onBlur);
+          if (this.root?.parentElement) this.root.parentElement.removeChild(this.root);
+          this.emit("unmounted");
+        }
+        /** Retourne l'élément fenêtre englobant (barre – / ×) */
+        getWindowEl() {
+          if (!this.root) return null;
+          const sel = this.opts.windowSelector || ".qws-win";
+          return this.root.closest(sel);
+        }
+        /** Affiche/masque la FENÊTRE (barre incluse) */
+        setWindowVisible(visible) {
+          const win = this.getWindowEl();
+          if (!win) return;
+          win.classList.toggle("is-hidden", !visible);
+          this.emit(visible ? "window:show" : "window:hide");
+        }
+        /** Bascule l’état de la fenêtre. Retourne true si maintenant visible. */
+        toggleWindow() {
+          const win = this.getWindowEl();
+          if (!win) return false;
+          const willShow = win.classList.contains("is-hidden");
+          this.setWindowVisible(willShow);
+          return willShow;
+        }
+        /** Donne l’état courant de la fenêtre (true = visible) */
+        isWindowVisible() {
+          const win = this.getWindowEl();
+          if (!win) return true;
+          return !win.classList.contains("is-hidden") && getComputedStyle(win).display !== "none";
+        }
+        /** Affiche/masque le root */
+        setVisible(visible) {
+          if (!this.root) return;
+          this.root.style.display = visible ? "" : "none";
+          this.emit(visible ? "show" : "hide");
+        }
+        toggle() {
+          if (!this.root) return false;
+          const v = this.root.style.display === "none";
+          this.setVisible(v);
+          return v;
+        }
+        /** Ajoute un onglet (peut être appelé avant ou après mount) */
+        addTab(id, title, render) {
+          this.tabs.set(id, { title, render, badge: null });
+          if (this.root) {
+            this.createTabView(id, this.tabs.get(id));
+            this.updateTabsBarVisibility();
+          }
+          return this;
+        }
+        /** Ajoute plusieurs onglets en une fois */
+        addTabs(defs) {
+          defs.forEach((d) => this.addTab(d.id, d.title, d.render));
+          return this;
+        }
+        /** Met à jour le titre de l’onglet (ex: compteur, libellé) */
+        setTabTitle(id, title) {
+          const def = this.tabs.get(id);
+          if (!def) return;
+          def.title = title;
+          if (def.btn) {
+            const label2 = def.btn.querySelector(".label");
+            if (label2) label2.textContent = title;
+          }
+        }
+        /** Ajoute/retire un badge à droite du titre (ex: “3”, “NEW”, “!”) */
+        setTabBadge(id, text) {
+          const def = this.tabs.get(id);
+          if (!def || !def.btn) return;
+          if (!def.badge) {
+            def.badge = document.createElement("span");
+            def.badge.className = "badge";
+            def.btn.appendChild(def.badge);
+          }
+          if (text == null || text === "") {
+            def.badge.style.display = "none";
+          } else {
+            def.badge.textContent = text;
+            def.badge.style.display = "";
+          }
+        }
+        /** Force le re-render d’un onglet (ré-exécute son render) */
+        refreshTab(id) {
+          const def = this.tabs.get(id);
+          if (!def?.view) return;
+          const scroller = this.findScrollableAncestor(def.view);
+          const st = scroller ? scroller.scrollTop : null;
+          const sl = scroller ? scroller.scrollLeft : null;
+          const activeId = document.activeElement?.id || null;
+          def.view.innerHTML = "";
+          try {
+            def.render(def.view, this);
+          } catch (e) {
+            def.view.textContent = String(e);
+          }
+          if (this.currentId === id) this.switchTo(id);
+          this.emit("tab:render", id);
+          if (scroller && st != null) {
+            requestAnimationFrame(() => {
+              try {
+                scroller.scrollTop = st;
+                scroller.scrollLeft = sl ?? 0;
+              } catch {
+              }
+              if (activeId) {
+                const n = document.getElementById(activeId);
+                if (n && n.focus) try {
+                  n.focus();
+                } catch {
+                }
+              }
+            });
+          }
+        }
+        findScrollableAncestor(start2) {
+          function isScrollable(el3) {
+            const s = getComputedStyle(el3);
+            const oy = s.overflowY || s.overflow;
+            return /(auto|scroll)/.test(oy) && el3.scrollHeight > el3.clientHeight;
+          }
+          let el2 = start2;
+          while (el2) {
+            if (isScrollable(el2)) return el2;
+            el2 = el2.parentElement;
+          }
+          return document.querySelector(".qws-win");
+        }
+        firstTabId() {
+          const it = this.tabs.keys().next();
+          return it.done ? null : it.value ?? null;
+        }
+        _updateAltCursor() {
+          if (!this.root) return;
+          this.root.classList.toggle("qmm-alt-drag", this._altDown && this._hovering);
+        }
+        /** Récupère la vue DOM d’un onglet (pratique pour updates ciblées) */
+        getTabView(id) {
+          return this.tabs.get(id)?.view ?? null;
+        }
+        /** Retire un onglet */
+        removeTab(id) {
+          const def = this.tabs.get(id);
+          if (!def) return;
+          this.tabs.delete(id);
+          const btn = this.tabBar?.querySelector(`button[data-id="${cssq(id)}"]`);
+          if (btn && btn.parentElement) btn.parentElement.removeChild(btn);
+          if (def.view && def.view.parentElement) def.view.parentElement.removeChild(def.view);
+          if (this.currentId === id) {
+            const first = this.tabs.keys().next().value || null;
+            this.switchTo(first);
+          }
+          this.updateTabsBarVisibility();
+        }
+        /** Active un onglet (id=null => affiche toutes les vues) */
+        switchTo(id) {
+          this.currentId = id;
+          [...this.tabBar.children].forEach((ch) => ch.classList.toggle("active", ch.dataset.id === id || id === null));
+          [...this.views.children].forEach((ch) => ch.classList.toggle("active", ch.dataset.id === id || id === null));
+          this.persistActive();
+          this.emit("tab:change", id);
+        }
+        /** Événements */
+        on(event, handler) {
+          if (!this.events.has(event)) this.events.set(event, /* @__PURE__ */ new Set());
+          this.events.get(event).add(handler);
+          return () => this.off(event, handler);
+        }
+        off(event, handler) {
+          this.events.get(event)?.delete(handler);
+        }
+        emit(event, ...args) {
+          this.events.get(event)?.forEach((h) => {
+            try {
+              h(...args);
+            } catch {
+            }
+          });
+        }
+        // ---------- Helpers UI publics (réutilisables dans tes tabs) ----------
+        btn(label2, onClickOrOpts) {
+          const opts = typeof onClickOrOpts === "function" ? { onClick: onClickOrOpts } : { ...onClickOrOpts || {} };
+          const b = el("button", "qmm-btn");
+          b.type = "button";
+          let iconEl = null;
+          if (opts.icon) {
+            iconEl = typeof opts.icon === "string" ? document.createElement("span") : opts.icon;
+            if (typeof opts.icon === "string" && iconEl) {
+              iconEl.textContent = opts.icon;
+            }
+            if (iconEl) {
+              iconEl.classList.add("qmm-btn__icon");
+            }
+          }
+          const trimmedLabel = (label2 ?? "").trim();
+          const shouldRenderLabel = !iconEl || trimmedLabel.length > 0;
+          const labelSpan = shouldRenderLabel ? document.createElement("span") : null;
+          if (labelSpan) {
+            labelSpan.className = "label";
+            labelSpan.textContent = label2;
+          }
+          if (iconEl) {
+            if (trimmedLabel.length === 0) {
+              b.classList.add("qmm-btn--icon");
+            }
+            if (opts.iconPosition === "right") {
+              iconEl.classList.add("is-right");
+              if (labelSpan) b.append(labelSpan);
+              b.append(iconEl);
+            } else {
+              iconEl.classList.add("is-left");
+              b.append(iconEl);
+              if (labelSpan) b.append(labelSpan);
+            }
+          } else {
+            if (labelSpan) b.append(labelSpan);
+          }
+          const variant = opts.variant && opts.variant !== "default" ? opts.variant : null;
+          if (variant) b.classList.add(`qmm-btn--${variant}`);
+          if (opts.fullWidth) b.classList.add("qmm-btn--full");
+          if (opts.size === "sm") b.classList.add("qmm-btn--sm");
+          if (opts.active) b.classList.add("active");
+          if (opts.tooltip || opts.title) b.title = opts.tooltip || opts.title || "";
+          if (opts.ariaLabel) b.setAttribute("aria-label", opts.ariaLabel);
+          if (opts.onClick) b.addEventListener("click", opts.onClick);
+          if (opts.disabled) this.setButtonEnabled(b, false);
+          b.setEnabled = (enabled5) => this.setButtonEnabled(b, enabled5);
+          b.setActive = (active2) => b.classList.toggle("active", !!active2);
+          return b;
+        }
+        setButtonEnabled(button2, enabled5) {
+          button2.disabled = !enabled5;
+          button2.classList.toggle("is-disabled", !enabled5);
+          button2.setAttribute("aria-disabled", (!enabled5).toString());
+        }
+        flexRow(opts = {}) {
+          const row = document.createElement("div");
+          row.className = ["qmm-flex", opts.className || ""].filter(Boolean).join(" ").trim();
+          row.style.display = "flex";
+          row.style.alignItems = this.mapAlign(opts.align ?? "center");
+          row.style.justifyContent = this.mapJustify(opts.justify ?? "start");
+          row.style.gap = `${opts.gap ?? 8}px`;
+          row.style.flexWrap = opts.wrap === false ? "nowrap" : "wrap";
+          if (opts.fullWidth) row.style.width = "100%";
+          return row;
+        }
+        formGrid(opts = {}) {
+          const grid = document.createElement("div");
+          grid.className = "qmm-form-grid";
+          grid.style.display = "grid";
+          grid.style.gridTemplateColumns = opts.columns || "max-content 1fr";
+          grid.style.columnGap = `${opts.columnGap ?? 8}px`;
+          grid.style.rowGap = `${opts.rowGap ?? 8}px`;
+          grid.style.alignItems = opts.align ? opts.align : "center";
+          return grid;
+        }
+        formRow(labelText, control, opts = {}) {
+          const wrap = document.createElement("div");
+          wrap.className = "qmm-form-row";
+          wrap.style.display = "grid";
+          wrap.style.gridTemplateColumns = `${opts.labelWidth || "160px"} 1fr`;
+          wrap.style.columnGap = `${opts.gap ?? 10}px`;
+          wrap.style.alignItems = opts.alignTop ? "start" : "center";
+          if (opts.wrap) wrap.classList.add("is-wrap");
+          const lab = this.label(labelText);
+          lab.classList.add("qmm-form-row__label");
+          lab.style.margin = "0";
+          lab.style.justifySelf = "start";
+          if (opts.alignTop) lab.style.alignSelf = "start";
+          wrap.append(lab, control);
+          return { root: wrap, label: lab };
+        }
+        card(title, opts = {}) {
+          const root = document.createElement("div");
+          root.className = "qmm-card";
+          root.dataset.tone = opts.tone || "default";
+          if (opts.align === "center") root.classList.add("is-center");
+          if (opts.align === "stretch") root.classList.add("is-stretch");
+          if (opts.padding) root.style.padding = opts.padding;
+          if (opts.gap != null) root.style.gap = `${opts.gap}px`;
+          if (opts.maxWidth) {
+            const max = typeof opts.maxWidth === "number" ? `${opts.maxWidth}px` : opts.maxWidth;
+            root.style.width = `min(${max}, 100%)`;
+          }
+          const header = document.createElement("div");
+          header.className = "qmm-card__header";
+          if (opts.compactHeader) header.classList.add("is-compact");
+          const titleWrap = document.createElement("div");
+          titleWrap.className = "qmm-card__title";
+          titleWrap.textContent = title;
+          if (opts.icon) {
+            const icon = typeof opts.icon === "string" ? document.createElement("span") : opts.icon;
+            if (typeof opts.icon === "string" && icon) icon.textContent = opts.icon;
+            if (icon) {
+              icon.classList.add("qmm-card__icon");
+              header.appendChild(icon);
+            }
+          }
+          header.appendChild(titleWrap);
+          if (opts.subtitle || opts.description) {
+            const sub = document.createElement("div");
+            sub.className = "qmm-card__subtitle";
+            sub.textContent = opts.subtitle || opts.description || "";
+            header.appendChild(sub);
+          }
+          if (opts.actions?.length) {
+            const actions = document.createElement("div");
+            actions.className = "qmm-card__actions";
+            opts.actions.forEach((a) => actions.appendChild(a));
+            header.appendChild(actions);
+          }
+          const body = document.createElement("div");
+          body.className = "qmm-card__body";
+          root.append(header, body);
+          return {
+            root,
+            header,
+            body,
+            setTitle(next) {
+              titleWrap.textContent = next;
+            }
+          };
+        }
+        toggleChip(labelText, opts = {}) {
+          const wrap = document.createElement("label");
+          wrap.className = "qmm-chip-toggle";
+          if (opts.tooltip) wrap.title = opts.tooltip;
+          const input = document.createElement("input");
+          input.type = opts.type || "checkbox";
+          if (opts.name) input.name = opts.name;
+          if (opts.value) input.value = opts.value;
+          input.checked = !!opts.checked;
+          const face = document.createElement("div");
+          face.className = "qmm-chip-toggle__face";
+          if (opts.icon) {
+            const icon = typeof opts.icon === "string" ? document.createElement("span") : opts.icon;
+            if (typeof opts.icon === "string" && icon) icon.textContent = opts.icon;
+            if (icon) {
+              icon.classList.add("qmm-chip-toggle__icon");
+              face.appendChild(icon);
+            }
+          }
+          const labelEl = document.createElement("span");
+          labelEl.className = "qmm-chip-toggle__label";
+          labelEl.textContent = labelText;
+          face.appendChild(labelEl);
+          if (opts.description) {
+            const desc = document.createElement("span");
+            desc.className = "qmm-chip-toggle__desc";
+            desc.textContent = opts.description;
+            face.appendChild(desc);
+          }
+          if (opts.badge) {
+            const badge = document.createElement("span");
+            badge.className = "qmm-chip-toggle__badge";
+            badge.textContent = opts.badge;
+            face.appendChild(badge);
+          }
+          wrap.append(input, face);
+          return { root: wrap, input, label: labelEl };
+        }
+        select(opts = {}) {
+          const sel = document.createElement("select");
+          sel.className = "qmm-input qmm-select";
+          if (opts.id) sel.id = opts.id;
+          if (opts.width) sel.style.minWidth = opts.width;
+          if (opts.placeholder) {
+            const opt = document.createElement("option");
+            opt.value = "";
+            opt.textContent = opts.placeholder;
+            opt.disabled = true;
+            opt.selected = true;
+            sel.appendChild(opt);
+          }
+          return sel;
+        }
+        errorBar() {
+          const el2 = document.createElement("div");
+          el2.className = "qmm-error";
+          el2.style.display = "none";
+          return {
+            el: el2,
+            show(message) {
+              el2.textContent = message;
+              el2.style.display = "block";
+            },
+            clear() {
+              el2.textContent = "";
+              el2.style.display = "none";
+            }
+          };
+        }
+        mapAlign(al) {
+          if (al === "start") return "flex-start";
+          if (al === "end") return "flex-end";
+          if (al === "stretch") return "stretch";
+          return "center";
+        }
+        mapJustify(j) {
+          if (j === "center") return "center";
+          if (j === "end") return "flex-end";
+          if (j === "between") return "space-between";
+          if (j === "around") return "space-around";
+          return "flex-start";
+        }
+        label(text) {
+          const l = el("label", "qmm-label");
+          l.textContent = text;
+          return l;
+        }
+        row(...children) {
+          const r = el("div", "qmm-row");
+          children.forEach((c) => r.appendChild(c));
+          return r;
+        }
+        section(title) {
+          const s = el("div", "qmm-section");
+          s.appendChild(el("div", "qmm-section-title", escapeHtml(title)));
+          return s;
+        }
+        inputNumber(min = 0, max = 9999, step = 1, value = 0) {
+          const wrap = el("div", "qmm-input-number");
+          const i = el("input", "qmm-input qmm-input-number-input");
+          i.type = "number";
+          i.min = String(min);
+          i.max = String(max);
+          i.step = String(step);
+          i.value = String(value);
+          i.inputMode = "numeric";
+          const spin = el("div", "qmm-spin");
+          const up = el("button", "qmm-step qmm-step--up", "\u25B2");
+          const down = el("button", "qmm-step qmm-step--down", "\u25BC");
+          up.type = down.type = "button";
+          const clamp3 = () => {
+            const n = Number(i.value);
+            if (Number.isFinite(n)) {
+              const lo = Number(i.min), hi = Number(i.max);
+              const clamped = Math.max(lo, Math.min(hi, n));
+              if (clamped !== n) i.value = String(clamped);
+            }
+          };
+          const bump = (dir) => {
+            if (dir < 0) i.stepDown();
+            else i.stepUp();
+            clamp3();
+            i.dispatchEvent(new Event("input", { bubbles: true }));
+            i.dispatchEvent(new Event("change", { bubbles: true }));
+          };
+          const addSpin = (btn, dir) => {
+            let pressTimer = null;
+            let repeatTimer = null;
+            let suppressNextClick = false;
+            const start2 = (ev) => {
+              suppressNextClick = false;
+              pressTimer = window.setTimeout(() => {
+                suppressNextClick = true;
+                bump(dir);
+                repeatTimer = window.setInterval(() => bump(dir), 60);
+              }, 300);
+              btn.setPointerCapture?.(ev.pointerId);
+            };
+            const stop2 = () => {
+              if (pressTimer != null) {
+                clearTimeout(pressTimer);
+                pressTimer = null;
+              }
+              if (repeatTimer != null) {
+                clearInterval(repeatTimer);
+                repeatTimer = null;
+              }
+            };
+            btn.addEventListener("pointerdown", start2);
+            ["pointerup", "pointercancel", "pointerleave", "blur"].forEach(
+              (ev) => btn.addEventListener(ev, stop2)
+            );
+            btn.addEventListener("click", (e) => {
+              if (suppressNextClick) {
+                e.preventDefault();
+                e.stopPropagation();
+                suppressNextClick = false;
+                return;
+              }
+              bump(dir);
+            });
+          };
+          addSpin(up, 1);
+          addSpin(down, -1);
+          i.addEventListener("change", clamp3);
+          spin.append(up, down);
+          wrap.append(i, spin);
+          i.wrap = wrap;
+          return i;
+        }
+        inputText(placeholder = "", value = "") {
+          const i = el("input", "qmm-input");
+          i.type = "text";
+          i.placeholder = placeholder;
+          i.value = value;
+          return i;
+        }
+        checkbox(checked = false) {
+          const i = el("input", "qmm-check");
+          i.type = "checkbox";
+          i.checked = checked;
+          return i;
+        }
+        radio(name, value, checked = false) {
+          const i = el("input", "qmm-radio");
+          i.type = "radio";
+          i.name = name;
+          i.value = value;
+          i.checked = checked;
+          return i;
+        }
+        slider(min = 0, max = 100, step = 1, value = 0) {
+          const i = el("input", "qmm-range");
+          i.type = "range";
+          i.min = String(min);
+          i.max = String(max);
+          i.step = String(step);
+          i.value = String(value);
+          return i;
+        }
+        rangeDual(min = 0, max = 100, step = 1, valueMin = min, valueMax = max) {
+          const wrap = el("div", "qmm-range-dual");
+          const track = el("div", "qmm-range-dual-track");
+          const fill = el("div", "qmm-range-dual-fill");
+          track.appendChild(fill);
+          wrap.appendChild(track);
+          const createHandle = (value, extraClass) => {
+            const input = this.slider(min, max, step, value);
+            input.classList.add("qmm-range-dual-input", extraClass);
+            wrap.appendChild(input);
+            return input;
+          };
+          const minInput = createHandle(valueMin, "qmm-range-dual-input--min");
+          const maxInput = createHandle(valueMax, "qmm-range-dual-input--max");
+          const updateFill = () => {
+            const minValue = Number(minInput.value);
+            const maxValue = Number(maxInput.value);
+            const total = max - min;
+            if (!Number.isFinite(total) || total <= 0) {
+              fill.style.left = "0%";
+              fill.style.right = "100%";
+              return;
+            }
+            const clampPercent2 = (value) => Math.max(0, Math.min(100, value));
+            const start2 = (Math.min(minValue, maxValue) - min) / total * 100;
+            const end = (Math.max(minValue, maxValue) - min) / total * 100;
+            fill.style.left = `${clampPercent2(start2)}%`;
+            fill.style.right = `${clampPercent2(100 - end)}%`;
+          };
+          minInput.addEventListener("input", updateFill);
+          maxInput.addEventListener("input", updateFill);
+          const handle = {
+            root: wrap,
+            min: minInput,
+            max: maxInput,
+            setValues(minValue, maxValue) {
+              minInput.value = String(minValue);
+              maxInput.value = String(maxValue);
+              updateFill();
+            },
+            refresh: updateFill
+          };
+          handle.refresh();
+          return handle;
+        }
+        switch(checked = false) {
+          const i = this.checkbox(checked);
+          i.classList.add("qmm-switch");
+          return i;
+        }
+        // Helpers “tableau simple” pour lister les items
+        table(headers, opts) {
+          const wrap = document.createElement("div");
+          wrap.className = "qmm-table-wrap";
+          if (opts?.minimal) wrap.classList.add("qmm-table-wrap--minimal");
+          const scroller = document.createElement("div");
+          scroller.className = "qmm-table-scroll";
+          if (opts?.maxHeight) scroller.style.maxHeight = opts.maxHeight;
+          wrap.appendChild(scroller);
+          const t = document.createElement("table");
+          t.className = "qmm-table";
+          if (opts?.minimal) t.classList.add("qmm-table--minimal");
+          if (opts?.compact) t.classList.add("qmm-table--compact");
+          if (opts?.fixed) t.style.tableLayout = "fixed";
+          const thead = document.createElement("thead");
+          const trh = document.createElement("tr");
+          headers.forEach((h) => {
+            const th = document.createElement("th");
+            if (typeof h === "string") {
+              th.textContent = h;
+            } else {
+              th.textContent = h.label ?? "";
+              if (h.align) th.classList.add(`is-${h.align}`);
+              if (h.width) th.style.width = h.width;
+            }
+            trh.appendChild(th);
+          });
+          thead.appendChild(trh);
+          const tbody = document.createElement("tbody");
+          t.append(thead, tbody);
+          scroller.appendChild(t);
+          return { root: wrap, tbody };
+        }
+        segmented(items, selected, onChange, opts) {
+          const root = document.createElement("div");
+          root.className = "qmm-seg";
+          if (opts?.fullWidth) root.classList.add("qmm-seg--full");
+          if (opts?.id) root.id = opts.id;
+          root.setAttribute("role", "radiogroup");
+          if (opts?.ariaLabel) root.setAttribute("aria-label", opts.ariaLabel);
+          const rail = document.createElement("div");
+          rail.className = "qmm-seg__indicator";
+          root.appendChild(rail);
+          const reduceMotionQuery = typeof window !== "undefined" && "matchMedia" in window ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+          const canAnimateIndicator = typeof rail.animate === "function";
+          if (canAnimateIndicator) {
+            rail.style.transition = "none";
+          }
+          let indicatorMetrics = null;
+          let indicatorAnimation = null;
+          const applyIndicatorStyles = (left, width) => {
+            rail.style.transform = `translate3d(${left}px,0,0)`;
+            rail.style.width = `${width}px`;
+          };
+          const cancelIndicatorAnimation = () => {
+            if (!indicatorAnimation) return;
+            indicatorAnimation.cancel();
+            indicatorAnimation = null;
+          };
+          let value = selected;
+          const btns = [];
+          const setSelected = (v, focus = false) => {
+            if (v === value) {
+              if (focus) {
+                const alreadyActive = btns.find((b) => b.dataset.value === v);
+                alreadyActive?.focus();
+              }
+              onChange?.(value);
+              return;
+            }
+            value = v;
+            for (const b of btns) {
+              const active2 = b.dataset.value === v;
+              b.setAttribute("aria-checked", active2 ? "true" : "false");
+              b.tabIndex = active2 ? 0 : -1;
+              b.classList.toggle("active", active2);
+              if (active2 && focus) b.focus();
+            }
+            moveIndicator(true);
+            onChange?.(value);
+          };
+          const moveIndicator = (animate = false) => {
+            const active2 = btns.find((b) => b.dataset.value === value);
+            if (!active2) return;
+            const i = btns.indexOf(active2);
+            const n = btns.length;
+            const cs = getComputedStyle(root);
+            const gap = parseFloat(cs.gap || cs.columnGap || "0") || 0;
+            const bL = parseFloat(cs.borderLeftWidth || "0") || 0;
+            const bR = parseFloat(cs.borderRightWidth || "0") || 0;
+            const rRoot = root.getBoundingClientRect();
+            const rBtn = active2.getBoundingClientRect();
+            let left = rBtn.left - rRoot.left - bL;
+            let width = rBtn.width;
+            const padW = rRoot.width - bL - bR;
+            if (n === 1) {
+              left = 0;
+              width = padW;
+            } else if (i === 0) {
+              const rightEdge = left + width + gap / 2;
+              left = 0;
+              width = rightEdge - left;
+            } else if (i === n - 1) {
+              left = left - gap / 2;
+              width = padW - left;
+            } else {
+              left = left - gap / 2;
+              width = width + gap;
+            }
+            const dpr = window.devicePixelRatio || 1;
+            const snap = (x) => Math.round(x * dpr) / dpr;
+            const targetLeft = snap(left);
+            const targetWidth = snap(width);
+            const previous = indicatorMetrics;
+            indicatorMetrics = { left: targetLeft, width: targetWidth };
+            const applyFinal = () => applyIndicatorStyles(targetLeft, targetWidth);
+            const shouldAnimate = animate && canAnimateIndicator && !reduceMotionQuery?.matches && previous != null && previous.width > 0 && Number.isFinite(previous.width) && targetWidth > 0 && Number.isFinite(targetWidth);
+            if (!shouldAnimate) {
+              cancelIndicatorAnimation();
+              applyFinal();
+              return;
+            }
+            cancelIndicatorAnimation();
+            applyIndicatorStyles(previous.left, previous.width);
+            indicatorAnimation = rail.animate(
+              [
+                {
+                  transform: `translate3d(${previous.left}px,0,0)`,
+                  width: `${previous.width}px`,
+                  opacity: 0.92,
+                  offset: 0
+                },
+                {
+                  transform: `translate3d(${targetLeft}px,0,0)`,
+                  width: `${targetWidth}px`,
+                  opacity: 1,
+                  offset: 1
+                }
+              ],
+              {
+                duration: 260,
+                easing: "cubic-bezier(.22,.7,.28,1)",
+                fill: "forwards"
+              }
+            );
+            const finalize = () => {
+              applyFinal();
+              indicatorAnimation = null;
+            };
+            indicatorAnimation.addEventListener("finish", finalize, { once: true });
+            indicatorAnimation.addEventListener("cancel", finalize, { once: true });
+          };
+          items.forEach(({ value: v, label: label2, disabled }) => {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.className = "qmm-seg__btn";
+            b.dataset.value = String(v);
+            b.setAttribute("role", "radio");
+            b.setAttribute("aria-checked", v === selected ? "true" : "false");
+            b.tabIndex = v === selected ? 0 : -1;
+            b.disabled = !!disabled;
+            const labelSpan = document.createElement("span");
+            labelSpan.className = "qmm-seg__btn-label";
+            labelSpan.textContent = label2;
+            b.appendChild(labelSpan);
+            b.addEventListener("click", () => {
+              if (!b.disabled) setSelected(v, false);
+            });
+            b.addEventListener("keydown", (e) => {
+              if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(e.key)) return;
+              e.preventDefault();
+              const idx = items.findIndex((it) => it.value === value);
+              if (e.key === "Home") {
+                setSelected(items[0].value, true);
+                return;
+              }
+              if (e.key === "End") {
+                setSelected(items[items.length - 1].value, true);
+                return;
+              }
+              const dir = e.key === "ArrowRight" ? 1 : -1;
+              let j = idx;
+              for (let k = 0; k < items.length; k++) {
+                j = (j + dir + items.length) % items.length;
+                if (!items[j].disabled) {
+                  setSelected(items[j].value, true);
+                  break;
+                }
+              }
+            });
+            btns.push(b);
+            root.appendChild(b);
+          });
+          const ro = window.ResizeObserver ? new ResizeObserver(() => moveIndicator(false)) : null;
+          if (ro) ro.observe(root);
+          window.addEventListener("resize", () => moveIndicator(false));
+          queueMicrotask(() => moveIndicator(false));
+          root.get = () => value;
+          root.set = (v) => setSelected(v, false);
+          return root;
+        }
+        radioGroup(name, options, selected, onChange) {
+          const wrap = el("div", "qmm-radio-group");
+          for (const { value, label: label2 } of options) {
+            const r = this.radio(name, value, selected === value);
+            const lab = document.createElement("label");
+            lab.className = "qmm-radio-label";
+            lab.appendChild(r);
+            lab.appendChild(document.createTextNode(label2));
+            r.onchange = () => {
+              if (r.checked) onChange(value);
+            };
+            wrap.appendChild(lab);
+          }
+          return wrap;
+        }
+        /** Bind LS: sauvegarde automatique via toStr/parse */
+        bindLS(key2, read, write, parse, toStr) {
+          try {
+            const raw = localStorage.getItem(key2);
+            if (raw != null) write(parse(raw));
+          } catch {
+          }
+          return { save: () => {
+            try {
+              localStorage.setItem(key2, toStr(read()));
+            } catch {
+            }
+          } };
+        }
+        /* -------------------------- split2 helper -------------------------- */
+        /** Crée un layout 2 colonnes (gauche/droite) en CSS Grid.
+         *  leftWidth: ex "200px" | "18rem" | "minmax(160px, 30%)" */
+        split2(leftWidth = "260px") {
+          const root = el("div", "qmm-split");
+          root.style.gridTemplateColumns = "minmax(160px, max-content) 1fr";
+          const left = el("div", "qmm-split-left");
+          const right = el("div", "qmm-split-right");
+          root.appendChild(left);
+          root.appendChild(right);
+          return { root, left, right };
+        }
+        /* -------------------------- VTabs factory -------------------------- */
+        /** Crée des “tabs verticaux” génériques (liste sélectionnable + filtre). */
+        vtabs(options = {}) {
+          return new VTabs(options);
+        }
+        hotkeyButton(initial, onChange, opts) {
+          const emptyLabel = opts?.emptyLabel ?? "None";
+          const listeningLabel = opts?.listeningLabel ?? "Press a key\u2026";
+          const clearable = opts?.clearable ?? true;
+          let hk = initial ?? null;
+          let recording = false;
+          let recordingTimeout = null;
+          if (opts?.storageKey) {
+            try {
+              hk = stringToHotkey(localStorage.getItem(opts.storageKey) || "") ?? initial ?? null;
+            } catch {
+            }
+          }
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "qmm-hotkey";
+          btn.setAttribute("aria-live", "polite");
+          const render = () => {
+            btn.classList.toggle("is-recording", recording);
+            btn.classList.toggle("is-empty", !hk);
+            btn.classList.toggle("is-assigned", !recording && !!hk);
+            if (recording) {
+              btn.textContent = listeningLabel;
+              btn.title = "Listening\u2026 press a key (Esc to cancel, Backspace to clear)";
+            } else if (!hk) {
+              btn.textContent = emptyLabel;
+              btn.title = "No key assigned";
+            } else {
+              btn.textContent = hotkeyToPretty(hk);
+              btn.title = "Click to rebind \u2022 Right-click to clear";
+            }
+          };
+          const applyHotkey = (value, skipRender = false) => {
+            hk = value ? { ...value } : null;
+            if (!skipRender) render();
+          };
+          btn.refreshHotkey = (value) => {
+            applyHotkey(value);
+          };
+          const stopRecording = () => {
+            if (!recording) return;
+            recording = false;
+            if (activeHotkeyRecorder === stopRecording) activeHotkeyRecorder = null;
+            window.removeEventListener("keydown", handleKeyDown, true);
+            document.removeEventListener("pointerdown", handlePointerDown2, true);
+            window.removeEventListener("blur", handleWindowBlur);
+            if (recordingTimeout !== null) {
+              clearTimeout(recordingTimeout);
+              recordingTimeout = null;
+            }
+            endKeybindCapture();
+            render();
+          };
+          const startRecording = () => {
+            if (recording) return;
+            activeHotkeyRecorder?.();
+            recording = true;
+            activeHotkeyRecorder = stopRecording;
+            beginKeybindCapture();
+            window.addEventListener("keydown", handleKeyDown, true);
+            document.addEventListener("pointerdown", handlePointerDown2, true);
+            window.addEventListener("blur", handleWindowBlur);
+            recordingTimeout = window.setTimeout(stopRecording, HOTKEY_RECORDING_TIMEOUT_MS);
+            render();
+          };
+          const save = () => {
+            if (opts?.storageKey) {
+              const str = hotkeyToString(hk);
+              try {
+                if (str) localStorage.setItem(opts.storageKey, str);
+                else localStorage.removeItem(opts.storageKey);
+              } catch {
+              }
+            }
+            onChange?.(hk, opts?.storageKey ? hotkeyToString(hk) : void 0);
+          };
+          const handlePointerDown2 = (e) => {
+            if (e.target instanceof Node && btn.contains(e.target)) return;
+            stopRecording();
+          };
+          const handleWindowBlur = (e) => {
+            if (e.target !== window) return;
+            stopRecording();
+          };
+          function handleKeyDown(e) {
+            if (!recording) return;
+            if (!btn.isConnected) {
+              stopRecording();
+              return;
+            }
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            if (e.key === "Escape") {
+              stopRecording();
+              return;
+            }
+            if ((e.key === "Backspace" || e.key === "Delete") && clearable) {
+              applyHotkey(null, true);
+              save();
+              stopRecording();
+              return;
+            }
+            const next = eventToHotkey(e, opts?.allowModifierOnly ?? false);
+            if (!next) {
+              return;
+            }
+            applyHotkey(next, true);
+            save();
+            stopRecording();
+          }
+          btn.addEventListener("click", (e) => {
+            e.preventDefault();
+            if (recording) {
+              stopRecording();
+              return;
+            }
+            startRecording();
+            btn.focus();
+          });
+          if (clearable) {
+            btn.addEventListener("contextmenu", (e) => {
+              e.preventDefault();
+              if (hk) {
+                applyHotkey(null, true);
+                save();
+                render();
+              }
+            });
+          }
+          render();
+          return btn;
+        }
+        // ---------- internes ----------
+        createTabView(id, def) {
+          const b = document.createElement("button");
+          b.className = "qmm-tab";
+          b.dataset.id = id;
+          b.innerHTML = `<span class="label">${escapeHtml(def.title)}</span><span class="badge" style="display:none"></span>`;
+          const badgeEl = b.querySelector(".badge");
+          def.btn = b;
+          def.badge = badgeEl;
+          b.onclick = () => this.switchTo(id);
+          this.tabBar.appendChild(b);
+          const view = el("div", "qmm-view");
+          view.dataset.id = id;
+          def.view = view;
+          this.views.appendChild(view);
+          try {
+            def.render(view, this);
+          } catch (e) {
+            view.textContent = String(e);
+          }
+          if (!this.currentId) this.switchTo(id);
+        }
+        persistActive() {
+          if (!this.currentId) return;
+          try {
+            writeAriesPath(`menu.activeTabs.${this.menuId}`, this.currentId);
+            try {
+              localStorage.removeItem(this.lsKeyActive);
+            } catch {
+            }
+          } catch {
+          }
+        }
+        restoreActive() {
+          let id = null;
+          try {
+            const stored = readAriesPath(`menu.activeTabs.${this.menuId}`);
+            if (typeof stored === "string" && stored) id = stored;
+          } catch {
+          }
+          try {
+            id = localStorage.getItem(this.lsKeyActive);
+          } catch {
+          }
+          if (id && this.tabs.has(id)) this.switchTo(id);
+          else if (this.tabs.size) this.switchTo(this.firstTabId());
+        }
+        updateTabsBarVisibility() {
+          if (!this.tabBar || !this.root) return;
+          const hasTabs = this.tabs.size > 0;
+          if (hasTabs) {
+            if (!this.tabBar.parentElement) {
+              this.root.insertBefore(this.tabBar, this.views);
+            }
+            this.tabBar.style.display = "flex";
+            this.root.classList.remove("qmm-no-tabs");
+          } else {
+            if (this.tabBar.parentElement) {
+              this.tabBar.parentElement.removeChild(this.tabBar);
+            }
+            this.root.classList.add("qmm-no-tabs");
+          }
+        }
+        ensureStyles() {
+          if (document.getElementById("__qmm_css__")) return;
+          const css5 = `
+    /* ================= Modern UI for qmm ================= */
+.qmm{
+  --qmm-bg:        #0a0e14;
+  --qmm-bg-soft:   #080c12;
+  --qmm-panel:     rgba(10,14,20,0.96);
+  --qmm-border:    rgba(255,255,255,0.14);
+  --qmm-border-2:  rgba(255,255,255,0.08);
+  --qmm-accent:    #5eead4;
+  --qmm-accent-2:  #2dd4bf;
+  --qmm-text:      #e7eef7;
+  --qmm-text-dim:  #b9c3cf;
+  --qmm-shadow:    0 18px 44px rgba(0,0,0,.45);
+  --qmm-blur:      10px;
+
+  display:flex; flex-direction:column; gap:10px; color:var(--qmm-text);
+}
+.qmm-compact{ gap:6px }
+
+/* ---------- Tabs (pill nav) ---------- */
+.qmm-tabs{
+  display:flex; gap:4px; flex-wrap:wrap; align-items:center;
+  padding:8px 10px; position:relative; isolation:isolate;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  background:linear-gradient(120deg, rgba(22,28,40,0.9), rgba(12,17,26,0.92));
+  border-top-left-radius:18px; border-top-right-radius:18px;
+}
+.qmm-no-tabs .qmm-views{ margin-top:0; border-radius:18px; }
+
+.qmm-tab{
+  flex:1 1 0; min-width:0; cursor:pointer;
+  display:inline-flex; justify-content:center; align-items:center; gap:8px;
+  padding:8px 12px; color:#c9d4e6;
+  background:transparent; border:1px solid transparent;
+  border-radius:12px;
+  position:relative; margin:0;
+  font-size:12px;
+  transition:background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.qmm-compact .qmm-tab{ padding:6px 10px }
+.qmm-tab:hover{ background:rgba(94,234,212,0.08); color:#e7eef7; }
+.qmm-tab:active{ transform:translateY(1px) }
+.qmm-tab:focus-visible{ outline:2px solid var(--qmm-accent); outline-offset:2px; border-radius:12px }
+
+.qmm-tab .badge{
+  font-size:11px; line-height:1; padding:2px 6px; border-radius:999px;
+  background:rgba(94,234,212,0.12); border:1px solid rgba(94,234,212,0.25);
+  color:#5eead4;
+}
+
+.qmm-tab.active{
+  background:rgba(94,234,212,0.18);
+  border-color:rgba(94,234,212,0.35);
+  color:#ecfdf5;
+}
+
+/* ---------- Views panel ---------- */
+.qmm-views{
+  border:1px solid rgba(255,255,255,0.14); border-radius:18px; padding:14px;
+  background:linear-gradient(160deg, rgba(15,20,30,0.95) 0%, rgba(10,14,20,0.95) 60%, rgba(8,12,18,0.96) 100%);
+  backdrop-filter:blur(10px);
+  display:flex; flex-direction:column;
+  min-width:0; min-height:0; overflow:auto; box-shadow:0 18px 44px rgba(0,0,0,.45);
+  scrollbar-width:thin;
+  scrollbar-color:rgba(94,234,212,0.20) rgba(255,255,255,0.03);
+}
+.qmm-views::-webkit-scrollbar{ width:8px; }
+.qmm-views::-webkit-scrollbar-track{ background:rgba(255,255,255,0.03); border-radius:4px; }
+.qmm-views::-webkit-scrollbar-thumb{ background:rgba(94,234,212,0.20); border-radius:4px; }
+.qmm-views::-webkit-scrollbar-thumb:hover{ background:rgba(94,234,212,0.35); }
+.qmm-compact .qmm-views{ padding:8px }
+.qmm-tabs + .qmm-views{ margin-top:0; border-top:none; border-top-left-radius:0; border-top-right-radius:0; }
+
+.qmm-view{ display:none; min-width:0; min-height:0; }
+.qmm-view.active{ display:block; }
+
+/* ---------- Basic controls ---------- */
+.qmm-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:6px 0 }
+.qmm-section{ margin-top:8px }
+.qmm-section-title{ font-weight:650; margin:2px 0 8px 0; color:var(--qmm-text) }
+
+.qmm-label{ opacity:.9 }
+.qmm-val{ min-width:24px; text-align:center }
+
+/* Buttons */
+.qmm-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:8px 14px;
+  border-radius:10px;
+  border:1px solid var(--qmm-border);
+  background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+  color:var(--qmm-text);
+  font-weight:600;
+  font-size:13px;
+  line-height:1.2;
+  cursor:pointer;
+  user-select:none;
+  transition:background 120ms ease, border-color 120ms ease, transform 100ms ease, box-shadow 120ms ease, color 120ms ease;
+}
+.qmm-compact .qmm-btn{ padding:6px 10px }
+.qmm-btn:hover{ background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04)); border-color:rgba(255,255,255,0.24) }
+.qmm-btn:active{ transform:translateY(1px) }
+.qmm-btn:focus-visible{ outline:2px solid var(--qmm-accent); outline-offset:2px; }
+.qmm-btn:disabled,
+.qmm-btn.is-disabled{
+  opacity:.55;
+  cursor:not-allowed;
+  filter:saturate(.6);
+  box-shadow:none;
+}
+.qmm-btn--full{ width:100%; justify-content:center; }
+.qmm-btn--sm{ padding:6px 10px; font-size:12px; border-radius:8px; }
+.qmm-btn--icon{ padding:6px; width:34px; height:34px; border-radius:50%; gap:0; }
+.qmm-btn__icon{ display:inline-flex; align-items:center; justify-content:center; font-size:1.1em; }
+.qmm-btn__icon.is-right{ order:2; }
+.qmm-btn__icon.is-left{ order:0; }
+
+/* Button variants */
+.qmm-btn--primary,
+.qmm-btn.qmm-primary{
+  background:linear-gradient(180deg, rgba(94,234,212,.32), rgba(45,212,191,.14));
+  border-color:rgba(94,234,212,0.45);
+  box-shadow:0 4px 14px rgba(94,234,212,.18);
+}
+.qmm-btn--primary:hover,
+.qmm-btn.qmm-primary:hover{ border-color:rgba(94,234,212,0.65); background:linear-gradient(180deg, rgba(94,234,212,.42), rgba(45,212,191,.22)); }
+.qmm-btn--secondary{
+  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.01));
+}
+.qmm-btn--danger,
+.qmm-btn.qmm-danger{
+  background:linear-gradient(180deg, rgba(255,86,86,.32), rgba(255,86,86,.14));
+  border-color:#ff6a6a55;
+  box-shadow:0 4px 14px rgba(255,86,86,.25);
+}
+.qmm-btn--ghost{ background:transparent; border-color:transparent; }
+.qmm-btn--ghost:hover{ background:rgba(255,255,255,.06); border-color:#ffffff2a; }
+.qmm-btn.active{
+  background:rgba(94,234,212,0.14);
+  border-color:rgba(94,234,212,0.40);
+  box-shadow:inset 0 0 0 1px rgba(94,234,212,0.20);
+}
+
+.qmm-flex{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+
+.qmm-form-grid{ width:100%; }
+
+.qmm-form-row{ width:100%; }
+.qmm-form-row.is-wrap{ grid-template-columns:1fr; }
+.qmm-form-row__label{ font-weight:600; opacity:.9; }
+
+.qmm-card{
+  display:grid;
+  gap:12px;
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:14px;
+  padding:14px;
+  background:linear-gradient(160deg, rgba(18,24,34,0.95), rgba(12,17,26,0.96));
+  backdrop-filter:blur(10px);
+  box-shadow:0 8px 24px rgba(0,0,0,.35);
+  width:100%;
+  transition:border-color 120ms ease, box-shadow 120ms ease;
+}
+.qmm-card.is-center{ text-align:center; align-items:center; }
+.qmm-card.is-stretch{ align-items:stretch; }
+.qmm-card__header{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:space-between;
+}
+.qmm-card__header.is-compact{ gap:6px; }
+.qmm-card__icon{ font-size:18px; }
+.qmm-card__title{ font-weight:700; font-size:14px; letter-spacing:.01em; }
+.qmm-card__subtitle{ font-size:12px; opacity:.75; flex-basis:100%; }
+.qmm-card__actions{ display:flex; gap:6px; margin-left:auto; }
+.qmm-card__body{ display:grid; gap:10px; }
+.qmm-card[data-tone="muted"]{
+  background:rgba(10,14,20,.92);
+  border-color:rgba(255,255,255,0.08);
+  box-shadow:none;
+}
+.qmm-card[data-tone="accent"]{
+  border-color:rgba(94,234,212,0.45);
+  box-shadow:0 10px 26px rgba(94,234,212,.15);
+}
+
+.qmm .stats-collapse-toggle{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:6px 12px;
+  min-height:32px;
+  border-radius:999px;
+  border:1px solid rgba(94,234,212,.40);
+  background:linear-gradient(135deg, rgba(94,234,212,.14), rgba(15,30,30,.18));
+  color:rgba(220,240,236,.92);
+  font-size:12px;
+  font-weight:600;
+  letter-spacing:.01em;
+  text-transform:uppercase;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 10px 24px rgba(9,13,27,.28);
+  transition:background .26s ease, border-color .26s ease, box-shadow .26s ease, color .26s ease, transform .16s ease;
+}
+.qmm .stats-collapse-toggle:hover{
+  background:linear-gradient(135deg, rgba(94,234,212,.22), rgba(20,100,90,.22));
+  border-color:rgba(94,234,212,.55);
+  color:#fff;
+  box-shadow:0 14px 30px rgba(45,212,191,.25), inset 0 1px 0 rgba(255,255,255,.18);
+}
+.qmm .stats-collapse-toggle:active{
+  transform:translateY(1px) scale(.99);
+}
+.qmm-card--collapsible[data-collapsed="true"] .stats-collapse-toggle{
+  background:linear-gradient(135deg, rgba(94,234,212,.08), rgba(8,30,28,.12));
+  border-color:rgba(94,234,212,.25);
+  color:rgba(196,240,236,.85);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1), 0 6px 18px rgba(9,13,27,.22);
+}
+.qmm-card--collapsible[data-collapsed="false"] .stats-collapse-toggle{
+  background:linear-gradient(135deg, rgba(94,234,212,.30), rgba(45,212,191,.25));
+  border-color:rgba(94,234,212,.72);
+  color:#fff;
+  box-shadow:0 16px 32px rgba(45,212,191,.28), inset 0 1px 0 rgba(255,255,255,.22);
+}
+.qmm .stats-collapse-toggle__icon{
+  width:16px;
+  height:16px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  color:inherit;
+  transition:transform .24s ease;
+}
+.qmm .stats-collapse-toggle__icon::before{
+  content:"";
+  position:absolute;
+  width:8px;
+  height:8px;
+  border-right:2px solid currentColor;
+  border-bottom:2px solid currentColor;
+  transform:rotate(45deg);
+  transition:transform .24s ease;
+}
+.qmm .stats-collapse-toggle__label{
+  color:inherit;
+  font-size:11px;
+  letter-spacing:.08em;
+  font-weight:700;
+}
+.qmm-card--collapsible[data-collapsed="false"] .stats-collapse-toggle__icon::before{
+  transform:rotate(-135deg);
+}
+.qmm-card--collapsible[data-collapsed="true"] .stats-collapse-toggle__icon::before{
+  transform:rotate(45deg);
+}
+
+.qmm-chip-toggle{
+  display:inline-flex;
+  align-items:stretch;
+  border-radius:999px;
+  border:1px solid #ffffff1f;
+  background:rgba(255,255,255,.05);
+  cursor:pointer;
+  transition:border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .1s ease;
+}
+.qmm-chip-toggle input{ display:none; }
+.qmm-chip-toggle__face{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 12px;
+  border-radius:999px;
+}
+.qmm-chip-toggle__icon{ font-size:14px; }
+.qmm-chip-toggle__label{ font-weight:600; }
+.qmm-chip-toggle__desc{ font-size:12px; opacity:.75; }
+.qmm-chip-toggle__badge{ font-size:11px; padding:2px 6px; border-radius:999px; background:#ffffff1a; border:1px solid #ffffff22; }
+.qmm-chip-toggle:hover{ border-color:rgba(94,234,212,0.30); background:rgba(94,234,212,0.09); }
+.qmm-chip-toggle input:checked + .qmm-chip-toggle__face{
+  background:linear-gradient(180deg, rgba(94,234,212,.22), rgba(94,234,212,.08));
+  box-shadow:0 0 0 1px rgba(94,234,212,0.35) inset, 0 6px 18px rgba(94,234,212,.15);
+}
+
+.qmm-error{
+  border:1px solid #ff6a6a55;
+  background:rgba(120,20,20,.35);
+  border-radius:10px;
+  color:#ffdada;
+  padding:10px;
+  font-size:13px;
+  line-height:1.4;
+}
+
+.qmm-select{
+  background-image:linear-gradient(45deg, transparent 50%, #ffffff80 50%), linear-gradient(135deg, #ffffff80 50%, transparent 50%), linear-gradient(90deg, transparent 50%, rgba(255,255,255,.1) 50%);
+  background-position:calc(100% - 18px) 50%, calc(100% - 13px) 50%, 100% 0;
+  background-size:5px 5px, 5px 5px, 2.5rem 2.5rem;
+  background-repeat:no-repeat;
+  padding-right:34px;
+}
+
+.qmm-vlist-wrap{ display:flex; flex-direction:column; width:100%; }
+
+/* Inputs */
+.qmm-input{
+  min-width:90px; background:rgba(255,255,255,0.04); color:#fff;
+  border:1px solid rgba(255,255,255,0.12); border-radius:10px;
+  padding:8px 10px; box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+  transition:border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+.qmm-input::placeholder{ color:#cbd6e780 }
+.qmm-input:focus{ outline:none; border-color:var(--qmm-accent); background:rgba(8,12,20,0.9); box-shadow:0 0 0 2px rgba(94,234,212,0.20) }
+
+/* Number input + spinner (unchanged API) */
+.qmm-input-number{ display:inline-flex; align-items:center; gap:6px }
+.qmm-input-number-input{ width:70px; text-align:center; padding-right:8px }
+.qmm-spin{ display:inline-flex; flex-direction:column; gap:2px }
+.qmm-step{
+  width:22px; height:16px; font-size:11px; line-height:1;
+  display:inline-flex; align-items:center; justify-content:center;
+  border-radius:6px; border:1px solid var(--qmm-border);
+  background:rgba(255,255,255,.08); color:#fff; cursor:pointer; user-select:none;
+  transition:background .18s ease, border-color .18s ease, transform .08s ease;
+}
+.qmm-step:hover{ background:#ffffff18; border-color:#ffffff40 }
+.qmm-step:active{ transform:translateY(1px) }
+
+/* Switch (checkbox) */
+.qmm-switch{
+  appearance:none; width:42px; height:24px; background:#6c7488aa; border-radius:999px;
+  position:relative; outline:none; cursor:pointer; transition:background .18s ease, box-shadow .18s ease;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12);
+}
+.qmm-switch::before{
+  content:""; position:absolute; top:2px; left:2px; width:20px; height:20px;
+  background:#fff; border-radius:50%; transition:transform .2s ease;
+  box-shadow:0 2px 8px rgba(0,0,0,.35);
+}
+.qmm-switch:checked{ background:linear-gradient(180deg, rgba(94,234,212,.90), rgba(45,212,191,.65)) }
+.qmm-switch:checked::before{ transform:translateX(18px) }
+.qmm-switch:focus-visible{ outline:2px solid var(--qmm-accent); outline-offset:2px }
+
+/* Checkbox & radio (native inputs skinned lightly) */
+.qmm-check, .qmm-radio{ transform:scale(1.1); accent-color: var(--qmm-accent) }
+
+/* Slider */
+.qmm-range{
+  width:180px; appearance:none; background:transparent; height:22px;
+}
+.qmm-range:focus{ outline:none }
+.qmm-range::-webkit-slider-runnable-track{
+  height:6px; background:linear-gradient(90deg, var(--qmm-accent), rgba(94,234,212,0.25));
+  border-radius:999px; box-shadow:inset 0 1px 0 rgba(255,255,255,.14);
+}
+.qmm-range::-moz-range-track{
+  height:6px; background:linear-gradient(90deg, var(--qmm-accent), rgba(94,234,212,0.25));
+  border-radius:999px; box-shadow:inset 0 1px 0 rgba(255,255,255,.14);
+}
+.qmm-range::-webkit-slider-thumb{
+  appearance:none; width:16px; height:16px; border-radius:50%; margin-top:-5px;
+  background:#fff; box-shadow:0 2px 10px rgba(0,0,0,.35), 0 0 0 2px #ffffff66 inset;
+  transition:transform .1s ease;
+}
+.qmm-range:active::-webkit-slider-thumb{ transform:scale(1.04) }
+.qmm-range::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:#fff; border:none;
+  box-shadow:0 2px 10px rgba(0,0,0,.35), 0 0 0 2px #ffffff66 inset;
+}
+
+.qmm-range-dual{
+  position:relative;
+  width:100%;
+  padding:18px 0 10px;
+}
+.qmm-range-dual-track{
+  position:absolute;
+  left:0;
+  right:0;
+  top:50%;
+  transform:translateY(-50%);
+  height:8px;
+  border-radius:999px;
+  background:linear-gradient(90deg, rgba(8,19,33,.8), rgba(27,43,68,.9));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08), inset 0 0 0 1px rgba(94,234,212,.08);
+}
+.qmm-range-dual-fill{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  height:8px;
+  border-radius:999px;
+  background:linear-gradient(90deg, var(--qmm-accent), rgba(94,234,212,0.55));
+  box-shadow:0 4px 14px rgba(94,234,212,.22);
+  transition:left .12s ease, right .12s ease;
+}
+.qmm-range-dual-input{
+  position:absolute;
+  left:0;
+  right:0;
+  top:50%;
+  transform:translateY(-50%);
+  width:100%;
+  height:28px;
+  margin:0;
+  background:transparent;
+  pointer-events:none;
+}
+.qmm-range-dual-input::-webkit-slider-runnable-track{ background:none; }
+.qmm-range-dual-input::-moz-range-track{ background:none; }
+.qmm-range-dual-input::-webkit-slider-thumb{
+  pointer-events:auto;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:linear-gradient(145deg, #fff, #d6f5ef);
+  border:2px solid rgba(94,234,212,.65);
+  box-shadow:0 4px 12px rgba(0,0,0,.35);
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+.qmm-range-dual-input:active::-webkit-slider-thumb,
+.qmm-range-dual-input:focus-visible::-webkit-slider-thumb{
+  transform:scale(1.05);
+  box-shadow:0 6px 16px rgba(0,0,0,.4);
+}
+.qmm-range-dual-input::-moz-range-thumb{
+  pointer-events:auto;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:linear-gradient(145deg, #fff, #d6f5ef);
+  border:2px solid rgba(94,234,212,.65);
+  box-shadow:0 4px 12px rgba(0,0,0,.35);
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+.qmm-range-dual-input:active::-moz-range-thumb,
+.qmm-range-dual-input:focus-visible::-moz-range-thumb{
+  transform:scale(1.05);
+  box-shadow:0 6px 16px rgba(0,0,0,.4);
+}
+.qmm-range-dual-input--min{ z-index:2; }
+.qmm-range-dual-input--max{ z-index:3; }
+.qmm-range-dual-bubble{
+  position:absolute;
+  top:14px;
+  transform:translate(-50%, -100%);
+  padding:4px 8px;
+  border-radius:6px;
+  font-size:11px;
+  line-height:1;
+  font-weight:600;
+  color:#d6f5ef;
+  background:rgba(17,28,46,.9);
+  box-shadow:0 4px 14px rgba(0,0,0,.35);
+  pointer-events:none;
+  transition:opacity .12s ease, transform .12s ease;
+  opacity:.85;
+}
+.qmm-range-dual-bubble::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:-4px;
+  width:8px;
+  height:8px;
+  background:inherit;
+  transform:translateX(-50%) rotate(45deg);
+  border-radius:2px;
+  box-shadow:0 4px 14px rgba(0,0,0,.35);
+}
+.qmm-range-dual-input--min:focus-visible + .qmm-range-dual-bubble--min,
+.qmm-range-dual-input--max:focus-visible + .qmm-range-dual-bubble--max,
+.qmm-range-dual-input--min:active + .qmm-range-dual-bubble--min,
+.qmm-range-dual-input--max:active + .qmm-range-dual-bubble--max{
+  opacity:1;
+  transform:translate(-50%, -110%) scale(1.02);
+}
+
+/* ---------- Minimal table ---------- */
+/* container */
+.qmm-table-wrap--minimal{
+  border:1px solid #263040; border-radius:8px; background:#0b0f14; box-shadow:none;
+}
+/* scroller (height cap) */
+.qmm-table-scroll{
+  overflow:auto; max-height:44vh; /* override via opts.maxHeight */
+}
+
+/* base */
+.qmm-table--minimal{
+  width:100%;
+  border-collapse:collapse;
+  background:transparent;
+  font-size:13px; line-height:1.35; color:var(--qmm-text, #cdd6e3);
+}
+
+/* header */
+.qmm-table--minimal thead th{
+  position:sticky; top:0; z-index:1;
+  text-align:left; font-weight:600;
+  padding:8px 10px;
+  color:#cbd5e1; background:#0f1318;
+  border-bottom:1px solid #263040;
+  text-transform:none; letter-spacing:0;
+}
+.qmm-table--minimal thead th.is-center { text-align: center; }
+.qmm-table--minimal thead th.is-left   { text-align: left; }   /* d\xE9j\xE0 pr\xE9sent, ok */
+.qmm-table--minimal thead th.is-right  { text-align: right; }
+.qmm-table--minimal thead th,
+.qmm-table--minimal td { vertical-align: middle; }
+
+/* cells */
+.qmm-table--minimal td{
+  padding:8px 10px; border-bottom:1px solid #1f2937; vertical-align:middle;
+}
+.qmm-table--minimal tbody tr:hover{ background:#0f1824; }
+
+/* compact variant */
+.qmm-table--compact thead th,
+.qmm-table--compact td{ padding:6px 8px; font-size:12px }
+
+/* utils */
+.qmm-table--minimal td.is-num{ text-align:right; font-variant-numeric:tabular-nums }
+.qmm-table--minimal td.is-center{ text-align:center }
+.qmm-ellipsis{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.qmm-prewrap{ white-space:pre-wrap; word-break:break-word }
+
+
+/* ---------- Split panels ---------- */
+.qmm-split{
+  display:grid; gap:12px;
+  grid-template-columns:minmax(180px,260px) minmax(0,1fr);
+  align-items:start;
+}
+.qmm-split-left{ display:flex; flex-direction:column; gap:10px }
+.qmm-split-right{
+  border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:12px;
+  display:flex; flex-direction:column; gap:12px;
+  background:linear-gradient(160deg, rgba(15,20,30,0.95), rgba(10,14,20,0.95));
+  backdrop-filter:blur(10px);
+  box-shadow:0 8px 24px rgba(0,0,0,.35);
+}
+
+/* ---------- VTabs (vertical list + filter) ---------- */
+.qmm-vtabs{ display:flex; flex-direction:column; gap:8px; min-width:0 }
+.qmm-vtabs .filter{ display:block }
+.qmm-vtabs .filter input{ width:100% }
+
+.qmm-vlist{
+  flex:0 0 auto; overflow:visible;
+  border:1px solid var(--qmm-border); border-radius:12px; padding:6px;
+  background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.qmm-vtab{
+  width:100%; text-align:left; cursor:pointer;
+  display:grid; grid-template-columns:28px 1fr auto; align-items:center; gap:10px;
+  padding:8px 10px; border-radius:10px; border:1px solid #ffffff18;
+  background:rgba(255,255,255,.03); color:inherit;
+  transition:background .18s ease, border-color .18s ease, transform .08s ease;
+}
+.qmm-vtab:hover{ background:rgba(255,255,255,.07); border-color:#ffffff34 }
+.qmm-vtab:active{ transform:translateY(1px) }
+.qmm-vtab.active{
+  background:linear-gradient(180deg, rgba(94,234,212,.16), rgba(94,234,212,.07));
+  border-color:rgba(94,234,212,0.35);
+  box-shadow:0 1px 14px rgba(94,234,212,.14) inset;
+}
+
+.qmm-dot{ width:10px; height:10px; border-radius:50%; justify-self:center; box-shadow:0 0 0 1px #0006 inset }
+.qmm-chip{ display:flex; align-items:center; gap:8px; min-width:0 }
+.qmm-chip img{
+  width:20px; height:20px; border-radius:50%; object-fit:cover; border:1px solid #4446;
+  box-shadow:0 1px 0 rgba(255,255,255,.08) inset;
+}
+.qmm-chip .t{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.qmm-tag{
+  font-size:11px; line-height:1; padding:3px 7px; border-radius:999px;
+  background:#ffffff14; border:1px solid #ffffff26;
+}
+
+/* ---------- Small helpers (optional) ---------- */
+  .qmm .qmm-help{ font-size:12px; color:var(--qmm-text-dim) }
+  .qmm .qmm-sep{ height:1px; background:linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent); width:100%; border:none; }
+
+/* drag handle */
+.qmm-grab {
+  margin-left:auto; opacity:.8; cursor:grab; user-select:none;
+  display:grid; grid-template-columns:repeat(2, 3px); grid-template-rows:repeat(3, 3px);
+  gap:2px; padding:4px 3px; align-content:center; justify-content:center;
+}
+.qmm-grab:active { cursor:grabbing; }
+.qmm-grab-dot {
+  width:3px; height:3px; border-radius:999px;
+  background:rgba(255,255,255,.82); box-shadow:0 0 0 1px #0005 inset;
+}
+.qmm-dragging { opacity:.6; }
+
+/* items animables */
+.qmm-team-item {
+  will-change: transform;
+  transition: transform 160ms ease;
+}
+.qmm-team-item.drag-ghost {
+  opacity: .4;
+}
+
+.qmm.qmm-alt-drag { cursor: grab; }
+.qmm.qmm-alt-drag:active { cursor: grabbing; }
+
+.qws-win.is-hidden { display: none !important; }
+
+.qmm-hotkey{
+  cursor:pointer; user-select:none;
+  border:1px solid var(--qmm-border); border-radius:10px;
+  padding:8px 12px;
+  background:linear-gradient(180deg, #ffffff10, #ffffff06);
+  color:var(--qmm-text);
+  box-shadow:0 1px 0 #000 inset, 0 1px 16px rgba(0,0,0,.18);
+  transition:
+    background .18s ease,
+    border-color .18s ease,
+    box-shadow .18s ease,
+    transform .08s ease,
+    color .18s ease;
+}
+.qmm-hotkey{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  white-space:nowrap;
+  width: var(--qmm-hotkey-w, 180px); 
+}
+.qmm-hotkey:hover{ background:linear-gradient(180deg, #ffffff16, #ffffff08); border-color:#ffffff40 }
+.qmm-hotkey:active{ transform:translateY(1px) }
+
+.qmm-hotkey:focus-visible{ outline:none }
+
+.qmm-hotkey.is-empty{
+  color:var(--qmm-text-dim);
+  font-style:italic;
+}
+
+.qmm-hotkey.is-assigned{
+  border-color:rgba(94,234,212,0.40);
+  box-shadow:0 1px 0 #000 inset, 0 1px 16px rgba(0,0,0,.18), 0 0 0 2px rgba(94,234,212,0.20);
+}
+
+.qmm-hotkey.is-recording{
+  outline:2px solid var(--qmm-accent);
+  outline-offset:2px;
+  border-color:var(--qmm-accent);
+  background:linear-gradient(180deg, rgba(94,234,212,.22), rgba(94,234,212,.08));
+  animation:qmm-hotkey-breathe 1.2s ease-in-out infinite;
+}
+
+@keyframes qmm-hotkey-breathe{
+  0%   { box-shadow: 0 0 0 0 rgba(94,234,212,.50), 0 1px 16px rgba(0,0,0,.25); }
+  60%  { box-shadow: 0 0 0 12px rgba(94,234,212,0), 0 1px 16px rgba(0,0,0,.25); }
+  100% { box-shadow: 0 0 0 0 rgba(94,234,212,0),  0 1px 16px rgba(0,0,0,.25); }
+}
+
+/* ---------- Segmented (minimal, modern) ---------- */
+.qmm-seg{
+  --seg-pad: 8px;
+  --seg-radius: 999px;
+  --seg-stroke: 1.2px;      /* \xE9paisseur du trait */
+  --seg-nudge-x: 0px;       /* micro-ajustements optionnels */
+  --seg-nudge-w: 0px;
+  --seg-fill: rgba(94,234,212,.07);
+  --seg-stroke-color: rgba(94,234,212,.55);
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--seg-pad);
+  border-radius: var(--seg-radius);
+  background: var(--qmm-bg-soft);
+  border: 1px solid var(--qmm-border-2);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+  overflow: hidden;
+  background-clip: padding-box; /* important pour que le fond ne passe pas sous la bordure */
+}
+
+.qmm-seg--full{ display:flex; width:100% }
+
+.qmm-seg__btn{
+  position: relative;
+  z-index: 1;
+  appearance: none; background: transparent; border: 0; cursor: pointer;
+  padding: 8px 14px;
+  border-radius: 999px;
+  color: var(--qmm-text-dim);
+  font: inherit; line-height: 1; white-space: nowrap;
+  transition: color .15s ease, transform .06s ease;
+}
+.qmm-seg__btn-label{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: inherit;
+}
+.qmm-compact .qmm-seg__btn{ padding: 6px 10px }
+.qmm-seg__btn:hover{ color: var(--qmm-text); }
+.qmm-seg__btn.active{ color:#fff; font-weight:600; }
+.qmm-seg__btn:active{ transform: translateY(1px); }
+.qmm-seg__btn[disabled]{ opacity:.5; cursor:not-allowed; }
+
+.qmm-seg__indicator{
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  width: 40px;                      /* maj en JS */
+  border-radius: inherit;
+  background: var(--seg-fill);              /* \u2B05\uFE0F applique la couleur */
+  outline: var(--seg-stroke,1.2px) solid var(--seg-stroke-color);
+  outline-offset: calc(-1 * var(--seg-stroke));
+
+  box-shadow: 0 1px 4px rgba(94,234,212,.08);
+  transform-origin: left center;
+  will-change: transform, width, opacity;
+  transition: transform .18s cubic-bezier(.2,.8,.2,1),
+              width .18s cubic-bezier(.2,.8,.2,1),
+              opacity .18s ease-out;
+  pointer-events: none;
+}
+
+/* Accessibilit\xE9 */
+@media (prefers-reduced-motion: reduce){
+  .qmm-seg__indicator, .qmm-seg__btn { transition: none; }
+}
+
+/* ---------- Card bounce utility ---------- */
+@keyframes qmm-card-bounce{
+  0%   { transform:translateY(0); }
+  30%  { transform:translateY(-4px); }
+  60%  { transform:translateY(1px); }
+  100% { transform:translateY(0); }
+}
+.qmm-card.is-bouncing{ animation:qmm-card-bounce 320ms ease; }
+
+    `;
+          const st = document.createElement("style");
+          st.id = "__qmm_css__";
+          st.textContent = css5;
+          (document.documentElement || document.body).appendChild(st);
+        }
+      };
+      VTabs = class {
+        constructor(opts = {}) {
+          this.filterWrap = null;
+          this.filterInput = null;
+          this.listWrap = null;
+          this.items = [];
+          this.selectedId = null;
+          this.root = el("div", "qmm-vtabs");
+          this.root.style.minWidth = "0";
+          this.emptyText = opts.emptyText || "Aucun \xE9l\xE9ment.";
+          this.renderItemCustom = opts.renderItem;
+          if (opts.filterPlaceholder) {
+            this.filterWrap = el("div", "filter");
+            this.filterInput = document.createElement("input");
+            this.filterInput.type = "search";
+            this.filterInput.placeholder = opts.filterPlaceholder;
+            this.filterInput.className = "qmm-input";
+            this.filterInput.oninput = () => this.renderList();
+            this.filterWrap.appendChild(this.filterInput);
+            this.root.appendChild(this.filterWrap);
+          }
+          this.list = el("div", "qmm-vlist");
+          this.list.style.minWidth = "0";
+          if (opts.maxHeightPx) {
+            this.list.style.maxHeight = `${opts.maxHeightPx}px`;
+            this.list.style.overflow = "auto";
+            this.list.style.flex = "1 1 auto";
+          }
+          if (opts.fillAvailableHeight) {
+            this.listWrap = document.createElement("div");
+            this.listWrap.className = "qmm-vlist-wrap";
+            Object.assign(this.listWrap.style, {
+              flex: "1 1 auto",
+              minHeight: "0",
+              display: "flex",
+              flexDirection: "column"
+            });
+            this.list.style.flex = "1 1 auto";
+            if (!opts.maxHeightPx) this.list.style.overflow = "auto";
+            this.listWrap.appendChild(this.list);
+            this.root.appendChild(this.listWrap);
+          } else {
+            this.root.appendChild(this.list);
+          }
+          this.selectedId = opts.initialId ?? null;
+          this.onSelectCb = opts.onSelect;
+        }
+        setItems(items) {
+          this.items = Array.isArray(items) ? items.slice() : [];
+          if (this.selectedId && !this.items.some((i) => i.id === this.selectedId)) {
+            this.selectedId = this.items[0]?.id ?? null;
+          }
+          this.renderList();
+        }
+        getSelected() {
+          return this.items.find((i) => i.id === this.selectedId) ?? null;
+        }
+        select(id) {
+          this.selectedId = id;
+          this.renderList();
+          this.onSelectCb?.(this.selectedId, this.getSelected());
+        }
+        onSelect(cb) {
+          this.onSelectCb = cb;
+        }
+        setBadge(id, text) {
+          const btn = this.list.querySelector(`button[data-id="${cssq(id)}"]`);
+          if (!btn) return;
+          let tag = btn.querySelector(".qmm-tag");
+          if (!tag && text != null) {
+            tag = el("span", "qmm-tag");
+            btn.appendChild(tag);
+          }
+          if (!tag) return;
+          if (text == null || text === "") tag.style.display = "none";
+          else {
+            tag.textContent = text;
+            tag.style.display = "";
+          }
+        }
+        getFilter() {
+          return (this.filterInput?.value || "").trim().toLowerCase();
+        }
+        renderList() {
+          const keepScroll = this.list.scrollTop;
+          this.list.innerHTML = "";
+          const q = this.getFilter();
+          const filtered = q ? this.items.filter((it) => (it.title || "").toLowerCase().includes(q) || (it.subtitle || "").toLowerCase().includes(q)) : this.items;
+          if (!filtered.length) {
+            const empty = document.createElement("div");
+            empty.style.opacity = "0.75";
+            empty.textContent = this.emptyText;
+            this.list.appendChild(empty);
+            return;
+          }
+          const ul = document.createElement("ul");
+          ul.style.listStyle = "none";
+          ul.style.margin = "0";
+          ul.style.padding = "0";
+          ul.style.display = "flex";
+          ul.style.flexDirection = "column";
+          ul.style.gap = "4px";
+          for (const it of filtered) {
+            const li = document.createElement("li");
+            const btn = document.createElement("button");
+            btn.className = "qmm-vtab";
+            btn.dataset.id = it.id;
+            btn.disabled = !!it.disabled;
+            if (this.renderItemCustom) {
+              this.renderItemCustom(it, btn);
+            } else {
+              const dot = el("div", "qmm-dot");
+              dot.style.background = it.statusColor || "#999a";
+              const chip2 = el("div", "qmm-chip");
+              const img = document.createElement("img");
+              img.src = it.avatarUrl || "";
+              img.alt = it.title;
+              const wrap = document.createElement("div");
+              wrap.style.display = "flex";
+              wrap.style.flexDirection = "column";
+              wrap.style.gap = "2px";
+              const t = el("div", "t");
+              t.textContent = it.title;
+              const sub = document.createElement("div");
+              sub.textContent = it.subtitle || "";
+              sub.style.opacity = "0.7";
+              sub.style.fontSize = "12px";
+              if (!it.subtitle) sub.style.display = "none";
+              wrap.appendChild(t);
+              wrap.appendChild(sub);
+              chip2.appendChild(img);
+              chip2.appendChild(wrap);
+              btn.appendChild(dot);
+              btn.appendChild(chip2);
+              if (it.badge != null) {
+                const tag = el("span", "qmm-tag", escapeHtml(String(it.badge)));
+                btn.appendChild(tag);
+              } else {
+                const spacer2 = document.createElement("div");
+                spacer2.style.width = "0";
+                btn.appendChild(spacer2);
+              }
+            }
+            btn.classList.toggle("active", it.id === this.selectedId);
+            btn.onclick = () => this.select(it.id);
+            li.appendChild(btn);
+            ul.appendChild(li);
+          }
+          this.list.appendChild(ul);
+          this.list.scrollTop = keepScroll;
+        }
+      };
+      _MOD_CODES = /* @__PURE__ */ new Set([
+        "ShiftLeft",
+        "ShiftRight",
+        "ControlLeft",
+        "ControlRight",
+        "AltLeft",
+        "AltRight",
+        "MetaLeft",
+        "MetaRight"
+      ]);
+      CANONICAL_CODES = {
+        space: "Space",
+        enter: "Enter",
+        escape: "Escape",
+        tab: "Tab",
+        backspace: "Backspace",
+        delete: "Delete",
+        insert: "Insert",
+        home: "Home",
+        end: "End",
+        pageup: "PageUp",
+        pagedown: "PageDown",
+        arrowup: "ArrowUp",
+        arrowdown: "ArrowDown",
+        arrowleft: "ArrowLeft",
+        arrowright: "ArrowRight",
+        bracketleft: "BracketLeft",
+        bracketright: "BracketRight",
+        backslash: "Backslash",
+        slash: "Slash",
+        minus: "Minus",
+        equal: "Equal",
+        semicolon: "Semicolon",
+        quote: "Quote",
+        backquote: "Backquote",
+        comma: "Comma",
+        period: "Period",
+        dot: "Period",
+        capslock: "CapsLock",
+        numlock: "NumLock",
+        scrolllock: "ScrollLock",
+        pause: "Pause",
+        contextmenu: "ContextMenu",
+        printscreen: "PrintScreen",
+        metaleft: "MetaLeft",
+        metaright: "MetaRight",
+        altleft: "AltLeft",
+        altright: "AltRight",
+        controlleft: "ControlLeft",
+        controlright: "ControlRight",
+        shiftleft: "ShiftLeft",
+        shiftright: "ShiftRight"
+      };
+    }
+  });
+
+  // src/game/ingameHotkeys.ts
+  function parseRapid(c) {
+    const parts = String(c).split("+").map((s) => s.trim()).filter(Boolean);
+    let code = "";
+    let ctrl = false, shift = false, alt = false, meta = false;
+    for (const p of parts) {
+      const P = p.toLowerCase();
+      if (P === "ctrl" || P === "control") ctrl = true;
+      else if (P === "shift") shift = true;
+      else if (P === "alt") alt = true;
+      else if (P === "meta" || P === "cmd" || P === "command" || P === "win") meta = true;
+      else code = p;
+    }
+    return { code, ctrl, shift, alt, meta };
+  }
+  function joinRapid(c) {
+    const mods = [];
+    if (c.ctrl) mods.push("Ctrl");
+    if (c.shift) mods.push("Shift");
+    if (c.alt) mods.push("Alt");
+    if (c.meta) mods.push("Meta");
+    mods.push(c.code);
+    return mods.join("+");
+  }
+  var resolveContext, KEYCODE_TABLE, codeToKey, isEditableTarget, normalizeCombo, parseCombo, evToCombo, REMAP_FLAG, RAPID_SYN_FLAG, InGameHotkeys, defaultContext, inGameHotkeys;
+  var init_ingameHotkeys = __esm({
+    "src/game/ingameHotkeys.ts"() {
+      "use strict";
+      init_pageContext();
+      resolveContext = (context) => {
+        if (context) return context;
+        const win = pageWindow ?? window;
+        const doc = win.document ?? document;
+        return { window: win, document: doc };
+      };
+      KEYCODE_TABLE = {
+        KeyA: 65,
+        KeyB: 66,
+        KeyC: 67,
+        KeyD: 68,
+        KeyE: 69,
+        KeyF: 70,
+        KeyG: 71,
+        KeyH: 72,
+        KeyI: 73,
+        KeyJ: 74,
+        KeyK: 75,
+        KeyL: 76,
+        KeyM: 77,
+        KeyN: 78,
+        KeyO: 79,
+        KeyP: 80,
+        KeyQ: 81,
+        KeyR: 82,
+        KeyS: 83,
+        KeyT: 84,
+        KeyU: 85,
+        KeyV: 86,
+        KeyW: 87,
+        KeyX: 88,
+        KeyY: 89,
+        KeyZ: 90,
+        Digit0: 48,
+        Digit1: 49,
+        Digit2: 50,
+        Digit3: 51,
+        Digit4: 52,
+        Digit5: 53,
+        Digit6: 54,
+        Digit7: 55,
+        Digit8: 56,
+        Digit9: 57,
+        Space: 32,
+        Enter: 13,
+        Escape: 27,
+        Tab: 9,
+        Backspace: 8,
+        Delete: 46,
+        Insert: 45,
+        ArrowLeft: 37,
+        ArrowUp: 38,
+        ArrowRight: 39,
+        ArrowDown: 40
+      };
+      codeToKey = (code, shift = false) => {
+        if (!code) return "";
+        if (/^Key[A-Z]$/.test(code)) return shift ? code.slice(3).toUpperCase() : code.slice(3).toLowerCase();
+        if (/^Digit[0-9]$/.test(code)) return code.slice(5);
+        if (code === "Space") return " ";
+        return code;
+      };
+      isEditableTarget = (t) => {
+        const el2 = t;
+        if (!el2 || !el2.tagName) return false;
+        const tag = el2.tagName.toLowerCase();
+        if (tag === "input" || tag === "textarea") return true;
+        const ce = el2.getAttribute && el2.getAttribute("contenteditable");
+        return !!(ce && ce !== "false");
+      };
+      normalizeCombo = (c) => {
+        const parts = String(c).split("+").map((s) => s.trim()).filter(Boolean);
+        const mods = [];
+        let code = "";
+        for (const p of parts) {
+          const P = p.toLowerCase();
+          if (P === "ctrl" || P === "control") mods.push("ctrl");
+          else if (P === "shift") mods.push("shift");
+          else if (P === "alt") mods.push("alt");
+          else if (P === "meta" || P === "cmd" || P === "command" || P === "win") mods.push("meta");
+          else code = p;
+        }
+        mods.sort((a, b) => ["ctrl", "shift", "alt", "meta"].indexOf(a) - ["ctrl", "shift", "alt", "meta"].indexOf(b));
+        return (mods.length ? mods.join("+") + "+" : "") + code;
+      };
+      parseCombo = (c) => {
+        const parts = String(c).split("+").map((s) => s.trim()).filter(Boolean);
+        const spec = {};
+        for (const p of parts) {
+          const P = p.toLowerCase();
+          if (P === "ctrl" || P === "control") spec.ctrl = true;
+          else if (P === "shift") spec.shift = true;
+          else if (P === "alt") spec.alt = true;
+          else if (P === "meta" || P === "cmd" || P === "command" || P === "win") spec.meta = true;
+          else spec.code = p;
+        }
+        if (spec.code && spec.key === void 0) spec.key = codeToKey(spec.code, !!spec.shift);
+        return spec;
+      };
+      evToCombo = (e) => {
+        const mods = [];
+        if (e.ctrlKey) mods.push("ctrl");
+        if (e.shiftKey) mods.push("shift");
+        if (e.altKey) mods.push("alt");
+        if (e.metaKey) mods.push("meta");
+        mods.sort((a, b) => ["ctrl", "shift", "alt", "meta"].indexOf(a) - ["ctrl", "shift", "alt", "meta"].indexOf(b));
+        return (mods.length ? mods.join("+") + "+" : "") + (e.code || "");
+      };
+      REMAP_FLAG = "__inGameHotkeysRemapped__";
+      RAPID_SYN_FLAG = "__inGameHotkeysRapidSynthetic__";
+      InGameHotkeys = class {
+        constructor(autoAttach = true, context) {
+          // remapper
+          this.enabled = true;
+          this.map = /* @__PURE__ */ new Map();
+          // combo normalisé -> spec destination
+          this.blockedSet = /* @__PURE__ */ new Set();
+          // combos bloqués
+          this.eventBlockers = /* @__PURE__ */ new Set();
+          this.attachedDocs = /* @__PURE__ */ new WeakSet();
+          // docs déjà hookés
+          this.observers = [];
+          this.handlers = /* @__PURE__ */ new Map();
+          this.passthrough = /* @__PURE__ */ new Set(["F5", "F12"]);
+          // rapid-fire manager
+          this.sessions = /* @__PURE__ */ new Map();
+          const ctx2 = resolveContext(context);
+          this.win = ctx2.window;
+          this.doc = ctx2.document;
+          if (autoAttach) {
+            this.attachDoc(this.doc);
+            this.attachAllFrames();
+            if (this.win.MutationObserver) {
+              const mo = new this.win.MutationObserver(() => this.attachAllFrames());
+              mo.observe(this.doc.documentElement || this.doc, { childList: true, subtree: true });
+              this.observers.push(mo);
+            }
+          }
+        }
+        /* --------- on/off remapper --------- */
+        enable(flag = true) {
+          this.enabled = !!flag;
+        }
+        disable() {
+          this.enabled = false;
+        }
+        isEnabled() {
+          return this.enabled;
+        }
+        /* --------- remaps --------- */
+        setMap(m) {
+          this.map.clear();
+          for (const [from, to] of Object.entries(m || {})) this.map.set(normalizeCombo(from), parseCombo(to));
+        }
+        add(from, to) {
+          this.map.set(normalizeCombo(from), parseCombo(to));
+        }
+        remove(from) {
+          this.map.delete(normalizeCombo(from));
+        }
+        clear() {
+          this.map.clear();
+        }
+        current() {
+          const out = {};
+          for (const [k, v] of this.map.entries()) {
+            const mods = [];
+            if (v.ctrl) mods.push("Ctrl");
+            if (v.shift) mods.push("Shift");
+            if (v.alt) mods.push("Alt");
+            if (v.meta) mods.push("Meta");
+            out[k] = (mods.length ? mods.join("+") + "+" : "") + (v.code || "");
+          }
+          return out;
+        }
+        /* --------- blocages --------- */
+        block(combo) {
+          this.blockedSet.add(normalizeCombo(combo));
+        }
+        unblock(combo) {
+          this.blockedSet.delete(normalizeCombo(combo));
+        }
+        blocked() {
+          return Array.from(this.blockedSet);
+        }
+        addEventBlocker(blocker) {
+          if (typeof blocker !== "function") {
+            return () => {
+            };
+          }
+          this.eventBlockers.add(blocker);
+          return () => {
+            this.eventBlockers.delete(blocker);
+          };
+        }
+        /* --------- helpers de binding --------- */
+        /** Déplace l’action bindée sur oldBase vers newPhysical et désactive oldBase. */
+        replace(oldBase, newPhysical) {
+          const oldN = normalizeCombo(oldBase);
+          const newN = normalizeCombo(newPhysical);
+          this.blockedSet.add(oldN);
+          this.map.set(newN, parseCombo(oldN));
+        }
+        /** Échange réciproquement deux touches (ne bloque pas). */
+        swap(a, b) {
+          const an = normalizeCombo(a), bn = normalizeCombo(b);
+          this.map.set(an, parseCombo(bn));
+          this.map.set(bn, parseCombo(an));
+        }
+        /* --------- frames & cleanup --------- */
+        attachAllFrames() {
+          this.doc.querySelectorAll("iframe").forEach((f) => {
+            try {
+              const d = f.contentDocument;
+              const origin = d?.location?.origin;
+              if (d && origin && origin === this.win.location.origin) this.attachDoc(d);
+            } catch {
+            }
+          });
+        }
+        destroy() {
+          for (const [doc, handler] of this.handlers.entries()) {
+            try {
+              const win = doc.defaultView || this.win;
+              win.removeEventListener("keydown", handler, true);
+              win.removeEventListener("keypress", handler, true);
+              win.removeEventListener("keyup", handler, true);
+            } catch {
+            }
+          }
+          this.handlers.clear();
+          this.attachedDocs = /* @__PURE__ */ new WeakSet();
+          for (const mo of this.observers) mo.disconnect();
+          this.observers = [];
+          this.stopAllRapidFires();
+          this.eventBlockers.clear();
+        }
+        /* --------- rapid-fire (API) --------- */
+        startRapidFire(opts) {
+          const trigger = normalizeCombo(opts.trigger);
+          const emit = normalizeCombo(opts.emit ?? opts.trigger);
+          const rateMs = 1e3 / Math.max(1, opts.rateHz ?? 12);
+          const mode = opts.mode ?? "tap";
+          const keyupDelayMs = opts.keyupDelayMs ?? 20;
+          this.sessions.set(trigger, {
+            trigger: parseRapid(trigger),
+            emit: parseRapid(emit),
+            rateMs,
+            mode,
+            keyupDelayMs,
+            pressed: false,
+            lastTarget: null,
+            tickTimer: null,
+            upTimer: null
+          });
+        }
+        stopRapidFire(trigger) {
+          if (!trigger) {
+            this.stopAllRapidFires();
+            return;
+          }
+          const key2 = normalizeCombo(trigger);
+          const s = this.sessions.get(key2);
+          if (!s) return;
+          this.endSession(s);
+          this.sessions.delete(key2);
+        }
+        stopAllRapidFires() {
+          for (const s of this.sessions.values()) this.endSession(s);
+          this.sessions.clear();
+        }
+        isRapidFireActive(trigger) {
+          const s = this.sessions.get(normalizeCombo(trigger));
+          return !!(s && s.pressed);
+        }
+        setRapidFireRate(trigger, hz) {
+          const s = this.sessions.get(normalizeCombo(trigger));
+          if (!s) return;
+          s.rateMs = 1e3 / Math.max(1, hz);
+          if (s.pressed) this.restartLoop(s);
+        }
+        setRapidFireMode(trigger, mode) {
+          const s = this.sessions.get(normalizeCombo(trigger));
+          if (!s) return;
+          s.mode = mode;
+        }
+        listRapidFires() {
+          const out = [];
+          for (const [key2, s] of this.sessions.entries()) {
+            out.push({
+              trigger: key2,
+              emit: joinRapid(s.emit),
+              rateHz: Math.round(1e3 / s.rateMs),
+              mode: s.mode
+            });
+          }
+          return out;
+        }
+        /* ================= internes ================= */
+        attachDoc(doc) {
+          if (!doc || this.attachedDocs.has(doc)) return;
+          const handler = this.makeHandler(doc);
+          const win = doc.defaultView || this.win;
+          win.addEventListener("keydown", handler, true);
+          win.addEventListener("keypress", handler, true);
+          win.addEventListener("keyup", handler, true);
+          this.handlers.set(doc, handler);
+          this.attachedDocs.add(doc);
+        }
+        makeHandler(doc) {
+          return (evt) => {
+            const e = evt;
+            if (e[REMAP_FLAG]) return;
+            const isRapidSynthetic = !!e[RAPID_SYN_FLAG];
+            if (!isRapidSynthetic) this.handleRapidFireInput(doc, e);
+            if (!isRapidSynthetic && this.eventBlockers.size) {
+              for (const blocker of Array.from(this.eventBlockers)) {
+                let shouldBlock = false;
+                try {
+                  shouldBlock = blocker(e);
+                } catch {
+                  shouldBlock = false;
+                }
+                if (shouldBlock) {
+                  e.stopImmediatePropagation();
+                  e.preventDefault();
+                  return;
+                }
+              }
+            }
+            if (!this.enabled) return;
+            if (isEditableTarget(e.target)) return;
+            if (this.passthrough.has(e.code)) return;
+            const combo = evToCombo(e);
+            if (this.blockedSet.has(combo)) {
+              e.stopImmediatePropagation();
+              e.preventDefault();
+              return;
+            }
+            const spec = this.map.get(combo);
+            if (!spec) return;
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            const code = spec.code || "";
+            const key2 = spec.key !== void 0 ? spec.key : codeToKey(code, e.shiftKey);
+            const ctrl = spec.ctrl ?? e.ctrlKey;
+            const shift = spec.shift ?? e.shiftKey;
+            const alt = spec.alt ?? e.altKey;
+            const meta = spec.meta ?? e.metaKey;
+            const kc = KEYCODE_TABLE[code] ?? (key2 && key2.length === 1 ? key2.toUpperCase().charCodeAt(0) : 0);
+            const eventWindow = doc.defaultView || this.win;
+            const ne = new eventWindow.KeyboardEvent(e.type, {
+              bubbles: true,
+              cancelable: true,
+              composed: true,
+              key: key2,
+              code,
+              ctrlKey: ctrl,
+              shiftKey: shift,
+              altKey: alt,
+              metaKey: meta,
+              repeat: e.repeat,
+              location: e.location
+            });
+            Object.defineProperties(ne, {
+              keyCode: { get: () => kc },
+              which: { get: () => kc },
+              charCode: { get: () => kc },
+              [REMAP_FLAG]: { value: true }
+            });
+            const target = e.target || doc;
+            target.dispatchEvent(ne);
+          };
+        }
+        /* ---------- Rapid-fire internes ---------- */
+        handleRapidFireInput(doc, e) {
+          if (isEditableTarget(e.target)) return;
+          if (e.type === "keydown" && !e.repeat) {
+            for (const s of this.sessions.values()) {
+              if (this.matches(e, s.trigger)) {
+                s.pressed = true;
+                s.lastTarget = e.target || doc;
+                this.startLoop(doc, s);
+              }
+            }
+          } else if (e.type === "keyup") {
+            for (const s of this.sessions.values()) {
+              if (this.matches(e, s.trigger)) {
+                s.pressed = false;
+                this.stopLoop(doc, s);
+              }
+            }
+          }
+        }
+        matches(e, c) {
+          return e.code === c.code && !!e.ctrlKey === !!c.ctrl && !!e.shiftKey === !!c.shift && !!e.altKey === !!c.alt && !!e.metaKey === !!c.meta;
+        }
+        startLoop(doc, s) {
+          this.stopLoop(doc, s);
+          const tick3 = () => {
+            if (!s.pressed) return;
+            this.dispatchKey(doc, s.lastTarget || doc, "keydown", s.emit, true);
+            if (s.mode === "tap") {
+              if (s.upTimer) this.win.clearTimeout(s.upTimer);
+              s.upTimer = this.win.setTimeout(() => {
+                this.dispatchKey(doc, s.lastTarget || doc, "keyup", s.emit, false);
+              }, s.keyupDelayMs);
+            }
+          };
+          tick3();
+          s.tickTimer = this.win.setInterval(tick3, s.rateMs);
+        }
+        stopLoop(doc, s) {
+          if (s.tickTimer) {
+            this.win.clearInterval(s.tickTimer);
+            s.tickTimer = null;
+          }
+          if (s.upTimer) {
+            this.win.clearTimeout(s.upTimer);
+            s.upTimer = null;
+          }
+          if (s.mode === "hold" && s.lastTarget) {
+            this.dispatchKey(doc, s.lastTarget, "keyup", s.emit, false);
+          }
+        }
+        restartLoop(s) {
+          if (!s.pressed) return;
+          const anyDoc = this.doc;
+          this.startLoop(anyDoc, s);
+        }
+        endSession(s) {
+          this.stopLoop(this.doc, s);
+          s.pressed = false;
+          s.lastTarget = null;
+        }
+        dispatchKey(doc, target, type, c, repeat) {
+          const code = c.code;
+          const key2 = codeToKey(code, c.shift);
+          const kc = KEYCODE_TABLE[code] ?? (key2 && key2.length === 1 ? key2.toUpperCase().charCodeAt(0) : 0);
+          const eventWindow = doc.defaultView || this.win;
+          const ev = new eventWindow.KeyboardEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            key: key2,
+            code,
+            ctrlKey: c.ctrl,
+            shiftKey: c.shift,
+            altKey: c.alt,
+            metaKey: c.meta,
+            repeat
+          });
+          Object.defineProperties(ev, {
+            keyCode: { get: () => kc },
+            which: { get: () => kc },
+            charCode: { get: () => kc },
+            [RAPID_SYN_FLAG]: { value: true }
+          });
+          try {
+            target.dispatchEvent(ev);
+          } catch {
+            doc.dispatchEvent(ev);
+          }
+        }
+      };
+      defaultContext = resolveContext();
+      inGameHotkeys = new InGameHotkeys(true, defaultContext);
+      shareGlobal("inGameHotkeys", inGameHotkeys);
+      try {
+        window.inGameHotkeys = inGameHotkeys;
+      } catch {
+      }
+    }
+  });
+
+  // src/features/keybinds/keybinds.ts
+  function getPetTeamActionId(teamId2) {
+    return `${PET_TEAM_ACTION_PREFIX}${teamId2}`;
+  }
+  function disposePetAction(id) {
+    actionMap.delete(id);
+    defaultMap.delete(id);
+    cache.delete(id);
+    listeners3.delete(id);
+    holdDefaultMap.delete(id);
+    holdCache.delete(id);
+    holdListeners.delete(id);
+  }
+  function registerPetAction(action2, defaultHotkey) {
+    const normalized = {
+      id: action2.id,
+      sectionId: PET_SECTION_ID,
+      label: action2.label,
+      hint: action2.hint,
+      allowModifierOnly: action2.allowModifierOnly,
+      defaultHotkey: cloneHotkey(defaultHotkey),
+      holdDetection: action2.holdDetection ? {
+        label: action2.holdDetection.label,
+        description: action2.holdDetection.description,
+        defaultEnabled: action2.holdDetection.defaultEnabled
+      } : void 0
+    };
+    actionMap.set(normalized.id, normalized);
+    defaultMap.set(normalized.id, cloneHotkey(defaultHotkey));
+    petActionIds.add(normalized.id);
+    petSection.actions.push(normalized);
+  }
+  function updatePetKeybinds(teams) {
+    for (const id of petActionIds) {
+      disposePetAction(id);
+    }
+    petActionIds.clear();
+    petSection.actions = [];
+    registerPetAction(
+      {
+        id: PET_TEAM_PREV_ID,
+        sectionId: PET_SECTION_ID,
+        label: "Previous team",
+        defaultHotkey: null
+      },
+      null
+    );
+    registerPetAction(
+      {
+        id: PET_TEAM_NEXT_ID,
+        sectionId: PET_SECTION_ID,
+        label: "Next team",
+        defaultHotkey: null
+      },
+      null
+    );
+    teams.forEach((team, index) => {
+      const name = String(team?.name || "").trim();
+      const labelName = name.length ? name : `Team ${index + 1}`;
+      registerPetAction(
+        {
+          id: getPetTeamActionId(team.id),
+          sectionId: PET_SECTION_ID,
+          label: `Use team \u2014 ${labelName}`,
+          defaultHotkey: null
+        },
+        null
+      );
+    });
+  }
+  function getCombosForGameAction() {
+    const state6 = gameActiveStates.get(GAME_ACTION_ID);
+    if (!state6) return [];
+    const combo = state6.combo;
+    return typeof combo === "string" && combo.length ? [combo] : [];
+  }
+  function applyGameActionBlockers() {
+    const shouldBlock = gameActionBlockers.size > 0;
+    const desired = /* @__PURE__ */ new Set();
+    if (shouldBlock) {
+      for (const combo of getCombosForGameAction()) {
+        if (combo) desired.add(combo);
+      }
+    }
+    for (const combo of gameActionBlockedCombos) {
+      if (!desired.has(combo)) {
+        try {
+          inGameHotkeys.unblock(combo);
+        } catch {
+        }
+      }
+    }
+    if (shouldBlock) {
+      for (const combo of desired) {
+        if (!gameActionBlockedCombos.has(combo)) {
+          try {
+            inGameHotkeys.block(combo);
+          } catch {
+          }
+        }
+      }
+    }
+    gameActionBlockedCombos.clear();
+    if (shouldBlock) {
+      for (const combo of desired) gameActionBlockedCombos.add(combo);
+    }
+  }
+  function hotkeyToCombo(hk) {
+    if (!hk) return null;
+    const combo = hotkeyToString(hk);
+    return combo.length ? combo : null;
+  }
+  function purgeTargetBindings(emitCombo) {
+    try {
+      inGameHotkeys.unblock(emitCombo);
+    } catch {
+    }
+    try {
+      const curr = inGameHotkeys.current();
+      for (const [from, to] of Object.entries(curr)) {
+        const toCode = String(to).split("+").pop();
+        if (toCode === emitCombo) {
+          try {
+            inGameHotkeys.remove(from);
+          } catch {
+          }
+        }
+      }
+    } catch {
+    }
+  }
+  function isMac2() {
+    return typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.platform || "");
+  }
+  function codeToDisplay(code) {
+    if (!code) return "";
+    const mKey = code.match(/^Key([A-Z])$/);
+    if (mKey) return mKey[1];
+    const mDigit = code.match(/^Digit([0-9])$/);
+    if (mDigit) return mDigit[1];
+    if (code === "ControlLeft" || code === "ControlRight") return "Ctrl";
+    if (code === "AltLeft" || code === "AltRight") return "Alt";
+    if (code === "ShiftLeft" || code === "ShiftRight") return "Shift";
+    if (code === "MetaLeft" || code === "MetaRight") return isMac2() ? "\xE2\u0152\u02DC" : "Win";
+    if (code === "Space") return "Space";
+    if (code === "Enter") return "Enter";
+    if (code === "Escape") return "Esc";
+    if (code === "Tab") return "Tab";
+    if (code === "Backspace") return "Backspace";
+    if (code === "Delete") return "Del";
+    if (code === "Insert") return "Ins";
+    if (code === "ArrowUp") return "\xE2\u2020\u2018";
+    if (code === "ArrowDown") return "\xE2\u2020\u201C";
+    if (code === "ArrowLeft") return "\xE2\u2020\x90";
+    if (code === "ArrowRight") return "\xE2\u2020\u2019";
+    return code;
+  }
+  function prettyHotkey(hk) {
+    if (!hk) return "\xE2\u20AC\u201D";
+    const mods = [];
+    if (hk.ctrl) mods.push("Ctrl");
+    if (hk.shift) mods.push("Shift");
+    if (hk.alt) mods.push("Alt");
+    if (hk.meta) mods.push(isMac2() ? "\xE2\u0152\u02DC" : "Win");
+    let base = "";
+    const k = hk.key;
+    if (typeof k === "string" && k.length === 1) {
+      base = k.toUpperCase();
+    } else {
+      base = codeToDisplay(hk.code);
+    }
+    const baseIsModifier = base && ["Ctrl", "Shift", "Alt", "\xE2\u0152\u02DC", "Win"].includes(base);
+    const parts = baseIsModifier ? mods : mods.concat(base ? [base] : []);
+    return parts.join(" + ");
+  }
+  function syncGameKeybind(id) {
+    if (typeof window === "undefined") return;
+    const emitCombo = GAME_KEYBIND_TARGETS[id];
+    purgeTargetBindings(emitCombo);
+    const prev = gameActiveStates.get(id);
+    if (prev) {
+      if (prev.rapidFire) {
+        try {
+          inGameHotkeys.stopRapidFire(prev.combo);
+        } catch {
+        }
+      }
+      gameActiveStates.delete(id);
+    }
+    const combo = hotkeyToCombo(getKeybind(id));
+    if (!combo) {
+      if (id === GAME_ACTION_ID) {
+        applyGameActionBlockers();
+      }
+      return;
+    }
+    const holdEnabled = getKeybindHoldDetection(id);
+    let replaced = false;
+    if (combo !== emitCombo) {
+      try {
+        inGameHotkeys.replace(emitCombo, combo);
+        replaced = true;
+      } catch {
+      }
+    }
+    let rapidFire = false;
+    if (holdEnabled) {
+      try {
+        inGameHotkeys.startRapidFire({
+          trigger: combo,
+          // on tient la touche choisie
+          emit: combo,
+          // remapper convertira en emitCombo si replace() actif
+          mode: "tap",
+          rateHz: 10
+        });
+        rapidFire = true;
+      } catch {
+      }
+    }
+    gameActiveStates.set(id, { combo, replaced, rapidFire });
+    if (id === GAME_ACTION_ID) {
+      applyGameActionBlockers();
+    }
+  }
+  function cloneHotkey(hk) {
+    return hk ? { ...hk } : null;
+  }
+  function hotkeysEqual(a, b) {
+    if (!a && !b) return true;
+    if (!a || !b) return false;
+    return hotkeyToString(a) === hotkeyToString(b);
+  }
+  function readStored(id) {
+    if (typeof window === "undefined") return void 0;
+    const map2 = readAriesPath(KEYBINDS_BINDINGS_PATH);
+    const raw = map2?.[id];
+    if (raw == null) return void 0;
+    if (raw === STORED_NONE) return null;
+    if (typeof raw !== "string") return null;
+    const parsed = stringToHotkey(raw);
+    return parsed ?? null;
+  }
+  function writeStored(id, hk) {
+    if (typeof window === "undefined") return;
+    updateAriesPath(KEYBINDS_BINDINGS_PATH, (current) => {
+      const base = current && typeof current === "object" ? { ...current } : {};
+      if (hk) {
+        base[id] = hotkeyToString(hk);
+      } else {
+        base[id] = STORED_NONE;
+      }
+      return base;
+    });
+  }
+  function removeStored(id) {
+    if (typeof window === "undefined") return;
+    updateAriesPath(KEYBINDS_BINDINGS_PATH, (current) => {
+      const base = current && typeof current === "object" ? { ...current } : {};
+      delete base[id];
+      return base;
+    });
+  }
+  function readHoldStored(id) {
+    if (typeof window === "undefined") return void 0;
+    const map2 = readAriesPath(KEYBINDS_HOLD_PATH);
+    const raw = map2?.[id];
+    if (raw == null) return void 0;
+    if (typeof raw === "string") return raw === "1";
+    if (typeof raw === "number") return raw === 1;
+    if (typeof raw === "boolean") return raw;
+    return void 0;
+  }
+  function writeHoldStored(id, enabled5) {
+    if (typeof window === "undefined") return;
+    updateAriesPath(KEYBINDS_HOLD_PATH, (current) => {
+      const base = current && typeof current === "object" ? { ...current } : {};
+      base[id] = !!enabled5;
+      return base;
+    });
+  }
+  function emitHoldChange(id) {
+    const set2 = holdListeners.get(id);
+    if (!set2 || set2.size === 0) return;
+    const current = getKeybindHoldDetection(id);
+    for (const cb of set2) cb(current);
+  }
+  function emitChange(id) {
+    const set2 = listeners3.get(id);
+    if (!set2 || set2.size === 0) return;
+    const current = cloneHotkey(getKeybind(id));
+    for (const cb of set2) cb(current);
+  }
+  function ensureCache(id) {
+    if (cache.has(id)) {
+      return cloneHotkey(cache.get(id) ?? null);
+    }
+    const stored = readStored(id);
+    const resolved = stored === void 0 ? cloneHotkey(defaultMap.get(id) ?? null) : cloneHotkey(stored);
+    cache.set(id, resolved);
+    return cloneHotkey(resolved);
+  }
+  function ensureHoldCache(id) {
+    if (!holdDefaultMap.has(id)) return false;
+    if (holdCache.has(id)) {
+      return holdCache.get(id) ?? false;
+    }
+    const stored = readHoldStored(id);
+    const resolved = stored === void 0 ? !!holdDefaultMap.get(id) : stored;
+    holdCache.set(id, resolved);
+    return resolved;
+  }
+  function getKeybind(id) {
+    return ensureCache(id);
+  }
+  function getDefaultKeybind(id) {
+    return cloneHotkey(defaultMap.get(id) ?? null);
+  }
+  function setKeybind(id, hk) {
+    const current = getKeybind(id);
+    if (hotkeysEqual(current, hk)) return;
+    const next = cloneHotkey(hk);
+    if (next) {
+      const asString = hotkeyToString(next);
+      for (const otherId of actionMap.keys()) {
+        if (otherId === id) continue;
+        const other = getKeybind(otherId);
+        if (!other) continue;
+        if (hotkeyToString(other) !== asString) continue;
+        cache.set(otherId, null);
+        writeStored(otherId, null);
+        emitChange(otherId);
+      }
+    }
+    cache.set(id, next);
+    writeStored(id, next);
+    emitChange(id);
+  }
+  function resetKeybind(id) {
+    cache.delete(id);
+    removeStored(id);
+    emitChange(id);
+  }
+  function getKeybindHoldDetection(id) {
+    return ensureHoldCache(id);
+  }
+  function setKeybindHoldDetection(id, enabled5) {
+    if (!holdDefaultMap.has(id)) return;
+    const current = ensureHoldCache(id);
+    if (current === enabled5) return;
+    holdCache.set(id, enabled5);
+    writeHoldStored(id, enabled5);
+    emitHoldChange(id);
+  }
+  function onKeybindHoldDetectionChange(id, cb) {
+    if (!holdDefaultMap.has(id)) {
+      return () => {
+      };
+    }
+    const set2 = holdListeners.get(id) ?? /* @__PURE__ */ new Set();
+    if (!holdListeners.has(id)) holdListeners.set(id, set2);
+    set2.add(cb);
+    return () => {
+      set2.delete(cb);
+      if (set2.size === 0) holdListeners.delete(id);
+    };
+  }
+  function onKeybindChange(id, cb) {
+    const set2 = listeners3.get(id) ?? /* @__PURE__ */ new Set();
+    if (!listeners3.has(id)) listeners3.set(id, set2);
+    set2.add(cb);
+    return () => {
+      set2.delete(cb);
+      if (set2.size === 0) listeners3.delete(id);
+    };
+  }
+  function eventMatchesKeybind(id, e) {
+    return matchHotkey(e, getKeybind(id));
+  }
+  function installGameKeybindsOnce() {
+    if (gameKeybindsInstalled || typeof window === "undefined") return;
+    gameKeybindsInstalled = true;
+    for (const id of GAME_KEYBIND_IDS) {
+      syncGameKeybind(id);
+      onKeybindChange(id, () => syncGameKeybind(id));
+      onKeybindHoldDetectionChange(id, () => syncGameKeybind(id));
+    }
+  }
+  function getKeybindLabel(id) {
+    return prettyHotkey(getKeybind(id));
+  }
+  function getKeybindSections() {
+    return keybindSections.map((section2) => ({
+      ...section2,
+      actions: section2.actions.map((action2) => ({
+        ...action2,
+        defaultHotkey: cloneHotkey(action2.defaultHotkey),
+        holdDetection: action2.holdDetection ? {
+          label: action2.holdDetection.label,
+          description: action2.holdDetection.description,
+          defaultEnabled: action2.holdDetection.defaultEnabled
+        } : void 0
+      }))
+    }));
+  }
+  var SECTION_CONFIG, KEYBINDS_BINDINGS_PATH, KEYBINDS_HOLD_PATH, ARIES_ROOT_KEY, STORED_NONE, actionMap, defaultMap, cache, listeners3, holdDefaultMap, holdCache, holdListeners, keybindSections, PET_SECTION_ID, PET_TEAM_ACTION_PREFIX, PET_TEAM_NEXT_ID, PET_TEAM_PREV_ID, petSection, petActionIds, GAME_KEYBIND_TARGETS, GAME_KEYBIND_IDS, gameActiveStates, gameKeybindsInstalled, GAME_ACTION_ID, gameActionBlockers, gameActionBlockedCombos;
+  var init_keybinds = __esm({
+    "src/features/keybinds/keybinds.ts"() {
+      "use strict";
+      init_ingameHotkeys();
+      init_menu();
+      init_storage();
+      SECTION_CONFIG = [
+        {
+          id: "gui",
+          title: "GUI",
+          icon: "\u{1F5A5}\uFE0F",
+          description: "Choose how you open and move the overlay.",
+          actions: [
+            {
+              id: "gui.toggle",
+              label: "Toggle menu visibility",
+              icon: "sprite/ui/CameraOff",
+              hint: "Opens or closes the Arie's Mod overlay.",
+              defaultHotkey: { alt: true, code: "KeyX" }
+            },
+            {
+              id: "gui.drag",
+              label: "Drag HUD",
+              icon: "sprite/ui/Touchpad",
+              hint: "Hold to drag menus interfaces around the screen.",
+              defaultHotkey: { alt: true, code: "AltLeft" },
+              allowModifierOnly: true
+            }
+          ]
+        },
+        {
+          id: "shops",
+          title: "Shops",
+          icon: "\u{1F6D2}",
+          description: "Quick shortcuts to every shop tab.",
+          actions: [
+            {
+              id: "shops.seeds",
+              label: "Seeds shop",
+              icon: "sprite/ui/SeedIcon",
+              defaultHotkey: { alt: true, code: "KeyS" }
+            },
+            {
+              id: "shops.eggs",
+              label: "Eggs shop",
+              icon: "sprite/ui/EggIcon",
+              defaultHotkey: { alt: true, code: "KeyE" }
+            },
+            {
+              id: "shops.decors",
+              label: "Decors shop",
+              icon: "sprite/ui/DecorIcon",
+              defaultHotkey: { alt: true, code: "KeyD" }
+            },
+            {
+              id: "shops.tools",
+              label: "Tools shop",
+              icon: "sprite/ui/ToolIcon",
+              defaultHotkey: { alt: true, code: "KeyT" }
+            }
+          ]
+        },
+        {
+          id: "game",
+          title: "Game",
+          icon: "\u{1F3AE}",
+          description: "Remap the in-game actions",
+          actions: [
+            {
+              id: "game.action",
+              label: "Action",
+              icon: "sprite/ui/PickupPin",
+              defaultHotkey: { code: "Space" },
+              holdDetection: {
+                label: "Rapid fire",
+                defaultEnabled: false
+              }
+            },
+            {
+              id: "game.inventory",
+              label: "Inventory",
+              icon: "sprite/ui/InventoryBag",
+              defaultHotkey: { code: "KeyE" }
+            },
+            {
+              id: "game.pet-hutch",
+              label: "Pet hutch",
+              icon: "sprite/decor/PetHutch_1",
+              defaultHotkey: null,
+              allowClear: true
+            },
+            {
+              id: "game.decor-shed",
+              label: "Decor shed",
+              icon: "sprite/decor/DecorShed",
+              defaultHotkey: null,
+              allowClear: true
+            },
+            {
+              id: "game.tool-shack",
+              label: "Tool shack",
+              icon: "sprite/decor/ToolShack",
+              defaultHotkey: null,
+              allowClear: true
+            },
+            {
+              id: "game.seed-silo",
+              label: "Seed silo",
+              icon: "sprite/decor/SeedSilo",
+              defaultHotkey: null,
+              allowClear: true
+            },
+            {
+              id: "game.feeding-trough",
+              label: "Feeding trough",
+              icon: "sprite/decor/FeedingTrough",
+              defaultHotkey: null,
+              allowClear: true
+            },
+            {
+              id: "game.weather-station",
+              label: "Weather station",
+              icon: "sprite/object/WeatherStation",
+              defaultHotkey: null,
+              allowClear: true
+            },
+            {
+              id: "game.journal",
+              label: "Journal",
+              icon: "sprite/ui/JournalStamp",
+              defaultHotkey: null,
+              allowClear: true
+            },
+            {
+              id: "game.move-up",
+              label: "Move up",
+              icon: "https://i.imgur.com/EkbKUgi.png",
+              defaultHotkey: { code: "KeyW" }
+            },
+            {
+              id: "game.move-down",
+              label: "Move down",
+              icon: "https://i.imgur.com/tdJ7IGP.png",
+              defaultHotkey: { code: "KeyS" }
+            },
+            {
+              id: "game.move-left",
+              label: "Move left",
+              icon: "https://i.imgur.com/86VbR70.png",
+              defaultHotkey: { code: "KeyA" }
+            },
+            {
+              id: "game.move-right",
+              label: "Move right",
+              icon: "https://i.imgur.com/Ljzz6td.png",
+              defaultHotkey: { code: "KeyD" }
+            }
+          ]
+        },
+        {
+          id: "sell",
+          title: "Sell",
+          icon: "\u{1F4B0}",
+          description: "Streamline selling actions.",
+          actions: [
+            {
+              id: "sell.sell-all",
+              label: "All crops",
+              icon: "sprite/ui/IconSell",
+              hint: "Trigger the sell-all flow for harvested crops.",
+              defaultHotkey: null
+            },
+            {
+              id: "sell.sell-all-pets",
+              label: "All pets",
+              icon: "sprite/ui/IconShop",
+              hint: "Sell every non-favorited pet in your inventory.",
+              defaultHotkey: null
+            }
+          ]
+        },
+        {
+          id: "companion",
+          title: "Companion",
+          icon: "\u{1F916}",
+          description: "Reach your companion without going through the launcher.",
+          actions: [
+            {
+              id: "companion.chat",
+              label: "Open the chat",
+              // Sans icône : l'atlas `ui` n'a pas de pictogramme de conversation, et
+              // en inventer une clé afficherait une case vide (`icon` est optionnel).
+              hint: "Opens the Companion window straight on its Chat tab.",
+              defaultHotkey: { alt: true, code: "KeyC" }
+            }
+          ]
+        }
+      ];
+      KEYBINDS_BINDINGS_PATH = "keybinds.bindings";
+      KEYBINDS_HOLD_PATH = "keybinds.hold";
+      ARIES_ROOT_KEY = "aries_mod";
+      STORED_NONE = "__none__";
+      actionMap = /* @__PURE__ */ new Map();
+      defaultMap = /* @__PURE__ */ new Map();
+      cache = /* @__PURE__ */ new Map();
+      listeners3 = /* @__PURE__ */ new Map();
+      holdDefaultMap = /* @__PURE__ */ new Map();
+      holdCache = /* @__PURE__ */ new Map();
+      holdListeners = /* @__PURE__ */ new Map();
+      keybindSections = SECTION_CONFIG.map((section2) => {
+        const actions = section2.actions.map((action2) => {
+          const normalized = {
+            id: action2.id,
+            sectionId: section2.id,
+            label: action2.label,
+            icon: action2.icon,
+            hint: action2.hint,
+            allowModifierOnly: action2.allowModifierOnly,
+            allowClear: action2.allowClear,
+            defaultHotkey: cloneHotkey(action2.defaultHotkey),
+            holdDetection: action2.holdDetection ? {
+              label: action2.holdDetection.label,
+              description: action2.holdDetection.description,
+              defaultEnabled: action2.holdDetection.defaultEnabled
+            } : void 0
+          };
+          actionMap.set(normalized.id, normalized);
+          defaultMap.set(normalized.id, cloneHotkey(action2.defaultHotkey));
+          if (action2.holdDetection) {
+            holdDefaultMap.set(normalized.id, !!action2.holdDetection.defaultEnabled);
+          }
+          return normalized;
+        });
+        return {
+          id: section2.id,
+          title: section2.title,
+          description: section2.description,
+          icon: section2.icon,
+          actions
+        };
+      });
+      PET_SECTION_ID = "pets";
+      PET_TEAM_ACTION_PREFIX = "pets.team.";
+      PET_TEAM_NEXT_ID = "pets.team.next";
+      PET_TEAM_PREV_ID = "pets.team.prev";
+      petSection = {
+        id: PET_SECTION_ID,
+        title: "Pets",
+        icon: "\u{1F437}",
+        description: "Assign shortcuts to your pet teams and cycle through them instantly.",
+        actions: []
+      };
+      keybindSections.push(petSection);
+      petActionIds = /* @__PURE__ */ new Set();
+      updatePetKeybinds([]);
+      GAME_KEYBIND_TARGETS = {
+        "game.action": "Space",
+        "game.inventory": "KeyE",
+        "game.move-up": "KeyW",
+        // Z (AZERTY) == KeyW
+        "game.move-down": "KeyS",
+        // S
+        "game.move-left": "KeyA",
+        // Q (AZERTY) == KeyA
+        "game.move-right": "KeyD"
+        // D
+      };
+      GAME_KEYBIND_IDS = [
+        "game.action",
+        "game.inventory",
+        "game.move-up",
+        "game.move-down",
+        "game.move-left",
+        "game.move-right"
+      ];
+      gameActiveStates = /* @__PURE__ */ new Map();
+      gameKeybindsInstalled = false;
+      GAME_ACTION_ID = "game.action";
+      gameActionBlockers = /* @__PURE__ */ new Set();
+      gameActionBlockedCombos = /* @__PURE__ */ new Set();
+      if (typeof window !== "undefined") {
+        window.addEventListener("storage", (event) => {
+          if (event.key !== ARIES_ROOT_KEY) return;
+          cache.clear();
+          holdCache.clear();
+          for (const id of actionMap.keys()) emitChange(id);
+          for (const id of holdDefaultMap.keys()) emitHoldChange(id);
+        });
+      }
     }
   });
 
@@ -24305,6 +23473,234 @@
       }
       HUTCH_DEFAULT_CAPACITY = 10;
       MAX_TEAM_SLOTS = 3;
+    }
+  });
+
+  // src/game/ws/shopPurchaseMessage.ts
+  function parseViewMode(raw) {
+    if (raw == null) return null;
+    let value = raw;
+    try {
+      value = JSON.parse(raw);
+    } catch {
+    }
+    return value === "list" || value === "grid" ? value : null;
+  }
+  function readShopViewMode(shop, storage) {
+    if (!storage) return "list";
+    try {
+      for (let i = 0; i < storage.length; i++) {
+        const key2 = storage.key(i);
+        if (!key2) continue;
+        const match = VIEW_MODE_KEY.exec(key2);
+        if (!match || match[1] !== shop) continue;
+        const mode = parseViewMode(storage.getItem(key2));
+        if (mode) return mode;
+      }
+    } catch {
+    }
+    return "list";
+  }
+  function buildShopPurchaseCommand(shop, item, viewMode, quantity = 1) {
+    const q = Math.max(1, Math.floor(Number(quantity) || 1));
+    return {
+      type: "PurchaseShopItem",
+      shop,
+      viewMode,
+      item,
+      ...q === 1 ? {} : { quantity: q }
+    };
+  }
+  var VIEW_MODE_KEY;
+  var init_shopPurchaseMessage = __esm({
+    "src/game/ws/shopPurchaseMessage.ts"() {
+      "use strict";
+      VIEW_MODE_KEY = /^shop:.*:(.+):viewMode$/;
+    }
+  });
+
+  // src/features/shops/purchases.ts
+  function isCurrentRestock(entry, shop) {
+    if (!("restockId" in entry)) return true;
+    const current = shop?.restockId;
+    return current != null && entry.restockId === current;
+  }
+  function purchasesForCurrentRestock(shops2, shopPurchases, kindOf) {
+    const out = { seed: {}, egg: {}, tool: {}, decor: {} };
+    if (!shopPurchases || typeof shopPurchases !== "object") return out;
+    for (const shopKey of Object.keys(shopPurchases)) {
+      const entry = shopPurchases[shopKey];
+      if (!entry || typeof entry !== "object") continue;
+      if (!isCurrentRestock(entry, shops2?.[shopKey])) continue;
+      const purch = entry.purchases;
+      if (!purch || typeof purch !== "object") continue;
+      for (const [itemId, count] of Object.entries(purch)) {
+        const n = Number(count) || 0;
+        const kind = DIRECT_KIND[shopKey] ?? kindOf(itemId);
+        if (!kind) continue;
+        out[kind][itemId] = (out[kind][itemId] ?? 0) + n;
+      }
+    }
+    return out;
+  }
+  function resolveShop(key2, shops2, mySlot) {
+    if (CUSTOM_RESTOCK_SHOPS.has(key2)) {
+      const custom = mySlot?.data?.customRestocks?.[key2];
+      if (custom) {
+        const inv = mySlot?.customRestockInventories?.[key2];
+        return inv && inv.restockId === `${key2}:custom:${custom.purchasedAt}` ? inv : null;
+      }
+    }
+    const shop = shops2?.[key2];
+    if (!shop || typeof shop !== "object") return null;
+    if ("restockId" in shop && shop.restockId == null) return null;
+    return shop;
+  }
+  function purchasesKnown(entry, shop) {
+    if (!entry || typeof entry !== "object" || !("restockId" in entry)) return true;
+    if (entry.restockId === shop?.restockId) return true;
+    return Number(entry.startedAtMs) < Number(shop?.startedAtMs);
+  }
+  function playerShopView(shops2, mySlot, kindOf) {
+    const shopPurchases = mySlot?.data?.shopPurchases;
+    const open = {};
+    const keys = new Set(shops2 && typeof shops2 === "object" ? Object.keys(shops2) : []);
+    for (const key2 of CUSTOM_RESTOCK_SHOPS) {
+      if (mySlot?.data?.customRestocks?.[key2]) keys.add(key2);
+    }
+    for (const key2 of keys) {
+      const shop = resolveShop(key2, shops2, mySlot);
+      if (!shop) continue;
+      if (!purchasesKnown(shopPurchases?.[key2], shop)) continue;
+      open[key2] = shop;
+    }
+    return { shops: open, purchases: purchasesForCurrentRestock(open, shopPurchases, kindOf) };
+  }
+  var DIRECT_KIND, CUSTOM_RESTOCK_SHOPS;
+  var init_purchases = __esm({
+    "src/features/shops/purchases.ts"() {
+      "use strict";
+      DIRECT_KIND = { seed: "seed", egg: "egg", tool: "tool", decor: "decor" };
+      CUSTOM_RESTOCK_SHOPS = /* @__PURE__ */ new Set(["seed", "egg", "tool", "decor"]);
+    }
+  });
+
+  // src/features/shops/shops.ts
+  function installShopKeybindsOnce() {
+    if (shopKeybindsInstalled || typeof window === "undefined") return;
+    shopKeybindsInstalled = true;
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (shouldIgnoreKeydown(event)) return;
+        for (const { id, modal } of SHOP_KEYBINDS) {
+          if (!eventMatchesKeybind(id, event)) continue;
+          event.preventDefault();
+          event.stopPropagation();
+          void openModal(modal);
+          break;
+        }
+      },
+      true
+    );
+  }
+  function _fallbackShopFor(kind) {
+    return kind === "seeds" ? "seed" : kind === "tools" ? "tool" : kind === "eggs" ? "egg" : "decor";
+  }
+  function _buildPurchasePayload(kind, it) {
+    if (kind === "seeds") {
+      const species = it.species ?? it.name;
+      return species ? { item: { itemType: "Seed", species: String(species) }, stat: "seedsBought" } : null;
+    }
+    if (kind === "tools") {
+      const toolId = it.toolId ?? it.id;
+      return toolId ? { item: { itemType: "Tool", toolId: String(toolId) }, stat: "toolsBought" } : null;
+    }
+    if (kind === "eggs") {
+      const eggId = it.eggId ?? it.id;
+      return eggId ? { item: { itemType: "Egg", eggId: String(eggId) }, stat: "eggsBought" } : null;
+    }
+    if (kind === "decor") {
+      const decorId = it.decorId ?? it.id;
+      return decorId ? { item: { itemType: "Decor", decorId: String(decorId) }, stat: "decorBought" } : null;
+    }
+    return null;
+  }
+  function _findShopForItem(snap, kind, it) {
+    if (!snap || typeof snap !== "object") return null;
+    const keys = Object.keys(snap);
+    const weatherKeys = keys.filter((k) => !BASE_SHOP_KEYS.includes(k));
+    const baseKeys = keys.filter((k) => BASE_SHOP_KEYS.includes(k));
+    const ordered = [...weatherKeys, ...baseKeys];
+    const targetSpecies = it.species ?? it.name;
+    const targetToolId = it.toolId ?? it.id;
+    const targetEggId = it.eggId ?? it.id;
+    const targetDecorId = it.decorId ?? it.id;
+    const matches = (entry) => {
+      if (!entry || typeof entry !== "object") return false;
+      if (kind === "seeds") return targetSpecies != null && entry.species === targetSpecies;
+      if (kind === "tools") return targetToolId != null && entry.toolId === targetToolId;
+      if (kind === "eggs") return targetEggId != null && entry.eggId === targetEggId;
+      if (kind === "decor") return targetDecorId != null && entry.decorId === targetDecorId;
+      return false;
+    };
+    for (const k of ordered) {
+      const inv = snap[k]?.inventory;
+      if (!Array.isArray(inv)) continue;
+      if (inv.some(matches)) return k;
+    }
+    return null;
+  }
+  var SHOP_KEYBINDS, shopKeybindsInstalled, BASE_SHOP_KEYS, ShopsService;
+  var init_shops = __esm({
+    "src/features/shops/shops.ts"() {
+      "use strict";
+      init_fakeModal();
+      init_keybinds();
+      init_keyboard();
+      init_stats();
+      init_send();
+      init_atoms();
+      init_pageContext();
+      init_shopPurchaseMessage();
+      init_purchases();
+      SHOP_KEYBINDS = [
+        { id: "shops.seeds", modal: "seedShop" },
+        { id: "shops.eggs", modal: "eggShop" },
+        { id: "shops.decors", modal: "decorShop" },
+        { id: "shops.tools", modal: "toolShop" }
+      ];
+      shopKeybindsInstalled = false;
+      BASE_SHOP_KEYS = ["seed", "egg", "tool", "decor"];
+      ShopsService = {
+        /** Achat unitaire : envoie le bon message au jeu. */
+        async buyOne(kind, it) {
+          return ShopsService.buy(kind, it, 1);
+        },
+        /** Achete `quantity` exemplaires en une seule commande, comme le Buy All du jeu. */
+        async buy(kind, it, quantity) {
+          const built = _buildPurchasePayload(kind, it);
+          if (!built) return;
+          let shop = null;
+          try {
+            const [shops2, slot] = await Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
+            shop = _findShopForItem(playerShopView(shops2, slot, () => null).shops, kind, it);
+          } catch {
+          }
+          if (!shop) shop = _fallbackShopFor(kind);
+          try {
+            let storage = null;
+            try {
+              storage = pageWindow.localStorage;
+            } catch {
+            }
+            const command = buildShopPurchaseCommand(shop, built.item, readShopViewMode(shop, storage), quantity);
+            sendToGame(command);
+            StatsService.incrementShopStat(built.stat, Number(command.quantity ?? 1));
+          } catch {
+          }
+        }
+      };
     }
   });
 
@@ -27809,7 +27205,7 @@
   }
   async function _waitForAtom(label2, keepGoing) {
     const startedAt = Date.now();
-    while (keepGoing() && Date.now() - startedAt < ATOM_WAIT_TIMEOUT_MS2) {
+    while (keepGoing() && Date.now() - startedAt < ATOM_WAIT_TIMEOUT_MS) {
       try {
         if (await Store.hasAtom(label2)) return true;
       } catch {
@@ -27974,7 +27370,7 @@
     _currentWeatherValue = null;
     _started = false;
   }
-  var PATH_NOTIFIER_PREFS, PATH_NOTIFIER_RULES, PATH_NOTIFIER_WEATHER, PATH_NOTIFIER_DEFAULTS, DISPLAY_RARITY, norm2, formatRuleSummary, formatLastSeen, weatherStateSignature, formatWeatherMutation, normalizeNumber, normalizeCycle, normalizeMutations2, WEATHER_DEFS, WEATHER_BY_ID, WEATHER_BY_ATOM, WEATHER_BY_NAME, _prefs, _weatherPrefs, _weatherPrefsLoaded, _contextDefaults, _contextDefaultsLoaded, _rules, _rulesLoaded, _rulesSubs, _hasOwn, _weatherState, _weatherSig, _weatherSubs, _currentWeatherId, _currentWeatherValue, _unsubWeather, _getPrefBits, _setPrefBits, _rowsById, _lastSig, _state, _unsubShops, _unsubPurchases, _watchGeneration, _subs, _toolInv, _decorInv, _unsubToolInv, _unsubDecorInv, _purchasesSubs, _itemKind, _rawShops, _rawSlot, _viewOf, _sameShopParts, _shopsSubs, BASE_SHOPS_SET, _onDataUpdated, ATOM_WAIT_POLL_MS, ATOM_WAIT_TIMEOUT_MS2, STATE_ATOM_LABEL, MY_USER_SLOT_ATOM_LABEL, _started, NotifierService;
+  var PATH_NOTIFIER_PREFS, PATH_NOTIFIER_RULES, PATH_NOTIFIER_WEATHER, PATH_NOTIFIER_DEFAULTS, DISPLAY_RARITY, norm2, formatRuleSummary, formatLastSeen, weatherStateSignature, formatWeatherMutation, normalizeNumber, normalizeCycle, normalizeMutations2, WEATHER_DEFS, WEATHER_BY_ID, WEATHER_BY_ATOM, WEATHER_BY_NAME, _prefs, _weatherPrefs, _weatherPrefsLoaded, _contextDefaults, _contextDefaultsLoaded, _rules, _rulesLoaded, _rulesSubs, _hasOwn, _weatherState, _weatherSig, _weatherSubs, _currentWeatherId, _currentWeatherValue, _unsubWeather, _getPrefBits, _setPrefBits, _rowsById, _lastSig, _state, _unsubShops, _unsubPurchases, _watchGeneration, _subs, _toolInv, _decorInv, _unsubToolInv, _unsubDecorInv, _purchasesSubs, _itemKind, _rawShops, _rawSlot, _viewOf, _sameShopParts, _shopsSubs, BASE_SHOPS_SET, _onDataUpdated, ATOM_WAIT_POLL_MS, ATOM_WAIT_TIMEOUT_MS, STATE_ATOM_LABEL, MY_USER_SLOT_ATOM_LABEL, _started, NotifierService;
   var init_notifier = __esm({
     "src/features/notifier/notifier.ts"() {
       "use strict";
@@ -28193,7 +27589,7 @@
         }
       };
       ATOM_WAIT_POLL_MS = 400;
-      ATOM_WAIT_TIMEOUT_MS2 = 10 * 6e4;
+      ATOM_WAIT_TIMEOUT_MS = 10 * 6e4;
       STATE_ATOM_LABEL = "stateAtom";
       MY_USER_SLOT_ATOM_LABEL = "myUserSlotAtom";
       _started = false;
@@ -51962,7 +51358,7 @@ Restore figures are averages; unlucky streaks do worse.`;
               break;
             }
             await kind.withdraw(task.entry.id, kind.storageId, plan.fromStorage);
-            await sleep5(WITHDRAW_SETTLE_MS);
+            await sleep6(WITHDRAW_SETTLE_MS);
           }
           for (let i = 0; i < task.qty; i++) {
             await gate2();
@@ -51975,7 +51371,7 @@ Restore figures are averages; unlucky streaks do worse.`;
               label: task.entry.label,
               remainingForCategory: task.qty - i - 1
             });
-            if (delayMs > 0 && i < task.qty - 1) await sleep5(delayMs);
+            if (delayMs > 0 && i < task.qty - 1) await sleep6(delayMs);
           }
         }
         selection.clear();
@@ -52027,19 +51423,19 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
   }
-  var WITHDRAW_SETTLE_MS, sleep5, formatNum4;
+  var WITHDRAW_SETTLE_MS, sleep6, formatNum4;
   var init_run = __esm({
     "src/features/deleters/run.ts"() {
       "use strict";
       init_sources();
       WITHDRAW_SETTLE_MS = 180;
-      sleep5 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      sleep6 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       formatNum4 = (n) => new Intl.NumberFormat("en-US").format(Math.max(0, Math.floor(n || 0)));
     }
   });
 
   // src/features/deleters/deleters.ts
-  var sleep6, toast2, guardEnabled, withdraw, seedDeleter, decorDeleter;
+  var sleep7, toast2, guardEnabled, withdraw, seedDeleter, decorDeleter;
   var init_deleters = __esm({
     "src/features/deleters/deleters.ts"() {
       "use strict";
@@ -52048,7 +51444,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_misc();
       init_player();
       init_toast();
-      sleep6 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      sleep7 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       toast2 = (title, message, kind) => {
         void toastSimple(title, message, kind);
       };
@@ -52089,7 +51485,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           const slot = await findFirstEmptySlot();
           if (!slot) throw new Error("No empty garden tile to delete decor on.");
           await PlayerService.placeDecor(slot.tileType, slot.index, decorId, 0);
-          if (delayMs > 0) await sleep6(delayMs);
+          if (delayMs > 0) await sleep7(delayMs);
           await PlayerService.removeGardenObject(slot.index, slot.tileType);
         },
         withdraw
@@ -60061,18 +59457,18 @@ Restore figures are averages; unlucky streaks do worse.`;
       /** Attend ce qui manque pour respecter l'écart. À appeler juste avant un envoi. */
       async wait() {
         const missing = minGapMs - (Date.now() - lastAt);
-        if (missing > 0) await sleep7(missing);
+        if (missing > 0) await sleep8(missing);
       }
     };
   }
-  var ACTION_DELAY_MS, SETTLE_MS, PROGRESS_EVERY, sleep7;
+  var ACTION_DELAY_MS, SETTLE_MS, PROGRESS_EVERY, sleep8;
   var init_batch = __esm({
     "src/features/companion/chat/batch.ts"() {
       "use strict";
       ACTION_DELAY_MS = 400;
       SETTLE_MS = 700;
       PROGRESS_EVERY = 10;
-      sleep7 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      sleep8 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     }
   });
 
@@ -60101,7 +59497,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     try {
       await PetsService.useTeam(teamId2, { markUsed: false });
-      await sleep7(AFTER_TEAM_SWAP_MS);
+      await sleep8(AFTER_TEAM_SWAP_MS);
     } catch {
       reporter2.say("system", "The team switch failed, working as I am.");
       return NOT_SWAPPED;
@@ -60113,7 +59509,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         if (!previous || previous.length === 0) return;
         try {
           await PetsService.usePetIds(previous);
-          await sleep7(AFTER_TEAM_SWAP_MS);
+          await sleep8(AFTER_TEAM_SWAP_MS);
           reporter2.say("system", "Your team is back the way it was.");
         } catch {
           reporter2.say("system", "Could not put your team back, sorry.");
@@ -60431,7 +59827,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       reporter2.say("report", "Stopped before I picked anything.");
       return;
     }
-    await sleep7(SETTLE_MS);
+    await sleep8(SETTLE_MS);
     let fresh = null;
     try {
       fresh = (await readHarvestRows()).filter((row) => row.ready);
@@ -60710,7 +60106,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         return { ok: false, reason: "could not pick it" };
       }
       StatsService.incrementGardenStat("totalHarvested", 1);
-      await sleep8(AFTER_HARVEST_MS);
+      await sleep9(AFTER_HARVEST_MS);
     }
     await walker.toPosition(await petPosition(candidate.petId));
     try {
@@ -60718,7 +60114,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
       return { ok: false, reason: "the feed did not go through" };
     }
-    await sleep8(AFTER_FEED_MS);
+    await sleep9(AFTER_FEED_MS);
     return { ok: true };
   }
   async function executeFeedBatch(picks, reporter2) {
@@ -60752,7 +60148,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const done = `${cancelled ? "Stopped there. " : ""}Fed ${names}.${tail}`;
     reporter2.say("report", done, compose(...spaced(petIcons(fed)), " ", done));
   }
-  var AFTER_HARVEST_MS, AFTER_FEED_MS, sleep8;
+  var AFTER_HARVEST_MS, AFTER_FEED_MS, sleep9;
   var init_feedRun = __esm({
     "src/features/companion/chat/feedRun.ts"() {
       "use strict";
@@ -60765,7 +60161,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_bubbleIcons();
       AFTER_HARVEST_MS = 700;
       AFTER_FEED_MS = 400;
-      sleep8 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      sleep9 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     }
   });
 
@@ -60794,7 +60190,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       reporter2.say("report", "Stopped before I planted anything.");
       return;
     }
-    await sleep7(SETTLE_MS);
+    await sleep8(SETTLE_MS);
     const planted = await countPlanted(attempted);
     const stopped = cancelled ? " before you stopped me" : "";
     if (planted === null) {
@@ -61023,7 +60419,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       );
       return;
     }
-    await sleep7(SETTLE_MS);
+    await sleep8(SETTLE_MS);
     const hatched = await countHatched(attempted);
     if (hatched === null) {
       reporter2.say("report", `Opened all ${attempted.length}, but I could not check.`);
@@ -61060,7 +60456,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     reporter2.say("system", line, compose(petThing(star.item, ""), " ", line, ...spaced(mutationChips(shown))), true);
     if (!timing || !lines) return;
-    await sleep7(timing.pauseMs);
+    await sleep8(timing.pauseMs);
     if (!reporter2.stopped()) reporter2.say("system", lines.resume);
   }
   async function executeHatchBatch(slots, reporter2) {
@@ -61178,7 +60574,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       reporter2.say("report", skipped.length > 0 ? "None of them went through." : "Nothing sold.");
       return;
     }
-    await sleep7(SETTLE_MS);
+    await sleep8(SETTLE_MS);
     let sold = null;
     try {
       const left = new Set((await readHatchScope()).pets.map((pet) => pet.petId));
@@ -64461,7 +63857,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     offer(shopReaction(names, Math.random));
   }
-  async function subscribe2() {
+  async function subscribe() {
     const add = (unsub) => {
       if (typeof unsub === "function") unsubscribers2.push(unsub);
     };
@@ -64501,7 +63897,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (running2) return;
     running2 = true;
     openSession();
-    void subscribe2().catch(() => {
+    void subscribe().catch(() => {
     });
     timers.push(
       window.setInterval(() => {
@@ -64856,7 +64252,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function refreshSlot() {
     slotIdx = await readMySlotIdx();
   }
-  async function subscribe3() {
+  async function subscribe2() {
     try {
       const unsub = await Atoms.data.gardenTileObjects.onChangeNow((next) => {
         latestGarden2 = next;
@@ -64869,7 +64265,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (running3) return;
     running3 = true;
     CompanionService.setWanderHooks(hooks2);
-    void subscribe3().catch(() => {
+    void subscribe2().catch(() => {
     });
     void refreshSlot().catch(() => {
     });
@@ -65107,7 +64503,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const db = b?.data;
     return da?.roomId === db?.roomId && da?.chat?.entries === db?.chat?.entries;
   }
-  async function subscribe4(gen) {
+  async function subscribe3(gen) {
     const add = (unsub) => {
       if (typeof unsub !== "function") return;
       if (!running4 || gen !== generation) {
@@ -65139,7 +64535,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     localId = null;
     roomId = null;
     entries = void 0;
-    void subscribe4(++generation).catch(() => {
+    void subscribe3(++generation).catch(() => {
     });
   }
   var running4, generation, unsubscribers4, state4, pending4, localId, roomId, entries;
@@ -65333,7 +64729,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     lastTile = { x, y };
     if (prev && (prev.x !== x || prev.y !== y)) noteActivity();
   }
-  async function subscribe5(gen) {
+  async function subscribe4(gen) {
     try {
       const unsub = await Atoms.player.position.onChangeNow((next) => onPosition(next));
       if (gen !== generation2 || !running5) unsub();
@@ -65357,7 +64753,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
     } catch {
     }
-    void subscribe5(gen).catch(() => {
+    void subscribe4(gen).catch(() => {
     });
   }
   var ACTIVITY_THROTTLE_MS, NEAR_DISTANCE, INPUT_EVENTS, running5, generation2, state5, unsubscribers5, ownHold, pending5, chain, lastNotedAt, lastTile;
