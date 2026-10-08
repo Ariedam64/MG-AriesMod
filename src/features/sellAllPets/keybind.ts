@@ -1,10 +1,9 @@
-// src/services/sell.ts
-// Installs keybind handlers for selling crops and pets.
+// The Sell All Crops and Sell All Pets keybinds.
 
 import { PlayerService } from "../../game/player";
 import { eventMatchesKeybind } from "../keybinds/keybinds";
 import { shouldIgnoreKeydown } from "../../lib/keyboard";
-import { runSellAllPetsFlow } from "./domButton";
+import { runSellAllPetsFlow } from "./flow";
 
 let sellKeybindsInstalled = false;
 

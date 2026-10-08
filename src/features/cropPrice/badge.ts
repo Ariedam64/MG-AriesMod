@@ -1,19 +1,15 @@
-// cropValuePixi.ts
-// Renders the crop coin value into the game's Pixi-based garden info card
-// (see gardenInfoCardPixi.ts for how that card is found and tracked).
+// The crop's coin value, drawn as a small badge above the game's Pixi garden
+// card (see game/pixi/gardenInfoCard.ts for how the card is found).
 //
-// The value text is attached to the card itself (not the outer row) because
-// the row can also contain left/right browse-arrow buttons laid out beside
-// the card — anchoring at the row's own x=0 would land the text under the
-// left arrow instead of under the card content.
-//
-// The card's own rounded background isn't a reachable display object (no
-// Graphics/Sprite/filter matching it was found anywhere near the card across
-// several live probes), so instead of trying to resize the game's box, we
-// draw our own small rounded badge behind the value text.
+// The badge hangs off the card itself, not the outer row: the row also holds
+// the left and right browse arrows, so the row's x=0 sits under the left arrow.
+// The card's own rounded background is not a reachable display object, so the
+// badge draws its own rounded backing instead of resizing the game's box.
 import { startCropPriceWatcherViaGardenObject } from "./priceWatcher";
 import { onShowCropPriceChange, readShowCropPrice } from "./setting";
 import { shareGlobal } from "../../platform/pageContext";
+import { formatInteger } from "../../lib/format";
+import { Subscriptions } from "../../lib/emitter";
 import { coin } from "../../data";
 import { Atoms } from "../../game/store/atoms";
 import {
@@ -24,11 +20,9 @@ import {
 } from "../../game/pixi/gardenInfoCard";
 import { getReadySpriteState } from "../../game/sprites/context";
 
-// Chrome DevTools only shows console output captured while the panel is
-// open — logs from before you open it are gone, not just hidden. So instead
-// of relying on console.log for post-hoc debugging, keep a small live status
-// object on the page window that can be inspected at any time, e.g.
-// `window.__MG_CROP_VALUE_PIXI_DEBUG__` in the console, whenever it's opened.
+// DevTools only shows console output captured while it is open, so a live
+// status object on the page window (`__MG_CROP_VALUE_PIXI_DEBUG__`) is what
+// tells what the badge last did.
 interface CropValuePixiDebugState {
   attached: boolean;
   lastSyncAt: number | null;
@@ -48,22 +42,14 @@ const BADGE_RADIUS = 6;
 const BADGE_COLOR = 0x000000;
 const BADGE_ALPHA = 0.55;
 
-const PRICE_FALLBACK = "—";
-const nfUS = new Intl.NumberFormat("en-US");
-const formatCoins = (value: number | null) =>
-  value == null ? PRICE_FALLBACK : nfUS.format(Math.max(0, Math.round(value)));
-
-// cropPrice.ts's own watcher already returns a null price for non-plant
-// objects, which already keeps the badge hidden — this is a second,
-// direct check (same pattern as lockerIndicatorPixi.ts/sellAllPetsPixi.ts)
-// so the gate is obvious here too, not just an implicit side effect of the
-// price computation elsewhere.
+// The price watcher already has no price for anything but a plant; checking
+// here as well keeps the gate visible where the badge is drawn.
 function isPlantObject(obj: any): boolean {
   return !!obj && typeof obj === "object" && obj.objectType === "plant";
 }
 
-// Coin texture is decoded once from the same base64 asset the old DOM
-// overlay used, and shared across every controller instance/card.
+// The coin texture is decoded once, from the same image the DOM tooltip uses,
+// and shared by every card.
 let coinTexture: any = null;
 let coinTexturePromise: Promise<any> | null = null;
 function ensureCoinTexture(TextureCtor: any): Promise<any> {
@@ -129,11 +115,9 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
     }
   };
 
-  // `syncValueNode` runs synchronously inside the game's own Pixi update
-  // loop (triggered from its `addChild` → `childAdded` emit). If it throws,
-  // the exception bubbles into the game's own rebuild and aborts it partway
-  // through — which is what produced a "whole card shifted" symptom in an
-  // earlier version of this code. Every path here must stay exception-safe.
+  // Runs inside the game's own Pixi update (its `addChild` emits
+  // `childAdded`). A throw aborts the game's rebuild partway, which once
+  // showed as the whole card shifting, so every path stays exception-safe.
   const syncValueNodeUnsafe = () => {
     debugState.objectType = currentGardenObject?.objectType ?? null;
     if (
@@ -142,7 +126,7 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
       currentCard.destroyed ||
       !geometry ||
       !isPlantObject(currentGardenObject) ||
-      // Coupé depuis le menu Misc : le badge disparaît, la carte reste celle du jeu.
+      // Switched off in the Misc menu: the card is left as the game drew it.
       !readShowCropPrice()
     ) {
       detachValueText();
@@ -158,7 +142,7 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
       return;
     }
 
-    const text = formatCoins(value);
+    const text = formatInteger(value, "round");
     if (!valueText) {
       graphicsCtor ??= findGraphicsCtor(getStage(state));
       if (graphicsCtor) {
@@ -186,8 +170,7 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
       }
     }
 
-    // Row (icon + text) centered horizontally, placed above the existing
-    // content (mutations/title) rather than below it.
+    // The icon and text, centred, above the card's title and mutations.
     const rowHeight = Math.max(valueIcon ? VALUE_ICON_SIZE : 0, valueText.height);
     const rowWidth = (valueIcon ? VALUE_ICON_SIZE + VALUE_ICON_GAP : 0) + valueText.width;
     const badgeHeight = rowHeight + BADGE_PADDING_Y * 2;
@@ -224,49 +207,43 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
       debugState.hasCoinTexture = !!coinTexture;
     } catch (error) {
       debugState.lastError = String((error as Error)?.message ?? error);
-      console.warn("[cropValuePixi] syncValueNode failed, clearing overlay", error);
+      console.warn("[cropPrice] badge sync failed, clearing overlay", error);
       try { detachValueText(); } catch {}
     }
   };
 
-  const offCard = watchGardenInfoCard((card, geom) => {
-    currentCard = card;
-    geometry = geom;
-    hitAreaBaseHeight = card?.hitArea?.height ?? 0;
-    detachValueText();
-    debugState.attached = !!card;
-    if (card) syncValueNode();
-  });
-
-  const offPrice = priceWatcher.onChange(syncValueNode);
-  const offShowPrice = onShowCropPriceChange(() => syncValueNode());
-
-  let unsubGardenObject: (() => void) | null = null;
-  void (async () => {
-    try {
-      currentGardenObject = await Atoms.data.myCurrentGardenObject.get();
-      if (running) syncValueNode();
-    } catch {}
-    try {
-      const unsub = await Atoms.data.myCurrentGardenObject.onChange((next: any) => {
-        currentGardenObject = next;
-        syncValueNode();
-      });
-      if (typeof unsub === "function") {
-        if (running) unsubGardenObject = unsub;
-        else unsub();
-      }
-    } catch {}
-  })();
+  const subs = new Subscriptions();
+  subs.add(
+    watchGardenInfoCard((card, geom) => {
+      currentCard = card;
+      geometry = geom;
+      hitAreaBaseHeight = card?.hitArea?.height ?? 0;
+      detachValueText();
+      debugState.attached = !!card;
+      if (card) syncValueNode();
+    }),
+  );
+  subs.add(priceWatcher.onChange(syncValueNode));
+  subs.add(onShowCropPriceChange(() => syncValueNode()));
+  void Atoms.data.myCurrentGardenObject
+    .get()
+    .then((initial) => {
+      currentGardenObject = initial;
+      syncValueNode();
+    })
+    .catch(() => {});
+  subs.add(
+    Atoms.data.myCurrentGardenObject.onChange((next: any) => {
+      currentGardenObject = next;
+      syncValueNode();
+    }),
+  );
 
   return {
     stop() {
       if (!running) return;
       running = false;
-      unsubGardenObject?.();
-      offCard();
-      offPrice?.();
-      offShowPrice();
+      subs.dispose();
       priceWatcher.stop();
       detachValueText();
       currentCard = null;

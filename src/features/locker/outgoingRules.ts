@@ -5,13 +5,11 @@ import { editGameToasts } from "../../game/toasts";
 import { tos } from "../../game/pixi/tileObjects";
 import { toastSimple } from "../../ui/toast";
 import { EditorService } from "../editor/editor";
-import { extractSeedKey, extractSizePercent, lockerService, normalizeMutationsList } from "./locker";
-import {
-  friendBonusPercentFromMultiplier,
-  friendBonusPercentFromPlayers,
-  lockerRestrictionsService,
-  percentToRequiredFriendCount,
-} from "./restrictions";
+import { lockerService } from "./locker";
+import { normalizeMutationsList } from "./harvestRules";
+import { extractSeedKey, extractSizePercent } from "./slotWatcher";
+import { eggIdOf, lockerRestrictionsService, percentToRequiredFriendCount } from "./restrictions";
+import { currentFriendBonus, followFriendBonus } from "./friendBonus";
 
 /**
  * The locker's hold on what the game sends: harvests the crop locker refuses,
@@ -21,21 +19,6 @@ import {
 
 let garden: GardenState | null = null;
 let currentGardenObject: any = null;
-let friendBonusFromMultiplier: number | null = null;
-let friendBonusFromPlayers: number | null = null;
-
-function eggIdOf(obj: any): string | null {
-  if (!obj || typeof obj !== "object" || obj.objectType !== "egg") return null;
-  return typeof obj.eggId === "string" && obj.eggId ? obj.eggId : null;
-}
-
-function lockerEnabled(): boolean {
-  try {
-    return lockerService.getState().enabled;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Fail-closed fallback for a harvest whose tile cannot be resolved from the
@@ -45,11 +28,7 @@ function lockerEnabled(): boolean {
  * is enough to block instead of silently allowing.
  */
 function blockedByCurrentSlot(): boolean {
-  try {
-    return lockerEnabled() && lockerService.getCurrentSlotSnapshot().harvestAllowed === false;
-  } catch {
-    return false;
-  }
+  return lockerService.isEnabled() && lockerService.currentHarvestAllowed() === false;
 }
 
 /** The garden tile a harvest targets, from the garden atom or, in editor mode, the tile view. */
@@ -99,7 +78,7 @@ function checkHarvest(message: any) {
     return;
   }
 
-  if (!lockerEnabled()) return;
+  if (!lockerService.isEnabled()) return;
 
   // The garden atom names the species on each sub-slot (a FourLeafClover
   // inside a Clover tile), so the sub-slot wins. The same slot of the player's
@@ -156,7 +135,7 @@ function isSellSuccessToast(t: any): boolean {
 }
 
 function checkSellAllCrops() {
-  const currentBonusPct = friendBonusFromMultiplier ?? friendBonusFromPlayers ?? null;
+  const currentBonusPct = currentFriendBonus();
   if (lockerRestrictionsService.allowsCropSale(currentBonusPct)) return;
 
   const requiredPct = lockerRestrictionsService.getRequiredPercent();
@@ -185,12 +164,7 @@ export function installLockerOutgoingRules(): void {
   void readAndFollow(Atoms.data.myCurrentGardenObject, (next) => {
     currentGardenObject = next;
   });
-  void readAndFollow(Atoms.server.friendBonusMultiplier, (next) => {
-    friendBonusFromMultiplier = friendBonusPercentFromMultiplier(next);
-  });
-  void readAndFollow(Atoms.server.numPlayers, (next) => {
-    friendBonusFromPlayers = friendBonusPercentFromPlayers(next);
-  });
+  followFriendBonus();
 
   interceptOutgoing("HarvestCrop", checkHarvest);
   interceptOutgoing("PickupDecor", checkDecorPickup);

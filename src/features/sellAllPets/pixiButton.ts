@@ -1,33 +1,19 @@
-// sellAllPetsPixi.ts
-// Adds a Pixi-rendered "Sell all Pets" button next to the game's own
-// single-slot contextual "Sell Pet" action prompt (the `ActionHud` container
-// under `UI`, which shows one contextual action button at a time — e.g. a
-// "press [space]" prompt). This replaced the old DOM modal/list of per-pet
-// "Sell <name>" buttons that sellAllPets.ts used to inject next to; this
-// file only adds a new Pixi-native button, reusing that file's existing
-// sell-all business logic untouched.
+// A Pixi "Sell all Pets" button beside the game's own "Sell Pet" prompt, the
+// one contextual action the `ActionHud` container under `UI` shows at a time.
 //
-// Which action is currently offered is read from the game's own
-// `actionAtom` (`Atoms.player.action`) rather than parsed from the button's
-// rendered text — the displayed label can vary (`Sell Pet`/`Sell Rainbow
-// Pet`/`Sell Gold Pet` all show for a plain "sell pet" prompt), while the
-// action's own type identifier is what the game itself dispatches on, so
-// it's the more stable signal.
-import {
-  getStage,
-  findByLabel,
-  findAcrossBranches,
-  findGraphicsCtor,
-} from "../../game/pixi/gardenInfoCard";
+// Which action is offered comes from the game's `actionAtom`
+// (`Atoms.player.action`), not from the button's text: the label varies
+// (Sell Pet, Sell Rainbow Pet, Sell Gold Pet) while the action's type is what
+// the game itself dispatches on.
+import { getStage, findByLabel, findGraphicsCtor } from "../../game/pixi/gardenInfoCard";
 import { getReadySpriteState } from "../../game/sprites/context";
 import { pageWindow, shareGlobal } from "../../platform/pageContext";
-import { runSellAllPetsFlow } from "./domButton";
+import { runSellAllPetsFlow } from "./flow";
+import { watchActionHud } from "./actionHud";
 import { Atoms } from "../../game/store/atoms";
+import { Subscriptions } from "../../lib/emitter";
 
-const ACTION_HUD_LABEL = "ActionHud";
 const BUTTON_FACE_LABEL = "McButtonFace";
-const ACTION_HUD_FIND_RETRY_MS = 1000;
-const ACTION_HUD_FIND_LOG_EVERY = 30;
 
 // Matches the game's own action-dispatch identifiers for selling a single
 // pet (seen in its own `case 'sellPet': case 'sellRainbowPet': case
@@ -44,7 +30,7 @@ const BUTTON_FILL_COLOR = 0x0067b4;
 const BUTTON_BORDER_COLOR = 0x48adf4;
 const BUTTON_BORDER_WIDTH = 2;
 const HOVER_SCALE = 1.08;
-// Per-frame easing factor towards the target scale — higher = snappier.
+// Per-frame easing towards the target scale: higher is snappier.
 const HOVER_SCALE_EASE = 0.25;
 const HOVER_SCALE_SETTLE_EPSILON = 0.001;
 
@@ -78,10 +64,9 @@ function actionLabel(action: any): string | null {
   return null;
 }
 
-// `.width`/`.height` are Pixi getters that can themselves throw mid layout
-// rebuild (not just return a bad value) — a `typeof x?.width === "number"`
-// check doesn't protect against that, since the getter throws before the
-// value even exists to check. Every read needs its own try/catch.
+// `.width` and `.height` are Pixi getters that can throw in the middle of a
+// layout rebuild, before there is a value to check, so every read gets its
+// own try/catch.
 function safeSize(node: any, prop: "width" | "height", fallback: number): number {
   try {
     const value = node?.[prop];
@@ -99,8 +84,8 @@ function findAnyTextStyle(root: any, limit = 5000): any {
     const node = stack.pop();
     if (!node || seen.has(node)) continue;
     seen.add(node);
-    // Rive display objects can also carry `.text`/`.style` — only trust
-    // genuine Pixi text nodes so we don't copy a Rive style object.
+    // Rive display objects can carry `.text` and `.style` too: only a real
+    // Pixi text node's style is copied.
     if (typeof node.text === "string" && node.style && node.renderPipeId === "text") return node.style;
     const children = node.children;
     if (Array.isArray(children)) for (const child of children) stack.push(child);
@@ -115,9 +100,6 @@ export function startSellAllPetsPixi(): SellAllPetsPixiController {
   let buttonBg: any = null;
   let buttonText: any = null;
   let currentAction: any = null;
-  let findAttempts = 0;
-  let findRafId: number | null = null;
-  let lastFindCheckAt = 0;
   let canvasEl: any = null;
   let canvasListenersAttached = false;
   let weSetPointerCursor = false;
@@ -134,8 +116,6 @@ export function startSellAllPetsPixi(): SellAllPetsPixiController {
   };
   shareGlobal("__MG_SELL_ALL_PETS_PIXI_DEBUG__", debugState);
 
-  // RAF-driven rather than setInterval — see gardenInfoCardPixi.ts for why
-  // (setInterval/setTimeout throttling risked never finding the target).
   const raf: (cb: (t: number) => void) => number = (pageWindow as any).requestAnimationFrame.bind(pageWindow);
   const cancelRaf: (id: number) => void = (pageWindow as any).cancelAnimationFrame.bind(pageWindow);
 
@@ -159,10 +139,9 @@ export function startSellAllPetsPixi(): SellAllPetsPixiController {
     if (scaleRafId == null) scaleRafId = raf(scaleAnimationTick);
   };
 
-  // Clears our own references without trying to destroy anything — used
-  // both after we destroy our own nodes, and when the game's own rebuild
-  // of `actionHud` destroys them out from under us first (see the
-  // `once("destroyed", ...)` hook where `buttonContainer` is created).
+  // Forgets our nodes without destroying them: used after destroying them
+  // ourselves, and when the game's rebuild of `actionHud` destroyed them
+  // first (see the `once("destroyed")` hook where the container is made).
   const forgetButtonRefs = () => {
     stopScaleAnimation();
     hovering = false;
@@ -184,24 +163,17 @@ export function startSellAllPetsPixi(): SellAllPetsPixiController {
     void runSellAllPetsFlow();
   };
 
-  // Pixi's own EventSystem never dispatched real clicks to this part of the
-  // tree here (confirmed earlier: even `stage.on('pointerdown', ...)` never
-  // fired despite native canvas pointerdown firing — this action prompt is
-  // likely keyboard-only ("[space]") in the base game, so its interaction
-  // wiring doesn't reach the mouse path at all). So instead of relying on
-  // `eventMode`/`.on('pointertap', ...)`, hit-test our own button directly
-  // from a native DOM listener on the canvas, using `toGlobal` for the
-  // button's current on-screen box — independent of whatever is or isn't
-  // wired up in Pixi's own interaction system.
+  // Pixi's EventSystem never delivered clicks to this part of the tree (even
+  // `stage.on("pointerdown")` stayed silent while the canvas got the native
+  // event): the prompt is keyboard-only in the game. So a native listener on
+  // the canvas hit-tests our button's on-screen box itself.
   const hitTestButton = (clientX: number, clientY: number): boolean => {
     if (!buttonBg || buttonBg.destroyed || !canvasEl) return false;
     try {
       const rect = canvasEl.getBoundingClientRect();
       const x = clientX - rect.left;
       const y = clientY - rect.top;
-      // Both corners go through `toGlobal` (not just the origin + a raw
-      // local width/height) so the hit box correctly grows/shrinks with
-      // the hover-zoom animation on the parent container.
+      // Both corners go through `toGlobal` so the box follows the hover zoom.
       const topLeft = buttonBg.toGlobal({ x: 0, y: 0 });
       const bottomRight = buttonBg.toGlobal({ x: buttonBg.width || 0, y: buttonBg.height || 0 });
       return x >= topLeft.x && x <= bottomRight.x && y >= topLeft.y && y <= bottomRight.y;
@@ -255,9 +227,8 @@ export function startSellAllPetsPixi(): SellAllPetsPixiController {
     canvasListenersAttached = true;
   };
 
-  // Runs synchronously inside the game's own Pixi update loop (triggered
-  // from its `addChild` → `childAdded` emit) — must never throw, same
-  // reasoning as gardenInfoCardPixi.ts's onChildAdded.
+  // Runs inside the game's own Pixi update (its `addChild` emits
+  // `childAdded`), so it must never throw, as in game/pixi/gardenInfoCard.ts.
   const syncUnsafe = () => {
     debugState.currentAction = actionLabel(currentAction);
     if (!running || !actionHud || actionHud.destroyed || !isSellPetAction(currentAction)) {
@@ -276,32 +247,28 @@ export function startSellAllPetsPixi(): SellAllPetsPixiController {
     if (!graphicsCtor) return;
     ensureCanvasListeners(state);
 
-    // Fall back to the observed real size (150x55) if any of these come
-    // back missing/zero — the button's own reported dimensions have been
-    // unreliable at the exact moment this fires (mid layout-rebuild).
+    // The face's size is unreliable in the middle of a rebuild, which is
+    // when this runs: missing or zero falls back on the observed 150x55.
     const face = findByLabel(wrapper, BUTTON_FACE_LABEL) ?? wrapper;
     const faceWidth = safeSize(face, "width", 150);
     const faceHeight = safeSize(face, "height", 55);
 
-    // Wrapping bg+text in their own container lets the hover animation
-    // scale around the button's center (via `pivot`) instead of its
-    // top-left corner, which would look like it's growing off to one side.
+    // Background and text share a container so the hover zoom scales around
+    // the button's centre (its `pivot`), not its top-left corner.
     if (!buttonContainer) {
       const ContainerCtor = state.ctors?.Container ?? actionHud.constructor;
       buttonContainer = new ContainerCtor();
       const thisContainer = buttonContainer;
-      // The game rebuilds `actionHud`'s children as a whole and doesn't
-      // know this one is ours — it can destroy it (nulling its internal
-      // render context) without notifying us. Without this hook we'd keep
-      // a stale reference and crash on the next `.clear()`/`.destroy()`.
+      // The game rebuilds `actionHud`'s children wholesale and can destroy
+      // ours without a word; holding on to it would crash the next
+      // `.clear()` or `.destroy()`.
       thisContainer.once("destroyed", () => {
         if (buttonContainer === thisContainer) forgetButtonRefs();
       });
       actionHud.addChildAt(buttonContainer, 0);
     }
     if (!buttonText) {
-      // Match the game's own button font instead of a generic hardcoded
-      // one — visually closer to the real UI than a fixed Arial style.
+      // The game's own button font, closer to its UI than a fixed Arial.
       const existingTextStyle = findAnyTextStyle(wrapper);
       const style = {
         ...BUTTON_TEXT_STYLE,
@@ -322,19 +289,18 @@ export function startSellAllPetsPixi(): SellAllPetsPixiController {
     const badgeWidth = safeSize(buttonText, "width", 100) + BUTTON_PADDING_X * 2;
     const badgeHeight = Math.max(faceHeight, buttonTextHeight + 12);
 
-    // Anchor right next to the visible face (not the whole wrapper) — click
-    // detection is now our own native hit-test (see hitTestButton), not
-    // Pixi's hit-testing, so there's no risk of the wrapper's own hit
-    // region "stealing" the click by sitting on top of ours anymore.
-    // `toGlobal` walks the whole ancestor transform chain, which can throw
-    // mid layout-rebuild same as the `.width`/`.height` getters above.
+    // Anchored beside the visible face rather than the whole wrapper; our own
+    // hit test means the wrapper's hit area cannot take the click. `toGlobal`
+    // walks every ancestor transform and can throw mid-rebuild too.
     let localAnchor: { x: number; y: number } = { x: 0, y: 0 };
     try {
       if (typeof face?.toGlobal === "function" && typeof actionHud.toLocal === "function") {
         const globalAnchor = face.toGlobal({ x: faceWidth, y: faceHeight / 2 });
         localAnchor = actionHud.toLocal(globalAnchor);
       }
-    } catch { /* keep the (0,0) fallback — next sync (fires often) will correct it */ }
+    } catch {
+      // Keeps (0, 0); the next sync, which comes often, corrects it.
+    }
 
     buttonBg.clear();
     buttonBg
@@ -343,9 +309,8 @@ export function startSellAllPetsPixi(): SellAllPetsPixiController {
       .stroke({ width: BUTTON_BORDER_WIDTH, color: BUTTON_BORDER_COLOR });
     buttonText.position.set(BUTTON_PADDING_X, (badgeHeight - buttonTextHeight) / 2);
 
-    // Pivot at the badge's own center, with position compensated so the
-    // badge still lands exactly where it used to at scale 1 — see the
-    // comment above `buttonContainer` creation for why.
+    // Pivot at the centre, position shifted to match, so at scale 1 the
+    // button sits exactly beside the face.
     buttonContainer.pivot.set(badgeWidth / 2, badgeHeight / 2);
     buttonContainer.position.set(
       localAnchor.x + BUTTON_GAP + badgeWidth / 2,
@@ -361,105 +326,53 @@ export function startSellAllPetsPixi(): SellAllPetsPixiController {
       debugState.lastError = null;
     } catch (error) {
       debugState.lastError = String((error as Error)?.message ?? error);
-      console.warn("[sellAllPetsPixi] sync failed, clearing button", error);
+      console.warn("[sellAllPets] Pixi button sync failed, clearing button", error);
       try { removeButton(); } catch {}
     }
   };
 
   const onChildAdded = () => sync();
+  const hudWatch = watchActionHud({
+    attach(hud) {
+      actionHud = hud;
+      hud.on("childAdded", onChildAdded);
+      debugState.attached = true;
+      sync();
+    },
+    detach() {
+      actionHud = null;
+      debugState.attached = false;
+      removeButton();
+    },
+    onSearch(attempts) {
+      debugState.findAttempts = attempts;
+    },
+  });
 
-  const attachToActionHud = (hud: any) => {
-    actionHud = hud;
-    actionHud.on("childAdded", onChildAdded);
-    actionHud.once("destroyed", () => {
-      if (actionHud === hud) {
-        actionHud = null;
-        debugState.attached = false;
-        removeButton();
-        // The game can destroy and fully recreate its whole Pixi tree
-        // (e.g. WebGL context loss after the tab/window is backgrounded a
-        // while, such as an alt-tab) — the search loop had already stopped
-        // scheduling itself once found the first time, so without this it
-        // would never look for the new one again.
-        restartSearchIfNeeded();
-      }
-    });
-    debugState.attached = true;
-    console.info(`[sellAllPetsPixi] attached to ${ACTION_HUD_LABEL} after ${findAttempts} attempt(s)`);
-    sync();
-  };
-
-  // No attempt cap — same reasoning as gardenInfoCardPixi.ts: the sprite
-  // catalog can take a variable amount of time to become ready, and
-  // retrying forever costs nothing once found.
-  const tryFindActionHud = () => {
-    if (!running || actionHud) return;
-    const state = getReadySpriteState();
-    if (!state) return;
-    const stage = getStage(state);
-    const found = findAcrossBranches(stage, (node: any) => node?.label === ACTION_HUD_LABEL);
-    if (found) {
-      attachToActionHud(found);
-      return;
-    }
-    findAttempts += 1;
-    debugState.findAttempts = findAttempts;
-    if (findAttempts % ACTION_HUD_FIND_LOG_EVERY === 0) {
-      console.info(`[sellAllPetsPixi] still searching for ${ACTION_HUD_LABEL} (${findAttempts} attempts so far)`);
-    }
-  };
-
-  const scheduleFind = (now: number) => {
-    findRafId = null;
-    if (!running || actionHud) return;
-    if (now - lastFindCheckAt >= ACTION_HUD_FIND_RETRY_MS) {
-      lastFindCheckAt = now;
-      tryFindActionHud();
-    }
-    if (!running || actionHud) return;
-    findRafId = raf(scheduleFind);
-  };
-
-  const restartSearchIfNeeded = () => {
-    if (!running || actionHud) return;
-    tryFindActionHud();
-    if (!actionHud && findRafId == null) {
-      findRafId = raf(scheduleFind);
-    }
-  };
-
-  tryFindActionHud();
-  if (!actionHud) {
-    findRafId = raf(scheduleFind);
-  }
-
-  let unsubAction: (() => void) | null = null;
-  void (async () => {
-    try {
-      currentAction = await Atoms.player.action.get();
+  const subs = new Subscriptions();
+  void Atoms.player.action
+    .get()
+    .then((initial) => {
+      currentAction = initial;
       if (running) sync();
-    } catch {}
-    try {
-      const unsub = await Atoms.player.action.onChange((next: any) => {
-        currentAction = next;
-        sync();
-      });
-      if (typeof unsub === "function") {
-        if (running) unsubAction = unsub;
-        else unsub();
-      }
-    } catch {}
-  })();
+    })
+    .catch(() => {});
+  subs.add(
+    Atoms.player.action.onChange((next: any) => {
+      currentAction = next;
+      sync();
+    }),
+  );
 
   return {
     stop() {
       if (!running) return;
       running = false;
-      if (findRafId != null) { cancelRaf(findRafId); findRafId = null; }
+      hudWatch.stop();
       if (actionHud) {
         try { actionHud.off("childAdded", onChildAdded); } catch {}
       }
-      unsubAction?.();
+      subs.dispose();
       if (canvasListenersAttached && canvasEl) {
         try {
           canvasEl.removeEventListener("pointerdown", onCanvasPointerDown);

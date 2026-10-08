@@ -221,13 +221,13 @@
   // src/game/sprites/pixi/hooks.ts
   function mkSyntheticApp(renderer) {
     const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
-    const listeners4 = /* @__PURE__ */ new Set();
+    const listeners3 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
-    const tick3 = (now2) => {
-      const delta = last ? (now2 - last) / (1e3 / 60) : 1;
-      last = now2;
-      for (const fn of listeners4) {
+    const tick3 = (now) => {
+      const delta = last ? (now - last) / (1e3 / 60) : 1;
+      last = now;
+      for (const fn of listeners3) {
         try {
           fn(delta);
         } catch {
@@ -237,14 +237,14 @@
     };
     const ticker = {
       add(fn) {
-        if (!listeners4.size) {
+        if (!listeners3.size) {
           rafId = requestAnimationFrame(tick3);
         }
-        listeners4.add(fn);
+        listeners3.add(fn);
       },
       remove(fn) {
-        listeners4.delete(fn);
-        if (!listeners4.size) {
+        listeners3.delete(fn);
+        if (!listeners3.size) {
           cancelAnimationFrame(rafId);
         }
       },
@@ -1414,8 +1414,8 @@
   }
   function processVariantJobs(state7, cfg) {
     if (!cfg.jobOn || !state7.open || !state7.jobs.length) return false;
-    const now2 = performance.now();
-    const burst = now2 - state7.changedAt <= cfg.jobBurstWindowMs;
+    const now = performance.now();
+    const burst = now - state7.changedAt <= cfg.jobBurstWindowMs;
     const budget = burst ? cfg.jobBurstMs : cfg.jobBudgetMs;
     const t0 = performance.now();
     let done = 0;
@@ -2274,11 +2274,11 @@
     if (list) list.push(handler);
     else map2.set(type, [handler]);
     return () => {
-      const current = map2.get(type);
-      if (!current) return;
-      const index = current.indexOf(handler);
-      if (index !== -1) current.splice(index, 1);
-      if (current.length === 0) map2.delete(type);
+      const current2 = map2.get(type);
+      if (!current2) return;
+      const index = current2.indexOf(handler);
+      if (index !== -1) current2.splice(index, 1);
+      if (current2.length === 0) map2.delete(type);
     };
   }
   function interceptOutgoing(type, rule) {
@@ -2290,22 +2290,22 @@
   function runOutgoing(message2) {
     const type = message2?.type;
     if (typeof type !== "string" || !type) return message2;
-    let current = message2;
+    let current2 = message2;
     for (const rule of [...rules.get(type) ?? []]) {
       try {
-        const verdict2 = rule(current);
+        const verdict2 = rule(current2);
         if (verdict2 === "drop") return null;
-        if (verdict2 && typeof verdict2 === "object") current = verdict2.replace;
+        if (verdict2 && typeof verdict2 === "object") current2 = verdict2.replace;
       } catch {
       }
     }
     for (const observer2 of [...observers.get(type) ?? []]) {
       try {
-        observer2(current);
+        observer2(current2);
       } catch {
       }
     }
-    return current;
+    return current2;
   }
   var rules, observers;
   var init_outgoing = __esm({
@@ -2329,18 +2329,18 @@
     const original = resolveSendMessage(conn);
     if (!original) return false;
     original.owner.sendMessage = function(message2, ...rest2) {
-      let current = message2;
+      let current2 = message2;
       try {
         const isEnvelope = message2?.type === "QuinoaCommand" && message2?.command && typeof message2.command === "object";
         if (!isEnvelope && message2?.type) {
-          current = runOutgoing(message2);
-          if (current === null) return;
+          current2 = runOutgoing(message2);
+          if (current2 === null) return;
         }
       } catch (error) {
         console.error("[MG-mod] sendMessage hook failed:", error);
-        current = message2;
+        current2 = message2;
       }
-      return original.fn.call(this, current, ...rest2);
+      return original.fn.call(this, current2, ...rest2);
     };
     status = "installed";
     shareGlobal(INSTALLED_FLAG, true);
@@ -3310,11 +3310,11 @@
     };
   }
   function unwrapNestedSnapshot(raw) {
-    let current = raw;
-    for (let depth = 0; depth < 10 && isRecord(current) && isRecord(current.snapshot); depth++) {
-      current = current.snapshot;
+    let current2 = raw;
+    for (let depth = 0; depth < 10 && isRecord(current2) && isRecord(current2.snapshot); depth++) {
+      current2 = current2.snapshot;
     }
-    return current ?? raw;
+    return current2 ?? raw;
   }
   function normalizeAriesStorage(raw) {
     const out = createDefaultAriesStorage();
@@ -3329,10 +3329,10 @@
       const defaults = out[key2];
       out[key2] = isRecord(defaults) && isRecord(value) ? { ...defaults, ...value } : value;
     }
-    for (const [legacyKey, [section4, field2]] of Object.entries(LEGACY_ROOT_KEYS)) {
+    for (const [legacyKey, [section5, field2]] of Object.entries(LEGACY_ROOT_KEYS)) {
       if (!(legacyKey in raw)) continue;
-      const target = isRecord(out[section4]) ? out[section4] : {};
-      out[section4] = target;
+      const target = isRecord(out[section5]) ? out[section5] : {};
+      out[section5] = target;
       if (target[field2] === void 0) target[field2] = raw[legacyKey];
     }
     return out;
@@ -3431,23 +3431,23 @@
     }, FLUSH_DELAY_MS);
   }
   function getValueAtPath(obj, path) {
-    let current = obj;
+    let current2 = obj;
     for (const segment of path) {
-      if (!current || typeof current !== "object") return void 0;
-      current = current[segment];
+      if (!current2 || typeof current2 !== "object") return void 0;
+      current2 = current2[segment];
     }
-    return current;
+    return current2;
   }
   function setValueAtPath(obj, path, value) {
     if (!path.length) return;
-    let current = obj;
+    let current2 = obj;
     for (const key2 of path.slice(0, -1)) {
-      if (!current[key2] || typeof current[key2] !== "object") current[key2] = {};
-      current = current[key2];
+      if (!current2[key2] || typeof current2[key2] !== "object") current2[key2] = {};
+      current2 = current2[key2];
     }
     const last = path[path.length - 1];
-    if (value === void 0) delete current[last];
-    else current[last] = value;
+    if (value === void 0) delete current2[last];
+    else current2[last] = value;
   }
   function getAriesStorage() {
     return load();
@@ -3456,11 +3456,11 @@
     persist(data);
   }
   function updateAriesStorage(mutator) {
-    const current = load();
-    mutator(current);
-    current.version = ARIES_STORAGE_VERSION;
-    persist(current);
-    return current;
+    const current2 = load();
+    mutator(current2);
+    current2.version = ARIES_STORAGE_VERSION;
+    persist(current2);
+    return current2;
   }
   function readAriesPath(path, fallback) {
     const value = getValueAtPath(load(), splitPath(path));
@@ -3764,8 +3764,8 @@
     if (existing) return existing.promise;
     const promise = capture().then((store) => {
       if (store.__polyfill) {
-        const current = getBridge();
-        if (current && current.promise === promise) {
+        const current2 = getBridge();
+        if (current2 && current2.promise === promise) {
           delete pageWindow[STORE_BRIDGE_GLOBAL];
         }
       }
@@ -3961,10 +3961,10 @@
     return findAtomsByLabel(new RegExp("^" + escape(label2) + "$"))[0] || null;
   }
   function pollPendingWaiters() {
-    const now2 = Date.now();
+    const now = Date.now();
     for (const waiter of Array.from(pendingWaiters)) {
       const atom = getAtomByLabel(waiter.label);
-      const givenUp = now2 >= waiter.expiresAt || waiter.keepGoing && !waiter.keepGoing();
+      const givenUp = now >= waiter.expiresAt || waiter.keepGoing && !waiter.keepGoing();
       if (atom || givenUp) {
         pendingWaiters.delete(waiter);
         waiter.resolve(atom ?? null);
@@ -4050,8 +4050,8 @@
       attachedUnsub = unsub;
       if (!immediate) return;
       try {
-        const current = await jGet(atom2);
-        if (!cancelled && current !== void 0) cb(current);
+        const current2 = await jGet(atom2);
+        if (!cancelled && current2 !== void 0) cb(current2);
       } catch {
       }
     };
@@ -4244,7 +4244,7 @@
     cb(await myPetInfos.get());
     return myPetInfos.onChange(cb, activePetsStructuralEq);
   }
-  var position, state, map, player, action, myData, myInventory, myCropInventory, mySeedInventory, myToolInventory, myEggInventory, myDecorInventory, mySeedSiloItems, myDecorShedItems, myToolShackItems, myPetInfos, myPrimitivePetSlots, totalPetSellPrice, myCropItemsToSell, myPetHutchPetItems, isMyInventoryAtMaxLength, myNumPetHutchItems, myPetHutchCapacitySlots, myUserSlot, numPlayers, totalCropSellPrice, friendBonusMultiplier, myValidatedSelectedItemIndex, setSelectedIndexToEnd, mySelectedItemName, mySelectedItemId, myPossiblyNoLongerValidSelectedItemIndex, mySelectedItemRotation, myCurrentGardenObject, myCurrentSortedGrowSlotIndices, myCurrentGrowSlotIndex, weather, activeModalRaw, sameModal, activeModal, inventoryModalIsActive, activityLogTab, avatarTriggerAnimationAtom, garden, gardenTileObjects, favoriteIds, playerId, stateUserSlots, myActivityLog, shops, eggShop, Atoms;
+  var position, state, map, player, action, myData, myInventory, myCropInventory, mySeedInventory, myToolInventory, myEggInventory, myDecorInventory, mySeedSiloItems, myDecorShedItems, myToolShackItems, myPetInfos, myPrimitivePetSlots, totalPetSellPrice, myCropItemsToSell, myPetHutchPetItems, isMyInventoryAtMaxLength, myNumPetHutchItems, myPetHutchCapacitySlots, myUserSlot, numPlayers, totalCropSellPrice, friendBonusMultiplier, myValidatedSelectedItemIndex, setSelectedIndexToEnd, mySelectedItemName, mySelectedItemId, myPossiblyNoLongerValidSelectedItemIndex, mySelectedItemRotation, myCurrentGardenObject, myCurrentGrowSlotIndex, weather, activeModalRaw, sameModal, activeModal, inventoryModalIsActive, activityLogTab, avatarTriggerAnimationAtom, garden, gardenTileObjects, favoriteIds, playerId, stateUserSlots, myActivityLog, shops, eggShop, Atoms;
   var init_atoms = __esm({
     "src/game/store/atoms.ts"() {
       "use strict";
@@ -4287,10 +4287,6 @@
       myPossiblyNoLongerValidSelectedItemIndex = makeAtom("myPossiblyNoLongerValidSelectedItemIndexAtom");
       mySelectedItemRotation = makeAtom("mySelectedItemRotationAtom");
       myCurrentGardenObject = makeAtom("myCurrentGardenObjectAtom");
-      myCurrentSortedGrowSlotIndices = makeAliasedAtom([
-        "myCurrentSortedGrowSlotIdsAtom",
-        "myCurrentSortedGrowSlotIndicesAtom"
-      ]);
       myCurrentGrowSlotIndex = makeAliasedAtom([
         "selectedCropSlotIdAtom",
         "myCurrentGrowSlotIdAtom",
@@ -4688,8 +4684,8 @@
         },
         /** Locks or unlocks an item to match `shouldBeFavorite`, and returns the state it ends in. */
         async ensureFavoriteItem(itemId, shouldBeFavorite) {
-          const current = (await this.getFavoriteIdSet()).has(itemId);
-          if (current === shouldBeFavorite) return current;
+          const current2 = (await this.getFavoriteIdSet()).has(itemId);
+          if (current2 === shouldBeFavorite) return current2;
           await this.toggleFavoriteItem(itemId);
           return shouldBeFavorite;
         },
@@ -4756,15 +4752,15 @@
       if (pendingTimer != null) return;
       pendingTimer = window.setTimeout(() => {
         pendingTimer = null;
-        const now2 = Date.now();
+        const now = Date.now();
         const pending6 = Array.from(pendingKeys);
         pendingKeys.clear();
-        pruneRecentMap(removedAtByKey, now2);
+        pruneRecentMap(removedAtByKey, now);
         const filtered = [];
         const skipped = [];
         for (const key2 of pending6) {
           const removedAt = removedAtByKey.get(key2) ?? 0;
-          if (removedAt && now2 - removedAt <= RECENT_REMOVE_MS) {
+          if (removedAt && now - removedAt <= RECENT_REMOVE_MS) {
             skipped.push(key2);
           } else {
             filtered.push(key2);
@@ -4828,8 +4824,8 @@
           const diff = diffSet(prev, nextSet);
           if (diff.added.length || diff.removed.length) {
             if (diff.removed.length) {
-              const now2 = Date.now();
-              for (const key2 of diff.removed) removedAtByKey.set(key2, now2);
+              const now = Date.now();
+              for (const key2 of diff.removed) removedAtByKey.set(key2, now);
             }
             log(`${logName} storage items updated`, { size: nextSet.size, added: diff.added, removed: diff.removed });
           }
@@ -4959,9 +4955,9 @@
         for (const key2 of prev) if (!next.has(key2)) removed.push(key2);
         return { added, removed };
       };
-      pruneRecentMap = (map2, now2, maxAgeMs = RECENT_REMOVE_MS * 4) => {
+      pruneRecentMap = (map2, now, maxAgeMs = RECENT_REMOVE_MS * 4) => {
         for (const [key2, ts] of map2) {
-          if (now2 - ts > maxAgeMs) map2.delete(key2);
+          if (now - ts > maxAgeMs) map2.delete(key2);
         }
       };
       summarizeQtyDelta = (prev, next, keys) => keys.map((key2) => ({
@@ -5374,8 +5370,8 @@
     const entry = { raf: 0, baseline: /* @__PURE__ */ new WeakMap(), touched: /* @__PURE__ */ new Set() };
     activeFlashes.set(gidx, entry);
     const start2 = performance.now();
-    const tick3 = (now2) => {
-      const progress = Math.min(1, (now2 - start2) / durationMs);
+    const tick3 = (now) => {
+      const progress = Math.min(1, (now - start2) / durationMs);
       const mix = startMix * (1 - progress);
       const parent = resolveParent();
       if (parent) {
@@ -10622,8 +10618,8 @@
     return applyEdit(states, idx, applyAll, { pct: clampSizePercent(size), size, mode: "custom" });
   }
   function editSlotMode(states, idx, mode, applyAll) {
-    const current = states[idx];
-    const size = mode === "custom" ? current.size : clampSizePercent(current.size);
+    const current2 = states[idx];
+    const size = mode === "custom" ? current2.size : clampSizePercent(current2.size);
     return applyEdit(states, idx, applyAll, { pct: clampSizePercent(size), size, mode });
   }
   var init_slotSize = __esm({
@@ -10923,9 +10919,9 @@
     try {
       const target = getCurrentEditorTile();
       if (!target) return false;
-      const current = readTileObjectAt(target);
-      if (!current) return false;
-      const updated = updater(current);
+      const current2 = readTileObjectAt(target);
+      if (!current2) return false;
+      const updated = updater(current2);
       const next = updated?.objectType === "plant" ? { ...updated, slots: ensureSlotIds(updated.slots) } : updated;
       setPlannedGarden(withTileObject(getPlannedGarden(), target.tileType, target.localTileIndex, next));
       if (next) void repaintTile(target, next);
@@ -10953,14 +10949,14 @@
   });
 
   // src/features/editor/savedGardenList.ts
-  function parseSavedGardens(raw, now2 = Date.now()) {
+  function parseSavedGardens(raw, now = Date.now()) {
     if (!Array.isArray(raw)) return [];
     return raw.map((entry) => {
       const g = entry ?? {};
       return {
         id: String(g.id || ""),
         name: String(g.name || UNTITLED),
-        createdAt: Number(g.createdAt) || now2,
+        createdAt: Number(g.createdAt) || now,
         garden: sanitizeGarden(g.garden || {})
       };
     }).filter((g) => !!g.id);
@@ -10986,7 +10982,7 @@
       init_gardenModel();
       MAX_SAVED_GARDENS = 50;
       UNTITLED = "Untitled";
-      newSavedGardenId = (now2) => `${now2}-${Math.random().toString(16).slice(2)}`;
+      newSavedGardenId = (now) => `${now}-${Math.random().toString(16).slice(2)}`;
       gardenSaveName = (name, fallback = UNTITLED) => name?.trim() || fallback;
       prependSaved = (list, saved) => [saved, ...list].slice(0, MAX_SAVED_GARDENS);
       replaceSaved = (list, saved) => list.map((g) => g.id === saved.id ? saved : g);
@@ -11015,15 +11011,15 @@
     if (!pid) return null;
     const garden3 = await getGardenForPlayer(pid);
     if (!garden3) return null;
-    const now2 = Date.now();
+    const now = Date.now();
     const all = listSavedGardens();
     const baseName = gardenSaveName(name);
     const existing = all.find((g) => g.name === baseName);
     const overwrite = !!existing && confirmOverwrite(baseName);
     const saved = {
-      id: overwrite ? existing.id : newSavedGardenId(now2),
+      id: overwrite ? existing.id : newSavedGardenId(now),
       name: overwrite ? baseName : uniqueGardenName(baseName, all.map((g) => g.name)),
-      createdAt: now2,
+      createdAt: now,
       garden: garden3
     };
     writeSavedGardens(overwrite ? replaceSaved(all, saved) : prependSaved(all, saved));
@@ -11048,11 +11044,11 @@
   async function importGarden(name, raw) {
     const garden3 = parseGardenJson(raw);
     if (!garden3) return null;
-    const now2 = Date.now();
+    const now = Date.now();
     const saved = {
-      id: newSavedGardenId(now2),
+      id: newSavedGardenId(now),
       name: gardenSaveName(name, "Imported garden"),
-      createdAt: now2,
+      createdAt: now,
       garden: garden3
     };
     writeSavedGardens(prependSaved(listSavedGardens(), saved));
@@ -11163,10 +11159,10 @@
         url: `${apiBase}/assets/sprites/${apiCat}/${item.name}.png`
       };
       indexEntries.push(entry);
-      const norm2 = normalizeSpriteName(item.name);
-      const arr = nameIndex.get(norm2) || [];
+      const norm = normalizeSpriteName(item.name);
+      const arr = nameIndex.get(norm) || [];
       arr.push(entry);
-      nameIndex.set(norm2, arr);
+      nameIndex.set(norm, arr);
     }
   }
   function spriteIndexSize() {
@@ -11239,31 +11235,31 @@
     return null;
   }
   function findSprite(categories, candidateId) {
-    const norm2 = normalizeSpriteName(candidateId);
+    const norm = normalizeSpriteName(candidateId);
     const internalCats = expandCategories(categories);
-    const fromCatalog = findCatalogSprite(internalCats, norm2);
+    const fromCatalog = findCatalogSprite(internalCats, norm);
     if (fromCatalog) return fromCatalog;
-    const entries2 = nameIndex.get(norm2);
+    const entries2 = nameIndex.get(norm);
     if (!entries2?.length) {
-      return findSpriteFuzzy(categories, norm2);
+      return findSpriteFuzzy(categories, norm);
     }
     for (const entry of entries2) {
       if (internalCats.has(entry.internalCat)) return entry;
     }
-    return findSpriteFuzzy(categories, norm2);
+    return findSpriteFuzzy(categories, norm);
   }
   function findSpriteFuzzy(categories, normTarget) {
     if (!normTarget) return null;
     const internalCats = expandCategories(categories);
-    for (const [norm2, entries2] of nameIndex) {
-      if (norm2.includes(normTarget) || normTarget.includes(norm2)) {
+    for (const [norm, entries2] of nameIndex) {
+      if (norm.includes(normTarget) || normTarget.includes(norm)) {
         for (const entry of entries2) {
           if (internalCats.has(entry.internalCat)) return entry;
         }
       }
     }
-    for (const [norm2, entries2] of nameIndex) {
-      if (norm2.includes(normTarget) || normTarget.includes(norm2)) {
+    for (const [norm, entries2] of nameIndex) {
+      if (norm.includes(normTarget) || normTarget.includes(norm)) {
         return entries2[0];
       }
     }
@@ -12707,8 +12703,8 @@
       writeSlots(edit.targets, () => ({ size: edit.size }));
     };
     const toggleMutation = (idx, id) => {
-      const current = mutationLists[idx];
-      const next = current.includes(id) ? current.filter((m) => m !== id) : [...current, id];
+      const current2 = mutationLists[idx];
+      const next = current2.includes(id) ? current2.filter((m) => m !== id) : [...current2, id];
       const targets = editAllSlots ? allIndices() : [idx];
       for (const t of targets) mutationLists[t] = next.slice();
       writeSlots(targets, () => ({ mutations: next.slice() }));
@@ -12979,7 +12975,7 @@
     const reduceMotion = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
     const canAnimate = typeof rail.animate === "function";
     if (canAnimate) rail.style.transition = "none";
-    let current = null;
+    let current2 = null;
     let animation = null;
     const apply2 = (left, width) => {
       rail.style.transform = `translate3d(${left}px,0,0)`;
@@ -13015,8 +13011,8 @@
         const dpr = window.devicePixelRatio || 1;
         const snap = (x) => Math.round(x * dpr) / dpr;
         const target = { left: snap(left), width: snap(width) };
-        const previous = current;
-        current = target;
+        const previous = current2;
+        current2 = target;
         animation?.cancel();
         animation = null;
         const shouldAnimate = animate && canAnimate && !reduceMotion?.matches && previous != null && previous.width > 0 && target.width > 0;
@@ -13589,8 +13585,8 @@
   async function editGameToasts(edit) {
     const atom = getAtomByLabel(TOASTS_ATOM);
     if (!atom) return false;
-    const current = await jGet(atom).catch(() => []);
-    const list = Array.isArray(current) ? current : [];
+    const current2 = await jGet(atom).catch(() => []);
+    const list = Array.isArray(current2) ? current2 : [];
     const next = edit(list.slice());
     const unchanged = next.length === list.length && next.every((toast3, i) => toast3 === list[i]);
     if (!unchanged) await jSet(atom, next);
@@ -13630,288 +13626,19 @@
     }
   });
 
-  // src/features/locker/locker.ts
-  function startLockerSlotWatcherViaGardenObject() {
-    if (typeof window === "undefined") {
-      return {
-        get: () => emptySlotInfo(),
-        onChange: () => () => {
-        },
-        stop() {
-        },
-        recompute() {
-        }
-      };
-    }
-    let cur = null;
-    let sortedIdx = null;
-    let sortedIdxSig = arraySignature(sortedIdx);
-    let selectedIdx = null;
-    let lastInfo = emptySlotInfo();
-    let curSig = gardenObjectSignature(cur);
-    const listeners4 = /* @__PURE__ */ new Set();
-    const notify2 = () => {
-      for (const fn of listeners4) {
-        try {
-          fn(lastInfo);
-        } catch {
-        }
-      }
-    };
-    let scheduled = false;
-    const scheduleRecomputeAndNotify = () => {
-      recomputeAndNotify();
-      if (scheduled) return;
-      scheduled = true;
-      const run = () => {
-        scheduled = false;
-        recomputeAndNotify();
-      };
-      if (typeof globalThis !== "undefined" && typeof globalThis.queueMicrotask === "function") {
-        globalThis.queueMicrotask(run);
-      } else if (typeof Promise !== "undefined") {
-        Promise.resolve().then(run);
-      } else if (typeof window !== "undefined" && typeof window.setTimeout === "function") {
-        window.setTimeout(run, 0);
-      } else {
-        run();
-      }
-    };
-    function getOrder(slotCount) {
-      if (!slotCount) return [];
-      if (Array.isArray(sortedIdx) && sortedIdx.length === slotCount) {
-        return sortedIdx.slice();
-      }
-      return defaultOrder(slotCount);
-    }
-    function selectedOrderedPosition(order, slotCount) {
-      if (!slotCount || !order.length) return 0;
-      const raw = Number.isFinite(selectedIdx) ? selectedIdx : 0;
-      const clampedRaw = clamp(raw, 0, slotCount - 1);
-      const pos = order.indexOf(clampedRaw);
-      return pos >= 0 ? pos : 0;
-    }
-    function computeSlotInfo() {
-      const seedKey = extractSeedKey(cur);
-      if (!isPlantObject(cur)) {
-        return {
-          isPlant: false,
-          originalIndex: null,
-          orderedIndex: null,
-          totalSlots: 0,
-          availableSlotCount: 0,
-          slot: null,
-          seedKey,
-          sizePercent: null,
-          mutations: []
-        };
-      }
-      const slots = Array.isArray(cur.slots) ? cur.slots : [];
-      const slotCount = slots.length;
-      if (!slotCount) {
-        return {
-          isPlant: true,
-          originalIndex: null,
-          orderedIndex: null,
-          totalSlots: 0,
-          availableSlotCount: 0,
-          slot: null,
-          seedKey,
-          sizePercent: null,
-          mutations: []
-        };
-      }
-      const order = getOrder(slotCount);
-      const availableIndices = [];
-      for (const idx of order) {
-        if (Number.isInteger(idx) && idx >= 0 && idx < slotCount) {
-          if (slots[idx] != null) availableIndices.push(idx);
-        }
-      }
-      const availableCount = availableIndices.length;
-      if (!availableCount) {
-        return {
-          isPlant: true,
-          originalIndex: null,
-          orderedIndex: null,
-          totalSlots: slotCount,
-          availableSlotCount: 0,
-          slot: null,
-          seedKey,
-          sizePercent: null,
-          mutations: []
-        };
-      }
-      let originalIndex = null;
-      let clampedPos;
-      const bySlotId2 = Number.isFinite(selectedIdx) ? slots.findIndex(
-        (s) => s && typeof s === "object" && s.slotId === selectedIdx
-      ) : -1;
-      if (bySlotId2 >= 0) {
-        originalIndex = bySlotId2;
-        const posInOrder = availableIndices.indexOf(bySlotId2);
-        clampedPos = posInOrder >= 0 ? posInOrder : 0;
-      } else {
-        const pos = selectedOrderedPosition(order, slotCount);
-        clampedPos = clamp(pos, 0, availableCount - 1);
-        originalIndex = availableIndices[clampedPos] ?? null;
-      }
-      const slot = typeof originalIndex === "number" ? slots[originalIndex] ?? null : null;
-      const sizePercent = slot ? extractSizePercent(slot) : null;
-      const mutations = slot ? normalizeMutationsList(slot.mutations) : [];
-      const slotSpecies = slot ? extractSeedKey(slot) : null;
-      const effectiveSeedKey = slotSpecies ?? seedKey;
-      return {
-        isPlant: true,
-        originalIndex: typeof originalIndex === "number" ? originalIndex : null,
-        orderedIndex: clampedPos,
-        totalSlots: slotCount,
-        availableSlotCount: availableCount,
-        slot: slot ?? null,
-        seedKey: effectiveSeedKey,
-        sizePercent,
-        mutations
-      };
-    }
-    function mutationsEqual(a, b) {
-      if (a.length !== b.length) return false;
-      for (let i = 0; i < a.length; i++) {
-        if (a[i] !== b[i]) return false;
-      }
-      return true;
-    }
-    function infosEqual(a, b) {
-      return a.isPlant === b.isPlant && a.originalIndex === b.originalIndex && a.orderedIndex === b.orderedIndex && a.totalSlots === b.totalSlots && a.availableSlotCount === b.availableSlotCount && a.slot === b.slot && a.seedKey === b.seedKey && a.sizePercent === b.sizePercent && mutationsEqual(a.mutations, b.mutations);
-    }
-    function recomputeAndNotify() {
-      const next = computeSlotInfo();
-      if (!infosEqual(next, lastInfo)) {
-        lastInfo = next;
-        notify2();
-      }
-    }
-    (async () => {
-      try {
-        selectedIdx = await myCurrentGrowSlotIndex.get();
-      } catch {
-      }
-      try {
-        const v = await myCurrentSortedGrowSlotIndices.get();
-        sortedIdx = Array.isArray(v) ? v.slice() : null;
-        sortedIdxSig = arraySignature(sortedIdx);
-      } catch {
-      }
-      try {
-        cur = await myCurrentGardenObject.get();
-        curSig = gardenObjectSignature(cur);
-      } catch {
-      }
-      const refreshSorted = (v) => {
-        const next = Array.isArray(v) ? v.slice() : null;
-        const sig = arraySignature(next);
-        if (sig === sortedIdxSig) return false;
-        sortedIdx = next;
-        sortedIdxSig = sig;
-        return true;
-      };
-      const refreshGarden = (v) => {
-        const sig = gardenObjectSignature(v ?? null);
-        if (sig === curSig) return false;
-        cur = v;
-        curSig = sig;
-        return true;
-      };
-      let awaitIndexBeforeRecompute = false;
-      let awaitIndexTimer = null;
-      const clearAwaitIndexTimer = () => {
-        if (awaitIndexTimer == null) return;
-        if (typeof globalThis !== "undefined") {
-          const clearer = globalThis.clearTimeout;
-          if (typeof clearer === "function") {
-            clearer.call(globalThis, awaitIndexTimer);
-          }
-        }
-        awaitIndexTimer = null;
-      };
-      const deferUntilIndexChanges = () => {
-        awaitIndexBeforeRecompute = true;
-        if (awaitIndexTimer != null) return;
-        const run = () => {
-          awaitIndexTimer = null;
-          if (!awaitIndexBeforeRecompute) return;
-          awaitIndexBeforeRecompute = false;
-          scheduleRecomputeAndNotify();
-        };
-        if (typeof globalThis !== "undefined") {
-          const setter = globalThis.setTimeout;
-          if (typeof setter === "function") {
-            awaitIndexTimer = setter.call(globalThis, run, 0);
-            return;
-          }
-        }
-        run();
-      };
-      myCurrentSortedGrowSlotIndices.onChange((v) => {
-        const changed5 = refreshSorted(v);
-        if (!changed5) return;
-        deferUntilIndexChanges();
-      });
-      myCurrentGardenObject.onChange((v) => {
-        const changed5 = refreshGarden(v);
-        if (!changed5) return;
-        deferUntilIndexChanges();
-      });
-      myCurrentGrowSlotIndex.onChange((idx) => {
-        selectedIdx = Number.isFinite(idx) ? idx : 0;
-        void (async () => {
-          try {
-            refreshSorted(await myCurrentSortedGrowSlotIndices.get());
-          } catch {
-          }
-          try {
-            refreshGarden(await myCurrentGardenObject.get());
-          } catch {
-          }
-          if (awaitIndexBeforeRecompute) {
-            awaitIndexBeforeRecompute = false;
-            clearAwaitIndexTimer();
-          }
-          scheduleRecomputeAndNotify();
-        })();
-      });
-      recomputeAndNotify();
-    })();
-    return {
-      get() {
-        return lastInfo;
-      },
-      onChange(cb) {
-        listeners4.add(cb);
-        return () => listeners4.delete(cb);
-      },
-      stop() {
-        listeners4.clear();
-      },
-      recompute() {
-        recomputeAndNotify();
-      }
-    };
-  }
+  // src/features/locker/settings.ts
   function defaultSettings() {
     return {
-      minScalePct: 50,
-      maxScalePct: 100,
-      // "None", not "Range". A 50–100 range is an *active* size criterion that
+      minScalePct: CROP_SIZE_MIN,
+      maxScalePct: CROP_SIZE_MAX,
+      // "None", not "Range". A 50-100 range is an active size criterion that
       // every crop matches, so in LOCK mode it locks the whole species while the
       // sliders sit at their extremes and look like no filter at all. Starting
       // with no size criterion means turning a species on locks nothing until the
       // player actually asks for something.
       scaleLockMode: "NONE",
       lockMode: "LOCK",
-      minInventory: 91,
       avoidNormal: false,
-      includeNormal: true,
-      highlightEnabled: false,
       visualMutations: [],
       weatherMode: "ANY",
       weatherSelected: [],
@@ -13919,86 +13646,58 @@
     };
   }
   function defaultState() {
-    return {
-      enabled: false,
-      settings: defaultSettings(),
-      overrides: {}
-    };
+    return { enabled: false, settings: defaultSettings(), overrides: {} };
   }
-  function sanitizeSettings(raw) {
-    const base = defaultSettings();
-    base.lockMode = raw?.lockMode === "ALLOW" ? "ALLOW" : "LOCK";
-    const rawMode = raw?.scaleLockMode;
-    const scaleMode = rawMode === "MINIMUM" ? "MINIMUM" : rawMode === "MAXIMUM" ? "MAXIMUM" : rawMode === "NONE" ? "NONE" : "RANGE";
-    base.scaleLockMode = scaleMode;
-    const minScaleRaw = Number(raw?.minScalePct);
-    let minScale = Number.isFinite(minScaleRaw) ? clampNumber(Math.round(minScaleRaw), 50, 100) : 50;
-    const maxScaleRaw = Number(raw?.maxScalePct);
-    let maxScale = Number.isFinite(maxScaleRaw) ? clampNumber(Math.round(maxScaleRaw), 50, 100) : 100;
-    if (scaleMode === "RANGE") {
-      maxScale = clampNumber(maxScale, 51, 100);
-      if (maxScale <= minScale) {
-        if (minScale >= 99) {
-          minScale = 99;
-          maxScale = 100;
+  function normalizeScaleRange(mode, rawMin, rawMax) {
+    let min = toCropSize(rawMin, CROP_SIZE_MIN);
+    let max = toCropSize(rawMax, CROP_SIZE_MAX);
+    if (mode === "RANGE") {
+      max = Math.max(CROP_SIZE_MIN + 1, max);
+      if (max <= min) {
+        if (min >= CROP_SIZE_MAX - 1) {
+          min = CROP_SIZE_MAX - 1;
+          max = CROP_SIZE_MAX;
         } else {
-          maxScale = clampNumber(minScale + 1, 51, 100);
+          max = min + 1;
         }
       }
-    } else if (scaleMode === "MAXIMUM") {
-      maxScale = clampNumber(maxScale, 50, 100);
-    } else if (scaleMode === "MINIMUM") {
-      minScale = clampNumber(minScale, 50, 100);
     }
-    base.minScalePct = minScale;
-    base.maxScalePct = maxScale;
-    const minInv = Number(raw?.minInventory);
-    base.minInventory = Number.isFinite(minInv) ? clampNumber(Math.round(minInv), 0, 999) : 91;
-    if (typeof raw?.avoidNormal === "boolean") {
-      base.avoidNormal = raw.avoidNormal;
-    } else {
-      base.avoidNormal = raw?.includeNormal === false;
-    }
-    base.includeNormal = !base.avoidNormal;
-    base.highlightEnabled = raw?.highlightEnabled === true;
-    base.visualMutations = Array.isArray(raw?.visualMutations) ? Array.from(new Set(raw.visualMutations.filter((m) => VISUAL_MUTATIONS.has(m)))) : [];
-    const mode = raw?.weatherMode;
-    base.weatherMode = mode === "ALL" || mode === "RECIPES" ? mode : "ANY";
-    base.weatherSelected = Array.isArray(raw?.weatherSelected) ? Array.from(new Set(raw.weatherSelected.map((m) => String(m || "")).filter(Boolean))) : [];
-    base.weatherRecipes = Array.isArray(raw?.weatherRecipes) ? raw.weatherRecipes.map(
-      (recipe) => Array.isArray(recipe) ? Array.from(new Set(recipe.map((m) => String(m || "")).filter(Boolean))) : []
-    ).filter((arr) => arr.length > 0) : [];
-    return base;
+    return { min, max };
+  }
+  function sanitizeSettings(raw) {
+    const scaleLockMode = toScaleMode(raw?.scaleLockMode);
+    const { min, max } = normalizeScaleRange(scaleLockMode, raw?.minScalePct, raw?.maxScalePct);
+    const weatherMode = raw?.weatherMode;
+    return {
+      minScalePct: min,
+      maxScalePct: max,
+      scaleLockMode,
+      lockMode: raw?.lockMode === "ALLOW" ? "ALLOW" : "LOCK",
+      // Settings saved before `avoidNormal` existed said `includeNormal: false`.
+      avoidNormal: typeof raw?.avoidNormal === "boolean" ? raw.avoidNormal : raw?.includeNormal === false,
+      visualMutations: Array.isArray(raw?.visualMutations) ? Array.from(new Set(raw.visualMutations.filter((m) => m === "Gold" || m === "Rainbow"))) : [],
+      weatherMode: weatherMode === "ALL" || weatherMode === "RECIPES" ? weatherMode : "ANY",
+      weatherSelected: uniqueStrings(raw?.weatherSelected),
+      weatherRecipes: Array.isArray(raw?.weatherRecipes) ? raw.weatherRecipes.map(uniqueStrings).filter((recipe) => recipe.length > 0) : []
+    };
   }
   function sanitizeState(raw) {
     const state7 = defaultState();
     if (!raw || typeof raw !== "object") return state7;
     state7.enabled = raw.enabled === true;
     state7.settings = sanitizeSettings(raw.settings);
-    state7.overrides = {};
     if (raw.overrides && typeof raw.overrides === "object") {
       for (const [key2, value] of Object.entries(raw.overrides)) {
         if (!key2) continue;
-        state7.overrides[key2] = {
-          enabled: value?.enabled === true,
-          settings: sanitizeSettings(value?.settings)
-        };
+        state7.overrides[key2] = { enabled: value?.enabled === true, settings: sanitizeSettings(value?.settings) };
       }
     }
     return state7;
   }
   function cloneSettings(settings) {
     return {
-      minScalePct: settings.minScalePct,
-      maxScalePct: settings.maxScalePct,
-      scaleLockMode: settings.scaleLockMode,
-      lockMode: settings.lockMode === "ALLOW" ? "ALLOW" : "LOCK",
-      minInventory: settings.minInventory,
-      avoidNormal: settings.avoidNormal,
-      includeNormal: settings.includeNormal,
-      highlightEnabled: settings.highlightEnabled === true,
+      ...settings,
       visualMutations: settings.visualMutations.slice(),
-      weatherMode: settings.weatherMode,
       weatherSelected: settings.weatherSelected.slice(),
       weatherRecipes: settings.weatherRecipes.map((recipe) => recipe.slice())
     };
@@ -14008,570 +13707,388 @@
     for (const [key2, value] of Object.entries(state7.overrides)) {
       overrides[key2] = { enabled: value.enabled, settings: cloneSettings(value.settings) };
     }
-    return {
-      enabled: state7.enabled,
-      settings: cloneSettings(state7.settings),
-      overrides
-    };
+    return { enabled: state7.enabled, settings: cloneSettings(state7.settings), overrides };
   }
-  function cloneSlotInfo(info) {
-    return {
-      isPlant: info.isPlant,
-      originalIndex: info.originalIndex,
-      orderedIndex: info.orderedIndex,
-      totalSlots: info.totalSlots,
-      availableSlotCount: info.availableSlotCount,
-      slot: info.slot,
-      seedKey: info.seedKey,
-      sizePercent: info.sizePercent,
-      mutations: info.mutations.slice()
-    };
-  }
-  function mutationsToArrays(raw) {
-    const normalized = normalizeMutationsList(raw);
-    let hasGold = false;
-    let hasRainbow = false;
-    const weather2 = [];
-    for (let i = 0; i < normalized.length; i++) {
-      const tag = String(normalized[i] || "");
-      if (!tag) continue;
-      if (tag === "Gold") {
-        hasGold = true;
-      } else if (tag === "Rainbow") {
-        hasRainbow = true;
-      } else {
-        weather2.push(tag);
-      }
+  var NO_WEATHER_TAG, SCALE_MODES, toScaleMode, toCropSize, uniqueStrings;
+  var init_settings3 = __esm({
+    "src/features/locker/settings.ts"() {
+      "use strict";
+      init_cropSize();
+      init_math();
+      NO_WEATHER_TAG = "NoWeatherEffect";
+      SCALE_MODES = ["MINIMUM", "MAXIMUM", "RANGE", "NONE"];
+      toScaleMode = (raw) => SCALE_MODES.includes(raw) ? raw : "RANGE";
+      toCropSize = (raw, fallback) => {
+        const n = Number(raw);
+        return Number.isFinite(n) ? clamp(Math.round(n), CROP_SIZE_MIN, CROP_SIZE_MAX) : fallback;
+      };
+      uniqueStrings = (raw) => Array.isArray(raw) ? Array.from(new Set(raw.map((tag) => String(tag || "")).filter(Boolean))) : [];
     }
-    return { hasGold, hasRainbow, weather: weather2 };
+  });
+
+  // src/features/locker/harvestRules.ts
+  function normalizeMutationTag(value) {
+    const trimmed = (typeof value === "string" ? value : value == null ? "" : String(value)).trim();
+    if (!trimmed) return "";
+    return MUTATION_ALIASES[trimmed.toLowerCase().replace(/[\s_-]+/g, "")] ?? trimmed;
   }
-  var VISUAL_MUTATIONS, LOCKER_NO_WEATHER_TAG, normalizeMutationTag, canonicalizeWeatherTag, normalizeMutationsList, emptySlotInfo, now, shallowEqualStrings, slotInfosEqual, isPlantObject, slotSignature, gardenObjectSignature, arraySignature, defaultOrder, extractSeedKey, extractSizePercent, ARIES_LOCKER_STATE_PATH, clampNumber, LockerService, lockerService;
-  var init_locker = __esm({
-    "src/features/locker/locker.ts"() {
+  function normalizeMutationsList(raw) {
+    if (!Array.isArray(raw)) return [];
+    return raw.map(normalizeMutationTag).filter(Boolean);
+  }
+  function sizeFilter(settings, size) {
+    const mode = settings.scaleLockMode;
+    if (mode === "NONE") return { hasCriteria: false, matched: false };
+    const { min, max } = normalizeScaleRange(mode, settings.minScalePct, settings.maxScalePct);
+    const aboveMin = size + SIZE_EPSILON >= min;
+    const belowMax = size - SIZE_EPSILON <= max;
+    const matched = mode === "MINIMUM" ? aboveMin : mode === "MAXIMUM" ? belowMax : aboveMin && belowMax;
+    return { hasCriteria: true, matched };
+  }
+  function colorFilter(settings, mutations) {
+    const hasGold = mutations.includes("Gold");
+    const hasRainbow = mutations.includes("Rainbow");
+    const gold = settings.visualMutations.includes("Gold");
+    const rainbow = settings.visualMutations.includes("Rainbow");
+    return {
+      hasCriteria: settings.avoidNormal || gold || rainbow,
+      matched: settings.avoidNormal && !hasGold && !hasRainbow || gold && hasGold || rainbow && hasRainbow
+    };
+  }
+  function carriesTag(required, weather2) {
+    const tag = normalizeMutationTag(required);
+    if (!tag) return null;
+    if (tag === NO_WEATHER_TAG) return weather2.length === 0;
+    return weather2.includes(tag);
+  }
+  function weatherFilter(settings, mutations) {
+    const weather2 = mutations.filter((tag) => tag !== "Gold" && tag !== "Rainbow");
+    if (settings.weatherMode === "RECIPES") {
+      const recipes = settings.weatherRecipes.filter((recipe) => Array.isArray(recipe) && recipe.length > 0);
+      return {
+        hasCriteria: settings.weatherRecipes.length > 0,
+        matched: recipes.some((recipe) => carriesAll(recipe, weather2))
+      };
+    }
+    const selected = settings.weatherSelected;
+    if (!selected.length) return { hasCriteria: false, matched: false };
+    const matched = settings.weatherMode === "ALL" ? carriesAll(selected, weather2) : selected.some((tag) => carriesTag(tag, weather2) === true);
+    return { hasCriteria: true, matched };
+  }
+  function harvestAllowedBy(settings, crop) {
+    const mutations = normalizeMutationsList(crop.mutations);
+    const filters = [sizeFilter(settings, crop.sizePercent), colorFilter(settings, mutations), weatherFilter(settings, mutations)];
+    const blocked = settings.lockMode === "ALLOW" ? filters.some((f) => f.hasCriteria && !f.matched) : filters.some((f) => f.matched);
+    return !blocked;
+  }
+  var MUTATION_ALIASES, SIZE_EPSILON, carriesAll;
+  var init_harvestRules = __esm({
+    "src/features/locker/harvestRules.ts"() {
+      "use strict";
+      init_settings3();
+      MUTATION_ALIASES = {
+        gold: "Gold",
+        rainbow: "Rainbow",
+        wet: "Wet",
+        chilled: "Chilled",
+        frozen: "Frozen",
+        dawn: "Dawnlit",
+        dawnlit: "Dawnlit",
+        dawnlight: "Dawnlit",
+        dawnbound: "Dawnbound",
+        dawncharged: "Dawnbound",
+        dawnradiant: "Dawnbound",
+        amberlit: "Amberlit",
+        amberlight: "Amberlit",
+        amberglow: "Amberlit",
+        ambershine: "Amberlit",
+        amberbound: "Amberbound",
+        ambercharged: "Amberbound",
+        amberradiant: "Amberbound"
+      };
+      SIZE_EPSILON = 1e-4;
+      carriesAll = (tags, weather2) => tags.every((tag) => carriesTag(tag, weather2) === true);
+    }
+  });
+
+  // src/data/rules/growSlot.ts
+  function resolveGrowSlot(slots, selectedSlotId) {
+    if (!Array.isArray(slots) || slots.length === 0) return null;
+    if (selectedSlotId != null && Number.isFinite(selectedSlotId)) {
+      const exact = slots.find((slot) => slot && slot.slotId === selectedSlotId);
+      if (exact) return exact;
+      const sorted = [...slots].sort(bySlotId);
+      return sorted.find((slot) => slotIdOf(slot) >= selectedSlotId) ?? sorted[0] ?? null;
+    }
+    return [...slots].sort(bySlotId)[0] ?? null;
+  }
+  var slotIdOf, bySlotId;
+  var init_growSlot = __esm({
+    "src/data/rules/growSlot.ts"() {
+      "use strict";
+      slotIdOf = (slot) => Number.isFinite(slot?.slotId) ? slot.slotId : 0;
+      bySlotId = (a, b) => slotIdOf(a) - slotIdOf(b);
+    }
+  });
+
+  // src/features/locker/slotWatcher.ts
+  function extractSeedKey(obj) {
+    if (!obj || typeof obj !== "object") return null;
+    const fields = obj;
+    for (const key2 of ["seedKey", "species", "seedSpecies", "plantSpecies", "cropSpecies", "speciesId"]) {
+      const value = fields[key2];
+      if (typeof value === "string" && value) return value;
+    }
+    return null;
+  }
+  function extractSizePercent(slot) {
+    if (!slot || typeof slot !== "object") return CROP_SIZE_MAX;
+    return readCropSize(slot) ?? // A pre-rework slot converts its scale with its species' maximum, which
+    // older payloads name under another field.
+    readCropSize({ ...slot, species: extractSeedKey(slot) }) ?? CROP_SIZE_MAX;
+  }
+  function selectedSlotInfo(gardenObject, selectedSlotId) {
+    const objectKey = extractSeedKey(gardenObject);
+    if (!isPlantObject(gardenObject)) return { ...emptySlotInfo(), seedKey: objectKey };
+    const slots = Array.isArray(gardenObject.slots) ? gardenObject.slots : [];
+    const fruits = slots.filter((s) => !!s && typeof s === "object");
+    const slot = resolveGrowSlot(fruits, selectedSlotId);
+    if (!slot) return { ...emptySlotInfo(), isPlant: true, seedKey: objectKey };
+    return {
+      isPlant: true,
+      slotIndex: slots.indexOf(slot),
+      slot,
+      // A fruit can be its own species (a FourLeafClover on a Clover plant), and
+      // per-crop overrides are keyed by it.
+      seedKey: extractSeedKey(slot) ?? objectKey,
+      sizePercent: extractSizePercent(slot),
+      mutations: normalizeMutationsList(slot.mutations)
+    };
+  }
+  function slotSignature(slot) {
+    if (!slot) return "\u2205";
+    const start2 = Number.isFinite(slot.startTime) ? slot.startTime : 0;
+    const end = Number.isFinite(slot.endTime) ? slot.endTime : 0;
+    const mutations = Array.isArray(slot.mutations) ? slot.mutations.join(",") : "";
+    return `${slot.species ?? ""}|${start2}|${end}|${readCropSize(slot) ?? 0}|${mutations}`;
+  }
+  function gardenObjectSignature(obj) {
+    if (!obj) return "\u2205";
+    if (!isPlantObject(obj)) {
+      const fields = obj;
+      const entries2 = Object.keys(fields).sort().map((key2) => `${key2}:${JSON.stringify(fields[key2])}`);
+      return `other|${entries2.join(";")}`;
+    }
+    const plant = obj;
+    const slots = Array.isArray(plant.slots) ? plant.slots.map((s) => slotSignature(s)).join("||") : "";
+    return `${plant.objectType}|${plant.species ?? ""}|${plant.plantedAt ?? 0}|${plant.maturedAt ?? 0}|slots:${slots}`;
+  }
+  function startLockerSlotWatcher() {
+    let gardenObject = null;
+    let gardenSig = gardenObjectSignature(null);
+    let selectedSlotId = null;
+    let info = emptySlotInfo();
+    let stopped = false;
+    const changes7 = new Emitter();
+    const subs = new Subscriptions();
+    const recompute = () => {
+      if (stopped) return;
+      const next = selectedSlotInfo(gardenObject, selectedSlotId);
+      if (sameSlotInfo(next, info)) return;
+      info = next;
+      changes7.emit(info);
+    };
+    const recomputeNowAndAfterTick = () => {
+      recompute();
+      queueMicrotask(recompute);
+    };
+    const takeGardenObject = (next) => {
+      const sig = gardenObjectSignature(next ?? null);
+      if (sig === gardenSig) return false;
+      gardenObject = next;
+      gardenSig = sig;
+      return true;
+    };
+    let pendingGardenRecompute = null;
+    const cancelPendingGardenRecompute = () => {
+      if (pendingGardenRecompute != null) clearTimeout(pendingGardenRecompute);
+      pendingGardenRecompute = null;
+    };
+    const recomputeAfterIdSettles = () => {
+      if (pendingGardenRecompute != null) return;
+      pendingGardenRecompute = setTimeout(() => {
+        pendingGardenRecompute = null;
+        recomputeNowAndAfterTick();
+      }, 0);
+    };
+    void (async () => {
+      try {
+        selectedSlotId = await myCurrentGrowSlotIndex.get();
+      } catch {
+      }
+      try {
+        takeGardenObject(await myCurrentGardenObject.get());
+      } catch {
+      }
+      if (stopped) return;
+      subs.add(
+        myCurrentGardenObject.onChange((next) => {
+          if (takeGardenObject(next)) recomputeAfterIdSettles();
+        })
+      );
+      subs.add(
+        myCurrentGrowSlotIndex.onChange(async (id) => {
+          selectedSlotId = Number.isFinite(id) ? id : 0;
+          try {
+            takeGardenObject(await myCurrentGardenObject.get());
+          } catch {
+          }
+          cancelPendingGardenRecompute();
+          recomputeNowAndAfterTick();
+        })
+      );
+      recompute();
+    })();
+    return {
+      get: () => info,
+      onChange: (cb) => changes7.on(cb),
+      stop() {
+        stopped = true;
+        cancelPendingGardenRecompute();
+        changes7.clear();
+        subs.dispose();
+      }
+    };
+  }
+  var emptySlotInfo, isPlantObject, sameStrings, sameSlotInfo;
+  var init_slotWatcher = __esm({
+    "src/features/locker/slotWatcher.ts"() {
       "use strict";
       init_atoms();
       init_cropSize();
-      init_storage();
-      init_math();
-      VISUAL_MUTATIONS = /* @__PURE__ */ new Set(["Gold", "Rainbow"]);
-      LOCKER_NO_WEATHER_TAG = "NoWeatherEffect";
-      normalizeMutationTag = (value) => {
-        const raw = typeof value === "string" ? value : value == null ? "" : String(value);
-        const trimmed = raw.trim();
-        if (!trimmed) return "";
-        const collapsed = trimmed.toLowerCase().replace(/[\s_-]+/g, "");
-        switch (collapsed) {
-          case "gold":
-            return "Gold";
-          case "rainbow":
-            return "Rainbow";
-          case "wet":
-            return "Wet";
-          case "chilled":
-            return "Chilled";
-          case "frozen":
-            return "Frozen";
-          case "dawn":
-          case "dawnlit":
-          case "dawnlight":
-            return "Dawnlit";
-          case "dawnbound":
-          case "dawncharged":
-          case "dawnradiant":
-            return "Dawnbound";
-          case "amberlit":
-          case "amberlight":
-          case "amberglow":
-          case "ambershine":
-            return "Amberlit";
-          case "amberbound":
-          case "ambercharged":
-          case "amberradiant":
-            return "Amberbound";
-          default:
-            return trimmed;
-        }
-      };
-      canonicalizeWeatherTag = (value) => {
-        if (value === LOCKER_NO_WEATHER_TAG) return LOCKER_NO_WEATHER_TAG;
-        const normalized = normalizeMutationTag(value);
-        return normalized || null;
-      };
-      normalizeMutationsList = (raw) => {
-        if (!Array.isArray(raw)) return [];
-        const out = [];
-        for (let i = 0; i < raw.length; i++) {
-          const normalized = normalizeMutationTag(raw[i]);
-          if (normalized) out.push(normalized);
-        }
-        return out;
-      };
+      init_growSlot();
+      init_emitter();
+      init_harvestRules();
       emptySlotInfo = () => ({
         isPlant: false,
-        originalIndex: null,
-        orderedIndex: null,
-        totalSlots: 0,
-        availableSlotCount: 0,
+        slotIndex: null,
         slot: null,
         seedKey: null,
         sizePercent: null,
         mutations: []
       });
-      now = () => typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
-      shallowEqualStrings = (a, b) => {
-        if (a === b) return true;
-        if (!a || !b) return (a?.length ?? 0) === (b?.length ?? 0);
-        if (a.length !== b.length) return false;
-        for (let i = 0; i < a.length; i++) {
-          if (a[i] !== b[i]) return false;
-        }
-        return true;
-      };
-      slotInfosEqual = (a, b) => a.isPlant === b.isPlant && a.originalIndex === b.originalIndex && a.orderedIndex === b.orderedIndex && a.totalSlots === b.totalSlots && a.availableSlotCount === b.availableSlotCount && a.slot === b.slot && a.seedKey === b.seedKey && a.sizePercent === b.sizePercent && shallowEqualStrings(a.mutations, b.mutations);
-      isPlantObject = (o) => !!o && o.objectType === "plant";
-      slotSignature = (slot) => {
-        if (!slot) return "\u2205";
-        const species = slot.species ?? "";
-        const start2 = Number.isFinite(slot.startTime) ? slot.startTime : 0;
-        const end = Number.isFinite(slot.endTime) ? slot.endTime : 0;
-        const size = readCropSize(slot) ?? 0;
-        const muts = Array.isArray(slot.mutations) ? slot.mutations.join(",") : "";
-        return `${species}|${start2}|${end}|${size}|${muts}`;
-      };
-      gardenObjectSignature = (obj) => {
-        if (!obj) return "\u2205";
-        if (!isPlantObject(obj)) {
-          if (!obj || typeof obj !== "object") return String(obj);
-          const entries2 = Object.keys(obj).sort().map((key2) => `${key2}:${JSON.stringify(obj[key2])}`);
-          return `other|${entries2.join(";")}`;
-        }
-        const base = `${obj.objectType}|${obj.species ?? ""}|${obj.plantedAt ?? 0}|${obj.maturedAt ?? 0}`;
-        const slots = Array.isArray(obj.slots) ? obj.slots.map((slot) => slotSignature(slot)).join("||") : "";
-        return `${base}|slots:${slots}`;
-      };
-      arraySignature = (arr) => Array.isArray(arr) ? arr.join(",") : "\u2205";
-      defaultOrder = (n) => Array.from({ length: n }, (_, i) => i);
-      extractSeedKey = (obj) => {
-        if (!obj || typeof obj !== "object") return null;
-        const fields = obj;
-        for (const key2 of ["seedKey", "species", "seedSpecies", "plantSpecies", "cropSpecies", "speciesId"]) {
-          const value = fields[key2];
-          if (typeof value === "string" && value) return value;
-        }
-        return null;
-      };
-      extractSizePercent = (slot) => {
-        if (!slot || typeof slot !== "object") return CROP_SIZE_MAX;
-        const alias = Number(slot.sizePercent ?? slot.sizePct ?? slot.percent ?? slot.progressPercent);
-        if (Number.isFinite(alias)) {
-          return clamp(Math.round(alias), 0, CROP_SIZE_MAX);
-        }
-        const size = readCropSize(slot);
-        if (size != null) return size;
-        const seedKey = extractSeedKey(slot);
-        if (seedKey) {
-          const fromSeedKey = readCropSize({ ...slot, species: seedKey });
-          if (fromSeedKey != null) return fromSeedKey;
-        }
-        return CROP_SIZE_MAX;
-      };
-      ARIES_LOCKER_STATE_PATH = "locker.state";
-      clampNumber = (value, min, max) => Math.max(min, Math.min(max, value));
+      isPlantObject = (obj) => !!obj && typeof obj === "object" && obj.objectType === "plant";
+      sameStrings = (a, b) => a.length === b.length && a.every((value, i) => value === b[i]);
+      sameSlotInfo = (a, b) => a.isPlant === b.isPlant && a.slotIndex === b.slotIndex && a.slot === b.slot && a.seedKey === b.seedKey && a.sizePercent === b.sizePercent && sameStrings(a.mutations, b.mutations);
+    }
+  });
+
+  // src/features/locker/locker.ts
+  var STATE_PATH, LockerService, lockerService;
+  var init_locker = __esm({
+    "src/features/locker/locker.ts"() {
+      "use strict";
+      init_storage();
+      init_emitter();
+      init_harvestRules();
+      init_settings3();
+      init_slotWatcher();
+      STATE_PATH = "locker.state";
       LockerService = class {
         constructor() {
           this.state = defaultState();
-          this.listeners = /* @__PURE__ */ new Set();
-          this.slotInfoListeners = /* @__PURE__ */ new Set();
+          this.stateChanges = new Emitter();
+          this.slotChanges = new Emitter();
           this.slotWatcher = null;
-          this.slotWatcherUnsub = null;
-          this.currentSlotInfo = emptySlotInfo();
-          this.currentSlotHarvestAllowed = null;
-          this.lastSlotChangeDetectedAt = null;
+          this.currentSlot = { info: emptySlotInfo(), harvestAllowed: null };
           this.load();
-          this.updateSlotWatcher();
+          this.syncSlotWatcher();
         }
         load() {
-          if (typeof window === "undefined") {
-            this.state = defaultState();
-            return;
-          }
-          try {
-            const parsed = readAriesPath(ARIES_LOCKER_STATE_PATH);
-            this.state = sanitizeState(parsed);
-          } catch {
-            this.state = defaultState();
-          }
-        }
-        save() {
           if (typeof window === "undefined") return;
           try {
-            writeAriesPath(ARIES_LOCKER_STATE_PATH, this.state);
+            this.state = sanitizeState(readAriesPath(STATE_PATH));
           } catch {
-          }
-        }
-        emit() {
-          if (!this.listeners.size) return;
-          const snapshot2 = this.getState();
-          const event = { type: "locker-state-changed", state: snapshot2 };
-          for (const listener of this.listeners) {
-            try {
-              listener(event);
-            } catch {
-            }
+            this.state = defaultState();
           }
         }
         setState(next) {
           this.state = next;
-          this.updateSlotWatcher();
-          this.save();
-          this.emit();
-          this.requestSlotWatcherRecompute();
-          this.reapplyCurrentSlotInfo();
-        }
-        updateSlotWatcher() {
-          const shouldWatch = this.state.enabled;
-          if (shouldWatch) {
-            if (!this.slotWatcher) {
-              this.slotWatcher = startLockerSlotWatcherViaGardenObject();
-            }
-            if (this.slotWatcher && !this.slotWatcherUnsub) {
-              try {
-                this.slotWatcherUnsub = this.slotWatcher.onChange((info) => this.handleSlotInfo(info));
-              } catch {
-                this.slotWatcherUnsub = null;
-              }
-            }
+          if (typeof window !== "undefined") {
             try {
-              const info = this.slotWatcher ? this.slotWatcher.get() : emptySlotInfo();
-              this.handleSlotInfo(info, { silent: true });
+              writeAriesPath(STATE_PATH, this.state);
             } catch {
-              this.handleSlotInfo(emptySlotInfo(), { silent: true });
             }
-            return;
           }
-          this.detachSlotWatcher();
+          this.syncSlotWatcher();
+          this.stateChanges.emit(this.getState());
+        }
+        /** The watcher only runs while the locker is on; it is judged again on every settings change. */
+        syncSlotWatcher() {
+          if (this.state.enabled && !this.slotWatcher) {
+            this.slotWatcher = startLockerSlotWatcher();
+            this.slotWatcher.onChange((info) => this.judgeSlot(info, true));
+          } else if (!this.state.enabled && this.slotWatcher) {
+            this.slotWatcher.stop();
+            this.slotWatcher = null;
+          }
+          this.judgeSlot(this.slotWatcher?.get() ?? emptySlotInfo(), false);
+        }
+        judgeSlot(info, log2) {
+          let harvestAllowed = null;
+          if (info.isPlant && info.slot) {
+            try {
+              harvestAllowed = this.allowsHarvest({
+                seedKey: info.seedKey,
+                sizePercent: info.sizePercent ?? 0,
+                mutations: info.mutations
+              });
+            } catch {
+              harvestAllowed = null;
+            }
+          }
+          if (log2) console.log("[Locker] Slot selection", { ...info, harvestAllowed });
+          this.currentSlot = { info, harvestAllowed };
+          this.slotChanges.emit(this.currentSlot);
         }
         getState() {
           return cloneState(this.state);
         }
+        isEnabled() {
+          return this.state.enabled;
+        }
         setGlobalState(next) {
-          const current = this.state;
-          const sanitized = sanitizeSettings(next.settings);
-          const updated = {
-            enabled: !!next.enabled,
-            settings: sanitized,
-            overrides: { ...current.overrides }
-          };
-          this.setState(updated);
+          this.setState({ enabled: !!next.enabled, settings: sanitizeSettings(next.settings), overrides: { ...this.state.overrides } });
         }
         setOverride(seedKey, override) {
           if (!seedKey) return;
-          const sanitized = {
-            enabled: !!override?.enabled,
-            settings: sanitizeSettings(override?.settings)
-          };
-          const overrides = { ...this.state.overrides, [seedKey]: sanitized };
-          this.setState({ ...this.state, overrides });
+          const sanitized = { enabled: !!override?.enabled, settings: sanitizeSettings(override?.settings) };
+          this.setState({ ...this.state, overrides: { ...this.state.overrides, [seedKey]: sanitized } });
         }
         removeOverride(seedKey) {
-          if (!seedKey) return;
-          if (!(seedKey in this.state.overrides)) return;
+          if (!seedKey || !(seedKey in this.state.overrides)) return;
           const overrides = { ...this.state.overrides };
           delete overrides[seedKey];
           this.setState({ ...this.state, overrides });
         }
         subscribe(listener) {
-          this.listeners.add(listener);
-          return () => this.listeners.delete(listener);
+          return this.stateChanges.on(listener);
         }
         onSlotInfoChange(listener) {
-          this.slotInfoListeners.add(listener);
-          return () => this.slotInfoListeners.delete(listener);
+          return this.slotChanges.on(listener);
         }
-        getCurrentSlotSnapshot() {
-          return {
-            info: cloneSlotInfo(this.currentSlotInfo),
-            harvestAllowed: this.currentSlotHarvestAllowed,
-            detectedAt: this.lastSlotChangeDetectedAt
-          };
+        /** The verdict on the selected crop: null when the locker is off or nothing harvestable is selected. */
+        currentHarvestAllowed() {
+          return this.currentSlot.harvestAllowed;
         }
-        requestSlotWatcherRecompute() {
-          if (!this.slotWatcher) return;
-          try {
-            this.slotWatcher.recompute();
-          } catch {
-          }
-        }
-        detachSlotWatcher() {
-          if (this.slotWatcherUnsub) {
-            try {
-              this.slotWatcherUnsub();
-            } catch {
-            }
-            this.slotWatcherUnsub = null;
-          }
-          if (this.slotWatcher) {
-            try {
-              this.slotWatcher.stop();
-            } catch {
-            }
-            this.slotWatcher = null;
-          }
-          this.handleSlotInfo(emptySlotInfo(), { silent: true });
-        }
-        handleSlotInfo(info, opts = {}) {
-          const { silent = false } = opts;
-          const prevInfo = this.currentSlotInfo;
-          const prevHarvestAllowed = this.currentSlotHarvestAllowed;
-          const normalizedMutations = normalizeMutationsList(info.mutations);
-          const nextInfo = { ...info, mutations: normalizedMutations };
-          let computedSizePercent = null;
-          let harvestAllowed = null;
-          let displaySizePercent = null;
-          if (nextInfo.isPlant && nextInfo.slot) {
-            if (typeof nextInfo.sizePercent === "number" && Number.isFinite(nextInfo.sizePercent)) {
-              computedSizePercent = nextInfo.sizePercent;
-            } else {
-              computedSizePercent = extractSizePercent(nextInfo.slot);
-            }
-            try {
-              const assessment = this.assessHarvest({
-                seedKey: nextInfo.seedKey ?? null,
-                sizePercent: computedSizePercent ?? 0,
-                mutations: normalizedMutations
-              });
-              harvestAllowed = assessment.allowed;
-            } catch {
-              harvestAllowed = null;
-            }
-          } else {
-            computedSizePercent = typeof nextInfo.sizePercent === "number" && Number.isFinite(nextInfo.sizePercent) ? nextInfo.sizePercent : null;
-            harvestAllowed = null;
-          }
-          if (typeof computedSizePercent === "number") {
-            displaySizePercent = Math.max(50, Math.min(100, computedSizePercent));
-          }
-          this.currentSlotInfo = nextInfo;
-          this.currentSlotHarvestAllowed = harvestAllowed;
-          if (!silent) {
-            if (nextInfo.isPlant) {
-              if (nextInfo.slot) {
-                console.log("[Locker] Slot selection", {
-                  seedKey: nextInfo.seedKey ?? null,
-                  slotIndex: nextInfo.originalIndex,
-                  orderedIndex: nextInfo.orderedIndex,
-                  sizePercent: computedSizePercent,
-                  displaySizePercent,
-                  harvestAllowed,
-                  mutations: normalizedMutations,
-                  slot: nextInfo.slot
-                });
-              } else {
-                console.log("[Locker] Slot selection", {
-                  isPlant: true,
-                  slotIndex: nextInfo.originalIndex,
-                  orderedIndex: nextInfo.orderedIndex,
-                  totalSlots: nextInfo.totalSlots,
-                  availableSlotCount: nextInfo.availableSlotCount,
-                  seedKey: nextInfo.seedKey ?? null,
-                  displaySizePercent,
-                  slot: nextInfo.slot
-                });
-              }
-            } else {
-              console.log("[Locker] Slot selection", { isPlant: false, slot: nextInfo.slot });
-            }
-            const infoChanged = !slotInfosEqual(prevInfo, nextInfo) || (prevHarvestAllowed ?? null) !== (harvestAllowed ?? null);
-            if (infoChanged) {
-              this.lastSlotChangeDetectedAt = now();
-            }
-          }
-          this.emitSlotInfoChange();
-        }
-        reapplyCurrentSlotInfo() {
-          try {
-            const info = this.slotWatcher ? this.slotWatcher.get() : emptySlotInfo();
-            this.handleSlotInfo(info, { silent: true });
-          } catch {
-            this.handleSlotInfo(emptySlotInfo(), { silent: true });
-          }
-        }
-        recomputeCurrentSlot() {
-          this.requestSlotWatcherRecompute();
-          this.reapplyCurrentSlotInfo();
-        }
-        effectiveSettings(seedKey) {
-          if (!this.state.enabled) {
-            return { enabled: false, settings: this.state.settings };
-          }
-          if (seedKey) {
-            const override = this.state.overrides[seedKey];
-            if (override?.enabled) {
-              return { enabled: true, settings: override.settings };
-            }
-          }
-          return { enabled: true, settings: this.state.settings };
-        }
-        assessHarvest(args) {
-          const effective = this.effectiveSettings(args.seedKey);
-          const filters = this.evaluateLockFilters(effective.settings, args);
-          const lockMode = effective.settings.lockMode === "ALLOW" ? "ALLOW" : "LOCK";
-          if (!effective.enabled) {
-            return { effective, filters, lockMode, allowed: true };
-          }
-          const blocked = lockMode === "ALLOW" ? filters.size.hasCriteria && !filters.size.matched || filters.color.hasCriteria && !filters.color.matched || filters.weather.hasCriteria && !filters.weather.matched : filters.matchAny;
-          return { effective, filters, lockMode, allowed: !blocked };
-        }
-        evaluateLockFilters(settings, args) {
-          const size = { hasCriteria: false, matched: false };
-          const color2 = { hasCriteria: false, matched: false };
-          const weatherInfo = { hasCriteria: false, matched: false };
-          const scaleMode = settings.scaleLockMode === "MAXIMUM" ? "MAXIMUM" : settings.scaleLockMode === "MINIMUM" ? "MINIMUM" : settings.scaleLockMode === "NONE" ? "NONE" : "RANGE";
-          const minScale = clampNumber(Math.round(settings.minScalePct ?? 50), 50, 100);
-          const maxScaleBase = clampNumber(Math.round(settings.maxScalePct ?? 100), 50, 100);
-          const epsilon = 1e-4;
-          let sizeMin = null;
-          let sizeMax = null;
-          if (scaleMode === "RANGE") {
-            size.hasCriteria = true;
-            const maxScaleRaw = clampNumber(maxScaleBase, 51, 100);
-            const maxScale = maxScaleRaw <= minScale ? Math.min(100, Math.max(51, minScale + 1)) : maxScaleRaw;
-            sizeMin = minScale;
-            sizeMax = maxScale;
-            const inRange = args.sizePercent + epsilon >= minScale && args.sizePercent - epsilon <= maxScale;
-            size.matched = inRange;
-          } else if (scaleMode === "MINIMUM") {
-            size.hasCriteria = true;
-            sizeMin = minScale;
-            size.matched = args.sizePercent + epsilon >= minScale;
-          } else if (scaleMode === "MAXIMUM") {
-            size.hasCriteria = true;
-            const maxScale = clampNumber(maxScaleBase, 50, 100);
-            sizeMax = maxScale;
-            size.matched = args.sizePercent - epsilon <= maxScale;
-          }
-          const { hasGold, hasRainbow, weather: weather2 } = mutationsToArrays(args.mutations);
-          const isNormal = !hasGold && !hasRainbow;
-          const avoidGold = settings.visualMutations.includes("Gold");
-          const avoidRainbow = settings.visualMutations.includes("Rainbow");
-          const colorFilters = [
-            settings.avoidNormal ? "normal" : null,
-            avoidGold ? "gold" : null,
-            avoidRainbow ? "rainbow" : null
-          ].filter(Boolean);
-          if (colorFilters.length) {
-            color2.hasCriteria = true;
-            const matches = settings.avoidNormal && isNormal || avoidGold && hasGold || avoidRainbow && hasRainbow;
-            color2.matched = matches;
-          }
-          const selected = settings.weatherSelected ?? [];
-          const mode = settings.weatherMode ?? "ANY";
-          if (mode === "RECIPES") {
-            const recipes = settings.weatherRecipes ?? [];
-            if (recipes.length) {
-              weatherInfo.hasCriteria = true;
-              let recipeMatch = false;
-              for (const recipe of recipes) {
-                if (!Array.isArray(recipe) || recipe.length === 0) continue;
-                let matches = true;
-                for (let j = 0; j < recipe.length; j++) {
-                  const rawTag = recipe[j];
-                  const normalizedRequired = canonicalizeWeatherTag(rawTag);
-                  if (!normalizedRequired) {
-                    matches = false;
-                    break;
-                  }
-                  if (normalizedRequired === LOCKER_NO_WEATHER_TAG) {
-                    if (weather2.length !== 0) {
-                      matches = false;
-                      break;
-                    }
-                    continue;
-                  }
-                  if (!weather2.includes(normalizedRequired)) {
-                    matches = false;
-                    break;
-                  }
-                }
-                if (matches) {
-                  recipeMatch = true;
-                  break;
-                }
-              }
-              weatherInfo.matched = recipeMatch;
-            }
-            const matchAny2 = size.matched || color2.matched || weatherInfo.matched;
-            return { size, color: color2, weather: weatherInfo, matchAny: matchAny2, sizeMin, sizeMax, scaleMode };
-          }
-          if (selected.length) {
-            weatherInfo.hasCriteria = true;
-            if (mode === "ALL") {
-              let allMatch = true;
-              for (let i = 0; i < selected.length; i++) {
-                const requiredRaw = selected[i];
-                const normalizedRequired = canonicalizeWeatherTag(requiredRaw);
-                if (!normalizedRequired) {
-                  allMatch = false;
-                  break;
-                }
-                if (normalizedRequired === LOCKER_NO_WEATHER_TAG) {
-                  if (weather2.length !== 0) {
-                    allMatch = false;
-                    break;
-                  }
-                  continue;
-                }
-                if (!weather2.includes(normalizedRequired)) {
-                  allMatch = false;
-                  break;
-                }
-              }
-              weatherInfo.matched = allMatch;
-            } else {
-              let anyMatch = false;
-              for (let i = 0; i < selected.length; i++) {
-                const requiredRaw = selected[i];
-                const normalizedRequired = canonicalizeWeatherTag(requiredRaw);
-                if (!normalizedRequired) {
-                  continue;
-                }
-                if (normalizedRequired === LOCKER_NO_WEATHER_TAG) {
-                  if (weather2.length === 0) {
-                    anyMatch = true;
-                    break;
-                  }
-                  continue;
-                }
-                if (weather2.includes(normalizedRequired)) {
-                  anyMatch = true;
-                  break;
-                }
-              }
-              weatherInfo.matched = anyMatch;
-            }
-          }
-          const matchAny = size.matched || color2.matched || weatherInfo.matched;
-          return { size, color: color2, weather: weatherInfo, matchAny, sizeMin, sizeMax, scaleMode };
-        }
-        emitSlotInfoChange() {
-          if (!this.slotInfoListeners.size) {
-            return;
-          }
-          const snapshot2 = {
-            type: "locker-slot-info-changed",
-            info: cloneSlotInfo(this.currentSlotInfo),
-            harvestAllowed: this.currentSlotHarvestAllowed,
-            detectedAt: this.lastSlotChangeDetectedAt
-          };
-          for (const listener of this.slotInfoListeners) {
-            try {
-              listener(snapshot2);
-            } catch {
-            }
-          }
+        /** A species override that is switched on replaces the global settings. */
+        settingsFor(seedKey) {
+          const override = seedKey ? this.state.overrides[seedKey] : void 0;
+          return override?.enabled ? override.settings : this.state.settings;
         }
         allowsHarvest(args) {
-          return this.assessHarvest(args).allowed;
+          if (!this.state.enabled) return true;
+          return harvestAllowedBy(this.settingsFor(args.seedKey), args);
         }
       };
       lockerService = new LockerService();
@@ -14583,31 +14100,55 @@
     const n = Number(raw);
     if (!Number.isFinite(n)) return null;
     if (n <= 0) return 0;
-    if (n > 0 && n <= 2) {
-      return clampPercent(Math.round((n - 1) * 100));
-    }
-    const clamped = Math.max(1, Math.min(6, Math.round(n)));
-    return clampPercent((clamped - 1) * 10);
+    if (n <= 2) return clamp(Math.round((n - 1) * 100), 0, FRIEND_BONUS_MAX);
+    return percentFromPlayerCount(toPlayerCount(n));
   }
   function friendBonusPercentFromPlayers(raw) {
     const n = Number(raw);
-    if (!Number.isFinite(n)) return null;
-    const clamped = Math.max(1, Math.min(6, Math.round(n)));
-    return clampPercent((clamped - 1) * 10);
+    return Number.isFinite(n) ? percentFromPlayerCount(toPlayerCount(n)) : null;
   }
   function percentToRequiredFriendCount(percent) {
-    const pct = sanitizePercent(percent);
-    return Math.max(1, Math.min(6, Math.round(pct / 10) + 1));
+    return clamp(Math.round(toBonusStep(percent) / 10) + 1, 1, MAX_PLAYERS);
   }
-  var ARIES_LOCKER_RESTRICTIONS_PATH, clampPercent, roundToStep, VALID_RARITIES, DEFAULT_SELL_ALL_PETS_RULES, DEFAULT_STATE, FRIEND_BONUS_STEP, FRIEND_BONUS_MAX, sanitizePercent, sanitizePlayers, sanitizeEggLocks, sanitizeSellAllPetsRules, requiredPercentFromPlayers, LockerRestrictionsService, lockerRestrictionsService;
+  function sanitizeEggLocks(raw) {
+    const out = {};
+    if (!raw || typeof raw !== "object") return out;
+    for (const [key2, value] of Object.entries(raw)) {
+      if (key2) out[key2] = value === true;
+    }
+    return out;
+  }
+  function sanitizeSellAllPetsRules(raw) {
+    if (!raw || typeof raw !== "object") return { ...DEFAULT_SELL_ALL_PETS_RULES };
+    const rarities = PET_RARITIES;
+    return {
+      enabled: raw.enabled !== false,
+      protectGold: raw.protectGold !== false,
+      protectRainbow: raw.protectRainbow !== false,
+      protectMaxStr: raw.protectMaxStr !== false,
+      maxStrThreshold: Math.round(clampFinite(raw.maxStrThreshold, 0, 100, DEFAULT_SELL_ALL_PETS_RULES.maxStrThreshold)),
+      protectedRarities: (Array.isArray(raw.protectedRarities) ? raw.protectedRarities : []).filter(
+        (r) => typeof r === "string" && rarities.includes(r)
+      )
+    };
+  }
+  function eggIdOf(gardenObject) {
+    const obj = gardenObject;
+    if (!obj || typeof obj !== "object" || obj.objectType !== "egg") return null;
+    return typeof obj.eggId === "string" && obj.eggId ? obj.eggId : null;
+  }
+  var STORAGE_PATH, FRIEND_BONUS_STEP, FRIEND_BONUS_MAX, MAX_PLAYERS, PET_RARITIES, DEFAULT_SELL_ALL_PETS_RULES, defaultState2, toBonusStep, toPlayerCount, percentFromPlayerCount, requiredPercentFromPlayers, sameRules, LockerRestrictionsService, lockerRestrictionsService;
   var init_restrictions = __esm({
     "src/features/locker/restrictions.ts"() {
       "use strict";
       init_storage();
-      ARIES_LOCKER_RESTRICTIONS_PATH = "locker.restrictions";
-      clampPercent = (value) => Math.max(0, Math.min(50, Math.round(value)));
-      roundToStep = (value, step) => Math.round(value / step) * step;
-      VALID_RARITIES = /* @__PURE__ */ new Set(["Common", "Uncommon", "Rare", "Legendary", "Mythical", "Divine", "Celestial"]);
+      init_emitter();
+      init_math();
+      STORAGE_PATH = "locker.restrictions";
+      FRIEND_BONUS_STEP = 10;
+      FRIEND_BONUS_MAX = 50;
+      MAX_PLAYERS = 6;
+      PET_RARITIES = ["Common", "Uncommon", "Rare", "Legendary", "Mythical", "Divine", "Celestial"];
       DEFAULT_SELL_ALL_PETS_RULES = {
         enabled: true,
         protectGold: true,
@@ -14616,167 +14157,128 @@
         maxStrThreshold: 95,
         protectedRarities: []
       };
-      DEFAULT_STATE = {
+      defaultState2 = () => ({
         minRequiredPlayers: 1,
         eggLocks: {},
         decorPickupLocked: false,
         sellAllPets: { ...DEFAULT_SELL_ALL_PETS_RULES }
-      };
-      FRIEND_BONUS_STEP = 10;
-      FRIEND_BONUS_MAX = 50;
-      sanitizePercent = (value) => {
-        const clamped = clampPercent(value);
-        return Math.max(0, Math.min(FRIEND_BONUS_MAX, roundToStep(clamped, FRIEND_BONUS_STEP)));
-      };
-      sanitizePlayers = (value) => {
-        if (!Number.isFinite(value)) return 1;
-        return Math.max(1, Math.min(6, Math.round(value)));
-      };
-      sanitizeEggLocks = (raw) => {
-        const out = {};
-        if (!raw || typeof raw !== "object") return out;
-        for (const [key2, value] of Object.entries(raw)) {
-          if (!key2) continue;
-          out[key2] = value === true;
-        }
-        return out;
-      };
-      sanitizeSellAllPetsRules = (raw) => {
-        if (!raw || typeof raw !== "object") return { ...DEFAULT_SELL_ALL_PETS_RULES };
-        const maxStrRaw = Number(raw.maxStrThreshold);
-        const maxStrThreshold = Number.isFinite(maxStrRaw) ? Math.max(0, Math.min(100, Math.round(maxStrRaw))) : DEFAULT_SELL_ALL_PETS_RULES.maxStrThreshold;
-        const rawRarities = Array.isArray(raw.protectedRarities) ? raw.protectedRarities : [];
-        const protectedRarities = rawRarities.filter(
-          (r) => typeof r === "string" && VALID_RARITIES.has(r)
-        );
-        return {
-          enabled: raw.enabled !== false,
-          protectGold: raw.protectGold !== false,
-          protectRainbow: raw.protectRainbow !== false,
-          protectMaxStr: raw.protectMaxStr !== false,
-          maxStrThreshold,
-          protectedRarities
-        };
-      };
-      requiredPercentFromPlayers = (players) => sanitizePercent((sanitizePlayers(players) - 1) * 10);
+      });
+      toBonusStep = (value) => clamp(Math.round(clamp(Math.round(value), 0, FRIEND_BONUS_MAX) / FRIEND_BONUS_STEP) * FRIEND_BONUS_STEP, 0, FRIEND_BONUS_MAX);
+      toPlayerCount = (value) => Number.isFinite(value) ? clamp(Math.round(value), 1, MAX_PLAYERS) : 1;
+      percentFromPlayerCount = (players) => clamp((players - 1) * 10, 0, FRIEND_BONUS_MAX);
+      requiredPercentFromPlayers = (players) => toBonusStep((toPlayerCount(players) - 1) * 10);
+      sameRules = (a, b) => a.enabled === b.enabled && a.protectGold === b.protectGold && a.protectRainbow === b.protectRainbow && a.protectMaxStr === b.protectMaxStr && a.maxStrThreshold === b.maxStrThreshold && JSON.stringify(a.protectedRarities.slice().sort()) === JSON.stringify(b.protectedRarities.slice().sort());
       LockerRestrictionsService = class {
         constructor() {
-          this.state = { ...DEFAULT_STATE };
-          this.listeners = /* @__PURE__ */ new Set();
-          this.load();
-        }
-        load() {
-          if (typeof window === "undefined") {
-            this.state = { ...DEFAULT_STATE };
-            return;
-          }
-          try {
-            const parsed = readAriesPath(ARIES_LOCKER_RESTRICTIONS_PATH) ?? {};
-            const players = sanitizePlayers(Number(parsed?.minRequiredPlayers ?? parsed?.minFriendBonusPct));
-            const eggLocks = sanitizeEggLocks(parsed?.eggLocks);
-            const decorPickupLocked = parsed?.decorPickupLocked === true;
-            const sellAllPets = sanitizeSellAllPetsRules(parsed?.sellAllPets);
-            this.state = { minRequiredPlayers: players, eggLocks, decorPickupLocked, sellAllPets };
-          } catch {
-            this.state = { ...DEFAULT_STATE };
-          }
-        }
-        save() {
+          this.state = defaultState2();
+          this.changes = new Emitter();
           if (typeof window === "undefined") return;
           try {
-            writeAriesPath(ARIES_LOCKER_RESTRICTIONS_PATH, this.state);
+            const saved = readAriesPath(STORAGE_PATH) ?? {};
+            this.state = {
+              // Older saves name the setting `minFriendBonusPct`.
+              minRequiredPlayers: toPlayerCount(Number(saved?.minRequiredPlayers ?? saved?.minFriendBonusPct)),
+              eggLocks: sanitizeEggLocks(saved?.eggLocks),
+              decorPickupLocked: saved?.decorPickupLocked === true,
+              sellAllPets: sanitizeSellAllPetsRules(saved?.sellAllPets)
+            };
           } catch {
+            this.state = defaultState2();
           }
         }
-        emit() {
-          for (const listener of this.listeners) {
+        update(patch) {
+          this.state = { ...this.state, ...patch };
+          if (typeof window !== "undefined") {
             try {
-              listener(this.getState());
+              writeAriesPath(STORAGE_PATH, this.state);
             } catch {
             }
           }
+          this.changes.emit(this.getState());
         }
         getState() {
           return { ...this.state };
         }
         getSellAllPetsRules() {
-          return { ...this.state.sellAllPets ?? DEFAULT_SELL_ALL_PETS_RULES };
+          return { ...this.state.sellAllPets };
         }
         setSellAllPetsRules(next) {
-          const current = this.getSellAllPetsRules();
-          const merged = { ...current, ...next };
-          const sanitized = sanitizeSellAllPetsRules(merged);
-          const prev = this.state.sellAllPets;
-          const same = prev?.enabled === sanitized.enabled && prev?.protectGold === sanitized.protectGold && prev?.protectRainbow === sanitized.protectRainbow && prev?.protectMaxStr === sanitized.protectMaxStr && prev?.maxStrThreshold === sanitized.maxStrThreshold && JSON.stringify((prev?.protectedRarities ?? []).slice().sort()) === JSON.stringify(sanitized.protectedRarities.slice().sort());
-          if (same) return;
-          this.state = { ...this.state, sellAllPets: sanitized };
-          this.save();
-          this.emit();
+          const sanitized = sanitizeSellAllPetsRules({ ...this.getSellAllPetsRules(), ...next });
+          if (!sameRules(this.state.sellAllPets, sanitized)) this.update({ sellAllPets: sanitized });
         }
         setMinRequiredPlayers(value) {
-          const players = sanitizePlayers(value);
-          if (players === this.state.minRequiredPlayers) return;
-          this.state = { ...this.state, minRequiredPlayers: players };
-          this.save();
-          this.emit();
+          const players = toPlayerCount(value);
+          if (players !== this.state.minRequiredPlayers) this.update({ minRequiredPlayers: players });
         }
         setEggLock(eggId, locked) {
-          if (!eggId) return;
-          const nextLocks = { ...this.state.eggLocks, [eggId]: !!locked };
-          this.state = { ...this.state, eggLocks: nextLocks };
-          this.save();
-          this.emit();
+          if (eggId) this.update({ eggLocks: { ...this.state.eggLocks, [eggId]: !!locked } });
         }
         setDecorPickupLocked(locked) {
-          if (!!locked === this.state.decorPickupLocked) return;
-          this.state = { ...this.state, decorPickupLocked: !!locked };
-          this.save();
-          this.emit();
+          if (!!locked !== this.state.decorPickupLocked) this.update({ decorPickupLocked: !!locked });
         }
         isEggLocked(eggId) {
-          if (!eggId) return false;
-          return this.state.eggLocks?.[eggId] === true;
+          return !!eggId && this.state.eggLocks[eggId] === true;
         }
-        allowsCropSale(currentFriendBonusPercent) {
-          const required = requiredPercentFromPlayers(this.state.minRequiredPlayers);
-          if (required <= 0) return true;
-          if (!Number.isFinite(currentFriendBonusPercent)) return false;
-          const current = clampPercent(Number(currentFriendBonusPercent));
-          return current + 1e-4 >= required;
+        isDecorPickupLocked() {
+          return this.state.decorPickupLocked;
         }
         getRequiredPercent() {
           return requiredPercentFromPlayers(this.state.minRequiredPlayers);
         }
-        isDecorPickupLocked() {
-          return this.state.decorPickupLocked === true;
+        /** An unknown bonus only passes when no bonus is required. */
+        allowsCropSale(currentFriendBonusPercent) {
+          const required = this.getRequiredPercent();
+          if (required <= 0) return true;
+          if (!Number.isFinite(currentFriendBonusPercent)) return false;
+          return clamp(Math.round(Number(currentFriendBonusPercent)), 0, FRIEND_BONUS_MAX) + 1e-4 >= required;
         }
         subscribe(listener) {
-          this.listeners.add(listener);
-          return () => this.listeners.delete(listener);
+          return this.changes.on(listener);
         }
       };
       lockerRestrictionsService = new LockerRestrictionsService();
     }
   });
 
+  // src/features/locker/friendBonus.ts
+  function followFriendBonus() {
+    if (following) return;
+    following = true;
+    void readAndFollow(Atoms.server.friendBonusMultiplier, (next) => {
+      fromMultiplier = friendBonusPercentFromMultiplier(next);
+      changes.emit(currentFriendBonus());
+    });
+    void readAndFollow(Atoms.server.numPlayers, (next) => {
+      fromPlayers = friendBonusPercentFromPlayers(next);
+      changes.emit(currentFriendBonus());
+    });
+  }
+  function currentFriendBonus() {
+    followFriendBonus();
+    return fromMultiplier ?? fromPlayers;
+  }
+  function onFriendBonusChange(listener) {
+    followFriendBonus();
+    return changes.on(listener);
+  }
+  var fromMultiplier, fromPlayers, following, changes;
+  var init_friendBonus = __esm({
+    "src/features/locker/friendBonus.ts"() {
+      "use strict";
+      init_atoms();
+      init_hub();
+      init_emitter();
+      init_restrictions();
+      fromMultiplier = null;
+      fromPlayers = null;
+      following = false;
+      changes = new Emitter();
+    }
+  });
+
   // src/features/locker/outgoingRules.ts
-  function eggIdOf(obj) {
-    if (!obj || typeof obj !== "object" || obj.objectType !== "egg") return null;
-    return typeof obj.eggId === "string" && obj.eggId ? obj.eggId : null;
-  }
-  function lockerEnabled() {
-    try {
-      return lockerService.getState().enabled;
-    } catch {
-      return false;
-    }
-  }
   function blockedByCurrentSlot() {
-    try {
-      return lockerEnabled() && lockerService.getCurrentSlotSnapshot().harvestAllowed === false;
-    } catch {
-      return false;
-    }
+    return lockerService.isEnabled() && lockerService.currentHarvestAllowed() === false;
   }
   function harvestedTile(slot) {
     let tile = garden2?.tileObjects?.[String(slot)];
@@ -14812,7 +14314,7 @@
       }
       return;
     }
-    if (!lockerEnabled()) return;
+    if (!lockerService.isEnabled()) return;
     const seedKey = extractSeedKey(cropSlot) ?? extractSeedKey(findGrowSlot(currentGardenObject?.slots, slotsIndex)) ?? extractSeedKey(tile);
     const sizePercent = extractSizePercent(cropSlot);
     const mutations = normalizeMutationsList(cropSlot.mutations);
@@ -14853,7 +14355,7 @@
     return isTileSell || !!t.description?.props?.values?.cropText;
   }
   function checkSellAllCrops() {
-    const currentBonusPct = friendBonusFromMultiplier ?? friendBonusFromPlayers ?? null;
+    const currentBonusPct = currentFriendBonus();
     if (lockerRestrictionsService.allowsCropSale(currentBonusPct)) return;
     const requiredPct = lockerRestrictionsService.getRequiredPercent();
     console.log("[SellAllCrops] Blocked by friend bonus restriction", {
@@ -14881,18 +14383,13 @@
     void readAndFollow(Atoms.data.myCurrentGardenObject, (next) => {
       currentGardenObject = next;
     });
-    void readAndFollow(Atoms.server.friendBonusMultiplier, (next) => {
-      friendBonusFromMultiplier = friendBonusPercentFromMultiplier(next);
-    });
-    void readAndFollow(Atoms.server.numPlayers, (next) => {
-      friendBonusFromPlayers = friendBonusPercentFromPlayers(next);
-    });
+    followFriendBonus();
     interceptOutgoing("HarvestCrop", checkHarvest);
     interceptOutgoing("PickupDecor", checkDecorPickup);
     interceptOutgoing("HatchEgg", checkHatch);
     interceptOutgoing("SellAllCrops", checkSellAllCrops);
   }
-  var garden2, currentGardenObject, friendBonusFromMultiplier, friendBonusFromPlayers, EGG_TOAST_TITLE;
+  var garden2, currentGardenObject, EGG_TOAST_TITLE;
   var init_outgoingRules2 = __esm({
     "src/features/locker/outgoingRules.ts"() {
       "use strict";
@@ -14904,11 +14401,12 @@
       init_toast();
       init_editor();
       init_locker();
+      init_harvestRules();
+      init_slotWatcher();
       init_restrictions();
+      init_friendBonus();
       garden2 = null;
       currentGardenObject = null;
-      friendBonusFromMultiplier = null;
-      friendBonusFromPlayers = null;
       EGG_TOAST_TITLE = "Egg hatch locker";
     }
   });
@@ -14916,8 +14414,8 @@
   // src/features/stats/stats.ts
   function readCount(value, fallback, integer) {
     const num2 = Number(value);
-    const positive = Math.max(0, Number.isFinite(num2) ? num2 : fallback);
-    return integer ? Math.floor(positive) : positive;
+    const positive2 = Math.max(0, Number.isFinite(num2) ? num2 : fallback);
+    return integer ? Math.floor(positive2) : positive2;
   }
   function unwrapNestedSnapshot2(raw) {
     let cur = raw;
@@ -14944,12 +14442,12 @@
     return out;
   }
   function normalizeStats(raw) {
-    const now2 = Date.now();
-    const base = createDefaultStats(now2);
+    const now = Date.now();
+    const base = createDefaultStats(now);
     if (!isRecord2(raw)) return base;
     if (Object.prototype.hasOwnProperty.call(raw, "createdAt")) {
       const createdAt = Number(raw.createdAt);
-      base.createdAt = Number.isFinite(createdAt) && createdAt > 0 ? Math.floor(createdAt) : now2;
+      base.createdAt = Number.isFinite(createdAt) && createdAt > 0 ? Math.floor(createdAt) : now;
     }
     base.garden = readGroup(raw.garden, base.garden, GARDEN_INT_KEYS);
     base.shops = readGroup(raw.shops, base.shops, SHOP_INT_KEYS);
@@ -14984,12 +14482,12 @@
   }
   function writeToStorage(stats) {
     memoryStore = cloneStats(stats);
-    writeAriesPath(STORAGE_PATH, memoryStore);
+    writeAriesPath(STORAGE_PATH2, memoryStore);
     return memoryStore;
   }
   function readFromStorage() {
     if (memoryStore) return cloneStats(memoryStore);
-    const stored = readAriesPath(STORAGE_PATH);
+    const stored = readAriesPath(STORAGE_PATH2);
     const raw = unwrapNestedSnapshot2(stored);
     if (!raw) {
       const fresh = createDefaultStats();
@@ -14998,20 +14496,20 @@
     }
     const normalized = normalizeStats(raw);
     memoryStore = cloneStats(normalized);
-    if (stored !== raw) writeAriesPath(STORAGE_PATH, memoryStore);
+    if (stored !== raw) writeAriesPath(STORAGE_PATH2, memoryStore);
     return normalized;
   }
-  function adjustValue(current, delta, integer) {
-    const a = Number(current);
+  function adjustValue(current2, delta, integer) {
+    const a = Number(current2);
     const b = Number(delta);
     const next = Math.max(0, (Number.isFinite(a) ? a : 0) + (Number.isFinite(b) ? b : 0));
     return integer ? Math.floor(next) : next;
   }
   function updateStats(mutator) {
-    const current = readFromStorage();
-    const draft = cloneStats(current);
+    const current2 = readFromStorage();
+    const draft = cloneStats(current2);
     mutator(draft);
-    if (JSON.stringify(current) === JSON.stringify(draft)) return current;
+    if (JSON.stringify(current2) === JSON.stringify(draft)) return current2;
     const stored = writeToStorage(draft);
     changed.emit(cloneStats(stored));
     return stored;
@@ -15020,14 +14518,14 @@
     if (!table[key2]) table[key2] = fresh();
     return table[key2];
   }
-  var STORAGE_PATH, GARDEN_INT_KEYS, SHOP_INT_KEYS, ABILITY_INT_KEYS, memoryStore, changed, isRecord2, zeroHatched, cloneStats, StatsService;
+  var STORAGE_PATH2, GARDEN_INT_KEYS, SHOP_INT_KEYS, ABILITY_INT_KEYS, memoryStore, changed, isRecord2, zeroHatched, cloneStats, StatsService;
   var init_stats = __esm({
     "src/features/stats/stats.ts"() {
       "use strict";
       init_data();
       init_emitter();
       init_storage();
-      STORAGE_PATH = "stats";
+      STORAGE_PATH2 = "stats";
       GARDEN_INT_KEYS = {
         totalPlanted: true,
         totalHarvested: true,
@@ -15535,7 +15033,7 @@
   // src/features/pets/abilityLogs.ts
   function persist2() {
     try {
-      writeAriesPath(STORAGE_PATH2, {
+      writeAriesPath(STORAGE_PATH3, {
         version: 1,
         cutoff: cutoffMs,
         logs: logs.map((entry) => ({
@@ -15550,7 +15048,7 @@
   }
   function restoreAbilityLogs() {
     try {
-      const saved = readAriesPath(STORAGE_PATH2);
+      const saved = readAriesPath(STORAGE_PATH3);
       if (!saved || typeof saved !== "object") return;
       const restored = [];
       for (const item of Array.isArray(saved.logs) ? saved.logs : []) {
@@ -15583,7 +15081,7 @@
   function push(entry) {
     logs.push(entry);
     if (logs.length > MAX_ENTRIES) logs.splice(0, logs.length - MAX_ENTRIES);
-    changes.emit(getAbilityLogs());
+    changes2.emit(getAbilityLogs());
     persist2();
   }
   function ingestActivityLogEntry(raw) {
@@ -15660,7 +15158,7 @@
     return sessionStart;
   }
   function onAbilityLogs(cb) {
-    const off = changes.on(cb);
+    const off = changes2.on(cb);
     try {
       cb(getAbilityLogs());
     } catch {
@@ -15674,10 +15172,10 @@
     logs = [];
     seenKeys.clear();
     cutoffMs = Date.now();
-    changes.emit(getAbilityLogs());
+    changes2.emit(getAbilityLogs());
     persist2();
   }
-  var STORAGE_PATH2, MAX_ENTRIES, CUTOFF_SKEW_MS, logs, seenKeys, cutoffMs, sessionStart, changes, entryKey, time12, optionalString;
+  var STORAGE_PATH3, MAX_ENTRIES, CUTOFF_SKEW_MS, logs, seenKeys, cutoffMs, sessionStart, changes2, entryKey, time12, optionalString;
   var init_abilityLogs = __esm({
     "src/features/pets/abilityLogs.ts"() {
       "use strict";
@@ -15688,14 +15186,14 @@
       init_abilityNames();
       init_abilityLogText();
       init_inventoryPets();
-      STORAGE_PATH2 = "pets.abilityLogs";
+      STORAGE_PATH3 = "pets.abilityLogs";
       MAX_ENTRIES = 500;
       CUTOFF_SKEW_MS = 1500;
       logs = [];
       seenKeys = /* @__PURE__ */ new Set();
       cutoffMs = 0;
       sessionStart = Date.now();
-      changes = new Emitter();
+      changes2 = new Emitter();
       entryKey = (e) => `${e.abilityId}|${e.petId}|${e.performedAt}`;
       time12 = (ms) => new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
       optionalString = (v) => typeof v === "string" && v ? v : void 0;
@@ -15741,8 +15239,8 @@
     return typeof v === "number" && Number.isFinite(v) && v > 0 ? v : DEFAULT_MAX_HUNGER;
   }
   function getHungerPctFor(pet) {
-    const current = Number(pet?.slot?.hunger) || 0;
-    const pct = current / maxHungerForSpecies(String(pet?.slot?.petSpecies || "")) * 100;
+    const current2 = Number(pet?.slot?.hunger) || 0;
+    const pct = current2 / maxHungerForSpecies(String(pet?.slot?.petSpecies || "")) * 100;
     return +Math.max(0, Math.min(100, pct)).toFixed(1);
   }
   var OVERRIDES_PATH, INSTANT_FEED_PATH, DEFAULT_THRESHOLD_PCT, DEFAULT_MAX_HUNGER, isAllowed, catalogEntry;
@@ -15789,19 +15287,19 @@
     if (!viewport || !content2 || !Array.isArray(content2.children)) return null;
     return { mask: viewport.mask, content: content2 };
   }
-  function logsContentKind(contentChildren) {
+  function logsContentKind(contentChildren2) {
     let kind = "unknown";
-    for (const child of contentChildren) {
+    for (const child of contentChildren2) {
       if (child?.label === STAT_CARD_LABEL) return "stats";
       if (child?.label === LOG_ROW_LABEL) kind = "logs";
     }
     return kind;
   }
-  function planLogRowsShift(contentChildren, toolbarSpace) {
-    const first = contentChildren[0];
+  function planLogRowsShift(contentChildren2, toolbarSpace) {
+    const first = contentChildren2[0];
     const isNote = !!first && first.label !== LOG_ROW_LABEL && (typeof first.textComponent?.text === "string" || typeof first.text === "string" && !(first.children?.length > 0));
     if (!isNote) return { hideFirst: false, shift: toolbarSpace };
-    const next = contentChildren[1];
+    const next = contentChildren2[1];
     const firstY = first.position?.y ?? first.y ?? 0;
     const noteSpace = next ? (next.position?.y ?? next.y ?? firstY) - firstY : first.height ?? 0;
     return { hideFirst: true, shift: toolbarSpace - noteSpace };
@@ -15826,8 +15324,8 @@
   // src/game/fakeModal.ts
   async function openModal(modalId) {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current && current !== modalId) {
+      const current2 = await Atoms.ui.activeModal.get();
+      if (current2 && current2 !== modalId) {
         await Atoms.ui.activeModal.set(null);
         await Atoms.ui.inventoryModalIsActive.set(false);
         await new Promise((r) => requestAnimationFrame(r));
@@ -15840,8 +15338,8 @@
   async function closeModal(modalId) {
     try {
       if (modalId) {
-        const current = await Atoms.ui.activeModal.get();
-        if (current !== modalId) return;
+        const current2 = await Atoms.ui.activeModal.get();
+        if (current2 !== modalId) return;
       }
       await Atoms.ui.activeModal.set(null);
       if (modalId === INVENTORY_MODAL_ID || !modalId) {
@@ -15980,7 +15478,7 @@
 
   // src/features/pets/teamStore.ts
   function load2() {
-    const saved = readAriesPath(STORAGE_PATH3) ?? [];
+    const saved = readAriesPath(STORAGE_PATH4) ?? [];
     if (!Array.isArray(saved)) return [];
     const seen = /* @__PURE__ */ new Set();
     const out = [];
@@ -16003,7 +15501,7 @@
     for (const t of list) {
       if (t?.serverId && t?.id) localIdByServerId.set(String(t.serverId), String(t.id));
     }
-    writeAriesPath(STORAGE_PATH3, list);
+    writeAriesPath(STORAGE_PATH4, list);
   }
   function teamsRef() {
     return teams;
@@ -16011,7 +15509,7 @@
   function commitTeams(next) {
     teams = next;
     save(teams);
-    changes2.emit(getTeams());
+    changes3.emit(getTeams());
   }
   function getTeams() {
     return teams.map(copy);
@@ -16021,7 +15519,7 @@
     return team ? copy(team) : null;
   }
   function onTeamsChange(cb) {
-    const off = changes2.on(cb);
+    const off = changes3.on(cb);
     try {
       cb(getTeams());
     } catch {
@@ -16053,16 +15551,16 @@
     }
     return `t_${Date.now().toString(36)}_${Math.random().toString(16).slice(2)}`;
   }
-  var STORAGE_PATH3, SLOT_COUNT, localIdByServerId, changes2, normalizeSlots, teams, copy;
+  var STORAGE_PATH4, SLOT_COUNT, localIdByServerId, changes3, normalizeSlots, teams, copy;
   var init_teamStore = __esm({
     "src/features/pets/teamStore.ts"() {
       "use strict";
       init_emitter();
       init_storage();
-      STORAGE_PATH3 = "pets.teams";
+      STORAGE_PATH4 = "pets.teams";
       SLOT_COUNT = 3;
       localIdByServerId = /* @__PURE__ */ new Map();
-      changes2 = new Emitter();
+      changes3 = new Emitter();
       normalizeSlots = (slots) => Array.isArray(slots) ? slots.slice(0, SLOT_COUNT).map((x) => x ? String(x) : null) : [null, null, null];
       teams = load2();
       copy = (t) => ({ ...t, slots: t.slots.slice(0, SLOT_COUNT) });
@@ -16459,12 +15957,12 @@
     const list = teamsRef();
     const index = list.findIndex((t) => t.id === patch.id);
     if (index < 0) return null;
-    const current = list[index];
+    const current2 = list[index];
     const next = {
-      id: current.id,
-      name: typeof patch.name === "string" ? petTeamName(patch.name) : current.name,
-      slots: Array.isArray(patch.slots) ? patch.slots.slice(0, SLOT_COUNT2) : current.slots,
-      serverId: current.serverId ?? null
+      id: current2.id,
+      name: typeof patch.name === "string" ? petTeamName(patch.name) : current2.name,
+      slots: Array.isArray(patch.slots) ? patch.slots.slice(0, SLOT_COUNT2) : current2.slots,
+      serverId: current2.serverId ?? null
     };
     commitTeams(list.map((t, i) => i === index ? next : t));
     const petIds = next.slots.filter((x) => !!x);
@@ -17256,38 +16754,38 @@
   });
 
   // src/features/keybinds/keybinds.ts
-  function register(section4, config) {
+  function register(section5, config) {
     const action2 = {
       ...config,
-      sectionId: section4.id,
+      sectionId: section5.id,
       defaultHotkey: cloneHotkey(config.defaultHotkey),
       holdDetection: config.holdDetection ? { ...config.holdDetection } : void 0
     };
     actions.set(action2.id, action2);
     if (action2.holdDetection) holdDefaults.set(action2.id, !!action2.holdDetection.defaultEnabled);
-    section4.actions.push(action2);
+    section5.actions.push(action2);
   }
   function setDynamicActions(sectionId, configs) {
     const index = SECTION_CONFIG.findIndex((s) => s.id === sectionId);
     if (index < 0) return;
-    const section4 = sections[index];
+    const section5 = sections[index];
     const fixed = new Set(SECTION_CONFIG[index].actions.map((a) => a.id));
-    for (const old of section4.actions) {
+    for (const old of section5.actions) {
       if (fixed.has(old.id)) continue;
       actions.delete(old.id);
       holdDefaults.delete(old.id);
       cache2.delete(old.id);
       holdCache.delete(old.id);
     }
-    section4.actions = section4.actions.filter((a) => fixed.has(a.id));
+    section5.actions = section5.actions.filter((a) => fixed.has(a.id));
     for (const config of configs) {
-      if (!fixed.has(config.id)) register(section4, config);
+      if (!fixed.has(config.id)) register(section5, config);
     }
   }
   function getKeybindSections() {
-    return sections.map((section4) => ({
-      ...section4,
-      actions: section4.actions.map((action2) => ({
+    return sections.map((section5) => ({
+      ...section5,
+      actions: section5.actions.map((action2) => ({
         ...action2,
         defaultHotkey: cloneHotkey(action2.defaultHotkey),
         holdDetection: action2.holdDetection ? { ...action2.holdDetection } : void 0
@@ -17301,8 +16799,8 @@
     return stringToHotkey(raw) ?? null;
   }
   function writeStored(id, hk) {
-    updateAriesPath(BINDINGS_PATH, (current) => {
-      const next = current && typeof current === "object" ? { ...current } : {};
+    updateAriesPath(BINDINGS_PATH, (current2) => {
+      const next = current2 && typeof current2 === "object" ? { ...current2 } : {};
       if (hk === void 0) delete next[id];
       else next[id] = hk ? hotkeyToString(hk) : STORED_NONE;
       return next;
@@ -17316,8 +16814,8 @@
     return void 0;
   }
   function writeHoldStored(id, enabled5) {
-    updateAriesPath(HOLD_PATH, (current) => {
-      const next = current && typeof current === "object" ? { ...current } : {};
+    updateAriesPath(HOLD_PATH, (current2) => {
+      const next = current2 && typeof current2 === "object" ? { ...current2 } : {};
       next[id] = enabled5;
       return next;
     });
@@ -17331,13 +16829,13 @@
     return emitter;
   }
   function emitChange(id) {
-    changes3.get(id)?.emit(getKeybind(id));
+    changes4.get(id)?.emit(getKeybind(id));
   }
   function emitHoldChange(id) {
     holdChanges.get(id)?.emit(getKeybindHoldDetection(id));
   }
   function onKeybindChange(id, cb) {
-    return emitterFor(changes3, id).on(cb);
+    return emitterFor(changes4, id).on(cb);
   }
   function onKeybindHoldDetectionChange(id, cb) {
     if (!holdDefaults.has(id)) return () => {
@@ -17396,7 +16894,7 @@
     const hk = getKeybind(id);
     return hk ? hotkeyToPretty(hk) : UNBOUND_LABEL;
   }
-  var BINDINGS_PATH, HOLD_PATH, ARIES_ROOT_KEY, STORED_NONE, UNBOUND_LABEL, sections, actions, holdDefaults, cache2, holdCache, changes3, holdChanges, cloneHotkey;
+  var BINDINGS_PATH, HOLD_PATH, ARIES_ROOT_KEY, STORED_NONE, UNBOUND_LABEL, sections, actions, holdDefaults, cache2, holdCache, changes4, holdChanges, cloneHotkey;
   var init_keybinds = __esm({
     "src/features/keybinds/keybinds.ts"() {
       "use strict";
@@ -17409,12 +16907,12 @@
       ARIES_ROOT_KEY = "aries_mod";
       STORED_NONE = "__none__";
       UNBOUND_LABEL = "None";
-      sections = SECTION_CONFIG.map((section4) => ({ ...section4, actions: [] }));
+      sections = SECTION_CONFIG.map((section5) => ({ ...section5, actions: [] }));
       actions = /* @__PURE__ */ new Map();
       holdDefaults = /* @__PURE__ */ new Map();
       cache2 = /* @__PURE__ */ new Map();
       holdCache = /* @__PURE__ */ new Map();
-      changes3 = /* @__PURE__ */ new Map();
+      changes4 = /* @__PURE__ */ new Map();
       holdChanges = /* @__PURE__ */ new Map();
       cloneHotkey = (hk) => hk ? { ...hk } : null;
       for (let i = 0; i < SECTION_CONFIG.length; i++) {
@@ -17466,13 +16964,13 @@
   }
   async function teamAfterStep(ids, step) {
     if (!ids.length) return null;
-    let current = null;
+    let current2 = null;
     try {
-      current = await getActiveTeamId();
+      current2 = await getActiveTeamId();
     } catch {
     }
-    if (!current || !ids.includes(current)) current = getLastUsedTeamId();
-    const index = current ? ids.indexOf(current) : -1;
+    if (!current2 || !ids.includes(current2)) current2 = getLastUsedTeamId();
+    const index = current2 ? ids.indexOf(current2) : -1;
     if (index < 0) return ids[0];
     return ids[(index + step + ids.length) % ids.length];
   }
@@ -17564,8 +17062,8 @@
   // src/features/shops/purchases.ts
   function isCurrentRestock(entry, shop) {
     if (!("restockId" in entry)) return true;
-    const current = shop?.restockId;
-    return current != null && entry.restockId === current;
+    const current2 = shop?.restockId;
+    return current2 != null && entry.restockId === current2;
   }
   function purchasesForCurrentRestock(shops2, shopPurchases, kindOf) {
     const out = { seed: {}, egg: {}, tool: {}, decor: {} };
@@ -18232,85 +17730,234 @@
     }
   });
 
-  // src/features/sellAllPets/domButton.ts
-  function startInjectSellAllPets(options2 = {}) {
-    if (!isBrowser()) return noSSRController();
-    const ROOT_SEL = options2.rootSelector ?? DEFAULTS.rootSelector;
-    const CHECK_SEL = options2.checkSelector ?? DEFAULTS.checkSelector;
-    const BTN_WIDE = options2.buttonSelectorWide ?? DEFAULTS.buttonSelectorWide;
-    const BTN_STRICT = options2.buttonSelectorStrict ?? DEFAULTS.buttonSelectorStrict;
-    const BTN_TEXT = options2.targetText ?? DEFAULTS.targetText;
-    const INJ_TEXT = options2.injectText ?? DEFAULTS.injectText;
-    const INJ_CLASS = options2.injectedClass ?? DEFAULTS.injectedClass;
-    const THEME = options2.theme ?? DEFAULT_THEME;
-    const OBS_HIST = options2.observeHistory ?? true;
-    const logger = typeof options2.log === "function" ? options2.log : options2.log ? (...a) => console.debug("[injectSellAllPets]", ...a) : () => {
+  // src/ui/kit/badges.ts
+  function pill(text2, tone) {
+    const el = h("span", "qmm-pill", text2);
+    setTone(el, tone);
+    return el;
+  }
+  function setTone(el, tone) {
+    el.classList.remove("is-ok", "is-warn", "is-bad");
+    if (tone) el.classList.add(`is-${tone}`);
+  }
+  function badge(text2, tone) {
+    return h("span", `qmm-badge is-${tone}`, text2);
+  }
+  function meter() {
+    const root4 = h("div", "qmm-meter");
+    const fill = h("div", "qmm-meter__fill");
+    root4.appendChild(fill);
+    return {
+      root: root4,
+      set(ratio, tone = "accent") {
+        fill.style.width = `${clampFinite(ratio, 0, 1, 0) * 100}%`;
+        fill.classList.toggle("is-warn", tone === "warn");
+      }
     };
-    const HANDLE = options2.onClick ?? createDefaultClickHandler(logger);
-    ensureStyle(INJ_CLASS, THEME);
-    let running6 = true;
-    let pending6 = false;
-    const processAll = () => {
-      if (!running6 || pending6) return;
-      pending6 = true;
-      requestAnimationFrame(() => {
-        try {
-          document.querySelectorAll(ROOT_SEL).forEach((root4) => processRoot(root4));
-        } finally {
-          pending6 = false;
+  }
+  var init_badges = __esm({
+    "src/ui/kit/badges.ts"() {
+      "use strict";
+      init_math();
+      init_dom2();
+    }
+  });
+
+  // src/ui/kit/modal.ts
+  function menuCard(options2) {
+    const card4 = h("button", "qmm-menu-card");
+    card4.type = "button";
+    card4.disabled = options2.disabled === true;
+    card4.append(h("div", "qmm-menu-card__name", options2.name), h("div", "qmm-menu-card__detail", options2.detail));
+    if (!card4.disabled) card4.addEventListener("click", options2.onClick);
+    return card4;
+  }
+  function openModal2(options2) {
+    let closed = false;
+    const scrim = h("div", "qmm-modal-scrim");
+    const hostZ = Number.parseInt(getComputedStyle(options2.host).zIndex, 10);
+    scrim.style.zIndex = String((Number.isFinite(hostZ) ? hostZ : layer.window) + 1);
+    const panel = h("div", "qmm-modal");
+    panel.style.width = `min(${options2.widthPx ?? 420}px, 100%)`;
+    panel.style.maxHeight = `min(${options2.maxHeightPx ?? 520}px, 88vh)`;
+    panel.addEventListener("click", (event) => event.stopPropagation());
+    const closeButton = h("button", "qmm-modal__close", "\u2715");
+    closeButton.type = "button";
+    closeButton.title = "Close";
+    closeButton.addEventListener("click", () => close());
+    const header = h("div", "qmm-modal__head");
+    header.append(h("div", "qmm-modal__title", options2.title), closeButton);
+    const body = h("div", "qmm-modal__body qmm-scroll");
+    const footer = h("div", "qmm-modal__foot");
+    panel.append(header, body, footer);
+    scrim.append(panel);
+    function onKeyDown2(event) {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        close();
+      }
+    }
+    function close() {
+      if (closed) return;
+      closed = true;
+      clearInterval(hostWatch);
+      document.removeEventListener("keydown", onKeyDown2, true);
+      scrim.remove();
+      options2.onClose?.();
+    }
+    const hostWatch = window.setInterval(() => {
+      if (!options2.host.isConnected) close();
+    }, 1e3);
+    scrim.addEventListener("click", () => close());
+    document.addEventListener("keydown", onKeyDown2, true);
+    (document.documentElement || document.body).appendChild(scrim);
+    return { body, footer, close, isOpen: () => !closed };
+  }
+  var init_modal = __esm({
+    "src/ui/kit/modal.ts"() {
+      "use strict";
+      init_dom2();
+      init_theme();
+    }
+  });
+
+  // src/features/sellAllPets/confirmModal.ts
+  function petRow({ pet, reasons, mutations }) {
+    const row4 = document.createElement("div");
+    Object.assign(row4.style, {
+      display: "grid",
+      gridTemplateColumns: `${ICON_PX}px 1fr`,
+      gap: "10px",
+      alignItems: "center",
+      padding: "6px 8px",
+      border: `1px solid ${color.border}`,
+      borderRadius: "10px",
+      background: color.cardBg
+    });
+    const icon2 = document.createElement("div");
+    Object.assign(icon2.style, {
+      width: `${ICON_PX}px`,
+      height: `${ICON_PX}px`,
+      borderRadius: "10px",
+      background: color.hoverBg,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+      fontSize: "12px",
+      fontWeight: "700"
+    });
+    icon2.textContent = String(pet.petSpecies || pet.name || "Pet").slice(0, 2).toUpperCase();
+    const species = String(pet.petSpecies || "").trim();
+    if (species) {
+      attachSpriteIcon(icon2, ["pet"], [species, pet.name || ""], ICON_PX, "sell-all-pets-confirm", {
+        mutations: mutations.map((m) => m.trim()).filter(Boolean)
+      });
+    }
+    const name = document.createElement("div");
+    name.textContent = pet.name ? `${pet.name} (${pet.petSpecies ?? "Pet"})` : pet.petSpecies ?? "Pet";
+    Object.assign(name.style, { fontWeight: "700", fontSize: "13px" });
+    const chips = document.createElement("div");
+    Object.assign(chips.style, { display: "flex", flexWrap: "wrap", gap: "6px" });
+    chips.append(...reasons.map((reason) => pill(reason)));
+    const info = document.createElement("div");
+    Object.assign(info.style, { display: "grid", gap: "4px" });
+    info.append(name, chips);
+    row4.append(icon2, info);
+    return row4;
+  }
+  function confirmProtectedPetSale(flagged) {
+    current?.close();
+    return new Promise((resolve) => {
+      let settled = false;
+      const settle = (value) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+      const modal = openModal2({
+        host: document.body,
+        title: "Confirm sell all pets",
+        widthPx: 520,
+        onClose: () => {
+          if (current === modal) current = null;
+          settle(false);
         }
       });
-    };
-    function processRoot(root4) {
-      const gate2 = root4.querySelector(CHECK_SEL);
-      if (!gate2) {
-        cleanup(root4, INJ_CLASS);
-        return;
-      }
-      const target = findTargetButton(root4, BTN_WIDE, BTN_STRICT, BTN_TEXT);
-      if (!target) {
-        cleanup(root4, INJ_CLASS);
-        return;
-      }
-      ensureInjectedNextTo(target, INJ_CLASS, INJ_TEXT, (ev, ctx2) => {
-        safeInvokeClick(HANDLE, ev, ctx2, logger);
+      current = modal;
+      const scrim = modal.body.closest(".qmm-modal-scrim");
+      if (scrim) scrim.style.zIndex = ON_TOP;
+      const intro = document.createElement("div");
+      intro.textContent = "The following pets match protected rules:";
+      Object.assign(intro.style, { fontSize: "13px", lineHeight: "1.4", color: color.textSoft });
+      modal.body.append(intro, ...flagged.map(petRow));
+      const spacer2 = document.createElement("div");
+      spacer2.style.flex = "1";
+      const sell = button("Sell", {
+        variant: "primary",
+        onClick: () => {
+          settle(true);
+          modal.close();
+        }
       });
-    }
-    const mo = new MutationObserver(processAll);
-    mo.observe(document.documentElement, { childList: true, subtree: true });
-    processAll();
-    let unhookHistory = null;
-    if (OBS_HIST) {
-      unhookHistory = hookHistory(processAll);
-    }
-    return {
-      stop() {
-        if (!running6) return;
-        running6 = false;
-        mo.disconnect();
-        unhookHistory?.();
-        logger("stopped");
-      },
-      runOnce() {
-        processAll();
-      },
-      isRunning() {
-        return running6;
-      }
-    };
+      modal.footer.append(spacer2, button("Cancel", { onClick: () => modal.close() }), sell);
+      sell.focus();
+    });
   }
-  async function runSellAllPetsFlow(logger = () => {
-  }) {
-    try {
-      logger("sell-all-pets:log-items");
-    } catch {
+  var ICON_PX, ON_TOP, current;
+  var init_confirmModal = __esm({
+    "src/features/sellAllPets/confirmModal.ts"() {
+      "use strict";
+      init_badges();
+      init_button();
+      init_modal();
+      init_theme();
+      init_iconCache();
+      ICON_PX = 48;
+      ON_TOP = "2147483647";
+      current = null;
     }
-    await PlayerService.logItems();
-    const pets = await runDefaultSellAllPetsAction(logger);
-    if (pets.length === 0) return;
-    await sellPetsFromInventory(pets, logger);
+  });
+
+  // src/features/sellAllPets/protection.ts
+  function flagProtectedPets(pets) {
+    const rules3 = lockerRestrictionsService.getSellAllPetsRules();
+    if (!rules3.enabled) return [];
+    const protectedColors = /* @__PURE__ */ new Map();
+    if (rules3.protectGold) protectedColors.set("gold", "Gold");
+    if (rules3.protectRainbow) protectedColors.set("rainbow", "Rainbow");
+    const maxStrThreshold = Math.round(clampFinite(rules3.maxStrThreshold, 0, 100, 0));
+    const protectedRarities = new Set(rules3.protectedRarities);
+    const flagged = [];
+    for (const pet of pets) {
+      const mutations = (Array.isArray(pet.mutations) ? pet.mutations : []).filter((m) => typeof m === "string");
+      const colors = new Set(mutations.map((m) => protectedColors.get(m.toLowerCase())).filter((c) => !!c));
+      const maxStrength = getPetInfo(pet)?.maxStrength;
+      const strong = rules3.protectMaxStr && typeof maxStrength === "number" && Number.isFinite(maxStrength) && maxStrength >= maxStrThreshold;
+      const species = String(pet.petSpecies || "").trim();
+      const rarity3 = species ? petCatalog2[species]?.rarity ?? "" : "";
+      const rare = rarity3 !== "" && protectedRarities.has(rarity3);
+      const reasons = [
+        ...Array.from(colors, (color2) => `Mutation: ${color2}`),
+        ...strong ? [`Max STR: ${Math.floor(maxStrength ?? 0)}`] : [],
+        ...rare ? [`Rarity: ${rarity3}`] : []
+      ];
+      if (reasons.length) flagged.push({ pet, reasons, mutations });
+    }
+    return flagged;
   }
-  async function getUnfavoritedInventoryPets() {
+  var init_protection = __esm({
+    "src/features/sellAllPets/protection.ts"() {
+      "use strict";
+      init_data();
+      init_petValue();
+      init_math();
+      init_restrictions();
+    }
+  });
+
+  // src/features/sellAllPets/flow.ts
+  async function unfavoritedInventoryPets() {
     try {
       await ensureStore();
     } catch {
@@ -18319,582 +17966,69 @@
       Atoms.inventory.myInventory.get().catch(() => null),
       Atoms.inventory.favoriteIds.get().catch(() => [])
     ]);
-    const favSet = new Set(
-      Array.isArray(favoriteIds2) ? favoriteIds2.filter((id) => typeof id === "string") : []
-    );
+    const favorites = new Set(Array.isArray(favoriteIds2) ? favoriteIds2.filter((id) => typeof id === "string") : []);
     const items = Array.isArray(inventory?.items) ? inventory.items : [];
-    const availablePets = [];
-    items.forEach((item, index) => {
-      if (!isInventoryPetItem(item)) return;
-      if (favSet.has(item.id)) return;
-      console.log("[sellAllPets] inventory index", index, item);
-      availablePets.push({ ...item, inventoryIndex: index });
-    });
-    return availablePets;
+    return items.filter(isInventoryPet).filter((pet) => !favorites.has(pet.id));
   }
-  function createDefaultClickHandler(logger) {
-    return async () => {
-      try {
-        logger("sell-all-pets:click");
-      } catch {
-      }
-      await runSellAllPetsFlow(logger);
-    };
-  }
-  async function runDefaultSellAllPetsAction(logger) {
-    const pets = await getUnfavoritedInventoryPets();
-    const detail = { pets, count: pets.length };
-    globalThis.__sellAllPetsCandidates = pets;
-    try {
-      logger("collected-non-favorite-pets", detail);
-    } catch {
+  function totalSellValue(pets) {
+    let total = 0;
+    for (const pet of pets) {
+      const value = computeInventoryItemValue(pet);
+      if (typeof value === "number" && Number.isFinite(value)) total += value;
     }
-    try {
-      globalThis.dispatchEvent?.(
-        new CustomEvent(SELL_ALL_PETS_EVENT, { detail })
-      );
-    } catch {
-    }
-    return pets;
+    return total.toLocaleString("en-US");
   }
-  async function sellPetsFromInventory(pets, logger) {
-    const toSell2 = pets.filter((pet) => typeof pet?.id === "string" && pet.id.trim().length > 0);
-    if (toSell2.length === 0) {
-      try {
-        logger("no-sellable-pets", { requested: pets.length });
-      } catch {
-      }
-      try {
-        globalThis.__sellAllPetsResult = { attempted: 0, sold: 0, failures: [] };
-      } catch {
-      }
+  async function countSaleValue() {
+    try {
+      const value = Number(await Atoms.pets.totalPetSellPrice.get());
+      if (Number.isFinite(value) && value > 0) StatsService.incrementShopStat("petsSoldValue", value);
+    } catch (error) {
+      console.error("[SellPet] Unable to read pet sell price", error);
+    }
+  }
+  async function runSellAllPetsFlow() {
+    await PlayerService.logItems();
+    const pets = await unfavoritedInventoryPets();
+    if (pets.length === 0) return;
+    const flagged = flagProtectedPets(pets);
+    if (flagged.length && !await confirmProtectedPetSale(flagged)) {
+      void toastSimple("Sell all Pets", "Sale cancelled.", "info").catch(() => {
+      });
       return;
     }
-    if (!await confirmHighValuePetSale(toSell2, logger)) {
-      try {
-        logger("sell-pets:cancelled");
-      } catch {
-      }
-      try {
-        toastSimple("Sell all Pets", "Sale cancelled.", "info");
-      } catch {
-      }
-      return;
-    }
-    const failures = [];
+    const totalValue = totalSellValue(pets);
     let sold = 0;
-    const totalValue = computeTotalPetSellValueFromInventory(toSell2);
-    try {
-      logger("sell-pets:total-value", { attempted: toSell2.length, totalValue });
-    } catch {
-    }
-    if (SELL_ALL_PETS_DRY_RUN) {
-      try {
-        logger("sell-pets:dry-run", { attempted: toSell2.length, totalValue });
-      } catch {
-      }
-      try {
-        toastSimple("Sell all Pets", `Dry run: ${toSell2.length} pets detected (no sale).`, "info");
-      } catch {
-      }
-      try {
-        globalThis.__sellAllPetsResult = { attempted: toSell2.length, sold: 0, failures: [] };
-      } catch {
-      }
-      return;
-    }
-    for (const pet of toSell2) {
-      try {
-        logger("sell-pet:start", { id: pet.id, pet });
-      } catch {
-      }
+    let failures = 0;
+    for (const pet of pets) {
       try {
         await PlayerService.sellPet(pet.id);
         sold += 1;
         StatsService.incrementShopStat("petsSoldCount");
-        void (async () => {
-          try {
-            const total = await Atoms.pets.totalPetSellPrice.get();
-            const value = Number(total);
-            if (Number.isFinite(value) && value > 0) {
-              StatsService.incrementShopStat("petsSoldValue", value);
-            }
-          } catch (error) {
-            console.error("[SellPet] Unable to read pet sell price", error);
-          }
-        })();
-        try {
-          logger("sell-pet:success", { id: pet.id, pet });
-        } catch {
-        }
-      } catch (error) {
-        failures.push({ pet, error });
-        try {
-          logger("sell-pet:error", { id: pet.id, error, pet });
-        } catch {
-        }
+        void countSaleValue();
+      } catch {
+        failures += 1;
       }
     }
-    if (failures.length === 0) {
-      toastSimple("Sell all Pets", `${sold} pets have been sold for ${totalValue} coins!`, "success");
-    }
-    try {
-      globalThis.__sellAllPetsResult = { attempted: toSell2.length, sold, failures };
-    } catch {
+    if (failures === 0) {
+      void toastSimple("Sell all Pets", `${sold} pets have been sold for ${totalValue} coins!`, "success").catch(() => {
+      });
     }
     audioPlayer.playSellNotification();
-    try {
-      logger("sell-pets:complete", { attempted: toSell2.length, sold, failures });
-    } catch {
-    }
   }
-  function computeTotalPetSellValueFromInventory(pets) {
-    if (!pets.length) return "";
-    let total = 0;
-    for (const pet of pets) {
-      const value = computeInventoryItemValue(pet);
-      if (typeof value === "number" && Number.isFinite(value)) {
-        total += value;
-      }
-    }
-    return total.toLocaleString("en-US");
-  }
-  async function confirmHighValuePetSale(pets, logger) {
-    const rules3 = lockerRestrictionsService.getSellAllPetsRules();
-    if (!rules3?.enabled) return true;
-    const mutationProtect = /* @__PURE__ */ new Set();
-    if (rules3.protectGold) mutationProtect.add("gold");
-    if (rules3.protectRainbow) mutationProtect.add("rainbow");
-    const maxStrThreshold = Number.isFinite(rules3.maxStrThreshold) ? Math.max(0, Math.min(100, Math.round(rules3.maxStrThreshold))) : 0;
-    const checkMaxStr = !!rules3.protectMaxStr;
-    const protectedRarities = new Set(
-      Array.isArray(rules3.protectedRarities) ? rules3.protectedRarities : []
-    );
-    if (mutationProtect.size === 0 && !checkMaxStr && protectedRarities.size === 0) return true;
-    const flagged = [];
-    for (const pet of pets) {
-      const rawMutations = Array.isArray(pet?.mutations) ? pet.mutations : [];
-      const mutations = rawMutations.filter((m) => typeof m === "string");
-      const foundMutations = mutationProtect.size ? mutations.map((m) => m.toLowerCase()).filter((m) => mutationProtect.has(m)).map((m) => m === "gold" ? "Gold" : "Rainbow") : [];
-      const hasMutation = foundMutations.length > 0;
-      const maxStrength = getPetInfo(pet)?.maxStrength;
-      const strongEnough = checkMaxStr && typeof maxStrength === "number" && Number.isFinite(maxStrength) ? maxStrength >= maxStrThreshold : false;
-      const petSpecies = String(pet.petSpecies || "").trim();
-      const petEntry = petSpecies ? petCatalog2[petSpecies] : null;
-      const petRarity = petEntry?.rarity ?? "";
-      const hasProtectedRarity = protectedRarities.size > 0 && petRarity !== "" && protectedRarities.has(petRarity);
-      if (!hasMutation && !strongEnough && !hasProtectedRarity) continue;
-      const reasons = [];
-      if (hasMutation) {
-        for (const mut of Array.from(new Set(foundMutations))) {
-          reasons.push(`Mutation: ${mut}`);
-        }
-      }
-      if (strongEnough) {
-        reasons.push(`Max STR: ${Math.floor(maxStrength ?? 0)}`);
-      }
-      if (hasProtectedRarity) {
-        reasons.push(`Rarity: ${petRarity}`);
-      }
-      flagged.push({
-        pet,
-        reasons,
-        maxStrength: typeof maxStrength === "number" && Number.isFinite(maxStrength) ? maxStrength : null,
-        mutations
-      });
-    }
-    if (flagged.length === 0) return true;
-    if (!isBrowser()) {
-      try {
-        logger("sell-pets:confirm-unavailable", { flagged: flagged.length });
-      } catch {
-      }
-      return false;
-    }
-    const confirmed = await showSellAllPetsConfirmModal(flagged);
-    if (!confirmed) {
-      try {
-        logger("sell-pets:confirm-cancelled", { flagged: flagged.length });
-      } catch {
-      }
-    }
-    return confirmed;
-  }
-  function showSellAllPetsConfirmModal(flagged) {
-    return new Promise((resolve) => {
-      if (!isBrowser()) {
-        resolve(false);
-        return;
-      }
-      const existing = document.getElementById(SELL_ALL_PETS_CONFIRM_MODAL_ID);
-      if (existing) existing.remove();
-      const overlay2 = document.createElement("div");
-      overlay2.id = SELL_ALL_PETS_CONFIRM_MODAL_ID;
-      overlay2.style.position = "fixed";
-      overlay2.style.inset = "0";
-      overlay2.style.zIndex = "2147483647";
-      overlay2.style.display = "flex";
-      overlay2.style.alignItems = "center";
-      overlay2.style.justifyContent = "center";
-      overlay2.style.background = "rgba(0,0,0,0.6)";
-      const box2 = document.createElement("div");
-      box2.style.minWidth = "320px";
-      box2.style.maxWidth = "520px";
-      box2.style.background = "#0f1318";
-      box2.style.color = "#ffffff";
-      box2.style.border = "1px solid rgba(255,255,255,0.15)";
-      box2.style.borderRadius = "14px";
-      box2.style.boxShadow = "0 12px 40px rgba(0,0,0,0.45)";
-      box2.style.padding = "18px 20px";
-      box2.style.display = "grid";
-      box2.style.gap = "12px";
-      box2.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
-      const title = document.createElement("div");
-      title.textContent = "Confirm sell all pets";
-      title.style.fontSize = "18px";
-      title.style.fontWeight = "800";
-      const body = document.createElement("div");
-      body.textContent = "The following pets match protected rules:";
-      body.style.opacity = "0.9";
-      body.style.fontSize = "13px";
-      body.style.lineHeight = "1.4";
-      const list = document.createElement("div");
-      list.style.display = "grid";
-      list.style.gap = "8px";
-      list.style.maxHeight = "260px";
-      list.style.overflow = "auto";
-      list.style.paddingRight = "4px";
-      const buildPetRow = (entry) => {
-        const row4 = document.createElement("div");
-        row4.style.display = "grid";
-        row4.style.gridTemplateColumns = "48px 1fr";
-        row4.style.gap = "10px";
-        row4.style.alignItems = "center";
-        row4.style.padding = "6px 8px";
-        row4.style.border = "1px solid rgba(255,255,255,0.08)";
-        row4.style.borderRadius = "10px";
-        row4.style.background = "rgba(255,255,255,0.03)";
-        const imgWrap = document.createElement("div");
-        imgWrap.style.width = "48px";
-        imgWrap.style.height = "48px";
-        imgWrap.style.borderRadius = "10px";
-        imgWrap.style.background = "rgba(255,255,255,0.08)";
-        imgWrap.style.display = "flex";
-        imgWrap.style.alignItems = "center";
-        imgWrap.style.justifyContent = "center";
-        imgWrap.style.overflow = "hidden";
-        const label2 = entry.pet.petSpecies || entry.pet.name || "Pet";
-        const fallback = document.createElement("div");
-        fallback.textContent = String(label2).slice(0, 2).toUpperCase();
-        fallback.style.fontSize = "12px";
-        fallback.style.fontWeight = "700";
-        imgWrap.appendChild(fallback);
-        const species = String(entry.pet.petSpecies || "").trim();
-        const mutations = Array.isArray(entry.mutations) ? entry.mutations.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
-        if (species) {
-          attachSpriteIcon(
-            imgWrap,
-            ["pet"],
-            [species, entry.pet.name || ""],
-            48,
-            "sell-all-pets-confirm",
-            {
-              mutations
-            }
-          );
-        }
-        const info = document.createElement("div");
-        info.style.display = "grid";
-        info.style.gap = "4px";
-        const name = document.createElement("div");
-        name.textContent = entry.pet.name ? `${entry.pet.name} (${entry.pet.petSpecies ?? "Pet"})` : entry.pet.petSpecies ?? "Pet";
-        name.style.fontWeight = "700";
-        name.style.fontSize = "13px";
-        const reasons = document.createElement("div");
-        reasons.style.display = "flex";
-        reasons.style.flexWrap = "wrap";
-        reasons.style.gap = "6px";
-        for (const reason of entry.reasons) {
-          const chip = document.createElement("div");
-          chip.textContent = reason;
-          chip.style.fontSize = "11px";
-          chip.style.padding = "2px 6px";
-          chip.style.borderRadius = "999px";
-          chip.style.background = "rgba(122,162,255,0.2)";
-          chip.style.border = "1px solid rgba(122,162,255,0.4)";
-          chip.style.color = "#dbe7ff";
-          reasons.appendChild(chip);
-        }
-        info.append(name, reasons);
-        row4.append(imgWrap, info);
-        return row4;
-      };
-      for (const entry of flagged) {
-        list.appendChild(buildPetRow(entry));
-      }
-      const actions2 = document.createElement("div");
-      actions2.style.display = "flex";
-      actions2.style.justifyContent = "flex-end";
-      actions2.style.gap = "8px";
-      const btnCancel = document.createElement("button");
-      btnCancel.type = "button";
-      btnCancel.textContent = "Cancel";
-      btnCancel.style.padding = "8px 12px";
-      btnCancel.style.borderRadius = "10px";
-      btnCancel.style.border = "1px solid rgba(255,255,255,0.2)";
-      btnCancel.style.background = "transparent";
-      btnCancel.style.color = "#ffffff";
-      btnCancel.style.cursor = "pointer";
-      const btnConfirm = document.createElement("button");
-      btnConfirm.type = "button";
-      btnConfirm.textContent = "Sell";
-      btnConfirm.style.padding = "8px 14px";
-      btnConfirm.style.borderRadius = "10px";
-      btnConfirm.style.border = "1px solid rgba(122,162,255,0.7)";
-      btnConfirm.style.background = "#1a2644";
-      btnConfirm.style.color = "#ffffff";
-      btnConfirm.style.cursor = "pointer";
-      btnConfirm.style.fontWeight = "700";
-      let settled = false;
-      const close = (value) => {
-        if (settled) return;
-        settled = true;
-        overlay2.remove();
-        document.removeEventListener("keydown", onKeyDown2, true);
-        resolve(value);
-      };
-      const onKeyDown2 = (ev) => {
-        if (ev.key === "Escape") {
-          ev.preventDefault();
-          close(false);
-        }
-      };
-      btnCancel.addEventListener("click", () => close(false));
-      btnConfirm.addEventListener("click", () => close(true));
-      overlay2.addEventListener("click", (ev) => {
-        if (ev.target === overlay2) close(false);
-      });
-      actions2.append(btnCancel, btnConfirm);
-      box2.append(title, body, list, actions2);
-      overlay2.appendChild(box2);
-      document.body.appendChild(overlay2);
-      document.addEventListener("keydown", onKeyDown2, true);
-      btnConfirm.focus();
-    });
-  }
-  function safeInvokeClick(handler, ev, ctx2, logger) {
-    try {
-      const result = handler(ev, ctx2);
-      if (isPromiseLike(result)) {
-        result.catch((err) => logClickError(err, logger));
-      }
-    } catch (err) {
-      logClickError(err, logger);
-    }
-  }
-  function logClickError(error, logger) {
-    try {
-      logger("sell-all-click-error", error);
-    } catch {
-    }
-  }
-  function isPromiseLike(value) {
-    return !!value && (typeof value === "object" || typeof value === "function") && typeof value.then === "function";
-  }
-  function isInventoryPetItem(item) {
-    return !!item && item.itemType === "Pet" && typeof item.id === "string";
-  }
-  function isBrowser() {
-    return typeof window !== "undefined" && typeof document !== "undefined";
-  }
-  function noSSRController() {
-    return { stop() {
-    }, runOnce() {
-    }, isRunning: () => false };
-  }
-  function norm(s) {
-    return (s ?? "").replace(/\s+/g, " ").trim();
-  }
-  function getLabel(el) {
-    const t = norm(el.textContent);
-    if (t) return t;
-    const a = norm(el.getAttribute("aria-label"));
-    return a;
-  }
-  function getWords(label2) {
-    return label2.trim().split(/\s+/).filter(Boolean);
-  }
-  function isSellTwoWordLabel(label2) {
-    const words = getWords(label2);
-    return words.length === 2 && /^sell$/i.test(words[0]);
-  }
-  function findTargetButton(scope, btnWide, btnStrict, _btnText) {
-    const all = Array.from(/* @__PURE__ */ new Set([
-      ...Array.from(scope.querySelectorAll(btnWide)),
-      ...Array.from(scope.querySelectorAll(btnStrict))
-    ])).filter((b) => b instanceof HTMLButtonElement).filter((b) => !b.classList.contains(DEFAULTS.injectedClass));
-    const target = all.find((b) => {
-      const label2 = getLabel(b);
-      if (/crops/i.test(label2)) return false;
-      if (isSellTwoWordLabel(label2)) return true;
-      if (/^sell$/i.test(label2.trim()) && b.querySelector("canvas")) return true;
-      return false;
-    });
-    return target ?? null;
-  }
-  function ensureInjectedNextTo(targetBtn, injectedClass, injectedText, onClick) {
-    const parent = targetBtn.parentElement || targetBtn.closest(".McFlex, .css-0") || targetBtn.parentNode;
-    if (!parent) return;
-    let injected6 = parent.querySelector(`.${injectedClass}`);
-    if (injected6) {
-      if (targetBtn.nextElementSibling !== injected6) {
-        parent.insertBefore(injected6, targetBtn.nextSibling);
-      }
-      if (injected6.textContent !== injectedText) injected6.textContent = injectedText;
-      return;
-    }
-    injected6 = document.createElement("button");
-    injected6.type = "button";
-    injected6.className = `${injectedClass} chakra-button`;
-    injected6.textContent = injectedText;
-    injected6.setAttribute("aria-label", injectedText);
-    injected6.title = injectedText;
-    injected6.style.marginLeft = "8px";
-    const cs = getComputedStyle(parent);
-    if (cs.display !== "flex") {
-      injected6.style.display = "inline-flex";
-      injected6.style.alignItems = "center";
-    }
-    injected6.addEventListener("click", (ev) => onClick(ev, {
-      host: targetBtn.closest(DEFAULTS.rootSelector),
-      targetBtn,
-      injectedBtn: injected6
-    }));
-    parent.insertBefore(injected6, targetBtn.nextSibling);
-  }
-  function cleanup(root4, injectedClass) {
-    root4.querySelectorAll(`.${injectedClass}`).forEach((n) => n.remove());
-  }
-  function ensureStyle(injectedClass, theme) {
-    const STYLE_ID6 = `${injectedClass}-style`;
-    if (document.getElementById(STYLE_ID6)) return;
-    const css5 = `
-.${injectedClass}{
-  font-synthesis: none;
-  -webkit-font-smoothing: antialiased;
-  -webkit-text-size-adjust: 100%;
-  cursor: pointer;
-  display: inline-flex;
-  appearance: none;
-  align-items: center;
-  justify-content: center;
-  user-select: none;
-  white-space: nowrap;
-  vertical-align: middle;
-
-  outline: transparent solid 2px;
-  outline-offset: 2px;
-  line-height: 1.2;
-
-  border-radius: 15px;                        /* aligns with provided design */
-  font-weight: 700;
-  height: auto;
-  min-width: var(--chakra-sizes-10, 2.5rem);
-  box-shadow: rgba(0, 0, 0, 0.3) 0px 4px 12px;
-  transform: translateY(0px);
-  transition: 0.2s;
-
-  border: 2px solid ${theme.border};
-  color: ${theme.text};
-  background: ${theme.bg};
-
-  text-transform: none;
-  overflow: hidden;
-  font-size: 20px;
-  padding-inline-start: var(--chakra-space-4, 1rem);
-  padding-inline-end: var(--chakra-space-4, 1rem);
-  padding-top: var(--chakra-space-3, 0.75rem);
-  padding-bottom: var(--chakra-space-3, 0.75rem);
-
-  -webkit-tap-highlight-color: transparent;
-}
-.${injectedClass}:hover{
-  transform: translateY(-1px);
-  background: ${theme.hoverBg};
-  border-color: ${theme.hoverBorder};
-}
-.${injectedClass}:active{
-  transform: translateY(1px);
-  background: ${theme.activeBg};
-}
-.${injectedClass}:focus-visible{
-  box-shadow: 0 0 0 3px ${theme.ring};
-}
-`.trim();
-    const s = document.createElement("style");
-    s.id = STYLE_ID6;
-    s.textContent = css5;
-    document.head.appendChild(s);
-  }
-  function hookHistory(onNavigate) {
-    const p = history.pushState?.bind(history);
-    const r = history.replaceState?.bind(history);
-    const wrap = (fn) => fn ? function(...args) {
-      const ret = fn.apply(this, args);
-      onNavigate();
-      return ret;
-    } : fn;
-    if (p) history.pushState = wrap(p);
-    if (r) history.replaceState = wrap(r);
-    const onPop = () => onNavigate();
-    window.addEventListener("popstate", onPop);
-    return () => {
-      if (p) history.pushState = p;
-      if (r) history.replaceState = r;
-      window.removeEventListener("popstate", onPop);
-    };
-  }
-  var SELL_ALL_PETS_EVENT, SELL_ALL_PETS_DRY_RUN, SELL_ALL_PETS_CONFIRM_MODAL_ID, DEFAULT_THEME, DEFAULTS;
-  var init_domButton = __esm({
-    "src/features/sellAllPets/domButton.ts"() {
+  var isInventoryPet;
+  var init_flow = __esm({
+    "src/features/sellAllPets/flow.ts"() {
       "use strict";
       init_atoms();
       init_jotai();
       init_player();
-      init_toast();
       init_audioPlayer();
+      init_toast();
       init_stats();
       init_value();
-      init_petValue();
-      init_iconCache();
-      init_restrictions();
-      init_data();
-      SELL_ALL_PETS_EVENT = "sell-all-pets:list";
-      SELL_ALL_PETS_DRY_RUN = false;
-      SELL_ALL_PETS_CONFIRM_MODAL_ID = "tm-sellallpets-confirm";
-      DEFAULT_THEME = {
-        text: "var(--chakra-colors-Neutral-TrueWhite, #FFFFFF)",
-        bg: "var(--chakra-colors-Blue-Magic, #0067B4)",
-        border: "var(--chakra-colors-Blue-Light, #48ADF4)",
-        hoverBg: "var(--chakra-colors-Blue-Light, #48ADF4)",
-        hoverBorder: "var(--chakra-colors-Blue-Baby, #25AAE2)",
-        activeBg: "var(--chakra-colors-Blue-Dark, #264093)",
-        ring: "var(--chakra-ring-color, rgba(66,153,225,0.6))"
-      };
-      DEFAULTS = {
-        // conteneur principal du panel modal pet sell
-        rootSelector: ".McFlex.css-1svwxx0",
-        // gate : bloc qui contient le bouton (hash de classe instable côté Chakra)
-        checkSelector: ".McGrid",
-        // nouveau bouton "Sell Pet"
-        buttonSelectorWide: "button.chakra-button.css-1glc7hj, button.chakra-button, button.css-1glc7hj",
-        buttonSelectorStrict: "button.chakra-button.css-1glc7hj",
-        targetText: "Sell Pet",
-        // Back-compat only
-        injectText: "Sell all Pets",
-        injectedClass: "tm-injected-sell-all",
-        styleId: "tm-injected-sell-all-style"
-      };
+      init_confirmModal();
+      init_protection();
+      isInventoryPet = (item) => !!item && item.itemType === "Pet" && typeof item.id === "string" && item.id.trim().length > 0;
     }
   });
 
@@ -18928,7 +18062,7 @@
       init_player();
       init_keybinds();
       init_keyboard();
-      init_domButton();
+      init_flow();
       sellKeybindsInstalled = false;
     }
   });
@@ -19813,7 +18947,7 @@
     return loaded2;
   }
   var SETTINGS_PATH, AUDIO_CONTEXTS, MIN_LOOP_GAP_MS, DEFAULT_VOLUME, DEFAULT_LOOP_INTERVAL_MS, DEFAULT_MIN_PLAY_GAP_MS, freshContext, AudioSettings;
-  var init_settings3 = __esm({
+  var init_settings4 = __esm({
     "src/features/notifier/audio/settings.ts"() {
       "use strict";
       init_math();
@@ -19896,7 +19030,7 @@
       init_math();
       init_encode();
       init_library();
-      init_settings3();
+      init_settings4();
       clamp01 = (v) => clamp(v, 0, 1);
       AudioNotifier = class {
         constructor() {
@@ -20145,9 +19279,9 @@
          */
         async playOnce(dataUrl, volume, awaitEnd = false) {
           if (!this.settings.enabled) return true;
-          const now2 = Date.now();
-          if (now2 - this.lastPlayTs < this.settings.minPlayGapMs) return false;
-          this.lastPlayTs = now2;
+          const now = Date.now();
+          if (now - this.lastPlayTs < this.settings.minPlayGapMs) return false;
+          this.lastPlayTs = now;
           if (!dataUrl) {
             if (this.primed && this.audioCtx) {
               try {
@@ -20469,12 +19603,12 @@
       console.info(`[gardenInfoCardPixi] still searching for ${CARD_SYSTEM_LABEL} (${findAttempts} attempts so far)`);
     }
   }
-  function scheduleFind(now2) {
+  function scheduleFind(now) {
     findRafId = null;
     debugState.rafTicks += 1;
     if (!listeners.size || cardSystem) return;
-    if (now2 - lastFindCheckAt >= CARD_SYSTEM_FIND_RETRY_MS) {
-      lastFindCheckAt = now2;
+    if (now - lastFindCheckAt >= CARD_SYSTEM_FIND_RETRY_MS) {
+      lastFindCheckAt = now;
       tryFindCardSystem();
     }
     if (!listeners.size || cardSystem) return;
@@ -20825,11 +19959,11 @@
         console.info(`[PixiBell] still searching for ${RAIL_LABEL} (${findAttempts2} attempts so far)`);
       }
     };
-    const scheduleFind2 = (now2) => {
+    const scheduleFind2 = (now) => {
       findRafId3 = null;
       if (!running6 || rail) return;
-      if (now2 - lastFindCheckAt3 >= RAIL_FIND_RETRY_MS) {
-        lastFindCheckAt3 = now2;
+      if (now - lastFindCheckAt3 >= RAIL_FIND_RETRY_MS) {
+        lastFindCheckAt3 = now;
         tryFindRail();
       }
       if (!running6 || rail) return;
@@ -21294,8 +20428,8 @@
   function toPurchasesSnapshot(view, slot) {
     const raw = slot?.data?.shopPurchases;
     const startedAt = (kind) => Number(raw?.[kind]?.startedAtMs ?? raw?.[kind]?.createdAt) || 0;
-    const section4 = (kind) => ({ createdAt: startedAt(kind), purchases: view.purchases[kind] });
-    return { seed: section4("seed"), egg: section4("egg"), tool: section4("tool"), decor: section4("decor") };
+    const section5 = (kind) => ({ createdAt: startedAt(kind), purchases: view.purchases[kind] });
+    return { seed: section5("seed"), egg: section5("egg"), tool: section5("tool"), decor: section5("decor") };
   }
   function onShops(shops2) {
     rawShops = shops2;
@@ -21430,8 +20564,8 @@
         /** Remembers a context's loop interval; an invalid one keeps the current value. */
         setLoopInterval(context, ms) {
           ensureLoaded();
-          const current = LoopDefaults.get(context).loopIntervalMs;
-          loopIntervals[context] = Number.isFinite(ms) ? normalizeInterval(ms) : current;
+          const current2 = LoopDefaults.get(context).loopIntervalMs;
+          loopIntervals[context] = Number.isFinite(ms) ? normalizeInterval(ms) : current2;
           save2();
         }
       };
@@ -21728,15 +20862,15 @@
         if (!entry || typeof entry !== "object") continue;
         const { base, weathers } = splitEligibleShops(entry.eligibleShops);
         if (!base && weathers.length === 0) continue;
-        const section4 = base ?? naturalSection;
-        const id = `${section4}:${key2}`;
+        const section5 = base ?? naturalSection;
+        const id = `${section5}:${key2}`;
         if (seen.has(id)) continue;
         seen.add(id);
         const rawRarity = typeof entry.rarity === "string" ? entry.rarity : void 0;
         const popup = followedIds().has(id);
         rows.push({
           id,
-          type: section4,
+          type: section5,
           name: typeof entry.name === "string" && entry.name.trim() ? String(entry.name) : key2,
           rarity: rawRarity ? DISPLAY_RARITY[rawRarity] ?? rawRarity : void 0,
           popup,
@@ -23169,73 +22303,38 @@
     }
   });
 
-  // src/data/rules/growSlot.ts
-  function resolveGrowSlot(slots, selectedSlotId) {
-    if (!Array.isArray(slots) || slots.length === 0) return null;
-    if (selectedSlotId != null && Number.isFinite(selectedSlotId)) {
-      const exact = slots.find((slot) => slot && slot.slotId === selectedSlotId);
-      if (exact) return exact;
-      const sorted = [...slots].sort(bySlotId);
-      return sorted.find((slot) => slotIdOf(slot) >= selectedSlotId) ?? sorted[0] ?? null;
-    }
-    return [...slots].sort(bySlotId)[0] ?? null;
-  }
-  var slotIdOf, bySlotId;
-  var init_growSlot = __esm({
-    "src/data/rules/growSlot.ts"() {
-      "use strict";
-      slotIdOf = (slot) => Number.isFinite(slot?.slotId) ? slot.slotId : 0;
-      bySlotId = (a, b) => slotIdOf(a) - slotIdOf(b);
-    }
-  });
-
   // src/features/cropPrice/priceWatcher.ts
   function startCropPriceWatcherViaGardenObject() {
-    let cur = null;
+    let gardenObject = null;
     let players = void 0;
     let selectedSlotId = null;
-    let lastPrice = null;
-    const listeners4 = /* @__PURE__ */ new Set();
-    const notify2 = () => {
-      for (const fn of listeners4) try {
-        fn();
-      } catch {
-      }
+    let price = null;
+    const changes7 = new Emitter();
+    const subs = new Subscriptions();
+    const computePrice = () => {
+      if (!isPlantObject2(gardenObject)) return null;
+      const slot = resolveGrowSlot(Array.isArray(gardenObject.slots) ? gardenObject.slots : [], selectedSlotId);
+      const slotValue = slot ? positive(valueFromGardenSlot(slot, DefaultPricing, players)) : null;
+      return slotValue ?? positive(valueFromGardenPlant(gardenObject, DefaultPricing, players));
+    };
+    const recompute = () => {
+      const next = computePrice();
+      if (next === price) return;
+      price = next;
+      changes7.emit();
     };
     let scheduled = false;
-    const scheduleRecomputeAndNotify = () => {
+    const scheduleRecompute = () => {
       if (scheduled) return;
       scheduled = true;
       requestAnimationFrame(() => {
         scheduled = false;
-        recomputeAndNotify();
+        recompute();
       });
     };
-    function computeSelectedSlotPrice() {
-      if (!isPlantObject2(cur)) return null;
-      const slots = Array.isArray(cur.slots) ? cur.slots : [];
-      if (!slots.length) return null;
-      const slot = resolveGrowSlot(slots, selectedSlotId);
-      if (!slot) return null;
-      const val = valueFromGardenSlot(slot, DefaultPricing, players);
-      return Number.isFinite(val) && val > 0 ? val : null;
-    }
-    function computeWholePlantPrice() {
-      if (!isPlantObject2(cur)) return null;
-      const v = valueFromGardenPlant(cur, DefaultPricing, players);
-      return Number.isFinite(v) && v > 0 ? v : null;
-    }
-    function recomputeAndNotify() {
-      const slotVal = computeSelectedSlotPrice();
-      const next = slotVal ?? computeWholePlantPrice() ?? null;
-      if (next !== lastPrice) {
-        lastPrice = next;
-        notify2();
-      }
-    }
-    (async () => {
+    void (async () => {
       try {
-        cur = await myCurrentGardenObject.get();
+        gardenObject = await myCurrentGardenObject.get();
       } catch {
       }
       try {
@@ -23246,40 +22345,40 @@
         selectedSlotId = await myCurrentGrowSlotIndex.get();
       } catch {
       }
-      numPlayers.onChange((n) => {
+      subs.add(numPlayers.onChange((n) => {
         players = n;
-      });
-      myCurrentGardenObject.onChange((v) => {
-        cur = v;
-        scheduleRecomputeAndNotify();
-      });
-      myCurrentGrowSlotIndex.onChange((idx) => {
-        selectedSlotId = Number.isFinite(idx) ? idx : null;
-        scheduleRecomputeAndNotify();
-      });
-      recomputeAndNotify();
+      }));
+      subs.add(myCurrentGardenObject.onChange((next) => {
+        gardenObject = next;
+        scheduleRecompute();
+      }));
+      subs.add(
+        myCurrentGrowSlotIndex.onChange((id) => {
+          selectedSlotId = Number.isFinite(id) ? id : null;
+          scheduleRecompute();
+        })
+      );
+      recompute();
     })();
     return {
-      get() {
-        return lastPrice;
-      },
-      onChange(cb) {
-        listeners4.add(cb);
-        return () => listeners4.delete(cb);
-      },
+      get: () => price,
+      onChange: (cb) => changes7.on(cb),
       stop() {
-        listeners4.clear();
+        changes7.clear();
+        subs.dispose();
       }
     };
   }
-  var isPlantObject2;
+  var isPlantObject2, positive;
   var init_priceWatcher = __esm({
     "src/features/cropPrice/priceWatcher.ts"() {
       "use strict";
       init_atoms();
       init_cropValue();
       init_growSlot();
-      isPlantObject2 = (o) => !!o && o.objectType === "plant";
+      init_emitter();
+      isPlantObject2 = (obj) => !!obj && obj.objectType === "plant";
+      positive = (value) => Number.isFinite(value) && value > 0 ? value : null;
     }
   });
 
@@ -23298,531 +22397,295 @@
       writeAriesPath(PATH_SHOW_CROP_PRICE, next);
     } catch {
     }
-    for (const listener of listeners2) {
-      try {
-        listener(next);
-      } catch {
-      }
-    }
+    changes5.emit(next);
   }
   function onShowCropPriceChange(cb) {
-    listeners2.add(cb);
-    return () => {
-      listeners2.delete(cb);
-    };
+    return changes5.on(cb);
   }
-  var PATH_SHOW_CROP_PRICE, listeners2;
+  var PATH_SHOW_CROP_PRICE, changes5;
   var init_setting = __esm({
     "src/features/cropPrice/setting.ts"() {
       "use strict";
       init_storage();
+      init_emitter();
       PATH_SHOW_CROP_PRICE = "misc.showCropPrice";
-      listeners2 = /* @__PURE__ */ new Set();
+      changes5 = new Emitter();
+    }
+  });
+
+  // src/features/locker/domLockMarks.ts
+  function markLocked(el, look) {
+    const key2 = datasetKey(look.owner);
+    if (el.dataset[key2] === void 0) {
+      const saved = {};
+      for (const prop of [...Object.keys(look.style), "position"]) saved[prop] = el.style.getPropertyValue(prop);
+      el.dataset[key2] = JSON.stringify(saved);
+    }
+    for (const [prop, value] of Object.entries(look.style)) el.style.setProperty(prop, value);
+    if (getComputedStyle(el).position === "static") el.style.setProperty("position", "relative");
+    const cls = glyphClass(look.owner);
+    if (el.querySelector(`span.${cls}`)) return;
+    const glyph = document.createElement("span");
+    glyph.className = cls;
+    glyph.textContent = LOCK_GLYPH;
+    for (const [prop, value] of Object.entries(look.glyph)) glyph.style.setProperty(prop, value);
+    el.appendChild(glyph);
+  }
+  function unmarkLocked(el, owner2) {
+    const key2 = datasetKey(owner2);
+    const raw = el.dataset[key2];
+    if (raw !== void 0) {
+      let saved = {};
+      try {
+        saved = JSON.parse(raw);
+      } catch {
+      }
+      for (const [prop, value] of Object.entries(saved)) {
+        if (value) el.style.setProperty(prop, value);
+        else el.style.removeProperty(prop);
+      }
+      delete el.dataset[key2];
+    }
+    el.querySelectorAll(`span.${glyphClass(owner2)}`).forEach((node) => node.remove());
+  }
+  function startDomLockIndicator(opts) {
+    const subs = new Subscriptions();
+    let running6 = true;
+    const elements = () => Array.from(document.querySelectorAll(opts.selector));
+    const refresh = () => {
+      if (!running6) return;
+      const locked = opts.isLocked();
+      for (const el of elements()) {
+        if (locked && opts.isTarget(el)) markLocked(el, opts.look);
+        else unmarkLocked(el, opts.look.owner);
+      }
+    };
+    const observer2 = new MutationObserver(refresh);
+    observer2.observe(document.documentElement, { childList: true, subtree: true });
+    subs.add(() => observer2.disconnect());
+    refresh();
+    return {
+      refresh,
+      add: (unsubscribe2) => subs.add(unsubscribe2),
+      stop() {
+        running6 = false;
+        subs.dispose();
+        for (const el of elements()) unmarkLocked(el, opts.look.owner);
+      }
+    };
+  }
+  var LOCK_GLYPH, cornerGlyph, datasetKey, glyphClass, datasetAttr, markedElements;
+  var init_domLockMarks = __esm({
+    "src/features/locker/domLockMarks.ts"() {
+      "use strict";
+      init_emitter();
+      LOCK_GLYPH = "\u{1F512}";
+      cornerGlyph = (offsetPx) => ({
+        position: "absolute",
+        top: `-${offsetPx}px`,
+        right: `-${offsetPx}px`,
+        "font-size": "16px",
+        "pointer-events": "none",
+        "user-select": "none",
+        "z-index": "2"
+      });
+      datasetKey = (owner2) => `tm${owner2.replace(/(^|-)(\w)/g, (_, _dash, c) => c.toUpperCase())}LockStyles`;
+      glyphClass = (owner2) => `tm-${owner2}-lock`;
+      datasetAttr = (owner2) => `tm-${owner2}-lock-styles`;
+      markedElements = (owner2) => Array.from(document.querySelectorAll(`[data-${datasetAttr(owner2)}]`));
     }
   });
 
   // src/features/cropPrice/domTooltip.ts
-  function getQpmGlobal() {
-    return readSharedGlobal("QPM");
-  }
-  function getQpmSizeSpan(inner) {
-    const QPM = getQpmGlobal();
-    if (!QPM) return null;
-    return inner.querySelector("span.qpm-crop-size");
-  }
-  function queryAll(root4, sel) {
-    return Array.from(root4.querySelectorAll(sel));
-  }
-  function createLogger(option2) {
-    if (typeof option2 === "function") return option2;
-    if (option2) return (...args) => console.debug("[AppendCropPrice/GO]", ...args);
-    return () => {
-    };
-  }
-  function forEachInner(root4, selectors, callback) {
-    queryAll(root4, selectors.rootSelector).forEach((rootEl) => {
-      queryAll(rootEl, selectors.innerSelector).forEach(callback);
-    });
-  }
-  function updatePanels(root4, selectors, markerClass, text2, locked, showPrice = true) {
-    forEachInner(root4, selectors, (inner) => {
-      if (!showPrice || shouldSkipInner(inner, markerClass)) {
-        removeMarker(inner, markerClass);
-        updateLockEmoji(inner, locked);
-        return;
-      }
-      updateLockEmoji(inner, locked);
-      ensureSpanAtEnd(inner, text2, markerClass);
-    });
-  }
-  function getLockerHarvestAllowed() {
-    try {
-      return lockerService.getCurrentSlotSnapshot().harvestAllowed ?? null;
-    } catch {
-      return null;
-    }
-  }
-  function subscribeLocker(handler) {
-    try {
-      return lockerService.onSlotInfoChange(handler);
-    } catch {
-      return null;
-    }
-  }
-  function startCropValuesObserverFromGardenAtom(options2 = {}) {
-    if (!hasDOM) {
-      return { stop() {
-      }, runOnce() {
-      }, isRunning: () => false };
-    }
-    const selectors = {
-      rootSelector: options2.rootSelector ?? DEFAULTS2.rootSelector,
-      innerSelector: options2.innerSelector ?? DEFAULTS2.innerSelector
-    };
-    const markerClass = options2.markerClass ?? DEFAULTS2.markerClass;
-    const root4 = options2.root ?? document;
-    const logger = createLogger(options2.log);
+  function startCropValuesObserverFromGardenAtom() {
     const priceWatcher = startCropPriceWatcherViaGardenObject();
-    const shouldWaitForLocker = lockerService.getState().enabled;
     let running6 = true;
-    let lockerHarvestAllowed = getLockerHarvestAllowed();
-    let lockerReady = !shouldWaitForLocker;
-    let lastRenderedValue = void 0;
-    let lastRenderedLocked = void 0;
-    let lastRenderedShowPrice = void 0;
-    let needsRepositionRender = false;
-    let qpmObserver = null;
+    let harvestAllowed = lockerService.currentHarvestAllowed();
+    let lockerReady = !lockerService.isEnabled();
+    let needsReposition = false;
+    let last = null;
     const render = () => {
-      if (!running6) return;
-      if (!lockerReady) return;
-      cleanupStrayLockedStyles();
-      const value = priceWatcher.get();
-      const locked = lockerHarvestAllowed === false;
-      const showPrice = readShowCropPrice();
-      if (value === lastRenderedValue && locked === lastRenderedLocked && showPrice === lastRenderedShowPrice && !needsRepositionRender) {
+      if (!running6 || !lockerReady) return;
+      unmarkStrayTooltips();
+      const next = { value: priceWatcher.get(), locked: harvestAllowed === false, showPrice: readShowCropPrice() };
+      if (!needsReposition && last && last.value === next.value && last.locked === next.locked && last.showPrice === next.showPrice) {
         return;
       }
-      lastRenderedValue = value;
-      lastRenderedLocked = locked;
-      lastRenderedShowPrice = showPrice;
-      needsRepositionRender = false;
-      updatePanels(root4, selectors, markerClass, formatCoins(value), locked, showPrice);
-      logger("render", { value, locked, showPrice });
-    };
-    let lockerReadyTimeout = null;
-    const clearLockerReadyTimeout = () => {
-      if (lockerReadyTimeout == null) return;
-      if (typeof globalThis !== "undefined" && typeof globalThis.clearTimeout === "function") {
-        globalThis.clearTimeout(lockerReadyTimeout);
-      }
-      lockerReadyTimeout = null;
-    };
-    const startLockerReadyTimeout = () => {
-      if (!shouldWaitForLocker || lockerReady || lockerReadyTimeout != null) return;
-      if (typeof globalThis === "undefined" || typeof globalThis.setTimeout !== "function") return;
-      lockerReadyTimeout = globalThis.setTimeout(() => {
-        lockerReadyTimeout = null;
-        if (!lockerReady) {
-          lockerReady = true;
-          render();
+      last = next;
+      needsReposition = false;
+      const text2 = next.value == null ? "-" : formatInteger(next.value, "round");
+      for (const panel of Array.from(document.querySelectorAll(PANEL_SELECTOR))) {
+        for (const block of Array.from(panel.querySelectorAll(BLOCK_SELECTOR))) {
+          if (!(block instanceof HTMLElement)) continue;
+          updateTooltipLock(block, next.locked);
+          if (!next.showPrice || isWrapperBlock(block)) removePriceLine(block);
+          else ensurePriceLine(block, text2);
         }
-      }, 500);
-    };
-    startLockerReadyTimeout();
-    const startQpmObserver = () => {
-      if (qpmObserver) return;
-      if (typeof MutationObserver === "undefined") return;
-      const target = document.body ?? document.documentElement ?? document;
-      if (!target) return;
-      qpmObserver = new MutationObserver((mutations) => {
-        let found = false;
-        for (const mutation of mutations) {
-          for (const node of Array.from(mutation.addedNodes)) {
-            if (!(node instanceof Element)) continue;
-            if (node.classList.contains("qpm-crop-size")) {
-              found = true;
-              break;
-            }
-            if (node.querySelector(".qpm-crop-size")) {
-              found = true;
-              break;
-            }
-          }
-          if (found) break;
-        }
-        if (found) {
-          needsRepositionRender = true;
-          render();
-        }
-      });
-      qpmObserver.observe(target, { childList: true, subtree: true });
-    };
-    const stopQpmObserver = () => {
-      if (!qpmObserver) return;
-      try {
-        qpmObserver.disconnect();
-      } catch {
       }
-      qpmObserver = null;
     };
-    startQpmObserver();
-    const lockerOff = subscribeLocker((event) => {
-      lockerHarvestAllowed = event.harvestAllowed ?? null;
-      clearLockerReadyTimeout();
-      if (!lockerReady && shouldWaitForLocker) {
-        lockerReady = true;
-      }
+    const readyTimer = lockerReady ? null : setTimeout(() => {
+      lockerReady = true;
+      render();
+    }, LOCKER_FIRST_VERDICT_WAIT_MS);
+    const offLocker = lockerService.onSlotInfoChange((event) => {
+      harvestAllowed = event.harvestAllowed;
+      if (readyTimer != null) clearTimeout(readyTimer);
+      lockerReady = true;
       render();
     });
-    if (shouldWaitForLocker && lockerOff == null) {
-      clearLockerReadyTimeout();
-      lockerReady = true;
-    }
+    const qpmObserver = new MutationObserver((mutations) => {
+      const added = mutations.some(
+        (m) => Array.from(m.addedNodes).some(
+          (node) => node instanceof Element && (node.classList.contains("qpm-crop-size") || !!node.querySelector(".qpm-crop-size"))
+        )
+      );
+      if (!added) return;
+      needsReposition = true;
+      render();
+    });
+    qpmObserver.observe(document.body ?? document.documentElement, { childList: true, subtree: true });
     render();
-    const off = priceWatcher.onChange(render);
-    const offShowPrice = onShowCropPriceChange(() => render());
+    const offPrice = priceWatcher.onChange(render);
+    const offShowPrice = onShowCropPriceChange(render);
     return {
       stop() {
         if (!running6) return;
         running6 = false;
-        clearLockerReadyTimeout();
-        stopQpmObserver();
-        off?.();
+        if (readyTimer != null) clearTimeout(readyTimer);
+        qpmObserver.disconnect();
+        offPrice();
         offShowPrice();
-        if (typeof lockerOff === "function") {
-          try {
-            lockerOff();
-          } catch {
-          }
-        }
+        offLocker();
         priceWatcher.stop();
-        logger("stopped");
-      },
-      runOnce() {
-        render();
-      },
-      isRunning() {
-        return running6;
       }
     };
   }
-  function shouldSkipInner(inner, markerClass) {
-    if (!(inner instanceof Element)) return false;
-    if (!inner.matches(OMA_SEL)) return false;
-    const matchedSel = [".McFlex.css-1l3zq7", ".McFlex.css-11dqzw"].find((s) => inner.matches(s));
-    if (matchedSel) {
-      const sameTypeChild = Array.from(inner.children).find((c) => c.matches(matchedSel));
-      if (sameTypeChild && getRealElementChildren(sameTypeChild, markerClass).length > 1) return true;
+  function isWrapperBlock(block) {
+    if (!block.matches(BLOCK_SELECTOR)) return false;
+    const own = BLOCK_SELECTORS.find((selector) => block.matches(selector));
+    if (own) {
+      const inner = Array.from(block.children).find((child) => child.matches(own));
+      if (inner && contentChildren(inner).length > 1) return true;
     }
-    const realChildren = getRealElementChildren(inner, markerClass);
-    return realChildren.length === 1;
+    return contentChildren(block).length === 1;
   }
-  function getRealElementChildren(inner, markerClass) {
-    const children = Array.from(inner.children);
-    return children.filter(
-      (el) => !(el.tagName === "SPAN" && el.classList.contains(markerClass))
-    );
+  function removePriceLine(block) {
+    block.querySelectorAll(`:scope > span.${PRICE_CLASS}`).forEach((line) => line.remove());
   }
-  function removeMarker(inner, markerClass) {
-    const markers = inner.querySelectorAll(`:scope > span.${CSS.escape(markerClass)}`);
-    markers.forEach((m) => m.remove());
+  function ensurePriceLine(block, text2) {
+    const lines = Array.from(block.querySelectorAll(`:scope > span.${PRICE_CLASS}`));
+    lines.slice(1).forEach((extra) => extra.remove());
+    let line = lines[0];
+    if (!line) {
+      line = document.createElement("span");
+      line.className = PRICE_CLASS;
+      Object.assign(line.style, { display: "block", marginTop: "6px", fontWeight: "700", color: "#FFD84D", fontSize: "14px" });
+    }
+    let icon2 = line.querySelector(`:scope > span.${PRICE_ICON_CLASS}`);
+    if (!icon2) {
+      icon2 = document.createElement("span");
+      icon2.className = PRICE_ICON_CLASS;
+      icon2.setAttribute("aria-hidden", "true");
+      Object.assign(icon2.style, {
+        width: "18px",
+        height: "18px",
+        display: "inline-block",
+        verticalAlign: "middle",
+        marginRight: "6px",
+        userSelect: "none",
+        pointerEvents: "none",
+        backgroundSize: "contain",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center"
+      });
+      line.insertBefore(icon2, line.firstChild);
+    }
+    const background = `url("${coin2.img64}")`;
+    if (icon2.style.backgroundImage !== background) icon2.style.backgroundImage = background;
+    let label2 = line.querySelector(`:scope > span.${PRICE_LABEL_CLASS}`);
+    if (!label2) {
+      label2 = document.createElement("span");
+      label2.className = PRICE_LABEL_CLASS;
+      label2.style.display = "inline";
+      line.appendChild(label2);
+    }
+    if (label2.textContent !== text2) label2.textContent = text2;
+    const qpmSize = readSharedGlobal("QPM") ? block.querySelector("span.qpm-crop-size") : null;
+    if (qpmSize) {
+      if (qpmSize.nextElementSibling !== line) block.insertBefore(line, qpmSize.nextElementSibling);
+    } else if (block.lastElementChild !== line) {
+      block.appendChild(line);
+    }
   }
   function isTooltipRoot(el) {
     if (TOOLTIP_ROOT_CLASSES.some((cls) => el.classList.contains(cls))) return true;
     const children = Array.from(el.children);
-    const grid = children.find((c) => c.classList.contains("McGrid"));
-    if (!grid) return false;
-    const extra = children.filter(
-      (c) => c !== grid && !c.classList.contains(LOCK_ICON_CLASS)
-    );
-    return extra.length === 0;
+    const grid = children.find((child) => child.classList.contains("McGrid"));
+    return !!grid && children.every((child) => child === grid || child.classList.contains(TOOLTIP_GLYPH_CLASS));
   }
-  function cleanupLegacyLockIcons() {
-    if (typeof document === "undefined") return;
-    const all = document.querySelectorAll(`span.${LOCK_ICON_CLASS}`);
-    all.forEach((icon2) => {
-      const parent = icon2.parentElement;
-      if (!parent || !isTooltipRoot(parent)) icon2.remove();
-    });
-  }
-  function cleanupStrayLockedStyles() {
-    if (typeof document === "undefined") return;
-    const all = document.querySelectorAll("[data-tm-locker-original-border]");
-    all.forEach((el) => {
-      if (!isTooltipRoot(el)) {
-        restoreTooltipStyles(el);
-        removeLockIcon(el);
-      }
-    });
-  }
-  function getTooltipRoot(inner) {
+  function tooltipRootOf(block) {
     for (const cls of TOOLTIP_ROOT_CLASSES) {
-      const direct = inner.closest(`.${cls}`);
-      if (direct) return direct;
+      const root5 = block.closest(`.${cls}`);
+      if (root5) return root5;
     }
-    const grid = inner.parentElement;
-    if (!(grid instanceof HTMLElement) || !grid.classList.contains("McGrid")) return null;
-    const parent = grid.parentElement;
-    if (!(parent instanceof HTMLElement)) return null;
-    return isTooltipRoot(parent) ? parent : null;
+    const grid = block.parentElement;
+    if (!grid?.classList.contains("McGrid")) return null;
+    const root4 = grid.parentElement;
+    return root4 && isTooltipRoot(root4) ? root4 : null;
   }
-  function updateLockEmoji(inner, locked) {
-    if (!(inner instanceof HTMLElement)) return;
-    inner.querySelectorAll(":scope > span.tm-locker-lock-emoji").forEach((node) => node.remove());
-    cleanupLegacyLockIcons();
-    cleanupStrayLockedStyles();
-    const textTarget = inner.querySelector(LOCK_TEXT_SELECTOR) ?? inner.querySelector(":scope > .chakra-text");
-    const tooltipRoot = getTooltipRoot(inner);
-    const legacyOuter = inner.closest(".css-502lyi");
-    if (legacyOuter && legacyOuter !== tooltipRoot) {
-      restoreTooltipStyles(legacyOuter);
-      removeLockIcon(legacyOuter);
+  function unmarkStrayTooltips() {
+    for (const el of markedElements(TOOLTIP_LOCK_LOOK.owner)) {
+      if (!isTooltipRoot(el)) unmarkLocked(el, TOOLTIP_LOCK_LOOK.owner);
     }
-    if (!locked) {
-      if (textTarget) {
-        restoreTextContent(textTarget);
-        restoreTextStyles(textTarget);
-      }
-      if (tooltipRoot) {
-        restoreTooltipStyles(tooltipRoot);
-        removeLockIcon(tooltipRoot);
-      }
-      return;
-    }
-    if (textTarget) {
-      restoreTextContent(textTarget);
-    }
-    if (tooltipRoot) {
-      storeOriginalTooltipStyles(tooltipRoot);
-      applyLockedTooltipStyles(tooltipRoot);
-      ensureLockIcon(tooltipRoot);
-    }
-  }
-  function restoreTextStyles(textTarget) {
-    restoreStyleFromDataset(textTarget, DATASET_KEY_COLOR, "color");
-    restoreStyleFromDataset(textTarget, DATASET_KEY_DISPLAY, "display");
-    restoreStyleFromDataset(textTarget, DATASET_KEY_ALIGN, "align-items");
-  }
-  function restoreTextContent(textTarget) {
-    const originalHtml = textTarget.dataset[DATASET_KEY_TEXT];
-    if (originalHtml !== void 0) {
-      textTarget.innerHTML = originalHtml;
-      delete textTarget.dataset[DATASET_KEY_TEXT];
-      return;
-    }
-    const currentHtml = textTarget.innerHTML;
-    const sanitizedHtml = stripLockPrefix(currentHtml);
-    if (sanitizedHtml !== currentHtml) {
-      textTarget.innerHTML = sanitizedHtml;
-    }
-  }
-  function restoreStyleFromDataset(el, datasetKey, cssProperty) {
-    const datasetMap = el.dataset;
-    const originalValue = datasetMap[datasetKey];
-    if (originalValue === void 0) return;
-    if (originalValue) {
-      el.style.setProperty(cssProperty, originalValue);
-    } else {
-      el.style.removeProperty(cssProperty);
-    }
-    delete datasetMap[datasetKey];
-  }
-  function storeOriginalTooltipStyles(tooltip) {
-    if (tooltip.dataset[DATASET_KEY_BORDER] === void 0) {
-      tooltip.dataset[DATASET_KEY_BORDER] = tooltip.style.border ?? "";
-    }
-    if (tooltip.dataset[DATASET_KEY_BORDER_RADIUS] === void 0) {
-      tooltip.dataset[DATASET_KEY_BORDER_RADIUS] = tooltip.style.borderRadius ?? "";
-    }
-    if (tooltip.dataset[DATASET_KEY_OVERFLOW] === void 0) {
-      tooltip.dataset[DATASET_KEY_OVERFLOW] = tooltip.style.overflow ?? "";
-    }
-  }
-  function applyLockedTooltipStyles(tooltip) {
-    tooltip.style.border = LOCK_BORDER_STYLE;
-    tooltip.style.borderRadius = LOCK_BORDER_RADIUS;
-    tooltip.style.overflow = "visible";
-    const computedPosition = typeof window !== "undefined" ? window.getComputedStyle(tooltip).position : tooltip.style.position || "static";
-    if (computedPosition === "static") {
-      if (tooltip.dataset[DATASET_KEY_POSITION] === void 0) {
-        tooltip.dataset[DATASET_KEY_POSITION] = tooltip.style.position ?? "";
-      }
-      tooltip.style.position = "relative";
-    }
-  }
-  function restoreTooltipStyles(tooltip) {
-    const originalBorder = tooltip.dataset[DATASET_KEY_BORDER];
-    if (originalBorder !== void 0) {
-      if (originalBorder) {
-        tooltip.style.border = originalBorder;
-      } else {
-        tooltip.style.removeProperty("border");
-      }
-      delete tooltip.dataset[DATASET_KEY_BORDER];
-    } else {
-      tooltip.style.removeProperty("border");
-    }
-    const originalBorderRadius = tooltip.dataset[DATASET_KEY_BORDER_RADIUS];
-    if (originalBorderRadius !== void 0) {
-      if (originalBorderRadius) {
-        tooltip.style.borderRadius = originalBorderRadius;
-      } else {
-        tooltip.style.removeProperty("border-radius");
-      }
-      delete tooltip.dataset[DATASET_KEY_BORDER_RADIUS];
-    } else {
-      tooltip.style.removeProperty("border-radius");
-    }
-    const originalOverflow = tooltip.dataset[DATASET_KEY_OVERFLOW];
-    if (originalOverflow !== void 0) {
-      if (originalOverflow) {
-        tooltip.style.overflow = originalOverflow;
-      } else {
-        tooltip.style.removeProperty("overflow");
-      }
-      delete tooltip.dataset[DATASET_KEY_OVERFLOW];
-    } else {
-      tooltip.style.removeProperty("overflow");
-    }
-    const originalPosition = tooltip.dataset[DATASET_KEY_POSITION];
-    if (originalPosition !== void 0) {
-      if (originalPosition) {
-        tooltip.style.position = originalPosition;
-      } else {
-        tooltip.style.removeProperty("position");
-      }
-      delete tooltip.dataset[DATASET_KEY_POSITION];
-    } else if (tooltip.style.position === "relative") {
-      tooltip.style.removeProperty("position");
-    }
-  }
-  function ensureLockIcon(tooltip) {
-    const icons = tooltip.querySelectorAll(`:scope > span.${LOCK_ICON_CLASS}`);
-    icons.forEach((node, idx) => {
-      if (idx > 0) node.remove();
+    document.querySelectorAll(`span.${TOOLTIP_GLYPH_CLASS}`).forEach((glyph) => {
+      const parent = glyph.parentElement;
+      if (!parent || !isTooltipRoot(parent)) glyph.remove();
     });
-    let icon2 = icons[0] ?? null;
-    if (!icon2) {
-      icon2 = document.createElement("span");
-      icon2.className = LOCK_ICON_CLASS;
-      tooltip.append(icon2);
-    }
-    icon2.textContent = LOCK_EMOJI;
-    icon2.style.position = "absolute";
-    icon2.style.top = "0";
-    icon2.style.right = "0";
-    icon2.style.left = "";
-    icon2.style.transform = "translate(50%, -50%)";
-    icon2.style.fontSize = "18px";
-    icon2.style.padding = "2px 8px";
-    icon2.style.borderRadius = "999px";
-    icon2.style.border = "none";
-    icon2.style.background = "transparent";
-    icon2.style.color = "white";
-    icon2.style.pointerEvents = "none";
-    icon2.style.userSelect = "none";
-    icon2.style.zIndex = "1";
   }
-  function removeLockIcon(tooltip) {
-    tooltip.querySelectorAll(`:scope > span.${LOCK_ICON_CLASS}`).forEach((node) => node.remove());
+  function updateTooltipLock(block, locked) {
+    const root4 = tooltipRootOf(block);
+    if (!root4) return;
+    if (locked) markLocked(root4, TOOLTIP_LOCK_LOOK);
+    else unmarkLocked(root4, TOOLTIP_LOCK_LOOK.owner);
   }
-  function stripLockPrefix(content2) {
-    return content2.replace(LOCK_PREFIX_REGEX, "");
-  }
-  function ensureSpanAtEnd(inner, text2, markerClass) {
-    const spans = Array.from(
-      inner.querySelectorAll(`:scope > span.${CSS.escape(markerClass)}`)
-    );
-    let span = spans[0] ?? null;
-    for (let i = 1; i < spans.length; i++) spans[i].remove();
-    if (!span) {
-      span = document.createElement("span");
-      span.className = markerClass;
-    }
-    span.style.display = "block";
-    span.style.marginTop = "6px";
-    span.style.fontWeight = "700";
-    span.style.color = "#FFD84D";
-    span.style.fontSize = "14px";
-    let icon2 = span.querySelector(`:scope > span.${ICON_CLASS}`);
-    if (!icon2) {
-      icon2 = document.createElement("span");
-      icon2.className = ICON_CLASS;
-      icon2.setAttribute("aria-hidden", "true");
-      icon2.style.width = "18px";
-      icon2.style.height = "18px";
-      icon2.style.display = "inline-block";
-      icon2.style.verticalAlign = "middle";
-      icon2.style.marginRight = "6px";
-      icon2.style.userSelect = "none";
-      icon2.style.pointerEvents = "none";
-      icon2.style.backgroundSize = "contain";
-      icon2.style.backgroundRepeat = "no-repeat";
-      icon2.style.backgroundPosition = "center";
-      span.insertBefore(icon2, span.firstChild);
-    }
-    const bg = `url("${coin2.img64}")`;
-    if (icon2.style.backgroundImage !== bg) {
-      icon2.style.backgroundImage = bg;
-    }
-    let label2 = span.querySelector(`:scope > span.${LABEL_CLASS}`);
-    if (!label2) {
-      label2 = document.createElement("span");
-      label2.className = LABEL_CLASS;
-      label2.style.display = "inline";
-      span.appendChild(label2);
-    }
-    if (label2.textContent !== text2) {
-      label2.textContent = text2;
-    }
-    const sizeSpan = getQpmSizeSpan(inner);
-    if (sizeSpan) {
-      const next = sizeSpan.nextElementSibling;
-      if (next !== span) {
-        inner.insertBefore(span, next);
-      }
-      return;
-    }
-    if (inner.lastElementChild !== span) {
-      inner.appendChild(span);
-    }
-  }
-  var DEFAULTS2, OMA_SEL, ICON_CLASS, LABEL_CLASS, LOCK_TEXT_SELECTOR, LOCK_EMOJI, LOCK_BORDER_STYLE, LOCK_BORDER_RADIUS, TOOLTIP_ROOT_CLASSES, LOCK_ICON_CLASS, DATASET_KEY_COLOR, DATASET_KEY_DISPLAY, DATASET_KEY_ALIGN, DATASET_KEY_TEXT, DATASET_KEY_BORDER, DATASET_KEY_BORDER_RADIUS, DATASET_KEY_POSITION, DATASET_KEY_OVERFLOW, LOCK_PREFIX_REGEX, PRICE_FALLBACK, nfUS, formatCoins, hasDOM;
+  var PANEL_SELECTOR, BLOCK_SELECTORS, BLOCK_SELECTOR, PRICE_CLASS, PRICE_ICON_CLASS, PRICE_LABEL_CLASS, TOOLTIP_ROOT_CLASSES, TOOLTIP_LOCK_LOOK, TOOLTIP_GLYPH_CLASS, LOCKER_FIRST_VERDICT_WAIT_MS, contentChildren;
   var init_domTooltip = __esm({
     "src/features/cropPrice/domTooltip.ts"() {
       "use strict";
       init_priceWatcher();
       init_setting();
       init_data();
+      init_format();
       init_locker();
+      init_domLockMarks();
       init_pageContext();
-      DEFAULTS2 = {
-        rootSelector: ".McFlex.css-fsggty, .McFlex.css-6prrn",
-        innerSelector: ".McFlex.css-1l3zq7, .McFlex.css-11dqzw",
-        markerClass: "tm-crop-price"
-      };
-      OMA_SEL = ".McFlex.css-1l3zq7, .McFlex.css-11dqzw";
-      ICON_CLASS = "tm-crop-price-icon";
-      LABEL_CLASS = "tm-crop-price-label";
-      LOCK_TEXT_SELECTOR = ":scope > .chakra-text.css-1jc0opy";
-      LOCK_EMOJI = "\u{1F512}";
-      LOCK_BORDER_STYLE = "2px solid rgb(188, 53, 215)";
-      LOCK_BORDER_RADIUS = "15px";
+      PANEL_SELECTOR = ".McFlex.css-fsggty, .McFlex.css-6prrn";
+      BLOCK_SELECTORS = [".McFlex.css-1l3zq7", ".McFlex.css-11dqzw"];
+      BLOCK_SELECTOR = BLOCK_SELECTORS.join(", ");
+      PRICE_CLASS = "tm-crop-price";
+      PRICE_ICON_CLASS = "tm-crop-price-icon";
+      PRICE_LABEL_CLASS = "tm-crop-price-label";
       TOOLTIP_ROOT_CLASSES = ["css-129757o", "css-7cru8u"];
-      LOCK_ICON_CLASS = "tm-locker-tooltip-lock-icon";
-      DATASET_KEY_COLOR = "tmLockerOriginalColor";
-      DATASET_KEY_DISPLAY = "tmLockerOriginalDisplay";
-      DATASET_KEY_ALIGN = "tmLockerOriginalAlign";
-      DATASET_KEY_TEXT = "tmLockerOriginalHtml";
-      DATASET_KEY_BORDER = "tmLockerOriginalBorder";
-      DATASET_KEY_BORDER_RADIUS = "tmLockerOriginalBorderRadius";
-      DATASET_KEY_POSITION = "tmLockerOriginalPosition";
-      DATASET_KEY_OVERFLOW = "tmLockerOriginalOverflow";
-      LOCK_PREFIX_REGEX = new RegExp(`^${LOCK_EMOJI}(?:\\u00A0|\\s|&nbsp;)*`);
-      PRICE_FALLBACK = "\u2014";
-      nfUS = new Intl.NumberFormat("en-US");
-      formatCoins = (value) => value == null ? PRICE_FALLBACK : nfUS.format(Math.max(0, Math.round(value)));
-      hasDOM = typeof window !== "undefined" && typeof document !== "undefined";
+      TOOLTIP_LOCK_LOOK = {
+        owner: "locker-tooltip",
+        style: { border: "2px solid rgb(188, 53, 215)", "border-radius": "15px", overflow: "visible" },
+        glyph: {
+          position: "absolute",
+          top: "0",
+          right: "0",
+          transform: "translate(50%, -50%)",
+          "font-size": "18px",
+          padding: "2px 8px",
+          "border-radius": "999px",
+          color: "white",
+          "pointer-events": "none",
+          "user-select": "none",
+          "z-index": "1"
+        }
+      };
+      TOOLTIP_GLYPH_CLASS = `tm-${TOOLTIP_LOCK_LOOK.owner}-lock`;
+      LOCKER_FIRST_VERDICT_WAIT_MS = 500;
+      contentChildren = (block) => Array.from(block.children).filter((el) => !(el.tagName === "SPAN" && el.classList.contains(PRICE_CLASS)));
     }
   });
 
@@ -23899,7 +22762,7 @@
     };
     const syncValueNodeUnsafe = () => {
       debugState3.objectType = currentGardenObject2?.objectType ?? null;
-      if (!running6 || !currentCard2 || currentCard2.destroyed || !geometry || !isPlantObject3(currentGardenObject2) || // Coupé depuis le menu Misc : le badge disparaît, la carte reste celle du jeu.
+      if (!running6 || !currentCard2 || currentCard2.destroyed || !geometry || !isPlantObject3(currentGardenObject2) || // Switched off in the Misc menu: the card is left as the game drew it.
       !readShowCropPrice()) {
         detachValueText();
         return;
@@ -23912,7 +22775,7 @@
         detachValueText();
         return;
       }
-      const text2 = formatCoins2(value);
+      const text2 = formatInteger(value, "round");
       if (!valueText) {
         graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state7)));
         if (graphicsCtor) {
@@ -23970,63 +22833,57 @@
         debugState3.hasCoinTexture = !!coinTexture;
       } catch (error) {
         debugState3.lastError = String(error?.message ?? error);
-        console.warn("[cropValuePixi] syncValueNode failed, clearing overlay", error);
+        console.warn("[cropPrice] badge sync failed, clearing overlay", error);
         try {
           detachValueText();
         } catch {
         }
       }
     };
-    const offCard = watchGardenInfoCard((card4, geom) => {
-      currentCard2 = card4;
-      geometry = geom;
-      hitAreaBaseHeight = card4?.hitArea?.height ?? 0;
-      detachValueText();
-      debugState3.attached = !!card4;
-      if (card4) syncValueNode();
+    const subs = new Subscriptions();
+    subs.add(
+      watchGardenInfoCard((card4, geom) => {
+        currentCard2 = card4;
+        geometry = geom;
+        hitAreaBaseHeight = card4?.hitArea?.height ?? 0;
+        detachValueText();
+        debugState3.attached = !!card4;
+        if (card4) syncValueNode();
+      })
+    );
+    subs.add(priceWatcher.onChange(syncValueNode));
+    subs.add(onShowCropPriceChange(() => syncValueNode()));
+    void Atoms.data.myCurrentGardenObject.get().then((initial) => {
+      currentGardenObject2 = initial;
+      syncValueNode();
+    }).catch(() => {
     });
-    const offPrice = priceWatcher.onChange(syncValueNode);
-    const offShowPrice = onShowCropPriceChange(() => syncValueNode());
-    let unsubGardenObject = null;
-    void (async () => {
-      try {
-        currentGardenObject2 = await Atoms.data.myCurrentGardenObject.get();
-        if (running6) syncValueNode();
-      } catch {
-      }
-      try {
-        const unsub = await Atoms.data.myCurrentGardenObject.onChange((next) => {
-          currentGardenObject2 = next;
-          syncValueNode();
-        });
-        if (typeof unsub === "function") {
-          if (running6) unsubGardenObject = unsub;
-          else unsub();
-        }
-      } catch {
-      }
-    })();
+    subs.add(
+      Atoms.data.myCurrentGardenObject.onChange((next) => {
+        currentGardenObject2 = next;
+        syncValueNode();
+      })
+    );
     return {
       stop() {
         if (!running6) return;
         running6 = false;
-        unsubGardenObject?.();
-        offCard();
-        offPrice?.();
-        offShowPrice();
+        subs.dispose();
         priceWatcher.stop();
         detachValueText();
         currentCard2 = null;
       }
     };
   }
-  var VALUE_TEXT_STYLE, VALUE_BADGE_GAP, VALUE_ICON_SIZE, VALUE_ICON_GAP, BADGE_PADDING_X, BADGE_PADDING_Y, BADGE_RADIUS, BADGE_COLOR, BADGE_ALPHA, PRICE_FALLBACK2, nfUS2, formatCoins2, coinTexture, coinTexturePromise;
+  var VALUE_TEXT_STYLE, VALUE_BADGE_GAP, VALUE_ICON_SIZE, VALUE_ICON_GAP, BADGE_PADDING_X, BADGE_PADDING_Y, BADGE_RADIUS, BADGE_COLOR, BADGE_ALPHA, coinTexture, coinTexturePromise;
   var init_badge = __esm({
     "src/features/cropPrice/badge.ts"() {
       "use strict";
       init_priceWatcher();
       init_setting();
       init_pageContext();
+      init_format();
+      init_emitter();
       init_data();
       init_atoms();
       init_gardenInfoCard();
@@ -24040,20 +22897,12 @@
       BADGE_RADIUS = 6;
       BADGE_COLOR = 0;
       BADGE_ALPHA = 0.55;
-      PRICE_FALLBACK2 = "\u2014";
-      nfUS2 = new Intl.NumberFormat("en-US");
-      formatCoins2 = (value) => value == null ? PRICE_FALLBACK2 : nfUS2.format(Math.max(0, Math.round(value)));
       coinTexture = null;
       coinTexturePromise = null;
     }
   });
 
   // src/features/locker/indicator.ts
-  function extractEggId(obj) {
-    if (!obj || typeof obj !== "object" || obj.objectType !== "egg") return null;
-    const eggId = obj.eggId;
-    return typeof eggId === "string" && eggId ? eggId : null;
-  }
   function isDecorObject(obj) {
     return !!obj && typeof obj === "object" && obj.objectType === "decor";
   }
@@ -24068,10 +22917,10 @@
     const debugState3 = { lastError: null, hasBorder: false, objectType: null };
     shareGlobal("__MG_LOCKER_INDICATOR_PIXI_DEBUG__", debugState3);
     const isLocked = () => {
-      const eggId = extractEggId(currentGardenObject2);
+      const eggId = eggIdOf(currentGardenObject2);
       if (eggId) return lockerRestrictionsService.isEggLocked(eggId);
       if (isDecorObject(currentGardenObject2)) return lockerRestrictionsService.isDecorPickupLocked();
-      return lockerService.getCurrentSlotSnapshot().harvestAllowed === false;
+      return lockerService.currentHarvestAllowed() === false;
     };
     const removeBorder = () => {
       if (border) {
@@ -24128,48 +22977,40 @@
         debugState3.lastError = null;
       } catch (error) {
         debugState3.lastError = String(error?.message ?? error);
-        console.warn("[lockerIndicatorPixi] sync failed, clearing border", error);
+        console.warn("[lockerIndicator] sync failed, clearing border", error);
         try {
           removeBorder();
         } catch {
         }
       }
     };
-    const offCard = watchGardenInfoCard((card4, geom) => {
-      removeBorder();
-      currentCard2 = card4;
-      geometry = geom;
+    const subs = new Subscriptions();
+    subs.add(
+      watchGardenInfoCard((card4, geom) => {
+        removeBorder();
+        currentCard2 = card4;
+        geometry = geom;
+        sync2();
+      })
+    );
+    subs.add(lockerService.onSlotInfoChange(sync2));
+    subs.add(lockerRestrictionsService.subscribe(sync2));
+    void Atoms.data.myCurrentGardenObject.get().then((initial) => {
+      currentGardenObject2 = initial;
       sync2();
+    }).catch(() => {
     });
-    const offSlot = lockerService.onSlotInfoChange(() => sync2());
-    const offRestrictions = lockerRestrictionsService.subscribe(() => sync2());
-    let unsubAtom = null;
-    void (async () => {
-      try {
-        currentGardenObject2 = await Atoms.data.myCurrentGardenObject.get();
-        if (running6) sync2();
-      } catch {
-      }
-      try {
-        const unsub = await Atoms.data.myCurrentGardenObject.onChange((next) => {
-          currentGardenObject2 = next;
-          sync2();
-        });
-        if (typeof unsub === "function") {
-          if (running6) unsubAtom = unsub;
-          else unsub();
-        }
-      } catch {
-      }
-    })();
+    subs.add(
+      Atoms.data.myCurrentGardenObject.onChange((next) => {
+        currentGardenObject2 = next;
+        sync2();
+      })
+    );
     return {
       stop() {
         if (!running6) return;
         running6 = false;
-        offCard();
-        offSlot?.();
-        offRestrictions?.();
-        unsubAtom?.();
+        subs.dispose();
         removeBorder();
         currentCard2 = null;
       }
@@ -24182,6 +23023,7 @@
       init_locker();
       init_restrictions();
       init_atoms();
+      init_emitter();
       init_pageContext();
       init_gardenInfoCard();
       init_context();
@@ -24193,6 +23035,181 @@
       LOCK_ICON_STYLE = { fontSize: 16 };
       LOCK_ICON_X_NUDGE = 4;
       LOCK_ICON_Y_NUDGE = 4;
+    }
+  });
+
+  // src/features/sellAllPets/domButton.ts
+  function findSellPetButton(panel) {
+    for (const btn of Array.from(panel.querySelectorAll(BUTTON_SELECTOR))) {
+      if (!(btn instanceof HTMLButtonElement) || btn.classList.contains(INJECTED_CLASS)) continue;
+      const label2 = labelOf(btn);
+      if (/crops/i.test(label2)) continue;
+      const words = label2.split(/\s+/).filter(Boolean);
+      if (words.length === 2 && /^sell$/i.test(words[0])) return btn;
+      if (/^sell$/i.test(label2) && btn.querySelector("canvas")) return btn;
+    }
+    return null;
+  }
+  function placeNextTo(target) {
+    const parent = target.parentElement || target.closest(".McFlex, .css-0");
+    if (!parent) return;
+    const existing = parent.querySelector(`.${INJECTED_CLASS}`);
+    if (existing) {
+      if (target.nextElementSibling !== existing) parent.insertBefore(existing, target.nextSibling);
+      if (existing.textContent !== LABEL) existing.textContent = LABEL;
+      return;
+    }
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `${INJECTED_CLASS} chakra-button`;
+    btn.textContent = LABEL;
+    btn.title = LABEL;
+    btn.setAttribute("aria-label", LABEL);
+    btn.style.marginLeft = "8px";
+    if (getComputedStyle(parent).display !== "flex") {
+      btn.style.display = "inline-flex";
+      btn.style.alignItems = "center";
+    }
+    btn.addEventListener("click", () => {
+      void runSellAllPetsFlow().catch(() => {
+      });
+    });
+    parent.insertBefore(btn, target.nextSibling);
+  }
+  function ensureStyle() {
+    const id = `${INJECTED_CLASS}-style`;
+    if (document.getElementById(id)) return;
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent = `
+.${INJECTED_CLASS} {
+  display: inline-flex; align-items: center; justify-content: center; appearance: none; cursor: pointer;
+  user-select: none; white-space: nowrap; vertical-align: middle; text-transform: none; overflow: hidden;
+  -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; font-synthesis: none;
+  outline: transparent solid 2px; outline-offset: 2px; line-height: 1.2; height: auto;
+  min-width: var(--chakra-sizes-10, 2.5rem);
+  padding: var(--chakra-space-3, 0.75rem) var(--chakra-space-4, 1rem);
+  border: 2px solid ${THEME.border}; border-radius: 15px;
+  color: ${THEME.text}; background: ${THEME.bg};
+  font-size: 20px; font-weight: 700;
+  box-shadow: rgba(0, 0, 0, 0.3) 0px 4px 12px; transform: translateY(0px); transition: 0.2s;
+}
+.${INJECTED_CLASS}:hover { transform: translateY(-1px); background: ${THEME.hoverBg}; border-color: ${THEME.hoverBorder}; }
+.${INJECTED_CLASS}:active { transform: translateY(1px); background: ${THEME.activeBg}; }
+.${INJECTED_CLASS}:focus-visible { box-shadow: 0 0 0 3px ${THEME.ring}; }
+`.trim();
+    document.head.appendChild(style);
+  }
+  function startInjectSellAllPets() {
+    ensureStyle();
+    let pending6 = false;
+    const processPanels = () => {
+      if (pending6) return;
+      pending6 = true;
+      requestAnimationFrame(() => {
+        pending6 = false;
+        for (const panel of Array.from(document.querySelectorAll(PANEL_SELECTOR2))) {
+          const target = panel.querySelector(PANEL_GATE_SELECTOR) ? findSellPetButton(panel) : null;
+          if (target) placeNextTo(target);
+          else panel.querySelectorAll(`.${INJECTED_CLASS}`).forEach((n) => n.remove());
+        }
+      });
+    };
+    const observer2 = new MutationObserver(processPanels);
+    observer2.observe(document.documentElement, { childList: true, subtree: true });
+    processPanels();
+    return { stop: () => observer2.disconnect() };
+  }
+  var PANEL_SELECTOR2, PANEL_GATE_SELECTOR, BUTTON_SELECTOR, INJECTED_CLASS, LABEL, THEME, labelOf;
+  var init_domButton = __esm({
+    "src/features/sellAllPets/domButton.ts"() {
+      "use strict";
+      init_flow();
+      PANEL_SELECTOR2 = ".McFlex.css-1svwxx0";
+      PANEL_GATE_SELECTOR = ".McGrid";
+      BUTTON_SELECTOR = "button.chakra-button.css-1glc7hj, button.chakra-button, button.css-1glc7hj";
+      INJECTED_CLASS = "tm-injected-sell-all";
+      LABEL = "Sell all Pets";
+      THEME = {
+        text: "var(--chakra-colors-Neutral-TrueWhite, #FFFFFF)",
+        bg: "var(--chakra-colors-Blue-Magic, #0067B4)",
+        border: "var(--chakra-colors-Blue-Light, #48ADF4)",
+        hoverBg: "var(--chakra-colors-Blue-Light, #48ADF4)",
+        hoverBorder: "var(--chakra-colors-Blue-Baby, #25AAE2)",
+        activeBg: "var(--chakra-colors-Blue-Dark, #264093)",
+        ring: "var(--chakra-ring-color, rgba(66,153,225,0.6))"
+      };
+      labelOf = (el) => (el.textContent || "").replace(/\s+/g, " ").trim() || (el.getAttribute("aria-label") ?? "").replace(/\s+/g, " ").trim();
+    }
+  });
+
+  // src/features/sellAllPets/actionHud.ts
+  function watchActionHud(watch) {
+    const raf3 = pageWindow.requestAnimationFrame.bind(pageWindow);
+    const cancelRaf = pageWindow.cancelAnimationFrame.bind(pageWindow);
+    let running6 = true;
+    let hud = null;
+    let attempts = 0;
+    let rafId = null;
+    let lastCheckAt = 0;
+    const attach2 = (found) => {
+      hud = found;
+      found.once("destroyed", () => {
+        if (hud !== found) return;
+        hud = null;
+        watch.detach();
+        search2();
+      });
+      console.info(`[sellAllPets] attached to ${ACTION_HUD_LABEL} after ${attempts} attempt(s)`);
+      watch.attach(found);
+    };
+    const tryFind = () => {
+      if (!running6 || hud) return;
+      const state7 = getReadySpriteState();
+      if (!state7) return;
+      const found = findAcrossBranches(getStage(state7), (node) => node?.label === ACTION_HUD_LABEL);
+      if (found) {
+        attach2(found);
+        return;
+      }
+      attempts += 1;
+      watch.onSearch?.(attempts);
+      if (attempts % LOG_EVERY === 0) {
+        console.info(`[sellAllPets] still searching for ${ACTION_HUD_LABEL} (${attempts} attempts so far)`);
+      }
+    };
+    const tick3 = (now) => {
+      rafId = null;
+      if (!running6 || hud) return;
+      if (now - lastCheckAt >= RETRY_MS) {
+        lastCheckAt = now;
+        tryFind();
+      }
+      if (running6 && !hud) rafId = raf3(tick3);
+    };
+    const search2 = () => {
+      tryFind();
+      if (running6 && !hud && rafId == null) rafId = raf3(tick3);
+    };
+    search2();
+    return {
+      stop() {
+        running6 = false;
+        if (rafId != null) cancelRaf(rafId);
+        rafId = null;
+      }
+    };
+  }
+  var ACTION_HUD_LABEL, RETRY_MS, LOG_EVERY;
+  var init_actionHud = __esm({
+    "src/features/sellAllPets/actionHud.ts"() {
+      "use strict";
+      init_gardenInfoCard();
+      init_context();
+      init_pageContext();
+      ACTION_HUD_LABEL = "ActionHud";
+      RETRY_MS = 1e3;
+      LOG_EVERY = 30;
     }
   });
 
@@ -24242,9 +23259,6 @@
     let buttonBg = null;
     let buttonText = null;
     let currentAction = null;
-    let findAttempts2 = 0;
-    let findRafId3 = null;
-    let lastFindCheckAt3 = 0;
     let canvasEl = null;
     let canvasListenersAttached = false;
     let weSetPointerCursor = false;
@@ -24423,7 +23437,7 @@
         debugState3.lastError = null;
       } catch (error) {
         debugState3.lastError = String(error?.message ?? error);
-        console.warn("[sellAllPetsPixi] sync failed, clearing button", error);
+        console.warn("[sellAllPets] Pixi button sync failed, clearing button", error);
         try {
           removeButton();
         } catch {
@@ -24431,92 +23445,46 @@
       }
     };
     const onChildAdded2 = () => sync2();
-    const attachToActionHud = (hud) => {
-      actionHud = hud;
-      actionHud.on("childAdded", onChildAdded2);
-      actionHud.once("destroyed", () => {
-        if (actionHud === hud) {
-          actionHud = null;
-          debugState3.attached = false;
-          removeButton();
-          restartSearchIfNeeded2();
-        }
-      });
-      debugState3.attached = true;
-      console.info(`[sellAllPetsPixi] attached to ${ACTION_HUD_LABEL} after ${findAttempts2} attempt(s)`);
-      sync2();
-    };
-    const tryFindActionHud = () => {
-      if (!running6 || actionHud) return;
-      const state7 = getReadySpriteState();
-      if (!state7) return;
-      const stage = getStage(state7);
-      const found = findAcrossBranches(stage, (node) => node?.label === ACTION_HUD_LABEL);
-      if (found) {
-        attachToActionHud(found);
-        return;
+    const hudWatch = watchActionHud({
+      attach(hud) {
+        actionHud = hud;
+        hud.on("childAdded", onChildAdded2);
+        debugState3.attached = true;
+        sync2();
+      },
+      detach() {
+        actionHud = null;
+        debugState3.attached = false;
+        removeButton();
+      },
+      onSearch(attempts) {
+        debugState3.findAttempts = attempts;
       }
-      findAttempts2 += 1;
-      debugState3.findAttempts = findAttempts2;
-      if (findAttempts2 % ACTION_HUD_FIND_LOG_EVERY === 0) {
-        console.info(`[sellAllPetsPixi] still searching for ${ACTION_HUD_LABEL} (${findAttempts2} attempts so far)`);
-      }
-    };
-    const scheduleFind2 = (now2) => {
-      findRafId3 = null;
-      if (!running6 || actionHud) return;
-      if (now2 - lastFindCheckAt3 >= ACTION_HUD_FIND_RETRY_MS) {
-        lastFindCheckAt3 = now2;
-        tryFindActionHud();
-      }
-      if (!running6 || actionHud) return;
-      findRafId3 = raf3(scheduleFind2);
-    };
-    const restartSearchIfNeeded2 = () => {
-      if (!running6 || actionHud) return;
-      tryFindActionHud();
-      if (!actionHud && findRafId3 == null) {
-        findRafId3 = raf3(scheduleFind2);
-      }
-    };
-    tryFindActionHud();
-    if (!actionHud) {
-      findRafId3 = raf3(scheduleFind2);
-    }
-    let unsubAction = null;
-    void (async () => {
-      try {
-        currentAction = await Atoms.player.action.get();
-        if (running6) sync2();
-      } catch {
-      }
-      try {
-        const unsub = await Atoms.player.action.onChange((next) => {
-          currentAction = next;
-          sync2();
-        });
-        if (typeof unsub === "function") {
-          if (running6) unsubAction = unsub;
-          else unsub();
-        }
-      } catch {
-      }
-    })();
+    });
+    const subs = new Subscriptions();
+    void Atoms.player.action.get().then((initial) => {
+      currentAction = initial;
+      if (running6) sync2();
+    }).catch(() => {
+    });
+    subs.add(
+      Atoms.player.action.onChange((next) => {
+        currentAction = next;
+        sync2();
+      })
+    );
     return {
       stop() {
         if (!running6) return;
         running6 = false;
-        if (findRafId3 != null) {
-          cancelRaf(findRafId3);
-          findRafId3 = null;
-        }
+        hudWatch.stop();
         if (actionHud) {
           try {
             actionHud.off("childAdded", onChildAdded2);
           } catch {
           }
         }
-        unsubAction?.();
+        subs.dispose();
         if (canvasListenersAttached && canvasEl) {
           try {
             canvasEl.removeEventListener("pointerdown", onCanvasPointerDown);
@@ -24531,19 +23499,18 @@
       }
     };
   }
-  var ACTION_HUD_LABEL, BUTTON_FACE_LABEL, ACTION_HUD_FIND_RETRY_MS, ACTION_HUD_FIND_LOG_EVERY, SELL_PET_ACTION_TYPES, BUTTON_GAP, BUTTON_TEXT, BUTTON_TEXT_STYLE, BUTTON_PADDING_X, BUTTON_RADIUS, BUTTON_FILL_COLOR, BUTTON_BORDER_COLOR, BUTTON_BORDER_WIDTH, HOVER_SCALE, HOVER_SCALE_EASE, HOVER_SCALE_SETTLE_EPSILON;
+  var BUTTON_FACE_LABEL, SELL_PET_ACTION_TYPES, BUTTON_GAP, BUTTON_TEXT, BUTTON_TEXT_STYLE, BUTTON_PADDING_X, BUTTON_RADIUS, BUTTON_FILL_COLOR, BUTTON_BORDER_COLOR, BUTTON_BORDER_WIDTH, HOVER_SCALE, HOVER_SCALE_EASE, HOVER_SCALE_SETTLE_EPSILON;
   var init_pixiButton = __esm({
     "src/features/sellAllPets/pixiButton.ts"() {
       "use strict";
       init_gardenInfoCard();
       init_context();
       init_pageContext();
-      init_domButton();
+      init_flow();
+      init_actionHud();
       init_atoms();
-      ACTION_HUD_LABEL = "ActionHud";
+      init_emitter();
       BUTTON_FACE_LABEL = "McButtonFace";
-      ACTION_HUD_FIND_RETRY_MS = 1e3;
-      ACTION_HUD_FIND_LOG_EVERY = 30;
       SELL_PET_ACTION_TYPES = /* @__PURE__ */ new Set(["sellPet", "sellRainbowPet", "sellGoldPet"]);
       BUTTON_GAP = 10;
       BUTTON_TEXT = "Sell all Pets";
@@ -24561,471 +23528,100 @@
 
   // src/features/locker/sellCropsLock.ts
   function startSellCropsLockWatcher() {
-    if (typeof window === "undefined" || typeof document === "undefined") {
-      return { stop() {
-      } };
-    }
-    let bonusFromMultiplier = null;
-    let bonusFromPlayers = friendBonusPercentFromPlayers(1);
-    let running6 = true;
-    const disposables = [];
-    const resolveCurrentBonus = () => bonusFromMultiplier ?? bonusFromPlayers ?? 0;
-    const applyLockState = (locked) => {
-      const containers = Array.from(
-        document.querySelectorAll(CONTAINER_SELECTOR)
-      );
-      containers.forEach((wrap) => setContainerLocked(wrap, locked));
-    };
-    const recompute = () => {
-      if (!running6) return;
-      const requiredPct = lockerRestrictionsService.getRequiredPercent();
-      const current = resolveCurrentBonus();
-      const locked = requiredPct > 0 && !(Number.isFinite(current) && current + 1e-4 >= requiredPct);
-      applyLockState(locked);
-    };
-    const observeDom = () => {
-      const mo = new MutationObserver(() => recompute());
-      mo.observe(document.documentElement, { childList: true, subtree: true });
-      disposables.push(() => mo.disconnect());
-    };
-    const subscribeAtoms = async () => {
-      try {
-        const initial = await Atoms.server.friendBonusMultiplier.get();
-        bonusFromMultiplier = friendBonusPercentFromMultiplier(initial);
-      } catch {
-      }
-      try {
-        const unsub = await Atoms.server.friendBonusMultiplier.onChange((next) => {
-          bonusFromMultiplier = friendBonusPercentFromMultiplier(next);
-          recompute();
-        });
-        if (typeof unsub === "function") disposables.push(unsub);
-      } catch {
-      }
-      try {
-        const initialPlayers = await Atoms.server.numPlayers.get();
-        bonusFromPlayers = friendBonusPercentFromPlayers(initialPlayers);
-      } catch {
-      }
-      try {
-        const unsubPlayers = await Atoms.server.numPlayers.onChange((next) => {
-          bonusFromPlayers = friendBonusPercentFromPlayers(next);
-          recompute();
-        });
-        if (typeof unsubPlayers === "function") disposables.push(unsubPlayers);
-      } catch {
-      }
-    };
-    observeDom();
-    disposables.push(lockerRestrictionsService.subscribe(() => recompute()));
-    void subscribeAtoms();
-    recompute();
-    return {
-      stop() {
-        running6 = false;
-        disposables.splice(0).forEach((fn) => {
-          try {
-            fn();
-          } catch {
-          }
-        });
-        applyLockState(false);
-      }
-    };
+    const indicator = startDomLockIndicator({
+      look: SELL_CROPS_LOCK_LOOK,
+      selector: ".css-vmnhaw",
+      isTarget: hasSellCropsButton,
+      isLocked: () => !lockerRestrictionsService.allowsCropSale(currentFriendBonus() ?? 0)
+    });
+    indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
+    indicator.add(onFriendBonusChange(indicator.refresh));
+    return indicator;
   }
-  function setContainerLocked(container, locked) {
-    if (!container) return;
-    const sellButton = findSellButton(container);
-    if (!sellButton) {
-      restoreContainerStyles(container);
-      removeLockIcon2(container);
-      return;
-    }
-    if (!locked) {
-      restoreContainerStyles(container);
-      removeLockIcon2(container);
-      return;
-    }
-    storeOriginalStyle(container, DATA_BORDER, "border");
-    storeOriginalStyle(container, DATA_RADIUS, "borderRadius");
-    storeOriginalStyle(container, DATA_POSITION, "position");
-    storeOriginalStyle(container, DATA_PADDING, "padding");
-    storeOriginalStyle(container, DATA_BOX, "boxSizing");
-    storeOriginalStyle(container, DATA_SHADOW, "boxShadow");
-    storeOriginalStyle(container, DATA_OVERFLOW, "overflow");
-    container.style.border = "none";
-    container.style.borderRadius = "";
-    container.style.padding = "";
-    container.style.boxSizing = "";
-    container.style.boxShadow = "none";
-    container.style.overflow = "";
-    const computedPos = window.getComputedStyle(container).position;
-    if (computedPos === "static") {
-      container.style.position = "relative";
-    }
-    container.style.zIndex = "1000";
-    ensureLockIcon2(container);
-  }
-  function storeOriginalStyle(el, key2, cssProperty) {
-    const data = el.dataset;
-    if (data[key2] !== void 0) return;
-    data[key2] = el.style[cssProperty];
-  }
-  function restoreContainerStyles(el) {
-    restoreStyle(el, DATA_BORDER, "border");
-    restoreStyle(el, DATA_RADIUS, "borderRadius");
-    restoreStyle(el, DATA_POSITION, "position");
-    restoreStyle(el, DATA_PADDING, "padding");
-    restoreStyle(el, DATA_BOX, "boxSizing");
-    restoreStyle(el, DATA_SHADOW, "boxShadow");
-    restoreStyle(el, DATA_OVERFLOW, "overflow");
-  }
-  function restoreStyle(el, key2, cssProperty) {
-    const data = el.dataset;
-    if (data[key2] === void 0) return;
-    const value = data[key2];
-    if (value) {
-      el.style.setProperty(camelToKebab(cssProperty), value);
-    } else {
-      el.style.removeProperty(camelToKebab(cssProperty));
-    }
-    delete data[key2];
-  }
-  function camelToKebab(str) {
-    return str.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
-  }
-  function ensureLockIcon2(btn) {
-    const existing = btn.querySelector(`span.${LOCK_ICON_CLASS2}`);
-    if (existing) return;
-    const icon2 = document.createElement("span");
-    icon2.className = LOCK_ICON_CLASS2;
-    icon2.textContent = "\u{1F512}";
-    icon2.style.position = "absolute";
-    icon2.style.top = "-4px";
-    icon2.style.right = "-4px";
-    icon2.style.fontSize = "16px";
-    icon2.style.pointerEvents = "none";
-    icon2.style.userSelect = "none";
-    icon2.style.zIndex = "2";
-    btn.appendChild(icon2);
-  }
-  function removeLockIcon2(btn) {
-    btn.querySelectorAll(`span.${LOCK_ICON_CLASS2}`).forEach((node) => node.remove());
-  }
-  function findSellButton(container) {
-    const btn = container.querySelector("button");
-    if (!btn) return null;
-    const text2 = (btn.textContent || "").trim();
-    return /sell\s*crops/i.test(text2) ? btn : null;
-  }
-  var CONTAINER_SELECTOR, LOCK_ICON_CLASS2, DATA_BORDER, DATA_RADIUS, DATA_POSITION, DATA_PADDING, DATA_BOX, DATA_SHADOW, DATA_OVERFLOW;
+  var SELL_CROPS_LOCK_LOOK, hasSellCropsButton;
   var init_sellCropsLock = __esm({
     "src/features/locker/sellCropsLock.ts"() {
       "use strict";
-      init_atoms();
+      init_domLockMarks();
+      init_friendBonus();
       init_restrictions();
-      CONTAINER_SELECTOR = ".css-vmnhaw";
-      LOCK_ICON_CLASS2 = "tm-sell-crops-lock";
-      DATA_BORDER = "tmSellLockBorder";
-      DATA_RADIUS = "tmSellLockRadius";
-      DATA_POSITION = "tmSellLockPosition";
-      DATA_PADDING = "tmSellLockPadding";
-      DATA_BOX = "tmSellLockBox";
-      DATA_SHADOW = "tmSellLockShadow";
-      DATA_OVERFLOW = "tmSellLockOverflow";
+      SELL_CROPS_LOCK_LOOK = {
+        owner: "sell-crops",
+        style: {
+          border: "none",
+          "border-radius": "",
+          padding: "",
+          "box-sizing": "",
+          "box-shadow": "none",
+          overflow: "",
+          "z-index": "1000"
+        },
+        glyph: cornerGlyph(4)
+      };
+      hasSellCropsButton = (container) => /sell\s*crops/i.test((container.querySelector("button")?.textContent || "").trim());
     }
   });
 
   // src/features/locker/eggHatchLockIndicator.ts
   function startEggHatchLockIndicator() {
-    if (typeof window === "undefined" || typeof document === "undefined") {
-      return { stop() {
-      } };
-    }
-    let running6 = true;
     let currentEggId = null;
-    const disposables = [];
-    const isEggLocked = () => lockerRestrictionsService.isEggLocked(currentEggId);
-    const applyLockState = () => {
-      if (!running6) return;
-      const locked = isEggLocked();
-      const containers = Array.from(document.querySelectorAll(CONTAINER_SELECTOR2));
-      containers.forEach((el) => {
-        if (!containsEggLabel(el)) {
-          restore(el);
-          return;
-        }
-        setLocked(el, locked);
-      });
-    };
-    const observeDom = () => {
-      const mo = new MutationObserver(() => applyLockState());
-      mo.observe(document.documentElement, { childList: true, subtree: true });
-      disposables.push(() => mo.disconnect());
-    };
-    const subscribeAtoms = async () => {
-      try {
-        const initial = await Atoms.data.myCurrentGardenObject.get();
-        currentEggId = extractEggId2(initial);
-      } catch {
-      }
-      try {
-        const unsub = await Atoms.data.myCurrentGardenObject.onChange((next) => {
-          currentEggId = extractEggId2(next);
-          applyLockState();
-        });
-        if (typeof unsub === "function") disposables.push(unsub);
-      } catch {
-      }
-      const unsubLocker = lockerRestrictionsService.subscribe(() => applyLockState());
-      disposables.push(unsubLocker);
-    };
-    observeDom();
-    void subscribeAtoms();
-    applyLockState();
-    return {
-      stop() {
-        running6 = false;
-        disposables.splice(0).forEach((fn) => {
-          try {
-            fn();
-          } catch {
-          }
-        });
-        const containers = Array.from(document.querySelectorAll(CONTAINER_SELECTOR2));
-        containers.forEach(restore);
-      }
-    };
+    const indicator = startDomLockIndicator({
+      look: { owner: "egg", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyph: cornerGlyph(8) },
+      selector: ".css-502lyi",
+      isTarget: (el) => (el.textContent || "").toLowerCase().includes("egg"),
+      isLocked: () => lockerRestrictionsService.isEggLocked(currentEggId)
+    });
+    indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
+    void Atoms.data.myCurrentGardenObject.get().then((initial) => {
+      currentEggId = eggIdOf(initial);
+    }).catch(() => {
+    });
+    indicator.add(
+      Atoms.data.myCurrentGardenObject.onChange((next) => {
+        currentEggId = eggIdOf(next);
+        indicator.refresh();
+      })
+    );
+    return indicator;
   }
-  function containsEggLabel(el) {
-    const text2 = (el.textContent || "").toLowerCase();
-    return text2.includes("egg");
-  }
-  function setLocked(el, locked) {
-    if (!locked) {
-      restore(el);
-      return;
-    }
-    storeStyle(el, DATA_BORDER2, "border");
-    storeStyle(el, DATA_RADIUS2, "borderRadius");
-    storeStyle(el, DATA_POSITION2, "position");
-    storeStyle(el, DATA_OVERFLOW2, "overflow");
-    el.style.border = `3px solid ${BORDER_COLOR2}`;
-    el.style.borderRadius = "16px";
-    el.style.overflow = "visible";
-    const pos = window.getComputedStyle(el).position;
-    if (pos === "static") {
-      el.style.position = "relative";
-    }
-    ensureLockIcon3(el);
-  }
-  function restore(el) {
-    restoreStyle2(el, DATA_BORDER2, "border");
-    restoreStyle2(el, DATA_RADIUS2, "borderRadius");
-    restoreStyle2(el, DATA_POSITION2, "position");
-    restoreStyle2(el, DATA_OVERFLOW2, "overflow");
-    removeLockIcon3(el);
-  }
-  function storeStyle(el, key2, cssProperty) {
-    const data = el.dataset;
-    if (data[key2] !== void 0) return;
-    data[key2] = el.style[cssProperty];
-  }
-  function restoreStyle2(el, key2, cssProperty) {
-    const data = el.dataset;
-    if (data[key2] === void 0) return;
-    const value = data[key2];
-    if (value) {
-      el.style.setProperty(camelToKebab2(cssProperty), value);
-    } else {
-      el.style.removeProperty(camelToKebab2(cssProperty));
-    }
-    delete data[key2];
-  }
-  function camelToKebab2(str) {
-    return str.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
-  }
-  function ensureLockIcon3(el) {
-    const existing = el.querySelector(`span.${LOCK_CLASS}`);
-    if (existing) return;
-    const icon2 = document.createElement("span");
-    icon2.className = LOCK_CLASS;
-    icon2.textContent = "\u{1F512}";
-    icon2.style.position = "absolute";
-    icon2.style.top = "-8px";
-    icon2.style.right = "-8px";
-    icon2.style.fontSize = "16px";
-    icon2.style.pointerEvents = "none";
-    icon2.style.userSelect = "none";
-    icon2.style.zIndex = "2";
-    el.appendChild(icon2);
-  }
-  function removeLockIcon3(el) {
-    el.querySelectorAll(`span.${LOCK_CLASS}`).forEach((node) => node.remove());
-  }
-  function extractEggId2(obj) {
-    if (!obj || typeof obj !== "object") return null;
-    if (obj.objectType !== "egg") return null;
-    const eggId = obj.eggId;
-    return typeof eggId === "string" && eggId ? eggId : null;
-  }
-  var CONTAINER_SELECTOR2, LOCK_CLASS, BORDER_COLOR2, DATA_BORDER2, DATA_RADIUS2, DATA_POSITION2, DATA_OVERFLOW2;
   var init_eggHatchLockIndicator = __esm({
     "src/features/locker/eggHatchLockIndicator.ts"() {
       "use strict";
       init_atoms();
+      init_domLockMarks();
       init_restrictions();
-      CONTAINER_SELECTOR2 = ".css-502lyi";
-      LOCK_CLASS = "tm-egg-lock";
-      BORDER_COLOR2 = "rgb(188, 53, 215)";
-      DATA_BORDER2 = "tmEggLockBorder";
-      DATA_RADIUS2 = "tmEggLockRadius";
-      DATA_POSITION2 = "tmEggLockPosition";
-      DATA_OVERFLOW2 = "tmEggLockOverflow";
     }
   });
 
   // src/features/locker/decorPickupLockIndicator.ts
-  function startDecorPickupLockIndicator() {
-    if (typeof window === "undefined" || typeof document === "undefined") {
-      return { stop() {
-      } };
-    }
-    let running6 = true;
-    const disposables = [];
-    const isLocked = () => lockerRestrictionsService.isDecorPickupLocked();
-    const applyLockState = () => {
-      if (!running6) return;
-      const locked = isLocked();
-      const containers = Array.from(document.querySelectorAll(CONTAINER_SELECTOR3));
-      containers.forEach((el) => {
-        if (!looksLikeDecorItem(el)) {
-          restore2(el);
-          return;
-        }
-        setLocked2(el, locked);
-      });
-    };
-    const observeDom = () => {
-      const mo = new MutationObserver(() => applyLockState());
-      mo.observe(document.documentElement, { childList: true, subtree: true });
-      disposables.push(() => mo.disconnect());
-    };
-    const subscribeLocker2 = () => {
-      const unsub = lockerRestrictionsService.subscribe(() => applyLockState());
-      disposables.push(unsub);
-    };
-    observeDom();
-    subscribeLocker2();
-    applyLockState();
-    return {
-      stop() {
-        running6 = false;
-        disposables.splice(0).forEach((fn) => {
-          try {
-            fn();
-          } catch {
-          }
-        });
-        const containers = Array.from(document.querySelectorAll(CONTAINER_SELECTOR3));
-        containers.forEach(restore2);
-      }
-    };
-  }
-  function looksLikeDecorItem(el) {
+  function looksLikeDecorTooltip(el) {
     const text2 = (el.textContent || "").toLowerCase();
-    if (!text2) return false;
-    if (!el.querySelector("canvas")) return false;
-    return decorLabels().some((label2) => label2 && text2.includes(label2));
+    return !!text2 && !!el.querySelector("canvas") && decorLabels().some((label2) => text2.includes(label2));
   }
-  function setLocked2(el, locked) {
-    if (!locked) {
-      restore2(el);
-      return;
-    }
-    storeStyle2(el, DATA_BORDER3, "border");
-    storeStyle2(el, DATA_RADIUS3, "borderRadius");
-    storeStyle2(el, DATA_POSITION3, "position");
-    storeStyle2(el, DATA_OVERFLOW3, "overflow");
-    el.style.border = `3px solid ${BORDER_COLOR3}`;
-    el.style.borderRadius = "16px";
-    el.style.overflow = "visible";
-    const pos = window.getComputedStyle(el).position;
-    if (pos === "static") {
-      el.style.position = "relative";
-    }
-    ensureLockIcon4(el);
+  function startDecorPickupLockIndicator() {
+    const indicator = startDomLockIndicator({
+      look: { owner: "decor", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyph: cornerGlyph(8) },
+      selector: ".css-502lyi",
+      isTarget: looksLikeDecorTooltip,
+      isLocked: () => lockerRestrictionsService.isDecorPickupLocked()
+    });
+    indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
+    return indicator;
   }
-  function restore2(el) {
-    restoreStyle3(el, DATA_BORDER3, "border");
-    restoreStyle3(el, DATA_RADIUS3, "borderRadius");
-    restoreStyle3(el, DATA_POSITION3, "position");
-    restoreStyle3(el, DATA_OVERFLOW3, "overflow");
-    removeLockIcon4(el);
-  }
-  function storeStyle2(el, key2, cssProperty) {
-    const data = el.dataset;
-    if (data[key2] !== void 0) return;
-    data[key2] = el.style[cssProperty];
-  }
-  function restoreStyle3(el, key2, cssProperty) {
-    const data = el.dataset;
-    if (data[key2] === void 0) return;
-    const value = data[key2];
-    if (value) {
-      el.style.setProperty(camelToKebab3(cssProperty), value);
-    } else {
-      el.style.removeProperty(camelToKebab3(cssProperty));
-    }
-    delete data[key2];
-  }
-  function camelToKebab3(str) {
-    return str.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
-  }
-  function ensureLockIcon4(el) {
-    const existing = el.querySelector(`span.${LOCK_CLASS2}`);
-    if (existing) return;
-    const icon2 = document.createElement("span");
-    icon2.className = LOCK_CLASS2;
-    icon2.textContent = "\u{1F512}";
-    icon2.style.position = "absolute";
-    icon2.style.top = "-8px";
-    icon2.style.right = "-8px";
-    icon2.style.fontSize = "16px";
-    icon2.style.pointerEvents = "none";
-    icon2.style.userSelect = "none";
-    icon2.style.zIndex = "2";
-    el.appendChild(icon2);
-  }
-  function removeLockIcon4(el) {
-    el.querySelectorAll(`span.${LOCK_CLASS2}`).forEach((node) => node.remove());
-  }
-  var CONTAINER_SELECTOR3, LOCK_CLASS2, BORDER_COLOR3, DATA_BORDER3, DATA_RADIUS3, DATA_POSITION3, DATA_OVERFLOW3, decorLabels;
+  var decorLabels;
   var init_decorPickupLockIndicator = __esm({
     "src/features/locker/decorPickupLockIndicator.ts"() {
       "use strict";
       init_data();
+      init_domLockMarks();
       init_restrictions();
-      CONTAINER_SELECTOR3 = ".css-502lyi";
-      LOCK_CLASS2 = "tm-decor-lock";
-      BORDER_COLOR3 = "rgb(188, 53, 215)";
-      DATA_BORDER3 = "tmDecorLockBorder";
-      DATA_RADIUS3 = "tmDecorLockRadius";
-      DATA_POSITION3 = "tmDecorLockPosition";
-      DATA_OVERFLOW3 = "tmDecorLockOverflow";
       decorLabels = memoOnCatalogs(() => {
         const labels = /* @__PURE__ */ new Set();
-        try {
-          Object.entries(decorCatalog2).forEach(([decorId, entry]) => {
-            if (decorId) labels.add(decorId.toLowerCase());
-            const name = entry?.name;
-            if (typeof name === "string" && name) {
-              labels.add(name.toLowerCase());
-            }
-          });
-        } catch {
+        for (const [decorId, entry] of Object.entries(decorCatalog2)) {
+          if (decorId) labels.add(decorId.toLowerCase());
+          if (typeof entry?.name === "string" && entry.name) labels.add(entry.name.toLowerCase());
         }
-        return Array.from(labels).filter(Boolean);
+        return Array.from(labels);
       });
     }
   });
@@ -25110,9 +23706,9 @@
   }
   function firstNestedString(source, paths) {
     for (const path of paths) {
-      let current = source;
-      for (const key2 of path) current = current && typeof current === "object" ? current[key2] : void 0;
-      const value = stringOrEmpty(current);
+      let current2 = source;
+      for (const key2 of path) current2 = current2 && typeof current2 === "object" ? current2[key2] : void 0;
+      const value = stringOrEmpty(current2);
       if (value) return value;
     }
     return "";
@@ -25637,17 +24233,17 @@
     return badge2;
   }
   function ensureParts(textEl) {
-    let label2 = textEl.querySelector(`.${LABEL_CLASS2}`);
-    let current = textEl.querySelector(`.${CURRENT_CLASS}`);
+    let label2 = textEl.querySelector(`.${LABEL_CLASS}`);
+    let current2 = textEl.querySelector(`.${CURRENT_CLASS}`);
     let max = textEl.querySelector(`.${MAX_CLASS}`);
-    if (!label2 || !current || !max) {
+    if (!label2 || !current2 || !max) {
       textEl.textContent = "";
-      label2 = Object.assign(document.createElement("span"), { className: LABEL_CLASS2 });
-      current = Object.assign(document.createElement("span"), { className: CURRENT_CLASS });
+      label2 = Object.assign(document.createElement("span"), { className: LABEL_CLASS });
+      current2 = Object.assign(document.createElement("span"), { className: CURRENT_CLASS });
       max = Object.assign(document.createElement("span"), { className: MAX_CLASS });
-      textEl.append(label2, current, max);
+      textEl.append(label2, current2, max);
     }
-    return { label: label2, current, max };
+    return { label: label2, current: current2, max };
   }
   function updateStrengthText(card4, item) {
     const wrap = card4.querySelector(STRENGTH_WRAPPER_SELECTOR);
@@ -25660,11 +24256,11 @@
     if (currentStrength == null) return;
     const max = Math.round(info.maxStrength);
     if (!Number.isFinite(max) || max <= 0) return;
-    const current = clamp(currentStrength, 0, max);
-    const isMax = current >= max;
+    const current2 = clamp(currentStrength, 0, max);
+    const isMax = current2 >= max;
     const parts = ensureParts(textEl);
     setText(parts.label, "STR ");
-    setText(parts.current, String(current));
+    setText(parts.current, String(current2));
     parts.current.style.setProperty("color", "#ffffff", "important");
     parts.current.style.setProperty("font-weight", "700", "important");
     if (isMax) {
@@ -25682,8 +24278,8 @@
     wrap.dataset[IS_MAX_DATASET_KEY] = isMax ? "1" : "0";
   }
   function ancestorContaining(start2, selector) {
-    for (let current = start2; current; current = current.parentElement) {
-      if (current.querySelector(selector)) return current;
+    for (let current2 = start2; current2; current2 = current2.parentElement) {
+      if (current2.querySelector(selector)) return current2;
     }
     return null;
   }
@@ -25728,7 +24324,7 @@
     textEl.style.margin = "0";
     if (wrap.style.pointerEvents) wrap.style.pointerEvents = "";
   }
-  var STRENGTH_WRAPPER_SELECTOR, STRENGTH_TEXT_SELECTOR, FAVORITE_BUTTON_SELECTOR, LABEL_CLASS2, CURRENT_CLASS, MAX_CLASS, BADGE_CLASS, IS_MAX_DATASET_KEY, BASE_TRANSFORM_DATASET_KEY, GAME_YELLOW, GAME_YELLOW_SOFT, RAINBOW_TEXT, parseFirstInteger, setText;
+  var STRENGTH_WRAPPER_SELECTOR, STRENGTH_TEXT_SELECTOR, FAVORITE_BUTTON_SELECTOR, LABEL_CLASS, CURRENT_CLASS, MAX_CLASS, BADGE_CLASS, IS_MAX_DATASET_KEY, BASE_TRANSFORM_DATASET_KEY, GAME_YELLOW, GAME_YELLOW_SOFT, RAINBOW_TEXT, parseFirstInteger, setText;
   var init_strengthBadge = __esm({
     "src/features/inventory/strengthBadge.ts"() {
       "use strict";
@@ -25738,7 +24334,7 @@
       STRENGTH_WRAPPER_SELECTOR = ".McFlex.css-15lpbqz";
       STRENGTH_TEXT_SELECTOR = ".chakra-text.css-wqvsdi";
       FAVORITE_BUTTON_SELECTOR = "button.chakra-button.css-1iytwn1";
-      LABEL_CLASS2 = "tm-strength__label";
+      LABEL_CLASS = "tm-strength__label";
       CURRENT_CLASS = "tm-strength__current";
       MAX_CLASS = "tm-strength__max";
       BADGE_CLASS = "tm-strength__badge";
@@ -25814,8 +24410,8 @@
     const header = Array.from(document.querySelectorAll("p.chakra-text")).find(
       (el) => (el.textContent ?? "").trim() === headerText
     );
-    for (let current = header ?? null; current && current !== document.body; current = current.parentElement) {
-      const next = current.nextElementSibling;
+    for (let current2 = header ?? null; current2 && current2 !== document.body; current2 = current2.parentElement) {
+      const next = current2.nextElementSibling;
       if (next?.querySelector(ITEM_CARD_SELECTOR)) return next;
     }
     return null;
@@ -25846,13 +24442,13 @@
   }
   function updateCardValue(card4, value, show) {
     const container = card4.querySelector(VALUE_CONTAINER_SELECTOR);
-    const current = container?.querySelector(`.${VALUE_ELEMENT_CLASS}`) ?? null;
+    const current2 = container?.querySelector(`.${VALUE_ELEMENT_CLASS}`) ?? null;
     if (!container || !show || typeof value !== "number" || !Number.isFinite(value)) {
-      if (container) current?.remove();
+      if (container) current2?.remove();
       delete card4.dataset[VALUE_DATASET_KEY];
       return;
     }
-    const target = current ?? Object.assign(document.createElement("div"), { className: VALUE_ELEMENT_CLASS });
+    const target = current2 ?? Object.assign(document.createElement("div"), { className: VALUE_ELEMENT_CLASS });
     Object.assign(target.style, {
       fontSynthesis: "none",
       WebkitFontSmoothing: "antialiased",
@@ -26187,7 +24783,7 @@
     write(SORT_DIRECTION_PATH, direction);
   }
   var SORT_KEY_PATH, SORT_DIRECTION_PATH, SHOW_VALUES_PATH, loadSortKey, loadSortDirection, loadShowValues, saveShowValues;
-  var init_settings4 = __esm({
+  var init_settings5 = __esm({
     "src/features/inventory/settings.ts"() {
       "use strict";
       init_storage();
@@ -26366,13 +24962,13 @@
       const target = resolveGrid();
       if (target && bar) void bar.summary.update(getActiveFilters(target), getSearchQuery(target));
     };
-    function pickDirection(current, sortKey) {
+    function pickDirection(current2, sortKey) {
       const fallback = DEFAULT_DIRECTION[sortKey] ?? "asc";
       const saved = loadSortDirection();
-      const preferred = isSortDirection(current.lastDirection) && current.lastDirection || saved || fallback;
-      current.directionSelect.value = preferred;
-      if (!isSortDirection(current.directionSelect.value)) current.directionSelect.value = fallback;
-      return current.directionSelect.value;
+      const preferred = isSortDirection(current2.lastDirection) && current2.lastDirection || saved || fallback;
+      current2.directionSelect.value = preferred;
+      if (!isSortDirection(current2.directionSelect.value)) current2.directionSelect.value = fallback;
+      return current2.directionSelect.value;
     }
     function update() {
       const target = resolveGrid();
@@ -26384,9 +24980,9 @@
         loadValuesOnNextShow = false;
         void loadPlayersInRoomForValues();
       }
-      const current = ensureSortBar(target, handlers);
-      if (!current) return;
-      bar = current;
+      const current2 = ensureSortBar(target, handlers);
+      if (!current2) return;
+      bar = current2;
       if (!gridListeners) {
         gridListeners = new Subscriptions();
         gridListeners.add(onPlayersInRoomLoaded(refreshSummary));
@@ -26396,7 +24992,7 @@
           })
         );
       }
-      current.showValues.checked = showValues;
+      current2.showValues.checked = showValues;
       const filters = getActiveFilters(target);
       const search2 = getSearchQuery(target);
       const container = getItemsContainer(target);
@@ -26404,17 +25000,17 @@
       const entries2 = container ? getDomEntries(container) : [];
       const domChanged = domOrderChanged(lastSortedOrder, entries2);
       lastContextKey = filterContextKey(filters, search2);
-      void current.summary.update(filters, search2);
+      void current2.summary.update(filters, search2);
       const options2 = computeSortOptions(filters, shownItemTypes(filters, search2));
       const offered = (key2) => key2 && options2.some((o) => o.value === key2) ? key2 : null;
-      if (lastRenderedEntryCount !== entries2.length || !current.sortSelect.options.length) {
-        renderSortOptions(current.sortSelect, options2, offered(current.lastSortKey) || offered(loadSortKey()));
+      if (lastRenderedEntryCount !== entries2.length || !current2.sortSelect.options.length) {
+        renderSortOptions(current2.sortSelect, options2, offered(current2.lastSortKey) || offered(loadSortKey()));
         lastRenderedEntryCount = entries2.length;
       }
-      const sortKey = current.sortSelect.value;
-      current.lastSortKey = sortKey;
-      const direction = pickDirection(current, sortKey);
-      current.lastDirection = direction;
+      const sortKey = current2.sortSelect.value;
+      current2.lastSortKey = sortKey;
+      const direction = pickDirection(current2, sortKey);
+      current2.lastDirection = direction;
       if (sortKey !== lastAppliedSortKey || direction !== lastAppliedDirection || domChanged) {
         lastAppliedSortKey = sortKey;
         lastAppliedDirection = direction;
@@ -26440,10 +25036,10 @@
       });
     };
     const bodyObserver = new MutationObserver(() => {
-      const current = grid && document.contains(grid) ? grid : null;
-      if (grid && !current) setGrid(null);
+      const current2 = grid && document.contains(grid) ? grid : null;
+      if (grid && !current2) setGrid(null);
       const next = document.querySelector(GRID_SELECTOR);
-      if (next !== current) {
+      if (next !== current2) {
         setGrid(next);
         if (next) update();
       }
@@ -26516,7 +25112,7 @@
       init_filters();
       init_inventoryDom();
       init_petHutch();
-      init_settings4();
+      init_settings5();
       init_sortBar();
       init_sortOptions();
       init_value();
@@ -26867,9 +25463,9 @@
     return activeFilter;
   }
   function computeFilteredHistory(filter) {
-    const history2 = getActivityLogHistory();
-    if (filter === "all") return history2;
-    return history2.filter((entry) => classifyEntryAction(entry.action) === filter);
+    const history = getActivityLogHistory();
+    if (filter === "all") return history;
+    return history.filter((entry) => classifyEntryAction(entry.action) === filter);
   }
   function filteredHistory() {
     return computeFilteredHistory(activeFilter);
@@ -26918,9 +25514,9 @@
   });
 
   // src/features/activityLog/filterToolbar.ts
-  function countActions(history2) {
+  function countActions(history) {
     const counts = /* @__PURE__ */ new Map();
-    for (const entry of history2) {
+    for (const entry of history) {
       const key2 = classifyEntryAction(entry.action);
       counts.set(key2, (counts.get(key2) ?? 0) + 1);
     }
@@ -26993,9 +25589,9 @@
     toolbar2.closedButton.caret.text = expanded ? CARET_OPEN : CARET_CLOSED;
   }
   function buildFilterToolbar(ctors, maxWidth) {
-    const history2 = getActivityLogHistory();
-    const counts = countActions(history2);
-    const total = history2.length;
+    const history = getActivityLogHistory();
+    const counts = countActions(history);
+    const total = history.length;
     const container = new ctors.Container();
     container.label = FILTER_TOOLBAR_LABEL;
     const closedButton = buildClosedButton(ctors, closedLabel({ counts, total }));
@@ -27181,11 +25777,11 @@
       }
     });
   }
-  function onFrame(now2) {
+  function onFrame(now) {
     findRafId2 = null;
     const open = isActivityLogModalOpen();
-    if (open && !modalNode && now2 - lastFindCheckAt2 >= FIND_RETRY_MS) {
-      lastFindCheckAt2 = now2;
+    if (open && !modalNode && now - lastFindCheckAt2 >= FIND_RETRY_MS) {
+      lastFindCheckAt2 = now;
       tryFindModal();
     }
     if (modalNode) syncToolbar();
@@ -27511,7 +26107,7 @@
     if (cachedState) return cachedState;
     let raw = null;
     try {
-      raw = readAriesPath(STATE_PATH);
+      raw = readAriesPath(STATE_PATH2);
     } catch {
     }
     const seenPetIds = [];
@@ -27536,10 +26132,10 @@
     }
     cachedState = state7;
     try {
-      writeAriesPath(STATE_PATH, state7);
+      writeAriesPath(STATE_PATH2, state7);
     } catch {
     }
-    changes4.emit(state7);
+    changes6.emit(state7);
   }
   function readPet(raw, eggIdFallback, timestamp, isPull) {
     if (!isRecord4(raw)) return null;
@@ -27652,10 +26248,10 @@
       state7.trackingStartedAt = Date.now();
       saveState(state7);
     }
-    const current = loadState();
-    if (current.bootstrapped && current.trackingStartedAt <= 0) {
-      current.trackingStartedAt = current.lastHatchAt > 0 ? current.lastHatchAt : Date.now();
-      saveState(current);
+    const current2 = loadState();
+    if (current2.bootstrapped && current2.trackingStartedAt <= 0) {
+      current2.trackingStartedAt = current2.lastHatchAt > 0 ? current2.lastHatchAt : Date.now();
+      saveState(current2);
     }
     let unsubscribe2 = null;
     try {
@@ -27669,7 +26265,7 @@
       }
     };
   }
-  var STATE_PATH, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, changes4, cachedState, HatchTracker;
+  var STATE_PATH2, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, changes6, cachedState, HatchTracker;
   var init_tracker = __esm({
     "src/features/hatch/tracker.ts"() {
       "use strict";
@@ -27679,11 +26275,11 @@
       init_pity();
       init_emitter();
       init_storage();
-      STATE_PATH = "hatch.tracker";
+      STATE_PATH2 = "hatch.tracker";
       HATCH_ACTION = "hatchEgg";
       DOUBLE_HATCH_ACTIONS = /* @__PURE__ */ new Set(["doublehatch", "doublehatchii"]);
       SEEN_LIMIT = 4e3;
-      changes4 = new Emitter();
+      changes6 = new Emitter();
       cachedState = null;
       HatchTracker = {
         getState() {
@@ -27715,42 +26311,9 @@
         // since the server's own never resets except on the outcome itself. Only
         // `setOffset` moves a counter by hand.
         subscribe(listener) {
-          return changes4.on(listener);
+          return changes6.on(listener);
         }
       };
-    }
-  });
-
-  // src/ui/kit/badges.ts
-  function pill(text2, tone) {
-    const el = h("span", "qmm-pill", text2);
-    setTone(el, tone);
-    return el;
-  }
-  function setTone(el, tone) {
-    el.classList.remove("is-ok", "is-warn", "is-bad");
-    if (tone) el.classList.add(`is-${tone}`);
-  }
-  function badge(text2, tone) {
-    return h("span", `qmm-badge is-${tone}`, text2);
-  }
-  function meter() {
-    const root4 = h("div", "qmm-meter");
-    const fill = h("div", "qmm-meter__fill");
-    root4.appendChild(fill);
-    return {
-      root: root4,
-      set(ratio, tone = "accent") {
-        fill.style.width = `${clampFinite(ratio, 0, 1, 0) * 100}%`;
-        fill.classList.toggle("is-warn", tone === "warn");
-      }
-    };
-  }
-  var init_badges = __esm({
-    "src/ui/kit/badges.ts"() {
-      "use strict";
-      init_math();
-      init_dom2();
     }
   });
 
@@ -29366,11 +27929,11 @@
     view.classList.add("dd-debug-view");
     const { leftCol, rightCol } = createTwoColumns(view);
     {
-      const section4 = card("\u{1F5C4}\uFE0F Capture store", {
+      const section5 = card("\u{1F5C4}\uFE0F Capture store", {
         tone: "muted",
         subtitle: "Initialize the Jotai store so atoms can be inspected."
       });
-      leftCol.appendChild(section4.root);
+      leftCol.appendChild(section5.root);
       const status2 = document.createElement("span");
       status2.className = "dd-status-chip";
       const refreshStatus = () => {
@@ -29393,14 +27956,14 @@
         }
       });
       actions2.append(btnCap, status2);
-      section4.body.appendChild(actions2);
+      section5.body.appendChild(actions2);
     }
     {
-      const section4 = card("\u{1F50D} Explore atoms", {
+      const section5 = card("\u{1F50D} Explore atoms", {
         tone: "muted",
         subtitle: "Filter labels using a regular expression."
       });
-      leftCol.appendChild(section4.root);
+      leftCol.appendChild(section5.root);
       const queryRow = flexRow({ gap: 10, wrap: true, fullWidth: true });
       const q = textInput("regex label (ex: position|health)", "");
       q.classList.add("dd-grow");
@@ -29418,14 +27981,14 @@
         const labels = atoms.map((a) => String(a?.debugLabel || a?.label || "<?>"));
         pre.textContent = labels.join("\n");
       }
-      section4.body.append(queryRow, pre);
+      section5.body.append(queryRow, pre);
     }
     {
-      const section4 = card("\u{1F9ED} Inspect an atom", {
+      const section5 = card("\u{1F9ED} Inspect an atom", {
         tone: "muted",
         subtitle: "Get the current value or subscribe to updates."
       });
-      rightCol.appendChild(section4.root);
+      rightCol.appendChild(section5.root);
       const controls = flexRow({ gap: 10, wrap: true, fullWidth: true });
       const q = textInput("atom label (ex: positionAtom)", "");
       q.classList.add("dd-grow");
@@ -29478,14 +28041,14 @@
       const note = document.createElement("p");
       note.className = "dd-inline-note";
       note.textContent = "Tip: subscriptions keep the value updated after each mutation.";
-      section4.body.append(controls, note, pre);
+      section5.body.append(controls, note, pre);
     }
     {
-      const section4 = card("\u270F\uFE0F Update an atom", {
+      const section5 = card("\u270F\uFE0F Update an atom", {
         tone: "muted",
         subtitle: "Publish a new value (JSON)."
       });
-      rightCol.appendChild(section4.root);
+      rightCol.appendChild(section5.root);
       const controls = flexRow({ gap: 10, wrap: true, fullWidth: true });
       const q = textInput("atom label (ex: activeModalStateAtom)", "");
       q.classList.add("dd-grow");
@@ -29539,7 +28102,7 @@
       });
       const btnCopy = button("Copy JSON", { icon: "\u{1F4CB}", onClick: () => copy2(ta.value) });
       controls.append(q, btnSet, btnCopy);
-      section4.body.append(controls, ta);
+      section5.body.append(controls, ta);
     }
     function setText2(el, v) {
       el.textContent = typeof v === "string" ? v : JSON.stringify(v, null, 2);
@@ -31024,6 +29587,871 @@ next: ${next}`;
     }
   });
 
+  // src/features/locker/menuStyles.ts
+  function ensureLockerMenuStyles() {
+    if (installed4) return;
+    installed4 = true;
+    addStyle(LOCKER_MENU_CSS);
+  }
+  var LOCKER_MENU_CSS, installed4;
+  var init_menuStyles = __esm({
+    "src/features/locker/menuStyles.ts"() {
+      "use strict";
+      init_dom();
+      LOCKER_MENU_CSS = `
+.lk-settings [hidden], .lk-restrictions [hidden], .lk-overrides [hidden] { display: none !important; }
+.lk-view { max-height: 54vh; overflow: auto; }
+.lk-column { display: flex; flex-direction: column; align-items: center; gap: var(--qmm-space-xl); width: 100%; }
+.lk-wide { width: min(760px, 100%); }
+.lk-hint { font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); text-align: center; }
+.lk-warning { font-size: var(--qmm-fs-md); font-weight: 600; color: var(--qmm-warn); text-align: center; }
+.lk-empty { font-size: var(--qmm-fs-md); color: var(--qmm-text-dim); text-align: center; }
+.lk-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; line-height: 1; }
+
+.lk-settings { display: flex; flex-direction: column; gap: var(--qmm-space-xl); width: min(760px, 100%); }
+.lk-settings.is-disabled { opacity: .55; }
+.lk-settings .qmm-card { text-align: center; }
+.lk-settings .qmm-card__header { justify-content: center; }
+.lk-settings .qmm-card__body { justify-items: center; }
+.lk-slider { width: min(420px, 100%); }
+.lk-values { display: flex; justify-content: space-between; gap: 16px; width: min(420px, 100%); }
+.lk-value { display: flex; align-items: center; gap: var(--qmm-space-sm); }
+.lk-color { min-width: 92px; }
+.lk-color .label { font-weight: 700; letter-spacing: .3px; }
+.lk-color--gold .label, .lk-color--rainbow .label {
+  background-clip: text; -webkit-background-clip: text; color: transparent; text-shadow: 0 0 6px rgba(0,0,0,.35);
+}
+.lk-color--gold .label { background-image: linear-gradient(120deg, #f5d76e, #c9932b, #f9e9b6); }
+.lk-color--rainbow .label { background-image: linear-gradient(90deg, #ff6b6b, #f7d35c, #3fd3ff, #9b6bff, #ff6b6b); }
+
+.lk-weather-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; width: min(640px, 100%); }
+.lk-weather-grid.is-dense { grid-template-columns: repeat(4, minmax(80px, 1fr)); width: 100%; }
+.lk-weather-grid.is-disabled { opacity: .55; pointer-events: none; }
+.lk-tile {
+  position: relative; display: grid; justify-items: center; align-items: center; gap: 3px; padding: 6px 8px;
+  border: 1px solid var(--qmm-border-strong); border-radius: 10px; background: var(--qmm-card-bg); cursor: pointer;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+.lk-tile:hover { border-color: var(--qmm-accent-border); }
+.lk-tile.is-checked {
+  border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--qmm-accent-border), 0 2px 6px rgba(0,0,0,.45);
+}
+.lk-tile input { position: absolute; inset: 0; margin: 0; opacity: 0; pointer-events: none; }
+.lk-tile__icon { display: inline-flex; align-items: center; justify-content: center; filter: drop-shadow(0 1px 1px rgba(0,0,0,.45)); }
+.lk-tile__caption { font-size: 11.5px; font-weight: 600; opacity: .85; text-align: center; }
+.is-dense > .lk-tile { padding: 4px 6px; }
+.is-dense > .lk-tile .lk-tile__caption { font-size: var(--qmm-fs-sm); font-weight: 500; }
+.lk-weather-badge {
+  display: inline-flex; align-items: center; justify-content: center; line-height: 1;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-pill); background: var(--qmm-field-bg); color: var(--qmm-text);
+}
+.lk-no-weather { display: grid; place-items: center; line-height: 1; font-weight: 700; color: var(--qmm-danger); text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+
+.lk-recipes { display: grid; gap: var(--qmm-space-md); width: 100%; }
+.lk-recipes__head { display: flex; align-items: center; justify-content: space-between; gap: var(--qmm-space-md); }
+.lk-recipes__title { font-weight: 600; opacity: .9; }
+.lk-recipes__list { display: grid; gap: var(--qmm-space-md); grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.lk-recipe {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--qmm-space-xl); padding: 10px 12px;
+  border: 1px solid var(--qmm-border); border-radius: 10px; background: var(--qmm-card-bg); text-align: left;
+}
+.lk-recipe.is-editing { flex-direction: column; align-items: stretch; gap: var(--qmm-space-lg); padding: 12px; }
+.lk-recipe__summary { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 auto; min-width: 220px; }
+.lk-recipe__actions { display: flex; gap: 6px; }
+.lk-recipe.is-editing .lk-recipe__actions > * { flex: 1; }
+.lk-tag {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: var(--qmm-fs-md); font-weight: 600;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-pill); background: var(--qmm-card-bg);
+}
+
+.lk-overrides { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: var(--qmm-space-lg); height: 54vh; }
+.lk-overrides > .qmm-vtabs { min-height: 0; }
+.lk-overrides__detail { display: flex; flex-direction: column; align-items: center; gap: var(--qmm-space-xl); min-height: 0; overflow: auto; }
+.lk-overrides__placeholder { padding: 32px 24px; border: 1px dashed var(--qmm-border-strong); border-radius: 10px; }
+.qmm-vtab.lk-crop-tab { grid-template-columns: 16px 1fr auto; gap: var(--qmm-space-md); padding: 6px 8px; }
+.lk-title { display: flex; align-items: center; gap: var(--qmm-space-lg); }
+
+.lk-restrictions { display: grid; gap: var(--qmm-space-xl); width: 100%; max-width: 1100px; }
+.lk-rarities { display: grid; gap: var(--qmm-space-md); padding: 8px 10px; border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md); background: var(--qmm-card-bg); }
+.lk-rarities.is-disabled { opacity: .6; pointer-events: none; }
+.lk-rarities__head { display: flex; align-items: center; justify-content: space-between; }
+.lk-rarities__chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.lk-rarities__picker { padding: 8px; border-radius: 8px; background: var(--qmm-muted-bg); }
+.lk-rarity { display: inline-flex; align-items: center; gap: 3px; }
+.lk-rarity > div { margin: 0 !important; }
+.lk-rarities__picker > div { cursor: pointer; margin: 0 !important; }
+.lk-dim { opacity: .6; }
+`;
+      installed4 = false;
+    }
+  });
+
+  // src/features/locker/seedOptions.ts
+  var SEED_EMOJIS, seedCache, getLockerSeedOptions, getLockerSeedEmojiForKey, getLockerSeedEmojiForSeedName;
+  var init_seedOptions = __esm({
+    "src/features/locker/seedOptions.ts"() {
+      "use strict";
+      init_data();
+      SEED_EMOJIS = [
+        "\u{1F955}",
+        "\u{1F353}",
+        "\u{1F343}",
+        "\u{1F535}",
+        "\u{1F34E}",
+        "\u{1F337}",
+        "\u{1F345}",
+        "\u{1F33C}",
+        "\u{1F33D}",
+        "\u{1F349}",
+        "\u{1F383}",
+        "\u{1F33F}",
+        "\u{1F965}",
+        "\u{1F34C}",
+        "\u{1F338}",
+        "\u{1F7E2}",
+        "\u{1F344}",
+        "\u{1F335}",
+        "\u{1F38D}",
+        "\u{1F347}",
+        "\u{1F336}\uFE0F",
+        "\u{1F34B}",
+        "\u{1F96D}",
+        "\u{1F409}",
+        "\u{1F352}",
+        "\u{1F33B}",
+        "\u2728",
+        "\u{1F506}",
+        "\u{1F52E}"
+      ];
+      seedCache = memoOnCatalogs(() => {
+        const options2 = Object.entries(plantCatalog2).map(([key2, def]) => ({
+          key: key2,
+          seedName: def?.seed?.name ?? "",
+          cropName: def?.crop?.name ?? "",
+          spriteKey: def?.crop?.sprite ?? def?.plant?.sprite ?? void 0
+        }));
+        const byKey = /* @__PURE__ */ new Map();
+        const bySeedName = /* @__PURE__ */ new Map();
+        options2.forEach((option2, index) => {
+          const emoji = SEED_EMOJIS[index % SEED_EMOJIS.length];
+          byKey.set(option2.key, emoji);
+          if (option2.seedName) bySeedName.set(option2.seedName, emoji);
+        });
+        return { options: options2, byKey, bySeedName };
+      });
+      getLockerSeedOptions = () => seedCache().options;
+      getLockerSeedEmojiForKey = (key2) => key2 ? seedCache().byKey.get(key2) ?? "\u2022" : void 0;
+      getLockerSeedEmojiForSeedName = (name) => name ? seedCache().bySeedName.get(name) ?? "\u2022" : void 0;
+    }
+  });
+
+  // src/features/locker/weatherTags.ts
+  function weatherMutationLabel(key2) {
+    const label2 = tileRefsMutationLabels2[key2];
+    if (label2) return label2;
+    const spaced2 = spaceWords(key2.replace(/_/g, " ")).replace(/\s+/g, " ").trim();
+    return spaced2 ? spaced2.charAt(0).toUpperCase() + spaced2.slice(1) : key2;
+  }
+  function recipeRivals(tag) {
+    const group2 = recipeGroupOf(tag);
+    return group2 ? RECIPE_GROUP_MEMBERS[group2].filter((other) => other !== tag) : [];
+  }
+  function keepOfferedTags(selection) {
+    for (const tag of selection) if (!isOffered(tag)) selection.delete(tag);
+  }
+  function normalizeRecipe(selection) {
+    keepOfferedTags(selection);
+    const seen = /* @__PURE__ */ new Set();
+    for (const { key: key2 } of weatherMutations()) {
+      if (!selection.has(key2)) continue;
+      const group2 = recipeGroupOf(key2);
+      if (!group2) continue;
+      if (seen.has(group2)) selection.delete(key2);
+      else seen.add(group2);
+    }
+  }
+  var NOT_CROP_MUTATIONS, weatherMutations, isOffered, RECIPE_GROUP_MEMBERS, recipeGroupOf;
+  var init_weatherTags = __esm({
+    "src/features/locker/weatherTags.ts"() {
+      "use strict";
+      init_data();
+      init_format();
+      init_settings3();
+      NOT_CROP_MUTATIONS = /* @__PURE__ */ new Set(["Puddle", "ThunderstruckGround"]);
+      weatherMutations = memoOnCatalogs(() => [
+        { key: NO_WEATHER_TAG, label: "No weather effect" },
+        ...Object.entries(tileRefsMutations2).filter(([key2, ref]) => !NOT_CROP_MUTATIONS.has(key2) && (typeof ref === "number" || typeof ref === "string")).map(([key2]) => ({ key: key2, label: weatherMutationLabel(key2) }))
+      ]);
+      isOffered = (tag) => weatherMutations().some((info) => info.key === tag);
+      RECIPE_GROUP_MEMBERS = {
+        condition: ["Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged"],
+        lighting: ["Dawnlit", "Amberlit", "Dawncharged", "Ambercharged"]
+      };
+      recipeGroupOf = (tag) => Object.keys(RECIPE_GROUP_MEMBERS).find((group2) => RECIPE_GROUP_MEMBERS[group2].includes(tag));
+    }
+  });
+
+  // src/features/locker/menuIcons.ts
+  function iconHolder(sizePx, fallback, fontScale) {
+    const holder2 = document.createElement("span");
+    holder2.className = "lk-icon";
+    holder2.style.width = `${sizePx}px`;
+    holder2.style.height = `${sizePx}px`;
+    holder2.style.fontSize = `${Math.round(sizePx * fontScale)}px`;
+    holder2.textContent = fallback;
+    holder2.setAttribute("aria-hidden", "true");
+    return holder2;
+  }
+  function seedIcon(seedKey, sizePx, spriteKey) {
+    const fallback = getLockerSeedEmojiForKey(seedKey) ?? getLockerSeedEmojiForSeedName(seedKey) ?? "\u{1F331}";
+    const holder2 = iconHolder(sizePx, fallback, 0.75);
+    const spriteName = spriteKey?.split("/").pop();
+    attachSpriteIcon(holder2, ["plant", "tallplant", "crop"], spriteName ? [spriteName, seedKey] : seedKey, sizePx, "plant");
+    return holder2;
+  }
+  function eggIcon(eggId, label2, sizePx) {
+    const holder2 = iconHolder(sizePx, "\u{1F95A}", 0.75);
+    const candidates = /* @__PURE__ */ new Set();
+    for (const value of [eggId, label2]) {
+      const trimmed = value?.trim();
+      if (!trimmed) continue;
+      const last = trimmed.split(/[./]/).pop() ?? trimmed;
+      for (const name of [trimmed, last]) {
+        candidates.add(name);
+        candidates.add(name.replace(/\s+/g, ""));
+      }
+    }
+    attachSpriteIcon(holder2, ["pet"], Array.from(candidates), sizePx, "locker-eggs");
+    return holder2;
+  }
+  function weatherIcon(tag, sizePx) {
+    const holder2 = document.createElement("span");
+    holder2.className = "lk-tile__icon";
+    if (tag === NO_WEATHER_TAG) {
+      const cross = iconHolder(Math.max(24, sizePx), "\u2716", 0.65);
+      cross.classList.add("lk-no-weather");
+      holder2.appendChild(cross);
+      return holder2;
+    }
+    const label2 = weatherMutationLabel(tag);
+    const badge2 = iconHolder(Math.max(16, sizePx), label2.charAt(0) || "?", 0.55);
+    badge2.classList.add("lk-weather-badge");
+    badge2.title = label2;
+    badge2.setAttribute("aria-label", label2);
+    holder2.appendChild(badge2);
+    attachWeatherSpriteIcon(holder2, tag, sizePx);
+    return holder2;
+  }
+  var init_menuIcons = __esm({
+    "src/features/locker/menuIcons.ts"() {
+      "use strict";
+      init_iconCache();
+      init_seedOptions();
+      init_settings3();
+      init_weatherTags();
+    }
+  });
+
+  // src/features/locker/weatherPicker.ts
+  function weatherTile(info, dense, onToggle) {
+    const root4 = document.createElement("label");
+    root4.className = "lk-tile";
+    root4.title = "Active filters influence harvest conditions";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    const caption2 = document.createElement("div");
+    caption2.className = "lk-tile__caption";
+    caption2.textContent = info.label;
+    root4.append(input, weatherIcon(info.key, dense ? 40 : 52), caption2);
+    const setChecked = (checked) => {
+      input.checked = checked;
+      root4.classList.toggle("is-checked", checked);
+    };
+    input.addEventListener("change", () => {
+      root4.classList.toggle("is-checked", input.checked);
+      onToggle(input.checked);
+    });
+    return { key: info.key, root: root4, setChecked };
+  }
+  function weatherGrid(dense) {
+    const grid = document.createElement("div");
+    grid.className = dense ? "lk-weather-grid is-dense" : "lk-weather-grid";
+    return grid;
+  }
+  var init_weatherPicker = __esm({
+    "src/features/locker/weatherPicker.ts"() {
+      "use strict";
+      init_menuIcons();
+    }
+  });
+
+  // src/features/locker/weatherRecipes.ts
+  function showSummary(summary, selection) {
+    summary.className = "lk-recipe__summary";
+    summary.replaceChildren();
+    const tags = weatherMutations().filter((info) => selection.has(info.key));
+    for (const { key: key2, label: label2 } of tags) {
+      const tag = document.createElement("div");
+      tag.className = "lk-tag";
+      const text2 = document.createElement("span");
+      text2.textContent = label2;
+      tag.append(weatherIcon(key2, 20), text2);
+      summary.appendChild(tag);
+    }
+    if (!tags.length) {
+      const empty = document.createElement("div");
+      empty.className = "lk-empty";
+      empty.textContent = "No weather mutation selected.";
+      summary.appendChild(empty);
+    }
+    return summary;
+  }
+  function weatherRecipeEditor(state7, onChange) {
+    const root4 = document.createElement("div");
+    root4.className = "lk-recipes";
+    const title = document.createElement("div");
+    title.className = "lk-recipes__title";
+    const addButton = button("+ Recipe", { size: "sm", onClick: () => startEditing(state7.weatherRecipes.length) });
+    const head = document.createElement("div");
+    head.className = "lk-recipes__head";
+    head.append(title, addButton);
+    const list = document.createElement("div");
+    list.className = "lk-recipes__list";
+    root4.append(head, list);
+    let editingIndex = null;
+    let draft = /* @__PURE__ */ new Set();
+    const startEditing = (index) => {
+      editingIndex = index;
+      draft = new Set(state7.weatherRecipes[index] ?? []);
+      normalizeRecipe(draft);
+      repaint();
+    };
+    const stopEditing = () => {
+      editingIndex = null;
+      draft = /* @__PURE__ */ new Set();
+      repaint();
+    };
+    const commit = () => {
+      if (editingIndex === null) return;
+      const recipe = new Set(draft);
+      normalizeRecipe(recipe);
+      if (editingIndex === state7.weatherRecipes.length) state7.weatherRecipes.push(recipe);
+      else if (editingIndex >= 0 && editingIndex < state7.weatherRecipes.length) state7.weatherRecipes[editingIndex] = recipe;
+      stopEditing();
+      onChange();
+    };
+    const remove = (index) => {
+      if (index < 0) return;
+      if (index < state7.weatherRecipes.length) state7.weatherRecipes.splice(index, 1);
+      if (editingIndex !== null) {
+        if (index === editingIndex) {
+          editingIndex = null;
+          draft = /* @__PURE__ */ new Set();
+        } else if (index < editingIndex) {
+          editingIndex -= 1;
+        }
+      }
+      repaint();
+      onChange();
+    };
+    function editingRow(index) {
+      const row4 = document.createElement("div");
+      row4.className = "lk-recipe is-editing";
+      const summary = showSummary(document.createElement("div"), draft);
+      const tiles = /* @__PURE__ */ new Map();
+      const grid = weatherGrid(true);
+      for (const info of weatherMutations()) {
+        const tile = weatherTile(info, true, (checked) => {
+          if (checked) {
+            for (const rival of recipeRivals(info.key)) {
+              if (draft.delete(rival)) tiles.get(rival)?.setChecked(false);
+            }
+            draft.add(info.key);
+          } else {
+            draft.delete(info.key);
+          }
+          showSummary(summary, draft);
+        });
+        tile.setChecked(draft.has(info.key));
+        tiles.set(info.key, tile);
+        grid.appendChild(tile.root);
+      }
+      const actions2 = document.createElement("div");
+      actions2.className = "lk-recipe__actions";
+      actions2.append(
+        button("\u274C", { size: "sm", tooltip: "Cancel", onClick: stopEditing }),
+        button("\u2714\uFE0F", { size: "sm", tooltip: "Save", onClick: commit })
+      );
+      if (index < state7.weatherRecipes.length) {
+        actions2.append(button("\u{1F5D1}\uFE0F", { size: "sm", tooltip: "Delete", ariaLabel: "Delete", onClick: () => remove(index) }));
+      }
+      row4.append(summary, grid, actions2);
+      return row4;
+    }
+    function savedRow(recipe, index) {
+      const row4 = document.createElement("div");
+      row4.className = "lk-recipe";
+      const actions2 = document.createElement("div");
+      actions2.className = "lk-recipe__actions";
+      actions2.append(
+        button("\u270F\uFE0F", { size: "xs", tooltip: "Edit", ariaLabel: "Edit", onClick: () => startEditing(index) }),
+        button("\u{1F5D1}\uFE0F", { size: "xs", tooltip: "Delete", ariaLabel: "Delete", onClick: () => remove(index) })
+      );
+      row4.append(showSummary(document.createElement("div"), recipe), actions2);
+      return row4;
+    }
+    function repaint() {
+      title.textContent = `${state7.lockMode === "ALLOW" ? "Allow" : "Lock"} when any recipe row matches (OR between rows)`;
+      addButton.setEnabled(editingIndex === null);
+      list.replaceChildren();
+      state7.weatherRecipes.forEach((recipe, index) => {
+        normalizeRecipe(recipe);
+        list.appendChild(index === editingIndex ? editingRow(index) : savedRow(recipe, index));
+      });
+      if (editingIndex !== null && editingIndex === state7.weatherRecipes.length) {
+        list.appendChild(editingRow(editingIndex));
+      }
+      if (!list.childElementCount) {
+        const empty = document.createElement("div");
+        empty.className = "lk-empty";
+        empty.textContent = "No recipe rows yet.";
+        list.appendChild(empty);
+      }
+    }
+    repaint();
+    return { root: root4, refresh: repaint };
+  }
+  var init_weatherRecipes = __esm({
+    "src/features/locker/weatherRecipes.ts"() {
+      "use strict";
+      init_button();
+      init_menuIcons();
+      init_weatherPicker();
+      init_weatherTags();
+    }
+  });
+
+  // src/features/locker/settingsCard.ts
+  function sliderValue(label2) {
+    const root4 = div("lk-value");
+    const value = pill("");
+    root4.append(div("qmm-label", label2), value);
+    return { root: root4, value };
+  }
+  function lockerSettingsCard(state7, onChange) {
+    const root4 = div("lk-settings");
+    root4.dataset.lockerSettingsCard = "1";
+    const lockModeHint = div("lk-hint");
+    const lockWarning = div("lk-warning");
+    const lockMode = segmented(
+      [
+        { value: "lock", label: "Lock" },
+        { value: "allow", label: "Allow" }
+      ],
+      state7.lockMode === "ALLOW" ? "allow" : "lock",
+      (value) => {
+        const next = value === "allow" ? "ALLOW" : "LOCK";
+        if (next === state7.lockMode) return;
+        state7.lockMode = next;
+        showLockMode();
+        recipes.refresh();
+        onChange();
+      },
+      { ariaLabel: "Harvest mode" }
+    );
+    const locksEverySize = () => {
+      if (state7.lockMode !== "LOCK") return false;
+      switch (state7.scaleLockMode) {
+        case "RANGE":
+          return state7.minScalePct <= CROP_SIZE_MIN && state7.maxScalePct >= CROP_SIZE_MAX;
+        case "MINIMUM":
+          return state7.minScalePct <= CROP_SIZE_MIN;
+        case "MAXIMUM":
+          return state7.maxScalePct >= CROP_SIZE_MAX;
+        default:
+          return false;
+      }
+    };
+    const showLockWarning = () => {
+      const blocked = locksEverySize();
+      lockWarning.hidden = !blocked;
+      lockWarning.textContent = blocked ? "This size filter covers every size, so nothing can be harvested. Pick None to stop filtering by size." : "";
+    };
+    const showLockMode = () => {
+      const value = state7.lockMode === "ALLOW" ? "allow" : "lock";
+      if (lockMode.get() !== value) lockMode.set(value);
+      lockModeHint.textContent = value === "allow" ? "Harvest only when every active filter category matches" : "Harvest is locked whenever any active filter matches";
+      showLockWarning();
+    };
+    const SCALE_MODES2 = {
+      none: "NONE",
+      minimum: "MINIMUM",
+      maximum: "MAXIMUM",
+      ranged: "RANGE"
+    };
+    const scaleValueOf = (mode) => Object.keys(SCALE_MODES2).find((key2) => SCALE_MODES2[key2] === mode) ?? "none";
+    const scaleMode = segmented(
+      [
+        { value: "none", label: "None" },
+        { value: "minimum", label: "Minimum" },
+        { value: "maximum", label: "Maximum" },
+        { value: "ranged", label: "Range" }
+      ],
+      scaleValueOf(state7.scaleLockMode),
+      (value) => {
+        const mode = SCALE_MODES2[value];
+        if (mode === state7.scaleLockMode) return;
+        state7.scaleLockMode = mode;
+        if (mode === "RANGE") {
+          range.setValues(state7.minScalePct, state7.maxScalePct);
+          readRange(true);
+        }
+        showScale();
+        onChange();
+      },
+      { ariaLabel: "Scale lock mode" }
+    );
+    const minSlider = slider(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, state7.minScalePct, { fill: true });
+    const maxSlider = slider(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, state7.maxScalePct, { fill: true });
+    const range = rangeDual(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, state7.minScalePct, state7.maxScalePct);
+    for (const el of [minSlider, maxSlider, range.root]) el.classList.add("lk-slider");
+    const minValue = sliderValue("Minimum");
+    const maxValue = sliderValue("Maximum");
+    const rangeMin = sliderValue("Min");
+    const rangeMax = sliderValue("Max");
+    const rangeValues = div("lk-values");
+    rangeValues.append(rangeMin.root, rangeMax.root);
+    const minControls = div("lk-column");
+    minControls.append(minSlider, minValue.root);
+    const maxControls = div("lk-column");
+    maxControls.append(maxSlider, maxValue.root);
+    const rangeControls = div("lk-column");
+    rangeControls.append(range.root, rangeValues);
+    const readRange = (commit) => {
+      const { min, max } = normalizeScaleRange("RANGE", range.min.value, range.max.value);
+      range.setValues(min, max);
+      rangeMin.value.textContent = String(min);
+      rangeMax.value.textContent = String(max);
+      if (!commit) return;
+      state7.minScalePct = min;
+      state7.maxScalePct = max;
+      showLockWarning();
+    };
+    const readSingle = (input, read2, key2, commit) => {
+      const n = Number.parseInt(input.value, 10);
+      const value = Number.isFinite(n) ? n : state7[key2];
+      read2.value.textContent = String(value);
+      if (!commit) return;
+      state7[key2] = value;
+      showLockWarning();
+    };
+    minSlider.addEventListener("input", () => readSingle(minSlider, minValue, "minScalePct", false));
+    minSlider.addEventListener("change", () => {
+      readSingle(minSlider, minValue, "minScalePct", true);
+      onChange();
+    });
+    maxSlider.addEventListener("input", () => readSingle(maxSlider, maxValue, "maxScalePct", false));
+    maxSlider.addEventListener("change", () => {
+      readSingle(maxSlider, maxValue, "maxScalePct", true);
+      onChange();
+    });
+    for (const thumb of [range.min, range.max]) {
+      thumb.addEventListener("input", () => readRange(false));
+      thumb.addEventListener("change", () => {
+        readRange(true);
+        onChange();
+      });
+    }
+    const showScale = () => {
+      const mode = state7.scaleLockMode;
+      if (scaleMode.get() !== scaleValueOf(mode)) scaleMode.set(scaleValueOf(mode));
+      minControls.hidden = mode !== "MINIMUM";
+      maxControls.hidden = mode !== "MAXIMUM";
+      rangeControls.hidden = mode !== "RANGE";
+      minSlider.value = String(state7.minScalePct);
+      maxSlider.value = String(state7.maxScalePct);
+      minValue.value.textContent = String(state7.minScalePct);
+      maxValue.value.textContent = String(state7.maxScalePct);
+      range.setValues(state7.minScalePct, state7.maxScalePct);
+      readRange(false);
+      showLockWarning();
+    };
+    const sizeStack = div("lk-column");
+    sizeStack.append(scaleMode, minControls, maxControls, rangeControls);
+    const colorButton = (label2, modifier, isOn, toggle2) => {
+      const btn = button(label2, {
+        size: "sm",
+        tooltip: "Active filters influence harvest conditions",
+        onClick: () => {
+          toggle2();
+          showColors();
+          onChange();
+        }
+      });
+      btn.classList.add("lk-color", `lk-color--${modifier}`);
+      colorButtons.push({ btn, isOn });
+      return btn;
+    };
+    const colorButtons = [];
+    const toggleVisual = (tag) => {
+      if (!state7.visualMutations.delete(tag)) state7.visualMutations.add(tag);
+    };
+    const colors = div("qmm-flex");
+    colors.style.justifyContent = "center";
+    colors.append(
+      colorButton("Normal", "normal", () => state7.avoidNormal, () => state7.avoidNormal = !state7.avoidNormal),
+      colorButton("Gold", "gold", () => state7.visualMutations.has("Gold"), () => toggleVisual("Gold")),
+      colorButton("Rainbow", "rainbow", () => state7.visualMutations.has("Rainbow"), () => toggleVisual("Rainbow"))
+    );
+    const showColors = () => colorButtons.forEach(({ btn, isOn }) => btn.setActive(isOn()));
+    const mainGrid = weatherGrid(false);
+    const mainTiles = weatherMutations().map((info) => {
+      const tile = weatherTile(info, false, (checked) => {
+        if (checked) state7.weatherSelected.add(info.key);
+        else state7.weatherSelected.delete(info.key);
+        onChange();
+      });
+      mainGrid.appendChild(tile.root);
+      return tile;
+    });
+    const modeName = `locker-weather-mode-${++weatherModeGroups}`;
+    const weatherMode = radioGroup(
+      modeName,
+      [
+        { value: "ANY", label: "Any match (OR)" },
+        { value: "ALL", label: "All match (AND)" },
+        { value: "RECIPES", label: "Recipes (match rows)" }
+      ],
+      state7.weatherMode,
+      (value) => {
+        state7.weatherMode = value;
+        showWeatherMode();
+        onChange();
+      }
+    );
+    weatherMode.classList.add("qmm-flex");
+    weatherMode.style.justifyContent = "center";
+    const recipes = weatherRecipeEditor(state7, onChange);
+    const recipesSection = section("Weather recipes", recipes.root);
+    const showWeatherMode = () => {
+      for (const input of Array.from(weatherMode.querySelectorAll("input"))) {
+        input.checked = input.value === state7.weatherMode;
+      }
+      const recipeMode = state7.weatherMode === "RECIPES";
+      mainGrid.classList.toggle("is-disabled", recipeMode);
+      mainGrid.inert = recipeMode;
+      recipesSection.hidden = !recipeMode;
+    };
+    root4.append(
+      section("Harvest mode", lockMode, lockModeHint, lockWarning),
+      section("Filter by size", sizeStack),
+      section("Filter by color", colors),
+      section("Filter by weather", mainGrid),
+      section("Weather filter mode", weatherMode),
+      recipesSection
+    );
+    const refresh = () => {
+      showLockMode();
+      showScale();
+      showColors();
+      mainTiles.forEach((tile) => tile.setChecked(state7.weatherSelected.has(tile.key)));
+      showWeatherMode();
+      recipes.refresh();
+    };
+    refresh();
+    return {
+      root: root4,
+      refresh,
+      setDisabled(disabled) {
+        root4.classList.toggle("is-disabled", disabled);
+        root4.inert = disabled;
+      }
+    };
+  }
+  var div, section, weatherModeGroups;
+  var init_settingsCard = __esm({
+    "src/features/locker/settingsCard.ts"() {
+      "use strict";
+      init_cropSize();
+      init_badges();
+      init_button();
+      init_card();
+      init_fields();
+      init_segmented();
+      init_sliders();
+      init_settings3();
+      init_weatherPicker();
+      init_weatherRecipes();
+      init_weatherTags();
+      div = (className, text2) => {
+        const el = document.createElement("div");
+        el.className = className;
+        if (text2 != null) el.textContent = text2;
+        return el;
+      };
+      section = (title, ...content2) => {
+        const { root: root4, body } = card(title, { align: "center" });
+        body.append(...content2);
+        return root4;
+      };
+      weatherModeGroups = 0;
+    }
+  });
+
+  // src/features/locker/overridesTab.ts
+  function overridesTab(store) {
+    const layout = document.createElement("div");
+    layout.className = "lk-overrides";
+    const detail = document.createElement("div");
+    detail.className = "lk-overrides__detail";
+    const icons = /* @__PURE__ */ new Map();
+    const iconFor = (key2) => {
+      let icon2 = icons.get(key2);
+      if (!icon2) {
+        icon2 = seedIcon(key2, 24, getLockerSeedOptions().find((opt) => opt.key === key2)?.spriteKey);
+        icons.set(key2, icon2);
+      }
+      return icon2;
+    };
+    const list = new VTabs({
+      emptyText: "No crops available.",
+      fillAvailableHeight: true,
+      renderItem: (item, btn) => {
+        btn.classList.add("lk-crop-tab");
+        const dot = document.createElement("span");
+        dot.className = "qmm-dot";
+        dot.style.background = item.statusColor ?? OVERRIDE_OFF;
+        const label2 = document.createElement("span");
+        label2.className = "label";
+        label2.textContent = item.title;
+        btn.append(dot, label2, iconFor(item.id));
+      },
+      onSelect: () => renderDetail()
+    });
+    layout.append(list.root, detail);
+    const listItems = () => getLockerSeedOptions().map((opt) => ({
+      id: opt.key,
+      title: opt.cropName || opt.key,
+      statusColor: store.isOverrideEnabled(opt.key) ? OVERRIDE_ON : OVERRIDE_OFF
+    }));
+    const scrollMemory = /* @__PURE__ */ new Map();
+    let shown = null;
+    detail.addEventListener("scroll", () => {
+      if (shown) scrollMemory.set(shown.key, detail.scrollTop);
+    });
+    function renderDetail() {
+      const key2 = list.getSelected()?.id ?? null;
+      if (!key2) {
+        shown = null;
+        const empty = document.createElement("div");
+        empty.className = "lk-empty lk-overrides__placeholder lk-wide";
+        empty.textContent = "Select a crop on the left to customise its locker settings.";
+        detail.replaceChildren(empty);
+        return;
+      }
+      const entry = store.ensureOverride(key2);
+      if (shown && shown.key === key2 && shown.entry === entry) {
+        shown.toggle.setChecked(entry.enabled);
+        shown.form.setDisabled(!entry.enabled);
+        shown.form.refresh();
+        shown.showStatus();
+        return;
+      }
+      const seed = getLockerSeedOptions().find((opt) => opt.key === key2);
+      const toggle2 = switchInput(entry.enabled, (on) => store.setOverrideEnabled(key2, on));
+      const header = card(seed?.cropName || key2, { actions: [toggle2] });
+      header.root.classList.add("lk-wide");
+      header.header.prepend(seedIcon(key2, 32, seed?.spriteKey));
+      header.root.removeChild(header.body);
+      const status2 = document.createElement("div");
+      status2.className = "lk-hint lk-wide";
+      const showStatus = () => {
+        status2.textContent = entry.enabled ? "This crop uses its own locker filters." : "Uses the global locker settings.";
+      };
+      const form = lockerSettingsCard(entry.settings, () => store.notifyOverrideSettingsChanged(key2));
+      form.setDisabled(!entry.enabled);
+      showStatus();
+      detail.replaceChildren(header.root, status2, form.root);
+      detail.scrollTop = scrollMemory.get(key2) ?? 0;
+      shown = { key: key2, entry, form, toggle: toggle2, showStatus };
+    }
+    const refresh = () => {
+      list.setItems(listItems());
+      renderDetail();
+    };
+    refresh();
+    const offStore = store.subscribe(refresh);
+    const onDataUpdated = (e) => {
+      if (e.detail?.key === "plants") refresh();
+    };
+    window.addEventListener("gemini:data-updated", onDataUpdated);
+    return {
+      render(view) {
+        view.replaceChildren(layout);
+        refresh();
+      },
+      destroy() {
+        offStore();
+        window.removeEventListener("gemini:data-updated", onDataUpdated);
+      }
+    };
+  }
+  var OVERRIDE_ON, OVERRIDE_OFF;
+  var init_overridesTab = __esm({
+    "src/features/locker/overridesTab.ts"() {
+      "use strict";
+      init_card();
+      init_toggles();
+      init_vtabs();
+      init_theme();
+      init_menuIcons();
+      init_settingsCard();
+      init_seedOptions();
+      OVERRIDE_ON = "#2ecc71";
+      OVERRIDE_OFF = color.danger;
+    }
+  });
+
+  // src/features/locker/eggOptions.ts
+  function catalogEggs() {
+    return Object.entries(eggCatalog2).filter(([id]) => !!id).map(([id, raw]) => ({ id, name: typeof raw?.name === "string" && raw.name || id }));
+  }
+  function shopEggs(shop) {
+    const found = /* @__PURE__ */ new Map();
+    const walk = (node) => {
+      if (!node || typeof node !== "object") return;
+      if (Array.isArray(node)) {
+        node.forEach(walk);
+        return;
+      }
+      const id = node.eggId ?? node.id ?? null;
+      if (typeof id === "string" && id && !found.has(id)) {
+        const name = typeof node.name === "string" && node.name || typeof shop?.names?.[id] === "string" && shop.names[id] || id;
+        found.set(id, name);
+      }
+      for (const value of Object.values(node)) if (value && typeof value === "object") walk(value);
+    };
+    walk(shop);
+    return Array.from(found, ([id, name]) => ({ id, name }));
+  }
+  function lockableEggs(shop) {
+    const eggs = catalogEggs();
+    const known = new Set(eggs.map((egg) => egg.id));
+    for (const egg of shopEggs(shop)) {
+      if (known.has(egg.id)) continue;
+      known.add(egg.id);
+      eggs.push(egg);
+    }
+    return eggs;
+  }
+  var init_eggOptions = __esm({
+    "src/features/locker/eggOptions.ts"() {
+      "use strict";
+      init_data();
+    }
+  });
+
   // src/ui/kit/rarityBadge.ts
   function rarityLabel(raw) {
     const rarity3 = String(raw || "").trim();
@@ -31109,2433 +30537,498 @@ next: ${next}`;
     }
   });
 
-  // src/features/locker/menu.ts
-  function buildLockerSeedOptions() {
-    return Object.entries(plantCatalog2).map(([key2, def]) => ({
-      key: key2,
-      seedName: def?.seed?.name ?? "",
-      cropName: def?.crop?.name ?? "",
-      spriteKey: def?.crop?.sprite ?? def?.plant?.sprite ?? void 0
-    }));
-  }
-  function buildLockerEmojiMaps(options2) {
-    const byKey = /* @__PURE__ */ new Map();
-    const bySeedName = /* @__PURE__ */ new Map();
-    options2.forEach((opt, index) => {
-      const emoji = SEED_EMOJIS[index % SEED_EMOJIS.length];
-      byKey.set(opt.key, emoji);
-      if (opt.seedName) bySeedName.set(opt.seedName, emoji);
+  // src/features/locker/sellPetsRulesCard.ts
+  function sellPetsRulesCard() {
+    const { root: root4, body } = card("Sell all pets protections", {
+      align: "stretch",
+      subtitle: "Show a confirmation modal when protected pets are detected."
     });
-    return { byKey, bySeedName };
-  }
-  function getLockerCache() {
-    const options2 = buildLockerSeedOptions();
-    if (!_lockerOptionsCache || options2.length !== _lockerOptionsCache.length) {
-      _lockerOptionsCache = options2;
-      const maps = buildLockerEmojiMaps(options2);
-      _lockerEmojiByKey = maps.byKey;
-      _lockerEmojisBySeedName = maps.bySeedName;
+    const rules3 = () => lockerRestrictionsService.getSellAllPetsRules();
+    const save3 = (patch) => {
+      lockerRestrictionsService.setSellAllPetsRules(patch);
+      refresh();
+    };
+    const enabled5 = switchInput(rules3().enabled, (on) => save3({ enabled: on }));
+    const gold = switchInput(rules3().protectGold, (on) => save3({ protectGold: on }));
+    const rainbow = switchInput(rules3().protectRainbow, (on) => save3({ protectRainbow: on }));
+    const maxStr = switchInput(rules3().protectMaxStr, (on) => save3({ protectMaxStr: on }));
+    const maxStrValue = numberInput(0, 100, 1, rules3().maxStrThreshold);
+    maxStrValue.addEventListener("change", () => {
+      const n = Number(maxStrValue.value);
+      const next = Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 0;
+      maxStrValue.value = String(next);
+      save3({ maxStrThreshold: next });
+    });
+    const maxStrControls = document.createElement("div");
+    maxStrControls.className = "qmm-flex";
+    maxStrControls.append(maxStr, maxStrValue.wrap);
+    const enabledRow = settingRow("Enable protection rules", null, enabled5).row;
+    const goldRow = settingRow("Protect Gold mutation", null, gold).row;
+    const rainbowRow = settingRow("Protect Rainbow mutation", null, rainbow).row;
+    const maxStrRow = settingRow("Protect pets with Max STR", null, maxStrControls).row;
+    const rarities = document.createElement("div");
+    rarities.className = "lk-rarities";
+    const chips = document.createElement("div");
+    chips.className = "lk-rarities__chips";
+    const picker2 = document.createElement("div");
+    picker2.className = "lk-rarities__chips lk-rarities__picker";
+    let pickerOpen = false;
+    const setProtected = (next) => save3({ protectedRarities: next });
+    const closeOnOutsideClick = (ev) => {
+      if (rarities.contains(ev.target)) return;
+      setPickerOpen(false);
+    };
+    const setPickerOpen = (open) => {
+      pickerOpen = open;
+      if (open) document.addEventListener("click", closeOnOutsideClick, true);
+      else document.removeEventListener("click", closeOnOutsideClick, true);
+      refresh();
+    };
+    const addButton = button("+", { size: "xs", onClick: () => setPickerOpen(!pickerOpen) });
+    const head = document.createElement("div");
+    head.className = "lk-rarities__head";
+    const title = document.createElement("div");
+    title.className = "qmm-setting-row__title";
+    title.textContent = "Protect by rarity";
+    head.append(title, addButton);
+    rarities.append(head, chips, picker2);
+    const showRarities = () => {
+      const selected = rules3().protectedRarities;
+      chips.replaceChildren();
+      if (!selected.length) {
+        const none = document.createElement("span");
+        none.className = "lk-empty";
+        none.textContent = "No rarities protected";
+        chips.appendChild(none);
+      }
+      for (const rarity3 of selected) {
+        const chip = document.createElement("div");
+        chip.className = "lk-rarity";
+        chip.append(
+          rarityBadge(rarity3),
+          button("\xD7", {
+            size: "xs",
+            variant: "ghost",
+            ariaLabel: `Unprotect ${rarity3}`,
+            onClick: () => setProtected(rules3().protectedRarities.filter((r) => r !== rarity3))
+          })
+        );
+        chips.appendChild(chip);
+      }
+      const remaining = PET_RARITIES.filter((rarity3) => !selected.includes(rarity3));
+      if (!remaining.length && pickerOpen) {
+        pickerOpen = false;
+        document.removeEventListener("click", closeOnOutsideClick, true);
+      }
+      picker2.replaceChildren(
+        ...remaining.map((rarity3) => {
+          const badge2 = rarityBadge(rarity3);
+          badge2.addEventListener("click", () => setProtected([...rules3().protectedRarities, rarity3]));
+          return badge2;
+        })
+      );
+      picker2.hidden = !pickerOpen;
+      addButton.querySelector(".label").textContent = pickerOpen ? "\xD7" : "+";
+    };
+    body.append(enabledRow, goldRow, rainbowRow, maxStrRow, rarities);
+    function refresh() {
+      const current2 = rules3();
+      enabled5.setChecked(current2.enabled);
+      gold.setChecked(current2.protectGold);
+      rainbow.setChecked(current2.protectRainbow);
+      maxStr.setChecked(current2.protectMaxStr);
+      maxStrValue.value = String(current2.maxStrThreshold);
+      for (const row4 of [goldRow, rainbowRow, maxStrRow]) row4.classList.toggle("lk-dim", !current2.enabled);
+      gold.disabled = rainbow.disabled = maxStr.disabled = !current2.enabled;
+      const maxStrOff = !current2.enabled || !current2.protectMaxStr;
+      maxStrValue.disabled = maxStrOff;
+      maxStrValue.wrap.classList.toggle("lk-dim", maxStrOff);
+      maxStrValue.wrap.inert = maxStrOff;
+      rarities.classList.toggle("is-disabled", !current2.enabled);
+      showRarities();
     }
-    return { options: _lockerOptionsCache, byKey: _lockerEmojiByKey, bySeedName: _lockerEmojisBySeedName };
+    refresh();
+    return { root: root4, refresh };
   }
-  function formatMutationLabel(key2) {
-    const spaced2 = key2.replace(/_/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/\s+/g, " ").trim();
-    if (!spaced2) return key2;
-    return spaced2.charAt(0).toUpperCase() + spaced2.slice(1);
-  }
-  function normalizeWeatherSelection(selection) {
-    selection.forEach((tag) => {
-      if (!isWeatherMutationAvailable(tag)) {
-        selection.delete(tag);
+  var init_sellPetsRulesCard = __esm({
+    "src/features/locker/sellPetsRulesCard.ts"() {
+      "use strict";
+      init_button();
+      init_card();
+      init_fields();
+      init_layout();
+      init_toggles();
+      init_rarityBadge();
+      init_restrictions();
+    }
+  });
+
+  // src/features/locker/restrictionsTab.ts
+  function friendBonusCard() {
+    let requiredPlayers = lockerRestrictionsService.getState().minRequiredPlayers;
+    const status2 = pill("");
+    const { root: root4, body } = card("Friend bonus locker", { align: "stretch", actions: [status2] });
+    const value = pill("", "warn");
+    const head = document.createElement("div");
+    head.className = "qmm-flex";
+    head.style.justifyContent = "space-between";
+    const title = document.createElement("div");
+    title.className = "qmm-setting-row__title";
+    title.textContent = "Minimum friend bonus required";
+    head.append(title, value);
+    const bonusSlider = slider(0, FRIEND_BONUS_MAX, FRIEND_BONUS_STEP, friendBonusPercentFromPlayers(requiredPlayers) ?? 0, { fill: true });
+    const statusText = document.createElement("div");
+    statusText.className = "qmm-setting-row__hint";
+    statusText.style.fontSize = "12.5px";
+    body.append(head, bonusSlider, statusText);
+    const showStatus = () => {
+      const requiredPct = toBonusStep2(friendBonusPercentFromPlayers(requiredPlayers) ?? 0);
+      const currentPct = currentFriendBonus() ?? 0;
+      const currentPlayers = percentToRequiredFriendCount(currentPct);
+      if (requiredPct <= 0) {
+        status2.textContent = "Unlocked";
+        setTone(status2);
+        statusText.textContent = `Current friend bonus: ${currentPct}% (${currentPlayers} players).`;
+        return;
       }
-    });
-  }
-  function normalizeRecipeSelection(selection) {
-    normalizeWeatherSelection(selection);
-    const seen = /* @__PURE__ */ new Set();
-    weatherMutations().forEach((info) => {
-      if (!selection.has(info.key)) return;
-      const group2 = WEATHER_RECIPE_GROUPS[info.key];
-      if (!group2) return;
-      if (seen.has(group2)) {
-        selection.delete(info.key);
-      } else {
-        seen.add(group2);
-      }
-    });
-  }
-  function createEmojiIcon(symbol, size) {
-    const wrap = applyStyles(document.createElement("span"), {
-      width: `${size}px`,
-      height: `${size}px`,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: `${Math.round(size * 0.75)}px`,
-      lineHeight: "1"
-    });
-    wrap.textContent = symbol;
-    wrap.setAttribute("aria-hidden", "true");
-    return wrap;
-  }
-  function createSeedIcon(seedKey, options2 = {}) {
-    const size = Math.max(12, options2.size ?? 24);
-    const fallback = options2.fallback ?? getLockerSeedEmojiForKey(seedKey) ?? getLockerSeedEmojiForSeedName(seedKey) ?? "\u{1F331}";
-    const wrap = applyStyles(document.createElement("span"), {
-      width: `${size}px`,
-      height: `${size}px`,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center"
-    });
-    wrap.appendChild(createEmojiIcon(fallback, size));
-    const spriteBaseName2 = options2.spriteKey?.split("/").pop();
-    const candidates = spriteBaseName2 ? [spriteBaseName2, seedKey] : seedKey;
-    attachSpriteIcon(wrap, ["plant", "tallplant", "crop"], candidates, size, "plant");
-    return wrap;
-  }
-  function createEggIcon(eggId, label2, size = 32) {
-    const fallback = "\u{1F95A}";
-    const wrap = applyStyles(document.createElement("span"), {
-      width: `${size}px`,
-      height: `${size}px`,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center"
-    });
-    wrap.appendChild(createEmojiIcon(fallback, size));
-    const candidates = /* @__PURE__ */ new Set();
-    const add = (value) => {
-      if (!value) return;
-      const trimmed = value.trim();
-      if (!trimmed) return;
-      candidates.add(trimmed);
-      candidates.add(trimmed.replace(/\s+/g, ""));
-      const last = trimmed.split(/[./]/).pop();
-      if (last && last !== trimmed) {
-        candidates.add(last);
-        candidates.add(last.replace(/\s+/g, ""));
+      const allowed = currentPct + 1e-4 >= requiredPct;
+      status2.textContent = allowed ? "Sale allowed" : "Sale locked";
+      setTone(status2, allowed ? "ok" : "bad");
+      statusText.textContent = allowed ? `Current bonus ${currentPct}% (${currentPlayers} players) meets the requirement (${requiredPct}%).` : `Requires ${requiredPct}% (${requiredPlayers} players) or more`;
+    };
+    const showSlider = (pct) => {
+      bonusSlider.value = String(pct);
+      value.textContent = `+${pct}%`;
+    };
+    const readSlider = (commit) => {
+      const raw = Number(bonusSlider.value);
+      const pct = toBonusStep2(Number.isFinite(raw) ? raw : 0);
+      showSlider(pct);
+      requiredPlayers = percentToRequiredFriendCount(pct);
+      showStatus();
+      if (commit) lockerRestrictionsService.setMinRequiredPlayers(requiredPlayers);
+    };
+    bonusSlider.addEventListener("input", () => readSlider(false));
+    bonusSlider.addEventListener("change", () => readSlider(true));
+    return {
+      root: root4,
+      showStatus,
+      sync(players) {
+        requiredPlayers = players;
+        showSlider(friendBonusPercentFromPlayers(players) ?? 0);
+        showStatus();
       }
     };
-    add(eggId);
-    add(label2);
-    if (candidates.size) {
-      attachSpriteIcon(wrap, ["pet"], Array.from(candidates), size, "locker-eggs");
-    }
-    return wrap;
   }
-  function createWeatherBadge(tag, options2 = {}) {
-    if (tag === NO_WEATHER_TAG) {
-      return createNoWeatherIcon(options2);
-    }
-    const size = Math.max(16, options2.size ?? 32);
-    const wrap = applyStyles(document.createElement("span"), {
-      width: `${size}px`,
-      height: `${size}px`,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      borderRadius: "999px",
-      background: "rgba(17,20,24,0.85)",
-      border: "1px solid rgba(255,255,255,0.08)",
-      fontSize: `${Math.round(size * 0.55)}px`,
-      color: "#e7eef7",
-      lineHeight: "1"
-    });
-    const label2 = weatherMutationLabel(tag);
-    const fallback = options2.fallback ?? label2.charAt(0);
-    wrap.textContent = fallback || "?";
-    wrap.title = label2;
-    wrap.setAttribute("aria-label", label2);
-    return wrap;
-  }
-  function createDefaultSettings() {
+  function eggLocksCard() {
+    const { root: root4, body } = card("Egg hatch locker", { align: "stretch" });
+    const rows = /* @__PURE__ */ new Map();
+    let eggs = catalogEggs();
+    const rowFor = (egg) => {
+      let entry = rows.get(egg.id);
+      if (!entry) {
+        const toggle2 = switchInput(false, (locked) => lockerRestrictionsService.setEggLock(egg.id, locked));
+        toggle2.title = "Lock hatching";
+        const { row: row4 } = settingRow(egg.name, null, toggle2);
+        row4.prepend(eggIcon(egg.id, egg.name, 32));
+        entry = { row: row4, title: row4.querySelector(".qmm-setting-row__title"), toggle: toggle2 };
+        rows.set(egg.id, entry);
+      }
+      return entry;
+    };
+    const render = () => {
+      if (!eggs.length) {
+        const empty = document.createElement("div");
+        empty.className = "lk-empty";
+        empty.textContent = "No eggs available.";
+        body.replaceChildren(empty);
+        return;
+      }
+      body.replaceChildren(
+        ...eggs.map((egg) => {
+          const entry = rowFor(egg);
+          entry.title.textContent = egg.name || egg.id;
+          entry.toggle.setChecked(lockerRestrictionsService.isEggLocked(egg.id));
+          return entry.row;
+        })
+      );
+    };
     return {
-      minScalePct: 50,
-      maxScalePct: 100,
-      // Matches the service default, and for the same reason: a full 50–100 range
-      // is a filter that matches every crop, so defaulting to it would lock a
-      // species outright the moment it is switched on.
-      scaleLockMode: "NONE",
-      lockMode: "LOCK",
-      minInventory: 91,
-      avoidNormal: false,
+      root: root4,
+      render,
+      setEggs(next) {
+        eggs = next;
+        render();
+      }
+    };
+  }
+  function restrictionsTab() {
+    const layout = document.createElement("div");
+    layout.className = "lk-restrictions";
+    const friendBonus = friendBonusCard();
+    const decorToggle = switchInput(
+      lockerRestrictionsService.isDecorPickupLocked(),
+      (locked) => lockerRestrictionsService.setDecorPickupLocked(locked)
+    );
+    const decor = card("Decor pick locker", {
+      align: "stretch",
+      subtitle: "Prevents placed decors from being picked up",
+      actions: [decorToggle]
+    });
+    const eggLocks = eggLocksCard();
+    const sellPets = sellPetsRulesCard();
+    layout.append(friendBonus.root, decor.root, eggLocks.root, sellPets.root);
+    const syncFromService = () => {
+      const state7 = lockerRestrictionsService.getState();
+      decorToggle.setChecked(state7.decorPickupLocked);
+      friendBonus.sync(state7.minRequiredPlayers);
+      eggLocks.render();
+      sellPets.refresh();
+    };
+    const subs = new Subscriptions();
+    let following2 = false;
+    const follow2 = () => {
+      if (following2) return;
+      following2 = true;
+      subs.add(onFriendBonusChange(friendBonus.showStatus));
+      subs.add(lockerRestrictionsService.subscribe(syncFromService));
+      void Atoms.shop.eggShop.get().then((shop) => eggLocks.setEggs(lockableEggs(shop))).catch(() => eggLocks.render());
+      subs.add(Atoms.shop.eggShop.onChange((shop) => eggLocks.setEggs(lockableEggs(shop))));
+    };
+    return {
+      render(view) {
+        view.classList.add("lk-view");
+        view.replaceChildren(layout);
+        syncFromService();
+        follow2();
+      },
+      destroy: () => subs.dispose()
+    };
+  }
+  var toBonusStep2;
+  var init_restrictionsTab = __esm({
+    "src/features/locker/restrictionsTab.ts"() {
+      "use strict";
+      init_atoms();
+      init_emitter();
+      init_badges();
+      init_card();
+      init_layout();
+      init_sliders();
+      init_toggles();
+      init_eggOptions();
+      init_friendBonus();
+      init_menuIcons();
+      init_restrictions();
+      init_sellPetsRulesCard();
+      toBonusStep2 = (value) => Math.max(0, Math.min(FRIEND_BONUS_MAX, Math.round(value / FRIEND_BONUS_STEP) * FRIEND_BONUS_STEP));
+    }
+  });
+
+  // src/features/locker/settingsDraft.ts
+  function newDraft() {
+    return draftFrom(defaultSettings());
+  }
+  function draftFrom(settings) {
+    const draft = {
+      ...settings,
       visualMutations: /* @__PURE__ */ new Set(),
-      weatherMode: "ANY",
       weatherSelected: /* @__PURE__ */ new Set(),
       weatherRecipes: []
     };
+    readInto(draft, settings);
+    return draft;
   }
-  function copySettings(target, source) {
-    target.minScalePct = source.minScalePct;
-    target.maxScalePct = source.maxScalePct;
-    target.scaleLockMode = source.scaleLockMode;
-    target.lockMode = source.lockMode;
-    target.minInventory = source.minInventory;
-    target.avoidNormal = source.avoidNormal;
-    target.visualMutations.clear();
-    source.visualMutations.forEach((v) => target.visualMutations.add(v));
-    target.weatherMode = source.weatherMode;
-    target.weatherSelected.clear();
-    source.weatherSelected.forEach((v) => target.weatherSelected.add(v));
-    target.weatherRecipes.length = 0;
-    source.weatherRecipes.forEach((set2) => target.weatherRecipes.push(new Set(set2)));
+  function refill(target, values) {
+    target.clear();
+    for (const value of values) target.add(value);
   }
-  function hydrateSettingsFromPersisted(target, persisted) {
-    const src = persisted ?? {};
-    const mode = src.scaleLockMode === "MINIMUM" ? "MINIMUM" : src.scaleLockMode === "MAXIMUM" ? "MAXIMUM" : src.scaleLockMode === "NONE" ? "NONE" : "RANGE";
-    let minScale = Math.max(50, Math.min(100, Math.round(src.minScalePct ?? 50)));
-    let maxScale = Math.max(50, Math.min(100, Math.round(src.maxScalePct ?? 100)));
-    if (mode === "RANGE") {
-      maxScale = Math.max(51, Math.min(100, maxScale));
-      if (maxScale <= minScale) {
-        if (minScale >= 99) {
-          minScale = 99;
-          maxScale = 100;
-        } else {
-          maxScale = Math.min(100, Math.max(51, minScale + 1));
-        }
-      }
-    } else if (mode === "MINIMUM") {
-      minScale = Math.max(50, Math.min(100, minScale));
-    } else if (mode === "MAXIMUM") {
-      maxScale = Math.max(50, Math.min(100, maxScale));
+  function readInto(draft, settings) {
+    draft.minScalePct = settings.minScalePct;
+    draft.maxScalePct = settings.maxScalePct;
+    draft.scaleLockMode = settings.scaleLockMode;
+    draft.lockMode = settings.lockMode;
+    draft.avoidNormal = settings.avoidNormal;
+    refill(draft.visualMutations, settings.visualMutations);
+    draft.weatherMode = settings.weatherMode;
+    refill(draft.weatherSelected, settings.weatherSelected);
+    keepOfferedTags(draft.weatherSelected);
+    draft.weatherRecipes.length = 0;
+    for (const recipe of settings.weatherRecipes) {
+      const set2 = new Set(recipe);
+      keepOfferedTags(set2);
+      draft.weatherRecipes.push(set2);
     }
-    target.minScalePct = minScale;
-    target.maxScalePct = maxScale;
-    target.scaleLockMode = mode;
-    target.lockMode = src.lockMode === "ALLOW" ? "ALLOW" : "LOCK";
-    target.minInventory = Math.max(0, Math.min(999, Math.round(src.minInventory ?? 91)));
-    target.avoidNormal = src.avoidNormal === true || src.includeNormal === false;
-    target.visualMutations.clear();
-    (src.visualMutations ?? []).forEach((mut) => {
-      if (mut === "Gold" || mut === "Rainbow") target.visualMutations.add(mut);
-    });
-    target.weatherMode = src.weatherMode === "ALL" || src.weatherMode === "RECIPES" ? src.weatherMode : "ANY";
-    target.weatherSelected.clear();
-    (src.weatherSelected ?? []).forEach((tag) => {
-      const weatherTag = tag;
-      if (isWeatherMutationAvailable(weatherTag)) {
-        target.weatherSelected.add(weatherTag);
-      }
-    });
-    target.weatherRecipes.length = 0;
-    (src.weatherRecipes ?? []).forEach((recipe) => {
-      const set2 = /* @__PURE__ */ new Set();
-      if (Array.isArray(recipe)) {
-        recipe.forEach((tag) => {
-          const weatherTag = tag;
-          if (isWeatherMutationAvailable(weatherTag)) {
-            set2.add(weatherTag);
-          }
-        });
-      }
-      target.weatherRecipes.push(set2);
-    });
   }
-  function serializeSettingsState(state7) {
-    normalizeWeatherSelection(state7.weatherSelected);
-    state7.weatherRecipes.forEach((set2) => normalizeRecipeSelection(set2));
-    const mode = state7.scaleLockMode === "MINIMUM" ? "MINIMUM" : state7.scaleLockMode === "MAXIMUM" ? "MAXIMUM" : state7.scaleLockMode === "NONE" ? "NONE" : "RANGE";
-    let minScale = Math.max(50, Math.min(100, Math.round(state7.minScalePct || 50)));
-    let maxScale = Math.max(50, Math.min(100, Math.round(state7.maxScalePct || 100)));
-    if (mode === "RANGE") {
-      maxScale = Math.max(51, Math.min(100, maxScale));
-      if (maxScale <= minScale) {
-        if (minScale >= 99) {
-          minScale = 99;
-          maxScale = 100;
-        } else {
-          maxScale = Math.min(100, Math.max(51, minScale + 1));
-        }
-      }
-    } else if (mode === "MINIMUM") {
-      minScale = Math.max(50, Math.min(100, minScale));
-    } else if (mode === "MAXIMUM") {
-      maxScale = Math.max(50, Math.min(100, maxScale));
-    }
+  function copyDraft(target, source) {
+    readInto(target, toPersisted(source));
+  }
+  function toPersisted(draft) {
+    keepOfferedTags(draft.weatherSelected);
+    draft.weatherRecipes.forEach(normalizeRecipe);
     return {
-      minScalePct: minScale,
-      maxScalePct: maxScale,
-      scaleLockMode: mode,
-      lockMode: state7.lockMode === "ALLOW" ? "ALLOW" : "LOCK",
-      minInventory: Math.max(0, Math.min(999, Math.round(state7.minInventory || 91))),
-      avoidNormal: !!state7.avoidNormal,
-      includeNormal: !state7.avoidNormal,
-      visualMutations: Array.from(state7.visualMutations),
-      weatherMode: state7.weatherMode,
-      weatherSelected: Array.from(state7.weatherSelected),
-      weatherRecipes: state7.weatherRecipes.map((set2) => Array.from(set2))
+      minScalePct: draft.minScalePct,
+      maxScalePct: draft.maxScalePct,
+      scaleLockMode: draft.scaleLockMode,
+      lockMode: draft.lockMode,
+      avoidNormal: draft.avoidNormal,
+      visualMutations: Array.from(draft.visualMutations),
+      weatherMode: draft.weatherMode,
+      weatherSelected: Array.from(draft.weatherSelected),
+      weatherRecipes: draft.weatherRecipes.map((set2) => Array.from(set2))
     };
   }
-  function setCheck(input, value) {
-    input.checked = !!value;
-  }
-  function createWeatherMutationToggle({
-    key: key2,
-    label: label2,
-    iconSize,
-    dense,
-    kind = "main",
-    iconFactory
-  }) {
-    const isMain = kind === "main" && !dense;
-    const gap = dense ? "3px" : isMain ? "3px" : "6px";
-    const padding = dense ? "4px 6px" : isMain ? "6px 8px" : "10px 12px";
-    const minWidth = dense ? "80px" : isMain ? "88px" : "120px";
-    const wrapStyles = {
-      position: "relative",
-      display: "grid",
-      justifyItems: "center",
-      alignItems: "center",
-      gap,
-      padding,
-      border: "1px solid rgba(255,255,255,0.10)",
-      borderRadius: "10px",
-      background: "rgba(255,255,255,0.02)",
-      cursor: "pointer",
-      minWidth,
-      transition: "border-color 120ms ease, box-shadow 120ms ease, background 120ms ease",
-      boxShadow: "none"
-    };
-    if (isMain) {
-      wrapStyles.width = "100%";
-    }
-    const wrap = applyStyles(document.createElement("label"), wrapStyles);
-    wrap.title = "Active filters influence harvest conditions";
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    applyStyles(input, {
-      position: "absolute",
-      inset: "0",
-      opacity: "0",
-      pointerEvents: "none",
-      margin: "0"
-    });
-    input.dataset.weatherToggle = kind;
-    wrap.appendChild(input);
-    wrap.dataset.weatherToggle = kind;
-    const computedIconSize = Math.max(24, iconSize ?? (dense ? 36 : isMain ? 52 : 72));
-    const iconWrap = applyStyles(document.createElement("span"), {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center"
-    });
-    const fallbackIcon = iconFactory ? iconFactory({ size: computedIconSize, fallback: label2.charAt(0) || "?" }) : createWeatherBadge(key2, {
-      size: computedIconSize,
-      fallback: label2.charAt(0) || "?"
-    });
-    applyStyles(iconWrap, {
-      filter: "drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45))"
-    });
-    iconWrap.appendChild(fallbackIcon);
-    wrap.appendChild(iconWrap);
-    attachWeatherSpriteIcon(iconWrap, key2, computedIconSize);
-    const caption2 = applyStyles(document.createElement("div"), {
-      fontSize: dense ? "11px" : "11.5px",
-      fontWeight: dense ? "500" : "600",
-      opacity: "0.85",
-      textAlign: "center"
-    });
-    caption2.textContent = label2;
-    wrap.appendChild(caption2);
-    const applyDisabledState = () => {
-      if (input.disabled) {
-        wrap.style.cursor = "default";
-        wrap.style.opacity = "0.55";
-        wrap.style.pointerEvents = "none";
-      } else {
-        wrap.style.cursor = "pointer";
-        wrap.style.opacity = "";
-        wrap.style.pointerEvents = "";
-      }
-    };
-    const updateState = () => {
-      if (input.checked) {
-        applyStyles(wrap, {
-          borderColor: "rgba(94,234,212,0.40)",
-          boxShadow: "0 0 0 1px rgba(94,234,212,0.25) inset, 0 2px 6px rgba(0, 0, 0, 0.45)",
-          background: "rgba(94,234,212,0.12)"
-        });
-      } else {
-        applyStyles(wrap, {
-          borderColor: "rgba(255,255,255,0.10)",
-          boxShadow: "none",
-          background: "rgba(255,255,255,0.02)"
-        });
-      }
-      applyDisabledState();
-    };
-    const setChecked = (value) => {
-      setCheck(input, value);
-      updateState();
-    };
-    const setDisabled = (value) => {
-      input.disabled = !!value;
-      updateState();
-    };
-    input.addEventListener("change", updateState);
-    input.addEventListener("mg-weather-toggle-refresh", updateState);
-    updateState();
-    return { key: key2, wrap, input, setChecked, setDisabled };
-  }
-  function styleBtnFullWidth(button3, text2) {
-    button3.textContent = text2;
-    button3.style.flex = "1";
-    button3.style.margin = "0";
-    button3.style.padding = "6px 10px";
-    button3.style.borderRadius = "8px";
-    button3.style.border = "1px solid rgba(255,255,255,0.10)";
-    button3.style.background = "rgba(255,255,255,0.04)";
-    button3.style.color = "#e7eef7";
-    button3.style.fontSize = "13px";
-    button3.style.fontWeight = "600";
-    button3.style.cursor = "pointer";
-    button3.style.justifyContent = "center";
-    button3.onmouseenter = () => {
-      button3.style.borderColor = "rgba(94,234,212,0.35)";
-      button3.style.background = "rgba(94,234,212,0.08)";
-    };
-    button3.onmouseleave = () => {
-      button3.style.borderColor = "rgba(255,255,255,0.10)";
-      button3.style.background = "rgba(255,255,255,0.04)";
-    };
-  }
-  function styleBtnCompact(button3, text2) {
-    button3.textContent = text2;
-    button3.style.margin = "0";
-    button3.style.padding = "4px 8px";
-    button3.style.borderRadius = "8px";
-    button3.style.border = "1px solid rgba(255,255,255,0.10)";
-    button3.style.background = "rgba(255,255,255,0.04)";
-    button3.style.color = "#e7eef7";
-    button3.style.fontSize = "12px";
-    button3.style.fontWeight = "600";
-    button3.style.cursor = "pointer";
-    button3.style.display = "inline-flex";
-    button3.style.alignItems = "center";
-    button3.style.justifyContent = "center";
-    button3.style.minWidth = "36px";
-    button3.onmouseenter = () => {
-      button3.style.borderColor = "rgba(94,234,212,0.35)";
-      button3.style.background = "rgba(94,234,212,0.08)";
-    };
-    button3.onmouseleave = () => {
-      button3.style.borderColor = "rgba(255,255,255,0.10)";
-      button3.style.background = "rgba(255,255,255,0.04)";
-    };
-  }
-  function createLockerSettingsCard(ui, state7, opts = {}) {
-    const card4 = document.createElement("div");
-    card4.dataset.lockerSettingsCard = "1";
-    card4.style.border = "1px solid rgba(255,255,255,0.10)";
-    card4.style.borderRadius = "10px";
-    card4.style.padding = "12px";
-    card4.style.display = "flex";
-    card4.style.flexDirection = "column";
-    card4.style.gap = "12px";
-    card4.style.alignItems = "center";
-    card4.style.overflow = "auto";
-    card4.style.minHeight = "0";
-    card4.style.width = "min(760px, 100%)";
-    let recipesTitleElement = null;
-    const updateRecipeTitleText = () => {
-      if (!recipesTitleElement) return;
-      const prefix = state7.lockMode === "ALLOW" ? "Allow" : "Lock";
-      recipesTitleElement.textContent = `${prefix} when any recipe row matches (OR between rows)`;
-    };
-    const makeSection = (titleText, content2) => {
-      const section4 = document.createElement("div");
-      section4.style.display = "grid";
-      section4.style.justifyItems = "center";
-      section4.style.gap = "8px";
-      section4.style.textAlign = "center";
-      section4.style.border = "1px solid rgba(255,255,255,0.10)";
-      section4.style.borderRadius = "10px";
-      section4.style.padding = "10px";
-      section4.style.background = "rgba(255,255,255,0.04)";
-      section4.style.boxShadow = "none";
-      section4.style.width = "min(720px, 100%)";
-      const heading = document.createElement("div");
-      heading.textContent = titleText;
-      heading.style.fontWeight = "600";
-      heading.style.opacity = "0.95";
-      section4.append(heading, content2);
-      return section4;
-    };
-    const centerRow = () => {
-      const row4 = document.createElement("div");
-      row4.style.display = "flex";
-      row4.style.flexWrap = "wrap";
-      row4.style.justifyContent = "center";
-      row4.style.alignItems = "center";
-      row4.style.gap = "8px";
-      return row4;
-    };
-    const toLockMode = (value) => value === "allow" ? "ALLOW" : "LOCK";
-    const fromLockMode = (mode) => mode === "ALLOW" ? "allow" : "lock";
-    const lockModeRow = centerRow();
-    lockModeRow.style.flexDirection = "column";
-    lockModeRow.style.alignItems = "center";
-    lockModeRow.style.gap = "10px";
-    const lockModeHint = document.createElement("div");
-    lockModeHint.style.fontSize = "12px";
-    lockModeHint.style.opacity = "0.8";
-    lockModeHint.style.textAlign = "center";
-    let isProgrammaticLockMode = false;
-    const lockModeSegmented = ui.segmented(
-      [
-        { value: "lock", label: "Lock" },
-        { value: "allow", label: "Allow" }
-      ],
-      fromLockMode(state7.lockMode),
-      (value) => {
-        if (isProgrammaticLockMode) return;
-        state7.lockMode = toLockMode(value);
-        updateLockModeUI();
-        opts.onChange?.();
-      },
-      { ariaLabel: "Harvest mode" }
-    );
-    const lockWarning = document.createElement("div");
-    applyStyles(lockWarning, {
-      fontSize: "12px",
-      textAlign: "center",
-      color: "#fbbf24",
-      fontWeight: "600",
-      display: "none"
-    });
-    const locksEverySize = () => {
-      if ((state7.lockMode ?? "LOCK") !== "LOCK") return false;
-      switch (state7.scaleLockMode) {
-        case "RANGE":
-          return state7.minScalePct <= 50 && state7.maxScalePct >= 100;
-        case "MINIMUM":
-          return state7.minScalePct <= 50;
-        case "MAXIMUM":
-          return state7.maxScalePct >= 100;
-        default:
-          return false;
-      }
-    };
-    const updateLockWarning = () => {
-      const blocked = locksEverySize();
-      lockWarning.style.display = blocked ? "" : "none";
-      lockWarning.textContent = blocked ? "This size filter covers every size, so nothing can be harvested. Pick None to stop filtering by size." : "";
-    };
-    lockModeRow.append(lockModeSegmented, lockModeHint, lockWarning);
-    const updateLockModeUI = () => {
-      const value = fromLockMode(state7.lockMode);
-      const current = lockModeSegmented.get?.();
-      if (current !== value) {
-        isProgrammaticLockMode = true;
-        try {
-          lockModeSegmented.set?.(value);
-        } finally {
-          isProgrammaticLockMode = false;
+  var LockerMenuStore;
+  var init_settingsDraft = __esm({
+    "src/features/locker/settingsDraft.ts"() {
+      "use strict";
+      init_emitter();
+      init_locker();
+      init_settings3();
+      init_weatherTags();
+      LockerMenuStore = class {
+        constructor(initial) {
+          this.global = { enabled: false, settings: newDraft(), hasPersistedSettings: true };
+          this.overrides = /* @__PURE__ */ new Map();
+          this.changes = new Emitter();
+          this.syncing = false;
+          this.syncFromService(initial);
         }
-      }
-      lockModeHint.textContent = value === "allow" ? "Harvest only when every active filter category matches" : "Harvest is locked whenever any active filter matches";
-      updateLockWarning();
-      updateRecipeTitleText();
-    };
-    const scaleRow = centerRow();
-    scaleRow.style.flexDirection = "column";
-    scaleRow.style.alignItems = "center";
-    scaleRow.style.width = "100%";
-    scaleRow.style.gap = "12px";
-    const scaleModeRow = centerRow();
-    scaleModeRow.style.flexWrap = "wrap";
-    scaleModeRow.style.justifyContent = "center";
-    scaleModeRow.style.gap = "12px";
-    const minSlider = ui.slider(50, 100, 1, state7.minScalePct);
-    applyStyles(minSlider, { width: "min(420px, 100%)" });
-    const maxSlider = ui.slider(50, 100, 1, state7.maxScalePct);
-    applyStyles(maxSlider, { width: "min(420px, 100%)" });
-    const toMode = (value) => {
-      switch (value) {
-        case "minimum":
-          return "MINIMUM";
-        case "maximum":
-          return "MAXIMUM";
-        case "ranged":
-          return "RANGE";
-        default:
-          return "NONE";
-      }
-    };
-    const fromMode = (mode) => {
-      switch (mode) {
-        case "MINIMUM":
-          return "minimum";
-        case "MAXIMUM":
-          return "maximum";
-        case "RANGE":
-          return "ranged";
-        default:
-          return "none";
-      }
-    };
-    let isProgrammaticScaleMode = false;
-    const initialScaleMode = fromMode(state7.scaleLockMode);
-    const scaleModeSegmented = ui.segmented(
-      [
-        { value: "none", label: "None" },
-        { value: "minimum", label: "Minimum" },
-        { value: "maximum", label: "Maximum" },
-        { value: "ranged", label: "Range" }
-      ],
-      initialScaleMode,
-      (value) => {
-        if (isProgrammaticScaleMode) return;
-        applyScaleMode(toMode(value), true);
-      },
-      { ariaLabel: "Scale lock mode" }
-    );
-    scaleModeRow.append(scaleModeSegmented);
-    const scaleSlider = ui.rangeDual(50, 100, 1, state7.minScalePct, state7.maxScalePct);
-    applyStyles(scaleSlider.root, {
-      width: "min(420px, 100%)",
-      marginLeft: "auto",
-      marginRight: "auto"
-    });
-    const scaleMinSlider = scaleSlider.min;
-    const scaleMaxSlider = scaleSlider.max;
-    const scaleMinValue = ui.label("50");
-    const scaleMaxValue = ui.label("100");
-    const scaleMinimumValue = ui.label("50");
-    const scaleMaximumValue = ui.label("100");
-    [scaleMinValue, scaleMaxValue, scaleMinimumValue, scaleMaximumValue].forEach((label2) => {
-      label2.style.margin = "0";
-      label2.style.fontWeight = "600";
-    });
-    const makeScaleValue = (labelText, valueLabel) => {
-      const wrap = applyStyles(document.createElement("div"), {
-        display: "flex",
-        alignItems: "center",
-        gap: "6px"
-      });
-      const label2 = ui.label(labelText);
-      label2.style.margin = "0";
-      label2.style.opacity = "0.9";
-      wrap.append(label2, valueLabel);
-      return wrap;
-    };
-    const scaleValues = applyStyles(document.createElement("div"), {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      width: "min(420px, 100%)",
-      gap: "16px"
-    });
-    scaleValues.append(makeScaleValue("Min", scaleMinValue), makeScaleValue("Max", scaleMaxValue));
-    const minControls = applyStyles(document.createElement("div"), {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: "12px",
-      width: "100%"
-    });
-    minControls.append(minSlider, makeScaleValue("Minimum", scaleMinimumValue));
-    const maxControls = applyStyles(document.createElement("div"), {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: "12px",
-      width: "100%"
-    });
-    maxControls.append(maxSlider, makeScaleValue("Maximum", scaleMaximumValue));
-    const rangeControls = applyStyles(document.createElement("div"), {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: "12px",
-      width: "100%"
-    });
-    rangeControls.append(scaleSlider.root, scaleValues);
-    scaleRow.append(scaleModeRow, minControls, maxControls, rangeControls);
-    const applyScaleRange = (commit, notify2 = commit) => {
-      let minValue = parseInt(scaleMinSlider.value, 10);
-      let maxValue = parseInt(scaleMaxSlider.value, 10);
-      if (!Number.isFinite(minValue)) minValue = state7.minScalePct;
-      if (!Number.isFinite(maxValue)) maxValue = state7.maxScalePct;
-      minValue = Math.max(50, Math.min(99, minValue));
-      maxValue = Math.max(51, Math.min(100, maxValue));
-      if (maxValue <= minValue) {
-        if (minValue >= 99) {
-          minValue = 99;
-          maxValue = 100;
-        } else {
-          maxValue = Math.min(100, Math.max(51, minValue + 1));
+        subscribe(listener) {
+          return this.changes.on(listener);
         }
-      }
-      scaleSlider.setValues(minValue, maxValue);
-      scaleMinValue.textContent = `${minValue}`;
-      scaleMaxValue.textContent = `${maxValue}`;
-      if (commit) {
-        state7.minScalePct = minValue;
-        state7.maxScalePct = maxValue;
-        updateLockWarning();
-        if (notify2) opts.onChange?.();
-      }
-    };
-    const applyScaleMinimum = (commit, notify2 = commit) => {
-      let minValue = parseInt(minSlider.value, 10);
-      if (!Number.isFinite(minValue)) minValue = state7.minScalePct;
-      minValue = Math.max(50, Math.min(100, minValue));
-      minSlider.value = String(minValue);
-      scaleMinimumValue.textContent = `${minValue}`;
-      if (commit) {
-        state7.minScalePct = minValue;
-        updateLockWarning();
-        if (notify2) opts.onChange?.();
-      }
-    };
-    const applyScaleMaximum = (commit, notify2 = commit) => {
-      let maxValue = parseInt(maxSlider.value, 10);
-      if (!Number.isFinite(maxValue)) maxValue = state7.maxScalePct;
-      maxValue = Math.max(50, Math.min(100, maxValue));
-      maxSlider.value = String(maxValue);
-      scaleMaximumValue.textContent = `${maxValue}`;
-      if (commit) {
-        state7.maxScalePct = maxValue;
-        updateLockWarning();
-        if (notify2) opts.onChange?.();
-      }
-    };
-    const updateScaleModeUI = () => {
-      const isRange = state7.scaleLockMode === "RANGE";
-      const isMin = state7.scaleLockMode === "MINIMUM";
-      const isMax = state7.scaleLockMode === "MAXIMUM";
-      rangeControls.style.display = isRange ? "" : "none";
-      minControls.style.display = isMin ? "" : "none";
-      maxControls.style.display = isMax ? "" : "none";
-      const segValue = fromMode(state7.scaleLockMode);
-      if (scaleModeSegmented.get?.() !== segValue) {
-        isProgrammaticScaleMode = true;
-        try {
-          scaleModeSegmented.set?.(segValue);
-        } finally {
-          isProgrammaticScaleMode = false;
-        }
-      }
-      updateLockWarning();
-    };
-    const applyScaleMode = (mode, notify2) => {
-      const prevMode = state7.scaleLockMode;
-      state7.scaleLockMode = mode;
-      if (mode === "RANGE") {
-        scaleSlider.setValues(state7.minScalePct, state7.maxScalePct);
-        applyScaleRange(prevMode !== mode, false);
-      } else if (mode === "MINIMUM") {
-        minSlider.value = String(state7.minScalePct);
-        applyScaleMinimum(prevMode !== mode, false);
-      } else if (mode === "MAXIMUM") {
-        maxSlider.value = String(state7.maxScalePct);
-        applyScaleMaximum(prevMode !== mode, false);
-      }
-      updateScaleModeUI();
-      if (notify2 && prevMode !== mode) {
-        opts.onChange?.();
-      }
-    };
-    minSlider.addEventListener("input", () => applyScaleMinimum(false));
-    minSlider.addEventListener("change", () => applyScaleMinimum(true));
-    maxSlider.addEventListener("input", () => applyScaleMaximum(false));
-    maxSlider.addEventListener("change", () => applyScaleMaximum(true));
-    scaleMinSlider.addEventListener("input", () => applyScaleRange(false));
-    scaleMaxSlider.addEventListener("input", () => applyScaleRange(false));
-    scaleMinSlider.addEventListener("change", () => applyScaleRange(true));
-    scaleMaxSlider.addEventListener("change", () => applyScaleRange(true));
-    applyScaleRange(false);
-    applyScaleMinimum(false);
-    applyScaleMaximum(false);
-    applyScaleMode(state7.scaleLockMode, false);
-    const colorsRow = centerRow();
-    colorsRow.style.flexWrap = "wrap";
-    colorsRow.style.gap = "8px";
-    const createColorButton = (label2, gradient2) => {
-      const button3 = document.createElement("button");
-      button3.type = "button";
-      button3.title = "Active filters influence harvest conditions";
-      applyStyles(button3, {
-        padding: "6px 12px",
-        borderRadius: "8px",
-        border: "1px solid rgba(255,255,255,0.10)",
-        background: "rgba(255,255,255,0.04)",
-        color: "#e7eef7",
-        fontWeight: "600",
-        letterSpacing: "0.3px",
-        transition: "border-color 120ms ease, box-shadow 120ms ease, background 120ms ease, opacity 120ms ease",
-        boxShadow: "none",
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "6px",
-        minWidth: "92px",
-        cursor: "pointer"
-      });
-      const text2 = document.createElement("span");
-      text2.textContent = label2;
-      if (gradient2) {
-        applyStyles(text2, {
-          backgroundImage: gradient2,
-          backgroundClip: "text",
-          WebkitBackgroundClip: "text",
-          color: "transparent",
-          fontWeight: "700",
-          textShadow: "0 0 6px rgba(0, 0, 0, 0.35)"
-        });
-      }
-      button3.appendChild(text2);
-      button3.addEventListener("mouseenter", () => {
-        if (button3.disabled || button3.dataset.active === "1") return;
-        button3.style.borderColor = "rgba(94,234,212,0.35)";
-      });
-      button3.addEventListener("mouseleave", () => {
-        if (button3.dataset.active === "1") return;
-        button3.style.borderColor = "rgba(255,255,255,0.10)";
-      });
-      return button3;
-    };
-    const btnNormal = createColorButton("Normal");
-    const btnGold = createColorButton(
-      "Gold",
-      "linear-gradient(120deg, #f5d76e, #c9932b, #f9e9b6)"
-    );
-    const btnRainbow = createColorButton(
-      "Rainbow",
-      "linear-gradient(90deg, #ff6b6b, #f7d35c, #3fd3ff, #9b6bff, #ff6b6b)"
-    );
-    const updateColorButtonVisual = (button3, active3) => {
-      button3.dataset.active = active3 ? "1" : "0";
-      button3.style.borderColor = active3 ? "rgba(94,234,212,0.40)" : "rgba(255,255,255,0.10)";
-      button3.style.boxShadow = active3 ? "0 0 0 1px rgba(94,234,212,0.25) inset, 0 2px 6px rgba(0, 0, 0, 0.45)" : "none";
-      button3.style.background = active3 ? "rgba(94,234,212,0.12)" : "rgba(255,255,255,0.04)";
-      button3.style.opacity = button3.disabled ? "0.55" : "";
-      button3.style.cursor = button3.disabled ? "default" : "pointer";
-    };
-    const updateColorButtons = () => {
-      updateColorButtonVisual(btnNormal, state7.avoidNormal);
-      updateColorButtonVisual(btnGold, state7.visualMutations.has("Gold"));
-      updateColorButtonVisual(btnRainbow, state7.visualMutations.has("Rainbow"));
-    };
-    btnNormal.addEventListener("click", () => {
-      state7.avoidNormal = !state7.avoidNormal;
-      updateColorButtons();
-      opts.onChange?.();
-    });
-    btnGold.addEventListener("click", () => {
-      if (state7.visualMutations.has("Gold")) state7.visualMutations.delete("Gold");
-      else state7.visualMutations.add("Gold");
-      updateColorButtons();
-      opts.onChange?.();
-    });
-    btnRainbow.addEventListener("click", () => {
-      if (state7.visualMutations.has("Rainbow")) state7.visualMutations.delete("Rainbow");
-      else state7.visualMutations.add("Rainbow");
-      updateColorButtons();
-      opts.onChange?.();
-    });
-    colorsRow.append(btnNormal, btnGold, btnRainbow);
-    const weatherGrid = applyStyles(document.createElement("div"), {
-      display: "grid",
-      gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-      columnGap: "6px",
-      rowGap: "6px",
-      justifyItems: "stretch",
-      width: "min(640px, 100%)",
-      marginInline: "auto"
-    });
-    const applyWeatherSelection = (selection) => (tag, checked) => {
-      if (checked) {
-        selection.add(tag);
-      } else {
-        selection.delete(tag);
-      }
-      opts.onChange?.();
-    };
-    const updateMainWeatherSelection = applyWeatherSelection(state7.weatherSelected);
-    const weatherToggles = weatherMutations().map((info) => {
-      const toggle2 = createWeatherMutationToggle({
-        key: info.key,
-        label: info.label,
-        kind: "main",
-        iconFactory: info.iconFactory
-      });
-      toggle2.input.addEventListener(
-        "change",
-        () => updateMainWeatherSelection(info.key, toggle2.input.checked)
-      );
-      weatherGrid.appendChild(toggle2.wrap);
-      return toggle2;
-    });
-    const updateWeatherMutationsDisabled = () => {
-      const disabled = card4.dataset.disabled === "1" || state7.weatherMode === "RECIPES";
-      weatherGrid.style.opacity = disabled ? "0.55" : "";
-      weatherGrid.style.pointerEvents = disabled ? "none" : "";
-      weatherToggles.forEach((toggle2) => toggle2.setDisabled(disabled));
-    };
-    const weatherModeName = `locker-weather-mode-${++weatherModeNameSeq}`;
-    const weatherModeRow = centerRow();
-    const buildRadio = (value, label2) => {
-      const wrap = document.createElement("label");
-      wrap.style.display = "inline-flex";
-      wrap.style.alignItems = "center";
-      wrap.style.gap = "6px";
-      const input = ui.radio(weatherModeName, value);
-      const span = document.createElement("span");
-      span.textContent = label2;
-      wrap.append(input, span);
-      input.addEventListener("change", () => {
-        if (!input.checked) return;
-        state7.weatherMode = value;
-        recipesWrap.style.display = value === "RECIPES" ? "" : "none";
-        updateWeatherMutationsDisabled();
-        opts.onChange?.();
-      });
-      return { wrap, input };
-    };
-    const radioAny = buildRadio("ANY", "Any match (OR)");
-    const radioAll = buildRadio("ALL", "All match (AND)");
-    const radioRecipes = buildRadio("RECIPES", "Recipes (match rows)");
-    weatherModeRow.append(radioAny.wrap, radioAll.wrap, radioRecipes.wrap);
-    const recipesWrap = document.createElement("div");
-    recipesWrap.style.display = "grid";
-    recipesWrap.style.gap = "8px";
-    recipesWrap.style.justifyItems = "center";
-    recipesWrap.style.width = "min(720px, 100%)";
-    const recipesHeader = centerRow();
-    recipesHeader.style.width = "100%";
-    recipesHeader.style.justifyContent = "space-between";
-    const recipesTitle = document.createElement("div");
-    recipesTitleElement = recipesTitle;
-    updateRecipeTitleText();
-    recipesTitle.style.fontWeight = "600";
-    recipesTitle.style.opacity = "0.9";
-    const btnAddRecipe = document.createElement("button");
-    btnAddRecipe.style.maxWidth = "140px";
-    styleBtnFullWidth(btnAddRecipe, "+ Recipe");
-    recipesHeader.append(recipesTitle, btnAddRecipe);
-    const recipesList = document.createElement("div");
-    recipesList.style.display = "grid";
-    recipesList.style.gap = "8px";
-    recipesList.style.gridTemplateColumns = "repeat(auto-fit, minmax(320px, 1fr))";
-    recipesList.style.justifyItems = "stretch";
-    let editingRecipeIndex = null;
-    let editingRecipeDraft = /* @__PURE__ */ new Set();
-    const emptyRecipes = document.createElement("div");
-    emptyRecipes.textContent = "No recipe rows yet.";
-    emptyRecipes.style.fontSize = "12px";
-    emptyRecipes.style.opacity = "0.7";
-    emptyRecipes.style.textAlign = "center";
-    const updateAddRecipeDisabled = () => {
-      const editing = editingRecipeIndex !== null;
-      const cardDisabled = card4.dataset.disabled === "1";
-      btnAddRecipe.disabled = editing || cardDisabled;
-      btnAddRecipe.style.opacity = editing ? "0.7" : "";
-      btnAddRecipe.style.pointerEvents = editing ? "none" : "";
-    };
-    const startEditingRecipe = (index, base) => {
-      editingRecipeIndex = index;
-      editingRecipeDraft = new Set(base ?? []);
-      normalizeRecipeSelection(editingRecipeDraft);
-      repaintRecipes();
-    };
-    const cancelEditingRecipe = () => {
-      editingRecipeIndex = null;
-      editingRecipeDraft = /* @__PURE__ */ new Set();
-      repaintRecipes();
-    };
-    const commitEditingRecipe = () => {
-      if (editingRecipeIndex === null) return;
-      const draft = new Set(editingRecipeDraft);
-      normalizeRecipeSelection(draft);
-      if (editingRecipeIndex === state7.weatherRecipes.length) {
-        state7.weatherRecipes.push(draft);
-      } else if (editingRecipeIndex >= 0 && editingRecipeIndex < state7.weatherRecipes.length) {
-        state7.weatherRecipes[editingRecipeIndex] = draft;
-      }
-      editingRecipeIndex = null;
-      editingRecipeDraft = /* @__PURE__ */ new Set();
-      repaintRecipes();
-      opts.onChange?.();
-    };
-    const deleteRecipeAt = (index) => {
-      if (index < 0) return;
-      if (index < state7.weatherRecipes.length) {
-        state7.weatherRecipes.splice(index, 1);
-      }
-      if (editingRecipeIndex !== null) {
-        if (index === editingRecipeIndex) {
-          editingRecipeIndex = null;
-          editingRecipeDraft = /* @__PURE__ */ new Set();
-        } else if (index < editingRecipeIndex) {
-          editingRecipeIndex -= 1;
-        }
-      }
-      repaintRecipes();
-      opts.onChange?.();
-    };
-    const buildRecipeBadge = (info) => {
-      const { key: tag, label: label2 } = info;
-      const badge2 = document.createElement("div");
-      applyStyles(badge2, {
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "6px",
-        padding: "4px 10px",
-        borderRadius: "999px",
-        border: "1px solid rgba(255,255,255,0.10)",
-        background: "rgba(255,255,255,0.04)",
-        color: "#e7eef7",
-        fontSize: "12px",
-        fontWeight: "600",
-        letterSpacing: "0.2px"
-      });
-      const iconWrap = applyStyles(document.createElement("span"), {
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center"
-      });
-      const fallbackIcon = info.iconFactory ? info.iconFactory({ size: 20, fallback: label2.charAt(0) || "?" }) : createWeatherBadge(tag, {
-        size: 20,
-        fallback: label2.charAt(0) || "?"
-      });
-      applyStyles(iconWrap, {
-        filter: "drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45))"
-      });
-      iconWrap.appendChild(fallbackIcon);
-      attachWeatherSpriteIcon(iconWrap, tag, 20);
-      const text2 = document.createElement("span");
-      text2.textContent = label2;
-      badge2.append(iconWrap, text2);
-      return badge2;
-    };
-    const renderRecipeSummary = (container, selection) => {
-      container.innerHTML = "";
-      const badges = document.createElement("div");
-      applyStyles(badges, {
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "6px",
-        justifyContent: "flex-start"
-      });
-      let count = 0;
-      weatherMutations().forEach((info) => {
-        if (!selection.has(info.key)) return;
-        count += 1;
-        badges.appendChild(buildRecipeBadge(info));
-      });
-      if (count === 0) {
-        const empty = document.createElement("div");
-        empty.textContent = "No weather mutation selected.";
-        empty.style.fontSize = "12px";
-        empty.style.opacity = "0.7";
-        empty.style.textAlign = "left";
-        badges.appendChild(empty);
-      }
-      container.appendChild(badges);
-    };
-    const applyDisabled = () => {
-      const cardDisabled = card4.dataset.disabled === "1";
-      const inputs = card4.querySelectorAll("input,button,select,textarea");
-      inputs.forEach((el) => {
-        if (el.dataset.weatherToggle === "main") {
-          return;
-        }
-        el.disabled = cardDisabled;
-        el.dispatchEvent(new Event("mg-weather-toggle-refresh"));
-      });
-      updateWeatherMutationsDisabled();
-      updateColorButtons();
-      card4.style.opacity = cardDisabled ? "0.55" : "";
-      updateAddRecipeDisabled();
-    };
-    function buildRecipeToggleGrid(selection, onSelectionChange) {
-      const toggleGrid = applyStyles(document.createElement("div"), {
-        display: "grid",
-        gridTemplateColumns: "repeat(4, minmax(80px, 1fr))",
-        columnGap: "6px",
-        rowGap: "6px",
-        justifyItems: "center"
-      });
-      const toggles = /* @__PURE__ */ new Map();
-      weatherMutations().forEach((info) => {
-        const toggle2 = createWeatherMutationToggle({
-          key: info.key,
-          label: info.label,
-          iconSize: 40,
-          dense: true,
-          kind: "recipe",
-          iconFactory: info.iconFactory
-        });
-        toggles.set(info.key, toggle2);
-        toggle2.setChecked(selection.has(toggle2.key));
-        toggle2.input.addEventListener("change", () => {
-          const checked = toggle2.input.checked;
-          const group2 = WEATHER_RECIPE_GROUPS[toggle2.key];
-          if (checked && group2) {
-            WEATHER_RECIPE_GROUP_MEMBERS[group2].forEach((other) => {
-              if (other === toggle2.key) return;
-              if (!selection.has(other)) return;
-              selection.delete(other);
-              toggles.get(other)?.setChecked(false);
-            });
+        /** Reads the saved state back in. Species the service no longer holds are forgotten. */
+        syncFromService(state7) {
+          this.syncing = true;
+          try {
+            this.global.enabled = state7.enabled;
+            readInto(this.global.settings, state7.settings);
+            for (const [key2, value] of Object.entries(state7.overrides)) {
+              const entry = this.ensureOverride(key2);
+              entry.enabled = value.enabled;
+              readInto(entry.settings, value.settings);
+              entry.hasPersistedSettings = true;
+            }
+            for (const key2 of Array.from(this.overrides.keys())) {
+              if (!(key2 in state7.overrides)) this.overrides.delete(key2);
+            }
+            this.changes.emit();
+          } finally {
+            this.syncing = false;
           }
-          if (checked) {
-            selection.add(toggle2.key);
-          } else {
-            selection.delete(toggle2.key);
+        }
+        setGlobalEnabled(enabled5) {
+          this.global.enabled = enabled5;
+          this.saveGlobal();
+        }
+        notifyGlobalSettingsChanged() {
+          this.saveGlobal();
+        }
+        /** The draft for a species, created with the defaults the first time it is opened. */
+        ensureOverride(key2) {
+          let entry = this.overrides.get(key2);
+          if (!entry) {
+            entry = { enabled: false, settings: newDraft(), hasPersistedSettings: false };
+            this.overrides.set(key2, entry);
           }
-          onSelectionChange();
-        });
-        toggleGrid.appendChild(toggle2.wrap);
-      });
-      return toggleGrid;
-    }
-    function repaintRecipes() {
-      recipesList.innerHTML = "";
-      const hasDraftNew = editingRecipeIndex !== null && editingRecipeIndex === state7.weatherRecipes.length;
-      const totalRows = state7.weatherRecipes.length + (hasDraftNew ? 1 : 0);
-      if (totalRows === 0) {
-        recipesList.appendChild(emptyRecipes);
-        applyDisabled();
-        return;
-      }
-      state7.weatherRecipes.forEach((set2, index) => {
-        normalizeRecipeSelection(set2);
-        const isEditing2 = editingRecipeIndex === index;
-        const selection = isEditing2 ? editingRecipeDraft : set2;
-        const row4 = applyStyles(document.createElement("div"), {
-          display: "flex",
-          gap: isEditing2 ? "10px" : "12px",
-          border: "1px solid rgba(255,255,255,0.10)",
-          borderRadius: "10px",
-          padding: isEditing2 ? "12px" : "10px 12px",
-          background: "rgba(255,255,255,0.02)",
-          boxShadow: "none",
-          width: "100%"
-        });
-        if (isEditing2) {
-          row4.style.flexDirection = "column";
-        } else {
-          row4.style.flexDirection = "row";
-          row4.style.alignItems = "center";
-          row4.style.justifyContent = "space-between";
-          row4.style.flexWrap = "wrap";
+          return entry;
         }
-        const summary = document.createElement("div");
-        renderRecipeSummary(summary, selection);
-        if (!isEditing2) {
-          summary.style.flex = "1 1 auto";
-          summary.style.minWidth = "220px";
+        isOverrideEnabled(key2) {
+          return this.overrides.get(key2)?.enabled === true;
         }
-        row4.appendChild(summary);
-        if (isEditing2) {
-          const toggleGrid = buildRecipeToggleGrid(selection, () => renderRecipeSummary(summary, selection));
-          row4.appendChild(toggleGrid);
-          const actions2 = applyStyles(document.createElement("div"), {
-            display: "flex",
-            gap: "8px",
-            width: "100%"
-          });
-          const btnCancel = document.createElement("button");
-          styleBtnFullWidth(btnCancel, "\u274C");
-          btnCancel.onclick = cancelEditingRecipe;
-          const btnValidate = document.createElement("button");
-          styleBtnFullWidth(btnValidate, "\u2714\uFE0F");
-          btnValidate.onclick = commitEditingRecipe;
-          actions2.append(btnCancel, btnValidate);
-          if (editingRecipeIndex !== null && editingRecipeIndex < state7.weatherRecipes.length) {
-            const btnDelete = document.createElement("button");
-            styleBtnFullWidth(btnDelete, "\u{1F5D1}\uFE0F");
-            btnDelete.title = "Delete";
-            btnDelete.setAttribute("aria-label", "Delete");
-            btnDelete.onclick = () => deleteRecipeAt(index);
-            actions2.append(btnDelete);
+        setOverrideEnabled(key2, enabled5) {
+          const entry = this.ensureOverride(key2);
+          if (enabled5 && !entry.enabled && !entry.hasPersistedSettings) {
+            copyDraft(entry.settings, this.global.settings);
           }
-          row4.appendChild(actions2);
-        } else {
-          const actions2 = applyStyles(document.createElement("div"), {
-            display: "flex",
-            gap: "6px",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            flex: "0 0 auto"
-          });
-          actions2.style.flexWrap = "nowrap";
-          const btnEdit = document.createElement("button");
-          styleBtnCompact(btnEdit, "\u270F\uFE0F");
-          btnEdit.title = "Edit";
-          btnEdit.setAttribute("aria-label", "Edit");
-          btnEdit.onclick = () => startEditingRecipe(index, set2);
-          const btnDelete = document.createElement("button");
-          styleBtnCompact(btnDelete, "\u{1F5D1}\uFE0F");
-          btnDelete.title = "Delete";
-          btnDelete.setAttribute("aria-label", "Delete");
-          btnDelete.onclick = () => deleteRecipeAt(index);
-          actions2.append(btnEdit, btnDelete);
-          row4.appendChild(actions2);
+          entry.enabled = enabled5;
+          this.saveOverride(key2);
         }
-        recipesList.appendChild(row4);
-      });
-      if (hasDraftNew && editingRecipeIndex !== null) {
-        const selection = editingRecipeDraft;
-        const row4 = applyStyles(document.createElement("div"), {
-          display: "flex",
-          flexDirection: "column",
-          gap: "10px",
-          border: "1px solid rgba(255,255,255,0.10)",
-          borderRadius: "10px",
-          padding: "12px",
-          background: "rgba(255,255,255,0.02)",
-          boxShadow: "none",
-          width: "100%"
-        });
-        const summary = document.createElement("div");
-        renderRecipeSummary(summary, selection);
-        row4.appendChild(summary);
-        const toggleGrid = buildRecipeToggleGrid(selection, () => renderRecipeSummary(summary, selection));
-        row4.appendChild(toggleGrid);
-        const actions2 = applyStyles(document.createElement("div"), {
-          display: "flex",
-          gap: "8px",
-          width: "100%"
-        });
-        const btnCancel = document.createElement("button");
-        styleBtnFullWidth(btnCancel, "\u274C");
-        btnCancel.onclick = cancelEditingRecipe;
-        const btnValidate = document.createElement("button");
-        styleBtnFullWidth(btnValidate, "\u2714\uFE0F");
-        btnValidate.onclick = commitEditingRecipe;
-        actions2.append(btnCancel, btnValidate);
-        row4.appendChild(actions2);
-        recipesList.appendChild(row4);
-      }
-      applyDisabled();
+        notifyOverrideSettingsChanged(key2) {
+          if (this.overrides.has(key2)) this.saveOverride(key2);
+        }
+        saveGlobal() {
+          if (this.syncing) return;
+          lockerService.setGlobalState({ enabled: this.global.enabled, settings: toPersisted(this.global.settings) });
+          this.changes.emit();
+        }
+        saveOverride(key2) {
+          if (this.syncing) return;
+          const entry = this.overrides.get(key2);
+          if (!entry) return;
+          entry.hasPersistedSettings = true;
+          lockerService.setOverride(key2, { enabled: entry.enabled, settings: toPersisted(entry.settings) });
+          this.changes.emit();
+        }
+      };
     }
-    btnAddRecipe.onclick = () => {
-      startEditingRecipe(state7.weatherRecipes.length);
-    };
-    recipesWrap.append(recipesHeader, recipesList);
-    card4.append(
-      makeSection("Harvest mode", lockModeRow),
-      makeSection("Filter by size", scaleRow),
-      makeSection("Filter by color", colorsRow),
-      makeSection("Filter by weather", weatherGrid),
-      makeSection("Weather filter mode", weatherModeRow),
-      makeSection("Weather recipes", recipesWrap)
-    );
-    const refresh = () => {
-      updateLockModeUI();
-      scaleSlider.setValues(state7.minScalePct, state7.maxScalePct);
-      minSlider.value = String(state7.minScalePct);
-      maxSlider.value = String(state7.maxScalePct);
-      applyScaleRange(false);
-      applyScaleMinimum(false);
-      applyScaleMaximum(false);
-      applyScaleMode(state7.scaleLockMode, false);
-      updateColorButtons();
-      weatherToggles.forEach((toggle2) => toggle2.setChecked(state7.weatherSelected.has(toggle2.key)));
-      radioAny.input.checked = state7.weatherMode === "ANY";
-      radioAll.input.checked = state7.weatherMode === "ALL";
-      radioRecipes.input.checked = state7.weatherMode === "RECIPES";
-      recipesWrap.style.display = state7.weatherMode === "RECIPES" ? "" : "none";
-      updateWeatherMutationsDisabled();
-      repaintRecipes();
-    };
-    const setDisabled = (value) => {
-      card4.dataset.disabled = value ? "1" : "0";
-      applyDisabled();
-    };
-    refresh();
-    return { root: card4, refresh, setDisabled };
-  }
-  function createRestrictionsTabRenderer(ui) {
-    let state7 = lockerRestrictionsService.getState();
-    let bonusFromMultiplier = null;
-    let bonusFromPlayers = friendBonusPercentFromPlayers(1);
-    let eggOptions = [];
-    const disposables = [];
-    let subsAttached = false;
-    const clampPercent2 = (value) => Math.max(0, Math.min(FRIEND_BONUS_MAX, Math.round(value / FRIEND_BONUS_STEP) * FRIEND_BONUS_STEP));
-    const resolveCurrentBonus = () => bonusFromMultiplier ?? bonusFromPlayers ?? 0;
-    const layout = applyStyles(document.createElement("div"), {
-      display: "grid",
-      gap: "12px",
-      justifyItems: "center",
-      width: "100%",
-      maxWidth: "1100px"
+  });
+
+  // src/features/locker/menu.ts
+  function generalTab(store) {
+    const root4 = document.createElement("div");
+    root4.className = "lk-column";
+    const toggle2 = switchInput(store.global.enabled, (on) => store.setGlobalEnabled(on));
+    const enabled5 = document.createElement("label");
+    enabled5.className = "qmm-flex";
+    const enabledText = document.createElement("span");
+    enabledText.className = "qmm-label";
+    enabledText.textContent = "Enabled";
+    enabled5.append(enabledText, toggle2);
+    const header = card("Global locker", {
+      subtitle: "Set the rules for locking or allowing harvests using the filters below",
+      actions: [enabled5]
     });
-    const card4 = ui.card("Friend bonus locker", {
-      align: "stretch"
-    });
-    card4.root.style.width = "100%";
-    card4.header.style.display = "flex";
-    card4.header.style.alignItems = "center";
-    card4.header.style.justifyContent = "space-between";
-    const sliderWrap = applyStyles(document.createElement("div"), {
-      display: "grid",
-      gap: "6px"
-    });
-    const sliderHeader = ui.flexRow({ justify: "between", align: "center", fullWidth: true });
-    const sliderTitle = document.createElement("div");
-    sliderTitle.textContent = "Minimum friend bonus required\u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E ";
-    sliderTitle.style.fontWeight = "600";
-    const sliderValue = applyStyles(document.createElement("div"), {
-      fontWeight: "700",
-      color: "#ff7a1f",
-      textShadow: "0 1px 1px rgba(0, 0, 0, 0.5)"
-    });
-    sliderHeader.append(sliderTitle, sliderValue);
-    const initialRequiredPct = friendBonusPercentFromPlayers(state7.minRequiredPlayers) ?? 0;
-    const slider2 = ui.slider(0, FRIEND_BONUS_MAX, FRIEND_BONUS_STEP, initialRequiredPct);
-    slider2.style.width = "100%";
-    sliderWrap.append(sliderHeader, slider2);
-    const statusBadge = applyStyles(document.createElement("div"), {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "6px",
-      padding: "4px 10px",
-      borderRadius: "999px",
-      fontWeight: "700",
-      fontSize: "12px",
-      letterSpacing: "0.25px"
-    });
-    statusBadge.style.marginLeft = "auto";
-    card4.header.appendChild(statusBadge);
-    const statusText = applyStyles(document.createElement("div"), {
-      fontSize: "12.5px",
-      lineHeight: "1.5",
-      opacity: "0.92"
-    });
-    card4.body.append(sliderWrap, statusText);
-    layout.append(card4.root);
-    const decorCard = ui.card("Decor pick locker", { align: "stretch" });
-    decorCard.root.style.width = "100%";
-    const decorRow = applyStyles(document.createElement("div"), {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "12px"
-    });
-    const decorText = applyStyles(document.createElement("div"), {
-      display: "flex",
-      flexDirection: "column",
-      gap: "4px"
-    });
-    const decorSubtitle = document.createElement("div");
-    decorSubtitle.textContent = "Prevents placed decors from being picked up";
-    decorSubtitle.style.fontSize = "12.5px";
-    decorSubtitle.style.opacity = "0.85";
-    decorText.append(decorSubtitle);
-    const decorToggle = ui.switch(state7.decorPickupLocked);
-    decorToggle.addEventListener("change", () => {
-      const locked = !!decorToggle.checked;
-      state7.decorPickupLocked = locked;
-      lockerRestrictionsService.setDecorPickupLocked(locked);
-    });
-    decorRow.append(decorText, decorToggle);
-    decorCard.body.append(decorRow);
-    layout.append(decorCard.root);
-    const eggCard = ui.card("Egg hatch locker", { align: "stretch" });
-    eggCard.root.style.width = "100%";
-    const eggList = applyStyles(document.createElement("div"), {
-      display: "grid",
-      gap: "8px",
-      width: "100%"
-    });
-    eggCard.body.append(eggList);
-    layout.append(eggCard.root);
-    const sellPetsCard = ui.card("Sell all pets protections", { align: "stretch" });
-    sellPetsCard.root.style.width = "100%";
-    const sellPetsIntro = document.createElement("div");
-    sellPetsIntro.textContent = "Show a confirmation modal when protected pets are detected.";
-    sellPetsIntro.style.fontSize = "12.5px";
-    sellPetsIntro.style.opacity = "0.8";
-    const sellPetsGrid = applyStyles(document.createElement("div"), {
-      display: "grid",
-      gap: "10px",
-      marginTop: "6px"
-    });
-    const createRuleRow = (title, subtitle) => {
-      const row4 = applyStyles(document.createElement("div"), {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "12px",
-        padding: "8px 10px",
-        border: "1px solid rgba(255,255,255,0.10)",
-        borderRadius: "10px",
-        background: "rgba(255,255,255,0.02)"
-      });
-      const text2 = applyStyles(document.createElement("div"), {
-        display: "grid",
-        gap: "2px"
-      });
-      const titleEl = document.createElement("div");
-      titleEl.textContent = title;
-      titleEl.style.fontWeight = "600";
-      titleEl.style.fontSize = "13px";
-      text2.appendChild(titleEl);
-      if (subtitle) {
-        const sub = document.createElement("div");
-        sub.textContent = subtitle;
-        sub.style.fontSize = "12px";
-        sub.style.opacity = "0.75";
-        text2.appendChild(sub);
-      }
-      const controls = applyStyles(document.createElement("div"), {
-        display: "flex",
-        alignItems: "center",
-        gap: "8px"
-      });
-      row4.append(text2, controls);
-      return { row: row4, controls };
-    };
-    const sellRulesInitial = lockerRestrictionsService.getSellAllPetsRules();
-    const sellEnableToggle = ui.switch(sellRulesInitial.enabled);
-    const sellEnableRow = createRuleRow("Enable protection rules");
-    sellEnableRow.controls.append(sellEnableToggle);
-    const sellGoldToggle = ui.switch(sellRulesInitial.protectGold);
-    const sellGoldRow = createRuleRow("Protect Gold mutation");
-    sellGoldRow.controls.append(sellGoldToggle);
-    const sellRainbowToggle = ui.switch(sellRulesInitial.protectRainbow);
-    const sellRainbowRow = createRuleRow("Protect Rainbow mutation");
-    sellRainbowRow.controls.append(sellRainbowToggle);
-    const sellMaxStrToggle = ui.switch(sellRulesInitial.protectMaxStr);
-    const sellMaxStrInput = ui.inputNumber(0, 100, 1, sellRulesInitial.maxStrThreshold);
-    const sellMaxStrWrap = sellMaxStrInput.wrap;
-    const sellMaxStrRow = createRuleRow("Protect pets with Max STR");
-    sellMaxStrRow.controls.append(sellMaxStrToggle, sellMaxStrWrap);
-    const SELL_ALL_RARITIES = ["Common", "Uncommon", "Rare", "Legendary", "Mythical", "Divine", "Celestial"];
-    const rarityRow = applyStyles(document.createElement("div"), {
-      padding: "8px 10px",
-      border: "1px solid rgba(255,255,255,0.10)",
-      borderRadius: "10px",
-      background: "rgba(255,255,255,0.02)",
-      display: "grid",
-      gap: "8px"
-    });
-    const rarityRowHeader = applyStyles(document.createElement("div"), {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between"
-    });
-    const rarityRowTitle = applyStyles(document.createElement("div"), {
-      fontWeight: "600",
-      fontSize: "13px"
-    });
-    rarityRowTitle.textContent = "Protect by rarity";
-    const rarityAddBtn = applyStyles(document.createElement("button"), {
-      border: "1px solid rgba(255,255,255,0.25)",
-      borderRadius: "6px",
-      background: "rgba(255,255,255,0.08)",
-      color: "#fff",
-      fontSize: "16px",
-      lineHeight: "1",
-      padding: "2px 8px",
-      cursor: "pointer",
-      fontWeight: "700"
-    });
-    rarityAddBtn.type = "button";
-    rarityAddBtn.textContent = "+";
-    rarityRowHeader.append(rarityRowTitle, rarityAddBtn);
-    const raritySelectedArea = applyStyles(document.createElement("div"), {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: "6px",
-      alignItems: "center"
-    });
-    const rarityPickerArea = applyStyles(document.createElement("div"), {
-      display: "none",
-      flexWrap: "wrap",
-      gap: "6px",
-      alignItems: "center",
-      padding: "8px",
-      background: "rgba(0,0,0,0.25)",
-      borderRadius: "8px"
-    });
-    rarityRow.append(rarityRowHeader, raritySelectedArea, rarityPickerArea);
-    let rarityPickerOpen = false;
-    const refreshRarityRow = () => {
-      const rules3 = lockerRestrictionsService.getSellAllPetsRules();
-      const selected = Array.isArray(rules3.protectedRarities) ? rules3.protectedRarities : [];
-      const enabled5 = rules3.enabled !== false;
-      const selectedSet = new Set(selected);
-      raritySelectedArea.innerHTML = "";
-      if (selected.length === 0) {
-        const none = applyStyles(document.createElement("span"), {
-          fontSize: "12px",
-          opacity: "0.5"
-        });
-        none.textContent = "No rarities protected";
-        raritySelectedArea.appendChild(none);
-      } else {
-        for (const r of selected) {
-          const wrap = applyStyles(document.createElement("div"), {
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "3px"
-          });
-          const badge2 = rarityBadge(r);
-          badge2.style.margin = "0";
-          const xBtn = applyStyles(document.createElement("button"), {
-            background: "none",
-            border: "none",
-            color: "rgba(255,255,255,0.6)",
-            fontSize: "14px",
-            cursor: "pointer",
-            padding: "0 2px",
-            lineHeight: "1"
-          });
-          xBtn.type = "button";
-          xBtn.textContent = "\xD7";
-          xBtn.addEventListener("click", () => {
-            const current = lockerRestrictionsService.getSellAllPetsRules().protectedRarities ?? [];
-            lockerRestrictionsService.setSellAllPetsRules({
-              protectedRarities: current.filter((x) => x !== r)
-            });
-            refreshRarityRow();
-          });
-          wrap.append(badge2, xBtn);
-          raritySelectedArea.appendChild(wrap);
-        }
-      }
-      rarityPickerArea.innerHTML = "";
-      const remaining = SELL_ALL_RARITIES.filter((r) => !selectedSet.has(r));
-      if (rarityPickerOpen && remaining.length > 0) {
-        rarityPickerArea.style.display = "flex";
-        for (const r of remaining) {
-          const badge2 = rarityBadge(r);
-          badge2.style.margin = "0";
-          badge2.style.cursor = "pointer";
-          badge2.addEventListener("click", () => {
-            const current = lockerRestrictionsService.getSellAllPetsRules().protectedRarities ?? [];
-            lockerRestrictionsService.setSellAllPetsRules({
-              protectedRarities: [...current, r]
-            });
-            refreshRarityRow();
-          });
-          rarityPickerArea.appendChild(badge2);
-        }
-      } else {
-        rarityPickerArea.style.display = "none";
-        if (remaining.length === 0) rarityPickerOpen = false;
-      }
-      rarityAddBtn.textContent = rarityPickerOpen ? "\xD7" : "+";
-      rarityRow.style.opacity = enabled5 ? "1" : "0.6";
-      rarityRow.style.pointerEvents = enabled5 ? "auto" : "none";
-    };
-    let rarityPickerOutsideHandler = null;
-    rarityAddBtn.addEventListener("click", (ev) => {
-      ev.stopPropagation();
-      rarityPickerOpen = !rarityPickerOpen;
-      refreshRarityRow();
-      if (rarityPickerOpen) {
-        rarityPickerOutsideHandler = (ev2) => {
-          if (!rarityRow.contains(ev2.target)) {
-            rarityPickerOpen = false;
-            refreshRarityRow();
-            document.removeEventListener("click", rarityPickerOutsideHandler, true);
-            rarityPickerOutsideHandler = null;
-          }
-        };
-        document.addEventListener("click", rarityPickerOutsideHandler, true);
-      } else if (rarityPickerOutsideHandler) {
-        document.removeEventListener("click", rarityPickerOutsideHandler, true);
-        rarityPickerOutsideHandler = null;
-      }
-    });
-    refreshRarityRow();
-    sellPetsGrid.append(sellEnableRow.row, sellGoldRow.row, sellRainbowRow.row, sellMaxStrRow.row, rarityRow);
-    sellPetsCard.body.append(sellPetsIntro, sellPetsGrid);
-    layout.append(sellPetsCard.root);
-    const LOCKED_ICON = "\u{1F512}";
-    const UNLOCKED_ICON = "\u{1F513}";
-    const eggRowCache = /* @__PURE__ */ new Map();
-    const emptyEggPlaceholder = applyStyles(document.createElement("div"), {
-      opacity: "0.7",
-      fontSize: "12px"
-    });
-    emptyEggPlaceholder.textContent = "No eggs available.";
-    const updateEggToggleAppearance = (toggle2, locked) => {
-      toggle2.textContent = locked ? LOCKED_ICON : UNLOCKED_ICON;
-      toggle2.style.background = locked ? "rgba(239,68,68,0.15)" : "rgba(16,185,129,0.15)";
-      toggle2.style.color = locked ? "#fca5a5" : "#9ef7c3";
-    };
-    let renderEggList;
-    const createEggRow = (opt) => {
-      const row4 = applyStyles(document.createElement("div"), {
-        display: "grid",
-        gridTemplateColumns: "auto auto 1fr",
-        alignItems: "center",
-        gap: "10px",
-        padding: "8px 10px",
-        border: "1px solid rgba(255,255,255,0.10)",
-        borderRadius: "10px",
-        background: "rgba(255,255,255,0.02)"
-      });
-      const toggle2 = document.createElement("button");
-      toggle2.type = "button";
-      toggle2.style.border = "1px solid rgba(255,255,255,0.10)";
-      toggle2.style.borderRadius = "10px";
-      toggle2.style.padding = "6px 10px";
-      toggle2.style.fontSize = "14px";
-      toggle2.style.fontWeight = "700";
-      toggle2.addEventListener("click", () => {
-        const next = !Boolean(state7.eggLocks?.[opt.id]);
-        state7.eggLocks = { ...state7.eggLocks || {}, [opt.id]: next };
-        lockerRestrictionsService.setEggLock(opt.id, next);
-        renderEggList();
-      });
-      const name = document.createElement("div");
-      name.style.fontWeight = "600";
-      name.style.color = "#e7eef7";
-      const icon2 = createEggIcon(opt.id, opt.name, 32);
-      row4.append(toggle2, icon2, name);
-      return { row: row4, toggle: toggle2, name };
-    };
-    renderEggList = () => {
-      eggList.innerHTML = "";
-      if (!eggOptions.length) {
-        eggList.appendChild(emptyEggPlaceholder);
-        return;
-      }
-      const fragment = document.createDocumentFragment();
-      const seen = /* @__PURE__ */ new Set();
-      eggOptions.forEach((opt) => {
-        const id = opt.id;
-        seen.add(id);
-        let entry = eggRowCache.get(id);
-        if (!entry) {
-          entry = createEggRow(opt);
-          eggRowCache.set(id, entry);
-        }
-        entry.name.textContent = opt.name || id;
-        const locked = !!state7.eggLocks?.[id];
-        updateEggToggleAppearance(entry.toggle, locked);
-        fragment.appendChild(entry.row);
-      });
-      for (const id of Array.from(eggRowCache.keys())) {
-        if (seen.has(id)) continue;
-        const entry = eggRowCache.get(id);
-        if (entry) {
-          entry.row.remove();
-        }
-        eggRowCache.delete(id);
-      }
-      eggList.appendChild(fragment);
-    };
-    const updateSliderValue = (pct) => {
-      slider2.value = String(pct);
-      sliderValue.textContent = `+${pct}%`;
-    };
-    const clampMaxStr = (value) => {
-      if (!Number.isFinite(value)) return 0;
-      return Math.max(0, Math.min(100, Math.round(value)));
-    };
-    const setRuleRowDisabled = (row4, disabled) => {
-      row4.style.opacity = disabled ? "0.6" : "1";
-    };
-    const refreshSellAllPetsControls = () => {
-      const rules3 = lockerRestrictionsService.getSellAllPetsRules();
-      const enabled5 = rules3.enabled !== false;
-      const protectGold = rules3.protectGold !== false;
-      const protectRainbow = rules3.protectRainbow !== false;
-      const protectMaxStr = rules3.protectMaxStr !== false;
-      setCheck(sellEnableToggle, enabled5);
-      setCheck(sellGoldToggle, protectGold);
-      setCheck(sellRainbowToggle, protectRainbow);
-      setCheck(sellMaxStrToggle, protectMaxStr);
-      sellMaxStrInput.value = String(clampMaxStr(rules3.maxStrThreshold));
-      sellGoldToggle.disabled = !enabled5;
-      sellRainbowToggle.disabled = !enabled5;
-      sellMaxStrToggle.disabled = !enabled5;
-      const maxStrDisabled = !enabled5 || !protectMaxStr;
-      sellMaxStrInput.disabled = maxStrDisabled;
-      sellMaxStrWrap.style.opacity = maxStrDisabled ? "0.6" : "1";
-      sellMaxStrWrap.style.pointerEvents = maxStrDisabled ? "none" : "auto";
-      setRuleRowDisabled(sellGoldRow.row, !enabled5);
-      setRuleRowDisabled(sellRainbowRow.row, !enabled5);
-      setRuleRowDisabled(sellMaxStrRow.row, !enabled5);
-      refreshRarityRow();
-    };
-    const setStatusTone = (tone) => {
-      const palette = tone === "success" ? { bg: "rgba(16,185,129,0.15)", border: "rgba(16,185,129,0.35)", color: "#9ef7c3" } : tone === "warn" ? { bg: "rgba(239,68,68,0.15)", border: "rgba(239,68,68,0.35)", color: "#fca5a5" } : { bg: "rgba(59,130,246,0.15)", border: "rgba(59,130,246,0.35)", color: "#a5c7ff" };
-      statusBadge.style.background = palette.bg;
-      statusBadge.style.border = `1px solid ${palette.border}`;
-      statusBadge.style.color = palette.color;
-    };
-    const updateStatus = () => {
-      const requiredPct = clampPercent2(friendBonusPercentFromPlayers(state7.minRequiredPlayers) ?? 0);
-      const currentPct = resolveCurrentBonus();
-      const requiredPlayers = state7.minRequiredPlayers;
-      const currentPlayers = currentPct != null ? percentToRequiredFriendCount(currentPct) : null;
-      const allowed = requiredPct <= 0 || currentPct != null && currentPct + 1e-4 >= requiredPct;
-      if (requiredPct <= 0) {
-        statusBadge.textContent = "Unlocked";
-        setStatusTone("info");
-        statusText.textContent = currentPct != null ? `Current friend bonus: ${currentPct}% (${currentPlayers} players).` : "Current friend bonus not detected yet.";
-        return;
-      }
-      statusBadge.textContent = allowed ? "Sale allowed" : "Sale locked";
-      setStatusTone(allowed ? "success" : "warn");
-      statusText.textContent = allowed ? `Current bonus ${currentPct}% (${currentPlayers} players) meets the requirement (${requiredPct}%).` : `Requires ${requiredPct}% (${requiredPlayers} players) or more`;
-    };
-    const handleSliderInput = (commit) => {
-      const raw = Number(slider2.value);
-      const pct = clampPercent2(Number.isFinite(raw) ? raw : 0);
-      updateSliderValue(pct);
-      state7.minRequiredPlayers = percentToRequiredFriendCount(pct);
-      updateStatus();
-      if (commit) {
-        lockerRestrictionsService.setMinRequiredPlayers(state7.minRequiredPlayers);
-      }
-    };
-    slider2.addEventListener("input", () => handleSliderInput(false));
-    slider2.addEventListener("change", () => handleSliderInput(true));
-    sellEnableToggle.addEventListener("change", () => {
-      const enabled5 = !!sellEnableToggle.checked;
-      lockerRestrictionsService.setSellAllPetsRules({ enabled: enabled5 });
-      refreshSellAllPetsControls();
-    });
-    sellGoldToggle.addEventListener("change", () => {
-      lockerRestrictionsService.setSellAllPetsRules({ protectGold: !!sellGoldToggle.checked });
-    });
-    sellRainbowToggle.addEventListener("change", () => {
-      lockerRestrictionsService.setSellAllPetsRules({ protectRainbow: !!sellRainbowToggle.checked });
-    });
-    sellMaxStrToggle.addEventListener("change", () => {
-      lockerRestrictionsService.setSellAllPetsRules({ protectMaxStr: !!sellMaxStrToggle.checked });
-      refreshSellAllPetsControls();
-    });
-    sellMaxStrInput.addEventListener("change", () => {
-      const next = clampMaxStr(Number(sellMaxStrInput.value));
-      sellMaxStrInput.value = String(next);
-      lockerRestrictionsService.setSellAllPetsRules({ maxStrThreshold: next });
-    });
-    const syncFromService = (next) => {
-      state7 = { ...next };
-      setCheck(decorToggle, state7.decorPickupLocked);
-      updateSliderValue(friendBonusPercentFromPlayers(state7.minRequiredPlayers) ?? 0);
-      updateStatus();
-      renderEggList();
-      refreshSellAllPetsControls();
-    };
-    const attachSubscriptions = async () => {
-      if (subsAttached) return;
-      subsAttached = true;
-      try {
-        const initialBonus = await Atoms.server.friendBonusMultiplier.get();
-        bonusFromMultiplier = friendBonusPercentFromMultiplier(initialBonus);
-      } catch {
-      }
-      try {
-        const unsub = await Atoms.server.friendBonusMultiplier.onChange((next) => {
-          bonusFromMultiplier = friendBonusPercentFromMultiplier(next);
-          updateStatus();
-        });
-        if (typeof unsub === "function") disposables.push(unsub);
-      } catch {
-      }
-      try {
-        const initialPlayers = await Atoms.server.numPlayers.get();
-        bonusFromPlayers = friendBonusPercentFromPlayers(initialPlayers);
-      } catch {
-      }
-      try {
-        const unsubPlayers = await Atoms.server.numPlayers.onChange((next) => {
-          bonusFromPlayers = friendBonusPercentFromPlayers(next);
-          updateStatus();
-        });
-        if (typeof unsubPlayers === "function") disposables.push(unsubPlayers);
-      } catch {
-      }
-      const unsubService = lockerRestrictionsService.subscribe(syncFromService);
-      disposables.push(unsubService);
-      eggOptions = extractEggOptionsFromCatalog();
-      try {
-        const initialEggShop = await Atoms.shop.eggShop.get();
-        eggOptions = mergeEggOptions(eggOptions, extractEggOptions(initialEggShop));
-      } catch {
-      }
-      renderEggList();
-      try {
-        const unsubEggShop = await Atoms.shop.eggShop.onChange((next) => {
-          eggOptions = mergeEggOptions(extractEggOptionsFromCatalog(), extractEggOptions(next));
-          renderEggList();
-        });
-        if (typeof unsubEggShop === "function") disposables.push(unsubEggShop);
-      } catch {
-      }
-    };
-    const render = (view) => {
-      view.innerHTML = "";
-      view.style.maxHeight = "54vh";
-      view.style.overflow = "auto";
-      view.append(layout);
-      syncFromService(lockerRestrictionsService.getState());
-      updateStatus();
-      void attachSubscriptions();
-    };
-    const destroy = () => {
-      while (disposables.length) {
-        const dispose = disposables.pop();
-        try {
-          dispose?.();
-        } catch {
-        }
-      }
-    };
-    return { render, destroy };
-  }
-  function extractEggOptions(raw) {
-    const seen = /* @__PURE__ */ new Set();
-    const options2 = [];
-    const add = (id, name) => {
-      if (typeof id !== "string" || !id) return;
-      if (seen.has(id)) return;
-      seen.add(id);
-      const label2 = typeof name === "string" && name || typeof raw?.names?.[id] === "string" && raw.names[id] || id;
-      options2.push({ id, name: label2 });
-    };
-    const walk = (node) => {
-      if (!node || typeof node !== "object") return;
-      if (Array.isArray(node)) {
-        node.forEach(walk);
-        return;
-      }
-      const candidate = node.eggId ?? node.id ?? null;
-      add(candidate, node.name);
-      for (const value of Object.values(node)) {
-        if (value && typeof value === "object") walk(value);
-      }
-    };
-    walk(raw);
-    return options2;
-  }
-  function extractEggOptionsFromCatalog() {
-    const options2 = [];
-    const seen = /* @__PURE__ */ new Set();
-    for (const [id, raw] of Object.entries(eggCatalog2)) {
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
-      const name = typeof raw?.name === "string" && raw.name || id;
-      options2.push({ id, name });
-    }
-    return options2;
-  }
-  function mergeEggOptions(base, extra) {
-    const seen = new Set(base.map((o) => o.id));
-    const result = [...base];
-    for (const opt of extra) {
-      if (seen.has(opt.id)) continue;
-      seen.add(opt.id);
-      result.push(opt);
-    }
-    return result;
-  }
-  function createGeneralTabRenderer(ui, store) {
-    const viewRoot = applyStyles(document.createElement("div"), {
-      display: "flex",
-      flexDirection: "column",
-      gap: "12px",
-      alignItems: "center",
-      width: "100%"
-    });
-    const layout = applyStyles(document.createElement("div"), {
-      display: "flex",
-      flexDirection: "column",
-      gap: "12px",
-      alignItems: "center",
-      width: "100%"
-    });
-    const header = applyStyles(document.createElement("div"), {
-      display: "flex",
-      alignItems: "center",
-      gap: "10px",
-      justifyContent: "space-between",
-      border: "1px solid rgba(255,255,255,0.10)",
-      borderRadius: "10px",
-      padding: "12px 16px",
-      background: "rgba(255,255,255,0.04)",
-      boxShadow: "none",
-      width: "min(760px, 100%)"
-    });
-    const textWrap = applyStyles(document.createElement("div"), {
-      display: "flex",
-      flexDirection: "column",
-      gap: "4px"
-    });
-    const title = document.createElement("div");
-    title.textContent = "Global locker";
-    title.style.fontWeight = "600";
-    title.style.fontSize = "15px";
-    const subtitle = document.createElement("div");
-    subtitle.textContent = "Set the rules for locking or allowing harvests using the filters below";
-    subtitle.style.opacity = "0.8";
-    subtitle.style.fontSize = "12px";
-    textWrap.append(title, subtitle);
-    const toggleWrap = applyStyles(document.createElement("label"), {
-      display: "flex",
-      alignItems: "center",
-      gap: "8px"
-    });
-    const toggleLabel = ui.label("Enabled");
-    toggleLabel.style.margin = "0";
-    const toggle2 = ui.switch(store.global.enabled);
-    toggleWrap.append(toggleLabel, toggle2);
-    header.append(textWrap, toggleWrap);
-    const form = createLockerSettingsCard(ui, store.global.settings, {
-      onChange: () => store.notifyGlobalSettingsChanged()
-    });
-    layout.append(header, form.root);
-    viewRoot.append(layout);
+    header.root.classList.add("lk-wide");
+    header.root.removeChild(header.body);
+    const form = lockerSettingsCard(store.global.settings, () => store.notifyGlobalSettingsChanged());
+    root4.append(header.root, form.root);
     const update = () => {
-      setCheck(toggle2, store.global.enabled);
+      toggle2.setChecked(store.global.enabled);
       form.setDisabled(!store.global.enabled);
       form.refresh();
     };
-    toggle2.addEventListener("change", () => {
-      store.setGlobalEnabled(!!toggle2.checked);
-    });
-    const unsubscribe2 = store.subscribe(() => {
-      update();
-    });
+    const off = store.subscribe(update);
     update();
-    const render = (view) => {
-      view.innerHTML = "";
-      view.style.maxHeight = "54vh";
-      view.style.overflow = "auto";
-      view.append(viewRoot);
-      update();
-    };
     return {
-      render,
-      destroy: () => unsubscribe2()
-    };
-  }
-  function createOverridesTabRenderer(ui, store) {
-    const layout = applyStyles(document.createElement("div"), {
-      display: "grid",
-      gridTemplateColumns: "minmax(220px, 280px) minmax(0, 1fr)",
-      gap: "10px",
-      alignItems: "stretch",
-      height: "54vh",
-      overflow: "hidden"
-    });
-    const left = applyStyles(document.createElement("div"), {
-      display: "grid",
-      gridTemplateRows: "1fr",
-      gap: "8px",
-      minHeight: "0"
-    });
-    layout.appendChild(left);
-    const list = applyStyles(document.createElement("div"), {
-      display: "grid",
-      gridTemplateColumns: "1fr",
-      rowGap: "6px",
-      overflow: "auto",
-      paddingRight: "2px",
-      border: "1px solid rgba(255,255,255,0.10)",
-      borderRadius: "10px",
-      padding: "6px"
-    });
-    left.appendChild(list);
-    const right = applyStyles(document.createElement("div"), {
-      display: "flex",
-      flexDirection: "column",
-      gap: "12px",
-      minHeight: "0"
-    });
-    layout.appendChild(right);
-    const detail = applyStyles(document.createElement("div"), {
-      display: "grid",
-      gap: "12px",
-      justifyItems: "center",
-      alignContent: "start",
-      height: "100%",
-      overflow: "auto"
-    });
-    right.appendChild(detail);
-    let selectedKey = null;
-    let renderedDetailKey = null;
-    const detailScrollMemory = /* @__PURE__ */ new Map();
-    const listButtons = /* @__PURE__ */ new Map();
-    const getClampedScrollTop = (element) => {
-      const max = Math.max(0, element.scrollHeight - element.clientHeight);
-      return Math.max(0, Math.min(element.scrollTop, max));
-    };
-    const restoreScrollTop = (element, value) => {
-      const max = Math.max(0, element.scrollHeight - element.clientHeight);
-      const target = Math.max(0, Math.min(value, max));
-      element.scrollTop = target;
-      return target;
-    };
-    const updateDetailScrollMemory = (key2) => {
-      const current = detailScrollMemory.get(key2) ?? { detail: 0, card: 0 };
-      current.detail = getClampedScrollTop(detail);
-      const currentCard2 = detail.querySelector('[data-locker-settings-card="1"]');
-      if (currentCard2) {
-        current.card = getClampedScrollTop(currentCard2);
-      }
-      detailScrollMemory.set(key2, current);
-    };
-    detail.addEventListener("scroll", () => {
-      if (!renderedDetailKey) return;
-      const memory = detailScrollMemory.get(renderedDetailKey) ?? { detail: 0, card: 0 };
-      memory.detail = getClampedScrollTop(detail);
-      detailScrollMemory.set(renderedDetailKey, memory);
-    });
-    const refreshListStyles = () => {
-      listButtons.forEach(({ button: button3, dot }, key2) => {
-        const isSelected = selectedKey === key2;
-        button3.style.background = isSelected ? "rgba(94,234,212,0.15)" : "rgba(255,255,255,0.04)";
-        dot.style.background = store.getOverride(key2)?.enabled ? "#2ecc71" : "#e74c3c";
-      });
-    };
-    const renderList = () => {
-      const previousScrollTop = getClampedScrollTop(list);
-      list.innerHTML = "";
-      const seeds = getLockerSeedOptions();
-      if (!seeds.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No crops available.";
-        empty.style.opacity = "0.7";
-        empty.style.fontSize = "12px";
-        empty.style.textAlign = "center";
-        empty.style.padding = "16px";
-        list.appendChild(empty);
-        restoreScrollTop(list, previousScrollTop);
-        selectedKey = null;
-        return;
-      }
-      if (selectedKey && !seeds.some((opt) => opt.key === selectedKey)) {
-        selectedKey = null;
-      }
-      listButtons.clear();
-      const fragment = document.createDocumentFragment();
-      seeds.forEach((opt) => {
-        const button3 = document.createElement("button");
-        button3.className = "qmm-vtab";
-        button3.style.display = "grid";
-        button3.style.gridTemplateColumns = "16px 1fr auto";
-        button3.style.alignItems = "center";
-        button3.style.gap = "8px";
-        button3.style.textAlign = "left";
-        button3.style.padding = "6px 8px";
-        button3.style.borderRadius = "8px";
-        button3.style.border = "1px solid rgba(255,255,255,0.10)";
-        button3.style.background = selectedKey === opt.key ? "rgba(94,234,212,0.15)" : "rgba(255,255,255,0.04)";
-        button3.style.color = "#e7eef7";
-        const dot = document.createElement("span");
-        dot.className = "qmm-dot";
-        dot.style.background = store.getOverride(opt.key)?.enabled ? "#2ecc71" : "#e74c3c";
-        const label2 = document.createElement("span");
-        label2.className = "label";
-        label2.textContent = opt.cropName || opt.key;
-        const icon2 = createSeedIcon(opt.key, { size: 24, spriteKey: opt.spriteKey });
-        button3.append(dot, label2, icon2);
-        listButtons.set(opt.key, { button: button3, dot });
-        button3.onmouseenter = () => button3.style.borderColor = "rgba(94,234,212,0.35)";
-        button3.onmouseleave = () => button3.style.borderColor = "rgba(255,255,255,0.10)";
-        button3.onclick = () => {
-          if (selectedKey === opt.key) return;
-          selectedKey = opt.key;
-          refreshListStyles();
-          renderDetail();
-        };
-        fragment.appendChild(button3);
-      });
-      list.appendChild(fragment);
-      refreshListStyles();
-      restoreScrollTop(list, previousScrollTop);
-    };
-    const renderDetail = () => {
-      if (renderedDetailKey) {
-        updateDetailScrollMemory(renderedDetailKey);
-      }
-      detail.innerHTML = "";
-      if (!selectedKey) {
-        const empty = document.createElement("div");
-        empty.textContent = "Select a crop on the left to customise its locker settings.";
-        empty.style.opacity = "0.7";
-        empty.style.fontSize = "13px";
-        empty.style.textAlign = "center";
-        empty.style.padding = "32px 24px";
-        empty.style.border = "1px dashed rgba(255,255,255,0.12)";
-        empty.style.borderRadius = "10px";
-        empty.style.width = "min(760px, 100%)";
-        detail.appendChild(empty);
-        renderedDetailKey = null;
-        return;
-      }
-      const seeds = getLockerSeedOptions();
-      const seed = seeds.find((opt) => opt.key === selectedKey);
-      if (!seed) {
-        selectedKey = null;
-        renderedDetailKey = null;
-        renderDetail();
-        return;
-      }
-      const override = store.ensureOverride(selectedKey, { silent: true });
-      const header = ui.flexRow({ justify: "between", align: "center", fullWidth: true });
-      header.style.border = "1px solid rgba(255,255,255,0.10)";
-      header.style.borderRadius = "10px";
-      header.style.padding = "12px 16px";
-      header.style.background = "rgba(255,255,255,0.04)";
-      header.style.boxShadow = "none";
-      header.style.width = "min(760px, 100%)";
-      const titleWrap = ui.flexRow({ gap: 10, align: "center" });
-      titleWrap.style.flexWrap = "nowrap";
-      const title = document.createElement("div");
-      title.textContent = seed.cropName || seed.key;
-      title.style.fontWeight = "600";
-      title.style.fontSize = "15px";
-      const icon2 = createSeedIcon(seed.key, { size: 32, spriteKey: seed.spriteKey });
-      titleWrap.append(icon2, title);
-      const toggleWrap = ui.flexRow({ gap: 8, align: "center" });
-      toggleWrap.style.flexWrap = "nowrap";
-      const toggleLabel = ui.label("Override");
-      toggleLabel.style.margin = "0";
-      const toggle2 = ui.switch(override.enabled);
-      toggleWrap.append(toggleLabel, toggle2);
-      header.append(titleWrap, toggleWrap);
-      const status2 = document.createElement("div");
-      status2.style.fontSize = "12px";
-      status2.style.opacity = "0.75";
-      status2.style.textAlign = "center";
-      status2.style.width = "min(760px, 100%)";
-      const updateStatus = () => {
-        status2.textContent = override.enabled ? "This crop uses its own locker filters." : "Uses the global locker settings.";
-      };
-      const form = createLockerSettingsCard(ui, override.settings, {
-        onChange: () => {
-          if (selectedKey) {
-            store.notifyOverrideSettingsChanged(selectedKey);
-          }
-        }
-      });
-      const applyEnabledState = () => {
-        form.setDisabled(!override.enabled);
-        form.refresh();
-        updateStatus();
-      };
-      toggle2.addEventListener("change", () => {
-        if (!selectedKey) return;
-        const wasEnabled = override.enabled;
-        const nextEnabled = !!toggle2.checked;
-        if (nextEnabled && !wasEnabled && !override.hasPersistedSettings) {
-          copySettings(override.settings, store.global.settings);
-        }
-        if (nextEnabled) {
-          override.hasPersistedSettings = true;
-        }
-        store.setOverrideEnabled(selectedKey, nextEnabled);
-      });
-      applyEnabledState();
-      detail.append(header, status2, form.root);
-      if (selectedKey) {
-        const memory = detailScrollMemory.get(selectedKey) ?? { detail: 0, card: 0 };
-        memory.detail = restoreScrollTop(detail, memory.detail);
-        memory.card = restoreScrollTop(form.root, memory.card);
-        detailScrollMemory.set(selectedKey, memory);
-        const activeKey = selectedKey;
-        form.root.addEventListener("scroll", () => {
-          if (renderedDetailKey !== activeKey) return;
-          const current = detailScrollMemory.get(activeKey) ?? { detail: getClampedScrollTop(detail), card: 0 };
-          current.card = getClampedScrollTop(form.root);
-          detailScrollMemory.set(activeKey, current);
-        });
-        renderedDetailKey = activeKey;
-      }
-    };
-    renderList();
-    renderDetail();
-    const refresh = () => {
-      refreshListStyles();
-      renderDetail();
-    };
-    const unsubscribe2 = store.subscribe(refresh);
-    const onDataUpdated = (e) => {
-      const key2 = e.detail?.key;
-      if (key2 === "plants") renderList();
-    };
-    window.addEventListener("gemini:data-updated", onDataUpdated);
-    const render = (view) => {
-      view.innerHTML = "";
-      view.append(layout);
-      refresh();
-    };
-    return {
-      render,
-      destroy: () => {
-        unsubscribe2();
-        window.removeEventListener("gemini:data-updated", onDataUpdated);
-      }
+      render(view) {
+        view.classList.add("lk-view");
+        view.replaceChildren(root4);
+        update();
+      },
+      destroy: off
     };
   }
   async function renderLockerMenu(container) {
+    ensureLockerMenuStyles();
     const ui = new Menu({ id: "locker", compact: true });
     ui.mount(container);
     const store = new LockerMenuStore(lockerService.getState());
-    const restrictionsTab = createRestrictionsTabRenderer(ui);
-    const generalTab = createGeneralTabRenderer(ui, store);
-    const overridesTab = createOverridesTabRenderer(ui, store);
+    const tabs = { general: generalTab(store), overrides: overridesTab(store), restrictions: restrictionsTab() };
     ui.addTabs([
-      { id: "locker-general", title: "General", render: (view) => generalTab.render(view) },
-      { id: "locker-overrides", title: "Overrides", render: (view) => overridesTab.render(view) },
-      { id: "locker-restrictions", title: "Restrictions", render: (view) => restrictionsTab.render(view) }
+      { id: "locker-general", title: "General", render: (view) => tabs.general.render(view) },
+      { id: "locker-overrides", title: "Overrides", render: (view) => tabs.overrides.render(view) },
+      { id: "locker-restrictions", title: "Restrictions", render: (view) => tabs.restrictions.render(view) }
     ]);
     ui.switchTo("locker-general");
-    const disposables = [];
-    disposables.push(lockerService.subscribe((event) => store.syncFromService(event.state)));
-    disposables.push(() => restrictionsTab.destroy());
-    disposables.push(() => generalTab.destroy());
-    disposables.push(() => overridesTab.destroy());
-    const cleanup2 = () => {
-      while (disposables.length) {
-        const dispose = disposables.pop();
-        try {
-          dispose?.();
-        } catch {
-        }
-      }
-    };
-    ui.on("unmounted", cleanup2);
+    const offService = lockerService.subscribe((state7) => store.syncFromService(state7));
+    ui.on("unmounted", () => {
+      offService();
+      Object.values(tabs).forEach((tab) => tab.destroy());
+    });
   }
-  var NO_WEATHER_TAG, SEED_EMOJIS, _lockerOptionsCache, _lockerEmojiByKey, _lockerEmojisBySeedName, getLockerSeedOptions, getLockerSeedEmojiForKey, getLockerSeedEmojiForSeedName, weatherMutationLabel, weatherMutations, createNoWeatherIcon, isWeatherMutationAvailable, WEATHER_RECIPE_GROUPS, WEATHER_RECIPE_GROUP_MEMBERS, applyStyles, weatherModeNameSeq, LockerMenuStore;
   var init_menu3 = __esm({
     "src/features/locker/menu.ts"() {
       "use strict";
       init_menu();
-      init_data();
+      init_card();
+      init_toggles();
       init_locker();
-      init_restrictions();
-      init_atoms();
-      init_iconCache();
-      init_rarityBadge();
-      NO_WEATHER_TAG = "NoWeatherEffect";
-      SEED_EMOJIS = [
-        "\u{1F955}",
-        "\u{1F353}",
-        "\u{1F343}",
-        "\u{1F535}",
-        "\u{1F34E}",
-        "\u{1F337}",
-        "\u{1F345}",
-        "\u{1F33C}",
-        "\u{1F33D}",
-        "\u{1F349}",
-        "\u{1F383}",
-        "\u{1F33F}",
-        "\u{1F965}",
-        "\u{1F34C}",
-        "\u{1F338}",
-        "\u{1F7E2}",
-        "\u{1F344}",
-        "\u{1F335}",
-        "\u{1F38D}",
-        "\u{1F347}",
-        "\u{1F336}\uFE0F",
-        "\u{1F34B}",
-        "\u{1F96D}",
-        "\u{1F409}",
-        "\u{1F352}",
-        "\u{1F33B}",
-        "\u2728",
-        "\u{1F506}",
-        "\u{1F52E}"
-      ];
-      _lockerOptionsCache = null;
-      _lockerEmojiByKey = null;
-      _lockerEmojisBySeedName = null;
-      getLockerSeedOptions = () => getLockerCache().options;
-      getLockerSeedEmojiForKey = (key2) => {
-        if (!key2) return void 0;
-        return getLockerCache().byKey.get(key2) ?? "\u2022";
-      };
-      getLockerSeedEmojiForSeedName = (name) => {
-        if (!name) return void 0;
-        return getLockerCache().bySeedName.get(name) ?? "\u2022";
-      };
-      weatherMutationLabel = (key2) => (tileRefsMutationLabels2 ?? {})[key2] ?? formatMutationLabel(key2);
-      weatherMutations = memoOnCatalogs(() => [
-        {
-          key: NO_WEATHER_TAG,
-          label: "No weather effect",
-          tileRef: null,
-          iconFactory: createNoWeatherIcon
-        },
-        ...Object.entries(tileRefsMutations2).filter((entry) => {
-          const [key2, value] = entry;
-          if (key2 === "Puddle" || key2 === "ThunderstruckGround") {
-            return false;
-          }
-          return typeof value === "number" || typeof value === "string";
-        }).map(([key2, value]) => ({
-          key: key2,
-          label: weatherMutationLabel(key2),
-          tileRef: value,
-          iconFactory: (options2) => createWeatherBadge(key2, options2)
-        }))
-      ]);
-      createNoWeatherIcon = (options2) => {
-        const size = Math.max(24, options2?.size ?? 48);
-        const wrap = applyStyles(document.createElement("div"), {
-          width: `${size}px`,
-          height: `${size}px`,
-          display: "grid",
-          placeItems: "center"
-        });
-        const glyph = applyStyles(document.createElement("span"), {
-          color: "#ff5c5c",
-          fontSize: `${Math.round(size * 0.65)}px`,
-          fontWeight: "700",
-          textShadow: "0 1px 2px rgba(0, 0, 0, 0.6)",
-          lineHeight: "1"
-        });
-        glyph.textContent = "\u2716";
-        wrap.appendChild(glyph);
-        return wrap;
-      };
-      isWeatherMutationAvailable = (tag) => weatherMutations().some((info) => info.key === tag);
-      WEATHER_RECIPE_GROUPS = {
-        Wet: "condition",
-        Chilled: "condition",
-        Frozen: "condition",
-        Thunderstruck: "condition",
-        Thundercharged: "condition",
-        Dawnlit: "lighting",
-        Amberlit: "lighting",
-        Dawncharged: "lighting",
-        Ambercharged: "lighting"
-      };
-      WEATHER_RECIPE_GROUP_MEMBERS = {
-        condition: ["Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged"],
-        lighting: ["Dawnlit", "Amberlit", "Dawncharged", "Ambercharged"]
-      };
-      applyStyles = (el, styles) => {
-        Object.entries(styles).forEach(([prop, value]) => {
-          el.style[prop] = value;
-        });
-        return el;
-      };
-      weatherModeNameSeq = 0;
-      LockerMenuStore = class {
-        constructor(initial) {
-          this.overrides = /* @__PURE__ */ new Map();
-          this.listeners = /* @__PURE__ */ new Set();
-          this.syncing = false;
-          this.global = { enabled: false, settings: createDefaultSettings(), hasPersistedSettings: true };
-          this.syncFromService(initial);
-        }
-        applyPersisted(state7) {
-          this.global.enabled = !!state7.enabled;
-          hydrateSettingsFromPersisted(this.global.settings, state7.settings);
-          this.global.hasPersistedSettings = true;
-          const seen = /* @__PURE__ */ new Set();
-          Object.entries(state7.overrides ?? {}).forEach(([key2, value]) => {
-            const entry = this.ensureOverride(key2, { silent: true });
-            entry.enabled = !!value?.enabled;
-            hydrateSettingsFromPersisted(entry.settings, value?.settings);
-            entry.hasPersistedSettings = true;
-            seen.add(key2);
-          });
-          for (const key2 of Array.from(this.overrides.keys())) {
-            if (!seen.has(key2)) {
-              this.overrides.delete(key2);
-            }
-          }
-        }
-        subscribe(listener) {
-          this.listeners.add(listener);
-          return () => this.listeners.delete(listener);
-        }
-        emit() {
-          for (const listener of this.listeners) {
-            try {
-              listener();
-            } catch {
-            }
-          }
-        }
-        syncFromService(state7) {
-          this.syncing = true;
-          this.applyPersisted(state7);
-          this.emit();
-          this.syncing = false;
-        }
-        setGlobalEnabled(enabled5) {
-          this.global.enabled = !!enabled5;
-          this.persistGlobal();
-          this.emit();
-        }
-        notifyGlobalSettingsChanged() {
-          this.persistGlobal();
-          this.emit();
-        }
-        ensureOverride(key2, opts = {}) {
-          let entry = this.overrides.get(key2);
-          if (!entry) {
-            entry = { enabled: false, settings: createDefaultSettings(), hasPersistedSettings: false };
-            this.overrides.set(key2, entry);
-            if (!opts.silent) {
-              this.emit();
-            }
-          }
-          return entry;
-        }
-        getOverride(key2) {
-          return this.overrides.get(key2);
-        }
-        setOverrideEnabled(key2, enabled5) {
-          const entry = this.ensureOverride(key2, { silent: true });
-          entry.enabled = !!enabled5;
-          this.persistOverride(key2);
-          this.emit();
-        }
-        notifyOverrideSettingsChanged(key2) {
-          const entry = this.overrides.get(key2);
-          if (!entry) return;
-          entry.hasPersistedSettings = true;
-          this.persistOverride(key2);
-          this.emit();
-        }
-        removeOverride(key2) {
-          if (!this.overrides.has(key2)) return;
-          this.overrides.delete(key2);
-          if (!this.syncing) {
-            lockerService.removeOverride(key2);
-            lockerService.recomputeCurrentSlot();
-          }
-          this.emit();
-        }
-        persistGlobal() {
-          if (this.syncing) return;
-          lockerService.setGlobalState({
-            enabled: this.global.enabled,
-            settings: serializeSettingsState(this.global.settings)
-          });
-          lockerService.recomputeCurrentSlot();
-        }
-        persistOverride(key2) {
-          if (this.syncing) return;
-          const entry = this.overrides.get(key2);
-          if (!entry) {
-            lockerService.removeOverride(key2);
-          } else {
-            lockerService.setOverride(key2, {
-              enabled: entry.enabled,
-              settings: serializeSettingsState(entry.settings)
-            });
-            entry.hasPersistedSettings = true;
-          }
-          lockerService.recomputeCurrentSlot();
-        }
-      };
+      init_menuStyles();
+      init_overridesTab();
+      init_restrictionsTab();
+      init_settingsCard();
+      init_settingsDraft();
     }
   });
 
@@ -33550,7 +31043,7 @@ next: ${next}`;
     });
     return Number.isFinite(value) && value > 0 ? value : null;
   }
-  function formatCoins3(value) {
+  function formatCoins(value) {
     if (typeof value !== "number" || !Number.isFinite(value)) return "\u2014";
     return formatInteger(value, "round");
   }
@@ -33597,9 +31090,9 @@ next: ${next}`;
       img.src = url;
       img.alt = label2;
       img.title = label2;
-      img.width = ICON_PX;
-      img.height = ICON_PX;
-      Object.assign(img.style, { width: `${ICON_PX}px`, height: `${ICON_PX}px`, objectFit: "contain", display: "block" });
+      img.width = ICON_PX2;
+      img.height = ICON_PX2;
+      Object.assign(img.style, { width: `${ICON_PX2}px`, height: `${ICON_PX2}px`, objectFit: "contain", display: "block" });
       img.draggable = false;
       labelSpan.replaceChildren(img);
     });
@@ -33625,7 +31118,7 @@ next: ${next}`;
     }
     return control;
   }
-  var MUTATION_ICON_NAMES, ICON_PX;
+  var MUTATION_ICON_NAMES, ICON_PX2;
   var init_mutationPicker2 = __esm({
     "src/features/calculator/mutationPicker.ts"() {
       "use strict";
@@ -33644,7 +31137,7 @@ next: ${next}`;
         Dawnbound: "MutationDawncharged",
         Amberbound: "MutationAmbercharged"
       };
-      ICON_PX = 20;
+      ICON_PX2 = 20;
     }
   });
 
@@ -33758,7 +31251,7 @@ next: ${next}`;
   function seedEmoji(option2, key2) {
     return getLockerSeedEmojiForKey(key2) || (option2?.seedName ? getLockerSeedEmojiForSeedName(option2.seedName) : void 0) || "\u{1F331}";
   }
-  function section(title) {
+  function section2(title) {
     const card4 = plainCard();
     Object.assign(card4.style, { padding: "12px", gap: "10px" });
     if (title) {
@@ -33850,15 +31343,15 @@ next: ${next}`;
     sizeRow.append(sizeLabel, sizeSlider, sizeValue);
     const weight = h("div", void 0, "\u2014");
     Object.assign(weight.style, { fontSize: "11px", color: color.textDim, textAlign: "center", fontVariantNumeric: "tabular-nums" });
-    const previewCard = section(null);
+    const previewCard = section2(null);
     previewCard.append(spriteBox, sizeRow, weight);
     const colorHost = h("div");
     const weatherHost = h("div");
     const lightingHost = h("div");
-    const mutationsCard = section("Mutations");
+    const mutationsCard = section2("Mutations");
     mutationsCard.append(colorHost, weatherHost, lightingHost);
     const friendHost = h("div");
-    const friendCard = section("Friend bonus");
+    const friendCard = section2("Friend bonus");
     friendCard.appendChild(friendHost);
     detail.append(price.root, previewCard, mutationsCard, friendCard);
     const states = /* @__PURE__ */ new Map();
@@ -33871,7 +31364,7 @@ next: ${next}`;
       return state7;
     };
     function refreshPrice() {
-      price.value.textContent = selectedKey ? formatCoins3(calculatorPrice(selectedKey, stateFor(selectedKey))) : "\u2014";
+      price.value.textContent = selectedKey ? formatCoins(calculatorPrice(selectedKey, stateFor(selectedKey))) : "\u2014";
     }
     function refreshSize(size) {
       sizeSlider.value = String(size);
@@ -33974,7 +31467,7 @@ next: ${next}`;
       init_data();
       init_cropSize();
       init_math();
-      init_menu3();
+      init_seedOptions();
       init_menu();
       init_card();
       init_dom2();
@@ -34312,8 +31805,8 @@ next: ${next}`;
     return getAriesStorage().hatch?.expanded?.[sectionId] !== true;
   }
   function setCollapsed(sectionId, collapsed) {
-    updateAriesStorage((current) => {
-      const hatch = current.hatch ?? (current.hatch = {});
+    updateAriesStorage((current2) => {
+      const hatch = current2.hatch ?? (current2.hatch = {});
       const map2 = hatch.expanded ?? (hatch.expanded = {});
       if (collapsed) delete map2[sectionId];
       else map2[sectionId] = true;
@@ -34493,7 +31986,7 @@ next: ${next}`;
     let rafId = null;
     const schedule2 = () => {
       if (!view.isConnected) {
-        cleanup2();
+        cleanup();
         return;
       }
       if (rafId !== null) return;
@@ -34504,7 +31997,7 @@ next: ${next}`;
     };
     const stopStats = StatsService.subscribe(schedule2);
     const stopTracker = HatchTracker.subscribe(schedule2);
-    function cleanup2() {
+    function cleanup() {
       try {
         stopStats();
       } catch {
@@ -34518,7 +32011,7 @@ next: ${next}`;
         rafId = null;
       }
     }
-    view.__cleanup__ = cleanup2;
+    view.__cleanup__ = cleanup;
     seedFromOwnedPets(StatsService.getSnapshot()).catch((error) => {
       console.error("[PetsHatch] Failed to seed pet stats", error);
     });
@@ -35096,13 +32589,13 @@ next: ${next}`;
       return result;
     }
     function rebuildAbilityOptions() {
-      const current = selAbility.value;
+      const current2 = selAbility.value;
       const entries2 = [
         ["", "All abilities"],
         ...PetsService.getSeenAbilityIds().map((id) => [id, id])
       ];
       options(selAbility, entries2);
-      selAbility.value = entries2.some(([value]) => value === current) ? current : "";
+      selAbility.value = entries2.some(([value]) => value === current2) ? current2 : "";
     }
     function repaint() {
       const visible = applyFilters();
@@ -35517,8 +33010,8 @@ next: ${next}`;
     if (ratio >= 0.75) return color.warn;
     return "#f87171";
   }
-  function mkBar(current, atMax) {
-    const ratio = atMax > 0 ? Math.max(0, Math.min(1, current / atMax)) : 0;
+  function mkBar(current2, atMax) {
+    const ratio = atMax > 0 ? Math.max(0, Math.min(1, current2 / atMax)) : 0;
     const track = document.createElement("div");
     Object.assign(track.style, {
       height: "3px",
@@ -35898,10 +33391,10 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/pets/teamEditor.ts
   function framed(title, content2) {
-    const section4 = card(title, { tone: "muted", align: "center" });
-    section4.body.append(content2);
-    section4.root.style.maxWidth = "720px";
-    return section4.root;
+    const section5 = card(title, { tone: "muted", align: "center" });
+    section5.body.append(content2);
+    section5.root.style.maxWidth = "720px";
+    return section5.root;
   }
   function slotRow(onChoose, onClear) {
     const root4 = document.createElement("div");
@@ -37074,16 +34567,16 @@ Restore figures are averages; unlucky streaks do worse.`;
   function combinations(items, size) {
     if (size <= 0 || size > items.length) return [];
     const out = [];
-    const current = [];
+    const current2 = [];
     const walk = (start2) => {
-      if (current.length === size) {
-        out.push([...current]);
+      if (current2.length === size) {
+        out.push([...current2]);
         return;
       }
       for (let i = start2; i < items.length; i += 1) {
-        current.push(items[i]);
+        current2.push(items[i]);
         walk(i + 1);
-        current.pop();
+        current2.pop();
       }
     };
     walk(0);
@@ -37525,32 +35018,32 @@ Restore figures are averages; unlucky streaks do worse.`;
     return row4;
   }
   function renderUnusedSection(unusedPets) {
-    const section4 = card(`\u{1F5D1}\uFE0F Not used in any team (${unusedPets.length})`, { tone: "muted", compactHeader: true, gap: 4 });
-    section4.root.style.gridColumn = "1 / -1";
-    section4.root.style.padding = "8px 10px";
+    const section5 = card(`\u{1F5D1}\uFE0F Not used in any team (${unusedPets.length})`, { tone: "muted", compactHeader: true, gap: 4 });
+    section5.root.style.gridColumn = "1 / -1";
+    section5.root.style.padding = "8px 10px";
     const chevron = document.createElement("span");
     chevron.textContent = "\u25B8";
     chevron.style.display = "inline-block";
     chevron.style.marginLeft = "8px";
     chevron.style.opacity = "0.6";
     chevron.style.transition = "transform 120ms ease";
-    section4.header.appendChild(chevron);
-    section4.header.style.cursor = "pointer";
-    section4.header.style.userSelect = "none";
+    section5.header.appendChild(chevron);
+    section5.header.style.cursor = "pointer";
+    section5.header.style.userSelect = "none";
     const list = document.createElement("div");
     list.style.display = "none";
     list.style.gap = "1px";
     for (const info of unusedPets) {
       list.appendChild(renderUnusedRow(info));
     }
-    section4.body.appendChild(list);
+    section5.body.appendChild(list);
     let expanded = false;
-    section4.header.addEventListener("click", () => {
+    section5.header.addEventListener("click", () => {
       expanded = !expanded;
       list.style.display = expanded ? "grid" : "none";
       chevron.style.transform = expanded ? "rotate(90deg)" : "none";
     });
-    return section4.root;
+    return section5.root;
   }
   async function loadTeams() {
     const pets = await PetsService.getInventoryPets();
@@ -37983,64 +35476,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/kit/modal.ts
-  function menuCard(options2) {
-    const card4 = h("button", "qmm-menu-card");
-    card4.type = "button";
-    card4.disabled = options2.disabled === true;
-    card4.append(h("div", "qmm-menu-card__name", options2.name), h("div", "qmm-menu-card__detail", options2.detail));
-    if (!card4.disabled) card4.addEventListener("click", options2.onClick);
-    return card4;
-  }
-  function openModal2(options2) {
-    let closed = false;
-    const scrim = h("div", "qmm-modal-scrim");
-    const hostZ = Number.parseInt(getComputedStyle(options2.host).zIndex, 10);
-    scrim.style.zIndex = String((Number.isFinite(hostZ) ? hostZ : layer.window) + 1);
-    const panel = h("div", "qmm-modal");
-    panel.style.width = `min(${options2.widthPx ?? 420}px, 100%)`;
-    panel.style.maxHeight = `min(${options2.maxHeightPx ?? 520}px, 88vh)`;
-    panel.addEventListener("click", (event) => event.stopPropagation());
-    const closeButton = h("button", "qmm-modal__close", "\u2715");
-    closeButton.type = "button";
-    closeButton.title = "Close";
-    closeButton.addEventListener("click", () => close());
-    const header = h("div", "qmm-modal__head");
-    header.append(h("div", "qmm-modal__title", options2.title), closeButton);
-    const body = h("div", "qmm-modal__body qmm-scroll");
-    const footer = h("div", "qmm-modal__foot");
-    panel.append(header, body, footer);
-    scrim.append(panel);
-    function onKeyDown2(event) {
-      if (event.key === "Escape") {
-        event.stopPropagation();
-        close();
-      }
-    }
-    function close() {
-      if (closed) return;
-      closed = true;
-      clearInterval(hostWatch);
-      document.removeEventListener("keydown", onKeyDown2, true);
-      scrim.remove();
-      options2.onClose?.();
-    }
-    const hostWatch = window.setInterval(() => {
-      if (!options2.host.isConnected) close();
-    }, 1e3);
-    scrim.addEventListener("click", () => close());
-    document.addEventListener("keydown", onKeyDown2, true);
-    (document.documentElement || document.body).appendChild(scrim);
-    return { body, footer, close, isOpen: () => !closed };
-  }
-  var init_modal = __esm({
-    "src/ui/kit/modal.ts"() {
-      "use strict";
-      init_dom2();
-      init_theme();
-    }
-  });
-
   // src/features/deleters/styles.ts
   function ensureDeleterStyles() {
     if (injected3) return;
@@ -38303,12 +35738,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     headerText.append(sectionLabel(config.title), h("div", "qws-del-head__desc", config.description));
     const header = h("div", "qws-del-head");
     header.append(iconBox(config.headerSprite, 22, "misc"), headerText);
-    const section4 = collapsibleCard({
+    const section5 = collapsibleCard({
       header,
       collapsed: config.collapsed,
       onToggle: config.onToggleCollapsed
     });
-    section4.root.classList.add("qws-del-section");
+    section5.root.classList.add("qws-del-section");
     const stats = h("div", "qws-del-stats");
     const statGroups = statTile();
     const statUnits = statTile();
@@ -38356,7 +35791,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     } });
     const actions2 = h("div", "qws-del-actions");
     actions2.append(btnSelect, btnClear, h("div", "qws-del-spacer"), btnDelete, btnPause, btnPlay, btnStop);
-    section4.body.append(stats, chips, estimate, progressWrap, actions2);
+    section5.body.append(stats, chips, estimate, progressWrap, actions2);
     const progress = { target: "-", done: 0, total: 0 };
     function buildChip(item) {
       const icon2 = h("span", "qws-del-chip__icon", config.fallbackIcon);
@@ -38421,7 +35856,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     function updateControls() {
       const running6 = controller.isRunning();
       const paused = controller.isPaused();
-      section4.root.classList.toggle("is-running", running6);
+      section5.root.classList.toggle("is-running", running6);
       btnPause.hidden = !running6 || paused;
       btnPlay.hidden = !running6 || !paused;
       btnStop.hidden = !running6;
@@ -38480,7 +35915,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     updateSummary();
     updateControls();
     return {
-      root: section4.root,
+      root: section5.root,
       cleanup: () => {
         clearSummaryTimer();
         subscriptions.dispose();
@@ -38560,13 +35995,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       return { dx, dy };
     }
     async function step(dx, dy) {
-      let current;
+      let current2;
       try {
-        current = await PlayerService.getPosition();
+        current2 = await PlayerService.getPosition();
       } catch {
       }
-      const x = Math.round(current?.x ?? 0);
-      const y = Math.round(current?.y ?? 0);
+      const x = Math.round(current2?.x ?? 0);
+      const y = Math.round(current2?.y ?? 0);
       try {
         await PlayerService.move(x + dx, y + dy);
       } catch {
@@ -39145,7 +36580,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/menu/harvestChips.ts
-  function iconHolder(sizePx) {
+  function iconHolder2(sizePx) {
     const box2 = document.createElement("div");
     css4(box2, {
       display: "flex",
@@ -39184,8 +36619,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     const all = [.../* @__PURE__ */ new Set([...candidates, ...bases.map((base) => `${base}Icon`)])];
     if (all.length) attachSpriteIcon(box2, ["crop", "tallplant", "plant"], all, sizePx, SPRITE_LOG_TAG2);
   }
-  function speciesIcon(species, sizePx = ICON_PX2) {
-    const box2 = iconHolder(sizePx);
+  function speciesIcon(species, sizePx = ICON_PX3) {
+    const box2 = iconHolder2(sizePx);
     attachAtlasCrop(box2, species, sizePx);
     return box2;
   }
@@ -39196,9 +36631,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     const apiCategory = INTERNAL_TO_API[segment] ?? (isComposableCategory(segment) ? segment : "plants");
     return composedSpriteUrl(apiCategory, spriteBaseName(species), mutations);
   }
-  function variantIcon(species, mutations, sizePx = ICON_PX2) {
+  function variantIcon(species, mutations, sizePx = ICON_PX3) {
     if (mutations.length === 0) return speciesIcon(species, sizePx);
-    const box2 = iconHolder(sizePx);
+    const box2 = iconHolder2(sizePx);
     const url = composedUrl(species, mutations);
     const img = document.createElement("img");
     img.alt = "";
@@ -39212,8 +36647,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     box2.append(img);
     return box2;
   }
-  function mutationIconEl(mutation, sizePx = ICON_PX2) {
-    const box2 = iconHolder(sizePx);
+  function mutationIconEl(mutation, sizePx = ICON_PX3) {
+    const box2 = iconHolder2(sizePx);
     const candidates = spellings(mutation).flatMap((name) => [`Mutation${name}`, name]);
     attachSpriteIcon(box2, ["ui", "mutation"], candidates, sizePx, SPRITE_LOG_TAG2);
     return box2;
@@ -39343,7 +36778,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return wrap;
   }
-  var SPRITE_LOG_TAG2, ICON_PX2;
+  var SPRITE_LOG_TAG2, ICON_PX3;
   var init_harvestChips = __esm({
     "src/features/companion/menu/harvestChips.ts"() {
       "use strict";
@@ -39354,12 +36789,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_discordCsp();
       init_panel();
       SPRITE_LOG_TAG2 = "companion-harvest";
-      ICON_PX2 = 26;
+      ICON_PX3 = 26;
     }
   });
 
   // src/features/companion/menu/plantChips.ts
-  function iconHolder2(sizePx) {
+  function iconHolder3(sizePx) {
     const box2 = document.createElement("div");
     css4(box2, {
       display: "flex",
@@ -39391,8 +36826,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     const tileRef = eggCatalog2[eggId]?.tileRef;
     return spellings2(eggId, typeof tileRef === "string" ? tileRef : null, eggCatalogName(eggId), name);
   }
-  function plantItemIcon(item, sizePx = ICON_PX3) {
-    const box2 = iconHolder2(sizePx);
+  function plantItemIcon(item, sizePx = ICON_PX4) {
+    const box2 = iconHolder3(sizePx);
     const isEgg = item.kind === "egg";
     const candidates = isEgg ? eggCandidates(item.id, item.name) : seedCandidates(item.id, item.name);
     if (candidates.length) {
@@ -39436,7 +36871,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
   }
-  var SPRITE_LOG_TAG3, ICON_PX3;
+  var SPRITE_LOG_TAG3, ICON_PX4;
   var init_plantChips = __esm({
     "src/features/companion/menu/plantChips.ts"() {
       "use strict";
@@ -39445,7 +36880,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_iconCache();
       init_panel();
       SPRITE_LOG_TAG3 = "companion-plant";
-      ICON_PX3 = 24;
+      ICON_PX4 = 24;
     }
   });
 
@@ -39632,14 +37067,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     return getAriesStorage().misc?.collapsed?.[sectionId] === true;
   }
   function setSectionCollapsed(sectionId, collapsed) {
-    updateAriesStorage((current) => {
-      const misc = current.misc ?? (current.misc = {});
+    updateAriesStorage((current2) => {
+      const misc = current2.misc ?? (current2.misc = {});
       const map2 = misc.collapsed ?? (misc.collapsed = {});
       if (collapsed) map2[sectionId] = true;
       else delete map2[sectionId];
     });
   }
-  function section2(id, icon2, title, description) {
+  function section3(id, icon2, title, description) {
     return collapsibleCard({
       icon: icon2,
       title,
@@ -39659,7 +37094,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return head;
   }
   function buildAutoRecoSection() {
-    const card4 = section2(
+    const card4 = section3(
       "autoReco",
       "\u{1F50C}",
       "Auto reconnect",
@@ -39709,7 +37144,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return card4.root;
   }
   function buildPlayerSection() {
-    const card4 = section2(
+    const card4 = section3(
       "player",
       "\u{1F47B}",
       "Player controls",
@@ -39741,7 +37176,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function buildInventoryGuardSection() {
-    const card4 = section2(
+    const card4 = section3(
       "inventoryGuard",
       "\u{1F392}",
       "Inventory guard",
@@ -39759,7 +37194,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return card4.root;
   }
   function buildDisplaySection(modalHost) {
-    const card4 = section2(
+    const card4 = section3(
       "display",
       "\u{1F4B0}",
       "Display",
@@ -39782,7 +37217,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return card4.root;
   }
   function buildStorageSection() {
-    const card4 = section2(
+    const card4 = section3(
       "storage",
       "\u{1F4E6}",
       "Storage auto-store",
@@ -40107,12 +37542,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function saveBackup(name) {
     const normalizedName = name.trim() || `Backup ${(/* @__PURE__ */ new Date()).toLocaleString()}`;
-    const current = ensureVersion(getAriesStorage());
+    const current2 = ensureVersion(getAriesStorage());
     const entry = {
       id: generateId(),
       name: normalizedName,
       timestamp: Date.now(),
-      data: current
+      data: current2
     };
     const next = [entry, ...readBackups()].slice(0, MAX_BACKUPS);
     persistBackups(next);
@@ -40143,8 +37578,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { success: true, message: "Backup deleted." };
   }
   function exportAllSettings() {
-    const current = ensureVersion(getAriesStorage());
-    return JSON.stringify(current, null, 2);
+    const current2 = ensureVersion(getAriesStorage());
+    return JSON.stringify(current2, null, 2);
   }
   function tryDecodePercentEncodedJson(text2) {
     if (!/^%(?:7B|5B)/i.test(text2)) return null;
@@ -40344,10 +37779,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     return wrap;
   }
   function importExportCard() {
-    const section4 = card("Import / Export", {
+    const section5 = card("Import / Export", {
       description: "Import or export the mod settings directly through JSON files."
     });
-    section4.body.classList.add("qws-set-card-body");
+    section5.body.classList.add("qws-set-card-body");
     const status2 = statusLine();
     const exportButton = button("Export Settings", {
       fullWidth: true,
@@ -40356,14 +37791,14 @@ Restore figures are averages; unlucky streaks do worse.`;
         status2.show({ success: true, message: "Settings exported as JSON file." });
       }
     });
-    section4.body.append(importDropZone(status2.show), status2.el, exportButton);
-    return section4.root;
+    section5.body.append(importDropZone(status2.show), status2.el, exportButton);
+    return section5.root;
   }
   function backupCard() {
-    const section4 = card("Backup", {
+    const section5 = card("Backup", {
       description: "Save our settings directly inside the mod storage for easy restores."
     });
-    section4.body.classList.add("qws-set-card-body");
+    section5.body.classList.add("qws-set-card-body");
     const status2 = statusLine();
     const list = h("div", "qws-set-list");
     const backupRow = (entry) => {
@@ -40411,9 +37846,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const controls = h("div", "qws-set-row");
     controls.append(nameInput, saveButton);
-    section4.body.append(controls, status2.el, list);
+    section5.body.append(controls, status2.el, list);
     refresh();
-    return section4.root;
+    return section5.root;
   }
   function renderDataTab(view) {
     ensureSettingsStyles();
@@ -40609,7 +38044,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return avatar3;
   }
-  function petRow(pet) {
+  function petRow2(pet) {
     const slot = pet?.slot;
     const hunger = PetsService.getHungerPctFor(pet);
     const row4 = h("div");
@@ -40690,7 +38125,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         petList.replaceChildren(empty);
         return;
       }
-      petList.replaceChildren(...pets.map(petRow));
+      petList.replaceChildren(...pets.map(petRow2));
     };
     PetsService.onPetsChangeNow((pets) => renderPets(Array.isArray(pets) ? pets.slice(0, ACTIVE_PET_SLOTS2) : [])).catch(
       () => renderPets([])
@@ -40839,7 +38274,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return row4;
   }
   function soundLibraryCard(onLibraryChange) {
-    const section4 = card("Sound library", { tone: "muted" });
+    const section5 = card("Sound library", { tone: "muted" });
     const errors = errorBar();
     const list = h("div");
     Object.assign(list.style, {
@@ -40896,9 +38331,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       padding: "10px"
     });
     listCard.append(listHeader, list);
-    section4.body.append(dropZone(importFiles), tip, listCard, errors.el);
+    section5.body.append(dropZone(importFiles), tip, listCard, errors.el);
     refresh();
-    return { root: section4.root, refresh };
+    return { root: section5.root, refresh };
   }
   var CONTEXT_LABELS, DROP_HINT2;
   var init_soundLibrary = __esm({
@@ -41082,7 +38517,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         /** Lists the library's sounds, keeping the selection when it still exists. */
         fillSounds() {
           const names = audio.listSounds();
-          const current = this.soundSelect.value;
+          const current2 = this.soundSelect.value;
           this.soundSelect.replaceChildren(
             ...names.map((name) => {
               const opt = h("option", void 0, name);
@@ -41091,7 +38526,7 @@ Restore figures are averages; unlucky streaks do worse.`;
             })
           );
           const preferred = audio.getDefaultSoundName(this.spec.key);
-          if (names.includes(current)) this.soundSelect.value = current;
+          if (names.includes(current2)) this.soundSelect.value = current2;
           else if (preferred && names.includes(preferred)) this.soundSelect.value = preferred;
           else if (names.length) this.soundSelect.value = names[0];
         }
@@ -41115,15 +38550,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (document.getElementById(STYLE_ID3)) return;
     const style = document.createElement("style");
     style.id = STYLE_ID3;
-    style.textContent = CSS2;
+    style.textContent = CSS;
     document.head.appendChild(style);
   }
-  var STYLE_ID3, CSS2;
+  var STYLE_ID3, CSS;
   var init_styles5 = __esm({
     "src/features/notifier/menu/styles.ts"() {
       "use strict";
       STYLE_ID3 = "qws-rule-style";
-      CSS2 = `
+      CSS = `
 .qws-rule-btn {
   display: inline-grid;
   place-items: center;
@@ -41260,7 +38695,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function openRuleEditor(target, anchor) {
     closeRuleEditor();
     ensureMenuStyles();
-    const current = NotifierRules.get(target.id);
+    const current2 = NotifierRules.get(target.id);
     const defaults = ruleDefaults(target.context);
     const canLoop = target.context === "shops";
     const pop = h("div", "qws-rule-popover");
@@ -41285,7 +38720,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     pop.appendChild(header);
     makeDraggable2(pop, header, closeBtn);
     const soundSelect = select2();
-    const selectedSound = current?.sound ?? "";
+    const selectedSound = current2?.sound ?? "";
     const names = audio.listSounds();
     option(soundSelect, "", defaults.soundName);
     for (const name of names) {
@@ -41295,7 +38730,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     soundSelect.value = selectedSound;
     pop.appendChild(field("Sound", soundSelect));
     const defaultVolumePct = Math.round(defaults.volume * 100);
-    const initialVolumePct = Math.round(clamp(current?.volume ?? defaults.volume, 0, 1) * 100);
+    const initialVolumePct = Math.round(clamp(current2?.volume ?? defaults.volume, 0, 1) * 100);
     const volumeRange = slider(0, 100, 1, initialVolumePct, { fill: true });
     const volumeValue = pill(`${initialVolumePct}%`);
     volumeRange.addEventListener("input", () => {
@@ -41308,7 +38743,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const modeSelect = select2();
     const modes = canLoop ? defaults.mode === "loop" ? ["loop", "oneshot"] : ["oneshot", "loop"] : ["oneshot"];
     for (const mode of modes) option(modeSelect, mode, mode === "loop" ? "Loop" : "One-shot");
-    modeSelect.value = canLoop ? current?.playbackMode ?? defaults.mode : "oneshot";
+    modeSelect.value = canLoop ? current2?.playbackMode ?? defaults.mode : "oneshot";
     modeSelect.disabled = !canLoop;
     pop.appendChild(field("Playback mode", modeSelect));
     const stopSelect = select2();
@@ -41320,7 +38755,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     intervalInput.step = "50";
     intervalInput.inputMode = "numeric";
     intervalInput.placeholder = String(defaults.loopIntervalMs);
-    intervalInput.value = current?.loopIntervalMs != null ? String(current.loopIntervalMs) : "";
+    intervalInput.value = current2?.loopIntervalMs != null ? String(current2.loopIntervalMs) : "";
     digitsOnly(intervalInput);
     const intervalField = field("Loop interval (ms)", intervalInput);
     const showLoopFields = () => {
@@ -41342,7 +38777,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       h("div", "qws-rule-hint", "Use defaults by leaving values unchanged (matching the default volume keeps it inherited).")
     );
     const actions2 = h("div", "qws-rule-actions");
-    const clearBtn = button("Clear", { variant: "ghost", size: "sm", disabled: !current });
+    const clearBtn = button("Clear", { variant: "ghost", size: "sm", disabled: !current2 });
     clearBtn.addEventListener("click", (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
@@ -41724,7 +39159,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const icons = [...names].map((value) => `${value.replace(/icon$/i, "")}Icon`);
     return [.../* @__PURE__ */ new Set([...icons, ...names])].filter(Boolean);
   }
-  function weatherIcon(row4) {
+  function weatherIcon2(row4) {
     const size = 40;
     const wrap = h("div");
     Object.assign(wrap.style, {
@@ -41793,7 +39228,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const mutationsLabel = h("div", void 0, "Mutations");
     Object.assign(mutationsLabel.style, { fontSize: "11px", opacity: "0.7", fontWeight: "600" });
     text2.append(titleRow, mutationsLabel, mutationList(row4), summary);
-    cell.append(weatherIcon(row4), text2);
+    cell.append(weatherIcon2(row4), text2);
     return cell;
   }
   function showLastSeen(el, row4) {
@@ -41981,9 +39416,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/lib/markdown.ts
   function escapeHtml(text2) {
-    const div = document.createElement("div");
-    div.textContent = text2;
-    return div.innerHTML;
+    const div2 = document.createElement("div");
+    div2.textContent = text2;
+    return div2.innerHTML;
   }
   function renderInlineMarkdown(text2) {
     let html = text2;
@@ -43138,8 +40573,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return getAriesStorage().keybinds?.collapsed?.[sectionId] === true;
   }
   function setSectionCollapsed2(sectionId, collapsed) {
-    updateAriesStorage((current) => {
-      const keybinds = current.keybinds ?? (current.keybinds = {});
+    updateAriesStorage((current2) => {
+      const keybinds = current2.keybinds ?? (current2.keybinds = {});
       const map2 = keybinds.collapsed ?? (keybinds.collapsed = {});
       if (collapsed) map2[sectionId] = true;
       else delete map2[sectionId];
@@ -43213,16 +40648,16 @@ Restore figures are averages; unlucky streaks do worse.`;
       overflowY: "auto",
       boxSizing: "border-box"
     });
-    for (const section4 of getKeybindSections()) {
+    for (const section5 of getKeybindSections()) {
       const card4 = collapsibleCard({
-        icon: section4.icon,
-        title: section4.title,
-        description: section4.description,
-        collapsed: isSectionCollapsed2(section4.id),
-        onToggle: (collapsed) => setSectionCollapsed2(section4.id, collapsed)
+        icon: section5.icon,
+        title: section5.title,
+        description: section5.description,
+        collapsed: isSectionCollapsed2(section5.id),
+        onToggle: (collapsed) => setSectionCollapsed2(section5.id, collapsed)
       });
-      card4.root.dataset.section = section4.id;
-      for (const action2 of section4.actions) card4.body.appendChild(keybindRow(action2));
+      card4.root.dataset.section = section5.id;
+      for (const action2 of section5.actions) card4.body.appendChild(keybindRow(action2));
       root4.appendChild(card4.root);
     }
   }
@@ -43662,7 +41097,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     return el;
   }
-  function section3(title, ...content2) {
+  function section4(title, ...content2) {
     const el = h("div");
     Object.assign(el.style, { display: "flex", flexDirection: "column", gap: "6px" });
     el.append(sectionLabel(title), ...content2);
@@ -43776,11 +41211,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     const garden3 = valueCard("Garden");
     content2.append(
       profile,
-      section3("Teleport", teleport),
-      section3("Follow", row3(unavailableButton("Follow player", "follow"))),
-      section3("Inspect", inspectGrid),
-      section3("Editor", inspectButton("Save player garden", "save", () => saveGardenWithEditor(player2))),
-      section3("Crop values", row3(inventory.card, garden3.card))
+      section4("Teleport", teleport),
+      section4("Follow", row3(unavailableButton("Follow player", "follow"))),
+      section4("Inspect", inspectGrid),
+      section4("Editor", inspectButton("Save player garden", "save", () => saveGardenWithEditor(player2))),
+      section4("Crop values", row3(inventory.card, garden3.card))
     );
     void (async () => {
       try {
@@ -44522,8 +41957,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function setSkinsEnabled(enabled5) {
     snapshot.enabled = enabled5;
-    updateAriesStorage((current) => {
-      current.skins = { ...current.skins || {}, enabled: enabled5 };
+    updateAriesStorage((current2) => {
+      current2.skins = { ...current2.skins || {}, enabled: enabled5 };
     });
     await reapply();
   }
@@ -44635,9 +42070,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (watchId === null) {
       lastRenderer = getSpriteState().renderer;
       watchId = pageWindow.setInterval(() => {
-        const current = getSpriteState().renderer;
-        if (!current || current === lastRenderer) return;
-        lastRenderer = current;
+        const current2 = getSpriteState().renderer;
+        if (!current2 || current2 === lastRenderer) return;
+        lastRenderer = current2;
         if (!snapshot.entries.size) return;
         console.info("[MG Skins] renderer recreated, re-applying skins");
         forgetAppliedState();
@@ -45513,8 +42948,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/emoteTypes.ts
-  function companionEmoteEntry(playerId2, emote, now2) {
-    return { kind: "emote", playerId: playerId2, emoteType: emote, lastTimestampMs: now2 + ENTRY_LEAD_MS };
+  function companionEmoteEntry(playerId2, emote, now) {
+    return { kind: "emote", playerId: playerId2, emoteType: emote, lastTimestampMs: now + ENTRY_LEAD_MS };
   }
   function mergeEmoteSource(real, fake) {
     const base = real && typeof real === "object" ? real : {};
@@ -45540,10 +42975,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return false;
   }
-  function emoteStartDelay(lastSpokeAt2, now2, canCutTalking = false) {
+  function emoteStartDelay(lastSpokeAt2, now, canCutTalking = false) {
     if (canCutTalking) return 0;
     if (lastSpokeAt2 === null) return 0;
-    return Math.max(0, lastSpokeAt2 + NPC_TALKING_MS + TALKING_MARGIN_MS - now2);
+    return Math.max(0, lastSpokeAt2 + NPC_TALKING_MS + TALKING_MARGIN_MS - now);
   }
   var EmoteType, ENTRY_LEAD_MS, NPC_TALKING_MS, TALKING_MARGIN_MS;
   var init_emoteTypes = __esm({
@@ -45721,9 +43156,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       const egg = eggName3(eggId);
       for (const kind of ["rainbow", "gold"]) {
         const was = Number(before[kind]) || 0;
-        const now2 = Number(after[kind]) || 0;
+        const now = Number(after[kind]) || 0;
         const label2 = RARITY_LABEL[kind];
-        if (now2 < was) {
+        if (now < was) {
           if (was < RELIEF_MIN[kind]) continue;
           const tries = was + 1;
           out.push({
@@ -45739,7 +43174,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           continue;
         }
         let step = null;
-        for (const s of DROUGHT_STEPS[kind]) if (was < s && now2 >= s) step = s;
+        for (const s of DROUGHT_STEPS[kind]) if (was < s && now >= s) step = s;
         if (step === null) continue;
         out.push({
           key: `badluck:${kind}`,
@@ -45784,14 +43219,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     return out;
   }
-  function newlyReadyEggs(tiles, now2, announced) {
+  function newlyReadyEggs(tiles, now, announced) {
     if (!tiles || typeof tiles !== "object") return [];
     const out = [];
     for (const [tileIdx, obj] of Object.entries(tiles)) {
       const o = obj;
       if (!o || o.objectType !== "egg") continue;
       const matured = Number(o.maturedAt);
-      if (!Number.isFinite(matured) || matured <= 0 || matured > now2) continue;
+      if (!Number.isFinite(matured) || matured <= 0 || matured > now) continue;
       const key2 = `${tileIdx}|${o.plantedAt ?? ""}`;
       if (!announced.has(key2)) out.push(key2);
     }
@@ -45828,21 +43263,21 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (holiday) out.push(...HOLIDAY_LINES[holiday]);
     return out;
   }
-  function resumeSession(stored, now2) {
+  function resumeSession(stored, now) {
     const s = stored;
     const lastSeenAt = Number(s?.lastSeenAt);
     const startedAt = Number(s?.startedAt);
-    const valid = Number.isFinite(lastSeenAt) && lastSeenAt > 0 && Number.isFinite(startedAt) && startedAt > 0 && startedAt <= now2;
+    const valid = Number.isFinite(lastSeenAt) && lastSeenAt > 0 && Number.isFinite(startedAt) && startedAt > 0 && startedAt <= now;
     const storedMet = Number(s?.firstMetAt);
-    const firstMetAt = Number.isFinite(storedMet) && storedMet > 0 && storedMet <= now2 ? storedMet : now2;
+    const firstMetAt = Number.isFinite(storedMet) && storedMet > 0 && storedMet <= now ? storedMet : now;
     const celebratedDays = Math.max(0, Math.floor(Number(s?.celebratedDays) || 0));
-    if (valid && now2 - lastSeenAt < SESSION_GAP_MS) {
+    if (valid && now - lastSeenAt < SESSION_GAP_MS) {
       const announcedHours = Math.max(0, Math.floor(Number(s?.announcedHours) || 0));
-      return { session: { startedAt, lastSeenAt: now2, announcedHours, firstMetAt, celebratedDays }, greeting: null };
+      return { session: { startedAt, lastSeenAt: now, announcedHours, firstMetAt, celebratedDays }, greeting: null };
     }
     return {
-      session: { startedAt: now2, lastSeenAt: now2, announcedHours: 0, firstMetAt, celebratedDays },
-      greeting: { first: !valid, awayMs: valid ? now2 - lastSeenAt : 0 }
+      session: { startedAt: now, lastSeenAt: now, announcedHours: 0, firstMetAt, celebratedDays },
+      greeting: { first: !valid, awayMs: valid ? now - lastSeenAt : 0 }
     };
   }
   function greetingReaction(greeting, hour, random, holiday = null) {
@@ -45873,8 +43308,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     for (let year = 1; year * 365 <= days; year++) steps.push(year * 365);
     return steps;
   }
-  function anniversaryReaction(firstMetAt, now2, celebratedDays, random) {
-    const days = Math.floor((now2 - firstMetAt) / DAY_MS);
+  function anniversaryReaction(firstMetAt, now, celebratedDays, random) {
+    const days = Math.floor((now - firstMetAt) / DAY_MS);
     let due = null;
     for (const step of anniversarySteps(days)) if (step <= days && step > celebratedDays) due = step;
     if (due === null) return { reaction: null, celebratedDays };
@@ -45891,8 +43326,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       celebratedDays: due
     };
   }
-  function sessionHours(session2, now2) {
-    return Math.max(0, Math.floor((now2 - session2.startedAt) / 36e5));
+  function sessionHours(session2, now) {
+    return Math.max(0, Math.floor((now - session2.startedAt) / 36e5));
   }
   function sessionHourReaction(hours, random) {
     if (hours < 1) return null;
@@ -45937,26 +43372,26 @@ Restore figures are averages; unlucky streaks do worse.`;
   function initialGateState() {
     return { lastSpokeAt: 0, mutedUntil: {}, queue: [] };
   }
-  function offerReaction(state7, reaction, now2) {
-    if (now2 < (state7.mutedUntil[familyOf(reaction.key)] ?? 0)) return state7;
+  function offerReaction(state7, reaction, now) {
+    if (now < (state7.mutedUntil[familyOf(reaction.key)] ?? 0)) return state7;
     const existing = state7.queue.find((q) => q.key === reaction.key);
     if (existing && (existing.weight ?? 0) > (reaction.weight ?? 0)) return state7;
     const queue = state7.queue.filter((q) => q.key !== reaction.key);
-    queue.push({ ...reaction, at: now2 });
+    queue.push({ ...reaction, at: now });
     return { ...state7, queue };
   }
-  function takeReaction(state7, now2, busy4) {
-    const queue = state7.queue.filter((q) => now2 - q.at <= REACTION_TTL_MS[q.priority]);
+  function takeReaction(state7, now, busy4) {
+    const queue = state7.queue.filter((q) => now - q.at <= REACTION_TTL_MS[q.priority]);
     const kept = { ...state7, queue };
-    if (busy4 || queue.length === 0 || now2 - state7.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
+    if (busy4 || queue.length === 0 || now - state7.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
     const chosen = queue.find((q) => q.priority === "high") ?? queue[0];
     const family = familyOf(chosen.key);
     const { at: _at, ...reaction } = chosen;
     return {
       reaction,
       state: {
-        lastSpokeAt: now2,
-        mutedUntil: { ...state7.mutedUntil, [family]: now2 + (FAMILY_COOLDOWN_MS[family] ?? 0) },
+        lastSpokeAt: now,
+        mutedUntil: { ...state7.mutedUntil, [family]: now + (FAMILY_COOLDOWN_MS[family] ?? 0) },
         // Le reste de la famille qui vient de parler se tait aussi.
         queue: queue.filter((q) => q !== chosen && (FAMILY_COOLDOWN_MS[family] ? familyOf(q.key) !== family : true))
       }
@@ -46151,8 +43586,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   function lineEmote(line) {
     return LINE_EMOTES[line] ?? null;
   }
-  function pokeLine(talkTimes, now2, random) {
-    const recent = talkTimes.filter((t) => now2 - t <= POKE_WINDOW_MS && t <= now2).length;
+  function pokeLine(talkTimes, now, random) {
+    const recent = talkTimes.filter((t) => now - t <= POKE_WINDOW_MS && t <= now).length;
     if (recent < POKE_THRESHOLD) return null;
     if (recent < 7) {
       return {
@@ -46171,7 +43606,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       emote: EmoteType.Angered
     };
   }
-  function ripeCropCount(tileObjects, now2) {
+  function ripeCropCount(tileObjects, now) {
     if (!tileObjects || typeof tileObjects !== "object") return 0;
     let count = 0;
     for (const obj of Object.values(tileObjects)) {
@@ -46181,7 +43616,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         const s = slot;
         if (!s || s.preserved === true) continue;
         const end = s.endTime;
-        if (typeof end === "number" && end > 0 && end <= now2) count++;
+        if (typeof end === "number" && end > 0 && end <= now) count++;
       }
     }
     return count;
@@ -46553,10 +43988,10 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/state.ts
   function loadCompanionSettings() {
-    return coerceSettings(readAriesPath(STORAGE_PATH4, void 0));
+    return coerceSettings(readAriesPath(STORAGE_PATH5, void 0));
   }
   function saveCompanionSettings(settings) {
-    writeAriesPath(STORAGE_PATH4, settings);
+    writeAriesPath(STORAGE_PATH5, settings);
   }
   function patchCompanionSettings(patch) {
     saveCompanionSettings({ ...loadCompanionSettings(), ...patch });
@@ -46566,18 +44001,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     return !loadCompanionSettings().reviewedSettings.includes(group2);
   }
   function markReviewed(group2) {
-    const current = loadCompanionSettings().reviewedSettings;
-    if (current.includes(group2)) return;
-    patchCompanionSettings({ reviewedSettings: [...current, group2] });
+    const current2 = loadCompanionSettings().reviewedSettings;
+    if (current2.includes(group2)) return;
+    patchCompanionSettings({ reviewedSettings: [...current2, group2] });
   }
-  var STORAGE_PATH4;
+  var STORAGE_PATH5;
   var init_state3 = __esm({
     "src/features/companion/state.ts"() {
       "use strict";
       init_storage();
       init_settingsShape();
       init_settingsShape();
-      STORAGE_PATH4 = "companion";
+      STORAGE_PATH5 = "companion";
     }
   });
 
@@ -46773,10 +44208,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function writeEntries(entries2) {
     const payload = { entries: entries2 };
     try {
-      if (!installed4) {
+      if (!installed5) {
         ensureTickAtom();
         await fakeShow(EMOTE_PATCH, payload);
-        installed4 = true;
+        installed5 = true;
       } else {
         await fakeUpdate(EMOTE_SOURCE_LABEL, payload);
       }
@@ -46787,7 +44222,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   }
   async function rest() {
-    if (!installed4) return;
+    if (!installed5) return;
     await writeEntries([]);
   }
   function cancelPending() {
@@ -46840,15 +44275,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     cancelStart();
     cancelPending();
     posing = null;
-    if (!installed4) return;
+    if (!installed5) return;
     try {
       await fakeHide(EMOTE_SOURCE_LABEL);
       await bumpTick();
     } catch {
     }
-    installed4 = false;
+    installed5 = false;
   }
-  var EMOTE_SOURCE_LABEL, EMOTE_PATCH, EMOTE_DURATION_MS, installed4, releaseTimer, posing, startTimer, lastSpokeAt;
+  var EMOTE_SOURCE_LABEL, EMOTE_PATCH, EMOTE_DURATION_MS, installed5, releaseTimer, posing, startTimer, lastSpokeAt;
   var init_emote = __esm({
     "src/features/companion/emote.ts"() {
       "use strict";
@@ -46865,7 +44300,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         merge: (real, fake) => mergeEmoteSource(real, fake)
       };
       EMOTE_DURATION_MS = 1500;
-      installed4 = false;
+      installed5 = false;
       releaseTimer = null;
       posing = null;
       startTimer = null;
@@ -46958,9 +44393,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     const rt = runtime;
     if (!rt || !rt.map || !rt.player) return;
     if (!hasGameCaughtUp(rt.movement.tile, rt.observedTile)) {
-      const now2 = Date.now();
-      if (rt.waitingSinceMs === null) rt.waitingSinceMs = now2;
-      if (now2 - rt.waitingSinceMs < RENDER_WAIT_TIMEOUT_MS) return;
+      const now = Date.now();
+      if (rt.waitingSinceMs === null) rt.waitingSinceMs = now;
+      if (now - rt.waitingSinceMs < RENDER_WAIT_TIMEOUT_MS) return;
     }
     rt.waitingSinceMs = null;
     let anchor;
@@ -47003,14 +44438,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   function resolveSpeech() {
     const rt = runtime;
     if (!rt) return null;
-    const now2 = Date.now();
-    rt.talkTimes = [...rt.talkTimes.filter((t) => now2 - t <= POKE_WINDOW_MS), now2];
-    const poke = pokeLine(rt.talkTimes, now2, Math.random);
+    const now = Date.now();
+    rt.talkTimes = [...rt.talkTimes.filter((t) => now - t <= POKE_WINDOW_MS), now];
+    const poke = pokeLine(rt.talkTimes, now, Math.random);
     if (poke) {
       playEmoteSoon(rt, poke.emote);
       return poke.message;
     }
-    const customLines = rt.settings.lines.length > 0 ? [...rt.settings.lines, ...timeLines(new Date(now2))] : [];
+    const customLines = rt.settings.lines.length > 0 ? [...rt.settings.lines, ...timeLines(new Date(now))] : [];
     const picked = pickDialogueLine({
       contextual: rt.settings.contextualEnabled ? rt.contextualCache : [],
       customLines,
@@ -47407,15 +44842,15 @@ Restore figures are averages; unlucky streaks do worse.`;
         async say(message2, opts = {}) {
           const rt = runtime;
           if (!rt || !message2.trim()) return;
-          const now2 = Date.now();
-          if (!opts.force && now2 - rt.lastBubbleAt < CHAT_BUBBLE_MIN_INTERVAL_MS) return;
-          rt.lastBubbleAt = now2;
+          const now = Date.now();
+          if (!opts.force && now - rt.lastBubbleAt < CHAT_BUBBLE_MIN_INTERVAL_MS) return;
+          rt.lastBubbleAt = now;
           const tagged = opts.tags && Object.keys(opts.tags).length > 0 ? { tags: opts.tags } : {};
           try {
             await npcChatBubbles.set({
               // Marqué comme écrit par le mod : sans ça, l'interception réécrirait
               // notre propre message avec une réplique tirée au hasard.
-              [rt.npcId]: { seq: 0, playerId: rt.npcId, message: message2, timestamp: now2, ...tagged, [AUTHORED_BY_MOD]: true }
+              [rt.npcId]: { seq: 0, playerId: rt.npcId, message: message2, timestamp: now, ...tagged, [AUTHORED_BY_MOD]: true }
             });
           } catch {
           }
@@ -47524,10 +44959,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     const entry = plantEntry(species);
     return thing(entry?.crop ?? entry?.plant, "");
   }
-  function seedIcon(species) {
+  function seedIcon2(species) {
     return thing(plantEntry(species)?.seed, "");
   }
-  function eggIcon(eggId) {
+  function eggIcon2(eggId) {
     return thing(eggCatalog2[eggId], "");
   }
   function variantIcons(species, mutations) {
@@ -47789,7 +45224,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function scanGarden(tileObjects, selectedSpecies) {
     const plants = [];
     const allCrops = [];
-    const now2 = Date.now();
+    const now = Date.now();
     if (!tileObjects || !selectedSpecies.size) {
       return emptyResult();
     }
@@ -47811,7 +45246,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         let growthPct = 0;
         const duration = endTime - startTime;
         if (duration > 0) {
-          const elapsed = now2 - startTime;
+          const elapsed = now - startTime;
           growthPct = Math.max(0, Math.min(100, elapsed / duration * 100));
         } else {
           growthPct = 100;
@@ -47940,7 +45375,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const species = speciesInGarden(tileObjects);
     if (species.size === 0) return [];
     const scan = scanGarden(tileObjects, species);
-    const now2 = Date.now();
+    const now = Date.now();
     const rows = [];
     for (const plant of scan.plants) {
       for (const crop of plant.crops) {
@@ -47952,7 +45387,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           sizePct: crop.sizePct,
           growthPct: Math.round(crop.growthPct),
           mutations: Array.isArray(crop.mutations) ? crop.mutations : [],
-          ready: crop.endTime > 0 && crop.endTime <= now2,
+          ready: crop.endTime > 0 && crop.endTime <= now,
           preserved: crop.preserved === true
         });
       }
@@ -48336,7 +45771,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/chat/plantRun.ts
   function topSeed(plan) {
     const most = countByItem(plan)[0];
-    return most?.kind === "seed" ? seedIcon(most.id) : null;
+    return most?.kind === "seed" ? seedIcon2(most.id) : null;
   }
   async function send2(assignment) {
     if (assignment.kind === "egg") {
@@ -48426,9 +45861,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!Number.isFinite(raw) || raw <= 0) return null;
     return raw < 1e11 ? raw * 1e3 : raw;
   }
-  function isEggReady(tile, now2) {
+  function isEggReady(tile, now) {
     const readyAt = normalizeTs(tile.maturedAt) ?? normalizeTs(tile.endTime) ?? normalizeTs(tile.readyAt) ?? normalizeTs(tile.hatchTime) ?? null;
-    return readyAt === null || readyAt <= now2;
+    return readyAt === null || readyAt <= now;
   }
   function asStringArray(value) {
     return Array.isArray(value) ? value.filter((entry) => typeof entry === "string") : [];
@@ -48447,7 +45882,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return scan;
     }
     if (!tileObjects || typeof tileObjects !== "object") return scan;
-    const now2 = Date.now();
+    const now = Date.now();
     for (const [key2, raw] of Object.entries(tileObjects)) {
       if (!raw || typeof raw !== "object") continue;
       const tile = raw;
@@ -48458,7 +45893,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       scan.totalEggs++;
       const eggId = String(tile.eggId ?? tile.id ?? tile.species ?? "");
       if (eggId) scan.eggIds.add(eggId);
-      if (isEggReady(tile, now2)) scan.readySlots.push(slot);
+      if (isEggReady(tile, now)) scan.readySlots.push(slot);
     }
     scan.readySlots.sort((a, b) => a - b);
     return scan;
@@ -48630,7 +46065,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function executeHatchBatch(slots, reporter2) {
     const kinds = (await readHatchScope().catch(() => null))?.eggIds ?? [];
     const opening = `On it. Opening ${slots.length} now.`;
-    reporter2.say("reply", opening, compose(kinds.length === 1 ? eggIcon(kinds[0]) : null, " ", opening));
+    reporter2.say("reply", opening, compose(kinds.length === 1 ? eggIcon2(kinds[0]) : null, " ", opening));
     const settings = loadCompanionSettings();
     const team = await wearTeam(settings.hatchTeamId, reporter2);
     const walker = await createWalker((message2) => reporter2.say("system", message2));
@@ -48857,7 +46292,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/chat/index.ts
   function notify() {
-    for (const listener of [...listeners3]) {
+    for (const listener of [...listeners2]) {
       try {
         listener();
       } catch {
@@ -48974,7 +46409,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const most = countByItem(plan)[0];
     const sentence = `That is ${proposal.summary}. Want me to get started?`;
     post("companion", "reply", sentence, proposal.id, {
-      bubble: compose(most?.kind === "seed" ? seedIcon(most.id) : null, " ", sentence)
+      bubble: compose(most?.kind === "seed" ? seedIcon2(most.id) : null, " ", sentence)
     });
   }
   async function proposeHatchSlots(provider, rules3) {
@@ -48995,7 +46430,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const kinds = await readHatchScope().then((scope) => scope.eggIds).catch(() => []);
     const sentence = `${proposal.summary}.${teamPromise(team)} Want me to open them?`;
     post("companion", "reply", sentence, proposal.id, {
-      bubble: compose(kinds.length === 1 ? eggIcon(kinds[0]) : null, " ", sentence)
+      bubble: compose(kinds.length === 1 ? eggIcon2(kinds[0]) : null, " ", sentence)
     });
   }
   async function proposeSellPlan(provider, rules3) {
@@ -49098,7 +46533,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (captured.kind === "sell") return captured.plan.sell.length;
     return captured.picks.length;
   }
-  var ALERT_DEDUPE_MS, state4, listeners3, nextProposalSeq, ACCEPTANCE, CompanionChat;
+  var ALERT_DEDUPE_MS, state4, listeners2, nextProposalSeq, ACCEPTANCE, CompanionChat;
   var init_chat = __esm({
     "src/features/companion/chat/index.ts"() {
       "use strict";
@@ -49131,7 +46566,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         run: null,
         cancelRequested: false
       };
-      listeners3 = /* @__PURE__ */ new Set();
+      listeners2 = /* @__PURE__ */ new Set();
       nextProposalSeq = 1;
       ACCEPTANCE = {
         harvest: "Yes, go ahead",
@@ -49193,8 +46628,8 @@ Restore figures are averages; unlucky streaks do worse.`;
           return state4.run !== null;
         },
         subscribe(listener) {
-          listeners3.add(listener);
-          return () => listeners3.delete(listener);
+          listeners2.add(listener);
+          return () => listeners2.delete(listener);
         },
         /** Alerte poussée par une source ; ignorée si identique et récente. */
         alert(text2) {
@@ -49345,12 +46780,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       return;
     }
     const signature = feedSignature(picks);
-    const now2 = Date.now();
-    if (signature === lastOfferedSignature && now2 - lastOfferedAtMs < REASK_COOLDOWN_MS) return;
+    const now = Date.now();
+    if (signature === lastOfferedSignature && now - lastOfferedAtMs < REASK_COOLDOWN_MS) return;
     const offered = await CompanionChat.offerFeed(() => findFeedable());
     if (!offered) return;
     lastOfferedSignature = signature;
-    lastOfferedAtMs = now2;
+    lastOfferedAtMs = now;
     await announceIfNeeded(picks);
   }
   function scheduleCheck() {
@@ -49745,10 +47180,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   function isCentered(message2) {
     return message2.kind === "system";
   }
-  function isSameGroup(previous, current) {
-    if (isCentered(previous) || isCentered(current)) return false;
-    if (previous.from !== current.from) return false;
-    return current.atMs - previous.atMs < GROUP_WINDOW_MS;
+  function isSameGroup(previous, current2) {
+    if (isCentered(previous) || isCentered(current2)) return false;
+    if (previous.from !== current2.from) return false;
+    return current2.atMs - previous.atMs < GROUP_WINDOW_MS;
   }
   function formatMessageTime(atMs) {
     try {
@@ -50017,8 +47452,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     row4.append(text2, control);
     return row4;
   }
-  function toggleIn(current, value) {
-    const next = new Set(current ?? []);
+  function toggleIn(current2, value) {
+    const next = new Set(current2 ?? []);
     if (next.has(value)) next.delete(value);
     else next.add(value);
     return next.size === 0 ? null : [...next];
@@ -50172,7 +47607,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/menu/teamSelect.ts
-  function teamSelect(current, onPick) {
+  function teamSelect(current2, onPick) {
     const el = document.createElement("select");
     el.className = "qws-pnl-select";
     css4(el, { fontSize: "12px", color: TEXT, minWidth: "150px" });
@@ -50192,7 +47627,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       option2.textContent = team.name;
       el.append(option2);
     }
-    el.value = current && teams2.some((team) => team.id === current) ? current : NO_TEAM;
+    el.value = current2 && teams2.some((team) => team.id === current2) ? current2 : NO_TEAM;
     el.addEventListener("change", () => onPick(el.value === NO_TEAM ? null : el.value));
     return { el, empty: teams2.length === 0 };
   }
@@ -50926,11 +48361,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       if (!held) return;
       if (!owned2.has(tileIndex) || scope.occupied.has(tileIndex)) return;
-      const current = plan.get(tileIndex);
-      if (current && itemKey(current) === itemKey(held)) return;
-      if (current) plan.delete(tileIndex);
+      const current2 = plan.get(tileIndex);
+      if (current2 && itemKey(current2) === itemKey(held)) return;
+      if (current2) plan.delete(tileIndex);
       if (remainingFor(held) <= 0) {
-        if (current) plan.set(tileIndex, current);
+        if (current2) plan.set(tileIndex, current2);
         return;
       }
       plan.set(tileIndex, { tileIndex, kind: held.kind, id: held.id, name: held.name });
@@ -51029,7 +48464,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/menu/hatchChips.ts
-  function iconHolder3(sizePx) {
+  function iconHolder4(sizePx) {
     const box2 = document.createElement("div");
     css4(box2, {
       display: "flex",
@@ -51041,8 +48476,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     return box2;
   }
-  function petSpeciesIcon2(species, sizePx = ICON_PX4) {
-    const box2 = iconHolder3(sizePx);
+  function petSpeciesIcon2(species, sizePx = ICON_PX5) {
+    const box2 = iconHolder4(sizePx);
     const candidates = [species, species.replace(/\s+/g, "")].filter(Boolean);
     attachSpriteIcon(box2, ["pet"], candidates, sizePx, SPRITE_LOG_TAG5, {
       onNoSpriteFound: () => {
@@ -51052,8 +48487,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     return box2;
   }
-  function abilityIcon(abilityId, sizePx = ICON_PX4) {
-    const box2 = iconHolder3(sizePx);
+  function abilityIcon(abilityId, sizePx = ICON_PX5) {
+    const box2 = iconHolder4(sizePx);
     const square = document.createElement("span");
     const { bg } = getAbilityChipColors(abilityId);
     css4(square, {
@@ -51067,7 +48502,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     box2.append(square);
     return box2;
   }
-  var SPRITE_LOG_TAG5, ICON_PX4;
+  var SPRITE_LOG_TAG5, ICON_PX5;
   var init_hatchChips = __esm({
     "src/features/companion/menu/hatchChips.ts"() {
       "use strict";
@@ -51075,7 +48510,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_abilityChipColors();
       init_panel();
       SPRITE_LOG_TAG5 = "companion-hatch";
-      ICON_PX4 = 26;
+      ICON_PX5 = 26;
     }
   });
 
@@ -51417,11 +48852,11 @@ Restore figures are averages; unlucky streaks do worse.`;
         thread.append(emptyThread(EMPTY_HINT));
         return;
       }
-      const now2 = Date.now();
+      const now = Date.now();
       let lastDayLabel = "";
       for (let i = 0; i < messages.length; i++) {
         const message2 = messages[i];
-        const dayLabel = formatDayLabel(message2.atMs, now2);
+        const dayLabel = formatDayLabel(message2.atMs, now);
         const startsDay = dayLabel !== "" && dayLabel !== lastDayLabel;
         if (startsDay) {
           thread.append(dateSeparator(dayLabel));
@@ -51684,9 +49119,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     let pingTimer = null;
     async function pingPosition() {
       try {
-        const current = await deps.getPosition();
-        if (!current) return;
-        await deps.pingPosition(Math.round(current.x), Math.round(current.y));
+        const current2 = await deps.getPosition();
+        if (!current2) return;
+        await deps.pingPosition(Math.round(current2.x), Math.round(current2.y));
       } catch {
       }
     }
@@ -51799,15 +49234,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     ev.preventDefault();
   }
   function installEditorPointerControls() {
-    if (installed5 || typeof window === "undefined") return;
-    installed5 = true;
+    if (installed6 || typeof window === "undefined") return;
+    installed6 = true;
     window.addEventListener("pointerdown", (ev) => void handlePointerDown(ev), true);
     window.addEventListener("pointermove", (ev) => void handlePointerMove(ev), true);
     window.addEventListener("pointerup", handlePointerUp, true);
     window.addEventListener("pointercancel", handlePointerUp, true);
     window.addEventListener("contextmenu", handleContextMenu, true);
   }
-  var installed5, dragMode, lastTileKey, tileKeyOf;
+  var installed6, dragMode, lastTileKey, tileKeyOf;
   var init_pointerControls = __esm({
     "src/features/editor/pointerControls.ts"() {
       "use strict";
@@ -51817,7 +49252,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_planEdits();
       init_session();
       init_tileMap();
-      installed5 = false;
+      installed6 = false;
       dragMode = null;
       lastTileKey = null;
       tileKeyOf = (target) => `${target.tileType}|${target.localTileIndex}`;
@@ -51889,35 +49324,35 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (resumed.greeting) offer(greetingReaction(resumed.greeting, today.getHours(), Math.random, holidayOf(today)));
     checkAnniversary(Date.now());
   }
-  function checkAnniversary(now2) {
+  function checkAnniversary(now) {
     if (!session) return;
-    const due = anniversaryReaction(session.firstMetAt, now2, session.celebratedDays, Math.random);
+    const due = anniversaryReaction(session.firstMetAt, now, session.celebratedDays, Math.random);
     if (!due.reaction) return;
     session.celebratedDays = due.celebratedDays;
     saveSession();
     offer(due.reaction);
   }
   function slowTick() {
-    const now2 = Date.now();
+    const now = Date.now();
     if (session) {
-      session.lastSeenAt = now2;
-      const hours = sessionHours(session, now2);
+      session.lastSeenAt = now;
+      const hours = sessionHours(session, now);
       if (hours > session.announcedHours) {
         session.announcedHours = hours;
         offer(sessionHourReaction(hours, Math.random));
       }
       saveSession();
-      const date = new Date(now2);
+      const date = new Date(now);
       const hour = date.getHours();
-      offer(clockReaction(lastHour, hour, now2 - session.startedAt, Math.random, holidayOf(date)));
+      offer(clockReaction(lastHour, hour, now - session.startedAt, Math.random, holidayOf(date)));
       lastHour = hour;
-      checkAnniversary(now2);
+      checkAnniversary(now);
     }
-    checkEggs(now2);
+    checkEggs(now);
   }
-  function checkEggs(now2) {
+  function checkEggs(now) {
     if (!latestGarden) return;
-    const fresh = newlyReadyEggs(latestGarden, now2, announcedEggs);
+    const fresh = newlyReadyEggs(latestGarden, now, announcedEggs);
     for (const key2 of fresh) announcedEggs.add(key2);
     if (!eggsPrimed) {
       eggsPrimed = true;
@@ -52349,12 +49784,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     return interest.tile;
   }
   function onInterestReached(tile) {
-    const current = pending3;
+    const current2 = pending3;
     pending3 = null;
-    if (!current || !running3) return;
-    const { interest, at } = current;
-    const now2 = Date.now();
-    if (now2 - at > PENDING_TTL_MS) return;
+    if (!current2 || !running3) return;
+    const { interest, at } = current2;
+    const now = Date.now();
+    if (now - at > PENDING_TTL_MS) return;
     if (interest.tile.x !== tile.x || interest.tile.y !== tile.y) return;
     if (busy2()) return;
     const still = latestGarden2?.[String(interest.dirtTileIdx)];
@@ -52365,7 +49800,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
     }
     const speak3 = reactions && shouldComment({
-      now: now2,
+      now,
       lastCommentAt,
       distanceToPlayer: CompanionService.distanceToPlayer(),
       busy: false,
@@ -52373,7 +49808,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     void (async () => {
       if (speak3) {
-        lastCommentAt = now2;
+        lastCommentAt = now;
         await CompanionService.say(interest.line);
       }
       await CompanionService.emote(interest.emote);
@@ -52493,19 +49928,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     return Math.round(MIRROR_DELAY_MIN_MS + r * span);
   }
   function decideMirror(state7, played, ctx2) {
-    const { now: now2, random } = ctx2;
-    let next = now2 - state7.streakLastAt > STREAK_GAP_MS ? { ...state7, streakCount: 1, streakAnswers: 0, streakSpamRolled: false, streakLastAt: now2 } : { ...state7, streakCount: state7.streakCount + 1, streakLastAt: now2 };
+    const { now, random } = ctx2;
+    let next = now - state7.streakLastAt > STREAK_GAP_MS ? { ...state7, streakCount: 1, streakAnswers: 0, streakSpamRolled: false, streakLastAt: now } : { ...state7, streakCount: state7.streakCount + 1, streakLastAt: now };
     if (!ctx2.available || ctx2.distance === null || ctx2.distance > MIRROR_MAX_DISTANCE) {
       return { state: next, action: null };
     }
-    if (next.streakCount >= SPAM_THRESHOLD && !next.streakSpamRolled && now2 - next.lastSpamLineAt >= SPAM_LINE_COOLDOWN_MS) {
+    if (next.streakCount >= SPAM_THRESHOLD && !next.streakSpamRolled && now - next.lastSpamLineAt >= SPAM_LINE_COOLDOWN_MS) {
       next = { ...next, streakSpamRolled: true };
       if (random() < SPAM_LINE_CHANCE) {
-        next = { ...next, lastSpamLineAt: now2, lastLineAt: now2, lastMirrorAt: now2 };
+        next = { ...next, lastSpamLineAt: now, lastLineAt: now, lastMirrorAt: now };
         return { state: next, action: { kind: "line", line: pick(SPAM_LINES, random), delayMs: mirrorDelay(random) } };
       }
     }
-    if (now2 - next.lastMirrorAt < MIRROR_COOLDOWN_MS) return { state: next, action: null };
+    if (now - next.lastMirrorAt < MIRROR_COOLDOWN_MS) return { state: next, action: null };
     if (next.streakAnswers >= STREAK_MAX_ANSWERS) return { state: next, action: null };
     if (next.streakAnswers >= 1 && random() >= SECOND_ANSWER_CHANCE) {
       return { state: { ...next, streakAnswers: STREAK_MAX_ANSWERS }, action: null };
@@ -52513,15 +49948,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     const emote = mirrorEmoteFor(played.emote, random);
     const delayMs = mirrorDelay(random);
     let line = null;
-    if (now2 - next.lastLineAt >= LINE_COOLDOWN_MS && random() < LINE_CHANCE) {
+    if (now - next.lastLineAt >= LINE_COOLDOWN_MS && random() < LINE_CHANCE) {
       const lines = MIRROR_LINES[played.emote];
       if (lines && lines.length) line = pick(lines, random);
     }
     next = {
       ...next,
       streakAnswers: next.streakAnswers + 1,
-      lastMirrorAt: now2,
-      lastLineAt: line ? now2 : next.lastLineAt
+      lastMirrorAt: now,
+      lastLineAt: line ? now : next.lastLineAt
     };
     return { state: next, action: { kind: "mirror", emote, delayMs, line } };
   }
@@ -52693,27 +50128,27 @@ Restore figures are averages; unlucky streaks do worse.`;
   function pickOne4(options2, random) {
     return options2[Math.min(options2.length - 1, Math.floor(random() * options2.length))];
   }
-  function initialAfkState(now2) {
-    return { phase: "active", quietSince: now2, phaseSince: now2, asked: false, nextSnoreAt: null, lastSnore: null };
+  function initialAfkState(now) {
+    return { phase: "active", quietSince: now, phaseSince: now, asked: false, nextSnoreAt: null, lastSnore: null };
   }
   function afkActivity(state7, input, random) {
-    const { now: now2, busy: busy4 } = input;
+    const { now, busy: busy4 } = input;
     if (state7.phase === "active") {
-      return { state: { ...state7, quietSince: now2 }, effects: [] };
+      return { state: { ...state7, quietSince: now }, effects: [] };
     }
     if (state7.phase === "idle") {
       const effects2 = [];
       if (state7.asked && !busy4 && random() < RETURN_LINE_CHANCE) effects2.push(say(pickOne4(RETURN_LINES, random), false));
-      return { state: initialAfkState(now2), effects: effects2 };
+      return { state: initialAfkState(now), effects: effects2 };
     }
-    const asleepFor = now2 - state7.phaseSince;
+    const asleepFor = now - state7.phaseSince;
     const effects = [];
     if (!busy4 && asleepFor >= WAKE_LINE_MIN_ASLEEP_MS) {
       const pool = asleepFor >= SNORE_SLOW_AFTER_MS ? LONG_WAKE_LINES : WAKE_LINES;
       effects.push(say(pickOne4(pool, random), false));
     }
     effects.push({ kind: "release" });
-    return { state: initialAfkState(now2), effects };
+    return { state: initialAfkState(now), effects };
   }
   var AFK_IDLE_AFTER_MS, AFK_ASLEEP_AFTER_MS, SNORE_SLOW_AFTER_MS, SNORE_SLOW_MIN_MS, SNORE_SLOW_MAX_MS, WAKE_LINE_MIN_ASLEEP_MS, RETURN_LINE_CHANCE, IDLE_LINES, RETURN_LINES, WAKE_LINES, LONG_WAKE_LINES, say;
   var init_afk = __esm({
@@ -52838,11 +50273,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function noteActivity() {
     if (!running5) return;
-    const now2 = Date.now();
-    if (state6.phase === "active" && now2 - lastNotedAt < ACTIVITY_THROTTLE_MS) return;
-    lastNotedAt = now2;
+    const now = Date.now();
+    if (state6.phase === "active" && now - lastNotedAt < ACTIVITY_THROTTLE_MS) return;
+    lastNotedAt = now;
     if (!enabled4() || !CompanionService.isRunning()) return;
-    apply(afkActivity(state6, { now: now2, busy: othersBusy() }, Math.random));
+    apply(afkActivity(state6, { now, busy: othersBusy() }, Math.random));
   }
   function onInput(event) {
     if (!event.isTrusted) return;
@@ -52984,7 +50419,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function questionOf(proposal) {
     const message2 = CompanionChat.getLog().messages.find((entry) => entry.proposalId === proposal.id);
     if (!message2) return [document.createTextNode(proposal.summary)];
-    return message2.positioned ? renderTagged(message2.text, message2.icons, ICON_PX5) : [document.createTextNode(message2.text)];
+    return message2.positioned ? renderTagged(message2.text, message2.icons, ICON_PX6) : [document.createTextNode(message2.text)];
   }
   function build(proposal) {
     ensureStyle2();
@@ -53062,7 +50497,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     unsubscribe = CompanionChat.subscribe(sync);
     sync();
   }
-  var CARD_ID, STYLE_ID5, Z_INDEX, ICON_PX5, TICK_MS, ACCENT2, TEXT2, TEXT_DIM2, card3, clockBar, timer, shownId, unsubscribe;
+  var CARD_ID, STYLE_ID5, Z_INDEX, ICON_PX6, TICK_MS, ACCENT2, TEXT2, TEXT_DIM2, card3, clockBar, timer, shownId, unsubscribe;
   var init_askBanner = __esm({
     "src/features/companion/menu/askBanner.ts"() {
       "use strict";
@@ -53075,7 +50510,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       CARD_ID = "mgCompanionAsk";
       STYLE_ID5 = "mgCompanionAskStyle";
       Z_INDEX = "2000050";
-      ICON_PX5 = 17;
+      ICON_PX6 = 17;
       TICK_MS = 100;
       ACCENT2 = "#5eead4";
       TEXT2 = "#e7eef7";

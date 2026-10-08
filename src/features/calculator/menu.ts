@@ -9,7 +9,7 @@ import {
   getLockerSeedEmojiForSeedName,
   getLockerSeedOptions,
   type LockerSeedOption,
-} from "../locker/menu";
+} from "../locker/seedOptions";
 import { Menu } from "../../ui/kit/menu";
 import { plainCard, sectionLabel } from "../../ui/kit/card";
 import { h } from "../../ui/kit/dom";

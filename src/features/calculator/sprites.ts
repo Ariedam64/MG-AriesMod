@@ -3,7 +3,7 @@
 
 import { attachSpriteIcon } from "../../ui/kit/sprites/iconCache";
 import { h } from "../../ui/kit/dom";
-import type { LockerSeedOption } from "../locker/menu";
+import type { LockerSeedOption } from "../locker/seedOptions";
 
 const PREVIEW_SPRITE_PX = 96;
 

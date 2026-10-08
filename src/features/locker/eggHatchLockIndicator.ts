@@ -1,160 +1,28 @@
 import { Atoms } from "../../game/store/atoms";
-import { lockerRestrictionsService } from "./restrictions";
+import { cornerGlyph, startDomLockIndicator, type DomLockIndicator } from "./domLockMarks";
+import { eggIdOf, lockerRestrictionsService } from "./restrictions";
 
-const CONTAINER_SELECTOR = ".css-502lyi";
-const LOCK_CLASS = "tm-egg-lock";
-const BORDER_COLOR = "rgb(188, 53, 215)";
-const DATA_BORDER = "tmEggLockBorder";
-const DATA_RADIUS = "tmEggLockRadius";
-const DATA_POSITION = "tmEggLockPosition";
-const DATA_OVERFLOW = "tmEggLockOverflow";
-
-type Controller = { stop(): void };
-
-export function startEggHatchLockIndicator(): Controller {
-  if (typeof window === "undefined" || typeof document === "undefined") {
-    return { stop() {} };
-  }
-
-  let running = true;
+/** Outlines the old DOM egg tooltip while the selected egg's hatching is locked. */
+export function startEggHatchLockIndicator(): DomLockIndicator {
   let currentEggId: string | null = null;
-  const disposables: Array<() => void> = [];
-
-  const isEggLocked = () => lockerRestrictionsService.isEggLocked(currentEggId);
-
-  const applyLockState = () => {
-    if (!running) return;
-    const locked = isEggLocked();
-    const containers = Array.from(document.querySelectorAll<HTMLElement>(CONTAINER_SELECTOR));
-    containers.forEach((el) => {
-      if (!containsEggLabel(el)) {
-        restore(el);
-        return;
-      }
-      setLocked(el, locked);
-    });
-  };
-
-  const observeDom = () => {
-    const mo = new MutationObserver(() => applyLockState());
-    mo.observe(document.documentElement, { childList: true, subtree: true });
-    disposables.push(() => mo.disconnect());
-  };
-
-  const subscribeAtoms = async () => {
-    try {
-      const initial = await Atoms.data.myCurrentGardenObject.get();
-      currentEggId = extractEggId(initial);
-    } catch {}
-    try {
-      const unsub = await Atoms.data.myCurrentGardenObject.onChange((next) => {
-        currentEggId = extractEggId(next);
-        applyLockState();
-      });
-      if (typeof unsub === "function") disposables.push(unsub);
-    } catch {}
-
-    const unsubLocker = lockerRestrictionsService.subscribe(() => applyLockState());
-    disposables.push(unsubLocker);
-  };
-
-  observeDom();
-  void subscribeAtoms();
-  applyLockState();
-
-  return {
-    stop() {
-      running = false;
-      disposables.splice(0).forEach((fn) => {
-        try {
-          fn();
-        } catch {}
-      });
-      const containers = Array.from(document.querySelectorAll<HTMLElement>(CONTAINER_SELECTOR));
-      containers.forEach(restore);
-    },
-  };
-}
-
-function containsEggLabel(el: HTMLElement): boolean {
-  const text = (el.textContent || "").toLowerCase();
-  return text.includes("egg");
-}
-
-function setLocked(el: HTMLElement, locked: boolean) {
-  if (!locked) {
-    restore(el);
-    return;
-  }
-
-  storeStyle(el, DATA_BORDER, "border");
-  storeStyle(el, DATA_RADIUS, "borderRadius");
-  storeStyle(el, DATA_POSITION, "position");
-  storeStyle(el, DATA_OVERFLOW, "overflow");
-
-  el.style.border = `3px solid ${BORDER_COLOR}`;
-  el.style.borderRadius = "16px";
-  el.style.overflow = "visible";
-  const pos = window.getComputedStyle(el).position;
-  if (pos === "static") {
-    el.style.position = "relative";
-  }
-  ensureLockIcon(el);
-}
-
-function restore(el: HTMLElement) {
-  restoreStyle(el, DATA_BORDER, "border");
-  restoreStyle(el, DATA_RADIUS, "borderRadius");
-  restoreStyle(el, DATA_POSITION, "position");
-  restoreStyle(el, DATA_OVERFLOW, "overflow");
-  removeLockIcon(el);
-}
-
-function storeStyle(el: HTMLElement, key: string, cssProperty: keyof CSSStyleDeclaration) {
-  const data = el.dataset as Record<string, string | undefined>;
-  if (data[key] !== undefined) return;
-  data[key] = el.style[cssProperty] as string;
-}
-
-function restoreStyle(el: HTMLElement, key: string, cssProperty: keyof CSSStyleDeclaration) {
-  const data = el.dataset as Record<string, string | undefined>;
-  if (data[key] === undefined) return;
-  const value = data[key];
-  if (value) {
-    el.style.setProperty(camelToKebab(cssProperty as string), value);
-  } else {
-    el.style.removeProperty(camelToKebab(cssProperty as string));
-  }
-  delete data[key];
-}
-
-function camelToKebab(str: string): string {
-  return str.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
-}
-
-function ensureLockIcon(el: HTMLElement) {
-  const existing = el.querySelector<HTMLElement>(`span.${LOCK_CLASS}`);
-  if (existing) return;
-  const icon = document.createElement("span");
-  icon.className = LOCK_CLASS;
-  icon.textContent = "🔒";
-  icon.style.position = "absolute";
-  icon.style.top = "-8px";
-  icon.style.right = "-8px";
-  icon.style.fontSize = "16px";
-  icon.style.pointerEvents = "none";
-  icon.style.userSelect = "none";
-  icon.style.zIndex = "2";
-  el.appendChild(icon);
-}
-
-function removeLockIcon(el: HTMLElement) {
-  el.querySelectorAll(`span.${LOCK_CLASS}`).forEach((node) => node.remove());
-}
-
-function extractEggId(obj: any): string | null {
-  if (!obj || typeof obj !== "object") return null;
-  if (obj.objectType !== "egg") return null;
-  const eggId = (obj as any).eggId;
-  return typeof eggId === "string" && eggId ? eggId : null;
+  const indicator = startDomLockIndicator({
+    look: { owner: "egg", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyph: cornerGlyph(8) },
+    selector: ".css-502lyi",
+    isTarget: (el) => (el.textContent || "").toLowerCase().includes("egg"),
+    isLocked: () => lockerRestrictionsService.isEggLocked(currentEggId),
+  });
+  indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
+  void Atoms.data.myCurrentGardenObject
+    .get()
+    .then((initial) => {
+      currentEggId = eggIdOf(initial);
+    })
+    .catch(() => {});
+  indicator.add(
+    Atoms.data.myCurrentGardenObject.onChange((next) => {
+      currentEggId = eggIdOf(next);
+      indicator.refresh();
+    }),
+  );
+  return indicator;
 }

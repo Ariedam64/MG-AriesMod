@@ -126,18 +126,6 @@ const mySelectedItemRotation = makeAtom<any>("mySelectedItemRotationAtom");
 export const myCurrentGardenObject = makeAtom<CurrentGardenObject>("myCurrentGardenObjectAtom");
 
 /**
- * Cycle order of the current plant's slotIds.
- *
- * v1169 folded this into the unlabelled tile-source state, so neither name
- * resolves on a current client and this stays empty. Callers must not depend
- * on it for correctness, only as an ordering hint when it happens to arrive.
- */
-export const myCurrentSortedGrowSlotIndices = makeAliasedAtom<number[] | null>([
-  "myCurrentSortedGrowSlotIdsAtom",
-  "myCurrentSortedGrowSlotIndicesAtom",
-]);
-
-/**
  * slotId of the selected fruit, NOT its position in `slots[]`.
  *
  * v1169 moved crop selection into `data/tile/cropSelection.ts` and publishes
