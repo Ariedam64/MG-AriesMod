@@ -44,7 +44,9 @@
     "check:outgoing": "esbuild scripts/checkOutgoingRules.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkOutgoingRules.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkOutgoingRules.cjs",
     "check:calculator": "esbuild scripts/checkCalculator.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkCalculator.cjs --log-level=error && node -e \"globalThis.window=globalThis;globalThis.document={};require('./node_modules/.cache/checkCalculator.cjs')\"",
     "check:inventorysort": "esbuild scripts/checkInventorySort.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkInventorySort.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkInventorySort.cjs",
-    "check:petteamhotkeys": "esbuild scripts/checkPetTeamHotkeys.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkPetTeamHotkeys.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkPetTeamHotkeys.cjs"
+    "check:petteamhotkeys": "esbuild scripts/checkPetTeamHotkeys.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkPetTeamHotkeys.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkPetTeamHotkeys.cjs",
+    "check:editor": "esbuild scripts/checkEditorModel.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkEditorModel.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkEditorModel.cjs",
+    "check:editorpanels": "esbuild scripts/checkEditorPanels.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkEditorPanels.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkEditorPanels.cjs"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",

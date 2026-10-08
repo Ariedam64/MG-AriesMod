@@ -1,5 +1,6 @@
 import { interceptOutgoing } from "../../game/ws/outgoing";
-import { EditorService, removeDecorFromGardenAtCurrentTile } from "./editor";
+import { EditorService } from "./editor";
+import { removeGardenObjectAtCurrentTile } from "./planEdits";
 
 /**
  * In editor mode the garden on screen is the editor's, not the server's, so
@@ -7,8 +8,7 @@ import { EditorService, removeDecorFromGardenAtCurrentTile } from "./editor";
  */
 function pickupDecorLocally() {
   if (!EditorService.isEnabled()) return;
-  console.log("[PickupDecor][Editor] intercept -> local remove");
-  void removeDecorFromGardenAtCurrentTile();
+  void removeGardenObjectAtCurrentTile();
   return "drop" as const;
 }
 
