@@ -2604,6 +2604,10 @@
       "use strict";
       init_theme();
       chromeCss = `
+/* Any rule setting display beats the browser's own [hidden] rule, so kit
+   elements restate it, important to also beat compound selectors. */
+[class*="qmm"][hidden], [class*="qws"][hidden] { display: none !important; }
+
 .qmm-scroll, .qws-pnl-scroll, .qmm-views {
   scrollbar-width: thin; scrollbar-color: var(--qmm-scrollbar) transparent;
 }
