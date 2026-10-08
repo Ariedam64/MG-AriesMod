@@ -6,7 +6,8 @@
 // qui en découle.
 
 import type { HarvestRequest } from "../chat";
-import { findFeedable, type FeedCandidate } from "../chat/petFeed";
+import type { FeedCandidate } from "../chat/feed";
+import { findFeedable } from "../chat/feedRead";
 import { BORDER, CARD_BG, TEXT, TEXT_DIM, WARN, button, css } from "../../../ui/kit/panel";
 import { speciesIcon } from "./harvestChips";
 import { openModal } from "../../../ui/kit/modal";

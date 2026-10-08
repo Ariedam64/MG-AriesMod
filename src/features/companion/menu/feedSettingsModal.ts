@@ -2,7 +2,7 @@
 // Réglages du nourrissage : quand il s'inquiète, et avec quoi.
 
 import { CompanionService } from "..";
-import { checkFeedNow } from "../chat/feedWatch";
+import { checkFeedNow } from "../feedWatch";
 import { loadCompanionSettings, markReviewed } from "../state";
 import { TEXT_DIM, button, css, numberField, toggle } from "../../../ui/kit/panel";
 import { settingRow } from "../../../ui/kit/layout";

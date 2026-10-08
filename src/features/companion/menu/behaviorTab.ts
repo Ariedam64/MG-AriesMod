@@ -7,7 +7,7 @@
 // à casser la marche sans comprendre pourquoi.
 
 import { CompanionService } from "..";
-import { checkFeedNow } from "../chat/feedWatch";
+import { checkFeedNow } from "../feedWatch";
 import type { CompanionMode } from "../anchors";
 import { TEXT_DIM, css, selectField, toggle } from "../../../ui/kit/panel";
 import { collapsibleCard, settingRow } from "../../../ui/kit/layout";

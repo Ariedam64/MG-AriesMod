@@ -6,7 +6,7 @@
 
 import type { HarvestRequest } from "../chat";
 import { readHarvestable } from "../chat/gardenRead";
-import { reviewFeeding, type FeedReview } from "../chat/petFeed";
+import { reviewFeeding, type FeedReview } from "../chat/feedRead";
 import { readPlantScope } from "../chat/plantRead";
 import { EMPTY_SCOPE, type PlantScope } from "../chat/plant";
 import { EMPTY_HATCH_SCOPE, readHatchScope, type HatchScope } from "../chat/hatchRead";

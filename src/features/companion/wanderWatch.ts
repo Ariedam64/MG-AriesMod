@@ -1,162 +1,117 @@
-// src/services/companion/wanderWatch.ts
-// Donne un but à ses flâneries : aller voir un crop mûr, un Gold, un œuf.
+// Gives his wandering a purpose: going to look at a ripe crop, a Gold, an egg.
 //
-// Tout ce qui décide vit dans `wanderInterest.ts`, pur et vérifié hors
-// navigateur. Ici on ne fait que tenir le jardin à jour, fournir les noms du
-// catalogue, et jouer la pose à l'arrivée.
+// Everything that decides lives in `wander.ts`, pure and checked outside the
+// browser. Here we only keep the garden current, supply catalog names, and
+// play the pose on arrival.
 //
-// Le branchement sur la boucle passe par `CompanionService.setWanderHooks` :
-// la boucle appelle `pickInterest` au moment exact où elle tire une nouvelle
-// cible de flânerie, et `onInterestReached` quand il y est. La façade n'a donc
-// pas à importer ce module.
-//
-// Aucun effet à l'import : rien ne tourne tant que `startWanderWatch()` n'est
-// pas appelé.
+// The movement loop is reached through `CompanionService.setWanderHooks`: it
+// calls `pickInterest` the moment it draws a new wander target, and
+// `onInterestReached` once he is there. The facade never imports this module.
 
-import { mutationCatalog } from "../../data";
 import { cropName, eggName, mutationName } from "../../data/names";
-import { Atoms } from "../../game/store/atoms";
 import { CompanionService } from ".";
 import { readMySlotIdx } from "./anchors";
-import { CompanionChat } from "./chat";
+import { companionBusy } from "./availability";
+import { rolledMutations } from "./catalogs";
+import { gardenFeed } from "./feeds";
 import type { WanderArea, WanderHooks, XY } from "./movement";
 import { loadCompanionSettings } from "./state";
-import { pickWanderInterest, shouldComment, type WanderInterest } from "./wanderInterest";
+import { pickWanderInterest, shouldComment, type WanderInterest } from "./wander";
+import { defineWatcher } from "./watch";
 
-/** Le slot du joueur change avec la salle : on le relit de temps en temps. */
+/** The player's slot changes with the room: it is read again every so often. */
 const SLOT_REFRESH_MS = 30_000;
 /**
- * Au-delà, un centre d'intérêt choisi n'est plus celui vers lequel il marche :
- * la flânerie a été interrompue, et une arrivée tardive ne doit rien jouer.
+ * Past this, the interest he picked is no longer where he is heading: the walk
+ * was interrupted, and a late arrival must not play anything.
  */
 const PENDING_TTL_MS = 60_000;
 
-let running = false;
-let unsubscribers: Array<() => void> = [];
-let timers: number[] = [];
+export const wanderWatch = defineWatcher("wander", (scope) => {
+  let slotIdx: number | null = null;
+  let pending: { interest: WanderInterest; at: number } | null = null;
+  let lastCommentAt = 0;
 
-let latestGarden: unknown = null;
-let slotIdx: number | null = null;
-let pending: { interest: WanderInterest; at: number } | null = null;
-let lastCommentAt = 0;
+  /** Called by the loop on every new wander target. Synchronous. */
+  function pickInterest(area: WanderArea): XY | null {
+    pending = null;
+    if (!scope.active || companionBusy()) return null;
+    const slot = slotIdx;
+    const garden = gardenFeed.latest();
+    if (slot === null || !garden) return null;
 
-/** Occupé à autre chose : une tâche, une question, une série d'actions. */
-function busy(): boolean {
-  if (!CompanionService.isRunning()) return true;
-  if (CompanionService.isBusy()) return true;
-  try {
-    if (CompanionChat.isRunning() || CompanionChat.getProposal()) return true;
-  } catch {}
-  return false;
-}
-
-/* ------------------------------ catalogues ------------------------------ */
-// Lus à chaque appel, jamais à l'import : au démarrage l'API n'a pas encore
-// répondu, et une copie figée resterait celle du catalogue embarqué.
-
-function rareMutations(): Set<string> {
-  const out = new Set<string>();
-  try {
-    for (const [key, def] of Object.entries((mutationCatalog ?? {}) as Record<string, { baseChance?: unknown }>)) {
-      if (Number(def?.baseChance) > 0) out.add(key);
-    }
-  } catch {}
-  return out;
-}
-
-/* ------------------------------ crochets ------------------------------ */
-
-/** Appelé par la boucle à chaque nouvelle cible de flânerie. Synchrone. */
-function pickInterest(area: WanderArea): XY | null {
-  pending = null;
-  if (!running || busy()) return null;
-  const slot = slotIdx;
-  if (slot === null || !latestGarden) return null;
-
-  const interest = pickWanderInterest({
-    tileObjects: latestGarden,
-    tileXY: (dirtTileIdx) => CompanionService.gardenTileXY(slot, dirtTileIdx),
-    now: Date.now(),
-    area,
-    random: Math.random,
-    rareMutations: rareMutations(),
-    cropName,
-    mutationName,
-    eggName,
-  });
-  if (!interest) return null;
-  pending = { interest, at: Date.now() };
-  return interest.tile;
-}
-
-/** Il vient de s'arrêter à côté de ce qu'il était venu voir. */
-function onInterestReached(tile: XY): void {
-  const current = pending;
-  pending = null;
-  if (!current || !running) return;
-  const { interest, at } = current;
-  const now = Date.now();
-  if (now - at > PENDING_TTL_MS) return;
-  if (interest.tile.x !== tile.x || interest.tile.y !== tile.y) return;
-  if (busy()) return;
-
-  // Le jardin a pu changer en route : un crop cueilli entre-temps ne mérite
-  // plus qu'on s'extasie devant la terre nue.
-  const still = (latestGarden as Record<string, unknown> | null)?.[String(interest.dirtTileIdx)];
-  if (!still || typeof still !== "object") return;
-
-  let reactions = false;
-  try {
-    reactions = loadCompanionSettings().reactions;
-  } catch {}
-
-  const speak =
-    reactions &&
-    shouldComment({
-      now,
-      lastCommentAt,
-      distanceToPlayer: CompanionService.distanceToPlayer(),
-      busy: false,
+    const interest = pickWanderInterest({
+      tileObjects: garden,
+      tileXY: (dirtTileIdx) => CompanionService.gardenTileXY(slot, dirtTileIdx),
+      now: Date.now(),
+      area,
       random: Math.random,
+      rareMutations: new Set(rolledMutations()),
+      cropName,
+      mutationName,
+      eggName,
     });
+    if (!interest) return null;
+    pending = { interest, at: Date.now() };
+    return interest.tile;
+  }
 
-  void (async () => {
-    if (speak) {
-      lastCommentAt = now;
-      await CompanionService.say(interest.line);
-    }
-    // Juste après la bulle : la pose remplace la parole (cf. `emote.ts`).
-    await CompanionService.emote(interest.emote);
-  })().catch(() => {});
-}
+  /** He just stopped next to what he came to see. */
+  function onInterestReached(tile: XY): void {
+    const current = pending;
+    pending = null;
+    if (!current || !scope.active) return;
+    const { interest, at } = current;
+    const now = Date.now();
+    if (now - at > PENDING_TTL_MS) return;
+    if (interest.tile.x !== tile.x || interest.tile.y !== tile.y) return;
+    if (companionBusy()) return;
 
-const hooks: WanderHooks = { pickInterest, onInterestReached };
+    // The garden may have changed on the way: a crop picked meanwhile is not
+    // worth marvelling at bare soil.
+    const still = (gardenFeed.latest() as Record<string, unknown> | null | undefined)?.[String(interest.dirtTileIdx)];
+    if (!still || typeof still !== "object") return;
 
-/* ------------------------------ cycle de vie ------------------------------ */
+    let reactions = false;
+    try {
+      reactions = loadCompanionSettings().reactions;
+    } catch {}
 
-async function refreshSlot(): Promise<void> {
-  slotIdx = await readMySlotIdx();
-}
+    const speak =
+      reactions &&
+      shouldComment({
+        now,
+        lastCommentAt,
+        distanceToPlayer: CompanionService.distanceToPlayer(),
+        busy: false,
+        random: Math.random,
+      });
 
-async function subscribe(): Promise<void> {
-  try {
-    const unsub = await Atoms.data.gardenTileObjects.onChangeNow((next) => {
-      latestGarden = next;
-    });
-    if (typeof unsub === "function") unsubscribers.push(unsub);
-  } catch {}
-}
+    void (async () => {
+      if (speak) {
+        lastCommentAt = now;
+        await CompanionService.say(interest.line);
+      }
+      // Right after the bubble: the pose replaces the speech (see `emote.ts`).
+      await CompanionService.emote(interest.emote);
+    })().catch(() => {});
+  }
 
-export function startWanderWatch(): void {
-  if (running) return;
-  running = true;
+  const refreshSlot = () => {
+    void readMySlotIdx()
+      .then((slot) => {
+        slotIdx = slot;
+      })
+      .catch(() => {});
+  };
+
+  const hooks: WanderHooks = { pickInterest, onInterestReached };
   CompanionService.setWanderHooks(hooks);
-  void subscribe().catch(() => {});
-  void refreshSlot().catch(() => {});
-  timers.push(
-    window.setInterval(() => {
-      void refreshSlot().catch(() => {});
-    }, SLOT_REFRESH_MS)
-  );
-}
-
+  scope.add(() => {
+    pending = null;
+    CompanionService.setWanderHooks(null);
+  });
+  scope.add(gardenFeed.hold());
+  refreshSlot();
+  scope.every(SLOT_REFRESH_MS, refreshSlot);
+});

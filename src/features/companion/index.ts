@@ -6,8 +6,10 @@
 // Aucun effet de bord à l'import : rien ne démarre tant que `start()` n'est pas
 // appelé, et `stop()` est idempotent et restaure tout.
 
+import { Subscriptions } from "../../lib/emitter";
 import { Atoms } from "../../game/store/atoms";
 import { makeAtom } from "../../game/store/hub";
+import { playerTileFeed, roundTile } from "./feeds";
 import {
   ATTENTION_MOVEMENT_CONFIG,
   DEFAULT_MOVEMENT_CONFIG,
@@ -85,8 +87,6 @@ const npcChatBubbles = makeAtom<Record<string, unknown>>("npcChatBubblesAtom");
 /** Ce que la couche avatar consomme réellement : sert de accusé de rendu. */
 const npcQuinoaUsers = makeAtom<Array<{ playerId: string; position?: XY | null }>>("npcQuinoaUsersAtom");
 
-type Unsubscribe = () => void;
-
 type Runtime = {
   settings: CompanionSettings;
   npcId: string;
@@ -94,7 +94,7 @@ type Runtime = {
   movement: MovementState;
   player: XY | null;
   timer: number | null;
-  unsubs: Unsubscribe[];
+  subscriptions: Subscriptions;
   lastBubbleAt: number;
   /** Dernière position que le jeu a réellement lue pour notre PNJ. */
   observedTile: XY | null;
@@ -137,13 +137,6 @@ let starting: Promise<boolean> | null = null;
  * démarre au boot, avant que le companion ne soit forcément apparu.
  */
 let wanderHooks: WanderHooks | null = null;
-
-function roundTile(pos: { x?: unknown; y?: unknown } | null | undefined): XY | null {
-  const x = Number(pos?.x);
-  const y = Number(pos?.y);
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-  return { x: Math.round(x), y: Math.round(y) };
-}
 
 /**
  * Choisit le NPC à détourner.
@@ -316,7 +309,7 @@ async function startInternal(): Promise<boolean> {
     movement: initialMovementState(),
     player,
     timer: null,
-    unsubs: [],
+    subscriptions: new Subscriptions(),
     lastBubbleAt: 0,
     observedTile: null,
     waitingSinceMs: null,
@@ -337,37 +330,32 @@ async function startInternal(): Promise<boolean> {
     void refreshContextual().catch(() => {});
   }, CONTEXTUAL_REFRESH_MS);
 
-  // La position du joueur pilote le suivi ; la map change à chaque salle.
-  try {
-    rt.unsubs.push(
-      await Atoms.player.position.onChangeNow((next) => {
-        const tile = roundTile(next);
-        if (tile) rt.player = tile;
-      })
-    );
-  } catch {}
-  // Accusé de rendu : cet atom est celui que lit la couche avatar, donc le voir
-  // changer prouve que la position injectée est bien arrivée jusqu'au rendu.
-  try {
-    rt.unsubs.push(
-      await npcQuinoaUsers.onChangeNow((entries) => {
+  // The player's tile drives following; the map changes with every room.
+  rt.subscriptions.add(
+    playerTileFeed.on((tile) => {
+      rt.player = tile;
+    })
+  );
+  // Render receipt: the avatar layer reads this atom, so seeing it change
+  // proves the injected position made it all the way to the screen.
+  rt.subscriptions.add(
+    npcQuinoaUsers
+      .onChangeNow((entries) => {
         const entry = Array.isArray(entries) ? entries.find((e) => e?.playerId === rt.npcId) : null;
         const tile = roundTile(entry?.position ?? null);
         if (tile) rt.observedTile = tile;
       })
-    );
-  } catch {}
-  try {
-    rt.unsubs.push(
-      await onMapChange((next) => {
-        rt.map = next;
-        // Nouvelle map : l'ancienne position n'a plus de sens, on refait apparaître.
-        rt.movement = initialMovementState();
-        rt.observedTile = null;
-        rt.waitingSinceMs = null;
-      })
-    );
-  } catch {}
+      .catch(() => undefined)
+  );
+  rt.subscriptions.add(
+    onMapChange((next) => {
+      rt.map = next;
+      // A new map: the old position means nothing there, so he spawns again.
+      rt.movement = initialMovementState();
+      rt.observedTile = null;
+      rt.waitingSinceMs = null;
+    })
+  );
 
   startTimer(rt);
   return true;
@@ -632,12 +620,7 @@ export const CompanionService = {
     }
     clearTimer(rt);
     clearContextualTimer(rt);
-    for (const unsub of rt.unsubs) {
-      try {
-        unsub();
-      } catch {}
-    }
-    rt.unsubs.length = 0;
+    rt.subscriptions.dispose();
     await hideCompanion();
     await disposeInjection();
   },

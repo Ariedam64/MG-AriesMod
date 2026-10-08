@@ -27,8 +27,7 @@ import {
 import { type HarvestScope } from "./gardenRead";
 import { describeSelection, groupVariants, selectionSignature, type HarvestRow } from "./harvest";
 import { executeHarvestBatch } from "./harvestRun";
-import { describeFeed, feedBubble, feedQuestion, feedSignature, type FeedCandidate } from "./petFeed";
-import { isSettled } from "./feedScope";
+import { describeFeed, feedBubble, feedQuestion, feedSignature, isSettled, type FeedCandidate } from "./feed";
 import { executeFeedBatch } from "./feedRun";
 import { countByItem, plantSignature, summarizePlan, type PlantAssignment } from "./plant";
 import { executePlantBatch } from "./plantRun";

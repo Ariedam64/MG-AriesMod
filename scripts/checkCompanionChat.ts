@@ -17,7 +17,7 @@ import {
   feedSignature,
   isSettled,
   type FeedCandidate,
-} from "../src/features/companion/chat/feedScope";
+} from "../src/features/companion/chat/feed";
 import {
   countByItem,
   describePlan,

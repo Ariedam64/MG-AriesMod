@@ -15,30 +15,10 @@ import { PetsService } from "../../pets/pets";
 import { PlayerService, type PetInfo } from "../../../game/player";
 import { StatsService } from "../../stats/stats";
 import type { XY } from "../movement";
-import type { FeedCandidate } from "./petFeed";
+import { petIcon, petIcons, type FeedCandidate } from "./feed";
 import { createWalker, type Walker } from "./walk";
 import type { BatchReporter } from "./batch";
 import { compose, spaced } from "./bubbleTags";
-import { petSpeciesIcon, petThing } from "./bubbleIcons";
-import type { BubbleTag } from "./bubbleTags";
-
-/**
- * Une icône par animal, sans doublon d'espèce, deux au plus.
- *
- * Le rendu d'animal du jeu d'abord : c'est le seul qui sache dessiner un pet en
- * bulle. La clé d'atlas ne sert que de repli, pour le fil.
- */
-function petIcons(picks: FeedCandidate[]): BubbleTag[] {
-  const seen = new Set<string>();
-  const icons: BubbleTag[] = [];
-  for (const pick of picks) {
-    if (seen.has(pick.petSpecies) || icons.length >= 2) continue;
-    seen.add(pick.petSpecies);
-    const icon = petThing(pick.pet, "") ?? petSpeciesIcon(pick.petSpecies);
-    if (icon) icons.push(icon);
-  }
-  return icons;
-}
 
 /** Temps laissé au serveur pour créer la produce avant de la donner. */
 const AFTER_HARVEST_MS = 700;
@@ -120,7 +100,7 @@ export async function executeFeedBatch(picks: FeedCandidate[], reporter: BatchRe
     if (outcome.ok) {
       fed.push(pick);
       const fedLine = `${pick.petName} has been fed.`;
-      reporter.say("system", fedLine, compose(petThing(pick.pet, "") ?? petSpeciesIcon(pick.petSpecies), " ", fedLine));
+      reporter.say("system", fedLine, compose(petIcon(pick), " ", fedLine));
     } else {
       failures.push(`${pick.petName} (${outcome.reason})`);
     }

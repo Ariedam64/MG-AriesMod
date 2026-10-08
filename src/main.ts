@@ -28,11 +28,7 @@ import { createAntiAfkController } from "./features/antiAfk/antiAfk";
 import { EditorService } from "./features/editor/editor";
 import { installEditorPointerControls } from "./features/editor/pointerControls";
 import { CompanionService } from "./features/companion";
-import { startFeedWatch } from "./features/companion/chat/feedWatch";
-import { startReactionWatch } from "./features/companion/reactionWatch";
-import { startWanderWatch } from "./features/companion/wanderWatch";
-import { startEmoteMirror } from "./features/companion/emoteMirrorWatch";
-import { startAfkWatch } from "./features/companion/afkWatch";
+import { startCompanion } from "./features/companion/start";
 import { mountCompanionAsk } from "./features/companion/menu/askBanner";
 
 import { detectGameVersion } from "./game/gameVersion";
@@ -101,23 +97,10 @@ import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/play
 
   initWatchers()
 
-  // Le companion reprend s'il était actif à la session précédente, et sa veille
-  // sur les pets affamés démarre avec lui. Elle ne fait que poser des questions :
-  // rien ne s'exécute sans confirmation (cf. services/companion/chat/proposals.ts).
-  CompanionService.autoStart();
-  startFeedWatch();
-  // Ses commentaires spontanés : météo, ventes, paliers, temps passé en jeu.
-  // Il ne fait que parler, jamais agir (cf. services/companion/reactions.ts).
-  startReactionWatch();
-  // Ce qui le rend vivant sans qu'on lui parle : il va voir ce qui pousse, il
-  // répond aux emotes du joueur, et il s'endort quand le joueur s'absente.
-  startWanderWatch();
-  startEmoteMirror();
-  startAfkWatch();
-  // Ses questions s'affichent en haut de l'écran, menu fermé compris. Aucune
-  // action de plus : les mêmes confirm/decline que le fil du chat.
+  startCompanion();
+  // The companion's questions also show at the top of the screen, menu closed.
   mountCompanionAsk();
-  // Exposé pour le diagnostic : window.Companion.start() / .listNpcs() / .say()
+  // For diagnosis from the console: window.Companion.start() / .listNpcs() / .say()
   shareGlobal("Companion", CompanionService);
 
   // One-time notice: auto-reconnect temporarily disabled at devs' request.
