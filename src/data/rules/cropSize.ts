@@ -73,7 +73,7 @@ function findPlantCatalogEntry(species: unknown): PlantCatalogEntry | null {
 }
 
 /** `crop.maxSizeMultiplier`, or the pre-rework `crop.maxScale` it replaced. */
-export function getMaxSizeMultiplier(species: unknown): number | null {
+function getMaxSizeMultiplier(species: unknown): number | null {
   const crop = findPlantCatalogEntry(species)?.crop;
   if (!crop) return null;
   const value = toFinite(crop.maxSizeMultiplier) ?? toFinite(crop.maxScale);
