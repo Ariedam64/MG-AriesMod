@@ -110,22 +110,17 @@ export function overridesTab(store: LockerMenuStore): LockerTab {
     renderDetail();
   };
   refresh();
-  const offStore = store.subscribe(refresh);
+  store.subscribe(refresh);
 
   // The live catalog can add crops after the menu was built.
-  const onDataUpdated = (e: Event) => {
+  window.addEventListener("gemini:data-updated", (e) => {
     if ((e as CustomEvent<{ key: string }>).detail?.key === "plants") refresh();
-  };
-  window.addEventListener("gemini:data-updated", onDataUpdated);
+  });
 
   return {
     render(view) {
       view.replaceChildren(layout);
       refresh();
-    },
-    destroy() {
-      offStore();
-      window.removeEventListener("gemini:data-updated", onDataUpdated);
     },
   };
 }

@@ -2,7 +2,6 @@
 // garden, importing garden files, and the saved garden list.
 
 import { downloadJSONFile } from "../../lib/download";
-import { Subscriptions } from "../../lib/emitter";
 import { button } from "../../ui/kit/button";
 import { plainCard, sectionLabel } from "../../ui/kit/card";
 import { textInput } from "../../ui/kit/fields";
@@ -287,13 +286,9 @@ export function renderEditorMenu(container: HTMLElement) {
   renderSavedList();
   wrap.appendChild(card(sectionLabel("Saved gardens"), status.el, listWrap));
 
-  const subs = new Subscriptions();
-  subs.add(
-    EditorService.onChange((enabled) => {
-      mode.modeSwitch.checked = enabled;
-      renderSavedList();
-    }),
-  );
-  subs.add(EditorService.onSavedGardensChange(renderSavedList));
-  (container as HTMLElement & { __cleanup__?: () => void }).__cleanup__ = () => subs.dispose();
+  EditorService.onChange((enabled) => {
+    mode.modeSwitch.checked = enabled;
+    renderSavedList();
+  });
+  EditorService.onSavedGardensChange(renderSavedList);
 }

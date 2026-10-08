@@ -38,7 +38,7 @@ function generalTab(store: LockerMenuStore): LockerTab {
     form.setDisabled(!store.global.enabled);
     form.refresh();
   };
-  const off = store.subscribe(update);
+  store.subscribe(update);
   update();
 
   return {
@@ -47,7 +47,6 @@ function generalTab(store: LockerMenuStore): LockerTab {
       view.replaceChildren(root);
       update();
     },
-    destroy: off,
   };
 }
 
@@ -65,10 +64,5 @@ export async function renderLockerMenu(container: HTMLElement) {
   ]);
   ui.switchTo("locker-general");
 
-  const offService = lockerService.subscribe((state) => store.syncFromService(state));
-  // Nothing unmounts a menu today, so this never runs; it is here for the day something does.
-  ui.on("unmounted", () => {
-    offService();
-    Object.values(tabs).forEach((tab) => tab.destroy());
-  });
+  lockerService.subscribe((state) => store.syncFromService(state));
 }

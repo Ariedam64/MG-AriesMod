@@ -30510,19 +30510,14 @@ next: ${next}`;
       renderDetail();
     };
     refresh();
-    const offStore = store.subscribe(refresh);
-    const onDataUpdated = (e) => {
+    store.subscribe(refresh);
+    window.addEventListener("gemini:data-updated", (e) => {
       if (e.detail?.key === "plants") refresh();
-    };
-    window.addEventListener("gemini:data-updated", onDataUpdated);
+    });
     return {
       render(view) {
         view.replaceChildren(layout);
         refresh();
-      },
-      destroy() {
-        offStore();
-        window.removeEventListener("gemini:data-updated", onDataUpdated);
       }
     };
   }
@@ -30914,15 +30909,14 @@ next: ${next}`;
       eggLocks.render();
       sellPets.refresh();
     };
-    const subs = new Subscriptions();
     let following3 = false;
     const follow2 = () => {
       if (following3) return;
       following3 = true;
-      subs.add(onFriendBonusChange(friendBonus.showStatus));
-      subs.add(lockerRestrictionsService.subscribe(syncFromService));
+      onFriendBonusChange(friendBonus.showStatus);
+      lockerRestrictionsService.subscribe(syncFromService);
       void Atoms.shop.eggShop.get().then((shop) => eggLocks.setEggs(lockableEggs(shop))).catch(() => eggLocks.render());
-      subs.add(Atoms.shop.eggShop.onChange((shop) => eggLocks.setEggs(lockableEggs(shop))));
+      void Atoms.shop.eggShop.onChange((shop) => eggLocks.setEggs(lockableEggs(shop)));
     };
     return {
       render(view) {
@@ -30930,8 +30924,7 @@ next: ${next}`;
         view.replaceChildren(layout);
         syncFromService();
         follow2();
-      },
-      destroy: () => subs.dispose()
+      }
     };
   }
   var toBonusStep2;
@@ -30939,7 +30932,6 @@ next: ${next}`;
     "src/features/locker/restrictionsTab.ts"() {
       "use strict";
       init_atoms();
-      init_emitter();
       init_badges();
       init_card();
       init_layout();
@@ -31117,15 +31109,14 @@ next: ${next}`;
       form.setDisabled(!store.global.enabled);
       form.refresh();
     };
-    const off = store.subscribe(update);
+    store.subscribe(update);
     update();
     return {
       render(view) {
         view.classList.add("lk-view");
         view.replaceChildren(root4);
         update();
-      },
-      destroy: off
+      }
     };
   }
   async function renderLockerMenu(container) {
@@ -31140,11 +31131,7 @@ next: ${next}`;
       { id: "locker-restrictions", title: "Restrictions", render: (view) => tabs.restrictions.render(view) }
     ]);
     ui.switchTo("locker-general");
-    const offService = lockerService.subscribe((state7) => store.syncFromService(state7));
-    ui.on("unmounted", () => {
-      offService();
-      Object.values(tabs).forEach((tab) => tab.destroy());
-    });
+    lockerService.subscribe((state7) => store.syncFromService(state7));
   }
   var init_menu3 = __esm({
     "src/features/locker/menu.ts"() {
@@ -32027,14 +32014,6 @@ next: ${next}`;
     return sortSpeciesByRarity(out);
   }
   function renderHatchTab(view) {
-    const prevCleanup = view.__cleanup__;
-    if (typeof prevCleanup === "function") {
-      try {
-        prevCleanup();
-      } catch {
-      }
-      view.__cleanup__ = void 0;
-    }
     view.replaceChildren();
     const wrap = document.createElement("div");
     wrap.classList.add("qws-pnl-scroll");
@@ -32140,7 +32119,6 @@ next: ${next}`;
         rafId = null;
       }
     }
-    view.__cleanup__ = cleanup;
     seedFromOwnedPets(StatsService.getSnapshot()).catch((error) => {
       console.error("[PetsHatch] Failed to seed pet stats", error);
     });
@@ -32546,14 +32524,6 @@ next: ${next}`;
     }
   }
   function renderLogsTab(view) {
-    const prevCleanup = view.__cleanup__;
-    if (typeof prevCleanup === "function") {
-      try {
-        prevCleanup();
-      } catch {
-      }
-      view.__cleanup__ = void 0;
-    }
     view.replaceChildren();
     const wrap = document.createElement("div");
     css3(wrap, {
@@ -32757,13 +32727,11 @@ next: ${next}`;
       search2 = inputSearch.value.trim();
       repaint();
     });
-    let stopWatcher = null;
-    let unsubLogs = null;
     void (async () => {
       try {
-        stopWatcher = await PetsService.startAbilityLogsWatcher();
+        await PetsService.startAbilityLogsWatcher();
         rebuildAbilityOptions();
-        unsubLogs = PetsService.onAbilityLogs((all) => {
+        PetsService.onAbilityLogs((all) => {
           logs2 = all.map((entry) => ({
             petId: entry.petId,
             petName: entry.name ?? null,
@@ -32784,16 +32752,6 @@ next: ${next}`;
       }
     })();
     repaint();
-    view.__cleanup__ = () => {
-      try {
-        unsubLogs?.();
-      } catch {
-      }
-      try {
-        stopWatcher?.();
-      } catch {
-      }
-    };
   }
   var css3, PANEL_WIDTH, LIST_MAX_HEIGHT, PET_ICON_PX, ROW_TEMPLATE2, normalizeAbilityKey;
   var init_logsTab = __esm({
@@ -34111,17 +34069,16 @@ Restore figures are averages; unlucky streaks do worse.`;
         applyingTeam = false;
       }
     }
-    const stopTeams = PetsService.onTeamsChange((all) => {
+    PetsService.onTeamsChange((all) => {
       teams2 = all.slice();
       if (selectedId && !teams2.some((t) => t.id === selectedId)) selectedId = null;
       if (!selectedId && teams2.length) selectedId = teams2[0].id;
       void scheduleRefresh();
       void editor.show(selectedTeam());
     });
-    let stopPets = null;
     void (async () => {
       try {
-        stopPets = await onActivePetsStructuralChangeNow(async () => {
+        await onActivePetsStructuralChangeNow(async () => {
           if (applyingTeam) return;
           await editor.repaint(selectedTeam());
           await scheduleRefresh();
@@ -34129,21 +34086,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       } catch {
       }
     })();
-    const previousCleanup = view.__cleanup__;
-    view.__cleanup__ = () => {
-      try {
-        stopTeams();
-      } catch {
-      }
-      try {
-        stopPets?.();
-      } catch {
-      }
-      try {
-        previousCleanup?.();
-      } catch {
-      }
-    };
   }
   var init_managerTab = __esm({
     "src/features/pets/managerTab.ts"() {
@@ -35181,14 +35123,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { teams: teams2, sustainPet, unusedPets, petsById };
   }
   function renderTeamBuilderTab(view) {
-    const prevCleanup = view.__cleanup__;
-    if (typeof prevCleanup === "function") {
-      try {
-        prevCleanup();
-      } catch {
-      }
-      view.__cleanup__ = void 0;
-    }
     view.innerHTML = "";
     const wrap = document.createElement("div");
     wrap.style.display = "grid";
@@ -35209,10 +35143,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     content2.style.gridTemplateColumns = "repeat(3, minmax(0, 1fr))";
     content2.style.gap = "8px";
     wrap.appendChild(content2);
-    let destroyed = false;
-    view.__cleanup__ = () => {
-      destroyed = true;
-    };
     async function repaint() {
       content2.innerHTML = "";
       const loading2 = document.createElement("div");
@@ -35220,7 +35150,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       loading2.style.opacity = "0.6";
       content2.appendChild(loading2);
       const { teams: teams2, unusedPets, petsById } = await loadTeams();
-      if (destroyed || !view.isConnected) return;
+      if (!view.isConnected) return;
       content2.innerHTML = "";
       if (!teams2.length) {
         const empty = document.createElement("div");
@@ -36039,23 +35969,15 @@ Restore figures are averages; unlucky streaks do worse.`;
           break;
       }
     };
-    const subscriptions = new Subscriptions();
-    subscriptions.add(controller2.events.on(onEvent));
+    controller2.events.on(onEvent);
     updateSummary();
     updateControls();
-    return {
-      root: section5.root,
-      cleanup: () => {
-        clearSummaryTimer();
-        subscriptions.dispose();
-      }
-    };
+    return section5.root;
   }
   var EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS, MAX_VISIBLE_CHIPS, CHIP_SPRITE_PX, formatDurationShort, formatFinishTime;
   var init_section = __esm({
     "src/features/deleters/section.ts"() {
       "use strict";
-      init_emitter();
       init_format();
       init_badges();
       init_button();
@@ -37347,19 +37269,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       buildDisplaySection(modalHost),
       buildInventoryGuardSection(),
       buildStorageSection(),
-      seedDeleterSection.root,
-      decorDeleterSection.root
+      seedDeleterSection,
+      decorDeleterSection
     );
-    root4.__cleanup__ = () => {
-      try {
-        seedDeleterSection.cleanup();
-      } catch {
-      }
-      try {
-        decorDeleterSection.cleanup();
-      } catch {
-      }
-    };
   }
   var PANEL_WIDTH_PX, AUTO_RECO_MAX_SECONDS, AUTO_RECO_STEP_SECONDS, MOVE_DELAY_MIN_MS, MOVE_DELAY_MAX_MS, MOVE_DELAY_DEFAULT_MS, formatShortDuration;
   var init_menu6 = __esm({
@@ -40517,22 +40429,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     renderSavedList();
     wrap.appendChild(card2(sectionLabel("Saved gardens"), status2.el, listWrap2));
-    const subs = new Subscriptions();
-    subs.add(
-      EditorService.onChange((enabled5) => {
-        mode.modeSwitch.checked = enabled5;
-        renderSavedList();
-      })
-    );
-    subs.add(EditorService.onSavedGardensChange(renderSavedList));
-    container.__cleanup__ = () => subs.dispose();
+    EditorService.onChange((enabled5) => {
+      mode.modeSwitch.checked = enabled5;
+      renderSavedList();
+    });
+    EditorService.onSavedGardensChange(renderSavedList);
   }
   var STATUS_CLEAR_MS, TONE_COLOR, row2, fileSafeName;
   var init_menu10 = __esm({
     "src/features/editor/menu.ts"() {
       "use strict";
       init_download();
-      init_emitter();
       init_button();
       init_card();
       init_fields();

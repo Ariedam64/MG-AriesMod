@@ -316,12 +316,6 @@ async function loadTeams(): Promise<{ teams: SuggestedTeam[]; sustainPet: Invent
 }
 
 export function renderTeamBuilderTab(view: HTMLElement): void {
-  const prevCleanup = (view as any).__cleanup__;
-  if (typeof prevCleanup === "function") {
-    try { prevCleanup(); } catch {}
-    (view as any).__cleanup__ = undefined;
-  }
-
   view.innerHTML = "";
 
   const wrap = document.createElement("div");
@@ -347,9 +341,6 @@ export function renderTeamBuilderTab(view: HTMLElement): void {
   content.style.gap = "8px";
   wrap.appendChild(content);
 
-  let destroyed = false;
-  (view as any).__cleanup__ = () => { destroyed = true; };
-
   async function repaint() {
     content.innerHTML = "";
     const loading = document.createElement("div");
@@ -358,7 +349,7 @@ export function renderTeamBuilderTab(view: HTMLElement): void {
     content.appendChild(loading);
 
     const { teams, unusedPets, petsById } = await loadTeams();
-    if (destroyed || !view.isConnected) return;
+    if (!view.isConnected) return;
 
     content.innerHTML = "";
 

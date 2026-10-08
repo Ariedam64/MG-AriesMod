@@ -406,12 +406,7 @@ export async function renderMiscMenu(container: HTMLElement) {
     buildDisplaySection(modalHost),
     buildInventoryGuardSection(),
     buildStorageSection(),
-    seedDeleterSection.root,
-    decorDeleterSection.root,
+    seedDeleterSection,
+    decorDeleterSection,
   );
-
-  (root as any).__cleanup__ = () => {
-    try { seedDeleterSection.cleanup(); } catch {}
-    try { decorDeleterSection.cleanup(); } catch {}
-  };
 }

@@ -71,12 +71,6 @@ const normalizeAbilityKey = (value?: string | null) =>
     .replace(/([ivx]+)$/i, "");
 
 export function renderLogsTab(view: HTMLElement): void {
-  const prevCleanup = (view as any).__cleanup__;
-  if (typeof prevCleanup === "function") {
-    try { prevCleanup(); } catch {}
-    (view as any).__cleanup__ = undefined;
-  }
-
   view.replaceChildren();
 
   // Style an inner wrapper, never the tab view itself: an inline display on
@@ -328,15 +322,12 @@ export function renderLogsTab(view: HTMLElement): void {
   inputSearch.addEventListener("input", () => { search = inputSearch.value.trim(); repaint(); });
 
   /* ----- Subscriptions ----- */
-  let stopWatcher: (() => void) | null = null;
-  let unsubLogs: (() => void) | null = null;
-
   void (async () => {
     try {
-      stopWatcher = await PetsService.startAbilityLogsWatcher();
+      await PetsService.startAbilityLogsWatcher();
       rebuildAbilityOptions();
 
-      unsubLogs = PetsService.onAbilityLogs(all => {
+      PetsService.onAbilityLogs(all => {
         logs = all.map(entry => ({
           petId: entry.petId,
           petName: entry.name ?? null,
@@ -357,9 +348,4 @@ export function renderLogsTab(view: HTMLElement): void {
   })();
 
   repaint();
-
-  (view as any).__cleanup__ = () => {
-    try { unsubLogs?.(); } catch {}
-    try { stopWatcher?.(); } catch {}
-  };
 }
