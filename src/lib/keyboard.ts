@@ -1,5 +1,3 @@
-// src/utils/keyboard.ts
-
 /**
  * True while a hotkey button is listening for the next keypress (rebinding).
  * Kept here (a leaf module) so every keydown consumer can check it without

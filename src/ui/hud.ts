@@ -541,7 +541,7 @@ function initVersionBadge(badge: HTMLElement): void {
     try {
       const remoteData = await fetchRemoteVersion();
       const remoteVersion = remoteData?.version?.trim();
-      if (!remoteVersion) show(localVersion || "version inconnue", "warn");
+      if (!remoteVersion) show(localVersion || "Unknown", "warn");
       else if (!localVersion) show(remoteVersion, "warn", remoteData?.download);
       else if (localVersion === remoteVersion) show(localVersion, "ok");
       else show(`${localVersion} → ${remoteVersion}`, "warn", remoteData?.download);

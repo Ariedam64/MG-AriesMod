@@ -26854,7 +26854,7 @@
       try {
         const remoteData = await fetchRemoteVersion();
         const remoteVersion = remoteData?.version?.trim();
-        if (!remoteVersion) show(localVersion || "version inconnue", "warn");
+        if (!remoteVersion) show(localVersion || "Unknown", "warn");
         else if (!localVersion) show(remoteVersion, "warn", remoteData?.download);
         else if (localVersion === remoteVersion) show(localVersion, "ok");
         else show(`${localVersion} \u2192 ${remoteVersion}`, "warn", remoteData?.download);
@@ -27325,7 +27325,7 @@
           this.filterInput = null;
           this.items = [];
           this.root = h("div", "qmm-vtabs");
-          this.emptyText = opts.emptyText || "Aucun \xE9l\xE9ment.";
+          this.emptyText = opts.emptyText || "No items.";
           this.renderItemCustom = opts.renderItem;
           this.selectedId = opts.initialId ?? null;
           this.onSelectCb = opts.onSelect;
