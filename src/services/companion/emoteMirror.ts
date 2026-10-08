@@ -38,19 +38,19 @@ export const MIRROR_DELAY_MAX_MS = 1_200;
  */
 export const STREAK_GAP_MS = 12_000;
 /** Réponses au plus par série. */
-export const STREAK_MAX_ANSWERS = 2;
+const STREAK_MAX_ANSWERS = 2;
 /** Chance de répondre une seconde fois dans la même série. Tirée une seule fois. */
-export const SECOND_ANSWER_CHANCE = 0.5;
+const SECOND_ANSWER_CHANCE = 0.5;
 
 /** Une réponse sur six environ s'accompagne d'un mot. */
-export const LINE_CHANCE = 1 / 6;
+const LINE_CHANCE = 1 / 6;
 /** Jamais plus d'un mot toutes les deux minutes. */
 export const LINE_COOLDOWN_MS = 120_000;
 
 /** À partir de tant d'emotes dans une série, il peut le faire remarquer. */
 export const SPAM_THRESHOLD = 6;
 /** Chance qu'il le fasse remarquer, tirée une fois par série. */
-export const SPAM_LINE_CHANCE = 0.3;
+const SPAM_LINE_CHANCE = 0.3;
 /** Et au plus une fois toutes les cinq minutes. */
 export const SPAM_LINE_COOLDOWN_MS = 300_000;
 

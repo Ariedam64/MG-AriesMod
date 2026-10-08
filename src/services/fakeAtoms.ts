@@ -243,6 +243,3 @@ export async function fakeDispose(label: string) {
   _fakeRegistry.delete(label);
 }
 
-export function fakeIsEnabled(label: string) {
-  return !!_getState(label)?.enabled;
-}

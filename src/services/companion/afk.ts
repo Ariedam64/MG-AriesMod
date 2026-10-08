@@ -43,7 +43,7 @@ export const SNORE_SLOW_MAX_MS = 6 * 60_000;
  */
 export const WAKE_LINE_MIN_ASLEEP_MS = 60_000;
 /** Chance d'un petit mot au retour du joueur, quand il avait demandé s'il était là. */
-export const RETURN_LINE_CHANCE = 0.3;
+const RETURN_LINE_CHANCE = 0.3;
 /** Chance qu'un ronflement soit une phrase de rêve plutôt qu'un simple « Zzz ». */
 export const DREAM_CHANCE = 0.12;
 
@@ -51,7 +51,7 @@ export const DREAM_CHANCE = 0.12;
 /*  Forme                                                              */
 /* ------------------------------------------------------------------ */
 
-export type AfkPhase = "active" | "idle" | "asleep";
+type AfkPhase = "active" | "idle" | "asleep";
 
 export type AfkState = {
   phase: AfkPhase;

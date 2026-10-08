@@ -1,7 +1,7 @@
 // Shared tag chip used by both the list cards and the detail hero.
 // Styling lives in styles.ts (`.mgt-tag` / `.mgt-tags`).
 
-export function createTagChip(tag: string): HTMLElement {
+function createTagChip(tag: string): HTMLElement {
   const chip = document.createElement("span");
   chip.className = "mgt-tag";
   chip.textContent = tag;

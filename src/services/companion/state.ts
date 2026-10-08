@@ -17,7 +17,7 @@ export function loadCompanionSettings(): CompanionSettings {
   return coerceSettings(readAriesPath<Partial<CompanionSettings>>(STORAGE_PATH, undefined));
 }
 
-export function saveCompanionSettings(settings: CompanionSettings): void {
+function saveCompanionSettings(settings: CompanionSettings): void {
   writeAriesPath(STORAGE_PATH, settings);
 }
 

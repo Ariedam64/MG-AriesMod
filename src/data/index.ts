@@ -4,10 +4,10 @@
 import { MGData } from "./dynamic";
 import * as hardcoded from "./hardcoded-data.clean.js";
 
-export { MGData } from "./dynamic";
-export type { CapturedDataKey, DataKey, DataBag, AbilityColor } from "./dynamic";
-export type { ActivityLogEntry, PetAbilityAction } from "./dynamic";
-export { formatAbilityLog, filterPetAbilityLogs, isPetAbilityAction, PET_ABILITY_ACTIONS } from "./dynamic";
+;
+;
+;
+export { formatAbilityLog, isPetAbilityAction } from "./dynamic";
 
 /* ------------------------------------------------------------------ */
 /*  Helper: create a proxy that reads dynamic data first, then static */
@@ -69,7 +69,6 @@ export const weatherCatalog = makeCatalogProxy("weather", hardcoded.weatherCatal
 /* ------------------------------------------------------------------ */
 
 export const rarity = hardcoded.rarity;
-export const harvestType = hardcoded.harvestType;
 export const coin = hardcoded.coin;
 
 /**
@@ -78,7 +77,7 @@ export const coin = hardcoded.coin;
  * Comes from MGData's `enums`, so a new tier added to the game slots in on its
  * own; the hardcoded constants order it until that data lands.
  */
-export function rarityOrder(): string[] {
+function rarityOrder(): string[] {
   const list = MGData.get("enums")?.rarity;
   if (Array.isArray(list)) {
     const values = list.filter((value): value is string => typeof value === "string" && !!value);
@@ -118,13 +117,5 @@ export function rarityRank(value: unknown): number {
 export const petHungerDepletionMinutes = hardcoded.petHungerDepletionMinutes as Record<string, number | undefined>;
 
 // Tile refs (sprite references, no dynamic equivalent)
-export const tileRefsMap = hardcoded.tileRefsMap;
-export const tileRefsPlants = hardcoded.tileRefsPlants;
-export const tileRefsTallPlants = hardcoded.tileRefsTallPlants;
-export const tileRefsSeeds = hardcoded.tileRefsSeeds;
-export const tileRefsItems = hardcoded.tileRefsItems;
-export const tileRefsAnimations = hardcoded.tileRefsAnimations;
-export const tileRefsPets = hardcoded.tileRefsPets;
 export const tileRefsMutations = hardcoded.tileRefsMutations;
 export const tileRefsMutationLabels = hardcoded.tileRefsMutationLabels;
-export const tileRefsDecor = hardcoded.tileRefsDecor;

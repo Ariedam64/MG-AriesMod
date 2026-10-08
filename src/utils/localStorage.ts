@@ -12,7 +12,7 @@ declare const GM_getValue:
 declare const GM_setValue: ((name: string, value: string) => void) | undefined;
 declare const GM_deleteValue: ((name: string) => void) | undefined;
 
-export const ARIES_STORAGE_KEY = "aries_mod";
+const ARIES_STORAGE_KEY = "aries_mod";
 const ARIES_STORAGE_VERSION = 1;
 const API_KEY_STORAGE_KEY = "aries_api_key";
 const AUTH_DECLINED_STORAGE_KEY = "aries_auth_declined";
@@ -144,127 +144,8 @@ const DEFAULT_ARIES_STORAGE: AriesStorage = {
   },
 };
 
-const LEGACY_STATIC_KEYS = [
-  "aries_storage",
-  "qws:stats:v1",
-  "mg.customRooms",
-  "qws:pets:overrides:v1",
-  "qws:pets:ui:v1",
-  "qws:pets:teams:v1",
-  "qws:pets:teamSearch:v1",
-  "qws:petAlerts:v1",
-  "qws:pets:abilityLogs:v1",
-  "qws:shop:notifs:v1",
-  "qws:shop:notifs:rules.v1",
-  "qws:weather:notifs:v1",
-  "qws:notifier:loopDefaults.v1",
-  "qws:player:ghostMode",
-  "qws:ghost:delayMs",
-  "qws:autoReco:onNewSession",
-  "qws:autoReco:delayMs",
-  "qws:locker:restrictions.v1",
-  "garden.locker.state.v2",
-  "qws:editor:saved-gardens",
-  "qws:editor:enabled",
-  "qws:activityLogs:history:v1",
-  "qws:activityLog:filter",
-  "qws:alerts:audio:settings:v1",
-  "qws:alerts:audio:library:v1",
-  "soundEffectsVolumeAtom",
-  "qws:pos",
-  "qws:collapsed",
-  "qws:hidden",
-];
 
-const LEGACY_PREFIXES = [
-  "qws:keybind:",
-  "qws:keybind-hold:",
-  "qws:hk:petteam:use:",
-  "qws:win:",
-  "menu:",
-];
 
-const STATIC_LEGACY_KEYS: Array<{
-  legacyKey: string;
-  apply: (raw: string, result: AriesStorage) => void;
-}> = [
-  {
-    legacyKey: "qws:stats:v1",
-    apply: (raw, r) => {
-      const flat = unwrapNestedSnapshot(parseSafe(raw));
-      r.stats = flat;
-    },
-  },
-  { legacyKey: "mg.customRooms", apply: (raw, r) => (r.room = mergeSection(r.room, { customRooms: parseSafe(raw) })) },
-  { legacyKey: "qws:pets:overrides:v1", apply: (raw, r) => (r.pets = mergeSection(r.pets, { overrides: parseSafe(raw) })) },
-  { legacyKey: "qws:pets:ui:v1", apply: (raw, r) => (r.pets = mergeSection(r.pets, { ui: parseSafe(raw) })) },
-  { legacyKey: "qws:pets:teams:v1", apply: (raw, r) => (r.pets = mergeSection(r.pets, { teams: parseSafe(raw) })) },
-  {
-    legacyKey: "qws:pets:teamSearch:v1",
-    apply: (raw, r) => (r.pets = mergeSection(r.pets, { teamSearch: parseSafe(raw) })),
-  },
-  { legacyKey: "qws:petAlerts:v1", apply: (raw, r) => (r.pets = mergeSection(r.pets, { alerts: parseSafe(raw) })) },
-  {
-    legacyKey: "qws:pets:abilityLogs:v1",
-    apply: (raw, r) => (r.pets = mergeSection(r.pets, { abilityLogs: parseSafe(raw) })),
-  },
-  { legacyKey: "qws:shop:notifs:v1", apply: (raw, r) => (r.notifier = mergeSection(r.notifier, { prefs: parseSafe(raw) })) },
-  {
-    legacyKey: "qws:shop:notifs:rules.v1",
-    apply: (raw, r) => (r.notifier = mergeSection(r.notifier, { rules: parseSafe(raw) })),
-  },
-  {
-    legacyKey: "qws:weather:notifs:v1",
-    apply: (raw, r) => (r.notifier = mergeSection(r.notifier, { weatherPrefs: parseSafe(raw) })),
-  },
-  {
-    legacyKey: "qws:notifier:loopDefaults.v1",
-    apply: (raw, r) => (r.notifier = mergeSection(r.notifier, { loopDefaults: parseSafe(raw) })),
-  },
-  { legacyKey: "qws:player:ghostMode", apply: (raw, r) => (r.misc = mergeSection(r.misc, { ghostMode: parseSafe(raw) })) },
-  { legacyKey: "qws:ghost:delayMs", apply: (raw, r) => (r.misc = mergeSection(r.misc, { ghostDelayMs: parseSafe(raw) })) },
-  {
-    legacyKey: "qws:autoReco:onNewSession",
-    apply: (raw, r) => (r.misc = mergeSection(r.misc, { autoRecoEnabled: parseSafe(raw) })),
-  },
-  {
-    legacyKey: "qws:autoReco:delayMs",
-    apply: (raw, r) => (r.misc = mergeSection(r.misc, { autoRecoDelayMs: parseSafe(raw) })),
-  },
-  {
-    legacyKey: "qws:locker:restrictions.v1",
-    apply: (raw, r) => (r.locker = mergeSection(r.locker, { restrictions: parseSafe(raw) })),
-  },
-  { legacyKey: "garden.locker.state.v2", apply: (raw, r) => (r.locker = mergeSection(r.locker, { state: parseSafe(raw) })) },
-  {
-    legacyKey: "qws:editor:saved-gardens",
-    apply: (raw, r) => (r.editor = mergeSection(r.editor, { savedGardens: parseSafe(raw) })),
-  },
-  {
-    legacyKey: "qws:editor:enabled",
-    apply: (raw, r) => (r.editor = mergeSection(r.editor, { enabled: parseSafe(raw) })),
-  },
-  {
-    legacyKey: "qws:activityLogs:history:v1",
-    apply: (raw, r) => (r.activityLog = mergeSection(r.activityLog, { history: parseSafe(raw) })),
-  },
-  { legacyKey: "qws:activityLog:filter", apply: (raw, r) => (r.activityLog = mergeSection(r.activityLog, { filter: parseSafe(raw) })) },
-  {
-    legacyKey: "qws:alerts:audio:settings:v1",
-    apply: (raw, r) => (r.audio = mergeSection(r.audio, { settings: parseSafe(raw) })),
-  },
-  {
-    legacyKey: "qws:alerts:audio:library:v1",
-    apply: (raw, r) => (r.audio = mergeSection(r.audio, { library: parseSafe(raw) })),
-  },
-  {
-    legacyKey: "soundEffectsVolumeAtom",
-    apply: (raw, r) => (r.audio = mergeSection(r.audio, { sfxVolumeAtom: parseSafe(raw) })),
-  },
-  { legacyKey: "qws:pos", apply: (raw, r) => (r.hud = mergeSection(r.hud, { pos: parseSafe(raw) })) },
-  { legacyKey: "qws:collapsed", apply: (raw, r) => (r.hud = mergeSection(r.hud, { collapsed: parseSafe(raw) })) },
-  { legacyKey: "qws:hidden", apply: (raw, r) => (r.hud = mergeSection(r.hud, { hidden: parseSafe(raw) })) },
-];
 
 function getHostStorage(): Storage | null {
   if (typeof window === "undefined") return null;
@@ -297,26 +178,6 @@ function mergeSection<T extends Record<string, unknown> | undefined>(
   return base as NonNullable<T>;
 }
 
-function collectByPrefix(
-  storage: Storage,
-  prefix: string,
-  transform?: (key: string, raw: string) => [string, unknown] | null,
-): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (let i = 0; i < storage.length; i++) {
-    const key = storage.key(i);
-    if (!key || !key.startsWith(prefix)) continue;
-    const raw = storage.getItem(key);
-    if (raw == null) continue;
-    if (transform) {
-      const entry = transform(key, raw);
-      if (entry) out[entry[0]] = entry[1];
-    } else {
-      out[key.slice(prefix.length)] = parseSafe(raw);
-    }
-  }
-  return out;
-}
 
 function unwrapNestedSnapshot(raw: unknown): unknown {
   let cur: unknown = raw;
@@ -548,142 +409,8 @@ function setValueAtPath(obj: any, path: string[], value: unknown): void {
   }
 }
 
-function hasLegacyData(storage: Storage): boolean {
-  for (const key of LEGACY_STATIC_KEYS) {
-    if (storage.getItem(key) != null) return true;
-  }
-  for (let i = 0; i < storage.length; i++) {
-    const key = storage.key(i) || "";
-    if (LEGACY_PREFIXES.some((p) => key.startsWith(p))) return true;
-  }
-  return false;
-}
 
-function cleanupLegacyData(storage: Storage): void {
-  for (const key of LEGACY_STATIC_KEYS) {
-    try {
-      storage.removeItem(key);
-    } catch {
-      /* ignore */
-    }
-  }
-  for (let i = storage.length - 1; i >= 0; i--) {
-    const key = storage.key(i);
-    if (!key) continue;
-    if (LEGACY_PREFIXES.some((p) => key.startsWith(p))) {
-      try {
-        storage.removeItem(key);
-      } catch {
-        /* ignore */
-      }
-    }
-  }
-}
 
-export function migrateLocalStorageToAries(): AriesStorage {
-  const storage = getHostStorage();
-  if (!storage) return loadAriesStorage();
-
-  const current = loadAriesStorage();
-  const shouldMigrate = hasLegacyData(storage);
-  const result: AriesStorage = { ...DEFAULT_ARIES_STORAGE, ...current };
-
-  if (!shouldMigrate) {
-    return result;
-  }
-
-  for (const entry of STATIC_LEGACY_KEYS) {
-    const { legacyKey, apply } = entry;
-    const raw = storage.getItem(legacyKey);
-    if (raw == null) continue;
-    apply(raw, result);
-  }
-
-  // Keybinds
-  const bindings = collectByPrefix(storage, "qws:keybind:", (key, raw) => [
-    key.replace("qws:keybind:", ""),
-    raw,
-  ]);
-  const holds = collectByPrefix(storage, "qws:keybind-hold:", (key, raw) => [
-    key.replace("qws:keybind-hold:", ""),
-    raw === "1" || raw === "true",
-  ]);
-  if ((Object.keys(bindings).length || Object.keys(holds).length) && !result.keybinds) {
-    result.keybinds = {};
-  }
-  if (Object.keys(bindings).length) {
-    result.keybinds = {
-      ...(result.keybinds ?? {}),
-      bindings: { ...(result.keybinds?.bindings ?? {}), ...(bindings as Record<string, string>) },
-    };
-  }
-  if (Object.keys(holds).length) {
-    result.keybinds = {
-      ...(result.keybinds ?? {}),
-      hold: { ...(result.keybinds?.hold ?? {}), ...(holds as Record<string, boolean>) },
-    };
-  }
-
-  // Legacy pet team hotkeys
-  const teamHotkeys = collectByPrefix(storage, "qws:hk:petteam:use:", (key, raw) => [
-    key.replace("qws:hk:petteam:use:", ""),
-    raw,
-  ]);
-  if (Object.keys(teamHotkeys).length) {
-    result.pets = {
-      ...(result.pets ?? {}),
-      hotkeys: { ...(result.pets?.hotkeys ?? {}), ...(teamHotkeys as Record<string, string>) },
-    };
-  }
-
-  // HUD window positions
-  const hudWindows = collectByPrefix(storage, "qws:win:", (key, raw) => {
-    const match = key.match(/^qws:win:(.+):pos$/);
-    if (!match || !match[1]) return null;
-    return [match[1], parseSafe(raw)];
-  });
-  if (Object.keys(hudWindows).length) {
-    result.hud = {
-      ...(result.hud ?? {}),
-      windows: { ...(result.hud?.windows ?? {}), ...hudWindows },
-    };
-  }
-
-  // Menu active tabs
-  const menuTabs = collectByPrefix(storage, "menu:", (key, raw) => {
-    const match = key.match(/^menu:(.+):activeTab$/);
-    if (!match || !match[1]) return null;
-    return [match[1], parseSafe(raw) as string];
-  });
-  if (Object.keys(menuTabs).length) {
-    const activeTabs: Record<string, string> = {};
-    for (const [k, v] of Object.entries(menuTabs)) {
-      if (typeof v === "string") activeTabs[k] = v;
-    }
-    if (Object.keys(activeTabs).length) {
-      result.menu = {
-        ...(result.menu ?? {}),
-        activeTabs: { ...(result.menu?.activeTabs ?? {}), ...activeTabs },
-      };
-    }
-  }
-
-  // Flatten any nested stats snapshot that might have been persisted as { snapshot: { ... } }
-  if (result.stats && typeof result.stats === "object") {
-    const flat = unwrapNestedSnapshot(result.stats);
-    result.stats = flat;
-  }
-
-  result.version = ARIES_STORAGE_VERSION;
-  if (!result.migratedAt) result.migratedAt = Date.now();
-
-  persistAriesStorage(result);
-  // Flush before deleting legacy keys: with the debounced write, a crash in
-  // the next few hundred ms would otherwise lose the migrated data for good.
-  flushAriesStorageNow();
-  cleanupLegacyData(storage);
-  return result;
-}
 
 export function getAriesStorage(): AriesStorage {
   return loadAriesStorage();
@@ -726,11 +453,6 @@ export function updateAriesPath<T = unknown>(
   });
 }
 
-export function removeLegacyStorageKeys(): void {
-  const storage = getHostStorage();
-  if (!storage) return;
-  cleanupLegacyData(storage);
-}
 
 // ---------- API Key Storage ----------
 
@@ -764,20 +486,6 @@ export function getApiKey(): string | null {
   }
 }
 
-/**
- * Supprime l'API key stockée
- */
-export function clearApiKey(): void {
-  try {
-    if (typeof GM_deleteValue === "function") {
-      GM_deleteValue(API_KEY_STORAGE_KEY);
-      return;
-    }
-    getHostStorage()?.removeItem(API_KEY_STORAGE_KEY);
-  } catch (e) {
-    console.error("Failed to clear API key:", e);
-  }
-}
 
 /**
  * Vérifie si l'utilisateur a une API key
@@ -789,27 +497,7 @@ export function hasApiKey(): boolean {
 
 // ---------- Auth declined flag ----------
 
-function readAuthDeclinedRaw(): string | null {
-  try {
-    if (typeof GM_getValue === "function") {
-      const raw = GM_getValue(AUTH_DECLINED_STORAGE_KEY, null);
-      if (raw == null) return null;
-      if (typeof raw === "string") return raw;
-      if (typeof raw === "boolean") return raw ? "1" : null;
-      return String(raw);
-    }
-    return getHostStorage()?.getItem(AUTH_DECLINED_STORAGE_KEY) ?? null;
-  } catch {
-    return null;
-  }
-}
 
-export function hasDeclinedApiAuth(): boolean {
-  const raw = readAuthDeclinedRaw();
-  if (!raw) return false;
-  const val = String(raw).trim().toLowerCase();
-  return val === "1" || val === "true" || val === "yes";
-}
 
 // ---------- Room privacy notice seen flag ----------
 

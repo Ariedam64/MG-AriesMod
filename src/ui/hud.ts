@@ -2,7 +2,7 @@
 import { NativeWS, sockets, workerFound } from "../core/state";
 import { ensureStore, isStoreCaptured, getCapturedInfo } from "../store/jotai";
 import { PetsService, installPetTeamHotkeysOnce, setTeamsForHotkeys } from "../services/pets";
-import { ShopsService, installShopKeybindsOnce } from "../services/shops";
+import { installShopKeybindsOnce } from "../services/shops";
 import { installCompanionKeybindsOnce } from "../services/companionKeybind";
 import { installSellKeybindsOnce } from "../services/sell";
 import { installPetHutchKeybindsOnce } from "../services/petHutchKeybind";
@@ -362,11 +362,6 @@ export function mountHUD(opts?: HUDOptions) {
     ro.observe(win);
     anyWin.__qwsClampObserver = ro;
   }
-  function resetWinPosDefault(el: HTMLElement) {
-    el.style.right = '16px';
-    el.style.bottom = '16px';
-    ensureOnScreen(el);
-  }
   function withTopLocked(el: HTMLElement, mutate: () => void) {
     const before = el.getBoundingClientRect();
     const vh = window.innerHeight;
@@ -425,7 +420,6 @@ export function mountHUD(opts?: HUDOptions) {
     console.warn("[QuinoaWS] HUD elements missing, abort init");
     return;
   }
-  const launchEl: HTMLDivElement = launch;
 
   const updateHideButtonTitle = () => {
     const pieces: string[] = [];
@@ -622,31 +616,7 @@ export function mountHUD(opts?: HUDOptions) {
     setLaunchState(id, true); // newly opened → Close
   }
 
-  function isShown(el: HTMLElement) { return el.style.display !== 'none'; }
 
-  function toggleWindow(id: string, title: string, render: PanelRender) {
-    const existing = windows.get(id);
-    if (!existing) {
-      openWindow(id, title, (root) => {
-        const el = root.closest('.qws-win') as HTMLElement;
-        if (el) restoreWinPos(id, el);
-        render(root);
-      });
-      return true;
-    } else {
-      if (isShown(existing.el)) {
-        existing.el.style.display = 'none';
-        setLaunchState(id, false);
-        return false;
-      } else {
-        existing.el.style.display = '';
-        bumpZ(existing.el);
-        ensureOnScreen(existing.el);
-        setLaunchState(id, true);
-        return true;
-      }
-    }
-  }
 
   function bumpZ(el: HTMLElement) {
     let maxZ = Z_BASE + 1;

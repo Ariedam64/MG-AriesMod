@@ -50,11 +50,11 @@ function findBundleUrl(pattern: RegExp): string | null {
   return null;
 }
 
-export function findMainBundleUrl(): string | null {
+function findMainBundleUrl(): string | null {
   return findBundleUrl(MAIN_BUNDLE_PATTERN);
 }
 
-export function findQuinoaViewUrl(): string | null {
+function findQuinoaViewUrl(): string | null {
   return findBundleUrl(QUINOA_VIEW_PATTERN);
 }
 
@@ -100,22 +100,6 @@ export function extractBalancedBlock(text: string, openBraceIndex: number): stri
   return null;
 }
 
-export function extractBalancedObjectLiteral(text: string, anchorIndex: number): string | null {
-  const declStart = Math.max(
-    text.lastIndexOf("const ", anchorIndex),
-    text.lastIndexOf("let ", anchorIndex),
-    text.lastIndexOf("var ", anchorIndex)
-  );
-  if (declStart < 0) return null;
-
-  const eq = text.indexOf("=", declStart);
-  if (eq < 0 || eq > anchorIndex) return null;
-
-  const braceStart = text.indexOf("{", eq);
-  if (braceStart < 0 || braceStart > anchorIndex) return null;
-
-  return extractBalancedBlock(text, braceStart);
-}
 
 async function fetchBundleByFinder(
   findUrl: () => string | null,

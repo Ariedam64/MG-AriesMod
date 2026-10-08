@@ -10,7 +10,7 @@ export type PetTeam = {
   serverId?: string | null;
 };
 
-export type ServerPetTeamMember = { petId: string; petSpecies?: string; name?: string | null };
+type ServerPetTeamMember = { petId: string; petSpecies?: string; name?: string | null };
 export type ServerPetTeam = { id: string; name: string; members: ServerPetTeamMember[]; emblem?: unknown };
 
 export function serverMemberIds(team: ServerPetTeam): string[] {
@@ -19,7 +19,7 @@ export function serverMemberIds(team: ServerPetTeam): string[] {
     : [];
 }
 
-export function sameMemberSet(a: (string | null)[], b: string[]): boolean {
+function sameMemberSet(a: (string | null)[], b: string[]): boolean {
   const aa = a.filter((x): x is string => !!x).slice().sort();
   const bb = b.slice().sort();
   if (aa.length !== bb.length) return false;
@@ -27,7 +27,7 @@ export function sameMemberSet(a: (string | null)[], b: string[]): boolean {
 }
 
 /** The game's SavePetTeam keeps the trimmed name cut to this many grapheme clusters. */
-export const PET_TEAM_NAME_MAX_CLUSTERS = 16;
+const PET_TEAM_NAME_MAX_CLUSTERS = 16;
 
 /** The name exactly as the server will store it. */
 export function petTeamName(name: string): string {

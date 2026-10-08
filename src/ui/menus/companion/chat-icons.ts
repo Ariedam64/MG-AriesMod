@@ -58,7 +58,7 @@ function petSpeciesOf(pet: unknown): string | null {
  * Rendre `null` plutôt qu'une case vide : le texte se suffit, et un carré gris
  * devant chaque message serait pire que pas d'image du tout.
  */
-export function tagIcon(tag: BubbleTag, sizePx: number): HTMLElement | null {
+function tagIcon(tag: BubbleTag, sizePx: number): HTMLElement | null {
   if ("mutation" in tag) {
     const box = holder(sizePx);
     // L'atlas `ui` porte les pastilles rondes ; la catégorie `mutation` porte

@@ -2,7 +2,7 @@
 import { getAtomByLabel, jGet, jSet } from "../store/jotai";
 
 export type ToastVariant = "success" | "error" | "info" | "warn";
-export type SimpleToast = { title: any; description?: any; variant?: ToastVariant; duration?: number };
+type SimpleToast = { title: any; description?: any; variant?: ToastVariant; duration?: number };
 
 // Matches the real "board"-style toast pushed by the game itself for shop
 // announcements (captured live from quinoaToastsAtom). title/subtitle can be
@@ -21,7 +21,7 @@ type ShopAnnouncementToast = {
 
 type AnyToast = SimpleToast | ShopAnnouncementToast;
 
-export async function sendToast(toast: AnyToast): Promise<void> {
+async function sendToast(toast: AnyToast): Promise<void> {
   const sendAtom = getAtomByLabel("sendQuinoaToastAtom");
   if (sendAtom) { await jSet(sendAtom, toast); return; }
 
@@ -50,22 +50,4 @@ export async function toastSimple(
   await sendToast({ title, description, variant, duration });
 }
 
-export async function toastBoard(
-  title: any, subtitle: any, presentation: string,
-  displayDurationMs = 5000, opts: Partial<ShopAnnouncementToast> = {}
-) {
-  await sendToast({
-    toastType: "shopAnnouncement",
-    presentation,
-    title,
-    subtitle,
-    isStackable: true,
-    displayDurationMs,
-    ...opts,
-  });
-}
 
-export async function clearToasts() {
-  const listAtom = getAtomByLabel("quinoaToastsAtom");
-  if (listAtom) await jSet(listAtom, []);
-}

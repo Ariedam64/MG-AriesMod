@@ -1,6 +1,6 @@
 import type { SpriteConfig, MutationName } from '../settings';
 import { MUT_META } from '../settings';
-import type { SpriteState, SpriteTexture, VariantSignature, SpriteItem, SpriteJob } from '../types';
+import type { SpriteState, SpriteTexture, VariantSignature } from '../types';
 
 // Heuristics ported from game logic for positioning/scaling mutation icons
 const TILE_SIZE_WORLD = 256;
@@ -82,7 +82,7 @@ const hasMutationFilter = (value: MutationName | '' | null): value is MutationNa
 
 const isTallKey = (k: string) => /tallplant/i.test(k);
 
-export const computeVariantSignature = (state: SpriteState): VariantSignature => {
+const computeVariantSignature = (state: SpriteState): VariantSignature => {
   if (!state.mutOn) {
     const f = hasMutationFilter(state.f) ? state.f : null;
     const baseMuts = f ? [f] : [];
@@ -118,15 +118,6 @@ export function buildVariantFromMutations(list: MutationName[]): VariantSignatur
   };
 }
 
-export function resolveTexByKey(key: string, state: SpriteState): SpriteTexture | null {
-  const direct = state.tex.get(key);
-  if (direct) return direct;
-  const anim = state.items.find(it => it.isAnim && it.key === key);
-  if (anim && anim.isAnim && anim.frames?.length) return anim.frames[0];
-  const suffixed = state.tex.get(`${key}-0`);
-  if (suffixed) return suffixed;
-  return null;
-}
 
 const normalizeMutListColor = (list: MutationName[]): MutationName[] => {
   const names = list.filter((m, idx, arr) => FILTERS[m] && arr.indexOf(m) === idx);
@@ -224,9 +215,6 @@ function applyFilterOnto(ctx: CanvasRenderingContext2D, sourceCanvas: HTMLCanvas
   ctx.restore();
 }
 
-function variantKey(it: SpriteItem, V: VariantSignature) {
-  return `${V.sig}::${it.key}`;
-}
 
 type OverlayHit = { tex: SpriteTexture; key: string };
 
@@ -482,7 +470,7 @@ function buildTallOverlaySprites(
   TextureCtor: any,
   disposables: SpriteTexture[]
 ) {
-  const { w, aX, basePos } = dims;
+  const { aX, basePos } = dims;
   if (!baseCanvas) return [];
   const overlays: any[] = [];
   for (const step of overlayPipeline) {
@@ -554,10 +542,6 @@ function buildIconSprites(
 
 const entryCost = (e: any) => (e?.isAnim ? (e.frames?.length || 0) : e?.tex ? 1 : 0);
 
-function lruTouch(state: SpriteState, k: string, e: any) {
-  state.lru.delete(k);
-  state.lru.set(k, e);
-}
 
 function lruEvict(state: SpriteState, cfg: SpriteConfig) {
   if (!cfg.cacheOn) return;
@@ -651,33 +635,9 @@ export function renderMutatedTexture(tex: SpriteTexture | null, itKey: string, V
 }
 
 // Backward compatibility with previous name
-export const applyMutationIcons = renderMutatedTexture;
 
-export function enqueueVariantJob(it: SpriteItem, V: VariantSignature, state: SpriteState, cfg: SpriteConfig) {
-  if (!cfg.cacheOn) return null;
-  if (!V.muts.length) return null;
-  const k = variantKey(it, V);
-  const hit = state.lru.get(k);
-  if (hit) return (lruTouch(state, k, hit), hit);
 
-  if (!cfg.jobOn) return null;
-  if (state.jobMap.has(k)) return null;
-
-  state.jobs.push({
-    k,
-    sig: state.sig,
-    itKey: it.key,
-    isAnim: !!it.isAnim,
-    src: it.isAnim ? (it.frames || []) : [it.first],
-    i: 0,
-    out: [],
-    V,
-  } as SpriteJob);
-  state.jobMap.add(k);
-  return null;
-}
-
-export function processVariantJobs(state: SpriteState, cfg: SpriteConfig): boolean {
+function processVariantJobs(state: SpriteState, cfg: SpriteConfig): boolean {
   if (!cfg.jobOn || !state.open || !state.jobs.length) return false;
 
   const now = performance.now();
@@ -736,5 +696,4 @@ export function processVariantJobs(state: SpriteState, cfg: SpriteConfig): boole
 }
 
 // Backward compatibility aliases
-export const getGenerated = enqueueVariantJob;
 export const processJobs = processVariantJobs;

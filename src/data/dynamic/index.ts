@@ -5,10 +5,10 @@ import { startColorPolling, stopColorPolling } from "./logic/abilityColors";
 import { getData, getAllData, hasData, waitForData, waitForAnyData } from "./logic/accessors";
 import { isAllDataCaptured, fetchAllData } from "./logic/capture";
 
-export type { CapturedDataKey, DataKey, DataBag } from "./types";
-export type { AbilityColor } from "./logic/abilityColors";
-export type { ActivityLogEntry, PetAbilityAction } from "./logic/abilityFormatter";
-export { formatAbilityLog, filterPetAbilityLogs, isPetAbilityAction, PET_ABILITY_ACTIONS } from "./logic/abilityFormatter";
+;
+;
+;
+export { formatAbilityLog, isPetAbilityAction } from "./logic/abilityFormatter";
 
 export const MGData = {
   /** Initialize module: fetch all data from API, start ability color polling */

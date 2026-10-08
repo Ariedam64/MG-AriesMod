@@ -186,19 +186,3 @@ export function startWanderWatch(): void {
   );
 }
 
-export function stopWanderWatch(): void {
-  running = false;
-  pending = null;
-  try {
-    CompanionService.setWanderHooks(null);
-  } catch {}
-  for (const id of timers) clearInterval(id);
-  timers = [];
-  for (const unsub of unsubscribers) {
-    try {
-      unsub();
-    } catch {}
-  }
-  unsubscribers = [];
-  latestGarden = null;
-}

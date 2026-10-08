@@ -3,7 +3,7 @@ export const splitKey = (key: string) => String(key || '').split('/').filter(Boo
 export const joinPath = (base: string, path?: string) =>
   base.replace(/\/?$/, '/') + String(path || '').replace(/^\//, '');
 
-export const dirOf = (path: string) =>
+const dirOf = (path: string) =>
   path.lastIndexOf('/') >= 0 ? path.slice(0, path.lastIndexOf('/') + 1) : '';
 
 /** Resolve `.`/`..` segments so joined paths don't keep literal `../` traversal. */
@@ -29,10 +29,6 @@ export function categoryOf(key: string): string {
   return parts[start] || 'misc';
 }
 
-export const baseNameOf = (key: string) => {
-  const parts = splitKey(key);
-  return parts[parts.length - 1] || '';
-};
 
 export function animParse(key: string) {
   const parts = splitKey(key);

@@ -420,7 +420,7 @@ export function applySkinTexture(
   return true;
 }
 
-export function revertSkin(frameKey: string): void {
+function revertSkin(frameKey: string): void {
   const entry = applied.get(frameKey);
   if (!entry) return;
   applied.delete(frameKey);

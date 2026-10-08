@@ -21,7 +21,7 @@ import {
 import { readCropSize } from "./cropSize";
 import { readAriesPath, writeAriesPath } from "./localStorage";
 
-export type SortKey =
+type SortKey =
   | 'none'
   | 'alpha'
   | 'qty'
@@ -31,9 +31,9 @@ export type SortKey =
   | 'strength'
   | 'value';
 
-export type SortDirection = 'asc' | 'desc';
+type SortDirection = 'asc' | 'desc';
 
-export type FilterKey =
+type FilterKey =
   | 'seed'
   | 'crop'
   | 'plant'
@@ -42,12 +42,12 @@ export type FilterKey =
   | 'decor'
   | string; // autorise d'autres clés au besoin
 
-export interface SortOption {
+interface SortOption {
   value: SortKey;
   label: string;
 }
 
-export interface InventorySortingConfig {
+interface InventorySortingConfig {
   gridSelector: string;
   filtersBlockSelector: string;
   closeButtonSelector: string;
@@ -63,7 +63,7 @@ export interface InventorySortingConfig {
   applySorting?: (grid: Element, sortKey: SortKey, direction: SortDirection) => void; // hook tri métier
 }
 
-export interface InventorySortingController {
+interface InventorySortingController {
   destroy(): void;
   update(): void; // recalcule options selon filtres actifs
   getActiveFilters(): string[];
@@ -97,7 +97,6 @@ const DEFAULTS: Required<Pick<
 
 const INVENTORY_SEARCH_INPUT_SELECTOR = 'input.chakra-input.css-8e1l1i';
 
-const ALWAYS: SortKey[] = ['none'];
 const BASE_SORT: SortKey[] = ['alpha', 'qty', 'rarity', 'value']; // Rarity par défaut
 const ORDER: SortKey[] = [
   'none',
@@ -344,7 +343,7 @@ interface InventoryDomSortState {
 
 // -------------------- Utils (exportés quand utiles) --------------------
 
-export const debounce = <T extends (...args: any[]) => void>(fn: T, wait = 120) => {
+const debounce = <T extends (...args: any[]) => void>(fn: T, wait = 120) => {
   let t: number | undefined;
   return (...args: Parameters<T>) => {
     if (t) window.clearTimeout(t);
@@ -352,7 +351,7 @@ export const debounce = <T extends (...args: any[]) => void>(fn: T, wait = 120) 
   };
 };
 
-export function isVisible(el: Element | null): el is Element {
+function isVisible(el: Element | null): el is Element {
   if (!el || !document.contains(el)) return false;
   const r = (el as HTMLElement).getBoundingClientRect();
   const cs = getComputedStyle(el as HTMLElement);
@@ -2040,15 +2039,12 @@ async function logInventoryForFilters(
     }
 
     const items = Array.isArray((inventory as any).items) ? (inventory as any).items : [];
-    const { filteredItems, keepAll, itemTypes } = filterInventoryItems(items, filters, searchQuery);
+    const { keepAll, itemTypes } = filterInventoryItems(items, filters, searchQuery);
     const resolvedDirection: SortDirection = sortKey
       ? (direction && DIRECTION_ORDER.includes(direction) ? direction : DEFAULT_DIRECTION_BY_SORT_KEY[sortKey]) ?? 'asc'
       : direction && DIRECTION_ORDER.includes(direction)
       ? direction
       : 'asc';
-    const itemsForLog = sortKey
-      ? sortInventoryItems(filteredItems, sortKey, resolvedDirection)
-      : filteredItems.slice();
 
     const descriptor = keepAll
       ? "toutes catégories"
@@ -2284,7 +2280,7 @@ function createDefaultApplySorting(
 /**
  * Récupère la liste des filtres actifs (texte du label).
  */
-export function getActiveFiltersFromGrid(
+function getActiveFiltersFromGrid(
   grid: Element,
   checkboxSelector: string,
   checkboxLabelSelector: string
@@ -2300,7 +2296,7 @@ export function getActiveFiltersFromGrid(
 /**
  * Calcule les options de tri à partir des filtres actifs (intersection logique).
  */
-export function computeSortOptions(
+function computeSortOptions(
   activeFilters: string[],
   labelByValue: Record<SortKey, string> = LABEL_BY_VALUE_DEFAULT,
   mapExtraByFilter: Readonly<Partial<Record<string, SortKey[]>>> = MAP_EXTRA_BY_FILTER_DEFAULT,
@@ -2688,7 +2684,6 @@ function ensureSortingBar(
   // We no longer anchor to the close button, as the new UI places it
   // in a separate column. Always append as a full-width row at the end
   // of the filters block to avoid breaking layout.
-  const closeBtn = null as unknown as Element | null;
 
   let wrap = filtersBlock.querySelector(':scope > .tm-sort-wrap') as HTMLElement | null;
   let select: HTMLSelectElement;
@@ -2848,7 +2843,7 @@ function renderDirectionOptions(
 
 // -------------------- Public attach --------------------
 
-export function attachInventorySorting(userConfig: Partial<InventorySortingConfig> = {}): InventorySortingController {
+function attachInventorySorting(userConfig: Partial<InventorySortingConfig> = {}): InventorySortingController {
   const cfg: InventorySortingConfig & Required<typeof DEFAULTS> = {
     ...DEFAULTS,
     ...userConfig,
@@ -3505,21 +3500,5 @@ export function startInventorySortingObserver(
   };
 }
 
-/** Helper simple pour récupérer les filtres actifs depuis un conteneur spécifique. */
-export function getActiveFilters(container: Element, config?: Partial<Pick<
-  InventorySortingConfig, 'checkboxSelector' | 'checkboxLabelSelector'
->>) {
-  const checkboxSelector = config?.checkboxSelector ?? DEFAULTS.checkboxSelector;
-  const checkboxLabelSelector = config?.checkboxLabelSelector ?? DEFAULTS.checkboxLabelSelector;
-  return getActiveFiltersFromGrid(container, checkboxSelector, checkboxLabelSelector);
-}
 
-/** Renvoie un mapping labels i18n par défaut (pratique si tu veux cloner et modifier). */
-export function defaultSortLabels(): Record<SortKey, string> {
-  return { ...LABEL_BY_VALUE_DEFAULT };
-}
 
-/** Mapping extra par filtre par défaut (modifiable côté appelant). */
-export function defaultMapExtraByFilter(): Record<FilterKey, SortKey[]> {
-  return { ...MAP_EXTRA_BY_FILTER_DEFAULT };
-}

@@ -21,7 +21,7 @@ import { StatsService } from "./stats";
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
 import { playerShopView, type PlayerShopView, type ShopKind } from "../utils/shopPurchases";
 
-export type SectionType = "Seed" | "Egg" | "Tool" | "Decor";
+type SectionType = "Seed" | "Egg" | "Tool" | "Decor";
 
 export type NotifierRow = {
   id: string;
@@ -62,7 +62,7 @@ export type NotifierFilters = {
 
 export type NotifierContext = "shops" | "weather";
 
-export type WeatherCycleMeta = {
+type WeatherCycleMeta = {
   kind: "weather" | "lunar" | "base" | "unknown";
   rawKind?: string;
   startWindowMin?: number;
@@ -97,11 +97,6 @@ export type WeatherState = {
   rows: WeatherRow[];
 };
 
-export type WeatherProbabilityDisplay = {
-  label: string;
-  title: string;
-  value: number | null;
-};
 
 export type ShopsSnapshot = {
   seed:  { inventory: any[]; secondsUntilRestock: number };
@@ -117,7 +112,7 @@ export type PurchasesSnapshot = {
   decor: { createdAt: number; purchases: Record<string, number> };
 };
 
-export type ToolInvItem = { toolId: string; itemType: "Tool"; quantity: number };
+type ToolInvItem = { toolId: string; itemType: "Tool"; quantity: number };
 
 const PATH_NOTIFIER_PREFS = "notifier.prefs";
 const PATH_NOTIFIER_RULES = "notifier.rules";
@@ -139,29 +134,8 @@ const DISPLAY_RARITY: Record<string, string> = {
 
 const norm = (s: unknown) => String(s ?? "").toLowerCase();
 
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-const formatPercent = (value: number): string => {
-  const pct = clamp(value, 0, 1) * 100;
-  if (pct >= 99.5) return "100%";
-  if (pct >= 10) return `${Math.round(pct)}%`;
-  return `${pct.toFixed(1)}%`;
-};
 
-const describeMinutes = (minutes: number): string => {
-  if (!Number.isFinite(minutes)) return "unknown";
-  if (minutes < 1) return "less than a minute";
-  if (minutes < 60) {
-    const mins = Math.round(minutes);
-    return `${mins} minute${mins !== 1 ? "s" : ""}`;
-  }
-  if (minutes < 24 * 60) {
-    const hours = Math.round(minutes / 60);
-    return `${hours} hour${hours !== 1 ? "s" : ""}`;
-  }
-  const days = Math.round(minutes / (24 * 60));
-  return `${days} day${days !== 1 ? "s" : ""}`;
-};
 
 export const formatRuleSummary = (rule?: NotifierRule | null): string => {
   if (!rule) return "";
@@ -221,90 +195,6 @@ export const formatLastSeen = (timestamp: number | null, isCurrent: boolean): { 
   return { label, title: new Date(timestamp).toLocaleString() };
 };
 
-export const computeWeatherProbabilityDisplay = (row: WeatherRow): WeatherProbabilityDisplay => {
-  if (row.isCurrent) {
-    return {
-      label: "Active",
-      title: "Weather currently active",
-      value: 1,
-    };
-  }
-
-  const weight = typeof row.weightInCycle === "number" && Number.isFinite(row.weightInCycle)
-    ? Math.max(0, row.weightInCycle)
-    : null;
-
-  if (!row.lastSeen) {
-    if (weight != null) {
-      const pct = formatPercent(weight);
-      return {
-        label: `~${pct}`,
-        title: `Estimated from cycle weight (${pct}). No sightings yet.`,
-        value: clamp(weight, 0, 1),
-      };
-    }
-    return { label: "—", title: "No sightings yet", value: null };
-  }
-
-  const cycle = row.cycle;
-  const elapsedMinutes = Math.max(0, (Date.now() - row.lastSeen) / 60_000);
-
-  if (!cycle) {
-    if (weight != null) {
-      const pct = formatPercent(weight);
-      return {
-        label: `~${pct}`,
-        title: `Estimated from cycle weight (${pct}).`,
-        value: clamp(weight, 0, 1),
-      };
-    }
-    return { label: "—", title: "No cycle data", value: null };
-  }
-
-  if (cycle.kind === "base") {
-    return { label: "Default", title: "Base weather state", value: null };
-  }
-
-  let readiness = 0;
-  const details: string[] = [];
-
-  if (cycle.kind === "weather") {
-    const min = typeof cycle.startWindowMin === "number" ? cycle.startWindowMin : 0;
-    const max = typeof cycle.startWindowMax === "number" ? cycle.startWindowMax : min;
-    const range = Math.max(1, max - min);
-    readiness = clamp((elapsedMinutes - min) / range, 0, 1);
-    details.push(`Cycle window: ${Math.round(min)}-${Math.round(max)} min`);
-  } else if (cycle.kind === "lunar") {
-    const period = typeof cycle.periodMinutes === "number" ? cycle.periodMinutes : 0;
-    if (period > 0) {
-      readiness = clamp(elapsedMinutes / period, 0, 1);
-      details.push(`Cycle period: ${Math.round(period)} min`);
-    } else {
-      readiness = 0;
-    }
-  } else {
-    const raw = cycle.rawKind ? cycle.rawKind : cycle.kind;
-    if (weight != null) {
-      const pct = formatPercent(weight);
-      return {
-        label: `~${pct}`,
-        title: `Cycle kind: ${raw}.`,
-        value: clamp(weight, 0, 1),
-      };
-    }
-    return { label: "—", title: `Cycle kind: ${raw}.`, value: null };
-  }
-
-  details.unshift(`Last seen ${describeMinutes(elapsedMinutes)} ago`);
-  if (weight != null) details.push(`Cycle weight: ${formatPercent(weight)}`);
-
-  const chance = clamp(weight != null ? weight * readiness : readiness, 0, 1);
-  return {
-    label: `~${formatPercent(chance)}`,
-    title: details.join("\n"),
-    value: chance,
-  };
-};
 
 export const weatherStateSignature = (rows: WeatherRow[]): string => JSON.stringify(
   rows.map((r) => [r.id, r.notify ? 1 : 0, r.lastSeen || 0, r.isCurrent ? 1 : 0]),

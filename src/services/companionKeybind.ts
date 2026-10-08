@@ -22,7 +22,7 @@ export const COMPANION_TAB_EVENT = "qws:companion-tab";
 
 let installed = false;
 
-export function openCompanionChat(): void {
+function openCompanionChat(): void {
   window.dispatchEvent(new CustomEvent("qws:open-panel", { detail: { id: COMPANION_PANEL_ID } }));
   window.dispatchEvent(new CustomEvent(COMPANION_TAB_EVENT, { detail: { tab: CHAT_TAB_ID } }));
 }

@@ -47,14 +47,14 @@ function normalizeKey(value: unknown): string {
 }
 
 /** Mirrors the game's own clamp: a non-finite size falls back to the minimum. */
-export function clampCropSize(value: unknown): number {
+function clampCropSize(value: unknown): number {
   const numeric = toFinite(value);
   if (numeric == null) return CROP_SIZE_MIN;
   return Math.min(CROP_SIZE_MAX, Math.max(CROP_SIZE_MIN, Math.round(numeric)));
 }
 
 /** Catalog entry for a species id, a crop name, a plant name or a seed name. */
-export function findPlantCatalogEntry(species: unknown): PlantCatalogEntry | null {
+function findPlantCatalogEntry(species: unknown): PlantCatalogEntry | null {
   const wanted = normalizeKey(species);
   if (!wanted) return null;
 
@@ -97,7 +97,7 @@ export function cropWeight(species: unknown, size: unknown): number | null {
 }
 
 /** Pre-rework fractional scale (1 → maxScale) back to a Size in [50, 100]. */
-export function legacyScaleToCropSize(scale: unknown, maxScale: number | null): number | null {
+function legacyScaleToCropSize(scale: unknown, maxScale: number | null): number | null {
   const numeric = toFinite(scale);
   if (numeric == null) return null;
   const upper =

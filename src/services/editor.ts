@@ -18,8 +18,6 @@ import { ensureStore, getAtomByLabel } from "../store/jotai";
 
 import {
   shareGlobal,
-  readSharedGlobal,
-  pageWindow,
 } from "../utils/page-context";
 
 
@@ -826,9 +824,6 @@ function createSelectionIcon(
 
 /* -------------------------------------------------------------------------- */
 
-function readPersisted(def = false): boolean {
-  return def;
-}
 
 function persist(enabled: boolean) {
   /* persistence disabled: editor toggle always resets to off */
@@ -1475,23 +1470,6 @@ function getGardenObjectLabel(obj: any): string {
   return String(obj.objectType || "Item");
 }
 
-function getInventoryItemLabel(item: any): string {
-  if (!item || typeof item !== "object") return "Item";
-
-  if (item.itemType === "Plant") {
-    const entry = (plantCatalog as any)[item.species];
-
-    return entry?.crop?.name || entry?.seed?.name || item.species || "Plant";
-  }
-
-  if (item.itemType === "Decor") {
-    const entry = (decorCatalog as any)[item.decorId];
-
-    return entry?.name || item.decorId || "Decor";
-  }
-
-  return String(item.itemType || "Item");
-}
 
 function renderCurrentItemOverlay() {
   if (!currentItemOverlayEl) return;
@@ -1505,7 +1483,7 @@ function renderCurrentItemOverlay() {
   void (async () => {
     content.innerHTML = "";
 
-    const { tileType, tileKey, tileObject } = await readCurrentTileContext();
+    const { tileKey, tileObject } = await readCurrentTileContext();
 
     if (!tileObject) {
       const empty = document.createElement("div");
@@ -3820,37 +3798,7 @@ function slotMatchToIndex(meta: SlotMatch): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function rebuildUserSlots(meta: SlotMatch, buildSlot: (slot: any) => any): any {
-  if (meta.isArray) {
-    const nextSlots = (meta.slotsArray || []).slice();
 
-    nextSlots[meta.matchIndex] = buildSlot(meta.matchSlot);
-
-    return nextSlots;
-  }
-
-  const nextEntries = (meta.entries || []).map(([k, s], idx) =>
-    idx === meta.matchIndex ? [k, buildSlot(s)] : [k, s],
-  );
-
-  return Object.fromEntries(nextEntries);
-}
-
-function buildStateWithUserSlots(cur: any, userSlots: any) {
-  return {
-    ...(cur || {}),
-
-    child: {
-      ...(cur?.child || {}),
-
-      data: {
-        ...(cur?.child?.data || {}),
-
-        userSlots,
-      },
-    },
-  };
-}
 
 /* -------------------------------------------------------------------------- */
 
@@ -3858,15 +3806,6 @@ function buildStateWithUserSlots(cur: any, userSlots: any) {
 
 /* -------------------------------------------------------------------------- */
 
-async function setStateAtom(next: any) {
-  try {
-    await Atoms.root.state.set(next);
-  } catch (err) {
-    console.log("[EditorService] setStateAtom failed", err);
-
-    throw err;
-  }
-}
 
 /** Builds the tile object to place from the currently selected picker entry ("brush"), or null if nothing is selected. */
 function buildBrushTileObject(): any | null {
@@ -4037,16 +3976,6 @@ export const EditorService = {
 
 const EMPTY_GARDEN: GardenState = { tileObjects: {}, boardwalkTileObjects: {} };
 
-function isGardenEmpty(val: any): boolean {
-  const tiles = val?.tileObjects;
-
-  const boards = val?.boardwalkTileObjects;
-
-  const isEmptyObj = (o: any) =>
-    o && typeof o === "object" && Object.keys(o).length === 0;
-
-  return isEmptyObj(tiles) && isEmptyObj(boards);
-}
 
 function makeEmptyGarden(): GardenState {
   return { ...EMPTY_GARDEN };
@@ -4134,43 +4063,6 @@ function sanitizeGarden(val: any): GardenState {
   };
 }
 
-function rewriteGardenSlotTimes(
-  garden: GardenState,
-  startTime: number,
-  endTime: number,
-): GardenState {
-  const rewriteSlots = (slots: any) => {
-    if (!Array.isArray(slots)) return [];
-
-    return slots.map((s) => ({
-      ...(s || {}),
-
-      startTime,
-
-      endTime,
-    }));
-  };
-
-  const rewriteTileMap = (map: Record<string, any>) => {
-    const next: Record<string, any> = {};
-
-    for (const [k, v] of Object.entries(map || {})) {
-      if (v && typeof v === "object" && v.objectType === "plant") {
-        next[k] = { ...v, slots: rewriteSlots((v as any).slots) };
-      } else {
-        next[k] = v;
-      }
-    }
-
-    return next;
-  };
-
-  return {
-    tileObjects: rewriteTileMap(garden.tileObjects || {}),
-
-    boardwalkTileObjects: rewriteTileMap(garden.boardwalkTileObjects || {}),
-  };
-}
 
 function readSavedGardens(): SavedGarden[] {
   try {
@@ -4208,17 +4100,6 @@ function writeSavedGardens(list: SavedGarden[]) {
   notifySavedGardensChanged();
 }
 
-async function getCurrentGarden(): Promise<GardenState | null> {
-  try {
-    const pid = await getPlayerId();
-
-    if (!pid) return null;
-
-    return await getGardenForPlayer(pid);
-  } catch {
-    return null;
-  }
-}
 
 /** Reads a player's real garden straight from live state, ignoring any local editor plan. */
 async function readRealGardenForPlayer(
@@ -4876,7 +4757,7 @@ export async function resolveOwnTile(
   }
 }
 
-export async function collectCurrentUserGardenTiles(): Promise<{
+async function collectCurrentUserGardenTiles(): Promise<{
   userSlotIdx: number;
 
   dirt: GardenTileDebugEntry[];
@@ -5510,7 +5391,7 @@ function normalizeCustomScale(_species: string, size: number): number {
   return clampSizePercent(size);
 }
 
-export function computeTargetScaleFromPercent(
+function computeTargetScaleFromPercent(
   _species: string | null | undefined,
 
   sizePercent: number,

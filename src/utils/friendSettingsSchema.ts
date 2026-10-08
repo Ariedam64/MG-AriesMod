@@ -11,7 +11,6 @@ export type FriendSettings = {
   showStats: boolean;
 };
 
-export const FRIEND_SETTINGS_PATH = "friends.settings";
 
 export const DEFAULT_FRIEND_SETTINGS: FriendSettings = {
   showOnlineFriendsOnly: false,

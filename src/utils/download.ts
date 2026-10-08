@@ -8,7 +8,7 @@ import { pageWindow } from "./page-context";
 
 declare const GM_download: ((options: { name?: string; url: string; saveAs?: boolean }) => void) | undefined;
 
-export function copyTextToClipboard(text: string): void {
+function copyTextToClipboard(text: string): void {
   if (navigator.clipboard?.writeText) {
     navigator.clipboard.writeText(text);
     return;

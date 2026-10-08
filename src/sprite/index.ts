@@ -1,4 +1,3 @@
-import { DEFAULT_CFG } from './settings';
 import { createSpriteContext } from './state';
 import { createPixiHooks, waitForPixi } from './pixi/hooks';
 import { getCtors } from './utils/pixi';

@@ -16,7 +16,7 @@ import type { CompanionMap } from "./map";
 // Le mode est une donnée de réglage : il vit dans `settingsShape.ts`, qui est
 // pur. On le réexporte ici parce que c'est de ce module que tout le reste le
 // prend déjà, et que le déplacer plus loin ne clarifierait rien.
-export { COMPANION_MODES, type CompanionMode } from "./settingsShape";
+export { type CompanionMode } from "./settingsShape";
 import type { CompanionMode } from "./settingsShape";
 
 /** Slot du joueur local dans la salle : indexe ses tuiles de jardin. */

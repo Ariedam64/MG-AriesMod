@@ -2,12 +2,12 @@
 import { NativeWS, quinoaWS, setQWS, sockets, Workers } from "./state";
 import { buildQuinoaMessage } from "./quinoaCommands";
 
-export function postAllToWorkers(msg: any) {
+function postAllToWorkers(msg: any) {
   if ((Workers as any).forEach) (Workers as any).forEach((w: Worker) => { try { w.postMessage(msg); } catch {} });
   else for (const w of (Workers as any)._a) { try { w.postMessage(msg); } catch {} }
 }
 
-export function getPageWS(): WebSocket {
+function getPageWS(): WebSocket {
   if (quinoaWS && quinoaWS.readyState === NativeWS.OPEN) return quinoaWS;
 
   let any: WebSocket | null = null;

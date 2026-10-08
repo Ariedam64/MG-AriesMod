@@ -80,7 +80,7 @@ export const getPetStrength = (pet: PetLike): number => {
   return Math.max(strength, 0);
 };
 
-export const getPetCoinMultiplier = (pet: PetLike): number => {
+const getPetCoinMultiplier = (pet: PetLike): number => {
   const mutations = Array.isArray(pet?.mutations) ? pet.mutations : [];
 
   return mutations.reduce((acc, mutation) => {
@@ -93,7 +93,7 @@ export const getPetCoinMultiplier = (pet: PetLike): number => {
   }, 1);
 };
 
-export const getPetValue = (pet: PetLike): number => {
+const getPetValue = (pet: PetLike): number => {
   const entry = getCatalogEntry(pet?.petSpecies ?? "");
   if (!entry) return 0;
 

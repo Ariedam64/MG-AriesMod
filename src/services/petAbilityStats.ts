@@ -115,18 +115,11 @@ export function getAbilityRawParameters(abilityId: string): Record<string, unkno
   return getDefinition(abilityId)?.baseParameters ?? {};
 }
 
-export function getRequiredWeather(abilityId: string): string | null {
+function getRequiredWeather(abilityId: string): string | null {
   const raw = getDefinition(abilityId)?.baseParameters?.requiredWeather;
   return typeof raw === "string" && raw ? raw : null;
 }
 
-/**
- * True when the ability rolls a chance at all. Always-on modifiers return
- * false and should be presented as "always on" rather than as a 0% proc.
- */
-export function isRolledAbility(abilityId: string): boolean {
-  return toFiniteNumber(getDefinition(abilityId)?.baseProbability) !== null;
-}
 
 /**
  * Ability stats at an explicit ratio. Split out from computeAbilityStats so
@@ -172,24 +165,5 @@ export function computeAbilityStatsAtRatio(abilityId: string, ratio: number): Ab
   };
 }
 
-/** Ability stats at the pet's current strength. */
-export function computeAbilityStats(pet: PetLike, abilityId: string): AbilityStats | null {
-  return computeAbilityStatsAtRatio(abilityId, getStrengthRatio(pet));
-}
 
-/** Ability stats as if the pet were fully grown. */
-export function computeAbilityStatsAtMaxStrength(pet: PetLike, abilityId: string): AbilityStats | null {
-  return computeAbilityStatsAtRatio(abilityId, getMaxStrengthRatio(pet));
-}
 
-/** Every ability of a pet, at current strength. Unknown ids are skipped. */
-export function computePetAbilityStats(pet: PetLike & { abilities?: string[] }): AbilityStats[] {
-  const abilityIds = Array.isArray(pet.abilities) ? pet.abilities : [];
-  const stats: AbilityStats[] = [];
-  for (const abilityId of abilityIds) {
-    if (!abilityId) continue;
-    const entry = computeAbilityStats(pet, abilityId);
-    if (entry) stats.push(entry);
-  }
-  return stats;
-}

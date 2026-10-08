@@ -26,7 +26,7 @@ declare function GM_xmlhttpRequest(details: {
 
 // ========== URL Builder ==========
 
-export function buildUrl(
+function buildUrl(
   path: string,
   query?: Record<string, string | number | undefined>,
 ): string {
@@ -169,24 +169,9 @@ async function request<T>(
 
 // ========== Convenience Methods ==========
 
-export async function httpGet<T>(
-  path: string,
-  query?: Record<string, string | number | undefined>,
-): Promise<HttpResponse<T>> {
-  return request<T>("GET", path, { query });
-}
 
 export async function httpPost<T>(path: string, body: unknown): Promise<HttpResponse<T>> {
   return request<T>("POST", path, { body });
 }
 
-export async function httpPatch<T>(path: string, body: unknown): Promise<HttpResponse<T>> {
-  return request<T>("PATCH", path, { body });
-}
 
-export async function httpDelete<T>(
-  path: string,
-  body?: unknown,
-): Promise<HttpResponse<T>> {
-  return request<T>("DELETE", path, { body });
-}

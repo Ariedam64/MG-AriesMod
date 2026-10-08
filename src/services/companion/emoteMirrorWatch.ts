@@ -164,14 +164,3 @@ export function startEmoteMirror(): void {
   void subscribe(++generation).catch(() => {});
 }
 
-export function stopEmoteMirror(): void {
-  running = false;
-  generation++;
-  cancelPending();
-  for (const unsub of unsubscribers) {
-    try {
-      unsub();
-    } catch {}
-  }
-  unsubscribers = [];
-}

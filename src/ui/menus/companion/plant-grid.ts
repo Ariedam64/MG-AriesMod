@@ -23,7 +23,7 @@ const CELL_ICON_PX = 20;
 /** Sépare visuellement les deux moitiés de la parcelle, comme en jeu. */
 const HALF_GAP_PX = 12;
 
-export type PaintMode = "assign" | "erase";
+type PaintMode = "assign" | "erase";
 
 export type PlantGridOptions = {
   /** Tuiles que le joueur possède. Les autres restent inertes. */

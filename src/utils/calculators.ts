@@ -2,9 +2,9 @@
 import { plantCatalog, mutationCatalog } from "../data";
 import { cropSizeMultiplier, readCropSize } from "./cropSize";
 
-export type ColorMutation = "Gold" | "Rainbow";
-export type WeatherMutation = "Wet" | "Chilled" | "Frozen" | "Thunderstruck" | "Thundercharged";
-export type TimeMutation = "Dawnlit" | "Dawnbound" | "Amberlit" | "Amberbound";
+type ColorMutation = "Gold" | "Rainbow";
+type WeatherMutation = "Wet" | "Chilled" | "Frozen" | "Thunderstruck" | "Thundercharged";
+type TimeMutation = "Dawnlit" | "Dawnbound" | "Amberlit" | "Amberbound";
 
 export type MutationName =
   | ColorMutation
@@ -42,7 +42,7 @@ export type GardenPlant = {
   maturedAt?: number;
 };
 
-export type RoundingMode = "round" | "floor" | "ceil" | "none";
+type RoundingMode = "round" | "floor" | "ceil" | "none";
 
 export type PricingOptions = {
   getBasePrice?: (species: string) => number | undefined | null;
@@ -265,7 +265,7 @@ function computeWeatherTimeMultiplier(
   return combineWeatherMultipliers(multipliers);
 }
 
-export function mutationsMultiplier(mutations?: MutationName[] | null): number {
+function mutationsMultiplier(mutations?: MutationName[] | null): number {
   const color = computeColorMultiplier(mutations);
   const weather = pickWeather(mutations);
   const time = pickTime(mutations);
@@ -369,25 +369,3 @@ export const DefaultPricing: PricingOptions = Object.freeze({
   rounding: "round",
 });
 
-export function debugProbe(
-  species: string,
-  size: number,
-  muts?: MutationName[],
-  playersInRoom?: number
-) {
-  const base = defaultGetBasePrice(species) ?? 0;
-  const sizeMult = cropSizeMultiplier(species, size);
-  const mutMult = mutationsMultiplier(muts);
-  const friendsMult = friendBonusMultiplier(playersInRoom);
-  const rawCoins = base * sizeMult * mutMult * friendsMult;
-  return {
-    species,
-    basePrice: base,
-    size,
-    sizeMult,
-    mutationMult: mutMult,
-    friendsMult,
-    rawCoins,
-    coins: applyRounding(rawCoins),
-  };
-}

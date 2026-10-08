@@ -13,7 +13,6 @@ import {
   type WeatherRow,
   type WeatherState,
   type NotifierContext,
-  type ContextStopDefaults,
 } from "../../services/notifier";
 
 
@@ -37,7 +36,7 @@ let detachRuleKeyBlocker: (() => void) | null = null;
 let detachRuleWheelBlocker: (() => void) | null = null;
 let detachRuleDragHandler: (() => void) | null = null;
 
-export const closeRuleEditor = () => {
+const closeRuleEditor = () => {
   if (rulePopover) {
     try { rulePopover.remove(); } catch {}
     rulePopover = null;
@@ -430,7 +429,6 @@ const openRuleEditor = (ui: Menu, row: RuleEditorRow, anchor: HTMLElement) => {
     return label || "Default";
   })();
   const formatModeLabel = (mode: PlaybackMode) => mode === "loop" ? "Loop" : "One-shot";
-  const defaultModeLabel = formatModeLabel(defaults.mode);
   const defaultIntervalMs = Math.max(
     150,
     Math.floor(contextDefaults.loopIntervalMs ?? defaults.loopIntervalMs ?? 150),
@@ -594,12 +592,6 @@ const openRuleEditor = (ui: Menu, row: RuleEditorRow, anchor: HTMLElement) => {
     const raw = modeSelect.value;
     if (raw === "oneshot" || raw === "loop") return raw;
     return allowPurchase ? defaults.mode : "oneshot";
-  };
-  const resolveStop = (): "manual" | "purchase" => {
-    if (!allowPurchase) return "purchase";
-    const raw = stopSelect?.value;
-    if (raw === "purchase") return "purchase";
-    return "purchase";
   };
 
   const updateLoopVisibility = () => {
@@ -1778,7 +1770,6 @@ style.textContent = `
   const onResize = () => syncHeaderToScrollbar();
   window.addEventListener("resize", onResize);
 
-  const lastSeenRefs = new Map<string, HTMLDivElement>();
 
   /* ================== Wiring avec NotifierService ================== */
 

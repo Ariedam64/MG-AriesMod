@@ -2,7 +2,6 @@
 import { pageWindow, shareGlobal } from "../utils/page-context";
 
 export const NativeWS = pageWindow.WebSocket;
-export const NativeWorker = pageWindow.Worker;
 
 // sockets créées dans la page
 export const sockets: WebSocket[] = [];
@@ -21,10 +20,6 @@ export function setQWS(ws: WebSocket, why: string) {
 
 // drapeau: WS détectée dans un worker instrumenté
 export let workerFound = false;
-export function setWorkerFound(v: boolean) {
-  workerFound = !!v;
-  shareGlobal("__QWS_workerFound", workerFound);
-}
 
 // petit Set compatible anciens navigateurs
 type SimpleSet<T> = Set<T> & {

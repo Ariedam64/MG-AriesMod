@@ -173,7 +173,7 @@ export function slotSignature(slots: number[]): string {
 }
 
 /** Effectifs par espèce, du plus nombreux au moins, pour un résumé lisible. */
-export function bySpecies(pets: PetRow[]): Array<{ species: string; count: number }> {
+function bySpecies(pets: PetRow[]): Array<{ species: string; count: number }> {
   const counts = new Map<string, number>();
   for (const pet of pets) counts.set(pet.species, (counts.get(pet.species) ?? 0) + 1);
   return [...counts.entries()]
@@ -204,10 +204,6 @@ export function summarizeHatch(slots: number[]): string {
   return `${slots.length} egg${slots.length === 1 ? "" : "s"} ready to hatch`;
 }
 
-/** Ce que le joueur demande quand il lance une vente. */
-export function describeSellRequest(pets: PetRow[]): string {
-  return pets.length === 1 ? `Sell ${pets[0].name}` : `Sell the ${pets.length} pets I do not want`;
-}
 
 /**
  * Ce qu'une vente emporte, tel qu'il l'annonce avant de demander.

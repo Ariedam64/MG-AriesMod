@@ -7,7 +7,6 @@ import {
 
 const CONTAINER_SELECTOR = ".css-vmnhaw";
 const LOCK_ICON_CLASS = "tm-sell-crops-lock";
-const LOCK_BORDER_STYLE = "3px solid rgb(188, 53, 215)";
 
 const DATA_BORDER = "tmSellLockBorder";
 const DATA_RADIUS = "tmSellLockRadius";

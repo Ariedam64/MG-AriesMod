@@ -66,9 +66,6 @@ function spriteKeyOf(entry: CatalogSprite): string | null {
   return name && category ? `sprite/${category}/${name}` : null;
 }
 
-function nameOf(entry: CatalogSprite, fallback: string): string {
-  return typeof entry?.name === "string" && entry.name ? entry.name : fallback;
-}
 
 function thing(entry: CatalogSprite, label: string, iconSizePx = BUBBLE_ICON_PX): GameThingTag | null {
   const sprite = spriteKeyOf(entry);
@@ -88,12 +85,6 @@ export function cropIcon(species: string): GameThingTag | null {
   return thing(entry?.crop ?? entry?.plant, "");
 }
 
-/** Le crop d'une espèce, icône et nom. */
-export function cropNamed(species: string): GameThingTag | null {
-  const entry = plantEntry(species);
-  const crop = entry?.crop ?? entry?.plant;
-  return thing(crop, nameOf(crop, species));
-}
 
 /** La graine d'une espèce, icône seule. */
 export function seedIcon(species: string): GameThingTag | null {

@@ -27,7 +27,7 @@ const DOUBLE_HATCH_ACTIONS = new Set(["doublehatch", "doublehatchii"]);
 /** Enough to out-live any log window; the log itself keeps far fewer. */
 const SEEN_LIMIT = 4000;
 
-export type HatchRarity = "normal" | "gold" | "rainbow";
+type HatchRarity = "normal" | "gold" | "rainbow";
 
 export interface EggCounters {
   /** Rare species id -> consecutive misses. */

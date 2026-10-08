@@ -18,7 +18,7 @@ import { MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND, DEFAULT_HEARTBEAT_INTERVAL } fro
 
 // ========== Types ==========
 
-export type PlayerStatePayload = {
+type PlayerStatePayload = {
   playerName: string | null;
   avatar?: string[] | null;
   modVersion: string | null;
@@ -43,7 +43,7 @@ export type PlayerStatePayload = {
   };
 };
 
-export type BuildPlayerStatePayloadOptions = {
+type BuildPlayerStatePayloadOptions = {
   playerId?: string | null;
   slotIndex?: number;
   roomIsPrivate?: boolean | null;
@@ -169,7 +169,7 @@ function normalizeActivityLog(slotData: any): any[] | null {
  * @param options - Options de construction
  * @returns Payload d'état ou null
  */
-export async function buildPlayerStatePayload(
+async function buildPlayerStatePayload(
   options: BuildPlayerStatePayloadOptions = {},
 ): Promise<PlayerStatePayload | null> {
   try {
@@ -305,7 +305,7 @@ export async function buildPlayerStatePayload(
   }
 }
 
-export async function logPlayerStatePayload(
+async function logPlayerStatePayload(
   options?: BuildPlayerStatePayloadOptions,
 ): Promise<PlayerStatePayload | null> {
   return buildPlayerStatePayload(options);
@@ -357,7 +357,7 @@ function snapshotPayloadForComparison(payload: PlayerStatePayload): string | nul
  * @param payload - Payload d'état du joueur
  * @returns true si l'envoi a réussi
  */
-export async function sendPlayerState(
+async function sendPlayerState(
   payload: PlayerStatePayload | null,
 ): Promise<boolean> {
   if (!payload) return false;
@@ -488,7 +488,7 @@ async function buildAndSendPlayerState(): Promise<void> {
   }
 }
 
-export function startPlayerStateReporting(
+function startPlayerStateReporting(
   intervalMs: number = DEFAULT_HEARTBEAT_INTERVAL,
 ): void {
   if (payloadReportingTimer !== null) return;
@@ -500,17 +500,12 @@ export function startPlayerStateReporting(
   }, normalizedMs);
 }
 
-export function stopPlayerStateReporting(): void {
-  if (payloadReportingTimer === null) return;
-  clearInterval(payloadReportingTimer);
-  payloadReportingTimer = null;
-}
 
-export type TriggerPlayerStateSyncOptions = {
+type TriggerPlayerStateSyncOptions = {
   force?: boolean;
 };
 
-export async function triggerPlayerStateSyncNow(
+async function triggerPlayerStateSyncNow(
   options: TriggerPlayerStateSyncOptions = {},
 ): Promise<void> {
   if (options.force) {

@@ -3,11 +3,11 @@ import type { SpriteTexture } from '../types';
 
 export const isAtlas = (j: any) => j && typeof j === 'object' && j.frames && j.meta && typeof j.meta.image === 'string';
 
-export function mkRect(Rectangle: any, x: number, y: number, w: number, h: number) {
+function mkRect(Rectangle: any, x: number, y: number, w: number, h: number) {
   return new Rectangle(x, y, w, h);
 }
 
-export function mkSubTex(Texture: any, baseTex: any, frame: any, orig: any, trim: any, rotate: number, anchor?: { x: number; y: number }) {
+function mkSubTex(Texture: any, baseTex: any, frame: any, orig: any, trim: any, rotate: number, anchor?: { x: number; y: number }) {
   let t: SpriteTexture;
   // Resolve the TextureSource: baseTex may be a Texture (v7/v8), a BaseTexture (v7), or a TextureSource (v8).
   const src = baseTex?.source ?? baseTex?.baseTexture ?? baseTex;

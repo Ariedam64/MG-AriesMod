@@ -23,10 +23,10 @@
  * `userId` avant `id` : quand les deux coexistent, `id` est un id local à la
  * table (cosmétiques de chat), pas le compte.
  */
-export const ACCOUNT_ID_KEYS = ["userId", "id", "discordUserId", "databaseUserId"] as const;
+const ACCOUNT_ID_KEYS = ["userId", "id", "discordUserId", "databaseUserId"] as const;
 
 /** Champ accepté en plus sur un userSlot, hérité de l'ancien schéma. */
-export const SLOT_ID_KEYS = [...ACCOUNT_ID_KEYS, "playerId"] as const;
+const SLOT_ID_KEYS = [...ACCOUNT_ID_KEYS, "playerId"] as const;
 
 const ROOM_ID_KEYS = ["id"] as const;
 

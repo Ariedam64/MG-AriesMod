@@ -27,13 +27,13 @@ const AUTO_RECO_DEFAULT_MS = 60_000;
 
 // Auto-reconnect temporarily disabled at the request of the game developers.
 // Set back to false to restore the feature (UI toggle + reconnect behaviour).
-export const AUTO_RECO_TEMPORARILY_DISABLED = true;
+const AUTO_RECO_TEMPORARILY_DISABLED = true;
 const PATH_KEEP_INVENTORY_SLOT_FREE = "misc.keepInventorySlotFree";
 const PATH_AUTO_STORE_SEED_SILO_ENABLED = "misc.autoStoreSeedSiloEnabled";
 const PATH_AUTO_STORE_DECOR_SHED_ENABLED = "misc.autoStoreDecorShedEnabled";
 const PATH_AUTO_STORE_TOOL_SHACK_ENABLED = "misc.autoStoreToolShackEnabled";
 
-export const readGhostEnabled = (def = false): boolean => {
+const readGhostEnabled = (def = false): boolean => {
   try {
     const stored = readAriesPath<unknown>(PATH_GHOST_MODE);
     if (typeof stored === "boolean") return stored;
@@ -42,21 +42,21 @@ export const readGhostEnabled = (def = false): boolean => {
     return !!stored;
   } catch { return def; }
 };
-export const writeGhostEnabled = (v: boolean) => {
+const writeGhostEnabled = (v: boolean) => {
   try {
     writeAriesPath(PATH_GHOST_MODE, !!v);
   } catch (err) {
   }
 };
 
-export const getGhostDelayMs = (): number => {
+const getGhostDelayMs = (): number => {
   try {
     const stored = readAriesPath<unknown>(PATH_GHOST_DELAY);
     const n = Math.floor(Number(stored || DEFAULT_DELAY_MS));
     return Math.max(5, n);
   } catch { return DEFAULT_DELAY_MS; }
 };
-export const setGhostDelayMs = (n: number) => {
+const setGhostDelayMs = (n: number) => {
   const v = Math.max(5, Math.floor(n || DEFAULT_DELAY_MS));
   try {
     writeAriesPath(PATH_GHOST_DELAY, v);
@@ -69,7 +69,7 @@ const clampAutoRecoDelay = (ms: number) => {
   return Math.min(AUTO_RECO_MAX_MS, Math.max(AUTO_RECO_MIN_MS, safeMs));
 };
 
-export const readAutoRecoEnabled = (def = false): boolean => {
+const readAutoRecoEnabled = (def = false): boolean => {
   try {
     const stored = readAriesPath<unknown>(PATH_AUTO_RECO_ENABLED);
     if (typeof stored === "boolean") return stored;
@@ -78,18 +78,18 @@ export const readAutoRecoEnabled = (def = false): boolean => {
     return !!stored;
   } catch { return def; }
 };
-export const writeAutoRecoEnabled = (on: boolean) => {
+const writeAutoRecoEnabled = (on: boolean) => {
   try { writeAriesPath(PATH_AUTO_RECO_ENABLED, !!on); } catch {}
 };
 
-export const getAutoRecoDelayMs = (): number => {
+const getAutoRecoDelayMs = (): number => {
   try {
     const raw = Number(readAriesPath<unknown>(PATH_AUTO_RECO_DELAY));
     if (Number.isFinite(raw)) return clampAutoRecoDelay(raw);
   } catch {}
   return AUTO_RECO_DEFAULT_MS;
 };
-export const setAutoRecoDelayMs = (ms: number) => {
+const setAutoRecoDelayMs = (ms: number) => {
   const v = clampAutoRecoDelay(ms);
   try { writeAriesPath(PATH_AUTO_RECO_DELAY, v); } catch {}
 };
@@ -106,11 +106,11 @@ export const readInventorySlotReserveEnabled = (def = false): boolean => {
   }
 };
 
-export const writeInventorySlotReserveEnabled = (on: boolean) => {
+const writeInventorySlotReserveEnabled = (on: boolean) => {
   try { writeAriesPath(PATH_KEEP_INVENTORY_SLOT_FREE, !!on); } catch {}
 };
 
-export const readAutoStoreSeedSiloEnabled = (def = false): boolean => {
+const readAutoStoreSeedSiloEnabled = (def = false): boolean => {
   try {
     const stored = readAriesPath<unknown>(PATH_AUTO_STORE_SEED_SILO_ENABLED);
     if (typeof stored === "boolean") return stored;
@@ -122,7 +122,7 @@ export const readAutoStoreSeedSiloEnabled = (def = false): boolean => {
   }
 };
 
-export const readAutoStoreDecorShedEnabled = (def = false): boolean => {
+const readAutoStoreDecorShedEnabled = (def = false): boolean => {
   try {
     const stored = readAriesPath<unknown>(PATH_AUTO_STORE_DECOR_SHED_ENABLED);
     if (typeof stored === "boolean") return stored;
@@ -134,7 +134,7 @@ export const readAutoStoreDecorShedEnabled = (def = false): boolean => {
   }
 };
 
-export const readAutoStoreToolShackEnabled = (def = false): boolean => {
+const readAutoStoreToolShackEnabled = (def = false): boolean => {
   try {
     const stored = readAriesPath<unknown>(PATH_AUTO_STORE_TOOL_SHACK_ENABLED);
     if (typeof stored === "boolean") return stored;
@@ -150,14 +150,14 @@ export const readAutoStoreToolShackEnabled = (def = false): boolean => {
 /*                               GHOST CONTROLLER                             */
 /* ========================================================================== */
 
-export type GhostController = {
+type GhostController = {
   start(): void;
   stop(): void;
   setSpeed(n: number): void;
   getSpeed(): number;
 };
 
-export function createGhostController(): GhostController {
+function createGhostController(): GhostController {
   let DELAY_MS = getGhostDelayMs();
   const KEYS = new Set<string>();
 
@@ -263,19 +263,19 @@ export function createGhostController(): GhostController {
 /*                              SEED DELETER LOGIC                            */
 /* ========================================================================== */
 
-export type SeedItem = {
+type SeedItem = {
   species: string;
   itemType: "Seed";
   quantity: number;
   id?: string;
 };
-export type DecorItem = {
+type DecorItem = {
   decorId: string;
   itemType: "Decor";
   quantity: number;
   id?: string;
 };
-export type InventoryShape = { items: any[]; favoritedItemIds?: string[] };
+type InventoryShape = { items: any[]; favoritedItemIds?: string[] };
 
 /* ========================================================================== */
 /*                             AUTO STORAGE LOGIC                             */
@@ -308,15 +308,15 @@ const toolShackAutoStore = createAutoStore({
   keyFromItem: storageKeyFromToolId,
 });
 
-export function setAutoStoreSeedSiloEnabled(on: boolean) {
+function setAutoStoreSeedSiloEnabled(on: boolean) {
   seedSiloAutoStore.setEnabled(on);
 }
 
-export function setAutoStoreDecorShedEnabled(on: boolean) {
+function setAutoStoreDecorShedEnabled(on: boolean) {
   decorShedAutoStore.setEnabled(on);
 }
 
-export function setAutoStoreToolShackEnabled(on: boolean) {
+function setAutoStoreToolShackEnabled(on: boolean) {
   toolShackAutoStore.setEnabled(on);
 }
 
@@ -451,7 +451,7 @@ async function waitSeedPause() {
 }
 
 /** Supprime les graines sélectionnées en appelant PlayerService.wish(species) autant de fois que qty. */
-export async function deleteSelectedSeeds(opts: DeleteOpts = {}) {
+async function deleteSelectedSeeds(opts: DeleteOpts = {}) {
   if (_seedDeleteBusy) {
     await toastSimple("Seed deleter", "Deletion already in progress.", "info");
     return;
@@ -572,7 +572,7 @@ export async function deleteSelectedSeeds(opts: DeleteOpts = {}) {
   }
 }
 
-export function cancelSeedDeletion() {
+function cancelSeedDeletion() {
   try {
     _seedDeletePaused = false;
     _seedDeletePauseResolver?.();
@@ -581,17 +581,17 @@ export function cancelSeedDeletion() {
   } catch (err) {
   }
 }
-export function isSeedDeletionRunning() {
+function isSeedDeletionRunning() {
   return _seedDeleteBusy;
 }
-export function pauseSeedDeletion() {
+function pauseSeedDeletion() {
   if (!_seedDeleteBusy || _seedDeletePaused) return;
   _seedDeletePaused = true;
   try {
     window.dispatchEvent(new CustomEvent("qws:seeddeleter:paused"));
   } catch {}
 }
-export function resumeSeedDeletion() {
+function resumeSeedDeletion() {
   if (!_seedDeletePaused) return;
   _seedDeletePaused = false;
   _seedDeletePauseResolver?.();
@@ -600,7 +600,7 @@ export function resumeSeedDeletion() {
     window.dispatchEvent(new CustomEvent("qws:seeddeleter:resumed"));
   } catch {}
 }
-export function isSeedDeletionPaused() {
+function isSeedDeletionPaused() {
   return _seedDeletePaused;
 }
 
@@ -632,7 +632,7 @@ function normalizeSeedItem(x: any, _idx: number): SeedItem | null {
   return { species, itemType: "Seed", quantity, id: `seed:${species}` };
 }
 
-export async function getMySeedInventory(): Promise<SeedItem[]> {
+async function getMySeedInventory(): Promise<SeedItem[]> {
   try {
     const raw = await Atoms.inventory.mySeedInventory.get();
     if (!Array.isArray(raw)) return [];
@@ -664,7 +664,7 @@ function normalizeDecorItem(x: any): DecorItem | null {
   return { decorId, itemType: "Decor", quantity, id: `decor:${decorId}` };
 }
 
-export async function getMyDecorInventory(): Promise<DecorItem[]> {
+async function getMyDecorInventory(): Promise<DecorItem[]> {
   try {
     const raw = await Atoms.inventory.myDecorInventory.get();
     if (!Array.isArray(raw)) return [];
@@ -679,16 +679,6 @@ function buildDecorInventoryShapeFrom(items: DecorItem[]): InventoryShape {
 }
 
 // Remplit le cache des quantités par nom d’affichage
-export async function buildSeedInventoryShape(): Promise<InventoryShape | null> {
-  const seeds = await getMySeedInventory();
-  seedStockByName.clear();
-  for (const s of seeds) {
-    const disp = seedDisplayNameFromSpecies(s.species);
-    seedStockByName.set(disp, (seedStockByName.get(disp) ?? 0) + (s.quantity ?? 0));
-  }
-  if (!seeds.length) return null;
-  return { items: seeds, favoritedItemIds: [] };
-}
 
 /* ------------------------------ overlay (UI) ------------------------------ */
 
@@ -1079,7 +1069,7 @@ async function endSelectedNameListener() {
 
 /* ------------------------- Ouverture simple (preview) ------------------------- */
 
-export async function openSeedInventoryPreview() {
+async function openSeedInventoryPreview() {
   try {
     const src = await getMySeedInventory();
     if (!src.length) {
@@ -1098,7 +1088,7 @@ export async function openSeedInventoryPreview() {
  * ouvre l’inventaire des graines (seulement) + overlay discret déplaçable,
  * écoute les sélections, puis restaure l’UI à la fermeture.
  */
-export async function openSeedSelectorFlow(setWindowVisible?: (v: boolean) => void) {
+async function openSeedSelectorFlow(setWindowVisible?: (v: boolean) => void) {
   try {
     setWindowVisible?.(false);
 
@@ -1423,7 +1413,7 @@ async function waitDecorPause() {
   }
 }
 
-export async function deleteSelectedDecor(opts: DecorDeleteOpts = {}) {
+async function deleteSelectedDecor(opts: DecorDeleteOpts = {}) {
   if (_decorDeleteBusy) {
     await toastSimple("Decor deleter", "Deletion already in progress.", "info");
     return;
@@ -1516,7 +1506,7 @@ export async function deleteSelectedDecor(opts: DecorDeleteOpts = {}) {
   }
 }
 
-export function cancelDecorDeletion() {
+function cancelDecorDeletion() {
   try {
     _decorDeletePaused = false;
     _decorDeletePauseResolver?.();
@@ -1524,17 +1514,17 @@ export function cancelDecorDeletion() {
     _decorDeleteAbort?.abort();
   } catch {}
 }
-export function isDecorDeletionRunning() {
+function isDecorDeletionRunning() {
   return _decorDeleteBusy;
 }
-export function pauseDecorDeletion() {
+function pauseDecorDeletion() {
   if (!_decorDeleteBusy || _decorDeletePaused) return;
   _decorDeletePaused = true;
   try {
     window.dispatchEvent(new CustomEvent("qws:decordeleter:paused"));
   } catch {}
 }
-export function resumeDecorDeletion() {
+function resumeDecorDeletion() {
   if (!_decorDeletePaused) return;
   _decorDeletePaused = false;
   _decorDeletePauseResolver?.();
@@ -1543,11 +1533,11 @@ export function resumeDecorDeletion() {
     window.dispatchEvent(new CustomEvent("qws:decordeleter:resumed"));
   } catch {}
 }
-export function isDecorDeletionPaused() {
+function isDecorDeletionPaused() {
   return _decorDeletePaused;
 }
 
-export async function openDecorSelectorFlow(setWindowVisible?: (v: boolean) => void) {
+async function openDecorSelectorFlow(setWindowVisible?: (v: boolean) => void) {
   try {
     setWindowVisible?.(false);
 

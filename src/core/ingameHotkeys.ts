@@ -27,7 +27,7 @@ interface RemapSpec {
   meta?: boolean;
 }
 
-export interface RapidFireOptions {
+interface RapidFireOptions {
   trigger: Combo;        // touche physique à maintenir (ex: "KeyP")
   emit?: Combo;          // touche à émettre (défaut = trigger)
   rateHz?: number;       // cadence (défaut 12 Hz)

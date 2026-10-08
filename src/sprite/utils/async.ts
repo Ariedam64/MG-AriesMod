@@ -7,8 +7,6 @@
 const pageWin: any = (globalThis as any).unsafeWindow || globalThis;
 
 export const sleep = (ms: number) => new Promise(resolve => pageWin.setTimeout(resolve, ms));
-export const raf = (fn: FrameRequestCallback) => pageWin.requestAnimationFrame(fn);
-export const nextFrame = () => new Promise<void>(resolve => pageWin.requestAnimationFrame(() => resolve()));
 
 export async function waitWithTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   const t0 = performance.now();

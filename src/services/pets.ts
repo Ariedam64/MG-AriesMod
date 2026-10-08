@@ -73,8 +73,6 @@ export type PetsUIState = {
   selectedPetId: string | null;
 };
 
-type PetImgEntry = { img64?: { normal?: string; gold?: string; rainbow?: string } };
-type PetCatalogLoose = Record<string, PetImgEntry>;
 
 const PATH_PETS_OVERRIDES = "pets.overrides";
 const PATH_PETS_INSTANT_FEED = "pets.instantFeed";
@@ -111,7 +109,6 @@ let unsubNextHotkey: (() => void) | null = null;
 let unsubPrevHotkey: (() => void) | null = null;
 let orderedTeamIds: string[] = [];
 let lastUsedTeamId: string | null = null;
-let _lastTeamHotkeyAt = 0;
 
 export type TeamLite = { id: string; name?: string | null };
 
@@ -169,22 +166,8 @@ function ensureLastUsedTeamIsValid(): void {
   }
 }
 
-function adjacentTeam(direction: 1 | -1): string | null {
-  if (!orderedTeamIds.length) return null;
-  if (!lastUsedTeamId || !orderedTeamIds.includes(lastUsedTeamId)) {
-    return direction === 1
-      ? orderedTeamIds[0] ?? null
-      : orderedTeamIds[orderedTeamIds.length - 1] ?? null;
-  }
-  if (orderedTeamIds.length === 1) return orderedTeamIds[0] ?? null;
-  const currentIndex = orderedTeamIds.indexOf(lastUsedTeamId);
-  let nextIndex = currentIndex + direction;
-  if (nextIndex < 0) nextIndex = orderedTeamIds.length - 1;
-  if (nextIndex >= orderedTeamIds.length) nextIndex = 0;
-  return orderedTeamIds[nextIndex] ?? null;
-}
 
-export function markTeamAsUsed(teamId: string | null): void {
+function markTeamAsUsed(teamId: string | null): void {
   lastUsedTeamId = teamId ? String(teamId) : null;
 }
 
@@ -250,7 +233,6 @@ export function installPetTeamHotkeysOnce(onUseTeam: (teamId: string) => void) {
         if (!teamId) return;
         markTeamAsUsed(teamId);
         onUseTeam(teamId);
-        _lastTeamHotkeyAt = Date.now();
       };
 
       if (hkPrevTeam && matchHotkey(e, hkPrevTeam)) {
@@ -295,36 +277,6 @@ export function installPetTeamHotkeysOnce(onUseTeam: (teamId: string) => void) {
 
 /* --------------------------------- Abilities -------------------------------- */
 
-export function petImg64From(
-  species?: string,
-  mutation?: string | string[]
-): string | undefined {
-  // 1) normaliser l’espèce pour matcher les clés du catalog
-  const spRaw = String(species || "").trim();
-  if (!spRaw) return undefined;
-  const sp = _canonicalSpecies(spRaw); // <-- utilise déjà petCatalog
-
-  const entry = (petCatalog as unknown as PetCatalogLoose)[sp];
-  const imgs = entry?.img64;
-  if (!imgs) {
-    return undefined;
-  }
-
-  // 2) accepter string[] et déduire la "clé" à partir de la liste
-  const toLower = (v: unknown) => String(v || "").toLowerCase();
-  const muts = Array.isArray(mutation) ? mutation.map(toLower) : [toLower(mutation)];
-
-  // synonyms : "none"/"aucune" -> normal
-  const has = (s: string) => muts.some(m => m.includes(s));
-  const key: keyof NonNullable<PetImgEntry["img64"]> =
-    has("rainbow") ? "rainbow" :
-    has("gold")    ? "gold"    :
-    "normal";
-
-  const src = (imgs as any)?.[key] || imgs.normal; // fallback normal
-  if (!src) return undefined;
-  return String(src).startsWith("data:") ? src : `data:image/png;base64,${src}`;
-}
 
 type AbilityDef = { name?: string; description?: string; trigger?: string; baseProbability?: number; baseParameters?: any };
 const _AB: Record<string, AbilityDef> = (petAbilities as any) ?? {};
@@ -585,13 +537,6 @@ async function _currentActiveTeamId(): Promise<string | null> {
   } catch { return null; }
 }
 
-async function _syncLastUsedFromActive(): Promise<void> {
-  try {
-    const slots = await _getActivePetSlotIds();
-    const tid = _teamIdFromSlots(slots);
-    if (tid) lastUsedTeamId = tid;
-  } catch {}
-}
 
 /* ------------------------- Native pet-team sync (game <-> mod) ------------------------- */
 // The game bundle exposes a built-in pet-team system (SavePetTeam / ApplyPetTeam /
@@ -1017,7 +962,7 @@ async function _ensureInventoryWatchersStarted() {
 
 /* ------------------------------- UI helpers --------------------------------- */
 
-export async function clearHandSelection(): Promise<void> {
+async function clearHandSelection(): Promise<void> {
   try { await Atoms.inventory.setSelectedIndexToEnd.set(null); } catch (err) { }
   try { await Atoms.inventory.mySelectedItemId.set(null); } catch (err) { }
   try { await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.set(null); } catch (err) {  }

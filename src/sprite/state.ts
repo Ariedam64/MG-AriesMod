@@ -1,7 +1,7 @@
 import { DEFAULT_CFG } from './settings';
 import type { SpriteContext, SpriteState } from './types';
 
-export function createInitialState(): SpriteState {
+function createInitialState(): SpriteState {
   return {
     started: false,
     open: false,

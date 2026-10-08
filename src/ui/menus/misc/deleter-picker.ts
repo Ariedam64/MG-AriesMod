@@ -13,7 +13,7 @@
 
 import { attachSpriteIcon } from "../../spriteIconCache";
 import {
-  BORDER, CARD_BG, css, DANGER, TEAL, TEAL_BORDER, TEAL_DIM,
+  BORDER, CARD_BG, css, DANGER, TEAL_BORDER, TEAL_DIM,
   TEXT, TEXT_DIM, button, textField,
 } from "../panel-ui";
 import { openModal } from "../companion/modal";
@@ -258,5 +258,3 @@ export function openDeleterPicker(options: DeleterPickerOptions): void {
     });
 }
 
-/** Re-exported so callers styling their own trigger stay on the same accent. */
-export const DELETER_PICKER_ACCENT = TEAL;

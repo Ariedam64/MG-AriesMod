@@ -1,6 +1,6 @@
 // src/data/dynamic/types.ts
 
-export type CapturedDataKey = "items" | "decor" | "mutations" | "eggs" | "pets" | "abilities" | "plants";
+type CapturedDataKey = "items" | "decor" | "mutations" | "eggs" | "pets" | "abilities" | "plants";
 /**
  * `enums` is not a catalog: it holds the game's ordered value lists (rarity
  * order, weather order, …), which is where display ordering comes from rather

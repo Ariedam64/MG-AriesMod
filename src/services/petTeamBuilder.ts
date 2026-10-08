@@ -14,12 +14,12 @@ import {
 import { computeTeamAutonomy } from "./petTeamStats";
 import type { InventoryPet } from "./pets";
 
-export type TeamBuilderMode = "active" | "afk";
+type TeamBuilderMode = "active" | "afk";
 
 // abilityId is the category's best-tier ability id — the UI resolves it to
 // a real color via getAbilityChipColors() (already used for the ability
 // dots), so the categorization here stays pure/DOM-free.
-export type MergedCategory = { id: string; label: string; shortLabel: string; icon: string; abilityId: string };
+type MergedCategory = { id: string; label: string; shortLabel: string; icon: string; abilityId: string };
 
 // One team can serve several categories at once (e.g. a Turtle team hits
 // both Plant Growth Speed and Egg Growth Speed) — categories is never empty,
@@ -348,7 +348,7 @@ function pickSustainPet(
 }
 
 /** Best overall feeder, with no particular goal in mind. */
-export function getBestSustainPet(pets: InventoryPet[]): InventoryPet | null {
+function getBestSustainPet(pets: InventoryPet[]): InventoryPet | null {
   return pickSustainPet(pets, null, false);
 }
 

@@ -64,7 +64,7 @@ function waitForAtom(label: string): Promise<unknown | null> {
   });
 }
 
-export async function ensureStore() {
+async function ensureStore() {
 try { await ensureJotaiStore(); } catch {}
 }
 
@@ -75,7 +75,7 @@ try { await ensureJotaiStore(); } catch {}
  * répondre tout de suite, quitte à rendre le fallback. Pour une valeur qui
  * n'existe pas encore au boot, passer par un abonnement.
  */
-export async function select<T>(label: string, fallback?: T): Promise<T | undefined> {
+async function select<T>(label: string, fallback?: T): Promise<T | undefined> {
 await ensureStore();
 const atom = getAtomByLabel(label);
 if (!atom) return fallback;
@@ -89,7 +89,7 @@ try { return await jGet<T>(atom); } catch { return fallback; }
  * lever d'erreur — un renommage côté jeu casse donc une fonctionnalité en
  * silence. Ce test permet de choisir entre plusieurs noms possibles.
  */
-export async function hasAtom(label: string): Promise<boolean> {
+async function hasAtom(label: string): Promise<boolean> {
   await ensureStore();
   return !!getAtomByLabel(label);
 }
@@ -101,7 +101,7 @@ export async function hasAtom(label: string): Promise<boolean> {
  * l'enregistre. L'unsubscribe rendu annule aussi bien l'attente que
  * l'abonnement réel, et reste sûr à appeler plusieurs fois.
  */
-export async function subscribe<T>(label: string, cb: (value: T) => void): Promise<Unsubscribe> {
+async function subscribe<T>(label: string, cb: (value: T) => void): Promise<Unsubscribe> {
   await ensureStore();
   let cancelled = false;
   let attachedUnsub: Unsubscribe | null = null;
@@ -144,7 +144,7 @@ export async function subscribe<T>(label: string, cb: (value: T) => void): Promi
  * poussée au moment de l'attache, pas au boot : sinon l'abonné resterait sur le
  * vide lu trop tôt jusqu'au prochain changement, qui peut ne jamais venir.
  */
-export async function subscribeImmediate<T>(label: string, cb: (value: T) => void): Promise<Unsubscribe> {
+async function subscribeImmediate<T>(label: string, cb: (value: T) => void): Promise<Unsubscribe> {
   await ensureStore();
   let cancelled = false;
   let attachedUnsub: Unsubscribe | null = null;
@@ -183,7 +183,7 @@ export async function subscribeImmediate<T>(label: string, cb: (value: T) => voi
   };
 }
 
-export async function set(label: string, value: any) {
+async function set(label: string, value: any) {
   await ensureStore();
   const atom = getAtomByLabel(label);
   if (!atom) return;

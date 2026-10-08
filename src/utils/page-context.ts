@@ -14,10 +14,8 @@ const pageWin =
 export const pageWindow = pageWin;
 
 /** Whether the userscript is running in an isolated sandbox. */
-export const isIsolatedContext = pageWin !== sandboxWin;
+const isIsolatedContext = pageWin !== sandboxWin;
 
-/** Provide the sandbox window in case something explicitly needs it. */
-export const sandboxWindow = sandboxWin;
 
 /** Mirror a global value onto both the page window and sandbox window. */
 export function shareGlobal(name: string, value: any) {

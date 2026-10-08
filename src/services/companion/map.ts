@@ -97,7 +97,7 @@ function toSet(source: Iterable<number> | null | undefined): Set<number> {
  * condition est active, et un companion planté au milieu d'une boutique fermée
  * est bien plus visible qu'un companion qui contourne une zone un peu large.
  */
-export function buildCompanionMap(raw: GameMap | null | undefined): CompanionMap | null {
+function buildCompanionMap(raw: GameMap | null | undefined): CompanionMap | null {
   if (!raw || !Number.isFinite(raw.cols) || !Number.isFinite(raw.rows)) return null;
   const cols = Number(raw.cols);
   const rows = Number(raw.rows);

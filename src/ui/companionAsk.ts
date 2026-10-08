@@ -231,9 +231,3 @@ export function mountCompanionAsk(): void {
   sync();
 }
 
-/** Retire la carte et cesse d'écouter. */
-export function unmountCompanionAsk(): void {
-  unsubscribe?.();
-  unsubscribe = null;
-  hide();
-}

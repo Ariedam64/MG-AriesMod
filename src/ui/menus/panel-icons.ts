@@ -17,7 +17,7 @@ const css = (el: HTMLElement, style: Partial<CSSStyleDeclaration>) =>
  * returned rather than a single guess — `attachSpriteIcon` takes the first that
  * resolves.
  */
-export function spriteLookup(frameKey: string): { categories: string[]; name: string } {
+function spriteLookup(frameKey: string): { categories: string[]; name: string } {
   const parts = frameKey.split('/').filter(Boolean);
   const name = parts[parts.length - 1] ?? frameKey;
   const category = parts.length >= 2 ? parts[parts.length - 2] : '';

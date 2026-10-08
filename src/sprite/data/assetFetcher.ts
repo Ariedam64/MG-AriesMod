@@ -80,7 +80,7 @@ function gmRequest(url: string, type: 'text' | 'blob' | 'json'): Promise<any> {
   );
 }
 
-export async function gm(url: string, type: 'text' | 'blob' | 'json' = 'text') {
+async function gm(url: string, type: 'text' | 'blob' | 'json' = 'text') {
   const root: any = (globalThis as any).unsafeWindow || (globalThis as any);
 
   if (typeof GM_xmlhttpRequest !== 'function') {
@@ -283,7 +283,7 @@ function isAtlasJsonPath(path: string): boolean {
  * (`meta.scale: 1`), which is what a replacement image should be fitted to.
  * Taking both would index every frame twice with conflicting rectangles.
  */
-export function extractAtlasJsons(manifest: ManifestBundle) {
+function extractAtlasJsons(manifest: ManifestBundle) {
   const jsons = new Set<string>();
   for (const bundle of manifest.bundles || []) {
     for (const asset of bundle.assets || []) {

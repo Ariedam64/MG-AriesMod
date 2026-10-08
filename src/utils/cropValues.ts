@@ -27,7 +27,7 @@ export interface AppendOptions {
 }
 export interface AppendController { stop(): void; runOnce(): void; isRunning(): boolean; }
 
-export const DEFAULTS = {
+const DEFAULTS = {
   rootSelector: ".McFlex.css-fsggty, .McFlex.css-6prrn",
   innerSelector: ".McFlex.css-1l3zq7, .McFlex.css-11dqzw",
   markerClass: "tm-crop-price",
@@ -289,21 +289,6 @@ export function startCropValuesObserverFromGardenAtom(options: AppendOptions = {
   };
 }
 
-export function appendSpanToAll(opts: Omit<AppendOptions, "log"> = {}): void {
-  if (!hasDOM) return;
-
-  const selectors: PanelSelectors = {
-    rootSelector: opts.rootSelector ?? DEFAULTS.rootSelector,
-    innerSelector: opts.innerSelector ?? DEFAULTS.innerSelector,
-  };
-  const markerClass = opts.markerClass ?? DEFAULTS.markerClass;
-  const root: ParentNode = opts.root ?? document;
-  const watcher = __singletonPriceWatcherGO();
-  const text = formatCoins(watcher.get());
-  const locked = getLockerHarvestAllowed() === false;
-
-  updatePanels(root, selectors, markerClass, text, locked, readShowCropPrice());
-}
 
 /* ================= helpers ================= */
 
@@ -682,8 +667,3 @@ function ensureSpanAtEnd(inner: Element, text: string, markerClass: string): voi
 
 
 // singleton pour appendSpanToAll()
-let __goWatcher: ReturnType<typeof startCropPriceWatcherViaGardenObject> | null = null;
-function __singletonPriceWatcherGO() {
-  if (!__goWatcher) __goWatcher = startCropPriceWatcherViaGardenObject();
-  return __goWatcher;
-}

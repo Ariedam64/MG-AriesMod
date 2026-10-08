@@ -73,7 +73,7 @@ export function plantItemIcon(item: { kind: PlantKind; id: string; name: string 
 }
 
 /** Infobulle d'un posable : le nom, et ce que c'est quand ce n'est pas une graine. */
-export function plantItemTitle(item: PlantItem): string {
+function plantItemTitle(item: PlantItem): string {
   return item.kind === "egg" ? `${item.name} (egg)` : item.name;
 }
 

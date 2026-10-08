@@ -124,6 +124,3 @@ export function uninstallSpeechRewriter(): void {
   wrapped = null;
 }
 
-export function isSpeechRewriterInstalled(): boolean {
-  return wrapped !== null;
-}

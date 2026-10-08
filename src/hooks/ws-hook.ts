@@ -37,11 +37,6 @@ let autoRecoCountdownInterval: number | null = null;
 type AutoRecoOverlay = { update: (ms: number) => void; destroy: () => void };
 let autoRecoOverlay: AutoRecoOverlay | null = null;
 
-/** When true, auto-reconnect is suppressed (e.g. sell flow navigating to another room). */
-let suppressAutoReco = false;
-export function setSuppressAutoReco(value: boolean): void {
-  suppressAutoReco = value;
-}
 
 function onWebSocketClose(cb: WsCloseListener): () => void {
   wsCloseListeners.push(cb);
@@ -411,17 +406,17 @@ type ResolvedSendMessage =
   | { kind: "static" | "proto"; fn: (message: unknown, ...rest: any[]) => unknown }
   | null;
 
-export type MessageInterceptorContext = {
+type MessageInterceptorContext = {
   thisArg: unknown;
   args: any[];
 };
 
-export type MessageInterceptorResult =
+type MessageInterceptorResult =
   | void
   | { kind: "drop" }
   | { kind: "replace"; message: any };
 
-export type MessageInterceptor = (
+type MessageInterceptor = (
   message: any,
   context: MessageInterceptorContext
 ) => MessageInterceptorResult;
@@ -440,7 +435,7 @@ let interceptorStatus: InterceptorHookStatus = readSharedGlobal<boolean>(
 let interceptorPoll: number | null = null;
 let interceptorTimeout: number | null = null;
 
-export function registerMessageInterceptor(
+function registerMessageInterceptor(
   type: string,
   interceptor: MessageInterceptor
 ): () => void {

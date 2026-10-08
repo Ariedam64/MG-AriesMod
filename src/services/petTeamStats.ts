@@ -44,7 +44,7 @@ function stripTierSuffix(text: string): string {
   return text.replace(/\s*(?:_NEW)?(?:IV|I{1,3})$/, "").trim() || text;
 }
 
-export type EffectContributor = {
+type EffectContributor = {
   petId: string;
   petName: string;
   abilityId: string;

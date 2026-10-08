@@ -36,7 +36,7 @@ declare global {
 }
 
 // ----------------- Interfaces publiques -----------------
-export interface AudioPlayerOptions {
+interface AudioPlayerOptions {
   atomKey?: string;   // clé localStorage (par défaut: "soundEffectsVolumeAtom")
   min?: number;       // 0.001
   max?: number;       // 0.2000000000000001
@@ -45,21 +45,21 @@ export interface AudioPlayerOptions {
   minVariantsPerAutoGroup?: number; // 2
 }
 
-export interface SfxInfo {
+interface SfxInfo {
   url: string;
   name?: string;
   logicalName?: string;
   sources?: string; // provenance(s): "perf, howler, cache:xxx, ref:xxx, dom, html"
 }
 
-export interface VolumeInfo {
+interface VolumeInfo {
   raw: number | null;
   clamped: number;
   vol: number; // final = (clamped → 0 si ~min) × Howler master × gainFactor
 }
 
 // ----------------- Implémentation -----------------
-export class AudioPlayer {
+class AudioPlayer {
   private found = new Set<string>();
   private meta = new Map<string, { from: Set<string>; name: string; logicalName: string }>();
   private groupsMap = new Map<string, Set<string>>();

@@ -22,7 +22,7 @@ import { compose, spaced, type BubbleLine } from "./bubbleTags";
 import { petSpeciesIcon, petThing } from "./bubbleIcons";
 
 export { describeFeed, feedSignature } from "./feedScope";
-export type { FeedCandidate, FeedSource } from "./feedScope";
+export type { FeedCandidate } from "./feedScope";
 function petIdOf(pet: PetInfo): string {
   return String(pet?.slot?.id ?? "");
 }

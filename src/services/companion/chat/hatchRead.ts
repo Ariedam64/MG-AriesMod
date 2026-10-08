@@ -20,7 +20,7 @@ import type { PetRow } from "./hatch";
  */
 export const INVENTORY_CAPACITY = 98;
 
-export type AbilityChoice = { id: string; name: string };
+type AbilityChoice = { id: string; name: string };
 
 export type HatchScope = {
   /** Cases d'œufs prêtes à éclore. */
@@ -223,7 +223,7 @@ export async function readInventoryCount(): Promise<number> {
  * le jour où le jeu en ajoute une troisième, et la source dynamique porte bien
  * ce champ.
  */
-export function rolledMutations(): string[] {
+function rolledMutations(): string[] {
   try {
     return Object.entries(mutationCatalog as Record<string, { baseChance?: unknown }>)
       .filter(([, def]) => Number(def?.baseChance) > 0)
@@ -257,7 +257,3 @@ export async function readHatchScope(): Promise<HatchScope> {
   };
 }
 
-/** Le nom affichable d'une capacité, pour les résumés qui n'ont que son id. */
-export function abilityNames(scope: HatchScope): Map<string, string> {
-  return new Map(scope.possibleAbilities.map((entry) => [entry.id, entry.name]));
-}

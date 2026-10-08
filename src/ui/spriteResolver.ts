@@ -74,7 +74,7 @@ export const API_TO_INTERNAL: Record<string, string> = {
 };
 
 /** Map from the categories used in attachSpriteIcon calls → internal cats to search */
-export const SEARCH_CATS: Record<string, string[]> = {
+const SEARCH_CATS: Record<string, string[]> = {
   plant: ["plant", "tallplant"],
   tallplant: ["tallplant", "plant"],
   crop: ["plant", "tallplant"],
@@ -102,7 +102,7 @@ export function normalizeSpriteName(value: string): string {
   return str.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-export function expandCategories(categories: string[]): Set<string> {
+function expandCategories(categories: string[]): Set<string> {
   const internalCats = new Set<string>();
   for (const cat of categories) {
     const expanded = SEARCH_CATS[cat] || [cat];
@@ -251,10 +251,6 @@ function buildCatalogIndex(): void {
   }
 }
 
-export function catalogIndexSize(): number {
-  buildCatalogIndex();
-  return catalogIndex.size;
-}
 
 function findCatalogSprite(internalCats: Set<string>, normTarget: string): SpriteEntry | null {
   if (!normTarget) return null;

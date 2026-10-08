@@ -5,15 +5,14 @@ import {
   plantCatalog,
   toolCatalog,
 } from "../data";
-import type { Unsubscribe } from "../store/api";
 import { getPetInfo } from "./petCalcul";
 import { estimateProduceValue, valueFromInventoryProduce } from "./calculators";
 import type { InventoryProduce } from "./calculators";
 import { readCropSize } from "./cropSize";
 
-export type InventoryValueLogKey = "seeds" | "tools" | "eggs" | "decors";
+type InventoryValueLogKey = "seeds" | "tools" | "eggs" | "decors";
 
-export interface PetInventoryValueEntry {
+interface PetInventoryValueEntry {
   id: string | null;
   name: string | null;
   petSpecies: string | null;
@@ -23,12 +22,12 @@ export interface PetInventoryValueEntry {
   coinMultiplier: number | null;
 }
 
-export interface PetInventoryValueSummary {
+interface PetInventoryValueSummary {
   totalValue: number;
   pets: PetInventoryValueEntry[];
 }
 
-export interface PlantSlotInventoryValueEntry {
+interface PlantSlotInventoryValueEntry {
   species: string | null;
   /** Whole-number Crop Size in [50, 100]. */
   size: number | null;
@@ -36,7 +35,7 @@ export interface PlantSlotInventoryValueEntry {
   value: number | null;
 }
 
-export interface PlantInventoryValueEntry {
+interface PlantInventoryValueEntry {
   id: string | null;
   species: string | null;
   plantedAt: number | null;
@@ -45,13 +44,13 @@ export interface PlantInventoryValueEntry {
   slots: PlantSlotInventoryValueEntry[];
 }
 
-export interface PlantInventoryValueSummary {
+interface PlantInventoryValueSummary {
   totalValue: number;
   playersInRoom: number | null;
   plants: PlantInventoryValueEntry[];
 }
 
-export interface CropInventoryValueEntry {
+interface CropInventoryValueEntry {
   id: string | null;
   species: string | null;
   /** Whole-number Crop Size in [50, 100]. */
@@ -60,12 +59,12 @@ export interface CropInventoryValueEntry {
   value: number | null;
 }
 
-export interface CropInventoryValueSummary {
+interface CropInventoryValueSummary {
   totalValue: number;
   crops: CropInventoryValueEntry[];
 }
 
-export type InventoryValueLogEntry = {
+type InventoryValueLogEntry = {
   quantity: number | null;
   coinPrice: number | null;
   value: number | null;
@@ -76,7 +75,7 @@ export type InventoryValueLogEntry = {
   | { decorId: string | null }
 );
 
-export interface InventoryValueLogSummary {
+interface InventoryValueLogSummary {
   totalValue: number;
   items: InventoryValueLogEntry[];
 }
@@ -183,7 +182,6 @@ const INVENTORY_VALUE_CATEGORIES: InventoryValueCategoryConfig<any>[] = [
 
 let currentSnapshot: InventoryValueSnapshot | null = null;
 let watcherPromise: Promise<void> | null = null;
-let unsubscribe: Unsubscribe | null = null;
 let computeCounter = 0;
 const listeners = new Set<(snapshot: InventoryValueSnapshot | null) => void>();
 
@@ -521,9 +519,6 @@ export async function ensureInventoryValueWatcher(): Promise<void> {
     }
 
     try {
-      unsubscribe = await Atoms.inventory.myInventory.onChange((next) => {
-        void refreshSnapshot(next);
-      });
     } catch (error) {
       console.warn("[InventoryValue] Impossible de s'abonner à myInventory", error);
     }
@@ -545,15 +540,3 @@ export function onInventoryValueChange(
   };
 }
 
-export function stopInventoryValueWatcher(): void {
-  watcherPromise = null;
-  computeCounter++;
-  if (unsubscribe) {
-    try {
-      unsubscribe();
-    } catch (error) {
-      console.warn("[InventoryValue] Impossible de stopper l'abonnement myInventory", error);
-    }
-    unsubscribe = null;
-  }
-}

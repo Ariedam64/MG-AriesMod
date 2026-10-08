@@ -9,7 +9,7 @@ import {
   extractBalancedBlock,
 } from "./bundleParser";
 
-export interface AbilityColor {
+interface AbilityColor {
   bg: string;
   hover: string;
 }

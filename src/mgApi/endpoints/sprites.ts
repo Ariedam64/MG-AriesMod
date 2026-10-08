@@ -2,7 +2,7 @@
 
 import { buildMgApiUrl, mgApiGetJson } from "../client/http";
 
-export type SpriteCatalogEntry = { name: string; url: string };
+type SpriteCatalogEntry = { name: string; url: string };
 
 export type SpriteCatalogResponse = {
   count: number;

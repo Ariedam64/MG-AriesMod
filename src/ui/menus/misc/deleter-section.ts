@@ -40,7 +40,7 @@ const formatDurationShort = (ms: number): string => {
 const formatFinishTime = (timestamp: number): string =>
   new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-export interface DeleterSelectionItem {
+interface DeleterSelectionItem {
   id?: string;
   label?: string;
   qty?: number;

@@ -1,7 +1,6 @@
 // src/services/keybinds.ts
 import { inGameHotkeys } from "../core/ingameHotkeys";
-import { hotkeyToPretty, hotkeyToString, matchHotkey, stringToHotkey, type Hotkey } from "../ui/menu";
-import { isKeybindCaptureActive } from "../utils/keyboard";
+import { hotkeyToString, matchHotkey, stringToHotkey, type Hotkey } from "../ui/menu";
 import { readAriesPath, updateAriesPath } from "../utils/localStorage";
 
 export type { Hotkey } from "../ui/menu";
@@ -64,14 +63,8 @@ export interface KeybindSection {
   actions: KeybindAction[];
 }
 
-export type KeyPhase = "down" | "hold" | "up";
-export type KeybindDispatch = (
-  id: KeybindAction["id"],
-  phase: KeyPhase,
-  ev: KeyboardEvent
-) => void;
 
-export interface KeybindHoldDetectionConfig {
+interface KeybindHoldDetectionConfig {
   label: string;
   description?: string;
   defaultEnabled?: boolean;
@@ -339,7 +332,7 @@ const keybindSections: KeybindSection[] = SECTION_CONFIG.map((section) => {
 });
 
 const PET_SECTION_ID = "pets";
-export const PET_TEAM_ACTION_PREFIX = "pets.team.";
+const PET_TEAM_ACTION_PREFIX = "pets.team.";
 export const PET_TEAM_NEXT_ID = "pets.team.next" as const;
 export const PET_TEAM_PREV_ID = "pets.team.prev" as const;
 
@@ -519,15 +512,6 @@ function applyGameActionBlockers(): void {
   }
 }
 
-export function setGameActionBlocked(source: string, blocked: boolean): void {
-  if (!source) return;
-  if (blocked) {
-    gameActionBlockers.add(source);
-  } else {
-    gameActionBlockers.delete(source);
-  }
-  applyGameActionBlockers();
-}
 
 function hotkeyToCombo(hk: Hotkey | null): string | null {
   if (!hk) return null;
@@ -672,113 +656,6 @@ function syncGameKeybind(id: GameKeybindId): void {
   }
 }
 
-export function mountGlobalKeybinds(opts: {
-  onAction: KeybindDispatch;                // quoi faire quand une action est dÃ©clenchÃ©e
-  isRebinding?: () => boolean;              // vrai quand tu es en train dâ€™enregistrer un nouveau bind
-  canUseGameplayInput?: () => boolean;      // ex: () => document.hasFocus() && !ui.isPaused()
-  preventDefault?: boolean;                 // false pour ne pas stopper scroll/shortcuts navigateur
-  actionIds?: Array<KeybindAction["id"]>;   // par dÃ©faut: toutes les actions dÃ©clarÃ©es
-}): () => void {
-  if (typeof window === "undefined" || typeof document === "undefined") {
-    return () => {};
-  }
-
-  const pressed = new Set<string>();
-  const ids =
-    (opts.actionIds && opts.actionIds.length
-      ? opts.actionIds
-      : getKeybindSections().flatMap(s => s.actions.map(a => a.id))) as Array<KeybindAction["id"]>;
-
-  const isTyping = (t: EventTarget | null): boolean => {
-    const el = t as HTMLElement | null;
-    return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || (el as any).isContentEditable);
-  };
-
-  const canUse =
-    opts.canUseGameplayInput ??
-    (() => true);
-
-  function handle(ev: KeyboardEvent, phase: KeyPhase) {
-    if (opts.isRebinding?.() === true) return;
-    if (isKeybindCaptureActive()) return;
-    if (!canUse()) return;
-    if (isTyping(ev.target)) return;
-
-    for (const id of ids) {
-      const hk = getKeybind(id as any);
-      if (!hk) continue;
-
-      if (matchesHotkey(ev, hk)) {
-        const detectHold = getKeybindHoldDetection(id as any);
-        let actualPhase: KeyPhase = phase;
-
-        if (phase === "down") {
-          const wasPressed = pressed.has(String(id));
-          if (wasPressed || ev.repeat) {
-            if (!detectHold) break;
-            actualPhase = "hold";
-          } else {
-            pressed.add(String(id));
-          }
-        } else {
-          pressed.delete(String(id));
-        }
-
-        if (opts.preventDefault !== false) {
-          ev.preventDefault();
-          ev.stopPropagation();
-        }
-
-        opts.onAction(id, actualPhase, ev);
-        break; // on stoppe au premier match
-      }
-    }
-  }
-
-  function matchesHotkey(ev: KeyboardEvent, hk: any): boolean {
-  if (typeof hk === "string") {
-    const parts = hk.toLowerCase().split("+").map((s: string) => s.trim());
-    const want = {
-      ctrl: parts.includes("ctrl") || parts.includes("control"),
-      alt: parts.includes("alt"),
-      shift: parts.includes("shift"),
-      meta: parts.includes("meta") || parts.includes("cmd") || parts.includes("command") || parts.includes("super"),
-      key: parts[parts.length - 1],
-    };
-    return (ev.ctrlKey || false) === want.ctrl &&
-           (ev.altKey || false) === want.alt &&
-           (ev.shiftKey || false) === want.shift &&
-           (ev.metaKey || false) === want.meta &&
-           ev.key.toLowerCase() === want.key;
-  }
-
-  // Objet
-  const key = (hk.key ?? hk.code ?? hk.k ?? "").toString().toLowerCase();
-  const evKey = (ev.key ?? ev.code ?? "").toLowerCase();
-  const keyOk   = key ? evKey === key : true;
-  const ctrlOk  = "ctrl"  in hk ? !!ev.ctrlKey  === !!hk.ctrl  : true;
-  const altOk   = "alt"   in hk ? !!ev.altKey   === !!hk.alt   : true;
-  const shiftOk = "shift" in hk ? !!ev.shiftKey === !!hk.shift : true;
-  const metaOk  = "meta"  in hk ? !!ev.metaKey  === !!hk.meta  : true;
-  return keyOk && ctrlOk && altOk && shiftOk && metaOk;
-}
-
-  const onDown = (e: KeyboardEvent) => handle(e, "down");
-  const onUp   = (e: KeyboardEvent) => handle(e, "up");
-
-  window.addEventListener("keydown", onDown, true); // capture:true => avant lâ€™UI
-  window.addEventListener("keyup", onUp, true);
-
-  window.addEventListener("blur", () => pressed.clear());
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState !== "visible") pressed.clear();
-  });
-
-  return () => {
-    window.removeEventListener("keydown", onDown, true);
-    window.removeEventListener("keyup", onUp, true);
-  };
-}
 
 function cloneHotkey(hk: Hotkey | null): Hotkey | null {
   return hk ? { ...hk } : null;
@@ -867,7 +744,6 @@ function ensureCache(id: KeybindId): Hotkey | null {
   return cloneHotkey(resolved);
 }
 
-let cachePrimed = false;
 
 function ensureHoldCache(id: KeybindId): boolean {
   if (!holdDefaultMap.has(id)) return false;
@@ -880,18 +756,6 @@ function ensureHoldCache(id: KeybindId): boolean {
   return resolved;
 }
 
-/**
- * Preloads every keybind in memory so shortcuts are immediately available
- * even if the dedicated menu has never been opened in the session.
- */
-export function primeKeybindCache(): void {
-  if (cachePrimed) return;
-  cachePrimed = true;
-
-  for (const id of actionMap.keys()) {
-    ensureCache(id);
-  }
-}
 
 export function getKeybind(id: KeybindId): Hotkey | null {
   return ensureCache(id);

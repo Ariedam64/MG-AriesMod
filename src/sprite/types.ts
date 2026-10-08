@@ -23,7 +23,7 @@ export interface AnimFrameGroup {
   count: number;
 }
 
-export interface SingleSpriteItem {
+interface SingleSpriteItem {
   key: string;
   isAnim: false;
   first: SpriteTexture;
@@ -79,13 +79,13 @@ export interface VariantSignature {
   sig: string;
 }
 
-export interface CacheEntry {
+interface CacheEntry {
   tex?: SpriteTexture;
   frames?: SpriteTexture[];
   isAnim?: boolean;
 }
 
-export interface SpriteJob {
+interface SpriteJob {
   k: string;
   sig: string;
   itKey: string;

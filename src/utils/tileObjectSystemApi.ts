@@ -62,7 +62,7 @@ export type TileOpts = {
   forceUpdate?: boolean;  // default true
 };
 
-export type FlashTileOpts = {
+type FlashTileOpts = {
   color?: number;
   startAlpha?: number;
   durationMs?: number;

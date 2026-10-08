@@ -6,7 +6,7 @@
 // borrowing its class names would leave other panels unstyled for anyone who
 // never opens it.
 
-export { iconBox, spriteLookup } from './panel-icons';
+export { iconBox } from './panel-icons';
 
 const STYLE_ID = 'qws-panel-ui-css';
 
@@ -117,31 +117,6 @@ export function ensurePanelStyles(): void {
 export const GOLD = '#FFC734';
 export const RAINBOW = '#c084fc';
 
-/**
- * Paints an element's text with the rainbow gradient.
- *
- * The gradient is painted across the element's box and then clipped to the
- * glyphs, so a box wider than its text shows only the gradient's first colours.
- * `width: fit-content` shrinks the box onto the text, which is what makes the
- * full spectrum land on the letters; grid and flex parents need the element to
- * stop stretching, hence `justifySelf`/`alignSelf`.
- *
- * The transparent fill is what lets the background show through, so the element
- * must carry no `color` of its own afterwards.
- */
-export function rainbowText(el: HTMLElement): void {
-  css(el, {
-    display: 'inline-block',
-    width: 'fit-content',
-    justifySelf: 'center',
-    alignSelf: 'center',
-    background: 'linear-gradient(90deg, #ff4d4d, #ff9f1c, #ffe14d, #3ddc84, #4dabf7, #a06bff)',
-    backgroundClip: 'text',
-    color: 'transparent',
-  });
-  el.style.setProperty('-webkit-background-clip', 'text');
-  el.style.setProperty('-webkit-text-fill-color', 'transparent');
-}
 
 export function sectionLabel(text: string): HTMLElement {
   const el = document.createElement('div');

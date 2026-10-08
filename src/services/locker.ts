@@ -64,7 +64,7 @@ const normalizeMutationsList = (raw: unknown): string[] => {
 
 type VisualTag = "Gold" | "Rainbow";
 type WeatherTag = string;
-export type WeatherMode = "ANY" | "ALL" | "RECIPES";
+type WeatherMode = "ANY" | "ALL" | "RECIPES";
 export type LockerScaleLockMode = "MINIMUM" | "MAXIMUM" | "RANGE" | "NONE";
 export type LockerLockMode = "LOCK" | "ALLOW";
 
@@ -83,7 +83,7 @@ export type LockerSettingsPersisted = {
   weatherRecipes: WeatherTag[][];
 };
 
-export type LockerOverridePersisted = {
+type LockerOverridePersisted = {
   enabled: boolean;
   settings: LockerSettingsPersisted;
 };
@@ -94,19 +94,19 @@ export type LockerStatePersisted = {
   overrides: Record<string, LockerOverridePersisted>;
 };
 
-export type LockerStateEvent = {
+type LockerStateEvent = {
   type: "locker-state-changed";
   state: LockerStatePersisted;
 };
 
-export type LockerSlotChangeEvent = {
+type LockerSlotChangeEvent = {
   type: "locker-slot-info-changed";
   info: LockerSlotInfo;
   harvestAllowed: boolean | null;
   detectedAt: number | null;
 };
 
-export type LockerSlotSnapshot = {
+type LockerSlotSnapshot = {
   info: LockerSlotInfo;
   harvestAllowed: boolean | null;
   detectedAt: number | null;
@@ -124,7 +124,7 @@ type HarvestCheckArgs = {
 };
 
 /** Structure retournée par le watcher Locker. */
-export type LockerSlotInfo = {
+type LockerSlotInfo = {
   /** true lorsque l'objet courant est une plante */
   isPlant: boolean;
   /** Index réel du slot dans le tableau de slots de la plante (null si indisponible) */
@@ -261,7 +261,7 @@ const extractSizePercent = (slot: any): number => {
   return CROP_SIZE_MAX;
 };
 
-export interface LockerSlotWatcher {
+interface LockerSlotWatcher {
   /** Retourne la dernière information connue. */
   get(): LockerSlotInfo;
   /** Ajoute un listener appelé à chaque changement. */
@@ -272,7 +272,7 @@ export interface LockerSlotWatcher {
   recompute(): void;
 }
 
-export function startLockerSlotWatcherViaGardenObject(): LockerSlotWatcher {
+function startLockerSlotWatcherViaGardenObject(): LockerSlotWatcher {
   if (typeof window === "undefined") {
     return {
       get: () => emptySlotInfo(),
@@ -771,7 +771,7 @@ function mutationsToArrays(raw: readonly string[] | null | undefined) {
   return { hasGold, hasRainbow, weather };
 }
 
-export class LockerService {
+class LockerService {
   private state: LockerStatePersisted = defaultState();
   private listeners = new Set<(event: LockerStateEvent) => void>();
   private slotInfoListeners = new Set<(event: LockerSlotChangeEvent) => void>();

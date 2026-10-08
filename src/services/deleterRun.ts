@@ -18,7 +18,7 @@ import {
 /** Let the server apply a withdrawal before the deletes start landing. */
 const WITHDRAW_SETTLE_MS = 180;
 
-export interface DeleterSelectionEntry {
+interface DeleterSelectionEntry {
   /** Raw game id: `species` for seeds, `decorId` for decor. */
   id: string;
   label: string;

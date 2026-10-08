@@ -45,7 +45,7 @@ const AFTER_HARVEST_MS = 700;
 /** Un nourrissage n'est pas instantané côté serveur ; on ne mitraille pas. */
 const AFTER_FEED_MS = 400;
 
-export type FeedOutcome = { ok: true } | { ok: false; reason: string };
+type FeedOutcome = { ok: true } | { ok: false; reason: string };
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -66,7 +66,7 @@ async function petPosition(petId: string): Promise<XY | null> {
   }
 }
 
-export async function runFeed(candidate: FeedCandidate, walker: Walker): Promise<FeedOutcome> {
+async function runFeed(candidate: FeedCandidate, walker: Walker): Promise<FeedOutcome> {
   let cropItemId: string;
 
   if (candidate.source.kind === "inventory") {

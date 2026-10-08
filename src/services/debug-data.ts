@@ -2,7 +2,6 @@
 // All "debug-data" logic (types, WebSocket hooks, buffer, utils).
 
 import {
-  NativeWS,
   sockets,
   quinoaWS,
   setQWS,
@@ -12,7 +11,7 @@ import {
 
 /* ----------------------------- Types & utils ----------------------------- */
 
-export type WSDir = "in" | "out";
+type WSDir = "in" | "out";
 
 export type Frame = {
   t: number;            // ms epoch
@@ -61,10 +60,6 @@ export function getWSInfos(): WSInfo[] {
   return Array.from(registry.values());
 }
 
-/** Read-only access to the map (if associating via ws is needed). */
-export function getWSRegistry(): ReadonlyMap<WebSocket, WSInfo> {
-  return registry;
-}
 
 /** Small helper status string for the UI. */
 export function getWSStatusText(): string {

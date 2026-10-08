@@ -44,10 +44,10 @@ import { explain, isExpired, verdict, type Proposal } from "./proposals";
 const ALERT_DEDUPE_MS = 60_000;
 
 /** Recalcule le lot au moment de la confirmation, pour détecter qu'il a changé. */
-export type ScopeProvider = () => Promise<HarvestScope>;
+type ScopeProvider = () => Promise<HarvestScope>;
 export type FeedProvider = () => Promise<FeedCandidate[]>;
 /** Rejoue le plan dessiné contre le jardin du moment, et n'en garde que le faisable. */
-export type PlantProvider = () => Promise<PlantAssignment[]>;
+type PlantProvider = () => Promise<PlantAssignment[]>;
 
 /**
  * Une demande d'action du joueur.
@@ -728,4 +728,3 @@ export const CompanionChat = {
   },
 };
 
-export type CompanionChatType = typeof CompanionChat;

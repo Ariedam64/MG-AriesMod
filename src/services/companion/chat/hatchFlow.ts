@@ -60,7 +60,3 @@ export function afterHatch(stop: HatchStop, scope: HatchScope, rules: KeepRules,
   return sellable.length > 0 ? "All open. Now the ones you did not want." : null;
 }
 
-/** Le lot de vente vaut la peine d'être proposé. */
-export function worthSelling(plan: SellPlan): boolean {
-  return plan.sell.length > 0;
-}

@@ -70,7 +70,7 @@ function parseChangelogPayload(raw: unknown): ChangelogEntry[] {
   return entries;
 }
 
-export async function fetchChangelog(): Promise<ChangelogEntry[]> {
+async function fetchChangelog(): Promise<ChangelogEntry[]> {
   const url = `${RAW_BASE_URL}/refs/heads/${REPO_BRANCH}/${CHANGELOG_FILE_PATH}?t=${Date.now()}`;
 
   const text = await fetchText(url);

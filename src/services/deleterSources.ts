@@ -21,9 +21,9 @@ export const SEED_STORAGE_ID = "SeedSilo";
 export const DECOR_STORAGE_ID = "DecorShed";
 
 /** Inventory entries the game allows. */
-export const INVENTORY_ENTRY_LIMIT = 100;
+const INVENTORY_ENTRY_LIMIT = 100;
 /** Cap used while the Misc "Keep 1 slot free" guard is on. */
-export const INVENTORY_ENTRY_LIMIT_GUARDED = 99;
+const INVENTORY_ENTRY_LIMIT_GUARDED = 99;
 
 export interface DeleterEntry {
   /** Raw game id: `species` for seeds, `decorId` for decor. */

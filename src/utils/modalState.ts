@@ -9,7 +9,7 @@
 // Writing a bare name into the new atom leaves the game reading `.modal` from a
 // string, so nothing opens.
 
-export type ModalStateObject = { modal: string | null; openId: number };
+type ModalStateObject = { modal: string | null; openId: number };
 
 function isStateObject(raw: unknown): raw is ModalStateObject {
   return !!raw && typeof raw === "object" && "modal" in (raw as object);

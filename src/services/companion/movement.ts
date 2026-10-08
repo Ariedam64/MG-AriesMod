@@ -27,7 +27,7 @@ import { findFirstStep, type IsGoal } from "./pathfinding";
 export type XY = { x: number; y: number };
 
 /** Activité interne : rejoindre l'ancre, ou flâner autour d'elle. */
-export type MovementActivity = "pursue" | "wander";
+type MovementActivity = "pursue" | "wander";
 
 /**
  * Ce que le companion vise, et comment se comporter une fois arrivé.

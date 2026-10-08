@@ -2,7 +2,7 @@
 
 import { mgApiGetJson } from "../client/http";
 
-export type AudioTheme = { name: string; ambience?: string; music?: string };
+type AudioTheme = { name: string; ambience?: string; music?: string };
 export type AudioSfxItem = { name: string; start: number; end: number; duration: number };
 
 export type AudioCatalogResponse = {

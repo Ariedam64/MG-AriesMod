@@ -94,11 +94,6 @@ type ErrorBarHandle = {
   clear: () => void;
 };
 
-export type Control =
-  | HTMLButtonElement
-  | HTMLInputElement
-  | HTMLSelectElement
-  | HTMLTextAreaElement;
 
 export interface MenuOptions {
   id?: string;
@@ -122,7 +117,6 @@ export type HotkeyButtonElement = HTMLButtonElement & {
   refreshHotkey: (hk: Hotkey | null) => void;
 };
 
-const MOD_ONLY = new Set(["Shift","Control","Alt","Meta"]);
 
 /** Un seul bouton de raccourci peut écouter le clavier à la fois. */
 let activeHotkeyRecorder: (() => void) | null = null;
@@ -138,7 +132,7 @@ type TabDef = {
 };
 
 /* --------------------------- VTabs Types --------------------------- */
-export type VTabItem = {
+type VTabItem = {
   id: string;
   title: string;
   subtitle?: string;
@@ -1201,7 +1195,7 @@ inputNumber(min = 0, max = 9999, step = 1, value = 0) {
   /* -------------------------- VTabs factory -------------------------- */
   /** Crée des “tabs verticaux” génériques (liste sélectionnable + filtre). */
   vtabs(options: VTabsOptions = {}) {
-    return new VTabs(this, options);
+    return new VTabs(options);
   }
 
  hotkeyButton(
@@ -2194,7 +2188,7 @@ inputNumber(min = 0, max = 9999, step = 1, value = 0) {
 }
 
 /* ----------------------------- VTabs class ----------------------------- */
-export class VTabs {
+class VTabs {
   root: HTMLElement;
   private filterWrap: HTMLElement | null = null;
   private filterInput: HTMLInputElement | null = null;
@@ -2206,7 +2200,7 @@ export class VTabs {
   private renderItemCustom?: (item: VTabItem, btn: HTMLButtonElement) => void;
   private emptyText: string;
 
-  constructor(private api: Menu, private opts: VTabsOptions = {}) {
+  constructor(opts: VTabsOptions = {}) {
     this.root = el('div', 'qmm-vtabs');
     this.root.style.minWidth = '0'; 
     this.emptyText = opts.emptyText || "Aucun élément.";
@@ -2566,7 +2560,7 @@ function prettyCode(code: string): string {
   return code; // F1, Escape, Tab, Space, etc.
 }
 
-export function hotkeyToPretty(h: Hotkey | null): string {
+function hotkeyToPretty(h: Hotkey | null): string {
   if (!h) return "—";
   const mac = isMac();
   const mods: string[] = [];

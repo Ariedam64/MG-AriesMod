@@ -70,7 +70,7 @@ export function itemKey(item: { kind: PlantKind; id: string }): string {
 }
 
 /** Identifiant d'une case du plan : la tuile et ce qui doit y pousser. */
-export function assignmentKey(assignment: PlantAssignment): string {
+function assignmentKey(assignment: PlantAssignment): string {
   return `${assignment.tileIndex}:${assignment.kind}:${assignment.id}`;
 }
 

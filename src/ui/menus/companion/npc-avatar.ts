@@ -155,7 +155,7 @@ async function compose(npcId: string): Promise<HTMLCanvasElement | null> {
  * recomposer quatre PNG à chaque fois serait du gâchis. Rend `null` quand la
  * tenue n'est pas connue — l'appelant garde alors son repli.
  */
-export function npcPortrait(npcId: string): Promise<HTMLCanvasElement | null> {
+function npcPortrait(npcId: string): Promise<HTMLCanvasElement | null> {
   let known = pending.get(npcId);
   if (!known) {
     known = compose(npcId).catch(() => null);

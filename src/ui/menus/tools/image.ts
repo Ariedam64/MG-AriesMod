@@ -21,7 +21,7 @@ function isDataImageUrl(value: string): boolean {
   return /^data:image\//i.test(value.trim());
 }
 
-export function isImageUrl(icon: string): boolean {
+function isImageUrl(icon: string): boolean {
   const value = icon.trim();
   return /^https?:\/\//i.test(value) || isDataImageUrl(value);
 }

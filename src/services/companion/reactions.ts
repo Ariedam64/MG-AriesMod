@@ -53,7 +53,7 @@ const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
 /* ------------------------------------------------------------------ */
 
 /** 100, 1 000, 10 000... jusqu'au million de milliards. */
-export const MILESTONES: readonly number[] = Array.from({ length: 14 }, (_, i) => 10 ** (i + 2));
+const MILESTONES: readonly number[] = Array.from({ length: 14 }, (_, i) => 10 ** (i + 2));
 
 /**
  * Le plus haut palier franchi entre deux valeurs, ou `null`.
@@ -383,7 +383,7 @@ export function rareCropReaction(crops: RareCrop[], random: () => number): React
 export type LuckCounters = Record<string, { gold: number; rainbow: number }>;
 
 /** Paliers de malchance. Le Rainbow est bien plus rare : ses paliers aussi. */
-export const DROUGHT_STEPS: Record<"gold" | "rainbow", readonly number[]> = {
+const DROUGHT_STEPS: Record<"gold" | "rainbow", readonly number[]> = {
   gold: [25, 50, 100, 200, 400],
   rainbow: [100, 250, 500, 1000, 2000],
 };

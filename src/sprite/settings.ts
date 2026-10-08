@@ -52,7 +52,6 @@ export const MUT_META: Record<MutationName, MutationMeta> = {
   Ambercharged: { overlayTall: null, tallIconOverride: null },
 };
 
-export const MUT_NAMES: MutationName[] = Object.keys(MUT_META) as MutationName[];
 export const MUT_G1: MutationName[] = ['', 'Gold', 'Rainbow'].filter(Boolean) as MutationName[];
 export const MUT_G2: MutationName[] = ['', 'Wet', 'Chilled', 'Frozen', 'Thunderstruck', 'Thundercharged'].filter(Boolean) as MutationName[];
 export const MUT_G3: MutationName[] = ['', 'Dawnlit', 'Ambershine', 'Dawncharged', 'Ambercharged'].filter(Boolean) as MutationName[];

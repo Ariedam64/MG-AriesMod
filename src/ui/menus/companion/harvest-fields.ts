@@ -130,7 +130,7 @@ export function summarizeSize(filters: HarvestFilters): string {
 
 /* -------------------------------- Aperçu -------------------------------- */
 
-export type PreviewEntry = { icon: HTMLElement; label: string; count: number };
+type PreviewEntry = { icon: HTMLElement; label: string; count: number };
 
 export type ResultStrip = {
   root: HTMLElement;

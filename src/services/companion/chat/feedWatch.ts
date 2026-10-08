@@ -16,14 +16,6 @@ import { feedBubble, findFeedable, feedSignature, type FeedCandidate } from "./p
 import { attendToQuestion, stopAttending } from "./attend";
 import { forGame } from "./bubbleTags";
 
-/**
- * Filet de sécurité, pas la source principale.
- *
- * L'état des pets nous est poussé : c'est lui qui déclenche la vérification,
- * presque à l'instant où un animal passe sous le seuil. Cet intervalle ne
- * rattrape que ce que le flux ne signale pas.
- */
-const POLL_MS = 30_000;
 
 /**
  * Les changements de pets arrivent en rafale — la faim descend en continu.
@@ -40,7 +32,6 @@ const SETTLE_MS = 1500;
  */
 const REASK_COOLDOWN_MS = 10 * 60 * 1000;
 
-let timer: number | null = null;
 let settleTimer: number | null = null;
 let unsubscribers: Array<() => void> = [];
 let running = false;
@@ -204,7 +195,6 @@ export function startFeedWatch(): void {
   if (running) return;
   running = true;
 
-  timer = window.setInterval(runTick, POLL_MS);
 
   // La faim descend en continu : c'est le flux d'état des pets qui donne la
   // réactivité, l'intervalle ne fait que rattraper ce qu'il ne signale pas.
@@ -222,20 +212,3 @@ export function startFeedWatch(): void {
   runTick();
 }
 
-export function stopFeedWatch(): void {
-  running = false;
-  if (timer !== null) {
-    clearInterval(timer);
-    timer = null;
-  }
-  if (settleTimer !== null) {
-    clearTimeout(settleTimer);
-    settleTimer = null;
-  }
-  for (const stop of unsubscribers) {
-    try {
-      stop();
-    } catch {}
-  }
-  unsubscribers = [];
-}

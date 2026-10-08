@@ -19,7 +19,7 @@
 
 export const INVENTORY = "inventory";
 
-export type MoveItemPlace = typeof INVENTORY | string;
+type MoveItemPlace = typeof INVENTORY | string;
 
 export interface MoveItemParams {
   from: MoveItemPlace;

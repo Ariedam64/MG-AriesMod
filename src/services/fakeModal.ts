@@ -10,15 +10,8 @@ import { activityLogOpenTarget, activityLogTabOf, type ActivityLogTab } from "..
 
 /* --------------------------------- Types -------------------------------- */
 export type ModalId = string;
-export type ModalPayload = any;
 export type InvPayload = { items?: any[]; favoritedItemIds?: string[] } | any;
 
-export type FakeModalOptions = {
-  /** Ouvre la modale (activeModal) automatiquement. Par défaut: true */
-  open?: boolean;
-  /** Auto-restore (désactive le fake) après N ms. */
-  autoRestoreMs?: number;
-};
 
 /* ------------------------------- Modal I/O ------------------------------- */
 
@@ -54,11 +47,11 @@ export async function closeModal(modalId?: ModalId) {
 }
 
 /** `value` is the raw atom value the gates see, `{ modal, openId }` since v1342. */
-export function isModalOpen(value: any, modalId: ModalId) {
+function isModalOpen(value: any, modalId: ModalId) {
   return modalNameOf(value) === modalId;
 }
 
-export async function isModalOpenAsync(modalId: ModalId): Promise<boolean> {
+async function isModalOpenAsync(modalId: ModalId): Promise<boolean> {
   try {
     const v = await Atoms.ui.activeModal.get();
     return isModalOpen(v, modalId);
@@ -67,7 +60,7 @@ export async function isModalOpenAsync(modalId: ModalId): Promise<boolean> {
   }
 }
 
-export async function waitModalClosed(modalId: ModalId, timeoutMs = 120000): Promise<boolean> {
+async function waitModalClosed(modalId: ModalId, timeoutMs = 120000): Promise<boolean> {
   const t0 = performance.now();
   while (performance.now() - t0 < timeoutMs) {
     try {
@@ -84,20 +77,7 @@ export async function waitModalClosed(modalId: ModalId, timeoutMs = 120000): Pro
 
 /* --------------------------- Helpers de gate ---------------------------- */
 
-function gateForModal(modalId: ModalId) {
-  return {
-    label: Atoms.ui.activeModal.label,
-    isOpen: (v: any) => isModalOpen(v, modalId),
-    openAction: () => openModal(modalId),
-    closeAction: () => closeModal(modalId),
-    autoDisableOnClose: true,
-  };
-}
 
-function withModalGate<T>(cfg: FakeConfig<T>, modalId: ModalId): FakeConfig<T> {
-  // On injecte/écrase la gate pour qu’elle cible CETTE modalId
-  return { ...cfg, gate: gateForModal(modalId) };
-}
 
 const mergeMyData = (real: any, patch: any) => {
   const base = real && typeof real === "object" ? real : {};
@@ -106,35 +86,7 @@ const mergeMyData = (real: any, patch: any) => {
 };
 
 /* ------------------------------- API générique ------------------------------- */
-/** Utilitaire générique (gardé pour compat) : applique une liste de FakeConfig à une modal. */
-export async function fakeModalShow<T = ModalPayload>(
-  modalId: ModalId,
-  payload: T,
-  configs: FakeConfig<any>[],
-  opts?: FakeModalOptions
-) {
-  const shouldOpen = opts?.open !== false;
 
-  for (const baseCfg of configs) {
-    const cfg = withModalGate(baseCfg, modalId);
-    await fakeShow(cfg, payload, {
-      openGate: false,
-      autoRestoreMs: opts?.autoRestoreMs,
-    });
-  }
-
-  if (shouldOpen) await openModal(modalId);
-}
-
-/** Désactive tous les fakes liés (ne ferme pas forcément la modale). */
-export async function fakeModalHide(_modalId: ModalId, configs: FakeConfig<any>[]) {
-  for (const cfg of configs) {
-    try {
-      await fakeHide(cfg.label);
-    } catch (err) {
-    }
-  }
-}
 
 /* ============================ Patchs partagés / spécifiques ============================ */
 /**
@@ -168,7 +120,7 @@ const INVENTORY_ATOM_PATCH: FakeConfig<any> = {
 
 const INVENTORY_MODAL_ID: ModalId = "inventory";
 
-export async function openInventoryPanel() {
+async function openInventoryPanel() {
   return openModal(INVENTORY_MODAL_ID);
 }
 
@@ -232,17 +184,11 @@ export async function fakeInventoryDisable() {
 
 export const JOURNAL_MODAL_ID: ModalId = "journal";
 
-export async function openJournalModal() {
+async function openJournalModal() {
   return openModal(JOURNAL_MODAL_ID);
 }
 
-export async function closeJournalModal() {
-  return closeModal(JOURNAL_MODAL_ID);
-}
 
-export function isJournalOpen(v: any) {
-  return isModalOpen(v, JOURNAL_MODAL_ID);
-}
 
 export async function isJournalModalOpen(): Promise<boolean> {
   return isModalOpenAsync(JOURNAL_MODAL_ID);
@@ -270,10 +216,6 @@ export async function fakeJournalShow(
   if (shouldOpen) await openJournalModal();
 }
 
-export async function fakeJournalHide() {
-  await fakeHide(SHARED_MYDATA_PATCH.label);
-  await closeJournalModal();
-}
 
 /* ===================== Activity log et Stats : une seule modale ===================== */
 // Depuis v1396 la modale `stats` n'existe plus : Stats est un onglet de la
@@ -296,13 +238,10 @@ async function isActivityLogTabOpen(tab: ActivityLogTab): Promise<boolean> {
 
 /* =============================== Spécifique STATS =============================== */
 
-export async function openStatsModal() {
+async function openStatsModal() {
   return openActivityLogTab("stats");
 }
 
-export async function closeStatsModal() {
-  if (await isActivityLogTabOpen("stats")) await closeModal(ACTIVITY_LOG_MODAL_ID);
-}
 
 export async function isStatsModalOpenAsync(): Promise<boolean> {
   return isActivityLogTabOpen("stats");
@@ -324,24 +263,14 @@ export async function fakeStatsShow(payload?: any, opts?: { open?: boolean; auto
   if (shouldOpen) await openStatsModal();
 }
 
-export async function fakeStatsHide() {
-  await fakeHide(SHARED_MYDATA_PATCH.label);
-  await closeStatsModal();
-}
 
 /* ============================ Spécifique ACTIVITY LOG ============================ */
 
-export async function openActivityLogModal() {
+async function openActivityLogModal() {
   return openActivityLogTab("logs");
 }
 
-export async function closeActivityLogModal() {
-  return closeModal(ACTIVITY_LOG_MODAL_ID);
-}
 
-export function isActivityLogModalOpen(v: any) {
-  return isModalOpen(v, ACTIVITY_LOG_MODAL_ID);
-}
 
 export async function isActivityLogModalOpenAsync(): Promise<boolean> {
   return isModalOpenAsync(ACTIVITY_LOG_MODAL_ID);
@@ -362,9 +291,5 @@ export async function fakeActivityLogShow(payload?: any, opts?: { open?: boolean
   if (shouldOpen) await openActivityLogModal();
 }
 
-export async function fakeActivityLogHide() {
-  await fakeHide(SHARED_MYDATA_PATCH.label);
-  await closeActivityLogModal();
-}
 
 

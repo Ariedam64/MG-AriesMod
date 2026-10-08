@@ -142,7 +142,7 @@ export function makeView<TSrc = any, T = any>(
 
 /* ========================== canal de signatures générique ========================== */
 
-export type SignatureOpts<TView, K extends string | number> = {
+type SignatureOpts<TView, K extends string | number> = {
   /**
    * Comment collecter les entrées à signer :
    * - "auto" (défaut) : si Array -> itère items; si Record -> Object.entries()
@@ -161,7 +161,7 @@ export type SignatureOpts<TView, K extends string | number> = {
   fields?: Array<string>;
 };
 
-export type SignatureChannel<TView, K extends string | number> = {
+type SignatureChannel<TView, K extends string | number> = {
   /** Notifie quand **au moins une** clé change de signature */
   sub(cb: (p: { value: TView; changedKeys: K[] }) => void): Promise<Unsubscribe>;
   /** Notifie seulement si la signature de `key` change */
@@ -247,7 +247,6 @@ function makeSignatureChannel<TView, K extends string | number>(
   }
 
   async function subKey(key: K, cb: (p: { value: TView }) => void): Promise<Unsubscribe> {
-    let last = "__INIT__";
     return sub(({ value, changedKeys }) => {
       if (changedKeys.includes(key)) cb({ value });
     });

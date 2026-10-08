@@ -6,7 +6,6 @@ import { PetsService,
   InventoryPet,
   installPetTeamHotkeysOnce,
   setTeamsForHotkeys } from "../../services/pets";
-import type { PetInfo } from "../../services/player";
 import type { PetTeam } from "../../services/pets";
 import { petTeamName } from "../../services/petTeamReconcile";
 import { onActivePetsStructuralChangeNow } from "../../store/atoms";

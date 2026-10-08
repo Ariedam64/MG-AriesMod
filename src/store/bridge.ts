@@ -15,7 +15,7 @@
 import { pageWindow } from "../utils/page-context";
 import type { JotaiStore } from "./jotai";
 
-export const STORE_BRIDGE_GLOBAL = "__MG_STORE_BRIDGE__";
+const STORE_BRIDGE_GLOBAL = "__MG_STORE_BRIDGE__";
 
 type StoreBridge = {
   version: 1;

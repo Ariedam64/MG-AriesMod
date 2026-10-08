@@ -721,6 +721,5 @@ export const CompanionService = {
   },
 };
 
-export type CompanionServiceType = typeof CompanionService;
 export type { NpcIdentity } from "./injection";
 export type { CompanionSettings } from "./state";

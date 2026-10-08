@@ -15,7 +15,7 @@ import type { BubbleTag } from "../../../services/companion/chat/bubbleTags";
 import { renderTagged, tagIcons } from "./chat-icons";
 
 /** Deux messages du même auteur dans cette fenêtre sont collés visuellement. */
-export const GROUP_WINDOW_MS = 2 * 60 * 1000;
+const GROUP_WINDOW_MS = 2 * 60 * 1000;
 
 const AVATAR_PX = 26;
 /** Assez grand pour se lire, assez petit pour ne pas bousculer la ligne. */
@@ -45,7 +45,7 @@ function contentOf(text: string, icons: BubbleTag[] | undefined, positioned: boo
 }
 
 /** Un message centré n'appartient à aucune colonne : il ne se groupe pas. */
-export function isCentered(message: ChatMessage): boolean {
+function isCentered(message: ChatMessage): boolean {
   return message.kind === "system";
 }
 
@@ -55,7 +55,7 @@ export function isSameGroup(previous: ChatMessage, current: ChatMessage): boolea
   return current.atMs - previous.atMs < GROUP_WINDOW_MS;
 }
 
-export function formatMessageTime(atMs: number): string {
+function formatMessageTime(atMs: number): string {
   try {
     return new Date(atMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   } catch {
@@ -106,7 +106,7 @@ export function dateSeparator(label: string): HTMLElement {
 }
 
 /** Ligne d'événement centrée : progression, refus, annulation. */
-export function systemLine(text: string, icons?: BubbleTag[], positioned = false): HTMLElement {
+function systemLine(text: string, icons?: BubbleTag[], positioned = false): HTMLElement {
   const line = document.createElement("div");
   css(line, {
     alignSelf: "center",

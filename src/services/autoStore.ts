@@ -21,7 +21,7 @@ const ATOM_POLL_MS = 400;
 const ATOM_TIMEOUT_MS = 10 * 60_000;
 
 /** Ce que la fabrique attend d'un atom (label + lecture + abonnement). */
-export interface AutoStoreAtom {
+interface AutoStoreAtom {
   label: string;
   get(): Promise<unknown>;
   onChange(cb: (next: unknown) => void): Promise<() => void>;

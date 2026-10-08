@@ -1,6 +1,6 @@
 // src/ui/menus/calculator.ts
 import { addStyle } from "../../core/dom";
-import { coin, plantCatalog, petAbilities, petCatalog } from "../../data";
+import { coin, plantCatalog } from "../../data";
 import { DefaultPricing, estimateProduceValue } from "../../utils/calculators";
 import {
   CROP_SIZE_MAX,
@@ -8,7 +8,6 @@ import {
   cropSizeMultiplier,
   getMaxSizeMultiplier,
 } from "../../utils/cropSize";
-import { getPetMaxStrength, getPetStrength } from "../../utils/petCalcul";
 import {
   getLockerSeedEmojiForKey,
   getLockerSeedEmojiForSeedName,

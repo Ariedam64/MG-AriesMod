@@ -12,13 +12,13 @@ export type GardenState = {
   boardwalkTileObjects: Record<string, any>;
 };
 
-export type GardenWithBackfill = {
+type GardenWithBackfill = {
   garden?: GardenState | null;
   slotIndex?: number;
   [key: string]: any;
 };
 
-export type GardensWithBackfillsState = GardenWithBackfill[] | null;
+type GardensWithBackfillsState = GardenWithBackfill[] | null;
 
 export type PlantSlotTiming = {
   species: string;
@@ -31,16 +31,6 @@ export type PlantSlotTiming = {
   mutations?: string[];
 };
 
-export type PlantTimingDerived = {
-  startTime?: number;
-  endTime?: number;
-  totalMs?: number;
-  remainingMs?: number;
-  progress: number;
-  status: "growing" | "ready" | "unknown";
-  species?: string;
-  mutations: string[];
-};
 
 export type CurrentGardenObject =
   | {
@@ -53,7 +43,7 @@ export type CurrentGardenObject =
   | Record<string, unknown>
   | null;
 
-export type PetSlot = {
+type PetSlot = {
   id: string;
   petSpecies: string;
   name?: string | null;
@@ -64,22 +54,22 @@ export type PetSlot = {
   abilities?: string[];
 };
 
-export type ToolItem = {
+type ToolItem = {
     toolId: string,
     itemType: string,
     quantity: number
 }
 
-export type DecorItem = {
+type DecorItem = {
   decorId: string;
   itemType: "Decor";
   quantity: number;
 };
 
-export type PetInfo = { slot: PetSlot; position?: XY | null };
+type PetInfo = { slot: PetSlot; position?: XY | null };
 export type PetState = PetInfo[] | null;
 
-export type CropItem = {
+type CropItem = {
   id: string;
   species?: string;
   itemType?: string;
@@ -89,9 +79,9 @@ export type CropItem = {
   scale?: number;
   mutations?: string[];
 };
-export type CropInventoryState = CropItem[] | null;
+type CropInventoryState = CropItem[] | null;
 
-export type SeedItem = {
+type SeedItem = {
   species: string;
   itemType: "Seed";
   quantity: number;
@@ -100,7 +90,7 @@ export type SeedInventoryState = SeedItem[] | null;
 export type ToolInventoryState = ToolItem[] | null;
 export type DecorInventoryState = DecorItem[] | null;
 
-export type AvatarTriggerAnimation = {
+type AvatarTriggerAnimation = {
   playerId: string;
   animation: string;
 };
@@ -108,62 +98,62 @@ export type AvatarTriggerAnimation = {
 /* ============================================================================
  * Root atoms
  * ==========================================================================*/
-export const position = makeAtom<XY>("positionAtom");
-export const state = makeAtom<any>("stateAtom");
-export const map = makeAtom<any>("mapAtom");
+const position = makeAtom<XY>("positionAtom");
+const state = makeAtom<any>("stateAtom");
+const map = makeAtom<any>("mapAtom");
 export const player = makeAtom<any>("playerAtom")
-export const action = makeAtom<any | null>("actionAtom")
+const action = makeAtom<any | null>("actionAtom")
 
-export const myData = makeAtom<any>("myDataAtom");
+const myData = makeAtom<any>("myDataAtom");
 export const myInventory = makeAtom<any>("myInventoryAtom");
-export const gardensWithBackfills = makeAtom<GardensWithBackfillsState>("gardensWithBackfillsAtom");
+const gardensWithBackfills = makeAtom<GardensWithBackfillsState>("gardensWithBackfillsAtom");
 
-export const myCropInventory = makeAtom<CropInventoryState>("myCropInventoryAtom");
-export const mySeedInventory = makeAtom<SeedInventoryState>("mySeedInventoryAtom");
-export const myToolInventory = makeAtom<ToolInventoryState>("myToolInventoryAtom");
-export const myEggInventory = makeAtom<ToolInventoryState>("myEggInventoryAtom");
-export const myDecorInventory = makeAtom<DecorInventoryState>("myDecorInventoryAtom");
+const myCropInventory = makeAtom<CropInventoryState>("myCropInventoryAtom");
+const mySeedInventory = makeAtom<SeedInventoryState>("mySeedInventoryAtom");
+const myToolInventory = makeAtom<ToolInventoryState>("myToolInventoryAtom");
+const myEggInventory = makeAtom<ToolInventoryState>("myEggInventoryAtom");
+const myDecorInventory = makeAtom<DecorInventoryState>("myDecorInventoryAtom");
 export const mySeedSiloItems = makeAtom<SeedInventoryState>("mySeedSiloItemsAtom");
 export const myDecorShedItems = makeAtom<DecorInventoryState>("myDecorShedItemsAtom");
 export const myToolShackItems = makeAtom<ToolInventoryState>("myToolShackItemsAtom");
-export const myFeedingTroughItems = makeAtom<CropInventoryState>("myFeedingTroughItemsAtom");
+const myFeedingTroughItems = makeAtom<CropInventoryState>("myFeedingTroughItemsAtom");
 // `myPetInfosAtom` no longer exists in the game (v1029). Nothing reads it
 // directly: `normalizePetsState` prefers it but falls back to the pet slots
 // below, which carry every field it needs, so pets keep resolving. Left in
 // place — and deliberately not repointed at `petInfosAtom`, which is every pet
 // in the room rather than ours.
 export const myPetInfos = makeAtom<PetState>("myPetInfosAtom");
-export const myPetSlotInfos = makeAtom<any>("myPetSlotInfosAtom");
+const myPetSlotInfos = makeAtom<any>("myPetSlotInfosAtom");
 // Renommé `myPrimitivePetSlotsAtom` -> `myPredictedPetSlotsAtom` côté jeu, avec
 // l'arrivée du système de prédiction/rollback : même tableau de slots, servi
 // depuis `prediction/quinoaPredictionAtoms.ts` et enrichi des commandes encore
 // en vol. L'ancien nom reste en repli le temps que les bundles en cache
 // disparaissent.
-export const myPrimitivePetSlots = makeAliasedAtom<any[]>([
+const myPrimitivePetSlots = makeAliasedAtom<any[]>([
   "myPredictedPetSlotsAtom",
   "myPrimitivePetSlotsAtom",
 ]);
-export const myPetIdOnSameTile = makeAtom<string | null>("myPetIdOnSameTileAtom");
-export const totalPetSellPrice = makeAtom<number>("totalPetSellPriceAtom")
-export const myCropItemsToSell = makeAtom<any>("myCropItemsToSellAtom")
+const myPetIdOnSameTile = makeAtom<string | null>("myPetIdOnSameTileAtom");
+const totalPetSellPrice = makeAtom<number>("totalPetSellPriceAtom")
+const myCropItemsToSell = makeAtom<any>("myCropItemsToSellAtom")
 export const myPetHutchPetItems = makeAtom<any>("myPetHutchPetItemsAtom")
 export const isMyInventoryAtMaxLength = makeAtom<any>("isMyInventoryAtMaxLengthAtom")
 export const myNumPetHutchItems = makeAtom<any>("myNumPetHutchItemsAtom")
 export const myPetHutchCapacitySlots = makeAtom<number>("myPetHutchCapacitySlotsAtom")
 
-export const shops = makeView<any, any>("stateAtom", { path: "child.data.shops" });
-export const myShopPurchases = makeView<any, any>("myDataAtom", { path: "shopPurchases" });
+const shops = makeView<any, any>("stateAtom", { path: "child.data.shops" });
+const myShopPurchases = makeView<any, any>("myDataAtom", { path: "shopPurchases" });
 /** The local player's userSlot: `data` plus `customRestockInventories`, their personal restocks. */
-export const myUserSlot = makeAtom<any>("myUserSlotAtom");
+const myUserSlot = makeAtom<any>("myUserSlotAtom");
 
 export const numPlayers = makeAtom<number>("numPlayersAtom");
-export const totalCropSellPrice = makeAtom<number>("totalCropSellPriceAtom");
+const totalCropSellPrice = makeAtom<number>("totalCropSellPriceAtom");
 
-export const myValidatedSelectedItemIndex = makeAtom<number | null>("myValidatedSelectedItemIndexAtom");
-export const setSelectedIndexToEnd = makeAtom<number | null>("setSelectedIndexToEndAtom");
-export const mySelectedItemName = makeAtom<any>("mySelectedItemNameAtom");
-export const mySelectedItemId = makeAtom<any>("mySelectedItemIdAtom");
-export const myPossiblyNoLongerValidSelectedItemIndex = makeAtom<number | null>("myPossiblyNoLongerValidSelectedItemIndexAtom");
+const myValidatedSelectedItemIndex = makeAtom<number | null>("myValidatedSelectedItemIndexAtom");
+const setSelectedIndexToEnd = makeAtom<number | null>("setSelectedIndexToEndAtom");
+const mySelectedItemName = makeAtom<any>("mySelectedItemNameAtom");
+const mySelectedItemId = makeAtom<any>("mySelectedItemIdAtom");
+const myPossiblyNoLongerValidSelectedItemIndex = makeAtom<number | null>("myPossiblyNoLongerValidSelectedItemIndexAtom");
 
 export const myCurrentGardenObject = makeAtom<CurrentGardenObject>("myCurrentGardenObjectAtom");
 
@@ -197,12 +187,12 @@ export const myCurrentGrowSlotIndex = makeAliasedAtom<number | null>([
   "mySelectedSlotIdAtom",
 ]);
 
-export const myOwnCurrentGardenObject = makeAtom<any>("myOwnCurrentGardenObjectAtom")
-export const isCurrentGrowSlotMature = makeAtom<any>("isCurrentGrowSlotMatureAtom")
-export const myOwnCurrentDirtTileIndex = makeAtom<any>("myOwnCurrentDirtTileIndexAtom")
-export const mySelectedItemRotation = makeAtom<any>("mySelectedItemRotationAtom")
+const myOwnCurrentGardenObject = makeAtom<any>("myOwnCurrentGardenObjectAtom")
+const isCurrentGrowSlotMature = makeAtom<any>("isCurrentGrowSlotMatureAtom")
+const myOwnCurrentDirtTileIndex = makeAtom<any>("myOwnCurrentDirtTileIndexAtom")
+const mySelectedItemRotation = makeAtom<any>("mySelectedItemRotationAtom")
 
-export const weather = makeAtom<string | null>("weatherAtom")
+const weather = makeAtom<string | null>("weatherAtom")
 
 // Renommé `activeModalAtom` -> `activeModalStateAtom` côté jeu. Depuis v1342
 // il vaut `{ modal, openId }` au lieu du nom, et `activeModalAtom` est devenu un
@@ -214,7 +204,7 @@ const activeModalRaw = makeAliasedAtom<any>([
   "activeModalAtom",
 ]);
 const sameModal = (a: unknown, b: unknown) => modalNameOf(a) === modalNameOf(b);
-export const activeModal: View<string | null> = {
+const activeModal: View<string | null> = {
   label: activeModalRaw.label,
   get: async () => modalNameOf(await activeModalRaw.get()),
   set: async (next) => {
@@ -233,74 +223,42 @@ export const activeModal: View<string | null> = {
     activeModalRaw.onChangeNow((next, prev) => cb(modalNameOf(next), modalNameOf(prev)), sameModal),
   asSignature: (opts) => activeModalRaw.asSignature(opts as any) as any,
 };
-export const inventoryModalIsActive = makeAtom<boolean>("inventoryModalIsActiveAtom");
+const inventoryModalIsActive = makeAtom<boolean>("inventoryModalIsActiveAtom");
 // Since v1396 Stats and Activity Log share the `activityLog` modal; this picks the tab (`"logs"` | `"stats"`).
-export const activityLogTab = makeAtom<string>("activityLogTabAtom");
-export const avatarTriggerAnimationAtom = makeAtom<AvatarTriggerAnimation | null>("avatarTriggerAnimationAtom")
+const activityLogTab = makeAtom<string>("activityLogTabAtom");
+const avatarTriggerAnimationAtom = makeAtom<AvatarTriggerAnimation | null>("avatarTriggerAnimationAtom")
 
-export const friendBonusMultiplier = makeAtom<any>("friendBonusMultiplierAtom")
+const friendBonusMultiplier = makeAtom<any>("friendBonusMultiplierAtom")
 
 /* ============================================================================
  * Derived views
  * ==========================================================================*/
-export const garden = makeView<any, GardenState | null>("myDataAtom", { path: "garden" });
-export const gardenTileObjects = makeView<any, Record<string, any>>("myDataAtom", { path: "garden.tileObjects" });
-export const favoriteIds = makeView<any, string[]>("myInventoryAtom", { path: "favoritedItemIds" });
+const garden = makeView<any, GardenState | null>("myDataAtom", { path: "garden" });
+const gardenTileObjects = makeView<any, Record<string, any>>("myDataAtom", { path: "garden.tileObjects" });
+const favoriteIds = makeView<any, string[]>("myInventoryAtom", { path: "favoritedItemIds" });
 // `playerAtom.id` porte aujourd'hui l'id de compte (il portait un id de room
 // `p_…` avant le renommage). Cette vue reste brute et sans garantie : une vue
 // mono-chemin renvoie null en silence au prochain renommage, et ne sait pas
 // distinguer les deux espaces de noms. Pour identifier le joueur, passer par
 // resolveMyAccountId() dans ../utils/playerIdentity.
 export const playerId = makeView<any, string | null>("playerAtom", { path: "id" });
-export const myOwnCurrentGardenObjectType = makeView<any, string | null>("myOwnCurrentGardenObjectAtom", { path: "objectType" });
+const myOwnCurrentGardenObjectType = makeView<any, string | null>("myOwnCurrentGardenObjectAtom", { path: "objectType" });
 
 /* stateAtom sub-views (optionnel) */
-export const stateChild = makeView<any, any>("stateAtom", { path: "child" });
-export const stateChildData = makeView<any, any>("stateAtom", { path: "child.data" });
-export const stateShops = makeView<any, any>("stateAtom", { path: "child.data.shops" });
 export const stateUserSlots = makeView<any, any>("stateAtom", { path: "child.data.userSlots" });
-export const statePlayers = makeView<any, any[] | undefined>("stateAtom", { path: "data.players" });
 export const myActivityLog = makeView<any>("myDataAtom", { path: "activityLogs"});
 
 /* Shops view (derived from stateAtom — shopsAtom removed from game) */
-export const seedShop  = makeView<any, any>("stateAtom", { path: "child.data.shops.seed"  });
-export const toolShop  = makeView<any, any>("stateAtom", { path: "child.data.shops.tool"  });
-export const eggShop   = makeView<any, any>("stateAtom", { path: "child.data.shops.egg"   });
-export const decorShop = makeView<any, any>("stateAtom", { path: "child.data.shops.decor" });
+const seedShop  = makeView<any, any>("stateAtom", { path: "child.data.shops.seed"  });
+const toolShop  = makeView<any, any>("stateAtom", { path: "child.data.shops.tool"  });
+const eggShop   = makeView<any, any>("stateAtom", { path: "child.data.shops.egg"   });
+const decorShop = makeView<any, any>("stateAtom", { path: "child.data.shops.decor" });
 
 /* ============================================================================
  * Signatures / Channels de diff
  * ==========================================================================*/
-function slotSig(o: any): string {
-  if (!o) return "∅";
-  return [
-    o.objectType ?? o.type ?? "",
-    o.species ?? o.seedSpecies ?? o.plantSpecies ?? o.eggId ?? o.decorId ?? "",
-    o.plantedAt ?? o.startTime ?? 0,
-    o.maturedAt ?? o.endTime ?? 0,
-  ].join("|");
-}
 
-export const GardenSlotsSig = gardenTileObjects.asSignature<number>({
-  mode: "record",
-  key: (_item, key) => Number(key as string),
-  sig: (item) => slotSig(item),
-});
 
-/** Signature "live" d’un pet (inclut xp/hunger/position -> bruyant) */
-function activePetSig(p: PetInfo): string {
-  const s = p?.slot ?? ({} as PetSlot);
-  const muts = Array.isArray(s.mutations) ? s.mutations.slice().sort().join(",") : "";
-  const ab = Array.isArray(s.abilities) ? s.abilities.slice().sort().join(",") : "";
-  const name = s.name ?? "";
-  const species = s.petSpecies ?? "";
-  const xp = Number.isFinite(s.xp as number) ? Math.round(s.xp as number) : 0;
-  const hunger = Number.isFinite(s.hunger as number) ? Math.round((s.hunger as number) * 1000) : 0;
-  const scale = Number.isFinite(s.targetScale as number) ? Math.round((s.targetScale as number) * 1000) : 0;
-  const x = Number.isFinite(p?.position?.x as number) ? Math.round(p!.position!.x as number) : 0;
-  const y = Number.isFinite(p?.position?.y as number) ? Math.round(p!.position!.y as number) : 0;
-  return `${species}|${name}|xp:${xp}|hg:${hunger}|sc:${scale}|m:${muts}|a:${ab}|pos:${x},${y}`;
-}
 
 /** Signature STABLE (ignore xp/hunger/position) -> idéale pour l’UI Manager */
 function activePetStableSig(p: PetInfo): string {
@@ -313,99 +271,13 @@ function activePetStableSig(p: PetInfo): string {
   return `${species}|${name}|sc:${scale}|m:${muts}|a:${ab}`;
 }
 
-export const PetsByIdSig = myPetInfos.asSignature<string>({
-  mode: "array",
-  key: (p) => String(p?.slot?.id ?? ""),
-  sig: (p) => activePetSig(p as PetInfo),
-});
 
-export const PetsByIdStableSig = myPetInfos.asSignature<string>({
-  mode: "array",
-  key: (p) => String(p?.slot?.id ?? ""),
-  sig: (p) => activePetStableSig(p as PetInfo),
-});
 
-export const FavoriteIdsSig = favoriteIds.asSignature<string>({
-  mode: "array",
-  key: (id) => String(id),
-  sig: () => "1",
-});
 
-/* ============================================================================
- * Abilities triggers (flatten)
- * ==========================================================================*/
-export type PetAbilityTrigger =
-  | {
-      petId: string;
-      abilityId: string | null;
-      performedAt: number | null;
-      data: any;
-      position?: XY | null;
-    }
-  | null;
-type TriggersByPet = Record<string, PetAbilityTrigger>;
 
-function _abilitySig(a: any): string {
-  if (!a) return "null";
-  const id = typeof a?.abilityId === "string" ? a.abilityId : "";
-  const ts = Number.isFinite(a?.performedAt) ? String(a.performedAt) : "";
-  let data = "";
-  try {
-    data = JSON.stringify(a?.data ?? null);
-  } catch {
-    data = "";
-  }
-  return `${id}|${ts}|${data}`;
-}
 
-function _extractAbilityTriggers(obj: any): { value: TriggersByPet; sig: Map<string, string> } {
-  const value: TriggersByPet = {};
-  const sig = new Map<string, string>();
-  if (obj && typeof obj === "object") {
-    for (const petId of Object.keys(obj)) {
-      const entry = obj[petId] ?? {};
-      const lat = entry.lastAbilityTrigger ?? null;
-      const pos = entry.position ?? null;
-      value[petId] = {
-        petId,
-        abilityId: lat?.abilityId ?? null,
-        performedAt: Number.isFinite(lat?.performedAt) ? lat.performedAt : null,
-        data: lat?.data ?? null,
-        position: pos ?? null,
-      };
-      sig.set(petId, _abilitySig(lat));
-    }
-  }
-  return { value, sig };
-}
 
-function _mapEqual(a: Map<string, string> | null, b: Map<string, string>): boolean {
-  if (!a) return false;
-  if (a.size !== b.size) return false;
-  for (const [k, v] of b) if (a.get(k) !== v) return false;
-  return true;
-}
 
-export const myPetsAbilitiesTrigger = {
-  async get(): Promise<TriggersByPet> {
-    const src = await myPetSlotInfos.get();
-    return _extractAbilityTriggers(src).value;
-  },
-  onChange(cb: (v: TriggersByPet) => void) {
-    let prevSig: Map<string, string> | null = null;
-    return myPetSlotInfos.onChange((src) => {
-      const { value, sig } = _extractAbilityTriggers(src);
-      if (!_mapEqual(prevSig, sig)) {
-        prevSig = sig;
-        cb(value);
-      }
-    });
-  },
-  async onChangeNow(cb: (v: TriggersByPet) => void) {
-    cb(await this.get());
-    return this.onChange(cb);
-  },
-};
 
 /* ============================================================================
  * Registry (lecture seule)
@@ -489,62 +361,11 @@ export async function onFavoriteIdsNow(cb: (ids: string[]) => void) {
   return onFavoriteIds(cb);
 }
 
-export const favoriteIdSet = {
-  async get(): Promise<Set<string>> {
-    const arr = await favoriteIds.get();
-    return new Set(Array.isArray(arr) ? arr : []);
-  },
-  onChange(cb: (s: Set<string>) => void) {
-    return favoriteIds.onChange((ids) => cb(new Set(Array.isArray(ids) ? ids : [])), HubEq.idSet);
-  },
-  async onChangeNow(cb: (s: Set<string>) => void) {
-    cb(await this.get());
-    return this.onChange(cb);
-  },
-};
 
-export function onPetsAbilityTriggers(cb: (map: Record<string, PetAbilityTrigger>) => void) {
-  return myPetsAbilitiesTrigger.onChange(cb);
-}
-export async function onPetsAbilityTriggersNow(cb: (map: Record<string, PetAbilityTrigger>) => void) {
-  cb(await myPetsAbilitiesTrigger.get());
-  return myPetsAbilitiesTrigger.onChange(cb);
-}
 
-export async function buildFavoriteIdsDiff(next: string[]): Promise<{ add: string[]; remove: string[] }> {
-  const cur = await favoriteIds.get();
-  const prev = new Set(Array.isArray(cur) ? cur : []);
-  const want = new Set(Array.isArray(next) ? next : []);
-  const add: string[] = [];
-  const remove: string[] = [];
-  for (const id of want) if (!prev.has(id)) add.push(id);
-  for (const id of prev) if (!want.has(id)) remove.push(id);
-  return { add, remove };
-}
 
-export function onSelectedItemName(cb: (name: string | null) => void) {
-  return mySelectedItemName.onChange(cb);
-}
-export async function onSelectedItemNameNow(cb: (name: string | null) => void) {
-  cb(await mySelectedItemName.get());
-  return mySelectedItemName.onChange(cb);
-}
 
-export function onCurrentGardenObject(cb: (obj: CurrentGardenObject) => void) {
-  return myCurrentGardenObject.onChange(cb);
-}
-export async function onCurrentGardenObjectNow(cb: (obj: CurrentGardenObject) => void) {
-  cb(await myCurrentGardenObject.get());
-  return myCurrentGardenObject.onChange(cb);
-}
 
-export function onCurrentGrowSlotIndex(cb: (idx: number | null) => void) {
-  return myCurrentGrowSlotIndex.onChange(cb);
-}
-export async function onCurrentGrowSlotIndexNow(cb: (idx: number | null) => void) {
-  cb(await myCurrentGrowSlotIndex.get());
-  return myCurrentGrowSlotIndex.onChange(cb);
-}
 
 /* Pets STRUCTUREL (stable) – Eq + hooks */
 function activePetsStructuralEq(a: PetState, b: PetState): boolean {
@@ -564,9 +385,6 @@ function activePetsStructuralEq(a: PetState, b: PetState): boolean {
   return true;
 }
 
-export function onActivePetsStructuralChange(cb: (pets: PetState) => void) {
-  return myPetInfos.onChange(cb, activePetsStructuralEq);
-}
 export async function onActivePetsStructuralChangeNow(cb: (pets: PetState) => void) {
   cb(await myPetInfos.get());
   return myPetInfos.onChange(cb, activePetsStructuralEq);
@@ -575,17 +393,6 @@ export async function onActivePetsStructuralChangeNow(cb: (pets: PetState) => vo
 /* ============================================================================
  * Utils format
  * ==========================================================================*/
-export const pad2 = (n: number) => n.toString().padStart(2, "0");
-export function fmtClock(date: Date) {
-  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
-}
-export function fmtDuration(ms: number) {
-  ms = Math.max(0, Math.floor(ms / 1000));
-  const h = Math.floor(ms / 3600);
-  const m = Math.floor((ms % 3600) / 60);
-  const s = ms % 60;
-  return (h ? `${h}h ` : "") + (m ? `${m}m ` : "") + `${s}s`;
-}
 
 /* ============================================================================
  * Getters simples
@@ -598,8 +405,3 @@ export async function getFavoriteIdSet(): Promise<Set<string>> {
 /* ============================================================================
  * Channels lisibles
  * ==========================================================================*/
-export const Channels = {
-  inventory: { favorites: FavoriteIdsSig },
-  garden: { slots: GardenSlotsSig },
-  activePets: { byId: PetsByIdSig, byIdStable: PetsByIdStableSig },
-} as const;

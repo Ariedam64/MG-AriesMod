@@ -8,7 +8,7 @@ export interface PixiCtors {
   Text: any;
 }
 
-export function findAny(root: any, pred: (node: any) => boolean, lim = 25000) {
+function findAny(root: any, pred: (node: any) => boolean, lim = 25000) {
   const stack = [root];
   const seen = new Set<any>();
   let n = 0;
@@ -96,7 +96,7 @@ export function getCtors(app: any): PixiCtors {
   throw new Error('No Sprite found (ctors) — PIXI not exposed and stage not yet rendered.');
 }
 
-export const baseTexOf = (tex: any) => tex?.baseTexture ?? tex?.source?.baseTexture ?? tex?.source ?? tex?._baseTexture ?? null;
+const baseTexOf = (tex: any) => tex?.baseTexture ?? tex?.source?.baseTexture ?? tex?.source ?? tex?._baseTexture ?? null;
 
 export function rememberBaseTex(tex: any, atlasBases: Set<any>): void {
   const base = baseTexOf(tex);

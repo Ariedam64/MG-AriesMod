@@ -6,7 +6,7 @@ export interface ActivityLogEntry {
   parameters: Record<string, unknown>;
 }
 
-export const PET_ABILITY_ACTIONS = [
+const PET_ABILITY_ACTIONS = [
   'CoinFinderI', 'CoinFinderII', 'CoinFinderIII', 'SnowyCoinFinder', 'DawnCoinFinder', 'ThunderCoinFinder',
   'SeedFinderI', 'SeedFinderII', 'SeedFinderIII', 'SeedFinderIV',
   'HungerRestore', 'HungerRestoreII', 'HungerRestoreIII', 'SnowyHungerRestore',
@@ -33,9 +33,6 @@ export function isPetAbilityAction(action: string): action is PetAbilityAction {
   return PET_ABILITY_ACTIONS.includes(action as PetAbilityAction);
 }
 
-export function filterPetAbilityLogs(logs: ActivityLogEntry[]): ActivityLogEntry[] {
-  return logs.filter((log) => isPetAbilityAction(log.action));
-}
 
 function formatTime(seconds: number): string {
   const hours = Math.floor(seconds / 3600);

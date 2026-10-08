@@ -104,7 +104,7 @@ export function lineEmote(line: string): EmoteType | null {
 /** Fenêtre dans laquelle on compte les Talk rapprochés. */
 export const POKE_WINDOW_MS = 10_000;
 /** À partir d'autant de Talk dans la fenêtre, il remarque qu'on insiste. */
-export const POKE_THRESHOLD = 5;
+const POKE_THRESHOLD = 5;
 
 /**
  * Réponse à un joueur qui clique sur lui en boucle, ou `null`.

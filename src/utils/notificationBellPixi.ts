@@ -71,7 +71,7 @@ const DEG_TO_RAD = Math.PI / 180;
 
 /** Ring angle (radians) at a given position in the cycle (0..1), linearly
  * interpolated between the sequence's keyframes. */
-export function bellRingAngleAt(cycleOffset: number): number {
+function bellRingAngleAt(cycleOffset: number): number {
   for (let i = 1; i < BELL_RING_SEQUENCE.length; i++) {
     const next = BELL_RING_SEQUENCE[i];
     if (cycleOffset > next.offset) continue;

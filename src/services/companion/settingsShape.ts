@@ -18,14 +18,14 @@ export type CompanionMode = "follow" | "garden";
  * `anchors.ts` s'abonne au pont d'état dès l'import, ce qui rendrait la
  * réparation d'un blob invérifiable hors navigateur.
  */
-export const COMPANION_MODES: CompanionMode[] = ["follow", "garden"];
+const COMPANION_MODES: CompanionMode[] = ["follow", "garden"];
 
 /** Garde-fou : une bulle très longue déborde de l'écran. */
 export const MAX_LINE_LENGTH = 160;
-export const MAX_LINES = 50;
+const MAX_LINES = 50;
 
 /** Les sujets qui ont leur écran de réglages. Le plant n'en a pas : il n'a rien à régler. */
-export const SETTINGS_GROUPS = ["feed", "harvest", "hatch"] as const;
+const SETTINGS_GROUPS = ["feed", "harvest", "hatch"] as const;
 export type SettingsGroup = (typeof SETTINGS_GROUPS)[number];
 
 export type CompanionSettings = {
@@ -92,7 +92,7 @@ export type CompanionSettings = {
   hatchKeepRules: KeepRules;
 };
 
-export const DEFAULT_COMPANION_SETTINGS: CompanionSettings = {
+const DEFAULT_COMPANION_SETTINGS: CompanionSettings = {
   enabled: false,
   mode: "follow",
   npcId: null,

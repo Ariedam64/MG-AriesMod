@@ -219,7 +219,7 @@ const NEIGHBOURS: ReadonlyArray<[number, number]> = [
  * accepte, orthogonales de préférence. Il ne se plante jamais SUR le crop, ça
  * le cacherait.
  */
-export function standingTiles(target: XY, area: WanderArea): XY[] {
+function standingTiles(target: XY, area: WanderArea): XY[] {
   const orthogonal: XY[] = [];
   const diagonal: XY[] = [];
   NEIGHBOURS.forEach(([dx, dy], i) => {
@@ -324,7 +324,7 @@ export function pickWanderInterest(input: WanderInterestInput): WanderInterest |
 /* ------------------------------------------------------------------ */
 
 /** Une arrivée sur quatre environ s'accompagne d'une réplique. */
-export const COMMENT_CHANCE = 0.25;
+const COMMENT_CHANCE = 0.25;
 /** Au plus une réplique de flânerie toutes les trois minutes. */
 export const COMMENT_COOLDOWN_MS = 3 * 60_000;
 /** Au-delà, la bulle s'afficherait hors de l'écran du joueur. */

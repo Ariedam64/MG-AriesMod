@@ -14,7 +14,7 @@
 // load it.
 
 /** The game's own marker, DISCORD_SHELL_FRAME_PARAM in its discordFrameHost.ts. */
-export const DISCORD_SHELL_FRAME_PARAM = "mc_shell_frame";
+const DISCORD_SHELL_FRAME_PARAM = "mc_shell_frame";
 
 /** True in the Discord host page, the one frame on discordsays.com that never runs the game. */
 export function isDiscordHostFrame(loc: { hostname: string; search: string }): boolean {

@@ -107,7 +107,7 @@ export async function listNpcIdentities(): Promise<NpcIdentity[]> {
 }
 
 /** playerId des NPC que le jeu fait exister en ce moment. */
-export async function readPresentNpcIds(): Promise<string[]> {
+async function readPresentNpcIds(): Promise<string[]> {
   try {
     const data = await quinoaData.get();
     const npcs = data?.npcs;

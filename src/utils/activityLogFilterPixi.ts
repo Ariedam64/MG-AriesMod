@@ -78,12 +78,12 @@ function persistFilter(filter: ActionKey): void {
   }
 }
 
-export function getActiveFilter(): ActionKey {
+function getActiveFilter(): ActionKey {
   return activeFilter;
 }
 
 /** Full local history (up to 500 entries) narrowed to the given filter. "all" returns it unfiltered. */
-export function computeFilteredHistory(filter: ActionKey): ActivityLogEntry[] {
+function computeFilteredHistory(filter: ActionKey): ActivityLogEntry[] {
   const history = getActivityLogHistory();
   if (filter === "all") return history;
   return history.filter((entry) => classifyEntryAction(entry.action) === filter);
@@ -102,7 +102,7 @@ async function applyActiveFilter(): Promise<void> {
   }
 }
 
-export function setActiveFilter(filter: ActionKey): void {
+function setActiveFilter(filter: ActionKey): void {
   if (filter === activeFilter) return;
   activeFilter = filter;
   debugState.activeFilter = filter;

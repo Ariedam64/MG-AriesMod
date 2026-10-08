@@ -1,13 +1,12 @@
 // src/services/workflowScan.ts
 // Garden tile scan for the auto-workflow feature.
 
-import { Atoms } from "../store/atoms";
-import { plantCatalog, mutationCatalog } from "../data";
+import { mutationCatalog } from "../data";
 import { CROP_SIZE_MAX, CROP_SIZE_MIN, readCropSize } from "../utils/cropSize";
 
 /* ─── Types ─── */
 
-export interface CropSnapshot {
+interface CropSnapshot {
   slotIndex: number;
   species: string;
   startTime: number;
@@ -34,7 +33,7 @@ export interface CropSnapshot {
   preserved: boolean;
 }
 
-export interface PlantSnapshot {
+interface PlantSnapshot {
   tileIndex: number;
   species: string;
   crops: CropSnapshot[];
@@ -85,11 +84,6 @@ const COLOR_MUTATIONS = new Set(
 
 const WEATHER_MUTATIONS = new Set(["Wet", "Chilled", "Frozen", "Thunderstruck"]);
 const TIME_MUTATIONS = new Set(["Dawnlit", "Amberlit", "Dawncharged", "Ambercharged"]);
-const ALL_KNOWN_MUTATIONS = new Set([
-  ...COLOR_MUTATIONS,
-  ...WEATHER_MUTATIONS,
-  ...TIME_MUTATIONS,
-]);
 
 /* ─── Crop Size ─── */
 
@@ -278,28 +272,5 @@ function emptyResult(): GardenScanResult {
 
 /* ─── Watcher ─── */
 
-let _unsub: (() => void) | null = null;
 
-export function startWorkflowScan(
-  getSelectedSpecies: () => string[],
-  onScan: (result: GardenScanResult) => void,
-): void {
-  stopWorkflowScan();
 
-  void (async () => {
-    try {
-      _unsub = await Atoms.data.gardenTileObjects.onChangeNow((tileObjects) => {
-        const species = new Set(getSelectedSpecies());
-        const result = scanGarden(tileObjects, species);
-        onScan(result);
-      });
-    } catch (err) {
-      console.warn("[WorkflowScan] failed to subscribe:", err);
-    }
-  })();
-}
-
-export function stopWorkflowScan(): void {
-  try { _unsub?.(); } catch {}
-  _unsub = null;
-}

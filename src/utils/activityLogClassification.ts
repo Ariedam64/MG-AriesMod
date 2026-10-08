@@ -28,7 +28,7 @@ export type ActionKey =
   | "other"
   | string;
 
-export const ACTION_ORDER: ActionKey[] = [
+const ACTION_ORDER: ActionKey[] = [
   "all",
   "found",
   "buy",
@@ -51,7 +51,7 @@ export const ACTION_ORDER: ActionKey[] = [
   "other",
 ];
 
-export const ACTION_LABELS: Record<string, string> = {
+const ACTION_LABELS: Record<string, string> = {
   all: "All",
   found: "Finds",
   buy: "Purchases",
@@ -176,7 +176,7 @@ const ACTION_MAP_LOWER: Record<string, ActionKey> = Object.fromEntries(
 ) as Record<string, ActionKey>;
 
 /** Strips known ability-name suffixes/prefixes (Snowy/_NEW/roman numerals) to find a shared bucket for tiered abilities. */
-export function normalizeAbilityAction(raw: string): ActionKey | null {
+function normalizeAbilityAction(raw: string): ActionKey | null {
   const trimmed = String(raw || "").trim();
   if (!trimmed) return null;
   let key = trimmed.replace(/^Snowy/i, "");

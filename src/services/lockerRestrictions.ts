@@ -1,5 +1,5 @@
 // src/services/lockerRestrictions.ts
-export type LockerRestrictionsState = {
+type LockerRestrictionsState = {
   /** Minimum players in room (1-6) required to allow selling crops. */
   minRequiredPlayers: number;
   /** Per-egg lock map: true means hatching is blocked. */
@@ -14,7 +14,7 @@ import { readAriesPath, writeAriesPath } from "../utils/localStorage";
 
 const ARIES_LOCKER_RESTRICTIONS_PATH = "locker.restrictions";
 
-export type SellAllPetsRules = {
+type SellAllPetsRules = {
   enabled: boolean;
   protectGold: boolean;
   protectRainbow: boolean;

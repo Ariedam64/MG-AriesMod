@@ -24,7 +24,7 @@ import { petCatalog } from "../data";
  * - Back-compat: keep options signatures, but targetText no longer used for detection
  * ==========================================================================='*/
 
-export type InventoryPetItem = {
+type InventoryPetItem = {
   id: string;
   itemType: "Pet";
   petSpecies?: string;
@@ -38,17 +38,17 @@ export type InventoryPetItem = {
   [key: string]: unknown;
 };
 
-export type SellAllPetsEventDetail = {
+type SellAllPetsEventDetail = {
   pets: InventoryPetItem[];
   count: number;
 };
 
-export const SELL_ALL_PETS_EVENT = "sell-all-pets:list" as const;
+const SELL_ALL_PETS_EVENT = "sell-all-pets:list" as const;
 
 const SELL_ALL_PETS_DRY_RUN = false;
 const SELL_ALL_PETS_CONFIRM_MODAL_ID = "tm-sellallpets-confirm";
 
-export interface ThemeColors {
+interface ThemeColors {
   text: string;
   bg: string;
   border: string;
@@ -99,7 +99,7 @@ const DEFAULT_THEME: ThemeColors = {
   ring:        'var(--chakra-ring-color, rgba(66,153,225,0.6))',
 };
 
-export const DEFAULTS = {
+const DEFAULTS = {
   // conteneur principal du panel modal pet sell
   rootSelector: '.McFlex.css-1svwxx0',
   // gate : bloc qui contient le bouton (hash de classe instable côté Chakra)
@@ -191,31 +191,6 @@ export function startInjectSellAllPets(options: InjectOptions = {}): InjectContr
   };
 }
 
-/** One-shot pass without installing observers */
-export function injectSellAllPetsOnce(options: Omit<InjectOptions, 'observeHistory' | 'log'> = {}): void {
-  if (!isBrowser()) return;
-
-  const ROOT_SEL   = options.rootSelector      ?? DEFAULTS.rootSelector;
-  const CHECK_SEL  = options.checkSelector     ?? DEFAULTS.checkSelector;
-  const BTN_WIDE   = options.buttonSelectorWide  ?? DEFAULTS.buttonSelectorWide;
-  const BTN_STRICT = options.buttonSelectorStrict ?? DEFAULTS.buttonSelectorStrict;
-  const BTN_TEXT   = options.targetText        ?? DEFAULTS.targetText;     // kept for signature
-  const INJ_TEXT   = options.injectText        ?? DEFAULTS.injectText;
-  const INJ_CLASS  = options.injectedClass     ?? DEFAULTS.injectedClass;
-  const THEME      = options.theme             ?? DEFAULT_THEME;
-  const logger: (...args: unknown[]) => void = () => {};
-  const HANDLE     = options.onClick ?? createDefaultClickHandler(logger);
-
-  ensureStyle(INJ_CLASS, THEME);
-
-  document.querySelectorAll(ROOT_SEL).forEach(root => {
-    const gate = (root as Element).querySelector(CHECK_SEL);
-    if (!gate) { cleanup(root as Element, INJ_CLASS); return; }
-    const target = findTargetButton(root as Element, BTN_WIDE, BTN_STRICT, BTN_TEXT);
-    if (!target) { cleanup(root as Element, INJ_CLASS); return; }
-    ensureInjectedNextTo(target, INJ_CLASS, INJ_TEXT, (ev, ctx) => { safeInvokeClick(HANDLE, ev, ctx, logger); });
-  });
-}
 
 export async function runSellAllPetsFlow(
   logger: (...args: unknown[]) => void = () => {}
@@ -231,7 +206,7 @@ export async function runSellAllPetsFlow(
 
 /* ======================== inventory extraction logic ======================== */
 
-export async function getUnfavoritedInventoryPets(): Promise<InventoryPetItem[]> {
+async function getUnfavoritedInventoryPets(): Promise<InventoryPetItem[]> {
   try { await ensureStore(); } catch {}
 
   const [inventory, favoriteIds] = await Promise.all([

@@ -54,7 +54,7 @@
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
   // src/sprite/settings.ts
-  var DEFAULT_CFG, MUT_META, MUT_NAMES, MUT_G1, MUT_G2, MUT_G3;
+  var DEFAULT_CFG, MUT_META, MUT_G1, MUT_G2, MUT_G3;
   var init_settings = __esm({
     "src/sprite/settings.ts"() {
       "use strict";
@@ -86,7 +86,6 @@
         Dawncharged: { overlayTall: null, tallIconOverride: null },
         Ambercharged: { overlayTall: null, tallIconOverride: null }
       };
-      MUT_NAMES = Object.keys(MUT_META);
       MUT_G1 = ["", "Gold", "Rainbow"].filter(Boolean);
       MUT_G2 = ["", "Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged"].filter(Boolean);
       MUT_G3 = ["", "Dawnlit", "Ambershine", "Dawncharged", "Ambercharged"].filter(Boolean);
@@ -172,7 +171,7 @@
     const listeners9 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
-    const tick4 = (now2) => {
+    const tick3 = (now2) => {
       const delta = last ? (now2 - last) / (1e3 / 60) : 1;
       last = now2;
       for (const fn of listeners9) {
@@ -181,12 +180,12 @@
         } catch {
         }
       }
-      rafId = requestAnimationFrame(tick4);
+      rafId = requestAnimationFrame(tick3);
     };
     const ticker = {
       add(fn) {
         if (!listeners9.size) {
-          rafId = requestAnimationFrame(tick4);
+          rafId = requestAnimationFrame(tick3);
         }
         listeners9.add(fn);
       },
@@ -999,7 +998,7 @@
     return layers;
   }
   function buildTallOverlaySprites(itKey, dims, overlayPipeline, state6, cfg, baseCanvas, TextureCtor, disposables) {
-    const { w, aX, basePos } = dims;
+    const { aX, basePos } = dims;
     if (!baseCanvas) return [];
     const overlays = [];
     for (const step of overlayPipeline) {
@@ -1614,537 +1613,6 @@
     }
   });
 
-  // src/utils/friendSettingsSchema.ts
-  var DEFAULT_FRIEND_SETTINGS;
-  var init_friendSettingsSchema = __esm({
-    "src/utils/friendSettingsSchema.ts"() {
-      "use strict";
-      DEFAULT_FRIEND_SETTINGS = {
-        showOnlineFriendsOnly: false,
-        hideRoomFromPublicList: false,
-        messageSoundEnabled: true,
-        friendRequestSoundEnabled: true,
-        showGarden: true,
-        showInventory: true,
-        showCoins: true,
-        showActivityLog: true,
-        showJournal: true,
-        showStats: true
-      };
-    }
-  });
-
-  // src/utils/localStorage.ts
-  function getHostStorage() {
-    if (typeof window === "undefined") return null;
-    try {
-      if (typeof window.localStorage === "undefined") return null;
-      return window.localStorage;
-    } catch {
-      return null;
-    }
-  }
-  function parseSafe(raw) {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return raw;
-    }
-  }
-  function mergeSection(existing, next) {
-    const base = { ...existing ?? {} };
-    for (const [k, v] of Object.entries(next)) {
-      if (base[k] === void 0) {
-        base[k] = v;
-      }
-    }
-    return base;
-  }
-  function unwrapNestedSnapshot(raw) {
-    let cur = raw;
-    let guard = 0;
-    while (guard++ < 10 && cur && typeof cur === "object" && "snapshot" in cur && typeof cur.snapshot === "object") {
-      cur = cur.snapshot;
-    }
-    return cur ?? raw;
-  }
-  function coerceLegacyAggregate(raw) {
-    const out = { ...DEFAULT_ARIES_STORAGE };
-    if (!raw || typeof raw !== "object") return out;
-    const data = raw;
-    if (typeof data.version === "number") out.version = data.version;
-    if (typeof data.migratedAt === "number") out.migratedAt = data.migratedAt;
-    if ("stats" in data) out.stats = unwrapNestedSnapshot(data.stats);
-    if ("customRooms" in data) out.room = mergeSection(out.room, { customRooms: data.customRooms });
-    if ("pets" in data && typeof data.pets === "object") {
-      out.pets = mergeSection(out.pets, data.pets);
-    }
-    if ("petsOverrides" in data) out.pets = mergeSection(out.pets, { overrides: data.petsOverrides });
-    if ("petsUI" in data) out.pets = mergeSection(out.pets, { ui: data.petsUI });
-    if ("petTeams" in data) out.pets = mergeSection(out.pets, { teams: data.petTeams });
-    if ("petTeamSearch" in data) out.pets = mergeSection(out.pets, { teamSearch: data.petTeamSearch });
-    if ("petTeamHotkeys" in data) out.pets = mergeSection(out.pets, { hotkeys: data.petTeamHotkeys });
-    if ("petAlerts" in data) out.pets = mergeSection(out.pets, { alerts: data.petAlerts });
-    if ("notifier" in data && typeof data.notifier === "object") {
-      out.notifier = mergeSection(out.notifier, data.notifier);
-    }
-    if ("notifierPrefs" in data) out.notifier = mergeSection(out.notifier, { prefs: data.notifierPrefs });
-    if ("notifierRules" in data) out.notifier = mergeSection(out.notifier, { rules: data.notifierRules });
-    if ("weatherNotifierPrefs" in data) out.notifier = mergeSection(out.notifier, { weatherPrefs: data.weatherNotifierPrefs });
-    if ("notifierLoopDefaults" in data) out.notifier = mergeSection(out.notifier, { loopDefaults: data.notifierLoopDefaults });
-    if ("misc" in data && typeof data.misc === "object") {
-      out.misc = mergeSection(out.misc, data.misc);
-    }
-    if ("ghostMode" in data) out.misc = mergeSection(out.misc, { ghostMode: data.ghostMode });
-    if ("ghostDelayMs" in data) out.misc = mergeSection(out.misc, { ghostDelayMs: data.ghostDelayMs });
-    if ("autoRecoEnabled" in data) out.misc = mergeSection(out.misc, { autoRecoEnabled: data.autoRecoEnabled });
-    if ("autoRecoDelayMs" in data) out.misc = mergeSection(out.misc, { autoRecoDelayMs: data.autoRecoDelayMs });
-    if ("locker" in data && typeof data.locker === "object") {
-      out.locker = mergeSection(out.locker, data.locker);
-    }
-    if ("lockerRestrictions" in data) out.locker = mergeSection(out.locker, { restrictions: data.lockerRestrictions });
-    if ("lockerState" in data) out.locker = mergeSection(out.locker, { state: data.lockerState });
-    if ("keybinds" in data && typeof data.keybinds === "object") {
-      out.keybinds = mergeSection(out.keybinds, data.keybinds);
-    }
-    if ("editorSavedGardens" in data) out.editor = mergeSection(out.editor, { savedGardens: data.editorSavedGardens });
-    if ("editor" in data && typeof data.editor === "object") {
-      out.editor = mergeSection(out.editor, data.editor);
-    }
-    if ("activityLog" in data && typeof data.activityLog === "object") {
-      out.activityLog = mergeSection(out.activityLog, data.activityLog);
-    }
-    if ("companion" in data && typeof data.companion === "object") {
-      out.companion = mergeSection(out.companion, data.companion);
-    }
-    if ("companionSession" in data && typeof data.companionSession === "object") {
-      out.companionSession = mergeSection(out.companionSession, data.companionSession);
-    }
-    if ("activityLogHistory" in data) out.activityLog = mergeSection(out.activityLog, { history: data.activityLogHistory });
-    if ("activityLogFilter" in data) out.activityLog = mergeSection(out.activityLog, { filter: data.activityLogFilter });
-    if ("hud" in data && typeof data.hud === "object") {
-      out.hud = mergeSection(out.hud, data.hud);
-    }
-    if ("menu" in data && typeof data.menu === "object") {
-      out.menu = mergeSection(out.menu, data.menu);
-    }
-    if ("inventory" in data && typeof data.inventory === "object") {
-      out.inventory = mergeSection(out.inventory, data.inventory);
-    }
-    if ("audio" in data && typeof data.audio === "object") {
-      out.audio = mergeSection(out.audio, data.audio);
-    }
-    if ("audioSettings" in data) out.audio = mergeSection(out.audio, { settings: data.audioSettings });
-    if ("audioLibrary" in data) out.audio = mergeSection(out.audio, { library: data.audioLibrary });
-    if ("soundEffectsVolumeAtom" in data) out.audio = mergeSection(out.audio, { sfxVolumeAtom: data.soundEffectsVolumeAtom });
-    if ("friends" in data && typeof data.friends === "object") {
-      out.friends = {
-        ...out.friends ?? {},
-        ...data.friends
-      };
-    }
-    if ("eggAutomation" in data && typeof data.eggAutomation === "object") {
-      out.eggAutomation = mergeSection(out.eggAutomation, data.eggAutomation);
-    }
-    if ("weatherTeams" in data && typeof data.weatherTeams === "object") {
-      out.weatherTeams = mergeSection(out.weatherTeams, data.weatherTeams);
-    }
-    if ("workflowStudio" in data) {
-      out.workflowStudio = data.workflowStudio;
-    }
-    if ("workflow" in data && typeof data.workflow === "object") {
-      out.workflow = mergeSection(out.workflow, data.workflow);
-    }
-    return out;
-  }
-  function installAriesLifecycleHooksOnce() {
-    if (ariesLifecycleHooksInstalled || typeof window === "undefined") return;
-    ariesLifecycleHooksInstalled = true;
-    const flush = () => flushAriesStorageNow();
-    window.addEventListener("pagehide", flush);
-    window.addEventListener("beforeunload", flush);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") flush();
-    });
-    window.addEventListener("storage", (event) => {
-      if (event.key !== ARIES_STORAGE_KEY) return;
-      if (ariesFlushPending) return;
-      cachedAriesStorage = null;
-    });
-  }
-  function flushAriesStorageNow() {
-    if (ariesFlushTimer !== null) {
-      clearTimeout(ariesFlushTimer);
-      ariesFlushTimer = null;
-    }
-    if (!ariesFlushPending || !cachedAriesStorage) return;
-    ariesFlushPending = false;
-    const storage = getHostStorage();
-    if (!storage) return;
-    try {
-      storage.setItem(ARIES_STORAGE_KEY, JSON.stringify(cachedAriesStorage));
-    } catch {
-    }
-  }
-  function scheduleAriesFlush() {
-    installAriesLifecycleHooksOnce();
-    ariesFlushPending = true;
-    if (ariesFlushTimer !== null) return;
-    ariesFlushTimer = window.setTimeout(() => {
-      ariesFlushTimer = null;
-      flushAriesStorageNow();
-    }, ARIES_FLUSH_DELAY_MS);
-  }
-  function loadAriesStorage() {
-    if (cachedAriesStorage) return cachedAriesStorage;
-    installAriesLifecycleHooksOnce();
-    const storage = getHostStorage();
-    const raw = storage?.getItem(ARIES_STORAGE_KEY);
-    if (raw) {
-      const parsed = parseSafe(raw);
-      if (parsed && typeof parsed === "object") {
-        cachedAriesStorage = coerceLegacyAggregate(parsed);
-        return cachedAriesStorage;
-      }
-    }
-    cachedAriesStorage = { ...DEFAULT_ARIES_STORAGE };
-    return cachedAriesStorage;
-  }
-  function persistAriesStorage(data) {
-    cachedAriesStorage = data;
-    scheduleAriesFlush();
-  }
-  function getValueAtPath(obj, path) {
-    let cur = obj;
-    for (const segment of path) {
-      if (!cur || typeof cur !== "object") return void 0;
-      cur = cur[segment];
-    }
-    return cur;
-  }
-  function setValueAtPath(obj, path, value) {
-    if (!path.length) return;
-    let cur = obj;
-    for (let i = 0; i < path.length - 1; i++) {
-      const key2 = path[i];
-      if (!cur[key2] || typeof cur[key2] !== "object") {
-        cur[key2] = {};
-      }
-      cur = cur[key2];
-    }
-    const last = path[path.length - 1];
-    if (value === void 0) {
-      if (cur && typeof cur === "object") {
-        delete cur[last];
-      }
-    } else {
-      cur[last] = value;
-    }
-  }
-  function getAriesStorage() {
-    return loadAriesStorage();
-  }
-  function saveAriesStorage(data) {
-    persistAriesStorage(data);
-  }
-  function updateAriesStorage(mutator) {
-    const current = loadAriesStorage();
-    mutator(current);
-    current.version = ARIES_STORAGE_VERSION;
-    persistAriesStorage(current);
-    return current;
-  }
-  function readAriesPath(path, fallback) {
-    const parts = path.split(".").filter(Boolean);
-    const value = getValueAtPath(loadAriesStorage(), parts);
-    if (value === void 0) return fallback;
-    return value;
-  }
-  function writeAriesPath(path, value) {
-    return updateAriesStorage((state6) => {
-      setValueAtPath(state6, path.split(".").filter(Boolean), value);
-    });
-  }
-  function updateAriesPath(path, updater) {
-    return updateAriesStorage((state6) => {
-      const parts = path.split(".").filter(Boolean);
-      const currentValue = getValueAtPath(state6, parts);
-      const next = updater(currentValue);
-      setValueAtPath(state6, parts, next);
-    });
-  }
-  function setApiKey(apiKey) {
-    try {
-      if (typeof GM_setValue === "function") {
-        GM_setValue(API_KEY_STORAGE_KEY, apiKey);
-        return;
-      }
-      getHostStorage()?.setItem(API_KEY_STORAGE_KEY, apiKey);
-    } catch (e) {
-      console.error("Failed to store API key:", e);
-    }
-  }
-  function getApiKey() {
-    try {
-      if (typeof GM_getValue === "function") {
-        return GM_getValue(API_KEY_STORAGE_KEY, null) ?? null;
-      }
-      return getHostStorage()?.getItem(API_KEY_STORAGE_KEY) ?? null;
-    } catch (e) {
-      console.error("Failed to retrieve API key:", e);
-      return null;
-    }
-  }
-  function hasApiKey() {
-    const key2 = getApiKey();
-    return key2 !== null && key2.length > 0;
-  }
-  function hasSeenRoomPrivacyNotice() {
-    try {
-      if (typeof GM_getValue === "function") {
-        const raw = GM_getValue(SEEN_ROOM_PRIVACY_NOTICE_KEY, null);
-        if (raw == null) return false;
-        if (typeof raw === "boolean") return raw;
-        return String(raw).trim() === "1";
-      }
-      return getHostStorage()?.getItem(SEEN_ROOM_PRIVACY_NOTICE_KEY) === "1";
-    } catch {
-      return false;
-    }
-  }
-  function markRoomPrivacyNoticeSeen() {
-    try {
-      if (typeof GM_setValue === "function") {
-        GM_setValue(SEEN_ROOM_PRIVACY_NOTICE_KEY, "1");
-        return;
-      }
-      getHostStorage()?.setItem(SEEN_ROOM_PRIVACY_NOTICE_KEY, "1");
-    } catch {
-    }
-  }
-  function hasSeenAutoRecoDisabledNotice() {
-    try {
-      if (typeof GM_getValue === "function") {
-        const raw = GM_getValue(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, null);
-        if (raw == null) return false;
-        if (typeof raw === "boolean") return raw;
-        return String(raw).trim() === "1";
-      }
-      return getHostStorage()?.getItem(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY) === "1";
-    } catch {
-      return false;
-    }
-  }
-  function markAutoRecoDisabledNoticeSeen() {
-    try {
-      if (typeof GM_setValue === "function") {
-        GM_setValue(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, "1");
-        return;
-      }
-      getHostStorage()?.setItem(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, "1");
-    } catch {
-    }
-  }
-  function getSeenChangelogVersion() {
-    try {
-      if (typeof GM_getValue === "function") {
-        const raw = GM_getValue(SEEN_CHANGELOG_VERSION_KEY, null);
-        return typeof raw === "string" && raw ? raw : null;
-      }
-      return getHostStorage()?.getItem(SEEN_CHANGELOG_VERSION_KEY) ?? null;
-    } catch {
-      return null;
-    }
-  }
-  function markChangelogVersionSeen(version) {
-    try {
-      if (typeof GM_setValue === "function") {
-        GM_setValue(SEEN_CHANGELOG_VERSION_KEY, version);
-        return;
-      }
-      getHostStorage()?.setItem(SEEN_CHANGELOG_VERSION_KEY, version);
-    } catch {
-    }
-  }
-  function setDeclinedApiAuth(declined) {
-    try {
-      if (declined) {
-        if (typeof GM_setValue === "function") {
-          GM_setValue(AUTH_DECLINED_STORAGE_KEY, "1");
-          return;
-        }
-        getHostStorage()?.setItem(AUTH_DECLINED_STORAGE_KEY, "1");
-        return;
-      }
-      if (typeof GM_deleteValue === "function") {
-        GM_deleteValue(AUTH_DECLINED_STORAGE_KEY);
-        return;
-      }
-      getHostStorage()?.removeItem(AUTH_DECLINED_STORAGE_KEY);
-    } catch {
-    }
-  }
-  var ARIES_STORAGE_KEY, ARIES_STORAGE_VERSION, API_KEY_STORAGE_KEY, AUTH_DECLINED_STORAGE_KEY, SEEN_ROOM_PRIVACY_NOTICE_KEY, SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, SEEN_CHANGELOG_VERSION_KEY, DEFAULT_ARIES_STORAGE, ARIES_FLUSH_DELAY_MS, cachedAriesStorage, ariesFlushTimer, ariesFlushPending, ariesLifecycleHooksInstalled;
-  var init_localStorage = __esm({
-    "src/utils/localStorage.ts"() {
-      "use strict";
-      init_friendSettingsSchema();
-      ARIES_STORAGE_KEY = "aries_mod";
-      ARIES_STORAGE_VERSION = 1;
-      API_KEY_STORAGE_KEY = "aries_api_key";
-      AUTH_DECLINED_STORAGE_KEY = "aries_auth_declined";
-      SEEN_ROOM_PRIVACY_NOTICE_KEY = "aries_seen_room_privacy_notice_v2";
-      SEEN_AUTO_RECO_DISABLED_NOTICE_KEY = "aries_seen_autoreco_disabled_notice";
-      SEEN_CHANGELOG_VERSION_KEY = "aries_seen_changelog_version";
-      DEFAULT_ARIES_STORAGE = {
-        version: ARIES_STORAGE_VERSION,
-        friends: {
-          settings: DEFAULT_FRIEND_SETTINGS
-        },
-        notifications: {
-          soundEnabled: true
-        }
-      };
-      ARIES_FLUSH_DELAY_MS = 500;
-      cachedAriesStorage = null;
-      ariesFlushTimer = null;
-      ariesFlushPending = false;
-      ariesLifecycleHooksInstalled = false;
-    }
-  });
-
-  // src/ariesModAPI/config.ts
-  var API_BASE_URL, API_ORIGIN, MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND, DEFAULT_HEARTBEAT_INTERVAL;
-  var init_config = __esm({
-    "src/ariesModAPI/config.ts"() {
-      "use strict";
-      API_BASE_URL = "https://ariesmod-api.ariedam.fr/";
-      API_ORIGIN = API_BASE_URL.replace(/\/$/, "");
-      MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND = 5;
-      DEFAULT_HEARTBEAT_INTERVAL = 6e4;
-    }
-  });
-
-  // src/ariesModAPI/client/http.ts
-  function buildUrl(path, query) {
-    const url = new URL(path, API_BASE_URL);
-    if (query) {
-      for (const [key2, value] of Object.entries(query)) {
-        if (value === void 0) continue;
-        url.searchParams.set(key2, String(value));
-      }
-    }
-    return url.toString();
-  }
-  function gmRequest2(method, url, body) {
-    return new Promise((resolve) => {
-      const apiKey = getApiKey();
-      const headers = {};
-      if (apiKey) {
-        headers["Authorization"] = `Bearer ${apiKey}`;
-      }
-      if (body !== void 0) {
-        headers["Content-Type"] = "application/json";
-      }
-      GM_xmlhttpRequest({
-        method,
-        url,
-        headers,
-        data: body !== void 0 ? JSON.stringify(body) : void 0,
-        onload: (res) => {
-          if (res.status >= 200 && res.status < 300) {
-            try {
-              const parsed = res.responseText ? JSON.parse(res.responseText) : null;
-              resolve({ status: res.status, data: parsed });
-            } catch {
-              resolve({ status: res.status, data: null });
-            }
-          } else {
-            resolve({ status: res.status, data: null });
-          }
-        },
-        onerror: () => {
-          resolve({ status: 0, data: null });
-        }
-      });
-    });
-  }
-  async function fetchRequest(method, url, body) {
-    try {
-      const apiKey = getApiKey();
-      const headers = {};
-      if (apiKey) {
-        headers["Authorization"] = `Bearer ${apiKey}`;
-      }
-      const options = {
-        method,
-        headers,
-        credentials: "omit"
-      };
-      if (body !== void 0) {
-        headers["Content-Type"] = "application/json";
-        options.body = JSON.stringify(body);
-      }
-      const res = await fetch(url, options);
-      const text = await res.text();
-      let parsed = null;
-      if (text) {
-        try {
-          parsed = JSON.parse(text);
-        } catch {
-        }
-      }
-      return { status: res.status, data: parsed };
-    } catch {
-      return { status: 0, data: null };
-    }
-  }
-  async function request(method, path, options) {
-    return withDiscordPollPause(async () => {
-      const url = buildUrl(path, options?.query);
-      if (isDiscordActivityContext()) {
-        return gmRequest2(method, url, options?.body);
-      }
-      try {
-        return await fetchRequest(method, url, options?.body);
-      } catch {
-        return gmRequest2(method, url, options?.body);
-      }
-    });
-  }
-  async function httpPost(path, body) {
-    return request("POST", path, { body });
-  }
-  var init_http = __esm({
-    "src/ariesModAPI/client/http.ts"() {
-      "use strict";
-      init_discordCsp();
-      init_localStorage();
-      init_config();
-      init_events();
-    }
-  });
-
-  // src/ariesModAPI/client/sse.ts
-  var init_sse = __esm({
-    "src/ariesModAPI/client/sse.ts"() {
-      "use strict";
-      init_localStorage();
-      init_http();
-      init_config();
-    }
-  });
-
-  // src/ariesModAPI/client/longPoll.ts
-  var init_longPoll = __esm({
-    "src/ariesModAPI/client/longPoll.ts"() {
-      "use strict";
-      init_localStorage();
-      init_config();
-      init_http();
-    }
-  });
-
   // src/ariesModAPI/client/events.ts
   function pauseDiscordLongPolls() {
     if (!isDiscordActivityContext()) return;
@@ -2181,8 +1649,6 @@
     "src/ariesModAPI/client/events.ts"() {
       "use strict";
       init_discordCsp();
-      init_sse();
-      init_longPoll();
       _unifiedConnections = /* @__PURE__ */ new Map();
       _pollPauseDepth = 0;
     }
@@ -2548,14 +2014,14 @@
   function startColorPolling() {
     if (captureState.colorPollingTimer) return;
     captureState.colorPollAttempts = 0;
-    const timer4 = setInterval(async () => {
+    const timer2 = setInterval(async () => {
       const success = await enrichAbilitiesWithColors();
       if (success || ++captureState.colorPollAttempts > MAX_COLOR_POLL_ATTEMPTS) {
-        clearInterval(timer4);
+        clearInterval(timer2);
         captureState.colorPollingTimer = null;
       }
     }, COLOR_POLL_INTERVAL_MS);
-    captureState.colorPollingTimer = timer4;
+    captureState.colorPollingTimer = timer2;
   }
   function stopColorPolling() {
     if (captureState.colorPollingTimer) {
@@ -4382,13 +3848,12 @@
   function label(rs) {
     return ["CONNECTING", "OPEN", "CLOSING", "CLOSED"][rs ?? -1] || "none";
   }
-  var NativeWS, NativeWorker, sockets, quinoaWS, workerFound, Workers;
+  var NativeWS, sockets, quinoaWS, workerFound, Workers;
   var init_state3 = __esm({
     "src/core/state.ts"() {
       "use strict";
       init_page_context();
       NativeWS = pageWindow.WebSocket;
-      NativeWorker = pageWindow.Worker;
       sockets = [];
       quinoaWS = null;
       workerFound = false;
@@ -5131,7 +4596,6 @@
       });
     }
     async function subKey(key2, cb) {
-      let last = "__INIT__";
       return sub(({ value, changedKeys }) => {
         if (changedKeys.includes(key2)) cb({ value });
       });
@@ -5220,28 +4684,6 @@
   });
 
   // src/store/atoms.ts
-  function slotSig(o) {
-    if (!o) return "\u2205";
-    return [
-      o.objectType ?? o.type ?? "",
-      o.species ?? o.seedSpecies ?? o.plantSpecies ?? o.eggId ?? o.decorId ?? "",
-      o.plantedAt ?? o.startTime ?? 0,
-      o.maturedAt ?? o.endTime ?? 0
-    ].join("|");
-  }
-  function activePetSig(p) {
-    const s = p?.slot ?? {};
-    const muts = Array.isArray(s.mutations) ? s.mutations.slice().sort().join(",") : "";
-    const ab = Array.isArray(s.abilities) ? s.abilities.slice().sort().join(",") : "";
-    const name = s.name ?? "";
-    const species = s.petSpecies ?? "";
-    const xp = Number.isFinite(s.xp) ? Math.round(s.xp) : 0;
-    const hunger = Number.isFinite(s.hunger) ? Math.round(s.hunger * 1e3) : 0;
-    const scale = Number.isFinite(s.targetScale) ? Math.round(s.targetScale * 1e3) : 0;
-    const x = Number.isFinite(p?.position?.x) ? Math.round(p.position.x) : 0;
-    const y = Number.isFinite(p?.position?.y) ? Math.round(p.position.y) : 0;
-    return `${species}|${name}|xp:${xp}|hg:${hunger}|sc:${scale}|m:${muts}|a:${ab}|pos:${x},${y}`;
-  }
   function activePetStableSig(p) {
     const s = p?.slot ?? {};
     const muts = Array.isArray(s.mutations) ? s.mutations.slice().sort().join(",") : "";
@@ -5282,7 +4724,7 @@
     const arr = await favoriteIds.get();
     return new Set(Array.isArray(arr) ? arr : []);
   }
-  var position, state, map, player, action, myData, myInventory, gardensWithBackfills, myCropInventory, mySeedInventory, myToolInventory, myEggInventory, myDecorInventory, mySeedSiloItems, myDecorShedItems, myToolShackItems, myFeedingTroughItems, myPetInfos, myPetSlotInfos, myPrimitivePetSlots, myPetIdOnSameTile, totalPetSellPrice, myCropItemsToSell, myPetHutchPetItems, isMyInventoryAtMaxLength, myNumPetHutchItems, myPetHutchCapacitySlots, shops, myShopPurchases, myUserSlot, numPlayers, totalCropSellPrice, myValidatedSelectedItemIndex, setSelectedIndexToEnd, mySelectedItemName, mySelectedItemId, myPossiblyNoLongerValidSelectedItemIndex, myCurrentGardenObject, myCurrentSortedGrowSlotIndices, myCurrentGrowSlotIndex, myOwnCurrentGardenObject, isCurrentGrowSlotMature, myOwnCurrentDirtTileIndex, mySelectedItemRotation, weather, activeModalRaw, sameModal, activeModal, inventoryModalIsActive, activityLogTab, avatarTriggerAnimationAtom, friendBonusMultiplier, garden, gardenTileObjects, favoriteIds, playerId, myOwnCurrentGardenObjectType, stateChild, stateChildData, stateShops, stateUserSlots, statePlayers, myActivityLog, seedShop, toolShop, eggShop, decorShop, GardenSlotsSig, PetsByIdSig, PetsByIdStableSig, FavoriteIdsSig, Atoms;
+  var position, state, map, player, action, myData, myInventory, gardensWithBackfills, myCropInventory, mySeedInventory, myToolInventory, myEggInventory, myDecorInventory, mySeedSiloItems, myDecorShedItems, myToolShackItems, myFeedingTroughItems, myPetInfos, myPetSlotInfos, myPrimitivePetSlots, myPetIdOnSameTile, totalPetSellPrice, myCropItemsToSell, myPetHutchPetItems, isMyInventoryAtMaxLength, myNumPetHutchItems, myPetHutchCapacitySlots, shops, myShopPurchases, myUserSlot, numPlayers, totalCropSellPrice, myValidatedSelectedItemIndex, setSelectedIndexToEnd, mySelectedItemName, mySelectedItemId, myPossiblyNoLongerValidSelectedItemIndex, myCurrentGardenObject, myCurrentSortedGrowSlotIndices, myCurrentGrowSlotIndex, myOwnCurrentGardenObject, isCurrentGrowSlotMature, myOwnCurrentDirtTileIndex, mySelectedItemRotation, weather, activeModalRaw, sameModal, activeModal, inventoryModalIsActive, activityLogTab, avatarTriggerAnimationAtom, friendBonusMultiplier, garden, gardenTileObjects, favoriteIds, playerId, myOwnCurrentGardenObjectType, stateUserSlots, myActivityLog, seedShop, toolShop, eggShop, decorShop, Atoms;
   var init_atoms = __esm({
     "src/store/atoms.ts"() {
       "use strict";
@@ -5374,36 +4816,12 @@
       favoriteIds = makeView("myInventoryAtom", { path: "favoritedItemIds" });
       playerId = makeView("playerAtom", { path: "id" });
       myOwnCurrentGardenObjectType = makeView("myOwnCurrentGardenObjectAtom", { path: "objectType" });
-      stateChild = makeView("stateAtom", { path: "child" });
-      stateChildData = makeView("stateAtom", { path: "child.data" });
-      stateShops = makeView("stateAtom", { path: "child.data.shops" });
       stateUserSlots = makeView("stateAtom", { path: "child.data.userSlots" });
-      statePlayers = makeView("stateAtom", { path: "data.players" });
       myActivityLog = makeView("myDataAtom", { path: "activityLogs" });
       seedShop = makeView("stateAtom", { path: "child.data.shops.seed" });
       toolShop = makeView("stateAtom", { path: "child.data.shops.tool" });
       eggShop = makeView("stateAtom", { path: "child.data.shops.egg" });
       decorShop = makeView("stateAtom", { path: "child.data.shops.decor" });
-      GardenSlotsSig = gardenTileObjects.asSignature({
-        mode: "record",
-        key: (_item, key2) => Number(key2),
-        sig: (item) => slotSig(item)
-      });
-      PetsByIdSig = myPetInfos.asSignature({
-        mode: "array",
-        key: (p) => String(p?.slot?.id ?? ""),
-        sig: (p) => activePetSig(p)
-      });
-      PetsByIdStableSig = myPetInfos.asSignature({
-        mode: "array",
-        key: (p) => String(p?.slot?.id ?? ""),
-        sig: (p) => activePetStableSig(p)
-      });
-      FavoriteIdsSig = favoriteIds.asSignature({
-        mode: "array",
-        key: (id) => String(id),
-        sig: () => "1"
-      });
       Atoms = {
         ui: { activeModal, inventoryModalIsActive, activityLogTab },
         server: { numPlayers, friendBonusMultiplier },
@@ -8853,7 +8271,6 @@
       init_dynamic();
       init_hardcoded_data_clean();
       init_dynamic();
-      init_dynamic();
       plantCatalog2 = makeCatalogProxy("plants", plantCatalog);
       petCatalog2 = makeCatalogProxy("pets", petCatalog);
       petAbilities2 = makeCatalogProxy("abilities", petAbilities);
@@ -8939,6 +8356,405 @@
       SIZE_SPAN = CROP_SIZE_MAX - CROP_SIZE_MIN;
       LEGACY_SCALE_MIN = 1;
       LEGACY_FALLBACK_MAX_SCALE = 2;
+    }
+  });
+
+  // src/utils/friendSettingsSchema.ts
+  var DEFAULT_FRIEND_SETTINGS;
+  var init_friendSettingsSchema = __esm({
+    "src/utils/friendSettingsSchema.ts"() {
+      "use strict";
+      DEFAULT_FRIEND_SETTINGS = {
+        showOnlineFriendsOnly: false,
+        hideRoomFromPublicList: false,
+        messageSoundEnabled: true,
+        friendRequestSoundEnabled: true,
+        showGarden: true,
+        showInventory: true,
+        showCoins: true,
+        showActivityLog: true,
+        showJournal: true,
+        showStats: true
+      };
+    }
+  });
+
+  // src/utils/localStorage.ts
+  function getHostStorage() {
+    if (typeof window === "undefined") return null;
+    try {
+      if (typeof window.localStorage === "undefined") return null;
+      return window.localStorage;
+    } catch {
+      return null;
+    }
+  }
+  function parseSafe(raw) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return raw;
+    }
+  }
+  function mergeSection(existing, next) {
+    const base = { ...existing ?? {} };
+    for (const [k, v] of Object.entries(next)) {
+      if (base[k] === void 0) {
+        base[k] = v;
+      }
+    }
+    return base;
+  }
+  function unwrapNestedSnapshot(raw) {
+    let cur = raw;
+    let guard = 0;
+    while (guard++ < 10 && cur && typeof cur === "object" && "snapshot" in cur && typeof cur.snapshot === "object") {
+      cur = cur.snapshot;
+    }
+    return cur ?? raw;
+  }
+  function coerceLegacyAggregate(raw) {
+    const out = { ...DEFAULT_ARIES_STORAGE };
+    if (!raw || typeof raw !== "object") return out;
+    const data = raw;
+    if (typeof data.version === "number") out.version = data.version;
+    if (typeof data.migratedAt === "number") out.migratedAt = data.migratedAt;
+    if ("stats" in data) out.stats = unwrapNestedSnapshot(data.stats);
+    if ("customRooms" in data) out.room = mergeSection(out.room, { customRooms: data.customRooms });
+    if ("pets" in data && typeof data.pets === "object") {
+      out.pets = mergeSection(out.pets, data.pets);
+    }
+    if ("petsOverrides" in data) out.pets = mergeSection(out.pets, { overrides: data.petsOverrides });
+    if ("petsUI" in data) out.pets = mergeSection(out.pets, { ui: data.petsUI });
+    if ("petTeams" in data) out.pets = mergeSection(out.pets, { teams: data.petTeams });
+    if ("petTeamSearch" in data) out.pets = mergeSection(out.pets, { teamSearch: data.petTeamSearch });
+    if ("petTeamHotkeys" in data) out.pets = mergeSection(out.pets, { hotkeys: data.petTeamHotkeys });
+    if ("petAlerts" in data) out.pets = mergeSection(out.pets, { alerts: data.petAlerts });
+    if ("notifier" in data && typeof data.notifier === "object") {
+      out.notifier = mergeSection(out.notifier, data.notifier);
+    }
+    if ("notifierPrefs" in data) out.notifier = mergeSection(out.notifier, { prefs: data.notifierPrefs });
+    if ("notifierRules" in data) out.notifier = mergeSection(out.notifier, { rules: data.notifierRules });
+    if ("weatherNotifierPrefs" in data) out.notifier = mergeSection(out.notifier, { weatherPrefs: data.weatherNotifierPrefs });
+    if ("notifierLoopDefaults" in data) out.notifier = mergeSection(out.notifier, { loopDefaults: data.notifierLoopDefaults });
+    if ("misc" in data && typeof data.misc === "object") {
+      out.misc = mergeSection(out.misc, data.misc);
+    }
+    if ("ghostMode" in data) out.misc = mergeSection(out.misc, { ghostMode: data.ghostMode });
+    if ("ghostDelayMs" in data) out.misc = mergeSection(out.misc, { ghostDelayMs: data.ghostDelayMs });
+    if ("autoRecoEnabled" in data) out.misc = mergeSection(out.misc, { autoRecoEnabled: data.autoRecoEnabled });
+    if ("autoRecoDelayMs" in data) out.misc = mergeSection(out.misc, { autoRecoDelayMs: data.autoRecoDelayMs });
+    if ("locker" in data && typeof data.locker === "object") {
+      out.locker = mergeSection(out.locker, data.locker);
+    }
+    if ("lockerRestrictions" in data) out.locker = mergeSection(out.locker, { restrictions: data.lockerRestrictions });
+    if ("lockerState" in data) out.locker = mergeSection(out.locker, { state: data.lockerState });
+    if ("keybinds" in data && typeof data.keybinds === "object") {
+      out.keybinds = mergeSection(out.keybinds, data.keybinds);
+    }
+    if ("editorSavedGardens" in data) out.editor = mergeSection(out.editor, { savedGardens: data.editorSavedGardens });
+    if ("editor" in data && typeof data.editor === "object") {
+      out.editor = mergeSection(out.editor, data.editor);
+    }
+    if ("activityLog" in data && typeof data.activityLog === "object") {
+      out.activityLog = mergeSection(out.activityLog, data.activityLog);
+    }
+    if ("companion" in data && typeof data.companion === "object") {
+      out.companion = mergeSection(out.companion, data.companion);
+    }
+    if ("companionSession" in data && typeof data.companionSession === "object") {
+      out.companionSession = mergeSection(out.companionSession, data.companionSession);
+    }
+    if ("activityLogHistory" in data) out.activityLog = mergeSection(out.activityLog, { history: data.activityLogHistory });
+    if ("activityLogFilter" in data) out.activityLog = mergeSection(out.activityLog, { filter: data.activityLogFilter });
+    if ("hud" in data && typeof data.hud === "object") {
+      out.hud = mergeSection(out.hud, data.hud);
+    }
+    if ("menu" in data && typeof data.menu === "object") {
+      out.menu = mergeSection(out.menu, data.menu);
+    }
+    if ("inventory" in data && typeof data.inventory === "object") {
+      out.inventory = mergeSection(out.inventory, data.inventory);
+    }
+    if ("audio" in data && typeof data.audio === "object") {
+      out.audio = mergeSection(out.audio, data.audio);
+    }
+    if ("audioSettings" in data) out.audio = mergeSection(out.audio, { settings: data.audioSettings });
+    if ("audioLibrary" in data) out.audio = mergeSection(out.audio, { library: data.audioLibrary });
+    if ("soundEffectsVolumeAtom" in data) out.audio = mergeSection(out.audio, { sfxVolumeAtom: data.soundEffectsVolumeAtom });
+    if ("friends" in data && typeof data.friends === "object") {
+      out.friends = {
+        ...out.friends ?? {},
+        ...data.friends
+      };
+    }
+    if ("eggAutomation" in data && typeof data.eggAutomation === "object") {
+      out.eggAutomation = mergeSection(out.eggAutomation, data.eggAutomation);
+    }
+    if ("weatherTeams" in data && typeof data.weatherTeams === "object") {
+      out.weatherTeams = mergeSection(out.weatherTeams, data.weatherTeams);
+    }
+    if ("workflowStudio" in data) {
+      out.workflowStudio = data.workflowStudio;
+    }
+    if ("workflow" in data && typeof data.workflow === "object") {
+      out.workflow = mergeSection(out.workflow, data.workflow);
+    }
+    return out;
+  }
+  function installAriesLifecycleHooksOnce() {
+    if (ariesLifecycleHooksInstalled || typeof window === "undefined") return;
+    ariesLifecycleHooksInstalled = true;
+    const flush = () => flushAriesStorageNow();
+    window.addEventListener("pagehide", flush);
+    window.addEventListener("beforeunload", flush);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") flush();
+    });
+    window.addEventListener("storage", (event) => {
+      if (event.key !== ARIES_STORAGE_KEY) return;
+      if (ariesFlushPending) return;
+      cachedAriesStorage = null;
+    });
+  }
+  function flushAriesStorageNow() {
+    if (ariesFlushTimer !== null) {
+      clearTimeout(ariesFlushTimer);
+      ariesFlushTimer = null;
+    }
+    if (!ariesFlushPending || !cachedAriesStorage) return;
+    ariesFlushPending = false;
+    const storage = getHostStorage();
+    if (!storage) return;
+    try {
+      storage.setItem(ARIES_STORAGE_KEY, JSON.stringify(cachedAriesStorage));
+    } catch {
+    }
+  }
+  function scheduleAriesFlush() {
+    installAriesLifecycleHooksOnce();
+    ariesFlushPending = true;
+    if (ariesFlushTimer !== null) return;
+    ariesFlushTimer = window.setTimeout(() => {
+      ariesFlushTimer = null;
+      flushAriesStorageNow();
+    }, ARIES_FLUSH_DELAY_MS);
+  }
+  function loadAriesStorage() {
+    if (cachedAriesStorage) return cachedAriesStorage;
+    installAriesLifecycleHooksOnce();
+    const storage = getHostStorage();
+    const raw = storage?.getItem(ARIES_STORAGE_KEY);
+    if (raw) {
+      const parsed = parseSafe(raw);
+      if (parsed && typeof parsed === "object") {
+        cachedAriesStorage = coerceLegacyAggregate(parsed);
+        return cachedAriesStorage;
+      }
+    }
+    cachedAriesStorage = { ...DEFAULT_ARIES_STORAGE };
+    return cachedAriesStorage;
+  }
+  function persistAriesStorage(data) {
+    cachedAriesStorage = data;
+    scheduleAriesFlush();
+  }
+  function getValueAtPath(obj, path) {
+    let cur = obj;
+    for (const segment of path) {
+      if (!cur || typeof cur !== "object") return void 0;
+      cur = cur[segment];
+    }
+    return cur;
+  }
+  function setValueAtPath(obj, path, value) {
+    if (!path.length) return;
+    let cur = obj;
+    for (let i = 0; i < path.length - 1; i++) {
+      const key2 = path[i];
+      if (!cur[key2] || typeof cur[key2] !== "object") {
+        cur[key2] = {};
+      }
+      cur = cur[key2];
+    }
+    const last = path[path.length - 1];
+    if (value === void 0) {
+      if (cur && typeof cur === "object") {
+        delete cur[last];
+      }
+    } else {
+      cur[last] = value;
+    }
+  }
+  function getAriesStorage() {
+    return loadAriesStorage();
+  }
+  function saveAriesStorage(data) {
+    persistAriesStorage(data);
+  }
+  function updateAriesStorage(mutator) {
+    const current = loadAriesStorage();
+    mutator(current);
+    current.version = ARIES_STORAGE_VERSION;
+    persistAriesStorage(current);
+    return current;
+  }
+  function readAriesPath(path, fallback) {
+    const parts = path.split(".").filter(Boolean);
+    const value = getValueAtPath(loadAriesStorage(), parts);
+    if (value === void 0) return fallback;
+    return value;
+  }
+  function writeAriesPath(path, value) {
+    return updateAriesStorage((state6) => {
+      setValueAtPath(state6, path.split(".").filter(Boolean), value);
+    });
+  }
+  function updateAriesPath(path, updater) {
+    return updateAriesStorage((state6) => {
+      const parts = path.split(".").filter(Boolean);
+      const currentValue = getValueAtPath(state6, parts);
+      const next = updater(currentValue);
+      setValueAtPath(state6, parts, next);
+    });
+  }
+  function setApiKey(apiKey) {
+    try {
+      if (typeof GM_setValue === "function") {
+        GM_setValue(API_KEY_STORAGE_KEY, apiKey);
+        return;
+      }
+      getHostStorage()?.setItem(API_KEY_STORAGE_KEY, apiKey);
+    } catch (e) {
+      console.error("Failed to store API key:", e);
+    }
+  }
+  function getApiKey() {
+    try {
+      if (typeof GM_getValue === "function") {
+        return GM_getValue(API_KEY_STORAGE_KEY, null) ?? null;
+      }
+      return getHostStorage()?.getItem(API_KEY_STORAGE_KEY) ?? null;
+    } catch (e) {
+      console.error("Failed to retrieve API key:", e);
+      return null;
+    }
+  }
+  function hasApiKey() {
+    const key2 = getApiKey();
+    return key2 !== null && key2.length > 0;
+  }
+  function hasSeenRoomPrivacyNotice() {
+    try {
+      if (typeof GM_getValue === "function") {
+        const raw = GM_getValue(SEEN_ROOM_PRIVACY_NOTICE_KEY, null);
+        if (raw == null) return false;
+        if (typeof raw === "boolean") return raw;
+        return String(raw).trim() === "1";
+      }
+      return getHostStorage()?.getItem(SEEN_ROOM_PRIVACY_NOTICE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+  function markRoomPrivacyNoticeSeen() {
+    try {
+      if (typeof GM_setValue === "function") {
+        GM_setValue(SEEN_ROOM_PRIVACY_NOTICE_KEY, "1");
+        return;
+      }
+      getHostStorage()?.setItem(SEEN_ROOM_PRIVACY_NOTICE_KEY, "1");
+    } catch {
+    }
+  }
+  function hasSeenAutoRecoDisabledNotice() {
+    try {
+      if (typeof GM_getValue === "function") {
+        const raw = GM_getValue(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, null);
+        if (raw == null) return false;
+        if (typeof raw === "boolean") return raw;
+        return String(raw).trim() === "1";
+      }
+      return getHostStorage()?.getItem(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+  function markAutoRecoDisabledNoticeSeen() {
+    try {
+      if (typeof GM_setValue === "function") {
+        GM_setValue(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, "1");
+        return;
+      }
+      getHostStorage()?.setItem(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, "1");
+    } catch {
+    }
+  }
+  function getSeenChangelogVersion() {
+    try {
+      if (typeof GM_getValue === "function") {
+        const raw = GM_getValue(SEEN_CHANGELOG_VERSION_KEY, null);
+        return typeof raw === "string" && raw ? raw : null;
+      }
+      return getHostStorage()?.getItem(SEEN_CHANGELOG_VERSION_KEY) ?? null;
+    } catch {
+      return null;
+    }
+  }
+  function markChangelogVersionSeen(version) {
+    try {
+      if (typeof GM_setValue === "function") {
+        GM_setValue(SEEN_CHANGELOG_VERSION_KEY, version);
+        return;
+      }
+      getHostStorage()?.setItem(SEEN_CHANGELOG_VERSION_KEY, version);
+    } catch {
+    }
+  }
+  function setDeclinedApiAuth(declined) {
+    try {
+      if (declined) {
+        if (typeof GM_setValue === "function") {
+          GM_setValue(AUTH_DECLINED_STORAGE_KEY, "1");
+          return;
+        }
+        getHostStorage()?.setItem(AUTH_DECLINED_STORAGE_KEY, "1");
+        return;
+      }
+      if (typeof GM_deleteValue === "function") {
+        GM_deleteValue(AUTH_DECLINED_STORAGE_KEY);
+        return;
+      }
+      getHostStorage()?.removeItem(AUTH_DECLINED_STORAGE_KEY);
+    } catch {
+    }
+  }
+  var ARIES_STORAGE_KEY, ARIES_STORAGE_VERSION, API_KEY_STORAGE_KEY, AUTH_DECLINED_STORAGE_KEY, SEEN_ROOM_PRIVACY_NOTICE_KEY, SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, SEEN_CHANGELOG_VERSION_KEY, DEFAULT_ARIES_STORAGE, ARIES_FLUSH_DELAY_MS, cachedAriesStorage, ariesFlushTimer, ariesFlushPending, ariesLifecycleHooksInstalled;
+  var init_localStorage = __esm({
+    "src/utils/localStorage.ts"() {
+      "use strict";
+      init_friendSettingsSchema();
+      ARIES_STORAGE_KEY = "aries_mod";
+      ARIES_STORAGE_VERSION = 1;
+      API_KEY_STORAGE_KEY = "aries_api_key";
+      AUTH_DECLINED_STORAGE_KEY = "aries_auth_declined";
+      SEEN_ROOM_PRIVACY_NOTICE_KEY = "aries_seen_room_privacy_notice_v2";
+      SEEN_AUTO_RECO_DISABLED_NOTICE_KEY = "aries_seen_autoreco_disabled_notice";
+      SEEN_CHANGELOG_VERSION_KEY = "aries_seen_changelog_version";
+      DEFAULT_ARIES_STORAGE = {
+        version: ARIES_STORAGE_VERSION,
+        friends: {
+          settings: DEFAULT_FRIEND_SETTINGS
+        },
+        notifications: {
+          soundEnabled: true
+        }
+      };
+      ARIES_FLUSH_DELAY_MS = 500;
+      cachedAriesStorage = null;
+      ariesFlushTimer = null;
+      ariesFlushPending = false;
+      ariesLifecycleHooksInstalled = false;
     }
   });
 
@@ -10076,7 +9892,7 @@
     }
     return stats.pets.hatchedByType[key2];
   }
-  var GARDEN_INT_KEYS, SHOP_INT_KEYS, ABILITY_INT_KEYS, WEATHER_INT_KEYS, memoryStore, listeners, isRecord, toNumber, toPositiveNumber, toPositiveInt, toPositiveTimestamp, cloneStats, unwrapMaybeNestedSnapshot, StatsService, StatsDefaults;
+  var GARDEN_INT_KEYS, SHOP_INT_KEYS, ABILITY_INT_KEYS, WEATHER_INT_KEYS, memoryStore, listeners, isRecord, toNumber, toPositiveNumber, toPositiveInt, toPositiveTimestamp, cloneStats, unwrapMaybeNestedSnapshot, StatsService;
   var init_stats = __esm({
     "src/services/stats.ts"() {
       "use strict";
@@ -10204,20 +10020,6 @@
           return () => {
             listeners.delete(listener);
           };
-        }
-      };
-      StatsDefaults = {
-        rarityOrder: [
-          rarity2.Common,
-          rarity2.Uncommon,
-          rarity2.Rare,
-          rarity2.Legendary,
-          rarity2.Mythic,
-          rarity2.Divine,
-          rarity2.Celestial
-        ],
-        createEmpty() {
-          return createDefaultStats();
         }
       };
     }
@@ -11362,7 +11164,7 @@
         }
         startLoop(doc, s) {
           this.stopLoop(doc, s);
-          const tick4 = () => {
+          const tick3 = () => {
             if (!s.pressed) return;
             this.dispatchKey(doc, s.lastTarget || doc, "keydown", s.emit, true);
             if (s.mode === "tap") {
@@ -11372,8 +11174,8 @@
               }, s.keyupDelayMs);
             }
           };
-          tick4();
-          s.tickTimer = this.win.setInterval(tick4, s.rateMs);
+          tick3();
+          s.tickTimer = this.win.setInterval(tick3, s.rateMs);
         }
         stopLoop(doc, s) {
           if (s.tickTimer) {
@@ -12499,7 +12301,7 @@
         /* -------------------------- VTabs factory -------------------------- */
         /** Crée des “tabs verticaux” génériques (liste sélectionnable + filtre). */
         vtabs(options = {}) {
-          return new VTabs(this, options);
+          return new VTabs(options);
         }
         hotkeyButton(initial, onChange, opts) {
           const emptyLabel = opts?.emptyLabel ?? "None";
@@ -13455,9 +13257,7 @@
         }
       };
       VTabs = class {
-        constructor(api, opts = {}) {
-          this.api = api;
-          this.opts = opts;
+        constructor(opts = {}) {
           this.filterWrap = null;
           this.filterInput = null;
           this.listWrap = null;
@@ -14075,7 +13875,6 @@
       "use strict";
       init_ingameHotkeys();
       init_menu();
-      init_keyboard();
       init_localStorage();
       SECTION_CONFIG = [
         {
@@ -14619,7 +14418,7 @@
   });
 
   // src/services/player.ts
-  function slotSig2(o) {
+  function slotSig(o) {
     if (!o) return "\u2205";
     return [
       o.objectType ?? o.type ?? "",
@@ -14641,7 +14440,7 @@
       if (!(k in p)) {
         added.push(+k);
         changes.push({ kind: "added", slot: +k, next: n[k] });
-      } else if (slotSig2(p[k]) !== slotSig2(n[k])) {
+      } else if (slotSig(p[k]) !== slotSig(n[k])) {
         updated.push(+k);
         changes.push({ kind: "updated", slot: +k, prev: p[k], next: n[k] });
       }
@@ -15287,8 +15086,8 @@
     const startedAt = Date.now();
     while (keepGoing() && Date.now() - startedAt < ATOM_TIMEOUT_MS) {
       try {
-        const ready2 = await Store.hasAtom(storage.label) && await Store.hasAtom(inventory.label);
-        if (ready2 && Array.isArray(await inventory.get())) return true;
+        const ready = await Store.hasAtom(storage.label) && await Store.hasAtom(inventory.label);
+        if (ready && Array.isArray(await inventory.get())) return true;
       } catch {
       }
       await new Promise((resolve) => setTimeout(resolve, ATOM_POLL_MS2));
@@ -15370,9 +15169,9 @@
       if (typeof window === "undefined") return;
       const generation3 = ++startGeneration;
       const isCurrent = () => enabled5 && startGeneration === generation3;
-      const ready2 = await waitForAtoms(storageAtom, inventoryAtom, isCurrent);
-      if (!ready2 || !isCurrent()) {
-        log(`${logName} auto-store aborted`, { ready: ready2, enabled: enabled5 });
+      const ready = await waitForAtoms(storageAtom, inventoryAtom, isCurrent);
+      if (!ready || !isCurrent()) {
+        log(`${logName} auto-store aborted`, { ready, enabled: enabled5 });
         return;
       }
       if (inventoryUnsub || storageUnsub) return;
@@ -18023,7 +17822,7 @@
     const entry = { raf: 0, baseline: /* @__PURE__ */ new WeakMap(), touched: /* @__PURE__ */ new Set() };
     activeFlashes.set(gidx, entry);
     const start2 = performance.now();
-    const tick4 = (now2) => {
+    const tick3 = (now2) => {
       const progress = Math.min(1, (now2 - start2) / durationMs);
       const mix = startMix * (1 - progress);
       const parent = resolveParent();
@@ -18042,9 +17841,9 @@
         stopFlashTile(gidx);
         return;
       }
-      entry.raf = requestAnimationFrame(tick4);
+      entry.raf = requestAnimationFrame(tick3);
     };
-    entry.raf = requestAnimationFrame(tick4);
+    entry.raf = requestAnimationFrame(tick3);
     return true;
   }
   function getWorldSystem(name) {
@@ -18996,7 +18795,7 @@
     if (!content) return;
     void (async () => {
       content.innerHTML = "";
-      const { tileType, tileKey, tileObject } = await readCurrentTileContext();
+      const { tileKey, tileObject } = await readCurrentTileContext();
       if (!tileObject) {
         const empty = document.createElement("div");
         empty.textContent = "Click on a plant or item to edit it.";
@@ -22748,7 +22547,6 @@
           if (!teamId2) return;
           markTeamAsUsed(teamId2);
           onUseTeam(teamId2);
-          _lastTeamHotkeyAt = Date.now();
         };
         if (hkPrevTeam && matchHotkey(e, hkPrevTeam)) {
           const baseId = lastUsedTeamId && teamsList.includes(lastUsedTeamId) ? lastUsedTeamId : teamsList[teamsList.length - 1] ?? null;
@@ -23837,7 +23635,7 @@
     }
     return finish({ swapped, placed, skipped });
   }
-  var PATH_PETS_OVERRIDES, PATH_PETS_INSTANT_FEED, PATH_PETS_UI, PATH_PETS_TEAMS, PATH_PETS_TEAM_SEARCH, PATH_PETS_TEAM_SYNC, PATH_PETS_HOTKEYS, PATH_PETS_ABILITY_LOGS, WEATHER_MUTATION_BOOST_IDS, TEAM_HK_MAP, TEAM_HK_UNSUBS, hkNextTeam, hkPrevTeam, unsubNextHotkey, unsubPrevHotkey, orderedTeamIds, lastUsedTeamId, _lastTeamHotkeyAt, _AB, _abilityIdsCache, _s, _sOpt, _n, _sArr, _petCatalogKeyByLc, _teamSearch, _teamSyncEnabled, _localTeamIdByServerId, _serverTeams, _teamSyncStarted, _lastServerTeamsSig, _reconcilingTeams, _reconcileTeamsQueued, _pendingServerCreates, _pendingCreateTimeouts, _pendingCreateSentName, PENDING_CREATE_TIMEOUT_MS, _lastCreateAttemptSig, _invRaw, _activeRaw, _hutchRaw, _invPetsCache, _invUnsub, _activeUnsub, _hutchUnsub, _invSig, _activeSig, _lastAutofeedAttemptAt, _belowThreshold, AUTOF_FEED_MIN_INTERVAL_MS, DEFAULT_OVERRIDE, DEFAULT_UI, DEFAULT_INSTANT_FEED, _currentPets, _userTriggerCb, PetsService, HUTCH_DEFAULT_CAPACITY, MAX_TEAM_SLOTS;
+  var PATH_PETS_OVERRIDES, PATH_PETS_INSTANT_FEED, PATH_PETS_UI, PATH_PETS_TEAMS, PATH_PETS_TEAM_SEARCH, PATH_PETS_TEAM_SYNC, PATH_PETS_HOTKEYS, PATH_PETS_ABILITY_LOGS, WEATHER_MUTATION_BOOST_IDS, TEAM_HK_MAP, TEAM_HK_UNSUBS, hkNextTeam, hkPrevTeam, unsubNextHotkey, unsubPrevHotkey, orderedTeamIds, lastUsedTeamId, _AB, _abilityIdsCache, _s, _sOpt, _n, _sArr, _petCatalogKeyByLc, _teamSearch, _teamSyncEnabled, _localTeamIdByServerId, _serverTeams, _teamSyncStarted, _lastServerTeamsSig, _reconcilingTeams, _reconcileTeamsQueued, _pendingServerCreates, _pendingCreateTimeouts, _pendingCreateSentName, PENDING_CREATE_TIMEOUT_MS, _lastCreateAttemptSig, _invRaw, _activeRaw, _hutchRaw, _invPetsCache, _invUnsub, _activeUnsub, _hutchUnsub, _invSig, _activeSig, _lastAutofeedAttemptAt, _belowThreshold, AUTOF_FEED_MIN_INTERVAL_MS, DEFAULT_OVERRIDE, DEFAULT_UI, DEFAULT_INSTANT_FEED, _currentPets, _userTriggerCb, PetsService, HUTCH_DEFAULT_CAPACITY, MAX_TEAM_SLOTS;
   var init_pets = __esm({
     "src/services/pets.ts"() {
       "use strict";
@@ -23885,7 +23683,6 @@
       unsubPrevHotkey = null;
       orderedTeamIds = [];
       lastUsedTeamId = null;
-      _lastTeamHotkeyAt = 0;
       _AB = petAbilities2 ?? {};
       _abilityIdsCache = null;
       _s = (v) => (v ?? "").toLowerCase();
@@ -25344,9 +25141,6 @@
         console.warn("[InventoryValue] Impossible de r\xE9cup\xE9rer l'inventaire initial", error);
       }
       try {
-        unsubscribe = await Atoms.inventory.myInventory.onChange((next) => {
-          void refreshSnapshot(next);
-        });
       } catch (error) {
         console.warn("[InventoryValue] Impossible de s'abonner \xE0 myInventory", error);
       }
@@ -25362,7 +25156,7 @@
       listeners4.delete(listener);
     };
   }
-  var INVENTORY_VALUE_CATEGORIES, currentSnapshot, watcherPromise, unsubscribe, computeCounter, listeners4;
+  var INVENTORY_VALUE_CATEGORIES, currentSnapshot, watcherPromise, computeCounter, listeners4;
   var init_inventoryValue = __esm({
     "src/utils/inventoryValue.ts"() {
       "use strict";
@@ -25447,7 +25241,6 @@
       ];
       currentSnapshot = null;
       watcherPromise = null;
-      unsubscribe = null;
       computeCounter = 0;
       listeners4 = /* @__PURE__ */ new Set();
     }
@@ -29987,9 +29780,6 @@
             }
           }
         }
-        triggerWithRule(id) {
-          this.triggerMany([id]);
-        }
         resolvePlaybackMode(id) {
           const rule = this.rulesById.get(id);
           const baseMode = audio.getPlaybackMode("shops");
@@ -30031,9 +29821,9 @@
           const overlayIds = new Set(out.map((r) => r.id));
           this.currentOverlayIds = overlayIds;
           const shopEmpty = (this.lastShops.seed?.inventory?.length ?? 0) + (this.lastShops.tool?.inventory?.length ?? 0) + (this.lastShops.egg?.inventory?.length ?? 0) + (this.lastShops.decor?.inventory?.length ?? 0) === 0;
-          const ready2 = this.shopUpdates >= 3 && this.purchasesUpdates >= 2 && !shopEmpty;
+          const ready = this.shopUpdates >= 3 && this.purchasesUpdates >= 2 && !shopEmpty;
           if (!this.bootArmed) {
-            if (!ready2) {
+            if (!ready) {
               this.prevOverlayIds = overlayIds;
               return;
             }
@@ -33325,9 +33115,8 @@
         return;
       }
       const items = Array.isArray(inventory.items) ? inventory.items : [];
-      const { filteredItems, keepAll, itemTypes } = filterInventoryItems(items, filters, searchQuery);
+      const { keepAll, itemTypes } = filterInventoryItems(items, filters, searchQuery);
       const resolvedDirection = sortKey ? (direction && DIRECTION_ORDER.includes(direction) ? direction : DEFAULT_DIRECTION_BY_SORT_KEY[sortKey]) ?? "asc" : direction && DIRECTION_ORDER.includes(direction) ? direction : "asc";
-      const itemsForLog = sortKey ? sortInventoryItems(filteredItems, sortKey, resolvedDirection) : filteredItems.slice();
       const descriptor = keepAll ? "toutes cat\xE9gories" : `types: ${Array.from(itemTypes).join(", ") || "(aucun)"}`;
       const sortDescriptor = sortKey ? `tri: ${sortKey} (${resolvedDirection})` : "tri: (non sp\xE9cifi\xE9)";
       const searchDescriptor = searchQuery ? `recherche: "${searchQuery}"` : "recherche: (vide)";
@@ -33808,7 +33597,6 @@
   function ensureSortingBar(grid, cfg, useCustomSelectStyles, labelByValue, directionLabelText, onChange, showValues, onToggleValues) {
     const filtersBlock = grid.querySelector(cfg.filtersBlockSelector);
     if (!filtersBlock) return null;
-    const closeBtn = null;
     let wrap = filtersBlock.querySelector(":scope > .tm-sort-wrap");
     let select2;
     let directionSelect;
@@ -36721,14 +36509,14 @@
       current.trackingStartedAt = current.lastHatchAt > 0 ? current.lastHatchAt : Date.now();
       saveState(current);
     }
-    let unsubscribe3 = null;
+    let unsubscribe2 = null;
     try {
-      unsubscribe3 = await myActivityLog.onChange((next) => consume(next, true));
+      unsubscribe2 = await myActivityLog.onChange((next) => consume(next, true));
     } catch {
     }
     return () => {
       try {
-        unsubscribe3?.();
+        unsubscribe2?.();
       } catch {
       }
     };
@@ -37082,11 +36870,6 @@
       ro.observe(win);
       anyWin.__qwsClampObserver = ro;
     }
-    function resetWinPosDefault(el2) {
-      el2.style.right = "16px";
-      el2.style.bottom = "16px";
-      ensureOnScreen(el2);
-    }
     function withTopLocked(el2, mutate) {
       const before = el2.getBoundingClientRect();
       const vh = window.innerHeight;
@@ -37140,7 +36923,6 @@
       console.warn("[QuinoaWS] HUD elements missing, abort init");
       return;
     }
-    const launchEl = launch;
     const updateHideButtonTitle = () => {
       const pieces = [];
       if (toggleHotkey) {
@@ -37323,32 +37105,6 @@
       saveWinPos(id, win);
       windows.set(id, { id, el: win, head, body });
       setLaunchState(id, true);
-    }
-    function isShown(el2) {
-      return el2.style.display !== "none";
-    }
-    function toggleWindow(id, title, render) {
-      const existing = windows.get(id);
-      if (!existing) {
-        openWindow(id, title, (root) => {
-          const el2 = root.closest(".qws-win");
-          if (el2) restoreWinPos(id, el2);
-          render(root);
-        });
-        return true;
-      } else {
-        if (isShown(existing.el)) {
-          existing.el.style.display = "none";
-          setLaunchState(id, false);
-          return false;
-        } else {
-          existing.el.style.display = "";
-          bumpZ(existing.el);
-          ensureOnScreen(existing.el);
-          setLaunchState(id, true);
-          return true;
-        }
-      }
     }
     function bumpZ(el2) {
       let maxZ = Z_BASE + 1;
@@ -37918,17 +37674,17 @@
   });
 
   // src/mgApi/config.ts
-  var API_BASE_URL2;
-  var init_config2 = __esm({
+  var API_BASE_URL;
+  var init_config = __esm({
     "src/mgApi/config.ts"() {
       "use strict";
-      API_BASE_URL2 = "https://mg-api.ariedam.fr";
+      API_BASE_URL = "https://mg-api.ariedam.fr";
     }
   });
 
   // src/mgApi/client/http.ts
   function buildMgApiUrl(path, query) {
-    const url = new URL(path, API_BASE_URL2);
+    const url = new URL(path, API_BASE_URL);
     if (query) {
       for (const [key2, value] of Object.entries(query)) {
         if (value === void 0) continue;
@@ -38008,11 +37764,11 @@
       return gmGetBinary(url);
     }
   }
-  var init_http2 = __esm({
+  var init_http = __esm({
     "src/mgApi/client/http.ts"() {
       "use strict";
       init_discordCsp();
-      init_config2();
+      init_config();
     }
   });
 
@@ -38034,7 +37790,7 @@
   var init_sprites = __esm({
     "src/mgApi/endpoints/sprites.ts"() {
       "use strict";
-      init_http2();
+      init_http();
       COMPOSE_KEY_PREFIX = {
         seeds: "sprite/seed",
         plants: "sprite/plant",
@@ -38059,7 +37815,7 @@
   var init_audio2 = __esm({
     "src/mgApi/endpoints/audio.ts"() {
       "use strict";
-      init_http2();
+      init_http();
     }
   });
 
@@ -38067,8 +37823,7 @@
   var init_mgApi = __esm({
     "src/mgApi/index.ts"() {
       "use strict";
-      init_config2();
-      init_http2();
+      init_http();
       init_sprites();
       init_audio2();
     }
@@ -41050,7 +40805,6 @@ next: ${next}`;
     resizeObserver.observe(bodyGrid);
     const onResize = () => syncHeaderToScrollbar();
     window.addEventListener("resize", onResize);
-    const lastSeenRefs = /* @__PURE__ */ new Map();
     let state6 = null;
     let renderedIds = /* @__PURE__ */ new Set();
     const getFilters = () => ({
@@ -42206,7 +41960,6 @@ next: ${next}`;
           return label2 || "Default";
         })();
         const formatModeLabel = (mode) => mode === "loop" ? "Loop" : "One-shot";
-        const defaultModeLabel = formatModeLabel(defaults.mode);
         const defaultIntervalMs = Math.max(
           150,
           Math.floor(contextDefaults.loopIntervalMs ?? defaults.loopIntervalMs ?? 150)
@@ -42355,12 +42108,6 @@ next: ${next}`;
           const raw = modeSelect.value;
           if (raw === "oneshot" || raw === "loop") return raw;
           return allowPurchase ? defaults.mode : "oneshot";
-        };
-        const resolveStop = () => {
-          if (!allowPurchase) return "purchase";
-          const raw = stopSelect?.value;
-          if (raw === "purchase") return "purchase";
-          return "purchase";
         };
         const updateLoopVisibility = () => {
           if (!allowPurchase) {
@@ -44380,7 +44127,7 @@ next: ${next}`;
     toggle2.addEventListener("change", () => {
       store.setGlobalEnabled(!!toggle2.checked);
     });
-    const unsubscribe3 = store.subscribe(() => {
+    const unsubscribe2 = store.subscribe(() => {
       update();
     });
     update();
@@ -44393,7 +44140,7 @@ next: ${next}`;
     };
     return {
       render,
-      destroy: () => unsubscribe3()
+      destroy: () => unsubscribe2()
     };
   }
   function createOverridesTabRenderer(ui, store) {
@@ -44637,7 +44384,7 @@ next: ${next}`;
       refreshListStyles();
       renderDetail();
     };
-    const unsubscribe3 = store.subscribe(refresh);
+    const unsubscribe2 = store.subscribe(refresh);
     const onDataUpdated = (e) => {
       const key2 = e.detail?.key;
       if (key2 === "plants") renderList();
@@ -44651,7 +44398,7 @@ next: ${next}`;
     return {
       render,
       destroy: () => {
-        unsubscribe3();
+        unsubscribe2();
         window.removeEventListener("gemini:data-updated", onDataUpdated);
       }
     };
@@ -44925,14 +44672,9 @@ next: ${next}`;
     document.head.appendChild(s);
     return s;
   }
-  var ready;
   var init_dom = __esm({
     "src/core/dom.ts"() {
       "use strict";
-      ready = new Promise((res) => {
-        if (document.readyState !== "loading") res();
-        else addEventListener("DOMContentLoaded", () => res(), { once: true });
-      });
     }
   });
 
@@ -51256,1154 +50998,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/services/companion/emoteTypes.ts
-  function companionEmoteEntry(playerId2, emote, now2) {
-    return { kind: "emote", playerId: playerId2, emoteType: emote, lastTimestampMs: now2 + ENTRY_LEAD_MS };
-  }
-  function mergeEmoteSource(real, fake) {
-    const base = real && typeof real === "object" ? real : {};
-    const entries2 = Array.isArray(base.entries) ? base.entries : [];
-    const ours = Array.isArray(fake?.entries) ? fake.entries : [];
-    return { ...base, entries: ours.length ? [...entries2, ...ours] : entries2 };
-  }
-  function cutTalking(avatarSystem2, playerId2) {
-    const system = avatarSystem2;
-    if (!system || typeof system.views?.get !== "function") return false;
-    const view = system.views.get(playerId2);
-    if (!view) return false;
-    try {
-      if (typeof system.stopNpcTalking === "function") {
-        system.stopNpcTalking(playerId2, view);
-        return true;
-      }
-      if (typeof view.setTalking === "function") {
-        view.setTalking(false);
-        return true;
-      }
-    } catch {
-    }
-    return false;
-  }
-  function emoteStartDelay(lastSpokeAt2, now2, canCutTalking = false) {
-    if (canCutTalking) return 0;
-    if (lastSpokeAt2 === null) return 0;
-    return Math.max(0, lastSpokeAt2 + NPC_TALKING_MS + TALKING_MARGIN_MS - now2);
-  }
-  var EmoteType, ENTRY_LEAD_MS, NPC_TALKING_MS, TALKING_MARGIN_MS;
-  var init_emoteTypes = __esm({
-    "src/services/companion/emoteTypes.ts"() {
-      "use strict";
-      EmoteType = {
-        Idle: -1,
-        Clapping: 0,
-        Laughing: 1,
-        Angered: 2,
-        Crying: 3,
-        Questioning: 4,
-        Love: 5
-      };
-      ENTRY_LEAD_MS = 6e4;
-      NPC_TALKING_MS = 3e3;
-      TALKING_MARGIN_MS = 150;
-    }
-  });
-
-  // src/services/companion/reactions.ts
-  function pickOne(options, random) {
-    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
-  }
-  function crossedMilestone(prev, next) {
-    if (!Number.isFinite(prev) || !Number.isFinite(next) || next <= prev) return null;
-    let crossed = null;
-    for (const m of MILESTONES) {
-      if (prev < m && next >= m) crossed = m;
-    }
-    return crossed;
-  }
-  function formatMilestone(n) {
-    const units = [
-      [1e15, "quadrillion"],
-      [1e12, "trillion"],
-      [1e9, "billion"],
-      [1e6, "million"]
-    ];
-    for (const [size, word] of units) {
-      if (n >= size) return `${fmt(n / size)} ${word}`;
-    }
-    return fmt(n);
-  }
-  function statReactions(prev, next, random) {
-    const out = [];
-    for (const def of STAT_DEFS) {
-      const m = crossedMilestone(def.read(prev), def.read(next));
-      if (m === null) continue;
-      out.push({
-        key: `milestone:${def.id}`,
-        message: pickOne(def.lines, random)(formatMilestone(m)),
-        emote: m >= 1e6 ? EmoteType.Love : EmoteType.Clapping,
-        priority: "high"
-      });
-    }
-    if (sumHatched(next, "rainbow") > sumHatched(prev, "rainbow")) {
-      out.push({
-        key: "hatch:rainbow",
-        message: pickOne(["A RAINBOW pet?! No way!", "Rainbow! I've never seen one up close!", "Look at those colours! A Rainbow pet!"], random),
-        emote: EmoteType.Love,
-        priority: "high"
-      });
-    } else if (sumHatched(next, "gold") > sumHatched(prev, "gold")) {
-      out.push({
-        key: "hatch:gold",
-        message: pickOne(["A Gold pet! Look at it shine!", "Gold! That one's a keeper.", "Shiny! A Gold pet!"], random),
-        emote: EmoteType.Love,
-        priority: "high"
-      });
-    } else if (sumHatched(next) > sumHatched(prev)) {
-      out.push({
-        key: "hatch:normal",
-        message: pickOne(["Welcome to the family, little one!", "A new friend! Hi there!", "Aww, look at the new pet."], random),
-        emote: EmoteType.Clapping,
-        priority: "low"
-      });
-    }
-    const earned = num(next?.shops?.cropsSoldValue) - num(prev?.shops?.cropsSoldValue);
-    if (earned > 0) {
-      const coins = fmt(earned);
-      out.push({
-        key: "sale:crops",
-        message: pickOne(
-          [`Ka-ching! +${coins} coins.`, `Sold! ${coins} coins richer.`, `Nice sale, ${coins} coins!`, `${coins} coins in the bank. Love it.`],
-          random
-        ),
-        emote: EmoteType.Clapping,
-        priority: "low"
-      });
-    }
-    return out;
-  }
-  function weatherEmote(weatherId) {
-    return WEATHER_EMOTES[weatherId] ?? EmoteType.Questioning;
-  }
-  function weatherChangeReaction(prevId, nextId, prevName, startLine, random) {
-    if (prevId === nextId) return null;
-    if (nextId) {
-      return { key: `weather:${nextId}`, message: startLine, emote: weatherEmote(nextId), priority: "high" };
-    }
-    if (!prevId) return null;
-    return {
-      key: "weather:end",
-      message: pickOne([`The ${prevName} is over. Sunshine's back!`, `And just like that, the ${prevName} is gone.`, `Bye bye, ${prevName}.`], random),
-      emote: null,
-      priority: "low"
-    };
-  }
-  function abilityReaction(event, random) {
-    const who = event.name?.trim() || (event.species ? `your ${event.species}` : "your pet");
-    const Who = who.charAt(0).toUpperCase() + who.slice(1);
-    return {
-      key: "ability",
-      message: pickOne(
-        [`${Who} just used ${event.abilityName}!`, `Go ${who}! ${event.abilityName}!`, `Did you see that? ${Who} used ${event.abilityName}.`],
-        random
-      ),
-      emote: EmoteType.Clapping,
-      priority: "low"
-    };
-  }
-  function eggsReadyReaction(count, random) {
-    if (count <= 0) return null;
-    return {
-      key: "egg",
-      message: count === 1 ? pickOne(["An egg is ready to hatch!", "Ooh, one of your eggs is ready!", "Something's wiggling in that egg. It's ready!"], random) : pickOne([`${count} eggs are ready to hatch!`, `${count} eggs ready! Hatching time?`], random),
-      emote: EmoteType.Clapping,
-      priority: "high"
-    };
-  }
-  function shopReaction(names, random) {
-    const list = names.filter((n) => typeof n === "string" && n.trim());
-    if (list.length === 0) return null;
-    const what = list.length === 1 ? list[0] : list.length === 2 ? `${list[0]} and ${list[1]}` : `${list[0]}, ${list[1]} and more`;
-    const isAre = list.length === 1 ? "is" : "are";
-    return {
-      key: "shop",
-      message: pickOne([`${what} ${isAre} in the shop! Go go go!`, `Ooh, ${what} just showed up in the shop!`, `Quick, ${what} ${isAre} in stock!`], random),
-      emote: EmoteType.Clapping,
-      priority: "high"
-    };
-  }
-  function restockedFollowed(prev, next, isFollowed) {
-    if (!prev || !next) return [];
-    const out = [];
-    for (const kind of Object.keys(SHOP_ID)) {
-      const before = Number(prev[kind]?.secondsUntilRestock) || 0;
-      const after = Number(next[kind]?.secondsUntilRestock) || 0;
-      if (after <= before) continue;
-      const inventory = next[kind]?.inventory;
-      if (!Array.isArray(inventory)) continue;
-      const [prefix, field] = SHOP_ID[kind];
-      for (const item of inventory) {
-        const key2 = item?.[field];
-        const stock = Number(item?.initialStock);
-        if (typeof key2 !== "string" || !key2 || !(stock > 0)) continue;
-        const id = `${prefix}:${key2}`;
-        if (isFollowed(id)) out.push(id);
-      }
-    }
-    return out;
-  }
-  function rareCropReaction(crops, random) {
-    if (crops.length === 0) return null;
-    const first = crops[0];
-    const message = crops.length === 1 ? pickOne([`A ${first.mutation} ${first.species}! Look at that!`, `Whoa, a ${first.mutation} ${first.species} just showed up!`, `${first.mutation}! Your ${first.species} is special.`], random) : pickOne([`${crops.length} rare crops just appeared! Look!`, `Whoa, ${crops.length} special crops at once!`], random);
-    return { key: "rarecrop", message, emote: EmoteType.Love, priority: "high" };
-  }
-  function badLuckReactions(prev, next, eggName4, random) {
-    const out = [];
-    for (const [eggId, after] of Object.entries(next ?? {})) {
-      const before = prev?.[eggId];
-      if (!before || !after) continue;
-      const egg = eggName4(eggId);
-      for (const kind of ["rainbow", "gold"]) {
-        const was = Number(before[kind]) || 0;
-        const now2 = Number(after[kind]) || 0;
-        const label2 = RARITY_LABEL[kind];
-        if (now2 < was) {
-          if (was < RELIEF_MIN[kind]) continue;
-          const tries = was + 1;
-          out.push({
-            key: `hatch:${kind}`,
-            message: pickOne(
-              [`FINALLY! A ${label2} pet after ${tries} tries!`, `${tries} hatches of waiting, and there it is. ${label2}!`, `I told you it was coming! ${label2}, at last!`],
-              random
-            ),
-            emote: EmoteType.Love,
-            priority: "high",
-            weight: 1
-          });
-          continue;
-        }
-        let step = null;
-        for (const s of DROUGHT_STEPS[kind]) if (was < s && now2 >= s) step = s;
-        if (step === null) continue;
-        out.push({
-          key: `badluck:${kind}`,
-          message: pickOne(
-            [
-              `${step} ${egg} hatches without a ${label2}... it's coming, I can feel it.`,
-              `Still no ${label2} after ${step} tries. The game owes you one.`,
-              `${step} in a row with no ${label2}. Hang in there, boss.`
-            ],
-            random
-          ),
-          emote: EmoteType.Crying,
-          priority: "high"
-        });
-      }
-    }
-    return out;
-  }
-  function newRareCrops(prev, next, rare) {
-    if (!prev || typeof prev !== "object" || !next || typeof next !== "object" || rare.size === 0) return [];
-    const seen = /* @__PURE__ */ new Map();
-    const index = (tiles, visit) => {
-      for (const [tileIdx, obj] of Object.entries(tiles)) {
-        const o = obj;
-        if (!o || o.objectType !== "plant" || !Array.isArray(o.slots)) continue;
-        o.slots.forEach((raw, i) => {
-          const s = raw;
-          if (!s) return;
-          const muts = Array.isArray(s.mutations) ? s.mutations.filter((m) => typeof m === "string") : [];
-          const species = typeof s.species === "string" ? s.species : typeof o.species === "string" ? o.species : "crop";
-          visit(`${tileIdx}|${s.slotId ?? i}|${s.startTime ?? ""}`, species, muts);
-        });
-      }
-    };
-    index(prev, (id, _species, muts) => seen.set(id, new Set(muts)));
-    const out = [];
-    index(next, (id, species, muts) => {
-      const before = seen.get(id) ?? /* @__PURE__ */ new Set();
-      for (const m of muts) {
-        if (rare.has(m) && !before.has(m)) out.push({ mutation: m, species });
-      }
-    });
-    return out;
-  }
-  function newlyReadyEggs(tiles, now2, announced) {
-    if (!tiles || typeof tiles !== "object") return [];
-    const out = [];
-    for (const [tileIdx, obj] of Object.entries(tiles)) {
-      const o = obj;
-      if (!o || o.objectType !== "egg") continue;
-      const matured = Number(o.maturedAt);
-      if (!Number.isFinite(matured) || matured <= 0 || matured > now2) continue;
-      const key2 = `${tileIdx}|${o.plantedAt ?? ""}`;
-      if (!announced.has(key2)) out.push(key2);
-    }
-    return out;
-  }
-  function dayPart(hour) {
-    if (hour < 5) return "night";
-    if (hour < 8) return "early";
-    if (hour < 12) return "morning";
-    if (hour < 17) return "afternoon";
-    if (hour < 22) return "evening";
-    return "late";
-  }
-  function dayPartLines(hour) {
-    return DAY_PART_LINES[dayPart(hour)];
-  }
-  function holidayOf(date) {
-    const m = date.getMonth() + 1;
-    const d = date.getDate();
-    if (m === 1 && d === 1) return "newyear";
-    if (m === 2 && d === 14) return "valentine";
-    if (m === 4 && d === 1) return "aprilfools";
-    if (m === 10 && d === 31) return "halloween";
-    if (m === 12 && (d === 24 || d === 25)) return "christmas";
-    if (m === 12 && d === 31) return "newyearseve";
-    return null;
-  }
-  function timeLines(date) {
-    const out = [...dayPartLines(date.getHours())];
-    const day = date.getDay();
-    if (day === 0 || day === 6) out.push(...WEEKEND_LINES);
-    if (day === 0) out.push(...SUNDAY_LINES);
-    const holiday = holidayOf(date);
-    if (holiday) out.push(...HOLIDAY_LINES[holiday]);
-    return out;
-  }
-  function resumeSession(stored, now2) {
-    const s = stored;
-    const lastSeenAt = Number(s?.lastSeenAt);
-    const startedAt = Number(s?.startedAt);
-    const valid = Number.isFinite(lastSeenAt) && lastSeenAt > 0 && Number.isFinite(startedAt) && startedAt > 0 && startedAt <= now2;
-    const storedMet = Number(s?.firstMetAt);
-    const firstMetAt = Number.isFinite(storedMet) && storedMet > 0 && storedMet <= now2 ? storedMet : now2;
-    const celebratedDays = Math.max(0, Math.floor(Number(s?.celebratedDays) || 0));
-    if (valid && now2 - lastSeenAt < SESSION_GAP_MS) {
-      const announcedHours = Math.max(0, Math.floor(Number(s?.announcedHours) || 0));
-      return { session: { startedAt, lastSeenAt: now2, announcedHours, firstMetAt, celebratedDays }, greeting: null };
-    }
-    return {
-      session: { startedAt: now2, lastSeenAt: now2, announcedHours: 0, firstMetAt, celebratedDays },
-      greeting: { first: !valid, awayMs: valid ? now2 - lastSeenAt : 0 }
-    };
-  }
-  function greetingReaction(greeting, hour, random, holiday = null) {
-    let lines;
-    if (greeting.first) {
-      lines = ["Hi there! I'll be sticking around.", "Nice to meet you! Let's grow something great."];
-    } else if (greeting.awayMs >= 3 * DAY_MS) {
-      lines = ["Where have you been? I missed you!", "You're back! It's been ages.", "Finally! I was starting to talk to the plants."];
-    } else if (holiday) {
-      lines = HOLIDAY_GREETINGS[holiday];
-    } else if (greeting.awayMs >= DAY_MS) {
-      lines = ["Welcome back! The garden missed you.", "Hey, you're back! Good to see you."];
-    } else {
-      const byPart = {
-        night: ["Hey, night owl! Couldn't sleep?", "Gardening at this hour? I like your style."],
-        early: ["Up with the sun, I see!", "Good morning! You're up early."],
-        morning: ["Good morning! Let's grow something.", "Morning! Ready when you are."],
-        afternoon: ["Good afternoon! Ready to garden?", "Hey! Perfect timing, the plants were asking for you."],
-        evening: ["Good evening! Glad you're here.", "Evening! Let's make it a good one."],
-        late: ["Evening, boss. Late session tonight?", "Hey! Quick one before bed?"]
-      };
-      lines = byPart[dayPart(hour)];
-    }
-    return { key: "session:greeting", message: pickOne(lines, random), emote: EmoteType.Love, priority: "high" };
-  }
-  function anniversarySteps(days) {
-    const steps = [7, 30, 100];
-    for (let year = 1; year * 365 <= days; year++) steps.push(year * 365);
-    return steps;
-  }
-  function anniversaryReaction(firstMetAt, now2, celebratedDays, random) {
-    const days = Math.floor((now2 - firstMetAt) / DAY_MS);
-    let due = null;
-    for (const step of anniversarySteps(days)) if (step <= days && step > celebratedDays) due = step;
-    if (due === null) return { reaction: null, celebratedDays };
-    let lines;
-    if (due === 7) lines = ["One week together already! Thanks for having me.", "A whole week of gardening together!"];
-    else if (due === 30) lines = ["We've been gardening together for a whole month!", "One month together! Time flies."];
-    else if (due === 100) lines = ["100 days together! That's a lot of crops.", "Day 100! Best garden buddy ever."];
-    else {
-      const years = due / 365;
-      lines = years === 1 ? ["Happy anniversary! One year together!", "One year already! Thanks for keeping me around."] : [`Happy anniversary! ${years} years together!`, `${years} years of gardening together. Wow.`];
-    }
-    return {
-      reaction: { key: "anniversary", message: pickOne(lines, random), emote: EmoteType.Love, priority: "high" },
-      celebratedDays: due
-    };
-  }
-  function sessionHours(session2, now2) {
-    return Math.max(0, Math.floor((now2 - session2.startedAt) / 36e5));
-  }
-  function sessionHourReaction(hours, random) {
-    if (hours < 1) return null;
-    let lines;
-    let emote = EmoteType.Clapping;
-    if (hours === 1) {
-      lines = ["We've been at it for an hour already.", "One hour in! Time flies when you're gardening."];
-    } else if (hours === 2) {
-      lines = ["Two hours in! Look at this place.", "Two hours already? Where did the time go?"];
-    } else if (hours < 6) {
-      lines = [`${hours} hours straight. Maybe stretch your legs?`, `${hours} hours! Don't forget to drink some water.`, `${hours} hours already. You're dedicated!`];
-      emote = EmoteType.Questioning;
-    } else {
-      lines = [`${hours} hours?! Are you okay?`, `${hours} hours. I think the plants need a break. And you too.`];
-      emote = EmoteType.Crying;
-    }
-    return { key: `session:hours`, message: pickOne(lines, random), emote, priority: "high" };
-  }
-  function clockReaction(prevHour, hour, sessionMs, random, holiday = null) {
-    if (prevHour === hour) return null;
-    if (hour === 0) {
-      if (holiday) {
-        return { key: "clock:holiday", message: pickOne(HOLIDAY_GREETINGS[holiday], random), emote: EmoteType.Love, priority: "high" };
-      }
-      return {
-        key: "clock:midnight",
-        message: pickOne(["It's midnight! Still going?", "Midnight already. The garden never sleeps, huh?"], random),
-        emote: EmoteType.Questioning,
-        priority: "high"
-      };
-    }
-    if (hour === 6 && sessionMs >= 3 * 36e5) {
-      return {
-        key: "clock:sunrise",
-        message: pickOne(["The sun's coming up. Did we just pull an all-nighter?", "Is that... sunrise? We've been up all night!"], random),
-        emote: EmoteType.Laughing,
-        priority: "high"
-      };
-    }
-    return null;
-  }
-  function initialGateState() {
-    return { lastSpokeAt: 0, mutedUntil: {}, queue: [] };
-  }
-  function offerReaction(state6, reaction, now2) {
-    if (now2 < (state6.mutedUntil[familyOf(reaction.key)] ?? 0)) return state6;
-    const existing = state6.queue.find((q) => q.key === reaction.key);
-    if (existing && (existing.weight ?? 0) > (reaction.weight ?? 0)) return state6;
-    const queue = state6.queue.filter((q) => q.key !== reaction.key);
-    queue.push({ ...reaction, at: now2 });
-    return { ...state6, queue };
-  }
-  function takeReaction(state6, now2, busy4) {
-    const queue = state6.queue.filter((q) => now2 - q.at <= REACTION_TTL_MS[q.priority]);
-    const kept = { ...state6, queue };
-    if (busy4 || queue.length === 0 || now2 - state6.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
-    const chosen = queue.find((q) => q.priority === "high") ?? queue[0];
-    const family = familyOf(chosen.key);
-    const { at: _at, ...reaction } = chosen;
-    return {
-      reaction,
-      state: {
-        lastSpokeAt: now2,
-        mutedUntil: { ...state6.mutedUntil, [family]: now2 + (FAMILY_COOLDOWN_MS[family] ?? 0) },
-        // Le reste de la famille qui vient de parler se tait aussi.
-        queue: queue.filter((q) => q !== chosen && (FAMILY_COOLDOWN_MS[family] ? familyOf(q.key) !== family : true))
-      }
-    };
-  }
-  var fmt, MILESTONES, sumHatched, sumAbilityTriggers, num, STAT_DEFS, WEATHER_EMOTES, SHOP_ID, DROUGHT_STEPS, RELIEF_MIN, RARITY_LABEL, DAY_PART_LINES, HOLIDAY_LINES, HOLIDAY_GREETINGS, WEEKEND_LINES, SUNDAY_LINES, TIME_LINE_EMOTES, SESSION_GAP_MS, DAY_MS, REACTION_GAP_MS, REACTION_TTL_MS, FAMILY_COOLDOWN_MS, familyOf;
-  var init_reactions = __esm({
-    "src/services/companion/reactions.ts"() {
-      "use strict";
-      init_emoteTypes();
-      fmt = (n) => Math.round(n).toLocaleString("en-US");
-      MILESTONES = Array.from({ length: 14 }, (_, i) => 10 ** (i + 2));
-      sumHatched = (s, key2) => {
-        let total = 0;
-        for (const counts of Object.values(s?.pets?.hatchedByType ?? {})) {
-          if (!counts) continue;
-          total += key2 ? Number(counts[key2]) || 0 : (Number(counts.normal) || 0) + (Number(counts.gold) || 0) + (Number(counts.rainbow) || 0);
-        }
-        return total;
-      };
-      sumAbilityTriggers = (s) => {
-        let total = 0;
-        for (const stat of Object.values(s?.abilities ?? {})) total += Number(stat?.triggers) || 0;
-        return total;
-      };
-      num = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
-      STAT_DEFS = [
-        {
-          id: "harvested",
-          read: (s) => num(s?.garden?.totalHarvested),
-          lines: [
-            (n) => `That's ${n} crops harvested! Incredible.`,
-            (n) => `${n} harvests! You're a natural.`,
-            (n) => `Crop number ${n}! We should celebrate.`
-          ]
-        },
-        {
-          id: "planted",
-          read: (s) => num(s?.garden?.totalPlanted),
-          lines: [
-            (n) => `${n} seeds planted! This garden keeps growing.`,
-            (n) => `That's seed number ${n}. Green thumb confirmed.`
-          ]
-        },
-        {
-          id: "watered",
-          read: (s) => num(s?.garden?.watercanUsed),
-          lines: [(n) => `${n} waterings! You really care about these plants.`]
-        },
-        {
-          id: "cropsSold",
-          read: (s) => num(s?.shops?.cropsSoldCount),
-          lines: [
-            (n) => `${n} crops sold! The shop loves you.`,
-            (n) => `That's ${n} crops sold. Business is booming.`
-          ]
-        },
-        {
-          id: "coins",
-          read: (s) => num(s?.shops?.cropsSoldValue) + num(s?.shops?.petsSoldValue),
-          lines: [
-            (n) => `You've earned ${n} coins from sales! So rich.`,
-            (n) => `${n} coins earned. Buy me something nice?`
-          ]
-        },
-        {
-          id: "seedsBought",
-          read: (s) => num(s?.shops?.seedsBought),
-          lines: [(n) => `${n} seeds bought! The shopkeeper knows your name by now.`]
-        },
-        {
-          id: "petsSold",
-          read: (s) => num(s?.shops?.petsSoldCount),
-          lines: [(n) => `${n} pets sold. Hope they found good homes!`]
-        },
-        {
-          id: "hatched",
-          read: (s) => sumHatched(s),
-          lines: [
-            (n) => `${n} pets hatched! That's a whole zoo.`,
-            (n) => `Pet number ${n}! Welcome to the family.`
-          ]
-        },
-        {
-          id: "abilities",
-          read: (s) => sumAbilityTriggers(s),
-          lines: [
-            (n) => `Your pets have used their abilities ${n} times!`,
-            (n) => `${n} pet abilities triggered. Hard workers!`
-          ]
-        }
-      ];
-      WEATHER_EMOTES = {
-        Rain: EmoteType.Laughing,
-        Frost: EmoteType.Clapping,
-        Thunderstorm: EmoteType.Crying,
-        Dawn: EmoteType.Love,
-        AmberMoon: EmoteType.Questioning
-      };
-      SHOP_ID = {
-        seed: ["Seed", "species"],
-        egg: ["Egg", "eggId"],
-        tool: ["Tool", "toolId"],
-        decor: ["Decor", "decorId"]
-      };
-      DROUGHT_STEPS = {
-        gold: [25, 50, 100, 200, 400],
-        rainbow: [100, 250, 500, 1e3, 2e3]
-      };
-      RELIEF_MIN = { gold: 25, rainbow: 100 };
-      RARITY_LABEL = { gold: "Gold", rainbow: "Rainbow" };
-      DAY_PART_LINES = {
-        night: [
-          "Shouldn't you be asleep?",
-          "The garden's so quiet at night.",
-          "Night owl, huh?",
-          "I'm not tired. You're tired.",
-          "Midnight snacks count as gardening, right?"
-        ],
-        early: ["Early bird gets the best seeds.", "Morning already? I barely slept.", "Nothing beats an early start."],
-        morning: ["Coffee first, crops second.", "Fresh morning, fresh sprouts.", "Morning, boss! Ready for the day?"],
-        afternoon: ["Lunch break in the garden? Good call.", "Nice afternoon for it.", "Afternoon sun, happy plants."],
-        evening: ["Evening already? Time flies in here.", "Love the evening light on the garden.", "One more harvest before dinner?"],
-        late: ["It's getting late, boss.", "Late night gardening session?", "Don't stay up too late, okay?"]
-      };
-      HOLIDAY_LINES = {
-        newyear: ["Happy New Year! New year, new crops.", "First harvest of the year, let's make it count!"],
-        valentine: ["Happy Valentine's Day! I got you a sprout.", "Roses are red, crops are green, best gardener I've ever seen."],
-        aprilfools: ["Did you know crops can talk? April fools!", "I planted a joke. It hasn't grown yet."],
-        halloween: ["Happy Halloween! Any spooky crops tonight?", "Boo! Did I scare you?"],
-        christmas: ["Merry Christmas! Hope Santa brings you rare seeds.", "Best present ever: a full garden."],
-        newyearseve: ["Last day of the year! Let's end it with a big harvest.", "Any resolutions? Mine is more gardening."]
-      };
-      HOLIDAY_GREETINGS = {
-        newyear: ["Happy New Year, boss!", "Happy New Year! Here's to a great harvest."],
-        valentine: ["Happy Valentine's Day!", "Aww, spending Valentine's Day with me?"],
-        aprilfools: ["Welcome back! Your garden turned into a desert. April fools!", "Happy April Fools! Don't trust anything I say today."],
-        halloween: ["Happy Halloween! Trick or treat?", "Spooky season is here! Happy Halloween!"],
-        christmas: ["Merry Christmas!", "Merry Christmas, boss! Thanks for visiting me."],
-        newyearseve: ["Last day of the year! Glad you're here.", "Happy New Year's Eve!"]
-      };
-      WEEKEND_LINES = ["Weekend gardening, the best kind.", "No work today? Perfect."];
-      SUNDAY_LINES = ["Lazy Sunday in the garden."];
-      TIME_LINE_EMOTES = {
-        "Shouldn't you be asleep?": EmoteType.Questioning,
-        "Night owl, huh?": EmoteType.Laughing,
-        "I'm not tired. You're tired.": EmoteType.Laughing,
-        "Midnight snacks count as gardening, right?": EmoteType.Questioning,
-        "Early bird gets the best seeds.": EmoteType.Clapping,
-        "Morning already? I barely slept.": EmoteType.Crying,
-        "Morning, boss! Ready for the day?": EmoteType.Questioning,
-        "Lunch break in the garden? Good call.": EmoteType.Clapping,
-        "Love the evening light on the garden.": EmoteType.Love,
-        "One more harvest before dinner?": EmoteType.Questioning,
-        "Late night gardening session?": EmoteType.Questioning,
-        "Weekend gardening, the best kind.": EmoteType.Love,
-        "No work today? Perfect.": EmoteType.Clapping,
-        "Lazy Sunday in the garden.": EmoteType.Love,
-        "Happy New Year! New year, new crops.": EmoteType.Clapping,
-        "First harvest of the year, let's make it count!": EmoteType.Clapping,
-        "Happy Valentine's Day! I got you a sprout.": EmoteType.Love,
-        "Roses are red, crops are green, best gardener I've ever seen.": EmoteType.Love,
-        "Did you know crops can talk? April fools!": EmoteType.Laughing,
-        "I planted a joke. It hasn't grown yet.": EmoteType.Laughing,
-        "Happy Halloween! Any spooky crops tonight?": EmoteType.Questioning,
-        "Boo! Did I scare you?": EmoteType.Laughing,
-        "Merry Christmas! Hope Santa brings you rare seeds.": EmoteType.Love,
-        "Best present ever: a full garden.": EmoteType.Love,
-        "Last day of the year! Let's end it with a big harvest.": EmoteType.Clapping,
-        "Any resolutions? Mine is more gardening.": EmoteType.Questioning
-      };
-      SESSION_GAP_MS = 20 * 6e4;
-      DAY_MS = 24 * 36e5;
-      REACTION_GAP_MS = 15e3;
-      REACTION_TTL_MS = {
-        high: 3 * 6e4,
-        low: 1e4
-      };
-      FAMILY_COOLDOWN_MS = {
-        ability: 5 * 6e4,
-        sale: 6e4,
-        hatch: 6e4,
-        egg: 5 * 6e4,
-        shop: 3e4,
-        rarecrop: 3e4
-      };
-      familyOf = (key2) => key2.split(":")[0];
-    }
-  });
-
-  // src/services/companion/dialogueLines.ts
-  function lineEmote(line) {
-    return LINE_EMOTES[line] ?? null;
-  }
-  function pokeLine(talkTimes, now2, random) {
-    const recent = talkTimes.filter((t) => now2 - t <= POKE_WINDOW_MS && t <= now2).length;
-    if (recent < POKE_THRESHOLD) return null;
-    if (recent < 7) {
-      return {
-        message: pickOne2(["Okay okay, I'm listening!", "Yes? I'm right here.", "One at a time, boss!"], random),
-        emote: EmoteType.Laughing
-      };
-    }
-    if (recent < 10) {
-      return {
-        message: pickOne2(["Are you poking me on purpose?", "Is this a game? I like games.", "Hey, that tickles!"], random),
-        emote: EmoteType.Questioning
-      };
-    }
-    return {
-      message: pickOne2(["Stop poking me!", "Okay, I'm ignoring you now.", "I'm going to start charging for this."], random),
-      emote: EmoteType.Angered
-    };
-  }
-  function ripeCropCount(tileObjects, now2) {
-    if (!tileObjects || typeof tileObjects !== "object") return 0;
-    let count = 0;
-    for (const obj of Object.values(tileObjects)) {
-      const slots = obj?.slots;
-      if (!Array.isArray(slots)) continue;
-      for (const slot of slots) {
-        const s = slot;
-        if (!s || s.preserved === true) continue;
-        const end = s.endTime;
-        if (typeof end === "number" && end > 0 && end <= now2) count++;
-      }
-    }
-    return count;
-  }
-  function pickOne2(options, random) {
-    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
-  }
-  function harvestMessage(ready2, random) {
-    const crops = `${ready2} ${plural(ready2, "crop", "crops")}`;
-    const isAre = plural(ready2, "is", "are");
-    return pickOne2(
-      [
-        `${crops} ${isAre} ready to harvest, by the way.`,
-        `Psst, ${crops} ${isAre} ripe and waiting for you.`,
-        `I spotted ${crops} ready to pick.`,
-        `Harvest time! ${crops} ${isAre} good to go.`,
-        `${crops} ${isAre} looking ripe. Just saying.`,
-        `Don't leave them hanging, ${crops} ${isAre} ready.`
-      ],
-      random
-    );
-  }
-  function hungryPetMessage(hungry, random) {
-    const pets = `${hungry} ${plural(hungry, "pet", "pets")}`;
-    const isAre = plural(hungry, "is", "are");
-    return pickOne2(
-      [
-        `${pets} ${isAre} getting hungry.`,
-        `I think ${pets} could use a snack.`,
-        `${pets} ${isAre} giving me the hungry eyes.`,
-        `Someone's tummy is rumbling. ${pets} need${hungry === 1 ? "s" : ""} feeding.`,
-        `Heads up, ${pets} ${isAre} running low on food.`
-      ],
-      random
-    );
-  }
-  function sellMessage(coins, random) {
-    const amount = `${Math.round(coins).toLocaleString("en-US")} coins`;
-    return pickOne2(
-      [
-        `You're carrying ${amount} worth of crops.`,
-        `Your bag's worth ${amount} right now. Shop trip?`,
-        `That's ${amount} of crops in your pockets.`,
-        `Ka-ching! ${amount} worth of crops, ready to sell.`,
-        `You could cash in ${amount} at the shop.`
-      ],
-      random
-    );
-  }
-  function weatherDisplayName(weatherId, catalog) {
-    const entry = catalog && typeof catalog === "object" ? catalog[weatherId] : void 0;
-    for (const field of ["name", "displayName"]) {
-      const value = entry?.[field];
-      if (typeof value === "string" && value.trim()) return value.trim();
-    }
-    return weatherId.replace(/([a-z])([A-Z])/g, "$1 $2");
-  }
-  function weatherMessage(weatherId, displayName, random) {
-    const own = WEATHER_LINES[weatherId];
-    if (own && own.length > 0) return pickOne2(own, random);
-    return pickOne2(GENERIC_WEATHER_TEMPLATES, random)(displayName);
-  }
-  var LEGACY_DEFAULT_LINES, DEFAULT_CUSTOM_LINES, LINE_EMOTES, POKE_WINDOW_MS, POKE_THRESHOLD, plural, WEATHER_LINES, GENERIC_WEATHER_TEMPLATES;
-  var init_dialogueLines = __esm({
-    "src/services/companion/dialogueLines.ts"() {
-      "use strict";
-      init_emoteTypes();
-      init_reactions();
-      LEGACY_DEFAULT_LINES = [
-        "Right behind you, boss.",
-        "Nice patch you've got here.",
-        "Want me to keep an eye on anything?",
-        "I like it here."
-      ];
-      DEFAULT_CUSTOM_LINES = [
-        ...LEGACY_DEFAULT_LINES,
-        "Lovely day for some gardening.",
-        "I could watch things grow all day. Actually, I do.",
-        "Do the plants talk to you too, or is that just me?",
-        "Careful where you step, something's sprouting.",
-        "I counted the leaves. Lost track at forty.",
-        "One day I'll have a garden of my own.",
-        "Smells like fresh soil. My favourite.",
-        "You've got a green thumb, you know that?",
-        "I'm not lazy, I'm supervising.",
-        "Did that sprout just move?",
-        "If you need a hand, I've got two.",
-        "Water, sun, patience. That's the whole secret.",
-        "I named one of the crops. Don't ask which.",
-        "Some of these are looking really good.",
-        "I'd buy that seed again, honestly.",
-        "Whatever you're doing, keep doing it.",
-        "Is it snack time yet?",
-        "I heard a rumour about a very rare crop.",
-        "The pets seem happy today.",
-        "Big plans for this garden?",
-        "Don't mind me, just enjoying the view.",
-        "I've been practising my whistling. Want to hear?",
-        "You can always count on me.",
-        "Every sprout is a tiny miracle.",
-        "Let me know when it's harvest time.",
-        "What's the rarest thing you've ever grown?",
-        "Right here if you need me.",
-        "I think the bees like you.",
-        "One more row and this place is perfect.",
-        "I'm having a great time, thanks for asking.",
-        "A good mutation is the best kind of surprise.",
-        "Think the weather will change soon?",
-        "Stay hydrated, boss.",
-        "Busy day, huh?",
-        "Who needs a map when you know every tile by heart?",
-        "I'll hold the fort."
-      ];
-      LINE_EMOTES = {
-        "Nice patch you've got here.": EmoteType.Clapping,
-        "Want me to keep an eye on anything?": EmoteType.Questioning,
-        "I like it here.": EmoteType.Love,
-        "Lovely day for some gardening.": EmoteType.Love,
-        "I could watch things grow all day. Actually, I do.": EmoteType.Laughing,
-        "Do the plants talk to you too, or is that just me?": EmoteType.Questioning,
-        "I counted the leaves. Lost track at forty.": EmoteType.Laughing,
-        "One day I'll have a garden of my own.": EmoteType.Love,
-        "Smells like fresh soil. My favourite.": EmoteType.Love,
-        "You've got a green thumb, you know that?": EmoteType.Clapping,
-        "I'm not lazy, I'm supervising.": EmoteType.Laughing,
-        "Did that sprout just move?": EmoteType.Questioning,
-        "I named one of the crops. Don't ask which.": EmoteType.Laughing,
-        "Some of these are looking really good.": EmoteType.Clapping,
-        "Whatever you're doing, keep doing it.": EmoteType.Clapping,
-        "Is it snack time yet?": EmoteType.Questioning,
-        "Big plans for this garden?": EmoteType.Questioning,
-        "I've been practising my whistling. Want to hear?": EmoteType.Laughing,
-        "Every sprout is a tiny miracle.": EmoteType.Love,
-        "What's the rarest thing you've ever grown?": EmoteType.Questioning,
-        "I think the bees like you.": EmoteType.Laughing,
-        "I'm having a great time, thanks for asking.": EmoteType.Love,
-        "A good mutation is the best kind of surprise.": EmoteType.Clapping,
-        "Think the weather will change soon?": EmoteType.Questioning,
-        "Busy day, huh?": EmoteType.Laughing,
-        ...TIME_LINE_EMOTES
-      };
-      POKE_WINDOW_MS = 1e4;
-      POKE_THRESHOLD = 5;
-      plural = (count, singular, pluralForm) => count === 1 ? singular : pluralForm;
-      WEATHER_LINES = {
-        Rain: [
-          "It's raining! The crops are loving this.",
-          "Free watering, courtesy of the sky.",
-          "I forgot my umbrella again.",
-          "Listen to that rain. So relaxing.",
-          "Puddle jumping, anyone?",
-          "Rain day. Perfect excuse to stay in the garden."
-        ],
-        Frost: [
-          "Brr, it's snowing! Wrap up warm.",
-          "Snow on the garden. Everything looks so quiet.",
-          "My toes are freezing out here.",
-          "Want to build a snowman after this?",
-          "Careful, it's slippery with all this snow.",
-          "Snowflakes on the leaves. Pretty, isn't it?"
-        ],
-        Thunderstorm: [
-          "Whoa, did you hear that thunder?",
-          "Thunderstorm! Stay away from tall things.",
-          "That lightning made me jump.",
-          "Big storm rolling in. Hold on to your hat.",
-          "I'm not scared of thunder. Much.",
-          "What a storm. The sky's putting on a show."
-        ],
-        Dawn: [
-          "Look at that sunrise.",
-          "Dawn's here. Everything glows.",
-          "Early light is the best light.",
-          "Rise and shine, garden!",
-          "The whole garden looks golden right now.",
-          "I love this time of day."
-        ],
-        AmberMoon: [
-          "The Amber Moon is up. Spooky, right?",
-          "Everything's glowing orange tonight.",
-          "Don't the crops look magical under the Amber Moon?",
-          "An Amber Moon. Doesn't come around often.",
-          "Stay close, strange things happen under the Amber Moon.",
-          "Moonlight like this makes me want to howl."
-        ]
-      };
-      GENERIC_WEATHER_TEMPLATES = [
-        (name) => `We're getting ${name} right now.`,
-        (name) => `Ooh, ${name}! Good time to be outside.`,
-        (name) => `Looks like ${name} out there.`,
-        (name) => `${name} today. The crops might like that.`,
-        (name) => `Did you notice? ${name} is here.`
-      ];
-    }
-  });
-
-  // src/services/companion/chat/harvest.ts
-  function mutationsOf(row) {
-    return row.mutations;
-  }
-  function rowKey(row) {
-    return `${row.tileIndex}:${row.slotId}`;
-  }
-  function selectionSignature(rows) {
-    return rows.map(rowKey).sort().join("|");
-  }
-  function speciesPresent(rows) {
-    return [...new Set(rows.map((row) => row.species))].sort((a, b) => a.localeCompare(b));
-  }
-  function mutationsPresent(rows) {
-    const all = /* @__PURE__ */ new Set();
-    for (const row of rows) for (const mutation of mutationsOf(row)) all.add(mutation);
-    return [...all].sort((a, b) => a.localeCompare(b));
-  }
-  function tally(rows, of) {
-    const counts = /* @__PURE__ */ new Map();
-    for (const row of rows) {
-      for (const value of of(row)) {
-        if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
-      }
-    }
-    return counts;
-  }
-  function matchesMutations(row, wanted, mode) {
-    if (wanted.length === 0) return true;
-    const present = new Set(mutationsOf(row));
-    switch (mode) {
-      case "all":
-        return wanted.every((mutation) => present.has(mutation));
-      case "none":
-        return wanted.every((mutation) => !present.has(mutation));
-      default:
-        return wanted.some((mutation) => present.has(mutation));
-    }
-  }
-  function filterRows(rows, filters) {
-    const species = filters.species && filters.species.length > 0 ? new Set(filters.species) : null;
-    return rows.filter((row) => {
-      if (!row.ready) return false;
-      if (row.preserved && !filters.includePreserved) return false;
-      if (species && !species.has(row.species)) return false;
-      if (row.sizePct < filters.minSizePct) return false;
-      return matchesMutations(row, filters.mutations, filters.mutationMode);
-    });
-  }
-  function describeFilters(filters) {
-    const species = filters.species ?? [];
-    const subject = species.length > 0 ? `my ${listWords(species)}` : "everything";
-    const qualifiers = [];
-    if (filters.mutations.length > 0) {
-      const list = listWords(filters.mutations);
-      if (filters.mutationMode === "none") qualifiers.push(`without ${list}`);
-      else if (filters.mutationMode === "all") qualifiers.push(`with both ${list}`);
-      else qualifiers.push(`with ${list}`);
-    }
-    if (filters.minSizePct > DEFAULT_FILTERS.minSizePct) {
-      qualifiers.push(`at least ${filters.minSizePct}% size`);
-    }
-    if (filters.includePreserved) qualifiers.push("preserved ones included");
-    if (qualifiers.length === 0) {
-      return species.length > 0 ? `Harvest ${subject}, please` : "Harvest everything that's ready";
-    }
-    return `Harvest ${subject}, ${qualifiers.join(", ")}`;
-  }
-  function groupVariants(rows) {
-    const groups = /* @__PURE__ */ new Map();
-    for (const row of rows) {
-      const mutations = [...mutationsOf(row)].sort();
-      const key2 = `${row.species}|${mutations.join(",")}`;
-      const known = groups.get(key2);
-      if (known) known.count++;
-      else groups.set(key2, { species: row.species, mutations, count: 1 });
-    }
-    return [...groups.values()].sort(
-      (a, b) => b.count - a.count || a.species.localeCompare(b.species) || a.mutations.length - b.mutations.length || a.mutations.join(",").localeCompare(b.mutations.join(","))
-    );
-  }
-  function listWords(words) {
-    if (words.length <= 1) return words[0] ?? "";
-    return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
-  }
-  function describeSelection(rows) {
-    if (rows.length === 0) return "nothing";
-    const bySpecies2 = /* @__PURE__ */ new Map();
-    for (const row of rows) bySpecies2.set(row.species, (bySpecies2.get(row.species) ?? 0) + 1);
-    const parts = [...bySpecies2.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([species, count]) => `${count} ${species}`);
-    const head = parts.slice(0, 3);
-    const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
-    const total = `${rows.length} crop${rows.length === 1 ? "" : "s"}`;
-    if (parts.length === 1) return `${parts[0]} ready`;
-    return `${total} ready: ${listWords(head)}${rest2}`;
-  }
-  var DEFAULT_FILTERS;
-  var init_harvest = __esm({
-    "src/services/companion/chat/harvest.ts"() {
-      "use strict";
-      DEFAULT_FILTERS = {
-        species: null,
-        minSizePct: 50,
-        mutations: [],
-        mutationMode: "any",
-        includePreserved: false
-      };
-    }
-  });
-
-  // src/services/companion/chat/hatch.ts
-  function hasAnyRule(rules) {
-    return rules.species.length > 0 || rules.mutations.length > 0 || rules.abilities.length > 0 || rules.minMaxStr !== null;
-  }
-  function hasAny(present, wanted) {
-    if (wanted.length === 0) return false;
-    const set2 = new Set(present.map((value) => value.toLowerCase()));
-    return wanted.some((value) => set2.has(value.toLowerCase()));
-  }
-  function matchesKeep(pet, rules) {
-    if (rules.species.includes(pet.species)) return true;
-    if (hasAny(pet.mutations, rules.mutations)) return true;
-    if (rules.abilities.some((ability) => pet.abilities.includes(ability))) return true;
-    if (rules.minMaxStr !== null && pet.maxStrength !== null && pet.maxStrength >= rules.minMaxStr) return true;
-    return false;
-  }
-  function hatchCheer(pets, rules) {
-    const kept = pets.filter((pet) => matchesKeep(pet, rules));
-    if (kept.length === 0) return null;
-    for (const mutation of CHEERED_MUTATIONS) {
-      const star = kept.find((pet) => hasAny(pet.mutations, [mutation]));
-      if (star) return { emote: EmoteType.Love, star, mutation };
-    }
-    return { emote: EmoteType.Clapping, star: null, mutation: null };
-  }
-  function isProtected(pet, rules) {
-    return pet.favorited || pet.onTeam || matchesKeep(pet, rules);
-  }
-  function toFavourite(pets, rules) {
-    return pets.filter((pet) => !pet.favorited && matchesKeep(pet, rules));
-  }
-  function toSell(pets, rules) {
-    if (!hasAnyRule(rules)) return [];
-    return pets.filter((pet) => !isProtected(pet, rules));
-  }
-  function petSignature(pets) {
-    return pets.map((pet) => pet.petId).sort().join("|");
-  }
-  function slotSignature2(slots) {
-    return [...slots].sort((a, b) => a - b).join("|");
-  }
-  function bySpecies(pets) {
-    const counts = /* @__PURE__ */ new Map();
-    for (const pet of pets) counts.set(pet.species, (counts.get(pet.species) ?? 0) + 1);
-    return [...counts.entries()].map(([species, count]) => ({ species, count })).sort((a, b) => b.count - a.count || a.species.localeCompare(b.species));
-  }
-  function describeKeep(rules, abilityNames = /* @__PURE__ */ new Map()) {
-    if (!hasAnyRule(rules)) return "Nothing set yet";
-    const parts = [];
-    if (rules.species.length) parts.push(listWords(rules.species));
-    if (rules.mutations.length) parts.push(listWords(rules.mutations));
-    if (rules.abilities.length) {
-      parts.push(listWords(rules.abilities.map((id) => abilityNames.get(id) ?? id)));
-    }
-    if (rules.minMaxStr !== null) parts.push(`max STR ${rules.minMaxStr} and up`);
-    return parts.join(", ");
-  }
-  function describeHatchRequest(count) {
-    return count === 1 ? "Hatch that egg for me" : `Hatch my ${count} eggs`;
-  }
-  function summarizeHatch(slots) {
-    return `${slots.length} egg${slots.length === 1 ? "" : "s"} ready to hatch`;
-  }
-  function summarizeSell(pets) {
-    if (pets.length === 0) return "nothing";
-    const parts = bySpecies(pets).map((entry) => `${entry.count} ${entry.species}`);
-    const head = parts.slice(0, 3);
-    const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
-    if (parts.length === 1) return parts[0];
-    return `${pets.length} pets: ${listWords(head)}${rest2}`;
-  }
-  var DEFAULT_KEEP_RULES, CHEERED_MUTATIONS;
-  var init_hatch = __esm({
-    "src/services/companion/chat/hatch.ts"() {
-      "use strict";
-      init_harvest();
-      init_emoteTypes();
-      DEFAULT_KEEP_RULES = {
-        species: [],
-        mutations: [],
-        abilities: [],
-        minMaxStr: null
-      };
-      CHEERED_MUTATIONS = ["Rainbow", "Gold"];
-    }
-  });
-
-  // src/services/companion/settingsShape.ts
-  function sanitizeLines(raw) {
-    if (!Array.isArray(raw)) return [...DEFAULT_CUSTOM_LINES];
-    return raw.filter((line) => typeof line === "string").map((line) => line.trim().slice(0, MAX_LINE_LENGTH)).filter((line) => line.length > 0).slice(0, MAX_LINES);
-  }
-  function storedLines(raw) {
-    if (raw === void 0) return [...DEFAULT_CUSTOM_LINES];
-    const lines = sanitizeLines(raw);
-    const isLegacy = lines.length === LEGACY_DEFAULT_LINES.length && lines.every((line, i) => line === LEGACY_DEFAULT_LINES[i]);
-    return isLegacy ? [...DEFAULT_CUSTOM_LINES] : lines;
-  }
-  function sanitizeKeepRules(raw) {
-    if (!raw || typeof raw !== "object") return { ...DEFAULT_KEEP_RULES };
-    const source = raw;
-    const names = (value) => Array.isArray(value) ? value.filter((entry) => typeof entry === "string" && entry !== "") : [];
-    const strength = Number(source.minMaxStr);
-    return {
-      species: names(source.species),
-      mutations: names(source.mutations),
-      abilities: names(source.abilities),
-      minMaxStr: Number.isFinite(strength) && strength > 0 ? Math.round(strength) : null
-    };
-  }
-  function teamId(raw) {
-    return typeof raw === "string" && raw ? raw : null;
-  }
-  function clampThreshold(raw) {
-    const value = Math.round(Number(raw));
-    if (!Number.isFinite(value)) return DEFAULT_COMPANION_SETTINGS.feedThresholdPct;
-    return Math.max(1, Math.min(90, value));
-  }
-  function coerceSettings(raw) {
-    if (!raw || typeof raw !== "object") return { ...DEFAULT_COMPANION_SETTINGS };
-    return {
-      enabled: raw.enabled === true,
-      // Les réglages de déplacement persistés par les versions précédentes sont
-      // simplement ignorés : ils sont devenus des constantes.
-      mode: COMPANION_MODES.includes(raw.mode) ? raw.mode : DEFAULT_COMPANION_SETTINGS.mode,
-      npcId: typeof raw.npcId === "string" && raw.npcId ? raw.npcId : null,
-      lines: storedLines(raw.lines),
-      contextualEnabled: raw.contextualEnabled !== false,
-      reactions: raw.reactions !== false,
-      feedAlerts: raw.feedAlerts !== false,
-      feedThresholdPct: clampThreshold(raw.feedThresholdPct),
-      feedFromGarden: raw.feedFromGarden !== false,
-      askOnScreen: raw.askOnScreen !== false,
-      harvestTeamId: teamId(raw.harvestTeamId),
-      hatchTeamId: teamId(raw.hatchTeamId),
-      hatchSellTeamId: teamId(raw.hatchSellTeamId),
-      hatchKeepRules: sanitizeKeepRules(raw.hatchKeepRules),
-      reviewedSettings: SETTINGS_GROUPS.filter(
-        (group) => Array.isArray(raw.reviewedSettings) && raw.reviewedSettings.includes(group)
-      )
-    };
-  }
-  var COMPANION_MODES, MAX_LINE_LENGTH, MAX_LINES, SETTINGS_GROUPS, DEFAULT_COMPANION_SETTINGS;
-  var init_settingsShape = __esm({
-    "src/services/companion/settingsShape.ts"() {
-      "use strict";
-      init_dialogueLines();
-      init_hatch();
-      COMPANION_MODES = ["follow", "garden"];
-      MAX_LINE_LENGTH = 160;
-      MAX_LINES = 50;
-      SETTINGS_GROUPS = ["feed", "harvest", "hatch"];
-      DEFAULT_COMPANION_SETTINGS = {
-        enabled: false,
-        mode: "follow",
-        npcId: null,
-        lines: [...DEFAULT_CUSTOM_LINES],
-        contextualEnabled: true,
-        reactions: true,
-        feedAlerts: true,
-        feedThresholdPct: 10,
-        feedFromGarden: true,
-        askOnScreen: true,
-        harvestTeamId: null,
-        hatchTeamId: null,
-        hatchSellTeamId: null,
-        hatchKeepRules: { ...DEFAULT_KEEP_RULES },
-        reviewedSettings: []
-      };
-    }
-  });
-
   // src/services/companion/anchors.ts
   async function resolveAnchor(request2) {
     const { mode, map: map2, player: player2 } = request2;
@@ -52473,7 +51067,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/services/companion/anchors.ts"() {
       "use strict";
       init_hub();
-      init_settingsShape();
       myUserSlotIdx = makeAtom("myUserSlotIdxAtom");
     }
   });
@@ -52588,6 +51181,116 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_hub();
       init_buildings();
       mapAtom = makeAtom("mapAtom");
+    }
+  });
+
+  // src/services/companion/chat/harvest.ts
+  function mutationsOf(row) {
+    return row.mutations;
+  }
+  function rowKey(row) {
+    return `${row.tileIndex}:${row.slotId}`;
+  }
+  function selectionSignature(rows) {
+    return rows.map(rowKey).sort().join("|");
+  }
+  function speciesPresent(rows) {
+    return [...new Set(rows.map((row) => row.species))].sort((a, b) => a.localeCompare(b));
+  }
+  function mutationsPresent(rows) {
+    const all = /* @__PURE__ */ new Set();
+    for (const row of rows) for (const mutation of mutationsOf(row)) all.add(mutation);
+    return [...all].sort((a, b) => a.localeCompare(b));
+  }
+  function tally(rows, of) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const row of rows) {
+      for (const value of of(row)) {
+        if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }
+  function matchesMutations(row, wanted, mode) {
+    if (wanted.length === 0) return true;
+    const present = new Set(mutationsOf(row));
+    switch (mode) {
+      case "all":
+        return wanted.every((mutation) => present.has(mutation));
+      case "none":
+        return wanted.every((mutation) => !present.has(mutation));
+      default:
+        return wanted.some((mutation) => present.has(mutation));
+    }
+  }
+  function filterRows(rows, filters) {
+    const species = filters.species && filters.species.length > 0 ? new Set(filters.species) : null;
+    return rows.filter((row) => {
+      if (!row.ready) return false;
+      if (row.preserved && !filters.includePreserved) return false;
+      if (species && !species.has(row.species)) return false;
+      if (row.sizePct < filters.minSizePct) return false;
+      return matchesMutations(row, filters.mutations, filters.mutationMode);
+    });
+  }
+  function describeFilters(filters) {
+    const species = filters.species ?? [];
+    const subject = species.length > 0 ? `my ${listWords(species)}` : "everything";
+    const qualifiers = [];
+    if (filters.mutations.length > 0) {
+      const list = listWords(filters.mutations);
+      if (filters.mutationMode === "none") qualifiers.push(`without ${list}`);
+      else if (filters.mutationMode === "all") qualifiers.push(`with both ${list}`);
+      else qualifiers.push(`with ${list}`);
+    }
+    if (filters.minSizePct > DEFAULT_FILTERS.minSizePct) {
+      qualifiers.push(`at least ${filters.minSizePct}% size`);
+    }
+    if (filters.includePreserved) qualifiers.push("preserved ones included");
+    if (qualifiers.length === 0) {
+      return species.length > 0 ? `Harvest ${subject}, please` : "Harvest everything that's ready";
+    }
+    return `Harvest ${subject}, ${qualifiers.join(", ")}`;
+  }
+  function groupVariants(rows) {
+    const groups = /* @__PURE__ */ new Map();
+    for (const row of rows) {
+      const mutations = [...mutationsOf(row)].sort();
+      const key2 = `${row.species}|${mutations.join(",")}`;
+      const known = groups.get(key2);
+      if (known) known.count++;
+      else groups.set(key2, { species: row.species, mutations, count: 1 });
+    }
+    return [...groups.values()].sort(
+      (a, b) => b.count - a.count || a.species.localeCompare(b.species) || a.mutations.length - b.mutations.length || a.mutations.join(",").localeCompare(b.mutations.join(","))
+    );
+  }
+  function listWords(words) {
+    if (words.length <= 1) return words[0] ?? "";
+    return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
+  }
+  function describeSelection(rows) {
+    if (rows.length === 0) return "nothing";
+    const bySpecies2 = /* @__PURE__ */ new Map();
+    for (const row of rows) bySpecies2.set(row.species, (bySpecies2.get(row.species) ?? 0) + 1);
+    const parts = [...bySpecies2.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([species, count]) => `${count} ${species}`);
+    const head = parts.slice(0, 3);
+    const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
+    const total = `${rows.length} crop${rows.length === 1 ? "" : "s"}`;
+    if (parts.length === 1) return `${parts[0]} ready`;
+    return `${total} ready: ${listWords(head)}${rest2}`;
+  }
+  var DEFAULT_FILTERS;
+  var init_harvest = __esm({
+    "src/services/companion/chat/harvest.ts"() {
+      "use strict";
+      DEFAULT_FILTERS = {
+        species: null,
+        minSizePct: 50,
+        mutations: [],
+        mutationMode: "any",
+        includePreserved: false
+      };
     }
   });
 
@@ -53086,7 +51789,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return box;
   }
   function openGardenView(host) {
-    let unsubscribe3 = null;
+    let unsubscribe2 = null;
     let disposed = false;
     const modal = openModal2({
       host,
@@ -53096,7 +51799,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       onClose: () => {
         disposed = true;
         try {
-          unsubscribe3?.();
+          unsubscribe2?.();
         } catch {
         }
       }
@@ -53215,7 +51918,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           render();
         });
         if (disposed) unsub?.();
-        else unsubscribe3 = unsub;
+        else unsubscribe2 = unsub;
       } catch {
         render();
       }
@@ -59032,9 +57735,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       renderGrid();
     });
     search2.value = menuState.query;
-    const unsubscribe3 = onSkinsChanged(() => {
+    const unsubscribe2 = onSkinsChanged(() => {
       if (!container.isConnected) {
-        unsubscribe3();
+        unsubscribe2();
         return;
       }
       renderAll();
@@ -59416,6 +58119,1044 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/services/companion/emoteTypes.ts
+  function companionEmoteEntry(playerId2, emote, now2) {
+    return { kind: "emote", playerId: playerId2, emoteType: emote, lastTimestampMs: now2 + ENTRY_LEAD_MS };
+  }
+  function mergeEmoteSource(real, fake) {
+    const base = real && typeof real === "object" ? real : {};
+    const entries2 = Array.isArray(base.entries) ? base.entries : [];
+    const ours = Array.isArray(fake?.entries) ? fake.entries : [];
+    return { ...base, entries: ours.length ? [...entries2, ...ours] : entries2 };
+  }
+  function cutTalking(avatarSystem2, playerId2) {
+    const system = avatarSystem2;
+    if (!system || typeof system.views?.get !== "function") return false;
+    const view = system.views.get(playerId2);
+    if (!view) return false;
+    try {
+      if (typeof system.stopNpcTalking === "function") {
+        system.stopNpcTalking(playerId2, view);
+        return true;
+      }
+      if (typeof view.setTalking === "function") {
+        view.setTalking(false);
+        return true;
+      }
+    } catch {
+    }
+    return false;
+  }
+  function emoteStartDelay(lastSpokeAt2, now2, canCutTalking = false) {
+    if (canCutTalking) return 0;
+    if (lastSpokeAt2 === null) return 0;
+    return Math.max(0, lastSpokeAt2 + NPC_TALKING_MS + TALKING_MARGIN_MS - now2);
+  }
+  var EmoteType, ENTRY_LEAD_MS, NPC_TALKING_MS, TALKING_MARGIN_MS;
+  var init_emoteTypes = __esm({
+    "src/services/companion/emoteTypes.ts"() {
+      "use strict";
+      EmoteType = {
+        Idle: -1,
+        Clapping: 0,
+        Laughing: 1,
+        Angered: 2,
+        Crying: 3,
+        Questioning: 4,
+        Love: 5
+      };
+      ENTRY_LEAD_MS = 6e4;
+      NPC_TALKING_MS = 3e3;
+      TALKING_MARGIN_MS = 150;
+    }
+  });
+
+  // src/services/companion/reactions.ts
+  function pickOne(options, random) {
+    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
+  }
+  function crossedMilestone(prev, next) {
+    if (!Number.isFinite(prev) || !Number.isFinite(next) || next <= prev) return null;
+    let crossed = null;
+    for (const m of MILESTONES) {
+      if (prev < m && next >= m) crossed = m;
+    }
+    return crossed;
+  }
+  function formatMilestone(n) {
+    const units = [
+      [1e15, "quadrillion"],
+      [1e12, "trillion"],
+      [1e9, "billion"],
+      [1e6, "million"]
+    ];
+    for (const [size, word] of units) {
+      if (n >= size) return `${fmt(n / size)} ${word}`;
+    }
+    return fmt(n);
+  }
+  function statReactions(prev, next, random) {
+    const out = [];
+    for (const def of STAT_DEFS) {
+      const m = crossedMilestone(def.read(prev), def.read(next));
+      if (m === null) continue;
+      out.push({
+        key: `milestone:${def.id}`,
+        message: pickOne(def.lines, random)(formatMilestone(m)),
+        emote: m >= 1e6 ? EmoteType.Love : EmoteType.Clapping,
+        priority: "high"
+      });
+    }
+    if (sumHatched(next, "rainbow") > sumHatched(prev, "rainbow")) {
+      out.push({
+        key: "hatch:rainbow",
+        message: pickOne(["A RAINBOW pet?! No way!", "Rainbow! I've never seen one up close!", "Look at those colours! A Rainbow pet!"], random),
+        emote: EmoteType.Love,
+        priority: "high"
+      });
+    } else if (sumHatched(next, "gold") > sumHatched(prev, "gold")) {
+      out.push({
+        key: "hatch:gold",
+        message: pickOne(["A Gold pet! Look at it shine!", "Gold! That one's a keeper.", "Shiny! A Gold pet!"], random),
+        emote: EmoteType.Love,
+        priority: "high"
+      });
+    } else if (sumHatched(next) > sumHatched(prev)) {
+      out.push({
+        key: "hatch:normal",
+        message: pickOne(["Welcome to the family, little one!", "A new friend! Hi there!", "Aww, look at the new pet."], random),
+        emote: EmoteType.Clapping,
+        priority: "low"
+      });
+    }
+    const earned = num(next?.shops?.cropsSoldValue) - num(prev?.shops?.cropsSoldValue);
+    if (earned > 0) {
+      const coins = fmt(earned);
+      out.push({
+        key: "sale:crops",
+        message: pickOne(
+          [`Ka-ching! +${coins} coins.`, `Sold! ${coins} coins richer.`, `Nice sale, ${coins} coins!`, `${coins} coins in the bank. Love it.`],
+          random
+        ),
+        emote: EmoteType.Clapping,
+        priority: "low"
+      });
+    }
+    return out;
+  }
+  function weatherEmote(weatherId) {
+    return WEATHER_EMOTES[weatherId] ?? EmoteType.Questioning;
+  }
+  function weatherChangeReaction(prevId, nextId, prevName, startLine, random) {
+    if (prevId === nextId) return null;
+    if (nextId) {
+      return { key: `weather:${nextId}`, message: startLine, emote: weatherEmote(nextId), priority: "high" };
+    }
+    if (!prevId) return null;
+    return {
+      key: "weather:end",
+      message: pickOne([`The ${prevName} is over. Sunshine's back!`, `And just like that, the ${prevName} is gone.`, `Bye bye, ${prevName}.`], random),
+      emote: null,
+      priority: "low"
+    };
+  }
+  function abilityReaction(event, random) {
+    const who = event.name?.trim() || (event.species ? `your ${event.species}` : "your pet");
+    const Who = who.charAt(0).toUpperCase() + who.slice(1);
+    return {
+      key: "ability",
+      message: pickOne(
+        [`${Who} just used ${event.abilityName}!`, `Go ${who}! ${event.abilityName}!`, `Did you see that? ${Who} used ${event.abilityName}.`],
+        random
+      ),
+      emote: EmoteType.Clapping,
+      priority: "low"
+    };
+  }
+  function eggsReadyReaction(count, random) {
+    if (count <= 0) return null;
+    return {
+      key: "egg",
+      message: count === 1 ? pickOne(["An egg is ready to hatch!", "Ooh, one of your eggs is ready!", "Something's wiggling in that egg. It's ready!"], random) : pickOne([`${count} eggs are ready to hatch!`, `${count} eggs ready! Hatching time?`], random),
+      emote: EmoteType.Clapping,
+      priority: "high"
+    };
+  }
+  function shopReaction(names, random) {
+    const list = names.filter((n) => typeof n === "string" && n.trim());
+    if (list.length === 0) return null;
+    const what = list.length === 1 ? list[0] : list.length === 2 ? `${list[0]} and ${list[1]}` : `${list[0]}, ${list[1]} and more`;
+    const isAre = list.length === 1 ? "is" : "are";
+    return {
+      key: "shop",
+      message: pickOne([`${what} ${isAre} in the shop! Go go go!`, `Ooh, ${what} just showed up in the shop!`, `Quick, ${what} ${isAre} in stock!`], random),
+      emote: EmoteType.Clapping,
+      priority: "high"
+    };
+  }
+  function restockedFollowed(prev, next, isFollowed) {
+    if (!prev || !next) return [];
+    const out = [];
+    for (const kind of Object.keys(SHOP_ID)) {
+      const before = Number(prev[kind]?.secondsUntilRestock) || 0;
+      const after = Number(next[kind]?.secondsUntilRestock) || 0;
+      if (after <= before) continue;
+      const inventory = next[kind]?.inventory;
+      if (!Array.isArray(inventory)) continue;
+      const [prefix, field] = SHOP_ID[kind];
+      for (const item of inventory) {
+        const key2 = item?.[field];
+        const stock = Number(item?.initialStock);
+        if (typeof key2 !== "string" || !key2 || !(stock > 0)) continue;
+        const id = `${prefix}:${key2}`;
+        if (isFollowed(id)) out.push(id);
+      }
+    }
+    return out;
+  }
+  function rareCropReaction(crops, random) {
+    if (crops.length === 0) return null;
+    const first = crops[0];
+    const message = crops.length === 1 ? pickOne([`A ${first.mutation} ${first.species}! Look at that!`, `Whoa, a ${first.mutation} ${first.species} just showed up!`, `${first.mutation}! Your ${first.species} is special.`], random) : pickOne([`${crops.length} rare crops just appeared! Look!`, `Whoa, ${crops.length} special crops at once!`], random);
+    return { key: "rarecrop", message, emote: EmoteType.Love, priority: "high" };
+  }
+  function badLuckReactions(prev, next, eggName4, random) {
+    const out = [];
+    for (const [eggId, after] of Object.entries(next ?? {})) {
+      const before = prev?.[eggId];
+      if (!before || !after) continue;
+      const egg = eggName4(eggId);
+      for (const kind of ["rainbow", "gold"]) {
+        const was = Number(before[kind]) || 0;
+        const now2 = Number(after[kind]) || 0;
+        const label2 = RARITY_LABEL[kind];
+        if (now2 < was) {
+          if (was < RELIEF_MIN[kind]) continue;
+          const tries = was + 1;
+          out.push({
+            key: `hatch:${kind}`,
+            message: pickOne(
+              [`FINALLY! A ${label2} pet after ${tries} tries!`, `${tries} hatches of waiting, and there it is. ${label2}!`, `I told you it was coming! ${label2}, at last!`],
+              random
+            ),
+            emote: EmoteType.Love,
+            priority: "high",
+            weight: 1
+          });
+          continue;
+        }
+        let step = null;
+        for (const s of DROUGHT_STEPS[kind]) if (was < s && now2 >= s) step = s;
+        if (step === null) continue;
+        out.push({
+          key: `badluck:${kind}`,
+          message: pickOne(
+            [
+              `${step} ${egg} hatches without a ${label2}... it's coming, I can feel it.`,
+              `Still no ${label2} after ${step} tries. The game owes you one.`,
+              `${step} in a row with no ${label2}. Hang in there, boss.`
+            ],
+            random
+          ),
+          emote: EmoteType.Crying,
+          priority: "high"
+        });
+      }
+    }
+    return out;
+  }
+  function newRareCrops(prev, next, rare) {
+    if (!prev || typeof prev !== "object" || !next || typeof next !== "object" || rare.size === 0) return [];
+    const seen = /* @__PURE__ */ new Map();
+    const index = (tiles, visit) => {
+      for (const [tileIdx, obj] of Object.entries(tiles)) {
+        const o = obj;
+        if (!o || o.objectType !== "plant" || !Array.isArray(o.slots)) continue;
+        o.slots.forEach((raw, i) => {
+          const s = raw;
+          if (!s) return;
+          const muts = Array.isArray(s.mutations) ? s.mutations.filter((m) => typeof m === "string") : [];
+          const species = typeof s.species === "string" ? s.species : typeof o.species === "string" ? o.species : "crop";
+          visit(`${tileIdx}|${s.slotId ?? i}|${s.startTime ?? ""}`, species, muts);
+        });
+      }
+    };
+    index(prev, (id, _species, muts) => seen.set(id, new Set(muts)));
+    const out = [];
+    index(next, (id, species, muts) => {
+      const before = seen.get(id) ?? /* @__PURE__ */ new Set();
+      for (const m of muts) {
+        if (rare.has(m) && !before.has(m)) out.push({ mutation: m, species });
+      }
+    });
+    return out;
+  }
+  function newlyReadyEggs(tiles, now2, announced) {
+    if (!tiles || typeof tiles !== "object") return [];
+    const out = [];
+    for (const [tileIdx, obj] of Object.entries(tiles)) {
+      const o = obj;
+      if (!o || o.objectType !== "egg") continue;
+      const matured = Number(o.maturedAt);
+      if (!Number.isFinite(matured) || matured <= 0 || matured > now2) continue;
+      const key2 = `${tileIdx}|${o.plantedAt ?? ""}`;
+      if (!announced.has(key2)) out.push(key2);
+    }
+    return out;
+  }
+  function dayPart(hour) {
+    if (hour < 5) return "night";
+    if (hour < 8) return "early";
+    if (hour < 12) return "morning";
+    if (hour < 17) return "afternoon";
+    if (hour < 22) return "evening";
+    return "late";
+  }
+  function dayPartLines(hour) {
+    return DAY_PART_LINES[dayPart(hour)];
+  }
+  function holidayOf(date) {
+    const m = date.getMonth() + 1;
+    const d = date.getDate();
+    if (m === 1 && d === 1) return "newyear";
+    if (m === 2 && d === 14) return "valentine";
+    if (m === 4 && d === 1) return "aprilfools";
+    if (m === 10 && d === 31) return "halloween";
+    if (m === 12 && (d === 24 || d === 25)) return "christmas";
+    if (m === 12 && d === 31) return "newyearseve";
+    return null;
+  }
+  function timeLines(date) {
+    const out = [...dayPartLines(date.getHours())];
+    const day = date.getDay();
+    if (day === 0 || day === 6) out.push(...WEEKEND_LINES);
+    if (day === 0) out.push(...SUNDAY_LINES);
+    const holiday = holidayOf(date);
+    if (holiday) out.push(...HOLIDAY_LINES[holiday]);
+    return out;
+  }
+  function resumeSession(stored, now2) {
+    const s = stored;
+    const lastSeenAt = Number(s?.lastSeenAt);
+    const startedAt = Number(s?.startedAt);
+    const valid = Number.isFinite(lastSeenAt) && lastSeenAt > 0 && Number.isFinite(startedAt) && startedAt > 0 && startedAt <= now2;
+    const storedMet = Number(s?.firstMetAt);
+    const firstMetAt = Number.isFinite(storedMet) && storedMet > 0 && storedMet <= now2 ? storedMet : now2;
+    const celebratedDays = Math.max(0, Math.floor(Number(s?.celebratedDays) || 0));
+    if (valid && now2 - lastSeenAt < SESSION_GAP_MS) {
+      const announcedHours = Math.max(0, Math.floor(Number(s?.announcedHours) || 0));
+      return { session: { startedAt, lastSeenAt: now2, announcedHours, firstMetAt, celebratedDays }, greeting: null };
+    }
+    return {
+      session: { startedAt: now2, lastSeenAt: now2, announcedHours: 0, firstMetAt, celebratedDays },
+      greeting: { first: !valid, awayMs: valid ? now2 - lastSeenAt : 0 }
+    };
+  }
+  function greetingReaction(greeting, hour, random, holiday = null) {
+    let lines;
+    if (greeting.first) {
+      lines = ["Hi there! I'll be sticking around.", "Nice to meet you! Let's grow something great."];
+    } else if (greeting.awayMs >= 3 * DAY_MS) {
+      lines = ["Where have you been? I missed you!", "You're back! It's been ages.", "Finally! I was starting to talk to the plants."];
+    } else if (holiday) {
+      lines = HOLIDAY_GREETINGS[holiday];
+    } else if (greeting.awayMs >= DAY_MS) {
+      lines = ["Welcome back! The garden missed you.", "Hey, you're back! Good to see you."];
+    } else {
+      const byPart = {
+        night: ["Hey, night owl! Couldn't sleep?", "Gardening at this hour? I like your style."],
+        early: ["Up with the sun, I see!", "Good morning! You're up early."],
+        morning: ["Good morning! Let's grow something.", "Morning! Ready when you are."],
+        afternoon: ["Good afternoon! Ready to garden?", "Hey! Perfect timing, the plants were asking for you."],
+        evening: ["Good evening! Glad you're here.", "Evening! Let's make it a good one."],
+        late: ["Evening, boss. Late session tonight?", "Hey! Quick one before bed?"]
+      };
+      lines = byPart[dayPart(hour)];
+    }
+    return { key: "session:greeting", message: pickOne(lines, random), emote: EmoteType.Love, priority: "high" };
+  }
+  function anniversarySteps(days) {
+    const steps = [7, 30, 100];
+    for (let year = 1; year * 365 <= days; year++) steps.push(year * 365);
+    return steps;
+  }
+  function anniversaryReaction(firstMetAt, now2, celebratedDays, random) {
+    const days = Math.floor((now2 - firstMetAt) / DAY_MS);
+    let due = null;
+    for (const step of anniversarySteps(days)) if (step <= days && step > celebratedDays) due = step;
+    if (due === null) return { reaction: null, celebratedDays };
+    let lines;
+    if (due === 7) lines = ["One week together already! Thanks for having me.", "A whole week of gardening together!"];
+    else if (due === 30) lines = ["We've been gardening together for a whole month!", "One month together! Time flies."];
+    else if (due === 100) lines = ["100 days together! That's a lot of crops.", "Day 100! Best garden buddy ever."];
+    else {
+      const years = due / 365;
+      lines = years === 1 ? ["Happy anniversary! One year together!", "One year already! Thanks for keeping me around."] : [`Happy anniversary! ${years} years together!`, `${years} years of gardening together. Wow.`];
+    }
+    return {
+      reaction: { key: "anniversary", message: pickOne(lines, random), emote: EmoteType.Love, priority: "high" },
+      celebratedDays: due
+    };
+  }
+  function sessionHours(session2, now2) {
+    return Math.max(0, Math.floor((now2 - session2.startedAt) / 36e5));
+  }
+  function sessionHourReaction(hours, random) {
+    if (hours < 1) return null;
+    let lines;
+    let emote = EmoteType.Clapping;
+    if (hours === 1) {
+      lines = ["We've been at it for an hour already.", "One hour in! Time flies when you're gardening."];
+    } else if (hours === 2) {
+      lines = ["Two hours in! Look at this place.", "Two hours already? Where did the time go?"];
+    } else if (hours < 6) {
+      lines = [`${hours} hours straight. Maybe stretch your legs?`, `${hours} hours! Don't forget to drink some water.`, `${hours} hours already. You're dedicated!`];
+      emote = EmoteType.Questioning;
+    } else {
+      lines = [`${hours} hours?! Are you okay?`, `${hours} hours. I think the plants need a break. And you too.`];
+      emote = EmoteType.Crying;
+    }
+    return { key: `session:hours`, message: pickOne(lines, random), emote, priority: "high" };
+  }
+  function clockReaction(prevHour, hour, sessionMs, random, holiday = null) {
+    if (prevHour === hour) return null;
+    if (hour === 0) {
+      if (holiday) {
+        return { key: "clock:holiday", message: pickOne(HOLIDAY_GREETINGS[holiday], random), emote: EmoteType.Love, priority: "high" };
+      }
+      return {
+        key: "clock:midnight",
+        message: pickOne(["It's midnight! Still going?", "Midnight already. The garden never sleeps, huh?"], random),
+        emote: EmoteType.Questioning,
+        priority: "high"
+      };
+    }
+    if (hour === 6 && sessionMs >= 3 * 36e5) {
+      return {
+        key: "clock:sunrise",
+        message: pickOne(["The sun's coming up. Did we just pull an all-nighter?", "Is that... sunrise? We've been up all night!"], random),
+        emote: EmoteType.Laughing,
+        priority: "high"
+      };
+    }
+    return null;
+  }
+  function initialGateState() {
+    return { lastSpokeAt: 0, mutedUntil: {}, queue: [] };
+  }
+  function offerReaction(state6, reaction, now2) {
+    if (now2 < (state6.mutedUntil[familyOf(reaction.key)] ?? 0)) return state6;
+    const existing = state6.queue.find((q) => q.key === reaction.key);
+    if (existing && (existing.weight ?? 0) > (reaction.weight ?? 0)) return state6;
+    const queue = state6.queue.filter((q) => q.key !== reaction.key);
+    queue.push({ ...reaction, at: now2 });
+    return { ...state6, queue };
+  }
+  function takeReaction(state6, now2, busy4) {
+    const queue = state6.queue.filter((q) => now2 - q.at <= REACTION_TTL_MS[q.priority]);
+    const kept = { ...state6, queue };
+    if (busy4 || queue.length === 0 || now2 - state6.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
+    const chosen = queue.find((q) => q.priority === "high") ?? queue[0];
+    const family = familyOf(chosen.key);
+    const { at: _at, ...reaction } = chosen;
+    return {
+      reaction,
+      state: {
+        lastSpokeAt: now2,
+        mutedUntil: { ...state6.mutedUntil, [family]: now2 + (FAMILY_COOLDOWN_MS[family] ?? 0) },
+        // Le reste de la famille qui vient de parler se tait aussi.
+        queue: queue.filter((q) => q !== chosen && (FAMILY_COOLDOWN_MS[family] ? familyOf(q.key) !== family : true))
+      }
+    };
+  }
+  var fmt, MILESTONES, sumHatched, sumAbilityTriggers, num, STAT_DEFS, WEATHER_EMOTES, SHOP_ID, DROUGHT_STEPS, RELIEF_MIN, RARITY_LABEL, DAY_PART_LINES, HOLIDAY_LINES, HOLIDAY_GREETINGS, WEEKEND_LINES, SUNDAY_LINES, TIME_LINE_EMOTES, SESSION_GAP_MS, DAY_MS, REACTION_GAP_MS, REACTION_TTL_MS, FAMILY_COOLDOWN_MS, familyOf;
+  var init_reactions = __esm({
+    "src/services/companion/reactions.ts"() {
+      "use strict";
+      init_emoteTypes();
+      fmt = (n) => Math.round(n).toLocaleString("en-US");
+      MILESTONES = Array.from({ length: 14 }, (_, i) => 10 ** (i + 2));
+      sumHatched = (s, key2) => {
+        let total = 0;
+        for (const counts of Object.values(s?.pets?.hatchedByType ?? {})) {
+          if (!counts) continue;
+          total += key2 ? Number(counts[key2]) || 0 : (Number(counts.normal) || 0) + (Number(counts.gold) || 0) + (Number(counts.rainbow) || 0);
+        }
+        return total;
+      };
+      sumAbilityTriggers = (s) => {
+        let total = 0;
+        for (const stat of Object.values(s?.abilities ?? {})) total += Number(stat?.triggers) || 0;
+        return total;
+      };
+      num = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
+      STAT_DEFS = [
+        {
+          id: "harvested",
+          read: (s) => num(s?.garden?.totalHarvested),
+          lines: [
+            (n) => `That's ${n} crops harvested! Incredible.`,
+            (n) => `${n} harvests! You're a natural.`,
+            (n) => `Crop number ${n}! We should celebrate.`
+          ]
+        },
+        {
+          id: "planted",
+          read: (s) => num(s?.garden?.totalPlanted),
+          lines: [
+            (n) => `${n} seeds planted! This garden keeps growing.`,
+            (n) => `That's seed number ${n}. Green thumb confirmed.`
+          ]
+        },
+        {
+          id: "watered",
+          read: (s) => num(s?.garden?.watercanUsed),
+          lines: [(n) => `${n} waterings! You really care about these plants.`]
+        },
+        {
+          id: "cropsSold",
+          read: (s) => num(s?.shops?.cropsSoldCount),
+          lines: [
+            (n) => `${n} crops sold! The shop loves you.`,
+            (n) => `That's ${n} crops sold. Business is booming.`
+          ]
+        },
+        {
+          id: "coins",
+          read: (s) => num(s?.shops?.cropsSoldValue) + num(s?.shops?.petsSoldValue),
+          lines: [
+            (n) => `You've earned ${n} coins from sales! So rich.`,
+            (n) => `${n} coins earned. Buy me something nice?`
+          ]
+        },
+        {
+          id: "seedsBought",
+          read: (s) => num(s?.shops?.seedsBought),
+          lines: [(n) => `${n} seeds bought! The shopkeeper knows your name by now.`]
+        },
+        {
+          id: "petsSold",
+          read: (s) => num(s?.shops?.petsSoldCount),
+          lines: [(n) => `${n} pets sold. Hope they found good homes!`]
+        },
+        {
+          id: "hatched",
+          read: (s) => sumHatched(s),
+          lines: [
+            (n) => `${n} pets hatched! That's a whole zoo.`,
+            (n) => `Pet number ${n}! Welcome to the family.`
+          ]
+        },
+        {
+          id: "abilities",
+          read: (s) => sumAbilityTriggers(s),
+          lines: [
+            (n) => `Your pets have used their abilities ${n} times!`,
+            (n) => `${n} pet abilities triggered. Hard workers!`
+          ]
+        }
+      ];
+      WEATHER_EMOTES = {
+        Rain: EmoteType.Laughing,
+        Frost: EmoteType.Clapping,
+        Thunderstorm: EmoteType.Crying,
+        Dawn: EmoteType.Love,
+        AmberMoon: EmoteType.Questioning
+      };
+      SHOP_ID = {
+        seed: ["Seed", "species"],
+        egg: ["Egg", "eggId"],
+        tool: ["Tool", "toolId"],
+        decor: ["Decor", "decorId"]
+      };
+      DROUGHT_STEPS = {
+        gold: [25, 50, 100, 200, 400],
+        rainbow: [100, 250, 500, 1e3, 2e3]
+      };
+      RELIEF_MIN = { gold: 25, rainbow: 100 };
+      RARITY_LABEL = { gold: "Gold", rainbow: "Rainbow" };
+      DAY_PART_LINES = {
+        night: [
+          "Shouldn't you be asleep?",
+          "The garden's so quiet at night.",
+          "Night owl, huh?",
+          "I'm not tired. You're tired.",
+          "Midnight snacks count as gardening, right?"
+        ],
+        early: ["Early bird gets the best seeds.", "Morning already? I barely slept.", "Nothing beats an early start."],
+        morning: ["Coffee first, crops second.", "Fresh morning, fresh sprouts.", "Morning, boss! Ready for the day?"],
+        afternoon: ["Lunch break in the garden? Good call.", "Nice afternoon for it.", "Afternoon sun, happy plants."],
+        evening: ["Evening already? Time flies in here.", "Love the evening light on the garden.", "One more harvest before dinner?"],
+        late: ["It's getting late, boss.", "Late night gardening session?", "Don't stay up too late, okay?"]
+      };
+      HOLIDAY_LINES = {
+        newyear: ["Happy New Year! New year, new crops.", "First harvest of the year, let's make it count!"],
+        valentine: ["Happy Valentine's Day! I got you a sprout.", "Roses are red, crops are green, best gardener I've ever seen."],
+        aprilfools: ["Did you know crops can talk? April fools!", "I planted a joke. It hasn't grown yet."],
+        halloween: ["Happy Halloween! Any spooky crops tonight?", "Boo! Did I scare you?"],
+        christmas: ["Merry Christmas! Hope Santa brings you rare seeds.", "Best present ever: a full garden."],
+        newyearseve: ["Last day of the year! Let's end it with a big harvest.", "Any resolutions? Mine is more gardening."]
+      };
+      HOLIDAY_GREETINGS = {
+        newyear: ["Happy New Year, boss!", "Happy New Year! Here's to a great harvest."],
+        valentine: ["Happy Valentine's Day!", "Aww, spending Valentine's Day with me?"],
+        aprilfools: ["Welcome back! Your garden turned into a desert. April fools!", "Happy April Fools! Don't trust anything I say today."],
+        halloween: ["Happy Halloween! Trick or treat?", "Spooky season is here! Happy Halloween!"],
+        christmas: ["Merry Christmas!", "Merry Christmas, boss! Thanks for visiting me."],
+        newyearseve: ["Last day of the year! Glad you're here.", "Happy New Year's Eve!"]
+      };
+      WEEKEND_LINES = ["Weekend gardening, the best kind.", "No work today? Perfect."];
+      SUNDAY_LINES = ["Lazy Sunday in the garden."];
+      TIME_LINE_EMOTES = {
+        "Shouldn't you be asleep?": EmoteType.Questioning,
+        "Night owl, huh?": EmoteType.Laughing,
+        "I'm not tired. You're tired.": EmoteType.Laughing,
+        "Midnight snacks count as gardening, right?": EmoteType.Questioning,
+        "Early bird gets the best seeds.": EmoteType.Clapping,
+        "Morning already? I barely slept.": EmoteType.Crying,
+        "Morning, boss! Ready for the day?": EmoteType.Questioning,
+        "Lunch break in the garden? Good call.": EmoteType.Clapping,
+        "Love the evening light on the garden.": EmoteType.Love,
+        "One more harvest before dinner?": EmoteType.Questioning,
+        "Late night gardening session?": EmoteType.Questioning,
+        "Weekend gardening, the best kind.": EmoteType.Love,
+        "No work today? Perfect.": EmoteType.Clapping,
+        "Lazy Sunday in the garden.": EmoteType.Love,
+        "Happy New Year! New year, new crops.": EmoteType.Clapping,
+        "First harvest of the year, let's make it count!": EmoteType.Clapping,
+        "Happy Valentine's Day! I got you a sprout.": EmoteType.Love,
+        "Roses are red, crops are green, best gardener I've ever seen.": EmoteType.Love,
+        "Did you know crops can talk? April fools!": EmoteType.Laughing,
+        "I planted a joke. It hasn't grown yet.": EmoteType.Laughing,
+        "Happy Halloween! Any spooky crops tonight?": EmoteType.Questioning,
+        "Boo! Did I scare you?": EmoteType.Laughing,
+        "Merry Christmas! Hope Santa brings you rare seeds.": EmoteType.Love,
+        "Best present ever: a full garden.": EmoteType.Love,
+        "Last day of the year! Let's end it with a big harvest.": EmoteType.Clapping,
+        "Any resolutions? Mine is more gardening.": EmoteType.Questioning
+      };
+      SESSION_GAP_MS = 20 * 6e4;
+      DAY_MS = 24 * 36e5;
+      REACTION_GAP_MS = 15e3;
+      REACTION_TTL_MS = {
+        high: 3 * 6e4,
+        low: 1e4
+      };
+      FAMILY_COOLDOWN_MS = {
+        ability: 5 * 6e4,
+        sale: 6e4,
+        hatch: 6e4,
+        egg: 5 * 6e4,
+        shop: 3e4,
+        rarecrop: 3e4
+      };
+      familyOf = (key2) => key2.split(":")[0];
+    }
+  });
+
+  // src/services/companion/dialogueLines.ts
+  function lineEmote(line) {
+    return LINE_EMOTES[line] ?? null;
+  }
+  function pokeLine(talkTimes, now2, random) {
+    const recent = talkTimes.filter((t) => now2 - t <= POKE_WINDOW_MS && t <= now2).length;
+    if (recent < POKE_THRESHOLD) return null;
+    if (recent < 7) {
+      return {
+        message: pickOne2(["Okay okay, I'm listening!", "Yes? I'm right here.", "One at a time, boss!"], random),
+        emote: EmoteType.Laughing
+      };
+    }
+    if (recent < 10) {
+      return {
+        message: pickOne2(["Are you poking me on purpose?", "Is this a game? I like games.", "Hey, that tickles!"], random),
+        emote: EmoteType.Questioning
+      };
+    }
+    return {
+      message: pickOne2(["Stop poking me!", "Okay, I'm ignoring you now.", "I'm going to start charging for this."], random),
+      emote: EmoteType.Angered
+    };
+  }
+  function ripeCropCount(tileObjects, now2) {
+    if (!tileObjects || typeof tileObjects !== "object") return 0;
+    let count = 0;
+    for (const obj of Object.values(tileObjects)) {
+      const slots = obj?.slots;
+      if (!Array.isArray(slots)) continue;
+      for (const slot of slots) {
+        const s = slot;
+        if (!s || s.preserved === true) continue;
+        const end = s.endTime;
+        if (typeof end === "number" && end > 0 && end <= now2) count++;
+      }
+    }
+    return count;
+  }
+  function pickOne2(options, random) {
+    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
+  }
+  function harvestMessage(ready, random) {
+    const crops = `${ready} ${plural(ready, "crop", "crops")}`;
+    const isAre = plural(ready, "is", "are");
+    return pickOne2(
+      [
+        `${crops} ${isAre} ready to harvest, by the way.`,
+        `Psst, ${crops} ${isAre} ripe and waiting for you.`,
+        `I spotted ${crops} ready to pick.`,
+        `Harvest time! ${crops} ${isAre} good to go.`,
+        `${crops} ${isAre} looking ripe. Just saying.`,
+        `Don't leave them hanging, ${crops} ${isAre} ready.`
+      ],
+      random
+    );
+  }
+  function hungryPetMessage(hungry, random) {
+    const pets = `${hungry} ${plural(hungry, "pet", "pets")}`;
+    const isAre = plural(hungry, "is", "are");
+    return pickOne2(
+      [
+        `${pets} ${isAre} getting hungry.`,
+        `I think ${pets} could use a snack.`,
+        `${pets} ${isAre} giving me the hungry eyes.`,
+        `Someone's tummy is rumbling. ${pets} need${hungry === 1 ? "s" : ""} feeding.`,
+        `Heads up, ${pets} ${isAre} running low on food.`
+      ],
+      random
+    );
+  }
+  function sellMessage(coins, random) {
+    const amount = `${Math.round(coins).toLocaleString("en-US")} coins`;
+    return pickOne2(
+      [
+        `You're carrying ${amount} worth of crops.`,
+        `Your bag's worth ${amount} right now. Shop trip?`,
+        `That's ${amount} of crops in your pockets.`,
+        `Ka-ching! ${amount} worth of crops, ready to sell.`,
+        `You could cash in ${amount} at the shop.`
+      ],
+      random
+    );
+  }
+  function weatherDisplayName(weatherId, catalog) {
+    const entry = catalog && typeof catalog === "object" ? catalog[weatherId] : void 0;
+    for (const field of ["name", "displayName"]) {
+      const value = entry?.[field];
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+    return weatherId.replace(/([a-z])([A-Z])/g, "$1 $2");
+  }
+  function weatherMessage(weatherId, displayName, random) {
+    const own = WEATHER_LINES[weatherId];
+    if (own && own.length > 0) return pickOne2(own, random);
+    return pickOne2(GENERIC_WEATHER_TEMPLATES, random)(displayName);
+  }
+  var LEGACY_DEFAULT_LINES, DEFAULT_CUSTOM_LINES, LINE_EMOTES, POKE_WINDOW_MS, POKE_THRESHOLD, plural, WEATHER_LINES, GENERIC_WEATHER_TEMPLATES;
+  var init_dialogueLines = __esm({
+    "src/services/companion/dialogueLines.ts"() {
+      "use strict";
+      init_emoteTypes();
+      init_reactions();
+      LEGACY_DEFAULT_LINES = [
+        "Right behind you, boss.",
+        "Nice patch you've got here.",
+        "Want me to keep an eye on anything?",
+        "I like it here."
+      ];
+      DEFAULT_CUSTOM_LINES = [
+        ...LEGACY_DEFAULT_LINES,
+        "Lovely day for some gardening.",
+        "I could watch things grow all day. Actually, I do.",
+        "Do the plants talk to you too, or is that just me?",
+        "Careful where you step, something's sprouting.",
+        "I counted the leaves. Lost track at forty.",
+        "One day I'll have a garden of my own.",
+        "Smells like fresh soil. My favourite.",
+        "You've got a green thumb, you know that?",
+        "I'm not lazy, I'm supervising.",
+        "Did that sprout just move?",
+        "If you need a hand, I've got two.",
+        "Water, sun, patience. That's the whole secret.",
+        "I named one of the crops. Don't ask which.",
+        "Some of these are looking really good.",
+        "I'd buy that seed again, honestly.",
+        "Whatever you're doing, keep doing it.",
+        "Is it snack time yet?",
+        "I heard a rumour about a very rare crop.",
+        "The pets seem happy today.",
+        "Big plans for this garden?",
+        "Don't mind me, just enjoying the view.",
+        "I've been practising my whistling. Want to hear?",
+        "You can always count on me.",
+        "Every sprout is a tiny miracle.",
+        "Let me know when it's harvest time.",
+        "What's the rarest thing you've ever grown?",
+        "Right here if you need me.",
+        "I think the bees like you.",
+        "One more row and this place is perfect.",
+        "I'm having a great time, thanks for asking.",
+        "A good mutation is the best kind of surprise.",
+        "Think the weather will change soon?",
+        "Stay hydrated, boss.",
+        "Busy day, huh?",
+        "Who needs a map when you know every tile by heart?",
+        "I'll hold the fort."
+      ];
+      LINE_EMOTES = {
+        "Nice patch you've got here.": EmoteType.Clapping,
+        "Want me to keep an eye on anything?": EmoteType.Questioning,
+        "I like it here.": EmoteType.Love,
+        "Lovely day for some gardening.": EmoteType.Love,
+        "I could watch things grow all day. Actually, I do.": EmoteType.Laughing,
+        "Do the plants talk to you too, or is that just me?": EmoteType.Questioning,
+        "I counted the leaves. Lost track at forty.": EmoteType.Laughing,
+        "One day I'll have a garden of my own.": EmoteType.Love,
+        "Smells like fresh soil. My favourite.": EmoteType.Love,
+        "You've got a green thumb, you know that?": EmoteType.Clapping,
+        "I'm not lazy, I'm supervising.": EmoteType.Laughing,
+        "Did that sprout just move?": EmoteType.Questioning,
+        "I named one of the crops. Don't ask which.": EmoteType.Laughing,
+        "Some of these are looking really good.": EmoteType.Clapping,
+        "Whatever you're doing, keep doing it.": EmoteType.Clapping,
+        "Is it snack time yet?": EmoteType.Questioning,
+        "Big plans for this garden?": EmoteType.Questioning,
+        "I've been practising my whistling. Want to hear?": EmoteType.Laughing,
+        "Every sprout is a tiny miracle.": EmoteType.Love,
+        "What's the rarest thing you've ever grown?": EmoteType.Questioning,
+        "I think the bees like you.": EmoteType.Laughing,
+        "I'm having a great time, thanks for asking.": EmoteType.Love,
+        "A good mutation is the best kind of surprise.": EmoteType.Clapping,
+        "Think the weather will change soon?": EmoteType.Questioning,
+        "Busy day, huh?": EmoteType.Laughing,
+        ...TIME_LINE_EMOTES
+      };
+      POKE_WINDOW_MS = 1e4;
+      POKE_THRESHOLD = 5;
+      plural = (count, singular, pluralForm) => count === 1 ? singular : pluralForm;
+      WEATHER_LINES = {
+        Rain: [
+          "It's raining! The crops are loving this.",
+          "Free watering, courtesy of the sky.",
+          "I forgot my umbrella again.",
+          "Listen to that rain. So relaxing.",
+          "Puddle jumping, anyone?",
+          "Rain day. Perfect excuse to stay in the garden."
+        ],
+        Frost: [
+          "Brr, it's snowing! Wrap up warm.",
+          "Snow on the garden. Everything looks so quiet.",
+          "My toes are freezing out here.",
+          "Want to build a snowman after this?",
+          "Careful, it's slippery with all this snow.",
+          "Snowflakes on the leaves. Pretty, isn't it?"
+        ],
+        Thunderstorm: [
+          "Whoa, did you hear that thunder?",
+          "Thunderstorm! Stay away from tall things.",
+          "That lightning made me jump.",
+          "Big storm rolling in. Hold on to your hat.",
+          "I'm not scared of thunder. Much.",
+          "What a storm. The sky's putting on a show."
+        ],
+        Dawn: [
+          "Look at that sunrise.",
+          "Dawn's here. Everything glows.",
+          "Early light is the best light.",
+          "Rise and shine, garden!",
+          "The whole garden looks golden right now.",
+          "I love this time of day."
+        ],
+        AmberMoon: [
+          "The Amber Moon is up. Spooky, right?",
+          "Everything's glowing orange tonight.",
+          "Don't the crops look magical under the Amber Moon?",
+          "An Amber Moon. Doesn't come around often.",
+          "Stay close, strange things happen under the Amber Moon.",
+          "Moonlight like this makes me want to howl."
+        ]
+      };
+      GENERIC_WEATHER_TEMPLATES = [
+        (name) => `We're getting ${name} right now.`,
+        (name) => `Ooh, ${name}! Good time to be outside.`,
+        (name) => `Looks like ${name} out there.`,
+        (name) => `${name} today. The crops might like that.`,
+        (name) => `Did you notice? ${name} is here.`
+      ];
+    }
+  });
+
+  // src/services/companion/chat/hatch.ts
+  function hasAnyRule(rules) {
+    return rules.species.length > 0 || rules.mutations.length > 0 || rules.abilities.length > 0 || rules.minMaxStr !== null;
+  }
+  function hasAny(present, wanted) {
+    if (wanted.length === 0) return false;
+    const set2 = new Set(present.map((value) => value.toLowerCase()));
+    return wanted.some((value) => set2.has(value.toLowerCase()));
+  }
+  function matchesKeep(pet, rules) {
+    if (rules.species.includes(pet.species)) return true;
+    if (hasAny(pet.mutations, rules.mutations)) return true;
+    if (rules.abilities.some((ability) => pet.abilities.includes(ability))) return true;
+    if (rules.minMaxStr !== null && pet.maxStrength !== null && pet.maxStrength >= rules.minMaxStr) return true;
+    return false;
+  }
+  function hatchCheer(pets, rules) {
+    const kept = pets.filter((pet) => matchesKeep(pet, rules));
+    if (kept.length === 0) return null;
+    for (const mutation of CHEERED_MUTATIONS) {
+      const star = kept.find((pet) => hasAny(pet.mutations, [mutation]));
+      if (star) return { emote: EmoteType.Love, star, mutation };
+    }
+    return { emote: EmoteType.Clapping, star: null, mutation: null };
+  }
+  function isProtected(pet, rules) {
+    return pet.favorited || pet.onTeam || matchesKeep(pet, rules);
+  }
+  function toFavourite(pets, rules) {
+    return pets.filter((pet) => !pet.favorited && matchesKeep(pet, rules));
+  }
+  function toSell(pets, rules) {
+    if (!hasAnyRule(rules)) return [];
+    return pets.filter((pet) => !isProtected(pet, rules));
+  }
+  function petSignature(pets) {
+    return pets.map((pet) => pet.petId).sort().join("|");
+  }
+  function slotSignature2(slots) {
+    return [...slots].sort((a, b) => a - b).join("|");
+  }
+  function bySpecies(pets) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const pet of pets) counts.set(pet.species, (counts.get(pet.species) ?? 0) + 1);
+    return [...counts.entries()].map(([species, count]) => ({ species, count })).sort((a, b) => b.count - a.count || a.species.localeCompare(b.species));
+  }
+  function describeKeep(rules, abilityNames = /* @__PURE__ */ new Map()) {
+    if (!hasAnyRule(rules)) return "Nothing set yet";
+    const parts = [];
+    if (rules.species.length) parts.push(listWords(rules.species));
+    if (rules.mutations.length) parts.push(listWords(rules.mutations));
+    if (rules.abilities.length) {
+      parts.push(listWords(rules.abilities.map((id) => abilityNames.get(id) ?? id)));
+    }
+    if (rules.minMaxStr !== null) parts.push(`max STR ${rules.minMaxStr} and up`);
+    return parts.join(", ");
+  }
+  function describeHatchRequest(count) {
+    return count === 1 ? "Hatch that egg for me" : `Hatch my ${count} eggs`;
+  }
+  function summarizeHatch(slots) {
+    return `${slots.length} egg${slots.length === 1 ? "" : "s"} ready to hatch`;
+  }
+  function summarizeSell(pets) {
+    if (pets.length === 0) return "nothing";
+    const parts = bySpecies(pets).map((entry) => `${entry.count} ${entry.species}`);
+    const head = parts.slice(0, 3);
+    const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
+    if (parts.length === 1) return parts[0];
+    return `${pets.length} pets: ${listWords(head)}${rest2}`;
+  }
+  var DEFAULT_KEEP_RULES, CHEERED_MUTATIONS;
+  var init_hatch = __esm({
+    "src/services/companion/chat/hatch.ts"() {
+      "use strict";
+      init_harvest();
+      init_emoteTypes();
+      DEFAULT_KEEP_RULES = {
+        species: [],
+        mutations: [],
+        abilities: [],
+        minMaxStr: null
+      };
+      CHEERED_MUTATIONS = ["Rainbow", "Gold"];
+    }
+  });
+
+  // src/services/companion/settingsShape.ts
+  function sanitizeLines(raw) {
+    if (!Array.isArray(raw)) return [...DEFAULT_CUSTOM_LINES];
+    return raw.filter((line) => typeof line === "string").map((line) => line.trim().slice(0, MAX_LINE_LENGTH)).filter((line) => line.length > 0).slice(0, MAX_LINES);
+  }
+  function storedLines(raw) {
+    if (raw === void 0) return [...DEFAULT_CUSTOM_LINES];
+    const lines = sanitizeLines(raw);
+    const isLegacy = lines.length === LEGACY_DEFAULT_LINES.length && lines.every((line, i) => line === LEGACY_DEFAULT_LINES[i]);
+    return isLegacy ? [...DEFAULT_CUSTOM_LINES] : lines;
+  }
+  function sanitizeKeepRules(raw) {
+    if (!raw || typeof raw !== "object") return { ...DEFAULT_KEEP_RULES };
+    const source = raw;
+    const names = (value) => Array.isArray(value) ? value.filter((entry) => typeof entry === "string" && entry !== "") : [];
+    const strength = Number(source.minMaxStr);
+    return {
+      species: names(source.species),
+      mutations: names(source.mutations),
+      abilities: names(source.abilities),
+      minMaxStr: Number.isFinite(strength) && strength > 0 ? Math.round(strength) : null
+    };
+  }
+  function teamId(raw) {
+    return typeof raw === "string" && raw ? raw : null;
+  }
+  function clampThreshold(raw) {
+    const value = Math.round(Number(raw));
+    if (!Number.isFinite(value)) return DEFAULT_COMPANION_SETTINGS.feedThresholdPct;
+    return Math.max(1, Math.min(90, value));
+  }
+  function coerceSettings(raw) {
+    if (!raw || typeof raw !== "object") return { ...DEFAULT_COMPANION_SETTINGS };
+    return {
+      enabled: raw.enabled === true,
+      // Les réglages de déplacement persistés par les versions précédentes sont
+      // simplement ignorés : ils sont devenus des constantes.
+      mode: COMPANION_MODES.includes(raw.mode) ? raw.mode : DEFAULT_COMPANION_SETTINGS.mode,
+      npcId: typeof raw.npcId === "string" && raw.npcId ? raw.npcId : null,
+      lines: storedLines(raw.lines),
+      contextualEnabled: raw.contextualEnabled !== false,
+      reactions: raw.reactions !== false,
+      feedAlerts: raw.feedAlerts !== false,
+      feedThresholdPct: clampThreshold(raw.feedThresholdPct),
+      feedFromGarden: raw.feedFromGarden !== false,
+      askOnScreen: raw.askOnScreen !== false,
+      harvestTeamId: teamId(raw.harvestTeamId),
+      hatchTeamId: teamId(raw.hatchTeamId),
+      hatchSellTeamId: teamId(raw.hatchSellTeamId),
+      hatchKeepRules: sanitizeKeepRules(raw.hatchKeepRules),
+      reviewedSettings: SETTINGS_GROUPS.filter(
+        (group) => Array.isArray(raw.reviewedSettings) && raw.reviewedSettings.includes(group)
+      )
+    };
+  }
+  var COMPANION_MODES, MAX_LINE_LENGTH, MAX_LINES, SETTINGS_GROUPS, DEFAULT_COMPANION_SETTINGS;
+  var init_settingsShape = __esm({
+    "src/services/companion/settingsShape.ts"() {
+      "use strict";
+      init_dialogueLines();
+      init_hatch();
+      COMPANION_MODES = ["follow", "garden"];
+      MAX_LINE_LENGTH = 160;
+      MAX_LINES = 50;
+      SETTINGS_GROUPS = ["feed", "harvest", "hatch"];
+      DEFAULT_COMPANION_SETTINGS = {
+        enabled: false,
+        mode: "follow",
+        npcId: null,
+        lines: [...DEFAULT_CUSTOM_LINES],
+        contextualEnabled: true,
+        reactions: true,
+        feedAlerts: true,
+        feedThresholdPct: 10,
+        feedFromGarden: true,
+        askOnScreen: true,
+        harvestTeamId: null,
+        hatchTeamId: null,
+        hatchSellTeamId: null,
+        hatchKeepRules: { ...DEFAULT_KEEP_RULES },
+        reviewedSettings: []
+      };
+    }
+  });
+
   // src/services/companion/state.ts
   function loadCompanionSettings() {
     return coerceSettings(readAriesPath(STORAGE_PATH, void 0));
@@ -59585,9 +59326,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     return lines;
   }
   async function readyHarvestLine() {
-    const ready2 = ripeCropCount(await Atoms.data.gardenTileObjects.get(), Date.now());
-    if (ready2 === 0) return null;
-    return { key: "harvest", message: harvestMessage(ready2, Math.random), emote: EmoteType.Clapping };
+    const ready = ripeCropCount(await Atoms.data.gardenTileObjects.get(), Date.now());
+    if (ready === 0) return null;
+    return { key: "harvest", message: harvestMessage(ready, Math.random), emote: EmoteType.Clapping };
   }
   async function hungryPetLine() {
     const pets = await PetsService.getPets();
@@ -60766,11 +60507,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       harvestTargets: []
     };
   }
-  var COLOR_MUTATIONS, WEATHER_MUTATIONS2, TIME_MUTATIONS, ALL_KNOWN_MUTATIONS;
+  var COLOR_MUTATIONS, WEATHER_MUTATIONS2, TIME_MUTATIONS;
   var init_workflowScan = __esm({
     "src/services/workflowScan.ts"() {
       "use strict";
-      init_atoms();
       init_data();
       init_cropSize();
       COLOR_MUTATIONS = new Set(
@@ -60781,11 +60521,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       );
       WEATHER_MUTATIONS2 = /* @__PURE__ */ new Set(["Wet", "Chilled", "Frozen", "Thunderstruck"]);
       TIME_MUTATIONS = /* @__PURE__ */ new Set(["Dawnlit", "Amberlit", "Dawncharged", "Ambercharged"]);
-      ALL_KNOWN_MUTATIONS = /* @__PURE__ */ new Set([
-        ...COLOR_MUTATIONS,
-        ...WEATHER_MUTATIONS2,
-        ...TIME_MUTATIONS
-      ]);
     }
   });
 
@@ -62238,7 +61973,6 @@ Restore figures are averages; unlucky streaks do worse.`;
   function startFeedWatch() {
     if (running) return;
     running = true;
-    timer = window.setInterval(runTick, POLL_MS);
     try {
       unsubscribers.push(PetsService.onPetsChange(() => scheduleCheck()));
     } catch {
@@ -62246,7 +61980,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     unsubscribers.push(CompanionChat.subscribe(releaseIfIdle));
     runTick();
   }
-  var POLL_MS, SETTLE_MS2, REASK_COOLDOWN_MS, timer, settleTimer, unsubscribers, running, lastOfferedSignature, lastOfferedAtMs, announcedProposalId, runTick;
+  var SETTLE_MS2, REASK_COOLDOWN_MS, settleTimer, unsubscribers, running, lastOfferedSignature, lastOfferedAtMs, announcedProposalId, runTick;
   var init_feedWatch = __esm({
     "src/services/companion/chat/feedWatch.ts"() {
       "use strict";
@@ -62257,10 +61991,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_petFeed();
       init_attend();
       init_bubbleTags();
-      POLL_MS = 3e4;
       SETTLE_MS2 = 1500;
       REASK_COOLDOWN_MS = 10 * 60 * 1e3;
-      timer = null;
       settleTimer = null;
       unsubscribers = [];
       running = false;
@@ -62352,11 +62084,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       status
     );
     refresh();
-    const timer4 = window.setInterval(refresh, STATUS_REFRESH_MS);
+    const timer2 = window.setInterval(refresh, STATUS_REFRESH_MS);
     view.append(card4.root);
     view.__cleanup__ = () => {
       disposed = true;
-      clearInterval(timer4);
+      clearInterval(timer2);
     };
   }
   var STATUS_REFRESH_MS, MODE_LABELS;
@@ -63280,7 +63012,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       host,
       title: "What should I harvest?",
       widthPx: 460,
-      onClose: () => clearInterval(timer4)
+      onClose: () => clearInterval(timer2)
     });
     const speciesCard = filterCard("", "Species");
     const mutationCard = filterCard("", "Mutations");
@@ -63469,7 +63201,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (!modal.isOpen()) return;
       render();
     }
-    const timer4 = window.setInterval(() => void refresh(), REFRESH_MS);
+    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS);
     render();
     void refresh();
     return { close: modal.close };
@@ -63500,7 +63232,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       host,
       title: "Who needs feeding?",
       widthPx: 420,
-      onClose: () => clearInterval(timer4)
+      onClose: () => clearInterval(timer2)
     });
     const list = document.createElement("div");
     css2(list, { display: "flex", flexDirection: "column", gap: "7px" });
@@ -63566,7 +63298,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (!modal.isOpen()) return;
       render();
     }
-    const timer4 = window.setInterval(() => void refresh(), REFRESH_MS2);
+    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS2);
     render();
     void refresh();
   }
@@ -63728,7 +63460,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       title: "What should I plant?",
       widthPx: 700,
       onClose: () => {
-        clearInterval(timer4);
+        clearInterval(timer2);
         grid.destroy();
       }
     });
@@ -63883,7 +63615,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       plan = new Map(viablePlan([...plan.values()], scope).map((entry) => [entry.tileIndex, entry]));
       render();
     }
-    const timer4 = window.setInterval(() => void refresh(), REFRESH_MS3);
+    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS3);
     render();
     void refresh();
   }
@@ -63970,7 +63702,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       host,
       title: "Hatching",
       widthPx: 470,
-      onClose: () => clearInterval(timer4)
+      onClose: () => clearInterval(timer2)
     });
     const speciesCard = filterCard("", "Keep species");
     const mutationCard = filterCard("", "Keep mutations");
@@ -64082,11 +63814,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       border: `1px solid ${BORDER}`,
       flex: "0 0 auto"
     });
-    const ready2 = document.createElement("div");
-    css2(ready2, { fontSize: "13px", fontWeight: "600", color: TEAL });
+    const ready = document.createElement("div");
+    css2(ready, { fontSize: "13px", fontWeight: "600", color: TEAL });
     const note = document.createElement("div");
     css2(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
-    strip.append(ready2, note);
+    strip.append(ready, note);
     const resetButton = button("Reset", "neutral", () => commit({ ...DEFAULT_KEEP_RULES }));
     const askButton = button("Ask to hatch", "accent", () => {
       onAsk({
@@ -64130,7 +63862,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         rules.minMaxStr !== null
       );
       const waiting = scope.totalEggs - scope.readySlots.length;
-      ready2.textContent = scope.readySlots.length === 0 ? "No egg is ready" : `${scope.readySlots.length} egg${scope.readySlots.length === 1 ? "" : "s"} ready`;
+      ready.textContent = scope.readySlots.length === 0 ? "No egg is ready" : `${scope.readySlots.length} egg${scope.readySlots.length === 1 ? "" : "s"} ready`;
       if (!hasAnyRule(rules)) {
         note.textContent = "Nothing set to keep, so I will not offer to sell. Favourites and your active team are always safe.";
         css2(note, { color: WARN });
@@ -64146,7 +63878,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (!modal.isOpen()) return;
       render();
     }
-    const timer4 = window.setInterval(() => void refresh(), REFRESH_MS4);
+    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS4);
     render();
     void refresh();
   }
@@ -64371,11 +64103,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     root.append(header.root, thread, bar);
     renderAll();
-    let unsubscribe3 = () => {
+    let unsubscribe2 = () => {
     };
-    unsubscribe3 = CompanionChat.subscribe(() => {
+    unsubscribe2 = CompanionChat.subscribe(() => {
       if (!root.isConnected) {
-        unsubscribe3();
+        unsubscribe2();
         return;
       }
       renderAll();
@@ -64389,7 +64121,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }, IDENTITY_REFRESH_MS);
     view.__cleanup__ = () => {
       clearInterval(identityTimer);
-      unsubscribe3();
+      unsubscribe2();
     };
   }
   var EMPTY_HINT, IDENTITY_REFRESH_MS;
@@ -65607,54 +65339,6 @@ Restore figures are averages; unlucky streaks do worse.`;
   function initialAfkState(now2) {
     return { phase: "active", quietSince: now2, phaseSince: now2, asked: false, nextSnoreAt: null, lastSnore: null };
   }
-  function snoreDelay(asleepForMs, random) {
-    const slow = asleepForMs >= SNORE_SLOW_AFTER_MS;
-    const min = slow ? SNORE_SLOW_MIN_MS : SNORE_MIN_MS;
-    const max = slow ? SNORE_SLOW_MAX_MS : SNORE_MAX_MS;
-    const r = Math.min(Math.max(random(), 0), 1);
-    return Math.round(min + (max - min) * r);
-  }
-  function snoreLine(last, random) {
-    const pool = random() < DREAM_CHANCE ? DREAM_LINES : SNORE_LINES;
-    const options = pool.filter((line) => line !== last);
-    return pickOne4(options.length > 0 ? options : pool, random);
-  }
-  function wakeSilently(state6, now2) {
-    const effects = state6.phase === "asleep" ? [{ kind: "release" }] : [];
-    return { state: initialAfkState(now2), effects };
-  }
-  function afkTick(state6, input, random) {
-    const { now: now2, busy: busy4, hidden } = input;
-    if (state6.phase === "asleep") {
-      if (busy4) return wakeSilently(state6, now2);
-      if (state6.nextSnoreAt === null || now2 < state6.nextSnoreAt) return { state: state6, effects: [] };
-      const asleepFor = now2 - state6.phaseSince;
-      const nextSnoreAt = now2 + snoreDelay(asleepFor, random);
-      if (hidden) return { state: { ...state6, nextSnoreAt }, effects: [] };
-      const message = snoreLine(state6.lastSnore, random);
-      return {
-        state: { ...state6, nextSnoreAt, lastSnore: message },
-        effects: [say({ message, emote: null }, false)]
-      };
-    }
-    if (busy4) return { state: state6, effects: [] };
-    if (state6.phase === "active") {
-      if (now2 - state6.quietSince < AFK_IDLE_AFTER_MS) return { state: state6, effects: [] };
-      const next2 = { ...state6, phase: "idle", phaseSince: now2, asked: !hidden };
-      return { state: next2, effects: hidden ? [] : [say(pickOne4(IDLE_LINES, random), true)] };
-    }
-    if (now2 - state6.phaseSince < AFK_ASLEEP_AFTER_MS) return { state: state6, effects: [] };
-    const next = {
-      ...state6,
-      phase: "asleep",
-      phaseSince: now2,
-      nextSnoreAt: now2 + snoreDelay(0, random),
-      lastSnore: null
-    };
-    const effects = hidden ? [] : [say(pickOne4(FALL_ASLEEP_LINES, random), true)];
-    effects.push({ kind: "hold" });
-    return { state: next, effects };
-  }
   function afkActivity(state6, input, random) {
     const { now: now2, busy: busy4 } = input;
     if (state6.phase === "active") {
@@ -65674,24 +65358,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     effects.push({ kind: "release" });
     return { state: initialAfkState(now2), effects };
   }
-  function afkReset(state6, now2) {
-    return wakeSilently(state6, now2);
-  }
-  var AFK_IDLE_AFTER_MS, AFK_ASLEEP_AFTER_MS, SNORE_MIN_MS, SNORE_MAX_MS, SNORE_SLOW_AFTER_MS, SNORE_SLOW_MIN_MS, SNORE_SLOW_MAX_MS, WAKE_LINE_MIN_ASLEEP_MS, RETURN_LINE_CHANCE, DREAM_CHANCE, IDLE_LINES, RETURN_LINES, FALL_ASLEEP_LINES, SNORE_LINES, DREAM_LINES, WAKE_LINES, LONG_WAKE_LINES, say;
+  var AFK_IDLE_AFTER_MS, AFK_ASLEEP_AFTER_MS, SNORE_SLOW_AFTER_MS, SNORE_SLOW_MIN_MS, SNORE_SLOW_MAX_MS, WAKE_LINE_MIN_ASLEEP_MS, RETURN_LINE_CHANCE, IDLE_LINES, RETURN_LINES, WAKE_LINES, LONG_WAKE_LINES, say;
   var init_afk = __esm({
     "src/services/companion/afk.ts"() {
       "use strict";
       init_emoteTypes();
       AFK_IDLE_AFTER_MS = 3 * 6e4;
       AFK_ASLEEP_AFTER_MS = 6 * 6e4;
-      SNORE_MIN_MS = 45e3;
-      SNORE_MAX_MS = 9e4;
       SNORE_SLOW_AFTER_MS = 30 * 6e4;
       SNORE_SLOW_MIN_MS = 3 * 6e4;
       SNORE_SLOW_MAX_MS = 6 * 6e4;
       WAKE_LINE_MIN_ASLEEP_MS = 6e4;
       RETURN_LINE_CHANCE = 0.3;
-      DREAM_CHANCE = 0.12;
       IDLE_LINES = [
         { message: "Hello? You still there?", emote: EmoteType.Questioning },
         { message: "Did you fall asleep on me?", emote: EmoteType.Questioning },
@@ -65702,27 +65380,6 @@ Restore figures are averages; unlucky streaks do worse.`;
         { message: "Oh, there you are!", emote: EmoteType.Laughing },
         { message: "Welcome back!", emote: EmoteType.Love },
         { message: "Ah, you're still here. Good.", emote: null }
-      ];
-      FALL_ASLEEP_LINES = [
-        { message: "I'll just rest my eyes...", emote: null },
-        { message: "Yawn... wake me up if anything grows.", emote: null },
-        { message: "Okay... a tiny nap. Just a tiny one...", emote: null },
-        { message: "I'll keep watch... with my eyes closed...", emote: null }
-      ];
-      SNORE_LINES = [
-        "Zzz...",
-        "Zzz... zzz...",
-        "zzz... carrots...",
-        "Mmh... five more minutes...",
-        "*snore*",
-        "Zzz... mmh..."
-      ];
-      DREAM_LINES = [
-        "Zzz... no, the golden one is mine...",
-        "Mmh... a pumpkin... the size of a house...",
-        "zzz... don't eat the seeds, little bunny...",
-        "Zzz... I'm the best gardener in the world...",
-        "Mmh... rain... more rain... perfect..."
       ];
       WAKE_LINES = [
         { message: "Huh? I wasn't sleeping!", emote: EmoteType.Questioning },
@@ -65822,16 +65479,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
     }
   }
-  function tick3() {
-    if (!running5) return;
-    const now2 = Date.now();
-    if (!enabled4() || !CompanionService.isRunning()) {
-      apply(afkReset(state5, now2));
-      return;
-    }
-    if (pending5 > 0) return;
-    apply(afkTick(state5, { now: now2, busy: othersBusy(), hidden: isHidden() }, Math.random));
-  }
   function noteActivity() {
     if (!running5) return;
     const now2 = Date.now();
@@ -65882,14 +65529,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     void subscribe5(gen).catch(() => {
     });
-    timer2 = window.setInterval(() => {
-      try {
-        tick3();
-      } catch {
-      }
-    }, TICK_MS);
   }
-  var TICK_MS, ACTIVITY_THROTTLE_MS, NEAR_DISTANCE, INPUT_EVENTS, running5, generation2, state5, timer2, unsubscribers5, ownHold, pending5, chain, lastNotedAt, lastTile;
+  var ACTIVITY_THROTTLE_MS, NEAR_DISTANCE, INPUT_EVENTS, running5, generation2, state5, unsubscribers5, ownHold, pending5, chain, lastNotedAt, lastTile;
   var init_afkWatch = __esm({
     "src/services/companion/afkWatch.ts"() {
       "use strict";
@@ -65898,14 +65539,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_chat();
       init_afk();
       init_state4();
-      TICK_MS = 5e3;
       ACTIVITY_THROTTLE_MS = 1e3;
       NEAR_DISTANCE = 8;
       INPUT_EVENTS = ["keydown", "pointerdown", "pointermove", "wheel", "touchstart"];
       running5 = false;
       generation2 = 0;
       state5 = initialAfkState(0);
-      timer2 = null;
       unsubscribers5 = [];
       ownHold = false;
       pending5 = 0;
@@ -65976,9 +65615,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     document.head.appendChild(style2);
   }
   function hide() {
-    if (timer3 !== null) {
-      window.clearInterval(timer3);
-      timer3 = null;
+    if (timer !== null) {
+      window.clearInterval(timer);
+      timer = null;
     }
     card3?.remove();
     card3 = null;
@@ -66037,14 +65676,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     card3 = root;
     clockBar = fill;
     shownId = proposal.id;
-    timer3 = window.setInterval(() => {
+    timer = window.setInterval(() => {
       const left = PROPOSAL_TTL_MS - (Date.now() - proposal.createdAtMs);
       if (left <= 0) {
         hide();
         return;
       }
       if (clockBar) clockBar.style.width = `${left / PROPOSAL_TTL_MS * 100}%`;
-    }, TICK_MS2);
+    }, TICK_MS);
   }
   function sync() {
     const proposal = CompanionChat.getProposal();
@@ -66062,11 +65701,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     build(proposal);
   }
   function mountCompanionAsk() {
-    if (unsubscribe2) return;
-    unsubscribe2 = CompanionChat.subscribe(sync);
+    if (unsubscribe) return;
+    unsubscribe = CompanionChat.subscribe(sync);
     sync();
   }
-  var CARD_ID, STYLE_ID6, Z_INDEX, ICON_PX4, TICK_MS2, ACCENT3, TEXT5, TEXT_DIM5, card3, clockBar, timer3, shownId, unsubscribe2;
+  var CARD_ID, STYLE_ID6, Z_INDEX, ICON_PX4, TICK_MS, ACCENT3, TEXT5, TEXT_DIM5, card3, clockBar, timer, shownId, unsubscribe;
   var init_companionAsk = __esm({
     "src/ui/companionAsk.ts"() {
       "use strict";
@@ -66080,15 +65719,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       STYLE_ID6 = "mgCompanionAskStyle";
       Z_INDEX = "2000050";
       ICON_PX4 = 17;
-      TICK_MS2 = 100;
+      TICK_MS = 100;
       ACCENT3 = "#5eead4";
       TEXT5 = "#e7eef7";
       TEXT_DIM5 = "rgba(231,238,247,0.68)";
       card3 = null;
       clockBar = null;
-      timer3 = null;
+      timer = null;
       shownId = null;
-      unsubscribe2 = null;
+      unsubscribe = null;
     }
   });
 
@@ -66563,6 +66202,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/ariesModAPI/config.ts
+  var API_BASE_URL2, API_ORIGIN, MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND, DEFAULT_HEARTBEAT_INTERVAL;
+  var init_config2 = __esm({
+    "src/ariesModAPI/config.ts"() {
+      "use strict";
+      API_BASE_URL2 = "https://ariesmod-api.ariedam.fr/";
+      API_ORIGIN = API_BASE_URL2.replace(/\/$/, "");
+      MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND = 5;
+      DEFAULT_HEARTBEAT_INTERVAL = 6e4;
+    }
+  });
+
   // src/ariesModAPI/auth/bridge.ts
   function normalizeAuthPayload(data) {
     if (!data || data.type !== "aries_discord_auth" || !data.apiKey) return null;
@@ -66619,7 +66270,107 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/ariesModAPI/auth/bridge.ts"() {
       "use strict";
       init_localStorage();
-      init_config();
+      init_config2();
+    }
+  });
+
+  // src/ariesModAPI/client/http.ts
+  function buildUrl(path, query) {
+    const url = new URL(path, API_BASE_URL2);
+    if (query) {
+      for (const [key2, value] of Object.entries(query)) {
+        if (value === void 0) continue;
+        url.searchParams.set(key2, String(value));
+      }
+    }
+    return url.toString();
+  }
+  function gmRequest2(method, url, body) {
+    return new Promise((resolve) => {
+      const apiKey = getApiKey();
+      const headers = {};
+      if (apiKey) {
+        headers["Authorization"] = `Bearer ${apiKey}`;
+      }
+      if (body !== void 0) {
+        headers["Content-Type"] = "application/json";
+      }
+      GM_xmlhttpRequest({
+        method,
+        url,
+        headers,
+        data: body !== void 0 ? JSON.stringify(body) : void 0,
+        onload: (res) => {
+          if (res.status >= 200 && res.status < 300) {
+            try {
+              const parsed = res.responseText ? JSON.parse(res.responseText) : null;
+              resolve({ status: res.status, data: parsed });
+            } catch {
+              resolve({ status: res.status, data: null });
+            }
+          } else {
+            resolve({ status: res.status, data: null });
+          }
+        },
+        onerror: () => {
+          resolve({ status: 0, data: null });
+        }
+      });
+    });
+  }
+  async function fetchRequest(method, url, body) {
+    try {
+      const apiKey = getApiKey();
+      const headers = {};
+      if (apiKey) {
+        headers["Authorization"] = `Bearer ${apiKey}`;
+      }
+      const options = {
+        method,
+        headers,
+        credentials: "omit"
+      };
+      if (body !== void 0) {
+        headers["Content-Type"] = "application/json";
+        options.body = JSON.stringify(body);
+      }
+      const res = await fetch(url, options);
+      const text = await res.text();
+      let parsed = null;
+      if (text) {
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+        }
+      }
+      return { status: res.status, data: parsed };
+    } catch {
+      return { status: 0, data: null };
+    }
+  }
+  async function request(method, path, options) {
+    return withDiscordPollPause(async () => {
+      const url = buildUrl(path, options?.query);
+      if (isDiscordActivityContext()) {
+        return gmRequest2(method, url, options?.body);
+      }
+      try {
+        return await fetchRequest(method, url, options?.body);
+      } catch {
+        return gmRequest2(method, url, options?.body);
+      }
+    });
+  }
+  async function httpPost(path, body) {
+    return request("POST", path, { body });
+  }
+  var init_http2 = __esm({
+    "src/ariesModAPI/client/http.ts"() {
+      "use strict";
+      init_discordCsp();
+      init_localStorage();
+      init_config2();
+      init_events();
     }
   });
 
@@ -66928,8 +66679,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_localStorage();
       init_version();
       init_playerIdentity();
-      init_http();
-      init_config();
+      init_http2();
+      init_config2();
       shareGlobal("buildPlayerStatePayload", buildPlayerStatePayload);
       shareGlobal("logPlayerStatePayload", logPlayerStatePayload);
       gameReadyWatcherInitialized = false;

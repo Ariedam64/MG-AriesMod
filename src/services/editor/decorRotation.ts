@@ -83,7 +83,7 @@ type DecorEntry = {
 };
 
 /** A sprite the preview can show, with the mirroring it must be drawn with. */
-export type DecorSpriteState = { spriteIds: string[]; mirrored: boolean };
+type DecorSpriteState = { spriteIds: string[]; mirrored: boolean };
 
 
 function getEntry(decorId: string): DecorEntry | null {
@@ -93,7 +93,7 @@ function getEntry(decorId: string): DecorEntry | null {
 }
 
 /** Storages (silo, hutch, shed, trough) are the decors the game never rotates. */
-export function isStorageDecor(decorId: string): boolean {
+function isStorageDecor(decorId: string): boolean {
   const entry = getEntry(decorId);
   return typeof entry?.baseCapacitySlots === "number";
 }
@@ -112,7 +112,7 @@ function positiveAngles(entry: DecorEntry | null): number[] {
 }
 
 /** Every visually distinct rotation the decor accepts, in slider order. */
-export function getDecorRotationStates(decorId: string): number[] {
+function getDecorRotationStates(decorId: string): number[] {
   const entry = getEntry(decorId);
   if (!entry || isStorageDecor(decorId)) return [ANGLE_NONE];
 
@@ -122,7 +122,7 @@ export function getDecorRotationStates(decorId: string): number[] {
 }
 
 /** The sprite to draw for one rotation value, mirroring included. */
-export function resolveDecorSpriteState(decorId: string, rotation: number): DecorSpriteState {
+function resolveDecorSpriteState(decorId: string, rotation: number): DecorSpriteState {
   const entry = getEntry(decorId);
   const angle = Math.abs(Number(rotation) || 0) % FULL_TURN_DEGREES;
   const variant = angle ? entry?.rotationVariants?.[String(angle)] : undefined;
@@ -139,7 +139,7 @@ export function resolveDecorSpriteState(decorId: string, rotation: number): Deco
   };
 }
 
-export function formatRotationLabel(rotation: number): string {
+function formatRotationLabel(rotation: number): string {
   const value = Number(rotation) || 0;
   const angle = Math.abs(value) % FULL_TURN_DEGREES;
   return value < 0 ? `${angle}° mirrored` : `${angle}°`;

@@ -70,7 +70,7 @@ function diffGarden(prev: GardenState | null, next: GardenState | null): GardenD
 
 /* ============================== Types Pets ============================== */
 
-export type PetSlot = {
+type PetSlot = {
   id: string;
   petSpecies: string;
   name?: string | null;
@@ -88,7 +88,7 @@ export type PetInfo = {
 
 export type PetState = PetInfo[] | null;
 
-export type PetsChange =
+type PetsChange =
   | { kind: "added"; id: string }
   | { kind: "removed"; id: string }
   | { kind: "updated"; id: string };
@@ -251,7 +251,7 @@ export type CropItem = {
 
 export type CropInventoryState = CropItem[] | null;
 
-export type InventoryChange =
+type InventoryChange =
   | { kind: "added"; key: string }
   | { kind: "removed"; key: string }
   | { kind: "updated"; key: string };

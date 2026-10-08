@@ -8,7 +8,7 @@ export type ExternalToolCreator = {
   avatar?: string;
 };
 
-export type ExternalToolAction = {
+type ExternalToolAction = {
   label: string;
   url: string;
 };

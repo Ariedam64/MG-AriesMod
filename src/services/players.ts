@@ -31,17 +31,13 @@ export type Player = {
 };
 
 // Journal types
-export type ProduceVariantLog = { variant: string; createdAt?: number };
-export type PetVariantLog    = { variant: string; createdAt?: number };
-export type PetAbilityLog    = { ability: string; createdAt?: number };
+type ProduceVariantLog = { variant: string; createdAt?: number };
+type PetVariantLog    = { variant: string; createdAt?: number };
+type PetAbilityLog    = { ability: string; createdAt?: number };
 
-export type GardenData = {
-  tileObjects: Record<string, any>;
-  boardwalkTileObjects?: Record<string, any>;
-} | null;
 
-export type SpeciesProduceLog = { variantsLogged?: ProduceVariantLog[] };
-export type SpeciesPetLog = {
+type SpeciesProduceLog = { variantsLogged?: ProduceVariantLog[] };
+type SpeciesPetLog = {
   variantsLogged?: PetVariantLog[];
   abilitiesLogged?: PetAbilityLog[];
 };
@@ -225,7 +221,7 @@ function clampPlayers(n: unknown): number {
 }
 
 // Récupération ponctuelle
-export async function getPlayersInRoom(): Promise<number> {
+async function getPlayersInRoom(): Promise<number> {
   try {
     const raw = await Atoms.server.numPlayers.get(); // <- lit l’atom
     return clampPlayers(raw);
@@ -235,23 +231,14 @@ export async function getPlayersInRoom(): Promise<number> {
 }
 
 // Abonnement aux changements
-export function onPlayersInRoomChange(cb: (n: number) => void) {
-  return Atoms.server.numPlayers.onChange((raw: unknown) => {
-    cb(clampPlayers(raw));
-  });
-}
 
 /* ---------------- Spawn tiles (garden positions) ---------------- */
 
 let __cachedSpawnTiles: number[] | null = null;
 let __spawnLoadPromise: Promise<number[]> | null = null;
 
-export function invalidateSpawnTilesCache() {
-  __cachedSpawnTiles = null;
-  __spawnLoadPromise = null;
-}
 
-export async function getSpawnTilesSorted(): Promise<number[]> {
+async function getSpawnTilesSorted(): Promise<number[]> {
   if (Array.isArray(__cachedSpawnTiles)) return __cachedSpawnTiles;
   if (__spawnLoadPromise) return __spawnLoadPromise;
 

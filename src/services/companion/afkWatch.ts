@@ -26,18 +26,13 @@ import { CompanionService } from ".";
 import { CompanionChat } from "./chat";
 import {
   afkActivity,
-  afkReset,
-  afkTick,
   initialAfkState,
   type AfkEffect,
-  type AfkPhase,
   type AfkState,
   type AfkStep,
 } from "./afk";
 import { loadCompanionSettings } from "./state";
 
-/** Cadence de l'horloge. Les seuils se comptent en minutes : inutile d'aller plus vite. */
-const TICK_MS = 5_000;
 /** En `active`, un signe de vie par seconde suffit : `pointermove` en envoie des dizaines. */
 const ACTIVITY_THROTTLE_MS = 1_000;
 /** Une réplique dite sans venir n'est dite que s'il est assez près pour qu'on la lise. */
@@ -49,7 +44,6 @@ let running = false;
 /** Change à chaque démarrage : un abonnement qui arrive après un arrêt se défait aussitôt. */
 let generation = 0;
 let state: AfkState = initialAfkState(0);
-let timer: number | null = null;
 let unsubscribers: Array<() => void> = [];
 /** L'attention posée pour dormir est la nôtre : on ne relâche que celle-là. */
 let ownHold = false;
@@ -156,17 +150,6 @@ function apply(step: AfkStep): void {
   }
 }
 
-function tick(): void {
-  if (!running) return;
-  const now = Date.now();
-  // Rangé ou réglage coupé : on repart de zéro, l'horloge reprendra au retour.
-  if (!enabled() || !CompanionService.isRunning()) {
-    apply(afkReset(state, now));
-    return;
-  }
-  if (pending > 0) return;
-  apply(afkTick(state, { now, busy: othersBusy(), hidden: isHidden() }, Math.random));
-}
 
 function noteActivity(): void {
   if (!running) return;
@@ -205,19 +188,7 @@ async function subscribe(gen: number): Promise<void> {
   } catch {}
 }
 
-/** Phase courante, `active` quand la veille ne tourne pas. */
-export function getAfkPhase(): AfkPhase {
-  return running ? state.phase : "active";
-}
 
-/**
- * Réveil sans un mot, demandé de l'extérieur : une réaction importante qui doit
- * passer, par exemple. Remet aussi l'horloge d'absence à zéro.
- */
-export function wakeCompanion(): void {
-  if (!running) return;
-  apply(afkReset(state, Date.now()));
-}
 
 export function startAfkWatch(): void {
   if (running) return;
@@ -237,28 +208,5 @@ export function startAfkWatch(): void {
   } catch {}
   void subscribe(gen).catch(() => {});
 
-  timer = window.setInterval(() => {
-    try {
-      tick();
-    } catch {}
-  }, TICK_MS);
 }
 
-export function stopAfkWatch(): void {
-  if (!running) return;
-  running = false;
-  generation++;
-  if (timer !== null) {
-    clearInterval(timer);
-    timer = null;
-  }
-  for (const unsub of unsubscribers) {
-    try {
-      unsub();
-    } catch {}
-  }
-  unsubscribers = [];
-  // Il ne doit pas rester planté à côté du joueur une fois la veille coupée.
-  releaseOwnHold();
-  state = initialAfkState(Date.now());
-}

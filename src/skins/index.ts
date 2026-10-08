@@ -15,7 +15,7 @@ import { rebakeAll } from './gameCaches';
 import { installSkinsDebug } from './debug';
 import { deleteSkin, clearSkins, listSkins, putSkin, MAX_SKIN_FILE_BYTES } from './store';
 import { groupTargets, loadTargets } from './targets';
-import type { SkinApplyResult, SkinEntry, SkinTarget, SkinnableObject } from './types';
+import type { SkinApplyResult, SkinEntry, SkinnableObject } from './types';
 
 const SKINS_CHANGED_EVENT = 'gemini:skins-changed';
 const RENDERER_WATCH_MS = 2_000;
@@ -269,19 +269,6 @@ function startTimers(): void {
   }
 }
 
-export function stopSkins(): void {
-  const pageWin: any = (globalThis as any).unsafeWindow || (globalThis as any);
-  if (watchId !== null) {
-    pageWin.clearInterval(watchId);
-    watchId = null;
-  }
-  if (retryId !== null) {
-    pageWin.clearInterval(retryId);
-    retryId = null;
-  }
-  revertAll();
-  started = false;
-}
 
 /** Safe to call more than once; only the first call does the work. */
 export async function initSkins(): Promise<void> {
@@ -307,4 +294,4 @@ export async function initSkins(): Promise<void> {
   }
 }
 
-export type { SkinTarget, SkinnableObject, SkinEntry, SkinApplyResult };
+;

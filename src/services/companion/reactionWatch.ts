@@ -371,15 +371,3 @@ export function startReactionWatch(): void {
   );
 }
 
-export function stopReactionWatch(): void {
-  running = false;
-  for (const id of timers) clearInterval(id);
-  timers = [];
-  for (const unsub of unsubscribers) {
-    try {
-      unsub();
-    } catch {}
-  }
-  unsubscribers = [];
-  saveSession();
-}

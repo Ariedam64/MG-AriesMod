@@ -16,8 +16,8 @@
 // send flat. That is what keeps us correct in both directions — when the devs
 // move one of the flat ones into the envelope, it moves here too.
 
-export const QUINOA_SCOPE: readonly string[] = ["Room", "Quinoa"];
-export const COMMAND_ENVELOPE_TYPE = "QuinoaCommand";
+const QUINOA_SCOPE: readonly string[] = ["Room", "Quinoa"];
+const COMMAND_ENVELOPE_TYPE = "QuinoaCommand";
 
 /**
  * Quinoa messages the live client wraps in the command envelope.
@@ -79,36 +79,12 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   "Wish",
 ]);
 
-/**
- * Quinoa messages the live client still writes flat.
- *
- * `Ping` and `PlayerPosition` never were commands — the first answers `Pong`,
- * the second feeds the `QuinoaMovementSnapshot`/`Batch` channel — so wrapping
- * one would break it in the other direction. The rest simply have not been
- * migrated yet. Listed for documentation; the allowlist above is what decides.
- */
-export const FLAT_TYPES: ReadonlySet<string> = new Set([
-  "Ping",
-  "PlayerPosition",
-  "Teleport",
-  "SetSelectedItem",
-  "PickupObject",
-  "DropObject",
-  "ThrowSnowball",
-  "CheckWeatherStatus",
-  "CheckFriendBonus",
-  "RequestPetGreet",
-  "QuinoaTutorialSkipped",
-  "UpgradePetHutch",
-  "UpgradeSeedSilo",
-  "UpgradeDecorShed",
-]);
 
 export function isQuinoaCommandType(type: unknown): boolean {
   return typeof type === "string" && COMMAND_TYPES.has(type);
 }
 
-export function isQuinoaScope(scopePath: unknown): boolean {
+function isQuinoaScope(scopePath: unknown): boolean {
   return (
     Array.isArray(scopePath) &&
     scopePath.length === QUINOA_SCOPE.length &&
@@ -166,7 +142,7 @@ export function hasInjectedCommands(): boolean {
 }
 
 /** Consumes the number for a command the mod is sending right now. */
-export function takeCommandSequenceForMod(): number {
+function takeCommandSequenceForMod(): number {
   modCommandsSent += 1;
   return nextCommandSequence++;
 }

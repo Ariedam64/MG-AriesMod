@@ -6,18 +6,18 @@ import { toastSimple } from "../ui/toast";
 import { readAriesPath, writeAriesPath } from "./localStorage";
 
 export type PlaybackMode = "oneshot" | "loop";
-export type StopConfig =
+type StopConfig =
   | { mode: "manual" }
   | { mode: "repeat"; repeats: number }
   | { mode: "purchase" };
 
-export interface AudioNotifierOptions {
+interface AudioNotifierOptions {
   minPlayGapMs?: number;
   volume?: number;
   defaultSound?: string;
 }
 
-export interface ImportSoundOptions {
+interface ImportSoundOptions {
   /** Nom à utiliser (sinon derivé du nom de fichier). L'unicité sera assurée automatiquement. */
   name?: string;
   /** Taille max finale en octets. Défaut: 200 * 1024 (200KB). */
@@ -96,7 +96,7 @@ type StoredAudioSettings = {
   contexts?: Partial<Record<AudioContextKey, StoredContextSettings>>;
 };
 
-export class AudioNotifier {
+class AudioNotifier {
   // ===== Core state
   private enabled = true;
   private volume = 0.7;

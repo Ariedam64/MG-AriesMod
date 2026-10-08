@@ -26,14 +26,14 @@ type DecorItem = { itemType: "Decor"; decorId:string;  initialStock: number };
 
 type Section<T> = { inventory: T[]; secondsUntilRestock: number };
 
-export type ShopsSnapshot = {
+type ShopsSnapshot = {
   seed:  Section<SeedItem>;
   tool:  Section<ToolItem>;
   egg:   Section<EggItem>;
   decor: Section<DecorItem>;
 };
 
-export type PurchasesSnapshot = {
+type PurchasesSnapshot = {
   seed:  { createdAt: number; purchases: Record<string, number> };
   egg:   { createdAt: number; purchases: Record<string, number> };
   tool:  { createdAt: number; purchases: Record<string, number> };
@@ -392,9 +392,6 @@ class OverlayBarebone {
     }
   }
 
-  private triggerWithRule(id: string) {
-    this.triggerMany([id]);
-  }
 
   private resolvePlaybackMode(id: string): PlaybackMode {
     const rule = this.rulesById.get(id);

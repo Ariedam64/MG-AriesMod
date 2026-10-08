@@ -7,7 +7,7 @@
 
 import type { HarvestRequest } from "../../../services/companion/chat";
 import { findFeedable, type FeedCandidate } from "../../../services/companion/chat/petFeed";
-import { BORDER, CARD_BG, TEAL, TEXT, TEXT_DIM, WARN, button, css } from "../panel-ui";
+import { BORDER, CARD_BG, TEXT, TEXT_DIM, WARN, button, css } from "../panel-ui";
 import { speciesIcon } from "./harvest-chips";
 import { openModal } from "./modal";
 import { settingsNotice } from "./settings-notice";

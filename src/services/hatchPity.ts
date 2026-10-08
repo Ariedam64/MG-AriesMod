@@ -41,7 +41,7 @@ export interface PityTarget {
   kind: "species" | "mutation";
 }
 
-export interface EggFauna {
+interface EggFauna {
   species: string;
   /** Spawn share within this egg, as a fraction. */
   share: number;
@@ -67,7 +67,7 @@ function toPositiveNumber(value: unknown): number | null {
 }
 
 /** `threshold = multiplier / chance`, the rule every shipped threshold follows. */
-export function thresholdForChance(chance: number): number {
+function thresholdForChance(chance: number): number {
   if (!Number.isFinite(chance) || chance <= 0) return 0;
   return Math.round(PITY_MULTIPLIER / chance);
 }
@@ -198,7 +198,7 @@ export function listEggPity(): EggPity[] {
   return out;
 }
 
-export function getEggPity(eggId: string): EggPity | null {
+function getEggPity(eggId: string): EggPity | null {
   const entry = (eggCatalog as Record<string, unknown>)[eggId];
   return isRecord(entry) ? buildEggPity(eggId, entry) : null;
 }

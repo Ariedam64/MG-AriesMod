@@ -4,7 +4,6 @@
 import {
   petAbilities,
   petCatalog,
-  rarity,
   weatherCatalog,
 } from "../data";
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
@@ -404,18 +403,4 @@ export const StatsService = {
   },
 };
 
-export const StatsDefaults = {
-  rarityOrder: [
-    rarity.Common,
-    rarity.Uncommon,
-    rarity.Rare,
-    rarity.Legendary,
-    rarity.Mythic,
-    rarity.Divine,
-    rarity.Celestial,
-  ] as const,
-  createEmpty(): StatsSnapshot {
-    return createDefaultStats();
-  },
-};
 

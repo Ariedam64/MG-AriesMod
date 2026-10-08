@@ -164,20 +164,3 @@ export function getLocalVersion(): string | undefined {
   return undefined;
 }
 
-export async function logRemoteVersion(): Promise<void> {
-  const remoteData = await fetchRemoteVersion();
-
-  const localVersion = getLocalVersion();
-
-  if (localVersion) {
-    console.log(`[MagicGarden] Local version: ${localVersion}`);
-  } else {
-    console.log("[MagicGarden] Local version: unknown");
-  }
-
-  if (remoteData?.version) {
-    console.log(`[MagicGarden] Remote version: ${remoteData.version}`);
-  } else {
-    console.log("[MagicGarden] Remote version: unavailable");
-  }
-}
