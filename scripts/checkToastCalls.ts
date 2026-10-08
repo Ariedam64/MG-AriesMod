@@ -5,6 +5,10 @@
 // read the word "success" in the default info colour. This reads every
 // `toastSimple(...)` call in src/ and fails on a variant name in the
 // description slot with no variant after it.
+//
+// The debug menu called `window.toastSimple`, which nothing has ever exposed,
+// so its "Copied" toast and its warnings never appeared. Toasts come from the
+// `ui/toast` import, never from a global.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -60,24 +64,30 @@ const variantLiteral = (arg: string | undefined) => {
   return !!m && VARIANTS.has(m[1]);
 };
 
+const where = (file: string, text: string, index: number) =>
+  `${relative(process.cwd(), file)}:${text.slice(0, index).split("\n").length}`;
+
 const misplaced: string[] = [];
+const throughWindow: string[] = [];
 let calls = 0;
 for (const file of sourceFiles(SRC)) {
   const text = readFileSync(file, "utf8");
+
+  const global = /\bwindow(?:\s+as\s+\w+\))?\??\.\s*toastSimple\b/g;
+  for (let m = global.exec(text); m; m = global.exec(text)) throughWindow.push(where(file, text, m.index));
+
   const re = /\btoastSimple\s*\(/g;
   for (let m = re.exec(text); m; m = re.exec(text)) {
     if (/function\s+$/.test(text.slice(Math.max(0, m.index - 20), m.index))) continue;
     calls++;
     const args = callArguments(text, m.index + m[0].length - 1);
-    if (args.length === 2 && variantLiteral(args[1])) {
-      const line = text.slice(0, m.index).split("\n").length;
-      misplaced.push(`${relative(process.cwd(), file)}:${line}`);
-    }
+    if (args.length === 2 && variantLiteral(args[1])) misplaced.push(where(file, text, m.index));
   }
 }
 
 check("toastSimple calls were found (sanity)", calls > 10, String(calls));
 check("no toast passes its variant as the description", misplaced.length === 0, misplaced.join(", "));
+check("no code looks for toastSimple on window", throughWindow.length === 0, throughWindow.join(", "));
 
 if (failed) {
   console.log(`\n${failed} check(s) failed`);

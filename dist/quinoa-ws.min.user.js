@@ -27533,10 +27533,8 @@
     else btn.textContent = text2;
   }
   function toast(msg, type = "warn") {
-    try {
-      window.toastSimple?.(msg, "", type);
-    } catch {
-    }
+    void toastSimple(msg, "", type).catch(() => {
+    });
   }
   function createTwoColumns(view) {
     const columns = document.createElement("div");
@@ -27568,18 +27566,10 @@
       } catch {
       }
       document.body.removeChild(ta);
-      try {
-        window.toastSimple?.(ok ? "Copied" : "Copy failed", "", ok ? "success" : "error");
-      } catch {
-      }
+      toast(ok ? "Copied" : "Copy failed", ok ? "success" : "error");
     };
     if (window.isSecureContext && navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(str).then(() => {
-        try {
-          window.toastSimple?.("Copied", "", "success");
-        } catch {
-        }
-      }).catch(fallback);
+      navigator.clipboard.writeText(str).then(() => toast("Copied", "success")).catch(fallback);
     } else {
       fallback();
     }
@@ -27597,6 +27587,7 @@
   var init_shared = __esm({
     "src/features/debug/shared.ts"() {
       "use strict";
+      init_toast();
     }
   });
 
@@ -28098,7 +28089,7 @@
           }
           try {
             await jSet(atom, val);
-            toast(fallback ? "Set OK (raw text)" : "Set OK");
+            toast(fallback ? "Set OK (raw text)" : "Set OK", "success");
           } catch (e) {
             toast(e?.message || "Set failed");
           }
