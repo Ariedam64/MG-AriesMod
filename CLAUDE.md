@@ -59,7 +59,7 @@ The version lives in **`meta.userscript.js`** only, and `dist/quinoa-ws.min.user
 
 The mod patches a minified bundle, so almost every bug is "the game renamed something".
 
-**Always re-check the live version before diagnosing.** `curl -L https://magicgarden.gg/` gives `/version/NNNN/`. A locally crawled bundle in `C:/tmp/mgNNNN` goes stale in days (1125 to 1169 in five, 1169 to 1206 in three). A conclusion drawn from the wrong build looks perfectly well evidenced and is simply wrong. Full crawl procedure: memory `live-game-bundle-download`.
+**Always re-check the live version before diagnosing.** `curl -s https://magicgarden.gg/platform/v1/version` answers in 18 bytes. A locally crawled bundle in `C:/tmp/mgNNNN` goes stale in days (1125 to 1169 in five, 1169 to 1206 in three, 1206 to 1240 in five). A conclusion drawn from the wrong build looks perfectly well evidenced and is simply wrong. Full crawl and search procedure: [`docs/bundle-crawl.md`](docs/bundle-crawl.md).
 
 Grep the bundle for **string literals** (message names, jotai `debugLabel`s, field names), never for minified identifiers.
 
