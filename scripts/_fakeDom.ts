@@ -228,6 +228,7 @@ export function installFakeDom(): { localStorage: FakeStorage } {
     visibilityState: "visible",
     activeElement: null,
     createElement: (tag: string) => new FakeElement(tag),
+    createElementNS: (_ns: string, tag: string) => new FakeElement(tag),
     createTextNode: (text: string) => {
       const node = new FakeElement("#text");
       node.textContent = text;

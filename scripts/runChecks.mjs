@@ -95,6 +95,7 @@ const SUITES = {
   visiblerefresh: ["checkVisibleRefresh", "dom-stub"],
   contrast: ["checkContrast"],
   kitstyles: ["checkKitStyles"],
+  dock: ["checkDock", "dom-stub"],
 };
 
 /** Problems with how suites are registered: a file with no entry, or package.json out of step. */
