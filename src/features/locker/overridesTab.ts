@@ -1,24 +1,22 @@
-// The locker menu's Overrides tab: every crop in a list, and for the selected
+// The locker menu's per-crop tab: every crop in a list, and for the selected
 // one a switch to give it its own filters instead of the global ones.
 
-import { card } from "../../ui/kit/card";
+import { h } from "../../ui/kit/dom";
 import { switchInput, type SwitchInput } from "../../ui/kit/toggles";
 import { VTabs, type VTabItem } from "../../ui/kit/vtabs";
-import { color } from "../../ui/kit/theme";
+import { lockerCard } from "./lockerCard";
 import { seedIcon } from "./menuIcons";
 import type { LockerTab } from "./restrictionsTab";
 import { lockerSettingsCard, type SettingsCard } from "./settingsCard";
 import type { LockerMenuStore, OverrideDraft } from "./settingsDraft";
 import { getLockerSeedOptions } from "./seedOptions";
 
-const OVERRIDE_ON = color.ok;
-const OVERRIDE_OFF = color.danger;
+const overrideStatus = (enabled: boolean) =>
+  enabled ? "Uses its own rules below." : "Follows the General tab.";
 
 export function overridesTab(store: LockerMenuStore): LockerTab {
-  const layout = document.createElement("div");
-  layout.className = "lk-overrides";
-  const detail = document.createElement("div");
-  detail.className = "lk-overrides__detail";
+  const layout = h("div", "lk-overrides");
+  const detail = h("div", "lk-overrides__detail");
 
   /** Icons are kept across list redraws, so a click does not reload every sprite. */
   const icons = new Map<string, HTMLElement>();
@@ -32,17 +30,13 @@ export function overridesTab(store: LockerMenuStore): LockerTab {
   };
 
   const list = new VTabs({
-    emptyText: "No crops available.",
+    filterPlaceholder: "Search crops",
+    emptyText: "No crops found.",
     fillAvailableHeight: true,
     renderItem: (item, btn) => {
       btn.classList.add("lk-crop-tab");
-      const dot = document.createElement("span");
-      dot.className = "qmm-dot";
-      dot.style.background = item.statusColor ?? OVERRIDE_OFF;
-      const label = document.createElement("span");
-      label.className = "label";
-      label.textContent = item.title;
-      btn.append(dot, label, iconFor(item.id));
+      btn.append(iconFor(item.id), h("span", "lk-crop-tab__name", item.title));
+      if (item.badge) btn.appendChild(h("span", "lk-on", item.badge));
     },
     onSelect: () => renderDetail(),
   });
@@ -52,7 +46,7 @@ export function overridesTab(store: LockerMenuStore): LockerTab {
     getLockerSeedOptions().map((opt) => ({
       id: opt.key,
       title: opt.cropName || opt.key,
-      statusColor: store.isOverrideEnabled(opt.key) ? OVERRIDE_ON : OVERRIDE_OFF,
+      badge: store.isOverrideEnabled(opt.key) ? "On" : null,
     }));
 
   /** Scroll position of the detail pane per crop, so coming back to one lands where it was. */
@@ -66,10 +60,7 @@ export function overridesTab(store: LockerMenuStore): LockerTab {
     const key = list.getSelected()?.id ?? null;
     if (!key) {
       shown = null;
-      const empty = document.createElement("div");
-      empty.className = "lk-empty lk-overrides__placeholder lk-wide";
-      empty.textContent = "Select a crop on the left to customise its locker settings.";
-      detail.replaceChildren(empty);
+      detail.replaceChildren(h("div", "lk-empty-state", "Pick a crop to give it rules of its own."));
       return;
     }
 
@@ -84,23 +75,18 @@ export function overridesTab(store: LockerMenuStore): LockerTab {
     }
 
     const seed = getLockerSeedOptions().find((opt) => opt.key === key);
+    const name = seed?.cropName || key;
     const toggle = switchInput(entry.enabled, (on) => store.setOverrideEnabled(key, on));
-    const header = card(seed?.cropName || key, { actions: [toggle] });
-    header.root.classList.add("lk-wide");
-    header.header.prepend(seedIcon(key, 32, seed?.spriteKey));
-    header.root.removeChild(header.body);
-
-    const status = document.createElement("div");
-    status.className = "lk-hint lk-wide";
-    const showStatus = () => {
-      status.textContent = entry.enabled ? "This crop uses its own locker filters." : "Uses the global locker settings.";
-    };
+    toggle.setAttribute("aria-label", `Own rules for ${name}`);
+    const header = lockerCard(name, { icon: seedIcon(key, 36, seed?.spriteKey), control: toggle });
+    header.root.classList.add("lk-hero");
+    const showStatus = () => header.setSubtitle(overrideStatus(entry.enabled));
 
     const form = lockerSettingsCard(entry.settings, () => store.notifyOverrideSettingsChanged(key));
     form.setDisabled(!entry.enabled);
     showStatus();
 
-    detail.replaceChildren(header.root, status, form.root);
+    detail.replaceChildren(header.root, form.root);
     detail.scrollTop = scrollMemory.get(key) ?? 0;
     shown = { key, entry, form, toggle, showStatus };
   }
@@ -119,6 +105,7 @@ export function overridesTab(store: LockerMenuStore): LockerTab {
 
   return {
     render(view) {
+      view.classList.add("lk-view", "qmm-scroll");
       view.replaceChildren(layout);
       refresh();
     },
