@@ -98,6 +98,7 @@ const SUITES = {
   dock: ["checkDock", "dom-stub"],
   huddock: ["checkHudDock", "dom-stub"],
   themecolors: ["checkThemeColors"],
+  modversion: ["checkModVersion"],
 };
 
 /** Problems with how suites are registered: a file with no entry, or package.json out of step. */

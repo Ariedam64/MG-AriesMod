@@ -8,10 +8,12 @@ import {
 } from "../features/keybinds/keybinds";
 import { isKeybindCaptureActive } from "../lib/keyboard";
 import { codesMatch, matchHotkey } from "../lib/hotkey";
+import { checkModVersion } from "../platform/modVersion";
 import { readAriesPath, writeAriesPath } from "../platform/storage";
 import { button } from "./kit/button";
 import { createDock } from "./kit/dock";
 import { h } from "./kit/dom";
+import { setMenuBadge } from "./kit/menuBadges";
 import { layer } from "./kit/theme";
 import { type Pos, attachAutoClamp, clampRect, currentPos, ensureOnScreen, makeDraggable, placeClamped, withTopLocked } from "./hudPlacement";
 import { startStatusLoop } from "./hudStatus";
@@ -22,6 +24,7 @@ export interface HUDOptions {
 }
 
 const HUD_HIDDEN_PATH = "hud.hidden";
+const HUD_FOLDED_PATH = "hud.dockFolded";
 const HUD_WIN_PATH = (id: string) => `hud.windows.${id}`;
 const isEditing = (el: EventTarget | null) => {
   const t = el as HTMLElement | null;
@@ -56,7 +59,10 @@ export function mountHUD(opts?: HUDOptions) {
   }
 
   // ---------- Dock ----------
-  const dock = createDock((id) => toggleWindow(id));
+  const dock = createDock(
+    (id) => toggleWindow(id),
+    (folded) => writeAriesPath(HUD_FOLDED_PATH, folded),
+  );
   (document.documentElement || document.body).appendChild(dock.root);
 
   const setHUDHidden = (hidden: boolean) => {
@@ -67,6 +73,7 @@ export function mountHUD(opts?: HUDOptions) {
 
   const isOn = (v: unknown) => v === true || v === "1" || v === 1;
   dock.setHidden(isOn(readAriesPath(HUD_HIDDEN_PATH)));
+  dock.setFolded(isOn(readAriesPath(HUD_FOLDED_PATH)));
 
   // ---------- Keys: Insert, the toggle hotkey and the drag hotkey ----------
   // Insert tapped on its own toggles the HUD; held, it is a drag modifier.
@@ -150,7 +157,7 @@ export function mountHUD(opts?: HUDOptions) {
     const keys: string[] = [];
     if (toggleHotkey) keys.push(getKeybindLabel(KEY_TOGGLE));
     keys.push("Insert");
-    dock.root.title = `Hide the menus with ${keys.join(" / ")}`;
+    dock.setFoldHint(`Fold the menus (${keys.join(" / ")} hides them)`);
   };
   updateHideButtonTitle();
   onKeybindChange(KEY_TOGGLE, (hk) => {
@@ -320,4 +327,6 @@ export function mountHUD(opts?: HUDOptions) {
 
   void ensureStore().catch(() => {});
   startStatusLoop(dock);
+  // A build behind the latest release badges Settings, where the download link is.
+  void checkModVersion().then((status) => setMenuBadge("settings", status.behind ? 1 : 0));
 }

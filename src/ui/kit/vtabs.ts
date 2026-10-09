@@ -8,7 +8,7 @@ export type VTabItem = {
   title: string;
   subtitle?: string;
   avatarUrl?: string;
-  /** Colour of the status dot on the left, e.g. `color.leaf`. */
+  /** Colour of the status dot on the left, e.g. `color.sepia`. */
   statusColor?: string;
   /** Small counter or flag right of the label. */
   badge?: string | null;

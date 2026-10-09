@@ -38,6 +38,15 @@ check(
   !!dock?.querySelector('.qws-dock-btn[data-id="alerts"]')?.classList.contains("open"),
 );
 
+const fold = dock?.querySelector(".qws-dock-fold");
+check("the hide hint sits on the fold button, not on every menu button", !dock?.getAttribute("title") && !!fold?.getAttribute("title"));
+fold?.click();
+check("the fold button folds the dock without a keyboard", !!dock?.classList.contains("folded"));
+checkEqual("folding is remembered", readAriesPath("hud.dockFolded"), true);
+fold?.click();
+check("a second click unfolds it", !dock?.classList.contains("folded"));
+checkEqual("unfolding is remembered", readAriesPath("hud.dockFolded"), false);
+
 window.dispatchEvent(event("keydown", { code: "Insert", key: "Insert" }));
 window.dispatchEvent(event("keyup", { code: "Insert", key: "Insert" }));
 check("a tap on Insert hides the dock", !!dock?.classList.contains("hidden"));

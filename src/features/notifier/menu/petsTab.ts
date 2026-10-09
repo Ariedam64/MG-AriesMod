@@ -65,7 +65,7 @@ function petRow(pet: PetInfo): HTMLDivElement {
   left.append(petAvatar(pet), name);
 
   const hungerValue = h("div", undefined, Number.isFinite(hunger) ? `${hunger}%` : "-");
-  Object.assign(hungerValue.style, { fontWeight: "700", color: color.gold });
+  Object.assign(hungerValue.style, { fontWeight: "700", color: color.goldInk });
 
   row.append(left, hungerValue);
   return row;

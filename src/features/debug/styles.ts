@@ -31,7 +31,7 @@ const DEBUG_CSS = `
 .dd-log{position:relative;border:1px solid var(--qmm-border-hover);border-radius:16px;background:var(--qmm-sunken);padding:10px;max-height:48vh;overflow:auto;}
 .dd-log{font-family:var(--qmm-font-mono);font-size:12px;line-height:1.4;user-select:text;}
 .dd-log .ws-row .arrow.is-in{color:var(--qmm-accent);}
-.dd-log .ws-row .arrow.is-out{color:var(--qmm-rainbow);}
+.dd-log .ws-row .arrow.is-out{color:var(--qmm-rainbow-ink);}
 .dd-log__empty{padding:28px 12px;text-align:center;font-size:13px;opacity:.6;}
 .dd-log .ws-row{position:relative;display:grid;grid-template-columns:96px 20px minmax(0,1fr);gap:10px;padding:8px 12px;border-radius:12px;border:1px solid transparent;transition:background .15s ease,border-color .15s ease;align-items:start;margin:2px 0;}
 .dd-log .ws-row .ts{opacity:.76;font-size:12px;}

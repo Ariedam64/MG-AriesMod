@@ -1,8 +1,9 @@
 // The dock: a column of menu buttons on the left edge of the screen.
 //
-// One button per registered menu, green while its window is open, with a
+// One button per registered menu, filled in sepia while its window is open, with a
 // name tooltip and an optional count badge (fed by `menuBadges`). A status dot
-// at the top shows the mod's connection to the game.
+// at the top shows the mod's connection to the game, and a fold button at the
+// bottom shrinks the dock to those two, for players without a keyboard.
 
 import { ensureKitStyles } from "./styles";
 import { h } from "./dom";
@@ -20,12 +21,19 @@ export type Dock = {
   setStatus(tone: DockTone, text: string): void;
   setHidden(hidden: boolean): void;
   isHidden(): boolean;
+  setFolded(folded: boolean): void;
+  /** The fold button's tooltip, e.g. naming the hotkey that hides the dock outright. */
+  setFoldHint(text: string): void;
 };
 
 /** Gap between the dock's edge and its tooltip, in px. */
 const TIP_GAP_PX = 10;
 
-export function createDock(onSelect: (id: string) => void): Dock {
+/** Chevrons for the fold button: pointing left folds, pointing right unfolds. */
+const FOLD_ICON = '<path d="M15 6l-6 6 6 6"/>';
+const UNFOLD_ICON = '<path d="M9 6l6 6-6 6"/>';
+
+export function createDock(onSelect: (id: string) => void, onFold?: (folded: boolean) => void): Dock {
   ensureKitStyles();
 
   const root = h("nav", "qws-dock");
@@ -33,6 +41,12 @@ export function createDock(onSelect: (id: string) => void): Dock {
   const status = h("span", "qws-dock-status");
   status.dataset.tone = "warn";
   root.appendChild(status);
+
+  const fold = h("button", "qws-dock-fold");
+  fold.type = "button";
+  const foldIcon = menuIcon("");
+  fold.appendChild(foldIcon);
+  root.appendChild(fold);
 
   const tip = h("div", "qws-dock-tip");
   const buttons = new Map<string, HTMLButtonElement>();
@@ -74,12 +88,26 @@ export function createDock(onSelect: (id: string) => void): Dock {
     btn.addEventListener("focus", () => showTip(btn, label));
     btn.addEventListener("mouseleave", hideTip);
     btn.addEventListener("blur", hideTip);
-    root.appendChild(btn);
+    root.insertBefore(btn, fold);
     buttons.set(id, btn);
     if (pendingBadges.has(id)) setBadge(id, pendingBadges.get(id) ?? 0);
   };
 
   onMenuBadge(setBadge);
+
+  const setFolded = (folded: boolean) => {
+    root.classList.toggle("folded", folded);
+    fold.setAttribute("aria-label", folded ? "Show the menus" : "Fold the menus");
+    fold.setAttribute("aria-expanded", folded ? "false" : "true");
+    foldIcon.innerHTML = folded ? UNFOLD_ICON : FOLD_ICON;
+    if (folded) hideTip();
+  };
+  setFolded(false);
+  fold.addEventListener("click", () => {
+    const folded = !root.classList.contains("folded");
+    setFolded(folded);
+    onFold?.(folded);
+  });
 
   return {
     root,
@@ -102,6 +130,10 @@ export function createDock(onSelect: (id: string) => void): Dock {
     },
     isHidden() {
       return root.classList.contains("hidden");
+    },
+    setFolded,
+    setFoldHint(text) {
+      fold.setAttribute("title", text);
     },
   };
 }

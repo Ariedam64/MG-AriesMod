@@ -1552,25 +1552,25 @@
         sandEdge: "#e3d3b0",
         sandShade: "#c9b48a",
         card: "#ffffff",
-        leaf: "#57a05f",
-        leafStrong: "#40844c",
-        leafShade: "#2f6638",
-        leafSoft: "#e7f2df",
-        leafInk: "#2f7a3d",
+        sepia: "#a0703f",
+        sepiaStrong: "#80562d",
+        sepiaShade: "#5e3d1e",
+        sepiaSoft: "#ecd3ae",
+        sepiaInk: "#77502a",
         bark: "#3b2f22",
         barkSoft: "#6b5537",
         barkDim: "#76634a",
         clay: "#c24a2a",
         amber: "#d18a1a",
-        onLeaf: "#ffffff"
+        onSepia: "#ffffff"
       };
       color = {
         ...palette,
-        accent: palette.leafStrong,
-        accentSoft: palette.leafSoft,
-        accentHover: "#d7ebcd",
-        accentBorder: "#8cc68f",
-        accentBorderHover: palette.leaf,
+        accent: palette.sepiaStrong,
+        accentSoft: palette.sepiaSoft,
+        accentHover: "#e4c79c",
+        accentBorder: "#c99d6b",
+        accentBorderHover: palette.sepia,
         text: palette.bark,
         textSoft: palette.barkSoft,
         textDim: palette.barkDim,
@@ -1590,6 +1590,10 @@
         scrim: "rgba(59,47,34,0.45)",
         /** A small drop shadow under a knob or a chip. */
         shade: "rgba(59,47,34,0.25)",
+        /** Status only (connected, active, at its best), never the accent. */
+        ok: "#4f9a58",
+        okInk: "#2f6e39",
+        okSoft: "#e3efd9",
         danger: palette.clay,
         dangerInk: "#a33a1e",
         dangerSoft: "#f6ddd5",
@@ -1602,13 +1606,17 @@
         warnBorder: "#e2bf7a",
         /** The pulse around a hotkey button that is recording. */
         warnGlow: "rgba(209,138,26,0.45)",
+        /** Gold and Rainbow as fills, or as text on a dark chip. */
         gold: "#FFC734",
-        rainbow: "#c084fc"
+        rainbow: "#c084fc",
+        /** Gold and Rainbow as text on paper or a card. */
+        goldInk: "#8a6100",
+        rainbowInk: "#8a3fc0"
       };
       gradient = {
         panel: palette.paper,
         tabBar: palette.paper,
-        head: palette.leaf,
+        head: palette.sepia,
         /** Text fills for the Gold and Rainbow mutation names. */
         gold: "linear-gradient(120deg, #e0b43c, #b07d1a, #e8c766)",
         rainbow: "linear-gradient(90deg, #e05555, #d9a520, #2aa7d6, #7f55e0, #e05555)"
@@ -1632,12 +1640,17 @@
           { fg: palette.barkSoft, bg: palette[bg], min: 4.5, use: `soft text on ${bg}` },
           { fg: palette.barkDim, bg: palette[bg], min: 4.5, use: `caption on ${bg}` }
         ]),
-        { fg: palette.leafInk, bg: palette.leafSoft, min: 4.5, use: "selected label" },
-        { fg: palette.leafInk, bg: palette.paper, min: 4.5, use: "green text on paper" },
-        { fg: palette.onLeaf, bg: palette.leafStrong, min: 4.5, use: "primary button text" },
-        { fg: palette.onLeaf, bg: palette.leaf, min: 3, use: "window title (18 px bold)" },
-        { fg: palette.onLeaf, bg: palette.clay, min: 4.5, use: "danger button and badge text" },
+        { fg: palette.sepiaInk, bg: palette.sepiaSoft, min: 4.5, use: "selected label" },
+        { fg: palette.sepiaInk, bg: palette.paper, min: 4.5, use: "sepia text on paper" },
+        { fg: palette.onSepia, bg: palette.sepiaStrong, min: 4.5, use: "primary button text" },
+        { fg: palette.onSepia, bg: palette.sepia, min: 3, use: "window title (18 px bold)" },
+        { fg: palette.onSepia, bg: palette.clay, min: 4.5, use: "danger button and badge text" },
         { fg: palette.paper, bg: palette.bark, min: 4.5, use: "active tab and tooltip" },
+        { fg: color.okInk, bg: color.okSoft, min: 4.5, use: "ok pill" },
+        ...["paper", "card"].flatMap((bg) => [
+          { fg: color.goldInk, bg: palette[bg], min: 4.5, use: `gold numbers on ${bg}` },
+          { fg: color.rainbowInk, bg: palette[bg], min: 4.5, use: `rainbow numbers on ${bg}` }
+        ]),
         { fg: color.warnInk, bg: color.warnSoft, min: 4.5, use: "warning pill" },
         { fg: color.dangerInk, bg: color.dangerSoft, min: 4.5, use: "error pill" }
       ];
@@ -1706,12 +1719,12 @@
 .qws-win .w-head {
   display: flex; align-items: center; gap: var(--qmm-space-md); flex: 0 0 auto;
   min-height: 56px; padding: 0 12px 0 18px; cursor: move;
-  background: var(--qmm-leaf); color: var(--qmm-on-leaf);
+  background: var(--qmm-sepia); color: var(--qmm-on-sepia);
 }
 .qws-win .w-title { font-size: 18px; font-weight: 900; letter-spacing: .01em; }
 .qws-win .w-head .w-btn {
   width: 34px; height: 34px; padding: 0; border: 0; border-radius: 12px;
-  background: var(--qmm-leaf-shade); color: var(--qmm-on-leaf); box-shadow: none; font-weight: 900;
+  background: var(--qmm-sepia-shade); color: var(--qmm-on-sepia); box-shadow: none; font-weight: 900;
 }
 .qws-win .w-head .w-btn:hover { background: var(--qmm-bark); }
 .qws-win .w-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 16px; }
@@ -1722,7 +1735,7 @@
   background: var(--qmm-field-bg); color: var(--qmm-text); font-family: var(--qmm-font);
 }
 .qws-win input:is([type="text"], [type="number"]):not(.qmm-input, .qws-pnl-input):focus {
-  outline: none; border-color: var(--qmm-leaf); box-shadow: 0 0 0 3px var(--qmm-leaf-soft);
+  outline: none; border-color: var(--qmm-sepia); box-shadow: 0 0 0 3px var(--qmm-sepia-soft);
 }
 /* Windows give text and number fields one width; an inline width still wins. */
 .qws-win input[type="text"], .qws-win input[type="number"] { width: 120px; }
@@ -1735,11 +1748,20 @@
   box-shadow: var(--qmm-shadow-raise-small);
 }
 .qws-dock.hidden { display: none; }
+.qws-dock.folded .qws-dock-btn { display: none; }
+.qws-dock-fold {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 24px; padding: 0; border: 0; border-radius: var(--qmm-radius-sm);
+  background: transparent; color: var(--qmm-text-dim); cursor: pointer;
+}
+.qws-dock-fold:hover { background: var(--qmm-sand); color: var(--qmm-text); }
+.qws-dock-fold:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
+.qws-dock-fold svg { width: 18px; height: 18px; pointer-events: none; }
 .qws-dock-status {
   flex: 0 0 auto; width: 10px; height: 10px; margin: 2px 0 4px; border-radius: 50%;
   background: var(--qmm-amber); box-shadow: 0 0 0 2px var(--qmm-paper-deep);
 }
-.qws-dock-status[data-tone="ok"] { background: var(--qmm-leaf); }
+.qws-dock-status[data-tone="ok"] { background: var(--qmm-ok); }
 .qws-dock-status[data-tone="bad"] { background: var(--qmm-clay); }
 .qws-dock-btn {
   position: relative; flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
@@ -1752,13 +1774,13 @@
 .qws-dock-btn:active { transform: translateY(2px); box-shadow: none; }
 .qws-dock-btn:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
 .qws-dock-btn.open {
-  background: var(--qmm-leaf-strong); color: var(--qmm-on-leaf); box-shadow: inset 0 -4px 0 var(--qmm-leaf-shade);
+  background: var(--qmm-sepia-strong); color: var(--qmm-on-sepia); box-shadow: inset 0 -4px 0 var(--qmm-sepia-shade);
 }
 .qws-dock-btn svg { width: 24px; height: 24px; pointer-events: none; }
 .qws-dock-badge {
   position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box;
   display: flex; align-items: center; justify-content: center; border-radius: var(--qmm-radius-pill);
-  border: 2px solid var(--qmm-paper); background: var(--qmm-clay); color: var(--qmm-on-leaf);
+  border: 2px solid var(--qmm-paper); background: var(--qmm-clay); color: var(--qmm-on-sepia);
   font: 900 11px var(--qmm-font);
 }
 .qws-dock-tip {
@@ -1845,14 +1867,14 @@
   border: 0; border-radius: var(--qmm-radius-pill);
   background: var(--qmm-sand); color: var(--qmm-text-soft); font-size: var(--qmm-fs-sm); font-weight: 800;
 }
-.qmm-pill.is-ok { color: var(--qmm-leaf-ink); background: var(--qmm-leaf-soft); }
+.qmm-pill.is-ok { color: var(--qmm-ok-ink); background: var(--qmm-ok-soft); }
 .qmm-pill.is-warn { color: var(--qmm-warn-ink); background: var(--qmm-warn-soft); }
 .qmm-pill.is-bad { color: var(--qmm-danger-ink); background: var(--qmm-danger-soft); }
 .qmm-badge {
   align-self: flex-start; padding: 2px 7px; border-radius: var(--qmm-radius-pill);
   font-size: var(--qmm-fs-xs); font-weight: 800;
 }
-.qmm-badge.is-ok { color: var(--qmm-leaf-ink); background: var(--qmm-leaf-soft); }
+.qmm-badge.is-ok { color: var(--qmm-ok-ink); background: var(--qmm-ok-soft); }
 .qmm-badge.is-warn { color: var(--qmm-warn-ink); background: var(--qmm-warn-soft); }
 .qmm-meter {
   position: relative; flex: 1 1 auto; min-width: 60px; height: 10px; overflow: hidden;
@@ -1882,7 +1904,7 @@
 }
 .qmm-vtab:hover { border-color: var(--qmm-border-hover); }
 .qmm-vtab:active { transform: translateY(1px); }
-.qmm-vtab.active { background: var(--qmm-leaf-soft); border-color: var(--qmm-accent-border); color: var(--qmm-leaf-ink); }
+.qmm-vtab.active { background: var(--qmm-sepia-soft); border-color: var(--qmm-accent-border); color: var(--qmm-sepia-ink); }
 .qmm-dot { width: 10px; height: 10px; justify-self: center; border-radius: 50%; box-shadow: 0 0 0 1px var(--qmm-sand-shade) inset; }
 .qmm-chip { display: flex; align-items: center; gap: var(--qmm-space-md); min-width: 0; }
 .qmm-chip img { width: 20px; height: 20px; object-fit: cover; border: 1px solid var(--qmm-border); border-radius: 50%; }
@@ -1911,7 +1933,7 @@
   transition: border-color 120ms ease, transform 120ms ease;
 }
 .qws-pnl-cell:hover { border-color: var(--qmm-border-hover); transform: translateY(-1px); }
-.qws-pnl-cell.is-active { border-color: var(--qmm-leaf); background: var(--qmm-leaf-soft); }
+.qws-pnl-cell.is-active { border-color: var(--qmm-sepia); background: var(--qmm-sepia-soft); }
 .qws-pnl-cell.is-skinned::after {
   content: ''; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%;
   background: var(--qmm-accent);
@@ -1931,13 +1953,13 @@
 }
 .qmm-modal__head {
   display: flex; align-items: center; gap: var(--qmm-space-lg); flex: 0 0 auto; min-height: 52px; padding: 0 12px 0 18px;
-  background: var(--qmm-leaf); color: var(--qmm-on-leaf);
+  background: var(--qmm-sepia); color: var(--qmm-on-sepia);
 }
-.qmm-modal__title { flex: 1; min-width: 0; font-size: 18px; font-weight: 900; color: var(--qmm-on-leaf); }
+.qmm-modal__title { flex: 1; min-width: 0; font-size: 18px; font-weight: 900; color: var(--qmm-on-sepia); }
 .qmm-modal__close {
   flex: 0 0 auto; width: 32px; height: 32px; cursor: pointer;
-  border: 0; border-radius: 10px; background: var(--qmm-leaf-shade);
-  color: var(--qmm-on-leaf); font-size: var(--qmm-fs-md); font-weight: 900; line-height: 1;
+  border: 0; border-radius: 10px; background: var(--qmm-sepia-shade);
+  color: var(--qmm-on-sepia); font-size: var(--qmm-fs-md); font-weight: 900; line-height: 1;
 }
 .qmm-modal__close:hover { background: var(--qmm-bark); }
 .qmm-modal__body {
@@ -1960,7 +1982,7 @@
 .qmm-menu-card__name { font-size: var(--qmm-fs-lg); font-weight: 900; color: var(--qmm-text); }
 .qmm-menu-card__detail { font-size: 11.5px; line-height: 1.45; color: var(--qmm-text-dim); }
 .qmm-menu-card:disabled .qmm-menu-card__name { color: var(--qmm-text-dim); }
-.qmm-menu-card:disabled .qmm-menu-card__detail { color: var(--qmm-leaf-ink); }
+.qmm-menu-card:disabled .qmm-menu-card__detail { color: var(--qmm-sepia-ink); }
 `;
     }
   });
@@ -1993,14 +2015,14 @@
 .qmm-btn__icon { display: inline-flex; align-items: center; justify-content: center; font-size: 1.1em; }
 .qmm-btn__icon.is-right { order: 2; }
 .qmm-btn--primary {
-  background: var(--qmm-leaf-strong); color: var(--qmm-on-leaf); box-shadow: inset 0 -3px 0 var(--qmm-leaf-shade);
+  background: var(--qmm-sepia-strong); color: var(--qmm-on-sepia); box-shadow: inset 0 -3px 0 var(--qmm-sepia-shade);
 }
-.qmm-btn--primary:hover { background: var(--qmm-leaf-shade); color: var(--qmm-on-leaf); }
-.qmm-btn--danger { background: var(--qmm-clay); color: var(--qmm-on-leaf); box-shadow: inset 0 -3px 0 var(--qmm-danger-ink); }
-.qmm-btn--danger:hover { background: var(--qmm-danger-ink); color: var(--qmm-on-leaf); }
+.qmm-btn--primary:hover { background: var(--qmm-sepia-shade); color: var(--qmm-on-sepia); }
+.qmm-btn--danger { background: var(--qmm-clay); color: var(--qmm-on-sepia); box-shadow: inset 0 -3px 0 var(--qmm-danger-ink); }
+.qmm-btn--danger:hover { background: var(--qmm-danger-ink); color: var(--qmm-on-sepia); }
 .qmm-btn--ghost { background: transparent; box-shadow: none; }
 .qmm-btn--ghost:hover { background: var(--qmm-sand); }
-.qmm-btn.active { background: var(--qmm-leaf-soft); color: var(--qmm-leaf-ink); box-shadow: inset 0 0 0 2px var(--qmm-accent-border); }
+.qmm-btn.active { background: var(--qmm-sepia-soft); color: var(--qmm-sepia-ink); box-shadow: inset 0 0 0 2px var(--qmm-accent-border); }
 
 .qmm-input, .qws-pnl-input {
   padding: 8px 10px; border: 2px solid var(--qmm-field-border); border-radius: var(--qmm-radius-md);
@@ -2010,7 +2032,7 @@
 .qmm-input { min-width: 90px; }
 .qws-pnl-input { font-size: var(--qmm-fs-md); }
 .qmm-input::placeholder, .qws-pnl-input::placeholder { color: var(--qmm-text-dim); font-weight: 500; }
-.qmm-input:focus, .qws-pnl-input:focus { border-color: var(--qmm-leaf); box-shadow: 0 0 0 3px var(--qmm-leaf-soft); }
+.qmm-input:focus, .qws-pnl-input:focus { border-color: var(--qmm-sepia); box-shadow: 0 0 0 3px var(--qmm-sepia-soft); }
 .qmm-input option, .qws-pnl-input option { background: var(--qmm-card); color: var(--qmm-text); }
 .qmm-input--sm { min-width: 0; padding: 6px 9px; font-size: var(--qmm-fs-sm); }
 .qmm-select { cursor: pointer; }
@@ -2027,7 +2049,7 @@
 .qmm-step:hover { background: var(--qmm-border-hover); color: var(--qmm-text); }
 .qmm-step:active { transform: translateY(1px); box-shadow: none; }
 
-.qmm-radio { transform: scale(1.15); accent-color: var(--qmm-leaf); }
+.qmm-radio { transform: scale(1.15); accent-color: var(--qmm-sepia); }
 
 .qmm-switch {
   -webkit-appearance: none; appearance: none; position: relative; flex-shrink: 0;
@@ -2039,7 +2061,7 @@
   content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%;
   background: var(--qmm-card); box-shadow: 0 1px 2px var(--qmm-shade); transition: transform 150ms ease;
 }
-.qmm-switch:checked { background: var(--qmm-leaf); box-shadow: inset 0 -2px 0 var(--qmm-leaf-shade); }
+.qmm-switch:checked { background: var(--qmm-sepia); box-shadow: inset 0 -2px 0 var(--qmm-sepia-shade); }
 .qmm-switch:checked::before { transform: translateX(20px); }
 .qmm-switch:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
 .qmm-switch:disabled { opacity: .45; cursor: not-allowed; }
@@ -2052,7 +2074,7 @@
 .qmm-chip-toggle:hover { border-color: var(--qmm-accent-border); }
 .qmm-chip-toggle input { display: none; }
 .qmm-chip-toggle__face { display: flex; align-items: center; gap: var(--qmm-space-md); padding: 6px 12px; border-radius: var(--qmm-radius-pill); }
-.qmm-chip-toggle input:checked + .qmm-chip-toggle__face { color: var(--qmm-leaf-ink); background: var(--qmm-leaf-soft); }
+.qmm-chip-toggle input:checked + .qmm-chip-toggle__face { color: var(--qmm-sepia-ink); background: var(--qmm-sepia-soft); }
 .qmm-chip-toggle__icon { font-size: 14px; }
 .qmm-chip-toggle__label { font-weight: 800; }
 .qmm-chip-toggle__desc { font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
@@ -2074,15 +2096,15 @@
   height: 10px; border-radius: var(--qmm-radius-pill); background: var(--qmm-sand-edge);
 }
 .qmm-range::-moz-range-progress, .qws-pnl-range::-moz-range-progress {
-  height: 10px; border-radius: var(--qmm-radius-pill); background: var(--qmm-leaf);
+  height: 10px; border-radius: var(--qmm-radius-pill); background: var(--qmm-sepia);
 }
 .qmm-range::-webkit-slider-thumb, .qws-pnl-range::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none; width: 22px; height: 22px; margin-top: -6px; box-sizing: border-box;
-  border: 3px solid var(--qmm-leaf); border-radius: 50%; background: var(--qmm-card); cursor: pointer;
+  border: 3px solid var(--qmm-sepia); border-radius: 50%; background: var(--qmm-card); cursor: pointer;
   transition: transform 120ms ease;
 }
 .qmm-range::-moz-range-thumb, .qws-pnl-range::-moz-range-thumb {
-  width: 16px; height: 16px; border: 3px solid var(--qmm-leaf); border-radius: 50%; background: var(--qmm-card); cursor: pointer;
+  width: 16px; height: 16px; border: 3px solid var(--qmm-sepia); border-radius: 50%; background: var(--qmm-card); cursor: pointer;
 }
 .qmm-range:hover::-webkit-slider-thumb, .qws-pnl-range:hover::-webkit-slider-thumb { transform: scale(1.1); }
 .qmm-range:focus-visible::-webkit-slider-thumb, .qws-pnl-range:focus-visible::-webkit-slider-thumb {
@@ -2097,7 +2119,7 @@
 }
 .qmm-range-dual-fill {
   position: absolute; top: 50%; transform: translateY(-50%); height: 10px;
-  border-radius: var(--qmm-radius-pill); background: var(--qmm-leaf); transition: left .12s ease, right .12s ease;
+  border-radius: var(--qmm-radius-pill); background: var(--qmm-sepia); transition: left .12s ease, right .12s ease;
 }
 .qmm-range-dual-input {
   position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
@@ -2107,11 +2129,11 @@
 .qmm-range-dual-input::-moz-range-track { background: none; }
 .qmm-range-dual-input::-webkit-slider-thumb {
   pointer-events: auto; width: 22px; height: 22px; margin-top: -6px; box-sizing: border-box;
-  background: var(--qmm-card); border: 3px solid var(--qmm-leaf); border-radius: 50%;
+  background: var(--qmm-card); border: 3px solid var(--qmm-sepia); border-radius: 50%;
 }
 .qmm-range-dual-input::-moz-range-thumb {
   pointer-events: auto; width: 16px; height: 16px;
-  background: var(--qmm-card); border: 3px solid var(--qmm-leaf); border-radius: 50%;
+  background: var(--qmm-card); border: 3px solid var(--qmm-sepia); border-radius: 50%;
 }
 .qmm-range-dual-input--min { z-index: 2; }
 .qmm-range-dual-input--max { z-index: 3; }
@@ -2155,7 +2177,7 @@
 }
 .qmm-hotkey:hover { border-color: var(--qmm-border-hover); }
 .qmm-hotkey:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
-.qmm-hotkey.is-assigned { color: var(--qmm-leaf-ink); border-color: var(--qmm-accent-border); background: var(--qmm-leaf-soft); }
+.qmm-hotkey.is-assigned { color: var(--qmm-sepia-ink); border-color: var(--qmm-accent-border); background: var(--qmm-sepia-soft); }
 .qmm-hotkey.is-empty { color: var(--qmm-text-dim); font-weight: 600; }
 .qmm-hotkey.is-recording {
   color: var(--qmm-warn-ink); border-color: var(--qmm-warn-border); background: var(--qmm-warn-soft);
@@ -14909,6 +14931,84 @@
     }
   });
 
+  // src/platform/modVersion.ts
+  function getLocalVersion() {
+    if (true) {
+      return "3.2.233";
+    }
+    if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
+      return GM_info.script.version;
+    }
+    return void 0;
+  }
+  async function fetchRemoteVersion() {
+    try {
+      const meta = extractUserscriptMetadata(await fetchScriptSource());
+      if (!meta) throw new Error("Metadata block not found in remote script");
+      return {
+        version: meta.get("version")?.[0],
+        download: meta.get("downloadurl")?.[0] ?? meta.get("updateurl")?.[0]
+      };
+    } catch (error) {
+      console.error("Unable to retrieve remote version:", error);
+      return null;
+    }
+  }
+  function versionStatusOf(local, remote) {
+    const latest = remote?.version?.trim() || void 0;
+    const behind = !!latest && latest !== local;
+    return { local, remote: latest, download: behind ? remote?.download ?? null : null, behind };
+  }
+  function checkModVersion() {
+    versionCheck ?? (versionCheck = fetchRemoteVersion().then((remote) => versionStatusOf(getLocalVersion(), remote)));
+    return versionCheck;
+  }
+  async function fetchScriptSource() {
+    const commitSha = await fetchLatestCommitSha();
+    const scriptUrl = commitSha ? `${RAW_BASE_URL}/${commitSha}/dist/${SCRIPT_FILE_PATH}` : `${RAW_BASE_URL}/refs/heads/${REPO_BRANCH}/dist/${SCRIPT_FILE_PATH}?t=${Date.now()}`;
+    return getText(scriptUrl, { noCache: true });
+  }
+  async function fetchLatestCommitSha() {
+    try {
+      const data = await getJSON(COMMITS_API_URL, {
+        noCache: true,
+        headers: { Accept: "application/vnd.github+json" }
+      });
+      const sha = typeof data?.sha === "string" ? data.sha.trim() : "";
+      if (sha) return sha;
+    } catch (error) {
+      console.warn("[MagicGarden] Failed to resolve latest commit SHA:", error);
+    }
+    return null;
+  }
+  function extractUserscriptMetadata(source) {
+    const header = source.match(/\/\/ ==UserScript==([\s\S]*?)\/\/ ==\/UserScript==/);
+    if (!header) return null;
+    const meta = /* @__PURE__ */ new Map();
+    for (const [, rawKey, rawValue] of header[1].matchAll(/^\/\/\s*@([^\s]+)\s+(.+)$/gm)) {
+      const key2 = rawKey.trim().toLowerCase();
+      if (!key2) continue;
+      const values = meta.get(key2) ?? [];
+      values.push(rawValue.trim());
+      meta.set(key2, values);
+    }
+    return meta;
+  }
+  var REPO_OWNER, REPO_NAME, REPO_BRANCH, SCRIPT_FILE_PATH, RAW_BASE_URL, COMMITS_API_URL, versionCheck;
+  var init_modVersion = __esm({
+    "src/platform/modVersion.ts"() {
+      "use strict";
+      init_http();
+      REPO_OWNER = "Ariedam64";
+      REPO_NAME = "MG-AriesMod";
+      REPO_BRANCH = "main";
+      SCRIPT_FILE_PATH = "quinoa-ws.min.user.js";
+      RAW_BASE_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}`;
+      COMMITS_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/commits/${REPO_BRANCH}`;
+      versionCheck = null;
+    }
+  });
+
   // src/ui/kit/menuIcons.ts
   function menuIcon(id) {
     const svg2 = document.createElementNS(SVG_NS, "svg");
@@ -14968,13 +15068,18 @@
   });
 
   // src/ui/kit/dock.ts
-  function createDock(onSelect) {
+  function createDock(onSelect, onFold) {
     ensureKitStyles();
     const root4 = h("nav", "qws-dock");
     root4.setAttribute("aria-label", "Aries Mod menus");
     const status2 = h("span", "qws-dock-status");
     status2.dataset.tone = "warn";
     root4.appendChild(status2);
+    const fold = h("button", "qws-dock-fold");
+    fold.type = "button";
+    const foldIcon = menuIcon("");
+    fold.appendChild(foldIcon);
+    root4.appendChild(fold);
     const tip = h("div", "qws-dock-tip");
     const buttons = /* @__PURE__ */ new Map();
     const pendingBadges = /* @__PURE__ */ new Map();
@@ -15012,11 +15117,24 @@
       btn.addEventListener("focus", () => showTip(btn, label2));
       btn.addEventListener("mouseleave", hideTip);
       btn.addEventListener("blur", hideTip);
-      root4.appendChild(btn);
+      root4.insertBefore(btn, fold);
       buttons.set(id, btn);
       if (pendingBadges.has(id)) setBadge(id, pendingBadges.get(id) ?? 0);
     };
     onMenuBadge(setBadge);
+    const setFolded = (folded) => {
+      root4.classList.toggle("folded", folded);
+      fold.setAttribute("aria-label", folded ? "Show the menus" : "Fold the menus");
+      fold.setAttribute("aria-expanded", folded ? "false" : "true");
+      foldIcon.innerHTML = folded ? UNFOLD_ICON : FOLD_ICON;
+      if (folded) hideTip();
+    };
+    setFolded(false);
+    fold.addEventListener("click", () => {
+      const folded = !root4.classList.contains("folded");
+      setFolded(folded);
+      onFold?.(folded);
+    });
     return {
       root: root4,
       add,
@@ -15038,10 +15156,14 @@
       },
       isHidden() {
         return root4.classList.contains("hidden");
+      },
+      setFolded,
+      setFoldHint(text2) {
+        fold.setAttribute("title", text2);
       }
     };
   }
-  var TIP_GAP_PX;
+  var TIP_GAP_PX, FOLD_ICON, UNFOLD_ICON;
   var init_dock = __esm({
     "src/ui/kit/dock.ts"() {
       "use strict";
@@ -15050,6 +15172,8 @@
       init_menuIcons();
       init_menuBadges();
       TIP_GAP_PX = 10;
+      FOLD_ICON = '<path d="M15 6l-6 6 6 6"/>';
+      UNFOLD_ICON = '<path d="M9 6l6 6-6 6"/>';
     }
   });
 
@@ -15132,154 +15256,7 @@
     }
   });
 
-  // src/platform/modVersion.ts
-  function getLocalVersion() {
-    if (true) {
-      return "3.2.233";
-    }
-    if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
-      return GM_info.script.version;
-    }
-    return void 0;
-  }
-  async function fetchRemoteVersion() {
-    try {
-      const meta = extractUserscriptMetadata(await fetchScriptSource());
-      if (!meta) throw new Error("Metadata block not found in remote script");
-      return {
-        version: meta.get("version")?.[0],
-        download: meta.get("downloadurl")?.[0] ?? meta.get("updateurl")?.[0]
-      };
-    } catch (error) {
-      console.error("Unable to retrieve remote version:", error);
-      return null;
-    }
-  }
-  async function fetchScriptSource() {
-    const commitSha = await fetchLatestCommitSha();
-    const scriptUrl = commitSha ? `${RAW_BASE_URL}/${commitSha}/dist/${SCRIPT_FILE_PATH}` : `${RAW_BASE_URL}/refs/heads/${REPO_BRANCH}/dist/${SCRIPT_FILE_PATH}?t=${Date.now()}`;
-    return getText(scriptUrl, { noCache: true });
-  }
-  async function fetchLatestCommitSha() {
-    try {
-      const data = await getJSON(COMMITS_API_URL, {
-        noCache: true,
-        headers: { Accept: "application/vnd.github+json" }
-      });
-      const sha = typeof data?.sha === "string" ? data.sha.trim() : "";
-      if (sha) return sha;
-    } catch (error) {
-      console.warn("[MagicGarden] Failed to resolve latest commit SHA:", error);
-    }
-    return null;
-  }
-  function extractUserscriptMetadata(source) {
-    const header = source.match(/\/\/ ==UserScript==([\s\S]*?)\/\/ ==\/UserScript==/);
-    if (!header) return null;
-    const meta = /* @__PURE__ */ new Map();
-    for (const [, rawKey, rawValue] of header[1].matchAll(/^\/\/\s*@([^\s]+)\s+(.+)$/gm)) {
-      const key2 = rawKey.trim().toLowerCase();
-      if (!key2) continue;
-      const values = meta.get(key2) ?? [];
-      values.push(rawValue.trim());
-      meta.set(key2, values);
-    }
-    return meta;
-  }
-  var REPO_OWNER, REPO_NAME, REPO_BRANCH, SCRIPT_FILE_PATH, RAW_BASE_URL, COMMITS_API_URL;
-  var init_modVersion = __esm({
-    "src/platform/modVersion.ts"() {
-      "use strict";
-      init_http();
-      REPO_OWNER = "Ariedam64";
-      REPO_NAME = "MG-AriesMod";
-      REPO_BRANCH = "main";
-      SCRIPT_FILE_PATH = "quinoa-ws.min.user.js";
-      RAW_BASE_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}`;
-      COMMITS_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/commits/${REPO_BRANCH}`;
-    }
-  });
-
-  // src/ui/kit/badges.ts
-  function pill(text2, tone) {
-    const el = h("span", "qmm-pill", text2);
-    setTone(el, tone);
-    return el;
-  }
-  function setTone(el, tone) {
-    el.classList.remove("is-ok", "is-warn", "is-bad");
-    if (tone) el.classList.add(`is-${tone}`);
-  }
-  function badge(text2, tone) {
-    return h("span", `qmm-badge is-${tone}`, text2);
-  }
-  function meter() {
-    const root4 = h("div", "qmm-meter");
-    const fill = h("div", "qmm-meter__fill");
-    root4.appendChild(fill);
-    return {
-      root: root4,
-      set(ratio, tone = "accent") {
-        fill.style.width = `${clampFinite(ratio, 0, 1, 0) * 100}%`;
-        fill.classList.toggle("is-warn", tone === "warn");
-      }
-    };
-  }
-  var init_badges = __esm({
-    "src/ui/kit/badges.ts"() {
-      "use strict";
-      init_math();
-      init_dom2();
-    }
-  });
-
   // src/ui/hudStatus.ts
-  function openDownloadLink(url) {
-    const gmObject = globalThis.GM;
-    const gmOpen = typeof GM_openInTab === "function" ? GM_openInTab : typeof gmObject?.openInTab === "function" ? gmObject.openInTab.bind(gmObject) : null;
-    if (isDiscordSurface() && gmOpen) {
-      try {
-        gmOpen(url, { active: true, setParent: true });
-        return;
-      } catch (error) {
-        console.warn("[MagicGarden] GM_openInTab failed, falling back to window.open", error);
-      }
-    }
-    window.open(url, "_blank", "noopener,noreferrer");
-  }
-  function initVersionBadge(badge2) {
-    const show = (text2, tone, downloadUrl) => {
-      badge2.textContent = text2;
-      setTone(badge2, tone);
-      badge2.classList.toggle("is-link", !!downloadUrl);
-      if (downloadUrl) {
-        badge2.dataset.download = downloadUrl;
-        badge2.title = "Download the new version";
-      } else {
-        delete badge2.dataset.download;
-        badge2.removeAttribute("title");
-      }
-    };
-    show("checking\u2026", "warn");
-    badge2.addEventListener("click", () => {
-      const url = badge2.dataset.download;
-      if (url) openDownloadLink(url);
-    });
-    void (async () => {
-      const localVersion = getLocalVersion();
-      try {
-        const remoteData = await fetchRemoteVersion();
-        const remoteVersion = remoteData?.version?.trim();
-        if (!remoteVersion) show(localVersion || "Unknown", "warn");
-        else if (!localVersion) show(remoteVersion, "warn", remoteData?.download);
-        else if (localVersion === remoteVersion) show(localVersion, "ok");
-        else show(`${localVersion} \u2192 ${remoteVersion}`, "warn", remoteData?.download);
-      } catch (error) {
-        console.error("[MagicGarden] Failed to check version:", error);
-        show(localVersion || "Unknown", "warn");
-      }
-    })();
-  }
   function getWSStatus() {
     if (sockets.some((ws) => ws.readyState === NativeWS.OPEN)) return { level: "ok", message: "ws open" };
     if (window.__QWS_workerFound || workerFound) return { level: "ok", message: "ws via worker" };
@@ -15326,9 +15303,6 @@
       init_sockets();
       init_jotai();
       init_iconCache();
-      init_modVersion();
-      init_environment();
-      init_badges();
       init_dom2();
     }
   });
@@ -15355,7 +15329,10 @@
       document.addEventListener("DOMContentLoaded", () => mountHUD(opts), { once: true });
       return;
     }
-    const dock = createDock((id) => toggleWindow(id));
+    const dock = createDock(
+      (id) => toggleWindow(id),
+      (folded) => writeAriesPath(HUD_FOLDED_PATH, folded)
+    );
     (document.documentElement || document.body).appendChild(dock.root);
     const setHUDHidden = (hidden) => {
       dock.setHidden(hidden);
@@ -15364,6 +15341,7 @@
     const toggleHUDHidden = () => setHUDHidden(!dock.isHidden());
     const isOn = (v) => v === true || v === "1" || v === 1;
     dock.setHidden(isOn(readAriesPath(HUD_HIDDEN_PATH)));
+    dock.setFolded(isOn(readAriesPath(HUD_FOLDED_PATH)));
     let insertDown = false;
     let insertUsedAsModifier = false;
     const KEY_TOGGLE = "gui.toggle";
@@ -15430,7 +15408,7 @@
       const keys = [];
       if (toggleHotkey) keys.push(getKeybindLabel(KEY_TOGGLE));
       keys.push("Insert");
-      dock.root.title = `Hide the menus with ${keys.join(" / ")}`;
+      dock.setFoldHint(`Fold the menus (${keys.join(" / ")} hides them)`);
     };
     updateHideButtonTitle();
     onKeybindChange(KEY_TOGGLE, (hk) => {
@@ -15573,8 +15551,9 @@
     void ensureStore().catch(() => {
     });
     startStatusLoop(dock);
+    void checkModVersion().then((status2) => setMenuBadge("settings", status2.behind ? 1 : 0));
   }
-  var HUD_HIDDEN_PATH, HUD_WIN_PATH, isEditing;
+  var HUD_HIDDEN_PATH, HUD_FOLDED_PATH, HUD_WIN_PATH, isEditing;
   var init_hud = __esm({
     "src/ui/hud.ts"() {
       "use strict";
@@ -15582,14 +15561,17 @@
       init_keybinds();
       init_keyboard();
       init_hotkey();
+      init_modVersion();
       init_storage();
       init_button();
       init_dock();
       init_dom2();
+      init_menuBadges();
       init_theme();
       init_hudPlacement();
       init_hudStatus();
       HUD_HIDDEN_PATH = "hud.hidden";
+      HUD_FOLDED_PATH = "hud.dockFolded";
       HUD_WIN_PATH = (id) => `hud.windows.${id}`;
       isEditing = (el) => {
         const t = el;
@@ -24804,9 +24786,9 @@
       padding: "6px 10px",
       borderRadius: "8px",
       border: "none",
-      backgroundColor: color.leafStrong,
-      boxShadow: `0 3px 0 ${color.leafShade}`,
-      color: color.onLeaf,
+      backgroundColor: color.sepiaStrong,
+      boxShadow: `0 3px 0 ${color.sepiaShade}`,
+      color: color.onSepia,
       fontSize: "13px",
       fontWeight: "800",
       cursor: "pointer",
@@ -25032,6 +25014,39 @@
       teamIds = [];
       installed3 = false;
       teamActionId = (teamId2) => `pets.team.${teamId2}`;
+    }
+  });
+
+  // src/ui/kit/badges.ts
+  function pill(text2, tone) {
+    const el = h("span", "qmm-pill", text2);
+    setTone(el, tone);
+    return el;
+  }
+  function setTone(el, tone) {
+    el.classList.remove("is-ok", "is-warn", "is-bad");
+    if (tone) el.classList.add(`is-${tone}`);
+  }
+  function badge(text2, tone) {
+    return h("span", `qmm-badge is-${tone}`, text2);
+  }
+  function meter() {
+    const root4 = h("div", "qmm-meter");
+    const fill = h("div", "qmm-meter__fill");
+    root4.appendChild(fill);
+    return {
+      root: root4,
+      set(ratio, tone = "accent") {
+        fill.style.width = `${clampFinite(ratio, 0, 1, 0) * 100}%`;
+        fill.classList.toggle("is-warn", tone === "warn");
+      }
+    };
+  }
+  var init_badges = __esm({
+    "src/ui/kit/badges.ts"() {
+      "use strict";
+      init_math();
+      init_dom2();
     }
   });
 
@@ -28035,7 +28050,7 @@ next: ${next}`;
 .dd-log{position:relative;border:1px solid var(--qmm-border-hover);border-radius:16px;background:var(--qmm-sunken);padding:10px;max-height:48vh;overflow:auto;}
 .dd-log{font-family:var(--qmm-font-mono);font-size:12px;line-height:1.4;user-select:text;}
 .dd-log .ws-row .arrow.is-in{color:var(--qmm-accent);}
-.dd-log .ws-row .arrow.is-out{color:var(--qmm-rainbow);}
+.dd-log .ws-row .arrow.is-out{color:var(--qmm-rainbow-ink);}
 .dd-log__empty{padding:28px 12px;text-align:center;font-size:13px;opacity:.6;}
 .dd-log .ws-row{position:relative;display:grid;grid-template-columns:96px 20px minmax(0,1fr);gap:10px;padding:8px 12px;border-radius:12px;border:1px solid transparent;transition:background .15s ease,border-color .15s ease;align-items:start;margin:2px 0;}
 .dd-log .ws-row .ts{opacity:.76;font-size:12px;}
@@ -29030,7 +29045,7 @@ next: ${next}`;
       init_menuIcons2();
       init_settingsCard();
       init_seedOptions();
-      OVERRIDE_ON = color.leaf;
+      OVERRIDE_ON = color.ok;
       OVERRIDE_OFF = color.danger;
     }
   });
@@ -29885,7 +29900,7 @@ next: ${next}`;
       marginBottom: "12px",
       fontSize: "20px",
       fontWeight: "700",
-      color: color.gold
+      color: color.goldInk
     });
     const icon2 = h("img");
     icon2.src = coin2.img64;
@@ -30199,8 +30214,8 @@ next: ${next}`;
       line.append(
         speciesCell(row5),
         numberCell(counts2.normal, color.text),
-        numberCell(counts2.gold, color.gold),
-        numberCell(counts2.rainbow, color.rainbow),
+        numberCell(counts2.gold, color.goldInk),
+        numberCell(counts2.rainbow, color.rainbowInk),
         numberCell(totalOf(counts2), color.accent, true)
       );
       wrap.appendChild(line);
@@ -30216,8 +30231,8 @@ next: ${next}`;
       totals.append(
         label2,
         numberCell(totalNormal, color.text, true),
-        numberCell(totalGold, color.gold, true),
-        numberCell(totalRainbow, color.rainbow, true),
+        numberCell(totalGold, color.goldInk, true),
+        numberCell(totalRainbow, color.rainbowInk, true),
         numberCell(totalNormal + totalGold + totalRainbow, color.accent, true)
       );
       wrap.appendChild(totals);
@@ -30969,7 +30984,7 @@ next: ${next}`;
       fontSize: "11px",
       fontWeight: "700",
       lineHeight: "1.5",
-      color: color.onLeaf,
+      color: color.onSepia,
       textShadow: `0 1px 2px ${color.shade}`,
       background: colors.bg,
       boxShadow: `0 0 0 1px ${color.shade} inset`,
@@ -31668,7 +31683,7 @@ next: ${next}`;
   // src/features/pets/teamStatsView.ts
   function fillRatioColor(ratio) {
     if (ratio >= 0.99) return ACCENT;
-    if (ratio >= 0.9) return color.leaf;
+    if (ratio >= 0.9) return color.ok;
     if (ratio >= 0.75) return color.warn;
     return color.danger;
   }
@@ -31979,7 +31994,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_theme();
       init_teamStatsText();
       MUTED = color.textSoft;
-      ACCENT = color.leafStrong;
+      ACCENT = color.okInk;
       DIM = color.textDim;
     }
   });
@@ -32468,7 +32483,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_theme();
       init_toggles();
       init_petIcon();
-      ACTIVE_DOT = color.leaf;
+      ACTIVE_DOT = color.ok;
       INACTIVE_DOT = color.sandShade;
       AUTOSCROLL_EDGE_PX = 28;
       AUTOSCROLL_STEP_PX = 18;
@@ -33512,7 +33527,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function renderTeamCard(team, petsById) {
     const isAfk = team.mode === "afk";
-    const glow = isAfk ? color.warn : color.leaf;
+    const glow = isAfk ? color.warn : color.sepia;
     const title = isAfk ? `${abilityLabel(team)} (AFK)` : abilityLabel(team);
     const teamCard = card(title, {
       tone: isAfk ? "accent" : "default",
@@ -36229,6 +36244,46 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/features/settings/versionPill.ts
+  function openDownloadLink(url) {
+    const gmObject = globalThis.GM;
+    const gmOpen = typeof GM_openInTab === "function" ? GM_openInTab : typeof gmObject?.openInTab === "function" ? gmObject.openInTab.bind(gmObject) : null;
+    if (isDiscordSurface() && gmOpen) {
+      try {
+        gmOpen(url, { active: true, setParent: true });
+        return;
+      } catch (error) {
+        console.warn("[MagicGarden] GM_openInTab failed, falling back to window.open", error);
+      }
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+  function versionPill() {
+    const badge2 = pill("checking\u2026", "warn");
+    badge2.addEventListener("click", () => {
+      const url = badge2.dataset.download;
+      if (url) openDownloadLink(url);
+    });
+    void checkModVersion().then(({ local, remote, download, behind }) => {
+      badge2.textContent = behind && local ? `${local} \u2192 ${remote}` : local || remote || "Unknown";
+      setTone(badge2, remote && !behind ? "ok" : "warn");
+      badge2.classList.toggle("is-link", !!download);
+      if (download) {
+        badge2.dataset.download = download;
+        badge2.title = "Download the new version";
+      }
+    });
+    return badge2;
+  }
+  var init_versionPill = __esm({
+    "src/features/settings/versionPill.ts"() {
+      "use strict";
+      init_environment();
+      init_modVersion();
+      init_badges();
+    }
+  });
+
   // src/features/settings/infosTab.ts
   function describeSurface(env) {
     if (!env) return "n/a";
@@ -36282,12 +36337,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     ensureSettingsStyles();
     const nav = typeof navigator !== "undefined" ? navigator : null;
     const environment = typeof window !== "undefined" ? detectEnvironment() : null;
-    const version = pill("", "warn");
-    initVersionBadge(version);
     const hero = h("div", "qws-set-hero");
     hero.append(
       h("div", "qws-set-hero__title", "Arie's Mod"),
-      version,
+      versionPill(),
       h("div", "qws-set-hero__sub", "Browser userscript for MagicGarden")
     );
     const runtimeRows = [
@@ -36320,12 +36373,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_gameVersion();
       init_environment();
-      init_badges();
       init_button();
       init_dom2();
-      init_hudStatus();
       init_openLink();
       init_styles4();
+      init_versionPill();
       KOFI_URL = "https://ko-fi.com/E1E11TWTM1";
       KOFI_TITLE = "Buy Me a Coffee at ko-fi.com";
     }
@@ -36397,7 +36449,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     Object.assign(name.style, { fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
     left.append(petAvatar(pet), name);
     const hungerValue = h("div", void 0, Number.isFinite(hunger) ? `${hunger}%` : "-");
-    Object.assign(hungerValue.style, { fontWeight: "700", color: color.gold });
+    Object.assign(hungerValue.style, { fontWeight: "700", color: color.goldInk });
     row5.append(left, hungerValue);
     return row5;
   }
@@ -38303,7 +38355,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   display: grid; place-items: center; flex-shrink: 0;
   width: 38px; height: 38px; font-size: 22px; line-height: 1;
 }
-.mgt-tile img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: screen; }
+.mgt-tile img { width: 100%; height: 100%; object-fit: contain; }
 .mgt-tile--lg { width: 54px; height: 54px; font-size: 32px; }
 
 /* \u2500\u2500 tags \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
@@ -39580,7 +39632,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const card4 = plainCard();
     Object.assign(card4.style, { flex: "1", gap: "4px", padding: "11px 14px" });
     const value = h("div", void 0, "\u2026");
-    Object.assign(value.style, { fontSize: "15px", fontWeight: "700", color: color.gold });
+    Object.assign(value.style, { fontSize: "15px", fontWeight: "700", color: color.goldInk });
     card4.append(sectionLabel(label2), value);
     return { card: card4, value };
   }
@@ -49164,7 +49216,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 }
 #${OVERLAY_ID2} .mgcl-eyebrow {
   margin: 0 0 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--qmm-leaf-ink);
+  color: var(--qmm-sepia-ink);
 }
 #${OVERLAY_ID2} .mgcl-title { margin: 0 0 4px; font-size: 18px; font-weight: 900; }
 #${OVERLAY_ID2} .mgcl-version { margin: 0 0 16px; font-size: 11.5px; color: var(--qmm-text-soft); }

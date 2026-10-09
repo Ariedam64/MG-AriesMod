@@ -146,7 +146,7 @@ function valueCard(label: string): { card: HTMLElement; value: HTMLElement } {
   const card = plainCard();
   Object.assign(card.style, { flex: "1", gap: "4px", padding: "11px 14px" });
   const value = h("div", undefined, "…");
-  Object.assign(value.style, { fontSize: "15px", fontWeight: "700", color: color.gold });
+  Object.assign(value.style, { fontSize: "15px", fontWeight: "700", color: color.goldInk });
   card.append(sectionLabel(label), value);
   return { card, value };
 }

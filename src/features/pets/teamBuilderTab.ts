@@ -160,7 +160,7 @@ function buildSaveName(team: SuggestedTeam, isAfk: boolean): string {
 
 function renderTeamCard(team: SuggestedTeam, petsById: Map<string, InventoryPet>): HTMLElement {
   const isAfk = team.mode === "afk";
-  const glow = isAfk ? color.warn : color.leaf;
+  const glow = isAfk ? color.warn : color.sepia;
   const title = isAfk ? `${abilityLabel(team)} (AFK)` : abilityLabel(team);
   const teamCard = card(title, {
     tone: isAfk ? "accent" : "default",

@@ -75,7 +75,7 @@ export function abilityPill(abilityId: string, label: string): HTMLElement {
     fontSize: "11px",
     fontWeight: "700",
     lineHeight: "1.5",
-    color: color.onLeaf,
+    color: color.onSepia,
     textShadow: `0 1px 2px ${color.shade}`,
     background: colors.bg,
     boxShadow: `0 0 0 1px ${color.shade} inset`,

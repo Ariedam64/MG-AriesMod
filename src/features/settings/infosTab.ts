@@ -2,12 +2,11 @@
 
 import { gameVersion } from "../../game/gameVersion";
 import { detectEnvironment, type EnvironmentInfo } from "../../platform/environment";
-import { pill } from "../../ui/kit/badges";
 import { button } from "../../ui/kit/button";
 import { h } from "../../ui/kit/dom";
-import { initVersionBadge } from "../../ui/hudStatus";
 import { openLink } from "../tools/openLink";
 import { ensureSettingsStyles } from "./styles";
+import { versionPill } from "./versionPill";
 
 const KOFI_URL = "https://ko-fi.com/E1E11TWTM1";
 const KOFI_TITLE = "Buy Me a Coffee at ko-fi.com";
@@ -75,13 +74,10 @@ export function renderInfosTab(view: HTMLElement): void {
   const nav = typeof navigator !== "undefined" ? navigator : null;
   const environment = typeof window !== "undefined" ? detectEnvironment() : null;
 
-  // The version against the latest release; it links to the download when behind.
-  const version = pill("", "warn");
-  initVersionBadge(version);
   const hero = h("div", "qws-set-hero");
   hero.append(
     h("div", "qws-set-hero__title", "Arie's Mod"),
-    version,
+    versionPill(),
     h("div", "qws-set-hero__sub", "Browser userscript for MagicGarden"),
   );
 

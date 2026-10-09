@@ -9,7 +9,7 @@ import type { InventoryPet } from "./inventoryPets";
 import { petIcon } from "./petIcon";
 import type { PetTeam } from "./teamStore";
 
-const ACTIVE_DOT = color.leaf;
+const ACTIVE_DOT = color.ok;
 const INACTIVE_DOT = color.sandShade;
 /** Within this distance of the list's edge, a drag scrolls the list. */
 const AUTOSCROLL_EDGE_PX = 28;

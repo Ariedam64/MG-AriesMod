@@ -25,6 +25,7 @@ const ALLOWED = new Set([
   "src/features/notifier/overlay.ts",
 ]);
 const COLOR = /#[0-9a-fA-F]{3,8}\b|rgba?\(\s*\d/g;
+const DARK_TRICKS = /mix-blend-mode:\s*screen/g;
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -38,5 +39,8 @@ for (const file of walk("src")) {
   if (ALLOWED.has(rel)) continue;
   const hits = readFileSync(file, "utf8").match(COLOR) ?? [];
   check(`${rel} uses theme colours only`, hits.length === 0, `${hits.length} literal(s): ${hits.slice(0, 5).join(" ")}`);
+  // Screen blending lightens artwork against a dark panel; on paper it turns it white.
+  const tricks = readFileSync(file, "utf8").match(DARK_TRICKS) ?? [];
+  check(`${rel} has no dark-theme blend tricks`, tricks.length === 0, tricks.join(" "));
 }
 done();

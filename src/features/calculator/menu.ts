@@ -66,7 +66,7 @@ function priceDisplay(): { root: HTMLElement; value: HTMLElement } {
     marginBottom: "12px",
     fontSize: "20px",
     fontWeight: "700",
-    color: color.gold,
+    color: color.goldInk,
   });
   const icon = h("img");
   icon.src = coin.img64;

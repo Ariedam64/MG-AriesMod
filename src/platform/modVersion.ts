@@ -31,7 +31,7 @@ export function getLocalVersion(): string | undefined {
 }
 
 /** Version and download link of the latest build on the main branch, or null when unreachable. */
-export async function fetchRemoteVersion(): Promise<RemoteVersion | null> {
+async function fetchRemoteVersion(): Promise<RemoteVersion | null> {
   try {
     const meta = extractUserscriptMetadata(await fetchScriptSource());
     if (!meta) throw new Error("Metadata block not found in remote script");
@@ -43,6 +43,29 @@ export async function fetchRemoteVersion(): Promise<RemoteVersion | null> {
     console.error("Unable to retrieve remote version:", error);
     return null;
   }
+}
+
+export type VersionStatus = {
+  local?: string;
+  /** The latest release, when the check reached it. */
+  remote?: string;
+  /** Where to get the latest release, when this build is behind it. */
+  download?: string | null;
+  behind: boolean;
+};
+
+export function versionStatusOf(local: string | undefined, remote: RemoteVersion | null): VersionStatus {
+  const latest = remote?.version?.trim() || undefined;
+  const behind = !!latest && latest !== local;
+  return { local, remote: latest, download: behind ? remote?.download ?? null : null, behind };
+}
+
+let versionCheck: Promise<VersionStatus> | null = null;
+
+/** This build against the latest release, fetched once per session. */
+export function checkModVersion(): Promise<VersionStatus> {
+  versionCheck ??= fetchRemoteVersion().then((remote) => versionStatusOf(getLocalVersion(), remote));
+  return versionCheck;
 }
 
 /**

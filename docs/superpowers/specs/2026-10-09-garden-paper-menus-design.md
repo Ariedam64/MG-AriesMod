@@ -3,6 +3,18 @@
 Status: approved by the owner on 2026-10-09 (direction B of the mockups at
 https://claude.ai/artifact/4dgABPntzegvVnfqfp79zP, dock on the left edge).
 
+Amended the same day, after the owner saw the first build:
+
+- the accent is sepia, not green: every "green" below (title band, primary
+  buttons, open dock buttons, switches, focus rings, selection) reads as sepia,
+  and the tokens are named `sepia*`;
+- green stays only as a status colour (`ok`, `okInk`, `okSoft`): the connected
+  dot, OK pills, active pet teams;
+- gold and rainbow text on paper uses `goldInk` and `rainbowInk`;
+- a fold button at the bottom of the dock shrinks it to the status dot, so
+  players without an Insert key can put it away;
+- a build behind the latest release badges the Settings dock button.
+
 ## Goal
 
 Every menu and floating surface of the mod gets one light, warm look that sits

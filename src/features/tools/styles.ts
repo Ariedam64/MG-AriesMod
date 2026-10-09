@@ -35,7 +35,7 @@ export function ensureToolsStyles(): void {
   display: grid; place-items: center; flex-shrink: 0;
   width: 38px; height: 38px; font-size: 22px; line-height: 1;
 }
-.mgt-tile img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: screen; }
+.mgt-tile img { width: 100%; height: 100%; object-fit: contain; }
 .mgt-tile--lg { width: 54px; height: 54px; font-size: 32px; }
 
 /* ── tags ────────────────────────────────────────────────────────────── */

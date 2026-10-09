@@ -24,7 +24,7 @@ import {
 
 const MUTED = color.textSoft;
 /** Green for "at its best". */
-const ACCENT = color.leafStrong;
+const ACCENT = color.okInk;
 const DIM = color.textDim;
 
 /**
@@ -34,7 +34,7 @@ const DIM = color.textDim;
  */
 function fillRatioColor(ratio: number): string {
   if (ratio >= 0.99) return ACCENT;
-  if (ratio >= 0.9) return color.leaf;
+  if (ratio >= 0.9) return color.ok;
   if (ratio >= 0.75) return color.warn;
   return color.danger;
 }

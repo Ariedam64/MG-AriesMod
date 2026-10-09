@@ -150,8 +150,8 @@ export function speciesCountsGrid(rows: SpeciesRow[], stats: StatsSnapshot): HTM
     line.append(
       speciesCell(row),
       numberCell(counts.normal, color.text),
-      numberCell(counts.gold, color.gold),
-      numberCell(counts.rainbow, color.rainbow),
+      numberCell(counts.gold, color.goldInk),
+      numberCell(counts.rainbow, color.rainbowInk),
       numberCell(totalOf(counts), color.accent, true),
     );
     wrap.appendChild(line);
@@ -170,8 +170,8 @@ export function speciesCountsGrid(rows: SpeciesRow[], stats: StatsSnapshot): HTM
     totals.append(
       label,
       numberCell(totalNormal, color.text, true),
-      numberCell(totalGold, color.gold, true),
-      numberCell(totalRainbow, color.rainbow, true),
+      numberCell(totalGold, color.goldInk, true),
+      numberCell(totalRainbow, color.rainbowInk, true),
       numberCell(totalNormal + totalGold + totalRainbow, color.accent, true),
     );
     wrap.appendChild(totals);

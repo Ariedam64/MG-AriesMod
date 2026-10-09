@@ -57,12 +57,12 @@ export const chromeCss = `
 .qws-win .w-head {
   display: flex; align-items: center; gap: var(--qmm-space-md); flex: 0 0 auto;
   min-height: 56px; padding: 0 12px 0 18px; cursor: move;
-  background: var(--qmm-leaf); color: var(--qmm-on-leaf);
+  background: var(--qmm-sepia); color: var(--qmm-on-sepia);
 }
 .qws-win .w-title { font-size: 18px; font-weight: 900; letter-spacing: .01em; }
 .qws-win .w-head .w-btn {
   width: 34px; height: 34px; padding: 0; border: 0; border-radius: 12px;
-  background: var(--qmm-leaf-shade); color: var(--qmm-on-leaf); box-shadow: none; font-weight: 900;
+  background: var(--qmm-sepia-shade); color: var(--qmm-on-sepia); box-shadow: none; font-weight: 900;
 }
 .qws-win .w-head .w-btn:hover { background: var(--qmm-bark); }
 .qws-win .w-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 16px; }
@@ -73,7 +73,7 @@ export const chromeCss = `
   background: var(--qmm-field-bg); color: var(--qmm-text); font-family: var(--qmm-font);
 }
 .qws-win input:is([type="text"], [type="number"]):not(.qmm-input, .qws-pnl-input):focus {
-  outline: none; border-color: var(--qmm-leaf); box-shadow: 0 0 0 3px var(--qmm-leaf-soft);
+  outline: none; border-color: var(--qmm-sepia); box-shadow: 0 0 0 3px var(--qmm-sepia-soft);
 }
 /* Windows give text and number fields one width; an inline width still wins. */
 .qws-win input[type="text"], .qws-win input[type="number"] { width: 120px; }
@@ -86,11 +86,20 @@ export const chromeCss = `
   box-shadow: var(--qmm-shadow-raise-small);
 }
 .qws-dock.hidden { display: none; }
+.qws-dock.folded .qws-dock-btn { display: none; }
+.qws-dock-fold {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 24px; padding: 0; border: 0; border-radius: var(--qmm-radius-sm);
+  background: transparent; color: var(--qmm-text-dim); cursor: pointer;
+}
+.qws-dock-fold:hover { background: var(--qmm-sand); color: var(--qmm-text); }
+.qws-dock-fold:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
+.qws-dock-fold svg { width: 18px; height: 18px; pointer-events: none; }
 .qws-dock-status {
   flex: 0 0 auto; width: 10px; height: 10px; margin: 2px 0 4px; border-radius: 50%;
   background: var(--qmm-amber); box-shadow: 0 0 0 2px var(--qmm-paper-deep);
 }
-.qws-dock-status[data-tone="ok"] { background: var(--qmm-leaf); }
+.qws-dock-status[data-tone="ok"] { background: var(--qmm-ok); }
 .qws-dock-status[data-tone="bad"] { background: var(--qmm-clay); }
 .qws-dock-btn {
   position: relative; flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
@@ -103,13 +112,13 @@ export const chromeCss = `
 .qws-dock-btn:active { transform: translateY(2px); box-shadow: none; }
 .qws-dock-btn:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
 .qws-dock-btn.open {
-  background: var(--qmm-leaf-strong); color: var(--qmm-on-leaf); box-shadow: inset 0 -4px 0 var(--qmm-leaf-shade);
+  background: var(--qmm-sepia-strong); color: var(--qmm-on-sepia); box-shadow: inset 0 -4px 0 var(--qmm-sepia-shade);
 }
 .qws-dock-btn svg { width: 24px; height: 24px; pointer-events: none; }
 .qws-dock-badge {
   position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box;
   display: flex; align-items: center; justify-content: center; border-radius: var(--qmm-radius-pill);
-  border: 2px solid var(--qmm-paper); background: var(--qmm-clay); color: var(--qmm-on-leaf);
+  border: 2px solid var(--qmm-paper); background: var(--qmm-clay); color: var(--qmm-on-sepia);
   font: 900 11px var(--qmm-font);
 }
 .qws-dock-tip {

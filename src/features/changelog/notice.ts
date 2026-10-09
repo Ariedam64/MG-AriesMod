@@ -34,7 +34,7 @@ const NOTICE_CSS = `
 }
 #${OVERLAY_ID} .mgcl-eyebrow {
   margin: 0 0 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--qmm-leaf-ink);
+  color: var(--qmm-sepia-ink);
 }
 #${OVERLAY_ID} .mgcl-title { margin: 0 0 4px; font-size: 18px; font-weight: 900; }
 #${OVERLAY_ID} .mgcl-version { margin: 0 0 16px; font-size: 11.5px; color: var(--qmm-text-soft); }
