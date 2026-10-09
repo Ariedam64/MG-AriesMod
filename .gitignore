@@ -1,3 +1,4 @@
 # Build artifact of `npm run check:stats`. node_modules itself is tracked in
 # this repo on purpose, so only the cache directory is excluded.
 node_modules/.cache/
+.superpowers/

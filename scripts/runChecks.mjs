@@ -93,6 +93,7 @@ const SUITES = {
   liveatoms: ["checkLiveAtoms", "dom-stub"],
   stagewatch: ["checkStageWatch", "dom-stub"],
   visiblerefresh: ["checkVisibleRefresh", "dom-stub"],
+  contrast: ["checkContrast"],
 };
 
 /** Problems with how suites are registered: a file with no entry, or package.json out of step. */
