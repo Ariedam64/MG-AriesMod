@@ -1,7 +1,5 @@
-// src/entry.ts
-//
 // The bundle's entry point. On Discord, the host page around the game frame
-// also gets the script (see utils/discordFrame.ts); there the mod must not
+// also gets the script (see platform/discordFrame.ts); there the mod must not
 // start at all, not even the side effects of its imports. `require` keeps the
 // load synchronous: in every other frame the mod starts exactly as before, at
 // document-start.

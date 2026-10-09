@@ -1,4 +1,3 @@
-// src/utils/download.ts
 // File download helper that works from a userscript sandbox and inside
 // iframes (Discord Activities): GM_download first, then an anchor click
 // executed in the page context, then a sandbox-side anchor, and finally a
