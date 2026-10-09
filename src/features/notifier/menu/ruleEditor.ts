@@ -40,9 +40,13 @@ function listen<K extends keyof DocumentEventMap>(
   teardown.add(() => document.removeEventListener(type, handler, options));
 }
 
-function field(label: string, ...controls: HTMLElement[]): HTMLDivElement {
+/** A labelled control; `aside` sits at the end of the label line. */
+function field(label: string, control: HTMLElement, aside?: string): HTMLDivElement {
+  const head = h("div", "qws-rule-field__head");
+  head.appendChild(h("label", "qws-rule-field__label", label));
+  if (aside) head.appendChild(h("span", "qws-rule-hint", aside));
   const wrap = h("div", "qws-rule-field");
-  wrap.append(h("label", undefined, label), ...controls);
+  wrap.append(head, control);
   return wrap;
 }
 
@@ -135,22 +139,12 @@ export function openRuleEditor(target: RuleTarget, anchor: HTMLElement): void {
   const pop = h("div", "qws-rule-popover");
 
   // Header: title, item type, close button. Dragging it moves the popover.
-  const header = h("div");
-  Object.assign(header.style, {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: "12px",
-    cursor: "move",
-    userSelect: "none",
-    touchAction: "none",
-  });
-  const titles = h("div");
-  const title = h("div", undefined, target.name);
-  Object.assign(title.style, { fontWeight: "700", fontSize: "14px", lineHeight: "1.2" });
-  const subtitle = h("div", "qws-rule-hint", target.type);
-  subtitle.style.fontSize = "12px";
-  titles.append(title, subtitle);
+  const header = h("div", "qws-rule-head");
+  const titles = h("div", "qws-rule-head__titles");
+  const kind = target.context === "weather" ? "Weather alert" : `${target.type} alert`;
+  const title = h("div", "qws-rule-head__title", target.name);
+  title.title = target.name;
+  titles.append(title, h("div", "qws-rule-hint", kind));
   const closeBtn = button("✕", { variant: "ghost", size: "xs", ariaLabel: "Close", onClick: closeRuleEditor });
   header.append(titles, closeBtn);
   pop.appendChild(header);
@@ -176,10 +170,9 @@ export function openRuleEditor(target: RuleTarget, anchor: HTMLElement): void {
   volumeRange.addEventListener("input", () => {
     volumeValue.textContent = `${clamp(Math.round(Number(volumeRange.value)) || 0, 0, 100)}%`;
   });
-  const volumeRow = h("div");
-  Object.assign(volumeRow.style, { display: "flex", alignItems: "center", gap: "10px" });
+  const volumeRow = h("div", "qws-rule-inline");
   volumeRow.append(volumeRange, volumeValue);
-  pop.appendChild(field("Volume", volumeRow, h("div", "qws-rule-hint", `Default: ${defaultVolumePct}%`)));
+  pop.appendChild(field("Volume", volumeRow, `Default ${defaultVolumePct}%`));
 
   // Playback mode. Only shop alerts can loop.
   const modeSelect = select();
@@ -187,12 +180,12 @@ export function openRuleEditor(target: RuleTarget, anchor: HTMLElement): void {
   for (const mode of modes) option(modeSelect, mode, mode === "loop" ? "Loop" : "One-shot");
   modeSelect.value = canLoop ? (current?.playbackMode ?? defaults.mode) : "oneshot";
   modeSelect.disabled = !canLoop;
-  pop.appendChild(field("Playback mode", modeSelect));
+  pop.appendChild(field("Playback", modeSelect));
 
   // Loop settings: a shop loop stops once the item is bought.
   const stopSelect = select();
   option(stopSelect, "purchase", "Until purchase");
-  const stopField = field("Stop condition", stopSelect);
+  const stopField = field("Stops", stopSelect);
 
   const intervalInput = h("input", "qmm-input qmm-input--sm");
   intervalInput.type = "number";
@@ -202,7 +195,7 @@ export function openRuleEditor(target: RuleTarget, anchor: HTMLElement): void {
   intervalInput.placeholder = String(defaults.loopIntervalMs);
   intervalInput.value = current?.loopIntervalMs != null ? String(current.loopIntervalMs) : "";
   digitsOnly(intervalInput);
-  const intervalField = field("Loop interval (ms)", intervalInput);
+  const intervalField = field("Repeat every (ms)", intervalInput);
 
   const showLoopFields = () => {
     const show = canLoop && modeSelect.value === "loop";
@@ -221,12 +214,10 @@ export function openRuleEditor(target: RuleTarget, anchor: HTMLElement): void {
   }
   showLoopFields();
 
-  pop.appendChild(
-    h("div", "qws-rule-hint", "Use defaults by leaving values unchanged (matching the default volume keeps it inherited)."),
-  );
+  pop.appendChild(h("div", "qws-rule-hint", "Anything left at its default follows the Settings tab."));
 
   const actions = h("div", "qws-rule-actions");
-  const clearBtn = button("Clear", { variant: "ghost", size: "sm", disabled: !current });
+  const clearBtn = button("Clear rule", { variant: "ghost", size: "sm", disabled: !current });
   clearBtn.addEventListener("click", (ev) => {
     ev.preventDefault();
     ev.stopPropagation();

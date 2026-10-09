@@ -1,8 +1,6 @@
-import { pill } from "../../../ui/kit/badges";
 import { button } from "../../../ui/kit/button";
 import { card, errorBar } from "../../../ui/kit/card";
 import { h } from "../../../ui/kit/dom";
-import { color } from "../../../ui/kit/theme";
 import { audio, type AudioContextKey } from "../audio/audio";
 
 /** The Sound library card: import files, preview them, pick the defaults, remove them. */
@@ -13,7 +11,7 @@ const CONTEXT_LABELS: Array<[AudioContextKey, string]> = [
   ["pets", "Pets"],
 ];
 
-const DROP_HINT = "Click to browse or drop files";
+const DROP_HINT = "Click to browse or drop files here.";
 
 /** The dashed drop zone that opens the file picker. */
 function dropZone(onFiles: (files: FileList | null) => Promise<void>): HTMLElement {
@@ -21,38 +19,20 @@ function dropZone(onFiles: (files: FileList | null) => Promise<void>): HTMLEleme
   input.type = "file";
   input.accept = "audio/*";
   input.multiple = true;
-  input.style.display = "none";
+  input.hidden = true;
 
-  const zone = h("div");
+  const zone = h("div", "qws-al-drop");
   zone.tabIndex = 0;
   zone.setAttribute("role", "button");
   zone.setAttribute("aria-label", "Select audio files");
-  Object.assign(zone.style, {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "6px",
-    padding: "18px 22px",
-    minHeight: "110px",
-    borderRadius: "14px",
-    border: `1px dashed ${color.borderStrong}`,
-    background: color.mutedBg,
-    transition: "border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease",
-    cursor: "pointer",
-    textAlign: "center",
-  });
-  const title = h("div", undefined, "Select audio files");
-  Object.assign(title.style, { fontWeight: "600", fontSize: "14px", letterSpacing: "0.02em" });
-  const status = h("div", undefined, DROP_HINT);
-  Object.assign(status.style, { fontSize: "12px", opacity: "0.75" });
-  zone.append(title, status);
+  const status = h("div", "qws-al-drop__hint", DROP_HINT);
+  zone.append(
+    h("div", "qws-al-drop__title", "Add sounds"),
+    status,
+    h("div", "qws-al-drop__formats", "MP3, WAV or OGG, up to 10 s and 200 KB."),
+  );
 
-  const highlight = (on: boolean) => {
-    zone.style.borderColor = on ? color.accentBorderHover : color.borderStrong;
-    zone.style.boxShadow = on ? `0 0 0 3px ${color.accentSoft}` : "none";
-    zone.style.background = on ? color.accentSoft : color.mutedBg;
-  };
+  const highlight = (on: boolean) => zone.classList.toggle("is-active", on);
   const settle = () => highlight(document.activeElement === zone);
 
   const take = async (files: FileList | null) => {
@@ -92,40 +72,34 @@ function dropZone(onFiles: (files: FileList | null) => Promise<void>): HTMLEleme
   return wrap;
 }
 
-/** One library sound: its name, the contexts using it by default, and its buttons. */
+/**
+ * One library sound: preview, name, a button per alert type that makes it
+ * that type's default (lit when it already is), and remove.
+ */
 function soundRow(name: string, onChange: () => void): HTMLDivElement {
   const defaultFor = CONTEXT_LABELS.filter(([key]) => audio.getDefaultSoundName(key) === name);
   const usedByShopsOrWeather = defaultFor.some(([key]) => key !== "pets");
 
-  const row = h("div");
-  Object.assign(row.style, {
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 1fr) auto",
-    gap: "12px",
-    alignItems: "center",
-    padding: "8px 10px",
-    borderRadius: "8px",
-    border: `1px solid ${defaultFor.length ? color.accentBorder : color.border}`,
-    background: color.cardBg,
+  const row = h("div", "qws-al-sound");
+  const play = button("", {
+    icon: "▶",
+    size: "sm",
+    title: "Preview",
+    ariaLabel: `Preview ${name}`,
+    onClick: () => void audio.trigger("preview", { sound: name }, "shops").catch(() => {}),
   });
+  const title = h("span", "qws-al-sound__name", name);
+  title.title = name;
 
-  const info = h("div");
-  Object.assign(info.style, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
-  const title = h("span", undefined, name);
-  Object.assign(title.style, { fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
-  info.appendChild(title);
-  for (const [, label] of defaultFor) info.appendChild(pill(label, "ok"));
-
-  const actions = h("div");
-  Object.assign(actions.style, { display: "flex", gap: "6px", justifyContent: "flex-end", flexWrap: "wrap" });
-  actions.appendChild(
-    button("▶", { size: "sm", title: "Preview", onClick: () => void audio.trigger("preview", { sound: name }, "shops").catch(() => {}) }),
-  );
+  const uses = h("div", "qws-al-sound__uses");
+  uses.appendChild(h("span", "qws-al-sound__label", "Default for"));
   for (const [key, label] of CONTEXT_LABELS) {
-    actions.appendChild(
-      button(`Set ${label.toLowerCase()}`, {
-        size: "sm",
-        title: `Set as ${label.toLowerCase()} default`,
+    const isDefault = defaultFor.some(([k]) => k === key);
+    uses.appendChild(
+      button(label, {
+        size: "xs",
+        active: isDefault,
+        title: isDefault ? `Default ${label.toLowerCase()} sound` : `Set as ${label.toLowerCase()} default`,
         onClick: () => {
           audio.setDefaultSoundByName(name, key);
           onChange();
@@ -133,9 +107,13 @@ function soundRow(name: string, onChange: () => void): HTMLDivElement {
       }),
     );
   }
-  const remove = button("Remove", {
+
+  const remove = button("", {
+    icon: "✕",
     size: "sm",
+    variant: "ghost",
     title: "Remove from library",
+    ariaLabel: `Remove ${name}`,
     onClick: () => {
       audio.unregisterSound(name);
       onChange();
@@ -145,34 +123,21 @@ function soundRow(name: string, onChange: () => void): HTMLDivElement {
     remove.setEnabled(false);
     remove.title = audio.isProtectedSound(name) ? "Built-in sound cannot be removed" : "Currently used as default";
   }
-  actions.appendChild(remove);
 
-  row.append(info, actions);
+  row.append(play, title, uses, remove);
   return row;
 }
 
 /** The library card. `onLibraryChange` runs after anything that changes the sounds or the defaults. */
 export function soundLibraryCard(onLibraryChange: () => void): { root: HTMLElement; refresh: () => void } {
-  const section = card("Sound library", { tone: "muted" });
+  const section = card("Sound library");
   const errors = errorBar();
-
-  const list = h("div");
-  Object.assign(list.style, {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
-    maxHeight: "240px",
-    overflowY: "auto",
-    minHeight: "0",
-    padding: "4px 4px 4px 0",
-  });
+  const list = h("div", "qws-al-list");
 
   const refresh = () => {
     const names = audio.listSounds();
     if (!names.length) {
-      const empty = h("div", undefined, "No sounds in the library.");
-      Object.assign(empty.style, { opacity: "0.75", textAlign: "center", padding: "12px 6px" });
-      list.replaceChildren(empty);
+      list.replaceChildren(h("div", "qws-al-empty", "No sounds yet. Add one above."));
       return;
     }
     list.replaceChildren(...names.map((name) => soundRow(name, onLibraryChange)));
@@ -186,38 +151,7 @@ export function soundLibraryCard(onLibraryChange: () => void): { root: HTMLEleme
     if (added.length) onLibraryChange();
   };
 
-  const tip = h("div", undefined, "MP3, WAV, OGG, at most 10 s and 200 KB.");
-  Object.assign(tip.style, { opacity: "0.75", fontSize: "12px" });
-
-  const listHeader = h("div");
-  Object.assign(listHeader.style, {
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 1fr) auto",
-    gap: "12px",
-    fontSize: "12px",
-    letterSpacing: "0.05em",
-    textTransform: "uppercase",
-    opacity: "0.65",
-    paddingBottom: "4px",
-    borderBottom: `1px solid ${color.border}`,
-  });
-  const actionsHead = h("span", undefined, "Actions");
-  actionsHead.style.justifySelf = "end";
-  listHeader.append(h("span", undefined, "Sound"), actionsHead);
-
-  const listCard = h("div");
-  Object.assign(listCard.style, {
-    display: "grid",
-    gridTemplateRows: "auto 1fr",
-    gap: "6px",
-    border: `1px solid ${color.border}`,
-    borderRadius: "10px",
-    background: color.mutedBg,
-    padding: "10px",
-  });
-  listCard.append(listHeader, list);
-
-  section.body.append(dropZone(importFiles), tip, listCard, errors.el);
+  section.body.append(dropZone(importFiles), errors.el, list);
   refresh();
   return { root: section.root, refresh };
 }

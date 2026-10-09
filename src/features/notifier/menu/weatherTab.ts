@@ -1,17 +1,18 @@
 import { pill } from "../../../ui/kit/badges";
 import { h, refreshWhileVisible } from "../../../ui/kit/dom";
-import { color } from "../../../ui/kit/theme";
 import { attachSpriteIcon } from "../../../ui/kit/sprites/iconCache";
 import { NotifierService } from "../notifier";
 import { NotifierRules } from "../rules";
 import { formatLastSeen, formatWeatherMutation } from "../weather";
 import { WeatherAlerts, weatherStateSignature, type WeatherRow, type WeatherState } from "../weatherAlerts";
-import { AlertGrid, ruleSummaryLine } from "./alertGrid";
+import { AlertList } from "./alertList";
+import { ensureMenuStyles } from "./styles";
 
 /** Every weather, when it was last seen, and its alert switch and custom rule. */
 
 const LAST_SEEN_REFRESH_MS = 30_000;
 const STATE_REFRESH_MS = 60_000;
+const ICON_SIZE = 40;
 
 /** Sprite names to try for a weather: its icon first, then the weather itself. */
 function weatherSpriteCandidates(row: WeatherRow): string[] {
@@ -26,103 +27,44 @@ function weatherSpriteCandidates(row: WeatherRow): string[] {
   return [...new Set([...icons, ...names])].filter(Boolean);
 }
 
+/** The weather's sprite, showing its initial until it loads. */
 function weatherIcon(row: WeatherRow): HTMLDivElement {
-  const size = 40;
   const wrap = h("div");
-  Object.assign(wrap.style, {
-    width: `${size}px`,
-    height: `${size}px`,
-    flex: `0 0 ${size}px`,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "8px",
-    background: color.mutedBg,
-  });
   const glyph = h("span", undefined, row.name.trim().charAt(0) || "🌦");
-  glyph.style.fontSize = `${size - 8}px`;
   glyph.setAttribute("aria-hidden", "true");
   wrap.appendChild(glyph);
-  attachSpriteIcon(wrap, ["ui", "weather", "mutation"], weatherSpriteCandidates(row), size, "alerts-weather");
+  attachSpriteIcon(wrap, ["ui", "weather", "mutation"], weatherSpriteCandidates(row), ICON_SIZE, "alerts-weather");
   return wrap;
 }
 
-function mutationList(row: WeatherRow): HTMLDivElement {
-  const list = h("div");
-  Object.assign(list.style, {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "6px",
-    alignItems: "flex-start",
-    fontSize: "12px",
-    lineHeight: "1.3",
-    opacity: row.mutations.length ? "0.85" : "0.6",
-  });
+function mutationChips(row: WeatherRow): HTMLDivElement {
+  const list = h("div", "qws-al-meta");
   if (!row.mutations.length) {
-    const none = h("span", undefined, "No mutation effects.");
-    none.style.whiteSpace = "nowrap";
-    list.appendChild(none);
+    list.appendChild(h("span", undefined, "No mutation effects"));
     return list;
   }
-  for (const mutation of row.mutations) {
-    const chip = h("span", undefined, formatWeatherMutation(mutation));
-    Object.assign(chip.style, {
-      display: "inline-flex",
-      alignItems: "center",
-      padding: "2px 8px",
-      borderRadius: "999px",
-      background: color.hoverBg,
-      whiteSpace: "nowrap",
-    });
-    list.appendChild(chip);
-  }
+  for (const mutation of row.mutations) list.appendChild(h("span", "qws-al-chip", formatWeatherMutation(mutation)));
   return list;
 }
 
-function itemCell(row: WeatherRow, summary: HTMLElement): HTMLDivElement {
-  const cell = h("div");
-  Object.assign(cell.style, { display: "flex", alignItems: "center", gap: "8px", padding: "6px" });
-  if (row.isCurrent) {
-    cell.style.background = color.accentSoft;
-    cell.style.borderRadius = "8px";
-  }
-
-  const text = h("div");
-  Object.assign(text.style, { display: "flex", flexDirection: "column", gap: "4px", lineHeight: "1.2", minWidth: "0", flex: "1 1 auto" });
-
-  const titleRow = h("div");
-  Object.assign(titleRow.style, { display: "flex", alignItems: "center", gap: "6px", minWidth: "0" });
-  const title = h("div", undefined, row.name);
-  Object.assign(title.style, { fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 auto" });
-  titleRow.appendChild(title);
-  if (row.isCurrent) titleRow.appendChild(pill("Current", "ok"));
-
-  const mutationsLabel = h("div", undefined, "Mutations");
-  Object.assign(mutationsLabel.style, { fontSize: "11px", opacity: "0.7", fontWeight: "600" });
-
-  text.append(titleRow, mutationsLabel, mutationList(row), summary);
-  cell.append(weatherIcon(row), text);
-  return cell;
-}
-
+/** "Seen 3 mins ago", "Active now" or "Never seen", with the exact time on hover. */
 function showLastSeen(el: HTMLElement, row: WeatherRow): void {
   const { label, title } = formatLastSeen(row.lastSeen, row.isCurrent);
-  el.textContent = label;
+  if (label === "Now") el.textContent = "Active now";
+  else if (label === "Never") el.textContent = "Never seen";
+  else el.textContent = `Seen ${label.charAt(0).toLowerCase()}${label.slice(1)}`;
   el.title = title;
-  el.style.opacity = label === "Never" ? "0.7" : "1";
 }
 
 export function renderWeatherTab(view: HTMLElement): void {
-  view.replaceChildren();
+  ensureMenuStyles();
+  const tab = h("div", "qws-al-tab");
+  view.replaceChildren(tab);
 
-  const wrap = h("div");
-  Object.assign(wrap.style, { display: "grid", gridTemplateRows: "1fr", height: "54vh", overflow: "hidden", minHeight: "0" });
-  view.appendChild(wrap);
+  const list = new AlertList("No weather to show yet.");
+  tab.appendChild(list.root);
 
-  const grid = new AlertGrid(["Weather", "Last seen", "Notify", "Custom rules"], "240px", "No weather entries.");
-  wrap.appendChild(grid.root);
-
-  const lastSeenLabels = new Map<string, HTMLDivElement>();
+  const lastSeenLabels = new Map<string, HTMLElement>();
   let state: WeatherState | null = null;
   let stateSig = "";
 
@@ -135,11 +77,9 @@ export function renderWeatherTab(view: HTMLElement): void {
 
   const rebuild = () => {
     lastSeenLabels.clear();
-    grid.setRows(
+    list.setRows(
       (state?.rows ?? []).map((row) => {
-        const summary = ruleSummaryLine();
-        const lastSeen = h("div");
-        Object.assign(lastSeen.style, { fontWeight: "600", whiteSpace: "nowrap" });
+        const lastSeen = h("div", "qws-al-meta");
         showLastSeen(lastSeen, row);
         lastSeenLabels.set(row.id, lastSeen);
         return {
@@ -147,9 +87,10 @@ export function renderWeatherTab(view: HTMLElement): void {
           name: row.name,
           type: row.type,
           context: "weather" as const,
-          item: itemCell(row, summary),
-          summary,
-          detail: lastSeen,
+          icon: weatherIcon(row),
+          badge: row.isCurrent ? pill("Current", "ok") : undefined,
+          details: [lastSeen, mutationChips(row)],
+          highlight: row.isCurrent,
           alertOn: row.notify,
           onAlertChange: (on: boolean) => WeatherAlerts.setNotify(row.id, on),
         };
@@ -172,14 +113,14 @@ export function renderWeatherTab(view: HTMLElement): void {
       stateSig = weatherStateSignature(next.rows);
       rebuild();
     });
-    NotifierRules.onChange(() => grid.refreshRules());
+    NotifierRules.onChange(() => list.refreshRules());
   })();
 
   // "3 mins ago" ages, and the state is re-read in case a change was missed,
   // both only while the tab shows.
-  refreshWhileVisible(wrap, refreshLastSeen, LAST_SEEN_REFRESH_MS);
+  refreshWhileVisible(tab, refreshLastSeen, LAST_SEEN_REFRESH_MS);
   refreshWhileVisible(
-    wrap,
+    tab,
     () => {
       NotifierService.getWeatherState()
         .then(show)

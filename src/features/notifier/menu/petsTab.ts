@@ -1,142 +1,105 @@
 import type { PetInfo } from "../../../game/player";
-import { card, plainCard } from "../../../ui/kit/card";
+import { meter } from "../../../ui/kit/badges";
+import { card } from "../../../ui/kit/card";
 import { h } from "../../../ui/kit/dom";
 import { numberInput } from "../../../ui/kit/fields";
-import { flexRow, formRow } from "../../../ui/kit/layout";
-import { color } from "../../../ui/kit/theme";
+import { settingRow } from "../../../ui/kit/layout";
 import { switchInput } from "../../../ui/kit/toggles";
 import { attachSpriteIcon } from "../../../ui/kit/sprites/iconCache";
 import { PetsService } from "../../pets/pets";
 import { PetAlertService } from "../petAlerts";
+import { ensureMenuStyles } from "./styles";
 
-/** The active pets with their hunger, and the shared hunger threshold. */
+/** The shared hunger threshold, and the active pets with their hunger. */
 
 const ACTIVE_PET_SLOTS = 3;
-const AVATAR_SIZE = 40;
+const AVATAR_SIZE = 36;
 
 /** The pet's sprite, showing the species' initial until it loads. */
 function petAvatar(pet: PetInfo): HTMLDivElement {
-  const avatar = h("div");
-  Object.assign(avatar.style, {
-    width: `${AVATAR_SIZE}px`,
-    height: `${AVATAR_SIZE}px`,
-    borderRadius: "8px",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: color.mutedBg,
-    border: `1px solid ${color.border}`,
-    overflow: "hidden",
-  });
+  const avatar = h("div", "qws-al-icon");
   const species = String(pet?.slot?.petSpecies ?? "").trim();
   const glyph = h("span", undefined, species ? species.charAt(0).toUpperCase() : "🐾");
-  glyph.style.fontSize = "28px";
   glyph.setAttribute("aria-hidden", "true");
   avatar.appendChild(glyph);
   if (species) {
     const mutations = (pet?.slot as { mutations?: unknown } | undefined)?.mutations;
-    attachSpriteIcon(avatar, ["pet"], [species], 36, "alerts-pet", {
+    attachSpriteIcon(avatar, ["pet"], [species], AVATAR_SIZE, "alerts-pet", {
       mutations: Array.isArray(mutations) ? mutations : undefined,
     });
   }
   return avatar;
 }
 
-function petRow(pet: PetInfo): HTMLDivElement {
+/** A pet with a bar of how fed it is, warm once under the shared threshold (`null` when it is off). */
+function petRow(pet: PetInfo, thresholdPct: number | null): HTMLDivElement {
   const slot = pet?.slot;
   const hunger = PetsService.getHungerPctFor(pet);
+  const known = Number.isFinite(hunger);
+  const low = known && thresholdPct != null && hunger < thresholdPct;
 
-  const row = h("div");
-  Object.assign(row.style, {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "10px",
-    padding: "6px 8px",
-    borderRadius: "8px",
-    border: `1px solid ${color.border}`,
-    background: color.cardBg,
-  });
-
-  const left = h("div");
-  Object.assign(left.style, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
-  const name = h("div", undefined, String(slot?.name || slot?.petSpecies || "Pet"));
-  Object.assign(name.style, { fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
-  left.append(petAvatar(pet), name);
-
-  const hungerValue = h("div", undefined, Number.isFinite(hunger) ? `${hunger}%` : "-");
-  Object.assign(hungerValue.style, { fontWeight: "700", color: color.goldInk });
-
-  row.append(left, hungerValue);
+  const row = h("div", "qws-al-pet");
+  const bar = meter();
+  bar.set(known ? hunger / 100 : 0, low ? "warn" : "accent");
+  const value = h("div", low ? "qws-al-pet__value is-low" : "qws-al-pet__value", known ? `${hunger}%` : "-");
+  const body = h("div", "qws-al-pet__body");
+  body.append(h("div", "qws-al-pet__name", String(slot?.name || slot?.petSpecies || "Pet")), bar.root);
+  row.append(petAvatar(pet), body, value);
   return row;
 }
 
-function generalCard(): HTMLDivElement {
-  const general = card("General notifications", { tone: "muted", align: "stretch" });
+function thresholdCard(onChange: () => void): HTMLElement {
+  const alert = card("Hunger alert");
 
   const toggle = switchInput(PetAlertService.isGeneralEnabled(), (on) => {
     PetAlertService.setGeneralEnabled(on);
     toggle.checked = PetAlertService.isGeneralEnabled();
+    onChange();
   });
-  const toggleRow = flexRow({ justify: "start", gap: 10 });
-  const toggleLabel = h("div", undefined, "Use a shared threshold for all pets");
-  toggleLabel.style.opacity = "0.9";
-  toggleRow.append(toggle, toggleLabel);
 
   const threshold = numberInput(1, 100, 1, PetAlertService.getGeneralThresholdPct());
+  threshold.setAttribute("aria-label", "Hunger threshold");
   threshold.addEventListener("change", () => {
     const typed = Number(threshold.value);
     const next = Math.max(1, Math.min(100, typed || PetAlertService.getGeneralThresholdPct()));
     threshold.value = String(PetAlertService.setGeneralThresholdPct(next));
+    onChange();
   });
+  const pct = h("div", "qws-al-pct");
+  pct.append(threshold.wrap, "%");
 
-  general.body.append(
-    formRow("Enable general", toggleRow, { labelWidth: "180px" }).root,
-    formRow("General threshold (%)", threshold.wrap, { labelWidth: "180px" }).root,
+  alert.body.append(
+    settingRow("Shared threshold", "One threshold for every active pet.", toggle).row,
+    settingRow("Alert below", "Hunger level that sounds the alert.", pct).row,
   );
-  return general.root;
+  return alert.root;
 }
 
 export function renderPetsTab(view: HTMLElement): void {
-  view.replaceChildren();
+  ensureMenuStyles();
   void PetAlertService.start().catch(() => {});
 
-  const layout = plainCard();
-  Object.assign(layout.style, {
-    display: "grid",
-    gridTemplateColumns: "minmax(220px, 260px) minmax(0, 1fr)",
-    alignItems: "stretch",
-    height: "54vh",
-    overflow: "hidden",
-  });
-  view.appendChild(layout);
+  const tab = h("div", "qws-al-tab");
+  const scroll = h("div", "qws-al-scroll qmm-scroll");
+  tab.appendChild(scroll);
+  view.replaceChildren(tab);
 
-  const petList = h("div");
-  Object.assign(petList.style, {
-    display: "grid",
-    gridTemplateColumns: "1fr",
-    alignContent: "start",
-    rowGap: "6px",
-    overflow: "auto",
-    padding: "6px",
-    border: `1px solid ${color.border}`,
-    borderRadius: "10px",
-  });
+  const petsCard = card("Active pets");
+  const petList = h("div", "qws-al-list");
+  petsCard.body.appendChild(petList);
 
-  const right = h("div");
-  Object.assign(right.style, { display: "flex", flexDirection: "column", gap: "10px", overflow: "auto", minHeight: "0" });
-  right.appendChild(generalCard());
-  layout.append(petList, right);
-
+  let shown: PetInfo[] = [];
   const renderPets = (pets: PetInfo[]) => {
+    shown = pets;
     if (!pets.length) {
-      const empty = h("div", undefined, "No active pets.");
-      empty.style.opacity = "0.75";
-      petList.replaceChildren(empty);
+      petList.replaceChildren(h("div", "qws-al-empty", "No active pets right now."));
       return;
     }
-    petList.replaceChildren(...pets.map(petRow));
+    const thresholdPct = PetAlertService.isGeneralEnabled() ? PetAlertService.getGeneralThresholdPct() : null;
+    petList.replaceChildren(...pets.map((pet) => petRow(pet, thresholdPct)));
   };
+
+  scroll.append(thresholdCard(() => renderPets(shown)), petsCard.root);
 
   PetsService.onPetsChangeNow((pets) => renderPets(Array.isArray(pets) ? pets.slice(0, ACTIVE_PET_SLOTS) : [])).catch(
     () => renderPets([]),
