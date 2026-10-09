@@ -18,6 +18,7 @@ import {
 } from "../autoReco/settings";
 import { autoStores } from "../autoStore/stores";
 import { readShowCropPrice, writeShowCropPrice } from "../cropPrice/setting";
+import { isDebugMenuShown, setDebugMenuShown } from "../debug/visibility";
 import { openGardenView } from "./gardenView";
 import { readGhostDelayMs, readGhostEnabled, setGhostDelayMs, setGhostEnabled } from "./ghost";
 import { readInventorySlotReserveEnabled, writeInventorySlotReserveEnabled } from "./inventoryReserve";
@@ -54,6 +55,7 @@ export function buildDisplaySection(modalHost: () => HTMLElement): HTMLElement {
   card.body.append(
     settingRow("Crop price", "A crop's sell price in its tooltip.", priceToggle).row,
     settingRow("Garden view", "Your whole garden as a flat grid, nothing hidden.", gardenViewButton).row,
+    settingRow("Debug menu", "Developer tools, shown in the launcher.", switchInput(isDebugMenuShown(), setDebugMenuShown)).row,
   );
   return card.root;
 }

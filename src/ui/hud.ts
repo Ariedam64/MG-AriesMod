@@ -12,6 +12,7 @@ import { codesMatch, matchHotkey } from "../lib/hotkey";
 import { readAriesPath, writeAriesPath } from "../platform/storage";
 import { button } from "./kit/button";
 import { createDock } from "./kit/dock";
+import { onMenuHidden } from "./kit/menuVisibility";
 import { readStoredPosition, storePosition } from "./kit/floating";
 import { h } from "./kit/dom";
 import { layer } from "./kit/theme";
@@ -321,6 +322,14 @@ export function mountHUD(opts?: HUDOptions) {
   } catch (error) {
     console.error("[HUD] panel registration failed:", error);
   }
+
+  // A menu taken out of the dock (the Debug menu, from Misc) closes its window too.
+  onMenuHidden((id, hidden) => {
+    const w = windows.get(id);
+    if (!hidden || !w || w.el.style.display === "none") return;
+    w.el.style.display = "none";
+    dock.setOpen(id, false);
+  });
 
   // Opens a registered window from anywhere, e.g. the instant feed widget.
   window.addEventListener("qws:open-panel", (ev: Event) => {

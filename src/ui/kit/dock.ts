@@ -11,6 +11,7 @@ import { h } from "./dom";
 import { makeDraggable, placeInViewport, type ScreenPosition } from "./floating";
 import { menuIcon } from "./menuIcons";
 import { onMenuBadge } from "./menuBadges";
+import { onMenuHidden } from "./menuVisibility";
 
 type DockItem = { id: string; label: string };
 type DockTone = "ok" | "warn" | "bad";
@@ -69,6 +70,7 @@ export function createDock(onSelect: (id: string) => void, events: DockOptions =
   const tip = h("div", "qws-dock-tip");
   const buttons = new Map<string, HTMLButtonElement>();
   const pendingBadges = new Map<string, number>();
+  const hiddenItems = new Set<string>();
 
   const showTip = (btn: HTMLElement, label: string) => {
     tip.textContent = label;
@@ -111,9 +113,16 @@ export function createDock(onSelect: (id: string) => void, events: DockOptions =
     grid.appendChild(btn);
     buttons.set(id, btn);
     if (pendingBadges.has(id)) setBadge(id, pendingBadges.get(id) ?? 0);
+    btn.hidden = hiddenItems.has(id);
   };
 
   onMenuBadge(setBadge);
+  onMenuHidden((id, hidden) => {
+    if (hidden) hiddenItems.add(id);
+    else hiddenItems.delete(id);
+    const btn = buttons.get(id);
+    if (btn) btn.hidden = hidden;
+  });
 
   const moveTo = (pos: ScreenPosition) => {
     root.classList.add("placed");

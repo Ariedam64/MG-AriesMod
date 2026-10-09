@@ -74,6 +74,10 @@ async function main() {
   change(rowNamed(container, "Crop price").querySelector(".qmm-switch") as El, { checked: false });
   checkEqual("the Crop price switch is saved", readAriesPath("misc.showCropPrice"), false);
   checkEqual("Garden view has its button", !!button(rowNamed(container, "Garden view"), "Open"), true);
+  const debugSwitch = rowNamed(container, "Debug menu")?.querySelector(".qmm-switch") as El;
+  checkEqual("the Debug menu switch starts off", (debugSwitch as any)?.checked, false);
+  change(debugSwitch, { checked: true });
+  checkEqual("the Debug menu switch is saved", readAriesPath("misc.showDebugMenu"), true);
 
   change(rowNamed(container, "Ghost mode").querySelector(".qmm-switch") as El, { checked: true });
   checkEqual("the Ghost mode switch is saved", readAriesPath("misc.ghostMode"), true);

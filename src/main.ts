@@ -17,6 +17,7 @@ import { renderPetsMenu } from "./features/pets/menu";
 import { renderMiscMenu } from "./features/misc/menu";
 import { renderSettingsMenu } from "./features/settings/menu";
 import { applyAppearance } from "./features/settings/appearance";
+import { initDebugMenuVisibility } from "./features/debug/visibility";
 import { renderNotifierMenu } from "./features/notifier/menu/menu";
 import { renderToolsMenu } from "./features/tools/menu";
 import { renderEditorMenu } from "./features/editor/menu";
@@ -82,6 +83,8 @@ import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/play
 
   // The player's menu theme and size, before any menu is drawn.
   applyAppearance();
+  // The Debug menu stays out of the launcher until turned on in Misc.
+  initDebugMenuVisibility();
 
   mountHUD({
     onRegister(register) {

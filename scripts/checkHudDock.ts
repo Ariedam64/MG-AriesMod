@@ -1,12 +1,15 @@
 // The HUD mounts the dock: menus open from it, open-panel events mark it, and
-// hiding with Insert is remembered.
+// hiding with Insert is remembered. The Debug menu stays out of the dock until
+// a player turns it on in Misc.
 import { installFakeDom } from "./_fakeDom";
 installFakeDom();
 import { check, checkEqual, done } from "./_check";
 import { mountHUD } from "../src/ui/hud";
 import { readAriesPath } from "../src/platform/storage";
+import { initDebugMenuVisibility, setDebugMenuShown } from "../src/features/debug/visibility";
 
 const rendered: string[] = [];
+initDebugMenuVisibility();
 mountHUD({
   onRegister(register) {
     register("pets", "Pets", (el) => {
@@ -14,6 +17,7 @@ mountHUD({
       el.textContent = "pets body";
     });
     register("alerts", "Alerts", () => rendered.push("alerts"));
+    register("debug-data", "Debug", () => rendered.push("debug"));
   },
 });
 
@@ -41,6 +45,16 @@ check(
   "an open-panel event marks the menu's dock button",
   !!dock?.querySelector('.qws-dock-btn[data-id="alerts"]')?.classList.contains("open"),
 );
+
+const debugButton = dock?.querySelector('.qws-dock-btn[data-id="debug-data"]');
+check("the Debug menu is hidden by default", !!debugButton?.hidden);
+setDebugMenuShown(true);
+check("turning it on shows its button", !debugButton?.hidden);
+debugButton?.click();
+check("and it opens", rendered.includes("debug") && !!debugButton?.classList.contains("open"));
+setDebugMenuShown(false);
+check("turning it off hides the button again", !!debugButton?.hidden);
+check("and closes its window", !debugButton?.classList.contains("open"));
 
 const fold = dock?.querySelector(".qws-dock-fold");
 check("the hide hint sits on the fold button, not on every menu button", !dock?.getAttribute("title") && !!fold?.getAttribute("title"));

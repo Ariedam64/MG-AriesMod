@@ -12014,11 +12014,11 @@ label.qws-ed-opt { cursor: pointer; }
     content2.appendChild(options2);
   }
   function editSlotList(edit) {
-    const changed6 = updateGardenObjectAtCurrentTile((obj) => {
+    const changed7 = updateGardenObjectAtCurrentTile((obj) => {
       if (obj?.objectType !== "plant") return obj;
       return { ...obj, slots: edit(Array.isArray(obj.slots) ? obj.slots.slice() : []) };
     });
-    if (changed6) currentItemChanged.emit();
+    if (changed7) currentItemChanged.emit();
   }
   function plantSlotBox(title, handlers) {
     const size = sizeControls();
@@ -15241,6 +15241,26 @@ label.qws-ed-opt { cursor: pointer; }
     }
   });
 
+  // src/ui/kit/menuVisibility.ts
+  function setMenuHidden(id, hidden) {
+    if (hiddenMenus.get(id) === hidden) return;
+    hiddenMenus.set(id, hidden);
+    changed3.emit([id, hidden]);
+  }
+  function onMenuHidden(cb) {
+    for (const [id, hidden] of hiddenMenus) cb(id, hidden);
+    return changed3.on(([id, hidden]) => cb(id, hidden));
+  }
+  var hiddenMenus, changed3;
+  var init_menuVisibility = __esm({
+    "src/ui/kit/menuVisibility.ts"() {
+      "use strict";
+      init_emitter();
+      hiddenMenus = /* @__PURE__ */ new Map();
+      changed3 = new Emitter();
+    }
+  });
+
   // src/ui/kit/dock.ts
   function createDock(onSelect, events = {}) {
     ensureKitStyles();
@@ -15259,6 +15279,7 @@ label.qws-ed-opt { cursor: pointer; }
     const tip2 = h("div", "qws-dock-tip");
     const buttons = /* @__PURE__ */ new Map();
     const pendingBadges = /* @__PURE__ */ new Map();
+    const hiddenItems = /* @__PURE__ */ new Set();
     const showTip = (btn, label2) => {
       tip2.textContent = label2;
       if (!tip2.isConnected) (document.documentElement || document.body).appendChild(tip2);
@@ -15297,8 +15318,15 @@ label.qws-ed-opt { cursor: pointer; }
       grid.appendChild(btn);
       buttons.set(id, btn);
       if (pendingBadges.has(id)) setBadge(id, pendingBadges.get(id) ?? 0);
+      btn.hidden = hiddenItems.has(id);
     };
     onMenuBadge(setBadge);
+    onMenuHidden((id, hidden) => {
+      if (hidden) hiddenItems.add(id);
+      else hiddenItems.delete(id);
+      const btn = buttons.get(id);
+      if (btn) btn.hidden = hidden;
+    });
     const moveTo = (pos) => {
       root4.classList.add("placed");
       const rect = root4.getBoundingClientRect();
@@ -15384,6 +15412,7 @@ label.qws-ed-opt { cursor: pointer; }
       init_floating();
       init_menuIcons();
       init_menuBadges();
+      init_menuVisibility();
       TIP_GAP_PX = 10;
       EDGE_MARGIN_PX = 8;
       FOLD_ICON = '<path d="M6 15l6-6 6 6"/>';
@@ -15759,6 +15788,12 @@ label.qws-ed-opt { cursor: pointer; }
     } catch (error) {
       console.error("[HUD] panel registration failed:", error);
     }
+    onMenuHidden((id, hidden) => {
+      const w = windows.get(id);
+      if (!hidden || !w || w.el.style.display === "none") return;
+      w.el.style.display = "none";
+      dock.setOpen(id, false);
+    });
     window.addEventListener("qws:open-panel", (ev) => {
       const id = String(ev.detail?.id || "");
       const entry = registry2.get(id);
@@ -15780,6 +15815,7 @@ label.qws-ed-opt { cursor: pointer; }
       init_storage();
       init_button();
       init_dock();
+      init_menuVisibility();
       init_floating();
       init_dom2();
       init_theme();
@@ -16431,16 +16467,16 @@ label.qws-ed-opt { cursor: pointer; }
     if (!added.length && !updated.length) return;
     const byKey = /* @__PURE__ */ new Map();
     for (const entry of getActivityLogHistory()) byKey.set(entryKey(entry), entry);
-    let changed6 = false;
+    let changed7 = false;
     for (const entry of [...updated, ...added]) {
       const key2 = entryKey(entry);
       const cur = byKey.get(key2);
       if (!cur || !entriesEqual(cur, entry)) {
         byKey.set(key2, entry);
-        changed6 = true;
+        changed7 = true;
       }
     }
-    if (changed6) saveHistory(Array.from(byKey.values()));
+    if (changed7) saveHistory(Array.from(byKey.values()));
   }
   var HISTORY_STORAGE_KEY, HISTORY_LIMIT, IDENTITY_FIELDS, entriesEqual;
   var init_history = __esm({
@@ -17697,12 +17733,12 @@ label.qws-ed-opt { cursor: pointer; }
     if (!events.length) return false;
     const state5 = loadState();
     const seen = new Set(state5.seenPetIds);
-    let changed6 = false;
+    let changed7 = false;
     for (const event of events) {
       if (seen.has(event.petId)) continue;
       seen.add(event.petId);
       state5.seenPetIds.push(event.petId);
-      changed6 = true;
+      changed7 = true;
       if (countStats) {
         try {
           StatsService.incrementPetHatched(event.species, rarityOf(event));
@@ -17714,8 +17750,8 @@ label.qws-ed-opt { cursor: pointer; }
       const counters = (_a = state5.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
       applyPull(counters, event, protectedSpecies(event.eggId));
     }
-    if (changed6) saveState(state5);
-    return changed6;
+    if (changed7) saveState(state5);
+    return changed7;
   }
   async function startHatchTracker() {
     const firstRun = !loadState().bootstrapped;
@@ -20370,17 +20406,17 @@ label.qws-ed-opt { cursor: pointer; }
             if (prefer && this.library.has(prefer)) return prefer;
             return fallback;
           };
-          let changed6 = false;
+          let changed7 = false;
           const shops2 = valid(this.ctx("shops").defaultSoundName);
           for (const key2 of AUDIO_CONTEXTS) {
             const target = this.ctx(key2);
             const next = key2 === "shops" ? shops2 : valid(target.defaultSoundName, shops2);
             if (next !== target.defaultSoundName) {
               target.defaultSoundName = next;
-              changed6 = true;
+              changed7 = true;
             }
           }
-          return changed6;
+          return changed7;
         }
         /* ================================ Library ================================ */
         listSounds() {
@@ -21912,7 +21948,7 @@ label.qws-ed-opt { cursor: pointer; }
         apply(value);
       } catch {
       }
-      changed3.emit();
+      changed4.emit();
     };
     try {
       update(await view.get());
@@ -21923,7 +21959,7 @@ label.qws-ed-opt { cursor: pointer; }
     } catch {
     }
   }
-  var toolCounts, decorCounts, changed3, InventoryCaps;
+  var toolCounts, decorCounts, changed4, InventoryCaps;
   var init_inventoryCaps = __esm({
     "src/features/notifier/inventoryCaps.ts"() {
       "use strict";
@@ -21932,7 +21968,7 @@ label.qws-ed-opt { cursor: pointer; }
       init_data();
       toolCounts = /* @__PURE__ */ new Map();
       decorCounts = /* @__PURE__ */ new Map();
-      changed3 = new Emitter();
+      changed4 = new Emitter();
       InventoryCaps = {
         async start() {
           await follow(Atoms.inventory.myToolInventory, (items) => {
@@ -21944,7 +21980,7 @@ label.qws-ed-opt { cursor: pointer; }
         },
         /** Fires after every inventory update. */
         onChange(cb) {
-          return changed3.on(cb);
+          return changed4.on(cb);
         }
       };
     }
@@ -22013,7 +22049,7 @@ label.qws-ed-opt { cursor: pointer; }
     }
     return rows;
   }
-  var FOLLOWED_PATH, followed, DISPLAY_RARITY, BASE_SHOPS, state2, idsSig, changed4, countFollowed, emit, ShopRows;
+  var FOLLOWED_PATH, followed, DISPLAY_RARITY, BASE_SHOPS, state2, idsSig, changed5, countFollowed, emit, ShopRows;
   var init_shopRows = __esm({
     "src/features/notifier/shopRows.ts"() {
       "use strict";
@@ -22037,10 +22073,10 @@ label.qws-ed-opt { cursor: pointer; }
       BASE_SHOPS = /* @__PURE__ */ new Set(["Seed", "Egg", "Tool", "Decor"]);
       state2 = null;
       idsSig = "";
-      changed4 = new Emitter();
+      changed5 = new Emitter();
       countFollowed = (rows) => rows.reduce((n, r) => n + (r.followed ? 1 : 0), 0);
       emit = () => {
-        if (state2) changed4.emit({ ...state2, rows: state2.rows.slice() });
+        if (state2) changed5.emit({ ...state2, rows: state2.rows.slice() });
       };
       ShopRows = {
         /** Rebuilds the rows from the catalogs. Listeners hear of it only when the set of items changed. */
@@ -22073,7 +22109,7 @@ label.qws-ed-opt { cursor: pointer; }
           return state2;
         },
         onChange(cb) {
-          return changed4.on(cb);
+          return changed5.on(cb);
         },
         /** Whether an item's alert is on. A capped item reads as off. */
         isFollowed(id) {
@@ -22586,7 +22622,7 @@ label.qws-ed-opt { cursor: pointer; }
     const isNew = sig !== stateSig;
     stateSig = sig;
     state3 = { updatedAt: Date.now(), currentId, rows };
-    if (isNew) changed5.emit(state3);
+    if (isNew) changed6.emit(state3);
   }
   function ring(id) {
     if (!weatherById(id)) return;
@@ -22611,7 +22647,7 @@ label.qws-ed-opt { cursor: pointer; }
     if (def) savePrefs();
     recomputeState();
   }
-  var PREFS_PATH, prefs, prefsLoaded, state3, stateSig, currentId, currentValue, changed5, weatherStateSignature, WeatherAlerts;
+  var PREFS_PATH, prefs, prefsLoaded, state3, stateSig, currentId, currentValue, changed6, weatherStateSignature, WeatherAlerts;
   var init_weatherAlerts = __esm({
     "src/features/notifier/weatherAlerts.ts"() {
       "use strict";
@@ -22629,7 +22665,7 @@ label.qws-ed-opt { cursor: pointer; }
       stateSig = null;
       currentId = null;
       currentValue = null;
-      changed5 = new Emitter();
+      changed6 = new Emitter();
       weatherStateSignature = (rows) => JSON.stringify(rows.map((r) => [r.id, r.notify ? 1 : 0, r.lastSeen || 0, r.isCurrent ? 1 : 0]));
       WeatherAlerts = {
         /** Reads the weather once, then follows it. */
@@ -22654,7 +22690,7 @@ label.qws-ed-opt { cursor: pointer; }
           return state3;
         },
         onChange(cb) {
-          return changed5.on(cb);
+          return changed6.on(cb);
         },
         setNotify(id, enabled2) {
           if (!id) return;
@@ -34482,6 +34518,28 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/features/debug/visibility.ts
+  function isDebugMenuShown() {
+    return readAriesPath(PATH) === true;
+  }
+  function setDebugMenuShown(shown) {
+    writeAriesPath(PATH, shown);
+    setMenuHidden(MENU_ID, !shown);
+  }
+  function initDebugMenuVisibility() {
+    setMenuHidden(MENU_ID, !isDebugMenuShown());
+  }
+  var PATH, MENU_ID;
+  var init_visibility = __esm({
+    "src/features/debug/visibility.ts"() {
+      "use strict";
+      init_storage();
+      init_menuVisibility();
+      PATH = "misc.showDebugMenu";
+      MENU_ID = "debug-data";
+    }
+  });
+
   // src/features/companion/chat/harvest.ts
   function rowKey(row2) {
     return `${row2.tileIndex}:${row2.slotId}`;
@@ -35507,7 +35565,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     card3.body.append(
       settingRow("Crop price", "A crop's sell price in its tooltip.", priceToggle).row,
-      settingRow("Garden view", "Your whole garden as a flat grid, nothing hidden.", gardenViewButton).row
+      settingRow("Garden view", "Your whole garden as a flat grid, nothing hidden.", gardenViewButton).row,
+      settingRow("Debug menu", "Developer tools, shown in the launcher.", switchInput(isDebugMenuShown(), setDebugMenuShown)).row
     );
     return card3.root;
   }
@@ -35597,6 +35656,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_settings2();
       init_stores();
       init_setting();
+      init_visibility();
       init_gardenView();
       init_ghost();
       init_inventoryReserve();
@@ -35784,7 +35844,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return rgb ? toHex(rgb) : null;
   }
   function readAppearance() {
-    const raw = readAriesPath(PATH) ?? {};
+    const raw = readAriesPath(PATH2) ?? {};
     const theme = typeof raw.theme === "string" && raw.theme in themes ? raw.theme : DEFAULT_THEME;
     return { theme, accent: cleanAccent(raw.accent), scale: raw.scale === void 0 ? 1 : cleanScale(raw.scale) };
   }
@@ -35806,10 +35866,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function saveAppearance(look) {
     const clean = { theme: look.theme in themes ? look.theme : DEFAULT_THEME, accent: cleanAccent(look.accent), scale: cleanScale(look.scale) };
-    writeAriesPath(PATH, clean);
+    writeAriesPath(PATH2, clean);
     applyAppearance(clean);
   }
-  var PATH, STYLE_ID3, SCALE_MIN, SCALE_MAX, DEFAULT_APPEARANCE;
+  var PATH2, STYLE_ID3, SCALE_MIN, SCALE_MAX, DEFAULT_APPEARANCE;
   var init_appearance = __esm({
     "src/features/settings/appearance.ts"() {
       "use strict";
@@ -35819,7 +35879,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_accent();
       init_styles();
       init_theme();
-      PATH = "ui.appearance";
+      PATH2 = "ui.appearance";
       STYLE_ID3 = "qmm-appearance";
       SCALE_MIN = 0.8;
       SCALE_MAX = 1.3;
@@ -37614,10 +37674,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     const show = (next) => {
       const sig = weatherStateSignature(next.rows);
-      const changed6 = sig !== stateSig2;
+      const changed7 = sig !== stateSig2;
       state5 = next;
       stateSig2 = sig;
-      if (changed6) rebuild2();
+      if (changed7) rebuild2();
       else refreshLastSeen();
     };
     void (async () => {
@@ -40534,16 +40594,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     retriesLeft -= 1;
     const targets = await loadTargets();
     const index = sharedStageIndex();
-    let changed6 = false;
+    let changed7 = false;
     for (const result of pending3) {
       const canvas = skinCanvases.get(result.frameKey);
       const target = targets.get(result.frameKey);
       if (!canvas || !target) continue;
       if (!applySkinTexture(target, canvas, index)) continue;
       snapshot2.results.set(result.frameKey, { frameKey: result.frameKey, applied: true });
-      changed6 = true;
+      changed7 = true;
     }
-    if (!changed6) return;
+    if (!changed7) return;
     snapshot2.rebaked = rebakeAll();
     notifyChanged();
   }
@@ -43200,14 +43260,14 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     };
   }
   function clearProposal(log2, proposalId) {
-    let changed6 = false;
+    let changed7 = false;
     const messages = log2.messages.map((entry) => {
       if (entry.proposalId !== proposalId) return entry;
-      changed6 = true;
+      changed7 = true;
       const { proposalId: _dropped, ...rest2 } = entry;
       return rest2;
     });
-    return changed6 ? { ...log2, messages } : log2;
+    return changed7 ? { ...log2, messages } : log2;
   }
   var MAX_MESSAGES;
   var init_log = __esm({
@@ -49612,6 +49672,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       init_menu6();
       init_menu7();
       init_appearance();
+      init_visibility();
       init_menu8();
       init_menu9();
       init_menu10();
@@ -49660,6 +49721,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
         installEditorPointerControls();
         void initSkins();
         applyAppearance();
+        initDebugMenuVisibility();
         mountHUD({
           onRegister(register2) {
             register2("pets", "Pets", renderPetsMenu);
