@@ -145,8 +145,16 @@ function takeCommandSequenceForMod(): number {
   return nextCommandSequence++;
 }
 
-/** Consumes the number for a game command we are renumbering. */
-export function takeCommandSequenceForGame(): number {
+/**
+ * Consumes the number for a game command we are renumbering, never below the
+ * number the game gave it. The game counts commands that never reached the
+ * socket (dropped by an outgoing rule, or sent while disconnected), and keeps a
+ * fence on its own number until the server has executed one at least as high:
+ * going out below it would leave that fence up and block the game's actions.
+ */
+export function takeCommandSequenceForGame(gameSequence?: unknown): number {
+  const own = Number(gameSequence);
+  if (Number.isFinite(own) && own > nextCommandSequence) nextCommandSequence = own;
   return nextCommandSequence++;
 }
 

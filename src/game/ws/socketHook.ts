@@ -48,7 +48,7 @@ function renumberGameCommand(envelope: any): any {
     observeGameCommandSequence(envelope?.commandSequence);
     return envelope;
   }
-  return { ...envelope, commandSequence: takeCommandSequenceForGame() };
+  return { ...envelope, commandSequence: takeCommandSequenceForGame(envelope?.commandSequence) };
 }
 
 /**

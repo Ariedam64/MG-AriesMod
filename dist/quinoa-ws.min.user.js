@@ -1142,7 +1142,9 @@
     modCommandsSent += 1;
     return nextCommandSequence++;
   }
-  function takeCommandSequenceForGame() {
+  function takeCommandSequenceForGame(gameSequence) {
+    const own = Number(gameSequence);
+    if (Number.isFinite(own) && own > nextCommandSequence) nextCommandSequence = own;
     return nextCommandSequence++;
   }
   function observeGameCommandSequence(commandSequence) {
@@ -1378,7 +1380,7 @@
       observeGameCommandSequence(envelope?.commandSequence);
       return envelope;
     }
-    return { ...envelope, commandSequence: takeCommandSequenceForGame() };
+    return { ...envelope, commandSequence: takeCommandSequenceForGame(envelope?.commandSequence) };
   }
   function processOutgoingFrame(data) {
     if (typeof data !== "string" || data.indexOf('"QuinoaCommand"') === -1) return data;
@@ -14706,6 +14708,7 @@ label.qws-ed-opt { cursor: pointer; }
             { id: "game.feeding-trough", label: "Feeding trough", icon: "sprite/decor/FeedingTrough", defaultHotkey: null, allowClear: true },
             { id: "game.weather-station", label: "Weather station", icon: "sprite/object/WeatherStation", defaultHotkey: null, allowClear: true },
             { id: "game.journal", label: "Journal", icon: "sprite/ui/JournalStamp", defaultHotkey: null, allowClear: true },
+            { id: "game.daily-quests", label: "Daily quests", icon: "sprite/ui/QuestIcon", defaultHotkey: null, allowClear: true },
             { id: "game.move-up", label: "Move up", icon: "https://i.imgur.com/EkbKUgi.png", defaultHotkey: { code: "KeyW" } },
             { id: "game.move-down", label: "Move down", icon: "https://i.imgur.com/tdJ7IGP.png", defaultHotkey: { code: "KeyS" } },
             { id: "game.move-left", label: "Move left", icon: "https://i.imgur.com/86VbR70.png", defaultHotkey: { code: "KeyA" } },
@@ -19887,6 +19890,8 @@ label.qws-ed-opt { cursor: pointer; }
       MODAL_TOGGLES = [
         ["game.pet-hutch", "petHutch"],
         ["game.journal", JOURNAL_MODAL_ID],
+        // The quest booth's modal, added in build 1449.
+        ["game.daily-quests", "dailyQuests"],
         ["game.seed-silo", "seedSilo"],
         ["game.decor-shed", "decorShed"],
         ["game.tool-shack", "toolShack"],

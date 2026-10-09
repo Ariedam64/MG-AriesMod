@@ -121,6 +121,17 @@ checkEqual("a second mod command keeps counting", modPickup.commandSequence, 16)
 checkEqual("still not renumbered", sendFromGame(modPickup).commandSequence, 16);
 checkEqual("the game's stale 15 becomes 17", sendFromGame(gameEnvelope(15, "HarvestCrop")).commandSequence, 17);
 
+// The game numbers a command even when it never reaches the socket: an outgoing
+// rule dropped it, or the game was not connected. Since build 1449 the game
+// keeps a fence on that number (a HatchEgg fence blocks hatching) until the
+// server has executed a number at least as high, so a game command must never
+// go out below the number the game gave it, or its fence is never lifted.
+resetCommandSequence();
+seedCommandSequence(200);
+checkEqual("the mod injects at 201", buildQuinoaMessage({ type: "SellPet", itemId: "p" }).commandSequence, 201);
+checkEqual("a game command is never sent below its own number", sendFromGame(gameEnvelope(203, "HatchEgg")).commandSequence, 203);
+checkEqual("and the stream carries on above it", buildQuinoaMessage({ type: "SellPet", itemId: "q" }).commandSequence, 204);
+
 // A reconnect re-seeds from Welcome and hands numbering back to the game.
 seedCommandSequence(100);
 checkEqual("Welcome re-seeds", sendFromGame(gameEnvelope(101, "PlantSeed")).commandSequence, 101);
