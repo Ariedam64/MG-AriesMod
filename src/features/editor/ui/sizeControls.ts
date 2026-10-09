@@ -62,7 +62,7 @@ export function sizeControls(): SizeControls {
 }
 
 /** A slot's header: its title, the custom switch, and the size. */
-export function slotHeader(title: string, size: SizeControls): HTMLDivElement {
+function slotHeader(title: string, size: SizeControls): HTMLDivElement {
   const row = h("div", "qws-ed-slot__head");
   row.append(h("span", "qws-ed-slot__title", title), size.modeLabel, size.value);
   return row;

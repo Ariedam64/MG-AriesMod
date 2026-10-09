@@ -52,10 +52,6 @@ export const containersCss = `
 
 .qmm-label { font-weight: 700; }
 .qmm-flex { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
-.qmm-form-row { display: grid; align-items: center; width: 100%; }
-.qmm-form-row.is-top { align-items: start; }
-.qmm-form-row__label { justify-self: start; margin: 0; font-weight: 800; }
-.qmm-form-row.is-top .qmm-form-row__label { align-self: start; }
 
 .qmm-error {
   padding: 10px 12px; border: 2px solid var(--qmm-danger-border); border-radius: var(--qmm-radius-md);

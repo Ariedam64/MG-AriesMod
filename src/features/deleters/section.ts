@@ -40,7 +40,7 @@ const formatFinishTime = (timestamp: number): string =>
   new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
 /** A noun in its two forms, so a count reads as a phrase: `1 seed`, `3 seeds`. */
-export type Noun = { one: string; many: string };
+type Noun = { one: string; many: string };
 
 const counted = (count: number, noun: Noun) => `${formatInteger(count)} ${count === 1 ? noun.one : noun.many}`;
 

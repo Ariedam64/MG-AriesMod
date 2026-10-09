@@ -87,26 +87,6 @@ export function collapsibleCard(opts: CollapsibleCardOptions): { root: HTMLEleme
   return { root, body };
 }
 
-export type FormRowOptions = {
-  alignTop?: boolean;
-  labelWidth?: string;
-  gap?: number;
-};
-
-/** A label column and a control column. */
-export function formRow(
-  labelText: string,
-  control: HTMLElement,
-  opts: FormRowOptions = {},
-): { root: HTMLDivElement; label: HTMLLabelElement } {
-  const root = h("div", opts.alignTop ? "qmm-form-row is-top" : "qmm-form-row");
-  root.style.gridTemplateColumns = `${opts.labelWidth || "160px"} 1fr`;
-  root.style.columnGap = `${opts.gap ?? 10}px`;
-  const label = h("label", "qmm-label qmm-form-row__label", labelText);
-  root.append(label, control);
-  return { root, label };
-}
-
 export type FlexRowOptions = {
   gap?: number;
   justify?: "start" | "center" | "end" | "between" | "around";

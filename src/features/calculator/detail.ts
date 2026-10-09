@@ -27,7 +27,7 @@ import {
 import { optionPicker } from "./mutationPicker";
 import { cropEmoji, cropPreview } from "./sprites";
 
-export type SelectedCrop = { key: string; option: LockerSeedOption | undefined; state: CalculatorState };
+type SelectedCrop = { key: string; option: LockerSeedOption | undefined; state: CalculatorState };
 
 export type CalculatorDetail = {
   root: HTMLElement;

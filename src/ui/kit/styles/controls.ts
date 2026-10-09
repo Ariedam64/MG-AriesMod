@@ -60,7 +60,6 @@ export const controlsCss = `
 .qmm-step:hover { background: var(--qmm-border-hover); color: var(--qmm-text); }
 .qmm-step:active { transform: translateY(1px); box-shadow: none; }
 
-.qmm-radio { transform: scale(1.15); accent-color: var(--qmm-sepia); }
 
 .qmm-switch {
   -webkit-appearance: none; appearance: none; position: relative; flex-shrink: 0;

@@ -388,7 +388,7 @@
     const attempts = [];
     pageWindow.__MG_CTORS_DEBUG__ = attempts;
     let iteration = 0;
-    const snapshot2 = () => {
+    const snapshot3 = () => {
       const stage = app?.stage;
       const lor = renderer?.lastObjectRendered;
       const rStage = renderer?.stage;
@@ -411,7 +411,7 @@
     };
     const deadline = Date.now() + 1e4;
     while (Date.now() < deadline) {
-      snapshot2();
+      snapshot3();
       try {
         return getCtors(app);
       } catch {
@@ -421,7 +421,7 @@
       }
       await sleep(100);
     }
-    snapshot2();
+    snapshot3();
     return getCtors(app);
   }
   var init_resolvePixi = __esm({
@@ -504,13 +504,13 @@
   // src/game/sprites/utils/path.ts
   function normalizeSegments(path) {
     const out = [];
-    for (const part of path.split("/")) {
-      if (part === "" || part === ".") continue;
-      if (part === "..") {
+    for (const part2 of path.split("/")) {
+      if (part2 === "" || part2 === ".") continue;
+      if (part2 === "..") {
         out.pop();
         continue;
       }
-      out.push(part);
+      out.push(part2);
     }
     return out.join("/");
   }
@@ -559,14 +559,14 @@
     }
   }
   function detectEnvironment() {
-    const framed2 = isInIframe();
+    const framed = isInIframe();
     const referrerHost = hostOf(document.referrer);
-    const embeddedInDiscord = framed2 && !!referrerHost && /(^|\.)discord(app)?\.com$/i.test(referrerHost);
+    const embeddedInDiscord = framed && !!referrerHost && /(^|\.)discord(app)?\.com$/i.test(referrerHost);
     return {
       surface: isDiscordActivityContext() || embeddedInDiscord ? "discord" : "web",
       host: location.hostname,
       origin: location.origin,
-      isInIframe: framed2,
+      isInIframe: framed,
       platform: /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) ? "mobile" : "desktop"
     };
   }
@@ -597,7 +597,7 @@
         );
       }
       const settle = () => clearTimeout(deadline);
-      const details = {
+      const details2 = {
         method: req.method ?? "GET",
         url: req.url,
         onload: (res) => {
@@ -614,12 +614,12 @@
           reject2(new Error(`Timeout for ${req.url}`));
         }
       };
-      if (kind !== "text") details.responseType = kind;
-      if (req.headers) details.headers = req.headers;
-      if (req.body !== void 0) details.data = req.body;
-      if (req.noCache) details.nocache = true;
-      if (req.timeoutMs) details.timeout = req.timeoutMs;
-      GM_xmlhttpRequest(details);
+      if (kind !== "text") details2.responseType = kind;
+      if (req.headers) details2.headers = req.headers;
+      if (req.body !== void 0) details2.data = req.body;
+      if (req.noCache) details2.nocache = true;
+      if (req.timeoutMs) details2.timeout = req.timeoutMs;
+      GM_xmlhttpRequest(details2);
     });
   }
   async function fetchRequest(req, kind) {
@@ -1121,7 +1121,7 @@
     return typeof type === "string" && COMMAND_TYPES.has(type);
   }
   function isQuinoaScope(scopePath) {
-    return Array.isArray(scopePath) && scopePath.length === QUINOA_SCOPE.length && scopePath.every((part, index) => part === QUINOA_SCOPE[index]);
+    return Array.isArray(scopePath) && scopePath.length === QUINOA_SCOPE.length && scopePath.every((part2, index) => part2 === QUINOA_SCOPE[index]);
   }
   function seedCommandSequence(executedCommandSequence) {
     const executed = Number(executedCommandSequence);
@@ -1483,9 +1483,9 @@
   });
 
   // src/lib/dom.ts
-  function addStyle(css4) {
+  function addStyle(css) {
     const style = document.createElement("style");
-    style.textContent = css4;
+    style.textContent = css;
     document.head.appendChild(style);
     return style;
   }
@@ -1770,6 +1770,8 @@
 .qmm.qmm-alt-drag { cursor: grab; }
 .qmm.qmm-alt-drag:active { cursor: grabbing; }
 
+/* A menu with one tab needs no tab bar. */
+.qmm-tabs.is-single { display: none; }
 .qmm-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-sm); padding: 0 0 12px; }
 .qmm-tab {
   flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: var(--qmm-space-sm);
@@ -1822,7 +1824,7 @@
   outline: none; border-color: var(--qmm-sepia); box-shadow: 0 0 0 3px var(--qmm-sepia-soft);
 }
 /* Windows give text and number fields one width; an inline width still wins. */
-.qws-win input[type="text"], .qws-win input[type="number"] { width: 120px; }
+.qws-win input[type="text"]:not([class]), .qws-win input[type="number"]:not([class]) { width: 120px; }
 
 .qws-dock {
   position: fixed; right: 16px; bottom: 16px; z-index: ${layer.hud};
@@ -1899,7 +1901,7 @@
       "use strict";
       containersCss = `
 .qmm-card {
-  display: grid; gap: var(--qmm-space-xl); width: 100%; padding: 14px; box-sizing: border-box;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--qmm-space-xl); width: 100%; padding: 14px; box-sizing: border-box;
   border: 3px solid var(--qmm-sand-edge); border-radius: 18px; background: var(--qmm-card);
 }
 .qmm-card--plain { display: flex; flex-direction: column; gap: var(--qmm-space-lg); width: auto; min-height: 0; padding: 10px; }
@@ -1911,9 +1913,10 @@
 .qmm-card__header.is-compact { gap: var(--qmm-space-sm); }
 .qmm-card__icon { font-size: 18px; }
 .qmm-card__title { font-size: var(--qmm-fs-xl); font-weight: 900; letter-spacing: .01em; }
-.qmm-card__subtitle { flex-basis: 100%; font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
-.qmm-card__actions { display: flex; gap: var(--qmm-space-sm); margin-left: auto; }
-.qmm-card__body { display: grid; gap: var(--qmm-space-lg); }
+/* Title and actions share the first line; the subtitle takes the line below. */
+.qmm-card__subtitle { order: 2; flex-basis: 100%; font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
+.qmm-card__actions { order: 1; display: flex; gap: var(--qmm-space-sm); margin-left: auto; }
+.qmm-card__body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--qmm-space-lg); }
 
 .qmm-section-label {
   font-size: var(--qmm-fs-xs); font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
@@ -1936,21 +1939,18 @@
 .qmm-collapse__body { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
 .qmm-collapse.is-collapsed > .qmm-collapse__body { display: none; }
 
+/* In a narrow window the controls drop under the text instead of crushing it. */
 .qmm-setting-row {
-  display: flex; align-items: center; gap: var(--qmm-space-lg); flex-shrink: 0; padding: 10px 12px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-lg); flex-shrink: 0; padding: 10px 12px;
   border: 0; border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
 }
-.qmm-setting-row__text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.qmm-setting-row__text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 140px; min-width: 0; }
 .qmm-setting-row__title { font-size: var(--qmm-fs-lg); font-weight: 800; color: var(--qmm-text); }
 .qmm-setting-row__hint { font-size: var(--qmm-fs-xs); line-height: 1.4; color: var(--qmm-text-dim); }
-.qmm-setting-row__controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--qmm-space-md); flex: 0 0 auto; }
+.qmm-setting-row__controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--qmm-space-md); flex: 0 1 auto; margin-left: auto; }
 
 .qmm-label { font-weight: 700; }
 .qmm-flex { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
-.qmm-form-row { display: grid; align-items: center; width: 100%; }
-.qmm-form-row.is-top { align-items: start; }
-.qmm-form-row__label { justify-self: start; margin: 0; font-weight: 800; }
-.qmm-form-row.is-top .qmm-form-row__label { align-self: start; }
 
 .qmm-error {
   padding: 10px 12px; border: 2px solid var(--qmm-danger-border); border-radius: var(--qmm-radius-md);
@@ -2145,7 +2145,6 @@
 .qmm-step:hover { background: var(--qmm-border-hover); color: var(--qmm-text); }
 .qmm-step:active { transform: translateY(1px); box-shadow: none; }
 
-.qmm-radio { transform: scale(1.15); accent-color: var(--qmm-sepia); }
 
 .qmm-switch {
   -webkit-appearance: none; appearance: none; position: relative; flex-shrink: 0;
@@ -2185,8 +2184,10 @@
 }
 .qmm-range { width: 180px; }
 .qws-pnl-range { width: 100%; }
+/* Chrome has no progress pseudo-element: the slider sets --qmm-range-fill to its value. */
 .qmm-range::-webkit-slider-runnable-track, .qws-pnl-range::-webkit-slider-runnable-track {
-  height: 10px; border-radius: var(--qmm-radius-pill); background: var(--qmm-sand-edge);
+  height: 10px; border-radius: var(--qmm-radius-pill);
+  background: linear-gradient(to right, var(--qmm-sepia) var(--qmm-range-fill, 0%), var(--qmm-sand-edge) var(--qmm-range-fill, 0%));
 }
 .qmm-range::-moz-range-track, .qws-pnl-range::-moz-range-track {
   height: 10px; border-radius: var(--qmm-radius-pill); background: var(--qmm-sand-edge);
@@ -2239,7 +2240,8 @@
   position: relative; display: inline-flex; align-items: center; gap: var(--qmm-space-xs); overflow: hidden;
   padding: var(--seg-pad, 4px); border-radius: var(--qmm-radius-pill); background: var(--qmm-sand);
 }
-.qmm-seg--full { display: flex; width: 100%; }
+.qmm-seg--full { display: flex; width: 100%; box-sizing: border-box; }
+.qmm-seg--full .qmm-seg__btn { flex: 1 1 0; min-width: 0; }
 .qmm-seg__btn {
   position: relative; z-index: 1; padding: 8px 14px; border: 0; border-radius: var(--qmm-radius-pill);
   appearance: none; background: transparent; color: var(--qmm-text-soft);
@@ -2328,17 +2330,17 @@
   // src/ui/kit/dom.ts
   function h(tag, className, text2) {
     ensureKitStyles();
-    const el = document.createElement(tag);
-    if (className) el.className = className;
-    if (text2 != null) el.textContent = text2;
-    return el;
+    const el4 = document.createElement(tag);
+    if (className) el4.className = className;
+    if (text2 != null) el4.textContent = text2;
+    return el4;
   }
   function iconNode(icon2, className) {
     const node = typeof icon2 === "string" ? h("span", void 0, icon2) : icon2;
     node.classList.add(className);
     return node;
   }
-  function refreshWhileVisible(el, refresh, everyMs) {
+  function refreshWhileVisible(el4, refresh, everyMs) {
     let timer2 = null;
     const run = () => {
       try {
@@ -2366,7 +2368,7 @@
         stop();
       }
     });
-    observer2.observe(el);
+    observer2.observe(el4);
     return () => {
       observer2.disconnect();
       stop();
@@ -2568,11 +2570,11 @@
       const defaults = out[key2];
       out[key2] = isRecord(defaults) && isRecord(value) ? { ...defaults, ...value } : value;
     }
-    for (const [legacyKey, [section5, field2]] of Object.entries(LEGACY_ROOT_KEYS)) {
+    for (const [legacyKey, [section, field3]] of Object.entries(LEGACY_ROOT_KEYS)) {
       if (!(legacyKey in raw)) continue;
-      const target = isRecord(out[section5]) ? out[section5] : {};
-      out[section5] = target;
-      if (target[field2] === void 0) target[field2] = raw[legacyKey];
+      const target = isRecord(out[section]) ? out[section] : {};
+      out[section] = target;
+      if (target[field3] === void 0) target[field3] = raw[legacyKey];
     }
     return out;
   }
@@ -5448,8 +5450,8 @@
         /** The mp3 paths named in the page itself and its same-origin scripts and stylesheets. */
         async scanResourcesForRefs() {
           const urls = /* @__PURE__ */ new Set();
-          document.querySelectorAll('script[src],link[rel="stylesheet"][href]').forEach((el) => {
-            const u = el.src || el.href;
+          document.querySelectorAll('script[src],link[rel="stylesheet"][href]').forEach((el4) => {
+            const u = el4.src || el4.href;
             try {
               const url = new URL(u, location.href);
               if (url.origin === location.origin) urls.add(url.href);
@@ -10915,38 +10917,222 @@
     }
   });
 
-  // src/features/editor/decorRotation.ts
-  function ensureSliderStyle() {
-    if (document.getElementById(STYLE_ID2)) return;
-    const style = document.createElement("style");
-    style.id = STYLE_ID2;
-    style.textContent = `
-.${SLIDER_CLASS} {
-  -webkit-appearance: none; appearance: none;
-  width: 100%; height: ${THUMB_SIZE_PX}px;
-  background: transparent; cursor: pointer; margin: 0;
-}
-.${SLIDER_CLASS}::-webkit-slider-runnable-track {
-  height: 4px; border-radius: 999px; background: ${color.track};
-}
-.${SLIDER_CLASS}::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none;
-  width: ${THUMB_SIZE_PX}px; height: ${THUMB_SIZE_PX}px;
-  margin-top: ${(4 - THUMB_SIZE_PX) / 2}px;
-  border-radius: 50%; background: ${color.accent}; border: none;
-  box-shadow: 0 1px 4px ${color.shade};
-}
-.${SLIDER_CLASS}::-moz-range-track {
-  height: 4px; border-radius: 999px; background: ${color.track};
-}
-.${SLIDER_CLASS}::-moz-range-thumb {
-  width: ${THUMB_SIZE_PX}px; height: ${THUMB_SIZE_PX}px;
-  border-radius: 50%; background: ${color.accent}; border: none;
-}
-.${SLIDER_CLASS}:focus-visible { outline: 2px solid ${color.accent}; outline-offset: 2px; }
-  `;
-    document.head.appendChild(style);
+  // src/features/editor/ui/styles.ts
+  function ensureEditorStyles() {
+    if (injected2) return;
+    if (typeof document === "undefined" || !document.head) return;
+    injected2 = true;
+    ensureKitStyles();
+    addStyle(MENU_CSS + PANEL_CSS);
   }
+  var ROTATION_THUMB_PX, MENU_CSS, PANEL_CSS, injected2;
+  var init_styles2 = __esm({
+    "src/features/editor/ui/styles.ts"() {
+      "use strict";
+      init_dom();
+      init_styles();
+      ROTATION_THUMB_PX = 14;
+      MENU_CSS = `
+.qws-ed-menu { display: flex; flex-direction: column; gap: var(--qmm-space-lg); width: 380px; max-width: 100%; }
+/* A card header with both a subtitle and actions keeps the actions beside the title. */
+.qws-ed-menu .qmm-card__actions { order: 1; }
+.qws-ed-menu .qmm-card__subtitle { order: 2; }
+
+.qws-ed-tips { display: flex; flex-wrap: wrap; gap: var(--qmm-space-sm); }
+.qws-ed-tip {
+  display: inline-flex; align-items: baseline; gap: var(--qmm-space-sm); padding: 5px 10px;
+  border-radius: var(--qmm-radius-pill); background: var(--qmm-paper-deep);
+  font-size: var(--qmm-fs-sm); font-weight: 700; color: var(--qmm-text-soft);
+}
+.qws-ed-tip b { font-weight: 900; color: var(--qmm-text); }
+
+.qws-ed-save { display: flex; align-items: center; gap: var(--qmm-space-md); }
+.qws-ed-save > .qmm-input { flex: 1 1 auto; min-width: 0; }
+
+.qws-ed-status {
+  max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--qmm-fs-sm); font-weight: 800; color: var(--qmm-text-dim);
+}
+.qws-ed-status.is-ok { color: var(--qmm-ok-ink); }
+.qws-ed-status.is-warn { color: var(--qmm-warn-ink); }
+.qws-ed-status.is-err { color: var(--qmm-danger-ink); }
+
+.qws-ed-list { display: flex; flex-direction: column; gap: var(--qmm-space-sm); }
+.qws-ed-note { font-size: var(--qmm-fs-sm); color: var(--qmm-text-dim); }
+.qws-ed-empty { padding: var(--qmm-space-lg) var(--qmm-space-md); text-align: center; font-size: var(--qmm-fs-md); color: var(--qmm-text-dim); }
+.qws-ed-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md);
+  padding: 8px 8px 8px 12px; border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+}
+.qws-ed-row__text { display: flex; flex-direction: column; gap: 1px; flex: 1 1 120px; min-width: 0; }
+.qws-ed-row__name {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--qmm-fs-lg); font-weight: 800; color: var(--qmm-text);
+}
+.qws-ed-row__date { font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); }
+.qws-ed-row__actions { display: flex; align-items: center; gap: var(--qmm-space-xs); flex: 0 0 auto; margin-left: auto; }
+.qmm-btn.qmm-btn--ghost.qws-ed-delete { color: var(--qmm-danger-ink); }
+.qmm-btn.qmm-btn--ghost.qws-ed-delete:hover { background: var(--qmm-danger-soft); color: var(--qmm-danger-ink); }
+
+.qws-ed-drop {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--qmm-space-lg);
+  border: 2px dashed var(--qmm-border-hover); border-radius: var(--qmm-radius-md);
+  text-align: center; cursor: pointer; transition: border-color 150ms ease, background 150ms ease;
+}
+.qws-ed-drop:hover, .qws-ed-drop.is-active, .qws-ed-drop:focus-visible {
+  outline: none; border-color: var(--qmm-accent-border-hover); background: var(--qmm-accent-soft);
+}
+.qws-ed-drop__title { font-size: var(--qmm-fs-md); font-weight: 800; color: var(--qmm-text); }
+.qws-ed-drop__hint { font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); }
+`;
+      PANEL_CSS = `
+.qws-ed-panel {
+  position: fixed; top: 12%; display: grid; grid-template-rows: auto minmax(0, 1fr);
+  width: 300px; max-height: calc(86vh / var(--qmm-scale, 1)); box-sizing: border-box; overflow: hidden;
+  border: 3px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-xl);
+  background: var(--qmm-paper); color: var(--qmm-text); box-shadow: var(--qmm-shadow-raise-small);
+  font-family: var(--qmm-font); pointer-events: auto;
+  scale: var(--qmm-scale, 1);
+}
+.qws-ed-panel.is-left { left: 12px; transform-origin: 0 0; }
+.qws-ed-panel.is-right { right: 12px; transform-origin: 100% 0; }
+.qws-ed-panel__head {
+  display: flex; align-items: center; min-height: 40px; padding: 0 16px;
+  background: var(--qmm-sepia); color: var(--qmm-on-sepia);
+  font-size: var(--qmm-fs-xl); font-weight: 900; letter-spacing: .01em;
+}
+.qws-ed-panel__body { display: grid; gap: var(--qmm-space-lg); min-height: 0; padding: var(--qmm-space-lg); }
+.qws-ed-scroll { min-height: 0; overflow: auto; }
+.qws-ed-section { min-height: 0; border-radius: var(--qmm-radius-lg); background: var(--qmm-paper-deep); }
+
+.qws-ed-hint { text-align: center; font-size: var(--qmm-fs-md); line-height: 1.45; color: var(--qmm-text-dim); }
+.qws-ed-label {
+  font-size: var(--qmm-fs-xs); font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--qmm-text-dim);
+}
+.qws-ed-named { display: flex; flex-direction: column; align-items: center; gap: var(--qmm-space-sm); min-width: 0; }
+.qws-ed-named__name {
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-align: center; font-weight: 900; color: var(--qmm-text);
+}
+
+.qws-ed-round.qmm-btn {
+  width: 28px; height: 28px; padding: 0; border-radius: 50%; font-size: var(--qmm-fs-lg); line-height: 1;
+}
+
+.qws-ed-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: var(--qmm-space-xs); padding: var(--qmm-space-sm); }
+.qws-ed-entry {
+  display: flex; align-items: center; justify-content: center; aspect-ratio: 1; padding: 3px; cursor: pointer;
+  border: 2px solid transparent; border-radius: var(--qmm-radius-sm); background: var(--qmm-card); color: var(--qmm-text);
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+.qws-ed-entry:hover { border-color: var(--qmm-border-hover); }
+.qws-ed-entry:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 1px; }
+.qws-ed-entry.is-selected { border-color: var(--qmm-sepia); background: var(--qmm-sepia-soft); transform: scale(1.06); }
+
+.qws-ed-brush { display: grid; align-content: start; gap: var(--qmm-space-lg); padding: var(--qmm-space-lg); }
+.qws-ed-selected { display: flex; align-items: center; gap: var(--qmm-space-lg); min-width: 0; }
+.qws-ed-selected__name {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--qmm-fs-xl); font-weight: 900; color: var(--qmm-text);
+}
+
+.qws-ed-opts { display: grid; gap: var(--qmm-space-md); }
+.qws-ed-opt {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--qmm-space-md);
+  font-size: var(--qmm-fs-md); font-weight: 800; color: var(--qmm-text-soft);
+}
+label.qws-ed-opt { cursor: pointer; }
+.qws-ed-stepper { display: inline-flex; align-items: center; gap: var(--qmm-space-sm); }
+.qws-ed-stepper__count { min-width: 34px; text-align: center; font-weight: 900; color: var(--qmm-text); }
+
+.qws-ed-slots { display: grid; gap: var(--qmm-space-md); }
+.qws-ed-slot { display: grid; gap: var(--qmm-space-md); padding: 10px 12px; border-radius: var(--qmm-radius-md); background: var(--qmm-card); }
+.qws-ed-slot__head { display: flex; align-items: center; gap: var(--qmm-space-md); min-height: 26px; }
+.qws-ed-slot__title { font-size: var(--qmm-fs-md); font-weight: 900; color: var(--qmm-text); }
+.qws-ed-slot__mode {
+  display: inline-flex; align-items: center; gap: var(--qmm-space-sm); margin-left: auto; cursor: pointer;
+  font-size: var(--qmm-fs-xs); font-weight: 800; color: var(--qmm-text-dim);
+}
+.qws-ed-slot__mode .qmm-switch { transform: scale(.8); transform-origin: right center; }
+.qws-ed-slot .qmm-pill { min-width: 26px; justify-content: center; padding: 3px 8px; }
+.qws-ed-custom {
+  display: flex; align-items: center; gap: var(--qmm-space-md);
+  font-size: var(--qmm-fs-sm); font-weight: 800; color: var(--qmm-text-soft);
+}
+.qws-ed-custom > .qmm-input { width: 90px; }
+
+.qws-ed-muts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-sm); }
+.qws-ed-muts__more {
+  display: flex; flex-wrap: wrap; gap: var(--qmm-space-sm); padding: var(--qmm-space-sm);
+  border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+}
+.qws-ed-mut {
+  display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0;
+  border: 2px solid transparent; border-radius: var(--qmm-radius-sm); background: var(--qmm-paper-deep);
+  color: var(--qmm-text); cursor: pointer; transition: border-color 120ms ease, background 120ms ease;
+}
+.qws-ed-mut:hover { border-color: var(--qmm-border-hover); }
+.qws-ed-mut:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 1px; }
+.qws-ed-muts__more .qws-ed-mut { background: var(--qmm-card); }
+.qws-ed-mut.is-on { border-color: var(--qmm-sepia); background: var(--qmm-sepia-soft); }
+.qws-ed-mut.is-add { font-size: var(--qmm-fs-xl); font-weight: 900; color: var(--qmm-text-soft); border-style: dashed; border-color: var(--qmm-border-hover); background: transparent; }
+.qws-ed-mut.is-add.is-open { border-style: solid; border-color: var(--qmm-sepia); background: var(--qmm-sepia-soft); color: var(--qmm-sepia-ink); }
+.qws-ed-tag {
+  display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px;
+  border-radius: var(--qmm-radius-sm); background: var(--qmm-paper-deep);
+}
+.qws-ed-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--qmm-space-sm); }
+
+.qws-ed-toolbar {
+  /* The translate property applies after scale, so the bar stays centred at any menu size. */
+  position: fixed; top: 7%; left: 50%; translate: -50% 0; transform-origin: 50% 0;
+  scale: var(--qmm-scale, 1);
+  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 6px 6px 6px 14px;
+  border: 3px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-pill);
+  background: var(--qmm-paper); color: var(--qmm-text); box-shadow: var(--qmm-shadow-raise-small);
+  font-family: var(--qmm-font); white-space: nowrap;
+}
+.qws-ed-toolbar__label { display: inline-flex; align-items: center; gap: var(--qmm-space-sm); font-size: var(--qmm-fs-md); font-weight: 900; }
+.qws-ed-toolbar__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--qmm-ok); }
+.qws-ed-toolbar .qmm-btn { border-radius: var(--qmm-radius-pill); }
+
+.qws-ed-rot { display: grid; gap: var(--qmm-space-sm); width: 100%; box-sizing: border-box; overflow: hidden; }
+.qws-ed-rot > .qws-ed-label { text-align: center; }
+.qws-ed-rot__preview {
+  display: grid; place-items: center; justify-self: center; width: 100%; max-width: 168px; box-sizing: border-box;
+  padding: 7px 0; overflow: hidden; border-radius: var(--qmm-radius-md); background: var(--qmm-card);
+}
+/* 14px narrower than the preview on each side, so the first and last tick
+   labels, centred on their notch, stay inside the panel. */
+.qws-ed-rot__track { display: grid; gap: 2px; justify-self: center; width: 100%; max-width: 140px; }
+.qws-ed-rot__ticks { position: relative; width: 100%; height: 22px; }
+.qws-ed-rot__tick { position: absolute; top: 0; display: grid; justify-items: center; gap: 2px; transform: translateX(-50%); }
+.qws-ed-rot__mark { width: 2px; height: 5px; border-radius: 1px; background: var(--qmm-track); }
+.qws-ed-rot__caption { white-space: nowrap; font-size: var(--qmm-fs-xs); font-weight: 700; color: var(--qmm-text-dim); }
+.qws-ed-rot__tick.is-active .qws-ed-rot__mark { background: var(--qmm-sepia); }
+.qws-ed-rot__tick.is-active .qws-ed-rot__caption { font-weight: 900; color: var(--qmm-sepia-ink); }
+.qws-ed-rot__slider {
+  -webkit-appearance: none; appearance: none; width: 100%; height: ${ROTATION_THUMB_PX}px; margin: 0;
+  background: transparent; cursor: pointer;
+}
+.qws-ed-rot__slider::-webkit-slider-runnable-track { height: 6px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track); }
+.qws-ed-rot__slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: ${ROTATION_THUMB_PX}px; height: ${ROTATION_THUMB_PX}px;
+  margin-top: ${(6 - ROTATION_THUMB_PX) / 2}px; border: none; border-radius: 50%;
+  background: var(--qmm-sepia); box-shadow: 0 1px 3px var(--qmm-shade);
+}
+.qws-ed-rot__slider::-moz-range-track { height: 6px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track); }
+.qws-ed-rot__slider::-moz-range-thumb {
+  width: ${ROTATION_THUMB_PX}px; height: ${ROTATION_THUMB_PX}px; border: none; border-radius: 50%; background: var(--qmm-sepia);
+}
+.qws-ed-rot__slider:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
+`;
+      injected2 = false;
+    }
+  });
+
+  // src/features/editor/decorRotation.ts
   function getEntry(decorId) {
     if (!decorId) return null;
     const entry = decorCatalog2?.[decorId];
@@ -10986,45 +11172,10 @@
     const angle = Math.abs(value) % FULL_TURN_DEGREES;
     return value < 0 ? `${angle}\xB0 mirrored` : `${angle}\xB0`;
   }
-  function createLabel(text2) {
-    const label2 = document.createElement("div");
-    label2.textContent = text2;
-    label2.style.fontSize = "12px";
-    label2.style.opacity = "0.8";
-    label2.style.textAlign = "center";
-    return label2;
-  }
-  function createPreviewBox() {
-    const box2 = document.createElement("div");
-    Object.assign(box2.style, {
-      width: "100%",
-      maxWidth: `${CONTENT_MAX_WIDTH_PX}px`,
-      justifySelf: "center",
-      boxSizing: "border-box",
-      height: `${PREVIEW_SIZE_PX + 14}px`,
-      display: "grid",
-      placeItems: "center",
-      borderRadius: "8px",
-      border: `1px solid ${color.borderStrong}`,
-      background: color.sunken,
-      overflow: "hidden"
-    });
-    return box2;
-  }
-  function createTrackWrap() {
-    const wrap = document.createElement("div");
-    wrap.style.width = "100%";
-    wrap.style.maxWidth = `${CONTENT_MAX_WIDTH_PX - TRACK_INSET_PX * 2}px`;
-    wrap.style.justifySelf = "center";
-    wrap.style.display = "grid";
-    wrap.style.gap = "2px";
-    return wrap;
-  }
   function createSlider(stopCount, value) {
-    ensureSliderStyle();
-    const slider2 = document.createElement("input");
+    const slider2 = h("input", "qws-ed-rot__slider");
     slider2.type = "range";
-    slider2.className = SLIDER_CLASS;
+    slider2.setAttribute("aria-label", "Rotation");
     slider2.min = "0";
     slider2.max = String(stopCount - 1);
     slider2.step = "1";
@@ -11032,54 +11183,26 @@
     return slider2;
   }
   function createTicks(labels) {
-    const root4 = document.createElement("div");
-    root4.style.position = "relative";
-    root4.style.width = "100%";
-    root4.style.height = "20px";
+    const root4 = h("div", "qws-ed-rot__ticks");
     const lastIndex = Math.max(1, labels.length - 1);
     const cells = labels.map((text2, index) => {
       const fraction = index / lastIndex;
-      const cell = document.createElement("div");
-      cell.style.position = "absolute";
-      cell.style.top = "0";
+      const cell = h("div", "qws-ed-rot__tick");
       cell.style.left = `calc(${THUMB_SIZE_PX / 2}px + (100% - ${THUMB_SIZE_PX}px) * ${fraction})`;
-      cell.style.transform = "translateX(-50%)";
-      cell.style.display = "grid";
-      cell.style.justifyItems = "center";
-      cell.style.gap = "2px";
-      const mark = document.createElement("div");
-      mark.style.width = "1px";
-      mark.style.height = "5px";
-      mark.style.background = color.track;
-      const caption2 = document.createElement("div");
-      caption2.textContent = text2;
-      caption2.style.fontSize = "10px";
-      caption2.style.whiteSpace = "nowrap";
-      caption2.style.color = color.textDim;
-      cell.append(mark, caption2);
+      cell.append(h("div", "qws-ed-rot__mark"), h("div", "qws-ed-rot__caption", text2));
       root4.appendChild(cell);
-      return { mark, caption: caption2 };
+      return cell;
     });
     const setActive = (index) => {
-      cells.forEach(({ mark, caption: caption2 }, i) => {
-        const active3 = i === index;
-        mark.style.background = active3 ? color.accent : color.track;
-        caption2.style.color = active3 ? color.accent : color.textDim;
-        caption2.style.fontWeight = active3 ? "700" : "400";
-      });
+      cells.forEach((cell, i) => cell.classList.toggle("is-active", i === index));
     };
     return { root: root4, setActive };
   }
   function createDecorRotationControl(decorId, currentRotation, onSelect) {
-    const root4 = document.createElement("div");
-    root4.style.display = "grid";
-    root4.style.gap = "6px";
-    root4.style.width = "100%";
-    root4.style.maxWidth = "100%";
-    root4.style.boxSizing = "border-box";
-    root4.style.overflow = "hidden";
-    const preview = createPreviewBox();
-    const holder2 = document.createElement("div");
+    ensureEditorStyles();
+    const root4 = h("div", "qws-ed-rot");
+    const preview = h("div", "qws-ed-rot__preview");
+    const holder2 = h("div");
     holder2.style.width = `${PREVIEW_SIZE_PX}px`;
     holder2.style.height = `${PREVIEW_SIZE_PX}px`;
     holder2.style.display = "grid";
@@ -11096,7 +11219,7 @@
     };
     const states = getDecorRotationStates(decorId);
     let index = Math.max(0, states.indexOf(Number(currentRotation) || 0));
-    root4.append(createLabel("Rotation"), preview);
+    root4.append(h("div", "qws-ed-label", "Rotation"), preview);
     if (states.length > 1) {
       const slider2 = createSlider(states.length, index);
       const ticks = createTicks(states.map(formatRotationLabel));
@@ -11111,7 +11234,7 @@
         apply();
         onSelect(states[index] ?? ANGLE_NONE);
       };
-      const track = createTrackWrap();
+      const track = h("div", "qws-ed-rot__track");
       track.append(slider2, ticks.root);
       root4.appendChild(track);
       apply();
@@ -11122,23 +11245,20 @@
     renderSprite(spriteIds, mirrored);
     return root4;
   }
-  var ANGLE_NONE, ANGLE_MIRRORED_NONE, FULL_TURN_DEGREES, PREVIEW_SIZE_PX, CONTENT_MAX_WIDTH_PX, TRACK_INSET_PX, SPRITE_LOG_TAG, THUMB_SIZE_PX, SLIDER_CLASS, STYLE_ID2;
+  var ANGLE_NONE, ANGLE_MIRRORED_NONE, FULL_TURN_DEGREES, PREVIEW_SIZE_PX, SPRITE_LOG_TAG, THUMB_SIZE_PX;
   var init_decorRotation = __esm({
     "src/features/editor/decorRotation.ts"() {
       "use strict";
       init_data();
+      init_dom2();
       init_iconCache();
-      init_theme();
+      init_styles2();
       ANGLE_NONE = 0;
       ANGLE_MIRRORED_NONE = -360;
       FULL_TURN_DEGREES = 360;
       PREVIEW_SIZE_PX = 64;
-      CONTENT_MAX_WIDTH_PX = 168;
-      TRACK_INSET_PX = 14;
       SPRITE_LOG_TAG = "editor-decor-rotation";
-      THUMB_SIZE_PX = 14;
-      SLIDER_CLASS = "qws-decor-rot-slider";
-      STYLE_ID2 = "qws-decor-rotation-css";
+      THUMB_SIZE_PX = ROTATION_THUMB_PX;
     }
   });
 
@@ -11337,104 +11457,66 @@
     attachSpriteIcon(wrap, ICON_CATEGORIES, candidates, size, "editor", { onNoSpriteFound: applyFallback });
     return wrap;
   }
-  function squareButton() {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    Object.assign(btn.style, {
-      width: `${TILE_PX}px`,
-      height: `${TILE_PX}px`,
-      padding: "0",
-      borderRadius: "8px",
-      border: `1px solid ${color.borderStrong}`,
-      background: color.sunken,
-      color: color.text,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      cursor: "pointer"
-    });
-    return btn;
-  }
   function mutationToggle(storedId, active3, onClick) {
     const label2 = mutationName(mutationCatalogKeyFor(storedId));
-    const btn = squareButton();
-    if (active3) {
-      Object.assign(btn.style, {
-        border: `1px solid ${color.accentBorderHover}`,
-        background: color.accentSoft,
-        boxShadow: `0 0 0 1px ${color.accentBorder} inset`
-      });
-    } else {
-      btn.style.opacity = "0.85";
-    }
+    const btn = h("button", active3 ? "qws-ed-mut is-on" : "qws-ed-mut");
+    btn.type = "button";
     btn.title = active3 ? `Remove ${label2}` : `Add ${label2}`;
+    btn.setAttribute("aria-label", btn.title);
     btn.appendChild(mutationIcon(storedId, 24));
     btn.onclick = onClick;
     return btn;
   }
   function mutationTag(storedId) {
-    const tag = document.createElement("span");
-    Object.assign(tag.style, {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: "28px",
-      height: "28px",
-      borderRadius: "8px",
-      border: `1px solid ${color.borderStrong}`,
-      background: color.sunken
-    });
+    ensureEditorStyles();
+    const tag = h("span", "qws-ed-tag");
     tag.title = mutationName(mutationCatalogKeyFor(storedId));
     tag.appendChild(mutationIcon(storedId, 20));
     return tag;
   }
   function mutationPicker(onToggle, prefix) {
-    const row5 = document.createElement("div");
-    Object.assign(row5.style, { display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" });
-    const dropdown = document.createElement("div");
-    Object.assign(dropdown.style, {
-      display: "none",
-      flexWrap: "wrap",
-      gap: "6px",
-      padding: "6px",
-      border: `1px solid ${color.borderStrong}`,
-      borderRadius: "8px",
-      background: color.sunken
-    });
+    ensureEditorStyles();
+    const row2 = h("div", "qws-ed-muts");
+    const dropdown = h("div", "qws-ed-muts__more");
+    dropdown.hidden = true;
     const render = (active3) => {
-      const wasOpen = dropdown.style.display !== "none";
-      row5.replaceChildren();
+      const wasOpen = !dropdown.hidden;
+      row2.replaceChildren();
       dropdown.replaceChildren();
-      if (prefix) row5.appendChild(prefix);
-      for (const id of sortMutationIds(active3)) row5.appendChild(mutationToggle(id, true, () => onToggle(id)));
+      if (prefix) row2.appendChild(prefix);
+      for (const id of sortMutationIds(active3)) row2.appendChild(mutationToggle(id, true, () => onToggle(id)));
       const available = orderedMutationKeys().map(storedMutationIdFor).filter((id) => !active3.includes(id));
       if (!available.length) {
-        dropdown.style.display = "none";
+        dropdown.hidden = true;
         return;
       }
-      const plus = squareButton();
-      plus.textContent = "+";
+      const plus = h("button", "qws-ed-mut is-add", "+");
+      plus.type = "button";
       plus.title = "Add mutation";
-      Object.assign(plus.style, { fontWeight: "900", fontSize: "16px", background: wasOpen ? PLUS_BG_OPEN : PLUS_BG_CLOSED });
-      plus.onclick = () => {
-        const open = dropdown.style.display === "none";
-        dropdown.style.display = open ? "flex" : "none";
-        plus.style.background = open ? PLUS_BG_OPEN : PLUS_BG_CLOSED;
+      const showOpen = (open) => {
+        plus.classList.toggle("is-open", open);
+        plus.setAttribute("aria-expanded", open ? "true" : "false");
       };
-      row5.appendChild(plus);
+      showOpen(wasOpen);
+      plus.onclick = () => {
+        dropdown.hidden = !dropdown.hidden;
+        showOpen(!dropdown.hidden);
+      };
+      row2.appendChild(plus);
       for (const id of available) dropdown.appendChild(mutationToggle(id, false, () => onToggle(id)));
     };
-    return { row: row5, dropdown, render };
+    return { row: row2, dropdown, render };
   }
-  var orderedMutationKeys, sortMutationIds, FALLBACK_COLORS, ICON_CATEGORIES, TILE_PX, PLUS_BG_CLOSED, PLUS_BG_OPEN;
+  var orderedMutationKeys, sortMutationIds, FALLBACK_COLORS, ICON_CATEGORIES;
   var init_mutationPicker = __esm({
     "src/features/editor/ui/mutationPicker.ts"() {
       "use strict";
       init_data();
       init_names();
       init_iconCache();
-      init_theme();
+      init_dom2();
       init_mutationOrder();
+      init_styles2();
       orderedMutationKeys = memoOnCatalogs(
         () => sortMutationCatalogKeys(Object.keys(mutationCatalog2 || {}), mutationCatalog2, weatherCatalog2)
       );
@@ -11453,189 +11535,88 @@
         Ambercharged: "rgba(240, 110, 80, 1)"
       };
       ICON_CATEGORIES = ["ui", "mutation", "weather"];
-      TILE_PX = 34;
-      PLUS_BG_CLOSED = color.sunken;
-      PLUS_BG_OPEN = color.hoverBg;
     }
   });
 
   // src/features/editor/ui/panelChrome.ts
   function floatingPanel(opts) {
-    ensureKitStyles();
-    const root4 = document.createElement("div");
+    ensureEditorStyles();
+    const root4 = h("div", `qws-ed-panel is-${opts.side}`);
     root4.id = opts.id;
-    Object.assign(root4.style, {
-      position: "fixed",
-      top: "12%",
-      [opts.side]: "12px",
-      zIndex: EDITOR_LAYER,
-      width: "300px",
-      maxHeight: "86vh",
-      display: "grid",
-      gridTemplateRows: "auto 1fr",
-      gap: "10px",
-      padding: "10px",
-      borderRadius: "12px",
-      border: `1px solid ${color.accentBorder}`,
-      background: "var(--qmm-gradient-panel)",
-      color: color.text,
-      boxShadow: "var(--qmm-shadow-window)",
-      pointerEvents: "auto",
-      ...opts.style
-    });
-    const header = document.createElement("div");
-    header.textContent = opts.title;
-    Object.assign(header.style, {
-      borderBottom: `1px solid ${color.accentSoft}`,
-      paddingBottom: "8px",
-      color: color.accent,
-      fontWeight: "700",
-      fontSize: "13px",
-      letterSpacing: "0.08em",
-      textTransform: "uppercase",
-      textAlign: "center"
-    });
-    root4.appendChild(header);
+    root4.style.zIndex = EDITOR_LAYER;
+    if (opts.style) Object.assign(root4.style, opts.style);
+    const body = h("div", "qws-ed-panel__body");
+    root4.append(h("div", "qws-ed-panel__head", opts.title), body);
     appendToPage(root4);
-    return { root: root4, header };
+    return { root: root4, body };
   }
   function panelSection() {
-    const el = document.createElement("div");
-    Object.assign(el.style, {
-      border: `1px solid ${color.accentSoft}`,
-      borderRadius: "10px",
-      background: color.mutedBg,
-      minHeight: "0"
-    });
-    return el;
+    ensureEditorStyles();
+    return h("div", "qws-ed-section");
   }
-  function roundButton(glyph, onClick, tone = "default") {
-    const btn = button(glyph, { size: "xs", variant: tone === "danger" ? "danger" : "default", onClick });
-    Object.assign(btn.style, { width: "28px", height: "28px", padding: "0", borderRadius: "50%", fontSize: "14px" });
+  function roundButton(glyph, onClick, label2) {
+    ensureEditorStyles();
+    const btn = button(glyph, { size: "xs", onClick, ariaLabel: label2, tooltip: label2 });
+    btn.classList.add("qws-ed-round");
     return btn;
   }
   function hint(text2) {
-    const el = document.createElement("div");
-    el.textContent = text2;
-    el.style.opacity = "0.7";
-    el.style.textAlign = "center";
-    return el;
+    ensureEditorStyles();
+    return h("div", "qws-ed-hint", text2);
+  }
+  function panelLabel(text2) {
+    ensureEditorStyles();
+    return h("div", "qws-ed-label", text2);
   }
   function iconWithName(icon2, name, fontSize2) {
-    const row5 = document.createElement("div");
-    Object.assign(row5.style, { display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" });
-    const nameEl = document.createElement("div");
-    nameEl.textContent = name;
-    Object.assign(nameEl.style, {
-      fontWeight: "700",
-      fontSize: `${fontSize2}px`,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-      textAlign: "center",
-      maxWidth: "100%"
-    });
-    row5.append(icon2, nameEl);
-    return row5;
+    ensureEditorStyles();
+    const row2 = h("div", "qws-ed-named");
+    const nameEl = h("div", "qws-ed-named__name", name);
+    nameEl.style.fontSize = `${fontSize2}px`;
+    row2.append(icon2, nameEl);
+    return row2;
   }
   var EDITOR_LAYER, appendToPage;
   var init_panelChrome = __esm({
     "src/features/editor/ui/panelChrome.ts"() {
       "use strict";
       init_button();
-      init_styles();
-      init_theme();
+      init_dom2();
+      init_styles2();
       EDITOR_LAYER = "1000001";
-      appendToPage = (el) => (document.body || document.documentElement).appendChild(el);
+      appendToPage = (el4) => (document.body || document.documentElement).appendChild(el4);
     }
   });
 
-  // src/ui/kit/card.ts
-  function card(title, opts = {}) {
-    const root4 = h("div", "qmm-card");
-    root4.dataset.tone = opts.tone || "default";
-    if (opts.align === "center") root4.classList.add("is-center");
-    if (opts.align === "stretch") root4.classList.add("is-stretch");
-    if (opts.padding) root4.style.padding = opts.padding;
-    if (opts.gap != null) root4.style.gap = `${opts.gap}px`;
-    if (opts.maxWidth) {
-      const max = typeof opts.maxWidth === "number" ? `${opts.maxWidth}px` : opts.maxWidth;
-      root4.style.width = `min(${max}, 100%)`;
-    }
-    const header = h("div", opts.compactHeader ? "qmm-card__header is-compact" : "qmm-card__header");
-    if (opts.icon) header.appendChild(iconNode(opts.icon, "qmm-card__icon"));
-    const titleEl = h("div", "qmm-card__title", title);
-    header.appendChild(titleEl);
-    const subtitle = opts.subtitle || opts.description;
-    if (subtitle) header.appendChild(h("div", "qmm-card__subtitle", subtitle));
-    if (opts.actions?.length) {
-      const actions2 = h("div", "qmm-card__actions");
-      actions2.append(...opts.actions);
-      header.appendChild(actions2);
-    }
-    const body = h("div", "qmm-card__body");
-    root4.append(header, body);
-    return { root: root4, header, body, setTitle: (next) => titleEl.textContent = next };
+  // src/ui/kit/badges.ts
+  function pill(text2, tone) {
+    const el4 = h("span", "qmm-pill", text2);
+    setTone(el4, tone);
+    return el4;
   }
-  function plainCard() {
-    return h("div", "qmm-card qmm-card--plain");
+  function setTone(el4, tone) {
+    el4.classList.remove("is-ok", "is-warn", "is-bad");
+    if (tone) el4.classList.add(`is-${tone}`);
   }
-  function sectionLabel(text2) {
-    return h("div", "qmm-section-label", text2);
+  function badge(text2, tone) {
+    return h("span", `qmm-badge is-${tone}`, text2);
   }
-  function errorBar() {
-    const el = h("div", "qmm-error");
-    el.hidden = true;
+  function meter() {
+    const root4 = h("div", "qmm-meter");
+    const fill = h("div", "qmm-meter__fill");
+    root4.appendChild(fill);
     return {
-      el,
-      show(message2) {
-        el.textContent = message2;
-        el.hidden = false;
-      },
-      clear() {
-        el.textContent = "";
-        el.hidden = true;
+      root: root4,
+      set(ratio, tone = "accent") {
+        fill.style.width = `${clampFinite(ratio, 0, 1, 0) * 100}%`;
+        fill.classList.toggle("is-warn", tone === "warn");
       }
     };
   }
-  var init_card = __esm({
-    "src/ui/kit/card.ts"() {
+  var init_badges = __esm({
+    "src/ui/kit/badges.ts"() {
       "use strict";
-      init_dom2();
-    }
-  });
-
-  // src/ui/kit/toggles.ts
-  function switchInput(checked = false, onChange) {
-    const input = h("input", "qmm-switch");
-    input.type = "checkbox";
-    input.checked = checked;
-    input.setChecked = (value) => {
-      input.checked = value;
-    };
-    if (onChange) input.addEventListener("change", () => onChange(input.checked));
-    return input;
-  }
-  function toggleChip(labelText, opts = {}) {
-    const root4 = h("label", "qmm-chip-toggle");
-    if (opts.tooltip) root4.title = opts.tooltip;
-    const input = h("input");
-    input.type = opts.type || "checkbox";
-    if (opts.name) input.name = opts.name;
-    if (opts.value) input.value = opts.value;
-    input.checked = !!opts.checked;
-    const face = h("div", "qmm-chip-toggle__face");
-    if (opts.icon) face.appendChild(iconNode(opts.icon, "qmm-chip-toggle__icon"));
-    const label2 = h("span", "qmm-chip-toggle__label", labelText);
-    face.appendChild(label2);
-    if (opts.description) face.appendChild(h("span", "qmm-chip-toggle__desc", opts.description));
-    if (opts.badge) face.appendChild(h("span", "qmm-chip-toggle__badge", opts.badge));
-    root4.append(input, face);
-    return { root: root4, input, label: label2 };
-  }
-  var init_toggles = __esm({
-    "src/ui/kit/toggles.ts"() {
-      "use strict";
+      init_math();
       init_dom2();
     }
   });
@@ -11722,27 +11703,6 @@
     }
     return sel;
   }
-  function radio(name, value, checked = false) {
-    const input = h("input", "qmm-radio");
-    input.type = "radio";
-    input.name = name;
-    input.value = value;
-    input.checked = checked;
-    return input;
-  }
-  function radioGroup(name, options2, selected, onChange) {
-    const wrap = h("div", "qmm-radio-group");
-    for (const { value, label: label2 } of options2) {
-      const input = radio(name, value, selected === value);
-      input.onchange = () => {
-        if (input.checked) onChange(value);
-      };
-      const row5 = h("label", "qmm-radio-label");
-      row5.append(input, label2);
-      wrap.appendChild(row5);
-    }
-    return wrap;
-  }
   var init_fields = __esm({
     "src/ui/kit/fields.ts"() {
       "use strict";
@@ -11759,6 +11719,26 @@
     input.max = String(max);
     input.step = String(step);
     input.value = String(value);
+    const paint2 = () => {
+      const lo = Number(input.min);
+      const span3 = Number(input.max) - lo;
+      const pct = span3 > 0 ? (Number(input.value) - lo) / span3 * 100 : 0;
+      input.style.setProperty("--qmm-range-fill", `${Math.min(100, Math.max(0, pct))}%`);
+    };
+    input.addEventListener("input", paint2);
+    input.addEventListener("change", paint2);
+    const native = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), "value");
+    if (native?.get && native.set) {
+      Object.defineProperty(input, "value", {
+        configurable: true,
+        get: () => native.get.call(input),
+        set: (next) => {
+          native.set.call(input, next);
+          paint2();
+        }
+      });
+    }
+    paint2();
     return input;
   }
   function rangeDual(min = 0, max = 100, step = 1, valueMin = min, valueMax = max) {
@@ -11811,6 +11791,41 @@
     }
   });
 
+  // src/ui/kit/toggles.ts
+  function switchInput(checked = false, onChange) {
+    const input = h("input", "qmm-switch");
+    input.type = "checkbox";
+    input.checked = checked;
+    input.setChecked = (value) => {
+      input.checked = value;
+    };
+    if (onChange) input.addEventListener("change", () => onChange(input.checked));
+    return input;
+  }
+  function toggleChip(labelText, opts = {}) {
+    const root4 = h("label", "qmm-chip-toggle");
+    if (opts.tooltip) root4.title = opts.tooltip;
+    const input = h("input");
+    input.type = opts.type || "checkbox";
+    if (opts.name) input.name = opts.name;
+    if (opts.value) input.value = opts.value;
+    input.checked = !!opts.checked;
+    const face = h("div", "qmm-chip-toggle__face");
+    if (opts.icon) face.appendChild(iconNode(opts.icon, "qmm-chip-toggle__icon"));
+    const label2 = h("span", "qmm-chip-toggle__label", labelText);
+    face.appendChild(label2);
+    if (opts.description) face.appendChild(h("span", "qmm-chip-toggle__desc", opts.description));
+    if (opts.badge) face.appendChild(h("span", "qmm-chip-toggle__badge", opts.badge));
+    root4.append(input, face);
+    return { root: root4, input, label: label2 };
+  }
+  var init_toggles = __esm({
+    "src/ui/kit/toggles.ts"() {
+      "use strict";
+      init_dom2();
+    }
+  });
+
   // src/features/editor/ui/inputGuards.ts
   function blockGameKeys(input) {
     const stop = (ev) => {
@@ -11840,60 +11855,84 @@
   });
 
   // src/features/editor/ui/sizeControls.ts
-  function sizeControls(modeText) {
-    const value = document.createElement("span");
+  function sizeControls() {
+    ensureEditorStyles();
+    const value = pill("");
     const modeSwitch = switchInput(false);
-    const modeLabel = document.createElement("label");
-    Object.assign(modeLabel.style, { display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" });
-    modeLabel.append(modeSwitch, document.createTextNode(modeText));
+    const modeLabel = h("label", "qws-ed-slot__mode");
+    modeLabel.append("Custom", modeSwitch);
     const range = slider(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, CROP_SIZE_MAX, { fill: true });
+    range.setAttribute("aria-label", "Size");
     const customInput = textInput("", "", { small: true });
     customInput.inputMode = "numeric";
     customInput.autocomplete = "off";
-    customInput.style.width = "90px";
+    customInput.setAttribute("aria-label", "Custom size");
     blockGameKeys(customInput);
     keepSizeCharacters(customInput);
-    const customRow = smallRow();
-    customRow.style.opacity = "0.9";
-    customRow.append(document.createTextNode("Custom size"), customInput);
+    const customRow = h("div", "qws-ed-custom");
+    customRow.append("Custom size", customInput);
     const show = ({ pct, mode, customText }) => {
       const custom = mode === "custom";
       value.textContent = String(pct);
       modeSwitch.checked = custom;
       range.value = String(pct);
       range.disabled = custom;
-      range.style.display = custom ? "none" : "";
+      range.hidden = custom;
       customInput.disabled = !custom;
-      customRow.style.display = custom ? "flex" : "none";
+      customRow.hidden = !custom;
       if (customText !== void 0) customInput.value = customText;
     };
     return { value, modeLabel, modeSwitch, slider: range, customRow, customInput, show };
   }
-  function sizeHeader(value, beside) {
-    const row5 = smallRow();
-    row5.style.opacity = "0.85";
-    const label2 = document.createElement("span");
-    label2.textContent = "Size";
-    row5.appendChild(label2);
-    if (beside) row5.appendChild(beside);
-    value.style.marginLeft = "auto";
-    row5.appendChild(value);
-    return row5;
+  function slotHeader(title, size) {
+    const row2 = h("div", "qws-ed-slot__head");
+    row2.append(h("span", "qws-ed-slot__title", title), size.modeLabel, size.value);
+    return row2;
   }
-  var smallRow;
+  function slotCard(title, size, mutations) {
+    const card3 = h("div", "qws-ed-slot");
+    card3.append(slotHeader(title, size), size.slider, size.customRow, ...mutations);
+    return card3;
+  }
+  var slotTitle;
   var init_sizeControls = __esm({
     "src/features/editor/ui/sizeControls.ts"() {
       "use strict";
+      init_badges();
+      init_dom2();
       init_fields();
       init_sliders();
       init_toggles();
       init_cropSize();
       init_inputGuards();
-      smallRow = () => {
-        const row5 = document.createElement("div");
-        Object.assign(row5.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "11px" });
-        return row5;
-      };
+      init_styles2();
+      slotTitle = (idx, maxSlots) => maxSlots > 1 ? `Slot ${idx + 1}` : "Size";
+    }
+  });
+
+  // src/features/editor/ui/slotOptions.ts
+  function slotCountRow(count, maxSlots, actions2) {
+    const remove = roundButton("-", actions2.onRemove, "Remove a slot");
+    const add = roundButton("+", actions2.onAdd, "Add a slot");
+    remove.setEnabled(count > 1);
+    add.setEnabled(count < maxSlots);
+    const stepper = h("div", "qws-ed-stepper");
+    stepper.append(remove, h("span", "qws-ed-stepper__count", `${count}/${maxSlots}`), add);
+    const row2 = h("div", "qws-ed-opt");
+    row2.append(h("span", void 0, "Slots"), stepper);
+    return row2;
+  }
+  function editAllRow(on, onChange) {
+    const row2 = h("label", "qws-ed-opt");
+    row2.append(h("span", void 0, "Edit all slots together"), switchInput(on, onChange));
+    return row2;
+  }
+  var init_slotOptions = __esm({
+    "src/features/editor/ui/slotOptions.ts"() {
+      "use strict";
+      init_dom2();
+      init_toggles();
+      init_panelChrome();
     }
   });
 
@@ -11934,10 +11973,9 @@
       writeSlots(targets, () => ({ mutations: next.slice() }));
       for (const t of targets) boxes[t]?.showMutations(mutationLists[t]);
     };
-    const list = document.createElement("div");
-    Object.assign(list.style, { display: "grid", gap: "8px" });
+    const list = h("div", "qws-ed-slots");
     slots.forEach((_, idx) => {
-      const box2 = plantSlotBox({
+      const box2 = plantSlotBox(slotTitle(idx, maxSlots), {
         onSlide: (value) => applySize(editSlotPercent(sizes, idx, value, editAllSlots)),
         onCustom: (raw) => applySize(editSlotCustom(sizes, idx, raw, editAllSlots)),
         onMode: (mode) => applySize(editSlotMode(sizes, idx, mode, editAllSlots)),
@@ -11948,67 +11986,42 @@
       boxes.push(box2);
       list.appendChild(box2.root);
     });
-    if (maxSlots > 1) content2.append(slotCountRow(species, slots.length, maxSlots), editAllRow());
-    content2.appendChild(list);
+    const options2 = h("div", "qws-ed-opts");
+    if (maxSlots > 1) {
+      options2.append(
+        slotCountRow(slots.length, maxSlots, {
+          onRemove: () => {
+            if (slots.length > 1) editSlotList((current3) => current3.slice(0, Math.max(1, current3.length - 1)));
+          },
+          onAdd: () => {
+            if (slots.length >= maxSlots) return;
+            editSlotList(
+              (current3) => current3.length >= maxSlots ? current3 : [...current3, makeGrowSlot(species, DEFAULT_SIZE_PERCENT)]
+            );
+          }
+        }),
+        editAllRow(editAllSlots, (on) => {
+          editAllSlots = on;
+        })
+      );
+    }
+    options2.appendChild(list);
+    content2.appendChild(options2);
   }
-  function slotCountRow(species, count, maxSlots) {
-    const row5 = document.createElement("div");
-    Object.assign(row5.style, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "8px",
-      fontSize: "12px",
-      opacity: "0.9"
+  function editSlotList(edit) {
+    const changed6 = updateGardenObjectAtCurrentTile((obj) => {
+      if (obj?.objectType !== "plant") return obj;
+      return { ...obj, slots: edit(Array.isArray(obj.slots) ? obj.slots.slice() : []) };
     });
-    const label2 = document.createElement("span");
-    label2.textContent = `Slots ${count}/${maxSlots}`;
-    const editSlots = (edit) => {
-      const changed6 = updateGardenObjectAtCurrentTile((obj) => {
-        if (obj?.objectType !== "plant") return obj;
-        return { ...obj, slots: edit(Array.isArray(obj.slots) ? obj.slots.slice() : []) };
-      });
-      if (changed6) currentItemChanged.emit();
-    };
-    const remove = roundButton("-", () => {
-      if (count > 1) editSlots((slots) => slots.slice(0, Math.max(1, slots.length - 1)));
-    });
-    const add = roundButton("+", () => {
-      if (count >= maxSlots) return;
-      editSlots((slots) => slots.length >= maxSlots ? slots : [...slots, makeGrowSlot(species, DEFAULT_SIZE_PERCENT)]);
-    });
-    remove.setEnabled(count > 1);
-    add.setEnabled(count < maxSlots);
-    const buttons = document.createElement("div");
-    Object.assign(buttons.style, { display: "flex", gap: "6px", alignItems: "center" });
-    buttons.append(remove, add);
-    row5.append(label2, buttons);
-    return row5;
+    if (changed6) currentItemChanged.emit();
   }
-  function editAllRow() {
-    const row5 = document.createElement("label");
-    Object.assign(row5.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", opacity: "0.9", cursor: "pointer" });
-    row5.append(
-      switchInput(editAllSlots, (on) => {
-        editAllSlots = on;
-      }),
-      document.createTextNode("Edit all slots together")
-    );
-    return row5;
-  }
-  function plantSlotBox(handlers) {
-    const size = sizeControls("Use custom size");
-    Object.assign(size.modeLabel.style, { fontSize: "11px", opacity: "0.9" });
+  function plantSlotBox(title, handlers) {
+    const size = sizeControls();
     size.slider.oninput = () => handlers.onSlide(Number(size.slider.value));
     size.customInput.onchange = () => handlers.onCustom(size.customInput.value);
     size.modeSwitch.onchange = () => handlers.onMode(size.modeSwitch.checked ? "custom" : "percent");
-    const mutations = mutationPicker(handlers.onToggleMutation);
-    const mutationsWrap = document.createElement("div");
-    Object.assign(mutationsWrap.style, { display: "grid", gap: "6px" });
-    mutationsWrap.append(sectionLabel("Mutations"), mutations.row, mutations.dropdown);
-    const root4 = plainCard();
-    root4.style.gap = "8px";
-    root4.append(sizeHeader(size.value), size.modeLabel, size.slider, size.customRow, mutationsWrap);
+    const mutations = mutationPicker(handlers.onToggleMutation, panelLabel("Mutations"));
+    const root4 = slotCard(title, size, [mutations.row, mutations.dropdown]);
     return {
       root: root4,
       showSize: (state5) => size.show({ pct: state5.pct, mode: state5.mode, customText: String(state5.size) }),
@@ -12019,8 +12032,7 @@
   var init_plantSlotsEditor = __esm({
     "src/features/editor/ui/plantSlotsEditor.ts"() {
       "use strict";
-      init_card();
-      init_toggles();
+      init_dom2();
       init_brush();
       init_brushSlots();
       init_planEdits();
@@ -12029,6 +12041,7 @@
       init_mutationPicker();
       init_panelChrome();
       init_sizeControls();
+      init_slotOptions();
       slotModesByTile = {};
       editAllSlots = false;
     }
@@ -12037,16 +12050,10 @@
   // src/features/editor/ui/currentItemPanel.ts
   function showCurrentItemPanel() {
     if (root && document.contains(root)) return;
-    const panel = floatingPanel({
-      id: "qws-editor-current-item",
-      side: "right",
-      title: "\u2728 Current item",
-      style: { minHeight: "200px" }
-    });
-    content = document.createElement("div");
+    const panel = floatingPanel({ id: "qws-editor-current-item", side: "right", title: "Current item" });
+    content = panel.body;
     content.id = "qws-editor-current-item-content";
-    Object.assign(content.style, { display: "grid", gap: "10px", minHeight: "0", overflow: "auto" });
-    panel.root.appendChild(content);
+    content.classList.add("qws-ed-scroll", "qmm-scroll");
     root = panel.root;
     stopFollowing = currentItemChanged.on(renderCurrentItem);
     renderCurrentItem();
@@ -12089,34 +12096,36 @@
     );
   }
   function renderBrushSummary(into) {
-    into.appendChild(hint("Click on a plant or item to edit it."));
+    const empty = hint("Click a plant or decor to edit it.");
+    empty.style.padding = "var(--qmm-space-md) 0";
+    into.appendChild(empty);
     const id = getSelectedId();
     if (!id) return;
     const isDecor = picker.mode === "decor";
     const label2 = entryLabel(picker.mode, id);
-    into.appendChild(iconWithName(entryIcon(isDecor ? "decor" : "plant", id, label2, 40), label2, 14));
+    const brush = h("div", "qws-ed-section qws-ed-brush");
+    brush.style.justifyItems = "center";
+    brush.append(panelLabel("Next placement"), iconWithName(entryIcon(isDecor ? "decor" : "plant", id, label2, 40), label2, 14));
+    into.appendChild(brush);
     if (isDecor) return;
     const active3 = /* @__PURE__ */ new Set();
     for (const cfg of brushSlotsFor(id).slots) {
       if (cfg.enabled) cfg.mutations.forEach((m) => active3.add(m));
     }
-    const row5 = document.createElement("div");
-    Object.assign(row5.style, { display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "center" });
+    const tags = h("div", "qws-ed-tags");
     if (active3.size) {
-      for (const mutationId of sortMutationIds([...active3])) row5.appendChild(mutationTag(mutationId));
+      for (const mutationId of sortMutationIds([...active3])) tags.appendChild(mutationTag(mutationId));
     } else {
-      const none = document.createElement("div");
-      none.textContent = "No mutations";
-      Object.assign(none.style, { opacity: "0.7", fontSize: "11px" });
-      row5.appendChild(none);
+      tags.appendChild(h("div", "qws-ed-note", "No mutations"));
     }
-    into.appendChild(row5);
+    brush.appendChild(tags);
   }
   var root, content, stopFollowing;
   var init_currentItemPanel = __esm({
     "src/features/editor/ui/currentItemPanel.ts"() {
       "use strict";
       init_button();
+      init_dom2();
       init_names();
       init_brush();
       init_decorRotation();
@@ -12216,9 +12225,10 @@
         const borderRight = parseFloat(cs.borderRightWidth || "0") || 0;
         const rootRect = root4.getBoundingClientRect();
         const btnRect = active3.getBoundingClientRect();
-        let left = btnRect.left - rootRect.left - borderLeft;
-        let width = btnRect.width;
-        const inner = rootRect.width - borderLeft - borderRight;
+        const scale = root4.offsetWidth ? rootRect.width / root4.offsetWidth : 1;
+        let left = (btnRect.left - rootRect.left) / scale - borderLeft;
+        let width = btnRect.width / scale;
+        const inner = rootRect.width / scale - borderLeft - borderRight;
         if (n === 1) {
           left = 0;
           width = inner;
@@ -12270,50 +12280,56 @@
 
   // src/features/editor/ui/brushDetails.ts
   function renderBrushDetails(wrap) {
-    const content2 = document.createElement("div");
-    Object.assign(content2.style, {
-      display: "grid",
-      gap: "10px",
-      minHeight: "0",
-      overflow: "auto",
-      alignContent: "flex-start",
-      justifyItems: "center"
-    });
+    ensureEditorStyles();
+    const content2 = h("div", "qws-ed-brush");
     wrap.replaceChildren(content2);
     const id = getSelectedId();
     if (!id) {
-      content2.appendChild(hint("Select an item on the left."));
+      const empty = hint("Pick a plant or decor above to place it.");
+      empty.style.padding = "var(--qmm-space-lg) 0";
+      content2.appendChild(empty);
       return;
     }
     content2.appendChild(selectedEntryRow(id));
     if (picker.mode === "plants") {
       content2.appendChild(brushSlotsPanel(id, () => renderBrushDetails(wrap)));
     } else {
-      const rotation = createDecorRotationControl(id, picker.decorRotation, (angle) => {
-        picker.decorRotation = angle;
-      });
-      rotation.style.marginTop = "6px";
-      content2.appendChild(rotation);
+      content2.appendChild(
+        createDecorRotationControl(id, picker.decorRotation, (angle) => {
+          picker.decorRotation = angle;
+        })
+      );
     }
   }
   function selectedEntryRow(id) {
     const label2 = entryLabel(picker.mode, id);
-    const row5 = document.createElement("div");
-    Object.assign(row5.style, { display: "grid", gridTemplateColumns: "auto 1fr", alignItems: "center", gap: "10px" });
-    const name = document.createElement("div");
-    name.textContent = label2;
-    Object.assign(name.style, { fontWeight: "700", fontSize: "15px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" });
-    row5.append(entryIcon(picker.mode === "decor" ? "decor" : "plant", id, label2, 48), name);
-    return row5;
+    const row2 = h("div", "qws-ed-selected");
+    row2.append(entryIcon(picker.mode === "decor" ? "decor" : "plant", id, label2, 44), h("div", "qws-ed-selected__name", label2));
+    return row2;
   }
   function brushSlotsPanel(species, rerender) {
     const maxSlots = getMaxSlotsForSpecies(species);
     const state5 = brushSlotsFor(species);
-    const panel = document.createElement("div");
-    Object.assign(panel.style, { display: "grid", gap: "6px", marginTop: "6px", width: "100%" });
-    if (maxSlots > 1) panel.append(...slotCountRows(species, state5, maxSlots, rerender));
-    const list = document.createElement("div");
-    Object.assign(list.style, { display: "grid", gap: "6px" });
+    const panel = h("div", "qws-ed-opts");
+    if (maxSlots > 1) {
+      panel.append(
+        slotCountRow(state5.slots.length, maxSlots, {
+          onRemove: () => {
+            editBrushSlots(species, removeBrushSlot);
+            rerender();
+          },
+          onAdd: () => {
+            editBrushSlots(species, (s) => addBrushSlot(s, maxSlots));
+            rerender();
+          }
+        }),
+        editAllRow(state5.applyAll, (on) => {
+          editBrushSlots(species, (s) => ({ ...s, applyAll: on }));
+          rerender();
+        })
+      );
+    }
+    const list = h("div", "qws-ed-slots");
     const boxes = [];
     const syncOthers = (next, from) => {
       if (!next.applyAll) return;
@@ -12322,48 +12338,16 @@
       });
     };
     state5.slots.forEach((cfg, idx) => {
-      const { root: root4, show } = brushSlotBox(species, idx, cfg, syncOthers, rerender);
+      const { root: root4, show } = brushSlotBox(species, idx, slotTitle(idx, maxSlots), cfg, syncOthers, rerender);
       boxes.push(show);
       list.appendChild(root4);
     });
     panel.appendChild(list);
     return panel;
   }
-  function slotCountRows(species, state5, maxSlots, rerender) {
-    const header = document.createElement("div");
-    Object.assign(header.style, { display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", opacity: "0.9" });
-    const right = document.createElement("div");
-    Object.assign(right.style, { display: "flex", gap: "6px", alignItems: "center" });
-    const count = document.createElement("span");
-    count.textContent = `${state5.slots.length}/${maxSlots}`;
-    right.append(
-      count,
-      roundButton("-", () => {
-        editBrushSlots(species, removeBrushSlot);
-        rerender();
-      }, "danger"),
-      roundButton("+", () => {
-        editBrushSlots(species, (s) => addBrushSlot(s, maxSlots));
-        rerender();
-      })
-    );
-    const title = document.createElement("span");
-    title.textContent = "Slots";
-    header.append(title, right);
-    const applyAllRow = document.createElement("label");
-    Object.assign(applyAllRow.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", opacity: "0.9", cursor: "pointer" });
-    const applyAll = switchInput(state5.applyAll, (on) => {
-      editBrushSlots(species, (s) => ({ ...s, applyAll: on }));
-      rerender();
-    });
-    applyAllRow.append(applyAll, document.createTextNode("Edit all slots together"));
-    return [header, applyAllRow];
-  }
-  function brushSlotBox(species, idx, initial, syncOthers, rerender) {
+  function brushSlotBox(species, idx, title, initial, syncOthers, rerender) {
     let cfg = initial;
-    const size = sizeControls("Custom");
-    size.modeLabel.style.fontSize = "10px";
-    size.modeLabel.style.opacity = "0.75";
+    const size = sizeControls();
     const show = (next, rewriteField) => {
       cfg = next;
       const pct = brushSlotSize(next);
@@ -12395,27 +12379,19 @@
         edit("percent", { sizePercent: percentMemory });
       }
     };
-    const prefix = sectionLabel("Mutations:");
-    prefix.style.flexShrink = "0";
     const mutations = mutationPicker((mutationId) => {
       editBrushSlots(species, (s) => toggleBrushMutation(s, idx, mutationId));
       rerender();
-    }, prefix);
+    }, panelLabel("Mutations"));
     mutations.render(Array.isArray(initial.mutations) ? initial.mutations : []);
-    const mutationsWrap = document.createElement("div");
-    Object.assign(mutationsWrap.style, { display: "grid", gap: "4px" });
-    mutationsWrap.append(mutations.row, mutations.dropdown);
-    const root4 = plainCard();
-    root4.style.gap = "8px";
-    root4.append(sizeHeader(size.value, size.modeLabel), size.slider, size.customRow, mutationsWrap);
+    const root4 = slotCard(title, size, [mutations.row, mutations.dropdown]);
     show(initial, true);
     return { root: root4, show: (next) => show(next, true) };
   }
   var init_brushDetails = __esm({
     "src/features/editor/ui/brushDetails.ts"() {
       "use strict";
-      init_card();
-      init_toggles();
+      init_dom2();
       init_decorRotation();
       init_brushSlots();
       init_brush();
@@ -12424,6 +12400,8 @@
       init_mutationPicker();
       init_panelChrome();
       init_sizeControls();
+      init_slotOptions();
+      init_styles2();
     }
   });
 
@@ -12433,27 +12411,21 @@
     const panel = floatingPanel({
       id: "qws-editor-side",
       side: "left",
-      title: "\u{1F33F} Item picker",
-      style: { minHeight: "420px", height: "min(720px, 86vh)" }
+      title: "Items",
+      style: { height: "min(720px, calc(86vh / var(--qmm-scale, 1)))" }
     });
-    panel.header.style.opacity = "0.85";
-    const content2 = document.createElement("div");
-    Object.assign(content2.style, {
-      display: "grid",
-      gridTemplateRows: "auto auto minmax(120px, 0.7fr) minmax(0, 1fr)",
-      gap: "8px",
-      minHeight: "0"
-    });
-    const search3 = textInput("Search\u2026", picker.query, { small: true });
-    Object.assign(search3.style, { width: "100%", boxSizing: "border-box" });
+    panel.body.style.gridTemplateRows = "auto auto minmax(120px, 0.7fr) minmax(0, 1fr)";
+    const search3 = textInput("Search", picker.query, { small: true });
+    search3.style.width = "100%";
+    search3.style.boxSizing = "border-box";
     search3.oninput = () => {
       picker.query = search3.value;
       renderEntryGrid();
     };
     const mode = segmented(
       [
-        { value: "plants", label: "\u{1F331} Plants" },
-        { value: "decor", label: "\u{1F3A8} Decor" }
+        { value: "plants", label: "Plants" },
+        { value: "decor", label: "Decor" }
       ],
       picker.mode,
       (next) => {
@@ -12468,12 +12440,11 @@
     );
     listWrap = panelSection();
     listWrap.id = "qws-editor-side-list";
-    Object.assign(listWrap.style, { overflow: "auto", padding: "6px" });
+    listWrap.classList.add("qws-ed-scroll", "qmm-scroll");
     detailsWrap = panelSection();
     detailsWrap.id = "qws-editor-side-details";
-    Object.assign(detailsWrap.style, { display: "grid", gridTemplateRows: "minmax(0, 1fr)", padding: "10px", overflow: "hidden" });
-    content2.append(mode, search3, listWrap, detailsWrap);
-    panel.root.appendChild(content2);
+    detailsWrap.classList.add("qws-ed-scroll", "qmm-scroll");
+    panel.body.append(mode, search3, listWrap, detailsWrap);
     root2 = panel.root;
     renderEntryGrid();
     renderDetails();
@@ -12485,42 +12456,23 @@
   function renderDetails() {
     if (detailsWrap) renderBrushDetails(detailsWrap);
   }
-  function styleEntry(btn, selected) {
-    Object.assign(btn.style, {
-      border: `1px solid ${selected ? color.accent : color.borderStrong}`,
-      background: selected ? color.accentSoft : color.cardBg,
-      boxShadow: selected ? `0 0 0 1px ${color.accentBorder}` : "none",
-      transform: selected ? "scale(1.06)" : "scale(1)"
-    });
+  function markSelected(btn, selected) {
+    btn.classList.toggle("is-selected", selected);
+    btn.setAttribute("aria-pressed", selected ? "true" : "false");
   }
   function entryButton(id, label2, selected) {
-    const btn = document.createElement("button");
+    const btn = h("button", "qws-ed-entry");
     btn.type = "button";
     btn.dataset.id = id;
     btn.title = label2;
-    Object.assign(btn.style, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "4px",
-      borderRadius: "8px",
-      color: color.text,
-      cursor: "pointer",
-      transition: "background 120ms ease, border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease"
-    });
-    styleEntry(btn, selected);
-    btn.onmouseenter = () => {
-      if (id === getSelectedId()) return;
-      btn.style.background = color.accentSoft;
-      btn.style.borderColor = color.accentBorder;
-    };
-    btn.onmouseleave = () => styleEntry(btn, id === getSelectedId());
+    btn.setAttribute("aria-label", label2);
+    markSelected(btn, selected);
     btn.onclick = () => {
       setSelectedId(id);
       renderEntryGrid();
       renderDetails();
     };
-    btn.appendChild(entryIcon(picker.mode === "decor" ? "decor" : "plant", id, label2, 26));
+    btn.appendChild(entryIcon(picker.mode === "decor" ? "decor" : "plant", id, label2, 28));
     return btn;
   }
   function renderEntryGrid() {
@@ -12531,18 +12483,19 @@
     const existing = listWrap.querySelector('[data-editor-side-list="list"]');
     if (existing && existing.dataset.sig === signature) {
       existing.querySelectorAll("button[data-id]").forEach((btn) => {
-        styleEntry(btn, btn.dataset.id === selectedId);
+        markSelected(btn, btn.dataset.id === selectedId);
       });
       return;
     }
     if (!entries.length) {
-      listWrap.replaceChildren(hint("No entries."));
+      const empty = hint(picker.query ? "Nothing matches this search." : "Nothing to place here yet.");
+      empty.style.padding = "var(--qmm-space-xl) var(--qmm-space-lg)";
+      listWrap.replaceChildren(empty);
       return;
     }
-    const grid = document.createElement("div");
+    const grid = h("div", "qws-ed-grid");
     grid.dataset.editorSideList = "list";
     grid.dataset.sig = signature;
-    Object.assign(grid.style, { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(34px, 1fr))", gap: "4px" });
     for (const entry of entries) grid.appendChild(entryButton(entry.id, entry.label, entry.id === selectedId));
     listWrap.replaceChildren(grid);
   }
@@ -12550,9 +12503,9 @@
   var init_itemPicker = __esm({
     "src/features/editor/ui/itemPicker.ts"() {
       "use strict";
+      init_dom2();
       init_fields();
       init_segmented();
-      init_theme();
       init_brush();
       init_brushDetails();
       init_entryIcon();
@@ -12566,41 +12519,23 @@
   // src/features/editor/ui/toolbar.ts
   function showToolbar(actions2, hudVisible) {
     if (!(root3 && document.contains(root3))) {
-      const el = document.createElement("div");
-      el.id = "qws-editor-overlay";
-      Object.assign(el.style, {
-        position: "fixed",
-        top: "7%",
-        left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: EDITOR_LAYER,
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        padding: "6px 8px",
-        borderRadius: "999px",
-        border: `1px solid ${color.borderStrong}`,
-        background: "var(--qmm-gradient-panel)",
-        color: color.text,
-        font: "600 13px/1.3 system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-        letterSpacing: "0.3px",
-        boxShadow: "var(--qmm-shadow-window)"
-      });
-      const label2 = document.createElement("span");
-      label2.textContent = "Editor mode";
-      label2.style.padding = "2px 6px";
+      ensureEditorStyles();
+      const el4 = h("div", "qws-ed-toolbar");
+      el4.id = "qws-editor-overlay";
+      el4.style.zIndex = EDITOR_LAYER;
+      const label2 = h("span", "qws-ed-toolbar__label");
+      label2.append(h("span", "qws-ed-toolbar__dot"), "Editor mode");
       const clear = button("Clear garden", { size: "sm", onClick: actions2.onClear });
       hudButton = button("", { size: "sm", onClick: actions2.onToggleHud });
-      for (const btn of [clear, hudButton]) btn.style.borderRadius = "999px";
-      el.append(label2, clear, hudButton);
-      (document.body || document.documentElement).appendChild(el);
-      root3 = el;
+      el4.append(label2, clear, hudButton);
+      (document.body || document.documentElement).appendChild(el4);
+      root3 = el4;
     }
     setHudButtonLabel(hudVisible);
   }
   function setHudButtonLabel(hudVisible) {
     const label2 = hudButton?.querySelector(".label");
-    if (label2) label2.textContent = hudVisible ? "Hide HUD" : "Show HUD";
+    if (label2) label2.textContent = hudVisible ? "Hide panels" : "Show panels";
   }
   function hideToolbar() {
     root3?.remove();
@@ -12612,8 +12547,9 @@
     "src/features/editor/ui/toolbar.ts"() {
       "use strict";
       init_button();
-      init_theme();
+      init_dom2();
       init_panelChrome();
+      init_styles2();
       root3 = null;
       hudButton = null;
     }
@@ -12947,11 +12883,11 @@
   });
 
   // src/game/roomScope.ts
-  async function currentRoomAtom(field2) {
+  async function currentRoomAtom(field3) {
     const roomAtom = getAtomByLabel(CURRENT_ROOM_LABEL);
     if (!roomAtom) return null;
     const room = await jGet(roomAtom).catch(() => null);
-    const atom = room?.[field2];
+    const atom = room?.[field3];
     return atom && typeof atom === "object" ? atom : null;
   }
   var CURRENT_ROOM_LABEL;
@@ -14714,22 +14650,21 @@
       SECTION_CONFIG = [
         {
           id: "gui",
-          title: "GUI",
-          icon: "\u{1F5A5}\uFE0F",
-          description: "Choose how you open and move the overlay.",
+          title: "Mod menus",
+          description: "Show, hide and move the mod's windows.",
           actions: [
             {
               id: "gui.toggle",
-              label: "Toggle menu visibility",
+              label: "Show or hide menus",
               icon: "sprite/ui/CameraOff",
-              hint: "Opens or closes the Arie's Mod overlay.",
+              hint: "Every Arie's Mod window and the launcher.",
               defaultHotkey: { alt: true, code: "KeyX" }
             },
             {
               id: "gui.drag",
-              label: "Drag HUD",
+              label: "Move windows",
               icon: "sprite/ui/Touchpad",
-              hint: "Hold to drag menus interfaces around the screen.",
+              hint: "Hold it, then drag a window anywhere.",
               defaultHotkey: { alt: true, code: "AltLeft" },
               allowModifierOnly: true
             }
@@ -14738,8 +14673,7 @@
         {
           id: "shops",
           title: "Shops",
-          icon: "\u{1F6D2}",
-          description: "Quick shortcuts to every shop tab.",
+          description: "Open a shop straight on its tab.",
           actions: [
             { id: "shops.seeds", label: "Seeds shop", icon: "sprite/ui/SeedIcon", defaultHotkey: { alt: true, code: "KeyS" } },
             { id: "shops.eggs", label: "Eggs shop", icon: "sprite/ui/EggIcon", defaultHotkey: { alt: true, code: "KeyE" } },
@@ -14750,8 +14684,7 @@
         {
           id: "game",
           title: "Game",
-          icon: "\u{1F3AE}",
-          description: "Remap the in-game actions",
+          description: "Change the game's own keys.",
           actions: [
             {
               id: "game.action",
@@ -14776,22 +14709,21 @@
         },
         {
           id: "sell",
-          title: "Sell",
-          icon: "\u{1F4B0}",
-          description: "Streamline selling actions.",
+          title: "Selling",
+          description: "Sell everything in one key press.",
           actions: [
             {
               id: "sell.sell-all",
               label: "All crops",
               icon: "sprite/ui/IconSell",
-              hint: "Trigger the sell-all flow for harvested crops.",
+              hint: "Sells every harvested crop.",
               defaultHotkey: null
             },
             {
               id: "sell.sell-all-pets",
               label: "All pets",
               icon: "sprite/ui/IconShop",
-              hint: "Sell every non-favorited pet in your inventory.",
+              hint: "Sells every pet that is not a favorite.",
               defaultHotkey: null
             }
           ]
@@ -14799,24 +14731,22 @@
         {
           id: "companion",
           title: "Companion",
-          icon: "\u{1F916}",
-          description: "Reach your companion without going through the launcher.",
+          description: "Reach your companion without the launcher.",
           actions: [
             {
               id: "companion.chat",
               label: "Open the chat",
               // No icon: the `ui` atlas has no chat pictogram, and a made-up key
               // would show an empty box.
-              hint: "Opens the Companion window straight on its Chat tab.",
+              hint: "Opens the Companion window on its Chat tab.",
               defaultHotkey: { alt: true, code: "KeyC" }
             }
           ]
         },
         {
           id: PET_SECTION_ID,
-          title: "Pets",
-          icon: "\u{1F437}",
-          description: "Assign shortcuts to your pet teams and cycle through them instantly.",
+          title: "Pet teams",
+          description: "Switch teams with a single key.",
           actions: [
             { id: "pets.team.prev", label: "Previous team", defaultHotkey: null },
             { id: "pets.team.next", label: "Next team", defaultHotkey: null }
@@ -14827,38 +14757,38 @@
   });
 
   // src/features/keybinds/keybinds.ts
-  function register(section5, config) {
+  function register(section, config) {
     const action2 = {
       ...config,
-      sectionId: section5.id,
+      sectionId: section.id,
       defaultHotkey: cloneHotkey(config.defaultHotkey),
       holdDetection: config.holdDetection ? { ...config.holdDetection } : void 0
     };
     actions.set(action2.id, action2);
     if (action2.holdDetection) holdDefaults.set(action2.id, !!action2.holdDetection.defaultEnabled);
-    section5.actions.push(action2);
+    section.actions.push(action2);
   }
   function setDynamicActions(sectionId, configs) {
     const index = SECTION_CONFIG.findIndex((s) => s.id === sectionId);
     if (index < 0) return;
-    const section5 = sections[index];
+    const section = sections[index];
     const fixed = new Set(SECTION_CONFIG[index].actions.map((a) => a.id));
-    for (const old of section5.actions) {
+    for (const old of section.actions) {
       if (fixed.has(old.id)) continue;
       actions.delete(old.id);
       holdDefaults.delete(old.id);
       cache.delete(old.id);
       holdCache.delete(old.id);
     }
-    section5.actions = section5.actions.filter((a) => fixed.has(a.id));
+    section.actions = section.actions.filter((a) => fixed.has(a.id));
     for (const config of configs) {
-      if (!fixed.has(config.id)) register(section5, config);
+      if (!fixed.has(config.id)) register(section, config);
     }
   }
   function getKeybindSections() {
-    return sections.map((section5) => ({
-      ...section5,
-      actions: section5.actions.map((action2) => ({
+    return sections.map((section) => ({
+      ...section,
+      actions: section.actions.map((action2) => ({
         ...action2,
         defaultHotkey: cloneHotkey(action2.defaultHotkey),
         holdDetection: action2.holdDetection ? { ...action2.holdDetection } : void 0
@@ -14980,7 +14910,7 @@
       ARIES_ROOT_KEY = "aries_mod";
       STORED_NONE = "__none__";
       UNBOUND_LABEL = "None";
-      sections = SECTION_CONFIG.map((section5) => ({ ...section5, actions: [] }));
+      sections = SECTION_CONFIG.map((section) => ({ ...section, actions: [] }));
       actions = /* @__PURE__ */ new Map();
       holdDefaults = /* @__PURE__ */ new Map();
       cache = /* @__PURE__ */ new Map();
@@ -15081,39 +15011,6 @@
     }
   });
 
-  // src/ui/kit/badges.ts
-  function pill(text2, tone) {
-    const el = h("span", "qmm-pill", text2);
-    setTone(el, tone);
-    return el;
-  }
-  function setTone(el, tone) {
-    el.classList.remove("is-ok", "is-warn", "is-bad");
-    if (tone) el.classList.add(`is-${tone}`);
-  }
-  function badge(text2, tone) {
-    return h("span", `qmm-badge is-${tone}`, text2);
-  }
-  function meter() {
-    const root4 = h("div", "qmm-meter");
-    const fill = h("div", "qmm-meter__fill");
-    root4.appendChild(fill);
-    return {
-      root: root4,
-      set(ratio, tone = "accent") {
-        fill.style.width = `${clampFinite(ratio, 0, 1, 0) * 100}%`;
-        fill.classList.toggle("is-warn", tone === "warn");
-      }
-    };
-  }
-  var init_badges = __esm({
-    "src/ui/kit/badges.ts"() {
-      "use strict";
-      init_math();
-      init_dom2();
-    }
-  });
-
   // src/features/settings/versionPill.ts
   function openDownloadLink(url) {
     const gmObject = globalThis.GM;
@@ -15167,9 +15064,9 @@
   }
   function shouldIgnoreKeydown(e) {
     if (isKeybindCaptureActive()) return true;
-    const el = e.target;
-    if (!el) return false;
-    return el.isContentEditable || el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT";
+    const el4 = e.target;
+    if (!el4) return false;
+    return el4.isContentEditable || el4.tagName === "INPUT" || el4.tagName === "TEXTAREA" || el4.tagName === "SELECT";
   }
   var keybindCaptureCount;
   var init_keyboard = __esm({
@@ -15202,15 +15099,15 @@
       top: clampCoord(pos.top, margin, viewport.height - size.height - margin)
     };
   }
-  function placeInViewport(el, pos, size, margin) {
+  function placeInViewport(el4, pos, size, margin) {
     const placed = clampToViewport(pos, size, margin);
-    el.style.left = `${Math.round(placed.left)}px`;
-    el.style.top = `${Math.round(placed.top)}px`;
+    el4.style.left = `${Math.round(placed.left)}px`;
+    el4.style.top = `${Math.round(placed.top)}px`;
     return placed;
   }
-  function makeDraggable(el, opts) {
+  function makeDraggable(el4, opts) {
     const threshold = opts.thresholdPx ?? 0;
-    const handle = opts.handle ?? el;
+    const handle = opts.handle ?? el4;
     let drag = null;
     const onMove = (ev) => {
       if (!drag || ev.pointerId !== drag.pointerId) return;
@@ -15247,7 +15144,7 @@
       const target = ev.target;
       if (target && opts.ignore?.(target)) return;
       if (drag) stop();
-      const rect = el.getBoundingClientRect();
+      const rect = el4.getBoundingClientRect();
       const base = { left: rect.left, top: rect.top };
       drag = {
         pointerId: ev.pointerId,
@@ -15354,20 +15251,20 @@
     head.append(status2, h("span", "qws-dock-title", events.title ?? "Arie's Mod"), fold);
     const grid = h("div", "qws-dock-grid");
     root4.append(head, grid);
-    const tip = h("div", "qws-dock-tip");
+    const tip2 = h("div", "qws-dock-tip");
     const buttons = /* @__PURE__ */ new Map();
     const pendingBadges = /* @__PURE__ */ new Map();
     const showTip = (btn, label2) => {
-      tip.textContent = label2;
-      if (!tip.isConnected) (document.documentElement || document.body).appendChild(tip);
+      tip2.textContent = label2;
+      if (!tip2.isConnected) (document.documentElement || document.body).appendChild(tip2);
       const rect = btn.getBoundingClientRect();
       const below = rect.top < 48;
-      tip.style.left = `${Math.round(rect.left + rect.width / 2)}px`;
-      tip.style.top = `${Math.round(below ? rect.bottom + TIP_GAP_PX : rect.top - TIP_GAP_PX)}px`;
-      tip.style.transform = below ? "translateX(-50%)" : "translate(-50%, -100%)";
-      tip.classList.add("shown");
+      tip2.style.left = `${Math.round(rect.left + rect.width / 2)}px`;
+      tip2.style.top = `${Math.round(below ? rect.bottom + TIP_GAP_PX : rect.top - TIP_GAP_PX)}px`;
+      tip2.style.transform = below ? "translateX(-50%)" : "translate(-50%, -100%)";
+      tip2.classList.add("shown");
     };
-    const hideTip = () => tip.classList.remove("shown");
+    const hideTip = () => tip2.classList.remove("shown");
     const setBadge = (id, count) => {
       const badge2 = buttons.get(id)?.querySelector(".qws-dock-badge");
       if (!badge2) {
@@ -15468,8 +15365,8 @@
       setFoldHint(text2) {
         fold.setAttribute("title", text2);
       },
-      addToHeader(el) {
-        head.insertBefore(el, fold);
+      addToHeader(el4) {
+        head.insertBefore(el4, fold);
       }
     };
   }
@@ -15490,37 +15387,37 @@
   });
 
   // src/ui/hudPlacement.ts
-  function currentPos(el) {
-    const rect = el.getBoundingClientRect();
-    const cs = getComputedStyle(el);
+  function currentPos(el4) {
+    const rect = el4.getBoundingClientRect();
+    const cs = getComputedStyle(el4);
     let r = parseFloat(cs.right);
     let b = parseFloat(cs.bottom);
     if (Number.isNaN(r)) r = window.innerWidth - rect.right;
     if (Number.isNaN(b)) b = window.innerHeight - rect.bottom;
     return { r, b };
   }
-  function placeClamped(el, r, b) {
-    const rect = el.getBoundingClientRect();
+  function placeClamped(el4, r, b) {
+    const rect = el4.getBoundingClientRect();
     const maxRight = Math.max(MARGIN, window.innerWidth - rect.width - MARGIN);
     const maxBottom = Math.max(MARGIN, window.innerHeight - rect.height - MARGIN);
-    el.style.right = `${Math.min(Math.max(r, MARGIN), maxRight)}px`;
-    el.style.bottom = `${Math.min(Math.max(b, MARGIN), maxBottom)}px`;
+    el4.style.right = `${Math.min(Math.max(r, MARGIN), maxRight)}px`;
+    el4.style.bottom = `${Math.min(Math.max(b, MARGIN), maxBottom)}px`;
   }
-  function clampRect(el) {
-    const { r, b } = currentPos(el);
-    placeClamped(el, r, b);
+  function clampRect(el4) {
+    const { r, b } = currentPos(el4);
+    placeClamped(el4, r, b);
   }
-  function ensureOnScreen(el) {
-    clampRect(el);
-    const rect = el.getBoundingClientRect();
-    const head = el.querySelector(".w-head")?.getBoundingClientRect() ?? rect;
-    let { r, b } = currentPos(el);
+  function ensureOnScreen(el4) {
+    clampRect(el4);
+    const rect = el4.getBoundingClientRect();
+    const head = el4.querySelector(".w-head")?.getBoundingClientRect() ?? rect;
+    let { r, b } = currentPos(el4);
     const maxRight = Math.max(MARGIN, window.innerWidth - rect.width - MARGIN);
     const maxBottom = Math.max(MARGIN, window.innerHeight - rect.height - MARGIN);
     if (head.top < MARGIN) b = Math.max(MARGIN, Math.min(maxBottom, b - (MARGIN - head.top)));
     if (rect.left < MARGIN) r = Math.max(MARGIN, Math.min(maxRight, r - (MARGIN - rect.left)));
-    el.style.right = `${r}px`;
-    el.style.bottom = `${b}px`;
+    el4.style.right = `${r}px`;
+    el4.style.bottom = `${b}px`;
   }
   function attachAutoClamp(win) {
     if (typeof ResizeObserver === "undefined") return;
@@ -15530,15 +15427,15 @@
       raf2 = requestAnimationFrame(() => ensureOnScreen(win));
     }).observe(win);
   }
-  function withTopLocked(el, mutate) {
-    const before = el.getBoundingClientRect();
-    const { b } = currentPos(el);
+  function withTopLocked(el4, mutate) {
+    const before = el4.getBoundingClientRect();
+    const { b } = currentPos(el4);
     mutate();
     requestAnimationFrame(() => {
-      const after = el.getBoundingClientRect();
+      const after = el4.getBoundingClientRect();
       const maxBottom = Math.max(MARGIN, window.innerHeight - after.height - MARGIN);
-      el.style.bottom = `${Math.min(Math.max(MARGIN, b + after.top - before.top), maxBottom)}px`;
-      ensureOnScreen(el);
+      el4.style.bottom = `${Math.min(Math.max(MARGIN, b + after.top - before.top), maxBottom)}px`;
+      ensureOnScreen(el4);
     });
   }
   function makeDraggable2(handle, target, opts) {
@@ -15621,12 +15518,12 @@
 
   // src/ui/hud.ts
   function installInputKeyTrap() {
-    const isTextField = (el) => {
-      if (el instanceof HTMLTextAreaElement) return true;
-      if (el instanceof HTMLInputElement) return ["text", "number", "search"].includes((el.type || "").toLowerCase());
-      return el instanceof HTMLElement && el.isContentEditable;
+    const isTextField = (el4) => {
+      if (el4 instanceof HTMLTextAreaElement) return true;
+      if (el4 instanceof HTMLInputElement) return ["text", "number", "search"].includes((el4.type || "").toLowerCase());
+      return el4 instanceof HTMLElement && el4.isContentEditable;
     };
-    const ours = (el) => !!el?.closest?.(".qws-win");
+    const ours = (el4) => !!el4?.closest?.(".qws-win");
     const trap = (ev) => {
       const target = ev.target;
       const active3 = document.activeElement;
@@ -15735,22 +15632,22 @@
     });
     const windows = /* @__PURE__ */ new Map();
     let cascade = 0;
-    function bumpZ(el) {
+    function bumpZ(el4) {
       let maxZ = layer.window;
       windows.forEach((w) => {
         const z = parseInt(getComputedStyle(w.el).zIndex || String(layer.window), 10);
         if (z > maxZ) maxZ = z;
       });
-      el.style.zIndex = String(maxZ + 1);
+      el4.style.zIndex = String(maxZ + 1);
     }
-    function saveWinPos(id, el) {
-      writeAriesPath(HUD_WIN_PATH(id), { r: parseFloat(el.style.right) || 16, b: parseFloat(el.style.bottom) || 16 });
+    function saveWinPos(id, el4) {
+      writeAriesPath(HUD_WIN_PATH(id), { r: parseFloat(el4.style.right) || 16, b: parseFloat(el4.style.bottom) || 16 });
     }
-    function restoreWinPos(id, el) {
+    function restoreWinPos(id, el4) {
       const saved = readAriesPath(HUD_WIN_PATH(id));
-      if (typeof saved?.r === "number") el.style.right = `${saved.r}px`;
-      if (typeof saved?.b === "number") el.style.bottom = `${saved.b}px`;
-      ensureOnScreen(el);
+      if (typeof saved?.r === "number") el4.style.right = `${saved.r}px`;
+      if (typeof saved?.b === "number") el4.style.bottom = `${saved.b}px`;
+      ensureOnScreen(el4);
     }
     function showWindow(id, title, render) {
       const existing = windows.get(id);
@@ -15823,12 +15720,12 @@
       }, true);
       const stopDrag = () => {
         if (!drag) return;
-        const el = drag.el;
+        const el4 = drag.el;
         drag = null;
         document.body.style.userSelect = "";
-        clampRect(el);
-        const win = [...windows.values()].find((w) => w.el === el);
-        if (win) saveWinPos(win.id, el);
+        clampRect(el4);
+        const win = [...windows.values()].find((w) => w.el === el4);
+        if (win) saveWinPos(win.id, el4);
       };
       window.addEventListener("mouseup", stopDrag, true);
       window.addEventListener("keyup", (e) => {
@@ -15887,8 +15784,8 @@
       HUD_FOLDED_PATH = "hud.dockFolded";
       HUD_DOCK_POS_PATH = "hud.dockPos";
       HUD_WIN_PATH = (id) => `hud.windows.${id}`;
-      isEditing = (el) => {
-        const t = el;
+      isEditing = (el4) => {
+        const t = el4;
         return !!t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName));
       };
     }
@@ -16479,8 +16376,8 @@
     const pick = (c) => typeof c === "string" && c.trim() ? c : null;
     const direct = pick(p.id) ?? pick(p.pet?.id);
     if (direct) return direct;
-    for (const field2 of IDENTITY_FIELDS) {
-      const value = pick(p[field2]);
+    for (const field3 of IDENTITY_FIELDS) {
+      const value = pick(p[field3]);
       if (value) return value;
     }
     return null;
@@ -17207,42 +17104,42 @@
   });
 
   // src/game/pixi/gardenInfoCard.ts
-  function computeGeometry(card4) {
-    const cardBounds = card4.getLocalBounds();
-    const width = card4.hitArea?.width ?? cardBounds.width;
-    const height = card4.hitArea?.height ?? cardBounds.height;
-    const titleRow = (card4.children ?? []).find((c) => c?.label === TITLE_ROW_LABEL);
+  function computeGeometry(card3) {
+    const cardBounds = card3.getLocalBounds();
+    const width = card3.hitArea?.width ?? cardBounds.width;
+    const height = card3.hitArea?.height ?? cardBounds.height;
+    const titleRow = (card3.children ?? []).find((c) => c?.label === TITLE_ROW_LABEL);
     const contentTop = titleRow ? titleRow.position.y + titleRow.getLocalBounds().minY : cardBounds.minY;
     const abilitiesSection = (cardSystem?.children ?? []).find((c) => c?.label === ABILITIES_SECTION_LABEL);
     const extraTopOffset = abilitiesSection ? abilitiesSection.getLocalBounds().height + SECTION_GAP_ESTIMATE : 0;
     return { top: contentTop - extraTopOffset, width, height };
   }
-  function notifyListeners(card4, geometry) {
+  function notifyListeners(card3, geometry) {
     for (const listener of listeners) {
       try {
-        listener(card4, geometry);
+        listener(card3, geometry);
       } catch (error) {
         console.warn("[gardenInfoCardPixi] listener failed", error);
       }
     }
   }
-  function onChildAddedUnsafe(row5) {
-    if (row5?.label !== CARD_ROW_LABEL) return;
-    const card4 = findByLabel(row5, OBJECT_CARD_LABEL);
-    if (!card4) return;
-    currentCard = card4;
-    const geometry = computeGeometry(card4);
-    card4.once("destroyed", () => {
-      if (currentCard === card4) {
+  function onChildAddedUnsafe(row2) {
+    if (row2?.label !== CARD_ROW_LABEL) return;
+    const card3 = findByLabel(row2, OBJECT_CARD_LABEL);
+    if (!card3) return;
+    currentCard = card3;
+    const geometry = computeGeometry(card3);
+    card3.once("destroyed", () => {
+      if (currentCard === card3) {
         currentCard = null;
         notifyListeners(null, null);
       }
     });
-    notifyListeners(card4, geometry);
+    notifyListeners(card3, geometry);
   }
-  function onChildAdded(row5) {
+  function onChildAdded(row2) {
     try {
-      onChildAddedUnsafe(row5);
+      onChildAddedUnsafe(row2);
     } catch (error) {
       console.warn("[gardenInfoCardPixi] onChildAdded failed", error);
     }
@@ -17474,13 +17371,13 @@
     };
     const subs = new Subscriptions();
     subs.add(
-      watchGardenInfoCard((card4, geom) => {
-        currentCard2 = card4;
+      watchGardenInfoCard((card3, geom) => {
+        currentCard2 = card3;
         geometry = geom;
-        hitAreaBaseHeight = card4?.hitArea?.height ?? 0;
+        hitAreaBaseHeight = card3?.hitArea?.height ?? 0;
         detachValueText();
-        debugState3.attached = !!card4;
-        if (card4) syncValueNode();
+        debugState3.attached = !!card3;
+        if (card3) syncValueNode();
       })
     );
     subs.add(priceWatcher.onChange(syncValueNode));
@@ -17908,11 +17805,11 @@
   });
 
   // src/features/inventory/itemInfo.ts
-  function readNestedValue(item, field2, parse) {
+  function readNestedValue(item, field3, parse) {
     if (!item || typeof item !== "object") return null;
     for (const source of [item, item.item, item.data]) {
       if (!source || typeof source !== "object") continue;
-      const parsed = parse(source[field2]);
+      const parsed = parse(source[field3]);
       if (parsed != null) return parsed;
     }
     return null;
@@ -17927,12 +17824,12 @@
     return "";
   }
   function plantLookup(order) {
-    const namePaths = order.map((part) => [part, "name"]);
+    const namePaths = order.map((part2) => [part2, "name"]);
     return {
       idField: "species",
       catalog: plantCatalog2,
       name: (_id, entry) => firstNestedString(entry, namePaths),
-      rarityPaths: order.map((part) => [part, "rarity"])
+      rarityPaths: order.map((part2) => [part2, "rarity"])
     };
   }
   function flatLookup(idField, catalog, name) {
@@ -17964,8 +17861,8 @@
   }
   function collectSpeciesCandidates(source, out) {
     if (!source || typeof source !== "object") return;
-    for (const field2 of SPECIES_FIELDS) {
-      const value = stringOrEmpty(source[field2]);
+    for (const field3 of SPECIES_FIELDS) {
+      const value = stringOrEmpty(source[field3]);
       if (value) out.add(value);
     }
   }
@@ -18043,7 +17940,7 @@
       return false;
     };
     const abilityNames = Array.isArray(item?.abilities) ? item.abilities.map(petAbilityName).filter(Boolean) : [];
-    const ownString = (field2) => typeof item?.[field2] === "string" ? item[field2] : null;
+    const ownString = (field3) => typeof item?.[field3] === "string" ? item[field3] : null;
     const candidates = [
       getInventoryItemName(item),
       ...["species", "seedSpecies", "plantSpecies", "petSpecies", "eggId", "decorId", "toolId", "id"].map(ownString),
@@ -18061,8 +17958,8 @@
       normalize = (s) => (s ?? "").trim().toLowerCase();
       stringOrEmpty = (value) => typeof value === "string" ? value.trim() : "";
       itemTypeOf = (item) => stringOrEmpty(item?.itemType);
-      readNestedString = (item, field2) => readNestedValue(item, field2, (value) => stringOrEmpty(value) || null);
-      readNestedNumber = (item, field2) => readNestedValue(item, field2, (value) => {
+      readNestedString = (item, field3) => readNestedValue(item, field3, (value) => stringOrEmpty(value) || null);
+      readNestedNumber = (item, field3) => readNestedValue(item, field3, (value) => {
         if (typeof value === "number" && Number.isFinite(value)) return value;
         if (typeof value === "string" && value.trim()) {
           const parsed = Number(value);
@@ -18088,8 +17985,8 @@
 
   // src/features/inventory/petStrength.ts
   function statsFor(item) {
-    for (const field2 of ["petSpecies", "species", "name"]) {
-      const candidate = readNestedString(item, field2);
+    for (const field3 of ["petSpecies", "species", "name"]) {
+      const candidate = readNestedString(item, field3);
       if (!candidate) continue;
       const key2 = speciesKey(candidate);
       const stats = key2 ? petStatsBySpecies().get(key2) : void 0;
@@ -18216,7 +18113,7 @@
       init_itemInfo();
       init_petStrength();
       compareText = (a, b) => a.localeCompare(b, void 0, { sensitivity: "base" });
-      stringField = (item, field2) => typeof item?.[field2] === "string" ? item[field2] : "";
+      stringField = (item, field3) => typeof item?.[field3] === "string" ? item[field3] : "";
       ownValue = (item) => typeof item?.value === "number" ? item.value : null;
       sortedMutationLabel = (mutations) => mutations.slice().sort(compareText).join("\0");
     }
@@ -18380,7 +18277,7 @@
       FILTER_CHECKBOX_SELECTOR = "label.chakra-checkbox.css-1v6h4z7";
       FILTER_CHECKBOX_LABEL_SELECTOR = ".chakra-checkbox__label";
       SEARCH_INPUT_SELECTOR = "input.chakra-input.css-8e1l1i";
-      isChecked = (el) => el.matches("[data-checked]") || !!el.querySelector("[data-checked]");
+      isChecked = (el4) => el4.matches("[data-checked]") || !!el4.querySelector("[data-checked]");
       shownTypesByContext = /* @__PURE__ */ new Map();
       shownTypesChanged = new Emitter();
       onShownItemTypesChange = (listener) => shownTypesChanged.on(listener);
@@ -18458,8 +18355,8 @@
     }
     return { label: label2, current: current3, max };
   }
-  function updateStrengthText(card4, item) {
-    const wrap = card4.querySelector(STRENGTH_WRAPPER_SELECTOR);
+  function updateStrengthText(card3, item) {
+    const wrap = card3.querySelector(STRENGTH_WRAPPER_SELECTOR);
     const textEl = wrap?.querySelector(STRENGTH_TEXT_SELECTOR);
     if (!wrap || !textEl) return;
     const info = getPetStrengthInfo(item);
@@ -18496,8 +18393,8 @@
     }
     return null;
   }
-  function alignStrengthText(card4) {
-    const wrap = card4.querySelector(STRENGTH_WRAPPER_SELECTOR);
+  function alignStrengthText(card3) {
+    const wrap = card3.querySelector(STRENGTH_WRAPPER_SELECTOR);
     if (!wrap) return;
     if (wrap.dataset[BASE_TRANSFORM_DATASET_KEY] == null) {
       wrap.dataset[BASE_TRANSFORM_DATASET_KEY] = wrap.style.transform ?? "";
@@ -18512,11 +18409,11 @@
       if (wrap.style.pointerEvents) wrap.style.pointerEvents = "";
       return;
     }
-    const row5 = ancestorContaining(wrap, FAVORITE_BUTTON_SELECTOR) ?? ancestorContaining(card4, FAVORITE_BUTTON_SELECTOR);
-    const favorite = row5?.querySelector(FAVORITE_BUTTON_SELECTOR);
-    if (!row5 || !favorite) return;
+    const row2 = ancestorContaining(wrap, FAVORITE_BUTTON_SELECTOR) ?? ancestorContaining(card3, FAVORITE_BUTTON_SELECTOR);
+    const favorite = row2?.querySelector(FAVORITE_BUTTON_SELECTOR);
+    if (!row2 || !favorite) return;
     const anchor = favorite.querySelector("svg") ?? favorite.querySelector(".chakra-icon") ?? favorite;
-    const rowRect = row5.getBoundingClientRect();
+    const rowRect = row2.getBoundingClientRect();
     if (!rowRect.width) return;
     const GAP_PX_MAX = 5;
     const GAP_PX_NON_MAX = 7;
@@ -18561,17 +18458,17 @@
         const parsed = match ? Number(match[1]) : NaN;
         return Number.isFinite(parsed) ? parsed : null;
       };
-      setText = (el, text2) => {
-        if (el.textContent !== text2) el.textContent = text2;
+      setText = (el4, text2) => {
+        if (el4.textContent !== text2) el4.textContent = text2;
       };
     }
   });
 
   // src/features/inventory/inventoryDom.ts
-  function isVisible(el) {
-    if (!el || !document.contains(el)) return false;
-    const rect = el.getBoundingClientRect();
-    const cs = getComputedStyle(el);
+  function isVisible(el4) {
+    if (!el4 || !document.contains(el4)) return false;
+    const rect = el4.getBoundingClientRect();
+    const cs = getComputedStyle(el4);
     if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") return false;
     return rect.width > 0 && rect.height > 0;
   }
@@ -18596,10 +18493,10 @@
     const entries = [];
     for (const child of Array.from(container.children)) {
       if (!(child instanceof HTMLElement)) continue;
-      const card4 = cardOf(child);
-      if (!card4) continue;
-      alignStrengthText(card4);
-      entries.push({ wrapper: child, card: card4 });
+      const card3 = cardOf(child);
+      if (!card3) continue;
+      alignStrengthText(card3);
+      entries.push({ wrapper: child, card: card3 });
     }
     return entries;
   }
@@ -18621,7 +18518,7 @@
   }
   function findSectionByHeader(headerText) {
     const header = Array.from(document.querySelectorAll("p.chakra-text")).find(
-      (el) => (el.textContent ?? "").trim() === headerText
+      (el4) => (el4.textContent ?? "").trim() === headerText
     );
     for (let current3 = header ?? null; current3 && current3 !== document.body; current3 = current3.parentElement) {
       const next = current3.nextElementSibling;
@@ -18653,12 +18550,12 @@
     }
     return FULL_FORMAT.format(value);
   }
-  function updateCardValue(card4, value, show) {
-    const container = card4.querySelector(VALUE_CONTAINER_SELECTOR);
+  function updateCardValue(card3, value, show) {
+    const container = card3.querySelector(VALUE_CONTAINER_SELECTOR);
     const current3 = container?.querySelector(`.${VALUE_ELEMENT_CLASS}`) ?? null;
     if (!container || !show || typeof value !== "number" || !Number.isFinite(value)) {
       if (container) current3?.remove();
-      delete card4.dataset[VALUE_DATASET_KEY];
+      delete card3.dataset[VALUE_DATASET_KEY];
       return;
     }
     const target = current3 ?? Object.assign(document.createElement("div"), { className: VALUE_ELEMENT_CLASS });
@@ -18688,7 +18585,7 @@
     }
     text2.textContent = formatCompactValue(value);
     target.title = formatFullValue(value);
-    card4.dataset[VALUE_DATASET_KEY] = String(value);
+    card3.dataset[VALUE_DATASET_KEY] = String(value);
     if (target.parentElement !== container || target !== container.lastElementChild) container.appendChild(target);
   }
   var VALUE_CONTAINER_SELECTOR, VALUE_ELEMENT_CLASS, VALUE_TEXT_CLASS, VALUE_DATASET_KEY, GAME_YELLOW2, LOADING, UNKNOWN, COMPACT_UNITS, FULL_FORMAT, formatFullValue, COIN_ICON_SRC, ValueSummary;
@@ -19019,17 +18916,17 @@
 
   // src/features/inventory/sortBar.ts
   function caption(text2) {
-    const el = document.createElement("span");
-    el.textContent = text2;
-    Object.assign(el.style, { font: "inherit", opacity: "0.8", flex: "0 0 auto" });
-    return el;
+    const el4 = document.createElement("span");
+    el4.textContent = text2;
+    Object.assign(el4.style, { font: "inherit", opacity: "0.8", flex: "0 0 auto" });
+    return el4;
   }
   function createSortBar(handlers) {
     const wrap = document.createElement("div");
     wrap.className = WRAP_CLASS;
     Object.assign(wrap.style, { display: "block", width: "100%", gridColumn: "1 / -1", flex: "0 0 auto", contain: "layout style" });
-    const row5 = document.createElement("div");
-    Object.assign(row5.style, {
+    const row2 = document.createElement("div");
+    Object.assign(row2.style, {
       display: "flex",
       alignItems: "center",
       flexWrap: "wrap",
@@ -19052,27 +18949,27 @@
     const divider = document.createElement("span");
     Object.assign(divider.style, { alignSelf: "stretch", width: "1px", minHeight: "24px", background: color.border, flex: "0 0 auto" });
     const summary = new ValueSummary();
-    row5.append(caption("Sort by:"), sortSelect, caption("Order:"), directionSelect, divider, showValuesLabel, summary.el);
-    wrap.appendChild(row5);
-    const bar = { wrap, sortSelect, directionSelect, showValues, summary, lastSortKey: null, lastDirection: null };
+    row2.append(caption("Sort by:"), sortSelect, caption("Order:"), directionSelect, divider, showValuesLabel, summary.el);
+    wrap.appendChild(row2);
+    const bar2 = { wrap, sortSelect, directionSelect, showValues, summary, lastSortKey: null, lastDirection: null };
     const picked = () => {
-      bar.lastSortKey = sortSelect.value || "none";
-      bar.lastDirection = directionSelect.value || "asc";
-      handlers.onSortChange(bar.lastSortKey, bar.lastDirection);
+      bar2.lastSortKey = sortSelect.value || "none";
+      bar2.lastDirection = directionSelect.value || "asc";
+      handlers.onSortChange(bar2.lastSortKey, bar2.lastDirection);
     };
     sortSelect.addEventListener("change", picked);
     directionSelect.addEventListener("change", picked);
     showValues.addEventListener("change", () => handlers.onShowValuesChange(showValues.checked));
-    return bar;
+    return bar2;
   }
   function ensureSortBar(grid, handlers) {
     const filtersBlock = grid.querySelector(FILTERS_BLOCK_SELECTOR);
     if (!filtersBlock) return null;
     const existing = filtersBlock.querySelector(`:scope > .${WRAP_CLASS}`);
-    const bar = existing && bars.get(existing) || createSortBar(handlers);
-    bars.set(bar.wrap, bar);
-    if (bar.wrap.parentElement !== filtersBlock) filtersBlock.appendChild(bar.wrap);
-    return bar;
+    const bar2 = existing && bars.get(existing) || createSortBar(handlers);
+    bars.set(bar2.wrap, bar2);
+    if (bar2.wrap.parentElement !== filtersBlock) filtersBlock.appendChild(bar2.wrap);
+    return bar2;
   }
   function renderSortOptions(select3, options2, preferred) {
     const previous = preferred ?? select3.value;
@@ -19101,7 +18998,7 @@
     const subs = new Subscriptions();
     let showValues = loadShowValues() ?? true;
     let grid = null;
-    let bar = null;
+    let bar2 = null;
     let lastAppliedSortKey = null;
     let lastAppliedDirection = null;
     let lastSortedOrder = null;
@@ -19120,8 +19017,8 @@
     });
     const sortWithBar = () => {
       const target = resolveGrid();
-      if (!target || !bar) return;
-      void sortGrid(target, bar.sortSelect.value, bar.directionSelect.value);
+      if (!target || !bar2) return;
+      void sortGrid(target, bar2.sortSelect.value, bar2.directionSelect.value);
     };
     let noiseContainer = null;
     const noiseObserver = new MutationObserver(() => {
@@ -19173,7 +19070,7 @@
     };
     const refreshSummary = () => {
       const target = resolveGrid();
-      if (target && bar) void bar.summary.update(getActiveFilters(target), getSearchQuery(target));
+      if (target && bar2) void bar2.summary.update(getActiveFilters(target), getSearchQuery(target));
     };
     function pickDirection(current3, sortKey) {
       const fallback = DEFAULT_DIRECTION[sortKey] ?? "asc";
@@ -19189,7 +19086,7 @@
       void followInventoryValues();
       const current3 = ensureSortBar(target, handlers);
       if (!current3) return;
-      bar = current3;
+      bar2 = current3;
       if (!gridListeners) {
         gridListeners = new Subscriptions();
         gridListeners.add(onInventoryItemsChange(refreshSummary));
@@ -19280,7 +19177,7 @@
       document.removeEventListener("change", onGridInput, true);
       document.removeEventListener("input", onGridInput, true);
       gridListeners?.dispose();
-      bar?.wrap.remove();
+      bar2?.wrap.remove();
     });
     return () => subs.dispose();
   }
@@ -19334,8 +19231,8 @@
   });
 
   // src/game/keyCombos.ts
-  function modifierOf(part) {
-    const p = part.toLowerCase();
+  function modifierOf(part2) {
+    const p = part2.toLowerCase();
     if (p === "ctrl" || p === "control") return "ctrl";
     if (p === "shift") return "shift";
     if (p === "alt") return "alt";
@@ -19344,10 +19241,10 @@
   }
   function parseComboSpec(c) {
     const spec = { code: "", ctrl: false, shift: false, alt: false, meta: false };
-    for (const part of String(c).split("+").map((s) => s.trim()).filter(Boolean)) {
-      const mod = modifierOf(part);
+    for (const part2 of String(c).split("+").map((s) => s.trim()).filter(Boolean)) {
+      const mod = modifierOf(part2);
       if (mod) spec[mod] = true;
-      else spec.code = part;
+      else spec.code = part2;
     }
     return spec;
   }
@@ -19370,10 +19267,10 @@
   function normalizeCombo(c) {
     const mods = [];
     let code = "";
-    for (const part of String(c).split("+").map((s) => s.trim()).filter(Boolean)) {
-      const mod = modifierOf(part);
+    for (const part2 of String(c).split("+").map((s) => s.trim()).filter(Boolean)) {
+      const mod = modifierOf(part2);
       if (mod) mods.push(mod);
-      else code = part;
+      else code = part2;
     }
     return joinModifiers(mods, code);
   }
@@ -19456,11 +19353,11 @@
       };
       keyCodeOf = (code, key2) => KEYCODE_TABLE[code] ?? (key2 && key2.length === 1 ? key2.toUpperCase().charCodeAt(0) : 0);
       isEditableTarget = (t) => {
-        const el = t;
-        if (!el || !el.tagName) return false;
-        const tag = el.tagName.toLowerCase();
+        const el4 = t;
+        if (!el4 || !el4.tagName) return false;
+        const tag = el4.tagName.toLowerCase();
         if (tag === "input" || tag === "textarea") return true;
-        const ce = el.getAttribute && el.getAttribute("contenteditable");
+        const ce = el4.getAttribute && el4.getAttribute("contenteditable");
         return !!(ce && ce !== "false");
       };
     }
@@ -20043,9 +19940,9 @@
     };
     const subs = new Subscriptions();
     subs.add(
-      watchGardenInfoCard((card4, geom) => {
+      watchGardenInfoCard((card3, geom) => {
         removeBorder();
-        currentCard2 = card4;
+        currentCard2 = card3;
         geometry = geom;
         sync2();
       })
@@ -20704,25 +20601,25 @@
             return true;
           }
           try {
-            const el = new Audio();
-            el.src = dataUrl;
-            el.volume = volume;
-            el.crossOrigin = "anonymous";
+            const el4 = new Audio();
+            el4.src = dataUrl;
+            el4.volume = volume;
+            el4.crossOrigin = "anonymous";
             let ended = null;
             let finish = null;
             if (awaitEnd) {
               ended = new Promise((resolve) => {
                 const done = () => {
-                  el.removeEventListener("ended", done);
-                  el.removeEventListener("error", done);
+                  el4.removeEventListener("ended", done);
+                  el4.removeEventListener("error", done);
                   resolve();
                 };
                 finish = done;
-                el.addEventListener("ended", done);
-                el.addEventListener("error", done);
+                el4.addEventListener("ended", done);
+                el4.addEventListener("error", done);
               });
             }
-            await el.play().catch(() => finish?.());
+            await el4.play().catch(() => finish?.());
             if (ended) await ended;
           } catch {
           }
@@ -20792,8 +20689,8 @@
       const next = BELL_RING_SEQUENCE[i];
       if (cycleOffset > next.offset) continue;
       const prev = BELL_RING_SEQUENCE[i - 1];
-      const span = next.offset - prev.offset;
-      const ratio = span > 0 ? (cycleOffset - prev.offset) / span : 0;
+      const span3 = next.offset - prev.offset;
+      const ratio = span3 > 0 ? (cycleOffset - prev.offset) / span3 : 0;
       return (prev.deg + (next.deg - prev.deg) * ratio) * DEG_TO_RAD;
     }
     return 0;
@@ -21494,10 +21391,10 @@
     const ordered = [...keys.filter((k) => !BASE_SHOP_KEYS.includes(k)), ...keys.filter((k) => BASE_SHOP_KEYS.includes(k))];
     const target = itemIdOf(kind, it);
     if (target == null) return null;
-    const field2 = ITEM_FIELD[kind];
+    const field3 = ITEM_FIELD[kind];
     for (const key2 of ordered) {
       const inv = shops2[key2]?.inventory;
-      if (Array.isArray(inv) && inv.some((entry) => entry && typeof entry === "object" && entry[field2] === target)) {
+      if (Array.isArray(inv) && inv.some((entry) => entry && typeof entry === "object" && entry[field3] === target)) {
         return key2;
       }
     }
@@ -21657,8 +21554,8 @@
   function toPurchasesSnapshot(view, slot) {
     const raw = slot?.data?.shopPurchases;
     const startedAt = (kind) => Number(raw?.[kind]?.startedAtMs ?? raw?.[kind]?.createdAt) || 0;
-    const section5 = (kind) => ({ createdAt: startedAt(kind), purchases: view.purchases[kind] });
-    return { seed: section5("seed"), egg: section5("egg"), tool: section5("tool"), decor: section5("decor") };
+    const section = (kind) => ({ createdAt: startedAt(kind), purchases: view.purchases[kind] });
+    return { seed: section("seed"), egg: section("egg"), tool: section("tool"), decor: section("decor") };
   }
   function onShops(shops2) {
     rawShops = shops2;
@@ -22091,15 +21988,15 @@
         if (!entry || typeof entry !== "object") continue;
         const { base, weathers } = splitEligibleShops(entry.eligibleShops);
         if (!base && weathers.length === 0) continue;
-        const section5 = base ?? naturalSection;
-        const id = `${section5}:${key2}`;
+        const section = base ?? naturalSection;
+        const id = `${section}:${key2}`;
         if (seen.has(id)) continue;
         seen.add(id);
         const rawRarity = typeof entry.rarity === "string" ? entry.rarity : void 0;
         const popup = followedIds().has(id);
         rows.push({
           id,
-          type: section5,
+          type: section,
           name: typeof entry.name === "string" && entry.name.trim() ? String(entry.name) : key2,
           rarity: rawRarity ? DISPLAY_RARITY[rawRarity] ?? rawRarity : void 0,
           popup,
@@ -22153,10 +22050,10 @@
         /** Re-reads every row's alert (followed, capped) and tells the listeners. */
         refresh() {
           if (!state2) return;
-          for (const row5 of state2.rows) {
-            const popup = followedIds().has(row5.id) && !isCapReached(row5.id);
-            row5.popup = popup;
-            row5.followed = popup;
+          for (const row2 of state2.rows) {
+            const popup = followedIds().has(row2.id) && !isCapReached(row2.id);
+            row2.popup = popup;
+            row2.followed = popup;
           }
           state2 = {
             ...state2,
@@ -22368,6 +22265,10 @@
   });
 
   // src/features/notifier/buyPanel.ts
+  function ensureBuyStyles() {
+    if (document.getElementById(STYLE_ID2)) return;
+    addStyle(CSS).id = STYLE_ID2;
+  }
   function itemName(id) {
     const [type, raw] = id.split(":");
     switch (type) {
@@ -22395,44 +22296,49 @@
       btn.disabled = false;
     }
   }
-  var ROW_BORDER, BuyPanel;
+  var STYLE_ID2, CSS, BuyPanel;
   var init_buyPanel = __esm({
     "src/features/notifier/buyPanel.ts"() {
       "use strict";
+      init_dom();
       init_names();
       init_button();
       init_dom2();
       init_shops();
       init_itemIcon();
       init_shopAlerts();
-      ROW_BORDER = "1px solid var(--qmm-border)";
+      STYLE_ID2 = "qws-buy-style";
+      CSS = `
+.qws-buy {
+  position: fixed; z-index: var(--chakra-zIndices-DialogModal, 7010); pointer-events: auto;
+  width: min(340px, 80vw); max-height: 50vh; overflow: auto; box-sizing: border-box; padding: 10px;
+  /* Keeps the scroll, and touch gestures, from reaching the game. */
+  overscroll-behavior: contain; touch-action: pan-y;
+  border: 3px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-lg);
+  background: var(--qmm-paper); color: var(--qmm-text); box-shadow: var(--qmm-shadow-raise);
+  font-family: var(--qmm-font); font-size: var(--qmm-fs-md);
+  scrollbar-width: thin; scrollbar-color: var(--qmm-scrollbar) transparent;
+}
+.qws-buy__title { padding: 2px 4px 8px; font-size: var(--qmm-fs-lg); font-weight: 900; }
+.qws-buy__list { display: flex; flex-direction: column; gap: 2px; }
+.qws-buy__row {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto auto; align-items: center;
+  gap: var(--qmm-space-md); padding: 6px; border-radius: var(--qmm-radius-md);
+}
+.qws-buy__row:hover { background: var(--qmm-paper-deep); }
+.qws-buy__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
+.qws-buy__qty { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--qmm-text-soft); }
+.qws-buy__empty { padding: 12px 4px; text-align: center; color: var(--qmm-text-dim); }
+`;
       BuyPanel = class {
         constructor(alerts) {
           this.alerts = alerts;
           this.lastSig = null;
-          this.el = h("div");
+          ensureBuyStyles();
+          this.el = h("div", "qws-buy");
           this.el.setAttribute("role", "dialog");
-          this.el.setAttribute("aria-label", "Tracked items available");
-          Object.assign(this.el.style, {
-            position: "fixed",
-            width: "min(340px, 80vw)",
-            maxHeight: "50vh",
-            overflow: "auto",
-            // Keeps the scroll, and touch gestures, from reaching the game.
-            overscrollBehavior: "contain",
-            touchAction: "pan-y",
-            borderRadius: "var(--chakra-radii-card, 12px)",
-            border: "1px solid var(--qmm-border-strong)",
-            background: "var(--qmm-panel-bg)",
-            backdropFilter: "blur(8px)",
-            color: "var(--qmm-text)",
-            boxShadow: "var(--qmm-shadow-window)",
-            padding: "8px",
-            display: "none",
-            zIndex: "var(--chakra-zIndices-DialogModal, 7010)",
-            pointerEvents: "auto"
-          });
-          this.el.style.setProperty("-webkit-backdrop-filter", "blur(8px)");
+          this.el.setAttribute("aria-label", "Followed items in stock");
+          this.el.style.display = "none";
           this.stopScrollReachingGame();
         }
         get isOpen() {
@@ -22446,48 +22352,20 @@
           const sig = JSON.stringify(items.map((r) => [r.id, r.qty]));
           if (sig === this.lastSig) return;
           this.lastSig = sig;
-          const head = h("div", void 0, "Tracked items available");
-          Object.assign(head.style, {
-            fontWeight: "700",
-            opacity: "0.9",
-            padding: "4px 2px",
-            borderBottom: ROW_BORDER,
-            marginBottom: "4px"
-          });
-          this.el.replaceChildren(head);
+          const head = h("div", "qws-buy__title", "In stock now");
           if (!items.length) {
-            const empty = h("div", void 0, "No tracked items are available.");
-            Object.assign(empty.style, { opacity: "0.75", padding: "8px 2px" });
-            this.el.appendChild(empty);
+            this.el.replaceChildren(head, h("div", "qws-buy__empty", "None of your followed items is in stock."));
             return;
           }
-          for (const item of items) this.el.appendChild(this.renderRow(item));
+          const list = h("div", "qws-buy__list");
+          list.append(...items.map((item) => this.renderRow(item)));
+          this.el.replaceChildren(head, list);
         }
         renderRow({ id, qty }) {
-          const row5 = h("div");
-          Object.assign(row5.style, {
-            display: "grid",
-            gridTemplateColumns: "24px 1fr max-content max-content max-content",
-            alignItems: "center",
-            gap: "8px",
-            padding: "6px 4px",
-            borderBottom: ROW_BORDER
-          });
-          const title = h("div", void 0, itemName(id));
-          Object.assign(title.style, {
-            fontWeight: "600",
-            fontSize: "12px",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap"
-          });
-          const count = h("div", void 0, `\xD7${qty}`);
-          Object.assign(count.style, {
-            fontVariantNumeric: "tabular-nums",
-            opacity: "0.9",
-            color: "var(--qmm-text-soft)",
-            textAlign: "right"
-          });
+          const row2 = h("div", "qws-buy__row");
+          const title = h("div", "qws-buy__name", itemName(id));
+          title.title = itemName(id);
+          const count = h("div", "qws-buy__qty", `\xD7${qty}`);
           const buyBtn = button("Buy", { size: "xs", variant: "primary" });
           const buyAllBtn = button("Buy all", { size: "xs" });
           buyBtn.onclick = (e) => {
@@ -22509,8 +22387,8 @@
               btn.title = "Unavailable";
             }
           }
-          row5.append(shopItemIcon(id, itemName(id), 24, "alerts-overlay"), title, count, buyBtn, buyAllBtn);
-          return row5;
+          row2.append(shopItemIcon(id, itemName(id), 28, "alerts-overlay"), title, count, buyBtn, buyAllBtn);
+          return row2;
         }
         async buy(id, btn, label2, purchase) {
           const stock = findStockItem(this.alerts.shopsSnapshot(), id);
@@ -22540,9 +22418,9 @@
     const kindLc = rawKind.toLowerCase();
     const kind = kindLc === "weather" || kindLc === "lunar" || kindLc === "base" ? kindLc : "unknown";
     const meta = { kind, rawKind: rawKind || void 0 };
-    for (const field2 of ["startWindowMin", "startWindowMax", "durationMinutes", "periodMinutes"]) {
-      const value = finiteNumber2(entry[field2]);
-      if (value !== void 0) meta[field2] = value;
+    for (const field3 of ["startWindowMin", "startWindowMax", "durationMinutes", "periodMinutes"]) {
+      const value = finiteNumber2(entry[field3]);
+      if (value !== void 0) meta[field3] = value;
     }
     return meta;
   }
@@ -22612,13 +22490,13 @@
     }
     if (!timestamp) return { label: "Never", title: "Never seen" };
     const diff = Math.max(0, Date.now() - timestamp);
-    const plural3 = (n, unit) => `${n} ${unit}${n > 1 ? "s" : ""} ago`;
+    const plural4 = (n, unit) => `${n} ${unit}${n > 1 ? "s" : ""} ago`;
     let label2;
     if (diff < 45e3) label2 = "Just now";
     else if (diff < 9e4) label2 = "1 min ago";
-    else if (diff < 36e5) label2 = plural3(Math.round(diff / 6e4), "min");
-    else if (diff < 36 * 36e5) label2 = plural3(Math.round(diff / 36e5), "hour");
-    else label2 = plural3(Math.round(diff / 864e5), "day");
+    else if (diff < 36e5) label2 = plural4(Math.round(diff / 6e4), "min");
+    else if (diff < 36 * 36e5) label2 = plural4(Math.round(diff / 36e5), "hour");
+    else label2 = plural4(Math.round(diff / 864e5), "day");
     return { label: label2, title: new Date(timestamp).toLocaleString() };
   }
   var WEATHER_ID_PREFIX, finiteNumber2, trimmedString, weatherIndex;
@@ -23436,8 +23314,8 @@
     if (seenKeys.has(key2)) return;
     seenKeys.add(key2);
     if (cutoffMs && performedAt < cutoffMs - CUTOFF_SKEW_MS) return;
-    const details = abilityLogText(abilityId, params);
-    if (details === null) return;
+    const details2 = abilityLogText(abilityId, params);
+    if (details2 === null) return;
     const cached2 = findCachedPet(petId);
     const mutationsRaw = Array.isArray(petParam?.mutations) ? petParam.mutations : cached2?.mutations;
     const mutations = Array.isArray(mutationsRaw) ? mutationsRaw.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
@@ -23454,7 +23332,7 @@
       mutations: mutations.length ? mutations : void 0,
       abilityId,
       abilityName: abilityName(abilityId),
-      data: details,
+      data: details2,
       performedAt,
       time12: time12(performedAt)
     });
@@ -24878,9 +24756,9 @@
   }
   function ensureWidget() {
     if (widget && widget.isConnected) return widget;
-    const el = document.createElement("div");
-    el.setAttribute("data-instant-feed-widget", "1");
-    Object.assign(el.style, {
+    const el4 = document.createElement("div");
+    el4.setAttribute("data-instant-feed-widget", "1");
+    Object.assign(el4.style, {
       position: "fixed",
       left: "-9999px",
       top: "-9999px",
@@ -24897,21 +24775,21 @@
       userSelect: "none",
       touchAction: "none"
     });
-    el.appendChild(createHeader());
+    el4.appendChild(createHeader());
     const buttonsRow = document.createElement("div");
     Object.assign(buttonsRow.style, {
       display: "flex",
       alignItems: "center",
       gap: "6px"
     });
-    el.appendChild(buttonsRow);
+    el4.appendChild(buttonsRow);
     widgetButtons = [];
     for (let i = 0; i < MAX_BUTTONS; i++) {
       const btn = createButton();
       buttonsRow.appendChild(btn);
       widgetButtons.push(btn);
     }
-    makeDraggable(el, {
+    makeDraggable(el4, {
       ignore: (target) => !!target.closest("button"),
       moveTo: (pos) => applyPosition(pos.left, pos.top),
       onDrop: (pos) => {
@@ -24919,11 +24797,11 @@
         storePosition(POS_PATH2, pos);
       }
     });
-    document.body.appendChild(el);
-    widget = el;
+    document.body.appendChild(el4);
+    widget = el4;
     positioned = false;
     updateButtons();
-    return el;
+    return el4;
   }
   function createHeader() {
     const header = document.createElement("div");
@@ -25232,12 +25110,12 @@
 
   // src/ui/kit/modal.ts
   function menuCard(options2) {
-    const card4 = h("button", "qmm-menu-card");
-    card4.type = "button";
-    card4.disabled = options2.disabled === true;
-    card4.append(h("div", "qmm-menu-card__name", options2.name), h("div", "qmm-menu-card__detail", options2.detail));
-    if (!card4.disabled) card4.addEventListener("click", options2.onClick);
-    return card4;
+    const card3 = h("button", "qmm-menu-card");
+    card3.type = "button";
+    card3.disabled = options2.disabled === true;
+    card3.append(h("div", "qmm-menu-card__name", options2.name), h("div", "qmm-menu-card__detail", options2.detail));
+    if (!card3.disabled) card3.addEventListener("click", options2.onClick);
+    return card3;
   }
   function openModal2(options2) {
     let closed = false;
@@ -25290,8 +25168,8 @@
 
   // src/features/sellAllPets/confirmModal.ts
   function petRow({ pet, reasons, mutations }) {
-    const row5 = document.createElement("div");
-    Object.assign(row5.style, {
+    const row2 = document.createElement("div");
+    Object.assign(row2.style, {
       display: "grid",
       gridTemplateColumns: `${ICON_PX}px 1fr`,
       gap: "10px",
@@ -25330,8 +25208,8 @@
     const info = document.createElement("div");
     Object.assign(info.style, { display: "grid", gap: "4px" });
     info.append(name, chips);
-    row5.append(icon2, info);
-    return row5;
+    row2.append(icon2, info);
+    return row2;
   }
   function confirmProtectedPetSale(flagged) {
     current?.close();
@@ -26042,7 +25920,7 @@
         }
         show(id) {
           this.currentId = id;
-          const isShown = (el) => id === null || el.dataset.id === id;
+          const isShown = (el4) => id === null || el4.dataset.id === id;
           for (const tab of Array.from(this.tabBar.children)) tab.classList.toggle("active", isShown(tab));
           for (const view of Array.from(this.views.children)) view.classList.toggle("active", isShown(view));
           this.emit("tab:change", id);
@@ -26070,6 +25948,7 @@
         }
         /** A menu without tabs drops the bar so its panel starts at the top. */
         updateTabBar() {
+          this.tabBar.classList.toggle("is-single", this.tabs.size === 1);
           if (this.tabs.size > 0) {
             if (!this.tabBar.parentElement) this.root.insertBefore(this.tabBar, this.views);
           } else {
@@ -26080,6 +25959,61 @@
           this.root?.classList.toggle("qmm-alt-drag", this.altDown && this.hovering);
         }
       };
+    }
+  });
+
+  // src/ui/kit/card.ts
+  function card(title, opts = {}) {
+    const root4 = h("div", "qmm-card");
+    root4.dataset.tone = opts.tone || "default";
+    if (opts.align === "center") root4.classList.add("is-center");
+    if (opts.align === "stretch") root4.classList.add("is-stretch");
+    if (opts.padding) root4.style.padding = opts.padding;
+    if (opts.gap != null) root4.style.gap = `${opts.gap}px`;
+    if (opts.maxWidth) {
+      const max = typeof opts.maxWidth === "number" ? `${opts.maxWidth}px` : opts.maxWidth;
+      root4.style.width = `min(${max}, 100%)`;
+    }
+    const header = h("div", opts.compactHeader ? "qmm-card__header is-compact" : "qmm-card__header");
+    if (opts.icon) header.appendChild(iconNode(opts.icon, "qmm-card__icon"));
+    const titleEl = h("div", "qmm-card__title", title);
+    header.appendChild(titleEl);
+    const subtitle = opts.subtitle || opts.description;
+    if (subtitle) header.appendChild(h("div", "qmm-card__subtitle", subtitle));
+    if (opts.actions?.length) {
+      const actions2 = h("div", "qmm-card__actions");
+      actions2.append(...opts.actions);
+      header.appendChild(actions2);
+    }
+    const body = h("div", "qmm-card__body");
+    root4.append(header, body);
+    return { root: root4, header, body, setTitle: (next) => titleEl.textContent = next };
+  }
+  function plainCard() {
+    return h("div", "qmm-card qmm-card--plain");
+  }
+  function sectionLabel(text2) {
+    return h("div", "qmm-section-label", text2);
+  }
+  function errorBar() {
+    const el4 = h("div", "qmm-error");
+    el4.hidden = true;
+    return {
+      el: el4,
+      show(message2) {
+        el4.textContent = message2;
+        el4.hidden = false;
+      },
+      clear() {
+        el4.textContent = "";
+        el4.hidden = true;
+      }
+    };
+  }
+  var init_card = __esm({
+    "src/ui/kit/card.ts"() {
+      "use strict";
+      init_dom2();
     }
   });
 
@@ -26187,16 +26121,16 @@
   });
 
   // src/ui/kit/layout.ts
-  function settingRow(title, hint2, control, opts = {}) {
-    const row5 = h("div", "qmm-setting-row");
-    if (opts.icon) row5.appendChild(iconBox(opts.icon, ROW_ICON_PX, opts.iconTag ?? "panel"));
+  function settingRow(title, hint3, control, opts = {}) {
+    const row2 = h("div", "qmm-setting-row");
+    if (opts.icon) row2.appendChild(iconBox(opts.icon, ROW_ICON_PX, opts.iconTag ?? "panel"));
     const text2 = h("div", "qmm-setting-row__text");
     text2.appendChild(h("div", "qmm-setting-row__title", title));
-    if (hint2) text2.appendChild(h("div", "qmm-setting-row__hint", hint2));
+    if (hint3) text2.appendChild(h("div", "qmm-setting-row__hint", hint3));
     const controls = h("div", "qmm-setting-row__controls");
     controls.appendChild(control);
-    row5.append(text2, controls);
-    return { row: row5, controls };
+    row2.append(text2, controls);
+    return { row: row2, controls };
   }
   function collapsibleCard(opts) {
     const root4 = plainCard();
@@ -26227,22 +26161,14 @@
     root4.append(head, body);
     return { root: root4, body };
   }
-  function formRow(labelText, control, opts = {}) {
-    const root4 = h("div", opts.alignTop ? "qmm-form-row is-top" : "qmm-form-row");
-    root4.style.gridTemplateColumns = `${opts.labelWidth || "160px"} 1fr`;
-    root4.style.columnGap = `${opts.gap ?? 10}px`;
-    const label2 = h("label", "qmm-label qmm-form-row__label", labelText);
-    root4.append(label2, control);
-    return { root: root4, label: label2 };
-  }
   function flexRow(opts = {}) {
-    const row5 = h("div", ["qmm-flex", opts.className].filter(Boolean).join(" "));
-    row5.style.alignItems = ALIGN[opts.align ?? "center"];
-    row5.style.justifyContent = JUSTIFY[opts.justify ?? "start"];
-    row5.style.gap = `${opts.gap ?? 8}px`;
-    row5.style.flexWrap = opts.wrap === false ? "nowrap" : "wrap";
-    if (opts.fullWidth) row5.style.width = "100%";
-    return row5;
+    const row2 = h("div", ["qmm-flex", opts.className].filter(Boolean).join(" "));
+    row2.style.alignItems = ALIGN[opts.align ?? "center"];
+    row2.style.justifyContent = JUSTIFY[opts.justify ?? "start"];
+    row2.style.gap = `${opts.gap ?? 8}px`;
+    row2.style.flexWrap = opts.wrap === false ? "nowrap" : "wrap";
+    if (opts.fullWidth) row2.style.width = "100%";
+    return row2;
   }
   var ROW_ICON_PX, JUSTIFY, ALIGN;
   var init_layout = __esm({
@@ -26267,16 +26193,47 @@
     void toastSimple(msg, "", type).catch(() => {
     });
   }
-  function createTwoColumns(view) {
-    const columns = document.createElement("div");
-    columns.className = "dd-debug-columns";
-    view.appendChild(columns);
-    const leftCol = document.createElement("div");
-    leftCol.className = "dd-debug-column";
-    const rightCol = document.createElement("div");
-    rightCol.className = "dd-debug-column";
-    columns.append(leftCol, rightCol);
-    return { columns, leftCol, rightCol };
+  function tabRoot(view) {
+    const root4 = h("div", "dd-view");
+    view.replaceChildren(root4);
+    return root4;
+  }
+  function cardGrid(parent) {
+    const grid = h("div", "dd-grid");
+    parent.appendChild(grid);
+    return grid;
+  }
+  function cardColumns(parent) {
+    const grid = cardGrid(parent);
+    const left = h("div", "dd-column");
+    const right = h("div", "dd-column");
+    grid.append(left, right);
+    return [left, right];
+  }
+  function bar(...children) {
+    const row2 = h("div", "dd-bar");
+    row2.append(...children);
+    return row2;
+  }
+  function barEnd(...children) {
+    const end = h("div", "dd-bar__end");
+    end.append(...children);
+    return end;
+  }
+  function grow(el4) {
+    el4.classList.add("dd-grow");
+    return el4;
+  }
+  function codeBox(placeholder, tall = false) {
+    const pre = h("pre", tall ? "dd-code dd-code--tall" : "dd-code");
+    pre.dataset.placeholder = placeholder;
+    return pre;
+  }
+  function emptyNote(text2) {
+    return h("div", "dd-empty", text2);
+  }
+  function hint2(text2) {
+    return h("p", "dd-hint", text2);
   }
   function copy2(text2) {
     const str = String(text2 ?? "");
@@ -26312,12 +26269,10 @@
       return /.*/i;
     }
   }
-  function stylePre(pre) {
-    pre.classList.add("dd-pre");
-  }
   var init_shared = __esm({
     "src/features/debug/shared.ts"() {
       "use strict";
+      init_dom2();
       init_toast();
     }
   });
@@ -26391,88 +26346,79 @@
     const s = Math.floor(seconds2 % 60);
     return `${m}:${s.toString().padStart(2, "0")}`;
   }
+  function audioRow(title, meta, actions2) {
+    const row2 = h("div", "dd-row");
+    const info = h("div", "dd-row__info");
+    info.append(h("div", "dd-row__title", title), h("div", "dd-row__meta", meta));
+    const acts = h("div", "dd-row__actions");
+    acts.append(...actions2);
+    row2.append(info, acts);
+    return row2;
+  }
   function renderAudioPlayerTab(view) {
-    view.innerHTML = "";
-    view.classList.add("dd-debug-view");
-    const { leftCol, rightCol } = createTwoColumns(view);
+    const root4 = tabRoot(view);
     let catalog = null;
     let visibleSfx = [];
     const audioEl = document.createElement("audio");
     audioEl.preload = "none";
-    view.appendChild(audioEl);
+    root4.appendChild(audioEl);
     let stopAtHandler = null;
     let nowPlayingLabel = "";
-    const overviewCard = card("\u{1F3A7} Audio catalog", {
-      tone: "muted",
-      subtitle: "Browse themes and SFX from mg-api.ariedam.fr /assets/audios."
+    const btnStop = button("Stop", {
+      size: "sm",
+      onClick: () => stopPlayback()
     });
-    leftCol.appendChild(overviewCard.root);
-    const summary = document.createElement("div");
-    summary.className = "dd-audio-summary";
-    const summaryThemes = document.createElement("div");
-    const summarySfx = document.createElement("div");
-    summary.append(summaryThemes, summarySfx);
-    const nowPlaying = document.createElement("div");
-    nowPlaying.className = "dd-audio-volume";
-    const overviewError = errorBar();
-    const actionsRow = flexRow({ gap: 10, wrap: true, fullWidth: true });
     const btnReload = button("Reload catalog", {
-      icon: "\u{1F504}",
-      variant: "primary",
+      variant: "ghost",
+      size: "sm",
       onClick: () => {
         void refreshAll(true);
       }
     });
-    const btnStop = button("Stop playback", {
-      icon: "\u23F9\uFE0F",
-      onClick: () => stopPlayback()
+    const playerControls = flexRow({ gap: 6 });
+    playerControls.append(btnStop, btnReload);
+    const player2 = settingRow("Player", "Not playing.", playerControls);
+    player2.row.classList.add("dd-status");
+    const nowPlaying = player2.row.querySelector(".qmm-setting-row__hint");
+    nowPlaying.classList.add("dd-now");
+    const overviewError = errorBar();
+    root4.append(player2.row, overviewError.el);
+    const themeCount = pill("0");
+    const themesCard = card("Themes", {
+      subtitle: "Music and ambience for each area.",
+      actions: [themeCount]
     });
-    actionsRow.append(btnReload, btnStop);
-    overviewCard.body.append(summary, nowPlaying, overviewError.el, actionsRow);
-    const themesCard = card("\u{1F3B5} Themes", {
-      tone: "muted",
-      subtitle: "Per-area music and ambience tracks."
+    root4.appendChild(themesCard.root);
+    const themeList = h("div", "dd-well qmm-scroll");
+    themesCard.body.append(themeList);
+    const sfxCount = pill("0");
+    const sfxCard = card("Sound effects", {
+      subtitle: "Cut from the single sound effect file.",
+      actions: [sfxCount]
     });
-    leftCol.appendChild(themesCard.root);
-    const themeList = document.createElement("div");
-    themeList.className = "dd-audio-list";
-    const themeEmpty = document.createElement("div");
-    themeEmpty.className = "dd-audio-empty";
-    themeEmpty.textContent = "No themes loaded yet.";
-    themesCard.body.append(themeList, themeEmpty);
-    const sfxCard = card("\u{1F509} SFX", {
-      tone: "muted",
-      subtitle: "Sliced from the single SFX atlas file."
-    });
-    rightCol.appendChild(sfxCard.root);
-    const sfxToolbar = flexRow({ gap: 10, wrap: true, fullWidth: true });
-    const sfxFilter = textInput("filter sfx (regex)", "");
-    sfxFilter.classList.add("dd-grow");
+    root4.appendChild(sfxCard.root);
+    const sfxFilter = grow(textInput("Filter, regex allowed", ""));
     const btnSfxClear = button("Clear", {
-      icon: "\u{1F9F9}",
+      variant: "ghost",
+      size: "sm",
       onClick: () => {
         sfxFilter.value = "";
         renderSfx();
         sfxFilter.focus();
       }
     });
-    const btnCopyVisible = button("Copy visible names", {
-      icon: "\u{1F4CB}",
+    const btnCopyVisible = button("Copy names", {
+      variant: "ghost",
+      size: "sm",
+      title: "Copy the names of the sounds shown",
       onClick: () => {
         if (!visibleSfx.length) return;
         copy2(visibleSfx.map((s) => s.name).join("\n"));
       }
     });
-    sfxToolbar.append(sfxFilter, btnSfxClear, btnCopyVisible);
-    const sfxInfo = document.createElement("p");
-    sfxInfo.className = "dd-card-description";
-    sfxInfo.style.margin = "0";
-    const sfxList = document.createElement("div");
-    sfxList.className = "dd-audio-list";
-    const sfxEmpty = document.createElement("div");
-    sfxEmpty.className = "dd-audio-empty";
-    sfxEmpty.textContent = "No SFX match the current filter.";
-    sfxCard.body.append(sfxToolbar, sfxInfo, sfxList, sfxEmpty);
+    const sfxInfo = hint2("");
+    const sfxList = h("div", "dd-well qmm-scroll");
+    sfxCard.body.append(bar(sfxFilter, btnSfxClear, btnCopyVisible), sfxInfo, sfxList);
     sfxFilter.addEventListener("input", () => renderSfx());
     sfxFilter.addEventListener("keydown", (ev) => {
       if (ev.key === "Enter") {
@@ -26480,11 +26426,6 @@
         renderSfx();
       }
     });
-    function setButtonEnabled2(btn, enabled2) {
-      const setter = btn.setEnabled;
-      if (typeof setter === "function") setter(enabled2);
-      else btn.disabled = !enabled2;
-    }
     function stopPlayback() {
       if (stopAtHandler) {
         audioEl.removeEventListener("timeupdate", stopAtHandler);
@@ -26493,11 +26434,13 @@
       audioEl.pause();
       nowPlayingLabel = "";
       nowPlaying.textContent = "Not playing.";
+      btnStop.setEnabled(false);
     }
     async function playClip(url, label2, start2, end) {
       stopPlayback();
       nowPlayingLabel = label2;
-      nowPlaying.textContent = `Loading: ${label2}\u2026`;
+      nowPlaying.textContent = `Loading ${label2}\u2026`;
+      btnStop.setEnabled(true);
       const safeUrl = await getAudioUrlSafe(url);
       if (nowPlayingLabel !== label2) return;
       audioEl.src = safeUrl;
@@ -26514,58 +26457,47 @@
       }
       try {
         await audioEl.play();
-        nowPlaying.textContent = `Playing: ${label2}`;
+        nowPlaying.textContent = `Playing ${label2}`;
       } catch {
-        nowPlaying.textContent = `Failed to play: ${label2}`;
+        nowPlaying.textContent = `Could not play ${label2}`;
       }
     }
     function renderThemes() {
       themeList.innerHTML = "";
       const themes2 = catalog?.themes ?? [];
       themes2.forEach((theme) => {
-        const row5 = document.createElement("div");
-        row5.className = "dd-audio-row";
-        const infoWrap = document.createElement("div");
-        infoWrap.className = "dd-audio-row__info";
-        const title = document.createElement("div");
-        title.className = "dd-audio-row__title";
-        title.textContent = theme.name;
-        const urlEl = document.createElement("div");
-        urlEl.className = "dd-audio-url";
-        urlEl.textContent = [theme.music && "music", theme.ambience && "ambience"].filter(Boolean).join(" \xB7 ") || "(no tracks)";
-        infoWrap.append(title, urlEl);
-        row5.appendChild(infoWrap);
-        const actions2 = flexRow({ gap: 6, wrap: true, align: "center" });
-        actions2.className = "dd-audio-actions";
+        const actions2 = [];
         if (theme.music) {
-          actions2.appendChild(button("Play music", {
-            icon: "\u25B6\uFE0F",
+          actions2.push(button("Music", {
+            icon: PLAY_GLYPH,
             size: "sm",
+            title: "Play the music",
             onClick: () => {
               void playClip(theme.music, `${theme.name} \xB7 music`);
             }
           }));
         }
         if (theme.ambience) {
-          actions2.appendChild(button("Play ambience", {
-            icon: "\u25B6\uFE0F",
+          actions2.push(button("Ambience", {
+            icon: PLAY_GLYPH,
             size: "sm",
+            title: "Play the ambience",
             onClick: () => {
               void playClip(theme.ambience, `${theme.name} \xB7 ambience`);
             }
           }));
         }
-        actions2.appendChild(button("Copy URLs", {
-          icon: "\u{1F4CB}",
+        actions2.push(button("Copy URLs", {
+          variant: "ghost",
           size: "sm",
           onClick: () => copy2([theme.music, theme.ambience].filter(Boolean).join("\n"))
         }));
-        row5.appendChild(actions2);
-        themeList.appendChild(row5);
+        const meta = [theme.music && "music", theme.ambience && "ambience"].filter(Boolean).join(" \xB7 ") || "(no tracks)";
+        themeList.appendChild(audioRow(theme.name, meta, actions2));
       });
-      themeList.style.display = themes2.length ? "" : "none";
-      themeEmpty.style.display = themes2.length ? "none" : "block";
-      themeEmpty.textContent = catalog ? "No themes in the catalog." : "No themes loaded yet.";
+      if (!themes2.length) {
+        themeList.appendChild(emptyNote(catalog ? "The catalog has no themes." : "No themes loaded yet."));
+      }
     }
     function renderSfx() {
       const rx = safeRegex(sfxFilter.value.trim() || ".*");
@@ -26576,103 +26508,84 @@
       for (const item of items) {
         if (!rx.test(item.name)) continue;
         visibleSfx.push(item);
-        const row5 = document.createElement("div");
-        row5.className = "dd-audio-row";
-        const infoWrap = document.createElement("div");
-        infoWrap.className = "dd-audio-row__info";
-        const title = document.createElement("div");
-        title.className = "dd-audio-row__title";
-        title.textContent = item.name;
-        const meta = document.createElement("div");
-        meta.className = "dd-audio-meta";
-        meta.textContent = `${formatTime2(item.start)} \u2192 ${formatTime2(item.end)} (${item.duration.toFixed(2)}s)`;
-        infoWrap.append(title, meta);
-        row5.appendChild(infoWrap);
-        const actions2 = flexRow({ gap: 6, wrap: false, align: "center" });
-        actions2.className = "dd-audio-actions";
         const playBtn = button("Play", {
-          icon: "\u25B6\uFE0F",
+          icon: PLAY_GLYPH,
           size: "sm",
           onClick: () => {
             void playClip(atlasUrl, item.name, item.start, item.end);
           }
         });
         const copyBtn = button("Copy URL", {
-          icon: "\u{1F4CB}",
+          variant: "ghost",
           size: "sm",
           onClick: () => copy2(atlasUrl)
         });
-        actions2.append(playBtn, copyBtn);
-        row5.appendChild(actions2);
-        sfxList.appendChild(row5);
+        const meta = `${formatTime2(item.start)} \u2192 ${formatTime2(item.end)} \xB7 ${item.duration.toFixed(2)}s`;
+        sfxList.appendChild(audioRow(item.name, meta, [playBtn, copyBtn]));
       }
-      sfxInfo.textContent = items.length ? `${visibleSfx.length} / ${items.length} SFX shown.` : "No SFX loaded yet.";
-      sfxList.style.display = visibleSfx.length ? "" : "none";
-      sfxEmpty.style.display = visibleSfx.length ? "none" : "block";
-      setButtonEnabled2(btnCopyVisible, visibleSfx.length > 0);
-      setButtonEnabled2(btnSfxClear, sfxFilter.value.trim().length > 0);
+      if (!visibleSfx.length) {
+        sfxList.appendChild(emptyNote(items.length ? "No sound matches this filter." : "No sounds loaded yet."));
+      }
+      sfxInfo.textContent = items.length ? `${visibleSfx.length} of ${items.length} shown.` : "";
+      sfxInfo.hidden = !items.length;
+      btnCopyVisible.setEnabled(visibleSfx.length > 0);
+      btnSfxClear.setEnabled(sfxFilter.value.trim().length > 0);
     }
     function updateSummary() {
-      summaryThemes.innerHTML = `<strong>${catalog?.themes.length ?? 0}</strong> themes`;
-      summarySfx.innerHTML = `<strong>${catalog?.sfx.items.length ?? 0}</strong> SFX`;
+      themeCount.textContent = String(catalog?.themes.length ?? 0);
+      sfxCount.textContent = String(catalog?.sfx.items.length ?? 0);
       if (!nowPlayingLabel) nowPlaying.textContent = "Not playing.";
     }
     async function refreshAll(forceReload = false) {
-      setButtonEnabled2(btnReload, false);
+      btnReload.setEnabled(false);
       overviewError.clear();
       try {
         catalog = await loadCatalog(forceReload);
         if (!catalog) {
-          overviewError.show("Failed to load the audio catalog from mg-api.ariedam.fr.");
+          overviewError.show("The audio catalog did not load from mg-api.ariedam.fr.");
         }
         updateSummary();
         renderThemes();
         renderSfx();
       } finally {
-        setButtonEnabled2(btnReload, true);
+        btnReload.setEnabled(true);
       }
     }
+    btnStop.setEnabled(false);
     void refreshAll();
   }
-  var catalogPromise;
+  var PLAY_GLYPH, catalogPromise;
   var init_audioTab = __esm({
     "src/features/debug/audioTab.ts"() {
       "use strict";
+      init_badges();
       init_button();
       init_card();
+      init_dom2();
       init_fields();
       init_layout();
       init_shared();
       init_discordCsp();
       init_mgApi();
+      PLAY_GLYPH = "\u25B6\uFE0E";
       catalogPromise = null;
     }
   });
 
   // src/features/debug/jotaiTab.ts
   function renderJotaiTab(view) {
-    view.innerHTML = "";
-    view.classList.add("dd-debug-view");
-    const { leftCol, rightCol } = createTwoColumns(view);
+    const root4 = tabRoot(view);
     {
-      const section5 = card("\u{1F5C4}\uFE0F Capture store", {
-        tone: "muted",
-        subtitle: "Initialize the Jotai store so atoms can be inspected."
-      });
-      leftCol.appendChild(section5.root);
-      const status2 = document.createElement("span");
-      status2.className = "dd-status-chip";
+      const status2 = pill("");
       const refreshStatus = () => {
         const captured = isStoreCaptured();
-        status2.textContent = captured ? "Store captured" : "Store not captured";
-        status2.classList.toggle("is-ok", captured);
-        status2.classList.toggle("is-warn", !captured);
+        status2.textContent = captured ? "Captured" : "Not captured";
+        setTone(status2, captured ? "ok" : "warn");
       };
       refreshStatus();
-      const actions2 = flexRow({ gap: 10, align: "center", wrap: true });
       const btnCap = button("Capture store", {
         variant: "primary",
-        icon: "\u23FA",
+        size: "sm",
         onClick: async () => {
           try {
             await ensureStore();
@@ -26681,49 +26594,48 @@
           refreshStatus();
         }
       });
-      actions2.append(btnCap, status2);
-      section5.body.appendChild(actions2);
+      const controls = flexRow({ gap: 8 });
+      controls.append(status2, btnCap);
+      const { row: row2 } = settingRow("Jotai store", "Atoms can be read and written once it is captured.", controls);
+      row2.classList.add("dd-status");
+      root4.appendChild(row2);
     }
+    const [left, right] = cardColumns(root4);
     {
-      const section5 = card("\u{1F50D} Explore atoms", {
-        tone: "muted",
-        subtitle: "Filter labels using a regular expression."
-      });
-      leftCol.appendChild(section5.root);
-      const queryRow = flexRow({ gap: 10, wrap: true, fullWidth: true });
-      const q = textInput("regex label (ex: position|health)", "");
-      q.classList.add("dd-grow");
-      const btnList = button("List", { icon: "\u{1F4C4}", onClick: () => doList() });
-      const btnCopy = button("Copy", { icon: "\u{1F4CB}", onClick: () => copy2(pre.textContent || "") });
-      queryRow.append(q, btnList, btnCopy);
-      const pre = document.createElement("pre");
-      stylePre(pre);
-      pre.style.minHeight = "140px";
-      async function doList() {
+      let doList2 = function() {
         const raw = q.value.trim();
         const rx = safeRegex(raw || ".*");
         const all = findAtomsByLabel(/.*/);
         const atoms = all.filter((a) => rx.test(String(a?.debugLabel || a?.label || "")));
         const labels = atoms.map((a) => String(a?.debugLabel || a?.label || "<?>"));
         pre.textContent = labels.join("\n");
-      }
-      section5.body.append(queryRow, pre);
+      };
+      var doList = doList2;
+      const section = card("Find atoms", { subtitle: "Filter atom labels with a regular expression." });
+      left.appendChild(section.root);
+      const q = grow(textInput("Regex, e.g. position|health", ""));
+      const pre = codeBox("Matching labels show here.", true);
+      pre.classList.add("dd-code--list");
+      q.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          doList2();
+        }
+      });
+      const btnList = button("List", { variant: "primary", size: "sm", onClick: () => doList2() });
+      const btnCopy = button("Copy", { variant: "ghost", size: "sm", onClick: () => copy2(pre.textContent || "") });
+      section.body.append(bar(q, btnList, btnCopy), pre);
     }
     {
-      const section5 = card("\u{1F9ED} Inspect an atom", {
-        tone: "muted",
-        subtitle: "Get the current value or subscribe to updates."
-      });
-      rightCol.appendChild(section5.root);
-      const controls = flexRow({ gap: 10, wrap: true, fullWidth: true });
-      const q = textInput("atom label (ex: positionAtom)", "");
-      q.classList.add("dd-grow");
-      const pre = document.createElement("pre");
-      stylePre(pre);
-      pre.style.minHeight = "160px";
+      const section = card("Inspect an atom", { subtitle: "Read its value once, or follow it as it changes." });
+      right.appendChild(section.root);
+      const q = textInput("Atom label, e.g. positionAtom", "");
+      q.classList.add("dd-full");
+      const pre = codeBox("The value shows here.", true);
       let unsubRef = null;
       const btnGet = button("Get", {
-        icon: "\u{1F441}",
+        variant: "primary",
+        size: "sm",
         onClick: async () => {
           const atom = getAtomByLabel(q.value.trim());
           if (!atom) {
@@ -26737,8 +26649,9 @@
           }
         }
       });
-      const btnSub = button("Subscribe", {
-        icon: "\u{1F514}",
+      const btnSub = button("Follow", {
+        size: "sm",
+        title: "Update the value after each change",
         onClick: async () => {
           const label2 = q.value.trim();
           if (!label2) return;
@@ -26750,7 +26663,8 @@
           if (unsubRef) {
             unsubRef();
             unsubRef = null;
-            btnSub.textContent = "Subscribe";
+            setBtnLabel(btnSub, "Follow");
+            btnSub.setActive(false);
             return;
           }
           unsubRef = await jSub(atom, async () => {
@@ -26759,31 +26673,23 @@
             } catch {
             }
           });
-          btnSub.textContent = "Unsubscribe";
+          setBtnLabel(btnSub, "Stop following");
+          btnSub.setActive(true);
         }
       });
-      const btnCopy = button("Copy", { icon: "\u{1F4CB}", onClick: () => copy2(pre.textContent || "") });
-      controls.append(q, btnGet, btnSub, btnCopy);
-      const note = document.createElement("p");
-      note.className = "dd-inline-note";
-      note.textContent = "Tip: subscriptions keep the value updated after each mutation.";
-      section5.body.append(controls, note, pre);
+      const btnCopy = button("Copy", { variant: "ghost", size: "sm", onClick: () => copy2(pre.textContent || "") });
+      section.body.append(q, bar(barEnd(btnCopy, btnSub, btnGet)), pre);
     }
     {
-      const section5 = card("\u270F\uFE0F Update an atom", {
-        tone: "muted",
-        subtitle: "Publish a new value (JSON)."
-      });
-      rightCol.appendChild(section5.root);
-      const controls = flexRow({ gap: 10, wrap: true, fullWidth: true });
-      const q = textInput("atom label (ex: activeModalStateAtom)", "");
-      q.classList.add("dd-grow");
-      const ta = document.createElement("textarea");
-      ta.className = "qmm-input dd-textarea";
-      ta.placeholder = `JSON or text value, e.g. inventory or { "x": 1, "y": 2 }`;
-      const btnSet = button("Set", {
-        icon: "\u2705",
+      const section = card("Write an atom", { subtitle: "Sends JSON, or plain text when it does not parse." });
+      right.appendChild(section.root);
+      const q = textInput("Atom label, e.g. activeModalStateAtom", "");
+      q.classList.add("dd-full");
+      const ta = h("textarea", "qmm-input dd-textarea");
+      ta.placeholder = `{ "x": 1, "y": 2 }`;
+      const btnSet = button("Set value", {
         variant: "primary",
+        size: "sm",
         onClick: async () => {
           const label2 = q.value.trim();
           if (!label2) {
@@ -26826,19 +26732,20 @@
           }
         }
       });
-      const btnCopy = button("Copy JSON", { icon: "\u{1F4CB}", onClick: () => copy2(ta.value) });
-      controls.append(q, btnSet, btnCopy);
-      section5.body.append(controls, ta);
+      const btnCopy = button("Copy", { variant: "ghost", size: "sm", onClick: () => copy2(ta.value) });
+      section.body.append(q, ta, bar(barEnd(btnCopy, btnSet)));
     }
-    function setText2(el, v) {
-      el.textContent = typeof v === "string" ? v : JSON.stringify(v, null, 2);
+    function setText2(el4, v) {
+      el4.textContent = typeof v === "string" ? v : JSON.stringify(v, null, 2);
     }
   }
   var init_jotaiTab = __esm({
     "src/features/debug/jotaiTab.ts"() {
       "use strict";
+      init_badges();
       init_button();
       init_card();
+      init_dom2();
       init_fields();
       init_layout();
       init_jotai();
@@ -26944,6 +26851,37 @@
     }
   });
 
+  // src/features/debug/atomValues.ts
+  function snapshot(value) {
+    if (value == null) return value;
+    try {
+      if (typeof structuredClone === "function") return structuredClone(value);
+    } catch {
+    }
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch {
+      return value;
+    }
+  }
+  function stringify(value) {
+    if (typeof value === "string") return value;
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  }
+  function summarizeValue(value) {
+    const str = stringify(value).replace(/\s+/g, " ").trim();
+    return str.length > 140 ? str.slice(0, 140) + "\u2026" : str;
+  }
+  var init_atomValues = __esm({
+    "src/features/debug/atomValues.ts"() {
+      "use strict";
+    }
+  });
+
   // src/features/debug/liveAtomsTab.ts
   function renderLiveAtomsTab(view) {
     if (typeof view.__atoms_live_cleanup__ === "function") {
@@ -26952,52 +26890,43 @@
       } catch {
       }
     }
-    view.innerHTML = "";
-    view.classList.add("dd-debug-view");
+    const root4 = tabRoot(view);
     const entries = /* @__PURE__ */ new Map();
     const records = [];
     let recording = false;
     let selectedRecord = null;
-    const { leftCol, rightCol } = createTwoColumns(view);
-    const selectCard = card("\u{1F9EA} Pick atoms", {
-      tone: "muted",
-      subtitle: "Filter labels with a regex then toggle atoms to monitor."
+    const grid = cardGrid(root4);
+    const selectedInfo = pill("");
+    const selectCard = card("Atoms to watch", {
+      subtitle: "Filter with a regex, then tick the atoms to record.",
+      actions: [selectedInfo]
     });
-    leftCol.appendChild(selectCard.root);
-    const filterRow = flexRow({ gap: 10, wrap: true, fullWidth: true });
-    const filterInput = textInput("regex label (ex: position|health)", "");
-    filterInput.classList.add("dd-grow");
-    const btnFilter = button("Refresh", { icon: "\u{1F50D}", onClick: () => refreshMatches() });
-    filterRow.append(filterInput, btnFilter);
-    const matchesWrap = document.createElement("div");
-    matchesWrap.className = "dd-atom-list";
-    const emptyMatches = document.createElement("p");
-    emptyMatches.className = "dd-card-description";
-    emptyMatches.textContent = "No atoms match the current filter.";
-    emptyMatches.style.display = "none";
-    const selectedInfo = document.createElement("p");
-    selectedInfo.className = "dd-card-description";
-    selectedInfo.style.marginTop = "8px";
-    selectCard.body.append(filterRow, matchesWrap, emptyMatches, selectedInfo);
+    grid.appendChild(selectCard.root);
+    const filterInput = grow(textInput("Regex, e.g. position|health", ""));
+    const btnFilter = button("Refresh", { size: "sm", onClick: () => refreshMatches() });
+    const matchesWrap = h("div", "dd-well dd-well--short qmm-scroll");
+    selectCard.body.append(bar(filterInput, btnFilter), matchesWrap);
     filterInput.addEventListener("keydown", (ev) => {
       if (ev.key === "Enter") {
         ev.preventDefault();
         refreshMatches();
       }
     });
-    const logCard = card("\u{1F4E1} Live atom log", {
-      tone: "muted",
-      subtitle: "Start recording to capture updates for the selected atoms."
+    const recordingPill = pill("Recording", "ok");
+    recordingPill.hidden = true;
+    const logCard = card("Change log", {
+      subtitle: "Every change of the ticked atoms while recording.",
+      actions: [recordingPill]
     });
-    rightCol.appendChild(logCard.root);
-    const controlsRow = flexRow({ gap: 10, wrap: true, fullWidth: true });
+    grid.appendChild(logCard.root);
     const btnRecord = button("Start recording", {
       variant: "primary",
+      size: "sm",
       onClick: () => toggleRecording()
     });
-    const btnClear = button("Clear log", {
+    const btnClear = button("Clear", {
       variant: "ghost",
-      icon: "\u{1F9F9}",
+      size: "sm",
       onClick: () => {
         records.length = 0;
         selectedRecord = null;
@@ -27006,81 +26935,47 @@
         updateControls();
       }
     });
-    const btnCopyLog = button("Copy log", {
+    const btnCopyLog = button("Copy", {
       variant: "ghost",
-      icon: "\u{1F4CB}",
+      size: "sm",
       onClick: () => copyLog()
     });
-    controlsRow.append(btnRecord, btnClear, btnCopyLog);
-    logCard.body.appendChild(controlsRow);
-    const logWrap = document.createElement("div");
-    logWrap.className = "dd-log";
-    logWrap.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
-    const logEmpty = document.createElement("div");
-    logEmpty.className = "dd-log__empty";
-    logEmpty.textContent = "No updates yet.";
+    logCard.body.appendChild(bar(btnRecord, barEnd(btnClear, btnCopyLog)));
+    const logWrap = h("div", "dd-well qmm-scroll");
+    const logEmpty = emptyNote("Nothing recorded yet. Tick some atoms, then start recording.");
     logWrap.appendChild(logEmpty);
     logCard.body.appendChild(logWrap);
-    const detailHeader = document.createElement("p");
-    detailHeader.className = "dd-card-description";
-    detailHeader.textContent = "Select a log entry to inspect previous and next values.";
-    const detailWrap = flexRow({ gap: 12, wrap: true, fullWidth: true });
-    const prevBox = document.createElement("div");
-    prevBox.style.flex = "1 1 320px";
-    const prevTitle = document.createElement("strong");
-    prevTitle.textContent = "Previous";
-    prevTitle.style.display = "block";
-    prevTitle.style.marginBottom = "6px";
-    const prevPre = document.createElement("pre");
-    stylePre(prevPre);
-    prevPre.style.minHeight = "140px";
-    prevPre.textContent = "";
+    const detailCard = card("Change details");
+    root4.appendChild(detailCard.root);
+    const detailHeader = hint2("");
+    const prevTitle = sectionLabel("Before");
+    const prevPre = codeBox("Nothing to show.");
+    const nextTitle = sectionLabel("After");
+    const nextPre = codeBox("Nothing to show.");
+    const compare = h("div", "dd-grid dd-grid--tight");
+    const prevBox = h("div", "dd-stack");
     prevBox.append(prevTitle, prevPre);
-    const nextBox = document.createElement("div");
-    nextBox.style.flex = "1 1 320px";
-    const nextTitle = document.createElement("strong");
-    nextTitle.textContent = "Next";
-    nextTitle.style.display = "block";
-    nextTitle.style.marginBottom = "6px";
-    const nextPre = document.createElement("pre");
-    stylePre(nextPre);
-    nextPre.style.minHeight = "140px";
-    nextPre.textContent = "";
+    const nextBox = h("div", "dd-stack");
     nextBox.append(nextTitle, nextPre);
-    const historyBox = document.createElement("div");
-    historyBox.style.flex = "1 1 100%";
-    historyBox.style.minWidth = "0";
-    const historyTitle = document.createElement("strong");
-    historyTitle.textContent = "History";
-    historyTitle.style.display = "block";
-    historyTitle.style.marginBottom = "6px";
-    const historyList = document.createElement("div");
-    historyList.style.display = "flex";
-    historyList.style.flexDirection = "column";
-    historyList.style.gap = "10px";
-    historyList.style.maxHeight = "320px";
-    historyList.style.overflow = "auto";
-    historyBox.append(historyTitle, historyList);
-    detailWrap.append(prevBox, nextBox, historyBox);
-    logCard.body.append(detailHeader, detailWrap);
+    compare.append(prevBox, nextBox);
+    const historyList = h("div", "dd-well qmm-scroll");
+    const historyBox = h("div", "dd-stack");
+    historyBox.append(sectionLabel("History of this atom"), historyList);
+    detailCard.body.append(detailHeader, compare, historyBox);
     function refreshMatches() {
       const raw = filterInput.value.trim();
       const rx = safeRegex(raw || ".*");
       const atoms = findAtomsByLabel(rx);
       matchesWrap.innerHTML = "";
-      emptyMatches.style.display = atoms.length ? "none" : "block";
+      if (!atoms.length) matchesWrap.appendChild(emptyNote("No atom matches this filter."));
       atoms.map((atom) => ({ atom, label: String(atom?.debugLabel || atom?.label || "<unknown>") })).sort((a, b) => a.label.localeCompare(b.label)).forEach(({ atom, label: label2 }) => {
-        const row5 = document.createElement("label");
-        row5.className = "dd-atom-list__item";
-        row5.title = label2;
-        const checkbox = document.createElement("input");
+        const row2 = h("label", "dd-pick");
+        row2.title = label2;
+        const checkbox = h("input");
         checkbox.type = "checkbox";
         checkbox.checked = entries.has(label2);
-        checkbox.className = "dd-atom-list__checkbox";
-        const text2 = document.createElement("span");
-        text2.className = "dd-atom-list__label";
-        text2.textContent = label2;
-        row5.append(checkbox, text2);
+        row2.classList.toggle("is-on", checkbox.checked);
+        row2.append(checkbox, h("span", void 0, label2));
         checkbox.addEventListener("change", async () => {
           if (checkbox.checked) {
             const existing = entries.get(label2);
@@ -27103,10 +26998,11 @@
             }
             entries.delete(label2);
           }
+          row2.classList.toggle("is-on", checkbox.checked);
           updateSelectedInfo();
           updateControls();
         });
-        matchesWrap.appendChild(row5);
+        matchesWrap.appendChild(row2);
         if (entries.has(label2)) {
           const existing = entries.get(label2);
           if (existing) existing.atom = atom;
@@ -27115,15 +27011,20 @@
       updateSelectedInfo();
     }
     function updateSelectedInfo() {
-      const size = entries.size;
-      selectedInfo.textContent = size ? `${size} atom${size > 1 ? "s" : ""} selected.` : "No atom selected.";
+      selectedInfo.textContent = `${entries.size} selected`;
     }
     function updateControls() {
       setBtnLabel(btnRecord, recording ? "Stop recording" : "Start recording");
       btnRecord.classList.toggle("active", recording);
+      recordingPill.hidden = !recording;
       btnRecord.disabled = !recording && !entries.size;
       btnClear.disabled = records.length === 0;
       btnCopyLog.disabled = records.length === 0;
+    }
+    function entryHead(title, time) {
+      const head = h("div", "dd-entry__head");
+      head.append(h("span", "dd-entry__title", title), h("span", "dd-entry__time", time));
+      return head;
     }
     function renderRecords(autoScroll = false) {
       logWrap.innerHTML = "";
@@ -27133,33 +27034,16 @@
         return;
       }
       records.forEach((rec, idx) => {
-        const row5 = document.createElement("div");
-        row5.className = selectedRecord === idx ? "dd-atom-entry dd-atom-entry--row is-selected" : "dd-atom-entry dd-atom-entry--row";
-        row5.dataset.idx = String(idx);
-        const left = document.createElement("div");
-        left.style.display = "flex";
-        left.style.flexDirection = "column";
-        left.style.gap = "2px";
-        const lbl = document.createElement("strong");
-        lbl.textContent = rec.label;
-        const ts = document.createElement("span");
-        ts.style.opacity = "0.7";
-        ts.style.fontSize = "12px";
-        ts.textContent = `${fmtTime(rec.timestamp)}${rec.type === "initial" ? " \u2022 initial" : ""}`;
-        left.append(lbl, ts);
-        const summary = document.createElement("div");
-        summary.style.fontSize = "12px";
-        summary.style.lineHeight = "1.45";
-        summary.style.whiteSpace = "pre-wrap";
-        const prefix = rec.type === "initial" ? "[initial] " : "";
-        summary.textContent = prefix + summarizeValue(rec.next);
-        row5.append(left, summary);
-        row5.addEventListener("click", () => {
+        const row2 = h("div", selectedRecord === idx ? "dd-entry is-selected" : "dd-entry");
+        row2.dataset.idx = String(idx);
+        const time = `${fmtTime(rec.timestamp)}${rec.type === "initial" ? " \xB7 initial" : ""}`;
+        row2.append(entryHead(rec.label, time), h("div", "dd-entry__text", summarizeValue(rec.next)));
+        row2.addEventListener("click", () => {
           selectedRecord = idx;
           renderRecords(false);
           updateDetails(rec);
         });
-        logWrap.appendChild(row5);
+        logWrap.appendChild(row2);
       });
       if (autoScroll) logWrap.scrollTop = logWrap.scrollHeight;
       if (selectedRecord != null && !records[selectedRecord]) {
@@ -27171,74 +27055,44 @@
     }
     function updateDetails(rec) {
       if (!rec) {
-        detailHeader.textContent = "Select a log entry to inspect previous and next values.";
-        prevTitle.textContent = "Previous";
+        detailHeader.textContent = "Pick an entry in the log to compare its values.";
+        prevTitle.textContent = "Before";
         prevPre.textContent = "";
-        nextTitle.textContent = "Next";
+        nextTitle.textContent = "After";
         nextPre.textContent = "";
         renderHistoryFor(null, null);
         return;
       }
       const typeSuffix = rec.type === "initial" ? " (initial)" : "";
       detailHeader.textContent = `${rec.label} \xB7 ${fmtTime(rec.timestamp)}${typeSuffix}`;
-      prevTitle.textContent = rec.type === "initial" ? "Previous (none)" : "Previous";
+      prevTitle.textContent = rec.type === "initial" ? "Before (none)" : "Before";
       prevPre.textContent = rec.type === "initial" ? "(no previous snapshot)" : stringify(rec.previous);
-      nextTitle.textContent = rec.type === "initial" ? "Initial value" : "Next";
+      nextTitle.textContent = rec.type === "initial" ? "Initial value" : "After";
       nextPre.textContent = stringify(rec.next);
       renderHistoryFor(rec.label, selectedRecord);
     }
     function renderHistoryFor(label2, selectedIdx) {
       historyList.innerHTML = "";
       if (!label2) {
-        const empty = document.createElement("p");
-        empty.className = "dd-card-description";
-        empty.textContent = "Select a log entry to inspect the value history.";
-        historyList.appendChild(empty);
+        historyList.appendChild(emptyNote("Pick an entry in the log to see every value its atom took."));
         return;
       }
       const relevant = records.map((rec, idx) => ({ rec, idx })).filter(({ rec }) => rec.label === label2);
       if (!relevant.length) {
-        const empty = document.createElement("p");
-        empty.className = "dd-card-description";
-        empty.textContent = "No history recorded yet.";
-        historyList.appendChild(empty);
+        historyList.appendChild(emptyNote("No history recorded yet."));
         return;
       }
       relevant.forEach(({ rec, idx }, order) => {
-        const item = document.createElement("div");
-        item.className = idx === selectedIdx ? "dd-atom-entry dd-atom-entry--history is-selected" : "dd-atom-entry dd-atom-entry--history";
+        const item = h("div", idx === selectedIdx ? "dd-entry is-selected" : "dd-entry");
         item.addEventListener("click", () => {
           selectedRecord = idx;
           renderRecords(false);
           updateDetails(records[selectedRecord]);
         });
-        const head = document.createElement("div");
-        head.style.display = "flex";
-        head.style.alignItems = "center";
-        head.style.justifyContent = "space-between";
-        const meta = document.createElement("div");
-        meta.style.display = "flex";
-        meta.style.alignItems = "center";
-        meta.style.gap = "8px";
-        const orderBadge = document.createElement("span");
-        orderBadge.className = "dd-atom-badge";
-        orderBadge.textContent = `#${order + 1}`;
-        const type = document.createElement("span");
-        type.textContent = rec.type === "initial" ? "Initial" : "Update";
-        type.style.fontSize = "11px";
-        type.style.opacity = "0.75";
-        type.style.textTransform = "uppercase";
-        meta.append(orderBadge, type);
-        const ts = document.createElement("span");
-        ts.textContent = fmtTime(rec.timestamp);
-        ts.style.fontSize = "12px";
-        ts.style.opacity = "0.75";
-        head.append(meta, ts);
-        const val = document.createElement("pre");
-        stylePre(val);
-        val.style.margin = "0";
+        const val = codeBox("");
         val.textContent = stringify(rec.next);
-        item.append(head, val);
+        const title = `#${order + 1} ${rec.type === "initial" ? "Initial" : "Update"}`;
+        item.append(entryHead(title, fmtTime(rec.timestamp)), val);
         historyList.appendChild(item);
       });
     }
@@ -27294,17 +27148,17 @@
         entry.unsubscribe = null;
       }
       try {
-        const initialValue = snapshot2(await jGet(entry.atom));
+        const initialValue = snapshot(await jGet(entry.atom));
         entry.lastValue = initialValue;
         const unsub = await jSub(entry.atom, async () => {
-          const previous = snapshot2(entry.lastValue);
+          const previous = snapshot(entry.lastValue);
           let nextValue;
           try {
             nextValue = await jGet(entry.atom);
           } catch (err) {
             nextValue = err?.message || String(err);
           }
-          const nextSnap = snapshot2(nextValue);
+          const nextSnap = snapshot(nextValue);
           entry.lastValue = nextSnap;
           const rec = {
             label: label2,
@@ -27323,7 +27177,7 @@
           label: label2,
           timestamp: Date.now(),
           previous: null,
-          next: snapshot2(initialValue),
+          next: snapshot(initialValue),
           type: "initial"
         };
         records.push(initialRecord);
@@ -27358,31 +27212,8 @@ next: ${next}`;
       }).join("\n\n");
       copy2(text2);
     }
-    function snapshot2(value) {
-      if (value == null) return value;
-      try {
-        if (typeof structuredClone === "function") return structuredClone(value);
-      } catch {
-      }
-      try {
-        return JSON.parse(JSON.stringify(value));
-      } catch {
-        return value;
-      }
-    }
-    function stringify(value) {
-      if (typeof value === "string") return value;
-      try {
-        return JSON.stringify(value, null, 2);
-      } catch {
-        return String(value);
-      }
-    }
-    function summarizeValue(value) {
-      const str = stringify(value).replace(/\s+/g, " ").trim();
-      return str.length > 140 ? str.slice(0, 140) + "\u2026" : str;
-    }
     refreshMatches();
+    updateDetails(null);
     updateControls();
     view.__atoms_live_cleanup__ = () => {
       stopRecording();
@@ -27402,12 +27233,14 @@ next: ${next}`;
   var init_liveAtomsTab = __esm({
     "src/features/debug/liveAtomsTab.ts"() {
       "use strict";
+      init_badges();
       init_button();
       init_card();
+      init_dom2();
       init_fields();
-      init_layout();
       init_jotai();
       init_wsCapture();
+      init_atomValues();
       init_shared();
     }
   });
@@ -27420,8 +27253,7 @@ next: ${next}`;
       } catch {
       }
     }
-    view.innerHTML = "";
-    view.classList.add("dd-debug-view");
+    const root4 = tabRoot(view);
     const frames = new FrameBuffer(2e3);
     const frameById = (fid) => frames.find((f) => f.id === fid);
     let seq = 0;
@@ -27436,8 +27268,8 @@ next: ${next}`;
     let mutePatterns = [];
     const setSelectedRow = (fid) => {
       selectedId = fid;
-      [...logWrap.querySelectorAll("[data-fid]")].forEach((row5) => {
-        row5.classList.toggle("selected", String(fid || "") === row5.dataset.fid);
+      [...logWrap.querySelectorAll("[data-fid]")].forEach((row2) => {
+        row2.classList.toggle("selected", String(fid || "") === row2.dataset.fid);
       });
       if (fid != null) {
         const f = frameById(fid);
@@ -27445,31 +27277,16 @@ next: ${next}`;
       }
     };
     const matchesMutes = (text2) => mutePatterns.some((rx) => rx.test(text2));
-    const statusCard = card("\u{1F4E1} Live traffic", {
-      tone: "muted",
-      subtitle: "Monitor, filter, and replay WebSocket frames."
+    const lblConn = pill("");
+    const trafficCard = card("Live traffic", {
+      subtitle: "Every frame the game sends and receives. Click one to load it below.",
+      actions: [lblConn]
     });
-    view.appendChild(statusCard.root);
-    const muteCard = card("\u{1F649} Mutes (regex)", {
-      tone: "muted",
-      subtitle: "Hide unwanted messages."
-    });
-    view.appendChild(muteCard.root);
-    const logCard = card("\u{1F9FE} Frame log", { tone: "muted" });
-    view.appendChild(logCard.root);
-    const sendCard = card("\u{1F4E4} Send a frame", {
-      tone: "muted",
-      subtitle: "Pick or compose a payload and send it."
-    });
-    view.appendChild(sendCard.root);
-    const statusToolbar = document.createElement("div");
-    statusToolbar.className = "dd-toolbar dd-toolbar--stretch";
-    statusCard.body.appendChild(statusToolbar);
-    const lblConn = document.createElement("span");
-    lblConn.className = "dd-status-chip";
-    const sel = select2({ width: "220px" });
+    root4.appendChild(trafficCard.root);
+    const sel = grow(select2());
+    sel.title = "Socket";
     const btnPause = button("Pause", {
-      variant: "secondary",
+      size: "sm",
       onClick: () => {
         paused = !paused;
         setBtnLabel(btnPause, paused ? "Resume" : "Pause");
@@ -27480,111 +27297,109 @@ next: ${next}`;
     btnPause.title = "Suspend live updates";
     const btnClear = button("Clear", {
       variant: "ghost",
-      icon: "\u{1F9F9}",
+      size: "sm",
       onClick: () => {
         frames.clear();
         setSelectedRow(null);
         repaint(true);
       }
     });
-    const btnCopy = button("Copy visible", {
+    const btnCopy = button("Copy shown", {
       variant: "ghost",
-      icon: "\u{1F4CB}",
+      size: "sm",
       onClick: () => copyVisible()
     });
-    statusToolbar.append(lblConn, sel, btnPause, btnClear, btnCopy);
-    const filterToolbar = document.createElement("div");
-    filterToolbar.className = "dd-toolbar dd-toolbar--stretch";
-    statusCard.body.appendChild(filterToolbar);
-    const inputFilter = textInput("filter text (case-insensitive)", "");
-    inputFilter.classList.add("dd-grow");
+    const inputFilter = grow(textInput("Filter text", ""));
     inputFilter.addEventListener("input", () => {
       filterText = inputFilter.value.trim().toLowerCase();
       repaint(true);
     });
-    const inToggle = toggleChip("IN", { checked: true, icon: "\u2190", tooltip: "Show incoming messages" });
+    const inToggle = toggleChip("In", { checked: true, icon: "\u2190", tooltip: "Show incoming messages" });
     inToggle.input.addEventListener("change", () => {
       showIn = inToggle.input.checked;
       repaint(true);
     });
-    const outToggle = toggleChip("OUT", { checked: true, icon: "\u2192", tooltip: "Show outgoing messages" });
+    const outToggle = toggleChip("Out", { checked: true, icon: "\u2192", tooltip: "Show outgoing messages" });
     outToggle.input.addEventListener("change", () => {
       showOut = outToggle.input.checked;
       repaint(true);
     });
-    const currentToggle = toggleChip("Active socket", { checked: false, icon: "\u{1F3AF}", tooltip: "Limit to the selected socket" });
+    const currentToggle = toggleChip("This socket only", { checked: false, tooltip: "Limit to the selected socket" });
     currentToggle.input.addEventListener("change", () => {
       onlyCurrentSocket = currentToggle.input.checked;
       repaint(true);
     });
-    const autoScrollToggle = toggleChip("Auto-scroll", { checked: true, icon: "\u{1F4DC}", tooltip: "Keep the log aligned with the latest frames" });
+    const autoScrollToggle = toggleChip("Auto-scroll", { checked: true, tooltip: "Keep the log aligned with the latest frames" });
     autoScrollToggle.input.addEventListener("change", () => {
       autoScroll = autoScrollToggle.input.checked;
     });
-    filterToolbar.append(inputFilter, inToggle.root, outToggle.root, currentToggle.root, autoScrollToggle.root);
-    const muteRow = flexRow({ gap: 10, wrap: true, fullWidth: true });
-    const muteInput = textInput("add regex (e.g. ping|keepalive)", "");
-    muteInput.classList.add("dd-grow");
-    const btnAddMute = button("Add", {
-      icon: "\u2795",
-      onClick: () => {
-        const raw = muteInput.value.trim();
-        if (!raw) return;
-        try {
-          mutePatterns.push(new RegExp(raw, "i"));
-          muteInput.value = "";
-          repaintMutes();
-          repaint(true);
-        } catch {
-        }
+    const muteInput = grow(textInput("Hide frames matching a regex, e.g. ping", ""));
+    const addMute = () => {
+      const raw = muteInput.value.trim();
+      if (!raw) return;
+      try {
+        mutePatterns.push(new RegExp(raw, "i"));
+        muteInput.value = "";
+        repaintMutes();
+        repaint(true);
+      } catch {
+      }
+    };
+    muteInput.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") {
+        ev.preventDefault();
+        addMute();
       }
     });
-    muteRow.append(muteInput, btnAddMute);
-    muteCard.body.appendChild(muteRow);
-    const mutesWrap = document.createElement("div");
-    mutesWrap.className = "dd-mute-chips";
-    muteCard.body.appendChild(mutesWrap);
+    const btnAddMute = button("Hide", { size: "sm", onClick: addMute });
+    const mutesWrap = h("div", "dd-mutes");
     function repaintMutes() {
       mutesWrap.innerHTML = "";
       mutePatterns.forEach((rx, i) => {
         const chip = button(`/${rx.source}/i \xD7`, {
-          variant: "ghost",
-          size: "sm",
+          size: "xs",
+          title: "Show these frames again",
           onClick: () => {
             mutePatterns.splice(i, 1);
             repaintMutes();
             repaint(true);
           }
         });
+        chip.classList.add("dd-mute");
         mutesWrap.appendChild(chip);
       });
     }
-    const logWrap = document.createElement("div");
-    logWrap.className = "dd-log";
-    const emptyState = document.createElement("div");
-    emptyState.className = "dd-log__empty";
-    emptyState.textContent = "No frames visible yet.";
-    logWrap.appendChild(emptyState);
-    logCard.body.appendChild(logWrap);
-    const ta = document.createElement("textarea");
-    ta.className = "qmm-input dd-textarea";
-    ta.placeholder = `Select a frame or paste a payload here. Choose Text or JSON below.`;
-    const sendControls = document.createElement("div");
-    sendControls.className = "dd-send-controls";
-    const asJson = radioGroup(
-      "ws-send-mode",
+    const logWrap = h("div", "dd-well dd-frames qmm-scroll");
+    const emptyState3 = emptyNote("");
+    logWrap.appendChild(emptyState3);
+    trafficCard.body.append(
+      bar(sel, btnPause, barEnd(btnClear, btnCopy)),
+      bar(inputFilter, inToggle.root, outToggle.root, currentToggle.root, autoScrollToggle.root),
+      bar(muteInput, btnAddMute),
+      mutesWrap,
+      logWrap
+    );
+    const sendCard = card("Send a frame", { subtitle: "Edit a captured frame or write your own." });
+    root4.appendChild(sendCard.root);
+    const ta = h("textarea", "qmm-input dd-textarea");
+    ta.placeholder = "Click a frame above, or paste a payload here.";
+    const sendMode = segmented(
       [{ value: "text", label: "Text" }, { value: "json", label: "JSON" }],
       "text",
-      () => {
-      }
+      void 0,
+      { ariaLabel: "Send as" }
     );
-    const replayToggle = toggleChip("Use source WS", { checked: false, icon: "\u21A9" });
+    const replayToggle = toggleChip("Use the frame's socket", {
+      checked: false,
+      tooltip: "Send to the socket the selected frame came from"
+    });
     replayToggle.input.addEventListener("change", () => {
       replayToSource = replayToggle.input.checked;
     });
-    const btnSend = button("Send", { variant: "primary", icon: "\u{1F4E8}", onClick: () => doSend() });
-    const btnCopyPayload = button("Copy payload", { variant: "ghost", icon: "\u{1F4CB}", onClick: () => copy2(ta.value) });
-    sendControls.append(asJson, replayToggle.root, btnSend, btnCopyPayload);
+    const btnSend = button("Send", { variant: "primary", size: "sm", onClick: () => doSend() });
+    const btnCopyPayload = button("Copy", { variant: "ghost", size: "sm", onClick: () => copy2(ta.value) });
+    const sendControls = h("div", "dd-send");
+    sendControls.append(sendMode, replayToggle.root, barEnd(btnCopyPayload, btnSend));
     sendCard.body.append(ta, sendControls);
     function refreshSocketPicker() {
       const wsArr = getWSInfos();
@@ -27604,15 +27419,15 @@ next: ${next}`;
       return Number.isFinite(idx) ? vals[idx]?.ws ?? null : null;
     }
     function updateStatus() {
-      const text2 = getWSStatusText();
-      lblConn.textContent = text2;
-      const low = text2.toLowerCase();
-      lblConn.classList.toggle("is-ok", /open|connected|ready/.test(low));
-      lblConn.classList.toggle("is-warn", /closing|connecting|pending/.test(low));
+      const low = getWSStatusText().toLowerCase();
+      const open = /open|connected|ready/.test(low);
+      lblConn.textContent = open ? "Connected" : "Not connected";
+      setTone(lblConn, open ? "ok" : "warn");
     }
     function updateEmptyState() {
-      const hasRows = logWrap.querySelector(".ws-row") != null;
-      emptyState.style.display = hasRows ? "none" : "";
+      const hasRows = logWrap.querySelector(".dd-frame") != null;
+      emptyState3.hidden = hasRows;
+      emptyState3.textContent = frames.toArray().length ? "No frame matches these filters." : "No frames yet. They show here as the game talks to the server.";
     }
     function passesFilters(f) {
       if (f.dir === "in" && !showIn || f.dir === "out" && !showOut) return false;
@@ -27622,15 +27437,14 @@ next: ${next}`;
       return true;
     }
     function rowActions(fid, f) {
-      const acts = document.createElement("div");
-      acts.className = "acts";
+      const acts = h("div", "dd-frame__acts");
       const action2 = (label2, run, title) => button(label2, {
         size: "xs",
         title,
         onClick: () => run()
       });
       const bCopy = action2("Copy", () => copy2(f.text));
-      const bToEd = action2("\u2192 Editor", () => {
+      const bToEd = action2("To editor", () => {
         ta.value = f.text;
         setSelectedRow(fid);
       });
@@ -27640,36 +27454,30 @@ next: ${next}`;
       return acts;
     }
     function buildRow(f) {
-      const row5 = document.createElement("div");
-      row5.className = "ws-row";
-      row5.dataset.fid = String(f.id);
-      const ts = document.createElement("div");
-      ts.className = "ts";
-      ts.textContent = fmtTime(f.t);
-      const arrow = document.createElement("div");
-      arrow.className = f.dir === "in" ? "arrow is-in" : "arrow is-out";
-      arrow.textContent = f.dir === "in" ? "\u2190" : "\u2192";
-      const body = document.createElement("div");
-      body.className = "body";
+      const row2 = h("div", "dd-frame");
+      row2.dataset.fid = String(f.id);
+      const ts = h("div", "dd-frame__ts", fmtTime(f.t));
+      const arrow = h("div", f.dir === "in" ? "dd-frame__dir is-in" : "dd-frame__dir is-out", f.dir === "in" ? "\u2190" : "\u2192");
+      arrow.title = f.dir === "in" ? "Received" : "Sent";
+      const body = h("div", "dd-frame__body");
       body.innerHTML = `<code>${escapeLite(f.text)}</code>`;
-      const acts = rowActions(f.id, f);
-      row5.append(ts, arrow, body, acts);
-      row5.onclick = () => setSelectedRow(f.id);
-      row5.ondblclick = () => {
+      row2.append(ts, arrow, body, rowActions(f.id, f));
+      row2.onclick = () => setSelectedRow(f.id);
+      row2.ondblclick = () => {
         ta.value = f.text;
         setSelectedRow(f.id);
       };
-      return row5;
+      return row2;
     }
     function appendOne(f) {
       if (!passesFilters(f)) return;
-      const row5 = buildRow(f);
-      logWrap.appendChild(row5);
+      const row2 = buildRow(f);
+      logWrap.appendChild(row2);
       updateEmptyState();
       if (autoScroll) logWrap.scrollTop = logWrap.scrollHeight;
     }
     function repaint(_full = false) {
-      logWrap.querySelectorAll(".ws-row").forEach((n) => n.remove());
+      logWrap.querySelectorAll(".dd-frame").forEach((n) => n.remove());
       frames.toArray().forEach((f) => {
         if (passesFilters(f)) logWrap.appendChild(buildRow(f));
       });
@@ -27684,8 +27492,7 @@ next: ${next}`;
     function replayFrame(f) {
       const target = replayToSource && f.ws ? f.ws : currentWS();
       if (!target || target.readyState !== WebSocket.OPEN) return;
-      const mode = asJson.querySelector('input[type="radio"]:checked')?.value || "text";
-      if (mode === "json") {
+      if (sendMode.get() === "json") {
         try {
           target.send(JSON.parse(f.text));
         } catch {
@@ -27700,8 +27507,7 @@ next: ${next}`;
       const wsAlt = selectedId != null && replayToSource ? frameById(selectedId)?.ws ?? null : null;
       const target = (replayToSource ? wsAlt : ws) || ws;
       if (!target || target.readyState !== WebSocket.OPEN) return;
-      const mode = asJson.querySelector('input[type="radio"]:checked')?.value || "text";
-      if (mode === "json") {
+      if (sendMode.get() === "json") {
         try {
           target.send(JSON.parse(ta.value));
         } catch {
@@ -27721,7 +27527,7 @@ next: ${next}`;
     });
     refreshSocketPicker();
     repaint(true);
-    const stopPolling = refreshWhileVisible(view, refreshSocketPicker, 1e3);
+    const stopPolling = refreshWhileVisible(root4, refreshSocketPicker, 1e3);
     view.__ws_cleanup__ = () => {
       stopPolling();
       stopFrames();
@@ -27730,11 +27536,12 @@ next: ${next}`;
   var init_wsTab = __esm({
     "src/features/debug/wsTab.ts"() {
       "use strict";
+      init_badges();
       init_button();
       init_card();
       init_dom2();
       init_fields();
-      init_layout();
+      init_segmented();
       init_toggles();
       init_wsCapture();
       init_shared();
@@ -27837,7 +27644,7 @@ next: ${next}`;
     }
     const centralSize = central.reduce((sum, entry) => sum + entry.length, 0);
     const parts = [...chunks, ...central, endRecord(files.length, centralSize, offset)];
-    return new Blob(parts.map((part) => part.slice()), { type: "application/zip" });
+    return new Blob(parts.map((part2) => part2.slice()), { type: "application/zip" });
   }
   function triggerBlobDownload(blob, filename) {
     const url = URL.createObjectURL(blob);
@@ -27889,33 +27696,24 @@ next: ${next}`;
     return out;
   }
   function renderSpritesTab(view) {
-    view.innerHTML = "";
-    view.classList.add("dd-debug-view");
-    const { leftCol, rightCol } = createTwoColumns(view);
-    const explorerCard = card("Sprite Explorer", {
-      tone: "muted",
-      subtitle: "Browse the live sprite catalog from mg-api.ariedam.fr."
-    });
-    leftCol.appendChild(explorerCard.root);
-    const listCard = card("Sprites", {
-      tone: "muted",
-      subtitle: "Preview sprites for the selected category."
-    });
-    rightCol.appendChild(listCard.root);
-    const categorySelect = select2({ width: "100%" });
-    categorySelect.disabled = true;
-    const searchInput = document.createElement("input");
-    searchInput.type = "search";
-    searchInput.placeholder = "Search name";
-    searchInput.className = "dd-sprite-search";
-    const reloadBtn = button("Reload sprites", {
+    const root4 = tabRoot(view);
+    const reloadBtn = button("Reload", {
       size: "sm",
       variant: "ghost",
       onClick: () => {
         void updateList(true);
       }
     });
-    const downloadBtnLabel = "Download visible sprites";
+    const filtersCard = card("Sprites", {
+      subtitle: "The live catalog from mg-api.ariedam.fr. Click a sprite to download it.",
+      actions: [reloadBtn]
+    });
+    root4.appendChild(filtersCard.root);
+    const categorySelect = select2();
+    categorySelect.disabled = true;
+    const searchInput = textInput("Name", "");
+    searchInput.type = "search";
+    const downloadBtnLabel = "Download all shown";
     const downloadBtn = button(downloadBtnLabel, {
       size: "sm",
       variant: "primary",
@@ -27924,50 +27722,22 @@ next: ${next}`;
       }
     });
     downloadBtn.disabled = true;
-    const controlsGrid = document.createElement("div");
-    controlsGrid.className = "dd-sprite-control-grid";
-    controlsGrid.append(
-      createSelectControl("Asset category", categorySelect),
-      createSelectControl("Search", searchInput)
-    );
-    explorerCard.body.appendChild(controlsGrid);
-    const actionRow = document.createElement("div");
-    actionRow.className = "dd-sprite-actions";
-    actionRow.append(reloadBtn, downloadBtn);
-    explorerCard.body.appendChild(actionRow);
+    const fields = h("div", "dd-fields");
+    fields.append(field("Category", categorySelect), field("Search", searchInput));
     const mutationFilters = { color: "None", condition: "None", lighting: "None" };
-    const mutationGroupContainers = {
-      color: document.createElement("div"),
-      condition: document.createElement("div"),
-      lighting: document.createElement("div")
-    };
-    const mutationCard = card("Mutations", {
-      tone: "muted",
-      subtitle: "Apply color or weather overlays via /assets/sprites/composed."
-    });
-    leftCol.appendChild(mutationCard.root);
-    const mutationBody = document.createElement("div");
-    mutationBody.className = "dd-sprite-mutation-card";
-    mutationCard.body.appendChild(mutationBody);
-    mutationGroupContainers.color.className = "dd-sprite-mutation-group";
-    mutationGroupContainers.condition.className = "dd-sprite-mutation-group";
-    mutationGroupContainers.lighting.className = "dd-sprite-mutation-group";
-    mutationBody.append(
-      mutationGroupContainers.color,
-      mutationGroupContainers.condition,
-      mutationGroupContainers.lighting
+    const mutations = h("div", "dd-stack");
+    mutations.append(
+      mutationGroup("color", COLOR_SELECTIONS, "Colour"),
+      mutationGroup("condition", CONDITION_SELECTIONS, "Weather"),
+      mutationGroup("lighting", LIGHTING_SELECTIONS, "Lighting")
     );
-    renderMutationControls();
-    const stats = document.createElement("p");
-    stats.className = "dd-sprite-stats";
-    stats.textContent = "Loading sprite catalog\u2026";
-    explorerCard.body.appendChild(stats);
-    const previewArea = document.createElement("div");
-    previewArea.className = "dd-sprite-grid";
-    const previewWrap = document.createElement("div");
-    previewWrap.className = "dd-sprite-grid-wrap";
+    const stats = hint2("Loading sprite catalog\u2026");
+    stats.classList.add("dd-grow");
+    filtersCard.body.append(fields, mutations, bar(stats, barEnd(downloadBtn)));
+    const previewArea = h("div", "dd-sprite-grid");
+    const previewWrap = h("div", "dd-sprites qmm-scroll");
     previewWrap.appendChild(previewArea);
-    listCard.body.appendChild(previewWrap);
+    root4.appendChild(previewWrap);
     let selectedCategory = ANY_CATEGORY;
     let searchTerm = "";
     let searchDebounce = null;
@@ -27991,11 +27761,7 @@ next: ${next}`;
       categorySelect.disabled = !categories.length;
     };
     const renderEmptyState = (message2) => {
-      previewArea.innerHTML = "";
-      const empty = document.createElement("div");
-      empty.className = "dd-sprite-grid__empty";
-      empty.textContent = message2;
-      previewArea.appendChild(empty);
+      previewArea.replaceChildren(emptyNote(message2));
     };
     const getActiveMutations = () => {
       const active3 = [];
@@ -28004,54 +27770,43 @@ next: ${next}`;
       if (mutationFilters.lighting !== "None") active3.push(mutationFilters.lighting);
       return active3;
     };
-    function renderMutationControls() {
-      renderMutationGroup("color", COLOR_SELECTIONS, "Color", mutationGroupContainers.color);
-      renderMutationGroup("condition", CONDITION_SELECTIONS, "Weather", mutationGroupContainers.condition);
-      renderMutationGroup("lighting", LIGHTING_SELECTIONS, "Lighting", mutationGroupContainers.lighting);
-    }
-    function renderMutationGroup(key2, options2, label2, container) {
-      container.innerHTML = "";
-      const heading = document.createElement("span");
-      heading.className = "dd-sprite-mutation-group-title";
-      heading.textContent = label2;
-      const row5 = document.createElement("div");
-      row5.className = "dd-sprite-mutation-buttons";
+    function mutationGroup(key2, options2, label2) {
+      const row2 = h("div", "dd-mutation");
+      const chips = h("div", "dd-mutation__chips");
       options2.forEach((option2) => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "dd-sprite-mutation-btn";
-        btn.textContent = option2 === "None" ? "None" : option2;
-        if (mutationFilters[key2] === option2) btn.classList.add("active");
-        btn.setAttribute("aria-pressed", mutationFilters[key2] === option2 ? "true" : "false");
-        btn.addEventListener("click", () => {
-          if (mutationFilters[key2] === option2) return;
+        const chip = toggleChip(option2, {
+          type: "radio",
+          name: `dd-sprite-mutation-${key2}`,
+          value: option2,
+          checked: mutationFilters[key2] === option2
+        });
+        chip.input.addEventListener("change", () => {
+          if (!chip.input.checked || mutationFilters[key2] === option2) return;
           mutationFilters[key2] = option2;
-          renderMutationControls();
           if (visibleSpriteRecords.length) renderSpriteCards(visibleSpriteRecords);
         });
-        row5.appendChild(btn);
+        chips.appendChild(chip.root);
       });
-      container.append(heading, row5);
+      row2.append(sectionLabel(label2), chips);
+      return row2;
     }
-    function previewUrlFor(record2, mutations) {
-      return mutations.length ? composedSpriteUrl(record2.category, record2.name, mutations) : record2.url;
+    function previewUrlFor(record2, mutations2) {
+      return mutations2.length ? composedSpriteUrl(record2.category, record2.name, mutations2) : record2.url;
     }
     function renderSpriteCards(records) {
       if (!records.length) {
-        renderEmptyState("No sprites match the current filters.");
+        renderEmptyState("No sprite matches these filters.");
         return;
       }
       const activeMutations = getActiveMutations();
       previewArea.innerHTML = "";
       records.forEach((record2) => {
-        const card4 = document.createElement("div");
-        card4.className = "dd-sprite-grid__item";
-        card4.title = `${record2.category}/${record2.name}`;
-        const imgWrap = document.createElement("div");
-        imgWrap.className = "dd-sprite-grid__img";
+        const tile = h("div", "dd-sprite");
+        tile.title = `${record2.category}/${record2.name}
+Click to download`;
+        const imgWrap = h("div", "dd-sprite__img");
         imgWrap.style.setProperty("--sprite-size", `${SPRITE_ICON_SIZE}px`);
-        const iconSlot2 = document.createElement("span");
-        iconSlot2.className = "dd-sprite-grid__icon";
+        const iconSlot2 = h("span", "dd-sprite__icon");
         const img = document.createElement("img");
         img.alt = record2.name;
         img.decoding = "async";
@@ -28064,34 +27819,32 @@ next: ${next}`;
         iconSlot2.appendChild(img);
         setImageSafe(img, previewUrlFor(record2, activeMutations));
         imgWrap.appendChild(iconSlot2);
-        const nameEl = document.createElement("span");
-        nameEl.className = "dd-sprite-grid__name";
-        nameEl.textContent = record2.name;
-        const meta = document.createElement("span");
-        meta.className = "dd-sprite-grid__meta";
-        meta.textContent = `${record2.category}/${record2.name}`;
-        card4.append(imgWrap, nameEl, meta);
+        tile.append(
+          imgWrap,
+          h("span", "dd-sprite__name", record2.name),
+          h("span", "dd-sprite__meta", record2.category)
+        );
         const triggerDownload = () => {
           if (downloadInProgress) return;
           void downloadSpriteRecord(record2, getActiveMutations());
         };
-        card4.addEventListener("click", triggerDownload);
-        card4.addEventListener("keydown", (event) => {
+        tile.addEventListener("click", triggerDownload);
+        tile.addEventListener("keydown", (event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
             triggerDownload();
           }
         });
-        card4.tabIndex = 0;
-        previewArea.appendChild(card4);
+        tile.tabIndex = 0;
+        previewArea.appendChild(tile);
       });
     }
     const updateList = async (forceReload = false) => {
       stats.textContent = "Loading sprite catalog\u2026";
       const catalog = await loadCatalog2(forceReload);
       if (!catalog) {
-        renderEmptyState("Failed to load the sprite catalog from mg-api.ariedam.fr.");
-        stats.textContent = "Catalog load failed. Try Reload.";
+        renderEmptyState("The sprite catalog did not load from mg-api.ariedam.fr. Try Reload.");
+        stats.textContent = "Catalog load failed.";
         return;
       }
       applyCategories(catalog.categories);
@@ -28100,16 +27853,16 @@ next: ${next}`;
       const filtered = !normalizedSearch ? records : records.filter((r) => r.name.toLowerCase().includes(normalizedSearch));
       const limited = filtered.slice(0, MAX_VISIBLE_SPRITES);
       visibleSpriteRecords = limited;
-      if (!downloadInProgress) downloadBtn.textContent = downloadBtnLabel;
+      if (!downloadInProgress) setBtnLabel(downloadBtn, downloadBtnLabel);
       downloadBtn.disabled = !limited.length || downloadInProgress;
       if (!limited.length) {
-        renderEmptyState("No sprites match the current filters.");
+        renderEmptyState("No sprite matches these filters.");
       } else {
         renderSpriteCards(limited);
       }
       const clipped = filtered.length > MAX_VISIBLE_SPRITES;
-      const categoryLabel = selectedCategory === ANY_CATEGORY ? "all categories" : `category "${selectedCategory}"`;
-      stats.textContent = clipped ? `Showing ${limited.length}/${filtered.length} sprites for ${categoryLabel}.` : `${filtered.length} sprites for ${categoryLabel}.`;
+      const categoryLabel = selectedCategory === ANY_CATEGORY ? "all categories" : `"${selectedCategory}"`;
+      stats.textContent = clipped ? `Showing ${limited.length} of ${filtered.length} sprites in ${categoryLabel}.` : `${filtered.length} sprites in ${categoryLabel}.`;
     };
     categorySelect.addEventListener("change", () => {
       selectedCategory = categorySelect.value || ANY_CATEGORY;
@@ -28124,16 +27877,16 @@ next: ${next}`;
       }, 150);
     });
     void updateList();
-    async function downloadSpriteRecord(record2, mutations) {
-      const bytes = await mgApiGetBinary(previewUrlFor(record2, mutations));
+    async function downloadSpriteRecord(record2, mutations2) {
+      const bytes = await mgApiGetBinary(previewUrlFor(record2, mutations2));
       if (!bytes) return;
-      triggerBlobDownload(new Blob([bytes], { type: "image/png" }), buildSpriteFilename(record2, mutations));
+      triggerBlobDownload(new Blob([bytes], { type: "image/png" }), buildSpriteFilename(record2, mutations2));
     }
     async function downloadVisibleSprites() {
       if (!visibleSpriteRecords.length || downloadInProgress) return;
       downloadInProgress = true;
       downloadBtn.disabled = true;
-      downloadBtn.textContent = "Preparing zip...";
+      setBtnLabel(downloadBtn, "Preparing zip...");
       try {
         const activeMutations = getActiveMutations();
         const files = [];
@@ -28141,26 +27894,22 @@ next: ${next}`;
           const bytes = await mgApiGetBinary(previewUrlFor(record2, activeMutations));
           if (!bytes) continue;
           files.push({ name: buildSpriteFilename(record2, activeMutations), bytes: new Uint8Array(bytes) });
-          downloadBtn.textContent = `Collected ${files.length}/${visibleSpriteRecords.length}`;
+          setBtnLabel(downloadBtn, `Collected ${files.length}/${visibleSpriteRecords.length}`);
         }
         if (!files.length) return;
-        downloadBtn.textContent = "Bundling zip...";
+        setBtnLabel(downloadBtn, "Bundling zip...");
         const zipBlob = packFilesToZip(files);
         triggerBlobDownload(zipBlob, `sprites-${Date.now()}.zip`);
       } finally {
         downloadInProgress = false;
-        downloadBtn.textContent = downloadBtnLabel;
+        setBtnLabel(downloadBtn, downloadBtnLabel);
         downloadBtn.disabled = !visibleSpriteRecords.length;
       }
     }
   }
-  function createSelectControl(labelText, control) {
-    const wrapper = document.createElement("label");
-    wrapper.className = "dd-sprite-control";
-    const label2 = document.createElement("span");
-    label2.className = "dd-sprite-control__label";
-    label2.textContent = labelText;
-    wrapper.append(label2, control);
+  function field(labelText, control) {
+    const wrapper = h("label", "dd-field");
+    wrapper.append(sectionLabel(labelText), control);
     return wrapper;
   }
   var ANY_CATEGORY, MAX_VISIBLE_SPRITES, SPRITE_ICON_SIZE, catalogPromise2, sanitizeFileComponent, buildSpriteFilename, COLOR_SELECTIONS, CONDITION_SELECTIONS, LIGHTING_SELECTIONS;
@@ -28169,7 +27918,9 @@ next: ${next}`;
       "use strict";
       init_button();
       init_card();
+      init_dom2();
       init_fields();
+      init_toggles();
       init_shared();
       init_zip();
       init_discordCsp();
@@ -28192,97 +27943,155 @@ next: ${next}`;
 
   // src/features/debug/styles.ts
   function ensureDebugStyles() {
-    if (injected2) return;
-    injected2 = true;
+    if (injected3) return;
+    injected3 = true;
     addStyle(DEBUG_CSS);
   }
-  var DEBUG_CSS, injected2;
-  var init_styles2 = __esm({
+  var DEBUG_CSS, injected3;
+  var init_styles3 = __esm({
     "src/features/debug/styles.ts"() {
       "use strict";
       init_dom();
       DEBUG_CSS = `
-.dd-debug-view{display:flex;flex-direction:column;gap:16px;}
-.dd-debug-columns{display:grid;gap:16px;grid-template-columns:repeat(2,minmax(320px,1fr));align-items:start;}
-@media (max-width:720px){.dd-debug-columns{grid-template-columns:minmax(0,1fr);}}
-.dd-debug-column{display:flex;flex-direction:column;gap:16px;min-width:0;}
-.dd-pre{max-height:260px;overflow:auto;margin:6px 0 0;padding:12px;border-radius:12px;border:1px solid var(--qmm-border-hover);background:var(--qmm-sunken);color:var(--qmm-text);font-size:12px;line-height:1.5;}
-.dd-atom-entry{padding:10px 12px;border-radius:12px;border:1px solid var(--qmm-border-strong);background:var(--qmm-muted-bg);cursor:pointer;}
-.dd-atom-entry:hover{border-color:var(--qmm-border-hover);}
-.dd-atom-entry.is-selected{background:var(--qmm-accent-soft);border-color:var(--qmm-accent-border-hover);}
-.dd-atom-entry--row{display:grid;grid-template-columns:minmax(120px,160px) minmax(0,1fr);gap:12px;margin:4px 0;}
-.dd-atom-entry--history{display:flex;flex-direction:column;gap:6px;}
-.dd-atom-badge{padding:2px 6px;border-radius:999px;font-size:11px;letter-spacing:.04em;text-transform:uppercase;background:var(--qmm-hover-bg);border:1px solid var(--qmm-border-hover);}
-.dd-card-description{font-size:13px;opacity:.72;margin:0;}
-.dd-atom-list{display:flex;flex-direction:column;gap:4px;margin-top:8px;max-height:40vh;overflow:auto;padding-right:4px;}
-.dd-atom-list__item{display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 6px;border-radius:8px;border:1px solid transparent;cursor:pointer;transition:background .12s ease,border-color .12s ease;}
-.dd-atom-list__item:hover{background:var(--qmm-hover-bg);border-color:var(--qmm-border-hover);}
-.dd-atom-list__checkbox{accent-color:var(--qmm-accent);}
-.dd-atom-list__label{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dd-status-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:600;letter-spacing:.01em;background:var(--qmm-hover-bg);border:1px solid var(--qmm-border-strong);color:var(--qmm-text);}
-.dd-status-chip.is-ok{color:var(--qmm-accent);background:var(--qmm-accent-soft);border-color:var(--qmm-accent-border);}
-.dd-status-chip.is-warn{color:var(--qmm-warn);background:var(--qmm-warn-soft);border-color:var(--qmm-warn-border);}
-.dd-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
-.dd-toolbar--stretch{width:100%;}
-.dd-toolbar .qmm-input{min-width:160px;}
-.dd-toolbar .dd-grow{flex:1 1 220px;min-width:180px;}
-.dd-mute-chips{display:flex;flex-wrap:wrap;gap:6px;}
-.dd-log{position:relative;border:1px solid var(--qmm-border-hover);border-radius:16px;background:var(--qmm-sunken);padding:10px;max-height:48vh;overflow:auto;}
-.dd-log{font-family:var(--qmm-font-mono);font-size:12px;line-height:1.4;user-select:text;}
-.dd-log .ws-row .arrow.is-in{color:var(--qmm-accent);}
-.dd-log .ws-row .arrow.is-out{color:var(--qmm-rainbow-ink);}
-.dd-log__empty{padding:28px 12px;text-align:center;font-size:13px;opacity:.6;}
-.dd-log .ws-row{position:relative;display:grid;grid-template-columns:96px 20px minmax(0,1fr);gap:10px;padding:8px 12px;border-radius:12px;border:1px solid transparent;transition:background .15s ease,border-color .15s ease;align-items:start;margin:2px 0;}
-.dd-log .ws-row .ts{opacity:.76;font-size:12px;}
-.dd-log .ws-row .arrow{font-weight:600;}
-.dd-log .ws-row .body{white-space:pre-wrap;word-break:break-word;}
-.dd-log .ws-row .body code{font-family:inherit;font-size:12px;color:var(--qmm-text);}
-.dd-log .ws-row .acts{position:absolute;top:6px;right:8px;display:flex;gap:6px;padding:4px 6px;background:var(--qmm-surface);border:1px solid var(--qmm-border-hover);border-radius:8px;opacity:0;visibility:hidden;transition:opacity .12s ease;z-index:1;}
-.dd-log .ws-row .acts .qmm-btn{padding:2px 6px;font-size:11px;}
-.dd-log .ws-row:hover .acts{opacity:1;visibility:visible;}
-.dd-log .ws-row:hover{background:var(--qmm-hover-bg);border-color:var(--qmm-border-hover);}
-.dd-log .ws-row.selected{background:var(--qmm-accent-soft);border-color:var(--qmm-accent-border-hover);}
-.dd-send-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
-.dd-send-controls .qmm-radio-group{display:flex;gap:10px;}
-.dd-textarea{min-height:140px;}
-.dd-inline-note{font-size:12px;opacity:.7;}
-.dd-audio-summary{display:grid;gap:4px;font-size:13px;}
-.dd-audio-summary strong{font-size:14px;}
-.dd-audio-volume{font-family:var(--qmm-font-mono);font-size:12px;opacity:.78;}
-.dd-audio-list{display:flex;flex-direction:column;gap:8px;margin-top:4px;max-height:48vh;overflow:auto;padding-right:4px;}
-.dd-audio-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;padding:10px 12px;border-radius:12px;border:1px solid var(--qmm-border);background:var(--qmm-muted-bg);}
-.dd-audio-row__info{flex:1 1 260px;min-width:0;display:flex;flex-direction:column;gap:6px;}
-.dd-audio-row__title{font-weight:600;font-size:13px;word-break:break-word;}
-.dd-audio-meta{font-size:12px;opacity:.72;display:flex;flex-wrap:wrap;gap:8px;}
-.dd-audio-url{font-family:var(--qmm-font-mono);font-size:11px;word-break:break-all;color:var(--qmm-text-soft);}
-.dd-audio-actions{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;}
-.dd-audio-empty{padding:24px 12px;text-align:center;font-size:13px;opacity:.6;}
-.dd-sprite-control-grid{display:grid;gap:12px;width:100%;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));align-items:end;}
-.dd-sprite-control{display:flex;flex-direction:column;gap:4px;font-size:12px;}
-.dd-sprite-control__label{font-size:11px;letter-spacing:.04em;text-transform:uppercase;opacity:.75;}
-.dd-sprite-control select,.dd-sprite-control input{width:100%;padding:6px 8px;border-radius:8px;border:1px solid var(--qmm-field-border);background:var(--qmm-field-bg);color:var(--qmm-text);font-size:13px;}
-.dd-sprite-control input[type="search"]::-webkit-search-cancel-button{filter:invert(1);}
-.dd-sprite-stats{font-size:13px;opacity:.75;margin:8px 0 0;}
-.dd-sprite-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
-.dd-sprite-grid-wrap{max-height:65vh;overflow:auto;padding-right:6px;width:100%;}
-.dd-sprite-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));align-items:stretch;min-height:0;}
-.dd-sprite-grid__item{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;border:1px solid var(--qmm-border);background:var(--qmm-muted-bg);min-width:0;cursor:pointer;outline:none;}
-.dd-sprite-grid__item:focus-visible{border-color:var(--qmm-accent-border-hover);box-shadow:0 0 0 1px var(--qmm-accent-border);}
-.dd-sprite-grid__img{display:flex;align-items:center;justify-content:center;background:var(--qmm-sunken);border-radius:12px;border:1px solid var(--qmm-border);overflow:hidden;min-height:var(--sprite-size,96px);}
-.dd-sprite-grid__icon{width:var(--sprite-size,96px);height:var(--sprite-size,96px);display:flex;align-items:center;justify-content:center;}
-.dd-sprite-grid__icon img{max-width:100%;max-height:100%;object-fit:contain;}
-.dd-sprite-grid__name{font-weight:600;font-size:13px;word-break:break-word;}
-.dd-sprite-grid__meta{font-size:11px;opacity:.65;word-break:break-all;font-family:var(--qmm-font-mono);}
-.dd-sprite-grid__empty{grid-column:1/-1;text-align:center;padding:32px 12px;font-size:13px;opacity:.66;}
-.dd-sprite-mutation-card{display:flex;flex-direction:column;gap:12px;}
-.dd-sprite-mutation-group{display:flex;flex-direction:column;gap:6px;}
-.dd-sprite-mutation-group-title{font-size:11px;letter-spacing:.04em;text-transform:uppercase;opacity:.75;}
-.dd-sprite-mutation-buttons{display:flex;flex-wrap:wrap;gap:6px;}
-.dd-sprite-mutation-btn{padding:6px 10px;border-radius:999px;border:1px solid var(--qmm-border-hover);background:var(--qmm-field-bg);color:var(--qmm-text);font-size:12px;cursor:pointer;transition:background .12s ease,border-color .12s ease,color .12s ease;}
-.dd-sprite-mutation-btn:hover{border-color:var(--qmm-accent-border);}
-.dd-sprite-mutation-btn.active{background:var(--qmm-accent-soft);border-color:var(--qmm-accent-border-hover);color:var(--qmm-accent);}
+/* Layout: a column of cards, side by side once the window is wide enough. */
+.dd-view { display: flex; flex-direction: column; gap: var(--qmm-space-lg); min-width: 0; }
+.dd-grid {
+  display: grid; gap: var(--qmm-space-lg); align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+}
+.dd-grid--tight { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.dd-column { display: flex; flex-direction: column; gap: var(--qmm-space-lg); min-width: 0; }
+.dd-view .qmm-card { min-width: 0; }
+/* A card's header actions (a count, a status) sit beside its title, above the subtitle. */
+.dd-view .qmm-card__actions { order: 1; }
+.dd-view .qmm-card__subtitle { order: 2; }
+.dd-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); min-width: 0; }
+.dd-bar > .dd-grow { flex: 1 1 180px; min-width: 0; }
+.dd-bar__end { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-sm); margin-left: auto; }
+.dd-view .dd-full.qmm-input { width: 100%; box-sizing: border-box; }
+.dd-stack {display: flex; flex-direction: column; gap: var(--qmm-space-sm); min-width: 0; }
+.dd-hint { margin: 0; font-size: var(--qmm-fs-sm); color: var(--qmm-text-dim); }
+.dd-empty { padding: 24px 12px; text-align: center; font-size: var(--qmm-fs-md); color: var(--qmm-text-dim); }
+.dd-status .qmm-setting-row__controls { flex: 0 1 auto; }
+/* Filter chips at the size of the small buttons beside them. */
+.dd-view .qmm-chip-toggle__face { padding: 5px 11px; font-size: var(--qmm-fs-sm); }
+
+/* Read-outs: values, listings, payloads. */
+.dd-code {
+  margin: 0; min-height: 96px; max-height: 260px; overflow: auto; padding: 10px 12px; box-sizing: border-box;
+  border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep); color: var(--qmm-text);
+  font-family: var(--qmm-font-mono); font-size: var(--qmm-fs-sm); line-height: 1.5;
+  white-space: pre-wrap; word-break: break-word; user-select: text;
+}
+.dd-code:empty::before { content: attr(data-placeholder); font-family: var(--qmm-font); color: var(--qmm-text-dim); }
+.dd-code--tall { min-height: 160px; max-height: 360px; }
+.dd-code--list { min-height: 240px; max-height: 60vh; }
+.dd-textarea {
+  width: 100%; min-height: 120px; box-sizing: border-box; resize: vertical;
+  font-family: var(--qmm-font-mono); font-size: var(--qmm-fs-sm); line-height: 1.5;
+}
+
+/* A scrolling well of rows. */
+.dd-well {
+  display: flex; flex-direction: column; gap: 2px; max-height: 48vh; overflow: auto; padding: 4px;
+  border-radius: var(--qmm-radius-lg); background: var(--qmm-paper-deep);
+}
+.dd-well--short { max-height: 36vh; }
+.dd-entry {
+  display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 7px 10px; cursor: pointer;
+  border: 2px solid transparent; border-radius: var(--qmm-radius-md);
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.dd-entry:hover { background: var(--qmm-sand); }
+.dd-entry.is-selected { background: var(--qmm-sepia-soft); border-color: var(--qmm-accent-border); }
+.dd-entry__head { display: flex; align-items: baseline; gap: var(--qmm-space-md); min-width: 0; }
+.dd-entry__title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; font-size: var(--qmm-fs-md); }
+.dd-entry.is-selected .dd-entry__title { color: var(--qmm-sepia-ink); }
+.dd-entry__time { flex: 0 0 auto; font-family: var(--qmm-font-mono); font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); }
+.dd-entry__text {
+  font-family: var(--qmm-font-mono); font-size: var(--qmm-fs-sm); color: var(--qmm-text-soft);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dd-entry .dd-code { min-height: 0; max-height: 180px; padding: 6px 0 0; background: none; }
+
+/* Atom picker. */
+.dd-pick {
+  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 5px 8px; cursor: pointer;
+  border-radius: var(--qmm-radius-sm); font-size: var(--qmm-fs-md); transition: background 120ms ease;
+}
+.dd-pick:hover { background: var(--qmm-sand); }
+.dd-pick.is-on { background: var(--qmm-sepia-soft); color: var(--qmm-sepia-ink); font-weight: 800; }
+.dd-pick input { flex: 0 0 auto; margin: 0; accent-color: var(--qmm-sepia); }
+.dd-pick span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* WebSocket frames. */
+.dd-frames { font-family: var(--qmm-font-mono); font-size: var(--qmm-fs-sm); line-height: 1.45; user-select: text; }
+.dd-frame {
+  position: relative; display: grid; grid-template-columns: auto 14px minmax(0, 1fr); gap: var(--qmm-space-md);
+  align-items: start; padding: 4px 8px; cursor: pointer;
+  border: 2px solid transparent; border-radius: var(--qmm-radius-md);
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.dd-frame:hover { background: var(--qmm-sand); }
+.dd-frame.selected { background: var(--qmm-sepia-soft); border-color: var(--qmm-accent-border); }
+.dd-frame__ts { color: var(--qmm-text-dim); font-size: var(--qmm-fs-xs); line-height: 1.6; }
+.dd-frame__dir { font-weight: 900; text-align: center; }
+.dd-frame__dir.is-in { color: var(--qmm-ok-ink); }
+.dd-frame__dir.is-out { color: var(--qmm-sepia-ink); }
+.dd-frame__body { white-space: pre-wrap; word-break: break-word; color: var(--qmm-text); }
+.dd-frame__body code { font: inherit; }
+.dd-frame__acts {
+  position: absolute; top: 4px; right: 6px; display: flex; gap: var(--qmm-space-xs); padding: 3px;
+  border-radius: var(--qmm-radius-md); background: var(--qmm-card); box-shadow: 0 2px 6px var(--qmm-shade);
+  font-family: var(--qmm-font); opacity: 0; visibility: hidden; transition: opacity 120ms ease;
+}
+.dd-frame:hover .dd-frame__acts, .dd-frame:focus-within .dd-frame__acts { opacity: 1; visibility: visible; }
+.dd-mutes { display: flex; flex-wrap: wrap; gap: var(--qmm-space-sm); }
+.dd-mutes:empty { display: none; }
+.dd-mute { font-family: var(--qmm-font-mono); }
+.dd-send { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.dd-send .dd-bar__end .qmm-btn--primary { min-width: 96px; }
+
+/* Audio rows. */
+.dd-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md) var(--qmm-space-lg);
+  padding: 8px 10px; border-radius: var(--qmm-radius-md); transition: background 120ms ease;
+}
+.dd-row:hover { background: var(--qmm-sand); }
+.dd-row__info { display: flex; flex-direction: column; gap: 2px; flex: 1 1 160px; min-width: 0; }
+.dd-row__title { font-size: var(--qmm-fs-md); font-weight: 800; word-break: break-word; }
+.dd-row__meta { font-family: var(--qmm-font-mono); font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); }
+.dd-row__actions { display: flex; flex-wrap: wrap; gap: var(--qmm-space-xs); margin-left: auto; }
+.dd-now { font-size: var(--qmm-fs-md); font-weight: 700; color: var(--qmm-text-soft); overflow: hidden; text-overflow: ellipsis; }
+
+/* Sprites. */
+.dd-fields { display: grid; gap: var(--qmm-space-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
+.dd-field { display: flex; flex-direction: column; gap: var(--qmm-space-xs); min-width: 0; }
+.dd-view .dd-field .qmm-input { width: 100%; box-sizing: border-box; }
+.dd-mutation { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-sm) var(--qmm-space-md); }
+.dd-mutation > .qmm-section-label { flex: 0 0 72px; }
+.dd-mutation__chips { display: flex; flex-wrap: wrap; gap: var(--qmm-space-xs); flex: 1 1 200px; min-width: 0; }
+.dd-sprites { max-height: 62vh; overflow: auto; padding: 2px 4px 2px 0; }
+.dd-sprite-grid { display: grid; gap: var(--qmm-space-md); grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); }
+.dd-sprite {
+  display: flex; flex-direction: column; align-items: center; gap: var(--qmm-space-xs); min-width: 0; padding: 8px;
+  cursor: pointer; outline: none; text-align: center;
+  border: 2px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-md); background: var(--qmm-card);
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+.dd-sprite:hover { border-color: var(--qmm-border-hover); transform: translateY(-1px); }
+.dd-sprite:focus-visible { border-color: var(--qmm-sepia); box-shadow: 0 0 0 3px var(--qmm-accent-border); }
+.dd-sprite__img {
+  display: flex; align-items: center; justify-content: center; align-self: stretch; overflow: hidden;
+  padding: 6px; border-radius: var(--qmm-radius-sm); background: var(--qmm-paper-deep);
+}
+.dd-sprite__icon { display: flex; align-items: center; justify-content: center; width: var(--sprite-size, 96px); height: var(--sprite-size, 96px); }
+.dd-sprite__icon img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.dd-sprite__name { max-width: 100%; font-size: var(--qmm-fs-sm); font-weight: 800; word-break: break-word; }
+.dd-sprite__meta { max-width: 100%; font-family: var(--qmm-font-mono); font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); word-break: break-all; }
+.dd-sprite-grid > .dd-empty { grid-column: 1 / -1; }
 `;
-      injected2 = false;
+      injected3 = false;
     }
   });
 
@@ -28294,7 +28103,7 @@ next: ${next}`;
     ui.addTab("jotai", "Jotai", renderJotaiTab);
     ui.addTab("atoms-live", "Live atoms", renderLiveAtomsTab);
     ui.addTab("sprite-assets", "Sprites", renderSpritesTab);
-    ui.addTab("audio-player", "Audio player", renderAudioPlayerTab);
+    ui.addTab("audio-player", "Audio", renderAudioPlayerTab);
     ui.addTab("websocket", "WebSocket", renderWSTab);
   }
   var init_menu2 = __esm({
@@ -28306,7 +28115,36 @@ next: ${next}`;
       init_liveAtomsTab();
       init_wsTab();
       init_spritesTab();
-      init_styles2();
+      init_styles3();
+    }
+  });
+
+  // src/features/locker/lockerCard.ts
+  function lockerCard(title, opts = {}) {
+    const root4 = h("div", "qmm-card lk-card");
+    const head = h("div", "lk-card__head");
+    if (opts.icon) head.appendChild(opts.icon);
+    const titles = h("div", "lk-card__titles");
+    const subtitle = h("div", "lk-card__subtitle", opts.subtitle ?? "");
+    subtitle.hidden = !opts.subtitle;
+    titles.append(h("div", "qmm-card__title", title), subtitle);
+    head.appendChild(titles);
+    if (opts.control) head.appendChild(h("div", "lk-card__control")).appendChild(opts.control);
+    const body = h("div", "qmm-card__body lk-card__body");
+    root4.append(head, body);
+    return {
+      root: root4,
+      body,
+      setSubtitle(text2) {
+        subtitle.textContent = text2;
+        subtitle.hidden = !text2;
+      }
+    };
+  }
+  var init_lockerCard = __esm({
+    "src/features/locker/lockerCard.ts"() {
+      "use strict";
+      init_dom2();
     }
   });
 
@@ -28322,89 +28160,138 @@ next: ${next}`;
       "use strict";
       init_dom();
       LOCKER_MENU_CSS = `
-.lk-settings [hidden], .lk-restrictions [hidden], .lk-overrides [hidden] { display: none !important; }
-.lk-view { max-height: 54vh; overflow: auto; }
-.lk-column { display: flex; flex-direction: column; align-items: center; gap: var(--qmm-space-xl); width: 100%; }
-.lk-wide { width: min(760px, 100%); }
-.lk-hint { font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); text-align: center; }
-.lk-warning { font-size: var(--qmm-fs-md); font-weight: 600; color: var(--qmm-warn); text-align: center; }
-.lk-empty { font-size: var(--qmm-fs-md); color: var(--qmm-text-dim); text-align: center; }
-.lk-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; line-height: 1; }
+.lk-menu [hidden] { display: none !important; }
+/* The window sizes itself to its content, so the menu sets its own width. */
+.lk-menu {
+  width: min(620px, calc((100vw - 64px) / var(--qmm-scale, 1)));
+  container-type: inline-size; container-name: lk-menu;
+}
+.lk-view { max-height: 56vh; overflow: auto; }
+.lk-tab, .lk-settings { display: flex; flex-direction: column; gap: var(--qmm-space-lg); }
+.lk-settings.is-disabled { opacity: .5; }
 
-.lk-settings { display: flex; flex-direction: column; gap: var(--qmm-space-xl); width: min(760px, 100%); }
-.lk-settings.is-disabled { opacity: .55; }
-.lk-settings .qmm-card { text-align: center; }
-.lk-settings .qmm-card__header { justify-content: center; }
-.lk-settings .qmm-card__body { justify-items: center; }
-.lk-slider { width: min(420px, 100%); }
-.lk-values { display: flex; justify-content: space-between; gap: 16px; width: min(420px, 100%); }
-.lk-value { display: flex; align-items: center; gap: var(--qmm-space-sm); }
-.lk-color { min-width: 92px; }
-.lk-color .label { font-weight: 700; letter-spacing: .3px; }
+.lk-card { gap: var(--qmm-space-lg); }
+.lk-card__head { display: flex; align-items: center; gap: var(--qmm-space-lg); min-width: 0; }
+.lk-card__titles { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.lk-card__subtitle { font-size: var(--qmm-fs-md); line-height: 1.4; color: var(--qmm-text-soft); }
+.lk-card__control { display: flex; align-items: center; flex: 0 0 auto; }
+.lk-card > .lk-card__body:empty { display: none; }
+.lk-card__body { gap: var(--qmm-space-md); }
+.lk-hero { border-color: var(--qmm-accent-border); }
+
+.lk-hint { font-size: var(--qmm-fs-sm); line-height: 1.45; color: var(--qmm-text-dim); }
+.lk-warning {
+  padding: 8px 10px; border-radius: var(--qmm-radius-md);
+  background: var(--qmm-warn-soft); color: var(--qmm-warn-ink);
+  font-size: var(--qmm-fs-sm); font-weight: 700; line-height: 1.4;
+}
+.lk-empty { font-size: var(--qmm-fs-sm); color: var(--qmm-text-dim); }
+.lk-empty-state {
+  padding: 18px 14px; border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+  font-size: var(--qmm-fs-md); color: var(--qmm-text-dim); text-align: center;
+}
+.lk-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; line-height: 1; }
+.lk-dim { opacity: .5; }
+
+.lk-settings .qmm-seg--full { box-sizing: border-box; }
+.lk-settings .qmm-seg--full .qmm-seg__btn { flex: 1 1 0; min-width: 0; padding-left: 6px; padding-right: 6px; }
+.lk-slider-line { display: flex; align-items: center; gap: var(--qmm-space-lg); }
+.lk-slider-line > :first-child { flex: 1 1 auto; min-width: 0; }
+.lk-slider-value { flex: 0 0 auto; min-width: 44px; justify-content: center; font-variant-numeric: tabular-nums; }
+
+.lk-colors { display: flex; flex-wrap: wrap; gap: var(--qmm-space-md); }
+.lk-color { min-width: 84px; }
 .lk-color--gold .label, .lk-color--rainbow .label {
   background-clip: text; -webkit-background-clip: text; color: transparent;
 }
 .lk-color--gold .label { background-image: var(--qmm-gradient-gold); }
 .lk-color--rainbow .label { background-image: var(--qmm-gradient-rainbow); }
 
-.lk-weather-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; width: min(640px, 100%); }
-.lk-weather-grid.is-dense { grid-template-columns: repeat(4, minmax(80px, 1fr)); width: 100%; }
-.lk-weather-grid.is-disabled { opacity: .55; pointer-events: none; }
+.lk-weather-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: var(--qmm-space-sm); }
+.lk-weather-grid.is-dense { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
 .lk-tile {
-  position: relative; display: grid; justify-items: center; align-items: center; gap: 3px; padding: 6px 8px;
-  border: 1px solid var(--qmm-border-strong); border-radius: 10px; background: var(--qmm-card-bg); cursor: pointer;
-  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+  position: relative; display: grid; justify-items: center; align-content: center; gap: var(--qmm-space-xs);
+  padding: 8px 4px 6px; border: 2px solid transparent; border-radius: var(--qmm-radius-md);
+  background: var(--qmm-paper-deep); cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
 }
-.lk-tile:hover { border-color: var(--qmm-accent-border); }
-.lk-tile.is-checked {
-  border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft);
-  box-shadow: inset 0 0 0 1px var(--qmm-accent-border), 0 2px 0 var(--qmm-sand-shade);
-}
+.lk-tile:hover { border-color: var(--qmm-border-hover); }
+.lk-tile.is-checked { border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft); }
+.lk-tile:focus-within { outline: 3px solid var(--qmm-accent-border); outline-offset: 1px; }
 .lk-tile input { position: absolute; inset: 0; margin: 0; opacity: 0; pointer-events: none; }
 .lk-tile__icon { display: inline-flex; align-items: center; justify-content: center; filter: drop-shadow(0 1px 1px var(--qmm-shade)); }
-.lk-tile__caption { font-size: 11.5px; font-weight: 600; opacity: .85; text-align: center; }
-.is-dense > .lk-tile { padding: 4px 6px; }
-.is-dense > .lk-tile .lk-tile__caption { font-size: var(--qmm-fs-sm); font-weight: 500; }
+.lk-tile__caption {
+  max-width: 100%; overflow-wrap: anywhere;
+  font-size: var(--qmm-fs-xs); font-weight: 700; line-height: 1.2; text-align: center; color: var(--qmm-text-soft);
+}
+.lk-tile.is-checked .lk-tile__caption { color: var(--qmm-sepia-ink); }
+.is-dense > .lk-tile { padding: 6px 4px 4px; }
 .lk-weather-badge {
-  display: inline-flex; align-items: center; justify-content: center; line-height: 1;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-pill); background: var(--qmm-field-bg); color: var(--qmm-text);
+  display: inline-flex; align-items: center; justify-content: center; line-height: 1; font-weight: 800;
+  border-radius: var(--qmm-radius-pill); background: var(--qmm-sand); color: var(--qmm-text-soft);
 }
-.lk-no-weather { display: grid; place-items: center; line-height: 1; font-weight: 700; color: var(--qmm-danger); }
+.lk-no-weather { display: grid; place-items: center; line-height: 1; font-weight: 800; color: var(--qmm-danger); }
 
-.lk-recipes { display: grid; gap: var(--qmm-space-md); width: 100%; }
-.lk-recipes__head { display: flex; align-items: center; justify-content: space-between; gap: var(--qmm-space-md); }
-.lk-recipes__title { font-weight: 600; opacity: .9; }
-.lk-recipes__list { display: grid; gap: var(--qmm-space-md); grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.lk-recipes { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
+.lk-recipes__head { display: flex; align-items: center; justify-content: space-between; gap: var(--qmm-space-lg); }
+.lk-recipes__list { display: flex; flex-direction: column; gap: var(--qmm-space-sm); }
 .lk-recipe {
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--qmm-space-xl); padding: 10px 12px;
-  border: 1px solid var(--qmm-border); border-radius: 10px; background: var(--qmm-card-bg); text-align: left;
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); padding: 8px 10px;
+  border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
 }
-.lk-recipe.is-editing { flex-direction: column; align-items: stretch; gap: var(--qmm-space-lg); padding: 12px; }
-.lk-recipe__summary { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 auto; min-width: 220px; }
-.lk-recipe__actions { display: flex; gap: 6px; }
-.lk-recipe.is-editing .lk-recipe__actions > * { flex: 1; }
+.lk-recipe.is-editing {
+  flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: var(--qmm-space-lg); padding: 10px;
+  background: var(--qmm-card); box-shadow: inset 0 0 0 2px var(--qmm-accent-border);
+}
+.lk-recipe.is-editing > * { flex: none; }
+.lk-recipe__summary { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-sm); flex: 1 1 200px; min-width: 0; }
+.lk-recipe__actions { display: flex; align-items: center; gap: var(--qmm-space-sm); }
 .lk-tag {
-  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: var(--qmm-fs-md); font-weight: 600;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-pill); background: var(--qmm-card-bg);
+  display: inline-flex; align-items: center; gap: var(--qmm-space-xs); padding: 3px 9px 3px 4px;
+  border-radius: var(--qmm-radius-pill); background: var(--qmm-card);
+  font-size: var(--qmm-fs-sm); font-weight: 700; color: var(--qmm-text);
 }
 
-.lk-overrides { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: var(--qmm-space-lg); height: 54vh; }
+.lk-overrides {
+  display: grid; grid-template-columns: minmax(160px, 210px) minmax(0, 1fr); gap: var(--qmm-space-lg); height: 56vh;
+}
 .lk-overrides > .qmm-vtabs { min-height: 0; }
-.lk-overrides__detail { display: flex; flex-direction: column; align-items: center; gap: var(--qmm-space-xl); min-height: 0; overflow: auto; }
-.lk-overrides__placeholder { padding: 32px 24px; border: 1px dashed var(--qmm-border-strong); border-radius: 10px; }
-.qmm-vtab.lk-crop-tab { grid-template-columns: 16px 1fr auto; gap: var(--qmm-space-md); padding: 6px 8px; }
-.lk-title { display: flex; align-items: center; gap: var(--qmm-space-lg); }
+.lk-overrides__detail { display: flex; flex-direction: column; gap: var(--qmm-space-lg); min-height: 0; overflow: auto; }
+.qmm-vtab.lk-crop-tab { grid-template-columns: 24px minmax(0, 1fr) auto; gap: var(--qmm-space-md); padding: 5px 8px; }
+.lk-crop-tab__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--qmm-fs-md); }
+.lk-on {
+  padding: 2px 7px; border-radius: var(--qmm-radius-pill);
+  background: var(--qmm-ok-soft); color: var(--qmm-ok-ink); font-size: var(--qmm-fs-xs); font-weight: 800;
+}
+@container lk-menu (max-width: 500px) {
+  .lk-overrides { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .lk-overrides > .qmm-vtabs { height: 200px; }
+  .lk-overrides__detail { overflow: visible; }
+}
 
-.lk-restrictions { display: grid; gap: var(--qmm-space-xl); width: 100%; max-width: 1100px; }
-.lk-rarities { display: grid; gap: var(--qmm-space-md); padding: 8px 10px; border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md); background: var(--qmm-card-bg); }
-.lk-rarities.is-disabled { opacity: .6; pointer-events: none; }
-.lk-rarities__head { display: flex; align-items: center; justify-content: space-between; }
-.lk-rarities__chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.lk-rarities__picker { padding: 8px; border-radius: 8px; background: var(--qmm-muted-bg); }
-.lk-rarity { display: inline-flex; align-items: center; gap: 3px; }
+.lk-egg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--qmm-space-sm); }
+.lk-egg-grid .qmm-setting-row { gap: var(--qmm-space-md); padding: 6px 10px; }
+.lk-egg-grid .qmm-setting-row__title { font-size: var(--qmm-fs-md); }
+.lk-egg-grid > .lk-empty-state { grid-column: 1 / -1; }
+
+/* The window's own rule gives bare number fields 120px, which the stepper does not need. */
+.lk-menu .qmm-input-number-input { width: 64px; min-width: 0; }
+
+.lk-rarities {
+  display: flex; flex-direction: column; gap: var(--qmm-space-md); padding: 10px 12px;
+  border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+}
+.lk-rarities.is-disabled { opacity: .5; }
+.lk-rarities__chips { display: flex; flex-wrap: wrap; gap: var(--qmm-space-sm); }
+.lk-rarity {
+  display: inline-flex; padding: 2px; border: 0; border-radius: var(--qmm-radius-sm);
+  background: transparent; cursor: pointer; opacity: .45; filter: grayscale(.7);
+  transition: opacity 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+}
+.lk-rarity:hover { opacity: .8; filter: none; }
+.lk-rarity.is-on { opacity: 1; filter: none; box-shadow: 0 0 0 2px var(--qmm-accent-border); }
+.lk-rarity:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 1px; }
 .lk-rarity > div { margin: 0 !important; }
-.lk-rarities__picker > div { cursor: pointer; margin: 0 !important; }
-.lk-dim { opacity: .6; }
 `;
       installed4 = false;
     }
@@ -28677,15 +28564,10 @@ next: ${next}`;
 
   // src/features/locker/weatherPicker.ts
   function weatherTile(info, dense, onToggle) {
-    const root4 = document.createElement("label");
-    root4.className = "lk-tile";
-    root4.title = "Active filters influence harvest conditions";
-    const input = document.createElement("input");
+    const root4 = h("label", "lk-tile");
+    const input = h("input");
     input.type = "checkbox";
-    const caption2 = document.createElement("div");
-    caption2.className = "lk-tile__caption";
-    caption2.textContent = info.label;
-    root4.append(input, weatherIcon(info.key, dense ? 40 : 52), caption2);
+    root4.append(input, weatherIcon(info.key, dense ? 32 : 40), h("div", "lk-tile__caption", info.label));
     const setChecked = (checked) => {
       input.checked = checked;
       root4.classList.toggle("is-checked", checked);
@@ -28697,13 +28579,12 @@ next: ${next}`;
     return { key: info.key, root: root4, setChecked };
   }
   function weatherGrid(dense) {
-    const grid = document.createElement("div");
-    grid.className = dense ? "lk-weather-grid is-dense" : "lk-weather-grid";
-    return grid;
+    return h("div", dense ? "lk-weather-grid is-dense" : "lk-weather-grid");
   }
   var init_weatherPicker = __esm({
     "src/features/locker/weatherPicker.ts"() {
       "use strict";
+      init_dom2();
       init_menuIcons2();
     }
   });
@@ -28714,32 +28595,24 @@ next: ${next}`;
     summary.replaceChildren();
     const tags = weatherMutations().filter((info) => selection.has(info.key));
     for (const { key: key2, label: label2 } of tags) {
-      const tag = document.createElement("div");
-      tag.className = "lk-tag";
-      const text2 = document.createElement("span");
-      text2.textContent = label2;
-      tag.append(weatherIcon(key2, 20), text2);
+      const tag = h("div", "lk-tag");
+      tag.append(weatherIcon(key2, 18), h("span", void 0, label2));
       summary.appendChild(tag);
     }
-    if (!tags.length) {
-      const empty = document.createElement("div");
-      empty.className = "lk-empty";
-      empty.textContent = "No weather mutation selected.";
-      summary.appendChild(empty);
-    }
+    if (!tags.length) summary.appendChild(h("div", "lk-empty", "Pick at least one effect below."));
     return summary;
   }
   function weatherRecipeEditor(state5, onChange) {
-    const root4 = document.createElement("div");
-    root4.className = "lk-recipes";
-    const title = document.createElement("div");
-    title.className = "lk-recipes__title";
-    const addButton = button("+ Recipe", { size: "sm", onClick: () => startEditing(state5.weatherRecipes.length) });
-    const head = document.createElement("div");
-    head.className = "lk-recipes__head";
+    const root4 = h("div", "lk-recipes");
+    const title = h("div", "lk-hint");
+    const addButton = button("Add recipe", {
+      size: "sm",
+      variant: "primary",
+      onClick: () => startEditing(state5.weatherRecipes.length)
+    });
+    const head = h("div", "lk-recipes__head");
     head.append(title, addButton);
-    const list = document.createElement("div");
-    list.className = "lk-recipes__list";
+    const list = h("div", "lk-recipes__list");
     root4.append(head, list);
     let editingIndex = null;
     let draft = /* @__PURE__ */ new Set();
@@ -28778,9 +28651,8 @@ next: ${next}`;
       onChange();
     };
     function editingRow(index) {
-      const row5 = document.createElement("div");
-      row5.className = "lk-recipe is-editing";
-      const summary = showSummary(document.createElement("div"), draft);
+      const row2 = h("div", "lk-recipe is-editing");
+      const summary = showSummary(h("div"), draft);
       const tiles = /* @__PURE__ */ new Map();
       const grid = weatherGrid(true);
       for (const info of weatherMutations()) {
@@ -28799,32 +28671,30 @@ next: ${next}`;
         tiles.set(info.key, tile);
         grid.appendChild(tile.root);
       }
-      const actions2 = document.createElement("div");
-      actions2.className = "lk-recipe__actions";
-      actions2.append(
-        button("\u274C", { size: "sm", tooltip: "Cancel", onClick: stopEditing }),
-        button("\u2714\uFE0F", { size: "sm", tooltip: "Save", onClick: commit })
-      );
+      const actions2 = h("div", "lk-recipe__actions");
       if (index < state5.weatherRecipes.length) {
-        actions2.append(button("\u{1F5D1}\uFE0F", { size: "sm", tooltip: "Delete", ariaLabel: "Delete", onClick: () => remove(index) }));
+        actions2.append(button("Delete", { size: "sm", variant: "ghost", onClick: () => remove(index) }));
       }
-      row5.append(summary, grid, actions2);
-      return row5;
+      actions2.append(
+        h("div", "qmm-spacer"),
+        button("Cancel", { size: "sm", onClick: stopEditing }),
+        button("Save", { size: "sm", variant: "primary", onClick: commit })
+      );
+      row2.append(summary, grid, actions2);
+      return row2;
     }
     function savedRow(recipe, index) {
-      const row5 = document.createElement("div");
-      row5.className = "lk-recipe";
-      const actions2 = document.createElement("div");
-      actions2.className = "lk-recipe__actions";
+      const row2 = h("div", "lk-recipe");
+      const actions2 = h("div", "lk-recipe__actions");
       actions2.append(
-        button("\u270F\uFE0F", { size: "xs", tooltip: "Edit", ariaLabel: "Edit", onClick: () => startEditing(index) }),
-        button("\u{1F5D1}\uFE0F", { size: "xs", tooltip: "Delete", ariaLabel: "Delete", onClick: () => remove(index) })
+        button("Edit", { size: "xs", onClick: () => startEditing(index) }),
+        button("Delete", { size: "xs", variant: "ghost", onClick: () => remove(index) })
       );
-      row5.append(showSummary(document.createElement("div"), recipe), actions2);
-      return row5;
+      row2.append(showSummary(h("div"), recipe), actions2);
+      return row2;
     }
     function repaint() {
-      title.textContent = `${state5.lockMode === "ALLOW" ? "Allow" : "Lock"} when any recipe row matches (OR between rows)`;
+      title.textContent = `A crop with every effect of a recipe is ${state5.lockMode === "ALLOW" ? "allowed" : "locked"}.`;
       addButton.setEnabled(editingIndex === null);
       list.replaceChildren();
       state5.weatherRecipes.forEach((recipe, index) => {
@@ -28835,10 +28705,7 @@ next: ${next}`;
         list.appendChild(editingRow(editingIndex));
       }
       if (!list.childElementCount) {
-        const empty = document.createElement("div");
-        empty.className = "lk-empty";
-        empty.textContent = "No recipe rows yet.";
-        list.appendChild(empty);
+        list.appendChild(h("div", "lk-empty-state", "No recipes yet. Add one with the button above."));
       }
     }
     repaint();
@@ -28848,6 +28715,7 @@ next: ${next}`;
     "src/features/locker/weatherRecipes.ts"() {
       "use strict";
       init_button();
+      init_dom2();
       init_menuIcons2();
       init_weatherPicker();
       init_weatherTags();
@@ -28855,17 +28723,17 @@ next: ${next}`;
   });
 
   // src/features/locker/settingsCard.ts
-  function sliderValue(label2) {
-    const root4 = div("lk-value");
+  function sliderLine(control) {
+    const root4 = h("div", "lk-slider-line");
     const value = pill("");
-    root4.append(div("qmm-label", label2), value);
+    value.classList.add("lk-slider-value");
+    root4.append(control, value);
     return { root: root4, value };
   }
   function lockerSettingsCard(state5, onChange) {
-    const root4 = div("lk-settings");
+    const root4 = h("div", "lk-settings");
     root4.dataset.lockerSettingsCard = "1";
-    const lockModeHint = div("lk-hint");
-    const lockWarning = div("lk-warning");
+    const lockModeHint = h("div", "lk-hint");
     const lockMode = segmented(
       [
         { value: "lock", label: "Lock" },
@@ -28880,8 +28748,11 @@ next: ${next}`;
         recipes.refresh();
         onChange();
       },
-      { ariaLabel: "Harvest mode" }
+      { ariaLabel: "Harvest mode", fullWidth: true }
     );
+    const modeCard2 = lockerCard("Mode");
+    modeCard2.body.append(lockMode, lockModeHint);
+    const lockWarning = h("div", "lk-warning");
     const locksEverySize = () => {
       if (state5.lockMode !== "LOCK") return false;
       switch (state5.scaleLockMode) {
@@ -28903,7 +28774,7 @@ next: ${next}`;
     const showLockMode = () => {
       const value = state5.lockMode === "ALLOW" ? "allow" : "lock";
       if (lockMode.get() !== value) lockMode.set(value);
-      lockModeHint.textContent = value === "allow" ? "Harvest only when every active filter category matches" : "Harvest is locked whenever any active filter matches";
+      lockModeHint.textContent = value === "allow" ? "Only crops matching every active filter type can be harvested." : "Crops matching any active filter can't be harvested.";
       showLockWarning();
     };
     const SCALE_MODES2 = {
@@ -28916,8 +28787,8 @@ next: ${next}`;
     const scaleMode = segmented(
       [
         { value: "none", label: "None" },
-        { value: "minimum", label: "Minimum" },
-        { value: "maximum", label: "Maximum" },
+        { value: "minimum", label: "Min" },
+        { value: "maximum", label: "Max" },
         { value: "ranged", label: "Range" }
       ],
       scaleValueOf(state5.scaleLockMode),
@@ -28932,29 +28803,19 @@ next: ${next}`;
         showScale();
         onChange();
       },
-      { ariaLabel: "Scale lock mode" }
+      { ariaLabel: "Scale lock mode", fullWidth: true }
     );
     const minSlider = slider(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, state5.minScalePct, { fill: true });
     const maxSlider = slider(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, state5.maxScalePct, { fill: true });
     const range = rangeDual(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, state5.minScalePct, state5.maxScalePct);
-    for (const el of [minSlider, maxSlider, range.root]) el.classList.add("lk-slider");
-    const minValue = sliderValue("Minimum");
-    const maxValue = sliderValue("Maximum");
-    const rangeMin = sliderValue("Min");
-    const rangeMax = sliderValue("Max");
-    const rangeValues = div("lk-values");
-    rangeValues.append(rangeMin.root, rangeMax.root);
-    const minControls = div("lk-column");
-    minControls.append(minSlider, minValue.root);
-    const maxControls = div("lk-column");
-    maxControls.append(maxSlider, maxValue.root);
-    const rangeControls = div("lk-column");
-    rangeControls.append(range.root, rangeValues);
+    const minLine = sliderLine(minSlider);
+    const maxLine = sliderLine(maxSlider);
+    const rangeLine = sliderLine(range.root);
+    const noSize = h("div", "lk-hint", "Every size passes.");
     const readRange = (commit) => {
       const { min, max } = normalizeScaleRange("RANGE", range.min.value, range.max.value);
       range.setValues(min, max);
-      rangeMin.value.textContent = String(min);
-      rangeMax.value.textContent = String(max);
+      rangeLine.value.textContent = `${min} to ${max}`;
       if (!commit) return;
       state5.minScalePct = min;
       state5.maxScalePct = max;
@@ -28968,14 +28829,14 @@ next: ${next}`;
       state5[key2] = value;
       showLockWarning();
     };
-    minSlider.addEventListener("input", () => readSingle(minSlider, minValue, "minScalePct", false));
+    minSlider.addEventListener("input", () => readSingle(minSlider, minLine, "minScalePct", false));
     minSlider.addEventListener("change", () => {
-      readSingle(minSlider, minValue, "minScalePct", true);
+      readSingle(minSlider, minLine, "minScalePct", true);
       onChange();
     });
-    maxSlider.addEventListener("input", () => readSingle(maxSlider, maxValue, "maxScalePct", false));
+    maxSlider.addEventListener("input", () => readSingle(maxSlider, maxLine, "maxScalePct", false));
     maxSlider.addEventListener("change", () => {
-      readSingle(maxSlider, maxValue, "maxScalePct", true);
+      readSingle(maxSlider, maxLine, "maxScalePct", true);
       onChange();
     });
     for (const thumb of [range.min, range.max]) {
@@ -28988,23 +28849,24 @@ next: ${next}`;
     const showScale = () => {
       const mode = state5.scaleLockMode;
       if (scaleMode.get() !== scaleValueOf(mode)) scaleMode.set(scaleValueOf(mode));
-      minControls.hidden = mode !== "MINIMUM";
-      maxControls.hidden = mode !== "MAXIMUM";
-      rangeControls.hidden = mode !== "RANGE";
+      noSize.hidden = mode !== "NONE";
+      minLine.root.hidden = mode !== "MINIMUM";
+      maxLine.root.hidden = mode !== "MAXIMUM";
+      rangeLine.root.hidden = mode !== "RANGE";
       minSlider.value = String(state5.minScalePct);
       maxSlider.value = String(state5.maxScalePct);
-      minValue.value.textContent = String(state5.minScalePct);
-      maxValue.value.textContent = String(state5.maxScalePct);
+      minLine.value.textContent = String(state5.minScalePct);
+      maxLine.value.textContent = String(state5.maxScalePct);
       range.setValues(state5.minScalePct, state5.maxScalePct);
       readRange(false);
       showLockWarning();
     };
-    const sizeStack = div("lk-column");
-    sizeStack.append(scaleMode, minControls, maxControls, rangeControls);
+    const sizeCard = lockerCard("Size");
+    sizeCard.body.append(scaleMode, noSize, minLine.root, maxLine.root, rangeLine.root, lockWarning);
+    const colorButtons = [];
     const colorButton = (label2, modifier, isOn, toggle) => {
       const btn = button(label2, {
         size: "sm",
-        tooltip: "Active filters influence harvest conditions",
         onClick: () => {
           toggle();
           showColors();
@@ -29015,18 +28877,37 @@ next: ${next}`;
       colorButtons.push({ btn, isOn });
       return btn;
     };
-    const colorButtons = [];
     const toggleVisual = (tag) => {
       if (!state5.visualMutations.delete(tag)) state5.visualMutations.add(tag);
     };
-    const colors = div("qmm-flex");
-    colors.style.justifyContent = "center";
+    const showColors = () => colorButtons.forEach(({ btn, isOn }) => {
+      btn.setActive(isOn());
+      btn.setAttribute("aria-pressed", isOn() ? "true" : "false");
+    });
+    const colors = h("div", "lk-colors");
     colors.append(
       colorButton("Normal", "normal", () => state5.avoidNormal, () => state5.avoidNormal = !state5.avoidNormal),
       colorButton("Gold", "gold", () => state5.visualMutations.has("Gold"), () => toggleVisual("Gold")),
       colorButton("Rainbow", "rainbow", () => state5.visualMutations.has("Rainbow"), () => toggleVisual("Rainbow"))
     );
-    const showColors = () => colorButtons.forEach(({ btn, isOn }) => btn.setActive(isOn()));
+    const colorCard = lockerCard("Colour");
+    colorCard.body.append(colors);
+    const weatherHint = h("div", "lk-hint");
+    const weatherMode = segmented(
+      [
+        { value: "ANY", label: "Any" },
+        { value: "ALL", label: "All" },
+        { value: "RECIPES", label: "Recipes" }
+      ],
+      state5.weatherMode,
+      (value) => {
+        if (value === state5.weatherMode) return;
+        state5.weatherMode = value;
+        showWeatherMode();
+        onChange();
+      },
+      { ariaLabel: "Weather filter mode", fullWidth: true }
+    );
     const mainGrid = weatherGrid(false);
     const mainTiles = weatherMutations().map((info) => {
       const tile = weatherTile(info, false, (checked) => {
@@ -29037,42 +28918,18 @@ next: ${next}`;
       mainGrid.appendChild(tile.root);
       return tile;
     });
-    const modeName = `locker-weather-mode-${++weatherModeGroups}`;
-    const weatherMode = radioGroup(
-      modeName,
-      [
-        { value: "ANY", label: "Any match (OR)" },
-        { value: "ALL", label: "All match (AND)" },
-        { value: "RECIPES", label: "Recipes (match rows)" }
-      ],
-      state5.weatherMode,
-      (value) => {
-        state5.weatherMode = value;
-        showWeatherMode();
-        onChange();
-      }
-    );
-    weatherMode.classList.add("qmm-flex");
-    weatherMode.style.justifyContent = "center";
     const recipes = weatherRecipeEditor(state5, onChange);
-    const recipesSection = section("Weather recipes", recipes.root);
     const showWeatherMode = () => {
-      for (const input of Array.from(weatherMode.querySelectorAll("input"))) {
-        input.checked = input.value === state5.weatherMode;
-      }
+      if (weatherMode.get() !== state5.weatherMode) weatherMode.set(state5.weatherMode);
+      weatherHint.textContent = WEATHER_MODE_HINTS[state5.weatherMode] ?? "";
+      weatherHint.hidden = !weatherHint.textContent;
       const recipeMode = state5.weatherMode === "RECIPES";
-      mainGrid.classList.toggle("is-disabled", recipeMode);
-      mainGrid.inert = recipeMode;
-      recipesSection.hidden = !recipeMode;
+      mainGrid.hidden = recipeMode;
+      recipes.root.hidden = !recipeMode;
     };
-    root4.append(
-      section("Harvest mode", lockMode, lockModeHint, lockWarning),
-      section("Filter by size", sizeStack),
-      section("Filter by color", colors),
-      section("Filter by weather", mainGrid),
-      section("Weather filter mode", weatherMode),
-      recipesSection
-    );
+    const weatherCard = lockerCard("Weather");
+    weatherCard.body.append(weatherMode, weatherHint, mainGrid, recipes.root);
+    root4.append(modeCard2.root, sizeCard.root, colorCard.root, weatherCard.root);
     const refresh = () => {
       showLockMode();
       showScale();
@@ -29091,42 +28948,33 @@ next: ${next}`;
       }
     };
   }
-  var div, section, weatherModeGroups;
+  var WEATHER_MODE_HINTS;
   var init_settingsCard = __esm({
     "src/features/locker/settingsCard.ts"() {
       "use strict";
       init_cropSize();
       init_badges();
       init_button();
-      init_card();
-      init_fields();
+      init_dom2();
       init_segmented();
       init_sliders();
+      init_lockerCard();
       init_settings3();
       init_weatherPicker();
       init_weatherRecipes();
       init_weatherTags();
-      div = (className, text2) => {
-        const el = document.createElement("div");
-        el.className = className;
-        if (text2 != null) el.textContent = text2;
-        return el;
+      WEATHER_MODE_HINTS = {
+        ANY: "Matches crops with any of the picked effects.",
+        ALL: "Matches crops with every picked effect.",
+        RECIPES: ""
       };
-      section = (title, ...content2) => {
-        const { root: root4, body } = card(title, { align: "center" });
-        body.append(...content2);
-        return root4;
-      };
-      weatherModeGroups = 0;
     }
   });
 
   // src/features/locker/overridesTab.ts
   function overridesTab(store) {
-    const layout = document.createElement("div");
-    layout.className = "lk-overrides";
-    const detail = document.createElement("div");
-    detail.className = "lk-overrides__detail";
+    const layout = h("div", "lk-overrides");
+    const detail = h("div", "lk-overrides__detail");
     const icons = /* @__PURE__ */ new Map();
     const iconFor = (key2) => {
       let icon2 = icons.get(key2);
@@ -29137,17 +28985,13 @@ next: ${next}`;
       return icon2;
     };
     const list = new VTabs({
-      emptyText: "No crops available.",
+      filterPlaceholder: "Search crops",
+      emptyText: "No crops found.",
       fillAvailableHeight: true,
       renderItem: (item, btn) => {
         btn.classList.add("lk-crop-tab");
-        const dot = document.createElement("span");
-        dot.className = "qmm-dot";
-        dot.style.background = item.statusColor ?? OVERRIDE_OFF;
-        const label2 = document.createElement("span");
-        label2.className = "label";
-        label2.textContent = item.title;
-        btn.append(dot, label2, iconFor(item.id));
+        btn.append(iconFor(item.id), h("span", "lk-crop-tab__name", item.title));
+        if (item.badge) btn.appendChild(h("span", "lk-on", item.badge));
       },
       onSelect: () => renderDetail()
     });
@@ -29155,7 +28999,7 @@ next: ${next}`;
     const listItems = () => getLockerSeedOptions().map((opt) => ({
       id: opt.key,
       title: opt.cropName || opt.key,
-      statusColor: store.isOverrideEnabled(opt.key) ? OVERRIDE_ON : OVERRIDE_OFF
+      badge: store.isOverrideEnabled(opt.key) ? "On" : null
     }));
     const scrollMemory = /* @__PURE__ */ new Map();
     let shown = null;
@@ -29166,10 +29010,7 @@ next: ${next}`;
       const key2 = list.getSelected()?.id ?? null;
       if (!key2) {
         shown = null;
-        const empty = document.createElement("div");
-        empty.className = "lk-empty lk-overrides__placeholder lk-wide";
-        empty.textContent = "Select a crop on the left to customise its locker settings.";
-        detail.replaceChildren(empty);
+        detail.replaceChildren(h("div", "lk-empty-state", "Pick a crop to give it rules of its own."));
         return;
       }
       const entry = store.ensureOverride(key2);
@@ -29181,20 +29022,16 @@ next: ${next}`;
         return;
       }
       const seed = getLockerSeedOptions().find((opt) => opt.key === key2);
+      const name = seed?.cropName || key2;
       const toggle = switchInput(entry.enabled, (on) => store.setOverrideEnabled(key2, on));
-      const header = card(seed?.cropName || key2, { actions: [toggle] });
-      header.root.classList.add("lk-wide");
-      header.header.prepend(seedIcon(key2, 32, seed?.spriteKey));
-      header.root.removeChild(header.body);
-      const status2 = document.createElement("div");
-      status2.className = "lk-hint lk-wide";
-      const showStatus = () => {
-        status2.textContent = entry.enabled ? "This crop uses its own locker filters." : "Uses the global locker settings.";
-      };
+      toggle.setAttribute("aria-label", `Own rules for ${name}`);
+      const header = lockerCard(name, { icon: seedIcon(key2, 36, seed?.spriteKey), control: toggle });
+      header.root.classList.add("lk-hero");
+      const showStatus = () => header.setSubtitle(overrideStatus(entry.enabled));
       const form = lockerSettingsCard(entry.settings, () => store.notifyOverrideSettingsChanged(key2));
       form.setDisabled(!entry.enabled);
       showStatus();
-      detail.replaceChildren(header.root, status2, form.root);
+      detail.replaceChildren(header.root, form.root);
       detail.scrollTop = scrollMemory.get(key2) ?? 0;
       shown = { key: key2, entry, form, toggle, showStatus };
     }
@@ -29209,24 +29046,24 @@ next: ${next}`;
     });
     return {
       render(view) {
+        view.classList.add("lk-view", "qmm-scroll");
         view.replaceChildren(layout);
         refresh();
       }
     };
   }
-  var OVERRIDE_ON, OVERRIDE_OFF;
+  var overrideStatus;
   var init_overridesTab = __esm({
     "src/features/locker/overridesTab.ts"() {
       "use strict";
-      init_card();
+      init_dom2();
       init_toggles();
       init_vtabs();
-      init_theme();
+      init_lockerCard();
       init_menuIcons2();
       init_settingsCard();
       init_seedOptions();
-      OVERRIDE_ON = color.ok;
-      OVERRIDE_OFF = color.danger;
+      overrideStatus = (enabled2) => enabled2 ? "Uses its own rules below." : "Follows the General tab.";
     }
   });
 
@@ -29307,8 +29144,8 @@ next: ${next}`;
   }
   function rarityBadge(raw) {
     const label2 = rarityLabel(raw);
-    const el = h("div", void 0, label2);
-    Object.assign(el.style, {
+    const el4 = h("div", void 0, label2);
+    Object.assign(el4.style, {
       display: "inline-flex",
       justifyContent: "center",
       alignItems: "center",
@@ -29324,17 +29161,17 @@ next: ${next}`;
     });
     if (label2 === "Celestial") {
       ensureCelestialKeyframes();
-      el.style.background = `linear-gradient(130deg,
+      el4.style.background = `linear-gradient(130deg,
       rgb(0,180,216) 0%,
       rgb(124,42,232) 40%,
       rgb(160,0,126) 60%,
       rgb(255,215,0) 100%)`;
-      el.style.backgroundSize = "200% 200%";
-      el.style.animation = "qwsCelestialShift 4s linear infinite";
+      el4.style.backgroundSize = "200% 200%";
+      el4.style.animation = "qwsCelestialShift 4s linear infinite";
     } else {
-      el.style.background = RARITY_COLORS[label2] || "#444";
+      el4.style.background = RARITY_COLORS[label2] || "#444";
     }
-    return el;
+    return el4;
   }
   var RARITY_COLORS, DARK_TEXT, CELESTIAL_KEYFRAMES_ID;
   var init_rarityBadge = __esm({
@@ -29356,98 +29193,66 @@ next: ${next}`;
 
   // src/features/locker/sellPetsRulesCard.ts
   function sellPetsRulesCard() {
-    const { root: root4, body } = card("Sell all pets protections", {
-      align: "stretch",
-      subtitle: "Show a confirmation modal when protected pets are detected."
-    });
     const rules3 = () => lockerRestrictionsService.getSellAllPetsRules();
     const save3 = (patch) => {
       lockerRestrictionsService.setSellAllPetsRules(patch);
       refresh();
     };
     const enabled2 = switchInput(rules3().enabled, (on) => save3({ enabled: on }));
+    enabled2.setAttribute("aria-label", "Sell all pets protections");
+    const { root: root4, body } = lockerCard("Sell all pets", {
+      subtitle: "Asks first when a protected pet would be sold.",
+      control: enabled2
+    });
     const gold = switchInput(rules3().protectGold, (on) => save3({ protectGold: on }));
     const rainbow = switchInput(rules3().protectRainbow, (on) => save3({ protectRainbow: on }));
     const maxStr = switchInput(rules3().protectMaxStr, (on) => save3({ protectMaxStr: on }));
     const maxStrValue = numberInput(0, 100, 1, rules3().maxStrThreshold);
+    maxStrValue.setAttribute("aria-label", "Max STR threshold");
     maxStrValue.addEventListener("change", () => {
       const n = Number(maxStrValue.value);
       const next = Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 0;
       maxStrValue.value = String(next);
       save3({ maxStrThreshold: next });
     });
-    const maxStrControls = document.createElement("div");
-    maxStrControls.className = "qmm-flex";
-    maxStrControls.append(maxStr, maxStrValue.wrap);
-    const enabledRow = settingRow("Enable protection rules", null, enabled2).row;
-    const goldRow = settingRow("Protect Gold mutation", null, gold).row;
-    const rainbowRow = settingRow("Protect Rainbow mutation", null, rainbow).row;
-    const maxStrRow = settingRow("Protect pets with Max STR", null, maxStrControls).row;
-    const rarities = document.createElement("div");
-    rarities.className = "lk-rarities";
-    const chips = document.createElement("div");
-    chips.className = "lk-rarities__chips";
-    const picker2 = document.createElement("div");
-    picker2.className = "lk-rarities__chips lk-rarities__picker";
-    let pickerOpen = false;
-    const setProtected = (next) => save3({ protectedRarities: next });
-    const closeOnOutsideClick = (ev) => {
-      if (rarities.contains(ev.target)) return;
-      setPickerOpen(false);
+    const maxStrControls = h("div", "qmm-flex");
+    maxStrControls.append(maxStrValue.wrap, maxStr);
+    const goldRow = settingRow("Gold pets", null, gold).row;
+    const rainbowRow = settingRow("Rainbow pets", null, rainbow).row;
+    const maxStrRow = settingRow("Strong pets", "Max STR at or above this number.", maxStrControls).row;
+    const rarities = h("div", "lk-rarities");
+    const chips = h("div", "lk-rarities__chips");
+    const rarityText = h("div", "qmm-setting-row__text");
+    rarityText.append(
+      h("div", "qmm-setting-row__title", "Rarities"),
+      h("div", "qmm-setting-row__hint", "Tap a rarity to protect it.")
+    );
+    rarities.append(rarityText, chips);
+    const toggleRarity = (rarity3) => {
+      const current3 = rules3().protectedRarities;
+      save3({
+        protectedRarities: current3.includes(rarity3) ? current3.filter((r) => r !== rarity3) : [...current3, rarity3]
+      });
     };
-    const setPickerOpen = (open) => {
-      pickerOpen = open;
-      if (open) document.addEventListener("click", closeOnOutsideClick, true);
-      else document.removeEventListener("click", closeOnOutsideClick, true);
-      refresh();
-    };
-    const addButton = button("+", { size: "xs", onClick: () => setPickerOpen(!pickerOpen) });
-    const head = document.createElement("div");
-    head.className = "lk-rarities__head";
-    const title = document.createElement("div");
-    title.className = "qmm-setting-row__title";
-    title.textContent = "Protect by rarity";
-    head.append(title, addButton);
-    rarities.append(head, chips, picker2);
+    const chipButtons = PET_RARITIES.map((rarity3) => {
+      const chip = h("button", "lk-rarity");
+      chip.type = "button";
+      chip.dataset.rarity = rarity3;
+      chip.appendChild(rarityBadge(rarity3));
+      chip.addEventListener("click", () => toggleRarity(rarity3));
+      chips.appendChild(chip);
+      return chip;
+    });
     const showRarities = () => {
       const selected = rules3().protectedRarities;
-      chips.replaceChildren();
-      if (!selected.length) {
-        const none = document.createElement("span");
-        none.className = "lk-empty";
-        none.textContent = "No rarities protected";
-        chips.appendChild(none);
+      for (const chip of chipButtons) {
+        const on = selected.includes(chip.dataset.rarity ?? "");
+        chip.classList.toggle("is-on", on);
+        chip.setAttribute("aria-pressed", on ? "true" : "false");
+        chip.title = on ? "Protected. Tap to stop protecting." : "Tap to protect.";
       }
-      for (const rarity3 of selected) {
-        const chip = document.createElement("div");
-        chip.className = "lk-rarity";
-        chip.append(
-          rarityBadge(rarity3),
-          button("\xD7", {
-            size: "xs",
-            variant: "ghost",
-            ariaLabel: `Unprotect ${rarity3}`,
-            onClick: () => setProtected(rules3().protectedRarities.filter((r) => r !== rarity3))
-          })
-        );
-        chips.appendChild(chip);
-      }
-      const remaining = PET_RARITIES.filter((rarity3) => !selected.includes(rarity3));
-      if (!remaining.length && pickerOpen) {
-        pickerOpen = false;
-        document.removeEventListener("click", closeOnOutsideClick, true);
-      }
-      picker2.replaceChildren(
-        ...remaining.map((rarity3) => {
-          const badge2 = rarityBadge(rarity3);
-          badge2.addEventListener("click", () => setProtected([...rules3().protectedRarities, rarity3]));
-          return badge2;
-        })
-      );
-      picker2.hidden = !pickerOpen;
-      addButton.querySelector(".label").textContent = pickerOpen ? "\xD7" : "+";
     };
-    body.append(enabledRow, goldRow, rainbowRow, maxStrRow, rarities);
+    body.append(goldRow, rainbowRow, maxStrRow, rarities);
     function refresh() {
       const current3 = rules3();
       enabled2.setChecked(current3.enabled);
@@ -29455,13 +29260,14 @@ next: ${next}`;
       rainbow.setChecked(current3.protectRainbow);
       maxStr.setChecked(current3.protectMaxStr);
       maxStrValue.value = String(current3.maxStrThreshold);
-      for (const row5 of [goldRow, rainbowRow, maxStrRow]) row5.classList.toggle("lk-dim", !current3.enabled);
+      for (const row2 of [goldRow, rainbowRow, maxStrRow]) row2.classList.toggle("lk-dim", !current3.enabled);
       gold.disabled = rainbow.disabled = maxStr.disabled = !current3.enabled;
       const maxStrOff = !current3.enabled || !current3.protectMaxStr;
       maxStrValue.disabled = maxStrOff;
       maxStrValue.wrap.classList.toggle("lk-dim", maxStrOff);
       maxStrValue.wrap.inert = maxStrOff;
       rarities.classList.toggle("is-disabled", !current3.enabled);
+      rarities.inert = !current3.enabled;
       showRarities();
     }
     refresh();
@@ -29470,12 +29276,12 @@ next: ${next}`;
   var init_sellPetsRulesCard = __esm({
     "src/features/locker/sellPetsRulesCard.ts"() {
       "use strict";
-      init_button();
-      init_card();
+      init_dom2();
       init_fields();
       init_layout();
-      init_toggles();
       init_rarityBadge();
+      init_toggles();
+      init_lockerCard();
       init_restrictions();
     }
   });
@@ -29484,34 +29290,32 @@ next: ${next}`;
   function friendBonusCard() {
     let requiredPlayers = lockerRestrictionsService.getState().minRequiredPlayers;
     const status2 = pill("");
-    const { root: root4, body } = card("Friend bonus locker", { align: "stretch", actions: [status2] });
-    const value = pill("", "warn");
-    const head = document.createElement("div");
-    head.className = "qmm-flex";
-    head.style.justifyContent = "space-between";
-    const title = document.createElement("div");
-    title.className = "qmm-setting-row__title";
-    title.textContent = "Minimum friend bonus required";
-    head.append(title, value);
+    const { root: root4, body } = lockerCard("Friend bonus", {
+      subtitle: "Crops only sell with at least this bonus.",
+      control: status2
+    });
+    const value = pill("");
+    value.classList.add("lk-slider-value");
     const bonusSlider = slider(0, FRIEND_BONUS_MAX, FRIEND_BONUS_STEP, friendBonusPercentFromPlayers(requiredPlayers) ?? 0, { fill: true });
-    const statusText = document.createElement("div");
-    statusText.className = "qmm-setting-row__hint";
-    statusText.style.fontSize = "12.5px";
-    body.append(head, bonusSlider, statusText);
+    bonusSlider.setAttribute("aria-label", "Minimum friend bonus");
+    const line = h("div", "lk-slider-line");
+    line.append(bonusSlider, value);
+    const statusText = h("div", "lk-hint");
+    body.append(line, statusText);
     const showStatus = () => {
       const requiredPct = toBonusStep2(friendBonusPercentFromPlayers(requiredPlayers) ?? 0);
       const currentPct = currentFriendBonus() ?? 0;
       const currentPlayers = percentToRequiredFriendCount(currentPct);
       if (requiredPct <= 0) {
-        status2.textContent = "Unlocked";
+        status2.textContent = "Off";
         setTone(status2);
-        statusText.textContent = `Current friend bonus: ${currentPct}% (${currentPlayers} players).`;
+        statusText.textContent = `Your bonus now: ${currentPct}% (${currentPlayers} players).`;
         return;
       }
       const allowed = currentPct + 1e-4 >= requiredPct;
       status2.textContent = allowed ? "Sale allowed" : "Sale locked";
       setTone(status2, allowed ? "ok" : "bad");
-      statusText.textContent = allowed ? `Current bonus ${currentPct}% (${currentPlayers} players) meets the requirement (${requiredPct}%).` : `Requires ${requiredPct}% (${requiredPlayers} players) or more`;
+      statusText.textContent = allowed ? `Your bonus of ${currentPct}% (${currentPlayers} players) meets the ${requiredPct}% needed.` : `Needs ${requiredPct}% (${requiredPlayers} players) or more.`;
     };
     const showSlider = (pct) => {
       bonusSlider.value = String(pct);
@@ -29538,7 +29342,9 @@ next: ${next}`;
     };
   }
   function eggLocksCard() {
-    const { root: root4, body } = card("Egg hatch locker", { align: "stretch" });
+    const { root: root4, body } = lockerCard("Egg hatching", { subtitle: "Locked eggs can't be hatched." });
+    const grid = h("div", "lk-egg-grid");
+    body.appendChild(grid);
     const rows = /* @__PURE__ */ new Map();
     let eggs = catalogEggs();
     const rowFor = (egg) => {
@@ -29546,25 +29352,23 @@ next: ${next}`;
       if (!entry) {
         const toggle = switchInput(false, (locked) => lockerRestrictionsService.setEggLock(egg.id, locked));
         toggle.title = "Lock hatching";
-        const { row: row5 } = settingRow(egg.name, null, toggle);
-        row5.prepend(eggIcon(egg.id, egg.name, 32));
-        entry = { row: row5, title: row5.querySelector(".qmm-setting-row__title"), toggle };
+        const { row: row2 } = settingRow(egg.name, null, toggle);
+        row2.prepend(eggIcon(egg.id, egg.name, 28));
+        entry = { row: row2, title: row2.querySelector(".qmm-setting-row__title"), toggle };
         rows.set(egg.id, entry);
       }
       return entry;
     };
     const render = () => {
       if (!eggs.length) {
-        const empty = document.createElement("div");
-        empty.className = "lk-empty";
-        empty.textContent = "No eggs available.";
-        body.replaceChildren(empty);
+        grid.replaceChildren(h("div", "lk-empty-state", "No eggs found yet. They show up once the shop loads."));
         return;
       }
-      body.replaceChildren(
+      grid.replaceChildren(
         ...eggs.map((egg) => {
           const entry = rowFor(egg);
           entry.title.textContent = egg.name || egg.id;
+          entry.toggle.setAttribute("aria-label", `Lock ${egg.name || egg.id}`);
           entry.toggle.setChecked(lockerRestrictionsService.isEggLocked(egg.id));
           return entry.row;
         })
@@ -29580,17 +29384,16 @@ next: ${next}`;
     };
   }
   function restrictionsTab() {
-    const layout = document.createElement("div");
-    layout.className = "lk-restrictions";
+    const layout = h("div", "lk-tab");
     const friendBonus = friendBonusCard();
     const decorToggle = switchInput(
       lockerRestrictionsService.isDecorPickupLocked(),
       (locked) => lockerRestrictionsService.setDecorPickupLocked(locked)
     );
-    const decor = card("Decor pick locker", {
-      align: "stretch",
-      subtitle: "Prevents placed decors from being picked up",
-      actions: [decorToggle]
+    decorToggle.setAttribute("aria-label", "Lock decor pickup");
+    const decor = lockerCard("Decor pickup", {
+      subtitle: "Stops placed decor from being picked up.",
+      control: decorToggle
     });
     const eggLocks = eggLocksCard();
     const sellPets = sellPetsRulesCard();
@@ -29613,7 +29416,7 @@ next: ${next}`;
     };
     return {
       render(view) {
-        view.classList.add("lk-view");
+        view.classList.add("lk-view", "qmm-scroll");
         view.replaceChildren(layout);
         syncFromService();
         follow2();
@@ -29626,12 +29429,13 @@ next: ${next}`;
       "use strict";
       init_atoms();
       init_badges();
-      init_card();
+      init_dom2();
       init_layout();
       init_sliders();
       init_toggles();
       init_eggOptions();
       init_friendBonus();
+      init_lockerCard();
       init_menuIcons2();
       init_restrictions();
       init_sellPetsRulesCard();
@@ -29780,25 +29584,18 @@ next: ${next}`;
 
   // src/features/locker/menu.ts
   function generalTab(store) {
-    const root4 = document.createElement("div");
-    root4.className = "lk-column";
+    const root4 = h("div", "lk-tab");
     const toggle = switchInput(store.global.enabled, (on) => store.setGlobalEnabled(on));
-    const enabled2 = document.createElement("label");
-    enabled2.className = "qmm-flex";
-    const enabledText = document.createElement("span");
-    enabledText.className = "qmm-label";
-    enabledText.textContent = "Enabled";
-    enabled2.append(enabledText, toggle);
-    const header = card("Global locker", {
-      subtitle: "Set the rules for locking or allowing harvests using the filters below",
-      actions: [enabled2]
-    });
-    header.root.classList.add("lk-wide");
-    header.root.removeChild(header.body);
+    toggle.setAttribute("aria-label", "Harvest locker");
+    const header = lockerCard("Harvest locker", { control: toggle });
+    header.root.classList.add("lk-hero");
     const form = lockerSettingsCard(store.global.settings, () => store.notifyGlobalSettingsChanged());
     root4.append(header.root, form.root);
     const update = () => {
       toggle.setChecked(store.global.enabled);
+      header.setSubtitle(
+        store.global.enabled ? "On. Harvests follow the rules below." : "Off. Turn it on to apply the rules below."
+      );
       form.setDisabled(!store.global.enabled);
       form.refresh();
     };
@@ -29806,7 +29603,7 @@ next: ${next}`;
     update();
     return {
       render(view) {
-        view.classList.add("lk-view");
+        view.classList.add("lk-view", "qmm-scroll");
         view.replaceChildren(root4);
         update();
       }
@@ -29816,11 +29613,12 @@ next: ${next}`;
     ensureLockerMenuStyles();
     const ui = new Menu({ id: "locker", compact: true });
     ui.mount(container);
+    ui.root.classList.add("lk-menu");
     const store = new LockerMenuStore(lockerService.getState());
     const tabs = { general: generalTab(store), overrides: overridesTab(store), restrictions: restrictionsTab() };
     ui.addTabs([
       { id: "locker-general", title: "General", render: (view) => tabs.general.render(view) },
-      { id: "locker-overrides", title: "Overrides", render: (view) => tabs.overrides.render(view) },
+      { id: "locker-overrides", title: "Per crop", render: (view) => tabs.overrides.render(view) },
       { id: "locker-restrictions", title: "Restrictions", render: (view) => tabs.restrictions.render(view) }
     ]);
     ui.switchTo("locker-general");
@@ -29829,10 +29627,11 @@ next: ${next}`;
   var init_menu3 = __esm({
     "src/features/locker/menu.ts"() {
       "use strict";
+      init_dom2();
       init_menu();
-      init_card();
       init_toggles();
       init_locker();
+      init_lockerCard();
       init_menuStyles();
       init_overridesTab();
       init_restrictionsTab();
@@ -29896,35 +29695,32 @@ next: ${next}`;
     void getSpriteObjectUrlByName(["ui"], iconName).then((url) => {
       if (!url) return;
       const img = document.createElement("img");
+      img.className = "qws-calc-seg__icon";
       img.src = url;
       img.alt = label2;
-      img.title = label2;
       img.width = ICON_PX2;
       img.height = ICON_PX2;
-      Object.assign(img.style, { width: `${ICON_PX2}px`, height: `${ICON_PX2}px`, objectFit: "contain", display: "block" });
       img.draggable = false;
       labelSpan.replaceChildren(img);
     });
   }
   function optionPicker(labels, selected, ariaLabel, onPick) {
     const control = segmented(
-      labels.map((label2) => ({ value: label2, label: label2, disabled: !onPick })),
+      labels.map((label2) => ({ value: label2, label: label2 })),
       selected,
       onPick,
       { ariaLabel, fullWidth: true }
     );
-    control.style.setProperty("--seg-pad", "6px");
-    for (const button2 of control.querySelectorAll(".qmm-seg__btn")) {
-      Object.assign(button2.style, {
-        flex: "1 1 0",
-        minWidth: "0",
-        display: "flex",
-        justifyContent: "center",
-        fontSize: "11px",
-        fontWeight: "600"
-      });
-      showIcon(button2, button2.dataset.value ?? "");
+    control.classList.add("qws-calc-seg");
+    const buttons = Array.from(control.querySelectorAll(".qmm-seg__btn"));
+    for (const button2 of buttons) {
+      const label2 = button2.dataset.value ?? "";
+      button2.title = label2;
+      showIcon(button2, label2);
     }
+    control.setEnabled = (enabled2) => {
+      for (const button2 of buttons) button2.disabled = !enabled2;
+    };
     return control;
   }
   var MUTATION_ICON_NAMES, ICON_PX2;
@@ -29979,36 +29775,23 @@ next: ${next}`;
     }
     return [...DEFAULT_CATEGORIES];
   }
+  function cropEmoji(option2, key2) {
+    return getLockerSeedEmojiForKey(key2) || (option2?.seedName ? getLockerSeedEmojiForSeedName(option2.seedName) : void 0) || "\u{1F331}";
+  }
   function cropListIcon(option2, emoji, size) {
-    const wrap = h("span", void 0, emoji.trim() ? emoji : "??");
-    Object.assign(wrap.style, {
-      width: `${size}px`,
-      height: `${size}px`,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center"
-    });
+    const wrap = h("span", "qws-calc-icon", emoji.trim() ? emoji : "??");
+    wrap.style.width = wrap.style.height = `${size}px`;
     attachSpriteIcon(wrap, spriteCategories(option2), spriteCandidates3(option2.key, option2), size, "calculator-list");
     return wrap;
   }
   function cropPreview() {
-    const root4 = h("span");
-    Object.assign(root4.style, {
-      position: "relative",
-      display: "inline-flex",
-      flexShrink: "0",
-      width: `${PREVIEW_SPRITE_PX}px`,
-      height: `${PREVIEW_SPRITE_PX}px`,
-      transformOrigin: "center"
-    });
-    const fill = { position: "absolute", inset: "0", display: "flex", alignItems: "center", justifyContent: "center" };
-    const fallback = h("span");
-    Object.assign(fallback.style, fill, { zIndex: "0", fontSize: "42px" });
-    const layer2 = h("span");
-    Object.assign(layer2.style, fill, { zIndex: "1" });
+    const root4 = h("span", "qws-calc-sprite");
+    root4.style.width = root4.style.height = `${PREVIEW_SPRITE_PX}px`;
+    const fallback = h("span", "qws-calc-sprite__fallback");
+    const layer2 = h("span", "qws-calc-sprite__layer");
     root4.append(fallback, layer2);
     const syncFallback = () => {
-      fallback.style.opacity = layer2.childElementCount > 0 ? "0" : "";
+      root4.classList.toggle("has-sprite", layer2.childElementCount > 0);
     };
     return {
       root: root4,
@@ -30036,6 +29819,7 @@ next: ${next}`;
       "use strict";
       init_iconCache();
       init_dom2();
+      init_seedOptions();
       PREVIEW_SPRITE_PX = 96;
       DEFAULT_CATEGORIES = ["tallplant", "plant", "crop"];
       PLANT_FIRST_SPECIES = /* @__PURE__ */ new Set([
@@ -30056,113 +29840,256 @@ next: ${next}`;
     }
   });
 
-  // src/features/calculator/menu.ts
-  function seedEmoji(option2, key2) {
-    return getLockerSeedEmojiForKey(key2) || (option2?.seedName ? getLockerSeedEmojiForSeedName(option2.seedName) : void 0) || "\u{1F331}";
-  }
-  function section2(title) {
-    const card4 = plainCard();
-    Object.assign(card4.style, { padding: "12px", gap: "10px" });
-    if (title) {
-      const heading = sectionLabel(title);
-      heading.style.textAlign = "center";
-      card4.appendChild(heading);
-    }
-    return card4;
-  }
-  function priceDisplay() {
-    const root4 = h("div");
-    Object.assign(root4.style, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "10px",
-      marginBottom: "12px",
-      fontSize: "20px",
-      fontWeight: "700",
-      color: color.goldInk
-    });
-    const icon2 = h("img");
-    icon2.src = coin2.img64;
-    icon2.alt = "";
-    icon2.draggable = false;
-    icon2.setAttribute("aria-hidden", "true");
-    Object.assign(icon2.style, { width: "20px", height: "20px", pointerEvents: "none", userSelect: "none" });
-    const value = h("span", void 0, "-");
-    value.style.lineHeight = "1";
-    root4.append(icon2, value);
+  // src/features/calculator/detail.ts
+  function pickRow(label2, picker2) {
+    const root4 = h("div", "qws-calc-pick");
+    const head = h("div", "qws-calc-pick__head");
+    const value = h("span", "qws-calc-pick__value");
+    head.append(h("span", "qws-calc-pick__label", label2), value);
+    root4.append(head, picker2);
     return { root: root4, value };
   }
-  function sourceHint() {
-    const el = h("div");
-    Object.assign(el.style, {
-      fontSize: "11px",
-      color: color.textSoft,
-      textAlign: "center",
-      marginTop: "20px",
-      paddingBottom: "4px"
-    });
+  function credit() {
+    const el4 = h("div", "qws-calc-credit");
     const link = h("a", void 0, "Daserix' Magic Garden Calculators");
     link.href = "https://daserix.github.io/magic-garden-calculator";
     link.target = "_blank";
     link.rel = "noreferrer noopener";
-    Object.assign(link.style, { color: color.accent, textDecoration: "underline" });
-    el.append("Based on ", link);
-    return el;
+    el4.append("Based on ", link);
+    return el4;
   }
-  function renderCropsTab(root4) {
-    root4.replaceChildren();
-    Object.assign(root4.style, { padding: "8px", boxSizing: "border-box", height: "66vh", overflow: "auto", display: "grid" });
-    const layout = h("div");
-    Object.assign(layout.style, {
-      display: "grid",
-      gridTemplateColumns: "minmax(220px, 280px) minmax(0, 1fr)",
-      gap: "10px",
-      height: "100%",
-      overflow: "hidden"
-    });
-    const listPane = h("div");
-    Object.assign(listPane.style, { display: "flex", flexDirection: "column", minHeight: "0" });
-    const detailScroll = h("div", "qmm-scroll");
-    Object.assign(detailScroll.style, { overflow: "auto", minHeight: "0" });
-    const detail = h("div");
-    Object.assign(detail.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "12px",
-      width: "min(440px, 100%)",
-      margin: "0 auto"
-    });
-    detailScroll.appendChild(detail);
-    layout.append(listPane, detailScroll);
-    root4.append(layout, sourceHint());
-    const price = priceDisplay();
+  function calculatorDetail() {
+    let current3 = null;
+    let syncing = false;
     const preview = cropPreview();
-    const spriteBox = h("div");
-    Object.assign(spriteBox.style, { display: "flex", alignItems: "center", justifyContent: "center", padding: "12px" });
-    spriteBox.appendChild(preview.root);
+    const stage = h("div", "qws-calc-stage");
+    stage.appendChild(preview.root);
+    const name = h("div", "qws-calc-name");
+    const price = h("div", "qws-calc-price");
+    const coinIcon = h("img");
+    coinIcon.src = coin2.img64;
+    coinIcon.alt = "";
+    coinIcon.draggable = false;
+    coinIcon.setAttribute("aria-hidden", "true");
+    const priceValue = h("span", void 0, "-");
+    price.append(coinIcon, priceValue);
+    const weight = h("div", "qws-calc-weight", "-");
+    const summary = h("div", "qws-calc-summary");
+    summary.append(name, price, weight);
+    const top = h("div", "qws-calc-hero__top");
+    top.append(stage, summary);
     const sizeSlider = slider(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, CROP_SIZE_MIN, { fill: true });
-    Object.assign(sizeSlider.style, { flex: "1 1 auto", minWidth: "0" });
-    const sizeLabel = h("span", void 0, "Size");
-    Object.assign(sizeLabel.style, { fontSize: "12px", color: color.textSoft });
-    const sizeValue = h("span", void 0, `${CROP_SIZE_MIN}%`);
-    Object.assign(sizeValue.style, { width: "4ch", fontSize: "12px", textAlign: "right", fontVariantNumeric: "tabular-nums" });
-    const sizeRow = h("div");
-    Object.assign(sizeRow.style, { display: "flex", alignItems: "center", gap: "8px" });
-    sizeRow.append(sizeLabel, sizeSlider, sizeValue);
-    const weight = h("div", void 0, "-");
-    Object.assign(weight.style, { fontSize: "11px", color: color.textDim, textAlign: "center", fontVariantNumeric: "tabular-nums" });
-    const previewCard = section2(null);
-    previewCard.append(spriteBox, sizeRow, weight);
-    const colorHost = h("div");
-    const weatherHost = h("div");
-    const lightingHost = h("div");
-    const mutationsCard = section2("Mutations");
-    mutationsCard.append(colorHost, weatherHost, lightingHost);
-    const friendHost = h("div");
-    const friendCard = section2("Friend bonus");
-    friendCard.appendChild(friendHost);
-    detail.append(price.root, previewCard, mutationsCard, friendCard);
+    sizeSlider.setAttribute("aria-label", "Size");
+    const sizeValue = pill(String(CROP_SIZE_MIN));
+    const sizeRow = h("div", "qws-calc-size");
+    sizeRow.append(h("span", "qws-calc-size__label", "Size"), sizeSlider, sizeValue);
+    const hero = plainCard();
+    hero.classList.add("qws-calc-hero");
+    hero.append(top, sizeRow);
+    const pickers = [];
+    function addPicker(labels, label2, ariaLabel, read2, write2, spriteChanges) {
+      const picker2 = optionPicker(labels, labels[0], ariaLabel, (value) => {
+        row2.value.textContent = value;
+        if (syncing || !current3) return;
+        write2(current3.state, value);
+        if (spriteChanges) refreshSprite();
+        refreshPrice();
+      });
+      const row2 = pickRow(label2, picker2);
+      row2.value.textContent = labels[0];
+      pickers.push({ setEnabled: picker2.setEnabled, sync: (state5) => picker2.set(read2(state5)) });
+      return row2.root;
+    }
+    const mutations = card("Mutations");
+    mutations.body.append(
+      addPicker(COLOR_LABELS, "Color", "Mutations", (s) => s.color, (s, v) => s.color = v, true),
+      addPicker(WEATHER_LABELS, "Weather", "Weather condition", (s) => s.weather, (s, v) => s.weather = v, true),
+      addPicker(LIGHTING_LABELS, "Lighting", "Weather lighting", (s) => s.lighting, (s, v) => s.lighting = v, true)
+    );
+    const friends = card("Friend bonus", { subtitle: "Each extra player in the room adds 10%." });
+    const friendPicker = optionPicker(FRIEND_BONUS_LABELS, FRIEND_BONUS_LABELS[0], "Friend bonus", (label2) => {
+      if (syncing || !current3) return;
+      current3.state.friendPlayers = friendPlayersOf(label2);
+      refreshPrice();
+    });
+    friends.body.appendChild(friendPicker);
+    pickers.push({
+      setEnabled: friendPicker.setEnabled,
+      sync: (state5) => friendPicker.set(friendPlayersLabel(state5.friendPlayers))
+    });
+    const empty = h("div", "qws-calc-empty", "No crops to show yet. They appear once the game data has loaded.");
+    const root4 = h("div", "qws-calc__detail qmm-scroll");
+    root4.append(hero, mutations.root, friends.root, empty, credit());
+    function refreshPrice() {
+      priceValue.textContent = current3 ? formatCoins(calculatorPrice(current3.key, current3.state)) : "-";
+    }
+    function refreshSize(size) {
+      sizeSlider.value = String(size);
+      sizeValue.textContent = String(size);
+      preview.setSize(size);
+      weight.textContent = formatWeight(current3 ? calculatorWeight(current3.key, size) : null);
+    }
+    function refreshSprite() {
+      if (!current3?.option) {
+        preview.clear();
+        return;
+      }
+      preview.show(current3.option, mutationsOf(current3.state), cropEmoji(current3.option, current3.key));
+    }
+    sizeSlider.addEventListener("input", () => {
+      if (!current3) return;
+      const size = clamp(Math.round(Number(sizeSlider.value)), CROP_SIZE_MIN, CROP_SIZE_MAX);
+      current3.state.size = size;
+      refreshSize(size);
+      refreshPrice();
+    });
+    return {
+      root: root4,
+      show(crop) {
+        current3 = crop;
+        const live = crop != null;
+        for (const el4 of [hero, mutations.root, friends.root]) el4.hidden = !live;
+        empty.hidden = live;
+        name.textContent = crop ? crop.option?.cropName || crop.key : "";
+        sizeSlider.disabled = !live;
+        refreshSize(crop ? crop.state.size : CROP_SIZE_MIN);
+        syncing = true;
+        try {
+          for (const { setEnabled, sync: sync2 } of pickers) {
+            setEnabled(live);
+            if (crop) sync2(crop.state);
+          }
+        } finally {
+          syncing = false;
+        }
+        refreshSprite();
+        refreshPrice();
+      }
+    };
+  }
+  var init_detail = __esm({
+    "src/features/calculator/detail.ts"() {
+      "use strict";
+      init_data();
+      init_cropSize();
+      init_math();
+      init_badges();
+      init_card();
+      init_dom2();
+      init_sliders();
+      init_compute();
+      init_mutationPicker2();
+      init_sprites3();
+    }
+  });
+
+  // src/features/calculator/styles.ts
+  function ensureCalculatorStyles() {
+    if (injected4) return;
+    injected4 = true;
+    addStyle(CALCULATOR_CSS);
+  }
+  var CALCULATOR_CSS, injected4;
+  var init_styles4 = __esm({
+    "src/features/calculator/styles.ts"() {
+      "use strict";
+      init_dom();
+      CALCULATOR_CSS = `
+.qws-calc {
+  container-type: inline-size;
+  width: min(720px, calc((100vw - 64px) / var(--qmm-scale, 1)));
+  height: calc(68vh / var(--qmm-scale, 1));
+  box-sizing: border-box;
+}
+.qws-calc__layout {
+  display: grid; grid-template-columns: minmax(180px, 240px) minmax(0, 1fr); gap: var(--qmm-space-xl);
+  height: 100%; min-height: 0;
+}
+.qws-calc__list { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.qws-calc__list > .qmm-vtabs { flex: 1 1 auto; min-height: 0; }
+.qws-calc__detail {
+  display: flex; flex-direction: column; gap: var(--qmm-space-lg); min-width: 0; min-height: 0;
+  overflow: auto; padding-right: var(--qmm-space-xs);
+}
+.qws-calc__detail > * { flex-shrink: 0; }
+/* The kit's cards are grids: without this, a row of options sets their minimum width. */
+.qws-calc__detail .qmm-card, .qws-calc__detail .qmm-card__body { grid-template-columns: minmax(0, 1fr); }
+
+.qws-calc-item__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qws-calc-icon { display: inline-flex; align-items: center; justify-content: center; }
+
+.qmm-card.qws-calc-hero { gap: var(--qmm-space-xl); padding: 14px; }
+.qws-calc-hero__top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-xl); }
+.qws-calc-stage {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+  width: 116px; height: 116px; border-radius: var(--qmm-radius-xl); background: var(--qmm-paper-deep);
+}
+.qws-calc-summary { display: flex; flex-direction: column; gap: var(--qmm-space-xs); flex: 1 1 120px; min-width: 0; }
+.qws-calc-name {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--qmm-fs-xl); font-weight: 900; color: var(--qmm-text);
+}
+.qws-calc-price {
+  display: flex; align-items: center; gap: var(--qmm-space-md);
+  font-size: 24px; font-weight: 900; line-height: 1.15; color: var(--qmm-gold-ink); font-variant-numeric: tabular-nums;
+}
+.qws-calc-price img { flex: 0 0 auto; width: 22px; height: 22px; pointer-events: none; user-select: none; }
+.qws-calc-weight { font-size: var(--qmm-fs-sm); font-weight: 700; color: var(--qmm-text-dim); font-variant-numeric: tabular-nums; }
+.qws-calc-size { display: flex; align-items: center; gap: var(--qmm-space-lg); }
+.qws-calc-size__label { font-size: var(--qmm-fs-sm); font-weight: 800; color: var(--qmm-text-soft); }
+.qws-calc-size > .qws-pnl-range { flex: 1 1 auto; min-width: 0; }
+.qws-calc-size > .qmm-pill { min-width: 4ch; justify-content: center; font-variant-numeric: tabular-nums; }
+
+.qws-calc-sprite { position: relative; display: inline-flex; flex-shrink: 0; transform-origin: center; }
+.qws-calc-sprite__fallback, .qws-calc-sprite__layer {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+}
+.qws-calc-sprite__fallback { z-index: 0; font-size: 42px; }
+.qws-calc-sprite__layer { z-index: 1; }
+.qws-calc-sprite.has-sprite .qws-calc-sprite__fallback { opacity: 0; }
+
+.qws-calc-pick { display: flex; flex-direction: column; gap: var(--qmm-space-sm); }
+.qws-calc-pick__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--qmm-space-md); font-size: var(--qmm-fs-sm); }
+.qws-calc-pick__label { font-weight: 800; color: var(--qmm-text-soft); }
+.qws-calc-pick__value { font-weight: 700; color: var(--qmm-text-dim); }
+
+.qws-calc-seg { --seg-pad: 4px; }
+.qws-calc-seg .qmm-seg__btn { flex: 1 1 0; min-width: 0; display: flex; justify-content: center; padding: 6px 4px; font-size: var(--qmm-fs-sm); }
+.qws-calc-seg .qmm-seg__btn-label { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.qws-calc-seg__icon { display: block; width: 20px; height: 20px; margin: 0 auto; object-fit: contain; }
+
+.qws-calc-empty {
+  margin: auto; max-width: 260px; padding: var(--qmm-space-xl);
+  text-align: center; font-size: var(--qmm-fs-md); line-height: 1.5; color: var(--qmm-text-dim);
+}
+.qws-calc-credit {
+  margin-top: auto; padding: var(--qmm-space-xs) 0;
+  text-align: center; font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim);
+}
+.qws-calc-credit a { color: var(--qmm-sepia-ink); font-weight: 800; text-decoration: underline; }
+
+/* A narrow window stacks the list above the crop. Last, so it wins over the rules above. */
+@container (max-width: 520px) {
+  .qws-calc__layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: 176px minmax(0, 1fr); gap: var(--qmm-space-lg); }
+  .qws-calc-stage { width: 100px; height: 100px; }
+  .qws-calc-seg .qmm-seg__btn { padding: 6px 1px; font-size: var(--qmm-fs-xs); }
+}
+`;
+      injected4 = false;
+    }
+  });
+
+  // src/features/calculator/menu.ts
+  function renderCropsTab(view) {
+    ensureCalculatorStyles();
+    view.replaceChildren();
+    const detail = calculatorDetail();
+    const listPane = h("div", "qws-calc__list");
+    const layout = h("div", "qws-calc__layout");
+    layout.append(listPane, detail.root);
+    const root4 = h("div", "qws-calc");
+    root4.appendChild(layout);
+    view.appendChild(root4);
     const states = /* @__PURE__ */ new Map();
     const optionByKey = /* @__PURE__ */ new Map();
     const listIcons = /* @__PURE__ */ new Map();
@@ -30172,60 +30099,12 @@ next: ${next}`;
       if (!state5) states.set(key2, state5 = defaultCalculatorState());
       return state5;
     };
-    function refreshPrice() {
-      price.value.textContent = selectedKey ? formatCoins(calculatorPrice(selectedKey, stateFor(selectedKey))) : "-";
-    }
-    function refreshSize(size) {
-      sizeSlider.value = String(size);
-      sizeValue.textContent = String(size);
-      preview.setSize(size);
-      weight.textContent = formatWeight(selectedKey ? calculatorWeight(selectedKey, size) : null);
-    }
-    function refreshSprite() {
-      const option2 = selectedKey ? optionByKey.get(selectedKey) : void 0;
-      if (!selectedKey || !option2) {
-        preview.clear();
-        return;
-      }
-      preview.show(option2, mutationsOf(stateFor(selectedKey)), seedEmoji(option2, selectedKey));
-    }
-    function renderPickers() {
-      const state5 = selectedKey ? stateFor(selectedKey) : defaultCalculatorState();
-      const live = selectedKey != null;
-      const pick = (field2, spriteChanges) => live ? (value) => {
-        state5[field2] = value;
-        if (spriteChanges) refreshSprite();
-        refreshPrice();
-      } : void 0;
-      colorHost.replaceChildren(optionPicker(COLOR_LABELS, state5.color, "Mutations", pick("color", true)));
-      weatherHost.replaceChildren(optionPicker(WEATHER_LABELS, state5.weather, "Weather condition", pick("weather", true)));
-      lightingHost.replaceChildren(optionPicker(LIGHTING_LABELS, state5.lighting, "Weather lighting", pick("lighting", true)));
-      const pickFriends = pick("friendPlayers", false);
-      friendHost.replaceChildren(
-        optionPicker(
-          FRIEND_BONUS_LABELS,
-          friendPlayersLabel(state5.friendPlayers),
-          "Friend bonus",
-          pickFriends && ((label2) => pickFriends(friendPlayersOf(label2)))
-        )
-      );
-    }
     function renderDetail() {
-      sizeSlider.disabled = !selectedKey;
-      refreshSize(selectedKey ? stateFor(selectedKey).size : CROP_SIZE_MIN);
-      renderPickers();
-      refreshSprite();
-      refreshPrice();
+      detail.show(selectedKey ? { key: selectedKey, option: optionByKey.get(selectedKey), state: stateFor(selectedKey) } : null);
     }
-    sizeSlider.addEventListener("input", () => {
-      if (!selectedKey) return;
-      const size = clamp(Math.round(Number(sizeSlider.value)), CROP_SIZE_MIN, CROP_SIZE_MAX);
-      stateFor(selectedKey).size = size;
-      refreshSize(size);
-      refreshPrice();
-    });
     const tabs = new VTabs({
-      emptyText: "No crops available.",
+      filterPlaceholder: "Search crops",
+      emptyText: "No crops found.",
       fillAvailableHeight: true,
       onSelect: (id) => {
         if (id === selectedKey) return;
@@ -30236,12 +30115,10 @@ next: ${next}`;
         let icon2 = listIcons.get(item.id);
         if (!icon2) {
           const option2 = optionByKey.get(item.id);
-          icon2 = option2 ? cropListIcon(option2, seedEmoji(option2, option2.key), LIST_ICON_PX) : h("span");
+          icon2 = option2 ? cropListIcon(option2, cropEmoji(option2, option2.key), LIST_ICON_PX) : h("span");
           listIcons.set(item.id, icon2);
         }
-        const label2 = h("span", void 0, item.title);
-        Object.assign(label2.style, { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
-        btn.append(icon2, label2, h("span"));
+        btn.append(icon2, h("span", "qws-calc-item__name", item.title), h("span"));
       }
     });
     listPane.appendChild(tabs.root);
@@ -30273,20 +30150,98 @@ next: ${next}`;
   var init_menu4 = __esm({
     "src/features/calculator/menu.ts"() {
       "use strict";
-      init_data();
-      init_cropSize();
-      init_math();
       init_seedOptions();
       init_menu();
-      init_card();
       init_dom2();
-      init_sliders();
-      init_theme();
       init_vtabs();
       init_compute();
-      init_mutationPicker2();
+      init_detail();
       init_sprites3();
+      init_styles4();
       LIST_ICON_PX = 24;
+    }
+  });
+
+  // src/features/hatch/styles.ts
+  function ensureHatchStyles() {
+    if (installed5) return;
+    installed5 = true;
+    addStyle(HATCH_CSS);
+  }
+  var HATCH_CSS, installed5;
+  var init_styles5 = __esm({
+    "src/features/hatch/styles.ts"() {
+      "use strict";
+      init_dom();
+      HATCH_CSS = `
+.ht-tab {
+  display: flex; flex-direction: column; gap: var(--qmm-space-lg);
+  width: min(700px, calc((100vw - 64px) / var(--qmm-scale, 1))); max-width: 100%; box-sizing: border-box;
+  container-type: inline-size;
+}
+.ht-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md) var(--qmm-space-lg); }
+.ht-head__text { flex: 1 1 220px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ht-title { font-size: var(--qmm-fs-xl); font-weight: 900; }
+.ht-sub { font-size: var(--qmm-fs-sm); line-height: 1.4; color: var(--qmm-text-dim); }
+.ht-list {
+  display: flex; flex-direction: column; gap: var(--qmm-space-md);
+  max-height: calc(58vh / var(--qmm-scale, 1)); overflow-y: auto; min-height: 0; padding-right: 2px;
+}
+.ht-empty { padding: var(--qmm-space-xl) var(--qmm-space-md); font-size: var(--qmm-fs-sm); color: var(--qmm-text-dim); text-align: center; }
+
+/* An egg's card: its header is the collapse button. */
+.qmm-card.ht-egg { padding: var(--qmm-space-lg) var(--qmm-space-xl); }
+.ht-egg > .qmm-collapse__body { gap: var(--qmm-space-xl); padding-top: var(--qmm-space-xs); }
+.ht-egg-head { display: flex; align-items: center; gap: var(--qmm-space-md); min-width: 0; }
+.ht-egg-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--qmm-fs-lg); font-weight: 800; }
+.ht-egg-seen { margin-left: auto; white-space: nowrap; font-size: var(--qmm-fs-xs); font-weight: 700; color: var(--qmm-text-dim); }
+
+.ht-section { display: flex; flex-direction: column; gap: var(--qmm-space-sm); }
+.ht-note { font-size: var(--qmm-fs-xs); line-height: 1.45; color: var(--qmm-text-dim); }
+
+/* A Bad Luck Protection counter: label | meter | value | head start. */
+.ht-row {
+  display: grid; grid-template-columns: minmax(96px, 1fr) minmax(70px, 1.5fr) auto auto;
+  align-items: center; gap: var(--qmm-space-lg); padding: 2px 0;
+}
+.ht-row__label { display: flex; align-items: center; gap: var(--qmm-space-sm); min-width: 0; }
+.ht-row__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--qmm-fs-md); font-weight: 700; }
+.ht-row__rate { white-space: nowrap; font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); }
+.ht-row__value {
+  white-space: nowrap; text-align: right; font-size: var(--qmm-fs-sm); font-weight: 700;
+  font-variant-numeric: tabular-nums; color: var(--qmm-text-dim);
+}
+.ht-row__value.is-near { color: var(--qmm-warn-ink); font-weight: 800; }
+/* Beats the window's own width for bare number fields. */
+.qws-win .ht-row input.ht-offset, .ht-row input.ht-offset { width: 64px; text-align: right; }
+
+/* Per species: Species | Normal | Gold | Rainbow | Total. */
+.ht-counts { display: flex; flex-direction: column; gap: 2px; }
+.ht-counts__row {
+  display: grid; grid-template-columns: minmax(0, 2.2fr) repeat(4, minmax(44px, 1fr));
+  align-items: center; gap: var(--qmm-space-sm); padding: 3px var(--qmm-space-sm); border-radius: var(--qmm-radius-sm);
+}
+.ht-counts__row.is-total { margin-top: var(--qmm-space-xs); background: var(--qmm-paper-deep); }
+.ht-counts__head {
+  text-align: center; font-size: var(--qmm-fs-xs); font-weight: 900; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--qmm-text-dim);
+}
+.ht-counts__head.is-left { text-align: left; }
+.ht-counts__mutation { display: flex; justify-content: center; }
+.ht-num { text-align: center; font-size: var(--qmm-fs-md); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--qmm-text-dim); }
+.ht-num.is-strong { font-weight: 800; }
+.ht-species { display: flex; align-items: center; gap: var(--qmm-space-sm); min-width: 0; }
+.ht-species__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--qmm-fs-md); font-weight: 700; }
+.ht-species__share { flex: 0 0 auto; white-space: nowrap; font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); }
+
+@container (max-width: 460px) {
+  .ht-row { grid-template-columns: minmax(0, 1fr) auto auto; row-gap: var(--qmm-space-xs); }
+  .ht-row > .qmm-meter { grid-column: 1 / -1; order: 1; }
+  .ht-counts__row { grid-template-columns: minmax(0, 1.6fr) repeat(4, minmax(34px, 1fr)); }
+  .ht-species__share { display: none; }
+}
+`;
+      installed5 = false;
     }
   });
 
@@ -30305,121 +30260,83 @@ next: ${next}`;
       return diff !== 0 ? diff : a.localeCompare(b);
     });
   }
-  function gridRow() {
-    const row5 = document.createElement("div");
-    css(row5, {
-      display: "grid",
-      gridTemplateColumns: GRID_TEMPLATE,
-      alignItems: "center",
-      gap: "6px"
-    });
-    return row5;
+  function span(className, text2) {
+    const el4 = document.createElement("span");
+    el4.className = className;
+    if (text2 != null) el4.textContent = text2;
+    return el4;
   }
-  function headerCell(label2, align = "center") {
-    const cell = document.createElement("span");
-    css(cell, {
-      fontSize: "10.5px",
-      fontWeight: "700",
-      letterSpacing: "0.06em",
-      textTransform: "uppercase",
-      textAlign: align,
-      color: color.textDim
-    });
-    cell.textContent = label2;
-    return cell;
+  function gridRow(extraClass = "") {
+    const row2 = document.createElement("div");
+    row2.className = `ht-counts__row ${extraClass}`.trim();
+    return row2;
   }
   function mutationHeaderCell(mutationId) {
-    const cell = document.createElement("span");
-    css(cell, { display: "flex", justifyContent: "center" });
+    const cell = span("ht-counts__mutation");
     cell.title = mutationId;
     cell.appendChild(iconBox(mutationIcon2(mutationId), HEADER_ICON_PX, "hatch"));
     return cell;
   }
   function numberCell(value, tint, strong = false) {
-    const cell = document.createElement("span");
-    css(cell, {
-      fontSize: "12.5px",
-      fontVariantNumeric: "tabular-nums",
-      fontWeight: strong ? "700" : "500",
-      color: value > 0 ? tint : color.textDim,
-      textAlign: "center"
-    });
-    cell.textContent = formatInteger(value);
+    const cell = span(strong ? "ht-num is-strong" : "ht-num", formatInteger(value));
+    if (value > 0) cell.style.color = tint;
     return cell;
   }
-  function speciesCell(row5) {
-    const cell = document.createElement("span");
-    css(cell, { display: "flex", alignItems: "center", gap: "7px", minWidth: "0" });
-    cell.appendChild(iconBox(`sprite/pet/${row5.species}`, SPECIES_ICON_PX, "hatch"));
-    const label2 = document.createElement("span");
-    css(label2, {
-      fontSize: "12.5px",
-      color: color.text,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    });
-    label2.textContent = row5.species;
-    cell.appendChild(label2);
-    if (row5.share !== void 0) {
-      const share = document.createElement("span");
-      css(share, { fontSize: "10px", color: color.textDim, whiteSpace: "nowrap", flex: "0 0 auto" });
-      const percent = row5.share * 100;
-      share.textContent = `${percent >= 1 ? Math.round(percent) : percent.toFixed(1)}%`;
-      cell.appendChild(share);
+  function speciesCell(row2) {
+    const cell = span("ht-species");
+    cell.appendChild(iconBox(`sprite/pet/${row2.species}`, SPECIES_ICON_PX, "hatch"));
+    cell.appendChild(span("ht-species__name", row2.species));
+    if (row2.share !== void 0) {
+      const percent = row2.share * 100;
+      cell.appendChild(span("ht-species__share", `${percent >= 1 ? Math.round(percent) : percent.toFixed(1)}%`));
     }
     return cell;
   }
   function speciesCountsGrid(rows, stats) {
+    ensureHatchStyles();
     const wrap = document.createElement("div");
-    css(wrap, { display: "flex", flexDirection: "column", gap: "3px" });
+    wrap.className = "ht-counts";
     const header = gridRow();
     header.append(
-      headerCell("Mutation counters", "left"),
-      headerCell("Normal"),
+      span("ht-counts__head is-left", "Hatched"),
+      span("ht-counts__head", "Normal"),
       mutationHeaderCell(GOLD_MUTATION),
       mutationHeaderCell(RAINBOW_MUTATION),
-      headerCell("Total")
+      span("ht-counts__head", "Total")
     );
     wrap.appendChild(header);
     let totalNormal = 0;
     let totalGold = 0;
     let totalRainbow = 0;
-    for (const row5 of rows) {
-      const counts2 = countsFor(stats, row5.species);
+    for (const row2 of rows) {
+      const counts2 = countsFor(stats, row2.species);
       totalNormal += counts2.normal ?? 0;
       totalGold += counts2.gold ?? 0;
       totalRainbow += counts2.rainbow ?? 0;
       const line = gridRow();
       line.append(
-        speciesCell(row5),
+        speciesCell(row2),
         numberCell(counts2.normal, color.text),
         numberCell(counts2.gold, color.goldInk),
         numberCell(counts2.rainbow, color.rainbowInk),
-        numberCell(totalOf(counts2), color.accent, true)
+        numberCell(totalOf(counts2), color.sepiaInk, true)
       );
       wrap.appendChild(line);
     }
     if (rows.length > 1) {
-      const separator = document.createElement("div");
-      css(separator, { height: "1px", background: color.border, margin: "2px 0" });
-      wrap.appendChild(separator);
-      const label2 = document.createElement("span");
-      css(label2, { fontSize: "11px", fontWeight: "700", color: color.textDim, textTransform: "uppercase" });
-      label2.textContent = "Total";
-      const totals = gridRow();
+      const totals = gridRow("is-total");
       totals.append(
-        label2,
+        span("ht-counts__head is-left", "Total"),
         numberCell(totalNormal, color.text, true),
         numberCell(totalGold, color.goldInk, true),
         numberCell(totalRainbow, color.rainbowInk, true),
-        numberCell(totalNormal + totalGold + totalRainbow, color.accent, true)
+        numberCell(totalNormal + totalGold + totalRainbow, color.sepiaInk, true)
       );
       wrap.appendChild(totals);
     }
     return wrap;
   }
-  var css, SPECIES_ICON_PX, HEADER_ICON_PX, GRID_TEMPLATE;
+  var SPECIES_ICON_PX, HEADER_ICON_PX;
   var init_counts = __esm({
     "src/features/hatch/counts.ts"() {
       "use strict";
@@ -30428,14 +30345,19 @@ next: ${next}`;
       init_format();
       init_icons();
       init_theme();
-      css = (el, style) => Object.assign(el.style, style);
+      init_styles5();
       SPECIES_ICON_PX = 24;
       HEADER_ICON_PX = 18;
-      GRID_TEMPLATE = "minmax(0, 2.2fr) repeat(4, minmax(54px, 1fr))";
     }
   });
 
   // src/features/hatch/eggCard.ts
+  function el(tag, className, text2) {
+    const node = document.createElement(tag);
+    node.className = className;
+    if (text2 != null) node.textContent = text2;
+    return node;
+  }
   function formatChance(chance) {
     if (!Number.isFinite(chance) || chance <= 0) return "";
     const percent = chance * 100;
@@ -30454,139 +30376,87 @@ next: ${next}`;
     const remaining = Math.max(0, ceiling - misses);
     const due = remaining === 0;
     const near = !due && remaining <= NEAR_GUARANTEE_PULLS;
-    const row5 = document.createElement("div");
-    css2(row5, {
-      display: "grid",
-      gridTemplateColumns: ROW_TEMPLATE,
-      alignItems: "center",
-      gap: "10px",
-      padding: "3px 0"
-    });
-    const label2 = document.createElement("div");
-    css2(label2, { display: "flex", alignItems: "center", gap: "6px", minWidth: "0" });
+    const row2 = el("div", "ht-row");
+    const label2 = el("div", "ht-row__label");
     label2.title = target.label;
-    const icon2 = iconBox(target.icon, TARGET_ICON_PX, "hatch");
-    label2.appendChild(icon2);
-    if (target.kind === "species") {
-      const name = document.createElement("span");
-      css2(name, {
-        fontSize: "12.5px",
-        color: color.text,
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap"
-      });
-      name.textContent = target.label;
-      label2.appendChild(name);
-    }
+    label2.appendChild(iconBox(target.icon, TARGET_ICON_PX, "hatch"));
+    if (target.kind === "species") label2.appendChild(el("span", "ht-row__name", target.label));
     const chance = formatChance(target.chance);
-    if (chance) {
-      const rate = document.createElement("span");
-      css2(rate, { fontSize: "10.5px", color: color.textDim, whiteSpace: "nowrap" });
-      rate.textContent = chance;
-      label2.appendChild(rate);
-    }
-    const bar = meter();
-    bar.set(misses / ceiling, due || near ? "warn" : "accent");
-    const value = document.createElement("span");
-    css2(value, {
-      fontSize: "11.5px",
-      fontVariantNumeric: "tabular-nums",
-      color: due || near ? color.warn : color.textDim,
-      whiteSpace: "nowrap",
-      textAlign: "right"
-    });
+    if (chance) label2.appendChild(el("span", "ht-row__rate", chance));
+    const bar2 = meter();
+    bar2.set(misses / ceiling, due || near ? "warn" : "accent");
     const isFloor = offset <= 0;
-    value.textContent = due ? "Guaranteed" : `${isFloor ? "\u2265 " : ""}${formatInteger(misses)} / ${formatInteger(ceiling)}`;
+    const value = el(
+      "span",
+      due || near ? "ht-row__value is-near" : "ht-row__value",
+      due ? "Guaranteed" : `${isFloor ? "\u2265 " : ""}${formatInteger(misses)} / ${formatInteger(ceiling)}`
+    );
     value.title = due ? `Due: the next pull is forced (threshold ${formatInteger(target.threshold)}).` : isFloor ? `At least ${formatInteger(remaining)} more misses before the guarantee (threshold ${formatInteger(target.threshold)}). The game keeps its own counter private, so this only counts hatches seen since tracking began. Set your real counter to correct it.` : `${formatInteger(remaining)} more misses before the guarantee (threshold ${formatInteger(target.threshold)}).`;
-    row5.append(label2, bar.root, value);
+    row2.append(label2, bar2.root, value);
     if (showOffsets) {
       const input = textInput("", String(offset), { small: true });
       Object.assign(input, { type: "number", min: "0", max: String(ceiling), step: "1" });
-      css2(input, { width: "70px", padding: "5px 7px", fontSize: "11px", textAlign: "right" });
+      input.classList.add("ht-offset");
       input.title = "Your real in-game counter for this outcome. The mod adds what it has seen since.";
+      input.setAttribute("aria-label", `In-game counter for ${target.label}`);
       input.addEventListener("change", () => {
         HatchTracker.setOffset(egg.eggId, target.key, Number(input.value));
       });
-      row5.appendChild(input);
+      row2.appendChild(input);
     } else {
-      row5.appendChild(document.createElement("span"));
+      row2.appendChild(document.createElement("span"));
     }
-    return row5;
+    return row2;
   }
   function trackingNote() {
-    const note = document.createElement("div");
-    css2(note, { fontSize: "10px", color: color.textDim, lineHeight: "1.45", padding: "1px 0 4px" });
     const startedAt = HatchTracker.getTrackingStartedAt();
     const since = startedAt > 0 ? `since ${new Date(startedAt).toLocaleDateString()}` : "since this install started watching";
-    note.textContent = `The game keeps its real counters private, so these only count hatches seen ${since}. Hatched before that? Type your in-game counter to correct it.`;
-    return note;
+    return el(
+      "div",
+      "ht-note",
+      `Counts the hatches seen ${since}; the game keeps its real counters private. Hatched before that? Use Set counters to type yours in.`
+    );
   }
   function eggHeader(egg, pulls) {
-    const head = document.createElement("div");
-    css2(head, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
+    const head = el("div", "ht-egg-head");
     head.appendChild(iconBox(`sprite/pet/${egg.eggId}`, EGG_ICON_PX, "hatch"));
-    const name = document.createElement("span");
-    css2(name, {
-      fontSize: "13.5px",
-      fontWeight: "600",
-      color: color.text,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    });
-    name.textContent = egg.name;
-    head.appendChild(name);
+    head.appendChild(el("span", "ht-egg-name", egg.name));
     const rarityFrame = raritySprite(egg.rarity);
     if (rarityFrame) {
       const badge2 = iconBox(rarityFrame, RARITY_ICON_PX, "hatch");
       badge2.title = egg.rarity;
       head.appendChild(badge2);
     }
-    const seen = document.createElement("span");
-    css2(seen, { fontSize: "11px", color: color.textDim, whiteSpace: "nowrap", marginLeft: "auto" });
-    seen.textContent = pulls === 1 ? "1 hatch seen" : `${formatInteger(pulls)} hatches seen`;
-    head.appendChild(seen);
+    head.appendChild(el("span", "ht-egg-seen", pulls === 1 ? "1 hatch seen" : `${formatInteger(pulls)} hatches seen`));
     return head;
   }
   function createEggCard(options2) {
+    ensureHatchStyles();
     const { egg, stats, showOffsets } = options2;
     const counters = HatchTracker.getCounters(egg.eggId);
-    const card4 = collapsibleCard({
+    const card3 = collapsibleCard({
       header: eggHeader(egg, counters.pulls),
       collapsed: options2.collapsed,
       onToggle: options2.onToggle
     });
-    const panel = document.createElement("div");
-    css2(panel, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "2px",
-      padding: "7px 9px",
-      borderRadius: "8px",
-      background: color.cardBg,
-      border: `1px solid ${color.border}`
-    });
-    panel.appendChild(sectionLabel("Bad luck protection"));
-    panel.appendChild(trackingNote());
+    card3.root.classList.add("ht-egg");
+    const pity = el("div", "ht-section");
+    pity.append(sectionLabel("Bad luck protection"), trackingNote());
     for (const target of egg.targets) {
-      panel.appendChild(targetRow(egg, target, showOffsets));
+      pity.appendChild(targetRow(egg, target, showOffsets));
     }
+    card3.body.appendChild(pity);
     if (egg.fauna.length) {
-      const separator = document.createElement("div");
-      css2(separator, { height: "1px", background: color.border, margin: "5px 0 4px" });
-      panel.appendChild(separator);
-      panel.appendChild(
+      card3.body.appendChild(
         speciesCountsGrid(
           egg.fauna.map((entry) => ({ species: entry.species, share: entry.share })),
           stats
         )
       );
     }
-    card4.body.appendChild(panel);
-    return card4.root;
+    return card3.root;
   }
-  var css2, EGG_ICON_PX, TARGET_ICON_PX, RARITY_ICON_PX, ROW_TEMPLATE, NEAR_GUARANTEE_PULLS;
+  var EGG_ICON_PX, TARGET_ICON_PX, RARITY_ICON_PX, NEAR_GUARANTEE_PULLS;
   var init_eggCard = __esm({
     "src/features/hatch/eggCard.ts"() {
       "use strict";
@@ -30599,12 +30469,10 @@ next: ${next}`;
       init_fields();
       init_icons();
       init_layout();
-      init_theme();
-      css2 = (el, style) => Object.assign(el.style, style);
+      init_styles5();
       EGG_ICON_PX = 30;
       TARGET_ICON_PX = 22;
       RARITY_ICON_PX = 20;
-      ROW_TEMPLATE = "minmax(96px, 1fr) minmax(70px, 1.5fr) auto auto";
       NEAR_GUARANTEE_PULLS = 10;
     }
   });
@@ -30707,34 +30575,27 @@ next: ${next}`;
     return sortSpeciesByRarity(out);
   }
   function renderHatchTab(view) {
+    ensureHatchStyles();
     view.replaceChildren();
     const wrap = document.createElement("div");
-    wrap.classList.add("qws-pnl-scroll");
-    Object.assign(wrap.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "8px",
-      // Wide enough for the counts grid to breathe, but capped against the
-      // viewport so the HUD window never runs off a small screen.
-      width: "min(680px, 86vw)",
-      maxWidth: "100%",
-      minHeight: "0",
-      maxHeight: "68vh",
-      overflowY: "auto",
-      boxSizing: "border-box"
-    });
+    wrap.className = "ht-tab";
     view.appendChild(wrap);
     const header = document.createElement("div");
-    Object.assign(header.style, { display: "flex", alignItems: "center", gap: "8px", flexShrink: "0", padding: "0 2px" });
+    header.className = "ht-head";
+    const text2 = document.createElement("div");
+    text2.className = "ht-head__text";
     const title = document.createElement("div");
-    Object.assign(title.style, { fontSize: "14.5px", fontWeight: "700", color: color.text, flex: "1 1 auto" });
-    title.textContent = "\u{1F95A} Hatches & bad luck protection";
-    title.title = "Counted from the hatches Arie's Mod has watched: the game never sends the real counters. Use Calibrate to set your actual head start.";
-    header.appendChild(title);
+    title.className = "ht-title";
+    title.textContent = "Hatches";
+    const subtitle = document.createElement("div");
+    subtitle.className = "ht-sub";
+    subtitle.textContent = "What each egg gave you, and how close its next guarantee is.";
+    text2.append(title, subtitle);
+    header.appendChild(text2);
     let showOffsets = false;
-    const calibrateBtn = button("Calibrate", {
+    const calibrateBtn = button("Set counters", {
       size: "sm",
-      title: "Show a head start field on every counter.",
+      title: "Counted from the hatches Arie's Mod has watched: the game never sends the real counters. Shows a field on every counter to type in your real one.",
       onClick: () => {
         showOffsets = !showOffsets;
         repaint();
@@ -30743,7 +30604,7 @@ next: ${next}`;
     header.appendChild(calibrateBtn);
     wrap.appendChild(header);
     const body = document.createElement("div");
-    Object.assign(body.style, { display: "flex", flexDirection: "column", gap: "8px" });
+    body.className = "ht-list qws-pnl-scroll";
     wrap.appendChild(body);
     function repaint() {
       calibrateBtn.setActive(showOffsets);
@@ -30767,20 +30628,20 @@ next: ${next}`;
       }
       const others = otherSpecies(stats, fromEggs);
       if (others.length) {
-        const card4 = collapsibleCard({
-          icon: "\u{1F43E}",
+        const card3 = collapsibleCard({
           title: "Other pets",
           description: "Species no egg hatches.",
           collapsed: isCollapsed(OTHER_SECTION_ID),
           onToggle: (collapsed) => setCollapsed(OTHER_SECTION_ID, collapsed)
         });
-        card4.body.appendChild(speciesCountsGrid(others.map((species) => ({ species })), stats));
-        body.appendChild(card4.root);
+        card3.root.classList.add("ht-egg");
+        card3.body.appendChild(speciesCountsGrid(others.map((species) => ({ species })), stats));
+        body.appendChild(card3.root);
       }
       if (!body.childElementCount) {
         const empty = document.createElement("div");
-        Object.assign(empty.style, { fontSize: "12.5px", color: color.textDim, padding: "6px 2px" });
-        empty.textContent = "No egg data available yet.";
+        empty.className = "ht-empty";
+        empty.textContent = "No egg data yet. It shows up once the game's catalogs have loaded.";
         body.appendChild(empty);
       }
     }
@@ -30831,9 +30692,259 @@ next: ${next}`;
       init_counts();
       init_button();
       init_layout();
-      init_theme();
       init_storage();
+      init_styles5();
       OTHER_SECTION_ID = "__other__";
+    }
+  });
+
+  // src/features/pets/styles.ts
+  function ensurePetsStyles() {
+    if (installed6) return;
+    installed6 = true;
+    addStyle(PETS_CSS);
+  }
+  var PANE_HEIGHT, PETS_CSS, installed6;
+  var init_styles6 = __esm({
+    "src/features/pets/styles.ts"() {
+      "use strict";
+      init_dom();
+      PANE_HEIGHT = "calc(56vh / var(--qmm-scale, 1))";
+      PETS_CSS = `
+/* A tab takes a set width, so the window keeps its size from tab to tab, and
+   is the container its layouts query to stack on a narrow window. */
+.pt-tab {
+  display: flex; flex-direction: column; gap: var(--qmm-space-xl);
+  width: min(780px, calc((100vw - 64px) / var(--qmm-scale, 1))); max-width: 100%; box-sizing: border-box;
+  container-type: inline-size;
+}
+.pt-empty {
+  padding: var(--qmm-space-xl) var(--qmm-space-md); font-size: var(--qmm-fs-sm); line-height: 1.45;
+  color: var(--qmm-text-dim); text-align: center;
+}
+.pt-hint { font-size: var(--qmm-fs-sm); line-height: 1.4; color: var(--qmm-text-dim); }
+.pt-scroll { max-height: ${PANE_HEIGHT}; overflow-y: auto; min-height: 0; padding: 2px 2px 2px 0; }
+
+/* A list on the left, its detail on the right. */
+.pt-split {
+  display: grid; grid-template-columns: minmax(200px, 250px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr);
+  gap: var(--qmm-space-xl); height: ${PANE_HEIGHT}; min-height: 0;
+}
+.pt-split > * { min-height: 0; }
+
+/* ----------------------------- Teams: the list ---------------------------- */
+.pt-teams { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
+.pt-teams__head { display: flex; align-items: center; gap: var(--qmm-space-md); min-height: 32px; }
+.pt-teams__head .qmm-section-label { flex: 1 1 auto; }
+.pt-teams__rows {
+  flex: 1 1 auto; min-height: 0; overflow: auto; scroll-behavior: smooth;
+  display: flex; flex-direction: column; gap: var(--qmm-space-xs);
+  padding: var(--qmm-space-sm); border-radius: var(--qmm-radius-lg); background: var(--qmm-paper-deep);
+}
+.pt-team {
+  flex: 0 0 auto; display: flex; align-items: center; gap: var(--qmm-space-md);
+  height: 40px; padding: 0 var(--qmm-space-sm) 0 var(--qmm-space-lg); box-sizing: border-box;
+  border: 2px solid transparent; border-radius: var(--qmm-radius-md); background: var(--qmm-card);
+  font-size: var(--qmm-fs-md); font-weight: 700; white-space: nowrap; cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.pt-team:hover { border-color: var(--qmm-border-hover); }
+.pt-team.is-selected { background: var(--qmm-sepia-soft); border-color: var(--qmm-accent-border); color: var(--qmm-sepia-ink); }
+.pt-team__dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: var(--qmm-sand-edge); }
+.pt-team__dot.is-active { background: var(--qmm-ok); box-shadow: 0 0 0 3px var(--qmm-ok-soft); }
+.pt-team__name { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.pt-team__pets { flex: 0 0 auto; display: flex; align-items: center; gap: 3px; }
+.pt-team .qmm-grab { margin-left: 0; }
+.pt-sync {
+  display: flex; align-items: center; gap: var(--qmm-space-md); padding: var(--qmm-space-xs) var(--qmm-space-sm);
+  font-size: var(--qmm-fs-sm); font-weight: 700; color: var(--qmm-text-soft); cursor: pointer;
+}
+
+/* ---------------------------- Teams: the editor --------------------------- */
+.pt-editor { display: flex; flex-direction: column; gap: var(--qmm-space-xl); overflow-y: auto; padding-right: 2px; }
+.pt-editor__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.pt-editor__name { flex: 1 1 0; font-size: var(--qmm-fs-xl); font-weight: 800; }
+.pt-editor__foot { display: flex; justify-content: flex-end; }
+.pt-slots { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
+.pt-slot {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) auto auto; align-items: center; gap: var(--qmm-space-lg);
+  padding: var(--qmm-space-md) var(--qmm-space-md) var(--qmm-space-md) var(--qmm-space-lg);
+  border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+}
+.pt-slot.is-empty { background: transparent; outline: 2px dashed var(--qmm-sand-edge); outline-offset: -2px; }
+.pt-slot__icon { display: grid; place-items: center; width: 44px; height: 44px; font-size: 26px; }
+.pt-slot.is-empty .pt-slot__icon { opacity: .4; }
+.pt-slot__text { display: flex; flex-direction: column; gap: var(--qmm-space-sm); min-width: 0; }
+.pt-slot__title { display: flex; align-items: center; gap: var(--qmm-space-sm); min-width: 0; }
+.pt-slot__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--qmm-fs-lg); font-weight: 800; }
+.pt-slot.is-empty .pt-slot__name { color: var(--qmm-text-dim); font-weight: 700; }
+
+/* Strength, as current/max. Green once the pet is at its max. */
+.pt-str {
+  flex: 0 0 auto; padding: 2px 7px; border-radius: var(--qmm-radius-pill);
+  background: var(--qmm-sand); color: var(--qmm-text-soft);
+  font-size: var(--qmm-fs-xs); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.pt-str.is-max { background: var(--qmm-ok-soft); color: var(--qmm-ok-ink); }
+
+/* -------------------------------- Team stats ------------------------------ */
+.pt-stats { display: flex; flex-direction: column; gap: var(--qmm-space-sm); }
+.pt-stats__groups { display: grid; gap: var(--qmm-space-sm); }
+.pt-stats.is-all .pt-stats__groups { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--qmm-space-md); }
+.pt-stat {
+  display: flex; flex-direction: column; gap: 3px; min-width: 0;
+  padding: var(--qmm-space-md) var(--qmm-space-lg); border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+}
+.pt-stat__head { display: flex; align-items: center; justify-content: space-between; gap: var(--qmm-space-sm); min-height: 16px; }
+.pt-stat__name {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--qmm-fs-xs); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--qmm-text-dim);
+}
+.pt-stat__value { display: flex; align-items: baseline; gap: var(--qmm-space-xs); font-variant-numeric: tabular-nums; }
+.pt-stat__big { font-size: var(--qmm-fs-xl); font-weight: 900; line-height: 1.1; }
+.pt-stat__unit, .pt-stat__max { font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); }
+.pt-stat__max { margin-left: auto; white-space: nowrap; }
+.pt-stat__always { font-size: var(--qmm-fs-md); font-weight: 700; color: var(--qmm-text-soft); }
+.pt-stat__bar { height: 4px; margin-top: 2px; overflow: hidden; border-radius: var(--qmm-radius-pill); background: var(--qmm-sand-edge); }
+.pt-stat__fill { height: 100%; border-radius: inherit; }
+.pt-stat__proc { display: flex; align-items: baseline; justify-content: space-between; gap: var(--qmm-space-md); font-size: var(--qmm-fs-xs); color: var(--qmm-text-soft); }
+.pt-stat__proc b { flex: 0 0 auto; font-weight: 800; color: var(--qmm-text); font-variant-numeric: tabular-nums; }
+.pt-stat__nav { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; }
+.pt-stat__arrow {
+  padding: 1px 5px; border: 0; border-radius: var(--qmm-radius-sm); background: transparent; color: var(--qmm-text-soft);
+  font: 900 var(--qmm-fs-md) var(--qmm-font); line-height: 1; cursor: pointer;
+}
+.pt-stat__arrow:hover { background: var(--qmm-sand); color: var(--qmm-text); }
+.pt-stat__count { font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); font-variant-numeric: tabular-nums; }
+.pt-stats__warn { font-size: var(--qmm-fs-xs); font-weight: 700; color: var(--qmm-warn-ink); }
+.pt-feedrow {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--qmm-space-md);
+  padding: var(--qmm-space-sm) var(--qmm-space-lg); border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+  font-size: var(--qmm-fs-sm);
+}
+.pt-feedrow__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--qmm-text-soft); }
+.pt-feedrow__value { flex: 0 0 auto; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* ------------------------------ Team Builder ----------------------------- */
+.pt-builder__bar { display: flex; align-items: center; gap: var(--qmm-space-lg); }
+.pt-builder__bar .pt-hint { flex: 1 1 auto; }
+.pt-builder__grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--qmm-space-lg); align-items: start;
+}
+.pt-builder__grid > .qmm-collapse, .pt-builder__grid > .pt-empty { grid-column: 1 / -1; }
+/* The kit card is a grid: its one column must be allowed to shrink, or a long
+   pet name pushes the card wider than its cell. */
+.pt-suggest, .pt-suggest .qmm-card__body { grid-template-columns: minmax(0, 1fr); }
+.pt-suggest {
+  position: relative; overflow: hidden; gap: var(--qmm-space-md);
+  padding: var(--qmm-space-lg) var(--qmm-space-lg) var(--qmm-space-lg) calc(var(--qmm-space-lg) + 4px);
+  transition: transform 140ms ease, border-color 140ms ease;
+}
+.pt-suggest:hover { transform: translateY(-2px); border-color: var(--qmm-border-hover); }
+.pt-suggest .qmm-card__header { flex-wrap: nowrap; align-items: flex-start; gap: var(--qmm-space-md); }
+.pt-suggest .qmm-card__title { flex: 1 1 0; min-width: 0; font-size: var(--qmm-fs-lg); line-height: 1.3; }
+.pt-suggest .qmm-card__actions { align-items: center; }
+.pt-suggest .qmm-card__body { gap: var(--qmm-space-md); }
+/* The colours of the abilities the team is built around. */
+.pt-suggest__strip { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; }
+.pt-suggest__pets { display: grid; gap: 2px; }
+
+/* One pet on one line: portrait, name, strength, ability squares. */
+.pt-chip { display: flex; align-items: center; gap: var(--qmm-space-sm); min-width: 0; padding: 3px 4px; border-radius: var(--qmm-radius-sm); }
+.pt-chip:hover { background: var(--qmm-paper-deep); }
+.pt-chip__name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--qmm-fs-sm); font-weight: 700; }
+.pt-unused { display: flex; align-items: center; gap: var(--qmm-space-md); opacity: .85; }
+.pt-unused > .pt-chip { flex: 1 1 auto; }
+.pt-unused__why {
+  flex: 0 1 auto; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim);
+}
+
+/* -------------------------------- Feeding -------------------------------- */
+.pt-feed-side { display: flex; flex-direction: column; gap: var(--qmm-space-xl); overflow-y: auto; padding-right: 2px; }
+.pt-crops { display: flex; flex-direction: column; gap: var(--qmm-space-sm); }
+.qmm-vtab.pt-species { grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; }
+.pt-species__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pt-crop-icon { display: grid; place-items: center; flex: 0 0 auto; width: 28px; height: 28px; font-weight: 800; color: var(--qmm-text-dim); }
+
+/* ---------------------------------- Logs --------------------------------- */
+.pt-logs__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.pt-logs__title { font-size: var(--qmm-fs-xl); font-weight: 900; }
+.pt-logs__head .qmm-pill { margin-right: auto; }
+.pt-logs__tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.pt-logs__search { flex: 1 1 180px; }
+.pt-logs__ability { min-width: 150px; }
+.pt-logs__cols, .pt-log {
+  display: grid; grid-template-columns: 92px minmax(110px, 1.1fr) minmax(100px, .9fr) minmax(0, 2fr);
+  align-items: center; gap: var(--qmm-space-lg);
+}
+.pt-logs__cols { padding: 0 var(--qmm-space-lg); }
+.pt-logs__list { display: flex; flex-direction: column; gap: var(--qmm-space-xs); max-height: calc(50vh / var(--qmm-scale, 1)); overflow-y: auto; min-height: 0; }
+.pt-log { padding: var(--qmm-space-sm) var(--qmm-space-lg); border-radius: var(--qmm-radius-md); background: var(--qmm-card); }
+/* A proc from this session reads at a glance without a legend. */
+.pt-log.is-session { background: var(--qmm-sepia-soft); box-shadow: inset 3px 0 0 var(--qmm-accent); }
+.pt-log__when { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-variant-numeric: tabular-nums; }
+.pt-log__date { font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); }
+.pt-log__time { font-size: var(--qmm-fs-sm); font-weight: 600; white-space: nowrap; }
+.pt-log.is-session .pt-log__time { font-weight: 800; color: var(--qmm-sepia-ink); }
+.pt-log__pet { display: flex; align-items: center; gap: var(--qmm-space-md); min-width: 0; }
+.pt-log__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--qmm-fs-sm); font-weight: 700; }
+.pt-log__ability { display: flex; min-width: 0; }
+.pt-log__details {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--qmm-fs-sm); color: var(--qmm-text-dim);
+}
+
+/* ----------------------------- Ability chips ----------------------------- */
+.pt-abilities { display: inline-flex; flex-wrap: wrap; align-items: center; line-height: 1; }
+.pt-abilities__empty { font-size: var(--qmm-fs-sm); color: var(--qmm-text-dim); }
+.pt-ability-dot {
+  display: inline-block; flex: 0 0 auto; border-radius: 3px; cursor: default;
+  background: var(--pt-ability); box-shadow: 0 0 0 1px var(--qmm-shade) inset, 0 0 0 1px var(--qmm-border);
+  transition: transform 80ms ease, box-shadow 120ms ease;
+}
+.pt-ability-dot:hover {
+  background: var(--pt-ability-hover); transform: scale(1.08);
+  box-shadow: 0 0 0 1px var(--qmm-shade) inset, 0 0 0 1px var(--qmm-border-hover);
+}
+.pt-ability-pill {
+  display: inline-block; max-width: 100%; padding: 3px 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  border-radius: var(--qmm-radius-pill); background: var(--pt-ability); box-shadow: 0 0 0 1px var(--qmm-shade) inset;
+  color: var(--qmm-on-sepia); text-shadow: 0 1px 2px var(--qmm-shade);
+  font-size: var(--qmm-fs-xs); font-weight: 800; line-height: 1.5;
+}
+.pt-ability-pill:hover { background: var(--pt-ability-hover); }
+
+/* A pet portrait. Its size and corner come inline, from the caller's size. */
+.pt-pet-icon {
+  flex: 0 0 auto; display: grid; place-items: center; overflow: hidden;
+  background: var(--qmm-card); box-shadow: inset 0 0 0 1px var(--qmm-sand-edge);
+  color: var(--qmm-text-soft); font-weight: 800;
+}
+.pt-pet-icon.is-empty { opacity: .4; }
+.pt-pet-icon img { object-fit: contain; }
+
+/* ------------------------------ Narrow windows ---------------------------- */
+@container (max-width: 560px) {
+  .pt-split { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; height: auto; }
+  .pt-teams__rows { max-height: 200px; }
+  .pt-slot { grid-template-columns: 32px minmax(0, 1fr) auto auto; gap: var(--qmm-space-md); padding: var(--qmm-space-sm); }
+  .pt-slot__icon { width: 32px; height: 32px; font-size: 20px; }
+  .pt-slot__title { flex-wrap: wrap; row-gap: 2px; }
+  .pt-slot .qmm-btn--icon { width: 28px; }
+  .pt-split .qmm-vlist { max-height: 200px; }
+  .pt-logs__cols { display: none; }
+  .pt-log {
+    grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--qmm-space-xs);
+    grid-template-areas: "pet when" "ability ability" "details details";
+  }
+  .pt-log__pet { grid-area: pet; }
+  .pt-log__when { grid-area: when; align-items: flex-end; }
+  .pt-log__ability { grid-area: ability; }
+  .pt-log__details { grid-area: details; white-space: normal; }
+}
+`;
+      installed6 = false;
     }
   });
 
@@ -30845,26 +30956,18 @@ next: ${next}`;
     img.height = size;
     img.alt = "";
     img.draggable = false;
-    Object.assign(img.style, { width: `${size}px`, height: `${size}px`, objectFit: "contain" });
+    img.style.width = img.style.height = `${size}px`;
     return img;
   }
   function petIcon(pet, size) {
+    ensurePetsStyles();
     const holder2 = document.createElement("div");
-    Object.assign(holder2.style, {
-      width: `${size}px`,
-      height: `${size}px`,
-      flex: "0 0 auto",
-      display: "grid",
-      placeItems: "center",
-      overflow: "hidden",
-      borderRadius: `${Math.round(size / 3.5)}px`,
-      background: color.surface,
-      border: `1px solid ${color.border}`,
-      fontSize: `${Math.max(9, Math.round(size * 0.45))}px`,
-      color: color.text
-    });
+    holder2.className = "pt-pet-icon";
+    holder2.style.width = holder2.style.height = `${size}px`;
+    holder2.style.borderRadius = `${Math.round(size / 3.5)}px`;
+    holder2.style.fontSize = `${Math.max(9, Math.round(size * 0.45))}px`;
     if (!pet) {
-      holder2.style.opacity = "0.35";
+      holder2.classList.add("is-empty");
       holder2.textContent = "\xB7";
       return holder2;
     }
@@ -30889,8 +30992,8 @@ next: ${next}`;
   var init_petIcon = __esm({
     "src/features/pets/petIcon.ts"() {
       "use strict";
-      init_theme();
       init_iconCache();
+      init_styles6();
       resolvedSprites = /* @__PURE__ */ new Map();
     }
   });
@@ -30904,11 +31007,10 @@ next: ${next}`;
   }
   function renderSpeciesItem(item, btn) {
     btn.replaceChildren();
-    btn.style.gridTemplateColumns = "24px 1fr auto";
-    btn.style.gap = "10px";
+    btn.classList.add("pt-species");
     const title = document.createElement("div");
+    title.className = "pt-species__name";
     title.textContent = item.title || "Pet";
-    Object.assign(title.style, { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: "0" });
     btn.append(petIcon({ petSpecies: item.id, name: item.title }, LIST_ICON_PX2), title);
     const rarity3 = String(item.rarity || "").trim();
     if (rarity3) {
@@ -30919,84 +31021,69 @@ next: ${next}`;
     }
   }
   function message(text2) {
-    const el = document.createElement("div");
-    el.textContent = text2;
-    el.style.opacity = "0.75";
-    return el;
+    const el4 = document.createElement("div");
+    el4.className = "pt-empty";
+    el4.textContent = text2;
+    return el4;
+  }
+  function cropIcon(crop, name) {
+    const box2 = document.createElement("span");
+    box2.className = "pt-crop-icon";
+    box2.textContent = name.charAt(0).toUpperCase();
+    const entry = plantCatalog2[crop];
+    const sprite = typeof entry?.crop?.sprite === "string" ? entry.crop.sprite : "";
+    const candidates = [sprite, crop].filter(Boolean);
+    attachSpriteIcon(box2, ["crop", "tallplant", "plant"], candidates, CROP_ICON_PX, "feed-crop");
+    return box2;
   }
   function cropRow(species, crop, name) {
-    const row5 = document.createElement("div");
-    Object.assign(row5.style, {
-      display: "grid",
-      gridTemplateColumns: "1fr auto",
-      alignItems: "center",
-      gap: "8px",
-      padding: "6px 4px",
-      borderBottom: `1px solid ${color.border}`
-    });
-    const label2 = document.createElement("div");
-    Object.assign(label2.style, { display: "flex", flexDirection: "column", gap: "2px" });
-    const nameEl = document.createElement("div");
-    nameEl.textContent = name;
-    nameEl.style.fontSize = "13px";
-    label2.appendChild(nameEl);
-    if (name !== crop) {
-      const idEl = document.createElement("div");
-      idEl.textContent = crop;
-      Object.assign(idEl.style, { fontSize: "11px", opacity: "0.6" });
-      label2.appendChild(idEl);
-    }
     const toggle = switchInput(
       PetsService.isInstantFeedCropAllowed(species, crop),
       (on) => PetsService.setInstantFeedCropAllowed(species, crop, on)
     );
-    row5.append(label2, toggle);
-    return row5;
+    toggle.setAttribute("aria-label", `Feed ${name}`);
+    const { row: row2 } = settingRow(name, name !== crop ? crop : null, toggle);
+    row2.prepend(cropIcon(crop, name));
+    return row2;
   }
   function renderFeedingTab(view) {
+    ensurePetsStyles();
     view.replaceChildren();
+    const tab = document.createElement("div");
+    tab.className = "pt-tab";
     const layout = document.createElement("div");
-    Object.assign(layout.style, {
-      display: "grid",
-      gridTemplateColumns: "minmax(220px, 280px) minmax(0, 1fr)",
-      gap: "10px",
-      alignItems: "stretch",
-      height: "54vh",
-      minHeight: "0"
-    });
-    view.appendChild(layout);
-    const left = document.createElement("div");
-    Object.assign(left.style, { display: "flex", flexDirection: "column", height: "100%", minHeight: "0" });
+    layout.className = "pt-split";
+    tab.appendChild(layout);
+    view.appendChild(tab);
     const tabs = new VTabs({
+      filterPlaceholder: "Find a pet",
       emptyText: "No pets found.",
       fillAvailableHeight: true,
       renderItem: (item, btn) => renderSpeciesItem(item, btn)
     });
-    Object.assign(tabs.root.style, { flex: "1 1 auto", minHeight: "0" });
-    left.appendChild(tabs.root);
-    const right = document.createElement("div");
-    Object.assign(right.style, { display: "flex", flexDirection: "column", gap: "10px", minHeight: "0" });
-    const panel = card("\u{1F356} Instant Feed", { tone: "muted", subtitle: "Allow or block crops for the Instant Feed button." });
-    Object.assign(panel.root.style, { display: "grid", gridTemplateRows: "auto 1fr", minHeight: "0", height: "100%" });
-    Object.assign(panel.body.style, { gridTemplateRows: "auto 1fr", minHeight: "0" });
-    right.appendChild(panel.root);
-    layout.append(left, right);
-    const widgetRow = document.createElement("label");
-    Object.assign(widgetRow.style, { display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" });
-    const widgetLabel = document.createElement("span");
-    widgetLabel.textContent = "Show floating Instant Feed widget";
-    widgetLabel.style.fontSize = "13px";
-    widgetRow.append(switchInput(isInstantFeedWidgetEnabled(), setInstantFeedWidgetEnabled), widgetLabel);
-    panel.body.appendChild(widgetRow);
+    const side = document.createElement("div");
+    side.className = "pt-feed-side";
+    layout.append(tabs.root, side);
+    const widget2 = settingRow(
+      "Floating feed button",
+      "Shows the Instant Feed button over the game.",
+      switchInput(isInstantFeedWidgetEnabled(), setInstantFeedWidgetEnabled)
+    );
+    side.appendChild(widget2.row);
+    const panel = card("Crops", { subtitle: "The crops Instant Feed may give this pet." });
     const crops = document.createElement("div");
-    Object.assign(crops.style, { display: "flex", flexDirection: "column", gap: "6px", overflow: "auto", minHeight: "0" });
+    crops.className = "pt-crops";
     panel.body.appendChild(crops);
+    side.appendChild(panel.root);
     const renderCrops = (species) => {
       crops.replaceChildren();
       if (!species) {
-        crops.appendChild(message("Select a pet to configure instant feed crops."));
+        panel.setTitle("Crops");
+        crops.appendChild(message("Pick a pet on the left to choose its crops."));
         return;
       }
+      const entry = petCatalog2[species];
+      panel.setTitle(`${String(entry?.name || species)} eats`);
       const compatible = Array.from(new Set(PetsService.getCompatibleCropsForSpecies(species).map(String).filter(Boolean)));
       if (!compatible.length) {
         crops.appendChild(message("No compatible crops for this pet."));
@@ -31010,20 +31097,23 @@ next: ${next}`;
     tabs.onSelect((id) => renderCrops(id));
     renderCrops(items[0]?.id ?? null);
   }
-  var LIST_ICON_PX2;
+  var LIST_ICON_PX2, CROP_ICON_PX;
   var init_feedingTab = __esm({
     "src/features/pets/feedingTab.ts"() {
       "use strict";
       init_data();
       init_card();
-      init_theme();
+      init_layout();
+      init_rarityBadge();
+      init_iconCache();
       init_toggles();
       init_vtabs();
-      init_rarityBadge();
       init_feedWidget();
       init_pets();
       init_petIcon();
+      init_styles6();
       LIST_ICON_PX2 = 22;
+      CROP_ICON_PX = 28;
     }
   });
 
@@ -31103,94 +31193,62 @@ next: ${next}`;
   });
 
   // src/features/pets/abilityChips.ts
-  function paintOnHover(el, colors, grow) {
-    el.onmouseenter = () => {
-      el.style.background = colors.hover;
-      if (grow) {
-        el.style.transform = "scale(1.08)";
-        el.style.boxShadow = RING_HOVER;
-      }
-    };
-    el.onmouseleave = () => {
-      el.style.background = colors.bg;
-      if (grow) {
-        el.style.transform = "none";
-        el.style.boxShadow = RING;
-      }
-    };
+  function paint(el4, colors) {
+    el4.style.setProperty("--pt-ability", colors.bg);
+    el4.style.setProperty("--pt-ability-hover", colors.hover);
   }
   function abilityDots(abilityIds, opts = {}) {
+    ensurePetsStyles();
     const size = opts.size ?? 12;
     const wrap = document.createElement("span");
-    Object.assign(wrap.style, { display: "inline-flex", alignItems: "center", gap: `${opts.gap ?? 8}px`, lineHeight: "1" });
+    wrap.className = "pt-abilities";
+    wrap.style.gap = `${opts.gap ?? 8}px`;
     const ids = abilityIds.filter(Boolean);
     if (!ids.length && opts.emptyText) {
       const empty = document.createElement("span");
+      empty.className = "pt-abilities__empty";
       empty.textContent = opts.emptyText;
-      Object.assign(empty.style, { opacity: "0.75", fontSize: "12px" });
       wrap.appendChild(empty);
       return wrap;
     }
     for (const id of ids) {
-      const colors = getAbilityChipColors(id);
       const dot = document.createElement("span");
+      dot.className = "pt-ability-dot";
       dot.title = abilityName(id) || id;
       dot.setAttribute("aria-label", dot.title);
-      Object.assign(dot.style, {
-        display: "inline-block",
-        width: `${size}px`,
-        height: `${size}px`,
-        borderRadius: "3px",
-        background: colors.bg,
-        boxShadow: RING,
-        cursor: "default",
-        transition: "transform 80ms ease, box-shadow 120ms ease, background 120ms ease"
-      });
-      paintOnHover(dot, colors, true);
+      dot.style.width = dot.style.height = `${size}px`;
+      paint(dot, getAbilityChipColors(id));
       wrap.appendChild(dot);
     }
     return wrap;
   }
   function abilityPill(abilityId, label2) {
-    const colors = getAbilityChipColors(abilityId);
+    ensurePetsStyles();
     const pill2 = document.createElement("span");
+    pill2.className = "pt-ability-pill";
     pill2.textContent = label2;
     pill2.title = label2;
-    Object.assign(pill2.style, {
-      display: "inline-block",
-      maxWidth: "100%",
-      padding: "3px 9px",
-      borderRadius: "999px",
-      fontSize: "11px",
-      fontWeight: "700",
-      lineHeight: "1.5",
-      color: color.onSepia,
-      textShadow: `0 1px 2px ${color.shade}`,
-      background: colors.bg,
-      boxShadow: `0 0 0 1px ${color.shade} inset`,
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      transition: "background 120ms ease"
-    });
-    paintOnHover(pill2, colors, false);
+    paint(pill2, getAbilityChipColors(abilityId));
     return pill2;
   }
-  var RING, RING_HOVER;
   var init_abilityChips = __esm({
     "src/features/pets/abilityChips.ts"() {
       "use strict";
-      init_theme();
       init_abilityChipColors();
       init_abilityNames();
-      RING = `0 0 0 1px ${color.shade} inset, 0 0 0 1px ${color.border}`;
-      RING_HOVER = `0 0 0 1px ${color.shade} inset, 0 0 0 1px ${color.borderHover}`;
+      init_styles6();
     }
   });
 
   // src/features/pets/logsTab.ts
-  function options(el, entries) {
-    el.replaceChildren(
+  function el2(tag, className, text2) {
+    const node = document.createElement(tag);
+    node.className = className;
+    if (text2 != null) node.textContent = text2;
+    return node;
+  }
+  function options(el4, entries) {
+    el4.replaceChildren(
       ...entries.map(([value, label2]) => {
         const option2 = document.createElement("option");
         option2.value = value;
@@ -31218,151 +31276,81 @@ next: ${next}`;
     }
   }
   function renderLogsTab(view) {
+    ensurePetsStyles();
     view.replaceChildren();
     const wrap = document.createElement("div");
-    css3(wrap, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-      width: PANEL_WIDTH,
-      maxWidth: "100%",
-      minHeight: "0",
-      boxSizing: "border-box"
-    });
+    wrap.className = "pt-tab";
     view.appendChild(wrap);
-    const panel = plainCard();
-    css3(panel, { minHeight: "0" });
-    wrap.appendChild(panel);
     const head = document.createElement("div");
-    css3(head, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
-    const title = document.createElement("div");
-    css3(title, { fontSize: "14.5px", fontWeight: "700", color: color.text, flex: "1 1 auto" });
-    title.textContent = "\u{1F4DD} Ability logs";
-    head.appendChild(title);
-    const count = document.createElement("span");
-    css3(count, { fontSize: "11px", color: color.textDim, whiteSpace: "nowrap" });
-    head.appendChild(count);
-    panel.appendChild(head);
-    const toolbar2 = document.createElement("div");
-    css3(toolbar2, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
-    const selAbility = select2({ small: true });
-    options(selAbility, [["", "All abilities"]]);
-    css3(selAbility, { minWidth: "170px" });
-    const selSort = select2({ small: true });
-    options(selSort, [["desc", "Newest first"], ["asc", "Oldest first"]]);
-    selSort.value = "desc";
-    const inputSearch = textInput("Search pet / ability / details", "", { small: true });
-    css3(inputSearch, { flex: "1 1 200px", minWidth: "160px" });
-    const btnClear = button("\u{1F9F9} Clear", {
+    head.className = "pt-logs__head";
+    const count = pill("");
+    const btnClear = button("Clear", {
       variant: "danger",
       size: "sm",
       title: "Clear all recorded logs",
       onClick: () => PetsService.clearAbilityLogs()
     });
-    toolbar2.append(selAbility, selSort, inputSearch, btnClear);
-    panel.appendChild(toolbar2);
+    head.append(el2("div", "pt-logs__title", "Ability logs"), count, btnClear);
+    wrap.appendChild(head);
+    const toolbar2 = document.createElement("div");
+    toolbar2.className = "pt-logs__tools";
+    const inputSearch = textInput("Search pets, abilities, details", "", { small: true });
+    inputSearch.classList.add("pt-logs__search");
+    inputSearch.setAttribute("aria-label", "Search the logs");
+    const selAbility = select2({ small: true });
+    selAbility.classList.add("pt-logs__ability");
+    selAbility.setAttribute("aria-label", "Ability");
+    options(selAbility, [["", "All abilities"]]);
+    const selSort = select2({ small: true });
+    selSort.setAttribute("aria-label", "Order");
+    options(selSort, [["desc", "Newest first"], ["asc", "Oldest first"]]);
+    selSort.value = "desc";
+    toolbar2.append(inputSearch, selAbility, selSort);
+    wrap.appendChild(toolbar2);
     const columns = document.createElement("div");
-    css3(columns, {
-      display: "grid",
-      gridTemplateColumns: ROW_TEMPLATE2,
-      gap: "10px",
-      padding: "0 8px"
-    });
+    columns.className = "pt-logs__cols";
     for (const label2 of ["When", "Pet", "Ability", "Details"]) {
       columns.appendChild(sectionLabel(label2));
     }
-    panel.appendChild(columns);
+    wrap.appendChild(columns);
     const list = document.createElement("div");
-    list.classList.add("qws-pnl-scroll");
-    css3(list, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "3px",
-      maxHeight: LIST_MAX_HEIGHT,
-      overflowY: "auto",
-      minHeight: "0"
-    });
-    panel.appendChild(list);
+    list.className = "pt-logs__list qws-pnl-scroll";
+    wrap.appendChild(list);
     const sessionStart2 = PetsService.getAbilityLogsSessionStart?.() ?? 0;
     let logs2 = [];
     let abilityFilter = "";
     let sortDir = "desc";
     let search3 = "";
     function whenCell(log2) {
-      const cell = document.createElement("div");
-      css3(cell, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
-      if (log2.date) {
-        const date = document.createElement("span");
-        css3(date, { fontSize: "10px", color: color.textDim, fontVariantNumeric: "tabular-nums" });
-        date.textContent = log2.date;
-        cell.appendChild(date);
-      }
-      const time = document.createElement("span");
-      css3(time, {
-        fontSize: "11.5px",
-        color: log2.isActiveSession ? color.accent : color.text,
-        fontWeight: log2.isActiveSession ? "600" : "500",
-        fontVariantNumeric: "tabular-nums",
-        whiteSpace: "nowrap"
-      });
-      time.textContent = log2.time12;
-      cell.appendChild(time);
+      const cell = el2("div", "pt-log__when");
+      if (log2.date) cell.appendChild(el2("span", "pt-log__date", log2.date));
+      cell.appendChild(el2("span", "pt-log__time", log2.time12));
       return cell;
     }
     function petCell(log2) {
-      const cell = document.createElement("div");
-      css3(cell, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
-      const name = document.createElement("span");
-      css3(name, {
-        fontSize: "12px",
-        color: color.text,
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis"
-      });
-      name.textContent = log2.petName || log2.species || "Pet";
-      name.title = name.textContent;
+      const cell = el2("div", "pt-log__pet");
+      const name = el2("span", "pt-log__name", log2.petName || log2.species || "Pet");
+      name.title = name.textContent ?? "";
       const icon2 = petIcon({ petSpecies: log2.species, mutations: log2.mutations, name: log2.petName }, PET_ICON_PX);
       cell.append(icon2, name);
       return cell;
     }
     function abilityCell(log2) {
-      const cell = document.createElement("div");
-      css3(cell, { display: "flex", minWidth: "0" });
+      const cell = el2("div", "pt-log__ability");
       cell.appendChild(abilityPill(log2.abilityId, log2.abilityName || log2.abilityId || "-"));
       return cell;
     }
     function detailsCell(log2) {
-      const cell = document.createElement("div");
       const text2 = detailsOf(log2);
-      css3(cell, {
-        fontSize: "11.5px",
-        color: color.textDim,
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        minWidth: "0"
-      });
-      cell.textContent = text2;
+      const cell = el2("div", "pt-log__details", text2);
       cell.title = text2;
       return cell;
     }
     function logRow(log2) {
-      const row5 = document.createElement("div");
-      css3(row5, {
-        display: "grid",
-        gridTemplateColumns: ROW_TEMPLATE2,
-        alignItems: "center",
-        gap: "10px",
-        padding: "5px 8px",
-        borderRadius: "8px",
-        background: log2.isActiveSession ? color.accentSoft : color.cardBg,
-        border: `1px solid ${color.border}`,
-        // A proc from this session reads at a glance without a legend.
-        borderLeft: log2.isActiveSession ? `2px solid ${color.accent}` : `1px solid ${color.border}`
-      });
-      row5.append(whenCell(log2), petCell(log2), abilityCell(log2), detailsCell(log2));
-      return row5;
+      const row2 = el2("div", log2.isActiveSession ? "pt-log is-session" : "pt-log");
+      if (log2.isActiveSession) row2.title = "From this session";
+      row2.append(whenCell(log2), petCell(log2), abilityCell(log2), detailsCell(log2));
+      return row2;
     }
     function applyFilters() {
       let result = logs2.slice();
@@ -31393,17 +31381,10 @@ next: ${next}`;
     function repaint() {
       const visible = applyFilters();
       count.textContent = visible.length === logs2.length ? `${logs2.length} entries` : `${visible.length} of ${logs2.length} entries`;
-      list.innerHTML = "";
+      btnClear.setEnabled(logs2.length > 0);
+      list.replaceChildren();
       if (!visible.length) {
-        const empty = document.createElement("div");
-        css3(empty, {
-          fontSize: "12px",
-          color: color.textDim,
-          textAlign: "center",
-          padding: "24px 8px"
-        });
-        empty.textContent = logs2.length ? "No log matches these filters." : "\u{1F5D2}\uFE0F No logs yet.";
-        list.appendChild(empty);
+        list.appendChild(el2("div", "pt-empty", logs2.length ? "No log matches these filters." : "No logs yet. Abilities show up here as your pets trigger them."));
         return;
       }
       for (const log2 of visible) list.appendChild(logRow(log2));
@@ -31447,22 +31428,19 @@ next: ${next}`;
     })();
     repaint();
   }
-  var css3, PANEL_WIDTH, LIST_MAX_HEIGHT, PET_ICON_PX, ROW_TEMPLATE2, normalizeAbilityKey;
+  var PET_ICON_PX, normalizeAbilityKey;
   var init_logsTab = __esm({
     "src/features/pets/logsTab.ts"() {
       "use strict";
+      init_badges();
       init_button();
       init_card();
       init_fields();
-      init_theme();
       init_abilityChips();
       init_pets();
       init_petIcon();
-      css3 = (el, style) => Object.assign(el.style, style);
-      PANEL_WIDTH = "min(760px, 88vw)";
-      LIST_MAX_HEIGHT = "min(56vh, 520px)";
+      init_styles6();
       PET_ICON_PX = 24;
-      ROW_TEMPLATE2 = "104px minmax(120px, 1.2fr) minmax(110px, 0.9fr) minmax(0, 2fr)";
       normalizeAbilityKey = (value) => String(value ?? "").toLowerCase().replace(/\s+/g, "").replace(/([ivx]+)$/i, "");
     }
   });
@@ -31861,63 +31839,39 @@ next: ${next}`;
   });
 
   // src/features/pets/teamStatsView.ts
-  function fillRatioColor(ratio) {
-    if (ratio >= 0.99) return ACCENT;
+  function el3(tag, className, text2) {
+    const node = document.createElement(tag);
+    node.className = className;
+    if (text2 != null) node.textContent = text2;
+    return node;
+  }
+  function ratioInk(ratio) {
+    if (ratio >= 0.9) return color.okInk;
+    if (ratio >= 0.75) return color.warnInk;
+    return color.dangerInk;
+  }
+  function ratioFill(ratio) {
+    if (ratio >= 0.99) return color.okInk;
     if (ratio >= 0.9) return color.ok;
     if (ratio >= 0.75) return color.warn;
     return color.danger;
   }
   function mkBar(current3, atMax) {
     const ratio = atMax > 0 ? Math.max(0, Math.min(1, current3 / atMax)) : 0;
-    const track = document.createElement("div");
-    Object.assign(track.style, {
-      height: "3px",
-      borderRadius: "999px",
-      background: color.track,
-      overflow: "hidden",
-      margin: "3px 0 1px"
-    });
-    const fill = document.createElement("div");
-    Object.assign(fill.style, {
-      height: "100%",
-      width: `${Math.max(1.5, ratio * 100)}%`,
-      borderRadius: "999px",
-      background: fillRatioColor(ratio),
-      opacity: "0.85"
-    });
+    const track = el3("div", "pt-stat__bar");
+    const fill = el3("div", "pt-stat__fill");
+    fill.style.width = `${Math.max(1.5, ratio * 100)}%`;
+    fill.style.background = ratioFill(ratio);
     track.appendChild(fill);
     return track;
   }
   function mkNav(nav) {
-    const wrap = document.createElement("div");
-    Object.assign(wrap.style, {
-      display: "flex",
-      alignItems: "center",
-      gap: "2px",
-      flex: "0 0 auto"
-    });
+    const wrap = el3("div", "pt-stat__nav");
     const mkArrow = (glyph, delta, label2) => {
-      const button2 = document.createElement("button");
+      const button2 = el3("button", "pt-stat__arrow", glyph);
       button2.type = "button";
-      button2.textContent = glyph;
       button2.title = label2;
-      Object.assign(button2.style, {
-        border: "none",
-        background: "transparent",
-        color: MUTED,
-        font: "inherit",
-        fontSize: "11px",
-        lineHeight: "1",
-        padding: "0 3px",
-        cursor: "pointer",
-        borderRadius: "3px"
-      });
-      button2.onmouseenter = () => {
-        button2.style.color = color.text;
-      };
-      button2.onmouseleave = () => {
-        button2.style.color = MUTED;
-      };
+      button2.setAttribute("aria-label", label2);
       button2.addEventListener("click", (event) => {
         event.stopPropagation();
         event.preventDefault();
@@ -31925,60 +31879,25 @@ next: ${next}`;
       });
       return button2;
     };
-    const counter2 = document.createElement("span");
-    counter2.textContent = `${nav.index + 1}/${nav.total}`;
-    counter2.style.fontSize = "9px";
-    counter2.style.color = DIM;
-    counter2.style.fontVariantNumeric = "tabular-nums";
-    wrap.append(mkArrow("\u2039", -1, "Previous effect"), counter2, mkArrow("\u203A", 1, "Next effect"));
+    wrap.append(
+      mkArrow("\u2039", -1, "Previous effect"),
+      el3("span", "pt-stat__count", `${nav.index + 1}/${nav.total}`),
+      mkArrow("\u203A", 1, "Next effect")
+    );
     return wrap;
   }
   function renderGroup(group2, nav) {
-    const block = document.createElement("div");
-    Object.assign(block.style, {
-      padding: "5px 7px",
-      borderRadius: "7px",
-      background: color.cardBg,
-      border: `1px solid ${color.border}`,
-      marginBottom: "4px"
-    });
-    const nameRow = document.createElement("div");
-    Object.assign(nameRow.style, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "6px",
-      minHeight: "13px"
-    });
-    const name = document.createElement("div");
+    const block = el3("div", "pt-stat");
+    const head = el3("div", "pt-stat__head");
     const weatherSuffix2 = group2.requiredWeathers.length ? ` \xB7 ${group2.requiredWeathers.join("/")}` : "";
-    name.textContent = `${groupTitle(group2)}${weatherSuffix2}`;
-    Object.assign(name.style, {
-      fontSize: "9px",
-      fontWeight: "600",
-      letterSpacing: "0.05em",
-      textTransform: "uppercase",
-      color: DIM,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    });
+    const name = el3("div", "pt-stat__name", `${groupTitle(group2)}${weatherSuffix2}`);
     if (weatherSuffix2) name.title = "Only fires while this weather is active.";
-    nameRow.appendChild(name);
-    if (nav) nameRow.appendChild(mkNav(nav));
-    block.appendChild(nameRow);
-    const value = document.createElement("div");
-    Object.assign(value.style, {
-      display: "flex",
-      alignItems: "baseline",
-      gap: "3px",
-      fontVariantNumeric: "tabular-nums"
-    });
+    head.appendChild(name);
+    if (nav) head.appendChild(mkNav(nav));
+    block.appendChild(head);
+    const value = el3("div", "pt-stat__value");
     if (group2.combinedProbability === null) {
-      const always = document.createElement("span");
-      always.textContent = "always on";
-      always.style.fontSize = "12px";
-      always.style.color = MUTED;
+      const always = el3("span", "pt-stat__always", "always on");
       always.title = "This ability has no proc chance: it applies continuously.";
       value.appendChild(always);
       block.appendChild(value);
@@ -31986,56 +31905,24 @@ next: ${next}`;
       const atMax = group2.combinedProbabilityAtMax ?? group2.combinedProbability;
       const ratio = atMax > 0 ? Math.min(1, group2.combinedProbability / atMax) : 1;
       const isMaxed = ratio >= 0.995;
-      const big = document.createElement("span");
-      big.textContent = formatPercent(group2.combinedProbability);
-      big.style.fontSize = "15px";
-      big.style.fontWeight = "700";
-      big.style.color = fillRatioColor(ratio);
-      big.style.lineHeight = "1.1";
-      const unit = document.createElement("span");
-      unit.textContent = triggerUnit(group2.trigger);
-      unit.style.fontSize = "9px";
-      unit.style.color = DIM;
-      value.append(big, unit);
-      if (!isMaxed) {
-        const ceiling = document.createElement("span");
-        ceiling.textContent = `max ${formatPercent(atMax)}`;
-        ceiling.style.fontSize = "9px";
-        ceiling.style.color = DIM;
-        ceiling.style.marginLeft = "auto";
-        value.appendChild(ceiling);
-      }
+      const big = el3("span", "pt-stat__big", formatPercent(group2.combinedProbability));
+      big.style.color = ratioInk(ratio);
+      value.append(big, el3("span", "pt-stat__unit", triggerUnit(group2.trigger)));
+      if (!isMaxed) value.appendChild(el3("span", "pt-stat__max", `max ${formatPercent(atMax)}`));
       const perHour = group2.trigger === "continuous" ? `
 About ${(group2.combinedProbability / 100 * CONTINUOUS_ROLLS_PER_HOUR).toFixed(1)} procs per hour.` : "";
       value.title = `Chance at least one of ${group2.contributors.length} pet(s) procs.
 Not a sum: it is 1 minus the product of every pet missing.${perHour}
 
 ` + (isMaxed ? "Every pet is at max strength: this is the most this team can do." : `At ${(ratio * 100).toFixed(0)}% of what these same pets would do at max strength (${formatPercent(atMax)}).`);
-      block.appendChild(value);
-      block.appendChild(mkBar(group2.combinedProbability, atMax));
+      block.append(value, mkBar(group2.combinedProbability, atMax));
     }
     const magnitude = perProcMagnitude(group2);
     if (magnitude) {
-      const row5 = document.createElement("div");
-      Object.assign(row5.style, {
-        display: "flex",
-        alignItems: "baseline",
-        justifyContent: "space-between",
-        gap: "8px",
-        fontSize: "10px",
-        marginTop: "1px"
-      });
-      row5.title = group2.contributors.length > 1 ? "What a single proc gives. Each pet applies its own value, so this is\na range across the team; the values never add up." : "What a single proc gives.";
-      const label2 = document.createElement("span");
-      label2.textContent = "per proc";
-      label2.style.color = MUTED;
-      const amount = document.createElement("span");
-      amount.textContent = magnitude;
-      amount.style.fontWeight = "600";
-      amount.style.flex = "0 0 auto";
-      amount.style.fontVariantNumeric = "tabular-nums";
-      row5.append(label2, amount);
-      block.appendChild(row5);
+      const row2 = el3("div", "pt-stat__proc");
+      row2.title = group2.contributors.length > 1 ? "What a single proc gives. Each pet applies its own value, so this is\na range across the team; the values never add up." : "What a single proc gives.";
+      row2.append(el3("span", "", "per proc"), el3("b", "", magnitude));
+      block.appendChild(row2);
     }
     return block;
   }
@@ -32050,45 +31937,42 @@ Not a sum: it is 1 minus the product of every pet missing.${perHour}
     return focused.length ? focused : groups;
   }
   function renderGroupCarousel(groups) {
-    const host = document.createElement("div");
+    const host = el3("div", "pt-stats__carousel");
     if (!groups.length) return host;
     if (groups.length === 1) {
       host.appendChild(renderGroup(groups[0]));
       return host;
     }
     let index = 0;
-    const paint = () => {
+    const paint2 = () => {
       host.replaceChildren(
         renderGroup(groups[index], {
           index,
           total: groups.length,
           onStep: (delta) => {
             index = (index + delta + groups.length) % groups.length;
-            paint();
+            paint2();
           }
         })
       );
     };
-    paint();
+    paint2();
     return host;
   }
   function renderDetails2(stats, groups, showAllGroups) {
-    const details = document.createElement("div");
-    details.style.paddingTop = "4px";
+    const details2 = el3("div", showAllGroups ? "pt-stats is-all" : "pt-stats");
     if (stats.unknownSpecies.length) {
-      const warn = document.createElement("div");
-      warn.textContent = `\u26A0 unknown species: ${stats.unknownSpecies.join(", ")}`;
-      warn.style.fontSize = "10px";
-      warn.style.color = color.warn;
-      details.appendChild(warn);
+      details2.appendChild(el3("div", "pt-stats__warn", `Unknown species: ${stats.unknownSpecies.join(", ")}`));
     }
     if (showAllGroups) {
-      for (const group2 of groups) details.appendChild(renderGroup(group2));
+      const grid = el3("div", "pt-stats__groups");
+      for (const group2 of groups) grid.appendChild(renderGroup(group2));
+      details2.appendChild(grid);
     } else {
-      details.appendChild(renderGroupCarousel(groups));
+      details2.appendChild(renderGroupCarousel(groups));
     }
-    details.appendChild(renderFeedRow(stats));
-    return details;
+    details2.appendChild(renderFeedRow(stats));
+    return details2;
   }
   function renderFeedRow(stats) {
     const autonomy = stats.autonomy;
@@ -32103,130 +31987,57 @@ Hunger Restore fires ~${autonomy.restoreActivationsPerMinute.toFixed(2)}\xD7/min
 Not counted (needs a specific weather): ${autonomy.weatherGatedHungerAbilities.join(", ")}.` : "";
     if (autonomy.status === "sustained") {
       text2 = "indefinitely";
-      tint = ACCENT;
+      tint = color.okInk;
       title = `Expected hunger restore covers the drain for every pet, so the team
 feeds itself.${boostLine}${restoreLine}${weatherLine2}
 
 This is an average: a bad run of Restore luck can still empty a pet.`;
     } else if (autonomy.status === "runs-out" && autonomy.minutesFromFull !== null) {
       text2 = `~${formatDuration(autonomy.minutesFromFull)}`;
-      tint = autonomy.minutesFromFull < 60 ? color.warn : ACCENT;
+      tint = autonomy.minutesFromFull < 60 ? color.warnInk : color.okInk;
       title = `Starting from full, ${autonomy.limitingPetName ?? "the first pet"} empties first.
 Rates the team itself: current hunger is not taken into account.${boostLine}${restoreLine}${weatherLine2}
 
 Restore figures are averages; unlucky streaks do worse.`;
     } else {
       text2 = "unknown";
-      tint = MUTED;
+      tint = color.textSoft;
       title = `No known hunger data for: ${autonomy.speciesMissingDepletion.join(", ")}.`;
     }
-    const row5 = document.createElement("div");
-    Object.assign(row5.style, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "8px",
-      padding: "4px 7px",
-      borderRadius: "7px",
-      background: color.cardBg,
-      border: `1px solid ${color.border}`,
-      fontSize: "10px"
-    });
-    row5.title = title;
-    const label2 = document.createElement("span");
-    label2.textContent = "\u{1F356} Lasts without feeding (from full)";
-    label2.style.color = MUTED;
-    label2.style.overflow = "hidden";
-    label2.style.textOverflow = "ellipsis";
-    label2.style.whiteSpace = "nowrap";
-    const valueSpan = document.createElement("span");
-    valueSpan.textContent = text2;
+    const row2 = el3("div", "pt-feedrow");
+    row2.title = title;
+    const valueSpan = el3("span", "pt-feedrow__value", text2);
     valueSpan.style.color = tint;
-    valueSpan.style.fontWeight = "600";
-    valueSpan.style.flex = "0 0 auto";
-    valueSpan.style.fontVariantNumeric = "tabular-nums";
-    row5.append(label2, valueSpan);
-    return row5;
+    row2.append(el3("span", "pt-feedrow__label", "Lasts without feeding"), valueSpan);
+    return row2;
   }
   function renderTeamStats(pets, options2 = {}) {
-    const wrap = document.createElement("div");
-    wrap.style.display = "grid";
-    wrap.style.gap = "2px";
+    ensurePetsStyles();
     const realPets = pets.filter(Boolean);
-    if (!realPets.length) {
-      const empty = document.createElement("div");
-      empty.textContent = "No pets in this team.";
-      empty.style.fontSize = "10px";
-      empty.style.color = MUTED;
-      wrap.appendChild(empty);
-      return wrap;
-    }
+    if (!realPets.length) return el3("div", "pt-empty", "No pets in this team.");
     const stats = computeTeamStats(realPets);
     const groups = options2.focusAbilityIds?.length ? focusGroups(stats.groups, options2.focusAbilityIds) : stats.groups;
-    wrap.appendChild(renderDetails2(stats, groups, options2.showAllGroups === true));
-    return wrap;
+    return renderDetails2(stats, groups, options2.showAllGroups === true);
   }
-  var MUTED, ACCENT, DIM;
   var init_teamStatsView = __esm({
     "src/features/pets/teamStatsView.ts"() {
       "use strict";
       init_teamStats();
       init_theme();
+      init_styles6();
       init_teamStatsText();
-      MUTED = color.textSoft;
-      ACCENT = color.okInk;
-      DIM = color.textDim;
     }
   });
 
   // src/features/pets/teamEditor.ts
-  function framed(title, content2) {
-    const section5 = card(title, { tone: "muted", align: "center" });
-    section5.body.append(content2);
-    section5.root.style.maxWidth = "720px";
-    return section5.root;
-  }
   function slotRow(onChoose, onClear) {
     const root4 = document.createElement("div");
-    Object.assign(root4.style, {
-      display: "grid",
-      gridTemplateColumns: `${SLOT_ICON_PX}px minmax(0,1fr) ${SLOT_BUTTON_PX}px ${SLOT_BUTTON_PX}px`,
-      alignItems: "center",
-      gap: "8px",
-      width: "min(560px, 100%)",
-      border: `1px solid ${color.border}`,
-      borderRadius: "10px",
-      padding: "8px 10px",
-      background: color.cardBg
-    });
-    const iconColumn = document.createElement("div");
-    Object.assign(iconColumn.style, { display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", flexShrink: "0" });
+    root4.className = "pt-slot";
     const iconWrap = document.createElement("div");
-    Object.assign(iconWrap.style, {
-      width: `${SLOT_ICON_PX}px`,
-      height: `${SLOT_ICON_PX}px`,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center"
-    });
-    const strengthBadge = document.createElement("div");
-    Object.assign(strengthBadge.style, {
-      fontSize: "9px",
-      fontWeight: "700",
-      lineHeight: "1",
-      padding: "1px 4px",
-      borderRadius: "4px",
-      background: color.bark,
-      color: color.paper,
-      whiteSpace: "nowrap",
-      display: "none",
-      pointerEvents: "none"
-    });
-    iconColumn.append(iconWrap, strengthBadge);
+    iconWrap.className = "pt-slot__icon";
     const pawFallback = () => {
       const paw = document.createElement("span");
       paw.textContent = "\u{1F43E}";
-      paw.style.fontSize = `${SLOT_ICON_PX - 6}px`;
       paw.setAttribute("aria-hidden", "true");
       iconWrap.replaceChildren(paw);
     };
@@ -32242,15 +32053,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       attachSpriteIcon(iconWrap, ["pet"], species, SLOT_ICON_PX, "pet-slot", { mutations, onNoSpriteFound: pawFallback });
     };
     const text2 = document.createElement("div");
-    Object.assign(text2.style, { display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" });
+    text2.className = "pt-slot__text";
+    const titleRow = document.createElement("div");
+    titleRow.className = "pt-slot__title";
     const nameEl = document.createElement("div");
-    Object.assign(nameEl.style, { fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
-    text2.append(nameEl, abilityDots([], { emptyText: "No ability" }));
-    const btnChoose = button("", { icon: "+", tooltip: "Choose a pet", ariaLabel: "Choose a pet" });
-    const btnClear = button("", { icon: "\u2212", variant: "danger", tooltip: "Remove this pet", ariaLabel: "Remove this pet" });
+    nameEl.className = "pt-slot__name";
+    const strengthBadge = document.createElement("span");
+    strengthBadge.className = "pt-str";
+    titleRow.append(nameEl, strengthBadge);
+    text2.append(titleRow, abilityDots([], { emptyText: "No ability" }));
+    const btnChoose = button("Choose", { size: "sm", tooltip: "Pick a pet from your inventory" });
+    const btnClear = button("", { icon: "\u2715", variant: "ghost", size: "sm", tooltip: "Remove this pet", ariaLabel: "Remove this pet" });
+    let empty = true;
     const setBusy = (busy) => {
       btnChoose.disabled = busy;
-      btnClear.disabled = busy;
+      btnClear.disabled = busy || empty;
     };
     btnChoose.onclick = async () => {
       setBusy(true);
@@ -32261,8 +32078,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
     btnClear.onclick = () => void onClear();
-    root4.append(iconColumn, text2, btnChoose, btnClear);
+    root4.append(iconWrap, text2, btnChoose, btnClear);
     function update(pet) {
+      empty = !pet;
+      root4.classList.toggle("is-empty", empty);
+      btnClear.disabled = empty;
+      const chooseLabel = btnChoose.querySelector(".label");
+      if (chooseLabel) chooseLabel.textContent = empty ? "Choose" : "Change";
       const species = String(pet?.petSpecies || "").trim();
       setIcon(species, pet?.mutations ?? []);
       const maxStrength = pet ? getPetMaxStrength(pet) : 0;
@@ -32270,51 +32092,38 @@ Restore figures are averages; unlucky streaks do worse.`;
         const strength = getPetStrength(pet);
         const maxed = strength >= maxStrength;
         strengthBadge.textContent = maxed ? `${maxStrength}` : `${strength}/${maxStrength}`;
-        strengthBadge.style.color = maxed ? MAX_STRENGTH_COLOR : color.paper;
-        strengthBadge.style.display = "block";
+        strengthBadge.title = maxed ? "Strength, at its max" : "Strength (current/max)";
+        strengthBadge.classList.toggle("is-max", maxed);
+        strengthBadge.hidden = false;
       } else {
-        strengthBadge.style.display = "none";
+        strengthBadge.hidden = true;
       }
       const speciesLabel = species ? species.charAt(0).toUpperCase() + species.slice(1) : "";
-      nameEl.textContent = pet ? pet.name?.trim() || speciesLabel || "Pet" : "None";
-      text2.lastElementChild.replaceWith(abilityDots(pet?.abilities ?? [], { emptyText: "No ability" }));
+      nameEl.textContent = pet ? pet.name?.trim() || speciesLabel || "Pet" : "Empty slot";
+      text2.lastElementChild.replaceWith(abilityDots(pet?.abilities ?? [], { emptyText: pet ? "No ability" : "Pick a pet to fill it." }));
     }
     update(null);
     return { root: root4, update };
   }
   function createTeamEditor(handlers) {
+    ensurePetsStyles();
     const root4 = document.createElement("div");
-    Object.assign(root4.style, { display: "grid", gridTemplateRows: "auto 1fr", gap: "10px", minHeight: "0" });
-    const header = document.createElement("div");
-    Object.assign(header.style, { display: "flex", alignItems: "center", gap: "8px" });
-    const title = document.createElement("div");
-    title.textContent = "Team editor";
-    Object.assign(title.style, {
-      fontWeight: "700",
-      fontSize: "14px",
-      flex: "1 1 0",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    });
+    root4.className = "pt-editor";
+    const head = document.createElement("div");
+    head.className = "pt-editor__head";
+    const nameInput = textInput("Team name", "");
+    nameInput.classList.add("pt-editor__name");
+    nameInput.setAttribute("aria-label", "Team name");
     const btnUseTeam = button("Use this team", {
       variant: "primary",
-      size: "sm",
       disabled: true,
       onClick: async () => {
         const team = handlers.selectedTeam();
         if (team) await handlers.onUseTeam(team);
       }
     });
-    header.append(title, btnUseTeam);
-    const body = document.createElement("div");
-    Object.assign(body.style, { display: "flex", flexDirection: "column", gap: "12px", overflow: "auto", minHeight: "0" });
-    root4.append(header, body);
-    const nameRow = flexRow({ justify: "center", fullWidth: true });
-    const nameInput = textInput("Team name", "");
-    Object.assign(nameInput.style, { flex: "1", minWidth: "0" });
-    nameRow.append(nameInput);
-    body.appendChild(framed("\u{1F3F7}\uFE0F Team name", nameRow));
+    head.append(nameInput, btnUseTeam);
+    root4.appendChild(head);
     const saveName = () => {
       const team = handlers.selectedTeam();
       if (!team) return;
@@ -32357,11 +32166,9 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
       )
     );
-    const slotGrid = document.createElement("div");
-    Object.assign(slotGrid.style, { display: "grid", gridTemplateColumns: "1fr", rowGap: "10px", justifyItems: "center" });
-    slotGrid.append(...rows.map((r) => r.root));
-    const btnUseCurrent = button("Current active", {
-      variant: "primary",
+    const btnUseCurrent = button("Use equipped", {
+      size: "sm",
+      tooltip: "Fill the slots with the pets you have out now",
       onClick: async () => {
         try {
           const ids = await PetsService.getActivePetIds();
@@ -32370,23 +32177,27 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
       }
     });
-    const btnClearSlots = button("Clear slots", { onClick: () => saveSlots([null, null, null]) });
-    btnUseCurrent.style.minWidth = btnClearSlots.style.minWidth = "140px";
-    const slotActions = flexRow({ gap: 6, justify: "center" });
-    slotActions.append(btnUseCurrent, btnClearSlots);
-    const slotsColumn = document.createElement("div");
-    Object.assign(slotsColumn.style, { display: "flex", flexDirection: "column", gap: "8px" });
-    slotsColumn.append(slotGrid, slotActions);
-    body.appendChild(framed("\u26A1 Active pets (3 slots)", slotsColumn));
-    const statsHost = document.createElement("div");
-    statsHost.style.width = "100%";
-    body.appendChild(framed("\u{1F4CA} Team stats", statsHost));
+    const btnClearSlots = button("Clear", { size: "sm", variant: "ghost", tooltip: "Empty all three slots", onClick: () => saveSlots([null, null, null]) });
+    const petsCard = card("Pets", { actions: [btnUseCurrent, btnClearSlots] });
+    const slotList = document.createElement("div");
+    slotList.className = "pt-slots";
+    slotList.append(...rows.map((r) => r.root));
+    petsCard.body.appendChild(slotList);
+    root4.appendChild(petsCard.root);
+    const statsCard = card("Stats", { subtitle: "Hover a number to see how it is worked out." });
+    const statsHost = statsCard.body;
+    root4.appendChild(statsCard.root);
     const statsMessage = (message2) => {
       const empty = document.createElement("div");
+      empty.className = "pt-empty";
       empty.textContent = message2;
-      Object.assign(empty.style, { opacity: "0.7", fontSize: "11px" });
       statsHost.replaceChildren(empty);
     };
+    const foot = document.createElement("div");
+    foot.className = "pt-editor__foot";
+    const btnDelete = button("Delete team", { variant: "danger", size: "sm", disabled: true, onClick: handlers.onDelete });
+    foot.appendChild(btnDelete);
+    root4.appendChild(foot);
     const drawnSlotIds = [null, null, null];
     async function repaint(team) {
       if (!team) return;
@@ -32399,7 +32210,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       const teamPets = team.slots.map((id) => id ? pets.get(String(id)) : void 0).filter((pet) => Boolean(pet));
       if (teamPets.length) statsHost.replaceChildren(renderTeamStats(teamPets, { showAllGroups: true }));
-      else statsMessage("No pets in this team.");
+      else statsMessage("Add a pet to see what this team does.");
     }
     async function show(team) {
       const has = !!team;
@@ -32407,13 +32218,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       btnClearSlots.setEnabled(has);
       btnUseCurrent.setEnabled(has);
       btnUseTeam.setEnabled(has);
+      btnDelete.setEnabled(has);
       if (!team) {
         rows.forEach((r, i) => {
           r.update(null);
           drawnSlotIds[i] = null;
         });
         nameInput.value = "";
-        statsMessage("No team selected.");
+        statsMessage("No team selected. Pick one on the left, or make a new one.");
         return;
       }
       nameInput.value = String(team.name || "");
@@ -32421,7 +32233,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return { root: root4, show, repaint };
   }
-  var SLOT_ICON_PX, SLOT_BUTTON_PX, MAX_STRENGTH_COLOR, emptyPet;
+  var SLOT_ICON_PX, emptyPet;
   var init_teamEditor = __esm({
     "src/features/pets/teamEditor.ts"() {
       "use strict";
@@ -32429,16 +32241,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_button();
       init_card();
       init_fields();
-      init_layout();
-      init_theme();
       init_iconCache();
       init_abilityChips();
       init_pets();
+      init_styles6();
       init_teamReconcile();
       init_teamStatsView();
       SLOT_ICON_PX = 40;
-      SLOT_BUTTON_PX = 34;
-      MAX_STRENGTH_COLOR = color.gold;
       emptyPet = (id) => ({
         id,
         itemType: "Pet",
@@ -32467,35 +32276,21 @@ Restore figures are averages; unlucky streaks do worse.`;
     return grab;
   }
   function createTeamList(handlers) {
+    ensurePetsStyles();
     const root4 = document.createElement("div");
-    Object.assign(root4.style, { display: "grid", gridTemplateRows: "auto 1fr auto", gap: "8px", minHeight: "0" });
-    const syncRow = document.createElement("label");
-    Object.assign(syncRow.style, { display: "flex", alignItems: "center", gap: "8px", padding: "2px 7px", cursor: "pointer" });
-    const syncSwitch = switchInput(handlers.isSyncEnabled(), (on) => handlers.setSyncEnabled(on));
-    syncSwitch.style.flexShrink = "0";
-    const syncLabel = document.createElement("span");
-    syncLabel.textContent = "Sync teams with the game";
-    syncLabel.style.fontSize = "13px";
-    syncRow.append(syncSwitch, syncLabel);
+    root4.className = "pt-teams";
+    const head = document.createElement("div");
+    head.className = "pt-teams__head";
+    const btnNew = button("New team", { icon: "+", size: "sm", onClick: handlers.onCreate });
+    head.append(sectionLabel("Your teams"), btnNew);
     const list = document.createElement("div");
-    Object.assign(list.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "6px",
-      overflow: "auto",
-      padding: "6px",
-      border: `1px solid ${color.border}`,
-      borderRadius: "10px",
-      background: color.cardBg,
-      scrollBehavior: "smooth",
-      minHeight: "0"
-    });
-    const footer = flexRow({ gap: 6 });
-    const btnNew = button("\u2795 New", { variant: "primary", size: "sm", fullWidth: true, onClick: handlers.onCreate });
-    const btnDelete = button("\u{1F5D1}\uFE0F Delete", { variant: "danger", size: "sm", fullWidth: true, onClick: handlers.onDelete });
-    btnNew.style.flex = btnDelete.style.flex = "1 1 0";
-    footer.append(btnNew, btnDelete);
-    root4.append(syncRow, list, footer);
+    list.className = "pt-teams__rows";
+    const syncRow = document.createElement("label");
+    syncRow.className = "pt-sync";
+    syncRow.title = "Keeps these teams and the game's own pet teams the same.";
+    const syncSwitch = switchInput(handlers.isSyncEnabled(), (on) => handlers.setSyncEnabled(on));
+    syncRow.append(syncSwitch, document.createTextNode("Sync with the game"));
+    root4.append(head, list, syncRow);
     let teams2 = [];
     let draggingIndex = null;
     let insertIndex = null;
@@ -32511,21 +32306,21 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     function showDropPreview() {
       const children = rows();
-      children.forEach((el) => el.style.transform = "");
+      children.forEach((el4) => el4.style.transform = "");
       if (draggingIndex === null || insertIndex === null) return;
       const from = draggingIndex;
       const to = insertIndex;
-      children.forEach((el, i) => {
-        el.style.transition = "transform 120ms ease";
+      children.forEach((el4, i) => {
+        el4.style.transition = "transform 120ms ease";
         if (i === from) return;
-        if (to > from && i > from && i < to) el.style.transform = `translateY(${-draggingHeight}px)`;
-        if (to < from && i >= to && i < from) el.style.transform = `translateY(${draggingHeight}px)`;
+        if (to > from && i > from && i < to) el4.style.transform = `translateY(${-draggingHeight}px)`;
+        if (to < from && i >= to && i < from) el4.style.transform = `translateY(${draggingHeight}px)`;
       });
     }
     function resetDrag() {
-      for (const el of rows()) {
-        el.style.transform = "";
-        el.style.transition = "";
+      for (const el4 of rows()) {
+        el4.style.transform = "";
+        el4.style.transition = "";
       }
       draggingIndex = null;
       insertIndex = null;
@@ -32563,62 +32358,34 @@ Restore figures are averages; unlucky streaks do worse.`;
     function teamRow(team, index, view) {
       const selected = team.id === view.selectedId;
       const active3 = team.id === view.activeTeamId;
-      const row5 = document.createElement("div");
-      row5.dataset.index = String(index);
-      row5.dataset.teamId = team.id;
-      Object.assign(row5.style, {
-        height: "36px",
-        padding: "0 10px",
-        borderRadius: "8px",
-        cursor: "pointer",
-        fontSize: "13px",
-        overflow: "hidden",
-        whiteSpace: "nowrap",
-        display: "flex",
-        flex: "0 0 auto",
-        gap: "8px",
-        alignItems: "center",
-        transition: "background 120ms ease, border-color 120ms ease",
-        border: `1px solid ${selected ? color.accentBorderHover : color.border}`,
-        background: selected ? color.accentSoft : color.cardBg
-      });
+      const row2 = document.createElement("div");
+      row2.className = selected ? "pt-team is-selected" : "pt-team";
+      row2.dataset.index = String(index);
+      row2.dataset.teamId = team.id;
       const dot = document.createElement("span");
-      Object.assign(dot.style, {
-        width: "10px",
-        height: "10px",
-        borderRadius: "50%",
-        flex: "0 0 auto",
-        boxShadow: `0 0 0 1px ${color.shade} inset`,
-        background: active3 ? ACTIVE_DOT : INACTIVE_DOT
-      });
+      dot.className = active3 ? "pt-team__dot is-active" : "pt-team__dot";
       dot.title = active3 ? "This team is currently active" : "Inactive team";
       const label2 = document.createElement("span");
+      label2.className = "pt-team__name";
       label2.textContent = team.name || "(unnamed)";
-      Object.assign(label2.style, { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 0" });
       const minis = document.createElement("div");
-      Object.assign(minis.style, { display: "flex", gap: "4px", alignItems: "center", marginLeft: "auto" });
+      minis.className = "pt-team__pets";
       for (let i = 0; i < 3; i++) {
         const id = team.slots[i];
         minis.appendChild(petIcon(id ? view.pets.get(String(id)) ?? null : null, MINI_ICON_PX));
       }
       const grab = grabHandle();
-      row5.append(dot, label2, minis, grab);
-      row5.onmouseenter = () => {
-        if (!selected) row5.style.borderColor = color.accentBorder;
-      };
-      row5.onmouseleave = () => {
-        if (!selected) row5.style.borderColor = color.border;
-      };
-      row5.onclick = () => handlers.onSelect(team.id);
+      row2.append(dot, label2, minis, grab);
+      row2.onclick = () => handlers.onSelect(team.id);
       grab.addEventListener("dragstart", (ev) => {
         draggingIndex = index;
-        draggingHeight = row5.getBoundingClientRect().height;
-        row5.classList.add("qmm-dragging");
+        draggingHeight = row2.getBoundingClientRect().height;
+        row2.classList.add("qmm-dragging");
         ev.dataTransfer?.setData("text/plain", String(index));
         if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "move";
         try {
-          const ghost2 = row5.cloneNode(true);
-          Object.assign(ghost2.style, { width: `${row5.getBoundingClientRect().width}px`, position: "absolute", top: "-9999px" });
+          const ghost2 = row2.cloneNode(true);
+          Object.assign(ghost2.style, { width: `${row2.getBoundingClientRect().width}px`, position: "absolute", top: "-9999px" });
           document.body.appendChild(ghost2);
           ev.dataTransfer.setDragImage(ghost2, ghost2.offsetWidth / 2, ghost2.offsetHeight / 2);
           setTimeout(() => ghost2.remove(), 0);
@@ -32626,18 +32393,18 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
       });
       grab.addEventListener("dragend", () => {
-        row5.classList.remove("qmm-dragging");
+        row2.classList.remove("qmm-dragging");
         resetDrag();
       });
-      row5.addEventListener("dragover", (ev) => {
-        const bounds = row5.getBoundingClientRect();
+      row2.addEventListener("dragover", (ev) => {
+        const bounds = row2.getBoundingClientRect();
         trackDrag(ev, ev.clientY < bounds.top + bounds.height / 2 ? index : index + 1);
       });
-      row5.addEventListener("drop", (ev) => {
+      row2.addEventListener("drop", (ev) => {
         ev.stopPropagation();
         drop(ev);
       });
-      return row5;
+      return row2;
     }
     function render(view) {
       teams2 = view.teams;
@@ -32645,8 +32412,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       list.replaceChildren();
       if (!teams2.length) {
         const empty = document.createElement("div");
-        empty.textContent = "No teams yet. Create one!";
-        Object.assign(empty.style, { opacity: "0.75", textAlign: "center", padding: "8px" });
+        empty.className = "pt-empty";
+        empty.textContent = "No teams yet. Make one with New team above.";
         list.appendChild(empty);
         return;
       }
@@ -32654,20 +32421,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return { root: root4, render };
   }
-  var ACTIVE_DOT, INACTIVE_DOT, AUTOSCROLL_EDGE_PX, AUTOSCROLL_STEP_PX, MINI_ICON_PX;
+  var AUTOSCROLL_EDGE_PX, AUTOSCROLL_STEP_PX, MINI_ICON_PX;
   var init_teamList = __esm({
     "src/features/pets/teamList.ts"() {
       "use strict";
       init_button();
-      init_layout();
-      init_theme();
+      init_card();
       init_toggles();
       init_petIcon();
-      ACTIVE_DOT = color.ok;
-      INACTIVE_DOT = color.sandShade;
+      init_styles6();
       AUTOSCROLL_EDGE_PX = 28;
       AUTOSCROLL_STEP_PX = 18;
-      MINI_ICON_PX = 18;
+      MINI_ICON_PX = 20;
     }
   });
 
@@ -32679,16 +32444,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     let activeTeamId = null;
     let applyingTeam = false;
     const selectedTeam = () => teams2.find((t) => t.id === selectedId) ?? null;
+    ensurePetsStyles();
+    const tab = document.createElement("div");
+    tab.className = "pt-tab";
     const layout = document.createElement("div");
-    Object.assign(layout.style, {
-      display: "grid",
-      gridTemplateColumns: "minmax(220px, 280px) minmax(0, 1fr)",
-      gap: "10px",
-      alignItems: "stretch",
-      height: "54vh",
-      overflow: "hidden"
-    });
-    view.appendChild(layout);
+    layout.className = "pt-split";
+    tab.appendChild(layout);
+    view.appendChild(tab);
     const list = createTeamList({
       onSelect(teamId2) {
         if (selectedId !== teamId2) {
@@ -32705,9 +32467,6 @@ Restore figures are averages; unlucky streaks do worse.`;
         void refreshList();
         void editor.show(selectedTeam());
       },
-      onDelete() {
-        if (selectedId) PetsService.deleteTeam(selectedId);
-      },
       isSyncEnabled: () => PetsService.isTeamSyncEnabled(),
       setSyncEnabled: (on) => PetsService.setTeamSyncEnabled(on)
     });
@@ -32715,6 +32474,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       selectedTeam,
       onRenamed: () => void refreshList(true),
       onUseTeam: useTeam2,
+      onDelete() {
+        if (selectedId) PetsService.deleteTeam(selectedId);
+      },
       setWindowVisible: (visible) => ui.setWindowVisible(visible)
     });
     layout.append(list.root, editor.root);
@@ -32795,6 +32557,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_player();
       init_pets();
+      init_styles6();
       init_teamEditor();
       init_teamList();
     }
@@ -33608,47 +33371,22 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/pets/teamBuilderTab.ts
+  function span2(className, text2) {
+    const el4 = document.createElement("span");
+    el4.className = className;
+    el4.textContent = text2;
+    return el4;
+  }
   function renderPetChip(pet) {
     const chip = document.createElement("div");
-    Object.assign(chip.style, {
-      display: "flex",
-      alignItems: "center",
-      gap: "6px",
-      minWidth: "0",
-      padding: "3px 4px",
-      borderRadius: "6px",
-      transition: "background 100ms ease"
-    });
-    chip.onmouseenter = () => {
-      chip.style.background = color.hoverBg;
-    };
-    chip.onmouseleave = () => {
-      chip.style.background = "transparent";
-    };
+    chip.className = "pt-chip";
     chip.appendChild(petIcon(pet ?? null, MINI_ICON_PX2));
-    const nameSpan = document.createElement("span");
-    nameSpan.style.fontSize = "11px";
-    nameSpan.style.fontWeight = "600";
-    nameSpan.style.overflow = "hidden";
-    nameSpan.style.textOverflow = "ellipsis";
-    nameSpan.style.whiteSpace = "nowrap";
-    nameSpan.style.flex = "1 1 auto";
-    nameSpan.style.minWidth = "0";
-    nameSpan.textContent = pet ? pet.name || pet.petSpecies || "?" : "-";
-    chip.appendChild(nameSpan);
+    chip.appendChild(span2("pt-chip__name", pet ? pet.name || pet.petSpecies || "?" : "-"));
     if (pet) {
-      const strBadge = document.createElement("span");
-      strBadge.textContent = `${getPetStrength(pet)}/${getPetMaxStrength(pet)}`;
+      const strength = getPetStrength(pet);
+      const maxStrength = getPetMaxStrength(pet);
+      const strBadge = span2(strength >= maxStrength && maxStrength > 0 ? "pt-str is-max" : "pt-str", `${strength}/${maxStrength}`);
       strBadge.title = "Strength (current/max). Teams rank by max strength.";
-      Object.assign(strBadge.style, {
-        fontSize: "10px",
-        fontVariantNumeric: "tabular-nums",
-        color: color.textSoft,
-        background: color.hoverBg,
-        padding: "1px 6px",
-        borderRadius: "999px",
-        flex: "0 0 auto"
-      });
       chip.appendChild(strBadge);
       chip.appendChild(abilityDots(pet.abilities, { size: 9, gap: 4 }));
     }
@@ -33707,50 +33445,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function renderTeamCard(team, petsById) {
     const isAfk = team.mode === "afk";
-    const glow = isAfk ? color.warn : color.sepia;
-    const title = isAfk ? `${abilityLabel(team)} (AFK)` : abilityLabel(team);
-    const teamCard = card(title, {
-      tone: isAfk ? "accent" : "default",
-      compactHeader: true,
-      gap: 6
-    });
-    Object.assign(teamCard.root.style, {
-      padding: "8px 10px 10px",
-      position: "relative",
-      overflow: "hidden",
-      transition: "transform 140ms ease, box-shadow 140ms ease"
-    });
-    teamCard.root.onmouseenter = () => {
-      teamCard.root.style.transform = "translateY(-2px)";
-      teamCard.root.style.boxShadow = `0 4px 0 ${color.sandShade}, 0 0 0 2px ${glow}`;
-    };
-    teamCard.root.onmouseleave = () => {
-      teamCard.root.style.transform = "none";
-      teamCard.root.style.boxShadow = "";
-    };
-    const stripColors = team.categories.map((c) => getAbilityChipColors(c.abilityId).bg);
-    const strip = document.createElement("div");
-    Object.assign(strip.style, {
-      position: "absolute",
-      left: "0",
-      top: "0",
-      bottom: "0",
-      width: "4px",
-      background: stripColors.length > 1 ? `linear-gradient(180deg, ${stripColors.join(", ")})` : stripColors[0]
-    });
-    teamCard.root.appendChild(strip);
-    const petsCol = document.createElement("div");
-    petsCol.style.display = "grid";
-    petsCol.style.gap = "1px";
-    for (const id of team.petIds) {
-      petsCol.appendChild(renderPetChip(petsById.get(id)));
-    }
-    teamCard.body.appendChild(petsCol);
-    const teamPets = team.petIds.map((id) => petsById.get(id)).filter((pet) => Boolean(pet));
-    teamCard.body.appendChild(renderTeamStats(teamPets, { focusAbilityIds: team.focusAbilityIds }));
-    const saveBtn = button("\u{1F4BE} Save", {
-      variant: "primary",
+    const saveBtn = button("Save", {
       size: "sm",
+      tooltip: "Save as a new team in the Teams tab",
       onClick: () => {
         const name = buildSaveName(team, isAfk);
         const created = PetsService.createTeam(name);
@@ -33758,21 +33455,27 @@ Restore figures are averages; unlucky streaks do worse.`;
         void toastSimple("Team saved", name, "success");
       }
     });
-    Object.assign(saveBtn.style, {
-      marginTop: "2px",
-      width: "84px",
-      height: "24px",
-      minHeight: "24px",
-      maxHeight: "24px",
-      boxSizing: "border-box",
-      padding: "0",
-      fontSize: "11px",
-      lineHeight: "1",
-      justifySelf: "center",
-      alignSelf: "center",
-      flexShrink: "0"
-    });
-    teamCard.body.appendChild(saveBtn);
+    const actions2 = [saveBtn];
+    if (isAfk) {
+      const afk = pill("AFK", "warn");
+      afk.title = "Every ability here works while you are away.";
+      actions2.unshift(afk);
+    }
+    const teamCard = card(abilityLabel(team), { tone: isAfk ? "accent" : "default", actions: actions2 });
+    teamCard.root.classList.add("pt-suggest");
+    const stripColors = team.categories.map((c) => getAbilityChipColors(c.abilityId).bg);
+    const strip = document.createElement("div");
+    strip.className = "pt-suggest__strip";
+    strip.style.background = stripColors.length > 1 ? `linear-gradient(180deg, ${stripColors.join(", ")})` : stripColors[0];
+    teamCard.root.appendChild(strip);
+    const petsCol = document.createElement("div");
+    petsCol.className = "pt-suggest__pets";
+    for (const id of team.petIds) {
+      petsCol.appendChild(renderPetChip(petsById.get(id)));
+    }
+    teamCard.body.appendChild(petsCol);
+    const teamPets = team.petIds.map((id) => petsById.get(id)).filter((pet) => Boolean(pet));
+    teamCard.body.appendChild(renderTeamStats(teamPets, { focusAbilityIds: team.focusAbilityIds }));
     return teamCard.root;
   }
   function unusedReasonText(info) {
@@ -33782,52 +33485,26 @@ Restore figures are averages; unlucky streaks do worse.`;
     return `outranked in: ${parts.join(", ")}`;
   }
   function renderUnusedRow(info) {
-    const row5 = document.createElement("div");
-    row5.style.display = "flex";
-    row5.style.alignItems = "center";
-    row5.style.gap = "6px";
-    row5.style.padding = "3px 0";
-    row5.style.opacity = "0.75";
-    row5.appendChild(renderPetChip(info.pet));
-    const reason = document.createElement("span");
-    reason.textContent = unusedReasonText(info);
-    reason.style.fontSize = "10px";
-    reason.style.opacity = "0.7";
-    reason.style.flex = "0 0 auto";
-    reason.style.whiteSpace = "nowrap";
-    reason.style.overflow = "hidden";
-    reason.style.textOverflow = "ellipsis";
-    reason.style.maxWidth = "45%";
-    row5.appendChild(reason);
-    return row5;
+    const row2 = document.createElement("div");
+    row2.className = "pt-unused";
+    row2.appendChild(renderPetChip(info.pet));
+    const reason = span2("pt-unused__why", unusedReasonText(info));
+    reason.title = reason.textContent ?? "";
+    row2.appendChild(reason);
+    return row2;
   }
   function renderUnusedSection(unusedPets) {
-    const section5 = card(`\u{1F5D1}\uFE0F Not used in any team (${unusedPets.length})`, { tone: "muted", compactHeader: true, gap: 4 });
-    section5.root.style.gridColumn = "1 / -1";
-    section5.root.style.padding = "8px 10px";
-    const chevron = document.createElement("span");
-    chevron.textContent = "\u25B8";
-    chevron.style.display = "inline-block";
-    chevron.style.marginLeft = "8px";
-    chevron.style.opacity = "0.6";
-    chevron.style.transition = "transform 120ms ease";
-    section5.header.appendChild(chevron);
-    section5.header.style.cursor = "pointer";
-    section5.header.style.userSelect = "none";
-    const list = document.createElement("div");
-    list.style.display = "none";
-    list.style.gap = "1px";
-    for (const info of unusedPets) {
-      list.appendChild(renderUnusedRow(info));
-    }
-    section5.body.appendChild(list);
-    let expanded = false;
-    section5.header.addEventListener("click", () => {
-      expanded = !expanded;
-      list.style.display = expanded ? "grid" : "none";
-      chevron.style.transform = expanded ? "rotate(90deg)" : "none";
+    const section = collapsibleCard({
+      title: `Not used in any team (${unusedPets.length})`,
+      description: "Pets another one outranks, or with no ability a team is built on.",
+      collapsed: true,
+      onToggle: () => {
+      }
     });
-    return section5.root;
+    for (const info of unusedPets) {
+      section.body.appendChild(renderUnusedRow(info));
+    }
+    return section.root;
   }
   async function loadTeams() {
     const pets = await PetsService.getInventoryPets();
@@ -33836,40 +33513,30 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { teams: teams2, sustainPet, unusedPets, petsById };
   }
   function renderTeamBuilderTab(view) {
-    view.innerHTML = "";
+    ensurePetsStyles();
+    view.replaceChildren();
     const wrap = document.createElement("div");
-    wrap.style.display = "grid";
-    wrap.style.gap = "10px";
-    wrap.style.alignContent = "start";
-    wrap.style.minHeight = "0";
-    wrap.style.maxHeight = "54vh";
-    wrap.style.overflow = "auto";
+    wrap.className = "pt-tab";
     view.appendChild(wrap);
-    const header = flexRow({ justify: "end", fullWidth: true });
-    header.style.paddingBottom = "8px";
-    header.style.borderBottom = `1px solid ${color.border}`;
-    const refreshBtn = button("\u{1F504} Refresh", { size: "sm" });
-    header.appendChild(refreshBtn);
+    const header = document.createElement("div");
+    header.className = "pt-builder__bar";
+    const refreshBtn = button("Refresh", { size: "sm", tooltip: "Look at your pets again" });
+    header.append(span2("pt-hint", "Teams made from the pets you own, best first. Save one to use it."), refreshBtn);
     wrap.appendChild(header);
+    const scroller = document.createElement("div");
+    scroller.className = "pt-scroll";
     const content2 = document.createElement("div");
-    content2.style.display = "grid";
-    content2.style.gridTemplateColumns = "repeat(3, minmax(0, 1fr))";
-    content2.style.gap = "8px";
-    wrap.appendChild(content2);
+    content2.className = "pt-builder__grid";
+    scroller.appendChild(content2);
+    wrap.appendChild(scroller);
+    const message2 = (text2) => content2.replaceChildren(span2("pt-empty", text2));
     async function repaint() {
-      content2.innerHTML = "";
-      const loading2 = document.createElement("div");
-      loading2.textContent = "Loading\u2026";
-      loading2.style.opacity = "0.6";
-      content2.appendChild(loading2);
+      message2("Looking at your pets\u2026");
       const { teams: teams2, unusedPets, petsById } = await loadTeams();
       if (!view.isConnected) return;
-      content2.innerHTML = "";
+      content2.replaceChildren();
       if (!teams2.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No useful team found. Hatch pets with offensive abilities.";
-        empty.style.opacity = "0.7";
-        content2.appendChild(empty);
+        message2("No useful team found. Hatch pets with offensive abilities.");
         return;
       }
       for (const team of teams2) {
@@ -33890,14 +33557,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_petValue();
       init_button();
+      init_badges();
       init_card();
       init_layout();
-      init_theme();
       init_toast();
       init_abilityChips();
       init_abilityChipColors();
       init_pets();
       init_petIcon();
+      init_styles6();
       init_teamBuilder();
       init_teamStatsView();
       MINI_ICON_PX2 = 24;
@@ -33915,11 +33583,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   function renderPetsMenu(root4) {
     const ui = new Menu({ id: "pets", compact: true, windowSelector: ".qws-win" });
     ui.mount(root4);
-    ui.addTab("manager", "\u{1F9F0} Manager", (view) => renderManagerTab(view, ui));
-    ui.addTab("teambuilder", "\u{1F9E9} Team Builder", (view) => renderTeamBuilderTab(view));
-    ui.addTab("feeding", "\u{1F356} Feeding", (view) => renderFeedingTab(view));
-    ui.addTab("hatch", "\u{1F95A} Hatch", (view) => renderHatchTab(view));
-    ui.addTab("logs", "\u{1F4DD} Logs", (view) => renderLogsTab(view));
+    ui.addTab("manager", "Teams", (view) => renderManagerTab(view, ui));
+    ui.addTab("teambuilder", "Team Builder", (view) => renderTeamBuilderTab(view));
+    ui.addTab("feeding", "Feeding", (view) => renderFeedingTab(view));
+    ui.addTab("hatch", "Hatch", (view) => renderHatchTab(view));
+    ui.addTab("logs", "Logs", (view) => renderLogsTab(view));
     const onOpenTab = (ev) => {
       const tab = String(ev.detail?.tab || "");
       if (TABS.has(tab)) ui.switchTo(tab);
@@ -34250,57 +33918,59 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/deleters/styles.ts
   function ensureDeleterStyles() {
-    if (injected3) return;
-    injected3 = true;
+    if (injected5) return;
+    injected5 = true;
     addStyle(DELETER_CSS);
   }
-  var DELETER_CSS, injected3;
-  var init_styles3 = __esm({
+  var DELETER_CSS, injected5;
+  var init_styles7 = __esm({
     "src/features/deleters/styles.ts"() {
       "use strict";
       init_dom();
       DELETER_CSS = `
-.qws-del-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.qws-del-head__text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.qws-del-head__desc { font-size: var(--qmm-fs-sm); line-height: 1.45; color: var(--qmm-text-dim); }
-
-.qws-del-stats { display: flex; gap: 6px; margin-bottom: 8px; }
-.qws-del-stat {
-  flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 8px 4px; border-radius: 10px; background: var(--qmm-card-bg); border: 1px solid var(--qmm-border);
+.qws-del-empty {
+  display: flex; align-items: center; gap: var(--qmm-space-lg); padding: 10px 12px;
+  border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
 }
-.qws-del-stat__value { font-size: 19px; font-weight: 700; line-height: 1.1; color: var(--qmm-text); }
-.qws-del-stat__value.is-warn { color: var(--qmm-warn); }
-.qws-del-stat__caption {
-  font-size: 9.5px; color: var(--qmm-text-dim); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap;
-}
+.qws-del-empty__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.qws-del-empty__title { font-size: var(--qmm-fs-lg); font-weight: 800; color: var(--qmm-text); }
+.qws-del-empty__hint { font-size: var(--qmm-fs-xs); line-height: 1.4; color: var(--qmm-text-dim); }
 
-.qws-del-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.qws-del-selection {
+  display: flex; flex-direction: column; gap: var(--qmm-space-md); padding: 10px 12px;
+  border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+}
+.qws-del-totals { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--qmm-space-sm) var(--qmm-space-md); }
+.qws-del-totals__value { font-size: var(--qmm-fs-xl); font-weight: 900; color: var(--qmm-text); }
+.qws-del-totals__groups { font-size: var(--qmm-fs-sm); font-weight: 700; color: var(--qmm-text-soft); }
+.qws-del-totals .qmm-pill { align-self: center; padding: 2px 8px; font-size: var(--qmm-fs-xs); }
+
+.qws-del-chips { display: flex; flex-wrap: wrap; gap: var(--qmm-space-xs); }
 .qws-del-chip {
-  display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 3px 8px 3px 4px;
-  border-radius: var(--qmm-radius-pill); border: 1px solid var(--qmm-border); background: var(--qmm-card-bg);
-  font-size: var(--qmm-fs-sm); color: var(--qmm-text);
+  display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 3px 9px 3px 4px;
+  border-radius: var(--qmm-radius-pill); background: var(--qmm-card);
+  font-size: var(--qmm-fs-sm); font-weight: 700; color: var(--qmm-text);
 }
-.qws-del-chip--more { padding: 3px 10px; border-style: dashed; background: none; color: var(--qmm-text-dim); }
+.qws-del-chip--more { padding: 3px 10px; background: var(--qmm-sand); color: var(--qmm-text-soft); }
 .qws-del-chip__icon {
   width: 22px; height: 22px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
-  font-size: 13px;
+  font-size: var(--qmm-fs-md);
 }
 .qws-del-chip__name { max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.qws-del-chip__qty { flex: 0 0 auto; font-weight: 600; color: var(--qmm-accent); }
-.qws-del-hint { font-size: var(--qmm-fs-sm); color: var(--qmm-text-dim); }
+.qws-del-chip__qty { flex: 0 0 auto; font-weight: 900; color: var(--qmm-sepia-ink); }
 
-.qws-del-estimate { min-height: 14px; margin-bottom: 10px; font-size: var(--qmm-fs-sm); color: var(--qmm-text-dim); }
+.qws-del-estimate { font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); }
+.qws-del-estimate:empty { display: none; }
 
-.qws-del-progress { display: none; flex-direction: column; gap: 6px; margin-bottom: 10px; }
-.qws-del-progress__line { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--qmm-text); }
+.qws-del-progress {
+  display: flex; flex-direction: column; gap: var(--qmm-space-sm); padding: 10px 12px;
+  border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+}
+.qws-del-progress__line { display: flex; align-items: center; gap: var(--qmm-space-md); font-size: var(--qmm-fs-sm); font-weight: 700; color: var(--qmm-text); }
 .qws-del-progress__target { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.qws-del-progress__count { flex: 0 0 auto; color: var(--qmm-text-dim); }
-.qws-del-section.is-running .qws-del-progress { display: flex; }
-.qws-del-section.is-running .qws-del-stats,
-.qws-del-section.is-running .qws-del-chips { display: none; }
+.qws-del-progress__count { flex: 0 0 auto; color: var(--qmm-text-dim); font-variant-numeric: tabular-nums; }
 
-.qws-del-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.qws-del-actions { display: flex; align-items: center; gap: var(--qmm-space-sm); flex-wrap: wrap; }
 .qws-del-spacer { flex: 1 1 auto; }
 
 .qws-del-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
@@ -34313,8 +33983,10 @@ Restore figures are averages; unlucky streaks do worse.`;
 
 .qws-del-row {
   display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer;
-  border-radius: 10px; border: 1px solid var(--qmm-border); background: var(--qmm-card-bg);
+  border-radius: var(--qmm-radius-md); border: 2px solid transparent; background: var(--qmm-card-bg);
+  transition: border-color 120ms ease, background 120ms ease;
 }
+.qws-del-row:hover { border-color: var(--qmm-border-hover); }
 .qws-del-row.is-selected { border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft); }
 .qws-del-row__icon {
   width: 36px; height: 36px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
@@ -34325,7 +33997,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 .qws-del-row__detail { font-size: 10.5px; color: var(--qmm-text-dim); }
 .qws-del-amount { width: 66px; flex: 0 0 auto; text-align: right; }
 `;
-      injected3 = false;
+      injected5 = false;
     }
   });
 
@@ -34405,8 +34077,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     function buildRow(entry) {
       const qty = picked.get(entry.id) ?? 0;
-      const row5 = h("div", qty > 0 ? "qws-del-row is-selected" : "qws-del-row");
-      row5.addEventListener("click", () => {
+      const row2 = h("div", qty > 0 ? "qws-del-row is-selected" : "qws-del-row");
+      row2.addEventListener("click", () => {
         if ((picked.get(entry.id) ?? 0) > 0) picked.delete(entry.id);
         else picked.set(entry.id, entry.total);
         renderRows();
@@ -34434,8 +34106,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         else picked.delete(entry.id);
         renderRows();
       });
-      row5.append(buildIcon(entry.id), text2, amount);
-      return row5;
+      row2.append(buildIcon(entry.id), text2, amount);
+      return row2;
     }
     function renderRows() {
       if (!modal.isOpen()) return;
@@ -34483,60 +34155,52 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_fields();
       init_modal();
       init_iconCache();
-      init_styles3();
+      init_styles7();
       ROW_SPRITE_PX = 36;
     }
   });
 
   // src/features/deleters/section.ts
-  function statTile() {
-    const root4 = h("div", "qws-del-stat");
-    const value = h("div", "qws-del-stat__value");
-    const caption2 = h("div", "qws-del-stat__caption");
-    root4.append(value, caption2);
-    return {
-      root: root4,
-      set: (nextValue, nextCaption, warn = false) => {
-        value.textContent = nextValue;
-        value.classList.toggle("is-warn", warn);
-        caption2.textContent = nextCaption;
-      }
-    };
-  }
   function createDeleterSection(config) {
     ensureDeleterStyles();
     const { controller: controller2 } = config;
-    const headerText = h("div", "qws-del-head__text");
-    headerText.append(sectionLabel(config.title), h("div", "qws-del-head__desc", config.description));
-    const header = h("div", "qws-del-head");
-    header.append(iconBox(config.headerSprite, 22, "misc"), headerText);
-    const section5 = collapsibleCard({
-      header,
+    const section = collapsibleCard({
+      title: config.title,
+      description: config.description,
       collapsed: config.collapsed,
       onToggle: config.onToggleCollapsed
     });
-    section5.root.classList.add("qws-del-section");
-    const stats = h("div", "qws-del-stats");
-    const statGroups = statTile();
-    const statUnits = statTile();
-    const statStorage = statTile();
-    stats.append(statGroups.root, statUnits.root, statStorage.root);
+    section.root.classList.add("qws-del-section");
+    const emptyText = h("div", "qws-del-empty__text");
+    emptyText.append(
+      h("div", "qws-del-empty__title", "Nothing picked yet"),
+      h("div", "qws-del-empty__hint", `Choose from your inventory and your ${config.storageLabel}.`)
+    );
+    const empty = h("div", "qws-del-empty");
+    empty.append(iconBox(config.sprite, EMPTY_SPRITE_PX, "misc"), emptyText);
+    const totalValue = h("span", "qws-del-totals__value");
+    const totalGroups = h("span", "qws-del-totals__groups");
+    const fromStoragePill = pill("", "warn");
+    const totals = h("div", "qws-del-totals");
+    totals.append(totalValue, totalGroups, fromStoragePill);
     const chips = h("div", "qws-del-chips");
     const estimate = h("div", "qws-del-estimate");
-    const bar = meter();
+    const selectionWrap = h("div", "qws-del-selection");
+    selectionWrap.append(totals, chips, estimate);
+    const bar2 = meter();
     const progressTargetEl = h("div", "qws-del-progress__target");
     const progressCount = h("div", "qws-del-progress__count");
     const progressLine = h("div", "qws-del-progress__line");
     progressLine.append(progressTargetEl, progressCount);
     const progressWrap = h("div", "qws-del-progress");
-    progressWrap.append(bar.root, progressLine);
+    progressWrap.append(progressLine, bar2.root);
     const btnSelect = button(config.selectLabel, {
-      variant: "primary",
       size: "sm",
       lockWhilePending: true,
       onClick: () => runSelect()
     });
     const btnClear = button(config.clearLabel, {
+      variant: "ghost",
       size: "sm",
       onClick: () => {
         controller2.clearSelection();
@@ -34553,7 +34217,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       controller2.pause();
       updateControls();
     } });
-    const btnPlay = button("Resume", { size: "sm", onClick: () => {
+    const btnPlay = button("Resume", { variant: "primary", size: "sm", onClick: () => {
       controller2.resume();
       updateControls();
     } });
@@ -34563,12 +34227,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     } });
     const actions2 = h("div", "qws-del-actions");
     actions2.append(btnSelect, btnClear, h("div", "qws-del-spacer"), btnDelete, btnPause, btnPlay, btnStop);
-    section5.body.append(stats, chips, estimate, progressWrap, actions2);
+    section.body.append(empty, selectionWrap, progressWrap, actions2);
     const progress = { target: "-", done: 0, total: 0 };
     function buildChip(item) {
       const icon2 = h("span", "qws-del-chip__icon", config.fallbackIcon);
       attachSpriteIcon(icon2, config.spriteCategories, [item.id], CHIP_SPRITE_PX, "deleter-chip");
       const chip = h("div", "qws-del-chip");
+      chip.title = item.label || item.id;
       chip.append(
         icon2,
         h("span", "qws-del-chip__name", item.label || item.id || "?"),
@@ -34597,48 +34262,56 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     function updateSummary() {
       const { selection, groupCount, totalQty, fromStorage } = readSelection();
-      statGroups.set(formatInteger(groupCount), config.groupNoun);
-      statUnits.set(formatInteger(totalQty), config.unitNoun);
-      statStorage.set(formatInteger(fromStorage), "from storage", fromStorage > 0);
-      chips.replaceChildren();
-      if (groupCount === 0) {
-        chips.append(
-          h("div", "qws-del-hint", `Nothing picked yet. Choose from your inventory and your ${config.storageLabel}.`)
-        );
-      } else {
-        const sorted = [...selection].sort((a, b) => b.qty - a.qty);
-        for (const item of sorted.slice(0, MAX_VISIBLE_CHIPS)) chips.append(buildChip(item));
-        if (sorted.length > MAX_VISIBLE_CHIPS) {
-          chips.append(h("div", "qws-del-chip qws-del-chip--more", `+${sorted.length - MAX_VISIBLE_CHIPS} more`));
-        }
-      }
       const running = controller2.isRunning();
+      const hasSelection = groupCount > 0 && totalQty > 0;
+      totalValue.textContent = counted(totalQty, config.unitNoun);
+      totalGroups.textContent = counted(groupCount, config.groupNoun);
+      fromStoragePill.textContent = `${formatInteger(fromStorage)} from the ${config.storageLabel}`;
+      fromStoragePill.hidden = fromStorage <= 0;
+      chips.replaceChildren();
+      const sorted = [...selection].sort((a, b) => b.qty - a.qty);
+      for (const item of sorted.slice(0, MAX_VISIBLE_CHIPS)) chips.append(buildChip(item));
+      if (sorted.length > MAX_VISIBLE_CHIPS) {
+        chips.append(h("div", "qws-del-chip qws-del-chip--more", `+${sorted.length - MAX_VISIBLE_CHIPS} more`));
+      }
       const estimateMs = estimateMsFor(totalQty);
       const finishTimestamp = running ? estimatedFinish : estimateMs > 0 ? Date.now() + estimateMs : null;
-      estimate.textContent = totalQty <= 0 ? "" : finishTimestamp ? `About ${formatDurationShort(estimateMs)} \xB7 done around ${formatFinishTime(finishTimestamp)}` : `About ${formatDurationShort(estimateMs)}`;
-      const hasSelection = groupCount > 0 && totalQty > 0;
+      estimate.textContent = totalQty <= 0 ? "" : finishTimestamp ? `About ${formatDurationShort(estimateMs)}, done around ${formatFinishTime(finishTimestamp)}` : `About ${formatDurationShort(estimateMs)}`;
+      btnSelect.classList.toggle("qmm-btn--primary", !hasSelection);
       setButtonEnabled(btnDelete, hasSelection && !running);
       setButtonEnabled(btnClear, hasSelection && !running);
       setButtonEnabled(btnSelect, !running);
+      syncVisibility2();
       clearSummaryTimer();
       if (!running && totalQty > 0) {
         summaryTimer = window.setTimeout(() => updateSummary(), 1e3);
       }
     }
-    function updateControls() {
+    function syncVisibility2() {
       const running = controller2.isRunning();
       const paused = controller2.isPaused();
-      section5.root.classList.toggle("is-running", running);
+      const groupCount = controller2.getSelection().length;
+      const hasSelection = readSelection().totalQty > 0;
+      section.root.classList.toggle("is-running", running);
+      empty.hidden = running || groupCount > 0;
+      selectionWrap.hidden = running || groupCount === 0;
+      progressWrap.hidden = !running;
+      btnSelect.hidden = running;
+      btnClear.hidden = running || groupCount === 0;
+      btnDelete.hidden = running || !hasSelection;
       btnPause.hidden = !running || paused;
       btnPlay.hidden = !running || !paused;
       btnStop.hidden = !running;
-      btnDelete.hidden = running;
+    }
+    function updateControls() {
+      const running = controller2.isRunning();
+      const paused = controller2.isPaused();
+      syncVisibility2();
       if (running) {
         const ratio = progress.total > 0 ? progress.done / progress.total : 0;
-        bar.set(ratio, paused ? "warn" : "accent");
-        progressTargetEl.textContent = paused ? `Paused \xB7 ${progress.target || "-"}` : progress.target || "-";
+        bar2.set(ratio, paused ? "warn" : "accent");
+        progressTargetEl.textContent = paused ? `Paused, ${progress.target || "-"}` : progress.target || "-";
         progressCount.textContent = `${formatInteger(progress.done)} / ${formatInteger(progress.total)}`;
-        estimate.textContent = "";
       }
       setButtonEnabled(btnPause, running && !paused);
       setButtonEnabled(btnPlay, running && paused);
@@ -34685,24 +34358,24 @@ Restore figures are averages; unlucky streaks do worse.`;
     controller2.events.on(onEvent);
     updateSummary();
     updateControls();
-    return section5.root;
+    return section.root;
   }
-  var EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS, MAX_VISIBLE_CHIPS, CHIP_SPRITE_PX, formatDurationShort, formatFinishTime;
+  var EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS, MAX_VISIBLE_CHIPS, CHIP_SPRITE_PX, EMPTY_SPRITE_PX, formatDurationShort, formatFinishTime, counted;
   var init_section = __esm({
     "src/features/deleters/section.ts"() {
       "use strict";
       init_format();
       init_badges();
       init_button();
-      init_card();
       init_dom2();
       init_icons();
       init_layout();
       init_iconCache();
-      init_styles3();
+      init_styles7();
       EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS = 10;
       MAX_VISIBLE_CHIPS = 4;
       CHIP_SPRITE_PX = 22;
+      EMPTY_SPRITE_PX = 30;
       formatDurationShort = (ms) => {
         if (ms < 1e3) return `${ms} ms`;
         const seconds2 = ms / 1e3;
@@ -34713,36 +34386,161 @@ Restore figures are averages; unlucky streaks do worse.`;
         return rest2 === 0 ? `${minutes} min` : `${minutes} min ${rest2} s`;
       };
       formatFinishTime = (timestamp) => new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      counted = (count, noun) => `${formatInteger(count)} ${count === 1 ? noun.one : noun.many}`;
+    }
+  });
+
+  // src/features/misc/sectionCard.ts
+  function isSectionCollapsed(sectionId) {
+    return getAriesStorage().misc?.collapsed?.[sectionId] === true;
+  }
+  function setSectionCollapsed(sectionId, collapsed) {
+    updateAriesStorage((current3) => {
+      const misc = current3.misc ?? (current3.misc = {});
+      const map2 = misc.collapsed ?? (misc.collapsed = {});
+      if (collapsed) map2[sectionId] = true;
+      else delete map2[sectionId];
+    });
+  }
+  function sectionCard(id, title, description) {
+    return collapsibleCard({
+      title,
+      description,
+      collapsed: isSectionCollapsed(id),
+      onToggle: (collapsed) => setSectionCollapsed(id, collapsed)
+    });
+  }
+  var init_sectionCard = __esm({
+    "src/features/misc/sectionCard.ts"() {
+      "use strict";
+      init_storage();
+      init_layout();
+    }
+  });
+
+  // src/features/misc/deleterCards.ts
+  function pickFor(host, controller2, opts) {
+    return new Promise((resolve) => {
+      let loaded2 = [];
+      openDeleterPicker({
+        ...opts,
+        host,
+        initial: new Map(controller2.getSelection().map((entry) => [entry.id, entry.qty])),
+        loadEntries: async () => {
+          loaded2 = await opts.loadEntries();
+          return loaded2;
+        },
+        onConfirm: (picked) => {
+          controller2.setSelection(
+            Array.from(picked, ([id, qty]) => {
+              const entry = loaded2.find((candidate) => candidate.id === id);
+              return {
+                id,
+                qty,
+                label: entry?.label ?? id,
+                fromStorage: Math.max(0, qty - (entry?.invQty ?? 0))
+              };
+            })
+          );
+        },
+        onClose: () => resolve()
+      });
+    });
+  }
+  function buildSeedDeleterSection(modalHost) {
+    return createDeleterSection({
+      sprite: "sprite/ui/SeedIcon",
+      title: "Seed deleter",
+      description: "Delete seeds in bulk, from your inventory and Seed Silo.",
+      spriteCategories: ["seed"],
+      fallbackIcon: "\u{1F331}",
+      groupNoun: { one: "species", many: "species" },
+      unitNoun: { one: "seed", many: "seeds" },
+      selectLabel: "Choose seeds",
+      clearLabel: "Clear",
+      storageLabel: "Seed Silo",
+      estimateDelayMs: SEED_DELETE_DELAY_MS,
+      runDelayMs: SEED_DELETE_DELAY_MS,
+      collapsed: isSectionCollapsed("seedDeleter"),
+      onToggleCollapsed: (collapsed) => setSectionCollapsed("seedDeleter", collapsed),
+      controller: seedDeleter,
+      openSelector: () => pickFor(modalHost(), seedDeleter, {
+        title: "Select seeds",
+        unitNoun: "seeds",
+        storageNoun: "silo",
+        spriteCategories: ["seed"],
+        fallbackIcon: "\u{1F331}",
+        loadEntries: getSeedEntries
+      })
+    });
+  }
+  function buildDecorDeleterSection(modalHost) {
+    return createDeleterSection({
+      sprite: "sprite/ui/DecorIcon",
+      title: "Decor deleter",
+      description: "Delete decor in bulk, from your inventory and Decor Shed.",
+      spriteCategories: ["decor"],
+      fallbackIcon: "\u{1FAB4}",
+      groupNoun: { one: "kind", many: "kinds" },
+      unitNoun: { one: "item", many: "items" },
+      selectLabel: "Choose decor",
+      clearLabel: "Clear",
+      storageLabel: "Decor Shed",
+      // Decor deletes cost roughly two round-trips each, so the estimate doubles
+      // the delay the run is actually given.
+      estimateDelayMs: DECOR_DELETE_DELAY_MS * 2,
+      runDelayMs: DECOR_DELETE_DELAY_MS,
+      collapsed: isSectionCollapsed("decorDeleter"),
+      onToggleCollapsed: (collapsed) => setSectionCollapsed("decorDeleter", collapsed),
+      controller: decorDeleter,
+      openSelector: () => pickFor(modalHost(), decorDeleter, {
+        title: "Select decor",
+        unitNoun: "decor",
+        storageNoun: "shed",
+        spriteCategories: ["decor"],
+        fallbackIcon: "\u{1FAB4}",
+        loadEntries: getDecorEntries
+      })
+    });
+  }
+  var init_deleterCards = __esm({
+    "src/features/misc/deleterCards.ts"() {
+      "use strict";
+      init_deleters();
+      init_picker();
+      init_section();
+      init_sources();
+      init_sectionCard();
     }
   });
 
   // src/features/companion/chat/harvest.ts
-  function rowKey(row5) {
-    return `${row5.tileIndex}:${row5.slotId}`;
+  function rowKey(row2) {
+    return `${row2.tileIndex}:${row2.slotId}`;
   }
   function selectionSignature(rows) {
     return rows.map(rowKey).sort().join("|");
   }
   function speciesPresent(rows) {
-    return [...new Set(rows.map((row5) => row5.species))].sort((a, b) => a.localeCompare(b));
+    return [...new Set(rows.map((row2) => row2.species))].sort((a, b) => a.localeCompare(b));
   }
   function mutationsPresent(rows) {
     const all = /* @__PURE__ */ new Set();
-    for (const row5 of rows) for (const mutation of row5.mutations) all.add(mutation);
+    for (const row2 of rows) for (const mutation of row2.mutations) all.add(mutation);
     return [...all].sort((a, b) => a.localeCompare(b));
   }
   function tally(rows, of) {
     const counts2 = /* @__PURE__ */ new Map();
-    for (const row5 of rows) {
-      for (const value of of(row5)) {
+    for (const row2 of rows) {
+      for (const value of of(row2)) {
         if (value) counts2.set(value, (counts2.get(value) ?? 0) + 1);
       }
     }
     return counts2;
   }
-  function matchesMutations(row5, wanted, mode) {
+  function matchesMutations(row2, wanted, mode) {
     if (wanted.length === 0) return true;
-    const present = new Set(row5.mutations);
+    const present = new Set(row2.mutations);
     switch (mode) {
       case "all":
         return wanted.every((mutation) => present.has(mutation));
@@ -34754,12 +34552,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function filterRows(rows, filters) {
     const species = filters.species && filters.species.length > 0 ? new Set(filters.species) : null;
-    return rows.filter((row5) => {
-      if (!row5.ready) return false;
-      if (row5.preserved && !filters.includePreserved) return false;
-      if (species && !species.has(row5.species)) return false;
-      if (row5.sizePct < filters.minSizePct) return false;
-      return matchesMutations(row5, filters.mutations, filters.mutationMode);
+    return rows.filter((row2) => {
+      if (!row2.ready) return false;
+      if (row2.preserved && !filters.includePreserved) return false;
+      if (species && !species.has(row2.species)) return false;
+      if (row2.sizePct < filters.minSizePct) return false;
+      return matchesMutations(row2, filters.mutations, filters.mutationMode);
     });
   }
   function describeFilters(filters) {
@@ -34783,12 +34581,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function groupVariants(rows) {
     const groups = /* @__PURE__ */ new Map();
-    for (const row5 of rows) {
-      const mutations = [...row5.mutations].sort();
-      const key2 = `${row5.species}|${mutations.join(",")}`;
+    for (const row2 of rows) {
+      const mutations = [...row2.mutations].sort();
+      const key2 = `${row2.species}|${mutations.join(",")}`;
       const known = groups.get(key2);
       if (known) known.count++;
-      else groups.set(key2, { species: row5.species, mutations, count: 1 });
+      else groups.set(key2, { species: row2.species, mutations, count: 1 });
     }
     return [...groups.values()].sort(
       (a, b) => b.count - a.count || a.species.localeCompare(b.species) || a.mutations.length - b.mutations.length || a.mutations.join(",").localeCompare(b.mutations.join(","))
@@ -34801,7 +34599,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function describeSelection(rows) {
     if (rows.length === 0) return "nothing";
     const bySpecies2 = /* @__PURE__ */ new Map();
-    for (const row5 of rows) bySpecies2.set(row5.species, (bySpecies2.get(row5.species) ?? 0) + 1);
+    for (const row2 of rows) bySpecies2.set(row2.species, (bySpecies2.get(row2.species) ?? 0) + 1);
     const parts = [...bySpecies2.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([species, count]) => `${count} ${species}`);
     const head = parts.slice(0, 3);
     const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
@@ -35122,10 +34920,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     const totals = /* @__PURE__ */ new Map();
     for (const raw of Array.isArray(rows) ? rows : []) {
       if (!raw || typeof raw !== "object") continue;
-      const row5 = raw;
-      const id = idOf(row5).trim();
+      const row2 = raw;
+      const id = idOf(row2).trim();
       if (!id) continue;
-      const quantity = Math.floor(Number(row5.quantity ?? 0));
+      const quantity = Math.floor(Number(row2.quantity ?? 0));
       if (!Number.isFinite(quantity) || quantity <= 0) continue;
       totals.set(id, (totals.get(id) ?? 0) + quantity);
     }
@@ -35137,8 +34935,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       Atoms.inventory.myEggInventory.get().catch(() => null)
     ]);
     return [
-      ...accumulate(seeds, "seed", (row5) => String(row5.species ?? ""), seedName),
-      ...accumulate(eggs, "egg", (row5) => String(row5.eggId ?? row5.id ?? row5.species ?? ""), eggName2)
+      ...accumulate(seeds, "seed", (row2) => String(row2.species ?? ""), seedName),
+      ...accumulate(eggs, "egg", (row2) => String(row2.eggId ?? row2.id ?? row2.species ?? ""), eggName2)
     ];
   }
   async function readPlantScope() {
@@ -35159,15 +34957,210 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/companion/menu/dom.ts
-  function styled(tag, style, text2) {
-    const el = h(tag, void 0, text2);
-    Object.assign(el.style, style);
-    return el;
+  // src/features/companion/menu/styles.ts
+  function ensureCompanionStyles() {
+    if (injected6) return;
+    if (typeof document === "undefined" || !document.head) return;
+    injected6 = true;
+    ensureKitStyles();
+    addStyle(COMPANION_CSS);
   }
-  function iconSlot(sizePx, inline = false) {
-    return styled(inline ? "span" : "div", {
-      display: inline ? "inline-flex" : "flex",
+  var COMPANION_CSS, injected6;
+  var init_styles8 = __esm({
+    "src/features/companion/menu/styles.ts"() {
+      "use strict";
+      init_dom();
+      init_styles();
+      COMPANION_CSS = `
+.qws-cmp-window { min-width: min(460px, calc(100vw / var(--qmm-scale, 1) - 72px)); }
+.qws-cmp-tab { display: flex; flex-direction: column; gap: var(--qmm-space-lg); }
+
+/* Setting rows wrap their control under the text in a narrow window. */
+.qws-cmp-tab .qmm-setting-row, .qws-cmp-modal .qmm-setting-row { flex-wrap: wrap; }
+.qws-cmp-tab .qmm-setting-row__text, .qws-cmp-modal .qmm-setting-row__text { flex: 1 1 140px; }
+.qws-cmp-tab .qmm-setting-row__controls, .qws-cmp-modal .qmm-setting-row__controls { margin-left: auto; }
+
+.qws-cmp-hint { font-size: var(--qmm-fs-xs); line-height: 1.5; color: var(--qmm-text-dim); }
+.qws-cmp-hint.is-warn { color: var(--qmm-warn-ink); font-weight: 800; }
+.qws-cmp-dim { opacity: .45; }
+
+/* The portrait: the borrowed NPC's head, or its initial while it loads. */
+.qws-cmp-avatar {
+  display: flex; align-items: center; justify-content: center; flex: 0 0 auto; overflow: hidden;
+  border-radius: 50%; background: var(--qmm-sepia-soft); color: var(--qmm-sepia-ink); font-weight: 900;
+}
+.qws-cmp-avatar.is-framed { box-shadow: 0 0 0 2px var(--qmm-accent-border); }
+.qws-cmp-avatar canvas { width: 100%; height: 100%; image-rendering: pixelated; }
+.qws-cmp-avatar-gap { flex: 0 0 auto; }
+
+.qws-cmp-dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: var(--qmm-sand-shade); }
+.qws-cmp-dot.is-ok { background: var(--qmm-ok); }
+.qws-cmp-dot.is-busy { background: var(--qmm-amber); }
+
+/* Behavior tab: who he is and whether he is out, on top. */
+.qmm-card.qws-cmp-hero { gap: var(--qmm-space-lg); }
+.qmm-card.qws-cmp-hero.is-on { border-color: var(--qmm-accent-border); }
+.qws-cmp-hero__top { display: flex; align-items: center; gap: var(--qmm-space-lg); }
+.qws-cmp-hero__text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.qws-cmp-hero__name { font-size: var(--qmm-fs-xl); font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qws-cmp-hero__status { font-size: var(--qmm-fs-sm); line-height: 1.4; color: var(--qmm-text-dim); }
+.qws-cmp-hero__look { display: flex; flex-direction: column; gap: var(--qmm-space-xs); }
+.qws-cmp-hero__look-row { display: flex; align-items: center; gap: var(--qmm-space-lg); }
+.qws-cmp-hero__look-row > .qmm-select { flex: 1 1 auto; min-width: 0; }
+.qws-cmp-label { font-size: var(--qmm-fs-sm); font-weight: 800; color: var(--qmm-text-soft); }
+
+/* Chat tab. */
+.qws-cmp-chat__head { display: flex; align-items: center; gap: var(--qmm-space-lg); padding: 0 var(--qmm-space-xs); }
+.qws-cmp-chat__who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.qws-cmp-chat__name { font-size: var(--qmm-fs-lg); font-weight: 900; color: var(--qmm-text); }
+.qws-cmp-chat__status { display: flex; align-items: center; gap: var(--qmm-space-sm); font-size: var(--qmm-fs-sm); font-weight: 700; color: var(--qmm-text-dim); }
+.qws-cmp-chat__status.is-busy { color: var(--qmm-sepia-ink); }
+
+.qws-cmp-thread {
+  display: flex; flex-direction: column; gap: 5px; height: min(300px, 45vh); overflow-y: auto; padding: var(--qmm-space-lg);
+  border-radius: var(--qmm-radius-lg); background: var(--qmm-paper-deep);
+}
+.qws-cmp-day {
+  align-self: center; margin: var(--qmm-space-md) 0 var(--qmm-space-xs); padding: 3px 10px;
+  border-radius: var(--qmm-radius-pill); background: var(--qmm-sand); color: var(--qmm-text-soft);
+  font-size: var(--qmm-fs-xs); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
+}
+.qws-cmp-system {
+  align-self: center; max-width: 90%; padding: 2px var(--qmm-space-md); text-align: center;
+  font-size: var(--qmm-fs-xs); line-height: 1.5; color: var(--qmm-text-dim);
+}
+.qws-cmp-msg { display: flex; align-items: flex-end; gap: var(--qmm-space-md); }
+.qws-cmp-msg.is-out { justify-content: flex-end; }
+.qws-cmp-msg.is-cont { margin-top: -2px; }
+.qws-cmp-msg__col { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; max-width: 78%; }
+.qws-cmp-msg.is-out .qws-cmp-msg__col { align-items: flex-end; }
+.qws-cmp-bubble {
+  padding: 7px 12px; border-radius: 14px 14px 14px 4px; background: var(--qmm-card); color: var(--qmm-text);
+  font-size: var(--qmm-fs-md); font-weight: 600; line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+}
+.qws-cmp-msg.is-out .qws-cmp-bubble { border-radius: 14px 14px 4px 14px; background: var(--qmm-sepia-soft); }
+.qws-cmp-msg__time { padding: 0 var(--qmm-space-xs); font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); }
+.qws-cmp-empty { margin: auto; max-width: 240px; text-align: center; font-size: var(--qmm-fs-sm); line-height: 1.5; color: var(--qmm-text-dim); }
+.qws-cmp-confirm { display: flex; flex-wrap: wrap; gap: var(--qmm-space-sm); align-self: flex-start; margin: 2px 0 0 34px; }
+.qws-cmp-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.qws-cmp-bar__grow { flex: 1 1 auto; }
+.qws-cmp-bar__end { margin-left: auto; }
+
+/* Popups. Their body scrolls, so nothing in it may shrink under its own content. */
+.qws-cmp-modal > * { flex-shrink: 0; }
+.qws-cmp-list { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
+.qws-cmp-foot-end { margin-left: auto; }
+
+.qws-cmp-notice {
+  display: flex; flex: 0 0 auto; align-items: center; gap: var(--qmm-space-lg); padding: 10px 12px;
+  border-radius: var(--qmm-radius-md); background: var(--qmm-warn-soft); color: var(--qmm-warn-ink);
+}
+.qws-cmp-notice__text { flex: 1 1 auto; min-width: 0; font-size: var(--qmm-fs-sm); font-weight: 700; line-height: 1.45; }
+.qws-cmp-notice .qmm-btn { flex: 0 0 auto; }
+
+.qws-cmp-item {
+  display: flex; align-items: center; gap: var(--qmm-space-lg); padding: 9px 12px;
+  border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+}
+.qws-cmp-item__text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.qws-cmp-item__title { font-size: var(--qmm-fs-md); font-weight: 800; color: var(--qmm-text); }
+.qws-cmp-item__sub { font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); }
+.qws-cmp-item__sub.is-warn { color: var(--qmm-warn-ink); font-weight: 800; }
+
+/* A folded filter card: its title on the left, what it is set to on the right. */
+.qmm-card.qws-cmp-filter { flex: 0 0 auto; gap: 10px; padding: 10px 12px; }
+.qws-cmp-filter__head { display: flex; align-items: center; gap: var(--qmm-space-md); width: 100%; }
+.qws-cmp-filter__summary {
+  max-width: 60%; margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right;
+  font-size: var(--qmm-fs-xs); font-weight: 700; color: var(--qmm-text-dim);
+}
+.qws-cmp-filter__summary.is-active { color: var(--qmm-sepia-ink); font-weight: 800; }
+.qws-cmp-field { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--qmm-space-lg); }
+.qws-cmp-field__label { font-size: var(--qmm-fs-sm); font-weight: 800; color: var(--qmm-text); }
+.qws-cmp-field__control { display: flex; align-items: center; gap: var(--qmm-space-lg); }
+.qws-cmp-field__control.is-grow { flex: 1 1 160px; min-width: 0; }
+.qws-cmp-field__control.is-grow > .qws-pnl-range { flex: 1 1 auto; }
+.qws-cmp-scroll { max-height: 190px; overflow-y: auto; overscroll-behavior: contain; }
+
+.qws-cmp-choice { --seg-pad: 3px; }
+.qws-cmp-choice .qmm-seg__btn { padding: 6px 10px; font-size: var(--qmm-fs-sm); }
+
+/* Selection tiles: a sprite and its count; selected through fill and border. */
+.qws-cmp-tiles { display: flex; flex-wrap: wrap; align-items: stretch; gap: var(--qmm-space-sm); }
+.qws-cmp-tile {
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  padding: 5px 6px 4px; border: 2px solid transparent; border-radius: var(--qmm-radius-sm);
+  background: var(--qmm-paper-deep); color: var(--qmm-text-dim);
+  font: 800 var(--qmm-fs-xs)/1 var(--qmm-font); cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease;
+}
+.qws-cmp-tile:hover { background: var(--qmm-sand); }
+.qws-cmp-tile:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
+.qws-cmp-tile.is-selected { border-color: var(--qmm-accent-border); background: var(--qmm-sepia-soft); color: var(--qmm-sepia-ink); }
+.qws-cmp-tile.is-empty:not(.is-selected) { opacity: .45; }
+.qws-cmp-tile.is-empty:not(.is-selected) .qws-cmp-tile__count { color: var(--qmm-warn-ink); }
+.qws-cmp-tile--named { flex-direction: row; gap: var(--qmm-space-sm); padding: 4px 10px 4px 6px; color: var(--qmm-text); font-size: var(--qmm-fs-sm); white-space: nowrap; }
+.qws-cmp-tile--all { min-width: 40px; padding: 0 10px; color: var(--qmm-text); font-size: var(--qmm-fs-sm); }
+
+.qws-cmp-initial { font-size: var(--qmm-fs-sm); font-weight: 800; color: var(--qmm-text-dim); }
+.qws-cmp-ability {
+  display: inline-block; width: 13px; height: 13px; border-radius: 4px;
+  box-shadow: 0 0 0 1px var(--qmm-field-bg) inset, 0 0 0 1px var(--qmm-track);
+}
+
+/* The summary at the bottom of a popup: what the request would do. */
+.qws-cmp-result {
+  display: flex; flex: 0 0 auto; flex-direction: column; gap: var(--qmm-space-md); padding: 12px 14px;
+  border-radius: var(--qmm-radius-lg); background: var(--qmm-sepia-soft); color: var(--qmm-sepia-ink);
+}
+.qws-cmp-result__head { font-size: var(--qmm-fs-lg); font-weight: 900; }
+.qws-cmp-result__icons { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.qws-cmp-result .qws-cmp-hint { color: var(--qmm-sepia-ink); font-weight: 700; }
+.qws-cmp-result .qws-cmp-hint.is-warn { color: var(--qmm-warn-ink); font-weight: 800; }
+.qws-cmp-count { display: flex; align-items: center; gap: 3px; font-size: var(--qmm-fs-xs); font-weight: 800; }
+.qws-cmp-more { align-self: center; font-size: var(--qmm-fs-xs); font-weight: 800; }
+
+/* The planting palette and plot. */
+.qws-cmp-palette { display: flex; flex-direction: column; gap: var(--qmm-space-sm); }
+.qws-cmp-plot {
+  display: grid; gap: 2px; width: 100%; margin: 0 auto; padding: 6px; box-sizing: border-box; flex: 0 0 auto;
+  border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+}
+.qws-cmp-plot__cell {
+  display: flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 4px;
+  user-select: none; transition: background 90ms ease;
+}
+.qws-cmp-plot__cell[data-state="absent"] { background: transparent; cursor: default; }
+.qws-cmp-plot__cell[data-state="occupied"] { background: var(--qmm-danger-soft); border-color: var(--qmm-clay); cursor: not-allowed; }
+.qws-cmp-plot__cell[data-state="free"] { background: var(--qmm-card); border-color: var(--qmm-sand-edge); cursor: pointer; }
+.qws-cmp-plot__cell[data-state="free"]:hover { background: var(--qmm-sand); }
+.qws-cmp-plot__cell[data-state="set"] { background: var(--qmm-sepia-soft); border-color: var(--qmm-accent-border); cursor: pointer; }
+.qws-cmp-plot__cell > * { pointer-events: none; }
+.qws-cmp-plot__aisle { pointer-events: none; }
+`;
+      injected6 = false;
+    }
+  });
+
+  // src/features/companion/menu/dom.ts
+  function part(tag, className, text2) {
+    ensureCompanionStyles();
+    return h(tag, className, text2);
+  }
+  function openCompanionModal(options2) {
+    ensureCompanionStyles();
+    const modal = openModal2(options2);
+    modal.body.classList.add("qws-cmp-modal");
+    return modal;
+  }
+  function styled(tag, style, text2) {
+    const el4 = h(tag, void 0, text2);
+    Object.assign(el4.style, style);
+    return el4;
+  }
+  function iconSlot(sizePx, inline2 = false) {
+    return styled(inline2 ? "span" : "div", {
+      display: inline2 ? "inline-flex" : "flex",
       alignItems: "center",
       justifyContent: "center",
       width: `${sizePx}px`,
@@ -35193,6 +35186,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/features/companion/menu/dom.ts"() {
       "use strict";
       init_dom2();
+      init_modal();
+      init_styles8();
     }
   });
 
@@ -35247,96 +35242,33 @@ Restore figures are averages; unlucky streaks do worse.`;
     attachSpriteIcon(box2, ["ui", "mutation"], candidates, sizePx, SPRITE_LOG_TAG2);
     return box2;
   }
-  function tileLook(selected) {
-    return {
-      background: selected ? color.accentSoft : color.cardBg,
-      border: `1px solid ${selected ? color.accentBorder : color.border}`
-    };
-  }
-  function hoverable(tile, selected) {
-    if (selected) return;
-    tile.addEventListener("mouseenter", () => tile.style.background = color.hoverBg);
-    tile.addEventListener("mouseleave", () => tile.style.background = color.cardBg);
-  }
-  function spriteTile(options2) {
-    const tile = styled("button", {
-      display: "inline-flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: "1px",
-      padding: "5px 6px 3px",
-      borderRadius: "10px",
-      cursor: "pointer",
-      lineHeight: "1",
-      transition: "background 120ms ease, border-color 120ms ease",
-      ...tileLook(options2.selected)
-    });
+  function tileButton(className, selected, onClick) {
+    const tile = part("button", selected ? `${className} is-selected` : className);
     tile.type = "button";
-    tile.title = options2.title;
-    tile.append(options2.icon);
-    if (options2.count !== void 0) {
-      tile.append(
-        styled("span", { fontSize: "10px", color: options2.selected ? color.accent : color.textDim }, String(options2.count))
-      );
-    }
-    tile.addEventListener("click", options2.onClick);
-    hoverable(tile, options2.selected);
-    return tile;
-  }
-  function labelledTile(options2) {
-    const tile = styled("button", {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "6px",
-      padding: "4px 9px 4px 5px",
-      borderRadius: "10px",
-      cursor: "pointer",
-      lineHeight: "1",
-      transition: "background 120ms ease, border-color 120ms ease",
-      ...tileLook(options2.selected)
-    });
-    tile.type = "button";
-    tile.title = options2.label;
-    const name = styled(
-      "span",
-      {
-        fontSize: "11.5px",
-        fontWeight: options2.selected ? "600" : "500",
-        color: options2.selected ? color.accent : color.text,
-        whiteSpace: "nowrap"
-      },
-      options2.label
-    );
-    tile.append(options2.icon, name);
-    tile.addEventListener("click", options2.onClick);
-    hoverable(tile, options2.selected);
-    return tile;
-  }
-  function allTile(label2, selected, onClick) {
-    const tile = styled(
-      "button",
-      {
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minWidth: "40px",
-        padding: "0 10px",
-        alignSelf: "stretch",
-        borderRadius: "10px",
-        cursor: "pointer",
-        fontSize: "11px",
-        lineHeight: "1",
-        color: selected ? color.accent : color.text,
-        ...tileLook(selected)
-      },
-      label2
-    );
-    tile.type = "button";
+    tile.setAttribute("aria-pressed", selected ? "true" : "false");
     tile.addEventListener("click", onClick);
     return tile;
   }
+  function spriteTile(options2) {
+    const tile = tileButton("qws-cmp-tile", options2.selected, options2.onClick);
+    tile.title = options2.title;
+    tile.append(options2.icon);
+    if (options2.count !== void 0) tile.append(part("span", "qws-cmp-tile__count", String(options2.count)));
+    return tile;
+  }
+  function labelledTile(options2) {
+    const tile = tileButton("qws-cmp-tile qws-cmp-tile--named", options2.selected, options2.onClick);
+    tile.title = options2.label;
+    tile.append(options2.icon, part("span", "", options2.label));
+    return tile;
+  }
+  function allTile(label2, selected, onClick) {
+    const tile = tileButton("qws-cmp-tile qws-cmp-tile--all", selected, onClick);
+    tile.textContent = label2;
+    return tile;
+  }
   function tileRow() {
-    return styled("div", { display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: "5px" });
+    return part("div", "qws-cmp-tiles");
   }
   function choiceControl(options2, selected, onChange) {
     let current3 = selected;
@@ -35349,9 +35281,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         onChange(value);
       }
     );
-    control.classList.add("qmm-compact");
-    control.style.fontSize = "11px";
-    control.style.setProperty("--seg-pad", "2px");
+    ensureCompanionStyles();
+    control.classList.add("qws-cmp-choice");
     control.querySelectorAll(".qmm-seg__btn").forEach((btn, i) => {
       btn.title = options2[i]?.title ?? "";
     });
@@ -35367,8 +35298,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_segmented();
       init_iconCache();
       init_resolver();
-      init_theme();
       init_dom3();
+      init_styles8();
       SPRITE_LOG_TAG2 = "companion-harvest";
       ICON_PX3 = 26;
     }
@@ -35390,33 +35321,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     return box2;
   }
   function plantTile(item, onClick) {
-    const el = styled("button", {
-      display: "inline-flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: "1px",
-      padding: "5px 6px 3px",
-      borderRadius: "10px",
-      cursor: "pointer",
-      lineHeight: "1",
-      transition: "background 120ms ease, border-color 120ms ease, opacity 120ms ease"
-    });
-    el.type = "button";
-    el.title = item.kind === "egg" ? `${item.name} (egg)` : item.name;
-    const count = styled("span", { fontSize: "10px" });
-    el.append(plantItemIcon(item), count);
-    el.addEventListener("click", onClick);
+    const el4 = part("button", "qws-cmp-tile");
+    el4.type = "button";
+    el4.title = item.kind === "egg" ? `${item.name} (egg)` : item.name;
+    const count = part("span", "qws-cmp-tile__count");
+    el4.append(plantItemIcon(item), count);
+    el4.addEventListener("click", onClick);
     return {
-      el,
+      el: el4,
       update(left, selected) {
-        const empty = left <= 0;
         count.textContent = String(Math.max(0, left));
-        Object.assign(el.style, {
-          background: selected ? color.accentSoft : color.cardBg,
-          border: `1px solid ${selected ? color.accentBorder : color.border}`,
-          opacity: empty && !selected ? "0.45" : "1"
-        });
-        count.style.color = selected ? color.accent : empty ? color.warn : color.textDim;
+        el4.classList.toggle("is-selected", selected);
+        el4.classList.toggle("is-empty", left <= 0);
+        el4.setAttribute("aria-pressed", selected ? "true" : "false");
       }
     };
   }
@@ -35427,7 +35344,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_data();
       init_names();
       init_iconCache();
-      init_theme();
       init_dom3();
       SPRITE_LOG_TAG3 = "companion-plant";
       ICON_PX4 = 24;
@@ -35492,19 +35408,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     grid.style.gridTemplateColumns = `repeat(${GARDEN_COLS / 2}, 1fr) ${HALF_GAP_PX}px repeat(${GARDEN_COLS / 2}, 1fr)`;
     grid.style.gridTemplateRows = `repeat(${GARDEN_ROWS}, 1fr)`;
     grid.style.aspectRatio = `${GARDEN_COLS + 0.6} / ${GARDEN_ROWS}`;
-    const hint2 = h(
+    const hint3 = h(
       "div",
       "qws-gv-hint",
       "Every tile gets the same space here, so nothing hides behind a taller plant. Hover a tile for its name."
     );
-    modal.body.append(toolbar2, grid, hint2);
+    modal.body.append(toolbar2, grid, hint3);
     const cells = /* @__PURE__ */ new Map();
-    for (let row5 = 0; row5 < GARDEN_ROWS; row5++) {
+    for (let row2 = 0; row2 < GARDEN_ROWS; row2++) {
       for (let col = 0; col < GARDEN_COLS; col++) {
         if (col === GARDEN_COLS / 2) grid.append(h("div"));
-        const el = h("div", "qws-gv-cell");
-        cells.set(row5 * GARDEN_COLS + col, { el, shown: null, content: null });
-        grid.append(el);
+        const el4 = h("div", "qws-gv-cell");
+        cells.set(row2 * GARDEN_COLS + col, { el: el4, shown: null, content: null });
+        grid.append(el4);
       }
     }
     let owned2 = /* @__PURE__ */ new Set();
@@ -35612,69 +35528,73 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/misc/menu.ts
-  function isSectionCollapsed(sectionId) {
-    return getAriesStorage().misc?.collapsed?.[sectionId] === true;
-  }
-  function setSectionCollapsed(sectionId, collapsed) {
-    updateAriesStorage((current3) => {
-      const misc = current3.misc ?? (current3.misc = {});
-      const map2 = misc.collapsed ?? (misc.collapsed = {});
-      if (collapsed) map2[sectionId] = true;
-      else delete map2[sectionId];
+  // src/features/misc/sections.ts
+  function buildDisplaySection(modalHost) {
+    const card3 = sectionCard("display", "Display", "What the mod adds to the game's screens.");
+    const priceToggle = switchInput(readShowCropPrice(), writeShowCropPrice);
+    const gardenViewButton = button("Open", {
+      variant: "primary",
+      size: "sm",
+      onClick: () => openGardenView(modalHost())
     });
+    card3.body.append(
+      settingRow("Crop price", "A crop's sell price in its tooltip.", priceToggle).row,
+      settingRow("Garden view", "Your whole garden as a flat grid, nothing hidden.", gardenViewButton).row
+    );
+    return card3.root;
   }
-  function section3(id, icon2, title, description) {
-    return collapsibleCard({
-      icon: icon2,
-      title,
-      description,
-      collapsed: isSectionCollapsed(id),
-      onToggle: (collapsed) => setSectionCollapsed(id, collapsed)
+  function buildMovementSection() {
+    const card3 = sectionCard("player", "Movement");
+    const ghostToggle = switchInput(readGhostEnabled(), setGhostEnabled);
+    const delayInput = numberInput(MOVE_DELAY_MIN_MS, MOVE_DELAY_MAX_MS, 5, readGhostDelayMs());
+    delayInput.setAttribute("aria-label", "Step delay in milliseconds");
+    delayInput.addEventListener("change", () => {
+      const value = clamp(
+        Math.floor(Number(delayInput.value) || MOVE_DELAY_DEFAULT_MS),
+        MOVE_DELAY_MIN_MS,
+        MOVE_DELAY_MAX_MS
+      );
+      delayInput.value = String(value);
+      setGhostDelayMs(value);
     });
+    card3.body.append(
+      settingRow("Ghost mode", "Walk through anything in your way.", ghostToggle).row,
+      settingRow("Step delay", "Milliseconds per step. Lower is faster.", delayInput.wrap).row
+    );
+    return card3.root;
   }
-  function panelHeader() {
-    const title = h("div", void 0, "\u2699\uFE0F Misc controls");
-    Object.assign(title.style, { fontSize: "15px", fontWeight: "700", color: color.text });
-    const subtitle = h("div", void 0, "Utility toggles and bulk tools.");
-    Object.assign(subtitle.style, { fontSize: "11px", color: color.textDim, lineHeight: "1.45" });
-    const head = h("div");
-    Object.assign(head.style, { display: "flex", flexDirection: "column", gap: "4px", flexShrink: "0", padding: "2px 2px 0" });
-    head.append(title, subtitle);
-    return head;
+  function buildInventorySection() {
+    const card3 = sectionCard("inventory", "Inventory", "Keep room free, and put away what already has a place.");
+    const guardToggle = switchInput(readInventorySlotReserveEnabled(), writeInventorySlotReserveEnabled);
+    card3.body.append(
+      settingRow("Keep one slot free", "At 99 of 100, refuses anything that needs a new slot.", guardToggle, {
+        icon: "sprite/ui/InventoryBag",
+        iconTag: "misc"
+      }).row,
+      h("div", "qws-misc-sub", "Auto-store new items in")
+    );
+    for (const entry of STORES) {
+      const control = switchInput(entry.store.isEnabled(), (on) => entry.store.setEnabled(on));
+      card3.body.append(settingRow(entry.title, entry.hint, control, { icon: entry.icon, iconTag: "misc" }).row);
+    }
+    return card3.root;
   }
   function buildAutoRecoSection() {
-    const card4 = section3(
-      "autoReco",
-      "\u{1F50C}",
-      "Auto reconnect",
-      "Reconnect automatically when the session is kicked."
-    );
+    const card3 = sectionCard("autoReco", "Auto reconnect", "Log back in when this account opens in another session.");
     const featureDisabled = AUTO_RECO_TEMPORARILY_DISABLED;
     const initialSeconds = Math.round(readAutoRecoDelayMs() / 1e3);
-    const hint2 = h("div");
-    Object.assign(hint2.style, { fontSize: "10px", color: color.textDim, lineHeight: "1.45", padding: "0 2px" });
     const delaySlider = slider(0, AUTO_RECO_MAX_SECONDS, AUTO_RECO_STEP_SECONDS, initialSeconds, { fill: true });
-    delaySlider.style.width = "150px";
+    delaySlider.setAttribute("aria-label", "Reconnect delay");
     const delayValue = pill(formatShortDuration(initialSeconds));
-    Object.assign(delayValue.style, { minWidth: "64px", justifyContent: "center" });
+    const delayControl = h("div", "qws-misc-range");
+    delayControl.append(delaySlider, delayValue);
     const enabledToggle = switchInput(featureDisabled ? false : readAutoRecoEnabled(), (on) => {
       writeAutoRecoEnabled(on);
-      syncEnabled2(on);
+      delaySlider.disabled = !on;
     });
-    function syncEnabled2(on) {
-      delaySlider.disabled = featureDisabled || !on;
-      hint2.textContent = on ? "Automatically log back in if this account is disconnected because it was opened in another session." : "Auto reconnect on session conflict is turned off.";
-    }
-    if (featureDisabled) {
-      enabledToggle.disabled = true;
-      Object.assign(enabledToggle.style, { opacity: "0.4", pointerEvents: "none" });
-      delaySlider.disabled = true;
-      hint2.textContent = "Auto reconnect has been temporarily disabled at the request of the game developers. It will most likely come back later.";
-    } else {
-      syncEnabled2(readAutoRecoEnabled());
-    }
-    const snapSeconds = (value) => Math.max(0, Math.min(AUTO_RECO_MAX_SECONDS, Math.round(value / AUTO_RECO_STEP_SECONDS) * AUTO_RECO_STEP_SECONDS));
+    enabledToggle.disabled = featureDisabled;
+    delaySlider.disabled = featureDisabled || !readAutoRecoEnabled();
+    const snapSeconds = (value) => clamp(Math.round(value / AUTO_RECO_STEP_SECONDS) * AUTO_RECO_STEP_SECONDS, 0, AUTO_RECO_MAX_SECONDS);
     const applySeconds = (raw, persist3) => {
       const seconds2 = snapSeconds(raw);
       delaySlider.value = String(seconds2);
@@ -35683,249 +35603,36 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     delaySlider.addEventListener("input", () => applySeconds(Number(delaySlider.value), false));
     delaySlider.addEventListener("change", () => applySeconds(Number(delaySlider.value), true));
-    const delayControl = h("div");
-    Object.assign(delayControl.style, { display: "flex", alignItems: "center", gap: "10px" });
-    delayControl.append(delaySlider, delayValue);
-    card4.body.append(
-      settingRow("Enabled", "Attempts to log back in after a session conflict.", enabledToggle).row,
-      settingRow("Delay", "Wait time before reconnecting.", delayControl).row,
-      hint2
-    );
-    return card4.root;
-  }
-  function buildPlayerSection() {
-    const card4 = section3(
-      "player",
-      "\u{1F47B}",
-      "Player controls",
-      "Movement helpers for walking and testing."
-    );
-    const ghostToggle = switchInput(readGhostEnabled(), setGhostEnabled);
-    const delayInput = numberInput(MOVE_DELAY_MIN_MS, MOVE_DELAY_MAX_MS, 5, readGhostDelayMs());
-    delayInput.addEventListener("change", () => {
-      const value = Math.max(
-        MOVE_DELAY_MIN_MS,
-        Math.min(MOVE_DELAY_MAX_MS, Math.floor(Number(delayInput.value) || MOVE_DELAY_DEFAULT_MS))
-      );
-      delayInput.value = String(value);
-      setGhostDelayMs(value);
-    });
-    card4.body.append(
-      settingRow("Ghost mode", "Ignores collisions while you move.", ghostToggle).row,
-      settingRow("Move delay (ms)", "Lower values feel faster.", delayInput.wrap).row
-    );
-    return card4.root;
-  }
-  function buildInventoryGuardSection() {
-    const card4 = section3(
-      "inventoryGuard",
-      "\u{1F392}",
-      "Inventory guard",
-      "Keep a slot open for swaps and bulk actions."
-    );
-    const guardToggle = switchInput(readInventorySlotReserveEnabled(), writeInventorySlotReserveEnabled);
-    card4.body.append(
-      settingRow(
-        "Keep 1 slot free",
-        "Blocks actions that would add a new inventory entry at 99/100.",
-        guardToggle,
-        { icon: "sprite/ui/InventoryBag", iconTag: "misc" }
-      ).row
-    );
-    return card4.root;
-  }
-  function buildDisplaySection(modalHost) {
-    const card4 = section3(
-      "display",
-      "\u{1F4B0}",
-      "Display",
-      "What the mod adds on top of the game's own screens."
-    );
-    const priceToggle = switchInput(readShowCropPrice(), writeShowCropPrice);
-    const gardenViewButton = button("Open", {
-      variant: "primary",
-      size: "sm",
-      onClick: () => openGardenView(modalHost())
-    });
-    card4.body.append(
-      settingRow("Crop price", "Shows a crop's sell price in its tooltip.", priceToggle).row,
-      settingRow(
-        "Garden view",
-        "Your whole garden as a flat grid, so no plant hides behind another.",
-        gardenViewButton
-      ).row
-    );
-    return card4.root;
-  }
-  function buildStorageSection() {
-    const card4 = section3(
-      "storage",
-      "\u{1F4E6}",
-      "Storage auto-store",
-      "Move items into storage when a matching stack already exists."
-    );
-    const rows = [
-      {
-        title: "Seed Silo",
-        hint: "Auto-store seeds when the species already exists in the silo.",
-        icon: "sprite/decor/SeedSilo",
-        store: autoStores.seedSilo
-      },
-      {
-        title: "Decor Shed",
-        hint: "Auto-store decor when the item already exists in the shed.",
-        icon: "sprite/decor/DecorShed",
-        store: autoStores.decorShed
-      },
-      {
-        title: "Tool Shack",
-        hint: "Auto-store tools when the item already exists in the shack.",
-        icon: "sprite/decor/ToolShack",
-        store: autoStores.toolShack
-      }
-    ];
-    for (const entry of rows) {
-      const control = switchInput(entry.store.isEnabled(), (on) => entry.store.setEnabled(on));
-      card4.body.appendChild(
-        settingRow(entry.title, entry.hint, control, { icon: entry.icon, iconTag: "misc" }).row
+    if (featureDisabled) {
+      card3.body.append(
+        h("div", "qws-misc-note", "Turned off for now, at the game developers' request. It should come back later.")
       );
     }
-    return card4.root;
-  }
-  async function renderMiscMenu(container) {
-    const ui = new Menu({ id: "misc", compact: true });
-    ui.mount(container);
-    const root4 = ui.root.querySelector(".qmm-views") ?? ui.root;
-    root4.replaceChildren();
-    root4.classList.add("qmm-scroll");
-    Object.assign(root4.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "12px",
-      width: `${PANEL_WIDTH_PX}px`,
-      maxWidth: "100%",
-      // A definite height, not 100%: the HUD window is itself a scroller and has
-      // no fixed height, so `height:100%` would collapse onto the content and
-      // hand the scrollbar back to the whole window.
-      height: "min(70vh, 600px)",
-      overflowY: "auto",
-      boxSizing: "border-box"
-    });
-    const modalHost = () => ui.root.closest(".qws-win") ?? ui.root;
-    const pickFor = (controller2, opts) => new Promise((resolve) => {
-      let loaded2 = [];
-      openDeleterPicker({
-        ...opts,
-        host: modalHost(),
-        initial: new Map(controller2.getSelection().map((entry) => [entry.id, entry.qty])),
-        loadEntries: async () => {
-          loaded2 = await opts.loadEntries();
-          return loaded2;
-        },
-        onConfirm: (picked) => {
-          controller2.setSelection(
-            Array.from(picked, ([id, qty]) => {
-              const entry = loaded2.find((candidate) => candidate.id === id);
-              return {
-                id,
-                qty,
-                label: entry?.label ?? id,
-                fromStorage: Math.max(0, qty - (entry?.invQty ?? 0))
-              };
-            })
-          );
-        },
-        onClose: () => resolve()
-      });
-    });
-    const seedDeleterSection = createDeleterSection({
-      headerSprite: "sprite/ui/SeedIcon",
-      title: "Seed deleter",
-      description: "Bulk delete seeds from your inventory and Seed Silo.",
-      spriteCategories: ["seed"],
-      fallbackIcon: "\u{1F331}",
-      groupNoun: "species",
-      unitNoun: "seeds",
-      selectLabel: "Choose seeds",
-      clearLabel: "Clear selected seeds",
-      storageLabel: "Seed Silo",
-      estimateDelayMs: SEED_DELETE_DELAY_MS,
-      runDelayMs: SEED_DELETE_DELAY_MS,
-      collapsed: isSectionCollapsed("seedDeleter"),
-      onToggleCollapsed: (collapsed) => setSectionCollapsed("seedDeleter", collapsed),
-      controller: seedDeleter,
-      openSelector: () => pickFor(seedDeleter, {
-        title: "Select seeds",
-        unitNoun: "seeds",
-        storageNoun: "silo",
-        spriteCategories: ["seed"],
-        fallbackIcon: "\u{1F331}",
-        loadEntries: getSeedEntries
-      })
-    });
-    const decorDeleterSection = createDeleterSection({
-      headerSprite: "sprite/ui/DecorIcon",
-      title: "Decor deleter",
-      description: "Bulk delete decor from your inventory and Decor Shed.",
-      spriteCategories: ["decor"],
-      fallbackIcon: "\u{1FAB4}",
-      groupNoun: "decor",
-      unitNoun: "items",
-      selectLabel: "Choose decor",
-      clearLabel: "Clear selected decor",
-      storageLabel: "Decor Shed",
-      // Decor deletes cost roughly two round-trips each, so the estimate doubles
-      // the delay the run is actually given.
-      estimateDelayMs: DECOR_DELETE_DELAY_MS * 2,
-      runDelayMs: DECOR_DELETE_DELAY_MS,
-      collapsed: isSectionCollapsed("decorDeleter"),
-      onToggleCollapsed: (collapsed) => setSectionCollapsed("decorDeleter", collapsed),
-      controller: decorDeleter,
-      openSelector: () => pickFor(decorDeleter, {
-        title: "Select decor",
-        unitNoun: "decor",
-        storageNoun: "shed",
-        spriteCategories: ["decor"],
-        fallbackIcon: "\u{1FAB4}",
-        loadEntries: getDecorEntries
-      })
-    });
-    root4.append(
-      panelHeader(),
-      buildAutoRecoSection(),
-      buildPlayerSection(),
-      buildDisplaySection(modalHost),
-      buildInventoryGuardSection(),
-      buildStorageSection(),
-      seedDeleterSection,
-      decorDeleterSection
+    card3.body.append(
+      settingRow("Enabled", null, enabledToggle).row,
+      settingRow("Delay", "Wait before reconnecting.", delayControl).row
     );
+    return card3.root;
   }
-  var PANEL_WIDTH_PX, AUTO_RECO_MAX_SECONDS, AUTO_RECO_STEP_SECONDS, MOVE_DELAY_MIN_MS, MOVE_DELAY_MAX_MS, MOVE_DELAY_DEFAULT_MS, formatShortDuration;
-  var init_menu6 = __esm({
-    "src/features/misc/menu.ts"() {
+  var AUTO_RECO_MAX_SECONDS, AUTO_RECO_STEP_SECONDS, MOVE_DELAY_MIN_MS, MOVE_DELAY_MAX_MS, MOVE_DELAY_DEFAULT_MS, formatShortDuration, STORES;
+  var init_sections = __esm({
+    "src/features/misc/sections.ts"() {
       "use strict";
-      init_storage();
+      init_math();
       init_badges();
       init_button();
       init_dom2();
       init_fields();
       init_layout();
-      init_menu();
       init_sliders();
-      init_theme();
       init_toggles();
       init_settings2();
       init_stores();
       init_setting();
-      init_deleters();
-      init_picker();
-      init_section();
-      init_sources();
-      init_ghost();
       init_gardenView();
+      init_ghost();
       init_inventoryReserve();
-      PANEL_WIDTH_PX = 620;
+      init_sectionCard();
       AUTO_RECO_MAX_SECONDS = 300;
       AUTO_RECO_STEP_SECONDS = 30;
       MOVE_DELAY_MIN_MS = 10;
@@ -35939,6 +35646,85 @@ Restore figures are averages; unlucky streaks do worse.`;
         const rest2 = total % 60;
         return rest2 === 0 ? `${minutes} min` : `${minutes} min ${rest2} s`;
       };
+      STORES = [
+        { title: "Seed Silo", hint: "Seeds of a species it already holds.", icon: "sprite/decor/SeedSilo", store: autoStores.seedSilo },
+        { title: "Decor Shed", hint: "Decor it already holds.", icon: "sprite/decor/DecorShed", store: autoStores.decorShed },
+        { title: "Tool Shack", hint: "Tools it already holds.", icon: "sprite/decor/ToolShack", store: autoStores.toolShack }
+      ];
+    }
+  });
+
+  // src/features/misc/styles.ts
+  function ensureMiscStyles() {
+    if (injected7) return;
+    injected7 = true;
+    addStyle(MISC_CSS);
+  }
+  var MISC_CSS, injected7;
+  var init_styles9 = __esm({
+    "src/features/misc/styles.ts"() {
+      "use strict";
+      init_dom();
+      MISC_CSS = `
+.qmm-views.qws-misc {
+  display: flex; flex-direction: column; gap: var(--qmm-space-lg); box-sizing: border-box;
+  /* Never wider than the screen, whatever the menu size. */
+  width: min(560px, calc((100vw - 48px) / var(--qmm-scale, 1))); max-width: 100%;
+  /* A definite height, not 100%: the HUD window has none, so 100% would
+     collapse onto the content and hand the scrollbar back to the window. */
+  height: min(70vh, 600px); overflow-y: auto; padding-right: 2px;
+}
+
+/* A narrow window puts a row's controls under its text instead of crushing it. */
+.qws-misc .qmm-setting-row { flex-wrap: wrap; }
+.qws-misc .qmm-setting-row__text { flex: 1 1 140px; }
+.qws-misc .qmm-setting-row__controls { margin-left: auto; }
+/* Windows and the kit widen every number field; the step delay holds four digits. */
+.qws-win .qws-misc input.qmm-input-number-input { width: 72px; min-width: 0; box-sizing: border-box; }
+
+.qws-misc-sub {
+  margin: var(--qmm-space-sm) 2px 0; font-size: var(--qmm-fs-sm); font-weight: 800; color: var(--qmm-text-soft);
+}
+
+.qws-misc-note {
+  padding: 8px 12px; border-radius: var(--qmm-radius-md);
+  background: var(--qmm-warn-soft); color: var(--qmm-warn-ink);
+  font-size: var(--qmm-fs-sm); font-weight: 700; line-height: 1.45;
+}
+
+.qws-misc-range { display: flex; align-items: center; gap: var(--qmm-space-md); }
+.qws-misc-range .qws-pnl-range { width: 140px; }
+.qws-misc-range .qmm-pill { min-width: 64px; justify-content: center; }
+`;
+      injected7 = false;
+    }
+  });
+
+  // src/features/misc/menu.ts
+  async function renderMiscMenu(container) {
+    ensureMiscStyles();
+    const ui = new Menu({ id: "misc", compact: true });
+    ui.mount(container);
+    const root4 = ui.root.querySelector(".qmm-views") ?? ui.root;
+    root4.replaceChildren();
+    root4.classList.add("qws-misc");
+    const modalHost = () => ui.root.closest(".qws-win") ?? ui.root;
+    root4.append(
+      buildDisplaySection(modalHost),
+      buildMovementSection(),
+      buildInventorySection(),
+      buildSeedDeleterSection(modalHost),
+      buildDecorDeleterSection(modalHost),
+      buildAutoRecoSection()
+    );
+  }
+  var init_menu6 = __esm({
+    "src/features/misc/menu.ts"() {
+      "use strict";
+      init_menu();
+      init_deleterCards();
+      init_sections();
+      init_styles9();
     }
   });
 
@@ -36075,88 +35861,104 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/settings/styles.ts
   function ensureSettingsStyles() {
-    if (injected4) return;
-    injected4 = true;
+    if (injected8) return;
+    injected8 = true;
     addStyle(SETTINGS_CSS);
   }
-  var SETTINGS_CSS, injected4;
-  var init_styles4 = __esm({
+  var SETTINGS_CSS, injected8;
+  var init_styles10 = __esm({
     "src/features/settings/styles.ts"() {
       "use strict";
       init_dom();
       SETTINGS_CSS = `
-.qws-set-tab { display: flex; flex-direction: column; gap: 12px; }
-.qws-set-card-body { display: flex; flex-direction: column; gap: 10px; }
-.qws-set-status { min-height: 18px; font-size: 13px; opacity: .9; }
-.qws-set-status.is-ok { color: var(--qmm-accent); }
-.qws-set-status.is-error { color: var(--qmm-danger); }
+.qws-set-tab { display: flex; flex-direction: column; gap: var(--qmm-space-lg); }
+.qws-set-stack { display: flex; flex-direction: column; gap: var(--qmm-space-lg); }
+.qws-set-end { display: flex; justify-content: flex-end; }
+.qws-set-note { font-size: var(--qmm-fs-md); line-height: 1.5; color: var(--qmm-text-soft); }
+.qws-set-empty {
+  padding: var(--qmm-space-lg); text-align: center;
+  font-size: var(--qmm-fs-md); color: var(--qmm-text-dim);
+}
+
+.qws-set-status {
+  padding: var(--qmm-space-md) var(--qmm-space-lg); border-radius: var(--qmm-radius-md);
+  font-size: var(--qmm-fs-sm); font-weight: 700; line-height: 1.4;
+  background: var(--qmm-paper-deep); color: var(--qmm-text-soft);
+}
+.qws-set-status.is-ok { background: var(--qmm-ok-soft); color: var(--qmm-ok-ink); }
+.qws-set-status.is-error { background: var(--qmm-danger-soft); color: var(--qmm-danger-ink); }
+
+.qws-set-save { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.qws-set-save > .qmm-input { flex: 1 1 110px; min-width: 0; }
+.qws-set-backups { display: flex; flex-direction: column; gap: var(--qmm-space-sm); }
+.qws-set-backup { flex-wrap: wrap; row-gap: var(--qmm-space-md); }
+.qws-set-backup .qmm-setting-row__text { flex: 1 1 120px; }
+.qws-set-backup .qmm-setting-row__title { font-size: var(--qmm-fs-md); overflow-wrap: anywhere; }
+.qws-set-backup .qmm-setting-row__controls { margin-left: auto; }
+.qws-set-backup__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--qmm-space-xs); }
 
 .qws-set-drop {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-  width: 100%; min-height: 110px; padding: 18px 22px; box-sizing: border-box; text-align: center; cursor: pointer;
-  border-radius: 14px; border: 1px dashed var(--qmm-border-hover); background: var(--qmm-field-bg);
-  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--qmm-space-xs);
+  width: 100%; min-height: 88px; padding: var(--qmm-space-xl); box-sizing: border-box; text-align: center; cursor: pointer;
+  border-radius: var(--qmm-radius-lg); border: 2px dashed var(--qmm-border-hover); background: var(--qmm-paper-deep);
+  transition: border-color 120ms ease, background 120ms ease;
 }
 .qws-set-drop.is-active, .qws-set-drop:focus-visible {
   outline: none; border-color: var(--qmm-accent-border-hover); background: var(--qmm-accent-soft);
-  box-shadow: 0 0 0 3px var(--qmm-accent-soft);
 }
-.qws-set-drop__title { font-size: 14px; font-weight: 600; letter-spacing: .02em; }
-.qws-set-drop__hint { font-size: 12px; opacity: .75; }
+.qws-set-drop__title { font-size: var(--qmm-fs-lg); font-weight: 800; color: var(--qmm-text); }
+.qws-set-drop__hint { font-size: var(--qmm-fs-sm); color: var(--qmm-text-dim); overflow-wrap: anywhere; }
 
-.qws-set-row { display: flex; align-items: center; gap: 8px; }
-.qws-set-row > .qmm-input { flex: 1; }
-.qws-set-list { display: flex; flex-direction: column; gap: 10px; }
-.qws-set-empty { opacity: .6; }
-.qws-set-backup {
-  display: flex; flex-direction: column; gap: 6px; padding: 10px;
-  border-radius: 8px; border: 1px solid var(--qmm-border); background: var(--qmm-card-bg);
+.qws-set-hero {
+  display: flex; flex-direction: column; align-items: center; gap: var(--qmm-space-sm);
+  padding: var(--qmm-space-lg) 0 var(--qmm-space-md); text-align: center;
 }
-.qws-set-backup__head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-.qws-set-backup__name { font-size: 13px; font-weight: 600; }
-.qws-set-backup__date { font-size: 11px; opacity: .65; }
-.qws-set-backup__actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.qws-set-hero__title { font-size: 20px; font-weight: 900; letter-spacing: .01em; color: var(--qmm-text); }
+.qws-set-hero__sub { font-size: var(--qmm-fs-sm); color: var(--qmm-text-dim); }
+.qws-set-facts { display: flex; flex-direction: column; gap: var(--qmm-space-md); margin: 0; }
+.qws-set-facts__row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--qmm-space-lg); }
+.qws-set-facts__label { margin: 0; flex: 0 0 auto; font-size: var(--qmm-fs-md); color: var(--qmm-text-dim); }
+.qws-set-facts__value {
+  margin: 0; min-width: 0; text-align: right; overflow-wrap: anywhere;
+  font-size: var(--qmm-fs-md); font-weight: 800; color: var(--qmm-text);
+}
+.qws-set-link-btn { align-self: flex-start; text-decoration: none; }
+.qws-set-link-btn:hover { text-decoration: none; }
 
-.qws-set-hero { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 0 14px; text-align: center; }
-.qws-set-hero__title { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; color: var(--qmm-text); }
-.qws-set-hero__sub { margin-top: 2px; font-size: 11px; color: var(--qmm-text-dim); }
-.qws-set-sep { height: 1px; margin: 0 0 12px; background: var(--qmm-border); }
-.qws-set-grid {
-  display: flex; flex-direction: column; margin-bottom: 14px; overflow: hidden;
-  border-radius: 10px; border: 1px solid var(--qmm-border);
-}
-.qws-set-grid__row { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; font-size: 12px; }
-.qws-set-grid__row:nth-child(odd) { background: var(--qmm-card-bg); }
-.qws-set-grid__label { color: var(--qmm-text-dim); }
-.qws-set-grid__value { font-weight: 600; color: var(--qmm-text); }
-.qws-set-support {
-  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 12px;
-  border-radius: 10px; border: 1px solid var(--qmm-border); background: var(--qmm-card-bg);
-}
-.qws-set-support__text { font-size: 12px; line-height: 1.5; text-align: center; color: var(--qmm-text-soft); }
-.qws-set-kofi { display: inline-block; border: 0; transition: opacity .15s ease, transform .15s ease; }
-.qws-set-kofi:hover { opacity: .82; transform: translateY(-2px); }
-.qws-set-kofi img { display: block; height: 36px; border: 0; }
-.qws-set-themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+.qws-set-themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: var(--qmm-space-md); }
 .qws-set-theme {
-  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: var(--qmm-space-sm); padding: var(--qmm-space-sm); cursor: pointer;
   font: inherit; color: var(--qmm-text); background: var(--qmm-card);
   border: 2px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-md);
+  transition: border-color 120ms ease;
 }
 .qws-set-theme:hover { border-color: var(--qmm-border-hover); }
 .qws-set-theme:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
 .qws-set-theme.is-active { border-color: var(--qmm-sepia); box-shadow: 0 0 0 2px var(--qmm-accent-border); }
 .qws-set-theme__preview {
-  position: relative; display: block; width: 100%; height: 54px; overflow: hidden;
-  border: 2px solid; border-radius: 10px; box-sizing: border-box;
+  position: relative; display: block; width: 100%; height: 50px; overflow: hidden;
+  border: 2px solid; border-radius: var(--qmm-radius-sm); box-sizing: border-box;
 }
-.qws-set-theme__band { position: absolute; inset: 0 0 auto 0; height: 14px; }
-.qws-set-theme__text { position: absolute; left: 8px; bottom: 6px; font-weight: 900; font-size: 15px; }
-.qws-set-theme__chip { position: absolute; right: 8px; bottom: 10px; width: 26px; height: 12px; border-radius: 6px; }
+.qws-set-theme__band { position: absolute; inset: 0 0 auto 0; height: 12px; }
+.qws-set-theme__text { position: absolute; left: 7px; bottom: 5px; font-weight: 900; font-size: var(--qmm-fs-lg); }
+.qws-set-theme__chip { position: absolute; right: 7px; bottom: 9px; width: 22px; height: 11px; border-radius: 6px; }
 .qws-set-theme__label { font-size: var(--qmm-fs-sm); font-weight: 800; }
-.qws-set-color { width: 44px; height: 30px; padding: 0 2px; cursor: pointer; border: 2px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-sm); background: var(--qmm-card); }
+
+.qws-set-tune .qmm-setting-row { flex-wrap: wrap; row-gap: var(--qmm-space-md); }
+.qws-set-tune .qmm-setting-row__text { flex: 1 1 140px; }
+.qws-set-tune .qmm-setting-row__controls { margin-left: auto; }
+.qws-set-size > .qws-pnl-range { flex: 1 0 100%; }
+.qws-set-color {
+  width: 44px; height: 32px; padding: 3px; cursor: pointer; box-sizing: border-box;
+  border: 2px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-sm); background: var(--qmm-card);
+}
+.qws-set-color:hover { border-color: var(--qmm-border-hover); }
+.qws-set-color:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
+.qws-set-color::-webkit-color-swatch-wrapper { padding: 0; }
+.qws-set-color::-webkit-color-swatch { border: 0; border-radius: 4px; }
+.qws-set-color::-moz-color-swatch { border: 0; border-radius: 4px; }
 `;
-      injected4 = false;
+      injected8 = false;
     }
   });
 
@@ -36201,22 +36003,24 @@ Restore figures are averages; unlucky streaks do worse.`;
     const themeAccent = button("Theme colour", { size: "sm", onClick: () => commit({ accent: null }) });
     const accentControls = flexRow({ gap: 8 });
     accentControls.append(picker2, themeAccent);
-    const size = slider(SCALE_MIN * 100, SCALE_MAX * 100, 5, look.scale * 100);
-    const sizeValue = pill("", "ok");
+    const size = slider(SCALE_MIN * 100, SCALE_MAX * 100, 5, look.scale * 100, { fill: true });
+    size.setAttribute("aria-label", "Menu size");
+    const sizeValue = pill("");
     const readSize = () => Number(size.value) / 100;
     size.addEventListener("input", () => {
       sizeValue.textContent = `${size.value}%`;
       applyAppearance({ ...look, scale: readSize() });
     });
     size.addEventListener("change", () => commit({ scale: readSize() }));
-    const sizeControls2 = flexRow({ gap: 8 });
-    sizeControls2.append(size, sizeValue);
+    const sizeRow = settingRow("Menu size", "Windows and the launcher.", sizeValue).row;
+    sizeRow.classList.add("qws-set-size");
+    sizeRow.appendChild(size);
     const tuneCard = card("Fine tuning");
-    tuneCard.body.append(
-      settingRow("Accent colour", "Buttons, title bands and selections.", accentControls).row,
-      settingRow("Menu size", "Windows and the launcher.", sizeControls2).row
-    );
-    const reset = button("Reset appearance", { onClick: () => commit(DEFAULT_APPEARANCE) });
+    tuneCard.root.classList.add("qws-set-tune");
+    tuneCard.body.append(settingRow("Accent colour", "Buttons, title bands and selections.", accentControls).row, sizeRow);
+    const reset = button("Reset appearance", { size: "sm", variant: "ghost", onClick: () => commit(DEFAULT_APPEARANCE) });
+    const resetRow = h("div", "qws-set-end");
+    resetRow.appendChild(reset);
     function refresh() {
       for (const btn of themeButtons) {
         const active3 = btn.dataset.theme === look.theme;
@@ -36236,7 +36040,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     refresh();
     const tab = h("div", "qws-set-tab");
-    tab.append(themeCard.root, tuneCard.root, reset);
+    tab.append(themeCard.root, tuneCard.root, resetRow);
     view.replaceChildren(tab);
   }
   var init_appearanceTab = __esm({
@@ -36250,7 +36054,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_sliders();
       init_theme();
       init_appearance();
-      init_styles4();
+      init_styles10();
     }
   });
 
@@ -36331,8 +36135,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   }
-  function ensureVersion(snapshot2) {
-    const next = { ...snapshot2 };
+  function ensureVersion(snapshot3) {
+    const next = { ...snapshot3 };
     if (!Number.isFinite(next.version)) {
       next.version = DEFAULT_VERSION;
     }
@@ -36479,13 +36283,16 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/settings/dataTab.ts
   function statusLine() {
-    const el = h("div", "qws-set-status");
+    const el4 = h("div", "qws-set-status");
+    el4.hidden = true;
+    el4.setAttribute("role", "status");
     return {
-      el,
+      el: el4,
       show(result) {
-        el.textContent = result.message;
-        el.classList.toggle("is-ok", result.success);
-        el.classList.toggle("is-error", !result.success);
+        el4.textContent = result.message;
+        el4.hidden = false;
+        el4.classList.toggle("is-ok", result.success);
+        el4.classList.toggle("is-error", !result.success);
       }
     };
   }
@@ -36496,18 +36303,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     const fileInput = h("input");
     fileInput.type = "file";
     fileInput.accept = ".json,application/json,text/plain";
-    fileInput.style.display = "none";
-    const hint2 = h("div", "qws-set-drop__hint", DROP_HINT);
+    fileInput.hidden = true;
+    const hint3 = h("div", "qws-set-drop__hint", DROP_HINT);
     const zone = h("div", "qws-set-drop");
     zone.tabIndex = 0;
     zone.setAttribute("role", "button");
     zone.setAttribute("aria-label", "Import settings JSON");
-    zone.append(h("div", "qws-set-drop__title", "Import settings"), hint2);
+    zone.append(h("div", "qws-set-drop__title", "Import a file"), hint3);
     const setActive = (active3) => zone.classList.toggle("is-active", active3);
     const settle = () => setActive(document.activeElement === zone);
     const showSelection = (files) => {
-      if (!files || !files.length) hint2.textContent = DROP_HINT;
-      else hint2.textContent = files.length === 1 ? files[0].name : `${files.length} files selected`;
+      if (!files || !files.length) hint3.textContent = DROP_HINT;
+      else hint3.textContent = files.length === 1 ? files[0].name : `${files.length} files selected`;
     };
     const importFiles = async (files) => {
       showSelection(files);
@@ -36547,63 +36354,49 @@ Restore figures are averages; unlucky streaks do worse.`;
     wrap.append(fileInput, zone);
     return wrap;
   }
-  function importExportCard() {
-    const section5 = card("Import / Export", {
-      description: "Import or export the mod settings directly through JSON files."
-    });
-    section5.body.classList.add("qws-set-card-body");
-    const status2 = statusLine();
-    const exportButton = button("Export Settings", {
-      fullWidth: true,
-      onClick: () => {
-        downloadJSONFile(`aries-settings-${Date.now()}.json`, exportAllSettings());
-        status2.show({ success: true, message: "Settings exported as JSON file." });
-      }
-    });
-    section5.body.append(importDropZone(status2.show), status2.el, exportButton);
-    return section5.root;
-  }
   function backupCard() {
-    const section5 = card("Backup", {
-      description: "Save our settings directly inside the mod storage for easy restores."
-    });
-    section5.body.classList.add("qws-set-card-body");
+    const section = card("Backups", { subtitle: "Snapshots of your settings, kept inside the mod." });
+    section.body.classList.add("qws-set-stack");
     const status2 = statusLine();
-    const list = h("div", "qws-set-list");
+    const list = h("div", "qws-set-backups");
     const backupRow = (entry) => {
-      const date = h("div", "qws-set-backup__date");
-      date.append(h("strong", void 0, "Created:"), ` ${new Date(entry.timestamp).toLocaleDateString()}`);
-      const head = h("div", "qws-set-backup__head");
-      head.append(h("div", "qws-set-backup__name", entry.name), date);
       const actions2 = h("div", "qws-set-backup__actions");
       actions2.append(
         button("Load", { size: "sm", onClick: () => status2.show(loadBackup(entry.id)) }),
-        button("Delete", {
-          size: "sm",
-          onClick: () => {
-            status2.show(deleteBackup(entry.id));
-            refresh();
-          }
-        }),
         button("Export", {
           size: "sm",
+          variant: "ghost",
           onClick: () => {
             exportBackupData(entry);
             status2.show({ success: true, message: "Backup exported." });
           }
+        }),
+        button("Delete", {
+          size: "sm",
+          variant: "ghost",
+          onClick: () => {
+            status2.show(deleteBackup(entry.id));
+            refresh();
+          }
         })
       );
-      const row5 = h("div", "qws-set-backup");
-      row5.append(head, actions2);
-      return row5;
+      const saved = `Saved ${new Date(entry.timestamp).toLocaleDateString()}`;
+      const { row: row2 } = settingRow(entry.name, saved, actions2);
+      row2.classList.add("qws-set-backup");
+      return row2;
     };
     function refresh() {
       const backups = listBackups();
-      if (!backups.length) list.replaceChildren(h("div", "qws-set-empty", "No backups saved yet."));
-      else list.replaceChildren(...backups.map(backupRow));
+      if (!backups.length) {
+        list.replaceChildren(h("div", "qws-set-empty", "No backups yet. Name one above and save it."));
+      } else {
+        list.replaceChildren(...backups.map(backupRow));
+      }
     }
     const nameInput = textInput("Backup name");
-    const saveButton = button("Save", {
+    nameInput.setAttribute("aria-label", "Backup name");
+    const saveButton = button("Save backup", {
+      variant: "primary",
       onClick: () => {
         const result = saveBackup(nameInput.value);
         status2.show(result);
@@ -36613,16 +36406,32 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
       }
     });
-    const controls = h("div", "qws-set-row");
+    const controls = h("div", "qws-set-save");
     controls.append(nameInput, saveButton);
-    section5.body.append(controls, status2.el, list);
+    section.body.append(controls, status2.el, list);
     refresh();
-    return section5.root;
+    return section.root;
+  }
+  function fileCard() {
+    const section = card("Import and export", { subtitle: "Move your settings to another browser as a JSON file." });
+    section.body.classList.add("qws-set-stack");
+    const status2 = statusLine();
+    const exportButton = button("Export to file", {
+      variant: "primary",
+      onClick: () => {
+        downloadJSONFile(`aries-settings-${Date.now()}.json`, exportAllSettings());
+        status2.show({ success: true, message: "Settings exported as JSON file." });
+      }
+    });
+    const exportRow = h("div", "qws-set-end");
+    exportRow.appendChild(exportButton);
+    section.body.append(importDropZone(status2.show), status2.el, exportRow);
+    return section.root;
   }
   function renderDataTab(view) {
     ensureSettingsStyles();
     const layout = h("div", "qws-set-tab");
-    layout.append(importExportCard(), backupCard());
+    layout.append(backupCard(), fileCard());
     view.replaceChildren(layout);
   }
   var DROP_HINT, errorText;
@@ -36634,9 +36443,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_card();
       init_dom2();
       init_fields();
+      init_layout();
       init_backup();
-      init_styles4();
-      DROP_HINT = "Drop a JSON file or click to browse.";
+      init_styles10();
+      DROP_HINT = "Drop a JSON file here, or click to pick one.";
       errorText = (error) => error instanceof Error ? error.message : "unknown error";
     }
   });
@@ -36698,22 +36508,17 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function kofiLink(isDiscord) {
     if (isDiscord) {
-      return button("\u2615 Support on Ko-fi", {
+      return button("Support on Ko-fi", {
         variant: "primary",
         title: KOFI_TITLE,
         onClick: () => void openLink(KOFI_URL)
       });
     }
-    const link = h("a", "qws-set-kofi");
+    const link = h("a", "qmm-btn qmm-btn--primary qws-set-link-btn", "Support on Ko-fi");
     link.href = KOFI_URL;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
     link.title = KOFI_TITLE;
-    const img = h("img");
-    img.src = "https://storage.ko-fi.com/cdn/kofi5.png?v=6";
-    img.alt = KOFI_TITLE;
-    img.height = 36;
-    link.appendChild(img);
     return link;
   }
   function renderInfosTab(view) {
@@ -36724,31 +36529,37 @@ Restore figures are averages; unlucky streaks do worse.`;
     hero.append(
       h("div", "qws-set-hero__title", "Arie's Mod"),
       versionPill(),
-      h("div", "qws-set-hero__sub", "Browser userscript for MagicGarden")
+      h("div", "qws-set-hero__sub", "A userscript for Magic Garden")
     );
+    const host = environment?.host || (typeof location !== "undefined" ? location.hostname : "") || "n/a";
     const runtimeRows = [
       ["Game version", gameVersion ?? "unknown"],
-      ["Host", environment?.host ?? (typeof location !== "undefined" ? location.hostname : "n/a")],
+      ["Host", host],
       ["Surface", describeSurface(environment)],
       ["Platform", describePlatform(environment, nav)],
       ["OS", detectOsLabel(nav)]
     ];
-    const grid = h("div", "qws-set-grid");
+    const details2 = card("Details");
+    const list = h("dl", "qws-set-facts");
     for (const [label2, value] of runtimeRows) {
-      const row5 = h("div", "qws-set-grid__row");
-      row5.append(h("span", "qws-set-grid__label", label2), h("span", "qws-set-grid__value", value));
-      grid.appendChild(row5);
+      const row2 = h("div", "qws-set-facts__row");
+      row2.append(h("dt", "qws-set-facts__label", label2), h("dd", "qws-set-facts__value", value));
+      list.appendChild(row2);
     }
-    const support = h("div", "qws-set-support");
-    support.append(
+    details2.body.appendChild(list);
+    const support = card("Support the mod");
+    support.body.classList.add("qws-set-stack");
+    support.body.append(
       h(
         "div",
-        "qws-set-support__text",
+        "qws-set-note",
         "Some features rely on paid server hosting. If you enjoy the mod, a coffee is always appreciated!"
       ),
       kofiLink(environment?.surface === "discord")
     );
-    view.replaceChildren(hero, h("div", "qws-set-sep"), grid, support);
+    const tab = h("div", "qws-set-tab");
+    tab.append(hero, details2.root, support.root);
+    view.replaceChildren(tab);
   }
   var KOFI_URL, KOFI_TITLE;
   var init_infosTab = __esm({
@@ -36757,9 +36568,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_gameVersion();
       init_environment();
       init_button();
+      init_card();
       init_dom2();
       init_openLink();
-      init_styles4();
+      init_styles10();
       init_versionPill();
       KOFI_URL = "https://ko-fi.com/E1E11TWTM1";
       KOFI_TITLE = "Buy Me a Coffee at ko-fi.com";
@@ -36771,7 +36583,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const ui = new Menu({ id: "settings", compact: true });
     ui.mount(container);
     ui.addTabs([
-      { id: "settings-data", title: "Settings", render: renderDataTab },
+      { id: "settings-data", title: "Backups", render: renderDataTab },
       { id: "settings-appearance", title: "Appearance", render: renderAppearanceTab },
       { id: "settings-infos", title: "Infos", render: renderInfosTab }
     ]);
@@ -36787,116 +36599,216 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/features/notifier/menu/styles.ts
+  function ensureMenuStyles() {
+    if (document.getElementById(STYLE_ID4)) return;
+    addStyle(CSS2).id = STYLE_ID4;
+  }
+  var STYLE_ID4, CSS2;
+  var init_styles11 = __esm({
+    "src/features/notifier/menu/styles.ts"() {
+      "use strict";
+      init_dom();
+      STYLE_ID4 = "qws-rule-style";
+      CSS2 = `
+/* Every tab has the same size, so switching tabs never resizes the window. */
+.qws-al-tab {
+  display: flex; flex-direction: column; gap: var(--qmm-space-lg);
+  width: 560px; max-width: min(100%, calc((100vw - 64px) / var(--qmm-scale, 1)));
+  height: 54vh; min-height: 0;
+}
+.qws-al-scroll {
+  display: flex; flex-direction: column; gap: var(--qmm-space-lg);
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px;
+}
+.qws-al-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.qws-al-toolbar .qmm-select { min-width: 0; }
+.qws-al-toolbar .qmm-pill { margin-left: auto; }
+.qws-al-empty { padding: 28px 12px; text-align: center; font-size: var(--qmm-fs-md); color: var(--qmm-text-dim); }
+
+/* One alert: icon, name and details, then the rule button and the switch. */
+.qws-al-list { display: flex; flex-direction: column; gap: var(--qmm-space-sm); }
+.qws-al-row {
+  display: flex; align-items: center; gap: var(--qmm-space-lg); padding: 8px 10px;
+  border-radius: var(--qmm-radius-md); background: var(--qmm-card);
+}
+.qws-al-row.is-current { box-shadow: inset 0 0 0 2px var(--qmm-accent-border); }
+.qws-al-icon {
+  display: inline-flex; align-items: center; justify-content: center; flex: 0 0 40px;
+  width: 40px; height: 40px; border-radius: var(--qmm-radius-sm); background: var(--qmm-paper-deep);
+  overflow: hidden; font-size: 26px;
+}
+.qws-al-text { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-width: 0; }
+.qws-al-name {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--qmm-space-sm); min-width: 0;
+  font-size: var(--qmm-fs-lg); font-weight: 800; color: var(--qmm-text);
+}
+.qws-al-name > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qws-al-meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-xs) var(--qmm-space-sm);
+  font-size: var(--qmm-fs-sm); color: var(--qmm-text-dim);
+}
+.qws-al-chip {
+  display: inline-flex; align-items: center; padding: 2px 8px; white-space: nowrap;
+  border-radius: var(--qmm-radius-pill); background: var(--qmm-sand); color: var(--qmm-text-soft);
+  font-size: var(--qmm-fs-xs); font-weight: 800;
+}
+.qws-al-chip.is-weather { background: var(--qmm-sepia-soft); color: var(--qmm-sepia-ink); }
+.qws-al-chip.is-only { background: var(--qmm-warn-soft); color: var(--qmm-warn-ink); }
+.qws-al-summary {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--qmm-fs-xs); font-weight: 700; color: var(--qmm-sepia-ink);
+}
+.qws-al-summary:empty { display: none; }
+.qws-al-actions { display: flex; align-items: center; gap: var(--qmm-space-md); flex: 0 0 auto; }
+
+.qws-rule-btn.qmm-btn--icon { width: 32px; height: 32px; border-radius: var(--qmm-radius-sm); font-size: 15px; }
+.qws-rule-btn[data-active="1"] {
+  background: var(--qmm-sepia-soft); color: var(--qmm-sepia-ink); box-shadow: inset 0 0 0 2px var(--qmm-accent-border);
+}
+
+/* Pets. */
+.qws-al-pet { display: flex; align-items: center; gap: var(--qmm-space-lg); padding: 8px 10px; border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep); }
+.qws-al-pet .qws-al-icon { background: var(--qmm-card); }
+.qws-al-pet__body { display: flex; flex-direction: column; gap: var(--qmm-space-sm); flex: 1 1 auto; min-width: 0; }
+.qws-al-pet__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
+.qws-al-pet .qmm-meter { flex: 0 0 auto; width: 100%; min-width: 0; }
+.qws-al-pet__value { flex: 0 0 auto; min-width: 40px; text-align: right; font-weight: 900; font-variant-numeric: tabular-nums; }
+.qws-al-pet__value.is-low { color: var(--qmm-warn-ink); }
+.qws-al-pct { display: inline-flex; align-items: center; gap: var(--qmm-space-sm); font-weight: 800; color: var(--qmm-text-soft); }
+
+/* Cards never grow past the tab, and rows wrap their controls under the title in a narrow window. */
+.qws-al-tab .qmm-card, .qws-al-tab .qmm-card__body { grid-template-columns: minmax(0, 1fr); }
+.qws-al-tab .qmm-setting-row { flex-wrap: wrap; }
+.qws-al-tab .qmm-setting-row__controls { flex: 0 1 auto; min-width: 0; margin-left: auto; }
+.qws-al-tab .qmm-range { width: 150px; }
+.qws-win .qws-al-tab input.qmm-input-number-input { width: 76px; }
+.qws-al-sound-pick { min-width: 0; }
+.qws-al-sound-pick .qmm-select { flex: 0 1 170px; width: 170px; min-width: 0; }
+.qws-al-ctx { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
+
+.qws-al-drop {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  padding: 16px; text-align: center; cursor: pointer;
+  border: 2px dashed var(--qmm-border-hover); border-radius: var(--qmm-radius-lg); background: var(--qmm-paper-deep);
+  transition: border-color 150ms ease, background 150ms ease;
+}
+.qws-al-drop.is-active, .qws-al-drop:focus-visible {
+  outline: none; border-color: var(--qmm-accent-border-hover); background: var(--qmm-accent-soft);
+}
+.qws-al-drop__title { font-size: var(--qmm-fs-lg); font-weight: 900; color: var(--qmm-text); }
+.qws-al-drop__hint { font-size: var(--qmm-fs-sm); color: var(--qmm-text-soft); }
+.qws-al-drop__formats { font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); }
+
+.qws-al-sound {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-sm) var(--qmm-space-md);
+  padding: 8px 10px; border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+}
+.qws-al-sound__name {
+  flex: 1 1 120px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800;
+}
+.qws-al-sound__uses { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-xs); margin-left: auto; }
+.qws-al-sound__label { margin-right: 2px; font-size: var(--qmm-fs-xs); font-weight: 800; color: var(--qmm-text-dim); }
+
+/* The custom rule popover, outside any window. */
+.qws-rule-popover {
+  position: fixed; z-index: 99999999999999;
+  display: flex; flex-direction: column; gap: var(--qmm-space-lg);
+  width: 290px; max-width: calc(100vw - 24px); padding: 14px; box-sizing: border-box;
+  border: 3px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-lg);
+  background: var(--qmm-paper); box-shadow: var(--qmm-shadow-raise); color: var(--qmm-text);
+  font-family: var(--qmm-font); font-size: var(--qmm-fs-md);
+}
+.qws-rule-head { display: flex; align-items: flex-start; gap: var(--qmm-space-lg); cursor: move; user-select: none; touch-action: none; }
+.qws-rule-head__titles { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.qws-rule-head__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--qmm-fs-xl); font-weight: 900; }
+.qws-rule-popover .qws-rule-field { display: grid; gap: var(--qmm-space-sm); }
+.qws-rule-field__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--qmm-space-md); }
+.qws-rule-field__label { font-size: var(--qmm-fs-sm); font-weight: 800; color: var(--qmm-text-soft); }
+.qws-rule-popover .qmm-select, .qws-rule-popover .qmm-input--sm { width: 100%; box-sizing: border-box; }
+.qws-rule-inline { display: flex; align-items: center; gap: var(--qmm-space-md); }
+.qws-rule-inline .qws-pnl-range { flex: 1 1 auto; min-width: 0; }
+.qws-rule-popover .qmm-select:disabled { opacity: .6; cursor: default; }
+.qws-rule-hint { font-size: var(--qmm-fs-xs); line-height: 1.4; color: var(--qmm-text-dim); }
+.qws-rule-popover .qws-rule-actions { display: flex; justify-content: space-between; gap: var(--qmm-space-md); }
+`;
+    }
+  });
+
   // src/features/notifier/menu/petsTab.ts
   function petAvatar(pet) {
-    const avatar3 = h("div");
-    Object.assign(avatar3.style, {
-      width: `${AVATAR_SIZE}px`,
-      height: `${AVATAR_SIZE}px`,
-      borderRadius: "8px",
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      background: color.mutedBg,
-      border: `1px solid ${color.border}`,
-      overflow: "hidden"
-    });
+    const avatar2 = h("div", "qws-al-icon");
     const species = String(pet?.slot?.petSpecies ?? "").trim();
     const glyph = h("span", void 0, species ? species.charAt(0).toUpperCase() : "\u{1F43E}");
-    glyph.style.fontSize = "28px";
     glyph.setAttribute("aria-hidden", "true");
-    avatar3.appendChild(glyph);
+    avatar2.appendChild(glyph);
     if (species) {
       const mutations = pet?.slot?.mutations;
-      attachSpriteIcon(avatar3, ["pet"], [species], 36, "alerts-pet", {
+      attachSpriteIcon(avatar2, ["pet"], [species], AVATAR_SIZE, "alerts-pet", {
         mutations: Array.isArray(mutations) ? mutations : void 0
       });
     }
-    return avatar3;
+    return avatar2;
   }
-  function petRow2(pet) {
+  function petRow2(pet, thresholdPct) {
     const slot = pet?.slot;
     const hunger = PetsService.getHungerPctFor(pet);
-    const row5 = h("div");
-    Object.assign(row5.style, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "10px",
-      padding: "6px 8px",
-      borderRadius: "8px",
-      border: `1px solid ${color.border}`,
-      background: color.cardBg
-    });
-    const left = h("div");
-    Object.assign(left.style, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
-    const name = h("div", void 0, String(slot?.name || slot?.petSpecies || "Pet"));
-    Object.assign(name.style, { fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
-    left.append(petAvatar(pet), name);
-    const hungerValue = h("div", void 0, Number.isFinite(hunger) ? `${hunger}%` : "-");
-    Object.assign(hungerValue.style, { fontWeight: "700", color: color.goldInk });
-    row5.append(left, hungerValue);
-    return row5;
+    const known = Number.isFinite(hunger);
+    const low = known && thresholdPct != null && hunger < thresholdPct;
+    const row2 = h("div", "qws-al-pet");
+    const bar2 = meter();
+    bar2.set(known ? hunger / 100 : 0, low ? "warn" : "accent");
+    const value = h("div", low ? "qws-al-pet__value is-low" : "qws-al-pet__value", known ? `${hunger}%` : "-");
+    const body = h("div", "qws-al-pet__body");
+    body.append(h("div", "qws-al-pet__name", String(slot?.name || slot?.petSpecies || "Pet")), bar2.root);
+    row2.append(petAvatar(pet), body, value);
+    return row2;
   }
-  function generalCard() {
-    const general = card("General notifications", { tone: "muted", align: "stretch" });
+  function thresholdCard(onChange) {
+    const alert = card("Hunger alert");
     const toggle = switchInput(PetAlertService.isGeneralEnabled(), (on) => {
       PetAlertService.setGeneralEnabled(on);
       toggle.checked = PetAlertService.isGeneralEnabled();
+      onChange();
     });
-    const toggleRow = flexRow({ justify: "start", gap: 10 });
-    const toggleLabel = h("div", void 0, "Use a shared threshold for all pets");
-    toggleLabel.style.opacity = "0.9";
-    toggleRow.append(toggle, toggleLabel);
     const threshold = numberInput(1, 100, 1, PetAlertService.getGeneralThresholdPct());
+    threshold.setAttribute("aria-label", "Hunger threshold");
     threshold.addEventListener("change", () => {
       const typed = Number(threshold.value);
       const next = Math.max(1, Math.min(100, typed || PetAlertService.getGeneralThresholdPct()));
       threshold.value = String(PetAlertService.setGeneralThresholdPct(next));
+      onChange();
     });
-    general.body.append(
-      formRow("Enable general", toggleRow, { labelWidth: "180px" }).root,
-      formRow("General threshold (%)", threshold.wrap, { labelWidth: "180px" }).root
+    const pct = h("div", "qws-al-pct");
+    pct.append(threshold.wrap, "%");
+    alert.body.append(
+      settingRow("Shared threshold", "One threshold for every active pet.", toggle).row,
+      settingRow("Alert below", "Hunger level that sounds the alert.", pct).row
     );
-    return general.root;
+    return alert.root;
   }
   function renderPetsTab(view) {
-    view.replaceChildren();
+    ensureMenuStyles();
     void PetAlertService.start().catch(() => {
     });
-    const layout = plainCard();
-    Object.assign(layout.style, {
-      display: "grid",
-      gridTemplateColumns: "minmax(220px, 260px) minmax(0, 1fr)",
-      alignItems: "stretch",
-      height: "54vh",
-      overflow: "hidden"
-    });
-    view.appendChild(layout);
-    const petList = h("div");
-    Object.assign(petList.style, {
-      display: "grid",
-      gridTemplateColumns: "1fr",
-      alignContent: "start",
-      rowGap: "6px",
-      overflow: "auto",
-      padding: "6px",
-      border: `1px solid ${color.border}`,
-      borderRadius: "10px"
-    });
-    const right = h("div");
-    Object.assign(right.style, { display: "flex", flexDirection: "column", gap: "10px", overflow: "auto", minHeight: "0" });
-    right.appendChild(generalCard());
-    layout.append(petList, right);
+    const tab = h("div", "qws-al-tab");
+    const scroll = h("div", "qws-al-scroll qmm-scroll");
+    tab.appendChild(scroll);
+    view.replaceChildren(tab);
+    const petsCard = card("Active pets");
+    const petList = h("div", "qws-al-list");
+    petsCard.body.appendChild(petList);
+    let shown = [];
     const renderPets = (pets) => {
+      shown = pets;
       if (!pets.length) {
-        const empty = h("div", void 0, "No active pets.");
-        empty.style.opacity = "0.75";
-        petList.replaceChildren(empty);
+        petList.replaceChildren(h("div", "qws-al-empty", "No active pets right now."));
         return;
       }
-      petList.replaceChildren(...pets.map(petRow2));
+      const thresholdPct = PetAlertService.isGeneralEnabled() ? PetAlertService.getGeneralThresholdPct() : null;
+      petList.replaceChildren(...pets.map((pet) => petRow2(pet, thresholdPct)));
     };
+    scroll.append(thresholdCard(() => renderPets(shown)), petsCard.root);
     PetsService.onPetsChangeNow((pets) => renderPets(Array.isArray(pets) ? pets.slice(0, ACTIVE_PET_SLOTS2) : [])).catch(
       () => renderPets([])
     );
@@ -36905,17 +36817,18 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_petsTab = __esm({
     "src/features/notifier/menu/petsTab.ts"() {
       "use strict";
+      init_badges();
       init_card();
       init_dom2();
       init_fields();
       init_layout();
-      init_theme();
       init_toggles();
       init_iconCache();
       init_pets();
       init_petAlerts();
+      init_styles11();
       ACTIVE_PET_SLOTS2 = 3;
-      AVATAR_SIZE = 40;
+      AVATAR_SIZE = 36;
     }
   });
 
@@ -36925,36 +36838,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     input.type = "file";
     input.accept = "audio/*";
     input.multiple = true;
-    input.style.display = "none";
-    const zone = h("div");
+    input.hidden = true;
+    const zone = h("div", "qws-al-drop");
     zone.tabIndex = 0;
     zone.setAttribute("role", "button");
     zone.setAttribute("aria-label", "Select audio files");
-    Object.assign(zone.style, {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "6px",
-      padding: "18px 22px",
-      minHeight: "110px",
-      borderRadius: "14px",
-      border: `1px dashed ${color.borderStrong}`,
-      background: color.mutedBg,
-      transition: "border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease",
-      cursor: "pointer",
-      textAlign: "center"
-    });
-    const title = h("div", void 0, "Select audio files");
-    Object.assign(title.style, { fontWeight: "600", fontSize: "14px", letterSpacing: "0.02em" });
-    const status2 = h("div", void 0, DROP_HINT2);
-    Object.assign(status2.style, { fontSize: "12px", opacity: "0.75" });
-    zone.append(title, status2);
-    const highlight = (on) => {
-      zone.style.borderColor = on ? color.accentBorderHover : color.borderStrong;
-      zone.style.boxShadow = on ? `0 0 0 3px ${color.accentSoft}` : "none";
-      zone.style.background = on ? color.accentSoft : color.mutedBg;
-    };
+    const status2 = h("div", "qws-al-drop__hint", DROP_HINT2);
+    zone.append(
+      h("div", "qws-al-drop__title", "Add sounds"),
+      status2,
+      h("div", "qws-al-drop__formats", "MP3, WAV or OGG, up to 10 s and 200 KB.")
+    );
+    const highlight = (on) => zone.classList.toggle("is-active", on);
     const settle = () => highlight(document.activeElement === zone);
     const take = async (files) => {
       status2.textContent = !files?.length ? DROP_HINT2 : files.length === 1 ? files[0].name : `${files.length} files selected`;
@@ -36992,34 +36887,26 @@ Restore figures are averages; unlucky streaks do worse.`;
   function soundRow(name, onChange) {
     const defaultFor = CONTEXT_LABELS.filter(([key2]) => audio.getDefaultSoundName(key2) === name);
     const usedByShopsOrWeather = defaultFor.some(([key2]) => key2 !== "pets");
-    const row5 = h("div");
-    Object.assign(row5.style, {
-      display: "grid",
-      gridTemplateColumns: "minmax(0, 1fr) auto",
-      gap: "12px",
-      alignItems: "center",
-      padding: "8px 10px",
-      borderRadius: "8px",
-      border: `1px solid ${defaultFor.length ? color.accentBorder : color.border}`,
-      background: color.cardBg
+    const row2 = h("div", "qws-al-sound");
+    const play = button("", {
+      icon: "\u25B6",
+      size: "sm",
+      title: "Preview",
+      ariaLabel: `Preview ${name}`,
+      onClick: () => void audio.trigger("preview", { sound: name }, "shops").catch(() => {
+      })
     });
-    const info = h("div");
-    Object.assign(info.style, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
-    const title = h("span", void 0, name);
-    Object.assign(title.style, { fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
-    info.appendChild(title);
-    for (const [, label2] of defaultFor) info.appendChild(pill(label2, "ok"));
-    const actions2 = h("div");
-    Object.assign(actions2.style, { display: "flex", gap: "6px", justifyContent: "flex-end", flexWrap: "wrap" });
-    actions2.appendChild(
-      button("\u25B6", { size: "sm", title: "Preview", onClick: () => void audio.trigger("preview", { sound: name }, "shops").catch(() => {
-      }) })
-    );
+    const title = h("span", "qws-al-sound__name", name);
+    title.title = name;
+    const uses = h("div", "qws-al-sound__uses");
+    uses.appendChild(h("span", "qws-al-sound__label", "Default for"));
     for (const [key2, label2] of CONTEXT_LABELS) {
-      actions2.appendChild(
-        button(`Set ${label2.toLowerCase()}`, {
-          size: "sm",
-          title: `Set as ${label2.toLowerCase()} default`,
+      const isDefault = defaultFor.some(([k]) => k === key2);
+      uses.appendChild(
+        button(label2, {
+          size: "xs",
+          active: isDefault,
+          title: isDefault ? `Default ${label2.toLowerCase()} sound` : `Set as ${label2.toLowerCase()} default`,
           onClick: () => {
             audio.setDefaultSoundByName(name, key2);
             onChange();
@@ -37027,9 +36914,12 @@ Restore figures are averages; unlucky streaks do worse.`;
         })
       );
     }
-    const remove = button("Remove", {
+    const remove = button("", {
+      icon: "\u2715",
       size: "sm",
+      variant: "ghost",
       title: "Remove from library",
+      ariaLabel: `Remove ${name}`,
       onClick: () => {
         audio.unregisterSound(name);
         onChange();
@@ -37039,29 +36929,17 @@ Restore figures are averages; unlucky streaks do worse.`;
       remove.setEnabled(false);
       remove.title = audio.isProtectedSound(name) ? "Built-in sound cannot be removed" : "Currently used as default";
     }
-    actions2.appendChild(remove);
-    row5.append(info, actions2);
-    return row5;
+    row2.append(play, title, uses, remove);
+    return row2;
   }
   function soundLibraryCard(onLibraryChange) {
-    const section5 = card("Sound library", { tone: "muted" });
+    const section = card("Sound library");
     const errors = errorBar();
-    const list = h("div");
-    Object.assign(list.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "6px",
-      maxHeight: "240px",
-      overflowY: "auto",
-      minHeight: "0",
-      padding: "4px 4px 4px 0"
-    });
+    const list = h("div", "qws-al-list");
     const refresh = () => {
       const names = audio.listSounds();
       if (!names.length) {
-        const empty = h("div", void 0, "No sounds in the library.");
-        Object.assign(empty.style, { opacity: "0.75", textAlign: "center", padding: "12px 6px" });
-        list.replaceChildren(empty);
+        list.replaceChildren(h("div", "qws-al-empty", "No sounds yet. Add one above."));
         return;
       }
       list.replaceChildren(...names.map((name) => soundRow(name, onLibraryChange)));
@@ -37073,110 +36951,75 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (failures.length) errors.show(failures[failures.length - 1]);
       if (added.length) onLibraryChange();
     };
-    const tip = h("div", void 0, "MP3, WAV, OGG, at most 10 s and 200 KB.");
-    Object.assign(tip.style, { opacity: "0.75", fontSize: "12px" });
-    const listHeader = h("div");
-    Object.assign(listHeader.style, {
-      display: "grid",
-      gridTemplateColumns: "minmax(0, 1fr) auto",
-      gap: "12px",
-      fontSize: "12px",
-      letterSpacing: "0.05em",
-      textTransform: "uppercase",
-      opacity: "0.65",
-      paddingBottom: "4px",
-      borderBottom: `1px solid ${color.border}`
-    });
-    const actionsHead = h("span", void 0, "Actions");
-    actionsHead.style.justifySelf = "end";
-    listHeader.append(h("span", void 0, "Sound"), actionsHead);
-    const listCard = h("div");
-    Object.assign(listCard.style, {
-      display: "grid",
-      gridTemplateRows: "auto 1fr",
-      gap: "6px",
-      border: `1px solid ${color.border}`,
-      borderRadius: "10px",
-      background: color.mutedBg,
-      padding: "10px"
-    });
-    listCard.append(listHeader, list);
-    section5.body.append(dropZone(importFiles), tip, listCard, errors.el);
+    section.body.append(dropZone(importFiles), errors.el, list);
     refresh();
-    return { root: section5.root, refresh };
+    return { root: section.root, refresh };
   }
   var CONTEXT_LABELS, DROP_HINT2;
   var init_soundLibrary = __esm({
     "src/features/notifier/menu/soundLibrary.ts"() {
       "use strict";
-      init_badges();
       init_button();
       init_card();
       init_dom2();
-      init_theme();
       init_audio();
       CONTEXT_LABELS = [
         ["shops", "Shops"],
         ["weather", "Weather"],
         ["pets", "Pets"]
       ];
-      DROP_HINT2 = "Click to browse or drop files";
+      DROP_HINT2 = "Click to browse or drop files here.";
     }
   });
 
   // src/features/notifier/menu/settingsTab.ts
-  function row(label2, control) {
-    const { root: root4, label: labelEl } = formRow(label2, control, { labelWidth: "160px" });
-    labelEl.style.opacity = "0.9";
-    return root4;
-  }
   function bellCard() {
-    const bell = card("Notification bell", { tone: "muted" });
+    const bell = card("Notification bell");
     const toggle = switchInput(isFloatingBellEnabled(), (on) => setFloatingBellEnabled(on));
     bell.body.appendChild(
-      settingRow(
-        "Floating bell (movable widget)",
-        "Detaches the bell from the game's icon rail and shows it as a draggable floating button instead. Use this if the bell is missing or misplaced on your screen.",
-        toggle
-      ).row
+      settingRow("Floating bell", "A bell you can drag anywhere, for when the game's one is missing.", toggle).row
     );
     return bell.root;
   }
+  function inline(...children) {
+    const row2 = h("div", "qws-rule-inline");
+    row2.append(...children);
+    return row2;
+  }
   function renderSettingsTab(view) {
-    view.replaceChildren();
+    ensureMenuStyles();
     void PetAlertService.start().catch(() => {
     });
-    const root4 = h("div");
-    Object.assign(root4.style, {
-      display: "grid",
-      gridTemplateRows: "auto 1fr",
-      gap: "12px",
-      height: "54vh",
-      minHeight: "0",
-      overflow: "hidden"
-    });
-    view.appendChild(root4);
+    const tab = h("div", "qws-al-tab");
+    const scroll = h("div", "qws-al-scroll qmm-scroll");
+    tab.appendChild(scroll);
+    view.replaceChildren(tab);
     const contexts = [];
     const library = soundLibraryCard(() => {
       for (const ctx2 of contexts) ctx2.fillSounds();
       library.refresh();
     });
-    for (const spec of CONTEXTS) {
-      contexts.push(new ContextSoundCard(spec, () => library.refresh()));
-    }
-    const audioCard = card("Audio & Playback", { tone: "muted" });
-    audioCard.body.append(...contexts.map((ctx2) => ctx2.root));
-    const scroller = h("div");
-    Object.assign(scroller.style, { overflow: "auto", minHeight: "0", height: "100%", display: "grid", alignContent: "start", gap: "12px" });
-    scroller.append(audioCard.root, library.root);
-    root4.append(bellCard(), scroller);
+    for (const spec of CONTEXTS) contexts.push(new ContextSounds(spec, () => library.refresh()));
+    const showContext = (key2) => {
+      contexts.forEach((ctx2, i) => ctx2.root.hidden = CONTEXTS[i].key !== key2);
+    };
+    const picker2 = segmented(
+      CONTEXTS.map(({ key: key2, label: label2 }) => ({ value: key2, label: label2 })),
+      "shops",
+      showContext,
+      { ariaLabel: "Alert type" }
+    );
+    const soundsCard = card("Alert sounds", { actions: [picker2] });
+    soundsCard.body.append(...contexts.map((ctx2) => ctx2.root));
+    showContext("shops");
+    scroll.append(soundsCard.root, library.root, bellCard());
     for (const ctx2 of contexts) {
       ctx2.fillSounds();
       ctx2.sync();
     }
     library.refresh();
   }
-  var CONTEXTS, muted, ContextSoundCard;
+  var CONTEXTS, ContextSounds;
   var init_settingsTab = __esm({
     "src/features/notifier/menu/settingsTab.ts"() {
       "use strict";
@@ -37194,27 +37037,26 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_petAlerts();
       init_playbackDefaults();
       init_soundLibrary();
+      init_styles11();
       CONTEXTS = [
-        { key: "shops", label: "Shops", canLoop: true, info: "Loops stop automatically when the item is purchased." },
-        { key: "weather", label: "Weather", canLoop: false, info: "Weather alerts play once per trigger." },
-        { key: "pets", label: "Pets", canLoop: true, info: "Loops keep repeating; stop manually by disabling the alert." }
+        { key: "shops", label: "Shops", canLoop: true, info: null },
+        { key: "weather", label: "Weather", canLoop: false, info: "Weather alerts play once." },
+        { key: "pets", label: "Pets", canLoop: true, info: "A loop keeps playing until you turn the alert off." }
       ];
-      muted = (el) => Object.assign(el.style, { opacity: "0.75", fontSize: "12px", lineHeight: "1.4" });
-      ContextSoundCard = class {
+      ContextSounds = class {
         constructor(spec, onDefaultChange) {
           this.spec = spec;
           this.onDefaultChange = onDefaultChange;
-          this.root = plainCard();
+          this.root = h("div", "qws-al-ctx");
           this.volume = slider(0, 100, 1, 0);
           this.volumeValue = pill("0%");
           this.mode = null;
           this.loopRow = null;
           this.loopInput = null;
-          this.soundSelect = select2({ id: `ap.defaultSound.${spec.key}`, width: "180px" });
-          const heading = h("div", void 0, spec.label);
-          Object.assign(heading.style, { fontWeight: "700", fontSize: "14px", letterSpacing: "0.02em" });
-          this.root.appendChild(heading);
-          const play = button("", { icon: "\u25B6", size: "sm", tooltip: `Play ${spec.label.toLowerCase()} sound`, ariaLabel: `Play ${spec.label.toLowerCase()} sound` });
+          const name = spec.label.toLowerCase();
+          this.soundSelect = select2({ id: `ap.defaultSound.${spec.key}` });
+          this.soundSelect.setAttribute("aria-label", `${spec.label} sound`);
+          const play = button("", { icon: "\u25B6", size: "sm", tooltip: `Play ${name} sound`, ariaLabel: `Play ${name} sound` });
           play.addEventListener("click", () => {
             audio.trigger("preview", { sound: this.soundSelect.value }, spec.key).catch(() => {
             });
@@ -37223,24 +37065,18 @@ Restore figures are averages; unlucky streaks do worse.`;
             audio.setDefaultSoundByName(this.soundSelect.value, spec.key);
             this.onDefaultChange();
           });
-          const soundRow2 = h("div");
-          Object.assign(soundRow2.style, { display: "flex", alignItems: "center", gap: "8px" });
-          soundRow2.append(this.soundSelect, play);
-          this.root.appendChild(row("Default sound", soundRow2));
+          const pick = inline(this.soundSelect, play);
+          pick.classList.add("qws-al-sound-pick");
+          this.root.appendChild(settingRow("Sound", null, pick).row);
+          this.volume.setAttribute("aria-label", `${spec.label} volume`);
           this.volume.addEventListener("input", () => {
             const pct = Math.max(0, Math.min(100, Math.round(Number(this.volume.value)) || 0));
             this.volumeValue.textContent = `${pct}%`;
             audio.setVolume(pct / 100, spec.key);
           });
-          const volumeRow = h("div");
-          Object.assign(volumeRow.style, { display: "flex", alignItems: "center", gap: "10px" });
-          volumeRow.append(this.volume, this.volumeValue);
-          this.root.appendChild(row("Volume", volumeRow));
+          this.root.appendChild(settingRow("Volume", null, inline(this.volume, this.volumeValue)).row);
           if (!spec.canLoop) {
-            this.root.appendChild(row("Playback mode", pill("One-shot")));
-            const info2 = h("div", void 0, spec.info);
-            muted(info2);
-            this.root.appendChild(row("Details", info2));
+            this.root.appendChild(settingRow("Playback", spec.info, pill("One-shot")).row);
             return;
           }
           this.mode = segmented(
@@ -37249,28 +37085,19 @@ Restore figures are averages; unlucky streaks do worse.`;
               { value: "loop", label: "Loop" }
             ],
             audio.getPlaybackMode(spec.key),
-            (mode) => this.apply(mode)
+            (mode) => this.apply(mode),
+            { ariaLabel: `${spec.label} playback` }
           );
-          this.root.appendChild(row("Playback mode", this.mode));
-          const loopDetails = h("div");
-          Object.assign(loopDetails.style, { display: "flex", flexDirection: "column", gap: "10px" });
-          const info = h("div", void 0, spec.info);
-          muted(info);
-          loopDetails.appendChild(info);
+          this.root.appendChild(settingRow("Playback", spec.info, this.mode).row);
           if (spec.key === "shops") {
             const stored = clampLoopInterval("", LoopDefaults.get("shops").loopIntervalMs);
             this.loopInput = numberInput(MIN_LOOP_INTERVAL_MS, MAX_LOOP_INTERVAL_MS, 50, stored);
+            this.loopInput.setAttribute("aria-label", "Loop interval in milliseconds");
             this.loopInput.addEventListener("change", () => this.apply("loop"));
             this.loopInput.addEventListener("blur", () => this.apply("loop"));
-            const interval = h("div");
-            Object.assign(interval.style, { display: "inline-flex", alignItems: "center", gap: "8px" });
-            const unit = h("span", void 0, "ms between plays");
-            unit.style.opacity = "0.85";
-            interval.append(this.loopInput.wrap, unit);
-            loopDetails.appendChild(interval);
+            this.loopRow = settingRow("Repeat every", "Stops once the item is bought.", inline(this.loopInput.wrap, "ms")).row;
+            this.root.appendChild(this.loopRow);
           }
-          this.loopRow = row(spec.key === "shops" ? "Stop condition" : "Loop interval", loopDetails);
-          this.root.appendChild(this.loopRow);
         }
         /** The loop interval in the field, or the stored one, kept in range and written back. */
         loopInterval() {
@@ -37282,7 +37109,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         apply(mode) {
           if (this.mode && this.mode.get() !== mode) return this.mode.set(mode);
           setContextPlayback(this.spec.key, mode, this.loopInterval());
-          if (this.loopRow) this.loopRow.style.display = mode === "loop" ? "" : "none";
+          if (this.loopRow) this.loopRow.hidden = mode !== "loop";
         }
         /** Lists the library's sounds, keeping the selection when it still exists. */
         fillSounds() {
@@ -37315,68 +37142,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/notifier/menu/styles.ts
-  function ensureMenuStyles() {
-    if (document.getElementById(STYLE_ID4)) return;
-    const style = document.createElement("style");
-    style.id = STYLE_ID4;
-    style.textContent = CSS;
-    document.head.appendChild(style);
-  }
-  var STYLE_ID4, CSS;
-  var init_styles5 = __esm({
-    "src/features/notifier/menu/styles.ts"() {
-      "use strict";
-      STYLE_ID4 = "qws-rule-style";
-      CSS = `
-.qws-rule-btn {
-  display: inline-grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  padding: 0;
-  border-radius: 8px;
-  line-height: 1;
-  font-size: 18px;
-  box-sizing: border-box;
-}
-.qws-rule-btn[data-active="1"] {
-  color: var(--qmm-accent);
-  background: var(--qmm-accent-soft);
-  border-color: var(--qmm-accent-border);
-}
-.qws-rule-popover {
-  position: fixed;
-  z-index: 99999999999999;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 260px;
-  max-width: 320px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  border: 1px solid var(--qmm-border-strong);
-  background: var(--qmm-gradient-panel);
-  box-shadow: var(--qmm-shadow-panel);
-  color: var(--qmm-text);
-}
-.qws-rule-popover .qws-rule-field { display: grid; gap: 6px; }
-.qws-rule-popover .qws-rule-field > label { font-weight: 600; font-size: 13px; }
-.qws-rule-popover .qws-rule-hint { opacity: .7; font-size: 11px; }
-.qws-rule-popover .qws-rule-actions { display: flex; justify-content: space-between; gap: 8px; }
-.qws-rule-summary {
-  min-height: 1.2em;
-  opacity: .75;
-  font-size: 11px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-`;
-    }
-  });
-
   // src/features/notifier/menu/ruleEditor.ts
   function closeRuleEditor() {
     popover?.remove();
@@ -37388,9 +37153,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     document.addEventListener(type, handler, options2);
     teardown.add(() => document.removeEventListener(type, handler, options2));
   }
-  function field(label2, ...controls) {
+  function field2(label2, control, aside) {
+    const head = h("div", "qws-rule-field__head");
+    head.appendChild(h("label", "qws-rule-field__label", label2));
+    if (aside) head.appendChild(h("span", "qws-rule-hint", aside));
     const wrap = h("div", "qws-rule-field");
-    wrap.append(h("label", void 0, label2), ...controls);
+    wrap.append(head, control);
     return wrap;
   }
   function option(sel, value, text2) {
@@ -37469,22 +37237,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     const defaults = ruleDefaults(target.context);
     const canLoop = target.context === "shops";
     const pop = h("div", "qws-rule-popover");
-    const header = h("div");
-    Object.assign(header.style, {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "flex-start",
-      gap: "12px",
-      cursor: "move",
-      userSelect: "none",
-      touchAction: "none"
-    });
-    const titles = h("div");
-    const title = h("div", void 0, target.name);
-    Object.assign(title.style, { fontWeight: "700", fontSize: "14px", lineHeight: "1.2" });
-    const subtitle = h("div", "qws-rule-hint", target.type);
-    subtitle.style.fontSize = "12px";
-    titles.append(title, subtitle);
+    const header = h("div", "qws-rule-head");
+    const titles = h("div", "qws-rule-head__titles");
+    const kind = target.context === "weather" ? "Weather alert" : `${target.type} alert`;
+    const title = h("div", "qws-rule-head__title", target.name);
+    title.title = target.name;
+    titles.append(title, h("div", "qws-rule-hint", kind));
     const closeBtn = button("\u2715", { variant: "ghost", size: "xs", ariaLabel: "Close", onClick: closeRuleEditor });
     header.append(titles, closeBtn);
     pop.appendChild(header);
@@ -37498,7 +37256,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     if (selectedSound && !names.includes(selectedSound)) option(soundSelect, selectedSound, shortSoundName(selectedSound));
     soundSelect.value = selectedSound;
-    pop.appendChild(field("Sound", soundSelect));
+    pop.appendChild(field2("Sound", soundSelect));
     const defaultVolumePct = Math.round(defaults.volume * 100);
     const initialVolumePct = Math.round(clamp(current3?.volume ?? defaults.volume, 0, 1) * 100);
     const volumeRange = slider(0, 100, 1, initialVolumePct, { fill: true });
@@ -37506,19 +37264,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     volumeRange.addEventListener("input", () => {
       volumeValue.textContent = `${clamp(Math.round(Number(volumeRange.value)) || 0, 0, 100)}%`;
     });
-    const volumeRow = h("div");
-    Object.assign(volumeRow.style, { display: "flex", alignItems: "center", gap: "10px" });
+    const volumeRow = h("div", "qws-rule-inline");
     volumeRow.append(volumeRange, volumeValue);
-    pop.appendChild(field("Volume", volumeRow, h("div", "qws-rule-hint", `Default: ${defaultVolumePct}%`)));
+    pop.appendChild(field2("Volume", volumeRow, `Default ${defaultVolumePct}%`));
     const modeSelect = select2();
     const modes = canLoop ? defaults.mode === "loop" ? ["loop", "oneshot"] : ["oneshot", "loop"] : ["oneshot"];
     for (const mode of modes) option(modeSelect, mode, mode === "loop" ? "Loop" : "One-shot");
     modeSelect.value = canLoop ? current3?.playbackMode ?? defaults.mode : "oneshot";
     modeSelect.disabled = !canLoop;
-    pop.appendChild(field("Playback mode", modeSelect));
+    pop.appendChild(field2("Playback", modeSelect));
     const stopSelect = select2();
     option(stopSelect, "purchase", "Until purchase");
-    const stopField = field("Stop condition", stopSelect);
+    const stopField = field2("Stops", stopSelect);
     const intervalInput = h("input", "qmm-input qmm-input--sm");
     intervalInput.type = "number";
     intervalInput.min = String(MIN_LOOP_INTERVAL_MS);
@@ -37527,7 +37284,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     intervalInput.placeholder = String(defaults.loopIntervalMs);
     intervalInput.value = current3?.loopIntervalMs != null ? String(current3.loopIntervalMs) : "";
     digitsOnly(intervalInput);
-    const intervalField = field("Loop interval (ms)", intervalInput);
+    const intervalField = field2("Repeat every (ms)", intervalInput);
     const showLoopFields = () => {
       const show = canLoop && modeSelect.value === "loop";
       stopField.style.display = show ? "grid" : "none";
@@ -37543,11 +37300,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
     }
     showLoopFields();
-    pop.appendChild(
-      h("div", "qws-rule-hint", "Use defaults by leaving values unchanged (matching the default volume keeps it inherited).")
-    );
+    pop.appendChild(h("div", "qws-rule-hint", "Anything left at its default follows the Settings tab."));
     const actions2 = h("div", "qws-rule-actions");
-    const clearBtn = button("Clear", { variant: "ghost", size: "sm", disabled: !current3 });
+    const clearBtn = button("Clear rule", { variant: "ghost", size: "sm", disabled: !current3 });
     clearBtn.addEventListener("click", (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
@@ -37610,7 +37365,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_audio();
       init_playbackDefaults();
       init_rules();
-      init_styles5();
+      init_styles11();
       MARGIN3 = 12;
       popover = null;
       teardown = new Subscriptions();
@@ -37618,143 +37373,80 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/notifier/menu/alertGrid.ts
-  function headCell(text2, align) {
-    const el = h("div", void 0, text2);
-    Object.assign(el.style, {
-      fontWeight: "600",
-      opacity: "0.9",
-      padding: "4px 6px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: align === "left" ? "flex-start" : "center"
-    });
-    return el;
-  }
-  function centeredCell(child) {
-    const cell = h("div");
-    Object.assign(cell.style, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      borderBottom: CELL_BORDER,
-      padding: "4px 6px",
-      boxSizing: "border-box"
-    });
-    cell.appendChild(child);
-    return cell;
-  }
-  function ruleSummaryLine() {
-    const el = h("div", "qws-rule-summary");
-    el.style.visibility = "hidden";
-    return el;
-  }
-  var CELL_BORDER, AlertGrid;
-  var init_alertGrid = __esm({
-    "src/features/notifier/menu/alertGrid.ts"() {
+  // src/features/notifier/menu/alertList.ts
+  var AlertList;
+  var init_alertList = __esm({
+    "src/features/notifier/menu/alertList.ts"() {
       "use strict";
       init_button();
-      init_card();
       init_dom2();
       init_toggles();
       init_rules();
       init_ruleEditor();
-      init_styles5();
-      CELL_BORDER = "1px solid var(--qmm-border)";
-      AlertGrid = class {
-        /** `firstColumnMin` is the item column's minimum width. */
-        constructor(headers, firstColumnMin, emptyText) {
+      init_styles11();
+      AlertList = class {
+        constructor(emptyText) {
           this.emptyText = emptyText;
           this.rows = /* @__PURE__ */ new Map();
           ensureMenuStyles();
-          const columns = `minmax(${firstColumnMin}, 1fr) 9rem 7rem 8rem`;
-          this.root = plainCard();
-          Object.assign(this.root.style, { display: "grid", gridTemplateRows: "auto 1fr", overflow: "hidden", minHeight: "0" });
-          this.head = h("div");
-          Object.assign(this.head.style, {
-            display: "grid",
-            gridTemplateColumns: columns,
-            justifyContent: "start",
-            borderBottom: "1px solid var(--qmm-border-strong)",
-            padding: "0 0 4px 0",
-            boxSizing: "border-box"
-          });
-          this.head.append(
-            headCell(headers[0], "left"),
-            headCell(headers[1], "center"),
-            headCell(headers[2], "center"),
-            headCell(headers[3], "center")
-          );
-          this.body = h("div");
-          Object.assign(this.body.style, {
-            display: "grid",
-            gridTemplateColumns: columns,
-            justifyContent: "start",
-            gridAutoRows: "auto",
-            alignContent: "start",
-            minHeight: "0",
-            height: "100%",
-            overflow: "auto",
-            overscrollBehavior: "contain",
-            width: "100%",
-            scrollbarGutter: "stable"
-          });
-          this.root.append(this.head, this.body);
-          new ResizeObserver(() => this.alignHeader()).observe(this.body);
-          window.addEventListener("resize", () => this.alignHeader());
-        }
-        alignHeader() {
-          this.head.style.paddingRight = `${this.body.offsetWidth - this.body.clientWidth}px`;
+          this.root = h("div", "qws-al-scroll qmm-scroll");
+          this.list = h("div", "qws-al-list");
+          this.root.appendChild(this.list);
         }
         /** Replaces every row; an empty list shows the empty text. */
         setRows(rows) {
           closeRuleEditor();
-          this.body.replaceChildren();
           this.rows.clear();
           if (!rows.length) {
-            const empty = h("div", void 0, this.emptyText);
-            Object.assign(empty.style, { opacity: "0.75", gridColumn: "1 / -1", padding: "8px" });
-            this.body.appendChild(empty);
+            this.list.replaceChildren(h("div", "qws-al-empty", this.emptyText));
+            return;
           }
-          for (const row5 of rows) this.addRow(row5);
-          this.alignHeader();
+          this.list.replaceChildren(...rows.map((row2) => this.renderRow(row2)));
         }
-        addRow(row5) {
-          row5.item.style.borderBottom = CELL_BORDER;
-          const toggle = switchInput(row5.alertOn, (on) => row5.onAlertChange(on));
-          const gear = button("", { icon: "\u2699", size: "sm", tooltip: "Custom rule", ariaLabel: `Custom rule for ${row5.name}` });
+        renderRow(row2) {
+          const el4 = h("div", row2.highlight ? "qws-al-row is-current" : "qws-al-row");
+          row2.icon.classList.add("qws-al-icon");
+          const name = h("div", "qws-al-name");
+          name.appendChild(h("span", void 0, row2.name));
+          if (row2.badge) name.appendChild(row2.badge);
+          const summary = h("div", "qws-al-summary");
+          const text2 = h("div", "qws-al-text");
+          text2.append(name, ...row2.details, summary);
+          const gear = button("", { icon: "\u2699", ariaLabel: `Custom rule for ${row2.name}` });
           gear.classList.add("qws-rule-btn");
           gear.addEventListener("click", (ev) => {
             ev.preventDefault();
             ev.stopPropagation();
-            openRuleEditor({ id: row5.id, name: row5.name, type: row5.type, context: row5.context }, gear);
+            openRuleEditor({ id: row2.id, name: row2.name, type: row2.type, context: row2.context }, gear);
           });
-          this.body.append(row5.item, centeredCell(row5.detail), centeredCell(toggle), centeredCell(gear));
-          const rendered = { gear, summary: row5.summary, toggle };
-          this.rows.set(row5.id, rendered);
-          this.showRule(rendered, row5.id);
+          const toggle = switchInput(row2.alertOn, (on) => row2.onAlertChange(on));
+          toggle.setAttribute("aria-label", `Alert for ${row2.name}`);
+          const actions2 = h("div", "qws-al-actions");
+          actions2.append(gear, toggle);
+          el4.append(row2.icon, text2, actions2);
+          const rendered = { gear, summary, toggle };
+          this.rows.set(row2.id, rendered);
+          this.showRule(rendered, row2.id);
+          return el4;
         }
         /** Redraws every row's rule button and summary. */
         refreshRules() {
-          for (const [id, row5] of this.rows) this.showRule(row5, id);
+          for (const [id, row2] of this.rows) this.showRule(row2, id);
         }
-        showRule(row5, id) {
+        showRule(row2, id) {
           const rule = NotifierRules.get(id);
           const summary = hasRule(rule) ? formatRuleSummary(rule) : "";
-          row5.gear.dataset.active = hasRule(rule) ? "1" : "0";
-          row5.gear.title = summary ? `Custom rule: ${summary}` : "Custom rule";
-          if (row5.summary) {
-            row5.summary.textContent = summary;
-            row5.summary.style.visibility = summary ? "visible" : "hidden";
-          }
+          row2.gear.dataset.active = hasRule(rule) ? "1" : "0";
+          row2.gear.title = summary ? `Custom rule: ${summary}` : "Custom rule";
+          row2.summary.textContent = summary;
         }
         /** Updates one row's switch without redrawing it. `locked` greys it out with a reason. */
         setAlert(id, on, locked = null) {
-          const row5 = this.rows.get(id);
-          if (!row5) return;
-          row5.toggle.checked = on;
-          row5.toggle.disabled = !!locked;
-          row5.toggle.title = locked ?? "";
+          const row2 = this.rows.get(id);
+          if (!row2) return;
+          row2.toggle.checked = on;
+          row2.toggle.disabled = !!locked;
+          row2.toggle.title = locked ?? "";
         }
         renderedIds() {
           return new Set(this.rows.keys());
@@ -37764,8 +37456,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/notifier/menu/shopsTab.ts
-  function filterSelect(id, minWidth, options2) {
-    const sel = select2({ id, width: minWidth });
+  function filterSelect(id, label2, options2) {
+    const sel = select2({ id, small: true });
+    sel.setAttribute("aria-label", label2);
     for (const [value, text2] of options2) {
       const opt = h("option", void 0, text2);
       opt.value = value;
@@ -37775,67 +37468,33 @@ Restore figures are averages; unlucky streaks do worse.`;
     return sel;
   }
   function weatherChip(weather2, only) {
-    const tint = only ? color.warn : color.accent;
-    const chip = h("span", void 0, weather2);
-    Object.assign(chip.style, {
-      padding: "1px 6px",
-      borderRadius: "999px",
-      fontSize: "10px",
-      fontWeight: "600",
-      background: only ? color.warnSoft : color.accentSoft,
-      color: tint,
-      border: `1px solid ${only ? color.warnBorder : color.accentBorder}`
-    });
+    const chip = h("span", only ? "qws-al-chip is-only" : "qws-al-chip is-weather", only ? `${weather2} only` : weather2);
     chip.title = only ? `Only available during ${weather2}` : `Also available during ${weather2}`;
     return chip;
   }
-  function itemCell(row5) {
-    const cell = h("div");
-    Object.assign(cell.style, { display: "flex", alignItems: "center", gap: "6px", padding: "4px 6px" });
-    const icon2 = shopItemIcon(row5.id, row5.name, 40, "alerts");
-    Object.assign(icon2.style, { borderRadius: "8px", background: color.mutedBg, marginRight: "6px" });
-    const text2 = h("div");
-    Object.assign(text2.style, { display: "flex", flexDirection: "column", gap: "2px", lineHeight: "1.15", minWidth: "0", flex: "1 1 auto" });
-    const title = h("div", void 0, row5.name);
-    Object.assign(title.style, { fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
-    const sub = h("div");
-    Object.assign(sub.style, { opacity: "0.7", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" });
-    sub.appendChild(h("span", void 0, row5.type));
-    for (const weather2 of row5.weathers ?? []) sub.appendChild(weatherChip(weather2, !!row5.weatherOnly));
-    text2.append(title, sub);
-    cell.append(icon2, text2);
-    return cell;
+  function rarityChip(rarity3) {
+    const badge2 = rarityBadge(rarity3);
+    Object.assign(badge2.style, { margin: "0", padding: "2px 8px", fontSize: "11px", borderRadius: "999px" });
+    return badge2;
+  }
+  function details(row2) {
+    const meta = h("div", "qws-al-meta");
+    meta.append(rarityChip(String(row2.rarity ?? "-")), h("span", void 0, row2.type));
+    for (const weather2 of row2.weathers ?? []) meta.appendChild(weatherChip(weather2, !!row2.weatherOnly));
+    return meta;
   }
   function renderShopsTab(view) {
-    view.replaceChildren();
-    const wrap = h("div");
-    Object.assign(wrap.style, {
-      display: "grid",
-      gridTemplateRows: "auto 1fr",
-      gap: "10px",
-      height: "54vh",
-      overflow: "hidden",
-      minHeight: "0",
-      position: "relative"
-    });
-    view.appendChild(wrap);
-    const typeSelect = filterSelect("shop.filter.type", "140px", TYPE_FILTERS);
-    const raritySelect = filterSelect("shop.filter.rarity", "160px", RARITY_FILTERS);
-    const followedCount = pill("Followed: 0");
-    followedCount.title = "Items with Overlay enabled";
-    followedCount.style.marginLeft = "auto";
-    const header = h("div");
-    Object.assign(header.style, { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", rowGap: "8px" });
-    header.append(
-      h("label", "qmm-label", "Type"),
-      typeSelect,
-      h("label", "qmm-label", "Rarity"),
-      raritySelect,
-      followedCount
-    );
-    wrap.appendChild(header);
-    const grid = new AlertGrid(["Item", "Rarity", "Notify", "Custom rules"], "200px", "No items.");
-    wrap.appendChild(grid.root);
+    ensureMenuStyles();
+    const tab = h("div", "qws-al-tab");
+    view.replaceChildren(tab);
+    const typeSelect = filterSelect("shop.filter.type", "Type", TYPE_FILTERS);
+    const raritySelect = filterSelect("shop.filter.rarity", "Rarity", RARITY_FILTERS);
+    const followedCount = pill("0 followed");
+    followedCount.title = "Items with alerts on";
+    const toolbar2 = h("div", "qws-al-toolbar");
+    toolbar2.append(typeSelect, raritySelect, followedCount);
+    const list = new AlertList("No item matches these filters.");
+    tab.append(toolbar2, list.root);
     let state5 = null;
     const filters = () => ({
       type: typeSelect.value || "all",
@@ -37843,26 +37502,26 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const visibleRows = (s) => ShopRows.filter(s.rows, filters());
     const updateRows = (s) => {
-      for (const row5 of s.rows) {
-        grid.setAlert(row5.id, row5.popup, isCapReached(row5.id) ? CAPPED_REASON : null);
+      for (const row2 of s.rows) {
+        list.setAlert(row2.id, row2.popup, isCapReached(row2.id) ? CAPPED_REASON : null);
       }
-      followedCount.textContent = `Followed: ${s.counts.followed}`;
+      followedCount.textContent = `${s.counts.followed} followed`;
     };
     const rebuild2 = () => {
       if (!state5) {
-        grid.setRows([]);
+        list.setRows([]);
         return;
       }
-      grid.setRows(
-        visibleRows(state5).map((row5) => ({
-          id: row5.id,
-          name: row5.name,
-          type: row5.type,
+      list.setRows(
+        visibleRows(state5).map((row2) => ({
+          id: row2.id,
+          name: row2.name,
+          type: row2.type,
           context: "shops",
-          item: itemCell(row5),
-          detail: rarityBadge(String(row5.rarity ?? "-")),
-          alertOn: row5.popup,
-          onAlertChange: (on) => ShopRows.setFollowed(row5.id, on)
+          icon: shopItemIcon(row2.id, row2.name, 40, "alerts"),
+          details: [details(row2)],
+          alertOn: row2.popup,
+          onAlertChange: (on) => ShopRows.setFollowed(row2.id, on)
         }))
       );
       updateRows(state5);
@@ -37873,12 +37532,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       await NotifierService.onChangeNow((next) => {
         const prev = state5;
         state5 = next;
-        const rendered = grid.renderedIds();
+        const rendered = list.renderedIds();
         const ids = visibleRows(next).map((r) => r.id);
         if (!prev || ids.length !== rendered.size || ids.some((id) => !rendered.has(id))) rebuild2();
         else updateRows(next);
       });
-      NotifierRules.onChange(() => grid.refreshRules());
+      NotifierRules.onChange(() => list.refreshRules());
     })();
   }
   var TYPE_FILTERS, RARITY_FILTERS, CAPPED_REASON;
@@ -37886,7 +37545,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/features/notifier/menu/shopsTab.ts"() {
       "use strict";
       init_badges();
-      init_theme();
       init_dom2();
       init_fields();
       init_rarityBadge();
@@ -37895,16 +37553,17 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_notifier();
       init_rules();
       init_shopRows();
-      init_alertGrid();
+      init_alertList();
+      init_styles11();
       TYPE_FILTERS = [
-        ["all", "All"],
+        ["all", "All types"],
         ["seed", "Seeds"],
         ["egg", "Eggs"],
         ["tool", "Tools"],
         ["decor", "Decor"]
       ];
       RARITY_FILTERS = [
-        ["all", "All"],
+        ["all", "All rarities"],
         ["common", "Common"],
         ["uncommon", "Uncommon"],
         ["rare", "Rare"],
@@ -37918,9 +37577,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/notifier/menu/weatherTab.ts
-  function weatherSpriteCandidates(row5) {
+  function weatherSpriteCandidates(row2) {
     const names = /* @__PURE__ */ new Set();
-    for (const value of [row5.name, row5.atomValue, row5.id]) {
+    for (const value of [row2.name, row2.atomValue, row2.id]) {
       const trimmed = value?.trim();
       if (!trimmed) continue;
       names.add(trimmed);
@@ -37929,119 +37588,63 @@ Restore figures are averages; unlucky streaks do worse.`;
     const icons = [...names].map((value) => `${value.replace(/icon$/i, "")}Icon`);
     return [.../* @__PURE__ */ new Set([...icons, ...names])].filter(Boolean);
   }
-  function weatherIcon2(row5) {
-    const size = 40;
+  function weatherIcon2(row2) {
     const wrap = h("div");
-    Object.assign(wrap.style, {
-      width: `${size}px`,
-      height: `${size}px`,
-      flex: `0 0 ${size}px`,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      borderRadius: "8px",
-      background: color.mutedBg
-    });
-    const glyph = h("span", void 0, row5.name.trim().charAt(0) || "\u{1F326}");
-    glyph.style.fontSize = `${size - 8}px`;
+    const glyph = h("span", void 0, row2.name.trim().charAt(0) || "\u{1F326}");
     glyph.setAttribute("aria-hidden", "true");
     wrap.appendChild(glyph);
-    attachSpriteIcon(wrap, ["ui", "weather", "mutation"], weatherSpriteCandidates(row5), size, "alerts-weather");
+    attachSpriteIcon(wrap, ["ui", "weather", "mutation"], weatherSpriteCandidates(row2), ICON_SIZE2, "alerts-weather");
     return wrap;
   }
-  function mutationList(row5) {
-    const list = h("div");
-    Object.assign(list.style, {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: "6px",
-      alignItems: "flex-start",
-      fontSize: "12px",
-      lineHeight: "1.3",
-      opacity: row5.mutations.length ? "0.85" : "0.6"
-    });
-    if (!row5.mutations.length) {
-      const none = h("span", void 0, "No mutation effects.");
-      none.style.whiteSpace = "nowrap";
-      list.appendChild(none);
+  function mutationChips(row2) {
+    const list = h("div", "qws-al-meta");
+    if (!row2.mutations.length) {
+      list.appendChild(h("span", void 0, "No mutation effects"));
       return list;
     }
-    for (const mutation of row5.mutations) {
-      const chip = h("span", void 0, formatWeatherMutation(mutation));
-      Object.assign(chip.style, {
-        display: "inline-flex",
-        alignItems: "center",
-        padding: "2px 8px",
-        borderRadius: "999px",
-        background: color.hoverBg,
-        whiteSpace: "nowrap"
-      });
-      list.appendChild(chip);
-    }
+    for (const mutation of row2.mutations) list.appendChild(h("span", "qws-al-chip", formatWeatherMutation(mutation)));
     return list;
   }
-  function itemCell2(row5, summary) {
-    const cell = h("div");
-    Object.assign(cell.style, { display: "flex", alignItems: "center", gap: "8px", padding: "6px" });
-    if (row5.isCurrent) {
-      cell.style.background = color.accentSoft;
-      cell.style.borderRadius = "8px";
-    }
-    const text2 = h("div");
-    Object.assign(text2.style, { display: "flex", flexDirection: "column", gap: "4px", lineHeight: "1.2", minWidth: "0", flex: "1 1 auto" });
-    const titleRow = h("div");
-    Object.assign(titleRow.style, { display: "flex", alignItems: "center", gap: "6px", minWidth: "0" });
-    const title = h("div", void 0, row5.name);
-    Object.assign(title.style, { fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 auto" });
-    titleRow.appendChild(title);
-    if (row5.isCurrent) titleRow.appendChild(pill("Current", "ok"));
-    const mutationsLabel = h("div", void 0, "Mutations");
-    Object.assign(mutationsLabel.style, { fontSize: "11px", opacity: "0.7", fontWeight: "600" });
-    text2.append(titleRow, mutationsLabel, mutationList(row5), summary);
-    cell.append(weatherIcon2(row5), text2);
-    return cell;
-  }
-  function showLastSeen(el, row5) {
-    const { label: label2, title } = formatLastSeen(row5.lastSeen, row5.isCurrent);
-    el.textContent = label2;
-    el.title = title;
-    el.style.opacity = label2 === "Never" ? "0.7" : "1";
+  function showLastSeen(el4, row2) {
+    const { label: label2, title } = formatLastSeen(row2.lastSeen, row2.isCurrent);
+    if (label2 === "Now") el4.textContent = "Active now";
+    else if (label2 === "Never") el4.textContent = "Never seen";
+    else el4.textContent = `Seen ${label2.charAt(0).toLowerCase()}${label2.slice(1)}`;
+    el4.title = title;
   }
   function renderWeatherTab(view) {
-    view.replaceChildren();
-    const wrap = h("div");
-    Object.assign(wrap.style, { display: "grid", gridTemplateRows: "1fr", height: "54vh", overflow: "hidden", minHeight: "0" });
-    view.appendChild(wrap);
-    const grid = new AlertGrid(["Weather", "Last seen", "Notify", "Custom rules"], "240px", "No weather entries.");
-    wrap.appendChild(grid.root);
+    ensureMenuStyles();
+    const tab = h("div", "qws-al-tab");
+    view.replaceChildren(tab);
+    const list = new AlertList("No weather to show yet.");
+    tab.appendChild(list.root);
     const lastSeenLabels = /* @__PURE__ */ new Map();
     let state5 = null;
     let stateSig2 = "";
     const refreshLastSeen = () => {
-      for (const row5 of state5?.rows ?? []) {
-        const el = lastSeenLabels.get(row5.id);
-        if (el) showLastSeen(el, row5);
+      for (const row2 of state5?.rows ?? []) {
+        const el4 = lastSeenLabels.get(row2.id);
+        if (el4) showLastSeen(el4, row2);
       }
     };
     const rebuild2 = () => {
       lastSeenLabels.clear();
-      grid.setRows(
-        (state5?.rows ?? []).map((row5) => {
-          const summary = ruleSummaryLine();
-          const lastSeen = h("div");
-          Object.assign(lastSeen.style, { fontWeight: "600", whiteSpace: "nowrap" });
-          showLastSeen(lastSeen, row5);
-          lastSeenLabels.set(row5.id, lastSeen);
+      list.setRows(
+        (state5?.rows ?? []).map((row2) => {
+          const lastSeen = h("div", "qws-al-meta");
+          showLastSeen(lastSeen, row2);
+          lastSeenLabels.set(row2.id, lastSeen);
           return {
-            id: row5.id,
-            name: row5.name,
-            type: row5.type,
+            id: row2.id,
+            name: row2.name,
+            type: row2.type,
             context: "weather",
-            item: itemCell2(row5, summary),
-            summary,
-            detail: lastSeen,
-            alertOn: row5.notify,
-            onAlertChange: (on) => WeatherAlerts.setNotify(row5.id, on)
+            icon: weatherIcon2(row2),
+            badge: row2.isCurrent ? pill("Current", "ok") : void 0,
+            details: [lastSeen, mutationChips(row2)],
+            highlight: row2.isCurrent,
+            alertOn: row2.notify,
+            onAlertChange: (on) => WeatherAlerts.setNotify(row2.id, on)
           };
         })
       );
@@ -38060,11 +37663,11 @@ Restore figures are averages; unlucky streaks do worse.`;
         stateSig2 = weatherStateSignature(next.rows);
         rebuild2();
       });
-      NotifierRules.onChange(() => grid.refreshRules());
+      NotifierRules.onChange(() => list.refreshRules());
     })();
-    refreshWhileVisible(wrap, refreshLastSeen, LAST_SEEN_REFRESH_MS);
+    refreshWhileVisible(tab, refreshLastSeen, LAST_SEEN_REFRESH_MS);
     refreshWhileVisible(
-      wrap,
+      tab,
       () => {
         NotifierService.getWeatherState().then(show).catch(() => {
         });
@@ -38072,31 +37675,32 @@ Restore figures are averages; unlucky streaks do worse.`;
       STATE_REFRESH_MS
     );
   }
-  var LAST_SEEN_REFRESH_MS, STATE_REFRESH_MS;
+  var LAST_SEEN_REFRESH_MS, STATE_REFRESH_MS, ICON_SIZE2;
   var init_weatherTab = __esm({
     "src/features/notifier/menu/weatherTab.ts"() {
       "use strict";
       init_badges();
       init_dom2();
-      init_theme();
       init_iconCache();
       init_notifier();
       init_rules();
       init_weather();
       init_weatherAlerts();
-      init_alertGrid();
+      init_alertList();
+      init_styles11();
       LAST_SEEN_REFRESH_MS = 3e4;
       STATE_REFRESH_MS = 6e4;
+      ICON_SIZE2 = 40;
     }
   });
 
   // src/features/notifier/menu/menu.ts
   function renderNotifierMenu(root4) {
     const ui = new Menu({ id: "alerts", compact: true, windowSelector: ".qws-win" });
-    ui.addTab("shops", "\u{1F6D2} Shops", renderShopsTab);
-    ui.addTab("weather", "\u{1F326} Weather", renderWeatherTab);
-    ui.addTab("pets", "\u{1F43E} Pets", renderPetsTab);
-    ui.addTab("settings", "\u2699\uFE0F Settings", renderSettingsTab);
+    ui.addTab("shops", "Shops", renderShopsTab);
+    ui.addTab("weather", "Weather", renderWeatherTab);
+    ui.addTab("pets", "Pets", renderPetsTab);
+    ui.addTab("settings", "Settings", renderSettingsTab);
     ui.mount(root4);
   }
   var init_menu8 = __esm({
@@ -38190,9 +37794,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/lib/markdown.ts
   function escapeHtml(text2) {
-    const div2 = document.createElement("div");
-    div2.textContent = text2;
-    return div2.innerHTML;
+    const div = document.createElement("div");
+    div.textContent = text2;
+    return div.innerHTML;
   }
   function renderInlineMarkdown(text2) {
     let html = text2;
@@ -38280,9 +37884,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/tools/tag.ts
   function createTagRow(tags) {
-    const row5 = h("div", "mgt-tags");
-    for (const tag of tags) row5.appendChild(h("span", "mgt-tag", tag));
-    return row5;
+    const row2 = h("div", "mgt-tags");
+    for (const tag of tags) row2.appendChild(h("span", "mgt-tag", tag));
+    return row2;
   }
   var init_tag = __esm({
     "src/features/tools/tag.ts"() {
@@ -38293,75 +37897,60 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/tools/listView.ts
   function createCard(tool, onSelect) {
-    const card4 = document.createElement("div");
-    card4.className = "mgt-card";
-    card4.setAttribute("role", "button");
-    card4.tabIndex = 0;
-    card4.title = tool.title;
-    card4.onclick = onSelect;
-    card4.onkeydown = (event) => {
+    const card3 = h("div", "mgt-card");
+    card3.setAttribute("role", "button");
+    card3.tabIndex = 0;
+    card3.title = tool.title;
+    card3.onclick = onSelect;
+    card3.onkeydown = (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
       onSelect();
     };
-    const head = document.createElement("div");
-    head.className = "mgt-card__head";
-    if (tool.icon) {
-      head.appendChild(createIconTile(tool.icon));
-    }
-    const title = document.createElement("span");
-    title.className = "mgt-card__title";
-    title.textContent = tool.title;
-    head.appendChild(title);
-    const arrow = document.createElement("span");
-    arrow.className = "mgt-card__arrow";
-    arrow.textContent = "\u2192";
+    const head = h("div", "mgt-card__head");
+    if (tool.icon) head.appendChild(createIconTile(tool.icon));
+    head.appendChild(h("span", "mgt-card__title", tool.title));
+    const arrow = h("span", "mgt-card__arrow", "\u203A");
     arrow.setAttribute("aria-hidden", "true");
     head.appendChild(arrow);
-    card4.appendChild(head);
-    const desc = document.createElement("p");
-    desc.className = "mgt-card__desc";
-    desc.textContent = markdownToPlainText(tool.description);
-    card4.appendChild(desc);
+    card3.appendChild(head);
+    card3.appendChild(h("p", "mgt-card__desc", markdownToPlainText(tool.description)));
     if (tool.tags?.length) {
       const foot = createTagRow(tool.tags);
       foot.classList.add("mgt-card__foot");
-      card4.appendChild(foot);
+      card3.appendChild(foot);
     }
-    return card4;
+    return card3;
   }
   function renderListView(tools, onSelectTool) {
-    const root4 = document.createElement("div");
-    root4.className = "mgt-list";
+    const root4 = h("div", "mgt-list");
     const allTags = Array.from(new Set(tools.flatMap((tool) => tool.tags ?? [])));
     const selectedTags = /* @__PURE__ */ new Set();
-    const grid = document.createElement("div");
-    grid.className = "mgt-grid";
+    const count = pill(countLabel(tools.length));
+    const introText = h("div", "mgt-intro__text");
+    introText.append(
+      h("div", "mgt-intro__title", "Community tools"),
+      h("div", "mgt-intro__sub", "Sites and apps made by players.")
+    );
+    const intro = h("div", "mgt-intro");
+    intro.append(introText, count);
+    root4.appendChild(intro);
+    const grid = h("div", "mgt-grid");
     const renderCards = () => {
-      grid.replaceChildren();
       const filtered = selectedTags.size ? tools.filter((tool) => tool.tags?.some((tag) => selectedTags.has(tag))) : tools;
+      count.textContent = countLabel(filtered.length);
       if (!filtered.length) {
-        const empty = document.createElement("div");
-        empty.className = "mgt-state";
-        empty.style.gridColumn = "1 / -1";
-        const text2 = document.createElement("p");
-        text2.className = "mgt-state__text";
-        text2.textContent = "No tools match the selected tags.";
-        empty.appendChild(text2);
-        grid.appendChild(empty);
+        const empty = h("div", "mgt-state");
+        empty.appendChild(h("p", "mgt-state__text", "No tools match the selected tags."));
+        grid.replaceChildren(empty);
         return;
       }
-      filtered.forEach((tool) => {
-        grid.appendChild(createCard(tool, () => onSelectTool(tool)));
-      });
+      grid.replaceChildren(...filtered.map((tool) => createCard(tool, () => onSelectTool(tool))));
     };
     if (allTags.length) {
-      const filters = document.createElement("div");
-      filters.className = "mgt-filters";
-      const label2 = document.createElement("span");
-      label2.className = "mgt-label";
-      label2.textContent = "Filter";
-      filters.appendChild(label2);
+      const filters = h("div", "mgt-filters");
+      filters.setAttribute("role", "group");
+      filters.setAttribute("aria-label", "Filter by tag");
       const tagButtons = /* @__PURE__ */ new Map();
       const refreshStates = () => {
         allButton.setActive(selectedTags.size === 0);
@@ -38397,15 +37986,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     root4.appendChild(grid);
     return { root: root4 };
   }
-  var ALL_FILTER_LABEL;
+  var ALL_FILTER_LABEL, countLabel;
   var init_listView = __esm({
     "src/features/tools/listView.ts"() {
       "use strict";
       init_markdown();
+      init_badges();
       init_button();
+      init_dom2();
       init_image();
       init_tag();
       ALL_FILTER_LABEL = "All";
+      countLabel = (count) => count === 1 ? "1 tool" : `${count} tools`;
     }
   });
 
@@ -38615,63 +38207,36 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/tools/detailView.ts
   function createCreatorChip(creator) {
-    const chip = document.createElement("div");
-    chip.className = creator.avatar ? "mgt-creator" : "mgt-creator mgt-creator--plain";
+    const chip = h("span", "mgt-creator");
     if (creator.avatar) {
-      const avatar3 = document.createElement("img");
-      avatar3.alt = creator.name;
-      loadImageInto(avatar3, creator.avatar);
-      chip.appendChild(avatar3);
+      const avatar2 = h("img");
+      avatar2.alt = "";
+      loadImageInto(avatar2, creator.avatar);
+      chip.appendChild(avatar2);
     }
-    const name = document.createElement("span");
-    name.textContent = creator.name;
-    chip.appendChild(name);
+    chip.appendChild(h("span", void 0, creator.name));
     return chip;
   }
   function createHero(tool) {
-    const hero = document.createElement("div");
-    hero.className = "mgt-hero";
-    const top = document.createElement("div");
-    top.className = "mgt-hero__top";
-    if (tool.icon) {
-      top.appendChild(createIconTile(tool.icon, "lg"));
-    }
-    const titles = document.createElement("div");
-    titles.className = "mgt-hero__titles";
-    const title = document.createElement("h2");
-    title.className = "mgt-hero__title";
-    title.textContent = tool.title;
-    titles.appendChild(title);
-    if (tool.tags?.length) {
-      titles.appendChild(createTagRow(tool.tags));
-    }
-    top.appendChild(titles);
+    const hero = h("div", "mgt-hero");
+    if (tool.icon) hero.appendChild(createIconTile(tool.icon, "lg"));
+    const titles = h("div", "mgt-hero__titles");
+    titles.appendChild(h("h2", "mgt-hero__title", tool.title));
     if (tool.creators?.length) {
-      const meta = document.createElement("div");
-      meta.className = "mgt-meta";
-      const label2 = document.createElement("span");
-      label2.className = "mgt-label";
-      label2.textContent = tool.creators.length > 1 ? "Created by" : "Creator";
-      meta.appendChild(label2);
-      tool.creators.forEach((creator) => meta.appendChild(createCreatorChip(creator)));
-      top.appendChild(meta);
+      const creators = h("div", "mgt-creators");
+      creators.appendChild(h("span", "mgt-creators__label", "Made by"));
+      tool.creators.forEach((creator) => creators.appendChild(createCreatorChip(creator)));
+      titles.appendChild(creators);
     }
-    hero.appendChild(top);
-    const divider = document.createElement("div");
-    divider.className = "mgt-divider";
-    hero.appendChild(divider);
-    const description = document.createElement("div");
-    description.className = "mgt-md";
-    description.innerHTML = renderMarkdown(tool.description);
-    hero.appendChild(description);
+    if (tool.tags?.length) titles.appendChild(createTagRow(tool.tags));
+    hero.appendChild(titles);
     return hero;
   }
   function createActions(actions2) {
     if (!actions2?.length) return null;
-    const row5 = document.createElement("div");
-    row5.className = "mgt-actions";
+    const row2 = h("div", "mgt-actions");
     actions2.forEach((action2, index) => {
-      row5.appendChild(
+      row2.appendChild(
         button(action2.label, {
           // The first link is the main one; the rest stay secondary.
           variant: index === 0 ? "primary" : "default",
@@ -38682,20 +38247,24 @@ Restore figures are averages; unlucky streaks do worse.`;
         })
       );
     });
-    return row5;
+    return row2;
   }
   function renderDetailView(tool, onBack) {
-    const root4 = document.createElement("div");
-    root4.className = "mgt-detail";
-    const back = button("All tools", { icon: "\u2190", size: "sm", onClick: onBack });
+    const root4 = h("div", "mgt-detail");
+    const back = button("All tools", { icon: "\u2039", size: "sm", variant: "ghost", onClick: onBack });
     back.classList.add("mgt-back");
     root4.appendChild(back);
     root4.appendChild(createHero(tool));
+    const actions2 = createActions(tool.actions);
+    if (actions2) root4.appendChild(actions2);
+    const about = card("About");
+    const description = h("div", "mgt-md");
+    description.innerHTML = renderMarkdown(tool.description);
+    about.body.appendChild(description);
+    root4.appendChild(about.root);
     if (tool.images?.length) {
       root4.appendChild(renderCarousel(tool.images).root);
     }
-    const actions2 = createActions(tool.actions);
-    if (actions2) root4.appendChild(actions2);
     return { root: root4 };
   }
   var init_detailView = __esm({
@@ -38703,6 +38272,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_markdown();
       init_button();
+      init_card();
+      init_dom2();
       init_openLink();
       init_carousel();
       init_image();
@@ -38717,140 +38288,134 @@ Restore figures are averages; unlucky streaks do worse.`;
     style.id = STYLE_ID5;
     style.textContent = `
 .mgt-card:focus-visible, .mgt-nav:focus-visible, .mgt-dot:focus-visible {
-  outline: 2px solid var(--qmm-accent);
+  outline: 3px solid var(--qmm-accent-border);
   outline-offset: 2px;
 }
 .mgt-nav, .mgt-dot { font-family: inherit; -webkit-appearance: none; appearance: none; margin: 0; }
 
-/* \u2500\u2500 shell \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
-.mgt-wrap { display: flex; flex-direction: column; gap: 14px; width: 100%; }
-.mgt-views { position: relative; width: 100%; }
-
-/* \u2500\u2500 filter bar \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
-.mgt-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
-.mgt-label {
-  font-size: 9.5px; font-weight: 700; letter-spacing: 0.09em;
-  text-transform: uppercase; color: var(--qmm-text-soft);
+/* Shell. The window sizes to its content, so the menu sets its own width,
+   capped to the screen so a narrow window never scrolls sideways. */
+.mgt-wrap {
+  display: flex; flex-direction: column; box-sizing: border-box;
+  width: min(600px, calc((100vw - 64px) / var(--qmm-scale, 1)));
+  max-width: 100%;
 }
-.mgt-filters .mgt-label { margin-right: 3px; }
-.mgt-filters .qmm-btn { border-radius: var(--qmm-radius-pill); }
+.mgt-views { position: relative; width: 100%; }
+/* The window body scrolls, and its padding leaves room for focus rings that a
+   scrolling panel here would clip. */
+.qmm-views.mgt-host { overflow: visible; }
 
-/* \u2500\u2500 icon tile (no frame: the artwork stands on its own) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+/* Small pieces shared by both views. */
 .mgt-tile {
   display: grid; place-items: center; flex-shrink: 0;
-  width: 38px; height: 38px; font-size: 22px; line-height: 1;
+  width: 40px; height: 40px; font-size: 24px; line-height: 1;
 }
 .mgt-tile img { width: 100%; height: 100%; object-fit: contain; }
-.mgt-tile--lg { width: 54px; height: 54px; font-size: 32px; }
+.mgt-tile--lg { width: 56px; height: 56px; font-size: 34px; }
 
-/* \u2500\u2500 tags \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
-.mgt-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.mgt-tags { display: flex; flex-wrap: wrap; gap: var(--qmm-space-xs); }
 .mgt-tag {
   display: inline-flex; align-items: center; white-space: nowrap;
-  padding: 2px 8px; border-radius: 6px;
-  font-size: 9.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
-  color: var(--qmm-accent);
-  background: var(--qmm-accent-soft);
-  border: 1px solid var(--qmm-accent-soft);
+  padding: 2px 8px; border-radius: var(--qmm-radius-pill);
+  font-size: var(--qmm-fs-xs); font-weight: 800;
+  color: var(--qmm-text-soft); background: var(--qmm-sand);
 }
 
-/* \u2500\u2500 list view \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
-.mgt-list { display: flex; flex-direction: column; gap: 14px; width: 100%; }
-.mgt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 12px; }
+/* List view. */
+.mgt-list { display: flex; flex-direction: column; gap: var(--qmm-space-lg); width: 100%; }
+.mgt-intro { display: flex; align-items: flex-start; gap: var(--qmm-space-lg); }
+.mgt-intro__text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.mgt-intro__title { font-size: var(--qmm-fs-xl); font-weight: 900; color: var(--qmm-text); }
+.mgt-intro__sub { font-size: var(--qmm-fs-sm); line-height: 1.4; color: var(--qmm-text-dim); }
+
+.mgt-filters { display: flex; flex-wrap: wrap; gap: var(--qmm-space-sm); }
+.mgt-filters .qmm-btn { border-radius: var(--qmm-radius-pill); padding: 5px 12px; }
+
+.mgt-grid {
+  display: grid; gap: var(--qmm-space-lg);
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
+}
 .mgt-card {
-  display: flex; flex-direction: column; gap: 10px; text-align: left;
-  padding: 14px; border-radius: 14px; cursor: pointer;
-  border: 2px solid var(--qmm-sand-edge);
-  background: var(--qmm-card);
-  transition: transform 170ms ease, border-color 170ms ease, box-shadow 170ms ease;
+  display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 0; text-align: left;
+  padding: var(--qmm-space-lg) 14px 14px; border-radius: var(--qmm-radius-lg); cursor: pointer;
+  border: 3px solid var(--qmm-sand-edge); background: var(--qmm-card);
+  transition: border-color 120ms ease;
 }
-.mgt-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--qmm-accent-border);
-  box-shadow: var(--qmm-shadow-raise-small);
-}
-.mgt-card__head { display: flex; align-items: center; gap: 11px; }
+.mgt-card:hover { border-color: var(--qmm-accent-border); }
+.mgt-card__head { display: flex; align-items: center; gap: var(--qmm-space-lg); min-width: 0; }
 .mgt-card__title {
-  font-size: 13.5px; font-weight: 700; color: var(--qmm-text); line-height: 1.25;
-  overflow: hidden; text-overflow: ellipsis;
+  flex: 1 1 auto; min-width: 0;
+  font-size: var(--qmm-fs-lg); font-weight: 900; line-height: 1.25; color: var(--qmm-text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .mgt-card__arrow {
-  margin-left: auto; flex-shrink: 0; font-size: 15px; color: var(--qmm-accent);
-  opacity: 0; transform: translateX(-5px);
-  transition: opacity 170ms ease, transform 170ms ease;
+  flex-shrink: 0; font-size: 18px; font-weight: 900; line-height: 1; color: var(--qmm-text-dim);
+  transition: color 120ms ease, transform 120ms ease;
 }
 .mgt-card:hover .mgt-card__arrow, .mgt-card:focus-visible .mgt-card__arrow {
-  opacity: 1; transform: translateX(0);
+  color: var(--qmm-sepia-ink); transform: translateX(2px);
 }
 .mgt-card__desc {
-  margin: 0; font-size: 12px; line-height: 1.55; color: var(--qmm-text-soft);
+  margin: 0; font-size: var(--qmm-fs-sm); line-height: 1.5; color: var(--qmm-text-soft);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .mgt-card__foot { margin-top: auto; }
 
-/* \u2500\u2500 detail view \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
-.mgt-detail { display: flex; flex-direction: column; gap: 14px; width: 100%; }
-.mgt-back { align-self: flex-start; }
-.mgt-hero {
-  display: flex; flex-direction: column; gap: 14px;
-  padding: 18px; border-radius: 16px;
-  border: 2px solid var(--qmm-accent-border);
-  background: var(--qmm-accent-soft);
+/* Detail view. */
+.mgt-detail { display: flex; flex-direction: column; gap: var(--qmm-space-xl); width: 100%; }
+.mgt-back { align-self: flex-start; margin-left: -6px; }
+.mgt-hero { display: flex; align-items: center; gap: var(--qmm-space-xl); min-width: 0; }
+.mgt-hero__titles { display: flex; flex-direction: column; gap: var(--qmm-space-sm); flex: 1 1 auto; min-width: 0; }
+.mgt-hero__title {
+  margin: 0; font-size: 18px; font-weight: 900; line-height: 1.2; color: var(--qmm-text);
+  overflow-wrap: anywhere;
 }
-.mgt-hero__top { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
-/* Grows to fill the row so the creators get pushed to the far right. */
-.mgt-hero__titles { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1 1 240px; }
-.mgt-hero__title { margin: 0; font-size: 19px; font-weight: 750; line-height: 1.2; color: var(--qmm-text); }
-.mgt-divider { height: 1px; background: linear-gradient(90deg, var(--qmm-border-strong), transparent); }
 
-.mgt-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
-.mgt-hero__top .mgt-meta { margin-left: auto; }
-.mgt-creator {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 3px 11px 3px 3px; border-radius: 999px;
-  background: var(--qmm-card-bg); border: 1px solid var(--qmm-border);
-  font-size: 11.5px; font-weight: 600; color: var(--qmm-text);
+/* Creators are plain names (with their avatar when there is one), so they
+   never read as one more row of tags. */
+.mgt-creators {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--qmm-space-xs) var(--qmm-space-md);
+  font-size: var(--qmm-fs-sm);
 }
-.mgt-creator--plain { padding: 5px 11px; }
+.mgt-creators__label { color: var(--qmm-text-dim); }
+.mgt-creator { display: inline-flex; align-items: center; gap: var(--qmm-space-xs); font-weight: 800; color: var(--qmm-text); }
 .mgt-creator img {
-  width: 22px; height: 22px; border-radius: 999px; object-fit: cover;
-  border: 1px solid var(--qmm-border-strong); flex-shrink: 0;
+  width: 20px; height: 20px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+  box-shadow: 0 0 0 2px var(--qmm-sand-edge);
 }
 
-/* \u2500\u2500 markdown body \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
-.mgt-md { font-size: 12.5px; line-height: 1.65; color: var(--qmm-text-soft); }
+.mgt-actions { display: flex; flex-wrap: wrap; gap: var(--qmm-space-md); }
+.mgt-actions .qmm-btn { flex: 1 1 140px; }
+
+/* Markdown body, in a tool's About card and in the changelog notice. */
+.mgt-md { font-size: var(--qmm-fs-md); line-height: 1.6; color: var(--qmm-text-soft); }
 .mgt-md > :first-child { margin-top: 0; }
 .mgt-md > :last-child { margin-bottom: 0; }
 .mgt-md p { margin: 0 0 10px; }
 .mgt-md ul { margin: 0 0 10px; padding-left: 18px; list-style: disc; }
 .mgt-md li { margin: 3px 0; }
-.mgt-md strong { color: var(--qmm-text); font-weight: 700; }
+.mgt-md strong { color: var(--qmm-text); font-weight: 800; }
 .mgt-md em { font-style: italic; }
 .mgt-md code {
   padding: 1px 5px; border-radius: 5px;
   font-family: var(--qmm-font-mono); font-size: 0.9em;
-  color: var(--qmm-accent);
-  background: var(--qmm-accent-soft);
-  border: 1px solid var(--qmm-accent-soft);
+  color: var(--qmm-sepia-ink); background: var(--qmm-sepia-soft);
 }
 .mgt-md a {
-  color: var(--qmm-accent); text-decoration: none;
-  border-bottom: 1px solid var(--qmm-accent-border);
-  transition: color 140ms ease, border-color 140ms ease;
+  color: var(--qmm-sepia-ink); font-weight: 700; text-decoration: none;
+  border-bottom: 2px solid var(--qmm-accent-border);
+  transition: border-color 120ms ease;
 }
-.mgt-md a:hover { border-bottom-color: var(--qmm-accent); }
+.mgt-md a:hover { border-bottom-color: var(--qmm-sepia-ink); }
 
-/* \u2500\u2500 actions \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
-.mgt-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
-
-/* \u2500\u2500 carousel \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
-.mgt-carousel { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+/* Carousel. */
+.mgt-carousel { display: flex; flex-direction: column; gap: var(--qmm-space-md); width: 100%; }
 .mgt-carousel__stage {
   position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden;
-  border-radius: 14px; border: 1px solid var(--qmm-border); background: var(--qmm-field-bg);
+  border-radius: var(--qmm-radius-lg); background: var(--qmm-paper-deep);
   cursor: zoom-in;
 }
-.mgt-carousel__stage:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
+.mgt-carousel__stage:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
 /* The slides stack on top of each other, so they must never take the clicks
    meant for the stage. Only the nav buttons opt back in. */
 .mgt-carousel__slide {
@@ -38860,41 +38425,40 @@ Restore figures are averages; unlucky streaks do worse.`;
 .mgt-carousel__slide img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .mgt-nav {
   position: absolute; top: 50%; transform: translateY(-50%);
-  display: grid; place-items: center; width: 36px; height: 36px;
+  display: grid; place-items: center; width: 34px; height: 34px;
   border-radius: 50%; cursor: pointer; z-index: 1;
-  border: 2px solid var(--qmm-sand-edge);
-  background: var(--qmm-paper); color: var(--qmm-text);
-  font-size: 20px; line-height: 1; padding: 0 0 2px;
-  backdrop-filter: blur(6px);
-  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+  border: 0; background: var(--qmm-paper); color: var(--qmm-text);
+  box-shadow: inset 0 -3px 0 var(--qmm-sand-shade);
+  font-size: 20px; font-weight: 900; line-height: 1; padding: 0 0 3px;
+  transition: background 120ms ease, color 120ms ease;
 }
-.mgt-nav:hover { background: var(--qmm-card); border-color: var(--qmm-accent-border-hover); color: var(--qmm-accent); }
+.mgt-nav:hover { background: var(--qmm-card); color: var(--qmm-sepia-ink); }
 .mgt-nav--prev { left: 10px; }
 .mgt-nav--next { right: 10px; }
-.mgt-dots { display: flex; justify-content: center; gap: 6px; }
+.mgt-dots { display: flex; justify-content: center; gap: var(--qmm-space-sm); }
 .mgt-dot {
-  width: 7px; height: 7px; padding: 0; border-radius: 50%; cursor: pointer;
+  width: 8px; height: 8px; padding: 0; border-radius: 50%; cursor: pointer;
   border: none; background: var(--qmm-sand-edge);
   transition: background 160ms ease, width 160ms ease;
 }
-.mgt-dot:hover { background: var(--qmm-sand-shade); }
-.mgt-dot.is-active { width: 18px; border-radius: 999px; background: var(--qmm-accent); }
+.mgt-dot:hover { background: var(--qmm-border-hover); }
+.mgt-dot.is-active { width: 20px; border-radius: var(--qmm-radius-pill); background: var(--qmm-sepia); }
 
-/* \u2500\u2500 full-screen image zoom \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+/* Full-screen image zoom. */
 .mgt-zoom {
   position: fixed; inset: 0; z-index: 2147483647; display: grid; place-items: center; padding: 20px;
   background: var(--qmm-scrim); backdrop-filter: blur(4px);
 }
 .mgt-zoom__box {
   position: relative; max-width: 90vw; max-height: 90vh; overflow: hidden;
-  background: var(--qmm-sunken); border: 1px solid var(--qmm-accent-border); border-radius: 14px;
+  background: var(--qmm-paper-deep); border: 3px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-lg);
   box-shadow: var(--qmm-shadow-modal);
 }
 .mgt-zoom__close {
-  top: 10px; right: 10px; left: auto; transform: none; z-index: 2; padding: 0; font-size: 14px;
+  top: 10px; right: 10px; left: auto; transform: none; z-index: 2; padding: 0; font-size: var(--qmm-fs-lg);
 }
 .mgt-zoom__status { padding: 18px 22px; }
-.mgt-zoom__status.is-error { color: var(--qmm-danger); }
+.mgt-zoom__status.is-error { color: var(--qmm-danger-ink); }
 .mgt-zoom__img {
   display: none; max-width: 100%; max-height: 90vh; object-fit: contain; cursor: zoom-in;
   transition: transform 200ms ease;
@@ -38902,31 +38466,33 @@ Restore figures are averages; unlucky streaks do worse.`;
 .mgt-zoom__img.is-loaded { display: block; }
 .mgt-zoom__img.is-zoomed { cursor: zoom-out; }
 
-/* \u2500\u2500 loading / error / empty states \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+/* Loading, error and empty states. */
 .mgt-state {
-  display: flex; flex-direction: column; align-items: center; gap: 11px;
-  padding: 30px 20px; border-radius: 14px; text-align: center;
-  border: 1px dashed var(--qmm-border); background: var(--qmm-card-bg);
+  display: flex; flex-direction: column; align-items: center; gap: var(--qmm-space-md);
+  padding: 32px 20px; border-radius: var(--qmm-radius-lg); text-align: center;
+  background: var(--qmm-paper-deep);
 }
-.mgt-state__text { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--qmm-text-soft); }
-.mgt-state__title { font-size: 13.5px; font-weight: 700; color: var(--qmm-text); }
+.mgt-state .qmm-btn { margin-top: var(--qmm-space-xs); }
+.mgt-state__text { margin: 0; font-size: var(--qmm-fs-md); line-height: 1.5; color: var(--qmm-text-soft); }
+.mgt-state__title { font-size: var(--qmm-fs-lg); font-weight: 900; color: var(--qmm-text); }
+.mgt-grid > .mgt-state { grid-column: 1 / -1; }
 .mgt-spinner {
-  width: 22px; height: 22px; border-radius: 50%;
-  border: 2px solid var(--qmm-accent-soft); border-top-color: var(--qmm-accent);
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 3px solid var(--qmm-sand-edge); border-top-color: var(--qmm-sepia);
   animation: mgt-spin 700ms linear infinite;
 }
 @keyframes mgt-spin { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) {
   .mgt-card, .mgt-card__arrow, .mgt-dot { transition: none; }
-  .mgt-card:hover { transform: none; }
+  .mgt-card:hover .mgt-card__arrow { transform: none; }
   .mgt-spinner { animation-duration: 2s; }
 }
 `;
     document.head.appendChild(style);
   }
   var STYLE_ID5;
-  var init_styles6 = __esm({
+  var init_styles12 = __esm({
     "src/features/tools/styles.ts"() {
       "use strict";
       STYLE_ID5 = "gemini-tools-styles";
@@ -38938,12 +38504,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) {
       from.style.display = "none";
-      to.style.display = "block";
+      to.style.display = "";
       return;
     }
     container.style.position = "relative";
     container.style.overflow = "hidden";
-    to.style.display = "flex";
+    to.style.display = "";
     from.style.position = "absolute";
     from.style.inset = "0";
     const fromTranslate = direction === "forward" ? -24 : 24;
@@ -38978,6 +38544,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     from.style.opacity = "";
     to.style.transform = "";
     to.style.opacity = "";
+    container.style.overflow = "";
   }
   var init_transition = __esm({
     "src/features/tools/transition.ts"() {
@@ -38992,46 +38559,42 @@ Restore figures are averages; unlucky streaks do worse.`;
     ui.mount(container);
     const view = ui.root.querySelector(".qmm-views");
     view.replaceChildren();
-    Object.assign(view.style, {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      padding: "8px",
-      width: "100%",
-      maxHeight: "70vh",
-      overflowY: "auto"
-    });
+    view.classList.add("mgt-host");
     const wrapper = h("div", "mgt-wrap");
-    Object.assign(wrapper.style, {
-      width: `${WRAPPER_WIDTH_PX}px`,
-      minWidth: `${WRAPPER_WIDTH_PX}px`,
-      maxWidth: "100%",
-      boxSizing: "border-box"
-    });
     const viewContainer = h("div", "mgt-views");
     wrapper.appendChild(viewContainer);
     view.appendChild(wrapper);
+    const showState = (title, text2, retryLabel) => {
+      const state5 = h("div", "mgt-state");
+      state5.append(
+        h("span", "mgt-state__title", title),
+        h("p", "mgt-state__text", text2),
+        button(retryLabel, { variant: "primary", onClick: () => void init() })
+      );
+      viewContainer.replaceChildren(state5);
+    };
     const showLoading = () => {
       const state5 = h("div", "mgt-state");
       state5.append(h("div", "mgt-spinner"), h("p", "mgt-state__text", "Fetching the latest tools..."));
       viewContainer.replaceChildren(state5);
     };
-    const showError = (message2) => {
-      const state5 = h("div", "mgt-state");
-      state5.append(
-        h("span", "mgt-state__title", "Couldn't load the tools"),
-        h("p", "mgt-state__text", message2),
-        button("Retry", { variant: "primary", onClick: () => init() })
-      );
-      viewContainer.replaceChildren(state5);
-    };
     let tools = [];
     let listViewRoot = null;
     let detailViewRoot = null;
+    let listScrollTop = 0;
+    let swapping = false;
     const showListView = async () => {
       if (listViewRoot) {
-        if (detailViewRoot && detailViewRoot.parentNode === viewContainer) {
-          await swapViews(viewContainer, detailViewRoot, listViewRoot, "back");
+        const detail = detailViewRoot;
+        if (!detail || detail.parentNode !== viewContainer || swapping) return;
+        swapping = true;
+        try {
+          await swapViews(viewContainer, detail, listViewRoot, "back");
+          container.scrollTop = listScrollTop;
+        } finally {
+          detail.remove();
+          if (detailViewRoot === detail) detailViewRoot = null;
+          swapping = false;
         }
         return;
       }
@@ -39039,10 +38602,18 @@ Restore figures are averages; unlucky streaks do worse.`;
       viewContainer.appendChild(listViewRoot);
     };
     const showDetailView = async (tool) => {
+      if (swapping) return;
       detailViewRoot = renderDetailView(tool, showListView).root;
       viewContainer.appendChild(detailViewRoot);
       if (listViewRoot && listViewRoot.parentNode === viewContainer) {
-        await swapViews(viewContainer, listViewRoot, detailViewRoot, "forward");
+        swapping = true;
+        listScrollTop = container.scrollTop;
+        container.scrollTop = 0;
+        try {
+          await swapViews(viewContainer, listViewRoot, detailViewRoot, "forward");
+        } finally {
+          swapping = false;
+        }
       }
     };
     const init = async () => {
@@ -39050,7 +38621,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       try {
         tools = await fetchTools();
         if (!tools.length) {
-          showError("No tools are available right now.");
+          showState("No tools yet", "None are listed right now. Check back soon.", "Check again");
           return;
         }
         viewContainer.replaceChildren();
@@ -39058,12 +38629,11 @@ Restore figures are averages; unlucky streaks do worse.`;
         detailViewRoot = null;
         await showListView();
       } catch (error) {
-        showError(error instanceof Error ? error.message : "Unknown error.");
+        showState("Couldn't load the tools", error instanceof Error ? error.message : "Unknown error.", "Retry");
       }
     };
     await init();
   }
-  var WRAPPER_WIDTH_PX;
   var init_menu9 = __esm({
     "src/features/tools/menu.ts"() {
       "use strict";
@@ -39073,81 +38643,64 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_fetchTools();
       init_listView();
       init_detailView();
-      init_styles6();
+      init_styles12();
       init_transition();
-      WRAPPER_WIDTH_PX = 720;
     }
   });
 
   // src/features/editor/menu.ts
-  function card2(...children) {
-    const el = plainCard();
-    el.style.padding = "14px";
-    el.append(...children);
-    return el;
-  }
   function statusLine2() {
-    const el = document.createElement("div");
-    Object.assign(el.style, { fontSize: "11px", color: color.textDim, minHeight: "16px", paddingLeft: "2px" });
+    const el4 = h("div", "qws-ed-status");
+    el4.setAttribute("role", "status");
     let timer2;
     return {
-      el,
+      el: el4,
       set(msg, tone = "ok") {
-        el.textContent = msg;
-        el.style.color = TONE_COLOR[tone];
+        el4.textContent = el4.title = msg;
+        el4.className = `qws-ed-status is-${tone}`;
         clearTimeout(timer2);
         timer2 = setTimeout(() => {
-          el.textContent = "";
-          el.style.color = color.textDim;
+          el4.textContent = el4.title = "";
+          el4.className = "qws-ed-status";
         }, STATUS_CLEAR_MS);
       }
     };
   }
+  function tip(key2, action2) {
+    const el4 = h("span", "qws-ed-tip");
+    el4.append(h("b", void 0, key2), action2);
+    return el4;
+  }
   function modeCard() {
-    const head = row2("12px");
-    head.style.justifyContent = "space-between";
-    const title = document.createElement("div");
-    Object.assign(title.style, { fontSize: "13px", fontWeight: "600", color: color.text });
-    title.textContent = "Editor mode";
     const modeSwitch = switchInput(EditorService.isEnabled(), (on) => EditorService.setEnabled(on));
-    head.append(title, modeSwitch);
-    const desc = document.createElement("div");
-    Object.assign(desc.style, { fontSize: "11px", color: color.textDim, lineHeight: "1.5" });
-    desc.textContent = "Sandbox garden with every plant and decor unlocked. Left click to place, right click to remove, drag to paint.";
-    return { root: card2(head, desc), modeSwitch };
+    modeSwitch.setAttribute("aria-label", "Editor mode");
+    const section = card("Editor mode", {
+      subtitle: "A sandbox garden with every plant and decor unlocked.",
+      actions: [modeSwitch]
+    });
+    const tips = h("div", "qws-ed-tips");
+    tips.append(tip("Left click", "place"), tip("Right click", "remove"), tip("Drag", "paint"));
+    section.body.appendChild(tips);
+    return { root: section.root, modeSwitch };
   }
   function dropZone2(onFiles) {
-    const zone = document.createElement("div");
-    const idle = { borderColor: color.borderHover, background: color.cardBg };
-    Object.assign(zone.style, {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "4px",
-      padding: "22px 12px",
-      border: `2px dashed ${color.borderHover}`,
-      borderRadius: "10px",
-      background: color.cardBg,
-      color: color.textDim,
-      fontSize: "11px",
-      textAlign: "center",
-      cursor: "pointer",
-      transition: "border-color 150ms ease, background 150ms ease"
-    });
-    const setActive = (active3) => Object.assign(zone.style, active3 ? { borderColor: color.accentBorderHover, background: color.accentSoft } : idle);
-    const title = document.createElement("div");
-    Object.assign(title.style, { fontWeight: "600", fontSize: "12px", color: color.text });
-    title.textContent = "Drop a garden JSON file here";
-    const sub = document.createElement("div");
-    sub.textContent = "\u2026or click to browse";
-    zone.append(title, sub);
-    const fileInput = document.createElement("input");
+    const fileInput = h("input");
     fileInput.type = "file";
     fileInput.accept = ".json,application/json,text/plain";
     fileInput.multiple = true;
-    fileInput.style.display = "none";
+    fileInput.hidden = true;
+    const zone = h("div", "qws-ed-drop");
+    zone.tabIndex = 0;
+    zone.setAttribute("role", "button");
+    zone.setAttribute("aria-label", "Import garden files");
+    zone.append(h("div", "qws-ed-drop__title", "Import a garden file"), h("div", "qws-ed-drop__hint", "Drop JSON files here, or click to browse."));
+    const setActive = (active3) => zone.classList.toggle("is-active", active3);
     zone.onclick = () => fileInput.click();
+    zone.addEventListener("keydown", (ev) => {
+      if (ev.key !== "Enter" && ev.key !== " ") return;
+      ev.preventDefault();
+      fileInput.click();
+    });
     fileInput.onchange = () => {
       onFiles(fileInput.files);
       fileInput.value = "";
@@ -39164,51 +38717,44 @@ Restore figures are averages; unlucky streaks do worse.`;
       setActive(false);
       onFiles(ev.dataTransfer?.files);
     });
-    return [zone, fileInput];
+    const wrap = h("div");
+    wrap.append(fileInput, zone);
+    return wrap;
   }
   function renderEditorMenu(container) {
-    Object.assign(container.style, { padding: "0", overflow: "hidden" });
-    const wrap = document.createElement("div");
-    wrap.className = "qmm-scroll";
-    Object.assign(wrap.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "12px",
-      padding: "14px",
-      overflowY: "auto",
-      height: "100%",
-      width: "380px",
-      boxSizing: "border-box",
-      background: "var(--qmm-gradient-panel)"
-    });
+    ensureEditorStyles();
+    const wrap = h("div", "qws-ed-menu");
     container.appendChild(wrap);
     const status2 = statusLine2();
     const mode = modeCard();
     wrap.appendChild(mode.root);
-    const nameInput = textInput("Garden name\u2026");
-    Object.assign(nameInput.style, { width: "100%", boxSizing: "border-box" });
-    const actions2 = row2();
-    const grow = { flex: "1" };
-    const save3 = button("Save current garden", {
+    const nameInput = textInput("Garden name");
+    nameInput.setAttribute("aria-label", "Garden name");
+    const save3 = button("Save", {
       variant: "primary",
       lockWhilePending: true,
       onClick: async () => {
-        const saved = await saveCurrentGarden(nameInput.value || "Untitled");
-        if (!saved) return status2.set("Save failed (no garden state found).", "err");
-        status2.set(`Saved "${saved.name}".`);
+        const saved2 = await saveCurrentGarden(nameInput.value || "Untitled");
+        if (!saved2) return status2.set("Save failed (no garden state found).", "err");
+        status2.set(`Saved "${saved2.name}".`);
       }
     });
     const clear = button("Clear garden", {
+      size: "sm",
       lockWhilePending: true,
       onClick: async () => {
         const ok = await setCurrentGarden(makeEmptyGarden());
         status2.set(ok ? "Garden cleared." : "Clear failed.", ok ? "ok" : "err");
       }
     });
-    Object.assign(save3.style, grow);
-    Object.assign(clear.style, grow);
-    actions2.append(save3, clear);
-    wrap.appendChild(card2(sectionLabel("Current garden"), nameInput, actions2));
+    const saveRow = h("div", "qws-ed-save");
+    saveRow.append(nameInput, save3);
+    const current3 = card("Current garden", {
+      subtitle: "Saves your plan while editing, your real garden otherwise.",
+      actions: [clear]
+    });
+    current3.body.appendChild(saveRow);
+    wrap.appendChild(current3.root);
     const importFiles = async (files) => {
       const list = Array.from(files || []);
       if (!list.length) return;
@@ -39217,10 +38763,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       for (const file of list) {
         try {
           const fallbackName = file.name.replace(/\.[^.]+$/, "").trim() || "Imported garden";
-          const saved = await importGarden(nameInput.value.trim() || fallbackName, await file.text());
-          if (saved) {
+          const saved2 = await importGarden(nameInput.value.trim() || fallbackName, await file.text());
+          if (saved2) {
             imported++;
-            lastName = saved.name;
+            lastName = saved2.name;
           }
         } catch {
         }
@@ -39228,34 +38774,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (!imported) return status2.set("Import failed (invalid JSON).", "err");
       status2.set(imported === 1 ? `Imported "${lastName}".` : `Imported ${imported} gardens.`);
     };
-    wrap.appendChild(card2(sectionLabel("Import"), ...dropZone2((files) => void importFiles(files))));
-    const listWrap2 = document.createElement("div");
-    Object.assign(listWrap2.style, { display: "flex", flexDirection: "column", gap: "6px" });
+    const editorNote = h("div", "qws-ed-note", "Turn on editor mode to load a garden.");
+    const listWrap2 = h("div", "qws-ed-list");
     const savedRow = (g, editorOn) => {
-      const el = row2();
-      Object.assign(el.style, {
-        padding: "10px 12px",
-        background: color.cardBg,
-        borderRadius: "10px",
-        border: `1px solid ${color.border}`,
-        transition: "border-color 120ms ease"
-      });
-      el.onmouseenter = () => el.style.borderColor = color.borderHover;
-      el.onmouseleave = () => el.style.borderColor = color.border;
-      const name = document.createElement("div");
-      Object.assign(name.style, {
-        flex: "1",
-        fontSize: "12px",
-        fontWeight: "600",
-        color: color.text,
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-        minWidth: "0"
-      });
-      name.textContent = name.title = g.name || "Untitled";
+      const name = g.name || "Untitled";
+      const text2 = h("div", "qws-ed-row__text");
+      const nameEl = h("div", "qws-ed-row__name", name);
+      nameEl.title = name;
+      text2.append(nameEl, h("div", "qws-ed-row__date", savedOn(g.createdAt)));
       const load3 = button("Load", {
-        variant: "primary",
         size: "sm",
         lockWhilePending: true,
         disabled: !editorOn,
@@ -39267,6 +38794,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
       });
       const exportBtn = button("Export", {
+        variant: "ghost",
         size: "sm",
         lockWhilePending: true,
         onClick: async () => {
@@ -39278,7 +38806,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
       });
       const remove = button("Delete", {
-        variant: "danger",
+        variant: "ghost",
         size: "sm",
         onClick: () => {
           if (!deleteSavedGarden(g.id)) return;
@@ -39286,52 +38814,52 @@ Restore figures are averages; unlucky streaks do worse.`;
           renderSavedList();
         }
       });
-      el.append(name, load3, exportBtn, remove);
-      return el;
+      remove.classList.add("qws-ed-delete");
+      const actions2 = h("div", "qws-ed-row__actions");
+      actions2.append(load3, exportBtn, remove);
+      const row2 = h("div", "qws-ed-row");
+      row2.append(text2, actions2);
+      return row2;
     };
     const renderSavedList = () => {
       const items = listSavedGardens();
+      const editorOn = EditorService.isEnabled();
+      editorNote.hidden = editorOn || !items.length;
       if (!items.length) {
-        const empty = document.createElement("div");
-        Object.assign(empty.style, { fontSize: "12px", color: color.textDim, padding: "4px 0" });
-        empty.textContent = "No saved gardens yet.";
-        listWrap2.replaceChildren(empty);
+        listWrap2.replaceChildren(h("div", "qws-ed-empty", "No saved gardens yet. Save the current one above, or import a file."));
         return;
       }
-      const editorOn = EditorService.isEnabled();
       listWrap2.replaceChildren(...items.map((g) => savedRow(g, editorOn)));
     };
     renderSavedList();
-    wrap.appendChild(card2(sectionLabel("Saved gardens"), status2.el, listWrap2));
+    const saved = card("Saved gardens", { actions: [status2.el] });
+    saved.body.append(editorNote, listWrap2, dropZone2((files) => void importFiles(files)));
+    wrap.appendChild(saved.root);
     EditorService.onChange((enabled2) => {
       mode.modeSwitch.checked = enabled2;
       renderSavedList();
     });
     EditorService.onSavedGardensChange(renderSavedList);
   }
-  var STATUS_CLEAR_MS, TONE_COLOR, row2, fileSafeName;
+  var STATUS_CLEAR_MS, fileSafeName, savedOn;
   var init_menu10 = __esm({
     "src/features/editor/menu.ts"() {
       "use strict";
       init_download();
       init_button();
       init_card();
+      init_dom2();
       init_fields();
-      init_theme();
       init_toggles();
       init_toast();
       init_editor();
       init_gardenModel();
       init_plannedGarden();
       init_savedGardens();
+      init_styles2();
       STATUS_CLEAR_MS = 4e3;
-      TONE_COLOR = { ok: color.accent, warn: color.warn, err: color.danger };
-      row2 = (gap = "8px") => {
-        const el = document.createElement("div");
-        Object.assign(el.style, { display: "flex", alignItems: "center", gap });
-        return el;
-      };
       fileSafeName = (name) => String(name || "garden").replace(/[\\/:*?"<>|]+/g, "").trim() || "garden";
+      savedOn = (ms) => new Date(ms).toLocaleDateString(void 0, { day: "numeric", month: "short", year: "numeric" });
     }
   });
 
@@ -39457,6 +38985,67 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/features/keybinds/styles.ts
+  function ensureKeybindsStyles() {
+    if (injected9) return;
+    injected9 = true;
+    addStyle(KEYBINDS_CSS);
+  }
+  var KEYBINDS_CSS, injected9;
+  var init_styles13 = __esm({
+    "src/features/keybinds/styles.ts"() {
+      "use strict";
+      init_dom();
+      KEYBINDS_CSS = `
+/* The menu's panel. A definite height, not 100%: the HUD window scrolls itself
+   and has no fixed height, so 100% would collapse onto the content. */
+.qmm-views.qws-kb {
+  display: flex; flex-direction: column; gap: var(--qmm-space-lg);
+  width: 620px; max-width: 100%; height: min(70vh, 600px); overflow-y: auto; box-sizing: border-box;
+  --qmm-hotkey-w: 136px;
+}
+.qws-kb-intro { margin: 0 2px; font-size: var(--qmm-fs-sm); line-height: 1.45; color: var(--qmm-text-dim); }
+
+.qws-kb .qmm-card--plain { padding: var(--qmm-space-lg); }
+.qws-kb .qmm-collapse__body { gap: 2px; }
+
+.qws-kb-group {
+  margin: var(--qmm-space-md) 8px 2px; font-size: var(--qmm-fs-sm); font-weight: 800; color: var(--qmm-text-dim);
+}
+.qws-kb-group:first-child { margin-top: 0; }
+
+.qws-kb-row {
+  flex-wrap: wrap; row-gap: var(--qmm-space-sm); padding: 6px 8px;
+  background: transparent; transition: background 120ms ease;
+}
+.qws-kb-row:hover { background: var(--qmm-paper-deep); }
+/* Narrow windows put the key under the label rather than squeezing it. */
+.qws-kb-row .qmm-setting-row__text { flex: 1 1 140px; }
+.qws-kb-row .qmm-setting-row__controls { flex-wrap: nowrap; gap: var(--qmm-space-sm); margin-left: auto; }
+
+/* Reset and remove keep their slots when hidden, so every key lines up. */
+.qws-kb-acts { display: grid; grid-template-columns: 28px 28px; gap: 2px; }
+.qws-kb-act--reset { grid-column: 1; }
+.qws-kb-act--clear { grid-column: 2; }
+.qws-kb-act.qmm-btn--icon { width: 28px; height: 28px; border-radius: var(--qmm-radius-sm); color: var(--qmm-text-dim); }
+.qws-kb-act.qmm-btn--icon:hover { color: var(--qmm-text); }
+.qws-kb-act--clear.qmm-btn--icon:hover { color: var(--qmm-danger-ink); background: var(--qmm-danger-soft); }
+.qws-kb-act:disabled, .qws-kb-act.is-disabled { visibility: hidden; }
+
+.qws-kb-hold {
+  display: inline-flex; align-items: center; gap: var(--qmm-space-sm); align-self: flex-start; margin-top: 4px;
+  font-size: var(--qmm-fs-sm); font-weight: 700; color: var(--qmm-text-soft); cursor: pointer; user-select: none;
+}
+.qws-kb-hold .qmm-switch { width: 34px; height: 20px; border-radius: 10px; }
+.qws-kb-hold .qmm-switch::before { top: 3px; left: 3px; width: 14px; height: 14px; }
+.qws-kb-hold .qmm-switch:checked::before { transform: translateX(14px); }
+
+.qws-kb-empty { margin: 4px 8px 2px; font-size: var(--qmm-fs-sm); line-height: 1.45; color: var(--qmm-text-dim); }
+`;
+      injected9 = false;
+    }
+  });
+
   // src/features/keybinds/menu.ts
   function isSectionCollapsed2(sectionId) {
     return getAriesStorage().keybinds?.collapsed?.[sectionId] === true;
@@ -39477,77 +39066,102 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function holdControl(action2) {
     const hold = action2.holdDetection;
-    const wrap = h("div", "qmm-flex");
-    wrap.style.flexWrap = "nowrap";
-    const label2 = h("span", "qmm-setting-row__hint", hold.label);
-    label2.style.whiteSpace = "nowrap";
-    if (hold.description) label2.title = hold.description;
+    const wrap = h("label", "qws-kb-hold");
+    if (hold.description) wrap.title = hold.description;
     const toggle = switchInput(getKeybindHoldDetection(action2.id), (on) => setKeybindHoldDetection(action2.id, on));
-    toggle.title = hold.description || hold.label;
     whileConnected(wrap, (cb) => onKeybindHoldDetectionChange(action2.id, cb), (on) => toggle.setChecked(on));
-    wrap.append(label2, toggle);
+    wrap.append(toggle, h("span", void 0, hold.label));
     return wrap;
   }
   function keybindRow(action2) {
     const keyButton = hotkeyButton(getKeybind(action2.id), (hk) => setKeybind(action2.id, hk), {
-      emptyLabel: "Unassigned",
+      emptyLabel: "Not set",
       listeningLabel: "Press a key",
       clearable: true,
       allowModifierOnly: action2.allowModifierOnly
     });
-    keyButton.style.flexShrink = "0";
-    const { row: row5, controls } = settingRow(action2.label, action2.hint ?? null, keyButton, {
+    const { row: row2, controls } = settingRow(action2.label, action2.hint ?? null, keyButton, {
       icon: action2.icon,
       iconTag: "keybinds"
     });
-    if (action2.holdDetection) controls.insertBefore(holdControl(action2), keyButton);
+    row2.classList.add("qws-kb-row");
+    if (action2.holdDetection) row2.querySelector(".qmm-setting-row__text")?.appendChild(holdControl(action2));
     const defaultString = hotkeyToString(getDefaultKeybind(action2.id));
+    const resetButton = defaultString ? button("", {
+      icon: "\u21BA",
+      variant: "ghost",
+      size: "sm",
+      title: "Restore the default key",
+      ariaLabel: "Restore the default key",
+      onClick: () => resetKeybind(action2.id)
+    }) : null;
+    const clearButton = action2.sectionId === "game" && !action2.allowClear ? null : button("", {
+      icon: "\u2715",
+      variant: "ghost",
+      size: "sm",
+      title: "Remove this shortcut",
+      ariaLabel: "Remove this shortcut",
+      onClick: () => setKeybind(action2.id, null)
+    });
+    const acts = h("div", "qws-kb-acts");
+    if (resetButton) {
+      resetButton.classList.add("qws-kb-act", "qws-kb-act--reset");
+      acts.appendChild(resetButton);
+    }
+    if (clearButton) {
+      clearButton.classList.add("qws-kb-act", "qws-kb-act--clear");
+      acts.appendChild(clearButton);
+    }
+    controls.appendChild(acts);
     const refresh = (hk) => {
       keyButton.refreshHotkey(hk);
       clearButton?.setEnabled(hotkeyToString(hk).length > 0);
       resetButton?.setEnabled(hotkeyToString(hk) !== defaultString);
     };
-    const clearButton = action2.sectionId === "game" && !action2.allowClear ? null : button("\u2715", {
-      variant: "danger",
-      size: "sm",
-      title: "Remove this shortcut",
-      onClick: () => setKeybind(action2.id, null)
-    });
-    if (clearButton) controls.appendChild(clearButton);
-    const resetButton = defaultString ? button("\u27F2", { size: "sm", title: "Restore default shortcut", onClick: () => resetKeybind(action2.id) }) : null;
-    if (resetButton) controls.appendChild(resetButton);
     refresh(getKeybind(action2.id));
-    whileConnected(row5, (cb) => onKeybindChange(action2.id, cb), refresh);
-    return row5;
+    whileConnected(row2, (cb) => onKeybindChange(action2.id, cb), refresh);
+    return row2;
+  }
+  function gameGroupOf(action2) {
+    if (action2.id.startsWith("game.move-")) return "Movement";
+    if (action2.allowClear) return "Open directly";
+    return "Actions";
+  }
+  function sectionBody(section, body) {
+    let group2 = null;
+    for (const action2 of section.actions) {
+      if (section.id === "game") {
+        const next = gameGroupOf(action2);
+        if (next !== group2) body.appendChild(h("div", "qws-kb-group", next));
+        group2 = next;
+      }
+      body.appendChild(keybindRow(action2));
+    }
+    const fixedCount = SECTION_CONFIG.find((s) => s.id === section.id)?.actions.length ?? 0;
+    if (section.id === PET_SECTION_ID && section.actions.length <= fixedCount) {
+      body.appendChild(h("div", "qws-kb-empty", "No pet teams yet. Each team you make in the Pets menu gets its own row here."));
+    }
   }
   function renderKeybindsMenu(container) {
+    ensureKeybindsStyles();
     const ui = new Menu({ id: "keybinds", compact: true });
     ui.mount(container);
     const root4 = ui.root.querySelector(".qmm-views") ?? ui.root;
     root4.replaceChildren();
-    Object.assign(root4.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "12px",
-      width: "620px",
-      maxWidth: "100%",
-      // A definite height, not 100%: the HUD window scrolls itself and has no
-      // fixed height, so 100% would collapse onto the content.
-      height: "min(70vh, 600px)",
-      overflowY: "auto",
-      boxSizing: "border-box"
-    });
-    for (const section5 of getKeybindSections()) {
-      const card4 = collapsibleCard({
-        icon: section5.icon,
-        title: section5.title,
-        description: section5.description,
-        collapsed: isSectionCollapsed2(section5.id),
-        onToggle: (collapsed) => setSectionCollapsed2(section5.id, collapsed)
+    root4.classList.add("qws-kb");
+    root4.appendChild(
+      h("p", "qws-kb-intro", "Click a key, then press the new one. Esc cancels, Backspace or a right click removes it.")
+    );
+    for (const section of getKeybindSections()) {
+      const card3 = collapsibleCard({
+        title: section.title,
+        description: section.description,
+        collapsed: isSectionCollapsed2(section.id),
+        onToggle: (collapsed) => setSectionCollapsed2(section.id, collapsed)
       });
-      card4.root.dataset.section = section5.id;
-      for (const action2 of section5.actions) card4.body.appendChild(keybindRow(action2));
-      root4.appendChild(card4.root);
+      card3.root.dataset.section = section.id;
+      sectionBody(section, card3.body);
+      root4.appendChild(card3.root);
     }
   }
   var init_menu11 = __esm({
@@ -39561,7 +39175,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_layout();
       init_menu();
       init_toggles();
+      init_catalog();
       init_keybinds();
+      init_styles13();
     }
   });
 
@@ -39919,123 +39535,154 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/room/menu.ts
-  function icon(name, size = 13) {
-    const el = h("span");
-    el.style.display = "inline-flex";
-    el.innerHTML = svg(ICON_PATHS[name], size);
-    return el;
+  // src/features/room/styles.ts
+  function ensureRoomStyles() {
+    if (injected10) return;
+    injected10 = true;
+    addStyle(ROOM_CSS);
   }
-  function avatar(player2, size) {
-    const el = h("div");
-    Object.assign(el.style, {
-      width: `${size}px`,
-      height: `${size}px`,
-      borderRadius: "50%",
-      flexShrink: "0",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: `${Math.floor(size * 0.38)}px`,
-      fontWeight: "700",
-      color: color.accent,
-      overflow: "hidden",
-      border: `2px solid ${color.accentBorder}`
-    });
-    if (player2.discordAvatarUrl) {
-      Object.assign(el.style, {
-        backgroundImage: `url(${player2.discordAvatarUrl})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center"
-      });
-    } else {
-      el.style.background = color.accentHover;
-      el.textContent = (player2.name || "?").charAt(0).toUpperCase();
+  var ROOM_CSS, injected10;
+  var init_styles14 = __esm({
+    "src/features/room/styles.ts"() {
+      "use strict";
+      init_dom();
+      ROOM_CSS = `
+.qws-win .w-body.qws-room-body { padding: 0; overflow: hidden; }
+
+/* A width of its own, so the split inside can follow it with a container query. */
+.qws-room {
+  container-type: inline-size;
+  width: min(600px, calc((100vw - 32px) / var(--qmm-scale, 1)));
+  height: min(660px, calc(90vh / var(--qmm-scale, 1) - 62px));
+  background: var(--qmm-paper);
+}
+.qws-room-split { display: grid; grid-template-columns: 196px minmax(0, 1fr); height: 100%; min-height: 0; }
+
+.qws-room-side {
+  display: flex; flex-direction: column; gap: var(--qmm-space-md); min-height: 0;
+  padding: var(--qmm-space-xl) var(--qmm-space-lg); background: var(--qmm-paper-deep);
+}
+.qws-room-side__head { display: flex; align-items: center; justify-content: space-between; gap: var(--qmm-space-md); padding: 0 var(--qmm-space-xs); }
+.qws-room-side .qmm-vtabs { flex: 1 1 auto; min-height: 0; }
+.qws-room-side .qmm-vlist { padding: 0; background: transparent; border-radius: 0; }
+.qws-room-side .qmm-vlist__empty { padding: var(--qmm-space-md) var(--qmm-space-xs); opacity: 1; font-size: var(--qmm-fs-sm); color: var(--qmm-text-dim); }
+.qws-room-side .qmm-vtab { grid-template-columns: auto minmax(0, 1fr); gap: var(--qmm-space-md); padding: 7px 9px; }
+.qws-room-side .qmm-vtab:not(.active) { background: transparent; }
+.qws-room-side .qmm-vtab:not(.active):hover { background: var(--qmm-card); border-color: transparent; }
+
+.qws-room-entry { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.qws-room-entry__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--qmm-fs-md); font-weight: 800; }
+.qws-room-entry__status { font-size: var(--qmm-fs-xs); font-weight: 700; color: var(--qmm-text-dim); }
+.qmm-vtab.active .qws-room-entry__status { color: var(--qmm-sepia-ink); }
+
+.qws-room-avatar {
+  position: relative; flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+  width: var(--room-avatar, 30px); height: var(--room-avatar, 30px); box-sizing: border-box;
+  border: 2px solid var(--qmm-accent-border); border-radius: 50%;
+  background: var(--qmm-sepia-soft) center / cover no-repeat; color: var(--qmm-sepia-ink);
+  font-size: calc(var(--room-avatar, 30px) * .4); font-weight: 900; line-height: 1;
+}
+.qws-room-avatar.is-large { --room-avatar: 56px; border-width: 3px; }
+.qws-room-avatar__dot {
+  position: absolute; right: -2px; bottom: -2px; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--qmm-bark-dim); box-shadow: 0 0 0 2px var(--qmm-paper-deep);
+}
+.qws-room-avatar.is-large .qws-room-avatar__dot { right: 0; bottom: 0; width: 14px; height: 14px; box-shadow: 0 0 0 3px var(--qmm-card); }
+.qws-room-avatar__dot.is-online { background: var(--qmm-ok); }
+.qmm-vtab.active .qws-room-avatar__dot { box-shadow: 0 0 0 2px var(--qmm-sepia-soft); }
+
+.qws-room-detail { min-width: 0; min-height: 0; overflow-y: auto; padding: var(--qmm-space-xl); }
+.qws-room-player { display: flex; flex-direction: column; gap: var(--qmm-space-lg); }
+/* In a narrow detail pane the buttons drop under their label instead of squeezing it. */
+.qws-room-player .qmm-setting-row { flex-wrap: wrap; }
+.qws-room-player .qmm-setting-row__text { flex: 1 1 150px; }
+.qws-room-player .qmm-setting-row__controls { flex-wrap: nowrap; margin-left: auto; }
+
+.qmm-card.qws-room-hero { padding: var(--qmm-space-xl); gap: var(--qmm-space-xl); }
+.qws-room-hero__top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-lg); }
+.qws-room-hero__who { display: flex; flex-direction: column; align-items: flex-start; gap: var(--qmm-space-xs); flex: 1 1 120px; min-width: 0; }
+.qws-room-hero__name {
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 18px; font-weight: 900; color: var(--qmm-text);
+}
+.qws-room-hero .qmm-pill { padding: 2px 9px; font-size: var(--qmm-fs-xs); }
+
+.qws-room-values { display: grid; grid-template-columns: 1fr 1fr; gap: var(--qmm-space-md); }
+.qws-room-value {
+  display: flex; flex-direction: column; gap: 2px; min-width: 0;
+  padding: 10px 12px; border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+}
+.qws-room-value__label { font-size: var(--qmm-fs-xs); font-weight: 700; color: var(--qmm-text-dim); }
+.qws-room-value__amount { font-size: var(--qmm-fs-xl); font-weight: 900; color: var(--qmm-gold-ink); }
+
+.qws-room-inspect { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: var(--qmm-space-md); }
+.qws-room-inspect .qmm-btn { justify-content: flex-start; }
+
+.qws-room-icon { display: inline-flex; }
+.qws-room-icon svg { display: block; }
+
+/* Greyed out, but still clickable so the player learns why it does nothing. */
+.qmm-btn.qws-room-off { opacity: .5; cursor: not-allowed; }
+.qmm-btn.qws-room-off:hover { background: var(--qmm-sand); color: var(--qmm-text-soft); }
+
+.qws-room-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--qmm-space-md);
+  height: 100%; min-height: 200px; padding: var(--qmm-space-xl); text-align: center;
+  color: var(--qmm-text-dim); font-size: var(--qmm-fs-md);
+}
+.qws-room-empty .qws-room-icon { opacity: .45; }
+.qws-room-empty__title { font-size: var(--qmm-fs-lg); font-weight: 800; color: var(--qmm-text-soft); }
+
+/* Narrow windows: the players become a row of chips above the details. */
+@container (max-width: 480px) {
+  .qws-room-split { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .qws-room-side { padding: var(--qmm-space-lg); }
+  .qws-room-side .qmm-vlist.is-scroll { overflow-x: auto; overflow-y: hidden; }
+  .qws-room-side .qmm-vlist__items { flex-direction: row; }
+  .qws-room-side .qmm-vlist__items > li { flex: 0 0 auto; max-width: 150px; }
+  .qws-room-entry__status { display: none; }
+  .qws-room-detail { padding: var(--qmm-space-lg); }
+}
+`;
+      injected10 = false;
     }
-    return el;
+  });
+
+  // src/features/room/menu.ts
+  function icon(name, size = 14) {
+    const el4 = h("span", "qws-room-icon");
+    el4.innerHTML = svg(ICON_PATHS[name], size);
+    return el4;
   }
-  function onlineStatus(online, fontSize2) {
-    const wrap = h("div");
-    Object.assign(wrap.style, {
-      display: "flex",
-      alignItems: "center",
-      gap: "4px",
-      fontSize: `${fontSize2}px`,
-      color: online ? color.accent : color.textDim
-    });
-    const dot = h("span");
-    Object.assign(dot.style, {
-      width: "6px",
-      height: "6px",
-      borderRadius: "50%",
-      background: online ? color.accent : color.textDim,
-      flexShrink: "0"
-    });
-    wrap.append(dot, document.createTextNode(online ? "Online" : "Offline"));
-    return wrap;
-  }
-  function nameLine(text2, fontSize2, weight) {
-    const el = h("div", void 0, text2);
-    Object.assign(el.style, {
-      fontSize: `${fontSize2}px`,
-      fontWeight: String(weight),
-      color: color.text,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    });
-    return el;
-  }
-  function section4(title, ...content2) {
-    const el = h("div");
-    Object.assign(el.style, { display: "flex", flexDirection: "column", gap: "6px" });
-    el.append(sectionLabel(title), ...content2);
-    return el;
-  }
-  function row3(...children) {
-    const el = h("div");
-    Object.assign(el.style, { display: "flex", gap: "8px" });
-    for (const child of children) child.style.flex = "1";
-    el.append(...children);
-    return el;
+  function avatar(player2, large = false) {
+    const el4 = h("div", large ? "qws-room-avatar is-large" : "qws-room-avatar");
+    if (player2.discordAvatarUrl) el4.style.backgroundImage = `url(${player2.discordAvatarUrl})`;
+    else el4.textContent = (player2.name || "?").charAt(0).toUpperCase();
+    const dot = h("span", player2.isConnected ? "qws-room-avatar__dot is-online" : "qws-room-avatar__dot");
+    dot.title = player2.isConnected ? "Online" : "Offline";
+    el4.appendChild(dot);
+    return el4;
   }
   function unavailableButton(label2, iconName) {
     const btn = button(label2, {
       icon: icon(iconName),
+      size: "sm",
       tooltip: PLAYER_POSITION_UNAVAILABLE_HINT,
       onClick: () => void toastSimple("Unavailable", PLAYER_POSITION_UNAVAILABLE_HINT, "info")
     });
-    Object.assign(btn.style, { opacity: "0.45", filter: "grayscale(1)", cursor: "not-allowed" });
+    btn.classList.add("qws-room-off");
     return btn;
   }
-  function inspectButton(label2, iconName, onClick) {
-    const btn = button(label2, { icon: icon(iconName), onClick, lockWhilePending: true, fullWidth: true });
-    btn.style.justifyContent = "flex-start";
-    return btn;
+  function valueTile(label2) {
+    const tile = h("div", "qws-room-value");
+    const amount = h("div", "qws-room-value__amount", "\u2026");
+    tile.append(h("div", "qws-room-value__label", label2), amount);
+    return { tile, amount };
   }
-  function valueCard(label2) {
-    const card4 = plainCard();
-    Object.assign(card4.style, { flex: "1", gap: "4px", padding: "11px 14px" });
-    const value = h("div", void 0, "\u2026");
-    Object.assign(value.style, { fontSize: "15px", fontWeight: "700", color: color.goldInk });
-    card4.append(sectionLabel(label2), value);
-    return { card: card4, value };
-  }
-  function emptyDetail() {
-    const hint2 = h("div");
-    Object.assign(hint2.style, {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: "10px",
-      paddingTop: "60px",
-      color: color.textDim,
-      fontSize: "12px"
-    });
-    const glyph = icon("user", 28);
-    glyph.style.opacity = "0.35";
-    hint2.append(glyph, document.createTextNode("Select a player"));
-    return hint2;
+  function emptyState(iconName, title, hint3) {
+    const el4 = h("div", "qws-room-empty");
+    el4.append(icon(iconName, 32), h("div", "qws-room-empty__title", title), h("div", void 0, hint3));
+    return el4;
   }
   async function withWindowHidden(root4, open, modal) {
     const win = root4.closest(".qws-win");
@@ -40057,28 +39704,46 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!saved) await toastSimple("Save garden", "Save failed (no garden state).", "error");
     else await toastSimple("Save garden", `Saved "${saved.name}".`, "success");
   }
-  function renderPlayerDetail(root4, player2) {
-    const content2 = h("div");
-    Object.assign(content2.style, { display: "flex", flexDirection: "column", gap: "18px" });
-    const profile = plainCard();
-    Object.assign(profile.style, { flexDirection: "row", alignItems: "center", gap: "12px", padding: "14px" });
-    const info = h("div");
-    Object.assign(info.style, { display: "flex", flexDirection: "column", gap: "4px", minWidth: "0", flex: "1" });
-    info.append(nameLine(player2.name || player2.id, 15, 700), onlineStatus(player2.isConnected ?? false, 11));
-    profile.append(avatar(player2, 46), info);
-    const teleport = row3(
-      unavailableButton("To player", "teleport"),
-      // Teleporting to a garden does not need live positions: it uses the map's spawn tiles.
-      button("To garden", {
-        icon: icon("garden"),
-        variant: "primary",
-        lockWhilePending: true,
-        onClick: () => teleportToGarden(player2.id)
-      })
+  function renderHero(player2) {
+    const hero = plainCard();
+    hero.classList.add("qws-room-hero");
+    const who = h("div", "qws-room-hero__who");
+    who.append(
+      h("div", "qws-room-hero__name", player2.name || player2.id),
+      player2.isConnected ? pill("Online", "ok") : pill("Offline")
     );
-    const inspectGrid = h("div");
-    Object.assign(inspectGrid.style, { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" });
-    inspectGrid.append(
+    const visit = button("Visit garden", {
+      icon: icon("garden"),
+      variant: "primary",
+      lockWhilePending: true,
+      onClick: () => teleportToGarden(player2.id)
+    });
+    const top = h("div", "qws-room-hero__top");
+    top.append(avatar(player2, true), who, visit);
+    const inventory = valueTile("Inventory value");
+    const garden3 = valueTile("Garden value");
+    const values = h("div", "qws-room-values");
+    values.append(inventory.tile, garden3.tile);
+    void (async () => {
+      try {
+        inventory.amount.textContent = formatPrice(Math.round(await inventoryValue(player2.id))) ?? "-";
+      } catch {
+        inventory.amount.textContent = "-";
+      }
+      try {
+        garden3.amount.textContent = formatPrice(Math.round(await gardenValue(player2.id))) ?? "-";
+      } catch {
+        garden3.amount.textContent = "-";
+      }
+    })();
+    hero.append(top, values);
+    return hero;
+  }
+  function renderPlayerDetail(root4, player2) {
+    const inspectButton = (label2, iconName, onClick) => button(label2, { icon: icon(iconName), onClick, lockWhilePending: true, fullWidth: true });
+    const inspect = card("Look inside", { subtitle: "Opens in the game's own window." });
+    const grid = h("div", "qws-room-inspect");
+    grid.append(
       inspectButton(
         "Inventory",
         "inventory",
@@ -40096,77 +39761,66 @@ Restore figures are averages; unlucky streaks do worse.`;
         () => withWindowHidden(root4, () => openActivityLog(player2.id, player2.name), fakeActivityLog)
       )
     );
-    const inventory = valueCard("Inventory");
-    const garden3 = valueCard("Garden");
-    content2.append(
-      profile,
-      section4("Teleport", teleport),
-      section4("Follow", row3(unavailableButton("Follow player", "follow"))),
-      section4("Inspect", inspectGrid),
-      section4("Editor", inspectButton("Save player garden", "save", () => saveGardenWithEditor(player2))),
-      section4("Crop values", row3(inventory.card, garden3.card))
+    inspect.body.appendChild(grid);
+    const save3 = button("Save", {
+      icon: icon("save"),
+      size: "sm",
+      lockWhilePending: true,
+      onClick: () => saveGardenWithEditor(player2)
+    });
+    const travel = h("div", "qmm-flex");
+    travel.append(unavailableButton("To player", "teleport"), unavailableButton("Follow", "follow"));
+    const more = card("More");
+    more.body.append(
+      settingRow("Save garden", "Keeps a copy in the Editor.", save3).row,
+      settingRow("Go to player", "Paused while the game hides where players are.", travel).row
     );
-    void (async () => {
-      try {
-        inventory.value.textContent = formatPrice(Math.round(await inventoryValue(player2.id))) ?? "-";
-      } catch {
-        inventory.value.textContent = "-";
-      }
-      try {
-        garden3.value.textContent = formatPrice(Math.round(await gardenValue(player2.id))) ?? "-";
-      } catch {
-        garden3.value.textContent = "-";
-      }
-    })();
+    const content2 = h("div", "qws-room-player");
+    content2.append(renderHero(player2), inspect.root, more.root);
     return content2;
   }
-  function renderPlayerTab(player2, btn) {
-    const info = h("div");
-    Object.assign(info.style, { display: "flex", flexDirection: "column", gap: "2px", minWidth: "0" });
-    info.append(nameLine(player2.name || player2.id, 12, 600), onlineStatus(!!player2.isConnected, 10));
-    btn.append(avatar(player2, 28), info, h("span"));
+  function renderPlayerEntry(player2, btn) {
+    const text2 = h("div", "qws-room-entry");
+    text2.append(
+      h("div", "qws-room-entry__name", player2.name || player2.id),
+      h("div", "qws-room-entry__status", player2.isConnected ? "Online" : "Offline")
+    );
+    btn.title = player2.name || player2.id;
+    btn.append(avatar(player2), text2);
   }
   async function renderRoomMenu(root4) {
-    Object.assign(root4.style, { padding: "0", overflow: "hidden" });
-    const wrap = h("div");
-    Object.assign(wrap.style, {
-      display: "flex",
-      minHeight: "400px",
-      height: "100%",
-      background: "var(--qmm-gradient-panel)"
-    });
-    const listPane = h("div", "qmm-scroll");
-    Object.assign(listPane.style, {
-      width: "200px",
-      flexShrink: "0",
-      display: "flex",
-      flexDirection: "column",
-      gap: "6px",
-      overflowY: "auto",
-      padding: "14px 8px 14px 12px",
-      borderRight: `1px solid ${color.border}`
-    });
-    const detailPane = h("div", "qmm-scroll");
-    Object.assign(detailPane.style, { flex: "1", overflowY: "auto", padding: "14px 14px 14px 16px", minWidth: "0" });
-    wrap.append(listPane, detailPane);
+    ensureRoomStyles();
+    root4.classList.add("qws-room-body");
+    const side = h("div", "qws-room-side");
+    const detail = h("div", "qws-room-detail qmm-scroll");
+    const split = h("div", "qws-room-split");
+    split.append(side, detail);
+    const wrap = h("div", "qws-room");
+    wrap.appendChild(split);
     root4.appendChild(wrap);
     let players = [];
     const playerById = (id) => id ? players.find((p) => p.id === id) ?? null : null;
     const showDetail = (id) => {
       const player2 = playerById(id);
-      detailPane.replaceChildren(player2 ? renderPlayerDetail(root4, player2) : emptyDetail());
+      detail.replaceChildren(
+        player2 ? renderPlayerDetail(root4, player2) : players.length ? emptyState("user", "No player selected", "Pick someone in the list.") : emptyState("users", "Nobody here yet", "Players show up here as they join the room.")
+      );
     };
-    const count = sectionLabel("0 players");
+    const count = h("span", "qmm-tag", "0");
+    const head = h("div", "qws-room-side__head");
+    head.append(sectionLabel("Players"), count);
     const tabs = new VTabs({
-      emptyText: "No players in room",
+      emptyText: "No one yet.",
       fillAvailableHeight: true,
       onSelect: (id) => showDetail(id),
       renderItem: (item, btn) => {
         const player2 = playerById(item.id);
-        if (player2) renderPlayerTab(player2, btn);
+        if (player2) renderPlayerEntry(player2, btn);
       }
     });
-    listPane.append(count, tabs.root);
+    side.append(head, tabs.root);
+    tabs.setItems([]);
+    showDetail(null);
     let lastSignature = "";
     async function refresh() {
       const next = await listPlayers();
@@ -40174,7 +39828,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (signature === lastSignature) return;
       lastSignature = signature;
       players = next;
-      count.textContent = `${players.length} player${players.length !== 1 ? "s" : ""}`;
+      count.textContent = String(players.length);
+      count.title = `${players.length} player${players.length !== 1 ? "s" : ""} in this room`;
       tabs.setItems(players.map((p) => ({ id: p.id, title: p.name || p.id })));
       const selected = tabs.getSelected();
       if (!selected && players.length) tabs.select(players[0].id);
@@ -40191,15 +39846,17 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_format();
       init_fakeModal();
       init_pageContext();
+      init_badges();
       init_button();
       init_card();
       init_dom2();
-      init_theme();
+      init_layout();
       init_vtabs();
       init_players();
       init_inspect();
+      init_styles14();
       PLAYER_POSITION_UNAVAILABLE_HINT = "Temporarily unavailable: the game no longer exposes player positions.";
-      svg = (paths, size = 13) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+      svg = (paths, size) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
       ICON_PATHS = {
         teleport: `<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/>`,
         garden: `<polygon points="12 3 20 15 4 15"/><polygon points="12 9 21 21 3 21"/><rect x="10" y="21" width="4" height="3" rx="1"/>`,
@@ -40209,6 +39866,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         actLog: `<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>`,
         save: `<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13"/><polyline points="7 3 7 8 15 8"/>`,
         user: `<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>`,
+        users: `<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>`,
         follow: `<path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>`
       };
     }
@@ -40284,9 +39942,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
     }
     if (sourceOf(texture) === source) return true;
-    for (const field2 of ["_source", "baseTexture", "_baseTexture"]) {
+    for (const field3 of ["_source", "baseTexture", "_baseTexture"]) {
       try {
-        texture[field2] = source;
+        texture[field3] = source;
         if (sourceOf(texture) === source) return true;
       } catch {
       }
@@ -40833,7 +40491,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/skins/index.ts
   function getSkinsSnapshot() {
-    return snapshot;
+    return snapshot2;
   }
   function notifyChanged() {
     skinsChanged.emit();
@@ -40842,10 +40500,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     return skinsChanged.on(listener);
   }
   function areSkinsEnabled() {
-    return snapshot.enabled;
+    return snapshot2.enabled;
   }
   async function setSkinsEnabled(enabled2) {
-    snapshot.enabled = enabled2;
+    snapshot2.enabled = enabled2;
     updateAriesStorage((current3) => {
       current3.skins = { ...current3.skins || {}, enabled: enabled2 };
     });
@@ -40853,7 +40511,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function reapply() {
     applyChain = applyChain.then(() => runApply()).catch((error) => {
-      snapshot.error = error instanceof Error ? error.message : String(error);
+      snapshot2.error = error instanceof Error ? error.message : String(error);
       notifyChanged();
     });
     return applyChain;
@@ -40864,21 +40522,21 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function runApply() {
     const targets = await loadTargets();
-    snapshot.results = /* @__PURE__ */ new Map();
+    snapshot2.results = /* @__PURE__ */ new Map();
     skinCanvases.clear();
     retriesLeft = MAX_RETRY_PASSES;
     revertAll();
-    if (!snapshot.enabled) {
-      snapshot.rebaked = rebakeAll();
-      snapshot.error = null;
+    if (!snapshot2.enabled) {
+      snapshot2.rebaked = rebakeAll();
+      snapshot2.error = null;
       notifyChanged();
       return;
     }
     const index = sharedStageIndex();
-    for (const entry of snapshot.entries.values()) {
+    for (const entry of snapshot2.entries.values()) {
       const target = targets.get(entry.frameKey);
       if (!target || !target.skinnable) {
-        snapshot.results.set(entry.frameKey, {
+        snapshot2.results.set(entry.frameKey, {
           frameKey: entry.frameKey,
           applied: false,
           error: target?.blockedReason ?? "Frame not found in the game atlases"
@@ -40889,26 +40547,26 @@ Restore figures are averages; unlucky streaks do worse.`;
         const canvas = await buildSkinCanvas(target, entry.blob);
         skinCanvases.set(entry.frameKey, canvas);
         const ok = applySkinTexture(target, canvas, index);
-        snapshot.results.set(entry.frameKey, {
+        snapshot2.results.set(entry.frameKey, {
           frameKey: entry.frameKey,
           applied: ok,
           error: ok ? void 0 : "Waiting for the game to draw this object"
         });
       } catch (error) {
-        snapshot.results.set(entry.frameKey, {
+        snapshot2.results.set(entry.frameKey, {
           frameKey: entry.frameKey,
           applied: false,
           error: error instanceof Error ? error.message : String(error)
         });
       }
     }
-    snapshot.rebaked = rebakeAll();
-    snapshot.error = null;
+    snapshot2.rebaked = rebakeAll();
+    snapshot2.error = null;
     notifyChanged();
   }
   async function retryPending() {
-    if (!snapshot.enabled || retriesLeft <= 0) return;
-    const pending3 = [...snapshot.results.values()].filter((result) => !result.applied);
+    if (!snapshot2.enabled || retriesLeft <= 0) return;
+    const pending3 = [...snapshot2.results.values()].filter((result) => !result.applied);
     if (!pending3.length) return;
     retriesLeft -= 1;
     const targets = await loadTargets();
@@ -40919,11 +40577,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       const target = targets.get(result.frameKey);
       if (!canvas || !target) continue;
       if (!applySkinTexture(target, canvas, index)) continue;
-      snapshot.results.set(result.frameKey, { frameKey: result.frameKey, applied: true });
+      snapshot2.results.set(result.frameKey, { frameKey: result.frameKey, applied: true });
       changed6 = true;
     }
     if (!changed6) return;
-    snapshot.rebaked = rebakeAll();
+    snapshot2.rebaked = rebakeAll();
     notifyChanged();
   }
   async function importSkin(frameKey, file) {
@@ -40942,17 +40600,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     bitmap.close?.();
     const entry = await putSkin(frameKey, file);
-    snapshot.entries.set(frameKey, entry);
+    snapshot2.entries.set(frameKey, entry);
     await reapply();
   }
   async function removeSkin(frameKey) {
     await deleteSkin(frameKey);
-    snapshot.entries.delete(frameKey);
+    snapshot2.entries.delete(frameKey);
     await reapply();
   }
   async function removeAllSkins() {
     await clearSkins();
-    snapshot.entries.clear();
+    snapshot2.entries.clear();
     await reapply();
   }
   function startTimers() {
@@ -40962,7 +40620,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         const current3 = getSpriteState().renderer;
         if (!current3 || current3 === lastRenderer) return;
         lastRenderer = current3;
-        if (!snapshot.entries.size) return;
+        if (!snapshot2.entries.size) return;
         console.info("[MG Skins] renderer recreated, re-applying skins");
         forgetAppliedState();
         void reapply();
@@ -40979,24 +40637,24 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function initSkins() {
     if (started4) return;
     started4 = true;
-    snapshot.enabled = getAriesStorage().skins?.enabled !== false;
+    snapshot2.enabled = getAriesStorage().skins?.enabled !== false;
     installSkinsDebug();
     try {
       const targets = await loadTargets();
-      snapshot.objects = groupTargets(targets);
+      snapshot2.objects = groupTargets(targets);
       const rows = await listSkins();
-      snapshot.entries = new Map(rows.map((row5) => [row5.frameKey, row5]));
-      snapshot.ready = true;
+      snapshot2.entries = new Map(rows.map((row2) => [row2.frameKey, row2]));
+      snapshot2.ready = true;
       notifyChanged();
       startTimers();
-      if (snapshot.entries.size) await reapply();
+      if (snapshot2.entries.size) await reapply();
     } catch (error) {
-      snapshot.error = error instanceof Error ? error.message : String(error);
-      snapshot.ready = true;
+      snapshot2.error = error instanceof Error ? error.message : String(error);
+      snapshot2.ready = true;
       notifyChanged();
     }
   }
-  var RENDERER_WATCH_MS, RETRY_PASS_MS, MAX_RETRY_PASSES, snapshot, skinCanvases, started4, watchId, retryId, lastRenderer, applyChain, retriesLeft, skinsChanged;
+  var RENDERER_WATCH_MS, RETRY_PASS_MS, MAX_RETRY_PASSES, snapshot2, skinCanvases, started4, watchId, retryId, lastRenderer, applyChain, retriesLeft, skinsChanged;
   var init_skins = __esm({
     "src/features/skins/index.ts"() {
       "use strict";
@@ -41013,7 +40671,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       RENDERER_WATCH_MS = 2e3;
       RETRY_PASS_MS = 5e3;
       MAX_RETRY_PASSES = 12;
-      snapshot = {
+      snapshot2 = {
         ready: false,
         enabled: true,
         entries: /* @__PURE__ */ new Map(),
@@ -41107,68 +40765,95 @@ Restore figures are averages; unlucky streaks do worse.`;
       input.click();
     });
   }
-  function thumbBox(empty = false) {
-    const el = h("div", "qws-skins-thumb");
-    if (empty) el.appendChild(h("span", "qws-skins-thumb__plus", "+"));
-    return el;
+  function emptyState2(title, hint3) {
+    const el4 = h("div", "qws-skins__empty");
+    el4.appendChild(h("div", "qws-skins__empty-title", title));
+    if (hint3) el4.appendChild(h("div", "qws-skins__empty-hint", hint3));
+    return el4;
   }
   function buildSlot(target, index, deps) {
-    const { entry, result, onError, onChanged } = deps;
-    const row5 = h("div", "qws-skins-slot");
-    const before = thumbBox();
-    mountThumb(before, target, null, SLOT_THUMB_PX);
-    const after = thumbBox(!entry);
-    if (entry) mountThumb(after, target, entry.blob, SLOT_THUMB_PX);
+    const { entry, result, showName, onError, onChanged } = deps;
+    const row2 = h("div", "qws-skins-slot");
+    const upload = async () => {
+      const file = await pickImageFile();
+      if (!file) return;
+      try {
+        await importSkin(target.frameKey, file);
+        onChanged();
+      } catch (error) {
+        onError(errorText3(error));
+      }
+    };
     const head = h("div", "qws-skins-slot__head");
-    const name = h("div", "qws-skins-slot__name", target.frameKey.split("/").pop() || `Stage ${index + 1}`);
-    name.title = target.frameKey;
-    head.appendChild(name);
+    const text2 = h("div", "qws-skins-slot__text");
+    if (showName) {
+      const name = h("div", "qws-skins-slot__name", target.frameKey.split("/").pop() || `Stage ${index + 1}`);
+      name.title = target.frameKey;
+      text2.appendChild(name);
+    }
+    const dims = h("div", "qws-skins-slot__dims", `Best size ${target.logicalSize.w}\xD7${target.logicalSize.h} px`);
+    dims.title = "Ideal image size for this slot";
+    text2.appendChild(dims);
+    head.appendChild(text2);
     if (entry) {
       const applied2 = result?.applied !== false;
       const status2 = badge(applied2 ? "Active" : "Waiting", applied2 ? "ok" : "warn");
       if (result?.error) status2.title = result.error;
       head.appendChild(status2);
     }
-    const dims = h("div", "qws-skins-slot__dims", `${target.logicalSize.w}\xD7${target.logicalSize.h}`);
-    dims.title = "Ideal image size for this slot";
+    const before = h("div", "qws-skins-thumb");
+    before.title = "Original";
+    mountThumb(before, target, null, SLOT_THUMB_PX);
+    let after;
+    if (target.skinnable) {
+      const pick = h("button", entry ? "qws-skins-thumb is-filled" : "qws-skins-thumb");
+      pick.type = "button";
+      pick.title = entry ? "Replace this image" : "Upload an image";
+      pick.setAttribute("aria-label", pick.title);
+      pick.addEventListener("click", async () => {
+        pick.classList.add("is-busy");
+        try {
+          await upload();
+        } finally {
+          pick.classList.remove("is-busy");
+        }
+      });
+      after = pick;
+    } else {
+      after = h("div", "qws-skins-thumb");
+    }
+    if (entry) mountThumb(after, target, entry.blob, SLOT_THUMB_PX);
+    else if (target.skinnable) after.appendChild(h("span", "qws-skins-thumb__plus", "+"));
     const actions2 = h("div", "qws-skins-slot__actions");
     if (!target.skinnable) {
       actions2.appendChild(badge(target.blockedReason || "Unavailable", "warn"));
     } else {
       actions2.appendChild(
-        button(entry ? "Replace" : "Set", {
+        button(entry ? "Replace" : "Upload", {
           variant: entry ? "default" : "primary",
           size: "sm",
           lockWhilePending: true,
+          onClick: upload
+        })
+      );
+      if (entry) {
+        const remove = button("\u2715", {
+          variant: "ghost",
+          size: "sm",
+          title: "Remove this skin",
+          ariaLabel: "Remove this skin",
+          lockWhilePending: true,
           onClick: async () => {
-            const file = await pickImageFile();
-            if (!file) return;
             try {
-              await importSkin(target.frameKey, file);
+              await removeSkin(target.frameKey);
               onChanged();
             } catch (error) {
               onError(errorText3(error));
             }
           }
-        })
-      );
-      if (entry) {
-        actions2.appendChild(
-          button("\u2715", {
-            variant: "danger",
-            size: "sm",
-            title: "Remove this skin",
-            lockWhilePending: true,
-            onClick: async () => {
-              try {
-                await removeSkin(target.frameKey);
-                onChanged();
-              } catch (error) {
-                onError(errorText3(error));
-              }
-            }
-          })
-        );
+        });
+        remove.classList.add("qws-skins-slot__remove");
+        actions2.appendChild(remove);
       }
     }
     const body = h("div", "qws-skins-slot__body");
@@ -41176,35 +40861,41 @@ Restore figures are averages; unlucky streaks do worse.`;
       before,
       h("span", "qws-skins-slot__arrow", "\u2192"),
       after,
-      dims,
       h("div", "qws-skins-slot__spacer"),
       actions2
     );
-    row5.append(head, body);
-    return row5;
+    row2.append(head, body);
+    return row2;
   }
   function buildDetail(options2) {
     const { object, entries, results, onError, onChanged } = options2;
     const host = h("div", "qws-skins-detail");
     if (!object) {
-      host.appendChild(h("div", "qws-skins-detail__empty", "Pick a sprite"));
+      host.appendChild(emptyState2("Pick a sprite", "Choose one on the left to give it your own image."));
       return host;
     }
-    host.appendChild(sectionLabel(object.category));
+    const head = h("div", "qws-skins-detail__head");
+    const title = h("div", "qws-skins-detail__title", object.label);
+    title.title = object.key;
+    const count = object.slots.length;
+    head.append(
+      sectionLabel(object.category),
+      title,
+      h("div", "qws-skins-detail__sub", count === 1 ? "One image" : `${count} images, one per stage or frame`)
+    );
+    host.appendChild(head);
     if (object.category === "tile") {
       host.appendChild(
         h("div", "qws-skins-detail__notice", "Ground tiles are baked into the map and cannot be skinned.")
       );
     }
-    const title = h("div", "qws-skins-detail__title", object.label);
-    title.title = object.key;
-    host.appendChild(title);
     const list = h("div", "qws-pnl-scroll qws-skins-detail__list");
     object.slots.forEach((target, index) => {
       list.appendChild(
         buildSlot(target, index, {
           entry: entries.get(target.frameKey),
           result: results.get(target.frameKey),
+          showName: count > 1,
           onError,
           onChanged
         })
@@ -41214,7 +40905,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return host;
   }
   var SLOT_THUMB_PX, errorText3;
-  var init_detail = __esm({
+  var init_detail2 = __esm({
     "src/features/skins/detail.ts"() {
       "use strict";
       init_badges();
@@ -41223,78 +40914,140 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_dom2();
       init_skins();
       init_thumb();
-      SLOT_THUMB_PX = 46;
+      SLOT_THUMB_PX = 44;
       errorText3 = (error) => error instanceof Error ? error.message : String(error);
     }
   });
 
   // src/features/skins/styles.ts
   function ensureSkinsStyles() {
-    if (injected5) return;
-    injected5 = true;
+    if (injected11) return;
+    injected11 = true;
     addStyle(SKINS_CSS);
   }
-  var SKINS_CSS, injected5;
-  var init_styles7 = __esm({
+  var SKINS_CSS, injected11;
+  var init_styles15 = __esm({
     "src/features/skins/styles.ts"() {
       "use strict";
       init_dom();
       SKINS_CSS = `
 .qws-skins {
-  display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 12px; padding: 14px;
-  width: 820px; max-width: 100%; height: min(72vh, 620px); overflow: hidden; box-sizing: border-box;
-  background: var(--qmm-gradient-panel);
+  container: qws-skins / inline-size;
+  display: flex; flex-direction: column; gap: var(--qmm-space-lg);
+  width: min(820px, calc((100vw - 48px) / var(--qmm-scale, 1)));
+  height: min(620px, calc(72vh / var(--qmm-scale, 1)));
+  padding: var(--qmm-space-xl); box-sizing: border-box; overflow: hidden;
+  background: var(--qmm-paper);
 }
-.qws-skins > .qmm-card { overflow: hidden; }
-.qws-skins__header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.qws-skins__enable { display: flex; align-items: center; gap: 8px; }
-.qws-skins__filters { display: flex; gap: 8px; }
-.qws-skins__category { flex: 0 0 auto; max-width: 150px; }
-.qws-skins__search { flex: 1 1 auto; min-width: 0; }
+.qws-skins > .qmm-setting-row { flex: 0 0 auto; }
+.qws-skins .qmm-error { padding: 8px 10px; font-size: var(--qmm-fs-sm); }
+
+.qws-skins__notice {
+  display: flex; flex-direction: column; gap: 2px; flex: 0 0 auto; padding: 8px 12px;
+  border-radius: var(--qmm-radius-md); background: var(--qmm-warn-soft); color: var(--qmm-warn-ink);
+  font-size: var(--qmm-fs-sm); font-weight: 700; line-height: 1.4;
+}
+
+.qws-skins__panes {
+  display: grid; grid-template-columns: minmax(0, 1fr) 316px; gap: var(--qmm-space-lg);
+  flex: 1 1 auto; min-height: 0;
+}
+@container qws-skins (max-width: 600px) {
+  .qws-skins__panes { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 3fr) minmax(0, 2fr); }
+}
+.qws-skins__pane { overflow: hidden; padding: var(--qmm-space-lg); gap: var(--qmm-space-lg); }
+@container qws-skins (max-width: 360px) {
+  .qws-skins__pane { padding: var(--qmm-space-md); gap: var(--qmm-space-md); }
+}
+
+.qws-skins__filters { display: flex; flex-wrap: wrap; gap: var(--qmm-space-md); flex: 0 0 auto; }
+.qws-skins__search { flex: 1 1 100px; min-width: 0; }
+.qws-skins__category { flex: 0 1 120px; min-width: 0; }
+
 .qws-skins__grid {
-  display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-  overflow-y: auto; min-height: 0; flex: 1 1 auto; align-content: start; padding-right: 2px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: var(--qmm-space-md);
+  align-content: start; flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 2px 4px 2px 2px;
 }
-.qws-skins__empty { grid-column: 1 / -1; padding: 24px 0; text-align: center; font-size: 12px; color: var(--qmm-text-dim); }
-.qws-skins__status { min-height: 15px; font-size: 11px; color: var(--qmm-text-dim); }
-.qws-skins__status.is-warn { color: var(--qmm-warn); }
-.qws-skins__error { font-size: 11px; color: var(--qmm-danger); }
-.qws-skins__error[hidden] { display: none; }
-.qws-skins__detail-host { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
-
-.qws-skins-detail { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
-.qws-skins-detail__empty { padding: 28px 0; text-align: center; font-size: 12px; color: var(--qmm-text-dim); }
-.qws-skins-detail__notice {
-  padding: 8px; border-radius: 9px; font-size: 11px; line-height: 1.45;
-  color: var(--qmm-warn); background: var(--qmm-warn-soft); border: 1px solid var(--qmm-warn-border);
+.qws-skins__grid .qws-pnl-cell {
+  flex-direction: column; gap: var(--qmm-space-xs); aspect-ratio: auto; min-width: 0;
+  padding: var(--qmm-space-md) var(--qmm-space-xs) var(--qmm-space-sm);
+  border: 2px solid transparent; border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+  font: inherit; color: inherit;
 }
-.qws-skins-detail__title {
-  font-size: 14px; font-weight: 600; color: var(--qmm-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.qws-skins-detail__list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; min-height: 0; }
-
-.qws-skins-slot {
-  display: flex; flex-direction: column; gap: 8px; padding: 8px;
-  border-radius: 10px; background: var(--qmm-card-bg); border: 1px solid var(--qmm-border);
-}
-.qws-skins-slot__head { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.qws-skins-slot__name {
-  flex: 1 1 auto; min-width: 0; font-size: 11px; color: var(--qmm-text);
+.qws-skins__grid .qws-pnl-cell:hover { border-color: var(--qmm-border-hover); }
+.qws-skins__grid .qws-pnl-cell:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 1px; }
+.qws-skins__grid .qws-pnl-cell.is-active { border-color: var(--qmm-sepia); background: var(--qmm-sepia-soft); }
+.qws-skins__grid .qws-pnl-cell.is-skinned::after { width: 8px; height: 8px; }
+.qws-skins-cell__art { display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; }
+.qws-skins-cell__name {
+  max-width: 100%; font-size: var(--qmm-fs-xs); font-weight: 700; color: var(--qmm-text-soft);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.qws-skins-slot__head .qmm-badge { align-self: center; flex: 0 0 auto; }
-.qws-skins-slot__body { display: flex; align-items: center; gap: 8px; }
-.qws-skins-slot__arrow { font-size: 12px; color: var(--qmm-text-dim); }
-.qws-skins-slot__dims { font-size: 10px; color: var(--qmm-text-dim); white-space: nowrap; }
-.qws-skins-slot__spacer { flex: 1 1 auto; }
-.qws-skins-slot__actions { display: flex; flex: 0 0 auto; gap: 5px; }
-.qws-skins-thumb {
-  display: flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 54px; height: 54px;
-  border-radius: 9px; background: var(--qmm-field-bg); border: 1px solid var(--qmm-border);
+.qws-skins__grid .is-active .qws-skins-cell__name { color: var(--qmm-sepia-ink); }
+
+.qws-skins__empty {
+  display: flex; flex-direction: column; align-items: center; gap: var(--qmm-space-xs);
+  padding: 32px 12px; text-align: center;
 }
-.qws-skins-thumb__plus { font-size: 18px; color: var(--qmm-text-dim); }
+.qws-skins__grid > .qws-skins__empty { grid-column: 1 / -1; }
+.qws-skins__empty-title { font-size: var(--qmm-fs-lg); font-weight: 800; color: var(--qmm-text-soft); }
+.qws-skins__empty-hint { font-size: var(--qmm-fs-sm); line-height: 1.45; color: var(--qmm-text-dim); }
+
+.qws-skins__foot {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--qmm-space-md);
+  flex: 0 0 auto; min-height: 30px; font-size: var(--qmm-fs-xs); font-weight: 700; color: var(--qmm-text-dim);
+}
+
+.qws-skins-detail { display: flex; flex-direction: column; gap: var(--qmm-space-lg); flex: 1 1 auto; min-height: 0; }
+.qws-skins-detail > .qws-skins__empty { flex: 1 1 auto; justify-content: center; }
+.qws-skins-detail__head { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.qws-skins-detail__title {
+  font-size: var(--qmm-fs-xl); font-weight: 900; color: var(--qmm-text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.qws-skins-detail__sub { font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); }
+.qws-skins-detail__notice {
+  padding: 8px 10px; border-radius: var(--qmm-radius-md); font-size: var(--qmm-fs-sm); line-height: 1.45;
+  color: var(--qmm-warn-ink); background: var(--qmm-warn-soft);
+}
+.qws-skins-detail__list {
+  display: flex; flex-direction: column; gap: var(--qmm-space-md); overflow-y: auto; min-height: 0; padding-right: 2px;
+}
+
+.qws-skins-slot {
+  display: flex; flex-direction: column; gap: var(--qmm-space-md); flex: 0 0 auto; padding: var(--qmm-space-md) 10px;
+  border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+}
+.qws-skins-slot__head { display: flex; align-items: center; gap: var(--qmm-space-md); min-width: 0; }
+.qws-skins-slot__text { display: flex; flex-direction: column; gap: 1px; flex: 1 1 auto; min-width: 0; }
+.qws-skins-slot__name {
+  font-size: var(--qmm-fs-sm); font-weight: 800; color: var(--qmm-text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.qws-skins-slot__dims { font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); white-space: nowrap; }
+.qws-skins-slot__head .qmm-badge { align-self: center; flex: 0 0 auto; }
+.qws-skins-slot__body { display: flex; align-items: center; gap: var(--qmm-space-sm); }
+.qws-skins-slot__arrow { font-size: var(--qmm-fs-md); color: var(--qmm-text-dim); }
+.qws-skins-slot__spacer { flex: 1 1 auto; }
+.qws-skins-slot__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--qmm-space-xs); flex: 0 1 auto; }
+.qws-skins-slot__remove { width: 30px; padding: 7px 0; }
+.qws-skins-slot__remove:hover { background: var(--qmm-danger-soft); color: var(--qmm-danger-ink); }
+
+.qws-skins-thumb {
+  display: flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 50px; height: 50px;
+  box-sizing: border-box; border-radius: var(--qmm-radius-sm); background: var(--qmm-card);
+}
+button.qws-skins-thumb {
+  padding: 0; border: 2px dashed var(--qmm-border-hover); font: inherit; color: var(--qmm-text-dim); cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+}
+button.qws-skins-thumb.is-filled { border-style: solid; border-color: transparent; }
+button.qws-skins-thumb:hover { border-color: var(--qmm-sepia); color: var(--qmm-sepia-ink); background: var(--qmm-sepia-soft); }
+button.qws-skins-thumb:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 1px; }
+button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
+.qws-skins-thumb__plus { font-size: 20px; font-weight: 800; line-height: 1; }
 `;
-      injected5 = false;
+      injected11 = false;
     }
   });
 
@@ -41312,22 +41065,37 @@ Restore figures are averages; unlucky streaks do worse.`;
     container.style.padding = "0";
     container.style.overflow = "hidden";
     const root4 = h("div", "qws-skins");
-    const browser = plainCard();
-    const detail = plainCard();
-    root4.append(browser, detail);
     container.replaceChildren(root4);
     const enableToggle = switchInput(areSkinsEnabled(), (on) => void setSkinsEnabled(on));
-    enableToggle.title = "Enable skins";
-    const enableWrap = h("div", "qws-skins__enable");
-    enableWrap.append(sectionLabel("Sprites"), enableToggle);
+    enableToggle.setAttribute("aria-label", "Show skins");
+    const enableRow = settingRow("Show skins", "Your images in place of the game's sprites.", enableToggle).row;
+    const notice = h("div", "qws-skins__notice");
+    notice.hidden = true;
+    const browser = plainCard();
+    browser.classList.add("qws-skins__pane");
+    const detail = plainCard();
+    detail.classList.add("qws-skins__pane");
+    const panes = h("div", "qws-skins__panes");
+    panes.append(browser, detail);
+    root4.append(enableRow, notice, panes);
+    const search3 = textInput("Search sprites", "", { small: true });
+    search3.type = "search";
+    search3.classList.add("qws-skins__search");
+    const categorySelect = select2({ small: true });
+    categorySelect.classList.add("qws-skins__category");
+    categorySelect.setAttribute("aria-label", "Sprite type");
+    const filters = h("div", "qws-skins__filters");
+    filters.append(search3, categorySelect);
+    const grid = h("div", "qws-pnl-scroll qws-skins__grid");
     let confirmTimer = null;
-    const clearBtn = button("Clear all", {
-      variant: "danger",
+    const clearBtn = button(CLEAR_LABEL, {
+      variant: "ghost",
       size: "sm",
       lockWhilePending: true,
       onClick: async () => {
         if (clearBtn.dataset.armed !== "yes") {
           clearBtn.dataset.armed = "yes";
+          clearBtn.classList.add("qmm-btn--danger");
           clearBtn.textContent = "Delete every skin?";
           confirmTimer = window.setTimeout(resetClear, CONFIRM_RESET_MS);
           return;
@@ -41341,96 +41109,90 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (confirmTimer !== null) window.clearTimeout(confirmTimer);
       confirmTimer = null;
       clearBtn.dataset.armed = "";
-      clearBtn.textContent = "Clear all";
+      clearBtn.classList.remove("qmm-btn--danger");
+      clearBtn.textContent = CLEAR_LABEL;
     }
-    const header = h("div", "qws-skins__header");
-    header.append(enableWrap, clearBtn);
-    const categorySelect = select2({ small: true });
-    categorySelect.classList.add("qws-skins__category");
-    const search3 = textInput("Search", "", { small: true });
-    search3.type = "search";
-    search3.classList.add("qws-skins__search");
-    const filters = h("div", "qws-skins__filters");
-    filters.append(categorySelect, search3);
-    const grid = h("div", "qws-pnl-scroll qws-skins__grid");
-    const status2 = h("div", "qws-skins__status");
-    browser.append(header, filters, grid, status2);
-    const errorEl = h("div", "qws-skins__error");
-    errorEl.hidden = true;
-    const detailHost = h("div", "qws-skins__detail-host");
-    detail.append(errorEl, detailHost);
-    const showError = (message2) => {
-      errorEl.textContent = message2;
-      errorEl.hidden = false;
-    };
+    const countEl = h("div");
+    const foot = h("div", "qws-skins__foot");
+    foot.append(countEl, clearBtn);
+    browser.append(filters, grid, foot);
+    const error = errorBar();
+    let detailEl = h("div", "qws-skins-detail");
+    detail.append(error.el, detailEl);
     const renderCategories = (objects) => {
       const previous = menuState.category;
       const categories = [...new Set(objects.map((o) => o.category))].sort();
-      categorySelect.replaceChildren();
-      const all = document.createElement("option");
-      all.value = ALL_CATEGORIES;
-      all.textContent = "All";
-      categorySelect.appendChild(all);
+      categorySelect.replaceChildren(new Option("All types", ALL_CATEGORIES));
       for (const category of categories) {
-        const option2 = document.createElement("option");
-        option2.value = category;
-        option2.textContent = category;
-        categorySelect.appendChild(option2);
+        categorySelect.appendChild(new Option(capitalize2(category), category));
       }
       categorySelect.value = categories.includes(previous) ? previous : ALL_CATEGORIES;
       menuState.category = categorySelect.value;
     };
     const renderDetail = () => {
-      const snapshot2 = getSkinsSnapshot();
-      detailHost.textContent = "";
-      detailHost.appendChild(
-        buildDetail({
-          object: snapshot2.objects.find((o) => o.key === menuState.selectedKey) ?? null,
-          entries: snapshot2.entries,
-          results: snapshot2.results,
-          onError: showError,
-          onChanged: () => {
-            errorEl.hidden = true;
-            renderAll();
-          }
-        })
-      );
+      const snapshot3 = getSkinsSnapshot();
+      const next = buildDetail({
+        object: snapshot3.objects.find((o) => o.key === menuState.selectedKey) ?? null,
+        entries: snapshot3.entries,
+        results: snapshot3.results,
+        onError: error.show,
+        onChanged: () => {
+          error.clear();
+          renderAll();
+        }
+      });
+      detailEl.replaceWith(next);
+      detailEl = next;
+    };
+    const cells = /* @__PURE__ */ new Map();
+    const selectObject = (key2) => {
+      cells.get(menuState.selectedKey ?? "")?.classList.remove("is-active");
+      menuState.selectedKey = key2;
+      cells.get(key2)?.classList.add("is-active");
+      renderDetail();
     };
     const renderGrid = () => {
-      const snapshot2 = getSkinsSnapshot();
+      const snapshot3 = getSkinsSnapshot();
+      const scrollTop = grid.scrollTop;
       grid.textContent = "";
-      const matches = filterObjects(snapshot2.objects);
+      cells.clear();
+      const matches = filterObjects(snapshot3.objects);
       for (const object of matches.slice(0, MAX_VISIBLE)) {
-        const cell = document.createElement("div");
-        cell.className = "qws-pnl-cell";
+        const cell = h("button", "qws-pnl-cell");
+        cell.type = "button";
         cell.title = object.label;
         if (object.key === menuState.selectedKey) cell.classList.add("is-active");
-        if (object.slots.some((slot) => snapshot2.entries.has(slot.frameKey))) {
+        if (object.slots.some((slot) => snapshot3.entries.has(slot.frameKey))) {
           cell.classList.add("is-skinned");
         }
-        mountThumb(cell, object.slots[0], null, GRID_THUMB_PX);
-        cell.addEventListener("click", () => {
-          menuState.selectedKey = object.key;
-          renderGrid();
-          renderDetail();
-        });
+        const art = h("div", "qws-skins-cell__art");
+        mountThumb(art, object.slots[0], null, GRID_THUMB_PX);
+        cell.append(art, h("div", "qws-skins-cell__name", object.label));
+        cell.addEventListener("click", () => selectObject(object.key));
+        cells.set(object.key, cell);
         grid.appendChild(cell);
       }
       if (!matches.length) {
-        grid.appendChild(h("div", "qws-skins__empty", snapshot2.ready ? "No match" : "Loading\u2026"));
+        grid.appendChild(
+          !snapshot3.ready ? emptyState2("Loading sprites\u2026") : snapshot3.objects.length ? emptyState2("No sprite matches", "Try another word or type.") : emptyState2("No sprites yet", "They show up once the game has loaded.")
+        );
       }
+      grid.scrollTop = scrollTop;
+      const skins = snapshot3.entries.size;
+      const shown = !matches.length ? "" : matches.length > MAX_VISIBLE ? `First ${formatInteger(MAX_VISIBLE)} of ${formatInteger(matches.length)}, search to narrow` : plural2(matches.length, "sprite");
+      countEl.textContent = [shown, skins ? plural2(skins, "skin") : ""].filter(Boolean).join(" \xB7 ");
     };
     const renderStatus = () => {
-      const snapshot2 = getSkinsSnapshot();
-      const hasSkins = snapshot2.entries.size > 0;
-      clearBtn.style.display = hasSkins ? "" : "none";
+      const snapshot3 = getSkinsSnapshot();
+      const hasSkins = snapshot3.entries.size > 0;
+      clearBtn.hidden = !hasSkins;
       if (!hasSkins) resetClear();
       enableToggle.setChecked(areSkinsEnabled());
-      const parts = [];
-      if (snapshot2.error) parts.push(`\u26A0 ${snapshot2.error}`);
-      if (hasSkins && snapshot2.rebaked === null) parts.push("\u26A0 Mutated plants keep their original look");
-      status2.textContent = parts.join(" \xB7 ");
-      status2.classList.toggle("is-warn", parts.length > 0);
+      const warnings = [];
+      if (snapshot3.error) warnings.push(snapshot3.error);
+      if (hasSkins && snapshot3.rebaked === null) warnings.push("Mutated plants keep their original look.");
+      notice.replaceChildren(...warnings.map((text2) => h("div", void 0, text2)));
+      notice.hidden = warnings.length === 0;
     };
     const renderAll = () => {
       renderCategories(getSkinsSnapshot().objects);
@@ -41456,24 +41218,29 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     renderAll();
   }
-  var ALL_CATEGORIES, MAX_VISIBLE, GRID_THUMB_PX, CONFIRM_RESET_MS, menuState;
+  var ALL_CATEGORIES, MAX_VISIBLE, GRID_THUMB_PX, CONFIRM_RESET_MS, CLEAR_LABEL, menuState, capitalize2, plural2;
   var init_menu13 = __esm({
     "src/features/skins/menu.ts"() {
       "use strict";
+      init_format();
       init_button();
       init_card();
       init_dom2();
       init_fields();
+      init_layout();
       init_toggles();
-      init_detail();
+      init_detail2();
       init_thumb();
       init_skins();
-      init_styles7();
+      init_styles15();
       ALL_CATEGORIES = "__all__";
       MAX_VISIBLE = 400;
       GRID_THUMB_PX = 52;
       CONFIRM_RESET_MS = 4e3;
+      CLEAR_LABEL = "Remove all";
       menuState = { category: ALL_CATEGORIES, query: "", selectedKey: null };
+      capitalize2 = (text2) => text2.charAt(0).toUpperCase() + text2.slice(1);
+      plural2 = (n, word) => `${formatInteger(n)} ${word}${n === 1 ? "" : "s"}`;
     }
   });
 
@@ -41664,10 +41431,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function writeEntries(entries) {
     const payload = { entries };
     try {
-      if (!installed5) {
+      if (!installed7) {
         ensureTickAtom();
         await fakeShow(EMOTE_PATCH, payload);
-        installed5 = true;
+        installed7 = true;
       } else {
         await fakeUpdate(EMOTE_SOURCE_LABEL, payload);
       }
@@ -41678,7 +41445,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   }
   async function rest() {
-    if (!installed5) return;
+    if (!installed7) return;
     await writeEntries([]);
   }
   function cancelPending() {
@@ -41694,8 +41461,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function playEmote(playerId2, emote, durationMs = EMOTE_DURATION_MS) {
     if (!playerId2 || emote === EmoteType.Idle) return;
     cancelStart();
-    const avatar3 = avatarSystem();
-    const canCut = !!avatar3?.views?.has?.(playerId2);
+    const avatar2 = avatarSystem();
+    const canCut = !!avatar2?.views?.has?.(playerId2);
     const delay = emoteStartDelay(lastSpokeAt.get(playerId2) ?? null, Date.now(), canCut);
     if (delay > 0) {
       startTimer = window.setTimeout(() => {
@@ -41712,7 +41479,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     cancelPending();
     posing = playerId2;
     if (canCut) {
-      cutTalking(avatar3, playerId2);
+      cutTalking(avatar2, playerId2);
       window.setTimeout(() => {
         if (posing === playerId2) cutTalking(avatarSystem(), playerId2);
       }, 80);
@@ -41731,15 +41498,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     cancelStart();
     cancelPending();
     posing = null;
-    if (!installed5) return;
+    if (!installed7) return;
     try {
       await fakeHide(EMOTE_SOURCE_LABEL);
       await bumpTick();
     } catch {
     }
-    installed5 = false;
+    installed7 = false;
   }
-  var EMOTE_SOURCE_LABEL, EMOTE_PATCH, EMOTE_DURATION_MS, installed5, releaseTimer, posing, startTimer, lastSpokeAt;
+  var EMOTE_SOURCE_LABEL, EMOTE_PATCH, EMOTE_DURATION_MS, installed7, releaseTimer, posing, startTimer, lastSpokeAt;
   var init_emote = __esm({
     "src/features/companion/emote.ts"() {
       "use strict";
@@ -41757,7 +41524,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         merge: (real, fake) => mergeEmoteSource(real, fake)
       };
       EMOTE_DURATION_MS = 1500;
-      installed5 = false;
+      installed7 = false;
       releaseTimer = null;
       posing = null;
       startTimer = null;
@@ -42021,8 +41788,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     const min = Math.max(0, Math.round(config.wanderPauseTicks));
     const max = config.wanderPauseMaxTicks;
     if (max === void 0 || !Number.isFinite(max) || Math.round(max) <= min) return min;
-    const span = Math.round(max) - min + 1;
-    return min + Math.min(span - 1, Math.floor(random() * span));
+    const span3 = Math.round(max) - min + 1;
+    return min + Math.min(span3 - 1, Math.floor(random() * span3));
   }
   function manhattan(a, b) {
     return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
@@ -42343,8 +42110,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return count;
   }
   function harvestMessage(ready, random) {
-    const crops = `${ready} ${plural2(ready, "crop", "crops")}`;
-    const isAre = plural2(ready, "is", "are");
+    const crops = `${ready} ${plural3(ready, "crop", "crops")}`;
+    const isAre = plural3(ready, "is", "are");
     return pickOne(
       [
         `${crops} ${isAre} ready to harvest, by the way.`,
@@ -42358,8 +42125,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     );
   }
   function hungryPetMessage(hungry, random) {
-    const pets = `${hungry} ${plural2(hungry, "pet", "pets")}`;
-    const isAre = plural2(hungry, "is", "are");
+    const pets = `${hungry} ${plural3(hungry, "pet", "pets")}`;
+    const isAre = plural3(hungry, "is", "are");
     return pickOne(
       [
         `${pets} ${isAre} getting hungry.`,
@@ -42386,8 +42153,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function weatherDisplayName(weatherId, catalog) {
     const entry = catalog && typeof catalog === "object" ? catalog[weatherId] : void 0;
-    for (const field2 of ["name", "displayName"]) {
-      const value = entry?.[field2];
+    for (const field3 of ["name", "displayName"]) {
+      const value = entry?.[field3];
       if (typeof value === "string" && value.trim()) return value.trim();
     }
     return spaceWords(weatherId);
@@ -42400,7 +42167,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function weatherEmote(weatherId) {
     return WEATHER_EMOTES[weatherId] ?? EmoteType.Questioning;
   }
-  var LEGACY_DEFAULT_LINES, DEFAULT_CUSTOM_LINES, LINE_EMOTES, POKE_WINDOW_MS, POKE_THRESHOLD, plural2, WEATHER_LINES, GENERIC_WEATHER_TEMPLATES, WEATHER_EMOTES;
+  var LEGACY_DEFAULT_LINES, DEFAULT_CUSTOM_LINES, LINE_EMOTES, POKE_WINDOW_MS, POKE_THRESHOLD, plural3, WEATHER_LINES, GENERIC_WEATHER_TEMPLATES, WEATHER_EMOTES;
   var init_dialogueLines = __esm({
     "src/features/companion/dialogueLines.ts"() {
       "use strict";
@@ -42483,7 +42250,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       };
       POKE_WINDOW_MS = 1e4;
       POKE_THRESHOLD = 5;
-      plural2 = (count, singular, pluralForm) => count === 1 ? singular : pluralForm;
+      plural3 = (count, singular, pluralForm) => count === 1 ? singular : pluralForm;
       WEATHER_LINES = {
         Rain: [
           "It's raining! The crops are loving this.",
@@ -43673,7 +43440,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function plantEntry(species) {
     return plantCatalog2[species];
   }
-  function cropIcon(species) {
+  function cropIcon2(species) {
     const entry = plantEntry(species);
     return thing(entry?.crop ?? entry?.plant, "");
   }
@@ -43684,8 +43451,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return thing(eggCatalog2[eggId], "");
   }
   function variantIcons(species, mutations) {
-    const crop = cropIcon(species);
-    return [...crop ? [crop] : [], ...mutationChips(mutations)];
+    const crop = cropIcon2(species);
+    return [...crop ? [crop] : [], ...mutationChips2(mutations)];
   }
   function petSpeciesIcon(species) {
     return thing(petCatalog2[species], "", PET_ICON_PX2);
@@ -43706,7 +43473,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return icons;
   }
-  function mutationChips(mutations, backgroundColor) {
+  function mutationChips2(mutations, backgroundColor) {
     return mutations.map((mutation) => ({ ...mutationChip(mutation, backgroundColor), iconSizePx: BUBBLE_ICON_PX }));
   }
   var BUBBLE_ICON_PX, PET_ICON_PX2;
@@ -44313,13 +44080,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function readHarvestable() {
     const rows = await readHarvestRows();
-    const ripe = rows.filter((row5) => row5.ready);
-    const allowed = ripe.filter((row5) => {
+    const ripe = rows.filter((row2) => row2.ready);
+    const allowed = ripe.filter((row2) => {
       try {
         return lockerService.allowsHarvest({
-          seedKey: row5.species,
-          sizePercent: row5.sizePct,
-          mutations: row5.mutations
+          seedKey: row2.species,
+          sizePercent: row2.sizePct,
+          mutations: row2.mutations
         });
       } catch {
         return false;
@@ -44402,7 +44169,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         source = { kind: "inventory", itemId: String(fromInventory.id), species: String(fromInventory.species) };
       } else {
         const rows = await gardenRows();
-        const fromGarden = rows.find((row5) => allowed.has(row5.species) && !claimed.has(`garden:${rowKey(row5)}`));
+        const fromGarden = rows.find((row2) => allowed.has(row2.species) && !claimed.has(`garden:${rowKey(row2)}`));
         if (fromGarden && allowGarden) {
           claimed.add(`garden:${rowKey(fromGarden)}`);
           source = { kind: "garden", row: fromGarden, species: fromGarden.species };
@@ -44607,23 +44374,194 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/companion/menu/behaviorTab.ts
-  function selectWith(options2) {
-    const el = select2({ small: true });
-    for (const [value, label2] of options2) el.append(new Option(label2, value));
-    return el;
+  // src/features/companion/avatar.ts
+  function layerRank(filename) {
+    const prefix = filename.split("_")[0];
+    return LAYER_ORDER.indexOf(prefix);
   }
+  function cosmeticsIn(value, depth = 0) {
+    if (depth > 3 || !value) return [];
+    if (Array.isArray(value)) {
+      return value.filter((entry) => typeof entry === "string" && entry.endsWith(".png"));
+    }
+    if (typeof value !== "object") return [];
+    for (const nested of Object.values(value)) {
+      const found = cosmeticsIn(nested, depth + 1);
+      if (found.length > 0) return found;
+    }
+    return [];
+  }
+  async function readNpcOutfit(npcId) {
+    if (!npcId) return [];
+    let all = null;
+    try {
+      all = await npcAvatarData.get();
+    } catch {
+      return [];
+    }
+    if (!all || typeof all !== "object") return [];
+    return cosmeticsIn(all[npcId]).filter((filename) => layerRank(filename) >= 0).sort((a, b) => layerRank(a) - layerRank(b));
+  }
+  function cosmeticUrl(filename) {
+    if (!gameVersion || !filename) return null;
+    const origin = typeof location !== "undefined" ? location.origin.replace(/\/$/, "") : "";
+    if (!origin) return null;
+    return `${origin}/version/${gameVersion}/assets/cosmetic/${filename}`;
+  }
+  var npcAvatarData, LAYER_ORDER;
+  var init_avatar = __esm({
+    "src/features/companion/avatar.ts"() {
+      "use strict";
+      init_hub();
+      init_gameVersion();
+      npcAvatarData = makeAtom("npcAvatarDataAtom");
+      LAYER_ORDER = ["Default", "Bottom", "Mid", "Top", "Expression"];
+    }
+  });
+
+  // src/features/companion/menu/npcAvatar.ts
+  function loadImage2(url) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.addEventListener("load", () => resolve(img));
+      img.addEventListener("error", () => resolve(null));
+      setImageSafe(img, url);
+    });
+  }
+  function opaqueBounds(canvas) {
+    const ctx2 = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx2) return null;
+    let pixels;
+    try {
+      pixels = ctx2.getImageData(0, 0, canvas.width, canvas.height).data;
+    } catch {
+      return null;
+    }
+    let minX = canvas.width;
+    let minY = canvas.height;
+    let maxX = -1;
+    let maxY = -1;
+    for (let y = 0; y < canvas.height; y++) {
+      for (let x = 0; x < canvas.width; x++) {
+        if (pixels[(y * canvas.width + x) * 4 + 3] < 16) continue;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+    if (maxX < 0) return null;
+    return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
+  }
+  function headCrop(canvas) {
+    const bounds = opaqueBounds(canvas);
+    if (!bounds) {
+      return {
+        x: canvas.width * FALLBACK_CROP.x,
+        y: canvas.height * FALLBACK_CROP.y,
+        width: canvas.width * FALLBACK_CROP.size,
+        height: canvas.height * FALLBACK_CROP.size
+      };
+    }
+    const side = Math.min(bounds.width * (1 + HEAD_PADDING * 2), bounds.height, canvas.height);
+    const centreX = bounds.x + bounds.width / 2;
+    const top = Math.max(0, bounds.y - side * (HEAD_PADDING / 2));
+    return {
+      x: Math.max(0, Math.min(centreX - side / 2, canvas.width - side)),
+      y: Math.min(top, Math.max(0, canvas.height - side)),
+      width: side,
+      height: side
+    };
+  }
+  async function compose2(npcId) {
+    const outfit = await readNpcOutfit(npcId).catch(() => []);
+    if (outfit.length === 0) return null;
+    const urls = outfit.map(cosmeticUrl).filter((url) => url !== null);
+    if (urls.length === 0) return null;
+    const layers = await Promise.all(urls.map(loadImage2));
+    const drawable = layers.filter((img) => img !== null);
+    if (drawable.length === 0) return null;
+    const full = document.createElement("canvas");
+    full.width = CANVAS_PX;
+    full.height = CANVAS_PX;
+    const ctx2 = full.getContext("2d", { willReadFrequently: true });
+    if (!ctx2) return null;
+    for (const layer2 of drawable) ctx2.drawImage(layer2, 0, 0, CANVAS_PX, CANVAS_PX);
+    const crop = headCrop(full);
+    const portrait2 = document.createElement("canvas");
+    portrait2.width = PORTRAIT_PX;
+    portrait2.height = PORTRAIT_PX;
+    const out = portrait2.getContext("2d");
+    if (!out) return null;
+    out.imageSmoothingEnabled = false;
+    out.drawImage(full, crop.x, crop.y, crop.width, crop.height, 0, 0, PORTRAIT_PX, PORTRAIT_PX);
+    return portrait2;
+  }
+  function npcPortrait(npcId) {
+    let known = pending2.get(npcId);
+    if (!known) {
+      known = compose2(npcId).catch(() => null);
+      pending2.set(npcId, known);
+    }
+    return known;
+  }
+  function fillWithPortrait(box2, npcId) {
+    if (!npcId) return;
+    void npcPortrait(npcId).then((source) => {
+      if (!source || !box2.isConnected) return;
+      const view = document.createElement("canvas");
+      view.width = source.width;
+      view.height = source.height;
+      view.getContext("2d")?.drawImage(source, 0, 0);
+      view.style.width = "100%";
+      view.style.height = "100%";
+      view.style.imageRendering = "pixelated";
+      box2.replaceChildren(view);
+    });
+  }
+  var CANVAS_PX, PORTRAIT_PX, HEAD_PADDING, FALLBACK_CROP, pending2;
+  var init_npcAvatar = __esm({
+    "src/features/companion/menu/npcAvatar.ts"() {
+      "use strict";
+      init_avatar();
+      init_discordCsp();
+      CANVAS_PX = 128;
+      PORTRAIT_PX = 64;
+      HEAD_PADDING = 0.22;
+      FALLBACK_CROP = { x: 0.28, y: 0.04, size: 0.44 };
+      pending2 = /* @__PURE__ */ new Map();
+    }
+  });
+
+  // src/features/companion/menu/portrait.ts
+  function borrowedIdentity() {
+    const npcId = CompanionService.getNpcId();
+    return { npcId, name: npcId ? npcId.replace(/^NPC_/, "") : null };
+  }
+  function portrait(identity, sizePx, framed = false) {
+    const el4 = part("div", framed ? "qws-cmp-avatar is-framed" : "qws-cmp-avatar");
+    el4.style.width = `${sizePx}px`;
+    el4.style.height = `${sizePx}px`;
+    el4.style.fontSize = `${Math.round(sizePx * 0.45)}px`;
+    const name = (identity?.name ?? "").trim();
+    if (name) el4.textContent = name.charAt(0).toUpperCase();
+    fillWithPortrait(el4, identity?.npcId ?? null);
+    return el4;
+  }
+  var init_portrait = __esm({
+    "src/features/companion/menu/portrait.ts"() {
+      "use strict";
+      init_companion();
+      init_dom3();
+      init_npcAvatar();
+    }
+  });
+
+  // src/features/companion/menu/behaviorTab.ts
   function renderBehaviorTab(view) {
     view.innerHTML = "";
     const settings = CompanionService.getSettings();
-    const card4 = collapsibleCard({
-      icon: "\u{1F9ED}",
-      title: "Behavior",
-      description: "Is he out, and where he stays.",
-      collapsed: false,
-      onToggle: () => {
-      }
-    });
     const enableToggle = switchInput(settings.enabled, (on) => {
       void CompanionService.applySettings({ enabled: on }).then(() => {
         checkFeedNow();
@@ -44631,14 +44569,18 @@ Restore figures are averages; unlucky streaks do worse.`;
       }).catch(() => {
       });
     });
-    const modeSelect = selectWith(MODE_LABELS);
-    modeSelect.value = settings.mode;
-    modeSelect.addEventListener("change", () => {
-      void CompanionService.applySettings({ mode: modeSelect.value }).then(refresh).catch(() => {
-      });
-    });
-    const npcSelect = selectWith([["", "Loading\u2026"]]);
+    enableToggle.setAttribute("aria-label", "Bring him out");
+    const face = part("div", "qws-cmp-avatar-gap");
+    const name = part("div", "qws-cmp-hero__name", "Companion");
+    const status2 = part("div", "qws-cmp-hero__status");
+    const text2 = part("div", "qws-cmp-hero__text");
+    text2.append(name, status2);
+    const top = part("div", "qws-cmp-hero__top");
+    top.append(face, text2, enableToggle);
+    const npcSelect = select2({ small: true });
+    npcSelect.append(new Option("Loading\u2026", ""));
     npcSelect.disabled = true;
+    npcSelect.setAttribute("aria-label", "Borrowed NPC");
     npcSelect.addEventListener("change", () => {
       void CompanionService.applySettings({ npcId: npcSelect.value || null }).then(refresh).catch(() => {
       });
@@ -44659,56 +44601,82 @@ Restore figures are averages; unlucky streaks do worse.`;
       npcSelect.innerHTML = "";
       npcSelect.append(new Option("Unavailable", ""));
     });
-    const status2 = styled("div", { fontSize: "12px", color: color.textDim, padding: "2px 2px 0" });
-    const showStatus = (text2) => {
-      if (status2.textContent !== text2) status2.textContent = text2;
-    };
-    function refresh() {
-      if (!CompanionService.isRunning()) {
-        showStatus("Inactive.");
-        return;
-      }
-      const npcId = CompanionService.getNpcId();
-      const name = npcId ? npcId.replace(/^NPC_/, "") : "?";
-      const wanted = CompanionService.getSettings().mode;
-      const actual = CompanionService.getEffectiveMode();
-      const fallback = actual && actual !== wanted ? " (no garden found, following you)" : "";
-      showStatus(`Active as ${name}${fallback}. Only you can see it.`);
-    }
+    const lookRow = part("div", "qws-cmp-hero__look-row");
+    lookRow.append(part("span", "qws-cmp-label", "Look"), npcSelect);
+    const look = part("div", "qws-cmp-hero__look");
+    look.append(lookRow, part("div", "qws-cmp-hint", 'Whose look he borrows. "In game" means already out.'));
+    const hero = part("div", "qmm-card qws-cmp-hero");
+    hero.append(top, look);
+    const modeControl = segmented(
+      MODE_LABELS,
+      settings.mode,
+      (mode) => {
+        if (mode === CompanionService.getSettings().mode) return;
+        void CompanionService.applySettings({ mode }).then(refresh).catch(() => {
+        });
+      },
+      { fullWidth: true, ariaLabel: "Where he stays" }
+    );
+    const placeCard = card("Where he stays", { subtitle: "Next to you, or on your own plot." });
+    placeCard.body.append(modeControl);
     const askToggle = switchInput(settings.askOnScreen, (on) => {
       void CompanionService.applySettings({ askOnScreen: on });
     });
     const reactionsToggle = switchInput(settings.reactions, (on) => {
       void CompanionService.applySettings({ reactions: on });
     });
-    card4.body.append(
-      settingRow("Enable", "Brings him out next to you.", enableToggle).row,
-      settingRow("Mode", "Follows you, or stays on your plot.", modeSelect).row,
-      settingRow("Borrowed NPC", 'Whose look it takes. "In game" means already spawned.', npcSelect).row,
-      settingRow("Ask on screen", "Shows his questions at the top, portrait and all.", askToggle).row,
-      settingRow("Reactions", "Comments on weather, sales, milestones and how long you've played.", reactionsToggle).row,
-      status2
+    const talkCard = card("Speaking up");
+    talkCard.body.append(
+      settingRow("Questions on screen", "Shows his questions at the top, portrait and all.", askToggle).row,
+      settingRow("Reactions", "Weather, sales, milestones and how long you've played.", reactionsToggle).row
     );
+    let shownNpc;
+    const showText = (el4, value) => {
+      if (el4.textContent !== value) el4.textContent = value;
+    };
+    function refresh() {
+      const running = CompanionService.isRunning();
+      hero.classList.toggle("is-on", running);
+      const identity = running ? borrowedIdentity() : { npcId: null, name: null };
+      if (identity.npcId !== shownNpc) {
+        shownNpc = identity.npcId;
+        face.replaceChildren(portrait(identity, HERO_AVATAR_PX, true));
+      }
+      showText(name, identity.name ?? "Companion");
+      if (!running) {
+        showText(status2, "Resting. Switch him on to bring him out.");
+        return;
+      }
+      const wanted = CompanionService.getSettings().mode;
+      const actual = CompanionService.getEffectiveMode();
+      const fallback = actual && actual !== wanted ? " No garden found, so he follows you." : "";
+      showText(status2, `Out next to you. Only you can see him.${fallback}`);
+    }
     refresh();
     refreshWhileVisible(status2, refresh, STATUS_REFRESH_MS);
-    view.append(card4.root);
+    const tab = part("div", "qws-cmp-tab");
+    tab.append(hero, placeCard.root, talkCard.root);
+    view.append(tab);
   }
-  var STATUS_REFRESH_MS, MODE_LABELS;
+  var STATUS_REFRESH_MS, HERO_AVATAR_PX, MODE_LABELS;
   var init_behaviorTab = __esm({
     "src/features/companion/menu/behaviorTab.ts"() {
       "use strict";
       init_companion();
       init_feedWatch();
+      init_card();
       init_fields();
       init_layout();
       init_dom2();
-      init_theme();
+      init_segmented();
       init_toggles();
       init_dom3();
+      init_portrait();
       STATUS_REFRESH_MS = 1e3;
+      HERO_AVATAR_PX = 48;
       MODE_LABELS = [
-        ["follow", "Follow me"],
-        ["garden", "Stay in my garden"]
+        { value: "follow", label: "Follow me" },
+        { value: "garden", label: "Stay in my garden" }
       ];
     }
   });
@@ -44874,27 +44842,26 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/menu/settingsParts.ts
   function teamSelect(current3, onPick) {
-    const el = select2({ small: true, width: "150px" });
-    el.append(new Option("Leave my team alone", NO_TEAM));
+    const el4 = select2({ small: true, width: "150px" });
+    el4.append(new Option("Leave my team alone", NO_TEAM));
     let teams2 = [];
     try {
       teams2 = PetsService.getTeams().map((team) => ({ id: team.id, name: team.name }));
     } catch {
       teams2 = [];
     }
-    for (const team of teams2) el.append(new Option(team.name, team.id));
-    el.value = current3 && teams2.some((team) => team.id === current3) ? current3 : NO_TEAM;
-    el.addEventListener("change", () => onPick(el.value === NO_TEAM ? null : el.value));
-    return { el, empty: teams2.length === 0 };
+    for (const team of teams2) el4.append(new Option(team.name, team.id));
+    el4.value = current3 && teams2.some((team) => team.id === current3) ? current3 : NO_TEAM;
+    el4.addEventListener("change", () => onPick(el4.value === NO_TEAM ? null : el4.value));
+    return { el: el4, empty: teams2.length === 0 };
   }
   function settingsHint(text2) {
-    return styled("div", { fontSize: "11px", lineHeight: "1.5", color: color.textDim }, text2);
+    return part("div", "qws-cmp-hint", text2);
   }
   function addBackButton(modal, back) {
     modal.footer.append(
       button("Back", {
         size: "sm",
-        block: true,
         onClick: () => {
           modal.close();
           back();
@@ -44908,7 +44875,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_button();
       init_fields();
-      init_theme();
       init_pets();
       init_dom3();
       NO_TEAM = "";
@@ -44919,7 +44885,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/menu/feedSettingsModal.ts
   function openFeedSettingsModal(host, back) {
     markReviewed("feed");
-    const modal = openModal2({ host, title: "Pet feed", widthPx: 440 });
+    const modal = openCompanionModal({ host, title: "Pet feed", widthPx: 440 });
     const settings = loadCompanionSettings();
     const alerts = switchInput(settings.feedAlerts, (on) => {
       void CompanionService.applySettings({ feedAlerts: on }).then(checkFeedNow);
@@ -44934,13 +44900,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       void CompanionService.applySettings({ feedFromGarden: on }).then(checkFeedNow);
     });
     modal.body.append(
-      settingRow("Tell me when a pet is starving", "He offers, and waits for your answer.", alerts).row,
-      settingRow("Warn below", `Fullness that worries him (${MIN_PCT} to ${MAX_PCT}).`, threshold.wrap).row,
-      settingRow(
-        "May pick from the garden",
-        "Lets him pick a ripe crop when the bag is empty. Your Locker still applies.",
-        fromGarden
-      ).row,
+      settingRow("Hungry pet alerts", "He offers to feed them, and waits for your answer.", alerts).row,
+      settingRow("Warn below", `Fullness in %, from ${MIN_PCT} to ${MAX_PCT}.`, threshold.wrap).row,
+      settingRow("Pick from the garden", "A ripe crop when the bag is empty. Your Locker still applies.", fromGarden).row,
       settingsHint("He only speaks up when he has something to give. He always asks first.")
     );
     addBackButton(modal, back);
@@ -44952,10 +44914,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_companion();
       init_fields();
       init_layout();
-      init_modal();
       init_toggles();
       init_feedWatch();
       init_state3();
+      init_dom3();
       init_settingsParts();
       MIN_PCT = 1;
       MAX_PCT = 90;
@@ -44964,29 +44926,18 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/menu/settingsNotice.ts
   function settingsNotice(group2, what, onOpen) {
+    const root4 = part("div", "qws-cmp-notice");
     if (!isUnreviewed(group2)) {
-      return styled("div", { display: "none" });
+      root4.hidden = true;
+      return root4;
     }
-    const root4 = styled("div", {
-      display: "flex",
-      alignItems: "center",
-      gap: "10px",
-      padding: "10px 12px",
-      borderRadius: "12px",
-      background: color.warnSoft,
-      border: `1px solid ${color.border}`,
-      flex: "0 0 auto"
-    });
-    const open = button("Set up", { size: "sm", onClick: onOpen });
-    open.style.flex = "0 0 auto";
-    root4.append(styled("div", { fontSize: "11.5px", lineHeight: "1.5", color: color.text, flex: "1", minWidth: "0" }, what), open);
+    root4.append(part("div", "qws-cmp-notice__text", what), button("Set up", { size: "sm", onClick: onOpen }));
     return root4;
   }
   var init_settingsNotice = __esm({
     "src/features/companion/menu/settingsNotice.ts"() {
       "use strict";
       init_button();
-      init_theme();
       init_state3();
       init_dom3();
     }
@@ -44995,13 +44946,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/menu/harvestSettingsModal.ts
   function openHarvestSettingsModal(host, back) {
     markReviewed("harvest");
-    const modal = openModal2({ host, title: "Harvest", widthPx: 460 });
+    const modal = openCompanionModal({ host, title: "Harvest", widthPx: 460 });
     const settings = loadCompanionSettings();
     const team = teamSelect(settings.harvestTeamId, (teamId2) => {
       void CompanionService.applySettings({ harvestTeamId: teamId2 });
     });
     modal.body.append(
-      settingRow("Team to wear while harvesting", "For abilities that pay off on harvest.", team.el).row,
+      settingRow("Harvest team", "Worn while he picks, for abilities that pay off on harvest.", team.el).row,
       settingsHint(
         team.empty ? NO_TEAMS_HINT : "He names the team before he picks, and puts yours back after. What he may pick still comes from your Locker."
       )
@@ -45013,8 +44964,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_companion();
       init_layout();
-      init_modal();
       init_state3();
+      init_dom3();
       init_settingsParts();
     }
   });
@@ -45022,7 +44973,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/menu/hatchSettingsModal.ts
   function openHatchSettingsModal(host, back) {
     markReviewed("hatch");
-    const modal = openModal2({ host, title: "Hatching", widthPx: 460 });
+    const modal = openCompanionModal({ host, title: "Hatching", widthPx: 460 });
     const settings = loadCompanionSettings();
     const hatchTeam = teamSelect(settings.hatchTeamId, (teamId2) => {
       void CompanionService.applySettings({ hatchTeamId: teamId2 });
@@ -45031,8 +44982,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       void CompanionService.applySettings({ hatchSellTeamId: teamId2 });
     });
     modal.body.append(
-      settingRow("Team to wear while hatching", "For abilities that change what hatches.", hatchTeam.el).row,
-      settingRow("Team to wear while selling", "Only during the sale. Yours comes straight back after.", sellTeam.el).row,
+      settingRow("Hatch team", "Worn while he hatches, for abilities that change what comes out.", hatchTeam.el).row,
+      settingRow("Sell team", "Worn only during the sale. Yours comes straight back after.", sellTeam.el).row,
       settingsHint(
         hatchTeam.empty ? NO_TEAMS_HINT : "The game will not sell a pet on your active team, so a smaller team frees the rest. He asks first, and puts yours back after."
       )
@@ -45044,19 +44995,19 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_companion();
       init_layout();
-      init_modal();
       init_state3();
+      init_dom3();
       init_settingsParts();
     }
   });
 
   // src/features/companion/menu/settingsModal.ts
-  function teamLine(teamId2, verb) {
+  function teamLine(teamId2, verb, doing) {
     const name = teamName(teamId2);
-    return name ? `Wears ${name} to ${verb}.` : `Keeps your team on while ${verb}.`;
+    return name ? `Wears ${name} to ${verb}.` : `Keeps your team on while ${doing}.`;
   }
   function openSettingsModal(host) {
-    const modal = openModal2({ host, title: "Settings", widthPx: 440 });
+    const modal = openCompanionModal({ host, title: "Settings", widthPx: 440 });
     const settings = loadCompanionSettings();
     const unseen = (group2) => settings.reviewedSettings.includes(group2) ? "" : " Not set up yet.";
     const back = () => openSettingsModal(host);
@@ -45070,11 +45021,13 @@ Restore figures are averages; unlucky streaks do worse.`;
         open(host, back);
       }
     });
-    modal.body.append(
+    const list = part("div", "qws-cmp-list");
+    list.append(
       entry("Pet feed", `${feedDetail}${unseen("feed")}`, openFeedSettingsModal),
-      entry("Harvest", `${teamLine(settings.harvestTeamId, "harvest")}${unseen("harvest")}`, openHarvestSettingsModal),
-      entry("Hatching", `${keeping} ${teamLine(settings.hatchSellTeamId, "sell")}${unseen("hatch")}`, openHatchSettingsModal)
+      entry("Harvest", `${teamLine(settings.harvestTeamId, "harvest", "harvesting")}${unseen("harvest")}`, openHarvestSettingsModal),
+      entry("Hatching", `${keeping} ${teamLine(settings.hatchSellTeamId, "sell", "selling")}${unseen("hatch")}`, openHatchSettingsModal)
     );
+    modal.body.append(list);
   }
   var init_settingsModal = __esm({
     "src/features/companion/menu/settingsModal.ts"() {
@@ -45083,6 +45036,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_crew();
       init_hatch();
       init_state3();
+      init_dom3();
       init_feedSettingsModal();
       init_harvestSettingsModal();
       init_hatchSettingsModal();
@@ -45090,44 +45044,30 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/menu/feedModal.ts
-  function row4(candidate) {
-    const line = styled("div", {
-      display: "flex",
-      alignItems: "center",
-      gap: "10px",
-      padding: "9px 11px",
-      borderRadius: "12px",
-      border: `1px solid ${color.border}`,
-      background: color.cardBg
-    });
-    const text2 = styled("div", { display: "flex", flexDirection: "column", gap: "2px", flex: "1", minWidth: "0" });
-    text2.append(
-      styled("div", { fontSize: "12.5px", color: color.text }, candidate.petName),
-      styled(
-        "div",
-        { fontSize: "11px", color: candidate.hungerPct <= 5 ? color.warn : color.textDim },
-        candidate.source.kind === "garden" ? `${candidate.hungerPct}% left, I would pick a ${candidate.source.species}` : `${candidate.hungerPct}% left, I have a ${candidate.source.species} in the bag`
-      )
+  function row(candidate) {
+    const line = part("div", "qws-cmp-item");
+    const sub = part(
+      "div",
+      candidate.hungerPct <= 5 ? "qws-cmp-item__sub is-warn" : "qws-cmp-item__sub",
+      candidate.source.kind === "garden" ? `${candidate.hungerPct}% left, I would pick a ${candidate.source.species}` : `${candidate.hungerPct}% left, I have a ${candidate.source.species} in the bag`
     );
-    const icon2 = speciesIcon(candidate.source.species, CROP_ICON_PX);
+    const text2 = part("div", "qws-cmp-item__text");
+    text2.append(part("div", "qws-cmp-item__title", candidate.petName), sub);
+    const icon2 = speciesIcon(candidate.source.species, CROP_ICON_PX2);
     icon2.title = candidate.source.species;
     line.append(text2, icon2);
     return line;
   }
   function openFeedModal(host, onAsk) {
     let picks = [];
-    const modal = openModal2({
+    const modal = openCompanionModal({
       host,
       title: "Who needs feeding?",
       widthPx: 420,
       onClose: () => clearInterval(timer2)
     });
-    const list = styled("div", { display: "flex", flexDirection: "column", gap: "7px" });
-    const empty = styled(
-      "div",
-      { fontSize: "12px", color: color.textDim, padding: "10px 2px", lineHeight: "1.5" },
-      "Nobody is hungry, or I have nothing they eat."
-    );
+    const list = part("div", "qws-cmp-list");
+    const empty = part("div", "qws-cmp-empty", "Nobody is hungry, or I have nothing they eat.");
     const notice = settingsNotice("feed", "Pet feed is not set up. I warn below 10% and may pick from the garden.", () => {
       modal.close();
       openFeedSettingsModal(host, () => openSettingsModal(host));
@@ -45135,19 +45075,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     modal.body.append(notice, list, empty);
     const askButton = button("Ask to feed them", {
       size: "sm",
-      block: true,
       variant: "primary",
       onClick: () => {
         onAsk(feedRequest(picks.length === 1 ? `Feed ${picks[0].petName}` : "Feed my hungry pets", () => findFeedable()));
         modal.close();
       }
     });
-    askButton.style.marginLeft = "auto";
+    askButton.classList.add("qws-cmp-foot-end");
     modal.footer.append(askButton);
     function render() {
       if (!modal.isOpen()) return;
-      list.replaceChildren(...picks.map(row4));
-      empty.style.display = picks.length === 0 ? "" : "none";
+      list.replaceChildren(...picks.map(row));
+      list.hidden = picks.length === 0;
+      empty.hidden = picks.length > 0;
       askButton.setEnabled(picks.length > 0);
     }
     async function refresh() {
@@ -45160,13 +45100,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     render();
     void refresh();
   }
-  var REFRESH_MS, CROP_ICON_PX;
+  var REFRESH_MS, CROP_ICON_PX2;
   var init_feedModal = __esm({
     "src/features/companion/menu/feedModal.ts"() {
       "use strict";
       init_button();
-      init_modal();
-      init_theme();
       init_feed2();
       init_feedRead();
       init_dom3();
@@ -45175,14 +45113,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_settingsNotice();
       init_settingsModal();
       REFRESH_MS = 5e3;
-      CROP_ICON_PX = 26;
+      CROP_ICON_PX2 = 26;
     }
   });
 
   // src/features/companion/chat/harvestRun.ts
   function topCrop(rows) {
     const top = groupVariants(rows)[0];
-    return top ? cropIcon(top.species) : null;
+    return top ? cropIcon2(top.species) : null;
   }
   async function report(attempted, cancelled, reporter2) {
     if (attempted.length === 0) {
@@ -45192,7 +45130,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     await sleep2(SETTLE_MS);
     let fresh = null;
     try {
-      fresh = (await readHarvestRows()).filter((row5) => row5.ready);
+      fresh = (await readHarvestRows()).filter((row2) => row2.ready);
     } catch {
       fresh = null;
     }
@@ -45202,7 +45140,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return;
     }
     const targeted = new Set(attempted.map(rowKey));
-    const stillRipe = fresh.filter((row5) => targeted.has(rowKey(row5))).length;
+    const stillRipe = fresh.filter((row2) => targeted.has(rowKey(row2))).length;
     const picked = attempted.length - stillRipe;
     if (picked > 0) StatsService.incrementGardenStat("totalHarvested", picked);
     if (stillRipe === 0) {
@@ -45225,11 +45163,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       reporter: reporter2,
       // The team goes on before the first crop: some abilities act on harvest.
       hire: () => hireCrew(reporter2, { teamId: loadCompanionSettings().harvestTeamId }),
-      async step(row5, walker, pace) {
-        await walker.toGardenTile(row5.tileIndex);
+      async step(row2, walker, pace) {
+        await walker.toGardenTile(row2.tileIndex);
         await pace.wait();
-        attempted.push(row5);
-        await PlayerService.harvestCrop(row5.tileIndex, row5.slotId);
+        attempted.push(row2);
+        await PlayerService.harvestCrop(row2.tileIndex, row2.slotId);
         pace.mark();
       },
       progressNote: (done, total) => `${done} of ${total} so far...`
@@ -45317,34 +45255,27 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/menu/harvestFields.ts
   function filterCard(title) {
-    const summary = styled("div", {
-      marginLeft: "auto",
-      fontSize: "11px",
-      color: color.textDim,
-      textAlign: "right",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-      maxWidth: "60%"
-    });
-    const header = styled("div", { display: "flex", alignItems: "center", gap: "8px", width: "100%" });
+    const summary = part("div", "qws-cmp-filter__summary");
+    const header = part("div", "qws-cmp-filter__head");
     header.append(sectionLabel(title), summary);
     const { root: root4, body } = collapsibleCard({ header, collapsed: true, onToggle: () => {
     } });
-    Object.assign(root4.style, { padding: "9px 11px", gap: "9px", flex: "0 0 auto" });
+    root4.classList.add("qws-cmp-filter");
     return {
       root: root4,
       body,
       setSummary(text2, active3) {
         summary.textContent = text2;
-        summary.style.color = active3 ? color.accent : color.textDim;
+        summary.classList.toggle("is-active", active3);
       }
     };
   }
-  function fieldRow(label2, control) {
-    const row5 = styled("div", { display: "flex", alignItems: "center", gap: "10px", justifyContent: "space-between" });
-    row5.append(styled("div", { fontSize: "11.5px", color: color.text }, label2), control);
-    return row5;
+  function fieldRow(label2, controls, grow3 = false) {
+    const row2 = part("div", "qws-cmp-field");
+    const holder2 = part("div", grow3 ? "qws-cmp-field__control is-grow" : "qws-cmp-field__control");
+    holder2.append(...controls);
+    row2.append(part("div", "qws-cmp-field__label", label2), holder2);
+    return row2;
   }
   function toggleIn(current3, value) {
     const next = new Set(current3 ?? []);
@@ -45353,10 +45284,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     return next.size === 0 ? null : [...next];
   }
   function selectionRow(options2) {
-    const row5 = tileRow();
-    row5.append(allTile(options2.allLabel, options2.selected === null, options2.onClear));
+    const row2 = tileRow();
+    row2.append(allTile(options2.allLabel, options2.selected === null, options2.onClear));
     for (const value of options2.values) {
-      row5.append(
+      row2.append(
         spriteTile({
           icon: options2.iconFor(value),
           title: value,
@@ -45366,7 +45297,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         })
       );
     }
-    return row5;
+    return row2;
   }
   function nameList(values, fallback) {
     if (values.length === 0) return fallback;
@@ -45387,54 +45318,38 @@ Restore figures are averages; unlucky streaks do worse.`;
     return filters.minSizePct > 50 ? `${filters.minSizePct}% and up` : "Any size";
   }
   function resultBox() {
-    const root4 = styled("div", {
-      display: "flex",
-      flexDirection: "column",
-      gap: "8px",
-      padding: "11px 12px",
-      borderRadius: "12px",
-      background: color.accentSoft,
-      border: `1px solid ${color.border}`,
-      flex: "0 0 auto"
-    });
-    const headline = styled("div", { fontSize: "13px", fontWeight: "600", color: color.accent });
+    const root4 = part("div", "qws-cmp-result");
+    const headline = part("div", "qws-cmp-result__head");
     root4.append(headline);
     return { root: root4, headline };
   }
   function countedIcon(icon2, label2, count) {
-    const pair = styled("div", { display: "flex", alignItems: "center", gap: "3px" });
+    const pair = part("div", "qws-cmp-count");
     pair.title = label2;
-    pair.append(icon2, styled("span", { fontSize: "11px", color: color.textDim }, String(count)));
+    pair.append(icon2, part("span", "", String(count)));
     return pair;
   }
   function resultStrip() {
     const { root: root4, headline } = resultBox();
-    const sprites = styled("div", { display: "flex", alignItems: "flex-end", gap: "10px", flexWrap: "wrap" });
+    const sprites = part("div", "qws-cmp-result__icons");
     root4.append(sprites);
     return {
       root: root4,
       update(total, entries, hidden) {
         headline.textContent = total === 0 ? "Nothing to pick" : `${total} crop${total === 1 ? "" : "s"}`;
         sprites.replaceChildren(...entries.map((entry) => countedIcon(entry.icon, entry.label, entry.count)));
-        sprites.style.display = entries.length === 0 ? "none" : "flex";
-        if (hidden > 0) {
-          sprites.append(styled("span", { fontSize: "11px", color: color.textDim, alignSelf: "center" }, `+${hidden} more`));
-        }
+        sprites.hidden = entries.length === 0;
+        if (hidden > 0) sprites.append(part("span", "qws-cmp-more", `+${hidden} more`));
       }
     };
   }
   function lockedNote() {
-    const root4 = styled("div", { fontSize: "11px", lineHeight: "1.5", color: color.textDim });
+    const root4 = part("div", "qws-cmp-hint");
     return {
       root: root4,
       update(lockedOut) {
-        if (lockedOut === 0) {
-          root4.textContent = "Your Locker decides what I leave alone.";
-          root4.style.color = color.textDim;
-          return;
-        }
-        root4.textContent = `Leaving ${lockedOut} locked crop${lockedOut === 1 ? "" : "s"} alone.`;
-        root4.style.color = color.warn;
+        root4.classList.toggle("is-warn", lockedOut > 0);
+        root4.textContent = lockedOut === 0 ? "Your Locker decides what I leave alone." : `Leaving ${lockedOut} locked crop${lockedOut === 1 ? "" : "s"} alone.`;
       }
     };
   }
@@ -45443,7 +45358,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_card();
       init_layout();
-      init_theme();
       init_harvest();
       init_dom3();
       init_harvestChips();
@@ -45467,7 +45381,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       filters = { ...filters, ...patch };
       render();
     };
-    const modal = openModal2({
+    const modal = openCompanionModal({
       host,
       title: "What should I harvest?",
       widthPx: 460,
@@ -45487,7 +45401,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       speciesCard.body.replaceChildren(
         selectionRow({
           values: speciesPresent(available),
-          counts: tally(available, (row5) => [row5.species]),
+          counts: tally(available, (row2) => [row2.species]),
           selected: filters.species,
           iconFor: (name) => cachedIcon(`species:${name}`, () => speciesIcon(name, TILE_ICON_PX)),
           onPick: (name) => setFilters({ species: toggleIn(filters.species, name) }),
@@ -45506,20 +45420,20 @@ Restore figures are averages; unlucky streaks do worse.`;
       filters.mutationMode,
       (value) => setFilters({ mutationMode: value })
     );
-    const mutationTiles = styled("div", {});
-    mutationCard.body.append(fieldRow("Match", modeControl), mutationTiles);
+    const mutationTiles = part("div", "");
+    mutationCard.body.append(fieldRow("Match", [modeControl]), mutationTiles);
     function renderMutations() {
       const available = scopedTo("mutations");
       const mutations = mutationsPresent(available);
       const kept = filters.mutations.filter((name) => mutations.includes(name));
       if (kept.length !== filters.mutations.length) filters = { ...filters, mutations: kept };
-      mutationCard.root.style.display = mutations.length === 0 ? "none" : "flex";
+      mutationCard.root.hidden = mutations.length === 0;
       if (mutations.length === 0) return;
       if (modeControl.get() !== filters.mutationMode) modeControl.set(filters.mutationMode);
       mutationTiles.replaceChildren(
         selectionRow({
           values: mutations,
-          counts: tally(available, (row5) => row5.mutations),
+          counts: tally(available, (row2) => row2.mutations),
           selected: filters.mutations.length === 0 ? null : filters.mutations,
           iconFor: (name) => cachedIcon(`mutation:${name}`, () => mutationIconEl(name, TILE_ICON_PX)),
           onPick: (name) => setFilters({ mutations: toggleIn(filters.mutations, name) ?? [] }),
@@ -45529,18 +45443,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       );
       mutationCard.setSummary(summarizeMutations(filters), filters.mutations.length > 0);
     }
-    const sizeValue = styled("span", { fontSize: "11.5px", color: color.text, minWidth: "38px", textAlign: "right" });
+    const sizeValue = pill("");
     const sizeSlider = slider(50, 100, 5, filters.minSizePct, { fill: true });
-    sizeSlider.style.flex = "1";
     sizeSlider.addEventListener("input", () => setFilters({ minSizePct: Number(sizeSlider.value) }));
-    {
-      const control = styled("div", { display: "flex", alignItems: "center", gap: "10px", flex: "1", minWidth: "0" });
-      control.append(sizeSlider, sizeValue);
-      const row5 = fieldRow("Minimum size", control);
-      row5.style.gap = "14px";
-      sizeCard.body.append(row5);
-    }
-    const preservedLabel = styled("div", { fontSize: "11.5px", fontWeight: "600", color: color.text });
+    sizeCard.body.append(fieldRow("Minimum size", [sizeSlider, sizeValue], true));
     const preservedControl = choiceControl(
       [
         { value: "skip", label: "Leave them", title: "They stay in the ground" },
@@ -45549,19 +45455,17 @@ Restore figures are averages; unlucky streaks do worse.`;
       filters.includePreserved ? "include" : "skip",
       (value) => setFilters({ includePreserved: value === "include" })
     );
-    const preservedRow = styled("div", { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
-    const preservedHolder = styled("div", {});
-    preservedHolder.append(preservedControl);
-    preservedRow.append(preservedLabel, preservedHolder);
+    const preserved = settingRow("Preserved crops", null, preservedControl);
+    const preservedLabel = preserved.row.querySelector(".qmm-setting-row__title");
     function renderPreserved() {
-      const ripe = scope.rows.filter((row5) => row5.ready && row5.preserved).length;
-      preservedLabel.textContent = ripe === 0 ? "Preserved crops" : `Preserved crops (${ripe} ripe)`;
+      const ripe = scope.rows.filter((row2) => row2.ready && row2.preserved).length;
+      const label2 = ripe === 0 ? "Preserved crops" : `Preserved crops (${ripe} ripe)`;
+      if (preservedLabel.textContent !== label2) preservedLabel.textContent = label2;
       const wanted = filters.includePreserved ? "include" : "skip";
       if (preservedControl.get() !== wanted) preservedControl.set(wanted);
     }
     const resetButton = button("Reset", {
       size: "sm",
-      block: true,
       onClick: () => {
         filters = { ...DEFAULT_FILTERS };
         render();
@@ -45569,7 +45473,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const askButton = button("Ask to pick these", {
       size: "sm",
-      block: true,
       variant: "primary",
       onClick: () => {
         const chosen = filters;
@@ -45582,12 +45485,13 @@ Restore figures are averages; unlucky streaks do worse.`;
         modal.close();
       }
     });
-    askButton.style.marginLeft = "auto";
+    askButton.classList.add("qws-cmp-foot-end");
     const notice = settingsNotice("harvest", "Harvest is not set up. I will pick with the team you have on.", () => {
       modal.close();
       openHarvestSettingsModal(host, () => openSettingsModal(host));
     });
-    modal.body.append(notice, preservedRow, speciesCard.root, mutationCard.root, sizeCard.root, preview.root, note.root);
+    preview.root.append(note.root);
+    modal.body.append(notice, preserved.row, speciesCard.root, mutationCard.root, sizeCard.root, preview.root);
     modal.footer.append(resetButton, askButton);
     function render() {
       if (!modal.isOpen()) return;
@@ -45629,10 +45533,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_harvestModal = __esm({
     "src/features/companion/menu/harvestModal.ts"() {
       "use strict";
+      init_badges();
       init_button();
-      init_modal();
+      init_layout();
       init_sliders();
-      init_theme();
       init_harvest2();
       init_gardenRead();
       init_harvest();
@@ -45701,7 +45605,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const shown = mutation ? star.mutations.filter((name) => name.toLowerCase() !== mutation.toLowerCase()) : star.mutations;
     if (cheer) void CompanionService.emote(cheer.emote, timing?.holdMs).catch(() => {
     });
-    reporter2.say("system", line, compose(petThing(star.item, ""), " ", line, ...spaced(mutationChips(shown))), true);
+    reporter2.say("system", line, compose(petThing(star.item, ""), " ", line, ...spaced(mutationChips2(shown))), true);
     if (!timing || !lines) return;
     await sleep2(timing.pauseMs);
     if (!reporter2.stopped()) reporter2.say("system", lines.resume);
@@ -46024,25 +45928,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     const candidates = [species, species.replace(/\s+/g, "")].filter(Boolean);
     attachSpriteIcon(box2, ["pet"], candidates, sizePx, SPRITE_LOG_TAG4, {
       onNoSpriteFound: () => {
-        Object.assign(box2.style, { fontSize: "12px", fontWeight: "700", color: color.textDim });
-        box2.textContent = species.charAt(0).toUpperCase();
+        box2.replaceChildren(part("span", "qws-cmp-initial", species.charAt(0).toUpperCase()));
       }
     });
     return box2;
   }
   function abilityIcon(abilityId, sizePx = ICON_PX5) {
     const box2 = iconSlot(sizePx);
-    const { bg } = getAbilityChipColors(abilityId);
-    box2.append(
-      styled("span", {
-        display: "inline-block",
-        width: "13px",
-        height: "13px",
-        borderRadius: "4px",
-        background: bg,
-        boxShadow: `0 0 0 1px ${color.fieldBg} inset, 0 0 0 1px ${color.track}`
-      })
-    );
+    const chip = part("span", "qws-cmp-ability");
+    chip.style.background = getAbilityChipColors(abilityId).bg;
+    box2.append(chip);
     return box2;
   }
   var SPRITE_LOG_TAG4, ICON_PX5;
@@ -46050,7 +45945,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/features/companion/menu/hatchChips.ts"() {
       "use strict";
       init_iconCache();
-      init_theme();
       init_abilityChipColors();
       init_dom3();
       SPRITE_LOG_TAG4 = "companion-hatch";
@@ -46077,7 +45971,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       return known;
     };
-    const modal = openModal2({
+    const modal = openCompanionModal({
       host,
       title: "Hatching",
       widthPx: 470,
@@ -46093,23 +45987,24 @@ Restore figures are averages; unlucky streaks do worse.`;
       render();
     }
     function chipRow(values, selected, labelFor2, iconFor, onPick, named = false) {
-      const row5 = tileRow();
+      const row2 = tileRow();
       for (const value of values) {
         const shared = { icon: iconFor(value), selected: selected.includes(value), onClick: () => onPick(value) };
-        row5.append(named ? labelledTile({ ...shared, label: labelFor2(value) }) : spriteTile({ ...shared, title: labelFor2(value) }));
+        row2.append(named ? labelledTile({ ...shared, label: labelFor2(value) }) : spriteTile({ ...shared, title: labelFor2(value) }));
       }
-      return row5;
+      return row2;
     }
-    function scrollable(row5) {
-      const box2 = styled("div", { maxHeight: `${ABILITY_LIST_MAX_PX}px`, overflowY: "auto", overscrollBehavior: "contain" });
-      box2.append(row5);
+    function scrollable(row2) {
+      const box2 = part("div", "qws-cmp-scroll qmm-scroll");
+      box2.style.maxHeight = `${ABILITY_LIST_MAX_PX}px`;
+      box2.append(row2);
       return box2;
     }
-    function renderCard(card4, values, picked, content2) {
-      card4.root.style.display = values.length > 0 ? "flex" : "none";
+    function renderCard(card3, values, picked, content2) {
+      card3.root.hidden = values.length === 0;
       if (values.length === 0) return;
-      card4.body.replaceChildren(content2());
-      card4.setSummary(summarize(picked.length), picked.length > 0);
+      card3.body.replaceChildren(content2());
+      card3.setSummary(summarize(picked.length), picked.length > 0);
     }
     function renderSpecies() {
       const values = offered(scope.possibleSpecies, rules3.species);
@@ -46172,26 +46067,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     const strengthToggle = switchInput(rules3.minMaxStr !== null, (on) => {
       commit({ ...rules3, minMaxStr: on ? Number(strengthField.value) || DEFAULT_STR : null });
     });
-    {
-      const control = styled("div", { display: "flex", alignItems: "center", gap: "10px" });
-      control.append(strengthField.wrap, strengthToggle);
-      strengthCard.body.append(fieldRow("Keep max STR from", control));
-    }
+    strengthCard.body.append(fieldRow("Keep max STR from", [strengthField.wrap, strengthToggle]));
     const strip = resultBox();
-    strip.root.style.gap = "5px";
-    const note = styled("div", { fontSize: "11px", lineHeight: "1.5", color: color.textDim });
+    const note = part("div", "qws-cmp-hint");
     strip.root.append(note);
-    const resetButton = button("Reset", { size: "sm", block: true, onClick: () => commit({ ...DEFAULT_KEEP_RULES }) });
+    const resetButton = button("Reset", { size: "sm", onClick: () => commit({ ...DEFAULT_KEEP_RULES }) });
     const askButton = button("Ask to hatch", {
       size: "sm",
-      block: true,
       variant: "primary",
       onClick: () => {
         onAsk(hatchRequest(describeHatchRequest(scope.readySlots.length), rules3));
         modal.close();
       }
     });
-    askButton.style.marginLeft = "auto";
+    askButton.classList.add("qws-cmp-foot-end");
     const notice = settingsNotice("hatch", "Hatching is not set up. I will use the team you have on.", () => {
       modal.close();
       openHatchSettingsModal(host, () => openSettingsModal(host));
@@ -46205,18 +46094,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       renderAbilities();
       strengthField.disabled = rules3.minMaxStr === null;
       if (rules3.minMaxStr !== null) strengthField.value = String(rules3.minMaxStr);
-      strengthField.wrap.style.opacity = rules3.minMaxStr === null ? "0.45" : "1";
+      strengthField.wrap.classList.toggle("qws-cmp-dim", rules3.minMaxStr === null);
       strengthCard.setSummary(rules3.minMaxStr === null ? "Off" : `${rules3.minMaxStr} and up`, rules3.minMaxStr !== null);
       const ready = scope.readySlots.length;
       const waiting = scope.totalEggs - ready;
       strip.headline.textContent = ready === 0 ? "No egg is ready" : `${ready} egg${ready === 1 ? "" : "s"} ready`;
-      if (!hasAnyRule(rules3)) {
-        note.textContent = "Nothing set to keep, so I will not offer to sell. Favourites and your active team are always safe.";
-        note.style.color = color.warn;
-      } else {
-        note.textContent = `Favourites and your active team are never sold.${waiting > 0 ? ` ${waiting} still growing.` : ""}`;
-        note.style.color = color.textDim;
-      }
+      const keepsNothing = !hasAnyRule(rules3);
+      note.classList.toggle("is-warn", keepsNothing);
+      note.textContent = keepsNothing ? "Nothing set to keep, so I will not offer to sell. Favourites and your active team are always safe." : `Favourites and your active team are never sold.${waiting > 0 ? ` ${waiting} still growing.` : ""}`;
       askButton.setEnabled(ready > 0);
     }
     async function refresh() {
@@ -46235,8 +46120,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_button();
       init_fields();
-      init_modal();
-      init_theme();
       init_toggles();
       init_hatch2();
       init_hatch();
@@ -46397,21 +46280,14 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/menu/plantGrid.ts
   function plantGrid(options2) {
-    const root4 = styled("div", {
-      display: "grid",
+    const root4 = part("div", "qws-cmp-plot");
+    Object.assign(root4.style, {
       gridTemplateColumns: `repeat(${GARDEN_COLS / 2}, 1fr) ${HALF_GAP_PX2}px repeat(${GARDEN_COLS / 2}, 1fr)`,
       gridTemplateRows: `repeat(${GARDEN_ROWS}, 1fr)`,
-      gap: "2px",
-      height: `min(38vh, ${MAX_GRID_HEIGHT_PX}px)`,
       aspectRatio: `${GARDEN_COLS} / ${GARDEN_ROWS}`,
-      width: "auto",
-      margin: "0 auto",
-      padding: "6px",
-      borderRadius: "12px",
-      border: `1px solid ${color.border}`,
-      background: color.fieldBg,
-      boxSizing: "border-box",
-      flex: "0 0 auto"
+      // As tall as fits, but never wider than the popup: a narrow window shrinks
+      // the plot rather than cutting it.
+      maxWidth: `calc(min(38vh, ${MAX_GRID_HEIGHT_PX}px) * ${GARDEN_COLS / GARDEN_ROWS})`
     });
     root4.addEventListener("contextmenu", (event) => event.preventDefault());
     const cells = /* @__PURE__ */ new Map();
@@ -46422,15 +46298,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     window.addEventListener("mouseup", stopPainting);
     function buildCell(tileIndex) {
-      const cell = styled("div", {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: "4px",
-        userSelect: "none",
-        border: "1px solid transparent",
-        transition: "background 90ms ease"
-      });
+      const cell = part("div", "qws-cmp-plot__cell");
       cell.dataset.tile = String(tileIndex);
       cell.addEventListener("mousedown", (event) => {
         event.preventDefault();
@@ -46443,13 +46311,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       return cell;
     }
-    for (let row5 = 0; row5 < GARDEN_ROWS; row5++) {
+    for (let row2 = 0; row2 < GARDEN_ROWS; row2++) {
       for (let col = 0; col < GARDEN_COLS; col++) {
-        if (col === GARDEN_COLS / 2) root4.append(styled("div", { pointerEvents: "none" }));
-        const tileIndex = row5 * GARDEN_COLS + col;
-        const el = buildCell(tileIndex);
-        cells.set(tileIndex, { el, shown: null });
-        root4.append(el);
+        if (col === GARDEN_COLS / 2) root4.append(part("div", "qws-cmp-plot__aisle"));
+        const tileIndex = row2 * GARDEN_COLS + col;
+        const el4 = buildCell(tileIndex);
+        cells.set(tileIndex, { el: el4, shown: null });
+        root4.append(el4);
       }
     }
     function stateKey(tileIndex, owned2, occupied) {
@@ -46461,29 +46329,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     function paintCell(cell, tileIndex, key2) {
       cell.shown = key2;
       cell.el.replaceChildren();
-      if (key2 === "absent") {
-        Object.assign(cell.el.style, { background: "transparent", borderColor: "transparent", cursor: "default" });
-        cell.el.title = "";
-        return;
-      }
-      if (key2 === "occupied") {
-        Object.assign(cell.el.style, { background: color.dangerHover, borderColor: color.danger, cursor: "not-allowed" });
-        cell.el.title = "Something is already growing here";
-        return;
-      }
-      if (key2 === "free") {
-        Object.assign(cell.el.style, { background: color.hoverBg, borderColor: color.border, cursor: "pointer" });
-        cell.el.title = "";
+      if (key2 === "absent" || key2 === "occupied" || key2 === "free") {
+        cell.el.dataset.state = key2;
+        cell.el.title = key2 === "occupied" ? "Something is already growing here" : "";
         return;
       }
       const assignment = options2.assignmentAt(tileIndex);
-      Object.assign(cell.el.style, { background: color.accentSoft, borderColor: color.accentBorder, cursor: "pointer" });
+      cell.el.dataset.state = "set";
       cell.el.title = assignment?.name ?? "";
-      if (assignment) {
-        const icon2 = options2.iconFor(assignment, CELL_ICON_PX2);
-        icon2.style.pointerEvents = "none";
-        cell.el.append(icon2);
-      }
+      if (assignment) cell.el.append(options2.iconFor(assignment, CELL_ICON_PX2));
     }
     return {
       root: root4,
@@ -46506,7 +46360,6 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_plantGrid = __esm({
     "src/features/companion/menu/plantGrid.ts"() {
       "use strict";
-      init_theme();
       init_plant();
       init_dom3();
       MAX_GRID_HEIGHT_PX = 300;
@@ -46517,10 +46370,10 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/menu/plantModal.ts
   function paletteGroup(title) {
-    const root4 = styled("div", { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
-    const row5 = styled("div", { display: "flex", flexWrap: "wrap", gap: "5px" });
-    root4.append(sectionLabel(title), row5);
-    return { root: root4, row: row5 };
+    const root4 = part("div", "qws-cmp-palette");
+    const row2 = tileRow();
+    root4.append(sectionLabel(title), row2);
+    return { root: root4, row: row2 };
   }
   function openPlantModal(host, onAsk) {
     let scope = EMPTY_SCOPE;
@@ -46530,7 +46383,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     let tiles = /* @__PURE__ */ new Map();
     let paletteSignature = "";
     const stripIcons = /* @__PURE__ */ new Map();
-    const modal = openModal2({
+    const modal = openCompanionModal({
       host,
       title: "What should I plant?",
       widthPx: 700,
@@ -46541,25 +46394,22 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const seedGroup = paletteGroup("Seeds");
     const eggGroup = paletteGroup("Eggs");
-    const paletteEmpty = styled("div", { fontSize: "12px", color: color.textDim, lineHeight: "1.5" }, "Nothing to plant. No seeds, no eggs.");
-    const hint2 = styled(
-      "div",
-      { fontSize: "11px", color: color.textDim, lineHeight: "1.5" },
-      "Pick one and draw. Right click erases, red is taken."
-    );
+    const paletteEmpty = part("div", "qws-cmp-empty", "Nothing to plant. No seeds, no eggs.");
+    const hint3 = part("div", "qws-cmp-hint", "Pick one and draw. Right click erases, red is taken.");
+    const palette = plainCard();
+    palette.append(seedGroup.root, eggGroup.root, hint3);
     const grid = plantGrid({
       owned: () => owned2,
       occupied: () => scope.occupied,
       assignmentAt: (tileIndex) => plan.get(tileIndex) ?? null,
       iconFor: (assignment, sizePx) => plantItemIcon(assignment, sizePx),
-      onPaint: (tileIndex, mode) => paint(tileIndex, mode)
+      onPaint: (tileIndex, mode) => paint2(tileIndex, mode)
     });
     const strip = resultBox();
-    const stripIconRow = styled("div", { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" });
+    const stripIconRow = part("div", "qws-cmp-result__icons");
     strip.root.append(stripIconRow);
     const clearButton = button("Clear", {
       size: "sm",
-      block: true,
       onClick: () => {
         plan = /* @__PURE__ */ new Map();
         render();
@@ -46567,7 +46417,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const askButton = button("Ask to plant these", {
       size: "sm",
-      block: true,
       variant: "primary",
       onClick: () => {
         const drawn = [...plan.values()];
@@ -46575,13 +46424,13 @@ Restore figures are averages; unlucky streaks do worse.`;
         modal.close();
       }
     });
-    askButton.style.marginLeft = "auto";
-    modal.body.append(seedGroup.root, eggGroup.root, paletteEmpty, hint2, grid.root, strip.root);
+    askButton.classList.add("qws-cmp-foot-end");
+    modal.body.append(palette, paletteEmpty, grid.root, strip.root);
     modal.footer.append(clearButton, askButton);
     function remainingFor(item) {
       return stockLeft([...plan.values()], scope.items).get(itemKey(item)) ?? 0;
     }
-    function paint(tileIndex, mode) {
+    function paint2(tileIndex, mode) {
       if (mode === "erase") {
         if (plan.delete(tileIndex)) render();
         return;
@@ -46619,7 +46468,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     function renderStrip() {
       const drawn = [...plan.values()];
       strip.headline.textContent = drawn.length === 0 ? "Nothing to plant yet" : `${drawn.length} tile${drawn.length === 1 ? "" : "s"}`;
-      stripIconRow.style.display = drawn.length === 0 ? "none" : "flex";
+      stripIconRow.hidden = drawn.length === 0;
       stripIconRow.replaceChildren(
         ...countByItem(drawn).map((entry) => {
           const key2 = itemKey(entry);
@@ -46641,12 +46490,10 @@ Restore figures are averages; unlucky streaks do worse.`;
         tiles.get(key2)?.update(left.get(key2) ?? 0, held !== null && itemKey(held) === key2);
       }
       const hasItems = scope.items.length > 0;
-      for (const group2 of [seedGroup, eggGroup]) {
-        group2.root.style.display = group2.row.childElementCount > 0 ? "flex" : "none";
-      }
-      paletteEmpty.style.display = hasItems ? "none" : "";
-      hint2.style.display = hasItems ? "" : "none";
-      grid.root.style.display = hasItems ? "grid" : "none";
+      for (const group2 of [seedGroup, eggGroup]) group2.root.hidden = group2.row.childElementCount === 0;
+      palette.hidden = !hasItems;
+      paletteEmpty.hidden = hasItems;
+      grid.root.hidden = !hasItems;
       grid.update();
       renderStrip();
       askButton.setEnabled(plan.size > 0);
@@ -46669,12 +46516,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_button();
       init_card();
-      init_modal();
-      init_theme();
       init_plant2();
       init_plant();
       init_plantRead();
       init_dom3();
+      init_harvestChips();
       init_harvestFields();
       init_plantChips();
       init_plantGrid();
@@ -46685,8 +46531,8 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/menu/actionsModal.ts
   function openActionsModal(host, onAsk) {
-    const modal = openModal2({ host, title: "What can you do?", widthPx: 420 });
-    const list = styled("div", { display: "flex", flexDirection: "column", gap: "8px" });
+    const modal = openCompanionModal({ host, title: "What can you do?", widthPx: 420 });
+    const list = part("div", "qws-cmp-list");
     modal.body.append(list);
     function renderRows(rows) {
       if (!modal.isOpen()) return;
@@ -46850,170 +46696,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/companion/avatar.ts
-  function layerRank(filename) {
-    const prefix = filename.split("_")[0];
-    return LAYER_ORDER.indexOf(prefix);
-  }
-  function cosmeticsIn(value, depth = 0) {
-    if (depth > 3 || !value) return [];
-    if (Array.isArray(value)) {
-      return value.filter((entry) => typeof entry === "string" && entry.endsWith(".png"));
-    }
-    if (typeof value !== "object") return [];
-    for (const nested of Object.values(value)) {
-      const found = cosmeticsIn(nested, depth + 1);
-      if (found.length > 0) return found;
-    }
-    return [];
-  }
-  async function readNpcOutfit(npcId) {
-    if (!npcId) return [];
-    let all = null;
-    try {
-      all = await npcAvatarData.get();
-    } catch {
-      return [];
-    }
-    if (!all || typeof all !== "object") return [];
-    return cosmeticsIn(all[npcId]).filter((filename) => layerRank(filename) >= 0).sort((a, b) => layerRank(a) - layerRank(b));
-  }
-  function cosmeticUrl(filename) {
-    if (!gameVersion || !filename) return null;
-    const origin = typeof location !== "undefined" ? location.origin.replace(/\/$/, "") : "";
-    if (!origin) return null;
-    return `${origin}/version/${gameVersion}/assets/cosmetic/${filename}`;
-  }
-  var npcAvatarData, LAYER_ORDER;
-  var init_avatar = __esm({
-    "src/features/companion/avatar.ts"() {
-      "use strict";
-      init_hub();
-      init_gameVersion();
-      npcAvatarData = makeAtom("npcAvatarDataAtom");
-      LAYER_ORDER = ["Default", "Bottom", "Mid", "Top", "Expression"];
-    }
-  });
-
-  // src/features/companion/menu/npcAvatar.ts
-  function loadImage2(url) {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.addEventListener("load", () => resolve(img));
-      img.addEventListener("error", () => resolve(null));
-      setImageSafe(img, url);
-    });
-  }
-  function opaqueBounds(canvas) {
-    const ctx2 = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx2) return null;
-    let pixels;
-    try {
-      pixels = ctx2.getImageData(0, 0, canvas.width, canvas.height).data;
-    } catch {
-      return null;
-    }
-    let minX = canvas.width;
-    let minY = canvas.height;
-    let maxX = -1;
-    let maxY = -1;
-    for (let y = 0; y < canvas.height; y++) {
-      for (let x = 0; x < canvas.width; x++) {
-        if (pixels[(y * canvas.width + x) * 4 + 3] < 16) continue;
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-      }
-    }
-    if (maxX < 0) return null;
-    return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
-  }
-  function headCrop(canvas) {
-    const bounds = opaqueBounds(canvas);
-    if (!bounds) {
-      return {
-        x: canvas.width * FALLBACK_CROP.x,
-        y: canvas.height * FALLBACK_CROP.y,
-        width: canvas.width * FALLBACK_CROP.size,
-        height: canvas.height * FALLBACK_CROP.size
-      };
-    }
-    const side = Math.min(bounds.width * (1 + HEAD_PADDING * 2), bounds.height, canvas.height);
-    const centreX = bounds.x + bounds.width / 2;
-    const top = Math.max(0, bounds.y - side * (HEAD_PADDING / 2));
-    return {
-      x: Math.max(0, Math.min(centreX - side / 2, canvas.width - side)),
-      y: Math.min(top, Math.max(0, canvas.height - side)),
-      width: side,
-      height: side
-    };
-  }
-  async function compose2(npcId) {
-    const outfit = await readNpcOutfit(npcId).catch(() => []);
-    if (outfit.length === 0) return null;
-    const urls = outfit.map(cosmeticUrl).filter((url) => url !== null);
-    if (urls.length === 0) return null;
-    const layers = await Promise.all(urls.map(loadImage2));
-    const drawable = layers.filter((img) => img !== null);
-    if (drawable.length === 0) return null;
-    const full = document.createElement("canvas");
-    full.width = CANVAS_PX;
-    full.height = CANVAS_PX;
-    const ctx2 = full.getContext("2d", { willReadFrequently: true });
-    if (!ctx2) return null;
-    for (const layer2 of drawable) ctx2.drawImage(layer2, 0, 0, CANVAS_PX, CANVAS_PX);
-    const crop = headCrop(full);
-    const portrait = document.createElement("canvas");
-    portrait.width = PORTRAIT_PX;
-    portrait.height = PORTRAIT_PX;
-    const out = portrait.getContext("2d");
-    if (!out) return null;
-    out.imageSmoothingEnabled = false;
-    out.drawImage(full, crop.x, crop.y, crop.width, crop.height, 0, 0, PORTRAIT_PX, PORTRAIT_PX);
-    return portrait;
-  }
-  function npcPortrait(npcId) {
-    let known = pending2.get(npcId);
-    if (!known) {
-      known = compose2(npcId).catch(() => null);
-      pending2.set(npcId, known);
-    }
-    return known;
-  }
-  function fillWithPortrait(box2, npcId) {
-    if (!npcId) return;
-    void npcPortrait(npcId).then((source) => {
-      if (!source || !box2.isConnected) return;
-      const view = document.createElement("canvas");
-      view.width = source.width;
-      view.height = source.height;
-      view.getContext("2d")?.drawImage(source, 0, 0);
-      view.style.width = "100%";
-      view.style.height = "100%";
-      view.style.imageRendering = "pixelated";
-      box2.replaceChildren(view);
-    });
-  }
-  var CANVAS_PX, PORTRAIT_PX, HEAD_PADDING, FALLBACK_CROP, pending2;
-  var init_npcAvatar = __esm({
-    "src/features/companion/menu/npcAvatar.ts"() {
-      "use strict";
-      init_avatar();
-      init_discordCsp();
-      CANVAS_PX = 128;
-      PORTRAIT_PX = 64;
-      HEAD_PADDING = 0.22;
-      FALLBACK_CROP = { x: 0.28, y: 0.04, size: 0.44 };
-      pending2 = /* @__PURE__ */ new Map();
-    }
-  });
-
   // src/features/companion/menu/chatView.ts
   function contentOf(text2, icons, positioned2, sizePx) {
     if (positioned2) return renderTagged(text2, icons, sizePx);
-    return [...tagIcons(icons, sizePx), styled("span", {}, text2)];
+    return [...tagIcons(icons, sizePx), document.createTextNode(text2)];
   }
   function isCentered(message2) {
     return message2.kind === "system";
@@ -47046,191 +46732,107 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   }
   function dateSeparator(label2) {
-    const line = () => styled("div", { flex: "1", height: "1px", background: color.border });
-    const text2 = styled(
-      "div",
-      {
-        fontSize: "10px",
-        fontWeight: "600",
-        color: color.textDim,
-        whiteSpace: "nowrap",
-        textTransform: "uppercase",
-        letterSpacing: "0.5px"
-      },
-      label2
-    );
-    const wrap = styled("div", { display: "flex", alignItems: "center", gap: "10px", margin: "10px 0 6px" });
-    wrap.append(line(), text2, line());
-    return wrap;
+    return part("div", "qws-cmp-day", label2);
   }
   function systemLine(text2, icons, positioned2 = false) {
-    const line = styled("div", {
-      alignSelf: "center",
-      fontSize: "11px",
-      color: color.textDim,
-      textAlign: "center",
-      padding: "2px 8px",
-      maxWidth: "90%"
-    });
+    const line = part("div", "qws-cmp-system");
     line.append(...contentOf(text2, icons, positioned2, SYSTEM_ICON_PX));
     return line;
-  }
-  function avatar2(identity, sizePx = AVATAR_PX) {
-    const el = styled("div", {
-      width: `${sizePx}px`,
-      height: `${sizePx}px`,
-      flexShrink: "0",
-      borderRadius: "50%",
-      overflow: "hidden",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: `${Math.round(sizePx * 0.45)}px`,
-      fontWeight: "600",
-      color: color.accent,
-      background: color.accentHover
-    });
-    const name = (identity?.name ?? "").trim();
-    if (name) el.textContent = name.charAt(0).toUpperCase();
-    fillWithPortrait(el, identity?.npcId ?? null);
-    return el;
   }
   function messageRow(message2, flags, identity = null) {
     if (isCentered(message2)) return systemLine(message2.text, message2.icons, message2.positioned);
     const outgoing = message2.from === "you";
-    const row5 = styled("div", {
-      display: "flex",
-      gap: "8px",
-      alignItems: "flex-end",
-      justifyContent: outgoing ? "flex-end" : "flex-start",
-      ...flags.isFirstInGroup ? {} : { marginTop: "-4px" }
-    });
-    if (!outgoing) row5.append(flags.isLastInGroup ? avatar2(identity) : styled("div", { width: `${AVATAR_PX}px`, flexShrink: "0" }));
-    const column = styled("div", {
-      maxWidth: "78%",
-      display: "flex",
-      flexDirection: "column",
-      gap: flags.isLastInGroup ? "3px" : "0",
-      alignItems: outgoing ? "flex-end" : "flex-start"
-    });
-    const bubble = styled("div", {
-      padding: "7px 11px",
-      borderRadius: outgoing ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
-      fontSize: "12.5px",
-      lineHeight: "1.5",
-      wordBreak: "break-word",
-      whiteSpace: "pre-wrap",
-      background: outgoing ? color.accentSoft : color.hoverBg,
-      border: `1px solid ${outgoing ? color.accentBorder : color.border}`,
-      color: color.text
-    });
+    const row2 = part("div", "qws-cmp-msg");
+    row2.classList.toggle("is-out", outgoing);
+    row2.classList.toggle("is-cont", !flags.isFirstInGroup);
+    if (!outgoing) {
+      if (flags.isLastInGroup) {
+        row2.append(portrait(identity, AVATAR_PX));
+      } else {
+        const gap = part("div", "qws-cmp-avatar-gap");
+        gap.style.width = `${AVATAR_PX}px`;
+        row2.append(gap);
+      }
+    }
+    const column = part("div", "qws-cmp-msg__col");
+    const bubble = part("div", "qws-cmp-bubble");
     bubble.append(...contentOf(message2.text, message2.icons, message2.positioned, BUBBLE_ICON_PX2));
     column.append(bubble);
-    if (flags.isLastInGroup) {
-      column.append(styled("div", { fontSize: "10px", color: color.textDim }, formatMessageTime(message2.atMs)));
-    }
-    row5.append(column);
-    return row5;
+    if (flags.isLastInGroup) column.append(part("div", "qws-cmp-msg__time", formatMessageTime(message2.atMs)));
+    row2.append(column);
+    return row2;
   }
   function chatHeader(name) {
-    const root4 = styled("div", {
-      display: "flex",
-      alignItems: "center",
-      gap: "10px",
-      padding: "8px 10px",
-      borderBottom: `1px solid ${color.border}`
-    });
-    const portraitSlot = styled("div", { display: "flex", flexShrink: "0" });
-    portraitSlot.append(avatar2(null, 32));
-    const title = styled("div", { fontSize: "13px", fontWeight: "600", color: color.text }, name);
-    const status2 = styled("div", { fontSize: "11px", color: color.textDim });
-    const info = styled("div", { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
+    const root4 = part("div", "qws-cmp-chat__head");
+    const portraitSlot = part("div", "qws-cmp-avatar-gap");
+    portraitSlot.append(portrait(null, HEADER_AVATAR_PX, true));
+    const title = part("div", "qws-cmp-chat__name", name);
+    const dot = part("span", "qws-cmp-dot");
+    const statusText = part("span", "");
+    const status2 = part("div", "qws-cmp-chat__status");
+    status2.append(dot, statusText);
+    const info = part("div", "qws-cmp-chat__who");
     info.append(title, status2);
     root4.append(portraitSlot, info);
     let shownIdentity = null;
     return {
       root: root4,
-      setStatus(text2, busy) {
-        status2.textContent = text2;
-        status2.style.color = busy ? color.accent : color.textDim;
+      setStatus(text2, tone) {
+        statusText.textContent = text2;
+        status2.classList.toggle("is-busy", tone === "busy");
+        dot.classList.toggle("is-busy", tone === "busy");
+        dot.classList.toggle("is-ok", tone === "ready");
       },
       setIdentity(identity) {
         if (identity.npcId === shownIdentity) return;
         shownIdentity = identity.npcId;
-        portraitSlot.replaceChildren(avatar2(identity, 32));
+        portraitSlot.replaceChildren(portrait(identity, HEADER_AVATAR_PX, true));
         title.textContent = identity.name || name;
       }
     };
   }
   function threadBody() {
-    const body = styled("div", {
-      height: "300px",
-      overflowY: "auto",
-      padding: "10px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "5px"
-    });
-    body.className = "qmm-scroll";
-    return body;
+    return part("div", "qws-cmp-thread qmm-scroll");
   }
   function emptyThread(text2) {
-    const wrap = styled("div", {
-      margin: "auto",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: "8px",
-      color: color.textDim,
-      textAlign: "center"
-    });
-    wrap.append(styled("div", { fontSize: "12px", maxWidth: "220px", lineHeight: "1.5" }, text2));
-    return wrap;
+    return part("div", "qws-cmp-empty", text2);
   }
   function actionBar() {
-    return styled("div", {
-      display: "flex",
-      alignItems: "center",
-      flexWrap: "wrap",
-      gap: "6px",
-      padding: "8px 10px",
-      borderTop: `1px solid ${color.border}`
-    });
+    return part("div", "qws-cmp-bar");
   }
   function barHint(text2, tone = "dim") {
-    return styled("div", { fontSize: "11px", color: tone === "warn" ? color.warn : color.textDim, marginLeft: "auto" }, text2);
+    const note = pill(text2, tone === "warn" ? "warn" : void 0);
+    note.classList.add("qws-cmp-bar__end");
+    return note;
   }
-  var GROUP_WINDOW_MS, AVATAR_PX, BUBBLE_ICON_PX2, SYSTEM_ICON_PX;
+  var GROUP_WINDOW_MS, AVATAR_PX, HEADER_AVATAR_PX, BUBBLE_ICON_PX2, SYSTEM_ICON_PX;
   var init_chatView = __esm({
     "src/features/companion/menu/chatView.ts"() {
       "use strict";
-      init_theme();
+      init_badges();
       init_chatIcons();
       init_dom3();
-      init_npcAvatar();
+      init_portrait();
       GROUP_WINDOW_MS = 2 * 60 * 1e3;
       AVATAR_PX = 26;
+      HEADER_AVATAR_PX = 38;
       BUBBLE_ICON_PX2 = 18;
       SYSTEM_ICON_PX = 15;
     }
   });
 
   // src/features/companion/menu/chatTab.ts
-  function borrowed() {
-    const npcId = CompanionService.getNpcId();
-    return { npcId, name: npcId ? npcId.replace(/^NPC_/, "") : null };
-  }
   function renderChatTab(view) {
     view.innerHTML = "";
-    const root4 = styled("div", { display: "flex", flexDirection: "column", gap: "8px" });
+    const root4 = part("div", "qws-cmp-tab");
     view.append(root4);
     const header = chatHeader("Companion");
     const thread = threadBody();
-    const bar = actionBar();
+    const bar2 = actionBar();
     const host = view.closest(".qws-win") ?? view;
     function confirmRow(proposalId) {
-      const row5 = styled("div", { display: "flex", gap: "6px", alignSelf: "flex-start", marginLeft: "34px", marginTop: "2px" });
-      row5.append(
+      const row2 = part("div", "qws-cmp-confirm");
+      row2.append(
         button("Yes, go ahead", {
           ...SMALL,
           variant: "primary",
@@ -47239,11 +46841,11 @@ Restore figures are averages; unlucky streaks do worse.`;
         }),
         button("Not now", { ...SMALL, onClick: () => CompanionChat.decline(proposalId) })
       );
-      return row5;
+      return row2;
     }
     function renderThread() {
       thread.innerHTML = "";
-      const identity = borrowed();
+      const identity = borrowedIdentity();
       const { messages } = CompanionChat.getLog();
       const proposal = CompanionChat.getProposal();
       if (messages.length === 0) {
@@ -47280,41 +46882,44 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const actionsButton = button("Actions", {
       ...SMALL,
+      variant: "primary",
       onClick: () => openActionsModal(host, (request2) => void CompanionChat.ask(request2).catch(() => {
       }))
     });
+    actionsButton.classList.add("qws-cmp-bar__grow");
     const settingsButton = button("Settings", { ...SMALL, onClick: () => openSettingsModal(host) });
     function renderBar() {
-      bar.innerHTML = "";
+      bar2.innerHTML = "";
       const run = CompanionChat.getRun();
       if (run) {
-        bar.append(
+        bar2.append(
           button(`Stop (${run.done}/${run.total})`, { ...SMALL, variant: "danger", onClick: () => CompanionChat.cancelRun() }),
           barHint("Working on it", "warn")
         );
         return;
       }
-      bar.append(actionsButton, settingsButton);
+      bar2.append(actionsButton, settingsButton);
     }
     function renderStatus() {
-      header.setIdentity(borrowed());
+      header.setIdentity(borrowedIdentity());
       const run = CompanionChat.getRun();
       if (run) {
-        header.setStatus(`On it, ${run.done} of ${run.total}`, true);
+        header.setStatus(`On it, ${run.done} of ${run.total}`, "busy");
         return;
       }
       if (CompanionChat.getProposal()) {
-        header.setStatus("Waiting on you", true);
+        header.setStatus("Waiting on you", "busy");
         return;
       }
-      header.setStatus(CompanionService.isRunning() ? "Ready when you are" : "Not out yet, but I can still help", false);
+      if (CompanionService.isRunning()) header.setStatus("Ready when you are", "ready");
+      else header.setStatus("Not out yet, but I can still help", "idle");
     }
     function renderAll() {
       renderThread();
       renderBar();
       renderStatus();
     }
-    root4.append(header.root, thread, bar);
+    root4.append(header.root, thread, bar2);
     renderAll();
     let unsubscribe2 = () => {
     };
@@ -47326,6 +46931,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       renderAll();
     });
     refreshWhileVisible(root4, renderStatus, IDENTITY_REFRESH_MS);
+    if (typeof IntersectionObserver !== "undefined") {
+      const observer2 = new IntersectionObserver((entries) => {
+        if (!root4.isConnected) observer2.disconnect();
+        else if (entries[entries.length - 1]?.isIntersecting) thread.scrollTop = thread.scrollHeight;
+      });
+      observer2.observe(thread);
+    }
   }
   var EMPTY_HINT, IDENTITY_REFRESH_MS, SMALL;
   var init_chatTab = __esm({
@@ -47338,18 +46950,20 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_actionsModal();
       init_chatView();
       init_dom3();
+      init_portrait();
       init_settingsModal();
-      EMPTY_HINT = "Pick something below. I always ask first.";
+      EMPTY_HINT = "Nothing said yet. Pick an action below, I always ask first.";
       IDENTITY_REFRESH_MS = 2e3;
-      SMALL = { size: "sm", block: true, lockWhilePending: true };
+      SMALL = { size: "sm", lockWhilePending: true };
     }
   });
 
   // src/features/companion/menu/index.ts
   function renderCompanionMenu(root4) {
+    ensureCompanionStyles();
     const ui = new Menu({ id: "companion", compact: true, windowSelector: ".qws-win" });
     ui.mount(root4);
-    root4.style.minWidth = `${MIN_WIDTH_PX}px`;
+    root4.classList.add("qws-cmp-window");
     ui.addTab("behavior", "Behavior", (view) => renderBehaviorTab(view));
     ui.addTab("chat", "Chat", (view) => renderChatTab(view));
     const onTabRequest = (event) => {
@@ -47362,7 +46976,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     window.addEventListener(COMPANION_TAB_EVENT, onTabRequest);
   }
-  var MIN_WIDTH_PX, TABS2;
+  var TABS2;
   var init_menu14 = __esm({
     "src/features/companion/menu/index.ts"() {
       "use strict";
@@ -47370,7 +46984,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_keybind();
       init_behaviorTab();
       init_chatTab();
-      MIN_WIDTH_PX = 460;
+      init_styles8();
       TABS2 = ["behavior", "chat"];
     }
   });
@@ -47609,15 +47223,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     ev.preventDefault();
   }
   function installEditorPointerControls() {
-    if (installed6 || typeof window === "undefined") return;
-    installed6 = true;
+    if (installed8 || typeof window === "undefined") return;
+    installed8 = true;
     window.addEventListener("pointerdown", (ev) => void handlePointerDown(ev), true);
     window.addEventListener("pointermove", (ev) => void handlePointerMove(ev), true);
     window.addEventListener("pointerup", handlePointerUp, true);
     window.addEventListener("pointercancel", handlePointerUp, true);
     window.addEventListener("contextmenu", handleContextMenu, true);
   }
-  var installed6, dragMode, lastTileKey, tileKeyOf;
+  var installed8, dragMode, lastTileKey, tileKeyOf;
   var init_pointerControls = __esm({
     "src/features/editor/pointerControls.ts"() {
       "use strict";
@@ -47627,7 +47241,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_planEdits();
       init_session();
       init_tileMap();
-      installed6 = false;
+      installed8 = false;
       dragMode = null;
       lastTileKey = null;
       tileKeyOf = (target) => `${target.tileType}|${target.localTileIndex}`;
@@ -47984,9 +47598,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   }
   function mirrorDelay(random) {
-    const span = MIRROR_DELAY_MAX_MS - MIRROR_DELAY_MIN_MS;
+    const span3 = MIRROR_DELAY_MAX_MS - MIRROR_DELAY_MIN_MS;
     const r = Math.min(1, Math.max(0, random()));
-    return Math.round(MIRROR_DELAY_MIN_MS + r * span);
+    return Math.round(MIRROR_DELAY_MIN_MS + r * span3);
   }
   function decideMirror(state5, played, ctx2) {
     const { now, random } = ctx2;
@@ -48269,9 +47883,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (after <= before) continue;
       const inventory = next[kind]?.inventory;
       if (!Array.isArray(inventory)) continue;
-      const [prefix, field2] = SHOP_ID[kind];
+      const [prefix, field3] = SHOP_ID[kind];
       for (const item of inventory) {
-        const key2 = item?.[field2];
+        const key2 = item?.[field3];
         const stock = Number(item?.initialStock);
         if (typeof key2 !== "string" || !key2 || !(stock > 0)) continue;
         const id = `${prefix}:${key2}`;
@@ -48837,16 +48451,16 @@ Restore figures are averages; unlucky streaks do worse.`;
           offer(weatherChangeReaction(prev, id, prevName, startLine, Math.random));
         }
         function onStats(next) {
-          const snapshot2 = clone(next);
+          const snapshot3 = clone(next);
           const prev = prevStats;
-          prevStats = snapshot2;
+          prevStats = snapshot3;
           if (!prev) return;
           let ownRun = false;
           try {
             ownRun = CompanionChat.isRunning();
           } catch {
           }
-          for (const reaction of statReactions(prev, snapshot2, Math.random)) {
+          for (const reaction of statReactions(prev, snapshot3, Math.random)) {
             if (ownRun && !reaction.key.startsWith("milestone:")) continue;
             offer(reaction);
           }
@@ -48881,7 +48495,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           let names = ids.map((id) => id.split(":").slice(1).join(":"));
           try {
             const state5 = await NotifierService.get();
-            const byId = new Map(state5.rows.map((row5) => [row5.id, row5.name]));
+            const byId = new Map(state5.rows.map((row2) => [row2.id, row2.name]));
             names = ids.map((id, i) => byId.get(id) ?? names[i]);
           } catch {
           }
@@ -49214,21 +48828,19 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/menu/askBanner.ts
   function ensureStyle() {
     if (document.getElementById(STYLE_ID6)) return;
+    ensureKitStyles();
     const style = document.createElement("style");
     style.id = STYLE_ID6;
     style.textContent = `
 #${CARD_ID} {
   position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
   z-index: ${Z_INDEX};
-  width: 430px; max-width: calc(100vw - 24px);
-  border-radius: 14px; overflow: hidden;
-  border: 1px solid var(--qmm-accent-border);
-  background:
-    radial-gradient(120% 140% at 0% 0%, var(--qmm-accent-soft), transparent 55%),
-    var(--qmm-gradient-panel);
-  backdrop-filter: blur(8px);
-  box-shadow: var(--qmm-shadow-modal);
-  font: 12.5px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  width: 430px; max-width: calc(100vw - 24px); box-sizing: border-box;
+  border-radius: var(--qmm-radius-xl); overflow: hidden;
+  border: 3px solid var(--qmm-sand-edge);
+  background: var(--qmm-paper);
+  box-shadow: var(--qmm-shadow-raise);
+  font-family: var(--qmm-font); font-size: var(--qmm-fs-md); font-weight: 700; line-height: 1.45;
   color: var(--qmm-text);
   animation: mgAskIn 160ms ease-out;
 }
@@ -49236,25 +48848,27 @@ Restore figures are averages; unlucky streaks do worse.`;
   from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
-#${CARD_ID} .mgask-body { display: flex; gap: 11px; padding: 13px 14px 11px; }
+@media (prefers-reduced-motion: reduce) { #${CARD_ID} { animation: none; } }
+#${CARD_ID} .mgask-body { display: flex; gap: var(--qmm-space-lg); padding: 14px 16px 12px; }
 #${CARD_ID} .mgask-face {
-  width: 46px; height: 46px; flex: 0 0 auto;
-  border-radius: 11px; overflow: hidden;
-  border: 1px solid var(--qmm-accent-border);
-  background: var(--qmm-hover-bg);
+  width: 48px; height: 48px; flex: 0 0 auto;
+  border-radius: 50%; overflow: hidden;
+  box-shadow: 0 0 0 2px var(--qmm-accent-border);
+  background: var(--qmm-sepia-soft);
   display: grid; place-items: center;
   font-size: 22px; line-height: 1;
 }
-#${CARD_ID} .mgask-right { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
-#${CARD_ID} .mgask-who { font-size: 11px; font-weight: 700; color: var(--qmm-accent); letter-spacing: 0.02em; }
+#${CARD_ID} .mgask-face canvas { image-rendering: pixelated; }
+#${CARD_ID} .mgask-right { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: var(--qmm-space-md); }
+#${CARD_ID} .mgask-who {
+  font-size: var(--qmm-fs-xs); font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--qmm-sepia-ink);
+}
 #${CARD_ID} .mgask-text { display: block; overflow-wrap: anywhere; }
 #${CARD_ID} .mgask-text img, #${CARD_ID} .mgask-text canvas { vertical-align: -3px; }
-#${CARD_ID} .mgask-buttons { display: flex; gap: 8px; }
-#${CARD_ID} .mgask-clock { height: 3px; background: var(--qmm-hover-bg); }
-#${CARD_ID} .mgask-clock > i {
-  display: block; height: 100%; width: 100%;
-  background: linear-gradient(90deg, var(--qmm-accent), var(--qmm-accent-border-hover));
-}
+#${CARD_ID} .mgask-buttons { display: flex; flex-wrap: wrap; gap: var(--qmm-space-md); }
+#${CARD_ID} .mgask-clock { height: 4px; background: var(--qmm-sand); }
+#${CARD_ID} .mgask-clock > i { display: block; height: 100%; width: 100%; background: var(--qmm-sepia); }
 `;
     document.head.appendChild(style);
   }
@@ -49263,8 +48877,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       window.clearInterval(timer);
       timer = null;
     }
-    card3?.remove();
-    card3 = null;
+    card2?.remove();
+    card2 = null;
     clockBar = null;
     shownId = null;
   }
@@ -49308,7 +48922,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     clock.append(fill);
     root4.append(body, clock);
     document.body.appendChild(root4);
-    card3 = root4;
+    card2 = root4;
     clockBar = fill;
     shownId = proposal.id;
     timer = window.setInterval(() => {
@@ -49340,12 +48954,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     unsubscribe = CompanionChat.subscribe(sync);
     sync();
   }
-  var CARD_ID, STYLE_ID6, Z_INDEX, ICON_PX6, TICK_MS2, card3, clockBar, timer, shownId, unsubscribe;
+  var CARD_ID, STYLE_ID6, Z_INDEX, ICON_PX6, TICK_MS2, card2, clockBar, timer, shownId, unsubscribe;
   var init_askBanner = __esm({
     "src/features/companion/menu/askBanner.ts"() {
       "use strict";
       init_button();
       init_dom2();
+      init_styles();
       init_theme();
       init_companion();
       init_chat();
@@ -49358,7 +48973,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       Z_INDEX = layer.window + 49;
       ICON_PX6 = 17;
       TICK_MS2 = 100;
-      card3 = null;
+      card2 = null;
       clockBar = null;
       timer = null;
       shownId = null;
@@ -49398,10 +49013,10 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/room/privacyNotice.ts
   function box() {
-    const el = h("div");
-    el.setAttribute("role", "dialog");
-    el.setAttribute("aria-label", "Room privacy notice");
-    Object.assign(el.style, {
+    const el4 = h("div");
+    el4.setAttribute("role", "dialog");
+    el4.setAttribute("aria-label", "Room privacy notice");
+    Object.assign(el4.style, {
       width: "440px",
       maxWidth: "92vw",
       padding: "24px 28px",
@@ -49412,7 +49027,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       boxShadow: "var(--qmm-shadow-modal)",
       textAlign: "center"
     });
-    return el;
+    return el4;
   }
   function showRoomPrivacyNoticeOnce() {
     if (typeof document === "undefined" || !document.body) return;
@@ -49581,7 +49196,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_button();
       init_dom2();
       init_carousel();
-      init_styles6();
+      init_styles12();
       init_fetchChangelog();
       OVERLAY_ID2 = "mgChangelogNotice";
       NOTICE_CSS = `
@@ -49748,8 +49363,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function getMyAccountId(state5) {
     try {
       const me = await player.get();
-      const snapshot2 = state5 ?? await Atoms.root.state.get();
-      return resolveMyAccountId(me, getPlayersArray(snapshot2));
+      const snapshot3 = state5 ?? await Atoms.root.state.get();
+      return resolveMyAccountId(me, getPlayersArray(snapshot3));
     } catch {
       return null;
     }
@@ -49812,7 +49427,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const resolvedPlayer = resolvePlayer(normalizedPlayers, slot, myAccountId ?? null);
       const playerName2 = resolvedPlayer?.name ?? slotData?.name ?? slot?.name ?? null;
       const avatarRaw = resolvedPlayer?.cosmetic?.avatar ?? slotData?.cosmetic?.avatar ?? slot?.cosmetic?.avatar ?? null;
-      const avatar3 = Array.isArray(avatarRaw) && avatarRaw.length > 0 ? avatarRaw.map((entry) => String(entry)) : null;
+      const avatar2 = Array.isArray(avatarRaw) && avatarRaw.length > 0 ? avatarRaw.map((entry) => String(entry)) : null;
       const coinCandidate = slotData?.coinsCount ?? slot?.coinsCount ?? slotData?.coins ?? slot?.coins ?? null;
       const coinValue = Number(coinCandidate);
       const coinsRaw = Number.isFinite(coinValue) ? coinValue : null;
@@ -49830,7 +49445,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const modVersion = localVersion ? `Arie's mod ${localVersion}` : null;
       const payload = {
         playerName: playerName2 ?? null,
-        avatar: avatar3 ?? null,
+        avatar: avatar2 ?? null,
         modVersion,
         coins: coinsRaw,
         room: {
@@ -49899,12 +49514,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function tryInitializeReporting(state5) {
     if (gameReadyTriggered) return;
-    const snapshot2 = state5 ?? await Atoms.root.state.get();
-    const players = Array.isArray(snapshot2?.data?.players) ? snapshot2.data.players : [];
+    const snapshot3 = state5 ?? await Atoms.root.state.get();
+    const players = Array.isArray(snapshot3?.data?.players) ? snapshot3.data.players : [];
     if (players.length === 0) return;
-    const myAccountId = await getMyAccountId(snapshot2);
+    const myAccountId = await getMyAccountId(snapshot3);
     if (!myAccountId) return;
-    const slots = getSlotsArray(snapshot2);
+    const slots = getSlotsArray(snapshot3);
     const mySlotExists = slots.some((slot) => readSlotId(slot) === myAccountId);
     if (!mySlotExists) return;
     gameReadyTriggered = true;
@@ -49943,27 +49558,27 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
         return;
       }
-      const snapshot2 = snapshotPayloadForComparison(payload);
+      const snapshot3 = snapshotPayloadForComparison(payload);
       let mustSend = false;
-      if (snapshot2 === null) {
+      if (snapshot3 === null) {
         mustSend = true;
       } else if (lastSentPayloadSnapshot === null) {
         mustSend = true;
-      } else if (snapshot2 !== lastSentPayloadSnapshot) {
+      } else if (snapshot3 !== lastSentPayloadSnapshot) {
         mustSend = true;
       } else if (unchangedSnapshotCount + 1 >= MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND) {
         mustSend = true;
       }
       if (!mustSend) {
-        if (snapshot2 !== null) {
+        if (snapshot3 !== null) {
           unchangedSnapshotCount += 1;
         }
         return;
       }
       const ok = await sendPlayerState(payload);
       if (ok) {
-        if (snapshot2 !== null) {
-          lastSentPayloadSnapshot = snapshot2;
+        if (snapshot3 !== null) {
+          lastSentPayloadSnapshot = snapshot3;
           unchangedSnapshotCount = 0;
         }
       }

@@ -92,32 +92,3 @@ export function select(opts: { id?: string; width?: string; placeholder?: string
   }
   return sel;
 }
-
-function radio(name: string, value: string, checked = false): HTMLInputElement {
-  const input = h("input", "qmm-radio");
-  input.type = "radio";
-  input.name = name;
-  input.value = value;
-  input.checked = checked;
-  return input;
-}
-
-/** Labelled radio buttons sharing one name. */
-export function radioGroup<T extends string>(
-  name: string,
-  options: Array<{ value: T; label: string }>,
-  selected: T | null,
-  onChange: (value: T) => void,
-): HTMLDivElement {
-  const wrap = h("div", "qmm-radio-group");
-  for (const { value, label } of options) {
-    const input = radio(name, value, selected === value);
-    input.onchange = () => {
-      if (input.checked) onChange(value);
-    };
-    const row = h("label", "qmm-radio-label");
-    row.append(input, label);
-    wrap.appendChild(row);
-  }
-  return wrap;
-}

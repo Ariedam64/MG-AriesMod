@@ -125,7 +125,7 @@ export function messageRow(message: ChatMessage, flags: BubbleFlags, identity: N
 }
 
 /** `ready`: he is out and free; `busy`: working or waiting on an answer; `idle`: not out. */
-export type ChatStatusTone = "ready" | "busy" | "idle";
+type ChatStatusTone = "ready" | "busy" | "idle";
 
 type ChatHeader = {
   root: HTMLElement;
