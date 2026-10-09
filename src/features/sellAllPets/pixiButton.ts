@@ -25,7 +25,7 @@ const BUTTON_TEXT = "Sell all Pets";
 const BUTTON_TEXT_STYLE = { fontFamily: "Arial", fontSize: 14, fontWeight: "700", fill: "#FFFFFF" };
 const BUTTON_PADDING_X = 14;
 const BUTTON_RADIUS = 10;
-// Same blue theme the old DOM-injected button used.
+// The game's own blue button theme.
 const BUTTON_FILL_COLOR = 0x0067b4;
 const BUTTON_BORDER_COLOR = 0x48adf4;
 const BUTTON_BORDER_WIDTH = 2;

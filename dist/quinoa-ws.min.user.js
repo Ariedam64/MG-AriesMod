@@ -15072,19 +15072,19 @@
     if (!viewport || !content2 || !Array.isArray(content2.children)) return null;
     return { mask: viewport.mask, content: content2 };
   }
-  function logsContentKind(contentChildren2) {
+  function logsContentKind(contentChildren) {
     let kind = "unknown";
-    for (const child of contentChildren2) {
+    for (const child of contentChildren) {
       if (child?.label === STAT_CARD_LABEL) return "stats";
       if (child?.label === LOG_ROW_LABEL) kind = "logs";
     }
     return kind;
   }
-  function planLogRowsShift(contentChildren2, toolbarSpace) {
-    const first = contentChildren2[0];
+  function planLogRowsShift(contentChildren, toolbarSpace) {
+    const first = contentChildren[0];
     const isNote = !!first && first.label !== LOG_ROW_LABEL && (typeof first.textComponent?.text === "string" || typeof first.text === "string" && !(first.children?.length > 0));
     if (!isNote) return { hideFirst: false, shift: toolbarSpace };
-    const next = contentChildren2[1];
+    const next = contentChildren[1];
     const firstY = first.position?.y ?? first.y ?? 0;
     const noteSpace = next ? (next.position?.y ?? next.y ?? firstY) - firstY : first.height ?? 0;
     return { hideFirst: true, shift: toolbarSpace - noteSpace };
@@ -16725,282 +16725,6 @@
       BADGE_ALPHA = 0.55;
       coinTexture = null;
       coinTexturePromise = null;
-    }
-  });
-
-  // src/features/locker/domLockMarks.ts
-  function markLocked(el, look) {
-    const key2 = datasetKey(look.owner);
-    if (el.dataset[key2] === void 0) {
-      const saved = {};
-      for (const prop of [...Object.keys(look.style), "position"]) saved[prop] = el.style.getPropertyValue(prop);
-      el.dataset[key2] = JSON.stringify(saved);
-    }
-    for (const [prop, value] of Object.entries(look.style)) el.style.setProperty(prop, value);
-    if (getComputedStyle(el).position === "static") el.style.setProperty("position", "relative");
-    const cls = glyphClass(look.owner);
-    if (el.querySelector(`span.${cls}`)) return;
-    const glyph = document.createElement("span");
-    glyph.className = cls;
-    glyph.textContent = LOCK_GLYPH;
-    for (const [prop, value] of Object.entries(look.glyph)) glyph.style.setProperty(prop, value);
-    el.appendChild(glyph);
-  }
-  function unmarkLocked(el, owner2) {
-    const key2 = datasetKey(owner2);
-    const raw = el.dataset[key2];
-    if (raw !== void 0) {
-      let saved = {};
-      try {
-        saved = JSON.parse(raw);
-      } catch {
-      }
-      for (const [prop, value] of Object.entries(saved)) {
-        if (value) el.style.setProperty(prop, value);
-        else el.style.removeProperty(prop);
-      }
-      delete el.dataset[key2];
-    }
-    el.querySelectorAll(`span.${glyphClass(owner2)}`).forEach((node) => node.remove());
-  }
-  function startDomLockIndicator(opts) {
-    const subs = new Subscriptions();
-    let running = true;
-    const elements = () => Array.from(document.querySelectorAll(opts.selector));
-    const refresh = () => {
-      if (!running) return;
-      const locked = opts.isLocked();
-      for (const el of elements()) {
-        if (locked && opts.isTarget(el)) markLocked(el, opts.look);
-        else unmarkLocked(el, opts.look.owner);
-      }
-    };
-    const observer2 = new MutationObserver(refresh);
-    observer2.observe(document.documentElement, { childList: true, subtree: true });
-    subs.add(() => observer2.disconnect());
-    refresh();
-    return {
-      refresh,
-      add: (unsubscribe2) => subs.add(unsubscribe2),
-      stop() {
-        running = false;
-        subs.dispose();
-        for (const el of elements()) unmarkLocked(el, opts.look.owner);
-      }
-    };
-  }
-  var LOCK_GLYPH, cornerGlyph, datasetKey, glyphClass, datasetAttr, markedElements;
-  var init_domLockMarks = __esm({
-    "src/features/locker/domLockMarks.ts"() {
-      "use strict";
-      init_emitter();
-      LOCK_GLYPH = "\u{1F512}";
-      cornerGlyph = (offsetPx) => ({
-        position: "absolute",
-        top: `-${offsetPx}px`,
-        right: `-${offsetPx}px`,
-        "font-size": "16px",
-        "pointer-events": "none",
-        "user-select": "none",
-        "z-index": "2"
-      });
-      datasetKey = (owner2) => `tm${owner2.replace(/(^|-)(\w)/g, (_, _dash, c) => c.toUpperCase())}LockStyles`;
-      glyphClass = (owner2) => `tm-${owner2}-lock`;
-      datasetAttr = (owner2) => `tm-${owner2}-lock-styles`;
-      markedElements = (owner2) => Array.from(document.querySelectorAll(`[data-${datasetAttr(owner2)}]`));
-    }
-  });
-
-  // src/features/cropPrice/domTooltip.ts
-  function startCropValuesObserverFromGardenAtom() {
-    const priceWatcher = startCropPriceWatcherViaGardenObject();
-    let running = true;
-    let harvestAllowed = lockerService.currentHarvestAllowed();
-    let lockerReady = !lockerService.isEnabled();
-    let needsReposition = false;
-    let last = null;
-    const render = () => {
-      if (!running || !lockerReady) return;
-      unmarkStrayTooltips();
-      const next = { value: priceWatcher.get(), locked: harvestAllowed === false, showPrice: readShowCropPrice() };
-      if (!needsReposition && last && last.value === next.value && last.locked === next.locked && last.showPrice === next.showPrice) {
-        return;
-      }
-      last = next;
-      needsReposition = false;
-      const text2 = next.value == null ? "-" : formatInteger(next.value, "round");
-      for (const panel of Array.from(document.querySelectorAll(PANEL_SELECTOR))) {
-        for (const block of Array.from(panel.querySelectorAll(BLOCK_SELECTOR))) {
-          if (!(block instanceof HTMLElement)) continue;
-          updateTooltipLock(block, next.locked);
-          if (!next.showPrice || isWrapperBlock(block)) removePriceLine(block);
-          else ensurePriceLine(block, text2);
-        }
-      }
-    };
-    const readyTimer = lockerReady ? null : setTimeout(() => {
-      lockerReady = true;
-      render();
-    }, LOCKER_FIRST_VERDICT_WAIT_MS);
-    const offLocker = lockerService.onSlotInfoChange((event) => {
-      harvestAllowed = event.harvestAllowed;
-      if (readyTimer != null) clearTimeout(readyTimer);
-      lockerReady = true;
-      render();
-    });
-    const qpmObserver = new MutationObserver((mutations) => {
-      const added = mutations.some(
-        (m) => Array.from(m.addedNodes).some(
-          (node) => node instanceof Element && (node.classList.contains("qpm-crop-size") || !!node.querySelector(".qpm-crop-size"))
-        )
-      );
-      if (!added) return;
-      needsReposition = true;
-      render();
-    });
-    qpmObserver.observe(document.body ?? document.documentElement, { childList: true, subtree: true });
-    render();
-    const offPrice = priceWatcher.onChange(render);
-    const offShowPrice = onShowCropPriceChange(render);
-    return {
-      stop() {
-        if (!running) return;
-        running = false;
-        if (readyTimer != null) clearTimeout(readyTimer);
-        qpmObserver.disconnect();
-        offPrice();
-        offShowPrice();
-        offLocker();
-        priceWatcher.stop();
-      }
-    };
-  }
-  function isWrapperBlock(block) {
-    if (!block.matches(BLOCK_SELECTOR)) return false;
-    const own = BLOCK_SELECTORS.find((selector) => block.matches(selector));
-    if (own) {
-      const inner = Array.from(block.children).find((child) => child.matches(own));
-      if (inner && contentChildren(inner).length > 1) return true;
-    }
-    return contentChildren(block).length === 1;
-  }
-  function removePriceLine(block) {
-    block.querySelectorAll(`:scope > span.${PRICE_CLASS}`).forEach((line) => line.remove());
-  }
-  function ensurePriceLine(block, text2) {
-    const lines = Array.from(block.querySelectorAll(`:scope > span.${PRICE_CLASS}`));
-    lines.slice(1).forEach((extra) => extra.remove());
-    let line = lines[0];
-    if (!line) {
-      line = document.createElement("span");
-      line.className = PRICE_CLASS;
-      Object.assign(line.style, { display: "block", marginTop: "6px", fontWeight: "700", color: "#FFD84D", fontSize: "14px" });
-    }
-    let icon2 = line.querySelector(`:scope > span.${PRICE_ICON_CLASS}`);
-    if (!icon2) {
-      icon2 = document.createElement("span");
-      icon2.className = PRICE_ICON_CLASS;
-      icon2.setAttribute("aria-hidden", "true");
-      Object.assign(icon2.style, {
-        width: "18px",
-        height: "18px",
-        display: "inline-block",
-        verticalAlign: "middle",
-        marginRight: "6px",
-        userSelect: "none",
-        pointerEvents: "none",
-        backgroundSize: "contain",
-        backgroundRepeat: "no-repeat",
-        backgroundPosition: "center"
-      });
-      line.insertBefore(icon2, line.firstChild);
-    }
-    const background = `url("${coin2.img64}")`;
-    if (icon2.style.backgroundImage !== background) icon2.style.backgroundImage = background;
-    let label2 = line.querySelector(`:scope > span.${PRICE_LABEL_CLASS}`);
-    if (!label2) {
-      label2 = document.createElement("span");
-      label2.className = PRICE_LABEL_CLASS;
-      label2.style.display = "inline";
-      line.appendChild(label2);
-    }
-    if (label2.textContent !== text2) label2.textContent = text2;
-    const qpmSize = readSharedGlobal("QPM") ? block.querySelector("span.qpm-crop-size") : null;
-    if (qpmSize) {
-      if (qpmSize.nextElementSibling !== line) block.insertBefore(line, qpmSize.nextElementSibling);
-    } else if (block.lastElementChild !== line) {
-      block.appendChild(line);
-    }
-  }
-  function isTooltipRoot(el) {
-    if (TOOLTIP_ROOT_CLASSES.some((cls) => el.classList.contains(cls))) return true;
-    const children = Array.from(el.children);
-    const grid = children.find((child) => child.classList.contains("McGrid"));
-    return !!grid && children.every((child) => child === grid || child.classList.contains(TOOLTIP_GLYPH_CLASS));
-  }
-  function tooltipRootOf(block) {
-    for (const cls of TOOLTIP_ROOT_CLASSES) {
-      const root5 = block.closest(`.${cls}`);
-      if (root5) return root5;
-    }
-    const grid = block.parentElement;
-    if (!grid?.classList.contains("McGrid")) return null;
-    const root4 = grid.parentElement;
-    return root4 && isTooltipRoot(root4) ? root4 : null;
-  }
-  function unmarkStrayTooltips() {
-    for (const el of markedElements(TOOLTIP_LOCK_LOOK.owner)) {
-      if (!isTooltipRoot(el)) unmarkLocked(el, TOOLTIP_LOCK_LOOK.owner);
-    }
-    document.querySelectorAll(`span.${TOOLTIP_GLYPH_CLASS}`).forEach((glyph) => {
-      const parent = glyph.parentElement;
-      if (!parent || !isTooltipRoot(parent)) glyph.remove();
-    });
-  }
-  function updateTooltipLock(block, locked) {
-    const root4 = tooltipRootOf(block);
-    if (!root4) return;
-    if (locked) markLocked(root4, TOOLTIP_LOCK_LOOK);
-    else unmarkLocked(root4, TOOLTIP_LOCK_LOOK.owner);
-  }
-  var PANEL_SELECTOR, BLOCK_SELECTORS, BLOCK_SELECTOR, PRICE_CLASS, PRICE_ICON_CLASS, PRICE_LABEL_CLASS, TOOLTIP_ROOT_CLASSES, TOOLTIP_LOCK_LOOK, TOOLTIP_GLYPH_CLASS, LOCKER_FIRST_VERDICT_WAIT_MS, contentChildren;
-  var init_domTooltip = __esm({
-    "src/features/cropPrice/domTooltip.ts"() {
-      "use strict";
-      init_priceWatcher();
-      init_setting();
-      init_data();
-      init_format();
-      init_locker();
-      init_domLockMarks();
-      init_pageContext();
-      PANEL_SELECTOR = ".McFlex.css-fsggty, .McFlex.css-6prrn";
-      BLOCK_SELECTORS = [".McFlex.css-1l3zq7", ".McFlex.css-11dqzw"];
-      BLOCK_SELECTOR = BLOCK_SELECTORS.join(", ");
-      PRICE_CLASS = "tm-crop-price";
-      PRICE_ICON_CLASS = "tm-crop-price-icon";
-      PRICE_LABEL_CLASS = "tm-crop-price-label";
-      TOOLTIP_ROOT_CLASSES = ["css-129757o", "css-7cru8u"];
-      TOOLTIP_LOCK_LOOK = {
-        owner: "locker-tooltip",
-        style: { border: "2px solid rgb(188, 53, 215)", "border-radius": "15px", overflow: "visible" },
-        glyph: {
-          position: "absolute",
-          top: "0",
-          right: "0",
-          transform: "translate(50%, -50%)",
-          "font-size": "18px",
-          padding: "2px 8px",
-          "border-radius": "999px",
-          color: "white",
-          "pointer-events": "none",
-          "user-select": "none",
-          "z-index": "1"
-        }
-      };
-      TOOLTIP_GLYPH_CLASS = `tm-${TOOLTIP_LOCK_LOOK.owner}-lock`;
-      LOCKER_FIRST_VERDICT_WAIT_MS = 500;
-      contentChildren = (block) => Array.from(block.children).filter((el) => !(el.tagName === "SPAN" && el.classList.contains(PRICE_CLASS)));
     }
   });
 
@@ -19603,70 +19327,6 @@
     }
   });
 
-  // src/features/locker/decorPickupLockIndicator.ts
-  function looksLikeDecorTooltip(el) {
-    const text2 = (el.textContent || "").toLowerCase();
-    return !!text2 && !!el.querySelector("canvas") && decorLabels().some((label2) => text2.includes(label2));
-  }
-  function startDecorPickupLockIndicator() {
-    const indicator = startDomLockIndicator({
-      look: { owner: "decor", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyph: cornerGlyph(8) },
-      selector: ".css-502lyi",
-      isTarget: looksLikeDecorTooltip,
-      isLocked: () => lockerRestrictionsService.isDecorPickupLocked()
-    });
-    indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
-    return indicator;
-  }
-  var decorLabels;
-  var init_decorPickupLockIndicator = __esm({
-    "src/features/locker/decorPickupLockIndicator.ts"() {
-      "use strict";
-      init_data();
-      init_domLockMarks();
-      init_restrictions();
-      decorLabels = memoOnCatalogs(() => {
-        const labels = /* @__PURE__ */ new Set();
-        for (const [decorId, entry] of Object.entries(decorCatalog2)) {
-          if (decorId) labels.add(decorId.toLowerCase());
-          if (typeof entry?.name === "string" && entry.name) labels.add(entry.name.toLowerCase());
-        }
-        return Array.from(labels);
-      });
-    }
-  });
-
-  // src/features/locker/eggHatchLockIndicator.ts
-  function startEggHatchLockIndicator() {
-    let currentEggId = null;
-    const indicator = startDomLockIndicator({
-      look: { owner: "egg", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyph: cornerGlyph(8) },
-      selector: ".css-502lyi",
-      isTarget: (el) => (el.textContent || "").toLowerCase().includes("egg"),
-      isLocked: () => lockerRestrictionsService.isEggLocked(currentEggId)
-    });
-    indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
-    void Atoms.data.myCurrentGardenObject.get().then((initial) => {
-      currentEggId = eggIdOf(initial);
-    }).catch(() => {
-    });
-    indicator.add(
-      Atoms.data.myCurrentGardenObject.onChange((next) => {
-        currentEggId = eggIdOf(next);
-        indicator.refresh();
-      })
-    );
-    return indicator;
-  }
-  var init_eggHatchLockIndicator = __esm({
-    "src/features/locker/eggHatchLockIndicator.ts"() {
-      "use strict";
-      init_atoms();
-      init_domLockMarks();
-      init_restrictions();
-    }
-  });
-
   // src/features/locker/indicator.ts
   function isDecorObject(obj) {
     return !!obj && typeof obj === "object" && obj.objectType === "decor";
@@ -19800,42 +19460,6 @@
       LOCK_ICON_STYLE = { fontSize: 16 };
       LOCK_ICON_X_NUDGE = 4;
       LOCK_ICON_Y_NUDGE = 4;
-    }
-  });
-
-  // src/features/locker/sellCropsLock.ts
-  function startSellCropsLockWatcher() {
-    const indicator = startDomLockIndicator({
-      look: SELL_CROPS_LOCK_LOOK,
-      selector: ".css-vmnhaw",
-      isTarget: hasSellCropsButton,
-      isLocked: () => !lockerRestrictionsService.allowsCropSale(currentFriendBonus() ?? 0)
-    });
-    indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
-    indicator.add(onFriendBonusChange(indicator.refresh));
-    return indicator;
-  }
-  var SELL_CROPS_LOCK_LOOK, hasSellCropsButton;
-  var init_sellCropsLock = __esm({
-    "src/features/locker/sellCropsLock.ts"() {
-      "use strict";
-      init_domLockMarks();
-      init_friendBonus();
-      init_restrictions();
-      SELL_CROPS_LOCK_LOOK = {
-        owner: "sell-crops",
-        style: {
-          border: "none",
-          "border-radius": "",
-          padding: "",
-          "box-sizing": "",
-          "box-shadow": "none",
-          overflow: "",
-          "z-index": "1000"
-        },
-        glyph: cornerGlyph(4)
-      };
-      hasSellCropsButton = (container) => /sell\s*crops/i.test((container.querySelector("button")?.textContent || "").trim());
     }
   });
 
@@ -25380,111 +25004,6 @@
     }
   });
 
-  // src/features/sellAllPets/domButton.ts
-  function findSellPetButton(panel) {
-    for (const btn of Array.from(panel.querySelectorAll(BUTTON_SELECTOR))) {
-      if (!(btn instanceof HTMLButtonElement) || btn.classList.contains(INJECTED_CLASS)) continue;
-      const label2 = labelOf(btn);
-      if (/crops/i.test(label2)) continue;
-      const words = label2.split(/\s+/).filter(Boolean);
-      if (words.length === 2 && /^sell$/i.test(words[0])) return btn;
-      if (/^sell$/i.test(label2) && btn.querySelector("canvas")) return btn;
-    }
-    return null;
-  }
-  function placeNextTo(target) {
-    const parent = target.parentElement || target.closest(".McFlex, .css-0");
-    if (!parent) return;
-    const existing = parent.querySelector(`.${INJECTED_CLASS}`);
-    if (existing) {
-      if (target.nextElementSibling !== existing) parent.insertBefore(existing, target.nextSibling);
-      if (existing.textContent !== LABEL) existing.textContent = LABEL;
-      return;
-    }
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = `${INJECTED_CLASS} chakra-button`;
-    btn.textContent = LABEL;
-    btn.title = LABEL;
-    btn.setAttribute("aria-label", LABEL);
-    btn.style.marginLeft = "8px";
-    if (getComputedStyle(parent).display !== "flex") {
-      btn.style.display = "inline-flex";
-      btn.style.alignItems = "center";
-    }
-    btn.addEventListener("click", () => {
-      void runSellAllPetsFlow().catch(() => {
-      });
-    });
-    parent.insertBefore(btn, target.nextSibling);
-  }
-  function ensureStyle() {
-    const id = `${INJECTED_CLASS}-style`;
-    if (document.getElementById(id)) return;
-    const style = document.createElement("style");
-    style.id = id;
-    style.textContent = `
-.${INJECTED_CLASS} {
-  display: inline-flex; align-items: center; justify-content: center; appearance: none; cursor: pointer;
-  user-select: none; white-space: nowrap; vertical-align: middle; text-transform: none; overflow: hidden;
-  -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; font-synthesis: none;
-  outline: transparent solid 2px; outline-offset: 2px; line-height: 1.2; height: auto;
-  min-width: var(--chakra-sizes-10, 2.5rem);
-  padding: var(--chakra-space-3, 0.75rem) var(--chakra-space-4, 1rem);
-  border: 2px solid ${THEME.border}; border-radius: 15px;
-  color: ${THEME.text}; background: ${THEME.bg};
-  font-size: 20px; font-weight: 700;
-  box-shadow: rgba(0, 0, 0, 0.3) 0px 4px 12px; transform: translateY(0px); transition: 0.2s;
-}
-.${INJECTED_CLASS}:hover { transform: translateY(-1px); background: ${THEME.hoverBg}; border-color: ${THEME.hoverBorder}; }
-.${INJECTED_CLASS}:active { transform: translateY(1px); background: ${THEME.activeBg}; }
-.${INJECTED_CLASS}:focus-visible { box-shadow: 0 0 0 3px ${THEME.ring}; }
-`.trim();
-    document.head.appendChild(style);
-  }
-  function startInjectSellAllPets() {
-    ensureStyle();
-    let pending3 = false;
-    const processPanels = () => {
-      if (pending3) return;
-      pending3 = true;
-      requestAnimationFrame(() => {
-        pending3 = false;
-        for (const panel of Array.from(document.querySelectorAll(PANEL_SELECTOR2))) {
-          const target = panel.querySelector(PANEL_GATE_SELECTOR) ? findSellPetButton(panel) : null;
-          if (target) placeNextTo(target);
-          else panel.querySelectorAll(`.${INJECTED_CLASS}`).forEach((n) => n.remove());
-        }
-      });
-    };
-    const observer2 = new MutationObserver(processPanels);
-    observer2.observe(document.documentElement, { childList: true, subtree: true });
-    processPanels();
-    return { stop: () => observer2.disconnect() };
-  }
-  var PANEL_SELECTOR2, PANEL_GATE_SELECTOR, BUTTON_SELECTOR, INJECTED_CLASS, LABEL, THEME, labelOf;
-  var init_domButton = __esm({
-    "src/features/sellAllPets/domButton.ts"() {
-      "use strict";
-      init_flow();
-      PANEL_SELECTOR2 = ".McFlex.css-1svwxx0";
-      PANEL_GATE_SELECTOR = ".McGrid";
-      BUTTON_SELECTOR = "button.chakra-button.css-1glc7hj, button.chakra-button, button.css-1glc7hj";
-      INJECTED_CLASS = "tm-injected-sell-all";
-      LABEL = "Sell all Pets";
-      THEME = {
-        text: "var(--chakra-colors-Neutral-TrueWhite, #FFFFFF)",
-        bg: "var(--chakra-colors-Blue-Magic, #0067B4)",
-        border: "var(--chakra-colors-Blue-Light, #48ADF4)",
-        hoverBg: "var(--chakra-colors-Blue-Light, #48ADF4)",
-        hoverBorder: "var(--chakra-colors-Blue-Baby, #25AAE2)",
-        activeBg: "var(--chakra-colors-Blue-Dark, #264093)",
-        ring: "var(--chakra-ring-color, rgba(66,153,225,0.6))"
-      };
-      labelOf = (el) => (el.textContent || "").replace(/\s+/g, " ").trim() || (el.getAttribute("aria-label") ?? "").replace(/\s+/g, " ").trim();
-    }
-  });
-
   // src/features/sellAllPets/keybind.ts
   function installSellKeybindsOnce() {
     if (sellKeybindsInstalled || typeof window === "undefined") return;
@@ -25947,13 +25466,8 @@
       } catch {
       }
       startActivityLogFilterPixi();
-      startCropValuesObserverFromGardenAtom();
       startCropValueOverlayInPixi();
-      startSellCropsLockWatcher();
-      startDecorPickupLockIndicator();
-      startEggHatchLockIndicator();
       startLockerIndicatorInPixi();
-      startInjectSellAllPets();
       startSellAllPetsPixi();
       startInstantFeedWidget();
       startInventorySortingObserver();
@@ -25966,21 +25480,16 @@
       init_historyWatcher();
       init_keybind();
       init_badge();
-      init_domTooltip();
       init_tracker();
       init_sorting();
       init_gameRemap();
       init_modalToggles();
-      init_decorPickupLockIndicator();
-      init_eggHatchLockIndicator();
       init_indicator();
-      init_sellCropsLock();
       init_overlay2();
       init_petAlerts();
       init_feedWidget();
       init_pets();
       init_teamHotkeys();
-      init_domButton();
       init_keybind2();
       init_pixiButton();
       init_shops();
@@ -48966,7 +48475,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/menu/askBanner.ts
-  function ensureStyle2() {
+  function ensureStyle() {
     if (document.getElementById(STYLE_ID5)) return;
     const style = document.createElement("style");
     style.id = STYLE_ID5;
@@ -49028,7 +48537,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return message2.positioned ? renderTagged(message2.text, message2.icons, ICON_PX6) : [document.createTextNode(message2.text)];
   }
   function build(proposal) {
-    ensureStyle2();
+    ensureStyle();
     const root4 = h("div");
     root4.id = CARD_ID;
     const face = h("div", "mgask-face", "\u{1F916}");

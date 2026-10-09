@@ -48,8 +48,8 @@ function isPlantObject(obj: any): boolean {
   return !!obj && typeof obj === "object" && obj.objectType === "plant";
 }
 
-// The coin texture is decoded once, from the same image the DOM tooltip uses,
-// and shared by every card.
+// The coin texture is decoded once, from the coin catalog image, and shared
+// by every card.
 let coinTexture: any = null;
 let coinTexturePromise: Promise<any> | null = null;
 function ensureCoinTexture(TextureCtor: any): Promise<any> {
