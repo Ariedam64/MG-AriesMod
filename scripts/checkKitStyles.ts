@@ -9,5 +9,6 @@ check("windows use the raised shadow", /\.qws-win\s*\{[^}]*var\(--qmm-shadow-rai
 check("the window title band is sepia", /\.qws-win \.w-head\s*\{[^}]*var\(--qmm-sepia\)/.test(css));
 check("no translucent white surfaces are left", !/rgba\(255,\s*255,\s*255/.test(css));
 check("no backdrop blur is left", !/backdrop-filter/.test(css));
-check("the dock scrolls when the screen is short", /\.qws-dock\s*\{[^}]*overflow-y:\s*auto/.test(css));
+check("the menu grid scrolls when the screen is short", /\.qws-dock-grid\s*\{[^}]*overflow-y:\s*auto/.test(css));
+check("the menu grid holds three icons per row", /\.qws-dock-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3,/.test(css));
 done();

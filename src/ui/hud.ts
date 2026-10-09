@@ -6,15 +6,14 @@ import {
   type Hotkey,
   type KeybindId,
 } from "../features/keybinds/keybinds";
+import { versionPill } from "../features/settings/versionPill";
 import { isKeybindCaptureActive } from "../lib/keyboard";
 import { codesMatch, matchHotkey } from "../lib/hotkey";
-import { checkModVersion } from "../platform/modVersion";
 import { readAriesPath, writeAriesPath } from "../platform/storage";
 import { button } from "./kit/button";
 import { createDock } from "./kit/dock";
 import { readStoredPosition, storePosition } from "./kit/floating";
 import { h } from "./kit/dom";
-import { setMenuBadge } from "./kit/menuBadges";
 import { layer } from "./kit/theme";
 import { type Pos, attachAutoClamp, clampRect, currentPos, ensureOnScreen, makeDraggable, placeClamped, withTopLocked } from "./hudPlacement";
 import { startStatusLoop } from "./hudStatus";
@@ -65,6 +64,8 @@ export function mountHUD(opts?: HUDOptions) {
     onFold: (folded) => writeAriesPath(HUD_FOLDED_PATH, folded),
     onMove: (pos) => storePosition(HUD_DOCK_POS_PATH, pos),
   });
+  // The version, and a download link when a newer release is out.
+  dock.addToHeader(versionPill());
   (document.documentElement || document.body).appendChild(dock.root);
   dock.place(readStoredPosition(HUD_DOCK_POS_PATH));
 
@@ -330,6 +331,4 @@ export function mountHUD(opts?: HUDOptions) {
 
   void ensureStore().catch(() => {});
   startStatusLoop(dock);
-  // A build behind the latest release badges Settings, where the download link is.
-  void checkModVersion().then((status) => setMenuBadge("settings", status.behind ? 1 : 0));
 }

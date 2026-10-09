@@ -17,6 +17,11 @@ Amended the same day, after the owner saw the first build:
 - after the first in-game test: the palette is one step darker (paper, sand,
   cards and sepia), and the dock can be dragged anywhere by the grip around its
   status dot, which is remembered.
+- after the second test: the dock became a panel like the old HUD. A header
+  holds the status dot, "Arie's Mod", the version pill (an amber "Update x"
+  link when a newer release is out) and the fold button; below it the menus
+  sit three to a row. Dragging the header moves the panel, which starts in the
+  bottom right corner as before. The version pill replaces the Settings badge.
 
 ## Goal
 

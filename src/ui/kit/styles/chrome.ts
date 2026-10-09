@@ -9,15 +9,15 @@ export const chromeCss = `
 
 .qmm, .qws-win, .qws-dock, .qmm-modal { font-family: var(--qmm-font); }
 
-.qmm-scroll, .qws-pnl-scroll, .qmm-views, .qws-win .w-body, .qws-dock {
+.qmm-scroll, .qws-pnl-scroll, .qmm-views, .qws-win .w-body, .qws-dock-grid {
   scrollbar-width: thin; scrollbar-color: var(--qmm-scrollbar) transparent;
 }
 .qmm-scroll::-webkit-scrollbar, .qws-pnl-scroll::-webkit-scrollbar, .qmm-views::-webkit-scrollbar,
-.qws-win .w-body::-webkit-scrollbar, .qws-dock::-webkit-scrollbar { width: 8px; }
+.qws-win .w-body::-webkit-scrollbar, .qws-dock-grid::-webkit-scrollbar { width: 8px; }
 .qmm-scroll::-webkit-scrollbar-track, .qws-pnl-scroll::-webkit-scrollbar-track, .qmm-views::-webkit-scrollbar-track,
-.qws-win .w-body::-webkit-scrollbar-track, .qws-dock::-webkit-scrollbar-track { background: transparent; }
+.qws-win .w-body::-webkit-scrollbar-track, .qws-dock-grid::-webkit-scrollbar-track { background: transparent; }
 .qmm-scroll::-webkit-scrollbar-thumb, .qws-pnl-scroll::-webkit-scrollbar-thumb, .qmm-views::-webkit-scrollbar-thumb,
-.qws-win .w-body::-webkit-scrollbar-thumb, .qws-dock::-webkit-scrollbar-thumb {
+.qws-win .w-body::-webkit-scrollbar-thumb, .qws-dock-grid::-webkit-scrollbar-thumb {
   background: var(--qmm-scrollbar); border-radius: 4px;
 }
 
@@ -79,31 +79,34 @@ export const chromeCss = `
 .qws-win input[type="text"], .qws-win input[type="number"] { width: 120px; }
 
 .qws-dock {
-  position: fixed; left: 12px; top: 50%; transform: translateY(-50%); z-index: ${layer.hud};
-  display: flex; flex-direction: column; align-items: center; gap: var(--qmm-space-sm);
-  max-height: calc(100vh - 24px); overflow-y: auto; overflow-x: visible; padding: 8px;
-  background: var(--qmm-paper); border: 3px solid var(--qmm-sand-edge); border-radius: 22px;
-  box-shadow: var(--qmm-shadow-raise-small);
+  position: fixed; right: 16px; bottom: 16px; z-index: ${layer.hud};
+  display: flex; flex-direction: column; gap: var(--qmm-space-md); padding: 10px 10px 8px;
+  color: var(--qmm-text); background: var(--qmm-paper);
+  border: 3px solid var(--qmm-sand-edge); border-radius: 20px; box-shadow: var(--qmm-shadow-raise-small);
 }
 .qws-dock.hidden { display: none; }
-.qws-dock.placed { transform: none; }
-.qws-dock-grip {
-  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 4px;
-  width: 100%; padding: 2px 0 4px; cursor: grab; touch-action: none; user-select: none;
+.qws-dock.placed { right: auto; bottom: auto; }
+.qws-dock.folded .qws-dock-grid { display: none; }
+.qws-dock-head {
+  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 0 2px;
+  cursor: move; touch-action: none; user-select: none;
 }
-.qws-dock-grip-bar { width: 22px; height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-sand-shade); }
-.qws-dock-grip:hover .qws-dock-grip-bar { background: var(--qmm-text-dim); }
-.qws-dock.folded .qws-dock-btn { display: none; }
+.qws-dock-title { flex: 1 1 auto; font-weight: 900; font-size: var(--qmm-fs-xl); white-space: nowrap; }
+.qws-dock-head .qmm-pill { font-size: var(--qmm-fs-xs); }
+.qws-dock-grid {
+  display: grid; grid-template-columns: repeat(3, 48px); gap: var(--qmm-space-md); justify-content: center;
+  max-height: calc(100vh - 120px); overflow-y: auto; padding: 6px 6px 6px 2px;
+}
 .qws-dock-fold {
   flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
-  width: 32px; height: 24px; padding: 0; border: 0; border-radius: var(--qmm-radius-sm);
-  background: transparent; color: var(--qmm-text-dim); cursor: pointer;
+  width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--qmm-radius-sm);
+  background: var(--qmm-sand); color: var(--qmm-text-soft); cursor: pointer;
 }
-.qws-dock-fold:hover { background: var(--qmm-sand); color: var(--qmm-text); }
+.qws-dock-fold:hover { background: var(--qmm-border-hover); color: var(--qmm-text); }
 .qws-dock-fold:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
 .qws-dock-fold svg { width: 18px; height: 18px; pointer-events: none; }
 .qws-dock-status {
-  flex: 0 0 auto; width: 10px; height: 10px; margin-top: 2px; border-radius: 50%;
+  flex: 0 0 auto; width: 10px; height: 10px; border-radius: 50%;
   background: var(--qmm-amber); box-shadow: 0 0 0 2px var(--qmm-paper-deep);
 }
 .qws-dock-status[data-tone="ok"] { background: var(--qmm-ok); }

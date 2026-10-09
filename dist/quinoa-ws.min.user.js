@@ -1671,15 +1671,15 @@
 
 .qmm, .qws-win, .qws-dock, .qmm-modal { font-family: var(--qmm-font); }
 
-.qmm-scroll, .qws-pnl-scroll, .qmm-views, .qws-win .w-body, .qws-dock {
+.qmm-scroll, .qws-pnl-scroll, .qmm-views, .qws-win .w-body, .qws-dock-grid {
   scrollbar-width: thin; scrollbar-color: var(--qmm-scrollbar) transparent;
 }
 .qmm-scroll::-webkit-scrollbar, .qws-pnl-scroll::-webkit-scrollbar, .qmm-views::-webkit-scrollbar,
-.qws-win .w-body::-webkit-scrollbar, .qws-dock::-webkit-scrollbar { width: 8px; }
+.qws-win .w-body::-webkit-scrollbar, .qws-dock-grid::-webkit-scrollbar { width: 8px; }
 .qmm-scroll::-webkit-scrollbar-track, .qws-pnl-scroll::-webkit-scrollbar-track, .qmm-views::-webkit-scrollbar-track,
-.qws-win .w-body::-webkit-scrollbar-track, .qws-dock::-webkit-scrollbar-track { background: transparent; }
+.qws-win .w-body::-webkit-scrollbar-track, .qws-dock-grid::-webkit-scrollbar-track { background: transparent; }
 .qmm-scroll::-webkit-scrollbar-thumb, .qws-pnl-scroll::-webkit-scrollbar-thumb, .qmm-views::-webkit-scrollbar-thumb,
-.qws-win .w-body::-webkit-scrollbar-thumb, .qws-dock::-webkit-scrollbar-thumb {
+.qws-win .w-body::-webkit-scrollbar-thumb, .qws-dock-grid::-webkit-scrollbar-thumb {
   background: var(--qmm-scrollbar); border-radius: 4px;
 }
 
@@ -1741,31 +1741,34 @@
 .qws-win input[type="text"], .qws-win input[type="number"] { width: 120px; }
 
 .qws-dock {
-  position: fixed; left: 12px; top: 50%; transform: translateY(-50%); z-index: ${layer.hud};
-  display: flex; flex-direction: column; align-items: center; gap: var(--qmm-space-sm);
-  max-height: calc(100vh - 24px); overflow-y: auto; overflow-x: visible; padding: 8px;
-  background: var(--qmm-paper); border: 3px solid var(--qmm-sand-edge); border-radius: 22px;
-  box-shadow: var(--qmm-shadow-raise-small);
+  position: fixed; right: 16px; bottom: 16px; z-index: ${layer.hud};
+  display: flex; flex-direction: column; gap: var(--qmm-space-md); padding: 10px 10px 8px;
+  color: var(--qmm-text); background: var(--qmm-paper);
+  border: 3px solid var(--qmm-sand-edge); border-radius: 20px; box-shadow: var(--qmm-shadow-raise-small);
 }
 .qws-dock.hidden { display: none; }
-.qws-dock.placed { transform: none; }
-.qws-dock-grip {
-  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 4px;
-  width: 100%; padding: 2px 0 4px; cursor: grab; touch-action: none; user-select: none;
+.qws-dock.placed { right: auto; bottom: auto; }
+.qws-dock.folded .qws-dock-grid { display: none; }
+.qws-dock-head {
+  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 0 2px;
+  cursor: move; touch-action: none; user-select: none;
 }
-.qws-dock-grip-bar { width: 22px; height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-sand-shade); }
-.qws-dock-grip:hover .qws-dock-grip-bar { background: var(--qmm-text-dim); }
-.qws-dock.folded .qws-dock-btn { display: none; }
+.qws-dock-title { flex: 1 1 auto; font-weight: 900; font-size: var(--qmm-fs-xl); white-space: nowrap; }
+.qws-dock-head .qmm-pill { font-size: var(--qmm-fs-xs); }
+.qws-dock-grid {
+  display: grid; grid-template-columns: repeat(3, 48px); gap: var(--qmm-space-md); justify-content: center;
+  max-height: calc(100vh - 120px); overflow-y: auto; padding: 6px 6px 6px 2px;
+}
 .qws-dock-fold {
   flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
-  width: 32px; height: 24px; padding: 0; border: 0; border-radius: var(--qmm-radius-sm);
-  background: transparent; color: var(--qmm-text-dim); cursor: pointer;
+  width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--qmm-radius-sm);
+  background: var(--qmm-sand); color: var(--qmm-text-soft); cursor: pointer;
 }
-.qws-dock-fold:hover { background: var(--qmm-sand); color: var(--qmm-text); }
+.qws-dock-fold:hover { background: var(--qmm-border-hover); color: var(--qmm-text); }
 .qws-dock-fold:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
 .qws-dock-fold svg { width: 18px; height: 18px; pointer-events: none; }
 .qws-dock-status {
-  flex: 0 0 auto; width: 10px; height: 10px; margin-top: 2px; border-radius: 50%;
+  flex: 0 0 auto; width: 10px; height: 10px; border-radius: 50%;
   background: var(--qmm-amber); box-shadow: 0 0 0 2px var(--qmm-paper-deep);
 }
 .qws-dock-status[data-tone="ok"] { background: var(--qmm-ok); }
@@ -14914,30 +14917,6 @@
     }
   });
 
-  // src/lib/keyboard.ts
-  function isKeybindCaptureActive() {
-    return keybindCaptureCount > 0;
-  }
-  function beginKeybindCapture() {
-    keybindCaptureCount++;
-  }
-  function endKeybindCapture() {
-    keybindCaptureCount = Math.max(0, keybindCaptureCount - 1);
-  }
-  function shouldIgnoreKeydown(e) {
-    if (isKeybindCaptureActive()) return true;
-    const el = e.target;
-    if (!el) return false;
-    return el.isContentEditable || el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT";
-  }
-  var keybindCaptureCount;
-  var init_keyboard = __esm({
-    "src/lib/keyboard.ts"() {
-      "use strict";
-      keybindCaptureCount = 0;
-    }
-  });
-
   // src/platform/modVersion.ts
   function getLocalVersion() {
     if (true) {
@@ -15013,6 +14992,104 @@
       RAW_BASE_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}`;
       COMMITS_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/commits/${REPO_BRANCH}`;
       versionCheck = null;
+    }
+  });
+
+  // src/ui/kit/badges.ts
+  function pill(text2, tone) {
+    const el = h("span", "qmm-pill", text2);
+    setTone(el, tone);
+    return el;
+  }
+  function setTone(el, tone) {
+    el.classList.remove("is-ok", "is-warn", "is-bad");
+    if (tone) el.classList.add(`is-${tone}`);
+  }
+  function badge(text2, tone) {
+    return h("span", `qmm-badge is-${tone}`, text2);
+  }
+  function meter() {
+    const root4 = h("div", "qmm-meter");
+    const fill = h("div", "qmm-meter__fill");
+    root4.appendChild(fill);
+    return {
+      root: root4,
+      set(ratio, tone = "accent") {
+        fill.style.width = `${clampFinite(ratio, 0, 1, 0) * 100}%`;
+        fill.classList.toggle("is-warn", tone === "warn");
+      }
+    };
+  }
+  var init_badges = __esm({
+    "src/ui/kit/badges.ts"() {
+      "use strict";
+      init_math();
+      init_dom2();
+    }
+  });
+
+  // src/features/settings/versionPill.ts
+  function openDownloadLink(url) {
+    const gmObject = globalThis.GM;
+    const gmOpen = typeof GM_openInTab === "function" ? GM_openInTab : typeof gmObject?.openInTab === "function" ? gmObject.openInTab.bind(gmObject) : null;
+    if (isDiscordSurface() && gmOpen) {
+      try {
+        gmOpen(url, { active: true, setParent: true });
+        return;
+      } catch (error) {
+        console.warn("[MagicGarden] GM_openInTab failed, falling back to window.open", error);
+      }
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+  function versionPill() {
+    const badge2 = pill("checking\u2026", "warn");
+    badge2.addEventListener("click", () => {
+      const url = badge2.dataset.download;
+      if (url) openDownloadLink(url);
+    });
+    void checkModVersion().then(({ local, remote, download, behind }) => {
+      badge2.textContent = behind ? `Update ${remote}` : local ? `v${local}` : "Unknown";
+      setTone(badge2, remote && !behind ? "ok" : "warn");
+      badge2.classList.toggle("is-link", !!download);
+      if (behind) badge2.title = `You have v${local ?? "?"}. A new version, v${remote}, is out.`;
+      if (download) {
+        badge2.dataset.download = download;
+        badge2.title += " Click to download it.";
+      }
+    });
+    return badge2;
+  }
+  var init_versionPill = __esm({
+    "src/features/settings/versionPill.ts"() {
+      "use strict";
+      init_environment();
+      init_modVersion();
+      init_badges();
+    }
+  });
+
+  // src/lib/keyboard.ts
+  function isKeybindCaptureActive() {
+    return keybindCaptureCount > 0;
+  }
+  function beginKeybindCapture() {
+    keybindCaptureCount++;
+  }
+  function endKeybindCapture() {
+    keybindCaptureCount = Math.max(0, keybindCaptureCount - 1);
+  }
+  function shouldIgnoreKeydown(e) {
+    if (isKeybindCaptureActive()) return true;
+    const el = e.target;
+    if (!el) return false;
+    return el.isContentEditable || el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT";
+  }
+  var keybindCaptureCount;
+  var init_keyboard = __esm({
+    "src/lib/keyboard.ts"() {
+      "use strict";
+      keybindCaptureCount = 0;
     }
   });
 
@@ -15183,15 +15260,14 @@
     root4.setAttribute("aria-label", "Aries Mod menus");
     const status2 = h("span", "qws-dock-status");
     status2.dataset.tone = "warn";
-    const grip = h("div", "qws-dock-grip");
-    grip.setAttribute("title", "Drag to move the menus");
-    grip.append(status2, h("span", "qws-dock-grip-bar"));
-    root4.appendChild(grip);
     const fold = h("button", "qws-dock-fold");
     fold.type = "button";
     const foldIcon = menuIcon("");
     fold.appendChild(foldIcon);
-    root4.appendChild(fold);
+    const head = h("div", "qws-dock-head");
+    head.append(status2, h("span", "qws-dock-title", events.title ?? "Arie's Mod"), fold);
+    const grid = h("div", "qws-dock-grid");
+    root4.append(head, grid);
     const tip = h("div", "qws-dock-tip");
     const buttons = /* @__PURE__ */ new Map();
     const pendingBadges = /* @__PURE__ */ new Map();
@@ -15199,10 +15275,10 @@
       tip.textContent = label2;
       if (!tip.isConnected) (document.documentElement || document.body).appendChild(tip);
       const rect = btn.getBoundingClientRect();
-      const onRight = rect.left > window.innerWidth / 2;
-      tip.style.left = `${Math.round(onRight ? rect.left - TIP_GAP_PX : rect.right + TIP_GAP_PX)}px`;
-      tip.style.top = `${Math.round(rect.top + rect.height / 2)}px`;
-      tip.style.transform = onRight ? "translate(-100%, -50%)" : "translateY(-50%)";
+      const below = rect.top < 48;
+      tip.style.left = `${Math.round(rect.left + rect.width / 2)}px`;
+      tip.style.top = `${Math.round(below ? rect.bottom + TIP_GAP_PX : rect.top - TIP_GAP_PX)}px`;
+      tip.style.transform = below ? "translateX(-50%)" : "translate(-50%, -100%)";
       tip.classList.add("shown");
     };
     const hideTip = () => tip.classList.remove("shown");
@@ -15230,7 +15306,7 @@
       btn.addEventListener("focus", () => showTip(btn, label2));
       btn.addEventListener("mouseleave", hideTip);
       btn.addEventListener("blur", hideTip);
-      root4.insertBefore(btn, fold);
+      grid.appendChild(btn);
       buttons.set(id, btn);
       if (pendingBadges.has(id)) setBadge(id, pendingBadges.get(id) ?? 0);
     };
@@ -15255,7 +15331,9 @@
       moveTo({ left: rect.left, top: rect.top });
     };
     makeDraggable(root4, {
-      handle: grip,
+      handle: head,
+      // The fold button and a clickable version pill stay clicks.
+      ignore: (target) => !!target.closest("button, .is-link"),
       moveTo: (pos) => {
         hideTip();
         return moveTo(pos);
@@ -15303,6 +15381,9 @@
       place,
       setFoldHint(text2) {
         fold.setAttribute("title", text2);
+      },
+      addToHeader(el) {
+        head.insertBefore(el, fold);
       }
     };
   }
@@ -15317,8 +15398,8 @@
       init_menuBadges();
       TIP_GAP_PX = 10;
       EDGE_MARGIN_PX = 8;
-      FOLD_ICON = '<path d="M15 6l-6 6 6 6"/>';
-      UNFOLD_ICON = '<path d="M9 6l6 6-6 6"/>';
+      FOLD_ICON = '<path d="M6 15l6-6 6 6"/>';
+      UNFOLD_ICON = '<path d="M6 9l6 6 6-6"/>';
     }
   });
 
@@ -15478,6 +15559,7 @@
       onFold: (folded) => writeAriesPath(HUD_FOLDED_PATH, folded),
       onMove: (pos) => storePosition(HUD_DOCK_POS_PATH, pos)
     });
+    dock.addToHeader(versionPill());
     (document.documentElement || document.body).appendChild(dock.root);
     dock.place(readStoredPosition(HUD_DOCK_POS_PATH));
     const setHUDHidden = (hidden) => {
@@ -15697,7 +15779,6 @@
     void ensureStore().catch(() => {
     });
     startStatusLoop(dock);
-    void checkModVersion().then((status2) => setMenuBadge("settings", status2.behind ? 1 : 0));
   }
   var HUD_HIDDEN_PATH, HUD_FOLDED_PATH, HUD_DOCK_POS_PATH, HUD_WIN_PATH, isEditing;
   var init_hud = __esm({
@@ -15705,15 +15786,14 @@
       "use strict";
       init_jotai();
       init_keybinds();
+      init_versionPill();
       init_keyboard();
       init_hotkey();
-      init_modVersion();
       init_storage();
       init_button();
       init_dock();
       init_floating();
       init_dom2();
-      init_menuBadges();
       init_theme();
       init_hudPlacement();
       init_hudStatus();
@@ -25061,39 +25141,6 @@
       teamIds = [];
       installed3 = false;
       teamActionId = (teamId2) => `pets.team.${teamId2}`;
-    }
-  });
-
-  // src/ui/kit/badges.ts
-  function pill(text2, tone) {
-    const el = h("span", "qmm-pill", text2);
-    setTone(el, tone);
-    return el;
-  }
-  function setTone(el, tone) {
-    el.classList.remove("is-ok", "is-warn", "is-bad");
-    if (tone) el.classList.add(`is-${tone}`);
-  }
-  function badge(text2, tone) {
-    return h("span", `qmm-badge is-${tone}`, text2);
-  }
-  function meter() {
-    const root4 = h("div", "qmm-meter");
-    const fill = h("div", "qmm-meter__fill");
-    root4.appendChild(fill);
-    return {
-      root: root4,
-      set(ratio, tone = "accent") {
-        fill.style.width = `${clampFinite(ratio, 0, 1, 0) * 100}%`;
-        fill.classList.toggle("is-warn", tone === "warn");
-      }
-    };
-  }
-  var init_badges = __esm({
-    "src/ui/kit/badges.ts"() {
-      "use strict";
-      init_math();
-      init_dom2();
     }
   });
 
@@ -36288,46 +36335,6 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_openLink = __esm({
     "src/features/tools/openLink.ts"() {
       "use strict";
-    }
-  });
-
-  // src/features/settings/versionPill.ts
-  function openDownloadLink(url) {
-    const gmObject = globalThis.GM;
-    const gmOpen = typeof GM_openInTab === "function" ? GM_openInTab : typeof gmObject?.openInTab === "function" ? gmObject.openInTab.bind(gmObject) : null;
-    if (isDiscordSurface() && gmOpen) {
-      try {
-        gmOpen(url, { active: true, setParent: true });
-        return;
-      } catch (error) {
-        console.warn("[MagicGarden] GM_openInTab failed, falling back to window.open", error);
-      }
-    }
-    window.open(url, "_blank", "noopener,noreferrer");
-  }
-  function versionPill() {
-    const badge2 = pill("checking\u2026", "warn");
-    badge2.addEventListener("click", () => {
-      const url = badge2.dataset.download;
-      if (url) openDownloadLink(url);
-    });
-    void checkModVersion().then(({ local, remote, download, behind }) => {
-      badge2.textContent = behind && local ? `${local} \u2192 ${remote}` : local || remote || "Unknown";
-      setTone(badge2, remote && !behind ? "ok" : "warn");
-      badge2.classList.toggle("is-link", !!download);
-      if (download) {
-        badge2.dataset.download = download;
-        badge2.title = "Download the new version";
-      }
-    });
-    return badge2;
-  }
-  var init_versionPill = __esm({
-    "src/features/settings/versionPill.ts"() {
-      "use strict";
-      init_environment();
-      init_modVersion();
-      init_badges();
     }
   });
 

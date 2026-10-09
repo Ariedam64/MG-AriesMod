@@ -82,6 +82,11 @@ function controlsMenu(body: HTMLElement): void {
 
 const dock = createDock(() => {});
 for (const [id, label] of [["pets", "Pets"], ["locker", "Locker"], ["alerts", "Alerts"], ["calculator", "Calculator"], ["room", "Room"], ["editor", "Editor"], ["skins", "Skins"], ["misc", "Misc"], ["keybinds", "Keybinds"], ["tools", "Tools"], ["settings", "Settings"], ["companion", "Companion"], ["debug-data", "Debug"]]) dock.add({ id, label });
+// The header as a player behind the latest release sees it.
+const update = pill("Update 3.2.240", "warn");
+update.classList.add("is-link");
+update.title = "You have v3.2.233. A new version, v3.2.240, is out. Click to download it.";
+dock.addToHeader(update);
 document.body.appendChild(dock.root);
 dock.setOpen("pets", true);
 dock.setStatus("ok", "Connected");

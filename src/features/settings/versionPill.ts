@@ -1,5 +1,5 @@
-// The version pill in Settings, Infos: this build against the latest release,
-// linking to the download when a newer one is out.
+// The version pill, in the HUD header and in Settings, Infos: this build
+// against the latest release, linking to the download when a newer one is out.
 
 import { isDiscordSurface } from "../../platform/environment";
 import { checkModVersion } from "../../platform/modVersion";
@@ -32,12 +32,13 @@ export function versionPill(): HTMLElement {
   });
 
   void checkModVersion().then(({ local, remote, download, behind }) => {
-    badge.textContent = behind && local ? `${local} → ${remote}` : local || remote || "Unknown";
+    badge.textContent = behind ? `Update ${remote}` : local ? `v${local}` : "Unknown";
     setTone(badge, remote && !behind ? "ok" : "warn");
     badge.classList.toggle("is-link", !!download);
+    if (behind) badge.title = `You have v${local ?? "?"}. A new version, v${remote}, is out.`;
     if (download) {
       badge.dataset.download = download;
-      badge.title = "Download the new version";
+      badge.title += " Click to download it.";
     }
   });
   return badge;

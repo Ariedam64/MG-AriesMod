@@ -1,10 +1,10 @@
-// The dock: a column of menu buttons on the left edge of the screen.
+// The dock: the mod's launcher panel, three menu buttons to a row.
 //
 // One button per registered menu, filled in sepia while its window is open, with a
-// name tooltip and an optional count badge (fed by `menuBadges`). A status dot
-// at the top shows the mod's connection to the game, and a fold button at the
-// bottom shrinks the dock to those two, for players without a keyboard. The
-// grip around the dot drags the whole dock anywhere on screen.
+// name tooltip and an optional count badge (fed by `menuBadges`). The header
+// carries a status dot for the mod's connection to the game, the mod's name,
+// whatever the HUD adds (the version), and a fold button that hides the grid.
+// Dragging the header moves the panel anywhere on screen.
 
 import { ensureKitStyles } from "./styles";
 import { h } from "./dom";
@@ -28,40 +28,43 @@ export type Dock = {
   place(pos: ScreenPosition | null): void;
   /** The fold button's tooltip, e.g. naming the hotkey that hides the dock outright. */
   setFoldHint(text: string): void;
+  /** Puts an element in the header, before the fold button. */
+  addToHeader(el: HTMLElement): void;
 };
 
-/** Gap between the dock's edge and its tooltip, in px. */
+/** Gap between a button and its tooltip, in px. */
 const TIP_GAP_PX = 10;
 /** How close a moved dock may come to the screen edge, in px. */
 const EDGE_MARGIN_PX = 8;
 
-type DockEvents = {
+type DockOptions = {
+  /** The header's name. */
+  title?: string;
   onFold?: (folded: boolean) => void;
   /** The player dropped the dock at `pos`. */
   onMove?: (pos: ScreenPosition) => void;
 };
 
-/** Chevrons for the fold button: pointing left folds, pointing right unfolds. */
-const FOLD_ICON = '<path d="M15 6l-6 6 6 6"/>';
-const UNFOLD_ICON = '<path d="M9 6l6 6-6 6"/>';
+/** Chevrons for the fold button: pointing up folds, pointing down unfolds. */
+const FOLD_ICON = '<path d="M6 15l6-6 6 6"/>';
+const UNFOLD_ICON = '<path d="M6 9l6 6 6-6"/>';
 
-export function createDock(onSelect: (id: string) => void, events: DockEvents = {}): Dock {
+export function createDock(onSelect: (id: string) => void, events: DockOptions = {}): Dock {
   ensureKitStyles();
 
   const root = h("nav", "qws-dock");
   root.setAttribute("aria-label", "Aries Mod menus");
   const status = h("span", "qws-dock-status");
   status.dataset.tone = "warn";
-  const grip = h("div", "qws-dock-grip");
-  grip.setAttribute("title", "Drag to move the menus");
-  grip.append(status, h("span", "qws-dock-grip-bar"));
-  root.appendChild(grip);
-
   const fold = h("button", "qws-dock-fold");
   fold.type = "button";
   const foldIcon = menuIcon("");
   fold.appendChild(foldIcon);
-  root.appendChild(fold);
+
+  const head = h("div", "qws-dock-head");
+  head.append(status, h("span", "qws-dock-title", events.title ?? "Arie's Mod"), fold);
+  const grid = h("div", "qws-dock-grid");
+  root.append(head, grid);
 
   const tip = h("div", "qws-dock-tip");
   const buttons = new Map<string, HTMLButtonElement>();
@@ -71,11 +74,11 @@ export function createDock(onSelect: (id: string) => void, events: DockEvents = 
     tip.textContent = label;
     if (!tip.isConnected) (document.documentElement || document.body).appendChild(tip);
     const rect = btn.getBoundingClientRect();
-    // A dock moved to the right half of the screen shows its tips on its left.
-    const onRight = rect.left > window.innerWidth / 2;
-    tip.style.left = `${Math.round(onRight ? rect.left - TIP_GAP_PX : rect.right + TIP_GAP_PX)}px`;
-    tip.style.top = `${Math.round(rect.top + rect.height / 2)}px`;
-    tip.style.transform = onRight ? "translate(-100%, -50%)" : "translateY(-50%)";
+    // Above the button, or below it when the panel sits against the top edge.
+    const below = rect.top < 48;
+    tip.style.left = `${Math.round(rect.left + rect.width / 2)}px`;
+    tip.style.top = `${Math.round(below ? rect.bottom + TIP_GAP_PX : rect.top - TIP_GAP_PX)}px`;
+    tip.style.transform = below ? "translateX(-50%)" : "translate(-50%, -100%)";
     tip.classList.add("shown");
   };
   const hideTip = () => tip.classList.remove("shown");
@@ -105,7 +108,7 @@ export function createDock(onSelect: (id: string) => void, events: DockEvents = 
     btn.addEventListener("focus", () => showTip(btn, label));
     btn.addEventListener("mouseleave", hideTip);
     btn.addEventListener("blur", hideTip);
-    root.insertBefore(btn, fold);
+    grid.appendChild(btn);
     buttons.set(id, btn);
     if (pendingBadges.has(id)) setBadge(id, pendingBadges.get(id) ?? 0);
   };
@@ -133,7 +136,9 @@ export function createDock(onSelect: (id: string) => void, events: DockEvents = 
     moveTo({ left: rect.left, top: rect.top });
   };
   makeDraggable(root, {
-    handle: grip,
+    handle: head,
+    // The fold button and a clickable version pill stay clicks.
+    ignore: (target) => !!target.closest("button, .is-link"),
     moveTo: (pos) => {
       hideTip();
       return moveTo(pos);
@@ -183,6 +188,9 @@ export function createDock(onSelect: (id: string) => void, events: DockEvents = 
     place,
     setFoldHint(text) {
       fold.setAttribute("title", text);
+    },
+    addToHeader(el) {
+      head.insertBefore(el, fold);
     },
   };
 }
