@@ -70,7 +70,7 @@ export const controlsCss = `
 }
 .qmm-switch::before {
   content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%;
-  background: var(--qmm-card); box-shadow: 0 1px 2px rgba(59,47,34,.25); transition: transform 150ms ease;
+  background: var(--qmm-card); box-shadow: 0 1px 2px var(--qmm-shade); transition: transform 150ms ease;
 }
 .qmm-switch:checked { background: var(--qmm-leaf); box-shadow: inset 0 -2px 0 var(--qmm-leaf-shade); }
 .qmm-switch:checked::before { transform: translateX(20px); }
@@ -195,8 +195,8 @@ export const controlsCss = `
   animation: qmm-hotkey-breathe 1.2s ease-in-out infinite;
 }
 @keyframes qmm-hotkey-breathe {
-  0% { box-shadow: 0 0 0 0 rgba(209,138,26,.45); }
-  60% { box-shadow: 0 0 0 10px rgba(209,138,26,0); }
-  100% { box-shadow: 0 0 0 0 rgba(209,138,26,0); }
+  0% { box-shadow: 0 0 0 0 var(--qmm-warn-glow); }
+  60% { box-shadow: 0 0 0 10px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
 }
 `;

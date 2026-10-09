@@ -20,9 +20,9 @@ function box(): HTMLElement {
     width: "440px",
     maxWidth: "92vw",
     padding: "24px 28px",
-    borderRadius: "14px",
-    border: "1px solid var(--qmm-border-strong)",
-    background: "var(--qmm-surface)",
+    borderRadius: "var(--qmm-radius-xl)",
+    border: "3px solid var(--qmm-sand-edge)",
+    background: "var(--qmm-paper)",
     color: "var(--qmm-text)",
     boxShadow: "var(--qmm-shadow-modal)",
     textAlign: "center",
@@ -45,8 +45,8 @@ export function showRoomPrivacyNoticeOnce(): void {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "rgba(0,0,0,.65)",
-    fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
+    background: "var(--qmm-scrim)",
+    fontFamily: "var(--qmm-font)",
   });
 
   const close = () => {
@@ -84,7 +84,7 @@ export function showRoomPrivacyNoticeOnce(): void {
   dialog.append(title, body, actions);
   overlay.appendChild(dialog);
 
-  // A click on the dark backdrop, outside the box, dismisses it too.
+  // A click on the backdrop, outside the box, dismisses it too.
   overlay.addEventListener("click", (event) => {
     if (event.target === overlay) close();
   });

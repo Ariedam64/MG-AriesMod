@@ -23,8 +23,8 @@ import {
 } from "./teamStatsText";
 
 const MUTED = color.textSoft;
-/** Green for "at its best", kept apart from the teal accent used for selection. */
-const ACCENT = "#34d399";
+/** Green for "at its best". */
+const ACCENT = color.leafStrong;
 const DIM = color.textDim;
 
 /**
@@ -34,9 +34,9 @@ const DIM = color.textDim;
  */
 function fillRatioColor(ratio: number): string {
   if (ratio >= 0.99) return ACCENT;
-  if (ratio >= 0.9) return "#a3e635";
+  if (ratio >= 0.9) return color.leaf;
   if (ratio >= 0.75) return color.warn;
-  return "#f87171";
+  return color.danger;
 }
 
 /**

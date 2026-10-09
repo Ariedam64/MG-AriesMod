@@ -56,6 +56,8 @@ export const color = {
   panelBg: palette.paper,
   scrollbar: "#d6c193",
   scrim: "rgba(59,47,34,0.45)",
+  /** A small drop shadow under a knob or a chip. */
+  shade: "rgba(59,47,34,0.25)",
 
   danger: palette.clay,
   dangerInk: "#a33a1e",
@@ -68,6 +70,8 @@ export const color = {
   warnInk: "#7a4f0a",
   warnSoft: "#f6e7c6",
   warnBorder: "#e2bf7a",
+  /** The pulse around a hotkey button that is recording. */
+  warnGlow: "rgba(209,138,26,0.45)",
 
   gold: "#FFC734",
   rainbow: "#c084fc",
@@ -77,6 +81,9 @@ const gradient = {
   panel: palette.paper,
   tabBar: palette.paper,
   head: palette.leaf,
+  /** Text fills for the Gold and Rainbow mutation names. */
+  gold: "linear-gradient(120deg, #e0b43c, #b07d1a, #e8c766)",
+  rainbow: "linear-gradient(90deg, #e05555, #d9a520, #2aa7d6, #7f55e0, #e05555)",
 } as const;
 
 const shadow = {

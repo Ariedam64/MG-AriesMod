@@ -1,13 +1,14 @@
 // Vertical tabs: a selectable list with an optional filter box.
 
 import { h } from "./dom";
+import { color } from "./theme";
 
 export type VTabItem = {
   id: string;
   title: string;
   subtitle?: string;
   avatarUrl?: string;
-  /** Colour of the status dot on the left, e.g. "#48d170". */
+  /** Colour of the status dot on the left, e.g. `color.leaf`. */
   statusColor?: string;
   /** Small counter or flag right of the label. */
   badge?: string | null;
@@ -129,7 +130,7 @@ export class VTabs {
 
   private renderDefaultItem(it: VTabItem, btn: HTMLButtonElement): void {
     const dot = h("div", "qmm-dot");
-    dot.style.background = it.statusColor || "#999a";
+    dot.style.background = it.statusColor || color.sandShade;
 
     const img = h("img");
     img.src = it.avatarUrl || "";

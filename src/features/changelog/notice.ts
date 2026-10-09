@@ -21,24 +21,22 @@ const NOTICE_CSS = `
 #${OVERLAY_ID} {
   position: fixed; inset: 0; z-index: 2147483647;
   display: grid; place-items: center; padding: 20px;
-  background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: var(--qmm-scrim); backdrop-filter: blur(4px);
+  font-family: var(--qmm-font);
 }
 #${OVERLAY_ID} .mgcl-box {
   width: 440px; max-width: 92vw; max-height: 85vh; overflow-y: auto;
-  padding: 22px 24px; border-radius: 16px;
-  border: 1px solid var(--qmm-accent-border);
-  background:
-    radial-gradient(130% 150% at 0% 0%, var(--qmm-accent-soft), transparent 55%),
-    linear-gradient(160deg, rgba(18,24,34,0.97), rgba(10,14,20,0.98));
+  padding: 22px 24px; border-radius: var(--qmm-radius-xl);
+  border: 3px solid var(--qmm-sand-edge);
+  background: var(--qmm-paper);
   box-shadow: var(--qmm-shadow-modal);
   color: var(--qmm-text);
 }
 #${OVERLAY_ID} .mgcl-eyebrow {
   margin: 0 0 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--qmm-accent);
+  color: var(--qmm-leaf-ink);
 }
-#${OVERLAY_ID} .mgcl-title { margin: 0 0 4px; font-size: 18px; font-weight: 750; }
+#${OVERLAY_ID} .mgcl-title { margin: 0 0 4px; font-size: 18px; font-weight: 900; }
 #${OVERLAY_ID} .mgcl-version { margin: 0 0 16px; font-size: 11.5px; color: var(--qmm-text-soft); }
 #${OVERLAY_ID} .mgcl-media { margin-top: 14px; }
 #${OVERLAY_ID} .mgcl-close { margin-top: 18px; }

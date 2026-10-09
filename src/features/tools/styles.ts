@@ -55,14 +55,14 @@ export function ensureToolsStyles(): void {
 .mgt-card {
   display: flex; flex-direction: column; gap: 10px; text-align: left;
   padding: 14px; border-radius: 14px; cursor: pointer;
-  border: 1px solid var(--qmm-border);
-  background: linear-gradient(160deg, rgba(18,24,34,0.70), rgba(12,17,26,0.86));
+  border: 2px solid var(--qmm-sand-edge);
+  background: var(--qmm-card);
   transition: transform 170ms ease, border-color 170ms ease, box-shadow 170ms ease;
 }
 .mgt-card:hover {
   transform: translateY(-2px);
   border-color: var(--qmm-accent-border);
-  box-shadow: 0 12px 28px rgba(0,0,0,0.38);
+  box-shadow: var(--qmm-shadow-raise-small);
 }
 .mgt-card__head { display: flex; align-items: center; gap: 11px; }
 .mgt-card__title {
@@ -89,10 +89,8 @@ export function ensureToolsStyles(): void {
 .mgt-hero {
   display: flex; flex-direction: column; gap: 14px;
   padding: 18px; border-radius: 16px;
-  border: 1px solid var(--qmm-accent-border);
-  background:
-    radial-gradient(130% 150% at 0% 0%, var(--qmm-accent-soft), transparent 55%),
-    linear-gradient(160deg, rgba(18,24,34,0.95), rgba(12,17,26,0.96));
+  border: 2px solid var(--qmm-accent-border);
+  background: var(--qmm-accent-soft);
 }
 .mgt-hero__top { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
 /* Grows to fill the row so the creators get pushed to the far right. */
@@ -159,28 +157,28 @@ export function ensureToolsStyles(): void {
   position: absolute; top: 50%; transform: translateY(-50%);
   display: grid; place-items: center; width: 36px; height: 36px;
   border-radius: 50%; cursor: pointer; z-index: 1;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(6,10,16,0.72); color: var(--qmm-text);
+  border: 2px solid var(--qmm-sand-edge);
+  background: var(--qmm-paper); color: var(--qmm-text);
   font-size: 20px; line-height: 1; padding: 0 0 2px;
   backdrop-filter: blur(6px);
   transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
 }
-.mgt-nav:hover { background: rgba(6,10,16,0.92); border-color: var(--qmm-accent-border-hover); color: var(--qmm-accent); }
+.mgt-nav:hover { background: var(--qmm-card); border-color: var(--qmm-accent-border-hover); color: var(--qmm-accent); }
 .mgt-nav--prev { left: 10px; }
 .mgt-nav--next { right: 10px; }
 .mgt-dots { display: flex; justify-content: center; gap: 6px; }
 .mgt-dot {
   width: 7px; height: 7px; padding: 0; border-radius: 50%; cursor: pointer;
-  border: none; background: rgba(255,255,255,0.28);
+  border: none; background: var(--qmm-sand-edge);
   transition: background 160ms ease, width 160ms ease;
 }
-.mgt-dot:hover { background: rgba(255,255,255,0.5); }
+.mgt-dot:hover { background: var(--qmm-sand-shade); }
 .mgt-dot.is-active { width: 18px; border-radius: 999px; background: var(--qmm-accent); }
 
 /* ── full-screen image zoom ──────────────────────────────────────────── */
 .mgt-zoom {
   position: fixed; inset: 0; z-index: 2147483647; display: grid; place-items: center; padding: 20px;
-  background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);
+  background: var(--qmm-scrim); backdrop-filter: blur(4px);
 }
 .mgt-zoom__box {
   position: relative; max-width: 90vw; max-height: 90vh; overflow: hidden;

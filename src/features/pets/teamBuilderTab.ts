@@ -160,7 +160,7 @@ function buildSaveName(team: SuggestedTeam, isAfk: boolean): string {
 
 function renderTeamCard(team: SuggestedTeam, petsById: Map<string, InventoryPet>): HTMLElement {
   const isAfk = team.mode === "afk";
-  const glow = isAfk ? "#38bdf8" : "#34d399";
+  const glow = isAfk ? color.warn : color.leaf;
   const title = isAfk ? `${abilityLabel(team)} (AFK)` : abilityLabel(team);
   const teamCard = card(title, {
     tone: isAfk ? "accent" : "default",
@@ -175,7 +175,7 @@ function renderTeamCard(team: SuggestedTeam, petsById: Map<string, InventoryPet>
   } as CSSStyleDeclaration);
   teamCard.root.onmouseenter = () => {
     teamCard.root.style.transform = "translateY(-2px)";
-    teamCard.root.style.boxShadow = `0 10px 24px rgba(0,0,0,0.35), 0 0 0 1px ${glow}33`;
+    teamCard.root.style.boxShadow = `0 4px 0 ${color.sandShade}, 0 0 0 2px ${glow}`;
   };
   teamCard.root.onmouseleave = () => {
     teamCard.root.style.transform = "none";

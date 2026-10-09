@@ -71,7 +71,8 @@
     "check:contrast": "node scripts/runChecks.mjs contrast",
     "check:kitstyles": "node scripts/runChecks.mjs kitstyles",
     "check:dock": "node scripts/runChecks.mjs dock",
-    "check:huddock": "node scripts/runChecks.mjs huddock"
+    "check:huddock": "node scripts/runChecks.mjs huddock",
+    "check:themecolors": "node scripts/runChecks.mjs themecolors"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",

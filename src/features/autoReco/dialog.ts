@@ -8,11 +8,11 @@ import { h } from "../../ui/kit/dom";
 const DIALOG_CSS = `
 .qws-reco-scrim {
   position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: var(--qmm-scrim); font-family: var(--qmm-font);
 }
 .qws-reco-box {
   width: 420px; max-width: 92vw; padding: 24px 28px; text-align: center; color: var(--qmm-text);
-  background: var(--qmm-surface); border: 1px solid var(--qmm-border-strong); border-radius: 14px;
+  background: var(--qmm-paper); border: 3px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-xl);
   box-shadow: var(--qmm-shadow-modal);
 }
 .qws-reco-title { margin: 0 0 10px; font-size: 22px; font-weight: 900; letter-spacing: .02em; }

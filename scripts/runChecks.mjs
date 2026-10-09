@@ -97,6 +97,7 @@ const SUITES = {
   kitstyles: ["checkKitStyles"],
   dock: ["checkDock", "dom-stub"],
   huddock: ["checkHudDock", "dom-stub"],
+  themecolors: ["checkThemeColors"],
 };
 
 /** Problems with how suites are registered: a file with no entry, or package.json out of step. */

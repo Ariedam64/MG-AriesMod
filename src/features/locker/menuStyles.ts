@@ -24,10 +24,10 @@ const LOCKER_MENU_CSS = `
 .lk-color { min-width: 92px; }
 .lk-color .label { font-weight: 700; letter-spacing: .3px; }
 .lk-color--gold .label, .lk-color--rainbow .label {
-  background-clip: text; -webkit-background-clip: text; color: transparent; text-shadow: 0 0 6px rgba(0,0,0,.35);
+  background-clip: text; -webkit-background-clip: text; color: transparent;
 }
-.lk-color--gold .label { background-image: linear-gradient(120deg, #f5d76e, #c9932b, #f9e9b6); }
-.lk-color--rainbow .label { background-image: linear-gradient(90deg, #ff6b6b, #f7d35c, #3fd3ff, #9b6bff, #ff6b6b); }
+.lk-color--gold .label { background-image: var(--qmm-gradient-gold); }
+.lk-color--rainbow .label { background-image: var(--qmm-gradient-rainbow); }
 
 .lk-weather-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; width: min(640px, 100%); }
 .lk-weather-grid.is-dense { grid-template-columns: repeat(4, minmax(80px, 1fr)); width: 100%; }
@@ -40,10 +40,10 @@ const LOCKER_MENU_CSS = `
 .lk-tile:hover { border-color: var(--qmm-accent-border); }
 .lk-tile.is-checked {
   border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft);
-  box-shadow: inset 0 0 0 1px var(--qmm-accent-border), 0 2px 6px rgba(0,0,0,.45);
+  box-shadow: inset 0 0 0 1px var(--qmm-accent-border), 0 2px 0 var(--qmm-sand-shade);
 }
 .lk-tile input { position: absolute; inset: 0; margin: 0; opacity: 0; pointer-events: none; }
-.lk-tile__icon { display: inline-flex; align-items: center; justify-content: center; filter: drop-shadow(0 1px 1px rgba(0,0,0,.45)); }
+.lk-tile__icon { display: inline-flex; align-items: center; justify-content: center; filter: drop-shadow(0 1px 1px var(--qmm-shade)); }
 .lk-tile__caption { font-size: 11.5px; font-weight: 600; opacity: .85; text-align: center; }
 .is-dense > .lk-tile { padding: 4px 6px; }
 .is-dense > .lk-tile .lk-tile__caption { font-size: var(--qmm-fs-sm); font-weight: 500; }
@@ -51,7 +51,7 @@ const LOCKER_MENU_CSS = `
   display: inline-flex; align-items: center; justify-content: center; line-height: 1;
   border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-pill); background: var(--qmm-field-bg); color: var(--qmm-text);
 }
-.lk-no-weather { display: grid; place-items: center; line-height: 1; font-weight: 700; color: var(--qmm-danger); text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+.lk-no-weather { display: grid; place-items: center; line-height: 1; font-weight: 700; color: var(--qmm-danger); }
 
 .lk-recipes { display: grid; gap: var(--qmm-space-md); width: 100%; }
 .lk-recipes__head { display: flex; align-items: center; justify-content: space-between; gap: var(--qmm-space-md); }

@@ -11,7 +11,7 @@ import { lockerSettingsCard, type SettingsCard } from "./settingsCard";
 import type { LockerMenuStore, OverrideDraft } from "./settingsDraft";
 import { getLockerSeedOptions } from "./seedOptions";
 
-const OVERRIDE_ON = "#2ecc71";
+const OVERRIDE_ON = color.leaf;
 const OVERRIDE_OFF = color.danger;
 
 export function overridesTab(store: LockerMenuStore): LockerTab {

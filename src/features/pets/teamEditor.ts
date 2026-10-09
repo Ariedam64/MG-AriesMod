@@ -17,7 +17,7 @@ import type { PetTeam } from "./teamStore";
 
 const SLOT_ICON_PX = 40;
 const SLOT_BUTTON_PX = 34;
-const MAX_STRENGTH_COLOR = "#facc15";
+const MAX_STRENGTH_COLOR = color.gold;
 
 export type TeamEditorHandlers = {
   /** The team the editor shows, read fresh at each action. */
@@ -83,8 +83,8 @@ function slotRow(onChoose: () => Promise<void>, onClear: () => Promise<void>): S
     lineHeight: "1",
     padding: "1px 4px",
     borderRadius: "4px",
-    background: "rgba(0,0,0,0.75)",
-    color: "#fff",
+    background: color.bark,
+    color: color.paper,
     whiteSpace: "nowrap",
     display: "none",
     pointerEvents: "none",
@@ -140,7 +140,7 @@ function slotRow(onChoose: () => Promise<void>, onClear: () => Promise<void>): S
       const strength = getPetStrength(pet);
       const maxed = strength >= maxStrength;
       strengthBadge.textContent = maxed ? `${maxStrength}` : `${strength}/${maxStrength}`;
-      strengthBadge.style.color = maxed ? MAX_STRENGTH_COLOR : "#fff";
+      strengthBadge.style.color = maxed ? MAX_STRENGTH_COLOR : color.paper;
       strengthBadge.style.display = "block";
     } else {
       strengthBadge.style.display = "none";

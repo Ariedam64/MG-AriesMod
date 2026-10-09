@@ -9,8 +9,8 @@ import type { InventoryPet } from "./inventoryPets";
 import { petIcon } from "./petIcon";
 import type { PetTeam } from "./teamStore";
 
-const ACTIVE_DOT = "#48d170";
-const INACTIVE_DOT = "#64748b";
+const ACTIVE_DOT = color.leaf;
+const INACTIVE_DOT = color.sandShade;
 /** Within this distance of the list's edge, a drag scrolls the list. */
 const AUTOSCROLL_EDGE_PX = 28;
 const AUTOSCROLL_STEP_PX = 18;
@@ -194,7 +194,7 @@ export function createTeamList(handlers: TeamListHandlers): TeamList {
       height: "10px",
       borderRadius: "50%",
       flex: "0 0 auto",
-      boxShadow: "0 0 0 1px rgba(0,0,0,0.4) inset",
+      boxShadow: `0 0 0 1px ${color.shade} inset`,
       background: active ? ACTIVE_DOT : INACTIVE_DOT,
     });
     dot.title = active ? "This team is currently active" : "Inactive team";

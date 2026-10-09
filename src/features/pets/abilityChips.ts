@@ -5,8 +5,8 @@ import { color } from "../../ui/kit/theme";
 import { getAbilityChipColors, type AbilityChipColors } from "./abilityChipColors";
 import { abilityName } from "./abilityNames";
 
-const RING = `0 0 0 1px rgba(0,0,0,0.4) inset, 0 0 0 1px ${color.border}`;
-const RING_HOVER = `0 0 0 1px rgba(0,0,0,0.4) inset, 0 0 0 1px ${color.borderHover}`;
+const RING = `0 0 0 1px ${color.shade} inset, 0 0 0 1px ${color.border}`;
+const RING_HOVER = `0 0 0 1px ${color.shade} inset, 0 0 0 1px ${color.borderHover}`;
 
 function paintOnHover(el: HTMLElement, colors: AbilityChipColors, grow: boolean): void {
   el.onmouseenter = () => {
@@ -75,10 +75,10 @@ export function abilityPill(abilityId: string, label: string): HTMLElement {
     fontSize: "11px",
     fontWeight: "700",
     lineHeight: "1.5",
-    color: "#fff",
-    textShadow: "0 1px 2px rgba(0,0,0,.45)",
+    color: color.onLeaf,
+    textShadow: `0 1px 2px ${color.shade}`,
     background: colors.bg,
-    boxShadow: "0 0 0 1px rgba(0,0,0,.35) inset",
+    boxShadow: `0 0 0 1px ${color.shade} inset`,
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",

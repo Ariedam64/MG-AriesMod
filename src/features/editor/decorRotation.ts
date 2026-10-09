@@ -61,7 +61,7 @@ function ensureSliderStyle(): void {
   width: ${THUMB_SIZE_PX}px; height: ${THUMB_SIZE_PX}px;
   margin-top: ${(4 - THUMB_SIZE_PX) / 2}px;
   border-radius: 50%; background: ${color.accent}; border: none;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.45);
+  box-shadow: 0 1px 4px ${color.shade};
 }
 .${SLIDER_CLASS}::-moz-range-track {
   height: 4px; border-radius: 999px; background: ${color.track};

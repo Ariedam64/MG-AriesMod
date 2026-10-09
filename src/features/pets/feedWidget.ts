@@ -12,6 +12,7 @@ import {
 } from "../../ui/kit/sprites/iconCache";
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
 import { makeDraggable, placeInViewport, readStoredPosition, storePosition, type ScreenPosition } from "../../ui/kit/floating";
+import { color } from "../../ui/kit/theme";
 import {
   DEFAULT_LABEL,
   MAX_BUTTONS,
@@ -172,10 +173,10 @@ function ensureWidget(): HTMLDivElement {
     flexDirection: "column",
     gap: "6px",
     padding: "6px 8px",
-    borderRadius: "12px",
-    border: "1px solid #32404e",
-    background: "linear-gradient(180deg, #111923, #0b131c)",
-    boxShadow: "0 10px 28px rgba(0,0,0,0.45)",
+    borderRadius: "16px",
+    border: `3px solid ${color.sandEdge}`,
+    background: color.paper,
+    boxShadow: `0 4px 0 ${color.sandShade}`,
     cursor: "grab",
     userSelect: "none",
     touchAction: "none",
@@ -224,8 +225,7 @@ function createHeader(): HTMLDivElement {
   const grip = document.createElement("span");
   grip.textContent = "⠿";
   Object.assign(grip.style, {
-    color: "#c8d7e8",
-    opacity: "0.65",
+    color: color.textDim,
     fontSize: "13px",
     lineHeight: "1",
     pointerEvents: "none",
@@ -234,9 +234,9 @@ function createHeader(): HTMLDivElement {
   const title = document.createElement("span");
   title.textContent = DEFAULT_LABEL;
   Object.assign(title.style, {
-    color: "#c8d7e8",
+    color: color.text,
     fontSize: "12px",
-    fontWeight: "700",
+    fontWeight: "800",
     lineHeight: "1",
     flex: "1 1 auto",
     pointerEvents: "none",
@@ -257,13 +257,13 @@ function createHeader(): HTMLDivElement {
     border: "none",
     borderRadius: "6px",
     background: "transparent",
-    color: "#c8d7e8",
+    color: color.textSoft,
     fontSize: "13px",
     lineHeight: "1",
     cursor: "pointer",
   } as CSSStyleDeclaration);
   gear.addEventListener("mouseenter", () => {
-    gear.style.background = "rgba(200, 215, 232, 0.15)";
+    gear.style.background = color.sand;
   });
   gear.addEventListener("mouseleave", () => {
     gear.style.background = "transparent";
@@ -295,10 +295,11 @@ function createButton(): HTMLButtonElement {
     padding: "6px 10px",
     borderRadius: "8px",
     border: "none",
-    backgroundColor: "#6D3A88",
-    color: "#ffffff",
+    backgroundColor: color.leafStrong,
+    boxShadow: `0 3px 0 ${color.leafShade}`,
+    color: color.onLeaf,
     fontSize: "13px",
-    fontWeight: "600",
+    fontWeight: "800",
     cursor: "pointer",
     pointerEvents: "auto",
   } as CSSStyleDeclaration);
@@ -369,7 +370,7 @@ function updateButtons(): void {
     if (strEl) {
       const strength = pet ? strengthLabel(pet) : null;
       strEl.textContent = strength?.text ?? "";
-      strEl.style.color = strength?.maxed ? "#facc15" : "";
+      strEl.style.color = strength?.maxed ? color.gold : "";
       strEl.style.display = strength ? "" : "none";
     }
 
