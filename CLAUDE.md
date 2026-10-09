@@ -63,6 +63,8 @@ The mod patches a minified bundle, so almost every bug is "the game renamed some
 
 Grep the bundle for **string literals** (message names, jotai `debugLabel`s, field names), never for minified identifiers.
 
+After a crawl, `node scripts/auditGameLabels.mjs C:/tmp/mgNNNN` lists every atom label the mod asks for that the bundle no longer has. Since build 1441 much local state lives on the room object held by `currentRoomAtom` (`toasts`, `npcLines`, ...), as unlabelled atoms: reach them through `game/roomScope.ts`, not by label.
+
 Two failure modes that are silent and have both bitten this repo:
 
 - **A jotai atom resolved by a label the game no longer has.** `set`/`subscribe` become no-ops, so a whole feature dies without an error. `makeAliasedAtom([...])` exists for this.
