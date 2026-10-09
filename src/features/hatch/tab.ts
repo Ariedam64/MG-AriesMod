@@ -7,6 +7,7 @@
 // Double Hatch bonus pet apart from a real pull.
 
 import { petCatalog } from "../../data";
+import { PlayerService } from "../../game/player";
 import { HatchTracker } from "./tracker";
 import { listEggPity } from "./pity";
 import { StatsService, type StatsSnapshot } from "../stats/stats";
@@ -87,7 +88,7 @@ async function seedFromOwnedPets(stats: StatsSnapshot): Promise<void> {
   try { inventory = await Atoms.inventory.myInventory.get(); } catch (error) {
     console.warn("[PetsHatch] Failed to read inventory data", error);
   }
-  try { activePets = await Atoms.pets.myPetInfos.get(); } catch (error) {
+  try { activePets = await PlayerService.getPets(); } catch (error) {
     console.warn("[PetsHatch] Failed to read active pet data", error);
   }
 

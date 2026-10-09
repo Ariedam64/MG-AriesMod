@@ -1,7 +1,7 @@
 // The Manager tab of the Pets menu: the team list on the left, the selected
 // team's editor on the right.
 
-import { onActivePetsStructuralChangeNow } from "../../game/store/atoms";
+import { onActivePetsStructuralChangeNow } from "../../game/player";
 import type { Menu } from "../../ui/kit/menu";
 import { PetsService, type PetTeam } from "./pets";
 import { createTeamEditor } from "./teamEditor";

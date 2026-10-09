@@ -1,50 +1,30 @@
-import { getAtomByLabel, jGet, jSet } from "../game/store/jotai";
+// The mod's toasts, shown through the game's own toast list (game/toasts.ts).
+
+import { pushGameToast } from "../game/toasts";
 
 export type ToastVariant = "success" | "error" | "info" | "warn";
-type SimpleToast = { title: any; description?: any; variant?: ToastVariant; duration?: number };
 
-// Matches the real "board"-style toast pushed by the game itself for shop
-// announcements (captured live from quinoaToastsAtom). title/subtitle can be
-// either a plain string or a `{ id }` i18n message reference, mirroring what
-// the game sends.
-type ShopAnnouncementToast = {
-  toastType: "shopAnnouncement";
-  presentation: string;
-  title: any;
-  subtitle?: any;
-  isStackable?: boolean;
-  displayDurationMs?: number | null;
-  presentByServerMs?: number;
-  id?: string;
-};
+let nextToastId = 0;
 
-type AnyToast = SimpleToast | ShopAnnouncementToast;
-
-async function sendToast(toast: AnyToast): Promise<void> {
-  const sendAtom = getAtomByLabel("sendQuinoaToastAtom");
-  if (sendAtom) { await jSet(sendAtom, toast); return; }
-
-  const listAtom = getAtomByLabel("quinoaToastsAtom");
-  if (!listAtom) throw new Error("No toast atom found");
-
-  const prev = await jGet<any[]>(listAtom).catch(() => []) as any[];
-  const isAnnouncement = "toastType" in toast && toast.toastType === "shopAnnouncement";
-
-  const t: any = isAnnouncement
-    ? { isClosable: true, presentByServerMs: Date.now(), ...toast }
-    : { isClosable: true, duration: 10000, ...toast };
-
-  // Every toast needs a distinct id: the game's toast list keys/removes
-  // entries by id, so any two toasts sharing "quinoa-game-toast" become
-  // indistinguishable to it: closing one either closes both or fails to
-  // remove either, which is exactly the "won't dismiss" symptom this fixes.
-  t.id = t.id ?? `quinoa-game-toast-${Date.now()}-${Math.random()}`;
-
-  await jSet(listAtom, [...prev, t]);
-}
-
+/**
+ * Shows a toast. `title` and `description` may be plain strings or the game's
+ * `{ id, message }` text references. Throws when the game has no toast list
+ * yet, so callers that care can tell.
+ */
 export async function toastSimple(
-  title: any, description?: any, variant: ToastVariant = "info", duration = 3500
-) {
-  await sendToast({ title, description, variant, duration });
+  title: any, description?: any, variant: ToastVariant = "info", duration = 3500,
+): Promise<void> {
+  const shown = await pushGameToast({
+    // Each toast needs its own id: the game removes entries by id, so two
+    // toasts sharing one could not be closed separately.
+    id: `aries-toast-${Date.now()}-${++nextToastId}`,
+    title,
+    description,
+    // The game only styles "error" and "warning"; the others look the same.
+    variant: variant === "warn" ? "warning" : variant,
+    displayDurationMs: duration,
+    isClosable: true,
+    isStackable: true,
+  });
+  if (!shown) throw new Error("The game has no toast list yet");
 }

@@ -17,10 +17,8 @@ import { saveTeam } from "./teams";
 
 const PICK_TIMEOUT_MS = 20_000;
 
+/** Empties the hand. The selection atoms are read-only; the game changes them through SetSelectedItem. */
 async function clearHandSelection(): Promise<void> {
-  try { await Atoms.inventory.setSelectedIndexToEnd.set(null); } catch {}
-  try { await Atoms.inventory.mySelectedItemId.set(null); } catch {}
-  try { await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.set(null); } catch {}
   try { await PlayerService.setSelectedItem(null); } catch {}
   try { await PlayerService.dropObject(); } catch {}
 }

@@ -36,13 +36,11 @@ function totalSellValue(pets: InventoryPet[]): string {
   return total.toLocaleString("en-US");
 }
 
-/** Counts the sale's value in the stats once the game has priced it. */
-async function countSaleValue(): Promise<void> {
-  try {
-    const value = Number(await Atoms.pets.totalPetSellPrice.get());
-    if (Number.isFinite(value) && value > 0) StatsService.incrementShopStat("petsSoldValue", value);
-  } catch (error) {
-    console.error("[SellPet] Unable to read pet sell price", error);
+/** Counts one sold pet's value in the stats, priced the same way as the confirmation. */
+function countSaleValue(pet: InventoryPet): void {
+  const value = computeInventoryItemValue(pet);
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    StatsService.incrementShopStat("petsSoldValue", value);
   }
 }
 
@@ -65,7 +63,7 @@ export async function runSellAllPetsFlow(): Promise<void> {
       await PlayerService.sellPet(pet.id);
       sold += 1;
       StatsService.incrementShopStat("petsSoldCount");
-      void countSaleValue();
+      countSaleValue(pet);
     } catch {
       failures += 1;
     }

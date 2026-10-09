@@ -139,21 +139,12 @@ async function startWatchers(): Promise<void> {
     rebuild();
   }));
 
-  // The primitive slots atom replaced myPetInfos in a game update; the older
-  // one is only watched when the newer one is not there.
-  let primitive: unknown = null;
-  try { primitive = await Atoms.pets.myPrimitivePetSlots.get(); } catch {}
-  const activeAtom = Array.isArray(primitive) ? Atoms.pets.myPrimitivePetSlots : Atoms.pets.myPetInfos;
-  if (Array.isArray(primitive)) {
-    activeRaw = primitive;
-  } else {
-    try {
-      const infos = await Atoms.pets.myPetInfos.get();
-      activeRaw = Array.isArray(infos) ? infos : [];
-    } catch {}
-  }
+  try {
+    const slots = await Atoms.pets.myPrimitivePetSlots.get();
+    activeRaw = Array.isArray(slots) ? slots : [];
+  } catch {}
   activeSig = stableSignature(activeRaw.map(activeSlotToPet));
-  watchers.add(activeAtom.onChange((list: any) => {
+  watchers.add(Atoms.pets.myPrimitivePetSlots.onChange((list: any) => {
     const next = Array.isArray(list) ? list : [];
     const sig = stableSignature(next.map(activeSlotToPet));
     if (sig === activeSig) return;

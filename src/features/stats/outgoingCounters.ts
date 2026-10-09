@@ -1,5 +1,7 @@
 import { observeOutgoing } from "../../game/ws/outgoing";
 import { Atoms } from "../../game/store/atoms";
+import { findInventoryItem } from "../../data/rules/inventory";
+import { computeInventoryItemValue } from "../inventory/value";
 import { StatsService } from "./stats";
 
 /**
@@ -52,10 +54,20 @@ function countCropSale() {
   })();
 }
 
-function countPetSale() {
+/** The coins a pet in the bag sells for, by its item id; null when it is not there. */
+export function petSaleValue(items: unknown, itemId: unknown): number | null {
+  const pet = findInventoryItem(items, itemId);
+  return pet ? computeInventoryItemValue(pet) : null;
+}
+
+function countPetSale(message: any) {
   StatsService.incrementShopStat("petsSoldCount");
-  void addPositive(() => Atoms.pets.totalPetSellPrice.get(), "petsSoldValue").catch((error) => {
-    console.error("[SellPet] Unable to read pet sell price", error);
+  // Read while the pet is still in the bag: observers run before the server answers.
+  void addPositive(async () => {
+    const inventory: any = await Atoms.inventory.myInventory.get();
+    return petSaleValue(inventory?.items, message?.itemId);
+  }, "petsSoldValue").catch((error) => {
+    console.error("[SellPet] Unable to price the pet sold", error);
   });
 }
 

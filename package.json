@@ -65,7 +65,9 @@
     "check:floating": "node scripts/runChecks.mjs floating",
     "check:stagewatch": "node scripts/runChecks.mjs stagewatch",
     "check:visiblerefresh": "node scripts/runChecks.mjs visiblerefresh",
-    "check:speech": "node scripts/runChecks.mjs speech"
+    "check:speech": "node scripts/runChecks.mjs speech",
+    "check:gametoasts": "node scripts/runChecks.mjs gametoasts",
+    "check:liveatoms": "node scripts/runChecks.mjs liveatoms"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",

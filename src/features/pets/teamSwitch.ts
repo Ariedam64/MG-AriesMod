@@ -5,11 +5,11 @@
 import { PlayerService } from "../../game/player";
 import {
   Atoms,
-  isMyInventoryAtMaxLength,
-  myNumPetHutchItems,
+  myPetHutchItems,
   myPetHutchCapacitySlots,
   myPetHutchPetItems,
 } from "../../game/store/atoms";
+import { isInventoryFullForUnstackable } from "../../data/rules/inventory";
 import { waitUntil } from "../../lib/async";
 import { toastSimple } from "../../ui/toast";
 import { getInventoryPets } from "./inventoryPets";
@@ -107,8 +107,8 @@ async function hutchInfo(): Promise<{ capacity: number; used: number; free: numb
   if (!capacity) capacity = HUTCH_DEFAULT_CAPACITY;
   if (!used) {
     try {
-      const n = Number(await myNumPetHutchItems.get());
-      if (Number.isFinite(n) && n > 0) used = n;
+      const items = await myPetHutchItems.get();
+      if (Array.isArray(items) && items.length > 0) used = items.length;
     } catch {}
   }
   return { capacity, used, free: Math.max(0, capacity - used) };
@@ -270,7 +270,10 @@ async function equipPetIds(rawIds: string[], markTeamId: string | null, markUsed
     // The wanted pet must be in the inventory before it can be swapped in or placed.
     if (inHutch.has(targetId)) {
       let inventoryFull = false;
-      try { inventoryFull = !!(await isMyInventoryAtMaxLength.get()); } catch {}
+      try {
+        const inventory: any = await Atoms.inventory.myInventory.get();
+        inventoryFull = isInventoryFullForUnstackable(inventory?.items);
+      } catch {}
       if (inventoryFull) {
         const freed = freeHutch > 0 && (await moveSparePetToHutch(targetSet, activeSlots, inHutch));
         if (!freed) {

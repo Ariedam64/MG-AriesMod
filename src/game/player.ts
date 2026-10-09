@@ -85,20 +85,11 @@ function toPetInfoFromPrimitive(entry: PrimitivePetSlot | null | undefined): Pet
   return info;
 }
 
-/**
- * The active pets. `myPetInfosAtom` is gone from the game (v1029), so the pet
- * slots are what normally answers; the old atom still wins if it ever comes back.
- */
-function normalizePetsState(petInfosRaw: unknown, primitiveRaw: unknown): PetState {
-  const infos = Array.isArray(petInfosRaw) ? (petInfosRaw as PetInfo[]) : null;
-  if (infos && infos.length) return infos;
-
-  const prim = Array.isArray(primitiveRaw) ? (primitiveRaw as PrimitivePetSlot[]) : null;
-  if (prim && prim.length) {
-    const mapped = prim.map(toPetInfoFromPrimitive).filter(Boolean) as PetInfo[];
-    if (mapped.length) return mapped;
-  }
-  return infos;
+/** The active pets, from the game's pet slots (`myPetInfosAtom` is gone since v1029). */
+function petsFromSlots(slotsRaw: unknown): PetState {
+  const slots = Array.isArray(slotsRaw) ? (slotsRaw as PrimitivePetSlot[]) : null;
+  if (!slots) return null;
+  return slots.map(toPetInfoFromPrimitive).filter(Boolean) as PetInfo[];
 }
 
 function petsStateSig(state: PetState): string {
@@ -108,37 +99,52 @@ function petsStateSig(state: PetState): string {
 }
 
 /**
- * Calls `cb` whenever the active pets change, from either source. With `seed`
- * (the current values of both sources) it also emits once before listening.
+ * Calls `cb` whenever the active pets change. With `seed` (the current slots)
+ * it also emits once before listening.
  */
-function watchPets(cb: (pets: PetState) => void, seed?: { infos: unknown; primitives: unknown }): () => void {
-  let lastInfos: unknown = seed?.infos ?? null;
-  let lastPrimitives: unknown = seed?.primitives ?? null;
+function watchPets(cb: (pets: PetState) => void, seed?: { slots: unknown }): () => void {
   let prevSig: string | null = null;
-
-  const emit = () => {
-    const next = normalizePetsState(lastInfos, lastPrimitives);
+  const emit = (slots: unknown) => {
+    const next = petsFromSlots(slots);
     const sig = petsStateSig(next);
     if (sig === prevSig) return;
     prevSig = sig;
     cb(next);
   };
-  if (seed) emit();
+  if (seed) emit(seed.slots);
 
-  const subs = [
-    Atoms.pets.myPetInfos.onChange((next) => {
-      lastInfos = next;
-      emit();
-    }),
-    Atoms.pets.myPrimitivePetSlots.onChange((next) => {
-      lastPrimitives = next;
-      emit();
-    }),
-  ];
+  const sub = Atoms.pets.myPrimitivePetSlots.onChange(emit);
   // onChange resolves to the unsubscriber, so it has to be awaited first.
   return () => {
-    for (const sub of subs) Promise.resolve(sub).then((off) => off?.()).catch(() => {});
+    Promise.resolve(sub).then((off) => off?.()).catch(() => {});
   };
+}
+
+/** Pet identity without xp, hunger or position, so a menu does not redraw on every tick. */
+function activePetStableSig(p: PetInfo): string {
+  const s = p?.slot ?? ({} as PetInfo["slot"]);
+  const muts = Array.isArray(s.mutations) ? s.mutations.slice().sort().join(",") : "";
+  const ab = Array.isArray(s.abilities) ? s.abilities.slice().sort().join(",") : "";
+  const scale = Number.isFinite(s.targetScale as number) ? Math.round((s.targetScale as number) * 1000) : 0;
+  return `${s.petSpecies ?? ""}|${s.name ?? ""}|sc:${scale}|m:${muts}|a:${ab}`;
+}
+
+function activePetsStructure(pets: PetState): string {
+  return (Array.isArray(pets) ? pets : [])
+    .map((p) => `${String(p?.slot?.id ?? "")}=${activePetStableSig(p)}`)
+    .sort()
+    .join("|");
+}
+
+/** Calls `cb` now, then whenever an active pet is added, removed or changes identity. */
+export async function onActivePetsStructuralChangeNow(cb: (pets: PetState) => void): Promise<() => void> {
+  let previous: string | null = null;
+  return PlayerService.onPetsChangeNow((pets) => {
+    const structure = activePetsStructure(pets);
+    if (structure === previous) return;
+    previous = structure;
+    cb(pets);
+  });
 }
 
 /* ============================= Crop inventory ============================= */
@@ -338,9 +344,7 @@ export const PlayerService = {
   },
 
   async getPets(): Promise<PetState> {
-    const infos = await Atoms.pets.myPetInfos.get();
-    const primitives = await Atoms.pets.myPrimitivePetSlots.get();
-    return normalizePetsState(infos, primitives);
+    return petsFromSlots(await Atoms.pets.myPrimitivePetSlots.get());
   },
 
   onPetsChange(cb: (pets: PetState) => void): () => void {
@@ -348,9 +352,7 @@ export const PlayerService = {
   },
 
   async onPetsChangeNow(cb: (pets: PetState) => void): Promise<() => void> {
-    const infos = await Atoms.pets.myPetInfos.get();
-    const primitives = await Atoms.pets.myPrimitivePetSlots.get();
-    return watchPets(cb, { infos, primitives });
+    return watchPets(cb, { slots: await Atoms.pets.myPrimitivePetSlots.get() });
   },
 
   async getCropInventoryState(): Promise<CropInventoryState> {

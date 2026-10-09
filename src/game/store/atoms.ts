@@ -38,19 +38,7 @@ export type CurrentGardenObject =
   | Record<string, unknown>
   | null;
 
-type PetSlot = {
-  id: string;
-  petSpecies: string;
-  name?: string | null;
-  xp?: number;
-  hunger?: number;
-  mutations?: string[];
-  targetScale?: number;
-  abilities?: string[];
-};
 
-type PetInfo = { slot: PetSlot; position?: XY | null };
-type PetState = PetInfo[] | null;
 
 type ToolItem = { toolId: string; itemType: string; quantity: number };
 type DecorItem = { decorId: string; itemType: "Decor"; quantity: number };
@@ -89,11 +77,6 @@ export const mySeedSiloItems = makeAtom<SeedItem[] | null>("mySeedSiloItemsAtom"
 export const myDecorShedItems = makeAtom<DecorItem[] | null>("myDecorShedItemsAtom");
 export const myToolShackItems = makeAtom<ToolItem[] | null>("myToolShackItemsAtom");
 
-// `myPetInfosAtom` no longer exists in the game (v1029). The pet streams in
-// `game/player.ts` prefer it but fall back to the pet slots below, which carry
-// every field they need. Deliberately not repointed at `petInfosAtom`, which is
-// every pet in the room rather than ours.
-const myPetInfos = makeAtom<PetState>("myPetInfosAtom");
 // Renamed `myPrimitivePetSlotsAtom` -> `myPredictedPetSlotsAtom` when the game
 // added prediction and rollback: the same slot array, served from its
 // prediction atoms and including commands still in flight. The old name stays
@@ -102,11 +85,10 @@ const myPrimitivePetSlots = makeAliasedAtom<any[]>([
   "myPredictedPetSlotsAtom",
   "myPrimitivePetSlotsAtom",
 ]);
-const totalPetSellPrice = makeAtom<number>("totalPetSellPriceAtom");
 const myCropItemsToSell = makeAtom<any>("myCropItemsToSellAtom");
 export const myPetHutchPetItems = makeAtom<any>("myPetHutchPetItemsAtom");
-export const isMyInventoryAtMaxLength = makeAtom<any>("isMyInventoryAtMaxLengthAtom");
-export const myNumPetHutchItems = makeAtom<any>("myNumPetHutchItemsAtom");
+/** Everything stored in the pet hutch, pets and their items alike. */
+export const myPetHutchItems = makeAtom<any[]>("myPetHutchItemsAtom");
 export const myPetHutchCapacitySlots = makeAtom<number>("myPetHutchCapacitySlotsAtom");
 
 /** The local player's userSlot: `data` plus `customRestockInventories`, their personal restocks. */
@@ -116,11 +98,13 @@ export const numPlayers = makeAtom<number>("numPlayersAtom");
 const totalCropSellPrice = makeAtom<number>("totalCropSellPriceAtom");
 const friendBonusMultiplier = makeAtom<any>("friendBonusMultiplierAtom");
 
-const myValidatedSelectedItemIndex = makeAtom<number | null>("myValidatedSelectedItemIndexAtom");
-const setSelectedIndexToEnd = makeAtom<number | null>("setSelectedIndexToEndAtom");
-const mySelectedItemName = makeAtom<any>("mySelectedItemNameAtom");
+// The selection is held by item id since build 1441; both atoms are derived
+// and read-only. The game changes it by sending SetSelectedItem.
+const myValidatedSelectedItemIndex = makeAliasedAtom<number | null>([
+  "mySelectedItemIndexAtom",
+  "myValidatedSelectedItemIndexAtom",
+]);
 const mySelectedItemId = makeAtom<any>("mySelectedItemIdAtom");
-const myPossiblyNoLongerValidSelectedItemIndex = makeAtom<number | null>("myPossiblyNoLongerValidSelectedItemIndexAtom");
 const mySelectedItemRotation = makeAtom<any>("mySelectedItemRotationAtom");
 
 export const myCurrentGardenObject = makeAtom<CurrentGardenObject>("myCurrentGardenObjectAtom");
@@ -209,46 +193,11 @@ export const Atoms = {
     myDecorShedItems,
     favoriteIds,
     mySelectedItemId,
-    mySelectedItemName,
     mySelectedItemRotation,
-    myPossiblyNoLongerValidSelectedItemIndex,
     myValidatedSelectedItemIndex,
-    setSelectedIndexToEnd,
     myCropItemsToSell,
   },
-  pets: { myPetInfos, myPrimitivePetSlots, totalPetSellPrice },
+  pets: { myPrimitivePetSlots },
   shop: { shops, myUserSlot, totalCropSellPrice, eggShop },
 } as const;
 
-/* ========================= Active pets, structurally ======================== */
-
-/** Pet identity without xp, hunger or position, so a menu does not redraw on every tick. */
-function activePetStableSig(p: PetInfo): string {
-  const s = p?.slot ?? ({} as PetSlot);
-  const muts = Array.isArray(s.mutations) ? s.mutations.slice().sort().join(",") : "";
-  const ab = Array.isArray(s.abilities) ? s.abilities.slice().sort().join(",") : "";
-  const scale = Number.isFinite(s.targetScale as number) ? Math.round((s.targetScale as number) * 1000) : 0;
-  return `${s.petSpecies ?? ""}|${s.name ?? ""}|sc:${scale}|m:${muts}|a:${ab}`;
-}
-
-function activePetsStructuralEq(a: PetState, b: PetState): boolean {
-  const snap = (st: PetState) => {
-    const m = new Map<string, string>();
-    for (const it of Array.isArray(st) ? st : []) {
-      const id = String(it?.slot?.id ?? "");
-      if (id) m.set(id, activePetStableSig(it));
-    }
-    return m;
-  };
-  const A = snap(a);
-  const B = snap(b);
-  if (A.size !== B.size) return false;
-  for (const [k, v] of A) if (B.get(k) !== v) return false;
-  return true;
-}
-
-/** Calls `cb` now, then whenever an active pet is added, removed or changes identity. */
-export async function onActivePetsStructuralChangeNow(cb: (pets: PetState) => void) {
-  cb(await myPetInfos.get());
-  return myPetInfos.onChange(cb, activePetsStructuralEq);
-}

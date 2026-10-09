@@ -89,6 +89,8 @@ const SUITES = {
   inventorysummary: ["checkInventoryValueSummary", "dom-stub"],
   floating: ["checkFloating", "dom-stub"],
   speech: ["checkCompanionSpeech", "dom-stub"],
+  gametoasts: ["checkGameToasts", "dom-stub"],
+  liveatoms: ["checkLiveAtoms", "dom-stub"],
   stagewatch: ["checkStageWatch", "dom-stub"],
   visiblerefresh: ["checkVisibleRefresh", "dom-stub"],
 };

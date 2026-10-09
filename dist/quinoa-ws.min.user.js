@@ -3264,33 +3264,7 @@
   });
 
   // src/game/store/atoms.ts
-  function activePetStableSig(p) {
-    const s = p?.slot ?? {};
-    const muts = Array.isArray(s.mutations) ? s.mutations.slice().sort().join(",") : "";
-    const ab = Array.isArray(s.abilities) ? s.abilities.slice().sort().join(",") : "";
-    const scale = Number.isFinite(s.targetScale) ? Math.round(s.targetScale * 1e3) : 0;
-    return `${s.petSpecies ?? ""}|${s.name ?? ""}|sc:${scale}|m:${muts}|a:${ab}`;
-  }
-  function activePetsStructuralEq(a, b) {
-    const snap = (st) => {
-      const m = /* @__PURE__ */ new Map();
-      for (const it of Array.isArray(st) ? st : []) {
-        const id = String(it?.slot?.id ?? "");
-        if (id) m.set(id, activePetStableSig(it));
-      }
-      return m;
-    };
-    const A = snap(a);
-    const B = snap(b);
-    if (A.size !== B.size) return false;
-    for (const [k, v] of A) if (B.get(k) !== v) return false;
-    return true;
-  }
-  async function onActivePetsStructuralChangeNow(cb) {
-    cb(await myPetInfos.get());
-    return myPetInfos.onChange(cb, activePetsStructuralEq);
-  }
-  var position, state, map, player, action, myData, myInventory, myCropInventory, mySeedInventory, myToolInventory, myEggInventory, myDecorInventory, mySeedSiloItems, myDecorShedItems, myToolShackItems, myPetInfos, myPrimitivePetSlots, totalPetSellPrice, myCropItemsToSell, myPetHutchPetItems, isMyInventoryAtMaxLength, myNumPetHutchItems, myPetHutchCapacitySlots, myUserSlot, numPlayers, totalCropSellPrice, friendBonusMultiplier, myValidatedSelectedItemIndex, setSelectedIndexToEnd, mySelectedItemName, mySelectedItemId, myPossiblyNoLongerValidSelectedItemIndex, mySelectedItemRotation, myCurrentGardenObject, myCurrentGrowSlotIndex, weather, activeModalRaw, sameModal, activeModal, inventoryModalIsActive, activityLogTab, avatarTriggerAnimationAtom, garden, gardenTileObjects, favoriteIds, playerId, stateUserSlots, myActivityLog, shops, eggShop, Atoms;
+  var position, state, map, player, action, myData, myInventory, myCropInventory, mySeedInventory, myToolInventory, myEggInventory, myDecorInventory, mySeedSiloItems, myDecorShedItems, myToolShackItems, myPrimitivePetSlots, myCropItemsToSell, myPetHutchPetItems, myPetHutchItems, myPetHutchCapacitySlots, myUserSlot, numPlayers, totalCropSellPrice, friendBonusMultiplier, myValidatedSelectedItemIndex, mySelectedItemId, mySelectedItemRotation, myCurrentGardenObject, myCurrentGrowSlotIndex, weather, activeModalRaw, sameModal, activeModal, inventoryModalIsActive, activityLogTab, avatarTriggerAnimationAtom, garden, gardenTileObjects, favoriteIds, playerId, stateUserSlots, myActivityLog, shops, eggShop, Atoms;
   var init_atoms = __esm({
     "src/game/store/atoms.ts"() {
       "use strict";
@@ -3311,26 +3285,23 @@
       mySeedSiloItems = makeAtom("mySeedSiloItemsAtom");
       myDecorShedItems = makeAtom("myDecorShedItemsAtom");
       myToolShackItems = makeAtom("myToolShackItemsAtom");
-      myPetInfos = makeAtom("myPetInfosAtom");
       myPrimitivePetSlots = makeAliasedAtom([
         "myPredictedPetSlotsAtom",
         "myPrimitivePetSlotsAtom"
       ]);
-      totalPetSellPrice = makeAtom("totalPetSellPriceAtom");
       myCropItemsToSell = makeAtom("myCropItemsToSellAtom");
       myPetHutchPetItems = makeAtom("myPetHutchPetItemsAtom");
-      isMyInventoryAtMaxLength = makeAtom("isMyInventoryAtMaxLengthAtom");
-      myNumPetHutchItems = makeAtom("myNumPetHutchItemsAtom");
+      myPetHutchItems = makeAtom("myPetHutchItemsAtom");
       myPetHutchCapacitySlots = makeAtom("myPetHutchCapacitySlotsAtom");
       myUserSlot = makeAtom("myUserSlotAtom");
       numPlayers = makeAtom("numPlayersAtom");
       totalCropSellPrice = makeAtom("totalCropSellPriceAtom");
       friendBonusMultiplier = makeAtom("friendBonusMultiplierAtom");
-      myValidatedSelectedItemIndex = makeAtom("myValidatedSelectedItemIndexAtom");
-      setSelectedIndexToEnd = makeAtom("setSelectedIndexToEndAtom");
-      mySelectedItemName = makeAtom("mySelectedItemNameAtom");
+      myValidatedSelectedItemIndex = makeAliasedAtom([
+        "mySelectedItemIndexAtom",
+        "myValidatedSelectedItemIndexAtom"
+      ]);
       mySelectedItemId = makeAtom("mySelectedItemIdAtom");
-      myPossiblyNoLongerValidSelectedItemIndex = makeAtom("myPossiblyNoLongerValidSelectedItemIndexAtom");
       mySelectedItemRotation = makeAtom("mySelectedItemRotationAtom");
       myCurrentGardenObject = makeAtom("myCurrentGardenObjectAtom");
       myCurrentGrowSlotIndex = makeAliasedAtom([
@@ -3380,14 +3351,11 @@
           myDecorShedItems,
           favoriteIds,
           mySelectedItemId,
-          mySelectedItemName,
           mySelectedItemRotation,
-          myPossiblyNoLongerValidSelectedItemIndex,
           myValidatedSelectedItemIndex,
-          setSelectedIndexToEnd,
           myCropItemsToSell
         },
-        pets: { myPetInfos, myPrimitivePetSlots, totalPetSellPrice },
+        pets: { myPrimitivePetSlots },
         shop: { shops, myUserSlot, totalCropSellPrice, eggShop }
       };
     }
@@ -3481,15 +3449,10 @@
     }
     return info;
   }
-  function normalizePetsState(petInfosRaw, primitiveRaw) {
-    const infos = Array.isArray(petInfosRaw) ? petInfosRaw : null;
-    if (infos && infos.length) return infos;
-    const prim = Array.isArray(primitiveRaw) ? primitiveRaw : null;
-    if (prim && prim.length) {
-      const mapped = prim.map(toPetInfoFromPrimitive).filter(Boolean);
-      if (mapped.length) return mapped;
-    }
-    return infos;
+  function petsFromSlots(slotsRaw) {
+    const slots = Array.isArray(slotsRaw) ? slotsRaw : null;
+    if (!slots) return null;
+    return slots.map(toPetInfoFromPrimitive).filter(Boolean);
   }
   function petsStateSig(state5) {
     if (!Array.isArray(state5)) return "null";
@@ -3497,31 +3460,39 @@
     return state5.map((p) => `${String(p?.slot?.id ?? "")}:${petSig(p)}`).join("|");
   }
   function watchPets(cb, seed) {
-    let lastInfos = seed?.infos ?? null;
-    let lastPrimitives = seed?.primitives ?? null;
     let prevSig = null;
-    const emit2 = () => {
-      const next = normalizePetsState(lastInfos, lastPrimitives);
+    const emit2 = (slots) => {
+      const next = petsFromSlots(slots);
       const sig = petsStateSig(next);
       if (sig === prevSig) return;
       prevSig = sig;
       cb(next);
     };
-    if (seed) emit2();
-    const subs = [
-      Atoms.pets.myPetInfos.onChange((next) => {
-        lastInfos = next;
-        emit2();
-      }),
-      Atoms.pets.myPrimitivePetSlots.onChange((next) => {
-        lastPrimitives = next;
-        emit2();
-      })
-    ];
+    if (seed) emit2(seed.slots);
+    const sub = Atoms.pets.myPrimitivePetSlots.onChange(emit2);
     return () => {
-      for (const sub of subs) Promise.resolve(sub).then((off) => off?.()).catch(() => {
+      Promise.resolve(sub).then((off) => off?.()).catch(() => {
       });
     };
+  }
+  function activePetStableSig(p) {
+    const s = p?.slot ?? {};
+    const muts = Array.isArray(s.mutations) ? s.mutations.slice().sort().join(",") : "";
+    const ab = Array.isArray(s.abilities) ? s.abilities.slice().sort().join(",") : "";
+    const scale = Number.isFinite(s.targetScale) ? Math.round(s.targetScale * 1e3) : 0;
+    return `${s.petSpecies ?? ""}|${s.name ?? ""}|sc:${scale}|m:${muts}|a:${ab}`;
+  }
+  function activePetsStructure(pets) {
+    return (Array.isArray(pets) ? pets : []).map((p) => `${String(p?.slot?.id ?? "")}=${activePetStableSig(p)}`).sort().join("|");
+  }
+  async function onActivePetsStructuralChangeNow(cb) {
+    let previous = null;
+    return PlayerService.onPetsChangeNow((pets) => {
+      const structure = activePetsStructure(pets);
+      if (structure === previous) return;
+      previous = structure;
+      cb(pets);
+    });
   }
   var PlayerService;
   var init_player = __esm({
@@ -3740,17 +3711,13 @@
           return await Atoms.data.garden.get() ?? null;
         },
         async getPets() {
-          const infos = await Atoms.pets.myPetInfos.get();
-          const primitives = await Atoms.pets.myPrimitivePetSlots.get();
-          return normalizePetsState(infos, primitives);
+          return petsFromSlots(await Atoms.pets.myPrimitivePetSlots.get());
         },
         onPetsChange(cb) {
           return watchPets(cb);
         },
         async onPetsChangeNow(cb) {
-          const infos = await Atoms.pets.myPetInfos.get();
-          const primitives = await Atoms.pets.myPrimitivePetSlots.get();
-          return watchPets(cb, { infos, primitives });
+          return watchPets(cb, { slots: await Atoms.pets.myPrimitivePetSlots.get() });
         },
         async getCropInventoryState() {
           return Atoms.inventory.myCropInventory.get();
@@ -12778,9 +12745,29 @@
     }
   });
 
+  // src/game/roomScope.ts
+  async function currentRoomAtom(field2) {
+    const roomAtom = getAtomByLabel(CURRENT_ROOM_LABEL);
+    if (!roomAtom) return null;
+    const room = await jGet(roomAtom).catch(() => null);
+    const atom = room?.[field2];
+    return atom && typeof atom === "object" ? atom : null;
+  }
+  var CURRENT_ROOM_LABEL;
+  var init_roomScope = __esm({
+    "src/game/roomScope.ts"() {
+      "use strict";
+      init_jotai();
+      CURRENT_ROOM_LABEL = "currentRoomAtom";
+    }
+  });
+
   // src/game/toasts.ts
+  async function toastsAtom() {
+    return currentRoomAtom("toasts");
+  }
   async function editGameToasts(edit) {
-    const atom = getAtomByLabel(TOASTS_ATOM);
+    const atom = await toastsAtom();
     if (!atom) return false;
     const current3 = await jGet(atom).catch(() => []);
     const list = Array.isArray(current3) ? current3 : [];
@@ -12789,37 +12776,44 @@
     if (!unchanged) await jSet(atom, next);
     return true;
   }
-  var TOASTS_ATOM;
+  function pushGameToast(toast3) {
+    return editGameToasts((list) => {
+      const index = list.findIndex((t) => t?.id === toast3.id);
+      if (index === -1) return [...list, toast3];
+      list[index] = toast3;
+      return list;
+    });
+  }
   var init_toasts = __esm({
     "src/game/toasts.ts"() {
       "use strict";
+      init_roomScope();
       init_jotai();
-      TOASTS_ATOM = "quinoaToastsAtom";
     }
   });
 
   // src/ui/toast.ts
-  async function sendToast(toast3) {
-    const sendAtom = getAtomByLabel("sendQuinoaToastAtom");
-    if (sendAtom) {
-      await jSet(sendAtom, toast3);
-      return;
-    }
-    const listAtom = getAtomByLabel("quinoaToastsAtom");
-    if (!listAtom) throw new Error("No toast atom found");
-    const prev = await jGet(listAtom).catch(() => []);
-    const isAnnouncement = "toastType" in toast3 && toast3.toastType === "shopAnnouncement";
-    const t = isAnnouncement ? { isClosable: true, presentByServerMs: Date.now(), ...toast3 } : { isClosable: true, duration: 1e4, ...toast3 };
-    t.id = t.id ?? `quinoa-game-toast-${Date.now()}-${Math.random()}`;
-    await jSet(listAtom, [...prev, t]);
-  }
   async function toastSimple(title, description, variant = "info", duration = 3500) {
-    await sendToast({ title, description, variant, duration });
+    const shown = await pushGameToast({
+      // Each toast needs its own id: the game removes entries by id, so two
+      // toasts sharing one could not be closed separately.
+      id: `aries-toast-${Date.now()}-${++nextToastId}`,
+      title,
+      description,
+      // The game only styles "error" and "warning"; the others look the same.
+      variant: variant === "warn" ? "warning" : variant,
+      displayDurationMs: duration,
+      isClosable: true,
+      isStackable: true
+    });
+    if (!shown) throw new Error("The game has no toast list yet");
   }
+  var nextToastId;
   var init_toast = __esm({
     "src/ui/toast.ts"() {
       "use strict";
-      init_jotai();
+      init_toasts();
+      nextToastId = 0;
     }
   });
 
@@ -13608,6 +13602,486 @@
     }
   });
 
+  // src/data/rules/inventory.ts
+  function isInventoryFullForUnstackable(items) {
+    return Array.isArray(items) && items.length >= INVENTORY_MAX_ITEMS;
+  }
+  function findInventoryItem(items, id) {
+    if (!Array.isArray(items) || typeof id !== "string" || !id) return null;
+    return items.find((item) => item && typeof item === "object" && item.id === id) ?? null;
+  }
+  var INVENTORY_MAX_ITEMS;
+  var init_inventory = __esm({
+    "src/data/rules/inventory.ts"() {
+      "use strict";
+      INVENTORY_MAX_ITEMS = 100;
+    }
+  });
+
+  // src/data/rules/petValue.ts
+  var SEC_PER_HOUR, XP_STRENGTH_MAX, BASE_STRENGTH_FLOOR, getCatalogEntry, getMutationEntry, getTargetScale, getXp, getPetMaxStrength, getBaseStrength, getPetStrength, getPetCoinMultiplier, getPetValue, getPetInfo;
+  var init_petValue = __esm({
+    "src/data/rules/petValue.ts"() {
+      "use strict";
+      init_data();
+      SEC_PER_HOUR = 3600;
+      XP_STRENGTH_MAX = 30;
+      BASE_STRENGTH_FLOOR = 30;
+      getCatalogEntry = (species) => {
+        if (!species) return null;
+        const entry = petCatalog2[species];
+        return entry ?? null;
+      };
+      getMutationEntry = (mutation) => {
+        if (!mutation) return null;
+        const entry = mutationCatalog2[mutation];
+        return entry ?? null;
+      };
+      getTargetScale = (pet) => {
+        const raw = pet?.targetScale;
+        return typeof raw === "number" && Number.isFinite(raw) ? raw : 1;
+      };
+      getXp = (pet) => {
+        const raw = pet?.xp;
+        return typeof raw === "number" && Number.isFinite(raw) ? Math.max(0, raw) : 0;
+      };
+      getPetMaxStrength = (pet) => {
+        const entry = getCatalogEntry(pet?.petSpecies ?? "");
+        if (!entry) return 0;
+        const maxScale = typeof entry.maxScale === "number" && entry.maxScale > 1 ? entry.maxScale : 1;
+        const targetScale = getTargetScale(pet);
+        const ratio = maxScale > 1 ? (targetScale - 1) / (maxScale - 1) : 0;
+        const raw = ratio * 20 + 80;
+        const strength = Math.floor(Number.isFinite(raw) ? raw : 0);
+        return Math.max(strength, 0);
+      };
+      getBaseStrength = (maxStrength) => {
+        const base = maxStrength - BASE_STRENGTH_FLOOR;
+        return Math.max(base, 0);
+      };
+      getPetStrength = (pet) => {
+        const entry = getCatalogEntry(pet?.petSpecies ?? "");
+        if (!entry) return 0;
+        const hoursToMature = typeof entry.hoursToMature === "number" && entry.hoursToMature > 0 ? entry.hoursToMature : 1;
+        const maxStrength = getPetMaxStrength(pet);
+        if (maxStrength <= 0) return 0;
+        const xpRate = getXp(pet) / (hoursToMature * SEC_PER_HOUR);
+        const xpComponent = Math.min(Math.floor(xpRate * XP_STRENGTH_MAX), XP_STRENGTH_MAX);
+        const baseStrength = getBaseStrength(maxStrength);
+        const strength = Math.min(baseStrength + xpComponent, maxStrength);
+        return Math.max(strength, 0);
+      };
+      getPetCoinMultiplier = (pet) => {
+        const mutations = Array.isArray(pet?.mutations) ? pet.mutations : [];
+        return mutations.reduce((acc, mutation) => {
+          const entry = getMutationEntry(mutation);
+          const multiplier = entry?.coinMultiplier;
+          if (typeof multiplier === "number" && Number.isFinite(multiplier) && multiplier > 0) {
+            return acc * multiplier;
+          }
+          return acc;
+        }, 1);
+      };
+      getPetValue = (pet) => {
+        const entry = getCatalogEntry(pet?.petSpecies ?? "");
+        if (!entry) return 0;
+        const maturitySellPrice = typeof entry.maturitySellPrice === "number" ? entry.maturitySellPrice : 0;
+        const maxStrength = getPetMaxStrength(pet);
+        if (maxStrength <= 0) return 0;
+        const strength = getPetStrength(pet);
+        const targetScale = getTargetScale(pet);
+        const coinMultiplier = getPetCoinMultiplier(pet);
+        const raw = maturitySellPrice * (strength / maxStrength) * targetScale * coinMultiplier;
+        if (!Number.isFinite(raw)) return 0;
+        return Math.round(Math.max(raw, 0));
+      };
+      getPetInfo = (pet) => ({
+        value: getPetValue(pet),
+        strength: getPetStrength(pet),
+        maxStrength: getPetMaxStrength(pet),
+        coinMultiplier: getPetCoinMultiplier(pet)
+      });
+    }
+  });
+
+  // src/data/rules/cropValue.ts
+  function resolveSpeciesKey(species) {
+    const wanted = key(species).toLowerCase();
+    if (!wanted) return null;
+    for (const k of Object.keys(plantCatalog2)) {
+      if (k.toLowerCase() === wanted) return k;
+    }
+    return null;
+  }
+  function findAnySellPriceNode(obj) {
+    if (!obj || typeof obj !== "object") return null;
+    if (typeof obj.baseSellPrice === "number" && Number.isFinite(obj.baseSellPrice)) {
+      return obj.baseSellPrice;
+    }
+    for (const k of ["produce", "crop", "item", "items", "data"]) {
+      if (obj[k]) {
+        const v = findAnySellPriceNode(obj[k]);
+        if (v != null) return v;
+      }
+    }
+    try {
+      const seen = /* @__PURE__ */ new Set();
+      const stack = [obj];
+      while (stack.length) {
+        const cur = stack.pop();
+        if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
+        seen.add(cur);
+        if (typeof cur.baseSellPrice === "number") {
+          const v = cur.baseSellPrice;
+          if (Number.isFinite(v)) return v;
+        }
+        for (const v of Object.values(cur)) if (v && typeof v === "object") stack.push(v);
+      }
+    } catch {
+    }
+    return null;
+  }
+  function defaultGetBasePrice(species) {
+    const spKey = resolveSpeciesKey(species);
+    if (!spKey) return null;
+    const node = plantCatalog2[spKey];
+    const cands = [
+      node?.produce?.baseSellPrice,
+      node?.crop?.baseSellPrice,
+      node?.item?.baseSellPrice,
+      node?.items?.Produce?.baseSellPrice
+    ].filter((v) => typeof v === "number" && Number.isFinite(v));
+    if (cands.length) return cands[0];
+    return findAnySellPriceNode(node);
+  }
+  function applyRounding(v, mode = "round") {
+    switch (mode) {
+      case "floor":
+        return Math.floor(v);
+      case "ceil":
+        return Math.ceil(v);
+      case "none":
+        return v;
+      case "round":
+      default:
+        return Math.round(v);
+    }
+  }
+  function friendBonusMultiplier2(playersInRoom3) {
+    if (!Number.isFinite(playersInRoom3)) return 1;
+    const n = Math.max(1, Math.min(6, Math.floor(playersInRoom3)));
+    return 1 + (n - 1) * 0.1;
+  }
+  function mutationMultiplier(name) {
+    const k = lowerKey(name);
+    if (!k) return null;
+    const mult = mutationMultipliers()[k];
+    return Number.isFinite(mult) ? mult : null;
+  }
+  function isColor(m) {
+    return m === "Gold" || m === "Rainbow";
+  }
+  function isWeather(m) {
+    return m === "Wet" || m === "Chilled" || m === "Frozen" || m === "Thunderstruck" || m === "Thundercharged";
+  }
+  function isTime(m) {
+    return m === "Dawnlit" || m === "Dawnbound" || m === "Amberlit" || m === "Amberbound";
+  }
+  function normalizeMutationName(m) {
+    const s = lowerKey(m);
+    if (!s) return "";
+    if (s === "amberglow" || s === "ambershine" || s === "amberlight") return "Amberlit";
+    if (s === "dawn" || s === "dawnlight") return "Dawnlit";
+    if (s === "golden") return "Gold";
+    if (s === "gold") return "Gold";
+    if (s === "rainbow") return "Rainbow";
+    if (s === "wet") return "Wet";
+    if (s === "chilled") return "Chilled";
+    if (s === "frozen") return "Frozen";
+    if (s === "thunderstruck" || s === "thunder") return "Thunderstruck";
+    if (s === "thunderstruckground" || s === "thunderstruck_ground") return "Thunderstruck";
+    if (s === "thundercharged" || s === "thunder charged" || s === "thunder-charged") return "Thundercharged";
+    if (s === "dawnlit") return "Dawnlit";
+    if (s === "dawnbound") return "Dawnbound";
+    if (s === "amberlit") return "Amberlit";
+    if (s === "dawncharged" || s === "dawnradiant" || s === "dawn-radiant" || s === "dawn charged") return "Dawnbound";
+    if (s === "amberbound" || s === "ambercharged" || s === "amberradiant" || s === "amber-radiant" || s === "amber charged") return "Amberbound";
+    return m;
+  }
+  function computeColorMultiplier(mutations) {
+    if (!Array.isArray(mutations)) return 1;
+    let best = 1;
+    for (const raw of mutations) {
+      const m = normalizeMutationName(raw);
+      if (isColor(m)) {
+        const mult = mutationMultiplier(m);
+        if (typeof mult === "number" && mult > best) best = mult;
+      }
+    }
+    return best;
+  }
+  function pickWeather(mutations) {
+    if (!Array.isArray(mutations)) return null;
+    const candidates = /* @__PURE__ */ new Set();
+    let hasWet = false;
+    let hasChilled = false;
+    for (const raw of mutations) {
+      const m = normalizeMutationName(raw);
+      if (m === "Wet") {
+        hasWet = true;
+        continue;
+      }
+      if (m === "Chilled") {
+        hasChilled = true;
+        continue;
+      }
+      if (isWeather(m)) candidates.add(m);
+    }
+    if (hasWet && hasChilled) {
+      candidates.add("Frozen");
+    } else if (hasWet) {
+      candidates.add("Wet");
+    } else if (hasChilled) {
+      candidates.add("Chilled");
+    }
+    if (!candidates.size) return null;
+    let pick = null;
+    let best = -Infinity;
+    for (const cand of candidates) {
+      const mult = mutationMultiplier(cand) ?? 1;
+      if (mult > best) {
+        best = mult;
+        pick = cand;
+      }
+    }
+    return pick;
+  }
+  function pickTime(mutations) {
+    if (!Array.isArray(mutations)) return null;
+    const candidates = /* @__PURE__ */ new Set();
+    for (const raw of mutations) {
+      const m = normalizeMutationName(raw);
+      if (isTime(m)) candidates.add(m);
+    }
+    if (!candidates.size) return null;
+    let pick = null;
+    let best = -Infinity;
+    for (const cand of candidates) {
+      const mult = mutationMultiplier(cand) ?? 1;
+      if (mult > best) {
+        best = mult;
+        pick = cand;
+      }
+    }
+    return pick;
+  }
+  function combineWeatherMultipliers(multipliers) {
+    if (!multipliers.length) return 1;
+    const sum = multipliers.reduce((acc, value) => acc + value, 0);
+    return sum - multipliers.length + 1;
+  }
+  function computeWeatherTimeMultiplier(weather2, time) {
+    if (!weather2 && !time) return 1;
+    const multipliers = [];
+    if (weather2) {
+      const mult = mutationMultiplier(weather2);
+      if (typeof mult === "number") multipliers.push(mult);
+    }
+    if (time) {
+      const mult = mutationMultiplier(time);
+      if (typeof mult === "number") multipliers.push(mult);
+    }
+    if (!multipliers.length) return 1;
+    return combineWeatherMultipliers(multipliers);
+  }
+  function mutationsMultiplier(mutations) {
+    const color2 = computeColorMultiplier(mutations);
+    const weather2 = pickWeather(mutations);
+    const time = pickTime(mutations);
+    const wt = computeWeatherTimeMultiplier(weather2, time);
+    return color2 * wt;
+  }
+  function estimateProduceValue(species, size, mutations, opts) {
+    const getBase = opts?.getBasePrice ?? defaultGetBasePrice;
+    const toMultiplier = opts?.sizeMultiplier ?? cropSizeMultiplier;
+    const round = opts?.rounding ?? "round";
+    const base = getBase(species);
+    if (!(Number.isFinite(base) && base > 0)) return 0;
+    const numericSize = Number(size);
+    if (!Number.isFinite(numericSize)) return 0;
+    const sizeMult = toMultiplier(species, numericSize);
+    if (!Number.isFinite(sizeMult) || sizeMult <= 0) return 0;
+    const mutMult = mutationsMultiplier(mutations);
+    const friendsMult = friendBonusMultiplier2(opts?.friendPlayers);
+    const pre = base * sizeMult * mutMult * friendsMult;
+    const out = Math.max(0, applyRounding(pre, round));
+    return out;
+  }
+  function valueFromInventoryProduce(item, opts, playersInRoom3) {
+    if (!item || item.itemType !== "Produce") return 0;
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
+    const size = readCropSize(item);
+    if (size == null) return 0;
+    return estimateProduceValue(item.species, size, item.mutations, merged);
+  }
+  function valueFromGardenSlot(slot, opts, playersInRoom3) {
+    if (!slot) return 0;
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
+    const size = readCropSize(slot);
+    if (size == null) return 0;
+    return estimateProduceValue(slot.species, size, slot.mutations, merged);
+  }
+  function valueFromGardenPlant(plant, opts, playersInRoom3) {
+    if (!plant || plant.objectType !== "plant" || !Array.isArray(plant.slots)) return 0;
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
+    let sum = 0;
+    for (const s of plant.slots) sum += valueFromGardenSlot(s, merged);
+    return sum;
+  }
+  function sumInventoryValue(items, opts, playersInRoom3) {
+    if (!Array.isArray(items)) return 0;
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
+    let sum = 0;
+    for (const it of items) {
+      if (it?.itemType === "Produce") {
+        sum += valueFromInventoryProduce(it, merged);
+      }
+    }
+    return sum;
+  }
+  function sumGardenValue(garden3, opts, playersInRoom3) {
+    if (!garden3 || typeof garden3 !== "object") return 0;
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
+    let sum = 0;
+    for (const k of Object.keys(garden3)) {
+      const p = garden3[k];
+      if (p?.objectType === "plant") {
+        sum += valueFromGardenPlant(p, merged);
+      }
+    }
+    return sum;
+  }
+  var key, lowerKey, mutationMultipliers, DefaultPricing;
+  var init_cropValue = __esm({
+    "src/data/rules/cropValue.ts"() {
+      "use strict";
+      init_data();
+      init_cropSize();
+      key = (s) => String(s ?? "").trim();
+      lowerKey = (s) => key(s).toLowerCase();
+      mutationMultipliers = memoOnCatalogs(() => {
+        const map2 = {};
+        if (!mutationCatalog2 || typeof mutationCatalog2 !== "object") return map2;
+        for (const [rawKey, rawValue] of Object.entries(mutationCatalog2)) {
+          const mult = Number(rawValue?.coinMultiplier);
+          if (!Number.isFinite(mult)) continue;
+          const name = key(rawValue?.name);
+          const lowerName = lowerKey(name);
+          const lowerRawKey = lowerKey(rawKey);
+          if (lowerName) map2[lowerName] = mult;
+          if (lowerRawKey) map2[lowerRawKey] = mult;
+        }
+        return map2;
+      });
+      DefaultPricing = Object.freeze({
+        getBasePrice: defaultGetBasePrice,
+        rounding: "round"
+      });
+    }
+  });
+
+  // src/features/inventory/value.ts
+  function finiteNumber(value) {
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
+    if (typeof value === "string" && value.trim()) {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  }
+  function identifier(raw) {
+    if (typeof raw === "string") return raw.trim() || null;
+    if (typeof raw === "number") return Number.isFinite(raw) ? String(raw) : null;
+    return null;
+  }
+  function computeInventoryItemValue(item, context = {}) {
+    if (!item || typeof item !== "object") return null;
+    const type = typeof item.itemType === "string" ? item.itemType.trim() : "";
+    const playersInRoom3 = context.playersInRoom ?? void 0;
+    switch (type) {
+      case "":
+        return null;
+      case "Pet": {
+        const value = getPetInfo(item).value;
+        return typeof value === "number" && Number.isFinite(value) ? value : null;
+      }
+      case "Plant": {
+        let total = 0;
+        for (const slot of Array.isArray(item.slots) ? item.slots : []) {
+          const species = typeof slot?.species === "string" ? slot.species : null;
+          const size = readCropSize(slot);
+          if (!species || size == null) continue;
+          const value = estimateProduceValue(species, size, stringMutations(slot), { friendPlayers: playersInRoom3 });
+          if (Number.isFinite(value)) total += value;
+        }
+        return total;
+      }
+      case "Produce": {
+        const value = valueFromInventoryProduce(item, void 0, playersInRoom3);
+        return Number.isFinite(value) ? value : null;
+      }
+      default: {
+        const priced = PRICED_BY_QUANTITY[type];
+        if (!priced) return null;
+        const id = identifier(item[priced.idField]);
+        const quantity = finiteNumber(item.quantity);
+        const coinPrice = id ? finiteNumber(priced.coinPrice(id)) : null;
+        if (quantity == null || coinPrice == null) return null;
+        const value = coinPrice * quantity;
+        return Number.isFinite(value) ? value : null;
+      }
+    }
+  }
+  function followInventoryValues() {
+    following2 ?? (following2 = Promise.all([
+      readAndFollow(Atoms.server.numPlayers, (raw) => {
+        playersInRoom = Number.isFinite(raw) ? raw : null;
+        playersInRoomChanges.emit();
+      }),
+      Atoms.inventory.myInventory.onChange(() => itemsChanges.emit()).catch(() => {
+      })
+    ]).then(() => {
+    }));
+    return following2;
+  }
+  var PRICED_BY_QUANTITY, stringMutations, playersInRoom, following2, playersInRoomChanges, itemsChanges, playersInRoomForValues, onPlayersInRoomChange, onInventoryItemsChange;
+  var init_value = __esm({
+    "src/features/inventory/value.ts"() {
+      "use strict";
+      init_atoms();
+      init_hub();
+      init_emitter();
+      init_data();
+      init_petValue();
+      init_cropValue();
+      init_cropSize();
+      PRICED_BY_QUANTITY = {
+        Seed: { idField: "species", coinPrice: (id) => plantCatalog2[id]?.seed?.coinPrice },
+        Tool: { idField: "toolId", coinPrice: (id) => toolCatalog2[id]?.coinPrice },
+        Egg: { idField: "eggId", coinPrice: (id) => eggCatalog2[id]?.coinPrice },
+        Decor: { idField: "decorId", coinPrice: (id) => decorCatalog2[id]?.coinPrice }
+      };
+      stringMutations = (slot) => Array.isArray(slot?.mutations) ? slot.mutations.filter((m) => typeof m === "string") : [];
+      playersInRoom = null;
+      following2 = null;
+      playersInRoomChanges = new Emitter();
+      itemsChanges = new Emitter();
+      playersInRoomForValues = () => playersInRoom;
+      onPlayersInRoomChange = (listener) => playersInRoomChanges.on(listener);
+      onInventoryItemsChange = (listener) => itemsChanges.on(listener);
+    }
+  });
+
   // src/features/stats/stats.ts
   function readCount(value, fallback, integer) {
     const num2 = Number(value);
@@ -13831,10 +14305,17 @@
       }
     })();
   }
-  function countPetSale() {
+  function petSaleValue(items, itemId) {
+    const pet = findInventoryItem(items, itemId);
+    return pet ? computeInventoryItemValue(pet) : null;
+  }
+  function countPetSale(message2) {
     StatsService.incrementShopStat("petsSoldCount");
-    void addPositive(() => Atoms.pets.totalPetSellPrice.get(), "petsSoldValue").catch((error) => {
-      console.error("[SellPet] Unable to read pet sell price", error);
+    void addPositive(async () => {
+      const inventory = await Atoms.inventory.myInventory.get();
+      return petSaleValue(inventory?.items, message2?.itemId);
+    }, "petsSoldValue").catch((error) => {
+      console.error("[SellPet] Unable to price the pet sold", error);
     });
   }
   function installStatsCounters() {
@@ -13855,6 +14336,8 @@
       "use strict";
       init_outgoing();
       init_atoms();
+      init_inventory();
+      init_value();
       init_stats();
       WATER_TIME_SAVED_MS = 5 * 60 * 1e3;
       PURCHASE_STATS = {
@@ -16147,292 +16630,6 @@
     }
   });
 
-  // src/data/rules/cropValue.ts
-  function resolveSpeciesKey(species) {
-    const wanted = key(species).toLowerCase();
-    if (!wanted) return null;
-    for (const k of Object.keys(plantCatalog2)) {
-      if (k.toLowerCase() === wanted) return k;
-    }
-    return null;
-  }
-  function findAnySellPriceNode(obj) {
-    if (!obj || typeof obj !== "object") return null;
-    if (typeof obj.baseSellPrice === "number" && Number.isFinite(obj.baseSellPrice)) {
-      return obj.baseSellPrice;
-    }
-    for (const k of ["produce", "crop", "item", "items", "data"]) {
-      if (obj[k]) {
-        const v = findAnySellPriceNode(obj[k]);
-        if (v != null) return v;
-      }
-    }
-    try {
-      const seen = /* @__PURE__ */ new Set();
-      const stack = [obj];
-      while (stack.length) {
-        const cur = stack.pop();
-        if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
-        seen.add(cur);
-        if (typeof cur.baseSellPrice === "number") {
-          const v = cur.baseSellPrice;
-          if (Number.isFinite(v)) return v;
-        }
-        for (const v of Object.values(cur)) if (v && typeof v === "object") stack.push(v);
-      }
-    } catch {
-    }
-    return null;
-  }
-  function defaultGetBasePrice(species) {
-    const spKey = resolveSpeciesKey(species);
-    if (!spKey) return null;
-    const node = plantCatalog2[spKey];
-    const cands = [
-      node?.produce?.baseSellPrice,
-      node?.crop?.baseSellPrice,
-      node?.item?.baseSellPrice,
-      node?.items?.Produce?.baseSellPrice
-    ].filter((v) => typeof v === "number" && Number.isFinite(v));
-    if (cands.length) return cands[0];
-    return findAnySellPriceNode(node);
-  }
-  function applyRounding(v, mode = "round") {
-    switch (mode) {
-      case "floor":
-        return Math.floor(v);
-      case "ceil":
-        return Math.ceil(v);
-      case "none":
-        return v;
-      case "round":
-      default:
-        return Math.round(v);
-    }
-  }
-  function friendBonusMultiplier2(playersInRoom3) {
-    if (!Number.isFinite(playersInRoom3)) return 1;
-    const n = Math.max(1, Math.min(6, Math.floor(playersInRoom3)));
-    return 1 + (n - 1) * 0.1;
-  }
-  function mutationMultiplier(name) {
-    const k = lowerKey(name);
-    if (!k) return null;
-    const mult = mutationMultipliers()[k];
-    return Number.isFinite(mult) ? mult : null;
-  }
-  function isColor(m) {
-    return m === "Gold" || m === "Rainbow";
-  }
-  function isWeather(m) {
-    return m === "Wet" || m === "Chilled" || m === "Frozen" || m === "Thunderstruck" || m === "Thundercharged";
-  }
-  function isTime(m) {
-    return m === "Dawnlit" || m === "Dawnbound" || m === "Amberlit" || m === "Amberbound";
-  }
-  function normalizeMutationName(m) {
-    const s = lowerKey(m);
-    if (!s) return "";
-    if (s === "amberglow" || s === "ambershine" || s === "amberlight") return "Amberlit";
-    if (s === "dawn" || s === "dawnlight") return "Dawnlit";
-    if (s === "golden") return "Gold";
-    if (s === "gold") return "Gold";
-    if (s === "rainbow") return "Rainbow";
-    if (s === "wet") return "Wet";
-    if (s === "chilled") return "Chilled";
-    if (s === "frozen") return "Frozen";
-    if (s === "thunderstruck" || s === "thunder") return "Thunderstruck";
-    if (s === "thunderstruckground" || s === "thunderstruck_ground") return "Thunderstruck";
-    if (s === "thundercharged" || s === "thunder charged" || s === "thunder-charged") return "Thundercharged";
-    if (s === "dawnlit") return "Dawnlit";
-    if (s === "dawnbound") return "Dawnbound";
-    if (s === "amberlit") return "Amberlit";
-    if (s === "dawncharged" || s === "dawnradiant" || s === "dawn-radiant" || s === "dawn charged") return "Dawnbound";
-    if (s === "amberbound" || s === "ambercharged" || s === "amberradiant" || s === "amber-radiant" || s === "amber charged") return "Amberbound";
-    return m;
-  }
-  function computeColorMultiplier(mutations) {
-    if (!Array.isArray(mutations)) return 1;
-    let best = 1;
-    for (const raw of mutations) {
-      const m = normalizeMutationName(raw);
-      if (isColor(m)) {
-        const mult = mutationMultiplier(m);
-        if (typeof mult === "number" && mult > best) best = mult;
-      }
-    }
-    return best;
-  }
-  function pickWeather(mutations) {
-    if (!Array.isArray(mutations)) return null;
-    const candidates = /* @__PURE__ */ new Set();
-    let hasWet = false;
-    let hasChilled = false;
-    for (const raw of mutations) {
-      const m = normalizeMutationName(raw);
-      if (m === "Wet") {
-        hasWet = true;
-        continue;
-      }
-      if (m === "Chilled") {
-        hasChilled = true;
-        continue;
-      }
-      if (isWeather(m)) candidates.add(m);
-    }
-    if (hasWet && hasChilled) {
-      candidates.add("Frozen");
-    } else if (hasWet) {
-      candidates.add("Wet");
-    } else if (hasChilled) {
-      candidates.add("Chilled");
-    }
-    if (!candidates.size) return null;
-    let pick = null;
-    let best = -Infinity;
-    for (const cand of candidates) {
-      const mult = mutationMultiplier(cand) ?? 1;
-      if (mult > best) {
-        best = mult;
-        pick = cand;
-      }
-    }
-    return pick;
-  }
-  function pickTime(mutations) {
-    if (!Array.isArray(mutations)) return null;
-    const candidates = /* @__PURE__ */ new Set();
-    for (const raw of mutations) {
-      const m = normalizeMutationName(raw);
-      if (isTime(m)) candidates.add(m);
-    }
-    if (!candidates.size) return null;
-    let pick = null;
-    let best = -Infinity;
-    for (const cand of candidates) {
-      const mult = mutationMultiplier(cand) ?? 1;
-      if (mult > best) {
-        best = mult;
-        pick = cand;
-      }
-    }
-    return pick;
-  }
-  function combineWeatherMultipliers(multipliers) {
-    if (!multipliers.length) return 1;
-    const sum = multipliers.reduce((acc, value) => acc + value, 0);
-    return sum - multipliers.length + 1;
-  }
-  function computeWeatherTimeMultiplier(weather2, time) {
-    if (!weather2 && !time) return 1;
-    const multipliers = [];
-    if (weather2) {
-      const mult = mutationMultiplier(weather2);
-      if (typeof mult === "number") multipliers.push(mult);
-    }
-    if (time) {
-      const mult = mutationMultiplier(time);
-      if (typeof mult === "number") multipliers.push(mult);
-    }
-    if (!multipliers.length) return 1;
-    return combineWeatherMultipliers(multipliers);
-  }
-  function mutationsMultiplier(mutations) {
-    const color2 = computeColorMultiplier(mutations);
-    const weather2 = pickWeather(mutations);
-    const time = pickTime(mutations);
-    const wt = computeWeatherTimeMultiplier(weather2, time);
-    return color2 * wt;
-  }
-  function estimateProduceValue(species, size, mutations, opts) {
-    const getBase = opts?.getBasePrice ?? defaultGetBasePrice;
-    const toMultiplier = opts?.sizeMultiplier ?? cropSizeMultiplier;
-    const round = opts?.rounding ?? "round";
-    const base = getBase(species);
-    if (!(Number.isFinite(base) && base > 0)) return 0;
-    const numericSize = Number(size);
-    if (!Number.isFinite(numericSize)) return 0;
-    const sizeMult = toMultiplier(species, numericSize);
-    if (!Number.isFinite(sizeMult) || sizeMult <= 0) return 0;
-    const mutMult = mutationsMultiplier(mutations);
-    const friendsMult = friendBonusMultiplier2(opts?.friendPlayers);
-    const pre = base * sizeMult * mutMult * friendsMult;
-    const out = Math.max(0, applyRounding(pre, round));
-    return out;
-  }
-  function valueFromInventoryProduce(item, opts, playersInRoom3) {
-    if (!item || item.itemType !== "Produce") return 0;
-    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
-    const size = readCropSize(item);
-    if (size == null) return 0;
-    return estimateProduceValue(item.species, size, item.mutations, merged);
-  }
-  function valueFromGardenSlot(slot, opts, playersInRoom3) {
-    if (!slot) return 0;
-    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
-    const size = readCropSize(slot);
-    if (size == null) return 0;
-    return estimateProduceValue(slot.species, size, slot.mutations, merged);
-  }
-  function valueFromGardenPlant(plant, opts, playersInRoom3) {
-    if (!plant || plant.objectType !== "plant" || !Array.isArray(plant.slots)) return 0;
-    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
-    let sum = 0;
-    for (const s of plant.slots) sum += valueFromGardenSlot(s, merged);
-    return sum;
-  }
-  function sumInventoryValue(items, opts, playersInRoom3) {
-    if (!Array.isArray(items)) return 0;
-    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
-    let sum = 0;
-    for (const it of items) {
-      if (it?.itemType === "Produce") {
-        sum += valueFromInventoryProduce(it, merged);
-      }
-    }
-    return sum;
-  }
-  function sumGardenValue(garden3, opts, playersInRoom3) {
-    if (!garden3 || typeof garden3 !== "object") return 0;
-    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
-    let sum = 0;
-    for (const k of Object.keys(garden3)) {
-      const p = garden3[k];
-      if (p?.objectType === "plant") {
-        sum += valueFromGardenPlant(p, merged);
-      }
-    }
-    return sum;
-  }
-  var key, lowerKey, mutationMultipliers, DefaultPricing;
-  var init_cropValue = __esm({
-    "src/data/rules/cropValue.ts"() {
-      "use strict";
-      init_data();
-      init_cropSize();
-      key = (s) => String(s ?? "").trim();
-      lowerKey = (s) => key(s).toLowerCase();
-      mutationMultipliers = memoOnCatalogs(() => {
-        const map2 = {};
-        if (!mutationCatalog2 || typeof mutationCatalog2 !== "object") return map2;
-        for (const [rawKey, rawValue] of Object.entries(mutationCatalog2)) {
-          const mult = Number(rawValue?.coinMultiplier);
-          if (!Number.isFinite(mult)) continue;
-          const name = key(rawValue?.name);
-          const lowerName = lowerKey(name);
-          const lowerRawKey = lowerKey(rawKey);
-          if (lowerName) map2[lowerName] = mult;
-          if (lowerRawKey) map2[lowerRawKey] = mult;
-        }
-        return map2;
-      });
-      DefaultPricing = Object.freeze({
-        getBasePrice: defaultGetBasePrice,
-        rounding: "round"
-      });
-    }
-  });
-
   // src/features/cropPrice/priceWatcher.ts
   function startCropPriceWatcherViaGardenObject() {
     let gardenObject = null;
@@ -17446,7 +17643,7 @@
     const strength = clamp(xpComponent + maxStrength - 30, 0, maxStrength);
     return { strength, maxStrength };
   }
-  var speciesKey, petStatsBySpecies, getPetStrength;
+  var speciesKey, petStatsBySpecies, getPetStrength2;
   var init_petStrength = __esm({
     "src/features/inventory/petStrength.ts"() {
       "use strict";
@@ -17471,7 +17668,7 @@
         }
         return map2;
       });
-      getPetStrength = (item) => getPetStrengthInfo(item)?.strength ?? null;
+      getPetStrength2 = (item) => getPetStrengthInfo(item)?.strength ?? null;
     }
   });
 
@@ -17523,7 +17720,7 @@
       case "size":
         return byOptionalNumber(getInventoryItemSize, isDesc);
       case "strength":
-        return byOptionalNumber(getPetStrength, isDesc);
+        return byOptionalNumber(getPetStrength2, isDesc);
       case "mutations":
         return (a, b) => {
           const mutationsA = getInventoryItemMutations(a);
@@ -17662,184 +17859,6 @@
         eggs: ["Egg"]
       };
       FILTER_KEYS_BY_ITEM_TYPE = filterKeysByItemType();
-    }
-  });
-
-  // src/data/rules/petValue.ts
-  var SEC_PER_HOUR, XP_STRENGTH_MAX, BASE_STRENGTH_FLOOR, getCatalogEntry, getMutationEntry, getTargetScale, getXp, getPetMaxStrength, getBaseStrength, getPetStrength2, getPetCoinMultiplier, getPetValue, getPetInfo;
-  var init_petValue = __esm({
-    "src/data/rules/petValue.ts"() {
-      "use strict";
-      init_data();
-      SEC_PER_HOUR = 3600;
-      XP_STRENGTH_MAX = 30;
-      BASE_STRENGTH_FLOOR = 30;
-      getCatalogEntry = (species) => {
-        if (!species) return null;
-        const entry = petCatalog2[species];
-        return entry ?? null;
-      };
-      getMutationEntry = (mutation) => {
-        if (!mutation) return null;
-        const entry = mutationCatalog2[mutation];
-        return entry ?? null;
-      };
-      getTargetScale = (pet) => {
-        const raw = pet?.targetScale;
-        return typeof raw === "number" && Number.isFinite(raw) ? raw : 1;
-      };
-      getXp = (pet) => {
-        const raw = pet?.xp;
-        return typeof raw === "number" && Number.isFinite(raw) ? Math.max(0, raw) : 0;
-      };
-      getPetMaxStrength = (pet) => {
-        const entry = getCatalogEntry(pet?.petSpecies ?? "");
-        if (!entry) return 0;
-        const maxScale = typeof entry.maxScale === "number" && entry.maxScale > 1 ? entry.maxScale : 1;
-        const targetScale = getTargetScale(pet);
-        const ratio = maxScale > 1 ? (targetScale - 1) / (maxScale - 1) : 0;
-        const raw = ratio * 20 + 80;
-        const strength = Math.floor(Number.isFinite(raw) ? raw : 0);
-        return Math.max(strength, 0);
-      };
-      getBaseStrength = (maxStrength) => {
-        const base = maxStrength - BASE_STRENGTH_FLOOR;
-        return Math.max(base, 0);
-      };
-      getPetStrength2 = (pet) => {
-        const entry = getCatalogEntry(pet?.petSpecies ?? "");
-        if (!entry) return 0;
-        const hoursToMature = typeof entry.hoursToMature === "number" && entry.hoursToMature > 0 ? entry.hoursToMature : 1;
-        const maxStrength = getPetMaxStrength(pet);
-        if (maxStrength <= 0) return 0;
-        const xpRate = getXp(pet) / (hoursToMature * SEC_PER_HOUR);
-        const xpComponent = Math.min(Math.floor(xpRate * XP_STRENGTH_MAX), XP_STRENGTH_MAX);
-        const baseStrength = getBaseStrength(maxStrength);
-        const strength = Math.min(baseStrength + xpComponent, maxStrength);
-        return Math.max(strength, 0);
-      };
-      getPetCoinMultiplier = (pet) => {
-        const mutations = Array.isArray(pet?.mutations) ? pet.mutations : [];
-        return mutations.reduce((acc, mutation) => {
-          const entry = getMutationEntry(mutation);
-          const multiplier = entry?.coinMultiplier;
-          if (typeof multiplier === "number" && Number.isFinite(multiplier) && multiplier > 0) {
-            return acc * multiplier;
-          }
-          return acc;
-        }, 1);
-      };
-      getPetValue = (pet) => {
-        const entry = getCatalogEntry(pet?.petSpecies ?? "");
-        if (!entry) return 0;
-        const maturitySellPrice = typeof entry.maturitySellPrice === "number" ? entry.maturitySellPrice : 0;
-        const maxStrength = getPetMaxStrength(pet);
-        if (maxStrength <= 0) return 0;
-        const strength = getPetStrength2(pet);
-        const targetScale = getTargetScale(pet);
-        const coinMultiplier = getPetCoinMultiplier(pet);
-        const raw = maturitySellPrice * (strength / maxStrength) * targetScale * coinMultiplier;
-        if (!Number.isFinite(raw)) return 0;
-        return Math.round(Math.max(raw, 0));
-      };
-      getPetInfo = (pet) => ({
-        value: getPetValue(pet),
-        strength: getPetStrength2(pet),
-        maxStrength: getPetMaxStrength(pet),
-        coinMultiplier: getPetCoinMultiplier(pet)
-      });
-    }
-  });
-
-  // src/features/inventory/value.ts
-  function finiteNumber(value) {
-    if (typeof value === "number") return Number.isFinite(value) ? value : null;
-    if (typeof value === "string" && value.trim()) {
-      const parsed = Number(value);
-      return Number.isFinite(parsed) ? parsed : null;
-    }
-    return null;
-  }
-  function identifier(raw) {
-    if (typeof raw === "string") return raw.trim() || null;
-    if (typeof raw === "number") return Number.isFinite(raw) ? String(raw) : null;
-    return null;
-  }
-  function computeInventoryItemValue(item, context = {}) {
-    if (!item || typeof item !== "object") return null;
-    const type = typeof item.itemType === "string" ? item.itemType.trim() : "";
-    const playersInRoom3 = context.playersInRoom ?? void 0;
-    switch (type) {
-      case "":
-        return null;
-      case "Pet": {
-        const value = getPetInfo(item).value;
-        return typeof value === "number" && Number.isFinite(value) ? value : null;
-      }
-      case "Plant": {
-        let total = 0;
-        for (const slot of Array.isArray(item.slots) ? item.slots : []) {
-          const species = typeof slot?.species === "string" ? slot.species : null;
-          const size = readCropSize(slot);
-          if (!species || size == null) continue;
-          const value = estimateProduceValue(species, size, stringMutations(slot), { friendPlayers: playersInRoom3 });
-          if (Number.isFinite(value)) total += value;
-        }
-        return total;
-      }
-      case "Produce": {
-        const value = valueFromInventoryProduce(item, void 0, playersInRoom3);
-        return Number.isFinite(value) ? value : null;
-      }
-      default: {
-        const priced = PRICED_BY_QUANTITY[type];
-        if (!priced) return null;
-        const id = identifier(item[priced.idField]);
-        const quantity = finiteNumber(item.quantity);
-        const coinPrice = id ? finiteNumber(priced.coinPrice(id)) : null;
-        if (quantity == null || coinPrice == null) return null;
-        const value = coinPrice * quantity;
-        return Number.isFinite(value) ? value : null;
-      }
-    }
-  }
-  function followInventoryValues() {
-    following2 ?? (following2 = Promise.all([
-      readAndFollow(Atoms.server.numPlayers, (raw) => {
-        playersInRoom = Number.isFinite(raw) ? raw : null;
-        playersInRoomChanges.emit();
-      }),
-      Atoms.inventory.myInventory.onChange(() => itemsChanges.emit()).catch(() => {
-      })
-    ]).then(() => {
-    }));
-    return following2;
-  }
-  var PRICED_BY_QUANTITY, stringMutations, playersInRoom, following2, playersInRoomChanges, itemsChanges, playersInRoomForValues, onPlayersInRoomChange, onInventoryItemsChange;
-  var init_value = __esm({
-    "src/features/inventory/value.ts"() {
-      "use strict";
-      init_atoms();
-      init_hub();
-      init_emitter();
-      init_data();
-      init_petValue();
-      init_cropValue();
-      init_cropSize();
-      PRICED_BY_QUANTITY = {
-        Seed: { idField: "species", coinPrice: (id) => plantCatalog2[id]?.seed?.coinPrice },
-        Tool: { idField: "toolId", coinPrice: (id) => toolCatalog2[id]?.coinPrice },
-        Egg: { idField: "eggId", coinPrice: (id) => eggCatalog2[id]?.coinPrice },
-        Decor: { idField: "decorId", coinPrice: (id) => decorCatalog2[id]?.coinPrice }
-      };
-      stringMutations = (slot) => Array.isArray(slot?.mutations) ? slot.mutations.filter((m) => typeof m === "string") : [];
-      playersInRoom = null;
-      following2 = null;
-      playersInRoomChanges = new Emitter();
-      itemsChanges = new Emitter();
-      playersInRoomForValues = () => playersInRoom;
-      onPlayersInRoomChange = (listener) => playersInRoomChanges.on(listener);
-      onInventoryItemsChange = (listener) => itemsChanges.on(listener);
     }
   });
 
@@ -22902,23 +22921,13 @@
       inventoryRaw = inv;
       rebuild();
     }));
-    let primitive = null;
     try {
-      primitive = await Atoms.pets.myPrimitivePetSlots.get();
+      const slots = await Atoms.pets.myPrimitivePetSlots.get();
+      activeRaw = Array.isArray(slots) ? slots : [];
     } catch {
     }
-    const activeAtom = Array.isArray(primitive) ? Atoms.pets.myPrimitivePetSlots : Atoms.pets.myPetInfos;
-    if (Array.isArray(primitive)) {
-      activeRaw = primitive;
-    } else {
-      try {
-        const infos = await Atoms.pets.myPetInfos.get();
-        activeRaw = Array.isArray(infos) ? infos : [];
-      } catch {
-      }
-    }
     activeSig = stableSignature(activeRaw.map(activeSlotToPet));
-    watchers.add(activeAtom.onChange((list) => {
+    watchers.add(Atoms.pets.myPrimitivePetSlots.onChange((list) => {
       const next = Array.isArray(list) ? list : [];
       const sig = stableSignature(next.map(activeSlotToPet));
       if (sig === activeSig) return;
@@ -23743,18 +23752,6 @@
   // src/features/pets/petPicker.ts
   async function clearHandSelection() {
     try {
-      await Atoms.inventory.setSelectedIndexToEnd.set(null);
-    } catch {
-    }
-    try {
-      await Atoms.inventory.mySelectedItemId.set(null);
-    } catch {
-    }
-    try {
-      await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.set(null);
-    } catch {
-    }
-    try {
       await PlayerService.setSelectedItem(null);
     } catch {
     }
@@ -23909,8 +23906,8 @@
     if (!capacity) capacity = HUTCH_DEFAULT_CAPACITY;
     if (!used) {
       try {
-        const n = Number(await myNumPetHutchItems.get());
-        if (Number.isFinite(n) && n > 0) used = n;
+        const items = await myPetHutchItems.get();
+        if (Array.isArray(items) && items.length > 0) used = items.length;
       } catch {
       }
     }
@@ -24041,7 +24038,8 @@
       if (inHutch.has(targetId)) {
         let inventoryFull2 = false;
         try {
-          inventoryFull2 = !!await isMyInventoryAtMaxLength.get();
+          const inventory = await Atoms.inventory.myInventory.get();
+          inventoryFull2 = isInventoryFullForUnstackable(inventory?.items);
         } catch {
         }
         if (inventoryFull2) {
@@ -24112,6 +24110,7 @@
       "use strict";
       init_player();
       init_atoms();
+      init_inventory();
       init_async2();
       init_toast();
       init_inventoryPets();
@@ -24350,7 +24349,7 @@
     };
     const maxStr = getPetMaxStrength(petLike);
     if (maxStr <= 0) return null;
-    const str = getPetStrength2(petLike);
+    const str = getPetStrength(petLike);
     const maxed = str >= maxStr;
     return { text: maxed ? `STR ${maxStr}` : `STR ${str}/${maxStr}`, maxed };
   }
@@ -25078,12 +25077,10 @@
     }
     return total.toLocaleString("en-US");
   }
-  async function countSaleValue() {
-    try {
-      const value = Number(await Atoms.pets.totalPetSellPrice.get());
-      if (Number.isFinite(value) && value > 0) StatsService.incrementShopStat("petsSoldValue", value);
-    } catch (error) {
-      console.error("[SellPet] Unable to read pet sell price", error);
+  function countSaleValue(pet) {
+    const value = computeInventoryItemValue(pet);
+    if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+      StatsService.incrementShopStat("petsSoldValue", value);
     }
   }
   async function runSellAllPetsFlow() {
@@ -25104,7 +25101,7 @@
         await PlayerService.sellPet(pet.id);
         sold += 1;
         StatsService.incrementShopStat("petsSoldCount");
-        void countSaleValue();
+        countSaleValue(pet);
       } catch {
         failures += 1;
       }
@@ -30297,7 +30294,7 @@ next: ${next}`;
       console.warn("[PetsHatch] Failed to read inventory data", error);
     }
     try {
-      activePets2 = await Atoms.pets.myPetInfos.get();
+      activePets2 = await PlayerService.getPets();
     } catch (error) {
       console.warn("[PetsHatch] Failed to read active pet data", error);
     }
@@ -30456,6 +30453,7 @@ next: ${next}`;
     "src/features/hatch/tab.ts"() {
       "use strict";
       init_data();
+      init_player();
       init_tracker();
       init_pity();
       init_stats();
@@ -31109,7 +31107,7 @@ next: ${next}`;
     return typeof value === "number" && Number.isFinite(value) ? value : null;
   }
   function getStrengthRatio(pet) {
-    return getPetStrength2(pet) / STRENGTH_SCALE;
+    return getPetStrength(pet) / STRENGTH_SCALE;
   }
   function getMaxStrengthRatio(pet) {
     return getPetMaxStrength(pet) / STRENGTH_SCALE;
@@ -31329,7 +31327,7 @@ next: ${next}`;
       if (!isKnownSpecies(pet.petSpecies) && !unknownSpecies.includes(pet.petSpecies)) {
         unknownSpecies.push(pet.petSpecies);
       }
-      strengthCurrent += getPetStrength2(pet);
+      strengthCurrent += getPetStrength(pet);
       strengthMax += getPetMaxStrength(pet);
       const ratio = getStrengthRatio(pet);
       const maxRatio = getMaxStrengthRatio(pet);
@@ -31900,7 +31898,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       setIcon(species, pet?.mutations ?? []);
       const maxStrength = pet ? getPetMaxStrength(pet) : 0;
       if (pet && maxStrength > 0) {
-        const strength = getPetStrength2(pet);
+        const strength = getPetStrength(pet);
         const maxed = strength >= maxStrength;
         strengthBadge.textContent = maxed ? `${maxStrength}` : `${strength}/${maxStrength}`;
         strengthBadge.style.color = maxed ? MAX_STRENGTH_COLOR : "#fff";
@@ -32426,7 +32424,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_managerTab = __esm({
     "src/features/pets/managerTab.ts"() {
       "use strict";
-      init_atoms();
+      init_player();
       init_pets();
       init_teamEditor();
       init_teamList();
@@ -33271,7 +33269,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     chip.appendChild(nameSpan);
     if (pet) {
       const strBadge = document.createElement("span");
-      strBadge.textContent = `${getPetStrength2(pet)}/${getPetMaxStrength(pet)}`;
+      strBadge.textContent = `${getPetStrength(pet)}/${getPetMaxStrength(pet)}`;
       strBadge.title = "Strength (current/max). Teams rank by max strength.";
       Object.assign(strBadge.style, {
         fontSize: "10px",
