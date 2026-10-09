@@ -10,15 +10,32 @@ import { containersCss } from "./containers";
 import { controlsCss } from "./controls";
 
 const STYLE_ID = "qmm-kit-css";
+const FONT_ID = "qmm-kit-font";
+const FONT_URL = "https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap";
 let injected = false;
+
+/** The whole kit stylesheet. */
+export function kitCss(): string {
+  return [themeVariables(), chromeCss, controlsCss, containersCss].join("\n");
+}
 
 export function ensureKitStyles(): void {
   if (injected) return;
   if (typeof document === "undefined" || typeof document.getElementById !== "function") return;
   injected = true;
+  const parent = document.head || document.documentElement;
+  // The font loads on its own; until it does, or if a page blocks it, the
+  // system font in the stack stands in and nothing waits for it.
+  if (!document.getElementById(FONT_ID)) {
+    const link = document.createElement("link");
+    link.id = FONT_ID;
+    link.rel = "stylesheet";
+    link.href = FONT_URL;
+    parent.appendChild(link);
+  }
   if (document.getElementById(STYLE_ID)) return;
   const style = document.createElement("style");
   style.id = STYLE_ID;
-  style.textContent = [themeVariables(), chromeCss, controlsCss, containersCss].join("\n");
-  (document.head || document.documentElement).appendChild(style);
+  style.textContent = kitCss();
+  parent.appendChild(style);
 }

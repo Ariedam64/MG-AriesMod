@@ -97,7 +97,7 @@ const space = { xs: 4, sm: 6, md: 8, lg: 12, xl: 16 } as const;
 const fontSize = { xs: 11, sm: 12, md: 13, lg: 14, xl: 15 } as const;
 
 /** Nunito, loaded with the kit stylesheet; the system font stands in until then, or for good. */
-export const fontFamily = "'Nunito', ui-rounded, system-ui, sans-serif";
+const fontFamily = "'Nunito', ui-rounded, system-ui, sans-serif";
 const fontMono = "ui-monospace, SFMono-Regular, Consolas, monospace";
 
 /** Stacking order of the mod's fixed layers. Windows sit above the HUD. */

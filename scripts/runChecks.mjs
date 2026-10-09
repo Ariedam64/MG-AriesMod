@@ -94,6 +94,7 @@ const SUITES = {
   stagewatch: ["checkStageWatch", "dom-stub"],
   visiblerefresh: ["checkVisibleRefresh", "dom-stub"],
   contrast: ["checkContrast"],
+  kitstyles: ["checkKitStyles"],
 };
 
 /** Problems with how suites are registered: a file with no entry, or package.json out of step. */
