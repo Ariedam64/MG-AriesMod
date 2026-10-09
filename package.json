@@ -17,6 +17,7 @@
     "check:lockerrules": "node scripts/runChecks.mjs lockerrules",
     "check:lockerslot": "node scripts/runChecks.mjs lockerslot",
     "check:lockermenu": "node scripts/runChecks.mjs lockermenu",
+    "check:miscmenu": "node scripts/runChecks.mjs miscmenu",
     "check:sellallpetsconfirm": "node scripts/runChecks.mjs sellallpetsconfirm",
     "check:abilitylogs": "node scripts/runChecks.mjs abilitylogs",
     "check:growslot": "node scripts/runChecks.mjs growslot",
