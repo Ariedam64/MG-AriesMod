@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      4.0.0
+// @version      4.0.1
 // @include      /^https:\/\/1227719606223765687\.discordsays\.com\/.*[?&]mc_shell_frame=1(&|#|$)/
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
