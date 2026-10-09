@@ -6,15 +6,9 @@
 // next as unused, so the total kept the value of the moment the inventory
 // opened: sell, harvest or buy, and the figure under the list stayed put.
 
+import { checkEqual, done, run } from "./_check";
 import { Atoms } from "../src/game/store/atoms";
 import * as value from "../src/features/inventory/value";
-
-let failed = 0;
-const check = (label: string, got: unknown, want: unknown) => {
-  const ok = JSON.stringify(got) === JSON.stringify(want);
-  if (!ok) failed++;
-  console.log(`${ok ? "ok  " : "FAIL"} ${label}: ${JSON.stringify(got)}${ok ? "" : ` (expected ${JSON.stringify(want)})`}`);
-};
 
 const inventoryListeners: Array<(next: unknown) => void> = [];
 (Atoms.inventory.myInventory as any).get = async () => ({ items: [] });
@@ -25,32 +19,24 @@ const inventoryListeners: Array<(next: unknown) => void> = [];
 (Atoms.server.numPlayers as any).get = async () => 1;
 (Atoms.server.numPlayers as any).onChange = async () => () => {};
 
-(async () => {
+run(async () => {
   const api = value as Record<string, any>;
   const follow = api.followInventoryValues as (() => Promise<void>) | undefined;
   const onItemsChange = api.onInventoryItemsChange as ((listener: () => void) => () => void) | undefined;
-  check("the inventory values have a watcher", typeof follow, "function");
-  check("the summary can hear the items change", typeof onItemsChange, "function");
-  if (!follow || !onItemsChange) {
-    console.log(`\n${failed} check(s) failed`);
-    process.exit(1);
-  }
+  checkEqual("the inventory values have a watcher", typeof follow, "function");
+  checkEqual("the summary can hear the items change", typeof onItemsChange, "function");
+  if (!follow || !onItemsChange) done();
 
   let refreshes = 0;
   onItemsChange(() => refreshes++);
   await follow();
-  check("the watcher follows the inventory", inventoryListeners.length, 1);
+  checkEqual("the watcher follows the inventory", inventoryListeners.length, 1);
 
   inventoryListeners.forEach((cb) => cb({ items: [{ itemType: "Seed", species: "Carrot", quantity: 1 }] }));
   inventoryListeners.forEach((cb) => cb({ items: [] }));
-  check("each change of the items reaches the summary", refreshes, 2);
+  checkEqual("each change of the items reaches the summary", refreshes, 2);
 
   await follow();
-  check("showing the inventory again does not follow twice", inventoryListeners.length, 1);
+  checkEqual("showing the inventory again does not follow twice", inventoryListeners.length, 1);
 
-  if (failed) {
-    console.log(`\n${failed} check(s) failed`);
-    process.exit(1);
-  }
-  console.log("\nall inventory value summary checks passed");
-})();
+});

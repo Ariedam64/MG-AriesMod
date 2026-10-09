@@ -1,3 +1,4 @@
+import { checkEqual, done } from "./_check";
 import {
   CONTEXTUAL_CHANCE,
   DEFAULT_CONTEXTUAL_COOLDOWN_MS,
@@ -19,13 +20,6 @@ import {
   weatherMessage,
 } from "../src/features/companion/dialogueLines";
 import { MAX_LINE_LENGTH, coerceSettings } from "../src/features/companion/settingsShape";
-
-let fails = 0;
-const check = (label: string, got: unknown, want: unknown) => {
-  const ok = String(got) === String(want);
-  if (!ok) fails++;
-  console.log(`${ok ? "PASS" : "FAIL"}  ${label}${ok ? "" : `\n        got=${got}  want=${want}`}`);
-};
 
 const EM_DASH = "\u2014";
 const fixedRandom = (v: number) => () => v;
@@ -52,16 +46,16 @@ console.log("--- contextual lines come first ---");
 {
   const harvest: ContextualLine = { key: "harvest", message: "3 crops are ready." };
   const r = pick([harvest], CUSTOM, initialDialogueState(), 1000);
-  check("a contextual alert comes before the custom lines", r.message, harvest.message);
-  check("the alert goes on cooldown once used", r.state.mutedUntil.harvest, 1000 + DEFAULT_CONTEXTUAL_COOLDOWN_MS);
+  checkEqual("a contextual alert comes before the custom lines", r.message, harvest.message);
+  checkEqual("the alert goes on cooldown once used", r.state.mutedUntil.harvest, 1000 + DEFAULT_CONTEXTUAL_COOLDOWN_MS);
 }
 {
   // The order of the candidates sets the priority.
   const first: ContextualLine = { key: "harvest", message: "harvest" };
   const second: ContextualLine = { key: "pets", message: "pets" };
   const r = pick([first, second], CUSTOM, initialDialogueState(), 0);
-  check("the first candidate wins", r.message, "harvest");
-  check("the second is not put on cooldown for nothing", r.state.mutedUntil.pets, "undefined");
+  checkEqual("the first candidate wins", r.message, "harvest");
+  checkEqual("the second is not put on cooldown for nothing", r.state.mutedUntil.pets, undefined);
 }
 
 console.log("\n--- alerts are part of the draw ---");
@@ -70,13 +64,13 @@ console.log("\n--- alerts are part of the draw ---");
   // A high draw lands on a custom line even with an alert available: otherwise
   // the alerts all come out in a row at the start, and never again after.
   const high = pick([harvest], CUSTOM, initialDialogueState(), 0, fixedRandom(0.9));
-  check("a high draw gives a custom line", CUSTOM.includes(String(high.message)), true);
-  check("and the alert is not put on cooldown for nothing", high.state.mutedUntil.harvest, "undefined");
+  checkEqual("a high draw gives a custom line", CUSTOM.includes(String(high.message)), true);
+  checkEqual("and the alert is not put on cooldown for nothing", high.state.mutedUntil.harvest, undefined);
   const lowDraw = pick([harvest], CUSTOM, initialDialogueState(), 0, fixedRandom(CONTEXTUAL_CHANCE - 0.01));
-  check("below the probability, it is the alert", lowDraw.message, "harvest");
+  checkEqual("below the probability, it is the alert", lowDraw.message, "harvest");
   // With no custom lines, there is nothing else to say but the alert.
   const onlyAlert = pick([harvest], [], initialDialogueState(), 0, fixedRandom(0.9));
-  check("with no custom lines, the alert comes out anyway", onlyAlert.message, "harvest");
+  checkEqual("with no custom lines, the alert comes out anyway", onlyAlert.message, "harvest");
 
   // Over many draws, alerts come out roughly one time in four.
   let state = initialDialogueState();
@@ -88,7 +82,7 @@ console.log("\n--- alerts are part of the draw ---");
     state = r.state;
     if (r.message === "harvest") alerts++;
   }
-  check("about 25% alerts over 2000 draws", alerts > 400 && alerts < 600, true);
+  checkEqual("about 25% alerts over 2000 draws", alerts > 400 && alerts < 600, true);
 }
 
 console.log("\n--- cooldown ---");
@@ -98,51 +92,51 @@ console.log("\n--- cooldown ---");
   const first = pick([harvest, pets], CUSTOM, initialDialogueState(), 0);
   // Right after, the same alert must stay quiet and make way for the next one.
   const second = pick([harvest, pets], CUSTOM, first.state, 1000);
-  check("an alert does not repeat right away", second.message, "pets");
+  checkEqual("an alert does not repeat right away", second.message, "pets");
   // Once the delay has passed, it may come back.
   const third = pick([harvest], CUSTOM, second.state, DEFAULT_CONTEXTUAL_COOLDOWN_MS + 1);
-  check("it comes back after the cooldown", third.message, "harvest");
+  checkEqual("it comes back after the cooldown", third.message, "harvest");
 }
 {
   // All on cooldown: we fall back on the custom lines.
   const harvest: ContextualLine = { key: "harvest", message: "harvest" };
   const first = pick([harvest], CUSTOM, initialDialogueState(), 0);
   const second = pick([harvest], CUSTOM, first.state, 500);
-  check("falls back on a custom line when everything is on cooldown", CUSTOM.includes(String(second.message)), true);
+  checkEqual("falls back on a custom line when everything is on cooldown", CUSTOM.includes(String(second.message)), true);
 }
 
 console.log("\n--- custom lines ---");
 {
   const r = pick([], CUSTOM, initialDialogueState(), 0, fixedRandom(0));
-  check("draws from the list", r.message, "A");
+  checkEqual("draws from the list", r.message, "A");
   // The same draw must not bring out the same line twice in a row.
   const again = pick([], CUSTOM, r.state, 0, fixedRandom(0));
-  check("avoids repeating the previous one", again.message, "B");
+  checkEqual("avoids repeating the previous one", again.message, "B");
 }
 {
   const single = pick([], ["Only"], initialDialogueState(), 0);
-  check("a one-line list is still usable", single.message, "Only");
+  checkEqual("a one-line list is still usable", single.message, "Only");
   const twice = pick([], ["Only"], single.state, 0);
-  check("and repeats without looping forever", twice.message, "Only");
+  checkEqual("and repeats without looping forever", twice.message, "Only");
 }
 {
   const empty = pick([], [], initialDialogueState(), 0);
-  check("empty list -> null (the game keeps its own line)", empty.message, "null");
+  checkEqual("empty list -> null (the game keeps its own line)", empty.message, null);
   const blanks = pick([], ["   ", ""], initialDialogueState(), 0);
-  check("blank lines do not count as lines", blanks.message, "null");
+  checkEqual("blank lines do not count as lines", blanks.message, null);
 }
 {
   // random() returning 1 must not run off the end of the array.
   const r = pick([], CUSTOM, initialDialogueState(), 0, fixedRandom(1));
-  check("random() = 1 stays in bounds", CUSTOM.includes(String(r.message)), true);
+  checkEqual("random() = 1 stays in bounds", CUSTOM.includes(String(r.message)), true);
 }
 
 console.log("\n--- state immutability ---");
 {
   const base = initialDialogueState();
   const r = pick([{ key: "harvest", message: "harvest" }], CUSTOM, base, 0);
-  check("the input state is not mutated", Object.keys(base.mutedUntil).length, 0);
-  check("the returned state carries the cooldown", Object.keys(r.state.mutedUntil).length, 1);
+  checkEqual("the input state is not mutated", Object.keys(base.mutedUntil).length, 0);
+  checkEqual("the returned state carries the cooldown", Object.keys(r.state.mutedUntil).length, 1);
 }
 
 console.log("\n--- harvest ready: preserved crops do not count ---");
@@ -153,45 +147,45 @@ console.log("\n--- harvest ready: preserved crops do not count ---");
     "1": { objectType: "plant", slots: [{ endTime: 5, preserved: true }, { endTime: now + 1 }] },
     "2": { objectType: "plant", slots: [{ endTime: 5, preserved: false }] },
   };
-  check("a preserved crop is not reported as ready to harvest", ripeCropCount(garden, now), 2);
+  checkEqual("a preserved crop is not reported as ready to harvest", ripeCropCount(garden, now), 2);
   const onlyPreserved = { "0": { objectType: "plant", slots: [{ endTime: 5, preserved: true }] } };
-  check("an all-preserved garden gives nothing to say", ripeCropCount(onlyPreserved, now), 0);
-  check("an unreadable garden counts zero", ripeCropCount(null, now), 0);
+  checkEqual("an all-preserved garden gives nothing to say", ripeCropCount(onlyPreserved, now), 0);
+  checkEqual("an unreadable garden counts zero", ripeCropCount(null, now), 0);
 }
 
 console.log("\n--- default lines ---");
 {
-  check("the default list has enough variety", DEFAULT_CUSTOM_LINES.length >= 30, true);
-  check("no duplicate line", new Set(DEFAULT_CUSTOM_LINES).size, DEFAULT_CUSTOM_LINES.length);
-  check(
+  checkEqual("the default list has enough variety", DEFAULT_CUSTOM_LINES.length >= 30, true);
+  checkEqual("no duplicate line", new Set(DEFAULT_CUSTOM_LINES).size, DEFAULT_CUSTOM_LINES.length);
+  checkEqual(
     "none is longer than a bubble",
     DEFAULT_CUSTOM_LINES.every((line) => line.length <= MAX_LINE_LENGTH),
     true
   );
-  check("no em dash", DEFAULT_CUSTOM_LINES.some((line) => line.includes(EM_DASH)), false);
+  checkEqual("no em dash", DEFAULT_CUSTOM_LINES.some((line) => line.includes(EM_DASH)), false);
 
   // Existing players have the 4 old lines on disk: without a migration, the
   // new list would never reach them.
   const legacy = coerceSettings({ lines: [...LEGACY_DEFAULT_LINES] });
-  check("the old default lines move to the new list", legacy.lines.length, DEFAULT_CUSTOM_LINES.length);
+  checkEqual("the old default lines move to the new list", legacy.lines.length, DEFAULT_CUSTOM_LINES.length);
   const custom = coerceSettings({ lines: ["Mine", "Right behind you, boss."] });
-  check("a custom list is not overwritten", custom.lines.join("|"), "Mine|Right behind you, boss.");
+  checkEqual("a custom list is not overwritten", custom.lines.join("|"), "Mine|Right behind you, boss.");
   const empty = coerceSettings({ lines: [] });
-  check("a list emptied on purpose stays empty", empty.lines.length, 0);
+  checkEqual("a list emptied on purpose stays empty", empty.lines.length, 0);
 }
 
 console.log("\n--- varied contextual lines ---");
 {
   const sweep = (make: (random: () => number) => string) =>
     new Set([0, 0.2, 0.4, 0.6, 0.8, 0.99].map((v) => make(fixedRandom(v))));
-  check("harvest has several phrasings", sweep((r) => harvestMessage(3, r)).size >= 3, true);
-  check("hunger has several phrasings", sweep((r) => hungryPetMessage(2, r)).size >= 3, true);
-  check("selling has several phrasings", sweep((r) => sellMessage(1500, r)).size >= 3, true);
-  check("weather has several phrasings", sweep((r) => weatherMessage("Rain", "Rain", r)).size >= 3, true);
-  check("the number does appear", harvestMessage(7, fixedRandom(0.5)).includes("7"), true);
-  check("the singular is respected", /\b1 crops\b/.test(harvestMessage(1, fixedRandom(0))), false);
-  check("coins are formatted", sellMessage(12345, fixedRandom(0)).includes("12,345"), true);
-  check("random() = 1 stays in bounds", typeof harvestMessage(2, fixedRandom(1)), "string");
+  checkEqual("harvest has several phrasings", sweep((r) => harvestMessage(3, r)).size >= 3, true);
+  checkEqual("hunger has several phrasings", sweep((r) => hungryPetMessage(2, r)).size >= 3, true);
+  checkEqual("selling has several phrasings", sweep((r) => sellMessage(1500, r)).size >= 3, true);
+  checkEqual("weather has several phrasings", sweep((r) => weatherMessage("Rain", "Rain", r)).size >= 3, true);
+  checkEqual("the number does appear", harvestMessage(7, fixedRandom(0.5)).includes("7"), true);
+  checkEqual("the singular is respected", /\b1 crops\b/.test(harvestMessage(1, fixedRandom(0))), false);
+  checkEqual("coins are formatted", sellMessage(12345, fixedRandom(0)).includes("12,345"), true);
+  checkEqual("random() = 1 stays in bounds", typeof harvestMessage(2, fixedRandom(1)), "string");
 }
 
 console.log("\n--- lines specific to each weather ---");
@@ -207,20 +201,20 @@ console.log("\n--- lines specific to each weather ---");
     ["AmberMoon", "Amber Moon"],
   ]) {
     const lines = all(id, name);
-    check(`${id} has its own lines`, lines.every((line) => !GENERIC_WEATHER_TEMPLATES.some((t) => t(name) === line)), true);
-    check(`${id} has several`, new Set(lines).size >= 4, true);
-    check(`${id} never shows the raw id`, id === name || lines.every((line) => !line.includes(id)), true);
+    checkEqual(`${id} has its own lines`, lines.every((line) => !GENERIC_WEATHER_TEMPLATES.some((t) => t(name) === line)), true);
+    checkEqual(`${id} has several`, new Set(lines).size >= 4, true);
+    checkEqual(`${id} never shows the raw id`, id === name || lines.every((line) => !line.includes(id)), true);
   }
   // A weather the game adds after this version: generic fallback, with its display name.
   const unknown = all("SolarFlare", "Solar Flare");
-  check("an unknown weather falls back on the generic lines", unknown.every((line) => line.includes("Solar Flare")), true);
-  check("no weather line has an em dash", [...unknown, ...all("Rain", "Rain")].some((l) => l.includes(EM_DASH)), false);
+  checkEqual("an unknown weather falls back on the generic lines", unknown.every((line) => line.includes("Solar Flare")), true);
+  checkEqual("no weather line has an em dash", [...unknown, ...all("Rain", "Rain")].some((l) => l.includes(EM_DASH)), false);
 }
 {
-  check("display name: live catalog", weatherDisplayName("Frost", { Frost: { name: "Snow" } }), "Snow");
-  check("display name: old displayName field", weatherDisplayName("Frost", { Frost: { displayName: "Snow" } }), "Snow");
-  check("display name: split id as a fallback", weatherDisplayName("AmberMoon", {}), "Amber Moon");
-  check("display name: unreadable catalog", weatherDisplayName("Rain", null), "Rain");
+  checkEqual("display name: live catalog", weatherDisplayName("Frost", { Frost: { name: "Snow" } }), "Snow");
+  checkEqual("display name: old displayName field", weatherDisplayName("Frost", { Frost: { displayName: "Snow" } }), "Snow");
+  checkEqual("display name: split id as a fallback", weatherDisplayName("AmberMoon", {}), "Amber Moon");
+  checkEqual("display name: unreadable catalog", weatherDisplayName("Rain", null), "Rain");
 }
 
 console.log("\n--- a Talk bubble shows after a mod bubble ---");
@@ -242,7 +236,7 @@ console.log("\n--- a Talk bubble shows after a mod bubble ---");
   const modAhead = server + 2_000; // the PC clock is 2 s ahead
   const talk = server + 500; // the player's Talk half a second later
 
-  check("without the correction, the Talk is ignored", deliver([modAhead, talk]).join(), "true,false");
+  checkEqual("without the correction, the Talk is ignored", deliver([modAhead, talk]).join(), "true,false");
 
   let last: number | null = null;
   const stamped = [modAhead, talk].map((ts) => {
@@ -250,11 +244,10 @@ console.log("\n--- a Talk bubble shows after a mod bubble ---");
     last = next;
     return next;
   });
-  check("with the correction, both bubbles show", deliver(stamped).join(), "true,true");
-  check("a bubble that is already newer keeps its time", nextBubbleTimestamp(100, 500), 500);
-  check("the very first one keeps its time", nextBubbleTimestamp(null, 42), 42);
-  check("an unreadable timestamp is left as is", nextBubbleTimestamp(100, NaN as unknown as number), "NaN");
+  checkEqual("with the correction, both bubbles show", deliver(stamped).join(), "true,true");
+  checkEqual("a bubble that is already newer keeps its time", nextBubbleTimestamp(100, 500), 500);
+  checkEqual("the very first one keeps its time", nextBubbleTimestamp(null, 42), 42);
+  checkEqual("an unreadable timestamp is left as is", nextBubbleTimestamp(100, NaN as unknown as number), NaN);
 }
 
-console.log(fails === 0 ? "\nAll checks passed." : `\n${fails} check(s) failed.`);
-process.exit(fails === 0 ? 0 : 1);
+done();

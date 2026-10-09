@@ -7,18 +7,8 @@
 //
 // Run with: npm run check:environment
 
+import { checkEqual, done } from "./_check";
 import { detectEnvironment, isDiscordActivityContext } from "../src/platform/environment";
-
-let failures = 0;
-
-function check(label: string, actual: unknown, expected: unknown): void {
-  if (actual === expected) {
-    console.log(`ok   ${label}`);
-    return;
-  }
-  failures += 1;
-  console.error(`FAIL ${label}\n  expected ${String(expected)}\n  actual   ${String(actual)}`);
-}
 
 type Page = { href: string; referrer: string; framed: boolean };
 
@@ -38,21 +28,17 @@ function visit(page: Page): void {
 const DISCORD_GAME_FRAME = "https://1227719606223765687.discordsays.com/?mc_shell_frame=1";
 
 visit({ href: DISCORD_GAME_FRAME, referrer: "https://1227719606223765687.discordsays.com/", framed: true });
-check("game frame under the Discord host page is an activity", isDiscordActivityContext(), true);
-check("game frame under the Discord host page is the discord surface", detectEnvironment().surface, "discord");
+checkEqual("game frame under the Discord host page is an activity", isDiscordActivityContext(), true);
+checkEqual("game frame under the Discord host page is the discord surface", detectEnvironment().surface, "discord");
 
 visit({ href: DISCORD_GAME_FRAME, referrer: "https://discord.com/channels/1/2", framed: true });
-check("game frame embedded straight in discord.com is the discord surface", detectEnvironment().surface, "discord");
+checkEqual("game frame embedded straight in discord.com is the discord surface", detectEnvironment().surface, "discord");
 
 visit({ href: "https://magicgarden.gg/r/ABCD", referrer: "", framed: false });
-check("the website is not an activity", isDiscordActivityContext(), false);
-check("the website is the web surface", detectEnvironment().surface, "web");
+checkEqual("the website is not an activity", isDiscordActivityContext(), false);
+checkEqual("the website is the web surface", detectEnvironment().surface, "web");
 
 visit({ href: "https://magicgarden.gg/r/ABCD", referrer: "https://example.com/", framed: true });
-check("the website framed by another site is still the web surface", detectEnvironment().surface, "web");
+checkEqual("the website framed by another site is still the web surface", detectEnvironment().surface, "web");
 
-if (failures) {
-  console.error(`\n${failures} check(s) failed`);
-  process.exit(1);
-}
-console.log("\nall environment checks passed");
+done();

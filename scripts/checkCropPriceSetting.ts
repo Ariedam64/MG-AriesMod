@@ -27,44 +27,37 @@ globalAny.localStorage = storage;
 // A player who already has Misc settings, but never touched this one.
 stored.set("aries_mod", JSON.stringify({ version: 2, misc: { ghostMode: true } }));
 
+import { checkEqual, done } from "./_check";
 import { readAriesPath } from "../src/platform/storage";
 import { onShowCropPriceChange, readShowCropPrice, writeShowCropPrice } from "../src/features/cropPrice/setting";
 
-let fails = 0;
-const check = (label: string, got: unknown, want: unknown) => {
-  const ok = String(got) === String(want);
-  if (!ok) fails++;
-  console.log(`${ok ? "PASS" : "FAIL"}  ${label}${ok ? "" : `\n        got=${got}  want=${want}`}`);
-};
-
 console.log("--- crop price in the tooltip ---");
-check("shown by default, nothing changes for anyone who touches nothing", readShowCropPrice(), true);
+checkEqual("shown by default, nothing changes for anyone who touches nothing", readShowCropPrice(), true);
 
 const seen: boolean[] = [];
 const off = onShowCropPriceChange((on) => seen.push(on));
 
 writeShowCropPrice(false);
-check("turns off", readShowCropPrice(), false);
-check("and the displays are told at once", seen.join(), "false");
-check("stored in the misc section", readAriesPath("misc.showCropPrice"), false);
-check("without touching the other Misc settings", readAriesPath("misc.ghostMode"), true);
+checkEqual("turns off", readShowCropPrice(), false);
+checkEqual("and the displays are told at once", seen.join(), "false");
+checkEqual("stored in the misc section", readAriesPath("misc.showCropPrice"), false);
+checkEqual("without touching the other Misc settings", readAriesPath("misc.ghostMode"), true);
 
 writeShowCropPrice(false);
-check("writing the same value again tells nobody", seen.join(), "false");
+checkEqual("writing the same value again tells nobody", seen.join(), "false");
 
 writeShowCropPrice(true);
-check("turns back on", readShowCropPrice(), true);
-check("and tells them again", seen.join(), "false,true");
+checkEqual("turns back on", readShowCropPrice(), true);
+checkEqual("and tells them again", seen.join(), "false,true");
 
 off();
 writeShowCropPrice(false);
-check("a removed subscriber is no longer told", seen.join(), "false,true");
+checkEqual("a removed subscriber is no longer told", seen.join(), "false,true");
 
 // The misc section is read back whole on reload: the value must be on disk,
 // not only in the memory cache.
 const onDisk = JSON.parse(stored.get("aries_mod") ?? "{}");
 const flushed = onDisk?.misc?.showCropPrice;
-check("written to disk (or waiting to be written)", flushed === false || readAriesPath("misc.showCropPrice") === false, true);
+checkEqual("written to disk (or waiting to be written)", flushed === false || readAriesPath("misc.showCropPrice") === false, true);
 
-console.log(fails === 0 ? "\nAll checks passed." : `\n${fails} check(s) failed.`);
-process.exit(fails === 0 ? 0 : 1);
+done();

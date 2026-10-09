@@ -6,16 +6,10 @@
 // opened. Menus that mount before adding their tabs never even reached the
 // restore: adding the first tab selected it and saved it over the player's
 // choice.
+import { checkEqual, done } from "./_check";
 import { installFakeDom } from "./_fakeDom";
 import { Menu } from "../src/ui/kit/menu";
 import { readAriesPath } from "../src/platform/storage";
-
-let failed = 0;
-const check = (label: string, got: unknown, want: unknown) => {
-  const ok = String(got) === String(want);
-  if (!ok) failed++;
-  console.log(`${ok ? "ok  " : "FAIL"} ${label}: ${got}${ok ? "" : ` (expected ${want})`}`);
-};
 
 const { localStorage } = installFakeDom();
 const noop = () => {};
@@ -37,30 +31,25 @@ function open(id: string, tabs: string[], order: "mount-first" | "tabs-first"): 
 for (const order of ["mount-first", "tabs-first"] as const) {
   const id = `check-${order}`;
   const first = open(id, ["one", "two", "three"], order);
-  check(`${order}: a new menu opens on its first tab`, first.active(), "one");
+  checkEqual(`${order}: a new menu opens on its first tab`, first.active(), "one");
   first.menu.switchTo("two");
 
   const again = open(id, ["one", "two", "three"], order);
-  check(`${order}: reopening shows the tab used last`, again.active(), "two");
-  check(`${order}: the choice is saved in aries_mod`, readAriesPath(`menu.activeTabs.${id}`), "two");
+  checkEqual(`${order}: reopening shows the tab used last`, again.active(), "two");
+  checkEqual(`${order}: the choice is saved in aries_mod`, readAriesPath(`menu.activeTabs.${id}`), "two");
 }
 
 // A tab that no longer exists falls back to the first one.
 const gone = open("check-gone", ["a", "b"], "mount-first");
 gone.menu.switchTo("b");
 const shrunk = open("check-gone", ["a", "c"], "mount-first");
-check("a saved tab that is gone falls back to the first", shrunk.active(), "a");
+checkEqual("a saved tab that is gone falls back to the first", shrunk.active(), "a");
 
 // Players upgrading from a build that kept the tab under a raw key keep it.
 localStorage.setItem("menu:check-legacy:activeTab", "y");
 const legacy = open("check-legacy", ["x", "y"], "mount-first");
-check("the pre-migration key is honoured once", legacy.active(), "y");
-check("and moved into aries_mod", readAriesPath("menu.activeTabs.check-legacy"), "y");
-check("and removed from raw localStorage", localStorage.getItem("menu:check-legacy:activeTab"), null);
+checkEqual("the pre-migration key is honoured once", legacy.active(), "y");
+checkEqual("and moved into aries_mod", readAriesPath("menu.activeTabs.check-legacy"), "y");
+checkEqual("and removed from raw localStorage", localStorage.getItem("menu:check-legacy:activeTab"), null);
 
-if (failed) {
-  console.log(`\n${failed} check(s) failed`);
-  process.exit(1);
-}
-console.log("\nall menu tab checks passed");
-process.exit(0);
+done();

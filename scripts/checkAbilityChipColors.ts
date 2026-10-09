@@ -8,22 +8,10 @@
 //
 // Run with: npm run check:abilitycolors
 
+import { checkEqual, done } from "./_check";
 import { captureState } from "../src/data/live/state";
 import { startColorPolling } from "../src/data/live/abilityColors";
 import { getAbilityChipColors } from "../src/features/pets/abilityChipColors";
-
-let failures = 0;
-
-function check(label: string, actual: unknown, expected: unknown): void {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
-  if (a === e) {
-    console.log(`ok   ${label}`);
-    return;
-  }
-  failures += 1;
-  console.error(`FAIL ${label}\n  expected ${e}\n  actual   ${a}`);
-}
 
 (captureState.data as Record<string, unknown>).abilities = {
   ProduceScaleBoost: { name: "Crop Size Boost I", color: "#228B22" },
@@ -34,20 +22,15 @@ function check(label: string, actual: unknown, expected: unknown): void {
 startColorPolling();
 
 setTimeout(() => {
-  check("an ability missing from the hand-written table takes the API colour", getAbilityChipColors("AmberCapture"), {
+  checkEqual("an ability missing from the hand-written table takes the API colour", getAbilityChipColors("AmberCapture"), {
     bg: "rgba(217, 130, 43, 0.9)",
     hover: "rgba(217, 130, 43, 1)",
   });
-  check("a known ability reads the same colour as before", getAbilityChipColors("ProduceScaleBoost"), {
+  checkEqual("a known ability reads the same colour as before", getAbilityChipColors("ProduceScaleBoost"), {
     bg: "rgba(34, 139, 34, 0.9)",
     hover: "rgba(34, 139, 34, 1)",
   });
-  check("a gradient is used as it is", getAbilityChipColors("GoldGranter").bg, "linear-gradient(135deg, #DCC846 0%, #C8AF1E 100%)");
+  checkEqual("a gradient is used as it is", getAbilityChipColors("GoldGranter").bg, "linear-gradient(135deg, #DCC846 0%, #C8AF1E 100%)");
 
-  if (failures) {
-    console.error(`\n${failures} check(s) failed`);
-    process.exit(1);
-  }
-  console.log("\nall ability colour checks passed");
-  process.exit(0);
+  done();
 }, 1_500);

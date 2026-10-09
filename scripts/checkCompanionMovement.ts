@@ -1,3 +1,4 @@
+import { checkEqual, done } from "./_check";
 import {
   DEFAULT_MOVEMENT_CONFIG,
   TASK_MOVEMENT_CONFIG,
@@ -19,13 +20,6 @@ import {
 import { findFirstStep } from "../src/features/companion/pathfinding";
 import { matchBuildingName } from "../src/features/companion/buildings";
 import { buildCompanionMap } from "../src/features/companion/mapView";
-
-let fails = 0;
-const check = (label: string, got: unknown, want: unknown) => {
-  const ok = String(got) === String(want);
-  if (!ok) fails++;
-  console.log(`${ok ? "PASS" : "FAIL"}  ${label}${ok ? "" : `\n        got=${got}  want=${want}`}`);
-};
 
 /** An open 40x40 map with no obstacle. */
 const openMap: IsWalkable = (x, y) => x >= 0 && y >= 0 && x < 40 && y < 40;
@@ -83,9 +77,9 @@ console.log("--- spawning ---");
     random: fixedRandom(0),
     config: cfg(),
   });
-  check("spawns next to the player", d.tile && chebyshev(d.tile, player), 1);
-  check("the spawn is flagged as a jump", d.teleported, true);
-  check("never spawns on the player's tile", d.tile && (d.tile.x === player.x && d.tile.y === player.y), false);
+  checkEqual("spawns next to the player", d.tile && chebyshev(d.tile, player), 1);
+  checkEqual("the spawn is flagged as a jump", d.teleported, true);
+  checkEqual("never spawns on the player's tile", d.tile && (d.tile.x === player.x && d.tile.y === player.y), false);
 }
 {
   // The player is walled in: no walkable tile around.
@@ -97,8 +91,8 @@ console.log("--- spawning ---");
     random: fixedRandom(0),
     config: cfg(),
   });
-  check("no walkable tile -> no position, no crash", d.tile, "null");
-  check("findNearbyWalkable returns null when everything is blocked", findNearbyWalkable({ x: 1, y: 1 }, closed, true), "null");
+  checkEqual("no walkable tile -> no position, no crash", d.tile, null);
+  checkEqual("findNearbyWalkable returns null when everything is blocked", findNearbyWalkable({ x: 1, y: 1 }, closed, true), null);
 }
 
 console.log("\n--- following ---");
@@ -106,10 +100,10 @@ console.log("\n--- following ---");
   const player = { x: 20, y: 20 };
   const start: MovementState = { ...initialMovementState(), tile: { x: 10, y: 20 }, lastAnchorTile: player };
   const r = run(start, player, 20, openMap, cfg({ idleTicksBeforeWander: 999 }));
-  check("no illegal step (more than one tile) while following", r.illegalSteps, 0);
-  check("no teleport at distance 10", r.teleports, 0);
-  check("ends at followDistance from the player", manhattan(r.state.tile!, player), DEFAULT_MOVEMENT_CONFIG.followDistance);
-  check("keeps pursuing while it catches up", r.state.activity, "pursue");
+  checkEqual("no illegal step (more than one tile) while following", r.illegalSteps, 0);
+  checkEqual("no teleport at distance 10", r.teleports, 0);
+  checkEqual("ends at followDistance from the player", manhattan(r.state.tile!, player), DEFAULT_MOVEMENT_CONFIG.followDistance);
+  checkEqual("keeps pursuing while it catches up", r.state.activity, "pursue");
 }
 {
   // Guard against falling behind: a player standing still must not send a
@@ -122,19 +116,19 @@ console.log("\n--- following ---");
   // We look at the position BEFORE the step of the switching tick: that is the
   // state the decision was taken on.
   const firstWander = r.frames.find((f) => f.activity === "wander");
-  check(
+  checkEqual(
     "switches to wandering only after catching up",
     firstWander && firstWander.preTile && manhattan(firstWander.preTile, player) <= DEFAULT_MOVEMENT_CONFIG.followDistance,
     true
   );
-  check("still ends up wandering once it has arrived", r.state.activity, "wander");
+  checkEqual("still ends up wandering once it has arrived", r.state.activity, "wander");
 }
 {
   // Already at the right distance: it must not hug the player.
   const player = { x: 20, y: 20 };
   const start: MovementState = { ...initialMovementState(), tile: { x: 21, y: 20 }, lastAnchorTile: player };
   const r = run(start, player, 5, openMap, cfg({ idleTicksBeforeWander: 999 }));
-  check("does not move when it is already close enough", `${r.state.tile!.x},${r.state.tile!.y}`, "21,20");
+  checkEqual("does not move when it is already close enough", `${r.state.tile!.x},${r.state.tile!.y}`, "21,20");
 }
 {
   // A wall between the companion and the player: it must go around, never through.
@@ -142,8 +136,8 @@ console.log("\n--- following ---");
   const start: MovementState = { ...initialMovementState(), tile: { x: 1, y: 5 }, lastAnchorTile: player };
   const r = run(start, player, 40, wallMap);
   const crossedWall = r.path.some((p) => p && p.x === 5 && p.y !== 0);
-  check("never crosses a blocked tile", crossedWall, false);
-  check("no illegal step while going around the wall", r.illegalSteps, 0);
+  checkEqual("never crosses a blocked tile", crossedWall, false);
+  checkEqual("no illegal step while going around the wall", r.illegalSteps, 0);
 }
 
 console.log("\n--- switching between follow and wander ---");
@@ -152,10 +146,10 @@ console.log("\n--- switching between follow and wander ---");
   const start: MovementState = { ...initialMovementState(), tile: { x: 21, y: 20 }, lastAnchorTile: player };
   const idle = DEFAULT_MOVEMENT_CONFIG.idleTicksBeforeWander;
   const before = run(start, player, idle - 1);
-  check("keeps pursuing before the idle threshold", before.state.activity, "pursue");
+  checkEqual("keeps pursuing before the idle threshold", before.state.activity, "pursue");
   const after = run(start, player, idle);
-  check("switches to wander at the threshold", after.state.activity, "wander");
-  check("no illegal step while wandering", after.illegalSteps, 0);
+  checkEqual("switches to wander at the threshold", after.state.activity, "wander");
+  checkEqual("no illegal step while wandering", after.illegalSteps, 0);
 
   // The player moves again: straight back to following.
   const resumed = stepMovement({
@@ -165,8 +159,8 @@ console.log("\n--- switching between follow and wander ---");
     random: fixedRandom(0),
     config: cfg(),
   });
-  check("back to pursuing as soon as the player moves", resumed.state.activity, "pursue");
-  check("the wander target is dropped on returning to follow", resumed.state.wanderTarget, "null");
+  checkEqual("back to pursuing as soon as the player moves", resumed.state.activity, "pursue");
+  checkEqual("the wander target is dropped on returning to follow", resumed.state.wanderTarget, null);
 }
 {
   // Wandering must stay within the radius around the player.
@@ -180,20 +174,20 @@ console.log("\n--- switching between follow and wander ---");
   const radius = DEFAULT_MOVEMENT_CONFIG.wanderRadius;
   const r = run(start, player, 60, openMap, cfg(), Math.random);
   const strayed = r.path.some((p) => p && manhattan(p, player) > radius * 2);
-  check("never strays far from the player while wandering", strayed, false);
-  check("no illegal step over 60 random ticks", r.illegalSteps, 0);
-  check("no stray teleport while wandering", r.teleports, 0);
+  checkEqual("never strays far from the player while wandering", strayed, false);
+  checkEqual("no illegal step over 60 random ticks", r.illegalSteps, 0);
+  checkEqual("no stray teleport while wandering", r.teleports, 0);
 }
 
 console.log("\n--- timings in milliseconds ---");
 {
-  check("30 s at 150 ms per step = 200 ticks", ticksFromMs(30_000, 150, 0), 200);
-  check("15 s at 150 ms per step = 100 ticks", ticksFromMs(15_000, 150, 1), 100);
+  checkEqual("30 s at 150 ms per step = 200 ticks", ticksFromMs(30_000, 150, 0), 200);
+  checkEqual("15 s at 150 ms per step = 100 ticks", ticksFromMs(15_000, 150, 1), 100);
   // The setting must keep its meaning when the walking speed changes.
-  check("30 s at 300 ms per step = 100 ticks", ticksFromMs(30_000, 300, 0), 100);
-  check("0 ms honours the requested minimum", ticksFromMs(0, 150, 0), 0);
-  check("a short duration does not drop below the minimum", ticksFromMs(10, 150, 1), 1);
-  check("invalid pace -> minimum, no division by zero", ticksFromMs(30_000, 0, 1), 1);
+  checkEqual("30 s at 300 ms per step = 100 ticks", ticksFromMs(30_000, 300, 0), 100);
+  checkEqual("0 ms honours the requested minimum", ticksFromMs(0, 150, 0), 0);
+  checkEqual("a short duration does not drop below the minimum", ticksFromMs(10, 150, 1), 1);
+  checkEqual("invalid pace -> minimum, no division by zero", ticksFromMs(30_000, 0, 1), 1);
 }
 {
   // The reported bug: the companion set off wandering again every ~600 ms.
@@ -217,17 +211,17 @@ console.log("\n--- timings in milliseconds ---");
     state = d.state;
     if (d.tile && manhattan(prev, d.tile) > 0) moves++;
   }
-  check("still for the whole 30 s pause", moves, 0);
+  checkEqual("still for the whole 30 s pause", moves, 0);
   const after = stepMovement({ anchor: playerAnchor(player), state, isWalkable: openMap, random: fixedRandom(0), config });
-  check("sets off again once the pause is over", manhattan(state.tile!, after.tile!), 1);
+  checkEqual("sets off again once the pause is over", manhattan(state.tile!, after.tile!), 1);
 }
 
 console.log("\n--- random wander pause ---");
 {
   const ranged = cfg({ wanderPauseTicks: 10, wanderPauseMaxTicks: 20 });
-  check("low draw -> lower bound", drawWanderPause(ranged, fixedRandom(0)), 10);
-  check("high draw -> upper bound, inclusive", drawWanderPause(ranged, fixedRandom(0.9999)), 20);
-  check("middle draw -> in the middle", drawWanderPause(ranged, fixedRandom(0.5)), 15);
+  checkEqual("low draw -> lower bound", drawWanderPause(ranged, fixedRandom(0)), 10);
+  checkEqual("high draw -> upper bound, inclusive", drawWanderPause(ranged, fixedRandom(0.9999)), 20);
+  checkEqual("middle draw -> in the middle", drawWanderPause(ranged, fixedRandom(0.5)), 15);
   let outOfRange = 0;
   const seen = new Set<number>();
   for (let i = 0; i < 500; i++) {
@@ -235,15 +229,15 @@ console.log("\n--- random wander pause ---");
     seen.add(p);
     if (p < 10 || p > 20 || !Number.isInteger(p)) outOfRange++;
   }
-  check("500 draws stay in range, in whole ticks", outOfRange, 0);
-  check("and the pause really varies", seen.size > 5, true);
+  checkEqual("500 draws stay in range, in whole ticks", outOfRange, 0);
+  checkEqual("and the pause really varies", seen.size > 5, true);
   // With no upper bound, or a nonsensical one, the old fixed pause applies.
-  check("no upper bound: fixed pause", drawWanderPause(cfg({ wanderPauseTicks: 7, wanderPauseMaxTicks: undefined }), fixedRandom(0.9)), 7);
-  check("upper bound below the minimum: fixed pause", drawWanderPause(cfg({ wanderPauseTicks: 7, wanderPauseMaxTicks: 3 }), fixedRandom(0.9)), 7);
-  check("NaN upper bound: fixed pause", drawWanderPause(cfg({ wanderPauseTicks: 7, wanderPauseMaxTicks: NaN }), fixedRandom(0.9)), 7);
+  checkEqual("no upper bound: fixed pause", drawWanderPause(cfg({ wanderPauseTicks: 7, wanderPauseMaxTicks: undefined }), fixedRandom(0.9)), 7);
+  checkEqual("upper bound below the minimum: fixed pause", drawWanderPause(cfg({ wanderPauseTicks: 7, wanderPauseMaxTicks: 3 }), fixedRandom(0.9)), 7);
+  checkEqual("NaN upper bound: fixed pause", drawWanderPause(cfg({ wanderPauseTicks: 7, wanderPauseMaxTicks: NaN }), fixedRandom(0.9)), 7);
   // The defaults: 8 to 45 s.
-  check("default: 8 s minimum", DEFAULT_MOVEMENT_CONFIG.wanderPauseTicks, ticksFromMs(8_000, 150, 0));
-  check("default: 45 s maximum", DEFAULT_MOVEMENT_CONFIG.wanderPauseMaxTicks, ticksFromMs(45_000, 150, 0));
+  checkEqual("default: 8 s minimum", DEFAULT_MOVEMENT_CONFIG.wanderPauseTicks, ticksFromMs(8_000, 150, 0));
+  checkEqual("default: 45 s maximum", DEFAULT_MOVEMENT_CONFIG.wanderPauseMaxTicks, ticksFromMs(45_000, 150, 0));
 }
 {
   // End to end through the state machine: on reaching its target, the pause it
@@ -265,8 +259,8 @@ console.log("\n--- random wander pause ---");
       random,
       config,
     }).state;
-  check("arrival, low draw -> short pause", arrivedOnTarget(fixedRandom(0)).wanderCooldown, 10);
-  check("arrival, high draw -> long pause", arrivedOnTarget(fixedRandom(0.9999)).wanderCooldown, 20);
+  checkEqual("arrival, low draw -> short pause", arrivedOnTarget(fixedRandom(0)).wanderCooldown, 10);
+  checkEqual("arrival, high draw -> long pause", arrivedOnTarget(fixedRandom(0.9999)).wanderCooldown, 20);
 }
 
 console.log("\n--- wandering with a purpose ---");
@@ -285,8 +279,8 @@ console.log("\n--- wandering with a purpose ---");
 
   // Without a hook: exactly the old behaviour (the first tile of the sweep).
   const plain = step(wandering());
-  check("no hook: random target as before", `${plain.state.wanderTarget!.x},${plain.state.wanderTarget!.y}`, "17,17");
-  check("no hook: target not flagged as an interest", plain.state.wanderTargetIsInterest, false);
+  checkEqual("no hook: random target as before", `${plain.state.wanderTarget!.x},${plain.state.wanderTarget!.y}`, "17,17");
+  checkEqual("no hook: target not flagged as an interest", plain.state.wanderTargetIsInterest, false);
 
   // The hook offers a valid tile: it becomes the target.
   let seenArea: WanderArea | null = null;
@@ -294,23 +288,23 @@ console.log("\n--- wandering with a purpose ---");
     seenArea = area;
     return { x: 22, y: 21 };
   });
-  check("the interest is accepted as the target", `${toward.state.wanderTarget!.x},${toward.state.wanderTarget!.y}`, "22,21");
-  check("the target is flagged as an interest", toward.state.wanderTargetIsInterest, true);
-  check("and it takes a step toward it", `${toward.tile!.x},${toward.tile!.y}`, "21,21");
+  checkEqual("the interest is accepted as the target", `${toward.state.wanderTarget!.x},${toward.state.wanderTarget!.y}`, "22,21");
+  checkEqual("the target is flagged as an interest", toward.state.wanderTargetIsInterest, true);
+  checkEqual("and it takes a step toward it", `${toward.tile!.x},${toward.tile!.y}`, "21,21");
   const area = seenArea as WanderArea | null;
-  check("the hook receives the centre and the radius", area && `${area.center.x},${area.center.y},${area.radius}`, "20,20,3");
-  check("the hook receives the current position", area && `${area.from.x},${area.from.y}`, "20,21");
-  check("hook area: rejects the centre (the player)", area && area.isWalkable(20, 20), false);
-  check("hook area: rejects the current tile", area && area.isWalkable(20, 21), false);
-  check("hook area: rejects outside the radius", area && area.isWalkable(24, 20), false);
-  check("hook area: accepts a tile within the radius", area && area.isWalkable(23, 23), true);
+  checkEqual("the hook receives the centre and the radius", area && `${area.center.x},${area.center.y},${area.radius}`, "20,20,3");
+  checkEqual("the hook receives the current position", area && `${area.from.x},${area.from.y}`, "20,21");
+  checkEqual("hook area: rejects the centre (the player)", area && area.isWalkable(20, 20), false);
+  checkEqual("hook area: rejects the current tile", area && area.isWalkable(20, 21), false);
+  checkEqual("hook area: rejects outside the radius", area && area.isWalkable(24, 20), false);
+  checkEqual("hook area: accepts a tile within the radius", area && area.isWalkable(23, 23), true);
 
   // An offer that wandering would not have accepted falls back to chance.
   const outside = step(wandering(), () => ({ x: 30, y: 30 }));
-  check("interest outside the radius -> random stroll", `${outside.state.wanderTarget!.x},${outside.state.wanderTarget!.y}`, "17,17");
-  check("and the target is not flagged as an interest", outside.state.wanderTargetIsInterest, false);
+  checkEqual("interest outside the radius -> random stroll", `${outside.state.wanderTarget!.x},${outside.state.wanderTarget!.y}`, "17,17");
+  checkEqual("and the target is not flagged as an interest", outside.state.wanderTargetIsInterest, false);
   const onPlayer = step(wandering(), () => ({ ...player }));
-  check("interest on the player -> rejected", onPlayer.state.wanderTargetIsInterest, false);
+  checkEqual("interest on the player -> rejected", onPlayer.state.wanderTargetIsInterest, false);
   const blockedMap: IsWalkable = (x, y) => openMap(x, y) && !(x === 22 && y === 21);
   const onWall = stepMovement({
     anchor: playerAnchor(player),
@@ -320,13 +314,13 @@ console.log("\n--- wandering with a purpose ---");
     config: cfg(),
     pickInterest: () => ({ x: 22, y: 21 }),
   });
-  check("interest on a blocked tile -> rejected", onWall.state.wanderTargetIsInterest, false);
+  checkEqual("interest on a blocked tile -> rejected", onWall.state.wanderTargetIsInterest, false);
   const fractional = step(wandering(), () => ({ x: 21.5, y: 21 }));
-  check("interest off the grid -> rejected", fractional.state.wanderTargetIsInterest, false);
+  checkEqual("interest off the grid -> rejected", fractional.state.wanderTargetIsInterest, false);
   const thrower = step(wandering(), () => {
     throw new Error("boom");
   });
-  check("a hook that throws -> random stroll, no crash", thrower.state.wanderTarget !== null && !thrower.state.wanderTargetIsInterest, true);
+  checkEqual("a hook that throws -> random stroll, no crash", thrower.state.wanderTarget !== null && !thrower.state.wanderTargetIsInterest, true);
 
   // The hook is only consulted when a new target is drawn.
   let calls = 0;
@@ -336,12 +330,12 @@ console.log("\n--- wandering with a purpose ---");
   };
   let s = wandering();
   for (let i = 0; i < 3; i++) s = step(s, counting).state;
-  check("a single call for a single target", calls, 1);
+  checkEqual("a single call for a single target", calls, 1);
 
   // During the pause there is no new target, so no call.
   calls = 0;
   step(wandering({ wanderCooldown: 5 }), counting);
-  check("no call during the pause", calls, 0);
+  checkEqual("no call during the pause", calls, 0);
 
   // While pursuing, wandering does not run: no call either.
   calls = 0;
@@ -353,7 +347,7 @@ console.log("\n--- wandering with a purpose ---");
     config: cfg({ idleTicksBeforeWander: 999 }),
     pickInterest: counting,
   });
-  check("no call while pursuing", calls, 0);
+  checkEqual("no call while pursuing", calls, 0);
 }
 {
   // Arriving on an interest is reported, once, and only that.
@@ -381,9 +375,9 @@ console.log("\n--- wandering with a purpose ---");
     if (d.interestReached) reached.push(d.interestReached);
     if (d.tile && manhattan(prev, d.tile) > 1) illegal++;
   }
-  check("arriving on the interest is reported once", reached.length, 1);
-  check("on the right tile", reached[0] && `${reached[0].x},${reached[0].y}`, "22,22");
-  check("no illegal step on the way to look", illegal, 0);
+  checkEqual("arriving on the interest is reported once", reached.length, 1);
+  checkEqual("on the right tile", reached[0] && `${reached[0].x},${reached[0].y}`, "22,22");
+  checkEqual("no illegal step on the way to look", illegal, 0);
 }
 {
   // A random stroll that reaches its end reports nothing.
@@ -401,7 +395,7 @@ console.log("\n--- wandering with a purpose ---");
     s = d.state;
     if (d.interestReached) reports++;
   }
-  check("random stroll: no interest arrival reported", reports, 0);
+  checkEqual("random stroll: no interest arrival reported", reports, 0);
 }
 {
   // The player moves while it goes to look: the interest is dropped, and a
@@ -416,8 +410,8 @@ console.log("\n--- wandering with a purpose ---");
   };
   s = stepMovement({ anchor: playerAnchor(player), state: s, isWalkable: openMap, random: fixedRandom(0), config: cfg(), pickInterest: () => ({ x: 22, y: 22 }) }).state;
   const moved = stepMovement({ anchor: playerAnchor({ x: 21, y: 20 }), state: s, isWalkable: openMap, random: fixedRandom(0), config: cfg() });
-  check("the player moves: interest dropped", moved.state.wanderTargetIsInterest, false);
-  check("and the target with it", moved.state.wanderTarget, "null");
+  checkEqual("the player moves: interest dropped", moved.state.wanderTargetIsInterest, false);
+  checkEqual("and the target with it", moved.state.wanderTarget, null);
 }
 {
   // In garden mode, an interest outside the zone is rejected even within the radius.
@@ -431,18 +425,18 @@ console.log("\n--- wandering with a purpose ---");
     config: cfg(),
     pickInterest: () => ({ x: 16, y: 12 }),
   });
-  check("interest outside the garden -> rejected", d.state.wanderTargetIsInterest, false);
-  check("the fallback target stays in the garden", inGarden(d.state.wanderTarget!.x, d.state.wanderTarget!.y), true);
+  checkEqual("interest outside the garden -> rejected", d.state.wanderTargetIsInterest, false);
+  checkEqual("the fallback target stays in the garden", inGarden(d.state.wanderTarget!.x, d.state.wanderTarget!.y), true);
 }
 
 console.log("\n--- anti-jump lock (render acknowledgement) ---");
 {
   const tile = { x: 5, y: 5 };
-  check("moves on when the game has rendered the current position", hasGameCaughtUp(tile, { x: 5, y: 5 }), true);
-  check("waits when the game has fallen behind", hasGameCaughtUp(tile, { x: 4, y: 5 }), false);
-  check("waits even for a lag of a single tile", hasGameCaughtUp(tile, { x: 5, y: 4 }), false);
-  check("does not hold back while nothing has been observed", hasGameCaughtUp(tile, null), true);
-  check("does not hold back before spawning", hasGameCaughtUp(null, { x: 1, y: 1 }), true);
+  checkEqual("moves on when the game has rendered the current position", hasGameCaughtUp(tile, { x: 5, y: 5 }), true);
+  checkEqual("waits when the game has fallen behind", hasGameCaughtUp(tile, { x: 4, y: 5 }), false);
+  checkEqual("waits even for a lag of a single tile", hasGameCaughtUp(tile, { x: 5, y: 4 }), false);
+  checkEqual("does not hold back while nothing has been observed", hasGameCaughtUp(tile, null), true);
+  checkEqual("does not hold back before spawning", hasGameCaughtUp(null, { x: 1, y: 1 }), true);
 }
 {
   // The scenario that caused the bug: the loop runs faster than rendering.
@@ -461,8 +455,8 @@ console.log("\n--- anti-jump lock (render acknowledgement) ---");
     if (i % 3 === 0 && state.tile) observed = { ...state.tile };
     if (state.tile && observed) maxGap = Math.max(maxGap, manhattan(state.tile, observed));
   }
-  check("injected and rendered positions stay within 1 tile", maxGap, 1);
-  check("the companion makes progress despite the lock", state.tile!.x > 5, true);
+  checkEqual("injected and rendered positions stay within 1 tile", maxGap, 1);
+  checkEqual("the companion makes progress despite the lock", state.tile!.x > 5, true);
 }
 
 console.log("\n--- robustness ---");
@@ -472,7 +466,7 @@ console.log("\n--- robustness ---");
   const player = { x: 10, y: 10 };
   const start: MovementState = { ...initialMovementState(), tile: { x: 5, y: 3 }, lastAnchorTile: player };
   const r = run(start, player, 30, wallMap);
-  check("moves off a blocked tile without an illegal step", r.illegalSteps, 0);
+  checkEqual("moves off a blocked tile without an illegal step", r.illegalSteps, 0);
 }
 {
   // The companion's position must never land on the player's.
@@ -480,7 +474,7 @@ console.log("\n--- robustness ---");
   const start: MovementState = { ...initialMovementState(), tile: { x: 26, y: 20 }, lastAnchorTile: player };
   const r = run(start, player, 30, openMap, cfg({ followDistance: 0 }));
   const overlapped = r.path.some((p) => p && p.x === player.x && p.y === player.y);
-  check("never walks onto the player's tile", overlapped, false);
+  checkEqual("never walks onto the player's tile", overlapped, false);
 }
 
 console.log("\n--- garden mode (still anchor plus zone) ---");
@@ -509,10 +503,10 @@ console.log("\n--- garden mode (still anchor plus zone) ---");
     if (d.tile && !inGarden(d.tile.x, d.tile.y)) escaped = true;
     if (!d.teleported && prev && d.tile && manhattan(prev, d.tile) > 1) illegal++;
   }
-  check("never leaves the garden zone", escaped, false);
-  check("no illegal step while wandering the garden", illegal, 0);
+  checkEqual("never leaves the garden zone", escaped, false);
+  checkEqual("no illegal step while wandering the garden", illegal, 0);
   // A still anchor: nobody to wait for, it wanders as soon as it has arrived.
-  check("wanders without waiting for the player to go idle", state.activity, "wander");
+  checkEqual("wanders without waiting for the player to go idle", state.activity, "wander");
 }
 {
   // The trap the anchor plus zone model must remove: the player walks away,
@@ -532,7 +526,7 @@ console.log("\n--- garden mode (still anchor plus zone) ---");
     state = d.state;
     if (d.tile && !inGarden(d.tile.x, d.tile.y)) escaped = true;
   }
-  check("a distant player does not drag the companion out of the garden", escaped, false);
+  checkEqual("a distant player does not drag the companion out of the garden", escaped, false);
 }
 
 console.log("--- never a teleport after spawning ---");
@@ -542,9 +536,9 @@ console.log("--- never a teleport after spawning ---");
   const player = { x: 38, y: 38 };
   const start: MovementState = { ...initialMovementState(), tile: { x: 1, y: 1 }, lastAnchorTile: player };
   const r = run(start, player, 120, openMap, cfg({ idleTicksBeforeWander: 999 }));
-  check("no jump, even over a very long distance", r.teleports, 0);
-  check("no illegal step", r.illegalSteps, 0);
-  check("it really did make progress on foot", r.state.tile!.x > 1 && r.state.tile!.y > 1, true);
+  checkEqual("no jump, even over a very long distance", r.teleports, 0);
+  checkEqual("no illegal step", r.illegalSteps, 0);
+  checkEqual("it really did make progress on foot", r.state.tile!.x > 1 && r.state.tile!.y > 1, true);
 }
 {
   // Switching from garden mode to follow: the anchor jumps from one end to the
@@ -562,8 +556,8 @@ console.log("--- never a teleport after spawning ---");
     random: fixedRandom(0),
     config: cfg(),
   });
-  check("mode switch: no jump", d.teleported, false);
-  check("mode switch: a single step", manhattan(state.tile!, d.tile!), 1);
+  checkEqual("mode switch: no jump", d.teleported, false);
+  checkEqual("mode switch: a single step", manhattan(state.tile!, d.tile!), 1);
 }
 {
   // The trap that separating the zone from walkability must remove: switching
@@ -589,8 +583,8 @@ console.log("--- never a teleport after spawning ---");
     if (d.teleported) teleports++;
     state = d.state;
   }
-  check("walks back into the garden from outside", inGarden(state.tile!.x, state.tile!.y), true);
-  check("without a single jump", teleports, 0);
+  checkEqual("walks back into the garden from outside", inGarden(state.tile!.x, state.tile!.y), true);
+  checkEqual("without a single jump", teleports, 0);
 }
 
 console.log("\n--- pathfinding: going around ---");
@@ -599,8 +593,8 @@ console.log("\n--- pathfinding: going around ---");
   // wall ahead. The greedy step then had no vertical candidate to try.
   const wallAtX5: IsWalkable = (x, y) => openMap(x, y) && !(x === 5 && y !== 0);
   const step = findFirstStep({ x: 3, y: 5 }, (x, y) => x === 8 && y === 5, wallAtX5);
-  check("lined up facing a wall: it still finds a step", step !== null, true);
-  check("and that step goes around instead of into the wall", step && step.x === 5, false);
+  checkEqual("lined up facing a wall: it still finds a step", step !== null, true);
+  checkEqual("and that step goes around instead of into the wall", step && step.x === 5, false);
 }
 {
   // It must REACH the target, not just avoid the wall.
@@ -610,10 +604,10 @@ console.log("\n--- pathfinding: going around ---");
   for (let i = 0; i < 60; i++) {
     const step = findFirstStep(tile, (x, y) => x === target.x && y === target.y, wallAtX5);
     if (!step) break;
-    if (manhattan(tile, step) !== 1) { check("every step is adjacent", false, true); break; }
+    if (manhattan(tile, step) !== 1) { checkEqual("every step is adjacent", false, true); break; }
     tile = step;
   }
-  check("goes through the door and reaches the target", `${tile.x},${tile.y}`, "8,5");
+  checkEqual("goes through the door and reaches the target", `${tile.x},${tile.y}`, "8,5");
 }
 {
   // A concave obstacle: the case where a go-around heuristic would fail.
@@ -633,35 +627,35 @@ console.log("\n--- pathfinding: going around ---");
     tile = step;
     if (tile.x === target.x && tile.y === target.y) break;
   }
-  check("gets out of a U-shaped pocket", stuck, false);
-  check("and arrives at the destination", `${tile.x},${tile.y}`, "7,20");
+  checkEqual("gets out of a U-shaped pocket", stuck, false);
+  checkEqual("and arrives at the destination", `${tile.x},${tile.y}`, "7,20");
 }
 
 console.log("\n--- pathfinding: edge cases ---");
 {
   const closed: IsWalkable = (x, y) => openMap(x, y) && x < 5;
   const step = findFirstStep({ x: 1, y: 1 }, (x, y) => x === 20 && y === 1, closed);
-  check("a truly unreachable target -> null (it stays put)", step, "null");
+  checkEqual("a truly unreachable target -> null (it stays put)", step, null);
 }
 {
   const step = findFirstStep({ x: 4, y: 4 }, (x, y) => x === 4 && y === 4, openMap);
-  check("already there -> null, no stray step", step, "null");
+  checkEqual("already there -> null, no stray step", step, null);
 }
 {
   const step = findFirstStep({ x: 4, y: 4 }, (x, y) => x === 9 && y === 12, openMap);
-  check("the returned step is always adjacent", step && manhattan({ x: 4, y: 4 }, step), 1);
+  checkEqual("the returned step is always adjacent", step && manhattan({ x: 4, y: 4 }, step), 1);
 }
 {
   // Arriving on a tile that is not walkable must never be offered.
   const holeAt: IsWalkable = (x, y) => openMap(x, y) && !(x === 9 && y === 4);
   const step = findFirstStep({ x: 4, y: 4 }, (x, y) => x === 9 && y === 4, holeAt);
-  check("a non-walkable arrival -> rejected", step, "null");
+  checkEqual("a non-walkable arrival -> rejected", step, null);
 }
 {
   // Search budget: a huge map must not turn a single step into an endless sweep.
   const infinite: IsWalkable = () => true;
   const step = findFirstStep({ x: 0, y: 0 }, () => false, infinite, 500);
-  check("the node budget holds, no infinite loop", step, "null");
+  checkEqual("the node budget holds, no infinite loop", step, null);
 }
 
 console.log("\n--- moving on command ---");
@@ -680,13 +674,13 @@ console.log("\n--- moving on command ---");
   };
 
   const done = walk(TASK_MOVEMENT_CONFIG);
-  check("command: the target is reached exactly", done.tile && manhattan(done.tile, target), 0);
+  checkEqual("command: the target is reached exactly", done.tile && manhattan(done.tile, target), 0);
 
   // The bug that prompted this test: with the follow config, the companion
   // stopped at followDistance from the target. The caller expected an exact
   // arrival, so it waited out its whole timeout on every crop.
   const short = walk(cfg());
-  check("follow config: stops short of the target", short.tile && manhattan(short.tile, target), 2);
+  checkEqual("follow config: stops short of the target", short.tile && manhattan(short.tile, target), 2);
 
   // Already there: no stray step, the caller moves on at once.
   const onSpot: MovementState = { ...initialMovementState(), tile: { ...target }, lastAnchorTile: { ...target } };
@@ -697,7 +691,7 @@ console.log("\n--- moving on command ---");
     random: fixedRandom(0),
     config: TASK_MOVEMENT_CONFIG,
   });
-  check("already on the target: stays still", still.tile && manhattan(still.tile, target), 0);
+  checkEqual("already on the target: stays still", still.tile && manhattan(still.tile, target), 0);
 }
 
 console.log("\n--- finding buildings ---");
@@ -706,15 +700,15 @@ console.log("\n--- finding buildings ---");
   // both casing and separators vary.
   const names = ["Pet_Shop", "PetHutch", "SeedShop"];
 
-  check("the pet shop is found", matchBuildingName(names, ["pet"], ["sell", "shop", "store"]), "Pet_Shop");
+  checkEqual("the pet shop is found", matchBuildingName(names, ["pet"], ["sell", "shop", "store"]), "Pet_Shop");
   // "pet" alone would also match the hutch: that is the whole point of the second group.
-  check("the hutch is told apart from the shop", matchBuildingName(names, ["pet"], ["hutch"]), "PetHutch");
-  check("separators are ignored", matchBuildingName(["pet shop"], ["petshop"], []), "pet shop");
-  check("case is ignored", matchBuildingName(["PETSHOP"], ["pet"], ["shop"]), "PETSHOP");
-  check("with no second group, nothing is required", matchBuildingName(names, ["seed"], []), "SeedShop");
+  checkEqual("the hutch is told apart from the shop", matchBuildingName(names, ["pet"], ["hutch"]), "PetHutch");
+  checkEqual("separators are ignored", matchBuildingName(["pet shop"], ["petshop"], []), "pet shop");
+  checkEqual("case is ignored", matchBuildingName(["PETSHOP"], ["pet"], ["shop"]), "PETSHOP");
+  checkEqual("with no second group, nothing is required", matchBuildingName(names, ["seed"], []), "SeedShop");
   // Guessing would be worse than returning null: the caller knows what to do with an absence.
-  check("nothing matches: nothing is made up", matchBuildingName(names, ["barn"], []), null);
-  check("the second group can rule everything out", matchBuildingName(names, ["pet"], ["barn"]), null);
+  checkEqual("nothing matches: nothing is made up", matchBuildingName(names, ["barn"], []), null);
+  checkEqual("the second group can rule everything out", matchBuildingName(names, ["pet"], ["barn"]), null);
 }
 
 console.log("\n--- the grid as the companion sees it ---");
@@ -730,21 +724,20 @@ console.log("\n--- the grid as the companion sees it ---");
     userSlotIdxAndBoardwalkTileIdxToGlobalTileIdx: [[8]],
     locations: { Pet_Shop: { activationTilesIdxs: [2, 3] } },
   });
-  check("the grid gets built", map !== null, true);
-  check("index -> xy", JSON.stringify(map?.toXY(6)), JSON.stringify({ x: 2, y: 1 }));
-  check("xy -> index", map?.toIndex(2, 1), 6);
-  check("a free tile can be crossed", map?.isWalkable(0, 0), true);
-  check("a collision blocks", map?.isWalkable(1, 0), false);
-  check("a conditional collision blocks too", map?.isWalkable(2, 1), false);
-  check("nothing passes outside the grid", map?.isWalkable(4, 0), false);
-  check("a local dirt tile becomes global", map?.gardenTileToGlobal(1, 1), 11);
-  check("a missing dirt index returns null", map?.gardenTileToGlobal(1, 5), null);
-  check("the number of dirt tiles in a plot", map?.dirtTileCount(0), 2);
-  check("the plot counts both dirt and boardwalk", map?.gardenTilesForSlot(0).join(","), "4,5,8");
-  check("an NPC's spawn point", map?.npcSpawnTile("Reina"), 9);
-  check("a building is found by fragments", map?.findBuilding(["pet"], ["shop"]), "Pet_Shop");
-  check("a map with no dimensions is not built", buildCompanionMap({ cols: 0, rows: 3 }), null);
+  checkEqual("the grid gets built", map !== null, true);
+  checkEqual("index -> xy", JSON.stringify(map?.toXY(6)), JSON.stringify({ x: 2, y: 1 }));
+  checkEqual("xy -> index", map?.toIndex(2, 1), 6);
+  checkEqual("a free tile can be crossed", map?.isWalkable(0, 0), true);
+  checkEqual("a collision blocks", map?.isWalkable(1, 0), false);
+  checkEqual("a conditional collision blocks too", map?.isWalkable(2, 1), false);
+  checkEqual("nothing passes outside the grid", map?.isWalkable(4, 0), false);
+  checkEqual("a local dirt tile becomes global", map?.gardenTileToGlobal(1, 1), 11);
+  checkEqual("a missing dirt index returns null", map?.gardenTileToGlobal(1, 5), null);
+  checkEqual("the number of dirt tiles in a plot", map?.dirtTileCount(0), 2);
+  checkEqual("the plot counts both dirt and boardwalk", map?.gardenTilesForSlot(0).join(","), "4,5,8");
+  checkEqual("an NPC's spawn point", map?.npcSpawnTile("Reina"), 9);
+  checkEqual("a building is found by fragments", map?.findBuilding(["pet"], ["shop"]), "Pet_Shop");
+  checkEqual("a map with no dimensions is not built", buildCompanionMap({ cols: 0, rows: 3 }), null);
 }
 
-console.log(fails === 0 ? "\nAll checks passed." : `\n${fails} check(s) failed.`);
-process.exit(fails === 0 ? 0 : 1);
+done();

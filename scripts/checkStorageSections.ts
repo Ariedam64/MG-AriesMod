@@ -37,37 +37,21 @@ stored.set(
   }),
 );
 
+import { checkEqual, done } from "./_check";
 import { getAriesStorage, readAriesPath, writeAriesPath } from "../src/platform/storage";
 
-let failures = 0;
-
-function check(label: string, actual: unknown, expected: unknown): void {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
-  if (a === e) {
-    console.log(`ok   ${label}`);
-    return;
-  }
-  failures += 1;
-  console.error(`FAIL ${label}\n  expected ${e}\n  actual   ${a}`);
-}
-
-check("the hatch tracker survives a reload", readAriesPath("hatch.tracker.seenPetIds"), ["pet-1"]);
-check("with its Bad Luck Protection counters", readAriesPath("hatch.tracker.counters.CommonEgg.hatches"), 4);
-check("and the expanded hatch cards", readAriesPath("hatch.expanded.CommonEgg"), true);
-check("the skins switch survives a reload", getAriesStorage().skins?.enabled, false);
-check("custom rooms stored nested survive a reload", readAriesPath("room.customRooms"), ["abc"]);
-check("notification settings survive a reload", readAriesPath("notifications.soundEnabled"), false);
-check("sections the old list knew still load", readAriesPath("misc.ghostMode"), true);
-check("nested stats snapshots are unwrapped", readAriesPath("stats"), { harvested: 12 });
-check("legacy pet teams fold into pets.teams", readAriesPath("pets.teams"), [{ id: "team-1" }]);
-check("legacy locker state folds into locker.state", readAriesPath("locker.state"), { locked: true });
+checkEqual("the hatch tracker survives a reload", readAriesPath("hatch.tracker.seenPetIds"), ["pet-1"]);
+checkEqual("with its Bad Luck Protection counters", readAriesPath("hatch.tracker.counters.CommonEgg.hatches"), 4);
+checkEqual("and the expanded hatch cards", readAriesPath("hatch.expanded.CommonEgg"), true);
+checkEqual("the skins switch survives a reload", getAriesStorage().skins?.enabled, false);
+checkEqual("custom rooms stored nested survive a reload", readAriesPath("room.customRooms"), ["abc"]);
+checkEqual("notification settings survive a reload", readAriesPath("notifications.soundEnabled"), false);
+checkEqual("sections the old list knew still load", readAriesPath("misc.ghostMode"), true);
+checkEqual("nested stats snapshots are unwrapped", readAriesPath("stats"), { harvested: 12 });
+checkEqual("legacy pet teams fold into pets.teams", readAriesPath("pets.teams"), [{ id: "team-1" }]);
+checkEqual("legacy locker state folds into locker.state", readAriesPath("locker.state"), { locked: true });
 
 writeAriesPath("misc.ghostMode", false);
-check("writing one setting keeps the others", readAriesPath("hatch.tracker.seenPetIds"), ["pet-1"]);
+checkEqual("writing one setting keeps the others", readAriesPath("hatch.tracker.seenPetIds"), ["pet-1"]);
 
-if (failures) {
-  console.error(`\n${failures} check(s) failed`);
-  process.exit(1);
-}
-console.log("\nall storage section checks passed");
+done();

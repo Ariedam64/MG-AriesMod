@@ -14,6 +14,7 @@
 //
 // Run with: npm run check:sprites
 
+import { checkEqual, done } from "./_check";
 import {
   findSprite,
   resetSpriteResolver,
@@ -24,17 +25,6 @@ import {
 
 const API = "https://mg-api.ariedam.fr";
 const sprite = (path: string) => `${API}/assets/sprites/${path}?v=1029`;
-
-let failures = 0;
-
-function check(label: string, actual: unknown, expected: unknown): void {
-  if (actual === expected) {
-    console.log(`ok   ${label}`);
-    return;
-  }
-  failures += 1;
-  console.error(`FAIL ${label}\n  expected ${String(expected)}\n  actual   ${String(actual)}`);
-}
 
 function urlFor(categories: string[], candidate: string): string | null {
   return findSprite(categories, candidate)?.url ?? null;
@@ -78,48 +68,47 @@ setCatalogReader(key => (CATALOGS[key] as Record<string, unknown>) ?? null);
 
 /* ------------------- what the alerts and the overlay ask for -------------- */
 
-check("Seed alert icon", urlFor(["seed"], "Carrot"), sprite("seeds/Carrot.png"));
-check("Seed alert icon, by display name", urlFor(["seed"], "Carrot Seed"), sprite("seeds/Carrot.png"));
-check("Tool alert icon", urlFor(["item"], "WateringCan"), sprite("items/WateringCan.png"));
-check("Tool alert icon, by display name", urlFor(["item"], "Watering Can"), sprite("items/WateringCan.png"));
-check("Decor alert icon", urlFor(["decor"], "SmallRock"), sprite("decor/SmallRock.png"));
-check("Egg alert icon (eggs live in the pet sheet)", urlFor(["pet"], "CommonEgg"), sprite("pets/CommonEgg.png"));
-check("Pet avatar", urlFor(["pet"], "Bat"), sprite("pets/Bat.png"));
-check("Weather alert icon", urlFor(["ui", "mutation", "weather"], "Rain"), sprite("ui/RainIcon.png"));
+checkEqual("Seed alert icon", urlFor(["seed"], "Carrot"), sprite("seeds/Carrot.png"));
+checkEqual("Seed alert icon, by display name", urlFor(["seed"], "Carrot Seed"), sprite("seeds/Carrot.png"));
+checkEqual("Tool alert icon", urlFor(["item"], "WateringCan"), sprite("items/WateringCan.png"));
+checkEqual("Tool alert icon, by display name", urlFor(["item"], "Watering Can"), sprite("items/WateringCan.png"));
+checkEqual("Decor alert icon", urlFor(["decor"], "SmallRock"), sprite("decor/SmallRock.png"));
+checkEqual("Egg alert icon (eggs live in the pet sheet)", urlFor(["pet"], "CommonEgg"), sprite("pets/CommonEgg.png"));
+checkEqual("Pet avatar", urlFor(["pet"], "Bat"), sprite("pets/Bat.png"));
+checkEqual("Weather alert icon", urlFor(["ui", "mutation", "weather"], "Rain"), sprite("ui/RainIcon.png"));
 
 /* ---------------------------- the other consumers ------------------------- */
 
-check("Locker crop icon is the harvested crop, not the seedling",
+checkEqual("Locker crop icon is the harvested crop, not the seedling",
   urlFor(["plant", "tallplant", "crop"], "Carrot"), sprite("plants/Carrot.png"));
-check("the seedling is still reachable by its own name",
+checkEqual("the seedling is still reachable by its own name",
   urlFor(["plant"], "BabyCarrot"), sprite("plants/BabyCarrot.png"));
-check("crop by display name", urlFor(["crop"], "Bamboo Shoot"), sprite("plants/Bamboo.png"));
-check("tall plant falls back to the plants sheet",
+checkEqual("crop by display name", urlFor(["crop"], "Bamboo Shoot"), sprite("plants/Bamboo.png"));
+checkEqual("tall plant falls back to the plants sheet",
   urlFor(["tallplant", "plant"], "Bamboo"), sprite("plants/Bamboo.png"));
-check("mutation icon that lives in the ui sheet",
+checkEqual("mutation icon that lives in the ui sheet",
   urlFor(["mutation"], "Gold"), sprite("ui/MutationGold.png"));
-check("mutation icon that lives in the mutations sheet",
+checkEqual("mutation icon that lives in the mutations sheet",
   urlFor(["mutation"], "Wet"), sprite("mutations/Wet.png"));
 
 /* ------------------------------- Guard rails ------------------------------ */
 
-check("an unknown name still resolves to nothing", urlFor(["seed"], "NotARealSeed"), null);
-check("an empty candidate resolves to nothing", urlFor(["seed"], ""), null);
+checkEqual("an unknown name still resolves to nothing", urlFor(["seed"], "NotARealSeed"), null);
+checkEqual("an empty candidate resolves to nothing", urlFor(["seed"], ""), null);
 
 // The catalog must win over the index, so a stale index entry can never shadow
 // the versioned URL the catalog serves.
 resetSpriteResolver();
 setSpriteIndex([{ id: "sprite/pet/Bat", name: "Bat" }], API);
 setCatalogReader(key => (CATALOGS[key] as Record<string, unknown>) ?? null);
-check("catalog wins over the unversioned index URL",
+checkEqual("catalog wins over the unversioned index URL",
   urlFor(["pet"], "Bat"), sprite("pets/Bat.png"));
 
 // With no catalog at all the index is still used, so the mod degrades instead
 // of going blank if MGData has not landed yet.
 resetSpriteResolver();
 setSpriteIndex([{ id: "sprite/pet/Bat", name: "Bat" }], API);
-check("index still answers when the catalog is empty",
+checkEqual("index still answers when the catalog is empty",
   urlFor(["pet"], "Bat"), `${API}/assets/sprites/pets/Bat.png`);
 
-console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);
-process.exit(failures === 0 ? 0 : 1);
+done();
