@@ -11,10 +11,10 @@
 // The popup harvests nothing. It makes a *request*, which the chat turns into
 // a question to confirm: automation is not allowed (see `chat/proposals.ts`).
 
+import { pill } from "../../../ui/kit/badges";
 import { button } from "../../../ui/kit/button";
-import { openModal } from "../../../ui/kit/modal";
+import { settingRow } from "../../../ui/kit/layout";
 import { slider } from "../../../ui/kit/sliders";
-import { color } from "../../../ui/kit/theme";
 import type { ChatRequest } from "../chat";
 import { harvestRequest } from "../chat/commands/harvest";
 import { readHarvestable, type HarvestScope } from "../chat/gardenRead";
@@ -30,7 +30,7 @@ import {
   type HarvestRow,
   type MutationMode,
 } from "../chat/harvest";
-import { styled } from "./dom";
+import { openCompanionModal, part } from "./dom";
 import { choiceControl, mutationIconEl, speciesIcon, variantIcon } from "./harvestChips";
 import {
   fieldRow,
@@ -74,7 +74,7 @@ export function openHarvestModal(host: HTMLElement, onAsk: (request: ChatRequest
     render();
   };
 
-  const modal = openModal({
+  const modal = openCompanionModal({
     host,
     title: "What should I harvest?",
     widthPx: 460,
@@ -120,8 +120,8 @@ export function openHarvestModal(host: HTMLElement, onAsk: (request: ChatRequest
     filters.mutationMode,
     (value) => setFilters({ mutationMode: value }),
   );
-  const mutationTiles = styled("div", {});
-  mutationCard.body.append(fieldRow("Match", modeControl), mutationTiles);
+  const mutationTiles = part("div", "");
+  mutationCard.body.append(fieldRow("Match", [modeControl]), mutationTiles);
 
   function renderMutations(): void {
     // The mutations offered are those the kept species carry: offering a
@@ -133,9 +133,7 @@ export function openHarvestModal(host: HTMLElement, onAsk: (request: ChatRequest
     const kept = filters.mutations.filter((name) => mutations.includes(name));
     if (kept.length !== filters.mutations.length) filters = { ...filters, mutations: kept };
 
-    // "flex", not "": the card sets its display inline, so clearing it drops
-    // the card back to block and its header button stops filling the width.
-    mutationCard.root.style.display = mutations.length === 0 ? "none" : "flex";
+    mutationCard.root.hidden = mutations.length === 0;
     if (mutations.length === 0) return;
 
     if (modeControl.get() !== filters.mutationMode) modeControl.set(filters.mutationMode);
@@ -153,18 +151,11 @@ export function openHarvestModal(host: HTMLElement, onAsk: (request: ChatRequest
     mutationCard.setSummary(summarizeMutations(filters), filters.mutations.length > 0);
   }
 
-  const sizeValue = styled("span", { fontSize: "11.5px", color: color.text, minWidth: "38px", textAlign: "right" });
+  const sizeValue = pill("");
   const sizeSlider = slider(50, 100, 5, filters.minSizePct, { fill: true });
-  sizeSlider.style.flex = "1";
   sizeSlider.addEventListener("input", () => setFilters({ minSizePct: Number(sizeSlider.value) }));
-  {
-    // The slider needs the whole width: its label precedes it on the same line.
-    const control = styled("div", { display: "flex", alignItems: "center", gap: "10px", flex: "1", minWidth: "0" });
-    control.append(sizeSlider, sizeValue);
-    const row = fieldRow("Minimum size", control);
-    row.style.gap = "14px";
-    sizeCard.body.append(row);
-  }
+  // The slider needs the whole width: its label precedes it on the same line.
+  sizeCard.body.append(fieldRow("Minimum size", [sizeSlider, sizeValue], true));
 
   /* --------------------------------- scope ---------------------------------- */
 
@@ -180,7 +171,6 @@ export function openHarvestModal(host: HTMLElement, onAsk: (request: ChatRequest
    * paid per crop, so picking one by mistake costs something, while leaving
    * one behind only costs a second pass.
    */
-  const preservedLabel = styled("div", { fontSize: "11.5px", fontWeight: "600", color: color.text });
   const preservedControl = choiceControl<"skip" | "include">(
     [
       { value: "skip", label: "Leave them", title: "They stay in the ground" },
@@ -189,16 +179,15 @@ export function openHarvestModal(host: HTMLElement, onAsk: (request: ChatRequest
     filters.includePreserved ? "include" : "skip",
     (value) => setFilters({ includePreserved: value === "include" }),
   );
-  const preservedRow = styled("div", { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
-  const preservedHolder = styled("div", {});
-  preservedHolder.append(preservedControl);
-  preservedRow.append(preservedLabel, preservedHolder);
+  const preserved = settingRow("Preserved crops", null, preservedControl);
+  const preservedLabel = preserved.row.querySelector(".qmm-setting-row__title") as HTMLElement;
 
   function renderPreserved(): void {
     const ripe = scope.rows.filter((row) => row.ready && row.preserved).length;
     // The count reads in the label: without it, a gap between what is ripe
     // and what he offers would have no explanation on screen.
-    preservedLabel.textContent = ripe === 0 ? "Preserved crops" : `Preserved crops (${ripe} ripe)`;
+    const label = ripe === 0 ? "Preserved crops" : `Preserved crops (${ripe} ripe)`;
+    if (preservedLabel.textContent !== label) preservedLabel.textContent = label;
     const wanted = filters.includePreserved ? "include" : "skip";
     if (preservedControl.get() !== wanted) preservedControl.set(wanted);
   }
@@ -207,7 +196,6 @@ export function openHarvestModal(host: HTMLElement, onAsk: (request: ChatRequest
 
   const resetButton = button("Reset", {
     size: "sm",
-    block: true,
     onClick: () => {
       filters = { ...DEFAULT_FILTERS };
       render();
@@ -216,7 +204,6 @@ export function openHarvestModal(host: HTMLElement, onAsk: (request: ChatRequest
 
   const askButton = button("Ask to pick these", {
     size: "sm",
-    block: true,
     variant: "primary",
     onClick: () => {
       // The provider runs again at confirmation, Locker included, then applies
@@ -231,14 +218,16 @@ export function openHarvestModal(host: HTMLElement, onAsk: (request: ChatRequest
       modal.close();
     },
   });
-  askButton.style.marginLeft = "auto";
+  askButton.classList.add("qws-cmp-foot-end");
 
   const notice = settingsNotice("harvest", "Harvest is not set up. I will pick with the team you have on.", () => {
     modal.close();
     openHarvestSettingsModal(host, () => openSettingsModal(host));
   });
 
-  modal.body.append(notice, preservedRow, speciesCard.root, mutationCard.root, sizeCard.root, preview.root, note.root);
+  // What the Locker sets aside reads with the result it shapes.
+  preview.root.append(note.root);
+  modal.body.append(notice, preserved.row, speciesCard.root, mutationCard.root, sizeCard.root, preview.root);
   modal.footer.append(resetButton, askButton);
 
   /* --------------------------------- render --------------------------------- */

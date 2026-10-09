@@ -5,9 +5,8 @@
 // the player already has in mind.
 
 import { attachSpriteIcon } from "../../../ui/kit/sprites/iconCache";
-import { color } from "../../../ui/kit/theme";
 import { getAbilityChipColors } from "../../pets/abilityChipColors";
-import { iconSlot, styled } from "./dom";
+import { iconSlot, part } from "./dom";
 
 const SPRITE_LOG_TAG = "companion-hatch";
 const ICON_PX = 26;
@@ -23,8 +22,7 @@ export function petSpeciesIcon(species: string, sizePx = ICON_PX): HTMLElement {
   const candidates = [species, species.replace(/\s+/g, "")].filter(Boolean);
   attachSpriteIcon(box, ["pet"], candidates, sizePx, SPRITE_LOG_TAG, {
     onNoSpriteFound: () => {
-      Object.assign(box.style, { fontSize: "12px", fontWeight: "700", color: color.textDim });
-      box.textContent = species.charAt(0).toUpperCase();
+      box.replaceChildren(part("span", "qws-cmp-initial", species.charAt(0).toUpperCase()));
     },
   });
   return box;
@@ -33,16 +31,8 @@ export function petSpeciesIcon(species: string, sizePx = ICON_PX): HTMLElement {
 /** An ability's coloured chip, in the pet manager's colours. */
 export function abilityIcon(abilityId: string, sizePx = ICON_PX): HTMLElement {
   const box = iconSlot(sizePx);
-  const { bg } = getAbilityChipColors(abilityId);
-  box.append(
-    styled("span", {
-      display: "inline-block",
-      width: "13px",
-      height: "13px",
-      borderRadius: "4px",
-      background: bg,
-      boxShadow: `0 0 0 1px ${color.fieldBg} inset, 0 0 0 1px ${color.track}`,
-    }),
-  );
+  const chip = part("span", "qws-cmp-ability");
+  chip.style.background = getAbilityChipColors(abilityId).bg;
+  box.append(chip);
   return box;
 }

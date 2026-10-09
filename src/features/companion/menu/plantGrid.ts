@@ -8,9 +8,8 @@
 // would reload two hundred sprites every few seconds, with the drawing
 // flickering under the hand.
 
-import { color } from "../../../ui/kit/theme";
 import { GARDEN_COLS, GARDEN_ROWS, GARDEN_TILE_COUNT, type PlantAssignment } from "../chat/plant";
-import { styled } from "./dom";
+import { part } from "./dom";
 
 /** Big enough to aim with the mouse, small enough for the plot to fit. */
 const MAX_GRID_HEIGHT_PX = 300;
@@ -52,21 +51,14 @@ type Cell = {
 };
 
 export function plantGrid(options: PlantGridOptions): PlantGrid {
-  const root = styled("div", {
-    display: "grid",
+  const root = part("div", "qws-cmp-plot");
+  Object.assign(root.style, {
     gridTemplateColumns: `repeat(${GARDEN_COLS / 2}, 1fr) ${HALF_GAP_PX}px repeat(${GARDEN_COLS / 2}, 1fr)`,
     gridTemplateRows: `repeat(${GARDEN_ROWS}, 1fr)`,
-    gap: "2px",
-    height: `min(38vh, ${MAX_GRID_HEIGHT_PX}px)`,
     aspectRatio: `${GARDEN_COLS} / ${GARDEN_ROWS}`,
-    width: "auto",
-    margin: "0 auto",
-    padding: "6px",
-    borderRadius: "12px",
-    border: `1px solid ${color.border}`,
-    background: color.fieldBg,
-    boxSizing: "border-box",
-    flex: "0 0 auto",
+    // As tall as fits, but never wider than the popup: a narrow window shrinks
+    // the plot rather than cutting it.
+    maxWidth: `calc(min(38vh, ${MAX_GRID_HEIGHT_PX}px) * ${GARDEN_COLS / GARDEN_ROWS})`,
   });
   // The right button erases: its menu has no business here.
   root.addEventListener("contextmenu", (event) => event.preventDefault());
@@ -82,15 +74,7 @@ export function plantGrid(options: PlantGridOptions): PlantGrid {
   window.addEventListener("mouseup", stopPainting);
 
   function buildCell(tileIndex: number): HTMLDivElement {
-    const cell = styled("div", {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      borderRadius: "4px",
-      userSelect: "none",
-      border: "1px solid transparent",
-      transition: "background 90ms ease",
-    });
+    const cell = part("div", "qws-cmp-plot__cell");
     cell.dataset.tile = String(tileIndex);
 
     cell.addEventListener("mousedown", (event) => {
@@ -111,7 +95,7 @@ export function plantGrid(options: PlantGridOptions): PlantGrid {
   // Two halves of ten columns, split by an inert column.
   for (let row = 0; row < GARDEN_ROWS; row++) {
     for (let col = 0; col < GARDEN_COLS; col++) {
-      if (col === GARDEN_COLS / 2) root.append(styled("div", { pointerEvents: "none" }));
+      if (col === GARDEN_COLS / 2) root.append(part("div", "qws-cmp-plot__aisle"));
       const tileIndex = row * GARDEN_COLS + col;
       const el = buildCell(tileIndex);
       cells.set(tileIndex, { el, shown: null });
@@ -131,31 +115,17 @@ export function plantGrid(options: PlantGridOptions): PlantGrid {
     cell.shown = key;
     cell.el.replaceChildren();
 
-    if (key === "absent") {
-      Object.assign(cell.el.style, { background: "transparent", borderColor: "transparent", cursor: "default" });
-      cell.el.title = "";
-      return;
-    }
-    if (key === "occupied") {
-      // Red and nothing else: the tile says it is taken, not by what.
-      Object.assign(cell.el.style, { background: color.dangerHover, borderColor: color.danger, cursor: "not-allowed" });
-      cell.el.title = "Something is already growing here";
-      return;
-    }
-    if (key === "free") {
-      Object.assign(cell.el.style, { background: color.hoverBg, borderColor: color.border, cursor: "pointer" });
-      cell.el.title = "";
+    if (key === "absent" || key === "occupied" || key === "free") {
+      cell.el.dataset.state = key;
+      // Red and nothing else when taken: the tile says it is taken, not by what.
+      cell.el.title = key === "occupied" ? "Something is already growing here" : "";
       return;
     }
 
     const assignment = options.assignmentAt(tileIndex);
-    Object.assign(cell.el.style, { background: color.accentSoft, borderColor: color.accentBorder, cursor: "pointer" });
+    cell.el.dataset.state = "set";
     cell.el.title = assignment?.name ?? "";
-    if (assignment) {
-      const icon = options.iconFor(assignment, CELL_ICON_PX);
-      icon.style.pointerEvents = "none";
-      cell.el.append(icon);
-    }
+    if (assignment) cell.el.append(options.iconFor(assignment, CELL_ICON_PX));
   }
 
   return {

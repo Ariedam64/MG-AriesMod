@@ -1,4 +1,5 @@
-// The Behavior tab: on or off, where he stays, and whose look he borrows.
+// The Behavior tab: on or off, whose look he borrows, where he stays, and
+// when he speaks up.
 //
 // Kept bare on purpose. Movement values (pace, distances, delays) are
 // constants in `movement.ts`, tuned to the game's renderer rather than to
@@ -7,37 +8,28 @@
 import { CompanionService } from "..";
 import { checkFeedNow } from "../feedWatch";
 import type { CompanionMode } from "../anchors";
+import { card } from "../../../ui/kit/card";
 import { select } from "../../../ui/kit/fields";
-import { collapsibleCard, settingRow } from "../../../ui/kit/layout";
+import { settingRow } from "../../../ui/kit/layout";
 import { refreshWhileVisible } from "../../../ui/kit/dom";
-import { color } from "../../../ui/kit/theme";
+import { segmented } from "../../../ui/kit/segmented";
 import { switchInput } from "../../../ui/kit/toggles";
-import { styled } from "./dom";
+import { part } from "./dom";
+import { borrowedIdentity, portrait } from "./portrait";
 
 const STATUS_REFRESH_MS = 1000;
+const HERO_AVATAR_PX = 48;
 
-const MODE_LABELS: Array<[CompanionMode, string]> = [
-  ["follow", "Follow me"],
-  ["garden", "Stay in my garden"],
+const MODE_LABELS: Array<{ value: CompanionMode; label: string }> = [
+  { value: "follow", label: "Follow me" },
+  { value: "garden", label: "Stay in my garden" },
 ];
-
-function selectWith(options: Array<[value: string, label: string]>): HTMLSelectElement {
-  const el = select({ small: true });
-  for (const [value, label] of options) el.append(new Option(label, value));
-  return el;
-}
 
 export function renderBehaviorTab(view: HTMLElement): void {
   view.innerHTML = "";
   const settings = CompanionService.getSettings();
 
-  const card = collapsibleCard({
-    icon: "🧭",
-    title: "Behavior",
-    description: "Is he out, and where he stays.",
-    collapsed: false,
-    onToggle: () => {},
-  });
+  /* ---------------------------------- hero ---------------------------------- */
 
   const enableToggle = switchInput(settings.enabled, (on) => {
     void CompanionService.applySettings({ enabled: on })
@@ -49,17 +41,20 @@ export function renderBehaviorTab(view: HTMLElement): void {
       })
       .catch(() => {});
   });
+  enableToggle.setAttribute("aria-label", "Bring him out");
 
-  const modeSelect = selectWith(MODE_LABELS);
-  modeSelect.value = settings.mode;
-  modeSelect.addEventListener("change", () => {
-    void CompanionService.applySettings({ mode: modeSelect.value as CompanionMode })
-      .then(refresh)
-      .catch(() => {});
-  });
+  const face = part("div", "qws-cmp-avatar-gap");
+  const name = part("div", "qws-cmp-hero__name", "Companion");
+  const status = part("div", "qws-cmp-hero__status");
+  const text = part("div", "qws-cmp-hero__text");
+  text.append(name, status);
+  const top = part("div", "qws-cmp-hero__top");
+  top.append(face, text, enableToggle);
 
-  const npcSelect = selectWith([["", "Loading…"]]);
+  const npcSelect = select({ small: true });
+  npcSelect.append(new Option("Loading…", ""));
   npcSelect.disabled = true;
+  npcSelect.setAttribute("aria-label", "Borrowed NPC");
   npcSelect.addEventListener("change", () => {
     void CompanionService.applySettings({ npcId: npcSelect.value || null })
       .then(refresh)
@@ -86,25 +81,31 @@ export function renderBehaviorTab(view: HTMLElement): void {
       npcSelect.append(new Option("Unavailable", ""));
     });
 
-  const status = styled("div", { fontSize: "12px", color: color.textDim, padding: "2px 2px 0" });
+  const lookRow = part("div", "qws-cmp-hero__look-row");
+  lookRow.append(part("span", "qws-cmp-label", "Look"), npcSelect);
+  const look = part("div", "qws-cmp-hero__look");
+  look.append(lookRow, part("div", "qws-cmp-hint", 'Whose look he borrows. "In game" means already out.'));
 
-  const showStatus = (text: string) => {
-    if (status.textContent !== text) status.textContent = text;
-  };
+  const hero = part("div", "qmm-card qws-cmp-hero");
+  hero.append(top, look);
 
-  function refresh(): void {
-    if (!CompanionService.isRunning()) {
-      showStatus("Inactive.");
-      return;
-    }
-    const npcId = CompanionService.getNpcId();
-    const name = npcId ? npcId.replace(/^NPC_/, "") : "?";
-    const wanted = CompanionService.getSettings().mode;
-    const actual = CompanionService.getEffectiveMode();
-    // A silent fallback would make no sense to the player: it is said.
-    const fallback = actual && actual !== wanted ? " (no garden found, following you)" : "";
-    showStatus(`Active as ${name}${fallback}. Only you can see it.`);
-  }
+  /* ------------------------------ where he stays ----------------------------- */
+
+  const modeControl = segmented(
+    MODE_LABELS,
+    settings.mode,
+    (mode) => {
+      // The kit calls back on a click on the current choice too.
+      if (mode === CompanionService.getSettings().mode) return;
+      void CompanionService.applySettings({ mode }).then(refresh).catch(() => {});
+    },
+    { fullWidth: true, ariaLabel: "Where he stays" },
+  );
+
+  const placeCard = card("Where he stays", { subtitle: "Next to you, or on your own plot." });
+  placeCard.body.append(modeControl);
+
+  /* -------------------------------- speaking -------------------------------- */
 
   const askToggle = switchInput(settings.askOnScreen, (on) => {
     void CompanionService.applySettings({ askOnScreen: on });
@@ -114,17 +115,47 @@ export function renderBehaviorTab(view: HTMLElement): void {
     void CompanionService.applySettings({ reactions: on });
   });
 
-  card.body.append(
-    settingRow("Enable", "Brings him out next to you.", enableToggle).row,
-    settingRow("Mode", "Follows you, or stays on your plot.", modeSelect).row,
-    settingRow("Borrowed NPC", 'Whose look it takes. "In game" means already spawned.', npcSelect).row,
-    settingRow("Ask on screen", "Shows his questions at the top, portrait and all.", askToggle).row,
-    settingRow("Reactions", "Comments on weather, sales, milestones and how long you've played.", reactionsToggle).row,
-    status,
+  const talkCard = card("Speaking up");
+  talkCard.body.append(
+    settingRow("Questions on screen", "Shows his questions at the top, portrait and all.", askToggle).row,
+    settingRow("Reactions", "Weather, sales, milestones and how long you've played.", reactionsToggle).row,
   );
+
+  /* --------------------------------- status --------------------------------- */
+
+  let shownNpc: string | null | undefined;
+
+  const showText = (el: HTMLElement, value: string) => {
+    if (el.textContent !== value) el.textContent = value;
+  };
+
+  function refresh(): void {
+    const running = CompanionService.isRunning();
+    hero.classList.toggle("is-on", running);
+
+    const identity = running ? borrowedIdentity() : { npcId: null, name: null };
+    // Composing the portrait again on every beat would be waste.
+    if (identity.npcId !== shownNpc) {
+      shownNpc = identity.npcId;
+      face.replaceChildren(portrait(identity, HERO_AVATAR_PX, true));
+    }
+    showText(name, identity.name ?? "Companion");
+
+    if (!running) {
+      showText(status, "Resting. Switch him on to bring him out.");
+      return;
+    }
+    const wanted = CompanionService.getSettings().mode;
+    const actual = CompanionService.getEffectiveMode();
+    // A silent fallback would make no sense to the player: it is said.
+    const fallback = actual && actual !== wanted ? " No garden found, so he follows you." : "";
+    showText(status, `Out next to you. Only you can see him.${fallback}`);
+  }
 
   refresh();
   refreshWhileVisible(status, refresh, STATUS_REFRESH_MS);
 
-  view.append(card.root);
+  const tab = part("div", "qws-cmp-tab");
+  tab.append(hero, placeCard.root, talkCard.root);
+  view.append(tab);
 }

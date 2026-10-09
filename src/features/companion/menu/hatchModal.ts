@@ -13,15 +13,13 @@
 
 import { button } from "../../../ui/kit/button";
 import { numberInput } from "../../../ui/kit/fields";
-import { openModal } from "../../../ui/kit/modal";
-import { color } from "../../../ui/kit/theme";
 import { switchInput } from "../../../ui/kit/toggles";
 import type { ChatRequest } from "../chat";
 import { hatchRequest } from "../chat/commands/hatch";
 import { DEFAULT_KEEP_RULES, describeHatchRequest, hasAnyRule, type KeepRules } from "../chat/hatch";
 import { EMPTY_HATCH_SCOPE, readHatchScope, type HatchScope } from "../chat/hatchRead";
 import { loadCompanionSettings, patchCompanionSettings } from "../state";
-import { styled } from "./dom";
+import { openCompanionModal, part } from "./dom";
 import { labelledTile, mutationIconEl, spriteTile, tileRow } from "./harvestChips";
 import { fieldRow, filterCard, resultBox } from "./harvestFields";
 import { abilityIcon, petSpeciesIcon } from "./hatchChips";
@@ -72,7 +70,7 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: ChatRequest) 
     return known;
   };
 
-  const modal = openModal({
+  const modal = openCompanionModal({
     host,
     title: "Hatching",
     widthPx: 470,
@@ -121,24 +119,20 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: ChatRequest) 
 
   /** Keeps a long list to a bearable height: abilities come by the dozen. */
   function scrollable(row: HTMLElement): HTMLElement {
-    const box = styled("div", { maxHeight: `${ABILITY_LIST_MAX_PX}px`, overflowY: "auto", overscrollBehavior: "contain" });
+    const box = part("div", "qws-cmp-scroll qmm-scroll");
+    box.style.maxHeight = `${ABILITY_LIST_MAX_PX}px`;
     box.append(row);
     return box;
   }
 
-  /**
-   * Fills one rule card, or hides it when there is nothing to offer.
-   *
-   * "flex", not "": the card would otherwise drop to block and its header
-   * button would stop filling the width.
-   */
+  /** Fills one rule card, or hides it when there is nothing to offer. */
   function renderCard(
     card: ReturnType<typeof filterCard>,
     values: string[],
     picked: string[],
     content: () => HTMLElement,
   ): void {
-    card.root.style.display = values.length > 0 ? "flex" : "none";
+    card.root.hidden = values.length === 0;
     if (values.length === 0) return;
     card.body.replaceChildren(content());
     card.setSummary(summarize(picked.length), picked.length > 0);
@@ -202,26 +196,20 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: ChatRequest) 
     commit({ ...rules, minMaxStr: on ? Number(strengthField.value) || DEFAULT_STR : null });
   });
 
-  {
-    const control = styled("div", { display: "flex", alignItems: "center", gap: "10px" });
-    control.append(strengthField.wrap, strengthToggle);
-    strengthCard.body.append(fieldRow("Keep max STR from", control));
-  }
+  strengthCard.body.append(fieldRow("Keep max STR from", [strengthField.wrap, strengthToggle]));
 
   /* --------------------------------- strip ---------------------------------- */
 
   const strip = resultBox();
-  strip.root.style.gap = "5px";
-  const note = styled("div", { fontSize: "11px", lineHeight: "1.5", color: color.textDim });
+  const note = part("div", "qws-cmp-hint");
   strip.root.append(note);
 
   /* --------------------------------- footer --------------------------------- */
 
-  const resetButton = button("Reset", { size: "sm", block: true, onClick: () => commit({ ...DEFAULT_KEEP_RULES }) });
+  const resetButton = button("Reset", { size: "sm", onClick: () => commit({ ...DEFAULT_KEEP_RULES }) });
 
   const askButton = button("Ask to hatch", {
     size: "sm",
-    block: true,
     variant: "primary",
     onClick: () => {
       // The eggs are read again at confirmation: that is what notices one that
@@ -230,7 +218,7 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: ChatRequest) 
       modal.close();
     },
   });
-  askButton.style.marginLeft = "auto";
+  askButton.classList.add("qws-cmp-foot-end");
 
   const notice = settingsNotice("hatch", "Hatching is not set up. I will use the team you have on.", () => {
     modal.close();
@@ -251,20 +239,18 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: ChatRequest) 
 
     strengthField.disabled = rules.minMaxStr === null;
     if (rules.minMaxStr !== null) strengthField.value = String(rules.minMaxStr);
-    strengthField.wrap.style.opacity = rules.minMaxStr === null ? "0.45" : "1";
+    strengthField.wrap.classList.toggle("qws-cmp-dim", rules.minMaxStr === null);
     strengthCard.setSummary(rules.minMaxStr === null ? "Off" : `${rules.minMaxStr} and up`, rules.minMaxStr !== null);
 
     const ready = scope.readySlots.length;
     const waiting = scope.totalEggs - ready;
     strip.headline.textContent = ready === 0 ? "No egg is ready" : `${ready} egg${ready === 1 ? "" : "s"} ready`;
 
-    if (!hasAnyRule(rules)) {
-      note.textContent = "Nothing set to keep, so I will not offer to sell. Favourites and your active team are always safe.";
-      note.style.color = color.warn;
-    } else {
-      note.textContent = `Favourites and your active team are never sold.${waiting > 0 ? ` ${waiting} still growing.` : ""}`;
-      note.style.color = color.textDim;
-    }
+    const keepsNothing = !hasAnyRule(rules);
+    note.classList.toggle("is-warn", keepsNothing);
+    note.textContent = keepsNothing
+      ? "Nothing set to keep, so I will not offer to sell. Favourites and your active team are always safe."
+      : `Favourites and your active team are never sold.${waiting > 0 ? ` ${waiting} still growing.` : ""}`;
 
     askButton.setEnabled(ready > 0);
   }

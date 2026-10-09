@@ -5,14 +5,14 @@
 
 import { CompanionService } from "..";
 import { settingRow } from "../../../ui/kit/layout";
-import { openModal } from "../../../ui/kit/modal";
 import { loadCompanionSettings, markReviewed } from "../state";
+import { openCompanionModal } from "./dom";
 import { NO_TEAMS_HINT, addBackButton, settingsHint, teamSelect } from "./settingsParts";
 
 export function openHarvestSettingsModal(host: HTMLElement, back: () => void): void {
   markReviewed("harvest");
 
-  const modal = openModal({ host, title: "Harvest", widthPx: 460 });
+  const modal = openCompanionModal({ host, title: "Harvest", widthPx: 460 });
   const settings = loadCompanionSettings();
 
   const team = teamSelect(settings.harvestTeamId, (teamId) => {
@@ -20,7 +20,7 @@ export function openHarvestSettingsModal(host: HTMLElement, back: () => void): v
   });
 
   modal.body.append(
-    settingRow("Team to wear while harvesting", "For abilities that pay off on harvest.", team.el).row,
+    settingRow("Harvest team", "Worn while he picks, for abilities that pay off on harvest.", team.el).row,
     settingsHint(
       team.empty
         ? NO_TEAMS_HINT

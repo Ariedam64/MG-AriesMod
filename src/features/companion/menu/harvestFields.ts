@@ -7,10 +7,9 @@
 
 import { sectionLabel } from "../../../ui/kit/card";
 import { collapsibleCard } from "../../../ui/kit/layout";
-import { color } from "../../../ui/kit/theme";
 import type { HarvestFilters } from "../chat/harvest";
 import { listWords } from "../chat/harvest";
-import { styled } from "./dom";
+import { part } from "./dom";
 import { allTile, spriteTile, tileRow } from "./harvestChips";
 
 type FilterCard = {
@@ -22,37 +21,29 @@ type FilterCard = {
 
 /** A folded card, title on the left, current state on the right. */
 export function filterCard(title: string): FilterCard {
-  const summary = styled("div", {
-    marginLeft: "auto",
-    fontSize: "11px",
-    color: color.textDim,
-    textAlign: "right",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    maxWidth: "60%",
-  });
-
-  const header = styled("div", { display: "flex", alignItems: "center", gap: "8px", width: "100%" });
+  const summary = part("div", "qws-cmp-filter__summary");
+  const header = part("div", "qws-cmp-filter__head");
   header.append(sectionLabel(title), summary);
 
   const { root, body } = collapsibleCard({ header, collapsed: true, onToggle: () => {} });
-  Object.assign(root.style, { padding: "9px 11px", gap: "9px", flex: "0 0 auto" });
+  root.classList.add("qws-cmp-filter");
 
   return {
     root,
     body,
     setSummary(text, active) {
       summary.textContent = text;
-      summary.style.color = active ? color.accent : color.textDim;
+      summary.classList.toggle("is-active", active);
     },
   };
 }
 
-/** A field line inside a card: a label, a control. */
-export function fieldRow(label: string, control: HTMLElement): HTMLElement {
-  const row = styled("div", { display: "flex", alignItems: "center", gap: "10px", justifyContent: "space-between" });
-  row.append(styled("div", { fontSize: "11.5px", color: color.text }, label), control);
+/** A field line inside a card: a label, its controls. `grow` lets them take the rest of the line. */
+export function fieldRow(label: string, controls: HTMLElement[], grow = false): HTMLElement {
+  const row = part("div", "qws-cmp-field");
+  const holder = part("div", grow ? "qws-cmp-field__control is-grow" : "qws-cmp-field__control");
+  holder.append(...controls);
+  row.append(part("div", "qws-cmp-field__label", label), holder);
   return row;
 }
 
@@ -122,28 +113,19 @@ export function summarizeSize(filters: HarvestFilters): string {
 
 /* --------------------------------- strips --------------------------------- */
 
-/** The coloured box at the bottom of a popup: a headline, then whatever the popup puts under it. */
+/** The tinted box at the bottom of a popup: a headline, then whatever the popup puts under it. */
 export function resultBox(): { root: HTMLElement; headline: HTMLElement } {
-  const root = styled("div", {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-    padding: "11px 12px",
-    borderRadius: "12px",
-    background: color.accentSoft,
-    border: `1px solid ${color.border}`,
-    flex: "0 0 auto",
-  });
-  const headline = styled("div", { fontSize: "13px", fontWeight: "600", color: color.accent });
+  const root = part("div", "qws-cmp-result");
+  const headline = part("div", "qws-cmp-result__head");
   root.append(headline);
   return { root, headline };
 }
 
 /** A sprite and its count, side by side. */
 export function countedIcon(icon: HTMLElement, label: string, count: number): HTMLElement {
-  const pair = styled("div", { display: "flex", alignItems: "center", gap: "3px" });
+  const pair = part("div", "qws-cmp-count");
   pair.title = label;
-  pair.append(icon, styled("span", { fontSize: "11px", color: color.textDim }, String(count)));
+  pair.append(icon, part("span", "", String(count)));
   return pair;
 }
 
@@ -163,7 +145,7 @@ type ResultStrip = {
  */
 export function resultStrip(): ResultStrip {
   const { root, headline } = resultBox();
-  const sprites = styled("div", { display: "flex", alignItems: "flex-end", gap: "10px", flexWrap: "wrap" });
+  const sprites = part("div", "qws-cmp-result__icons");
   root.append(sprites);
 
   return {
@@ -171,28 +153,24 @@ export function resultStrip(): ResultStrip {
     update(total, entries, hidden) {
       headline.textContent = total === 0 ? "Nothing to pick" : `${total} crop${total === 1 ? "" : "s"}`;
       sprites.replaceChildren(...entries.map((entry) => countedIcon(entry.icon, entry.label, entry.count)));
-      sprites.style.display = entries.length === 0 ? "none" : "flex";
-      if (hidden > 0) {
-        sprites.append(styled("span", { fontSize: "11px", color: color.textDim, alignSelf: "center" }, `+${hidden} more`));
-      }
+      sprites.hidden = entries.length === 0;
+      if (hidden > 0) sprites.append(part("span", "qws-cmp-more", `+${hidden} more`));
     },
   };
 }
 
 /** The note under the strip: what the Locker sets aside. */
 export function lockedNote(): { root: HTMLElement; update(lockedOut: number): void } {
-  const root = styled("div", { fontSize: "11px", lineHeight: "1.5", color: color.textDim });
+  const root = part("div", "qws-cmp-hint");
 
   return {
     root,
     update(lockedOut) {
-      if (lockedOut === 0) {
-        root.textContent = "Your Locker decides what I leave alone.";
-        root.style.color = color.textDim;
-        return;
-      }
-      root.textContent = `Leaving ${lockedOut} locked crop${lockedOut === 1 ? "" : "s"} alone.`;
-      root.style.color = color.warn;
+      root.classList.toggle("is-warn", lockedOut > 0);
+      root.textContent =
+        lockedOut === 0
+          ? "Your Locker decides what I leave alone."
+          : `Leaving ${lockedOut} locked crop${lockedOut === 1 ? "" : "s"} alone.`;
     },
   };
 }

@@ -7,9 +7,8 @@
 import { eggCatalog } from "../../../data";
 import { eggCatalogName, seedCatalogName } from "../../../data/names";
 import { attachSpriteIcon } from "../../../ui/kit/sprites/iconCache";
-import { color } from "../../../ui/kit/theme";
 import type { PlantItem, PlantKind } from "../chat/plant";
-import { iconSlot, spriteSpellings, styled } from "./dom";
+import { iconSlot, part, spriteSpellings } from "./dom";
 
 const SPRITE_LOG_TAG = "companion-plant";
 const ICON_PX = 24;
@@ -47,35 +46,21 @@ export type PlantTile = {
  * the carrots ran out beats wondering where they went.
  */
 export function plantTile(item: PlantItem, onClick: () => void): PlantTile {
-  const el = styled("button", {
-    display: "inline-flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: "1px",
-    padding: "5px 6px 3px",
-    borderRadius: "10px",
-    cursor: "pointer",
-    lineHeight: "1",
-    transition: "background 120ms ease, border-color 120ms ease, opacity 120ms ease",
-  });
+  const el = part("button", "qws-cmp-tile");
   el.type = "button";
   el.title = item.kind === "egg" ? `${item.name} (egg)` : item.name;
 
-  const count = styled("span", { fontSize: "10px" });
+  const count = part("span", "qws-cmp-tile__count");
   el.append(plantItemIcon(item), count);
   el.addEventListener("click", onClick);
 
   return {
     el,
     update(left, selected) {
-      const empty = left <= 0;
       count.textContent = String(Math.max(0, left));
-      Object.assign(el.style, {
-        background: selected ? color.accentSoft : color.cardBg,
-        border: `1px solid ${selected ? color.accentBorder : color.border}`,
-        opacity: empty && !selected ? "0.45" : "1",
-      });
-      count.style.color = selected ? color.accent : empty ? color.warn : color.textDim;
+      el.classList.toggle("is-selected", selected);
+      el.classList.toggle("is-empty", left <= 0);
+      el.setAttribute("aria-pressed", selected ? "true" : "false");
     },
   };
 }

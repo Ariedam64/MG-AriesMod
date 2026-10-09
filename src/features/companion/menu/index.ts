@@ -5,19 +5,18 @@ import { Menu } from "../../../ui/kit/menu";
 import { COMPANION_TAB_EVENT } from "../keybind";
 import { renderBehaviorTab } from "./behaviorTab";
 import { renderChatTab } from "./chatTab";
-
-/**
- * The thread needs width: HUD windows size to their content, and with no floor
- * the companion opened in a column where every message took five lines.
- */
-const MIN_WIDTH_PX = 460;
+import { ensureCompanionStyles } from "./styles";
 
 const TABS = ["behavior", "chat"] as const;
 
 export function renderCompanionMenu(root: HTMLElement): void {
+  ensureCompanionStyles();
   const ui = new Menu({ id: "companion", compact: true, windowSelector: ".qws-win" });
   ui.mount(root);
-  root.style.minWidth = `${MIN_WIDTH_PX}px`;
+  // The thread needs width: HUD windows size to their content, and with no
+  // floor the companion opened in a column where every message took five
+  // lines. The floor gives way on a screen narrower than it.
+  root.classList.add("qws-cmp-window");
 
   ui.addTab("behavior", "Behavior", (view) => renderBehaviorTab(view));
   ui.addTab("chat", "Chat", (view) => renderChatTab(view));
