@@ -28,41 +28,42 @@ function showIcon(button: HTMLButtonElement, label: string): void {
   void getSpriteObjectUrlByName(["ui"], iconName).then((url) => {
     if (!url) return;
     const img = document.createElement("img");
+    img.className = "qws-calc-seg__icon";
     img.src = url;
     img.alt = label;
-    img.title = label;
     img.width = ICON_PX;
     img.height = ICON_PX;
-    Object.assign(img.style, { width: `${ICON_PX}px`, height: `${ICON_PX}px`, objectFit: "contain", display: "block" });
     img.draggable = false;
     labelSpan.replaceChildren(img);
   });
 }
 
-/** `onPick` is left out while there is no crop to apply the choice to. */
+export type OptionPicker<T extends string> = SegmentedControl<T> & {
+  /** Greys the options out while there is no crop to apply them to. */
+  setEnabled(enabled: boolean): void;
+};
+
 export function optionPicker<T extends string>(
   labels: readonly T[],
   selected: T,
   ariaLabel: string,
-  onPick?: (value: T) => void,
-): SegmentedControl<T> {
+  onPick: (value: T) => void,
+): OptionPicker<T> {
   const control = segmented<T>(
-    labels.map((label) => ({ value: label, label, disabled: !onPick })),
+    labels.map((label) => ({ value: label, label })),
     selected,
     onPick,
     { ariaLabel, fullWidth: true },
-  );
-  control.style.setProperty("--seg-pad", "6px");
-  for (const button of control.querySelectorAll<HTMLButtonElement>(".qmm-seg__btn")) {
-    Object.assign(button.style, {
-      flex: "1 1 0",
-      minWidth: "0",
-      display: "flex",
-      justifyContent: "center",
-      fontSize: "11px",
-      fontWeight: "600",
-    });
-    showIcon(button, button.dataset.value ?? "");
+  ) as OptionPicker<T>;
+  control.classList.add("qws-calc-seg");
+  const buttons = Array.from(control.querySelectorAll<HTMLButtonElement>(".qmm-seg__btn"));
+  for (const button of buttons) {
+    const label = button.dataset.value ?? "";
+    button.title = label;
+    showIcon(button, label);
   }
+  control.setEnabled = (enabled) => {
+    for (const button of buttons) button.disabled = !enabled;
+  };
   return control;
 }

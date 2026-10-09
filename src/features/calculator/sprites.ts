@@ -3,7 +3,11 @@
 
 import { attachSpriteIcon } from "../../ui/kit/sprites/iconCache";
 import { h } from "../../ui/kit/dom";
-import type { LockerSeedOption } from "../locker/seedOptions";
+import {
+  getLockerSeedEmojiForKey,
+  getLockerSeedEmojiForSeedName,
+  type LockerSeedOption,
+} from "../locker/seedOptions";
 
 const PREVIEW_SPRITE_PX = 96;
 
@@ -60,16 +64,19 @@ function spriteCategories(option: LockerSeedOption): string[] {
   return [...DEFAULT_CATEGORIES];
 }
 
+/** The emoji that stands in for a crop until its sprite loads. */
+export function cropEmoji(option: LockerSeedOption | undefined, key: string): string {
+  return (
+    getLockerSeedEmojiForKey(key) ||
+    (option?.seedName ? getLockerSeedEmojiForSeedName(option.seedName) : undefined) ||
+    "🌱"
+  );
+}
+
 /** A small crop icon with an emoji until the sprite loads. */
 export function cropListIcon(option: LockerSeedOption, emoji: string, size: number): HTMLElement {
-  const wrap = h("span", undefined, emoji.trim() ? emoji : "??");
-  Object.assign(wrap.style, {
-    width: `${size}px`,
-    height: `${size}px`,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-  });
+  const wrap = h("span", "qws-calc-icon", emoji.trim() ? emoji : "??");
+  wrap.style.width = wrap.style.height = `${size}px`;
   attachSpriteIcon(wrap, spriteCategories(option), spriteCandidates(option.key, option), size, "calculator-list");
   return wrap;
 }
@@ -84,25 +91,14 @@ export type CropPreview = {
 };
 
 export function cropPreview(): CropPreview {
-  const root = h("span");
-  Object.assign(root.style, {
-    position: "relative",
-    display: "inline-flex",
-    flexShrink: "0",
-    width: `${PREVIEW_SPRITE_PX}px`,
-    height: `${PREVIEW_SPRITE_PX}px`,
-    transformOrigin: "center",
-  });
-
-  const fill = { position: "absolute", inset: "0", display: "flex", alignItems: "center", justifyContent: "center" };
-  const fallback = h("span");
-  Object.assign(fallback.style, fill, { zIndex: "0", fontSize: "42px" });
-  const layer = h("span");
-  Object.assign(layer.style, fill, { zIndex: "1" });
+  const root = h("span", "qws-calc-sprite");
+  root.style.width = root.style.height = `${PREVIEW_SPRITE_PX}px`;
+  const fallback = h("span", "qws-calc-sprite__fallback");
+  const layer = h("span", "qws-calc-sprite__layer");
   root.append(fallback, layer);
 
   const syncFallback = () => {
-    fallback.style.opacity = layer.childElementCount > 0 ? "0" : "";
+    root.classList.toggle("has-sprite", layer.childElementCount > 0);
   };
 
   return {
