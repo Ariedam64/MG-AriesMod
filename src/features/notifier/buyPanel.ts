@@ -1,3 +1,4 @@
+import { addStyle } from "../../lib/dom";
 import { decorCatalogName, eggCatalogName, seedCatalogName, toolCatalogName } from "../../data/names";
 import { button } from "../../ui/kit/button";
 import { h } from "../../ui/kit/dom";
@@ -7,7 +8,35 @@ import { findStockItem, type AvailableItem, type ShopAlerts } from "./shopAlerts
 
 /** The dropdown under the bell: every followed item in stock, with Buy and Buy all. */
 
-const ROW_BORDER = "1px solid var(--qmm-border)";
+const STYLE_ID = "qws-buy-style";
+
+const CSS = `
+.qws-buy {
+  position: fixed; z-index: var(--chakra-zIndices-DialogModal, 7010); pointer-events: auto;
+  width: min(340px, 80vw); max-height: 50vh; overflow: auto; box-sizing: border-box; padding: 10px;
+  /* Keeps the scroll, and touch gestures, from reaching the game. */
+  overscroll-behavior: contain; touch-action: pan-y;
+  border: 3px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-lg);
+  background: var(--qmm-paper); color: var(--qmm-text); box-shadow: var(--qmm-shadow-raise);
+  font-family: var(--qmm-font); font-size: var(--qmm-fs-md);
+  scrollbar-width: thin; scrollbar-color: var(--qmm-scrollbar) transparent;
+}
+.qws-buy__title { padding: 2px 4px 8px; font-size: var(--qmm-fs-lg); font-weight: 900; }
+.qws-buy__list { display: flex; flex-direction: column; gap: 2px; }
+.qws-buy__row {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto auto; align-items: center;
+  gap: var(--qmm-space-md); padding: 6px; border-radius: var(--qmm-radius-md);
+}
+.qws-buy__row:hover { background: var(--qmm-paper-deep); }
+.qws-buy__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
+.qws-buy__qty { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--qmm-text-soft); }
+.qws-buy__empty { padding: 12px 4px; text-align: center; color: var(--qmm-text-dim); }
+`;
+
+function ensureBuyStyles(): void {
+  if (document.getElementById(STYLE_ID)) return;
+  addStyle(CSS).id = STYLE_ID;
+}
 
 /** The display name of an alert item (`Seed:Carrot`). */
 function itemName(id: string): string {
@@ -45,29 +74,11 @@ export class BuyPanel {
   private lastSig: string | null = null;
 
   constructor(private readonly alerts: ShopAlerts) {
-    this.el = h("div");
+    ensureBuyStyles();
+    this.el = h("div", "qws-buy");
     this.el.setAttribute("role", "dialog");
-    this.el.setAttribute("aria-label", "Tracked items available");
-    Object.assign(this.el.style, {
-      position: "fixed",
-      width: "min(340px, 80vw)",
-      maxHeight: "50vh",
-      overflow: "auto",
-      // Keeps the scroll, and touch gestures, from reaching the game.
-      overscrollBehavior: "contain",
-      touchAction: "pan-y",
-      borderRadius: "var(--chakra-radii-card, 12px)",
-      border: "1px solid var(--qmm-border-strong)",
-      background: "var(--qmm-panel-bg)",
-      backdropFilter: "blur(8px)",
-      color: "var(--qmm-text)",
-      boxShadow: "var(--qmm-shadow-window)",
-      padding: "8px",
-      display: "none",
-      zIndex: "var(--chakra-zIndices-DialogModal, 7010)",
-      pointerEvents: "auto",
-    });
-    this.el.style.setProperty("-webkit-backdrop-filter", "blur(8px)");
+    this.el.setAttribute("aria-label", "Followed items in stock");
+    this.el.style.display = "none";
     this.stopScrollReachingGame();
   }
 
@@ -85,52 +96,21 @@ export class BuyPanel {
     if (sig === this.lastSig) return;
     this.lastSig = sig;
 
-    const head = h("div", undefined, "Tracked items available");
-    Object.assign(head.style, {
-      fontWeight: "700",
-      opacity: "0.9",
-      padding: "4px 2px",
-      borderBottom: ROW_BORDER,
-      marginBottom: "4px",
-    });
-    this.el.replaceChildren(head);
-
+    const head = h("div", "qws-buy__title", "In stock now");
     if (!items.length) {
-      const empty = h("div", undefined, "No tracked items are available.");
-      Object.assign(empty.style, { opacity: "0.75", padding: "8px 2px" });
-      this.el.appendChild(empty);
+      this.el.replaceChildren(head, h("div", "qws-buy__empty", "None of your followed items is in stock."));
       return;
     }
-    for (const item of items) this.el.appendChild(this.renderRow(item));
+    const list = h("div", "qws-buy__list");
+    list.append(...items.map((item) => this.renderRow(item)));
+    this.el.replaceChildren(head, list);
   }
 
   private renderRow({ id, qty }: AvailableItem): HTMLDivElement {
-    const row = h("div");
-    Object.assign(row.style, {
-      display: "grid",
-      gridTemplateColumns: "24px 1fr max-content max-content max-content",
-      alignItems: "center",
-      gap: "8px",
-      padding: "6px 4px",
-      borderBottom: ROW_BORDER,
-    });
-
-    const title = h("div", undefined, itemName(id));
-    Object.assign(title.style, {
-      fontWeight: "600",
-      fontSize: "12px",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-    });
-
-    const count = h("div", undefined, `×${qty}`);
-    Object.assign(count.style, {
-      fontVariantNumeric: "tabular-nums",
-      opacity: "0.9",
-      color: "var(--qmm-text-soft)",
-      textAlign: "right",
-    });
+    const row = h("div", "qws-buy__row");
+    const title = h("div", "qws-buy__name", itemName(id));
+    title.title = itemName(id);
+    const count = h("div", "qws-buy__qty", `×${qty}`);
 
     const buyBtn = button("Buy", { size: "xs", variant: "primary" });
     const buyAllBtn = button("Buy all", { size: "xs" });
@@ -156,7 +136,7 @@ export class BuyPanel {
       }
     }
 
-    row.append(shopItemIcon(id, itemName(id), 24, "alerts-overlay"), title, count, buyBtn, buyAllBtn);
+    row.append(shopItemIcon(id, itemName(id), 28, "alerts-overlay"), title, count, buyBtn, buyAllBtn);
     return row;
   }
 
