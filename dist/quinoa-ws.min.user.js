@@ -10303,10 +10303,11 @@
     }
     return null;
   }
-  var INTERNAL_TO_API, API_TO_INTERNAL, SEARCH_CATS, indexEntries, nameIndex, CATALOG_SOURCES, catalogIndex, catalogSourcesIndexed, catalogReader;
+  var API_BASE, INTERNAL_TO_API, API_TO_INTERNAL, SEARCH_CATS, indexEntries, nameIndex, CATALOG_SOURCES, catalogIndex, catalogSourcesIndexed, catalogReader;
   var init_resolver = __esm({
     "src/ui/kit/sprites/resolver.ts"() {
       "use strict";
+      API_BASE = "https://mg-api.ariedam.fr";
       INTERNAL_TO_API = {
         plant: "plants",
         tallplant: "tallPlants",
@@ -10379,21 +10380,7 @@
     }
   });
 
-  // src/ui/kit/sprites/iconCache.ts
-  function fetchIndex() {
-    if (indexReady) return indexReady;
-    indexReady = getJSON(
-      `${API_BASE}/assets/sprite-data?flat=1`,
-      SPRITE_REQUEST
-    ).then((data) => {
-      setSpriteIndex(data.items || [], API_BASE);
-      console.log("[SpriteIconCache] sprite index loaded", { count: spriteIndexSize() });
-    }).catch((err) => {
-      console.error("[SpriteIconCache] failed to fetch sprite index", err);
-      indexReady = null;
-    });
-    return indexReady;
-  }
+  // src/ui/kit/sprites/mutationTint.ts
   function knownMutations(list) {
     if (!Array.isArray(list)) return [];
     const names = list.map((value) => typeof value === "string" ? value.trim() : "").filter((name) => !!name && (!!MUTATION_FILTERS[name] || !!MUTATION_ICONS[name]));
@@ -10443,7 +10430,7 @@
     ctx2.fillStyle = gradient2;
     ctx2.fillRect(0, 0, width, height);
   }
-  async function applyMutationFilters(img, mutations) {
+  async function applyMutationFilters(img, mutations, loadIcon) {
     const allMuts = [...new Set(mutations.filter((m) => MUTATION_FILTERS[m]))];
     const colorMuts = normalizeMutations(mutations);
     if (!colorMuts.length && !allMuts.length) return img.src;
@@ -10500,7 +10487,7 @@
       const iconDef = MUTATION_ICONS[name];
       if (!iconDef) continue;
       try {
-        const iconImg = await loadImage(iconDef.url);
+        const iconImg = await loadIcon(iconDef.url);
         const iconW = iconImg.naturalWidth || iconImg.width;
         const iconH = iconImg.naturalHeight || iconImg.height;
         if (!iconW || !iconH) continue;
@@ -10518,6 +10505,71 @@
       }
     }
     return canvas.toDataURL("image/png");
+  }
+  var MUTATION_ICONS, MUTATION_FILTERS, SUPPORTED_BLEND_OPS;
+  var init_mutationTint = __esm({
+    "src/ui/kit/sprites/mutationTint.ts"() {
+      "use strict";
+      init_resolver();
+      MUTATION_ICONS = {
+        // Ground-level icons (anchor.y about 0.5), drawn at the plant's base.
+        Wet: { url: `${API_BASE}/assets/sprites/mutations/Wet.png`, anchor: { x: 0.5, y: 0.487 } },
+        Chilled: { url: `${API_BASE}/assets/sprites/mutations/Chilled.png`, anchor: { x: 0.502, y: 0.543 } },
+        Frozen: { url: `${API_BASE}/assets/sprites/mutations/Frozen.png`, anchor: { x: 0.5, y: 0.474 } },
+        Thunderstruck: { url: `${API_BASE}/assets/sprites/mutations/Thunderstruck.png`, anchor: { x: 0.495, y: 0.525 } },
+        Thundercharged: { url: `${API_BASE}/assets/sprites/mutations/Thundercharged.png`, anchor: { x: 0.495, y: 0.525 } },
+        // Floating icons (anchor.y about 0.8), drawn above the plant.
+        Dawnlit: { url: `${API_BASE}/assets/sprites/mutations/Dawnlit.png`, anchor: { x: 0.506, y: 0.809 } },
+        Ambershine: { url: `${API_BASE}/assets/sprites/mutations/Amberlit.png`, anchor: { x: 0.5, y: 0.82 } },
+        Dawncharged: { url: `${API_BASE}/assets/sprites/mutations/Dawncharged.png`, anchor: { x: 0.519, y: 0.796 } },
+        Ambercharged: { url: `${API_BASE}/assets/sprites/mutations/Ambercharged.png`, anchor: { x: 0.501, y: 0.795 } }
+      };
+      MUTATION_FILTERS = {
+        Gold: { op: "source-atop", colors: ["rgb(235,200,0)"], a: 0.7 },
+        Rainbow: { op: "color", colors: ["#FF1744", "#FF9100", "#FFEA00", "#00E676", "#2979FF", "#D500F9"], ang: 130, masked: true },
+        Wet: { op: "source-atop", colors: ["rgb(50,180,200)"], a: 0.25 },
+        Chilled: { op: "source-atop", colors: ["rgb(100,160,210)"], a: 0.45 },
+        Frozen: { op: "source-atop", colors: ["rgb(100,130,220)"], a: 0.5 },
+        Thunderstruck: { op: "source-atop", colors: ["rgb(16, 141, 163)"], a: 0.45 },
+        Thundercharged: { op: "source-atop", colors: ["rgb(10, 100, 190)"], a: 0.5 },
+        Dawnlit: { op: "source-atop", colors: ["rgb(209,70,231)"], a: 0.5 },
+        Ambershine: { op: "source-atop", colors: ["rgb(190,100,40)"], a: 0.5 },
+        Dawncharged: { op: "source-atop", colors: ["rgb(140,80,200)"], a: 0.5 },
+        Ambercharged: { op: "source-atop", colors: ["rgb(170,60,25)"], a: 0.5 }
+      };
+      SUPPORTED_BLEND_OPS = (() => {
+        try {
+          const canvas = document.createElement("canvas");
+          const ctx2 = canvas.getContext("2d");
+          if (!ctx2) return /* @__PURE__ */ new Set();
+          const ops = ["color", "hue", "saturation", "luminosity", "overlay", "screen", "lighter", "source-atop"];
+          const ok = /* @__PURE__ */ new Set();
+          for (const op of ops) {
+            ctx2.globalCompositeOperation = op;
+            if (ctx2.globalCompositeOperation === op) ok.add(op);
+          }
+          return ok;
+        } catch {
+          return /* @__PURE__ */ new Set();
+        }
+      })();
+    }
+  });
+
+  // src/ui/kit/sprites/iconCache.ts
+  function fetchIndex() {
+    if (indexReady) return indexReady;
+    indexReady = getJSON(
+      `${API_BASE}/assets/sprite-data?flat=1`,
+      SPRITE_REQUEST
+    ).then((data) => {
+      setSpriteIndex(data.items || [], API_BASE);
+      console.log("[SpriteIconCache] sprite index loaded", { count: spriteIndexSize() });
+    }).catch((err) => {
+      console.error("[SpriteIconCache] failed to fetch sprite index", err);
+      indexReady = null;
+    });
+    return indexReady;
   }
   function loadImage(url) {
     let promise = imageCache.get(url);
@@ -10641,7 +10693,7 @@
       let promise = spriteDataUrlCache.get(ck);
       if (!promise) {
         promise = loadImage(entry.url).then(async (imgEl) => {
-          const dataUrl = await applyMutationFilters(imgEl, mutations);
+          const dataUrl = await applyMutationFilters(imgEl, mutations, loadImage);
           spriteDataUrlResolved.set(ck, dataUrl);
           return dataUrl;
         }).catch(() => null);
@@ -10666,60 +10718,18 @@
       return null;
     }
   }
-  var SPRITE_REQUEST, API_BASE, indexReady, MUTATION_ICONS, MUTATION_FILTERS, SUPPORTED_BLEND_OPS, imageCache, objectUrlCache, spriteDataUrlCache, spriteDataUrlResolved, warmupState, warmupListeners;
+  var SPRITE_REQUEST, indexReady, imageCache, objectUrlCache, spriteDataUrlCache, spriteDataUrlResolved, warmupState, warmupListeners;
   var init_iconCache = __esm({
     "src/ui/kit/sprites/iconCache.ts"() {
       "use strict";
       init_http();
       init_live();
       init_resolver();
+      init_mutationTint();
       SPRITE_REQUEST = { preferGm: true };
-      API_BASE = "https://mg-api.ariedam.fr";
       indexReady = null;
       setCatalogReader((key2) => MGData.get(key2));
       fetchIndex();
-      MUTATION_ICONS = {
-        // Ground-level icons (anchor.y about 0.5), drawn at the plant's base.
-        Wet: { url: `${API_BASE}/assets/sprites/mutations/Wet.png`, anchor: { x: 0.5, y: 0.487 } },
-        Chilled: { url: `${API_BASE}/assets/sprites/mutations/Chilled.png`, anchor: { x: 0.502, y: 0.543 } },
-        Frozen: { url: `${API_BASE}/assets/sprites/mutations/Frozen.png`, anchor: { x: 0.5, y: 0.474 } },
-        Thunderstruck: { url: `${API_BASE}/assets/sprites/mutations/Thunderstruck.png`, anchor: { x: 0.495, y: 0.525 } },
-        Thundercharged: { url: `${API_BASE}/assets/sprites/mutations/Thundercharged.png`, anchor: { x: 0.495, y: 0.525 } },
-        // Floating icons (anchor.y about 0.8), drawn above the plant.
-        Dawnlit: { url: `${API_BASE}/assets/sprites/mutations/Dawnlit.png`, anchor: { x: 0.506, y: 0.809 } },
-        Ambershine: { url: `${API_BASE}/assets/sprites/mutations/Amberlit.png`, anchor: { x: 0.5, y: 0.82 } },
-        Dawncharged: { url: `${API_BASE}/assets/sprites/mutations/Dawncharged.png`, anchor: { x: 0.519, y: 0.796 } },
-        Ambercharged: { url: `${API_BASE}/assets/sprites/mutations/Ambercharged.png`, anchor: { x: 0.501, y: 0.795 } }
-      };
-      MUTATION_FILTERS = {
-        Gold: { op: "source-atop", colors: ["rgb(235,200,0)"], a: 0.7 },
-        Rainbow: { op: "color", colors: ["#FF1744", "#FF9100", "#FFEA00", "#00E676", "#2979FF", "#D500F9"], ang: 130, masked: true },
-        Wet: { op: "source-atop", colors: ["rgb(50,180,200)"], a: 0.25 },
-        Chilled: { op: "source-atop", colors: ["rgb(100,160,210)"], a: 0.45 },
-        Frozen: { op: "source-atop", colors: ["rgb(100,130,220)"], a: 0.5 },
-        Thunderstruck: { op: "source-atop", colors: ["rgb(16, 141, 163)"], a: 0.45 },
-        Thundercharged: { op: "source-atop", colors: ["rgb(10, 100, 190)"], a: 0.5 },
-        Dawnlit: { op: "source-atop", colors: ["rgb(209,70,231)"], a: 0.5 },
-        Ambershine: { op: "source-atop", colors: ["rgb(190,100,40)"], a: 0.5 },
-        Dawncharged: { op: "source-atop", colors: ["rgb(140,80,200)"], a: 0.5 },
-        Ambercharged: { op: "source-atop", colors: ["rgb(170,60,25)"], a: 0.5 }
-      };
-      SUPPORTED_BLEND_OPS = (() => {
-        try {
-          const canvas = document.createElement("canvas");
-          const ctx2 = canvas.getContext("2d");
-          if (!ctx2) return /* @__PURE__ */ new Set();
-          const ops = ["color", "hue", "saturation", "luminosity", "overlay", "screen", "lighter", "source-atop"];
-          const ok = /* @__PURE__ */ new Set();
-          for (const op of ops) {
-            ctx2.globalCompositeOperation = op;
-            if (ctx2.globalCompositeOperation === op) ok.add(op);
-          }
-          return ok;
-        } catch {
-          return /* @__PURE__ */ new Set();
-        }
-      })();
       imageCache = /* @__PURE__ */ new Map();
       objectUrlCache = /* @__PURE__ */ new Map();
       spriteDataUrlCache = /* @__PURE__ */ new Map();
@@ -14325,74 +14335,6 @@
     }
   });
 
-  // src/platform/modVersion.ts
-  function getLocalVersion() {
-    if (true) {
-      return "3.2.233";
-    }
-    if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
-      return GM_info.script.version;
-    }
-    return void 0;
-  }
-  async function fetchRemoteVersion() {
-    try {
-      const meta = extractUserscriptMetadata(await fetchScriptSource());
-      if (!meta) throw new Error("Metadata block not found in remote script");
-      return {
-        version: meta.get("version")?.[0],
-        download: meta.get("downloadurl")?.[0] ?? meta.get("updateurl")?.[0]
-      };
-    } catch (error) {
-      console.error("Unable to retrieve remote version:", error);
-      return null;
-    }
-  }
-  async function fetchScriptSource() {
-    const commitSha = await fetchLatestCommitSha();
-    const scriptUrl = commitSha ? `${RAW_BASE_URL}/${commitSha}/dist/${SCRIPT_FILE_PATH}` : `${RAW_BASE_URL}/refs/heads/${REPO_BRANCH}/dist/${SCRIPT_FILE_PATH}?t=${Date.now()}`;
-    return getText(scriptUrl, { noCache: true });
-  }
-  async function fetchLatestCommitSha() {
-    try {
-      const data = await getJSON(COMMITS_API_URL, {
-        noCache: true,
-        headers: { Accept: "application/vnd.github+json" }
-      });
-      const sha = typeof data?.sha === "string" ? data.sha.trim() : "";
-      if (sha) return sha;
-    } catch (error) {
-      console.warn("[MagicGarden] Failed to resolve latest commit SHA:", error);
-    }
-    return null;
-  }
-  function extractUserscriptMetadata(source) {
-    const header = source.match(/\/\/ ==UserScript==([\s\S]*?)\/\/ ==\/UserScript==/);
-    if (!header) return null;
-    const meta = /* @__PURE__ */ new Map();
-    for (const [, rawKey, rawValue] of header[1].matchAll(/^\/\/\s*@([^\s]+)\s+(.+)$/gm)) {
-      const key2 = rawKey.trim().toLowerCase();
-      if (!key2) continue;
-      const values = meta.get(key2) ?? [];
-      values.push(rawValue.trim());
-      meta.set(key2, values);
-    }
-    return meta;
-  }
-  var REPO_OWNER, REPO_NAME, REPO_BRANCH, SCRIPT_FILE_PATH, RAW_BASE_URL, COMMITS_API_URL;
-  var init_modVersion = __esm({
-    "src/platform/modVersion.ts"() {
-      "use strict";
-      init_http();
-      REPO_OWNER = "Ariedam64";
-      REPO_NAME = "MG-AriesMod";
-      REPO_BRANCH = "main";
-      SCRIPT_FILE_PATH = "quinoa-ws.min.user.js";
-      RAW_BASE_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}`;
-      COMMITS_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/commits/${REPO_BRANCH}`;
-    }
-  });
-
   // src/ui/kit/badges.ts
   function pill(text2, tone) {
     const el = h("span", "qmm-pill", text2);
@@ -14426,7 +14368,7 @@
     }
   });
 
-  // src/ui/hud.ts
+  // src/ui/hudPlacement.ts
   function currentPos(el) {
     const rect = el.getBoundingClientRect();
     const cs = getComputedStyle(el);
@@ -14497,6 +14439,188 @@
       opts.onEnd();
     });
   }
+  var MARGIN;
+  var init_hudPlacement = __esm({
+    "src/ui/hudPlacement.ts"() {
+      "use strict";
+      MARGIN = 8;
+    }
+  });
+
+  // src/platform/modVersion.ts
+  function getLocalVersion() {
+    if (true) {
+      return "3.2.233";
+    }
+    if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
+      return GM_info.script.version;
+    }
+    return void 0;
+  }
+  async function fetchRemoteVersion() {
+    try {
+      const meta = extractUserscriptMetadata(await fetchScriptSource());
+      if (!meta) throw new Error("Metadata block not found in remote script");
+      return {
+        version: meta.get("version")?.[0],
+        download: meta.get("downloadurl")?.[0] ?? meta.get("updateurl")?.[0]
+      };
+    } catch (error) {
+      console.error("Unable to retrieve remote version:", error);
+      return null;
+    }
+  }
+  async function fetchScriptSource() {
+    const commitSha = await fetchLatestCommitSha();
+    const scriptUrl = commitSha ? `${RAW_BASE_URL}/${commitSha}/dist/${SCRIPT_FILE_PATH}` : `${RAW_BASE_URL}/refs/heads/${REPO_BRANCH}/dist/${SCRIPT_FILE_PATH}?t=${Date.now()}`;
+    return getText(scriptUrl, { noCache: true });
+  }
+  async function fetchLatestCommitSha() {
+    try {
+      const data = await getJSON(COMMITS_API_URL, {
+        noCache: true,
+        headers: { Accept: "application/vnd.github+json" }
+      });
+      const sha = typeof data?.sha === "string" ? data.sha.trim() : "";
+      if (sha) return sha;
+    } catch (error) {
+      console.warn("[MagicGarden] Failed to resolve latest commit SHA:", error);
+    }
+    return null;
+  }
+  function extractUserscriptMetadata(source) {
+    const header = source.match(/\/\/ ==UserScript==([\s\S]*?)\/\/ ==\/UserScript==/);
+    if (!header) return null;
+    const meta = /* @__PURE__ */ new Map();
+    for (const [, rawKey, rawValue] of header[1].matchAll(/^\/\/\s*@([^\s]+)\s+(.+)$/gm)) {
+      const key2 = rawKey.trim().toLowerCase();
+      if (!key2) continue;
+      const values = meta.get(key2) ?? [];
+      values.push(rawValue.trim());
+      meta.set(key2, values);
+    }
+    return meta;
+  }
+  var REPO_OWNER, REPO_NAME, REPO_BRANCH, SCRIPT_FILE_PATH, RAW_BASE_URL, COMMITS_API_URL;
+  var init_modVersion = __esm({
+    "src/platform/modVersion.ts"() {
+      "use strict";
+      init_http();
+      REPO_OWNER = "Ariedam64";
+      REPO_NAME = "MG-AriesMod";
+      REPO_BRANCH = "main";
+      SCRIPT_FILE_PATH = "quinoa-ws.min.user.js";
+      RAW_BASE_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}`;
+      COMMITS_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/commits/${REPO_BRANCH}`;
+    }
+  });
+
+  // src/ui/hudStatus.ts
+  function openDownloadLink(url) {
+    const gmObject = globalThis.GM;
+    const gmOpen = typeof GM_openInTab === "function" ? GM_openInTab : typeof gmObject?.openInTab === "function" ? gmObject.openInTab.bind(gmObject) : null;
+    if (isDiscordSurface() && gmOpen) {
+      try {
+        gmOpen(url, { active: true, setParent: true });
+        return;
+      } catch (error) {
+        console.warn("[MagicGarden] GM_openInTab failed, falling back to window.open", error);
+      }
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+  function initVersionBadge(badge2) {
+    const show = (text2, tone, downloadUrl) => {
+      badge2.textContent = text2;
+      setTone(badge2, tone);
+      badge2.classList.toggle("is-link", !!downloadUrl);
+      if (downloadUrl) {
+        badge2.dataset.download = downloadUrl;
+        badge2.title = "Download the new version";
+      } else {
+        delete badge2.dataset.download;
+        badge2.removeAttribute("title");
+      }
+    };
+    show("checking\u2026", "warn");
+    badge2.addEventListener("click", () => {
+      const url = badge2.dataset.download;
+      if (url) openDownloadLink(url);
+    });
+    void (async () => {
+      const localVersion = getLocalVersion();
+      try {
+        const remoteData = await fetchRemoteVersion();
+        const remoteVersion = remoteData?.version?.trim();
+        if (!remoteVersion) show(localVersion || "Unknown", "warn");
+        else if (!localVersion) show(remoteVersion, "warn", remoteData?.download);
+        else if (localVersion === remoteVersion) show(localVersion, "ok");
+        else show(`${localVersion} \u2192 ${remoteVersion}`, "warn", remoteData?.download);
+      } catch (error) {
+        console.error("[MagicGarden] Failed to check version:", error);
+        show(localVersion || "Unknown", "warn");
+      }
+    })();
+  }
+  function getWSStatus() {
+    if (sockets.some((ws) => ws.readyState === NativeWS.OPEN)) return { level: "ok", message: "ws open" };
+    if (window.__QWS_workerFound || workerFound) return { level: "ok", message: "ws via worker" };
+    return { level: "bad", message: "ws none" };
+  }
+  function getStoreStatus() {
+    try {
+      const info = getCapturedInfo();
+      if (isStoreCaptured()) return { level: "ok", message: `store ${info.via || "ready"}` };
+      if (info.via === "polyfill" || info.polyfill) return { level: "warn", message: "store polyfill" };
+      return { level: "bad", message: "store none" };
+    } catch {
+      return { level: "bad", message: "store error" };
+    }
+  }
+  function showStatus(el, text2, title, tone) {
+    if (el.textContent !== text2) el.textContent = text2;
+    if (el.title !== title) el.title = title;
+    if (!el.classList.contains(`is-${tone}`)) setTone(el, tone);
+  }
+  function startStatusLoop(box2, full, mini) {
+    let warmup = getSpriteWarmupState();
+    const update = () => {
+      if (!warmup.completed) {
+        const progress = warmup.total > 0 ? `${warmup.done}/${warmup.total}` : `${warmup.done}`;
+        const summary = warmup.total > 0 ? `Sprites warming: ${progress}` : "Sprites warming up";
+        showStatus(full, `Sprites ${progress}`, summary, "warn");
+        showStatus(mini, progress, summary, "warn");
+        mini.style.display = "";
+        return;
+      }
+      const ws = getWSStatus();
+      const store = getStoreStatus();
+      const level = store.message === "store none" && ws.level === "bad" ? "bad" : ws.level === "ok" && store.level === "ok" ? "ok" : "warn";
+      const title = `${ws.message}, ${store.message}`;
+      showStatus(full, "status", title, level);
+      showStatus(mini, level === "ok" ? "OK" : level === "warn" ? "WARN" : "ISSUES", title, level);
+      mini.style.display = level === "ok" ? "none" : "";
+    };
+    onSpriteWarmupProgress((state5) => {
+      warmup = state5;
+      update();
+    });
+    refreshWhileVisible(box2, update, 800);
+  }
+  var init_hudStatus = __esm({
+    "src/ui/hudStatus.ts"() {
+      "use strict";
+      init_sockets();
+      init_jotai();
+      init_iconCache();
+      init_modVersion();
+      init_environment();
+      init_badges();
+      init_dom2();
+    }
+  });
+
+  // src/ui/hud.ts
   function installInputKeyTrap() {
     const isTextField = (el) => {
       if (el instanceof HTMLTextAreaElement) return true;
@@ -14512,19 +14636,6 @@
       ev.stopImmediatePropagation();
     };
     for (const type of ["keydown", "keypress", "keyup"]) window.addEventListener(type, trap, true);
-  }
-  function openDownloadLink(url) {
-    const gmObject = globalThis.GM;
-    const gmOpen = typeof GM_openInTab === "function" ? GM_openInTab : typeof gmObject?.openInTab === "function" ? gmObject.openInTab.bind(gmObject) : null;
-    if (isDiscordSurface() && gmOpen) {
-      try {
-        gmOpen(url, { active: true, setParent: true });
-        return;
-      } catch (error) {
-        console.warn("[MagicGarden] GM_openInTab failed, falling back to window.open", error);
-      }
-    }
-    window.open(url, "_blank", "noopener,noreferrer");
   }
   function mountHUD(opts) {
     if (document.readyState === "loading") {
@@ -14800,106 +14911,25 @@
     });
     startStatusLoop(box2, statusFull, statusMini);
   }
-  function initVersionBadge(badge2) {
-    const show = (text2, tone, downloadUrl) => {
-      badge2.textContent = text2;
-      setTone(badge2, tone);
-      badge2.classList.toggle("is-link", !!downloadUrl);
-      if (downloadUrl) {
-        badge2.dataset.download = downloadUrl;
-        badge2.title = "Download the new version";
-      } else {
-        delete badge2.dataset.download;
-        badge2.removeAttribute("title");
-      }
-    };
-    show("checking\u2026", "warn");
-    badge2.addEventListener("click", () => {
-      const url = badge2.dataset.download;
-      if (url) openDownloadLink(url);
-    });
-    void (async () => {
-      const localVersion = getLocalVersion();
-      try {
-        const remoteData = await fetchRemoteVersion();
-        const remoteVersion = remoteData?.version?.trim();
-        if (!remoteVersion) show(localVersion || "Unknown", "warn");
-        else if (!localVersion) show(remoteVersion, "warn", remoteData?.download);
-        else if (localVersion === remoteVersion) show(localVersion, "ok");
-        else show(`${localVersion} \u2192 ${remoteVersion}`, "warn", remoteData?.download);
-      } catch (error) {
-        console.error("[MagicGarden] Failed to check version:", error);
-        show(localVersion || "Unknown", "warn");
-      }
-    })();
-  }
-  function getWSStatus() {
-    if (sockets.some((ws) => ws.readyState === NativeWS.OPEN)) return { level: "ok", message: "ws open" };
-    if (window.__QWS_workerFound || workerFound) return { level: "ok", message: "ws via worker" };
-    return { level: "bad", message: "ws none" };
-  }
-  function getStoreStatus() {
-    try {
-      const info = getCapturedInfo();
-      if (isStoreCaptured()) return { level: "ok", message: `store ${info.via || "ready"}` };
-      if (info.via === "polyfill" || info.polyfill) return { level: "warn", message: "store polyfill" };
-      return { level: "bad", message: "store none" };
-    } catch {
-      return { level: "bad", message: "store error" };
-    }
-  }
-  function showStatus(el, text2, title, tone) {
-    if (el.textContent !== text2) el.textContent = text2;
-    if (el.title !== title) el.title = title;
-    if (!el.classList.contains(`is-${tone}`)) setTone(el, tone);
-  }
-  function startStatusLoop(box2, full, mini) {
-    let warmup = getSpriteWarmupState();
-    const update = () => {
-      if (!warmup.completed) {
-        const progress = warmup.total > 0 ? `${warmup.done}/${warmup.total}` : `${warmup.done}`;
-        const summary = warmup.total > 0 ? `Sprites warming: ${progress}` : "Sprites warming up";
-        showStatus(full, `Sprites ${progress}`, summary, "warn");
-        showStatus(mini, progress, summary, "warn");
-        mini.style.display = "";
-        return;
-      }
-      const ws = getWSStatus();
-      const store = getStoreStatus();
-      const level = store.message === "store none" && ws.level === "bad" ? "bad" : ws.level === "ok" && store.level === "ok" ? "ok" : "warn";
-      const title = `${ws.message}, ${store.message}`;
-      showStatus(full, "status", title, level);
-      showStatus(mini, level === "ok" ? "OK" : level === "warn" ? "WARN" : "ISSUES", title, level);
-      mini.style.display = level === "ok" ? "none" : "";
-    };
-    onSpriteWarmupProgress((state5) => {
-      warmup = state5;
-      update();
-    });
-    refreshWhileVisible(box2, update, 800);
-  }
-  var HUD_POS_PATH, HUD_COLLAPSED_PATH, HUD_HIDDEN_PATH, HUD_WIN_PATH, MARGIN, isEditing;
+  var HUD_POS_PATH, HUD_COLLAPSED_PATH, HUD_HIDDEN_PATH, HUD_WIN_PATH, isEditing;
   var init_hud = __esm({
     "src/ui/hud.ts"() {
       "use strict";
-      init_sockets();
       init_jotai();
       init_keybinds();
       init_keyboard();
       init_hotkey();
-      init_iconCache();
-      init_modVersion();
-      init_environment();
       init_storage();
       init_badges();
       init_button();
       init_dom2();
       init_theme();
+      init_hudPlacement();
+      init_hudStatus();
       HUD_POS_PATH = "hud.pos";
       HUD_COLLAPSED_PATH = "hud.collapsed";
       HUD_HIDDEN_PATH = "hud.hidden";
       HUD_WIN_PATH = (id) => `hud.windows.${id}`;
-      MARGIN = 8;
       isEditing = (el) => {
         const t = el;
         return !!t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName));
@@ -24262,6 +24292,113 @@
     }
   });
 
+  // src/features/pets/activePetSlots.ts
+  function normalizeActivePets(value) {
+    const list = Array.isArray(value) ? value : [];
+    const out = [];
+    for (const entry of list) {
+      if (!entry || typeof entry !== "object") continue;
+      const raw = entry;
+      const slot = raw?.slot && typeof raw.slot === "object" ? raw.slot : raw;
+      const id = String(slot?.id ?? "").trim();
+      if (!id) continue;
+      const name = slot?.name ?? raw?.name ?? raw?.petName ?? null;
+      const petSpecies = slot?.petSpecies ?? raw?.petSpecies ?? raw?.species ?? null;
+      const mutationsRaw = slot?.mutations ?? raw?.mutations ?? raw?.data?.mutations ?? raw?.slot?.data?.mutations ?? raw?.pet?.mutations ?? null;
+      const mutations = Array.isArray(mutationsRaw) ? mutationsRaw.map((m) => String(m ?? "").trim()).filter(Boolean) : void 0;
+      const xpRaw = Number(slot?.xp ?? raw?.xp);
+      const xp = Number.isFinite(xpRaw) ? xpRaw : void 0;
+      const targetScaleRaw = Number(slot?.targetScale ?? raw?.targetScale);
+      const targetScale = Number.isFinite(targetScaleRaw) ? targetScaleRaw : void 0;
+      out.push({ id, name, petSpecies, mutations, xp, targetScale });
+      if (out.length >= MAX_BUTTONS) break;
+    }
+    return out;
+  }
+  function activePetsSignature(list) {
+    if (!list.length) return "";
+    return list.map((pet) => {
+      const id = String(pet.id ?? "");
+      const species = String(pet.petSpecies ?? "");
+      const name = String(pet.name ?? "");
+      const muts = Array.isArray(pet.mutations) ? pet.mutations.map((m) => String(m ?? "").trim()).filter(Boolean).sort().join(",") : "";
+      const strength = strengthLabel(pet)?.text ?? "";
+      return `${id}|${species}|${name}|${muts}|${strength}`;
+    }).join(";");
+  }
+  function petDisplayName(pet) {
+    const name = String(pet.name ?? "").trim();
+    if (name) return name;
+    const species = String(pet.petSpecies ?? "").trim();
+    if (species) return species.charAt(0).toUpperCase() + species.slice(1);
+    return "Pet";
+  }
+  function strengthLabel(pet) {
+    const petLike = {
+      petSpecies: String(pet.petSpecies ?? ""),
+      xp: pet.xp,
+      targetScale: pet.targetScale,
+      mutations: pet.mutations
+    };
+    const maxStr = getPetMaxStrength(petLike);
+    if (maxStr <= 0) return null;
+    const str = getPetStrength2(petLike);
+    const maxed = str >= maxStr;
+    return { text: maxed ? `STR ${maxStr}` : `STR ${str}/${maxStr}`, maxed };
+  }
+  function buttonTitle(pet) {
+    const name = petDisplayName(pet);
+    const strength = strengthLabel(pet);
+    return strength ? `${DEFAULT_LABEL}: ${name} (${strength.text})` : `${DEFAULT_LABEL}: ${name}`;
+  }
+  var DEFAULT_LABEL, MAX_BUTTONS;
+  var init_activePetSlots = __esm({
+    "src/features/pets/activePetSlots.ts"() {
+      "use strict";
+      init_petValue();
+      DEFAULT_LABEL = "Instant Feed";
+      MAX_BUTTONS = 3;
+    }
+  });
+
+  // src/features/pets/instantFeed.ts
+  async function findPetById(petId) {
+    try {
+      const list = await PetsService.getPets();
+      const arr = Array.isArray(list) ? list : [];
+      return arr.find((p) => String(p?.slot?.id || "") === petId) ?? null;
+    } catch (err) {
+      console.warn("[InstantFeed] Failed to fetch pets", err);
+      return null;
+    }
+  }
+  async function instantFeedPet(petId) {
+    const pet = await findPetById(petId);
+    if (!pet) return;
+    const species = String(pet?.slot?.petSpecies || "");
+    const compatible = PetsService.getInstantFeedAllowedCrops(species);
+    if (!compatible.size) return;
+    const inventory = await PlayerService.getCropInventoryState();
+    const items = Array.isArray(inventory) ? inventory : [];
+    const favoriteSet = await PlayerService.getFavoriteIdSet().catch(() => /* @__PURE__ */ new Set());
+    const chosen = items.find((item) => {
+      const speciesId = String(item?.species || "");
+      if (!speciesId || !compatible.has(speciesId)) return false;
+      const id = String(item?.id || "");
+      return id && !favoriteSet.has(id);
+    });
+    const chosenId = String(chosen?.id || "");
+    if (!chosenId) return;
+    await PlayerService.feedPet(petId, chosenId);
+  }
+  var init_instantFeed = __esm({
+    "src/features/pets/instantFeed.ts"() {
+      "use strict";
+      init_player();
+      init_pets();
+    }
+  });
+
   // src/features/pets/feedWidget.ts
   function isInstantFeedWidgetEnabled() {
     return readAriesPath(ENABLED_PATH2, true) !== false;
@@ -24543,16 +24680,16 @@
       const nameEl = btn.querySelector('[data-instant-feed-name="1"]');
       const strEl = btn.querySelector('[data-instant-feed-str="1"]');
       const pet = activePets[i] ?? null;
-      const title = pet ? buildButtonTitle(pet) : DEFAULT_LABEL;
+      const title = pet ? buttonTitle(pet) : DEFAULT_LABEL;
       btn.setAttribute("aria-label", title);
       btn.title = title;
       btn.dataset.petId = pet?.id ?? "";
       btn.disabled = !pet;
       btn.style.opacity = pet ? "" : "0.6";
       btn.style.cursor = pet ? "pointer" : "default";
-      if (nameEl) nameEl.textContent = pet ? buildPetDisplayName(pet) : DEFAULT_LABEL;
+      if (nameEl) nameEl.textContent = pet ? petDisplayName(pet) : DEFAULT_LABEL;
       if (strEl) {
-        const strength = pet ? buildStrengthLabel(pet) : null;
+        const strength = pet ? strengthLabel(pet) : null;
         strEl.textContent = strength?.text ?? "";
         strEl.style.color = strength?.maxed ? "#facc15" : "";
         strEl.style.display = strength ? "" : "none";
@@ -24578,127 +24715,39 @@
     }
     if (widget && positioned && isWidgetVisible()) clampIntoViewport();
   }
-  function buildPetDisplayName(pet) {
-    const name = String(pet.name ?? "").trim();
-    if (name) return name;
-    const species = String(pet.petSpecies ?? "").trim();
-    if (species) return species.charAt(0).toUpperCase() + species.slice(1);
-    return "Pet";
-  }
-  function buildStrengthLabel(pet) {
-    const petLike = {
-      petSpecies: String(pet.petSpecies ?? ""),
-      xp: pet.xp,
-      targetScale: pet.targetScale,
-      mutations: pet.mutations
-    };
-    const maxStr = getPetMaxStrength(petLike);
-    if (maxStr <= 0) return null;
-    const str = getPetStrength2(petLike);
-    const maxed = str >= maxStr;
-    return { text: maxed ? `STR ${maxStr}` : `STR ${str}/${maxStr}`, maxed };
-  }
-  function buildButtonTitle(pet) {
-    const name = buildPetDisplayName(pet);
-    const strength = buildStrengthLabel(pet);
-    return strength ? `${DEFAULT_LABEL}: ${name} (${strength.text})` : `${DEFAULT_LABEL}: ${name}`;
-  }
   function updateActivePets(next) {
     const normalized = normalizeActivePets(next);
-    const sig = buildActivePetsSignature(normalized);
+    const sig = activePetsSignature(normalized);
     if (sig === activePetsSig) return;
     activePetsSig = sig;
     activePets = normalized;
     updateButtons();
   }
-  function normalizeActivePets(value) {
-    const list = Array.isArray(value) ? value : [];
-    const out = [];
-    for (const entry of list) {
-      if (!entry || typeof entry !== "object") continue;
-      const raw = entry;
-      const slot = raw?.slot && typeof raw.slot === "object" ? raw.slot : raw;
-      const id = String(slot?.id ?? "").trim();
-      if (!id) continue;
-      const name = slot?.name ?? raw?.name ?? raw?.petName ?? null;
-      const petSpecies = slot?.petSpecies ?? raw?.petSpecies ?? raw?.species ?? null;
-      const mutationsRaw = slot?.mutations ?? raw?.mutations ?? raw?.data?.mutations ?? raw?.slot?.data?.mutations ?? raw?.pet?.mutations ?? null;
-      const mutations = Array.isArray(mutationsRaw) ? mutationsRaw.map((m) => String(m ?? "").trim()).filter(Boolean) : void 0;
-      const xpRaw = Number(slot?.xp ?? raw?.xp);
-      const xp = Number.isFinite(xpRaw) ? xpRaw : void 0;
-      const targetScaleRaw = Number(slot?.targetScale ?? raw?.targetScale);
-      const targetScale = Number.isFinite(targetScaleRaw) ? targetScaleRaw : void 0;
-      out.push({ id, name, petSpecies, mutations, xp, targetScale });
-      if (out.length >= MAX_BUTTONS) break;
-    }
-    return out;
-  }
-  function buildActivePetsSignature(list) {
-    if (!list.length) return "";
-    return list.map((pet) => {
-      const id = String(pet.id ?? "");
-      const species = String(pet.petSpecies ?? "");
-      const name = String(pet.name ?? "");
-      const muts = Array.isArray(pet.mutations) ? pet.mutations.map((m) => String(m ?? "").trim()).filter(Boolean).sort().join(",") : "";
-      const strength = buildStrengthLabel(pet)?.text ?? "";
-      return `${id}|${species}|${name}|${muts}|${strength}`;
-    }).join(";");
-  }
-  async function findPetById(petId) {
-    try {
-      const list = await PetsService.getPets();
-      const arr = Array.isArray(list) ? list : [];
-      return arr.find((p) => String(p?.slot?.id || "") === petId) ?? null;
-    } catch (err) {
-      console.warn("[InstantFeed] Failed to fetch pets", err);
-      return null;
-    }
-  }
   async function handleInstantFeedForPet(petId, btn) {
     if (!petId) return;
     const prevDisabled = btn.disabled;
-    const expectedPetId = petId;
     btn.disabled = true;
     try {
-      const pet = await findPetById(petId);
-      if (!pet) return;
-      const species = String(pet?.slot?.petSpecies || "");
-      const compatible = PetsService.getInstantFeedAllowedCrops(species);
-      if (!compatible.size) return;
-      const inventory = await PlayerService.getCropInventoryState();
-      const items = Array.isArray(inventory) ? inventory : [];
-      const favoriteSet = await PlayerService.getFavoriteIdSet().catch(() => /* @__PURE__ */ new Set());
-      const chosen = items.find((item) => {
-        const speciesId = String(item?.species || "");
-        if (!speciesId || !compatible.has(speciesId)) return false;
-        const id = String(item?.id || "");
-        return id && !favoriteSet.has(id);
-      });
-      const chosenId = String(chosen?.id || "");
-      if (!chosenId) return;
-      await PlayerService.feedPet(petId, chosenId);
+      await instantFeedPet(petId);
     } catch (err) {
       console.error("[InstantFeed] Failed to feed pet", err);
     } finally {
-      if (btn.dataset.petId === expectedPetId) {
+      if (btn.dataset.petId === petId) {
         btn.disabled = prevDisabled;
       }
     }
   }
-  var DEFAULT_LABEL, MAX_BUTTONS, ICON_SIZE, WIDGET_Z_INDEX, SCREEN_MARGIN2, DEFAULT_TOP, GLOBAL_START_FLAG, INVENTORY_CARD_ATOM, ENABLED_PATH2, POS_PATH2, started3, enabled, modalOpen2, inventoryCardOpen, activePets, activePetsSig, widget, widgetButtons, savedPos, positioned;
+  var ICON_SIZE, WIDGET_Z_INDEX, SCREEN_MARGIN2, DEFAULT_TOP, GLOBAL_START_FLAG, INVENTORY_CARD_ATOM, ENABLED_PATH2, POS_PATH2, started3, enabled, modalOpen2, inventoryCardOpen, activePets, activePetsSig, widget, widgetButtons, savedPos, positioned;
   var init_feedWidget = __esm({
     "src/features/pets/feedWidget.ts"() {
       "use strict";
-      init_pets();
-      init_player();
       init_api();
       init_atoms();
       init_iconCache();
       init_storage();
-      init_petValue();
       init_floating();
-      DEFAULT_LABEL = "Instant Feed";
-      MAX_BUTTONS = 3;
+      init_activePetSlots();
+      init_instantFeed();
       ICON_SIZE = 18;
       WIDGET_Z_INDEX = 1999900;
       SCREEN_MARGIN2 = 8;
@@ -31357,36 +31406,9 @@ next: ${next}`;
     }
   });
 
-  // src/features/pets/teamStatsView.ts
+  // src/features/pets/teamStatsText.ts
   function triggerUnit(trigger) {
     return trigger && TRIGGER_UNITS[trigger] || "/roll";
-  }
-  function fillRatioColor(ratio) {
-    if (ratio >= 0.99) return ACCENT;
-    if (ratio >= 0.9) return "#a3e635";
-    if (ratio >= 0.75) return color.warn;
-    return "#f87171";
-  }
-  function mkBar(current3, atMax) {
-    const ratio = atMax > 0 ? Math.max(0, Math.min(1, current3 / atMax)) : 0;
-    const track = document.createElement("div");
-    Object.assign(track.style, {
-      height: "3px",
-      borderRadius: "999px",
-      background: color.track,
-      overflow: "hidden",
-      margin: "3px 0 1px"
-    });
-    const fill = document.createElement("div");
-    Object.assign(fill.style, {
-      height: "100%",
-      width: `${Math.max(1.5, ratio * 100)}%`,
-      borderRadius: "999px",
-      background: fillRatioColor(ratio),
-      opacity: "0.85"
-    });
-    track.appendChild(fill);
-    return track;
   }
   function formatPercent(value) {
     if (value >= 10) return `${value.toFixed(1)}%`;
@@ -31429,6 +31451,67 @@ next: ${next}`;
     const low = formatAmount(Math.min(...values), meta.unit);
     const high = formatAmount(Math.max(...values), meta.unit);
     return low === high ? high : `${low} \u2013 ${high}`;
+  }
+  var PARAMETER_LABELS, CONTINUOUS_ROLLS_PER_HOUR, TRIGGER_UNITS;
+  var init_teamStatsText = __esm({
+    "src/features/pets/teamStatsText.ts"() {
+      "use strict";
+      PARAMETER_LABELS = {
+        // Crop Size is a whole number in [50, 100]; the boost adds points, not a percentage.
+        sizeIncrease: { label: "Crop size", unit: "" },
+        scaleIncreasePercentage: { label: "Crop size", unit: "%" },
+        cropSellPriceIncreasePercentage: { label: "Sell price", unit: "%" },
+        mutationChanceIncreasePercentage: { label: "Mutation chance", unit: "%" },
+        hungerRestorePercentage: { label: "Hunger restore", unit: "%" },
+        hungerRefundPercentage: { label: "Hunger refund", unit: "%" },
+        hungerDepletionRateDecreasePercentage: { label: "Hunger drain", unit: "%" },
+        plantGrowthReductionMinutes: { label: "Plant growth", unit: "min" },
+        eggGrowthTimeReductionMinutes: { label: "Egg growth", unit: "min" },
+        baseMaxCoinsFindable: { label: "Coins (max)", unit: "" },
+        bonusXp: { label: "Bonus XP", unit: "" },
+        maxStrengthIncreasePercentage: { label: "Max STR", unit: "%" },
+        plantAbilityChanceBoostPercentage: { label: "Plant ability", unit: "%" }
+      };
+      CONTINUOUS_ROLLS_PER_HOUR = 60;
+      TRIGGER_UNITS = {
+        continuous: "/min",
+        harvest: "/harvest",
+        sellAllCrops: "/sale",
+        sellPet: "/pet sold",
+        hatchEgg: "/hatch",
+        playerActivated: "/use",
+        weather: "/weather"
+      };
+    }
+  });
+
+  // src/features/pets/teamStatsView.ts
+  function fillRatioColor(ratio) {
+    if (ratio >= 0.99) return ACCENT;
+    if (ratio >= 0.9) return "#a3e635";
+    if (ratio >= 0.75) return color.warn;
+    return "#f87171";
+  }
+  function mkBar(current3, atMax) {
+    const ratio = atMax > 0 ? Math.max(0, Math.min(1, current3 / atMax)) : 0;
+    const track = document.createElement("div");
+    Object.assign(track.style, {
+      height: "3px",
+      borderRadius: "999px",
+      background: color.track,
+      overflow: "hidden",
+      margin: "3px 0 1px"
+    });
+    const fill = document.createElement("div");
+    Object.assign(fill.style, {
+      height: "100%",
+      width: `${Math.max(1.5, ratio * 100)}%`,
+      borderRadius: "999px",
+      background: fillRatioColor(ratio),
+      opacity: "0.85"
+    });
+    track.appendChild(fill);
+    return track;
   }
   function mkNav(nav) {
     const wrap = document.createElement("div");
@@ -31708,41 +31791,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     wrap.appendChild(renderDetails2(stats, groups, options2.showAllGroups === true));
     return wrap;
   }
-  var PARAMETER_LABELS, MUTED, ACCENT, DIM, CONTINUOUS_ROLLS_PER_HOUR, TRIGGER_UNITS;
+  var MUTED, ACCENT, DIM;
   var init_teamStatsView = __esm({
     "src/features/pets/teamStatsView.ts"() {
       "use strict";
       init_teamStats();
       init_theme();
-      PARAMETER_LABELS = {
-        // Crop Size is a whole number in [50, 100]; the boost adds points, not a percentage.
-        sizeIncrease: { label: "Crop size", unit: "" },
-        scaleIncreasePercentage: { label: "Crop size", unit: "%" },
-        cropSellPriceIncreasePercentage: { label: "Sell price", unit: "%" },
-        mutationChanceIncreasePercentage: { label: "Mutation chance", unit: "%" },
-        hungerRestorePercentage: { label: "Hunger restore", unit: "%" },
-        hungerRefundPercentage: { label: "Hunger refund", unit: "%" },
-        hungerDepletionRateDecreasePercentage: { label: "Hunger drain", unit: "%" },
-        plantGrowthReductionMinutes: { label: "Plant growth", unit: "min" },
-        eggGrowthTimeReductionMinutes: { label: "Egg growth", unit: "min" },
-        baseMaxCoinsFindable: { label: "Coins (max)", unit: "" },
-        bonusXp: { label: "Bonus XP", unit: "" },
-        maxStrengthIncreasePercentage: { label: "Max STR", unit: "%" },
-        plantAbilityChanceBoostPercentage: { label: "Plant ability", unit: "%" }
-      };
+      init_teamStatsText();
       MUTED = color.textSoft;
       ACCENT = "#34d399";
       DIM = color.textDim;
-      CONTINUOUS_ROLLS_PER_HOUR = 60;
-      TRIGGER_UNITS = {
-        continuous: "/min",
-        harvest: "/harvest",
-        sellAllCrops: "/sale",
-        sellPet: "/pet sold",
-        hatchEgg: "/hatch",
-        playerActivated: "/use",
-        weather: "/weather"
-      };
     }
   });
 
@@ -32813,7 +32871,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/pets/teamBuilder.ts
+  // src/features/pets/teamBuilderTraits.ts
   function abilityTrigger(id) {
     return petAbilities2[id]?.trigger;
   }
@@ -32836,36 +32894,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (hasRestore && hasBoost) return 2;
     if (hasRestore || hasBoost) return 1;
     return 0;
-  }
-  function pickSustainPet(pets, category, afkOnly) {
-    const NOT_USEFUL = Number.POSITIVE_INFINITY;
-    const wantedMutations = category ? categoryGrantedMutations(category) : /* @__PURE__ */ new Set();
-    const ranked = pets.map((pet) => {
-      const abilities = petAbilityIds(pet);
-      const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
-      const tierIndex = category ? bestTierIndex(category, relevant) : -1;
-      const { hardAvoidCount, softAvoidCount } = granterPenaltyFor(pet, wantedMutations);
-      return {
-        pet,
-        score: sustainScore(pet),
-        hardAvoidCount,
-        // Lower is better; pets that do nothing for the goal sort last.
-        goalRank: tierIndex === -1 ? NOT_USEFUL : tierIndex,
-        effectiveStrength: getPetMaxStrength(pet) - GRANTER_STRENGTH_PENALTY * softAvoidCount
-      };
-    }).filter((candidate) => candidate.score > 0);
-    if (!ranked.length) return null;
-    ranked.sort((a, b) => {
-      if (a.score !== b.score) return b.score - a.score;
-      if (a.hardAvoidCount !== b.hardAvoidCount) return a.hardAvoidCount - b.hardAvoidCount;
-      if (a.goalRank !== b.goalRank) return a.goalRank - b.goalRank;
-      if (a.effectiveStrength !== b.effectiveStrength) return b.effectiveStrength - a.effectiveStrength;
-      return a.pet.petSpecies.localeCompare(b.pet.petSpecies);
-    });
-    return ranked[0].pet;
-  }
-  function getBestSustainPet(pets) {
-    return pickSustainPet(pets, null, false);
   }
   function abilityGrantedMutations(abilityId) {
     const raw = getAbilityRawParameters(abilityId).grantedMutations;
@@ -32904,6 +32932,49 @@ Restore figures are averages; unlucky streaks do worse.`;
       softAvoidCount += penalty.softAvoidCount;
     }
     return { hardAvoidCount, softAvoidCount };
+  }
+  var HARD_AVOID_MUTATIONS, SOFT_AVOID_MUTATIONS, GRANTER_STRENGTH_PENALTY;
+  var init_teamBuilderTraits = __esm({
+    "src/features/pets/teamBuilderTraits.ts"() {
+      "use strict";
+      init_data();
+      init_abilityStats();
+      HARD_AVOID_MUTATIONS = /* @__PURE__ */ new Set(["Gold"]);
+      SOFT_AVOID_MUTATIONS = /* @__PURE__ */ new Set(["Rainbow"]);
+      GRANTER_STRENGTH_PENALTY = 10;
+    }
+  });
+
+  // src/features/pets/teamBuilder.ts
+  function pickSustainPet(pets, category, afkOnly) {
+    const NOT_USEFUL = Number.POSITIVE_INFINITY;
+    const wantedMutations = category ? categoryGrantedMutations(category) : /* @__PURE__ */ new Set();
+    const ranked = pets.map((pet) => {
+      const abilities = petAbilityIds(pet);
+      const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
+      const tierIndex = category ? bestTierIndex(category, relevant) : -1;
+      const { hardAvoidCount, softAvoidCount } = granterPenaltyFor(pet, wantedMutations);
+      return {
+        pet,
+        score: sustainScore(pet),
+        hardAvoidCount,
+        // Lower is better; pets that do nothing for the goal sort last.
+        goalRank: tierIndex === -1 ? NOT_USEFUL : tierIndex,
+        effectiveStrength: getPetMaxStrength(pet) - GRANTER_STRENGTH_PENALTY * softAvoidCount
+      };
+    }).filter((candidate) => candidate.score > 0);
+    if (!ranked.length) return null;
+    ranked.sort((a, b) => {
+      if (a.score !== b.score) return b.score - a.score;
+      if (a.hardAvoidCount !== b.hardAvoidCount) return a.hardAvoidCount - b.hardAvoidCount;
+      if (a.goalRank !== b.goalRank) return a.goalRank - b.goalRank;
+      if (a.effectiveStrength !== b.effectiveStrength) return b.effectiveStrength - a.effectiveStrength;
+      return a.pet.petSpecies.localeCompare(b.pet.petSpecies);
+    });
+    return ranked[0].pet;
+  }
+  function getBestSustainPet(pets) {
+    return pickSustainPet(pets, null, false);
   }
   function combinations(items, size) {
     if (size <= 0 || size > items.length) return [];
@@ -33147,18 +33218,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       unusedPets: findUnusedPets(pets, usedIds, sustainPet)
     };
   }
-  var HARD_AVOID_MUTATIONS, SOFT_AVOID_MUTATIONS, GRANTER_STRENGTH_PENALTY, AFK_POOL_LIMIT, AFK_FEEDER_LIMIT;
+  var AFK_POOL_LIMIT, AFK_FEEDER_LIMIT;
   var init_teamBuilder = __esm({
     "src/features/pets/teamBuilder.ts"() {
       "use strict";
-      init_data();
       init_petValue();
       init_abilityStats();
       init_teamStats();
       init_teamBuilderCategories();
-      HARD_AVOID_MUTATIONS = /* @__PURE__ */ new Set(["Gold"]);
-      SOFT_AVOID_MUTATIONS = /* @__PURE__ */ new Set(["Rainbow"]);
-      GRANTER_STRENGTH_PENALTY = 10;
+      init_teamBuilderTraits();
       AFK_POOL_LIMIT = 6;
       AFK_FEEDER_LIMIT = 4;
     }
@@ -48960,7 +49028,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/platform/ariesApi/playerStateReport.ts
+  // src/platform/ariesApi/playerStatePayload.ts
   function clampPlayers(n) {
     const value = Math.floor(Number(n));
     if (!Number.isFinite(value)) return 1;
@@ -49123,6 +49191,20 @@ Restore figures are averages; unlucky streaks do worse.`;
       return null;
     }
   }
+  var init_playerStatePayload = __esm({
+    "src/platform/ariesApi/playerStatePayload.ts"() {
+      "use strict";
+      init_atoms();
+      init_pageContext();
+      init_storage();
+      init_modVersion();
+      init_playerIdentity();
+      shareGlobal("buildPlayerStatePayload", buildPlayerStatePayload);
+      shareGlobal("logPlayerStatePayload", buildPlayerStatePayload);
+    }
+  });
+
+  // src/platform/ariesApi/playerStateReport.ts
   function snapshotPayloadForComparison(payload) {
     try {
       const log2 = payload.state.activityLog;
@@ -49244,14 +49326,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_atoms();
       init_pageContext();
       init_storage();
-      init_modVersion();
       init_playerIdentity();
       init_http3();
+      init_playerStatePayload();
       DEFAULT_HEARTBEAT_INTERVAL_MS = 6e4;
       MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND = 5;
       MAX_INITIAL_RETRIES = 3;
-      shareGlobal("buildPlayerStatePayload", buildPlayerStatePayload);
-      shareGlobal("logPlayerStatePayload", buildPlayerStatePayload);
       gameReadyWatcherInitialized = false;
       gameReadyTriggered = false;
       unwatchState = null;

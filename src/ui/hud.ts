@@ -1,5 +1,4 @@
-import { NativeWS, sockets, workerFound } from "../game/ws/sockets";
-import { ensureStore, isStoreCaptured, getCapturedInfo } from "../game/store/jotai";
+import { ensureStore } from "../game/store/jotai";
 import {
   getKeybind,
   getKeybindLabel,
@@ -9,14 +8,13 @@ import {
 } from "../features/keybinds/keybinds";
 import { isKeybindCaptureActive } from "../lib/keyboard";
 import { codesMatch, matchHotkey } from "../lib/hotkey";
-import { getSpriteWarmupState, onSpriteWarmupProgress } from "./kit/sprites/iconCache";
-import { fetchRemoteVersion, getLocalVersion } from "../platform/modVersion";
-import { isDiscordSurface } from "../platform/environment";
 import { readAriesPath, writeAriesPath } from "../platform/storage";
-import { pill, setTone, type StatusTone } from "./kit/badges";
+import { pill } from "./kit/badges";
 import { button } from "./kit/button";
-import { h, refreshWhileVisible } from "./kit/dom";
+import { h } from "./kit/dom";
 import { layer } from "./kit/theme";
+import { type Pos, attachAutoClamp, clampRect, currentPos, ensureOnScreen, makeDraggable, placeClamped, withTopLocked } from "./hudPlacement";
+import { initVersionBadge, startStatusLoop } from "./hudStatus";
 
 export type PanelRender = (root: HTMLElement) => void;
 export interface HUDOptions {
@@ -27,98 +25,6 @@ const HUD_POS_PATH = "hud.pos";
 const HUD_COLLAPSED_PATH = "hud.collapsed";
 const HUD_HIDDEN_PATH = "hud.hidden";
 const HUD_WIN_PATH = (id: string) => `hud.windows.${id}`;
-/** Closest a box may come to the viewport edge. */
-const MARGIN = 8;
-
-type Pos = { r: number; b: number };
-
-/** The box's distance from the right and bottom edges, as laid out now. */
-function currentPos(el: HTMLElement): Pos {
-  const rect = el.getBoundingClientRect();
-  const cs = getComputedStyle(el);
-  let r = parseFloat(cs.right);
-  let b = parseFloat(cs.bottom);
-  if (Number.isNaN(r)) r = window.innerWidth - rect.right;
-  if (Number.isNaN(b)) b = window.innerHeight - rect.bottom;
-  return { r, b };
-}
-
-/** Places a box by its right/bottom offsets, kept inside the viewport. */
-function placeClamped(el: HTMLElement, r: number, b: number): void {
-  const rect = el.getBoundingClientRect();
-  const maxRight = Math.max(MARGIN, window.innerWidth - rect.width - MARGIN);
-  const maxBottom = Math.max(MARGIN, window.innerHeight - rect.height - MARGIN);
-  el.style.right = `${Math.min(Math.max(r, MARGIN), maxRight)}px`;
-  el.style.bottom = `${Math.min(Math.max(b, MARGIN), maxBottom)}px`;
-}
-
-function clampRect(el: HTMLElement): void {
-  const { r, b } = currentPos(el);
-  placeClamped(el, r, b);
-}
-
-/** Like `clampRect`, and also pulls a window's title bar and left edge back on screen. */
-function ensureOnScreen(el: HTMLElement): void {
-  clampRect(el);
-  const rect = el.getBoundingClientRect();
-  const head = el.querySelector<HTMLElement>(".w-head")?.getBoundingClientRect() ?? rect;
-  let { r, b } = currentPos(el);
-  const maxRight = Math.max(MARGIN, window.innerWidth - rect.width - MARGIN);
-  const maxBottom = Math.max(MARGIN, window.innerHeight - rect.height - MARGIN);
-  if (head.top < MARGIN) b = Math.max(MARGIN, Math.min(maxBottom, b - (MARGIN - head.top)));
-  if (rect.left < MARGIN) r = Math.max(MARGIN, Math.min(maxRight, r - (MARGIN - rect.left)));
-  el.style.right = `${r}px`;
-  el.style.bottom = `${b}px`;
-}
-
-/** Keeps a window on screen as its content grows or shrinks. */
-function attachAutoClamp(win: HTMLElement): void {
-  if (typeof ResizeObserver === "undefined") return;
-  let raf = 0;
-  new ResizeObserver(() => {
-    if (raf) cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(() => ensureOnScreen(win));
-  }).observe(win);
-}
-
-/** Runs a size change while keeping the box's top edge where it was. */
-function withTopLocked(el: HTMLElement, mutate: () => void): void {
-  const before = el.getBoundingClientRect();
-  const { b } = currentPos(el);
-  mutate();
-  requestAnimationFrame(() => {
-    const after = el.getBoundingClientRect();
-    const maxBottom = Math.max(MARGIN, window.innerHeight - after.height - MARGIN);
-    el.style.bottom = `${Math.min(Math.max(MARGIN, b + after.top - before.top), maxBottom)}px`;
-    ensureOnScreen(el);
-  });
-}
-
-/** Drags `target` by `handle`, clamped to the viewport. */
-function makeDraggable(
-  handle: HTMLElement,
-  target: HTMLElement,
-  opts: { ignore?: (t: HTMLElement) => boolean; onStart?: () => void; onEnd: () => void },
-): void {
-  let start: { x: number; y: number; pos: Pos } | null = null;
-  handle.addEventListener("mousedown", (e) => {
-    if (opts.ignore?.(e.target as HTMLElement)) return;
-    start = { x: e.clientX, y: e.clientY, pos: currentPos(target) };
-    document.body.style.userSelect = "none";
-    opts.onStart?.();
-  });
-  window.addEventListener("mousemove", (e) => {
-    if (!start) return;
-    placeClamped(target, start.pos.r - (e.clientX - start.x), start.pos.b - (e.clientY - start.y));
-  });
-  window.addEventListener("mouseup", () => {
-    if (!start) return;
-    start = null;
-    document.body.style.userSelect = "";
-    opts.onEnd();
-  });
-}
-
 const isEditing = (el: EventTarget | null) => {
   const t = el as HTMLElement | null;
   return !!t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName));
@@ -143,25 +49,6 @@ function installInputKeyTrap(): void {
     ev.stopImmediatePropagation();
   };
   for (const type of ["keydown", "keypress", "keyup"] as const) window.addEventListener(type, trap, true);
-}
-
-/** Opens a link in a new tab; inside Discord the userscript manager has to do it. */
-function openDownloadLink(url: string): void {
-  const gmObject = (globalThis as typeof globalThis & { GM?: { openInTab?: typeof GM_openInTab } }).GM;
-  const gmOpen = typeof GM_openInTab === "function"
-    ? GM_openInTab
-    : typeof gmObject?.openInTab === "function"
-      ? gmObject.openInTab.bind(gmObject)
-      : null;
-  if (isDiscordSurface() && gmOpen) {
-    try {
-      gmOpen(url, { active: true, setParent: true });
-      return;
-    } catch (error) {
-      console.warn("[MagicGarden] GM_openInTab failed, falling back to window.open", error);
-    }
-  }
-  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 export function mountHUD(opts?: HUDOptions) {
@@ -492,98 +379,4 @@ export function mountHUD(opts?: HUDOptions) {
   initVersionBadge(versionPill);
   void ensureStore().catch(() => {});
   startStatusLoop(box, statusFull, statusMini);
-}
-
-function initVersionBadge(badge: HTMLElement): void {
-  const show = (text: string, tone: StatusTone, downloadUrl?: string | null) => {
-    badge.textContent = text;
-    setTone(badge, tone);
-    badge.classList.toggle("is-link", !!downloadUrl);
-    if (downloadUrl) {
-      badge.dataset.download = downloadUrl;
-      badge.title = "Download the new version";
-    } else {
-      delete badge.dataset.download;
-      badge.removeAttribute("title");
-    }
-  };
-
-  show("checking…", "warn");
-  badge.addEventListener("click", () => {
-    const url = badge.dataset.download;
-    if (url) openDownloadLink(url);
-  });
-
-  void (async () => {
-    const localVersion = getLocalVersion();
-    try {
-      const remoteData = await fetchRemoteVersion();
-      const remoteVersion = remoteData?.version?.trim();
-      if (!remoteVersion) show(localVersion || "Unknown", "warn");
-      else if (!localVersion) show(remoteVersion, "warn", remoteData?.download);
-      else if (localVersion === remoteVersion) show(localVersion, "ok");
-      else show(`${localVersion} → ${remoteVersion}`, "warn", remoteData?.download);
-    } catch (error) {
-      console.error("[MagicGarden] Failed to check version:", error);
-      show(localVersion || "Unknown", "warn");
-    }
-  })();
-}
-
-type StatusInfo = { level: StatusTone; message: string };
-
-function getWSStatus(): StatusInfo {
-  if (sockets.some((ws) => ws.readyState === NativeWS.OPEN)) return { level: "ok", message: "ws open" };
-  if ((window as any).__QWS_workerFound || workerFound) return { level: "ok", message: "ws via worker" };
-  return { level: "bad", message: "ws none" };
-}
-
-function getStoreStatus(): StatusInfo {
-  try {
-    const info = getCapturedInfo() as { via?: string; polyfill?: unknown };
-    if (isStoreCaptured()) return { level: "ok", message: `store ${info.via || "ready"}` };
-    if (info.via === "polyfill" || info.polyfill) return { level: "warn", message: "store polyfill" };
-    return { level: "bad", message: "store none" };
-  } catch {
-    return { level: "bad", message: "store error" };
-  }
-}
-
-/** Rewrites a pill only when something changed: a write is a DOM mutation every observer sees. */
-function showStatus(el: HTMLElement, text: string, title: string, tone: StatusTone): void {
-  if (el.textContent !== text) el.textContent = text;
-  if (el.title !== title) el.title = title;
-  if (!el.classList.contains(`is-${tone}`)) setTone(el, tone);
-}
-
-/** Sprite warm-up progress first, then socket and store health, refreshed while the HUD shows. */
-function startStatusLoop(box: HTMLElement, full: HTMLElement, mini: HTMLElement): void {
-  let warmup = getSpriteWarmupState();
-
-  const update = () => {
-    if (!warmup.completed) {
-      const progress = warmup.total > 0 ? `${warmup.done}/${warmup.total}` : `${warmup.done}`;
-      const summary = warmup.total > 0 ? `Sprites warming: ${progress}` : "Sprites warming up";
-      showStatus(full, `Sprites ${progress}`, summary, "warn");
-      showStatus(mini, progress, summary, "warn");
-      mini.style.display = "";
-      return;
-    }
-
-    const ws = getWSStatus();
-    const store = getStoreStatus();
-    const level: StatusTone = store.message === "store none" && ws.level === "bad"
-      ? "bad"
-      : ws.level === "ok" && store.level === "ok" ? "ok" : "warn";
-    const title = `${ws.message}, ${store.message}`;
-    showStatus(full, "status", title, level);
-    showStatus(mini, level === "ok" ? "OK" : level === "warn" ? "WARN" : "ISSUES", title, level);
-    mini.style.display = level === "ok" ? "none" : "";
-  };
-
-  onSpriteWarmupProgress((state) => {
-    warmup = state;
-    update();
-  });
-  refreshWhileVisible(box, update, 800);
 }
