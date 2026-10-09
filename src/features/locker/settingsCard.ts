@@ -1,14 +1,15 @@
-// The locker's filter settings, shared by the global tab and each species
-// override: harvest mode, size, colour, weather and weather recipes. The
-// controls edit a settings draft in place and call `onChange` after each edit.
+// The locker's filter settings, shared by the General tab and each crop
+// override: the mode (lock or allow), then the size, colour and weather
+// filters. The controls edit a settings draft in place and call `onChange`
+// after each edit.
 
 import { CROP_SIZE_MAX, CROP_SIZE_MIN } from "../../data/rules/cropSize";
 import { pill } from "../../ui/kit/badges";
 import { button, type KitButton } from "../../ui/kit/button";
-import { card } from "../../ui/kit/card";
-import { radioGroup } from "../../ui/kit/fields";
+import { h } from "../../ui/kit/dom";
 import { segmented } from "../../ui/kit/segmented";
 import { rangeDual, slider } from "../../ui/kit/sliders";
+import { lockerCard } from "./lockerCard";
 import type { LockerScaleLockMode, VisualTag, WeatherMode } from "./settings";
 import { normalizeScaleRange } from "./settings";
 import type { SettingsDraft } from "./settingsDraft";
@@ -24,38 +25,28 @@ export type SettingsCard = {
   setDisabled(disabled: boolean): void;
 };
 
-const div = (className: string, text?: string): HTMLDivElement => {
-  const el = document.createElement("div");
-  el.className = className;
-  if (text != null) el.textContent = text;
-  return el;
-};
-
-const section = (title: string, ...content: HTMLElement[]): HTMLElement => {
-  const { root, body } = card(title, { align: "center" });
-  body.append(...content);
-  return root;
-};
-
-/** "Min 62" style read-out under a slider. */
-function sliderValue(label: string): { root: HTMLElement; value: HTMLSpanElement } {
-  const root = div("lk-value");
+/** A slider and its read-out on one line. */
+function sliderLine(control: HTMLElement): { root: HTMLElement; value: HTMLSpanElement } {
+  const root = h("div", "lk-slider-line");
   const value = pill("");
-  root.append(div("qmm-label", label), value);
+  value.classList.add("lk-slider-value");
+  root.append(control, value);
   return { root, value };
 }
 
-let weatherModeGroups = 0;
+/** Recipe mode has none: the recipe editor's own line says how rows match. */
+const WEATHER_MODE_HINTS: Record<WeatherMode, string> = {
+  ANY: "Matches crops with any of the picked effects.",
+  ALL: "Matches crops with every picked effect.",
+  RECIPES: "",
+};
 
 export function lockerSettingsCard(state: SettingsDraft, onChange: () => void): SettingsCard {
-  const root = div("lk-settings");
+  const root = h("div", "lk-settings");
   root.dataset.lockerSettingsCard = "1";
 
-  // ---- harvest mode --------------------------------------------------------
-  const lockModeHint = div("lk-hint");
-  // In LOCK mode a size filter covering every size blocks every crop, while
-  // its sliders at 50 and 100 look like no filter at all. This says so.
-  const lockWarning = div("lk-warning");
+  // ---- mode ----------------------------------------------------------------
+  const lockModeHint = h("div", "lk-hint");
   const lockMode = segmented<"lock" | "allow">(
     [
       { value: "lock", label: "Lock" },
@@ -70,9 +61,14 @@ export function lockerSettingsCard(state: SettingsDraft, onChange: () => void): 
       recipes.refresh();
       onChange();
     },
-    { ariaLabel: "Harvest mode" },
+    { ariaLabel: "Harvest mode", fullWidth: true },
   );
+  const modeCard = lockerCard("Mode");
+  modeCard.body.append(lockMode, lockModeHint);
 
+  // In LOCK mode a size filter covering every size blocks every crop, while
+  // its sliders at 50 and 100 look like no filter at all. This says so.
+  const lockWarning = h("div", "lk-warning");
   const locksEverySize = (): boolean => {
     if (state.lockMode !== "LOCK") return false;
     switch (state.scaleLockMode) {
@@ -94,8 +90,8 @@ export function lockerSettingsCard(state: SettingsDraft, onChange: () => void): 
     if (lockMode.get() !== value) lockMode.set(value);
     lockModeHint.textContent =
       value === "allow"
-        ? "Harvest only when every active filter category matches"
-        : "Harvest is locked whenever any active filter matches";
+        ? "Only crops matching every active filter type can be harvested."
+        : "Crops matching any active filter can't be harvested.";
     showLockWarning();
   };
 
@@ -113,8 +109,8 @@ export function lockerSettingsCard(state: SettingsDraft, onChange: () => void): 
   const scaleMode = segmented<ScaleValue>(
     [
       { value: "none", label: "None" },
-      { value: "minimum", label: "Minimum" },
-      { value: "maximum", label: "Maximum" },
+      { value: "minimum", label: "Min" },
+      { value: "maximum", label: "Max" },
       { value: "ranged", label: "Range" },
     ],
     scaleValueOf(state.scaleLockMode),
@@ -130,34 +126,22 @@ export function lockerSettingsCard(state: SettingsDraft, onChange: () => void): 
       showScale();
       onChange();
     },
-    { ariaLabel: "Scale lock mode" },
+    { ariaLabel: "Scale lock mode", fullWidth: true },
   );
 
   const minSlider = slider(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, state.minScalePct, { fill: true });
   const maxSlider = slider(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, state.maxScalePct, { fill: true });
   const range = rangeDual(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, state.minScalePct, state.maxScalePct);
-  for (const el of [minSlider, maxSlider, range.root]) el.classList.add("lk-slider");
-
-  const minValue = sliderValue("Minimum");
-  const maxValue = sliderValue("Maximum");
-  const rangeMin = sliderValue("Min");
-  const rangeMax = sliderValue("Max");
-  const rangeValues = div("lk-values");
-  rangeValues.append(rangeMin.root, rangeMax.root);
-
-  const minControls = div("lk-column");
-  minControls.append(minSlider, minValue.root);
-  const maxControls = div("lk-column");
-  maxControls.append(maxSlider, maxValue.root);
-  const rangeControls = div("lk-column");
-  rangeControls.append(range.root, rangeValues);
+  const minLine = sliderLine(minSlider);
+  const maxLine = sliderLine(maxSlider);
+  const rangeLine = sliderLine(range.root);
+  const noSize = h("div", "lk-hint", "Every size passes.");
 
   /** Reads the range thumbs, keeping at least one point between them. */
   const readRange = (commit: boolean) => {
     const { min, max } = normalizeScaleRange("RANGE", range.min.value, range.max.value);
     range.setValues(min, max);
-    rangeMin.value.textContent = String(min);
-    rangeMax.value.textContent = String(max);
+    rangeLine.value.textContent = `${min} to ${max}`;
     if (!commit) return;
     state.minScalePct = min;
     state.maxScalePct = max;
@@ -172,14 +156,14 @@ export function lockerSettingsCard(state: SettingsDraft, onChange: () => void): 
     showLockWarning();
   };
 
-  minSlider.addEventListener("input", () => readSingle(minSlider, minValue, "minScalePct", false));
+  minSlider.addEventListener("input", () => readSingle(minSlider, minLine, "minScalePct", false));
   minSlider.addEventListener("change", () => {
-    readSingle(minSlider, minValue, "minScalePct", true);
+    readSingle(minSlider, minLine, "minScalePct", true);
     onChange();
   });
-  maxSlider.addEventListener("input", () => readSingle(maxSlider, maxValue, "maxScalePct", false));
+  maxSlider.addEventListener("input", () => readSingle(maxSlider, maxLine, "maxScalePct", false));
   maxSlider.addEventListener("change", () => {
-    readSingle(maxSlider, maxValue, "maxScalePct", true);
+    readSingle(maxSlider, maxLine, "maxScalePct", true);
     onChange();
   });
   for (const thumb of [range.min, range.max]) {
@@ -193,26 +177,27 @@ export function lockerSettingsCard(state: SettingsDraft, onChange: () => void): 
   const showScale = () => {
     const mode = state.scaleLockMode;
     if (scaleMode.get() !== scaleValueOf(mode)) scaleMode.set(scaleValueOf(mode));
-    minControls.hidden = mode !== "MINIMUM";
-    maxControls.hidden = mode !== "MAXIMUM";
-    rangeControls.hidden = mode !== "RANGE";
+    noSize.hidden = mode !== "NONE";
+    minLine.root.hidden = mode !== "MINIMUM";
+    maxLine.root.hidden = mode !== "MAXIMUM";
+    rangeLine.root.hidden = mode !== "RANGE";
     minSlider.value = String(state.minScalePct);
     maxSlider.value = String(state.maxScalePct);
-    minValue.value.textContent = String(state.minScalePct);
-    maxValue.value.textContent = String(state.maxScalePct);
+    minLine.value.textContent = String(state.minScalePct);
+    maxLine.value.textContent = String(state.maxScalePct);
     range.setValues(state.minScalePct, state.maxScalePct);
     readRange(false);
     showLockWarning();
   };
 
-  const sizeStack = div("lk-column");
-  sizeStack.append(scaleMode, minControls, maxControls, rangeControls);
+  const sizeCard = lockerCard("Size");
+  sizeCard.body.append(scaleMode, noSize, minLine.root, maxLine.root, rangeLine.root, lockWarning);
 
   // ---- colour --------------------------------------------------------------
+  const colorButtons: Array<{ btn: KitButton; isOn: () => boolean }> = [];
   const colorButton = (label: string, modifier: string, isOn: () => boolean, toggle: () => void): KitButton => {
     const btn = button(label, {
       size: "sm",
-      tooltip: "Active filters influence harvest conditions",
       onClick: () => {
         toggle();
         showColors();
@@ -223,20 +208,42 @@ export function lockerSettingsCard(state: SettingsDraft, onChange: () => void): 
     colorButtons.push({ btn, isOn });
     return btn;
   };
-  const colorButtons: Array<{ btn: KitButton; isOn: () => boolean }> = [];
   const toggleVisual = (tag: VisualTag) => {
     if (!state.visualMutations.delete(tag)) state.visualMutations.add(tag);
   };
-  const colors = div("qmm-flex");
-  colors.style.justifyContent = "center";
+  const showColors = () =>
+    colorButtons.forEach(({ btn, isOn }) => {
+      btn.setActive(isOn());
+      btn.setAttribute("aria-pressed", isOn() ? "true" : "false");
+    });
+
+  const colors = h("div", "lk-colors");
   colors.append(
     colorButton("Normal", "normal", () => state.avoidNormal, () => (state.avoidNormal = !state.avoidNormal)),
     colorButton("Gold", "gold", () => state.visualMutations.has("Gold"), () => toggleVisual("Gold")),
     colorButton("Rainbow", "rainbow", () => state.visualMutations.has("Rainbow"), () => toggleVisual("Rainbow")),
   );
-  const showColors = () => colorButtons.forEach(({ btn, isOn }) => btn.setActive(isOn()));
+  const colorCard = lockerCard("Colour");
+  colorCard.body.append(colors);
 
   // ---- weather -------------------------------------------------------------
+  const weatherHint = h("div", "lk-hint");
+  const weatherMode = segmented<WeatherMode>(
+    [
+      { value: "ANY", label: "Any" },
+      { value: "ALL", label: "All" },
+      { value: "RECIPES", label: "Recipes" },
+    ],
+    state.weatherMode,
+    (value) => {
+      if (value === state.weatherMode) return;
+      state.weatherMode = value;
+      showWeatherMode();
+      onChange();
+    },
+    { ariaLabel: "Weather filter mode", fullWidth: true },
+  );
+
   const mainGrid = weatherGrid(false);
   const mainTiles = weatherMutations().map((info) => {
     const tile = weatherTile(info, false, (checked) => {
@@ -248,46 +255,22 @@ export function lockerSettingsCard(state: SettingsDraft, onChange: () => void): 
     return tile;
   });
 
-  const modeName = `locker-weather-mode-${++weatherModeGroups}`;
-  const weatherMode = radioGroup<WeatherMode>(
-    modeName,
-    [
-      { value: "ANY", label: "Any match (OR)" },
-      { value: "ALL", label: "All match (AND)" },
-      { value: "RECIPES", label: "Recipes (match rows)" },
-    ],
-    state.weatherMode,
-    (value) => {
-      state.weatherMode = value;
-      showWeatherMode();
-      onChange();
-    },
-  );
-  weatherMode.classList.add("qmm-flex");
-  weatherMode.style.justifyContent = "center";
-
   const recipes = weatherRecipeEditor(state, onChange);
-  const recipesSection = section("Weather recipes", recipes.root);
 
-  /** The tiles only count outside recipe mode, where the rows replace them. */
+  /** The tiles only count outside recipe mode, where the recipes replace them. */
   const showWeatherMode = () => {
-    for (const input of Array.from(weatherMode.querySelectorAll<HTMLInputElement>("input"))) {
-      input.checked = input.value === state.weatherMode;
-    }
+    if (weatherMode.get() !== state.weatherMode) weatherMode.set(state.weatherMode);
+    weatherHint.textContent = WEATHER_MODE_HINTS[state.weatherMode] ?? "";
+    weatherHint.hidden = !weatherHint.textContent;
     const recipeMode = state.weatherMode === "RECIPES";
-    mainGrid.classList.toggle("is-disabled", recipeMode);
-    mainGrid.inert = recipeMode;
-    recipesSection.hidden = !recipeMode;
+    mainGrid.hidden = recipeMode;
+    recipes.root.hidden = !recipeMode;
   };
 
-  root.append(
-    section("Harvest mode", lockMode, lockModeHint, lockWarning),
-    section("Filter by size", sizeStack),
-    section("Filter by color", colors),
-    section("Filter by weather", mainGrid),
-    section("Weather filter mode", weatherMode),
-    recipesSection,
-  );
+  const weatherCard = lockerCard("Weather");
+  weatherCard.body.append(weatherMode, weatherHint, mainGrid, recipes.root);
+
+  root.append(modeCard.root, sizeCard.root, colorCard.root, weatherCard.root);
 
   const refresh = () => {
     showLockMode();

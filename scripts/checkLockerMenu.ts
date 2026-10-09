@@ -40,22 +40,21 @@ async function main() {
   byText(general, ".qmm-btn", "Gold")!.click();
   checkEqual("the Gold button filters gold crops", settings().visualMutations.join(","), "Gold");
 
-  byText(general, ".qmm-seg__btn", "Minimum")!.click();
+  byText(general, ".qmm-seg__btn", "Min")!.click();
   checkEqual("the Minimum size mode is saved", settings().scaleLockMode, "MINIMUM");
 
   const wetTile = all(general, ".lk-tile").find((tile) => tile.textContent?.includes("Wet"))!;
   change(all(wetTile, "input")[0], true);
   checkEqual("a weather tile adds its mutation", settings().weatherSelected.includes("Wet"), true);
 
-  const recipesRadio = all(general, ".qmm-radio").find((r) => (r as unknown as HTMLInputElement).value === "RECIPES")!;
-  change(recipesRadio, true);
+  byText(general, ".qmm-seg__btn", "Recipes")!.click();
   checkEqual("the Recipes mode is saved", settings().weatherMode, "RECIPES");
 
-  byText(general, ".qmm-btn", "+ Recipe")!.click();
+  byText(general, ".qmm-btn", "Add recipe")!.click();
   const editor = all(general, ".lk-recipe")[0];
   const frozen = all(editor, ".lk-tile").find((tile) => tile.textContent?.includes("Frozen"))!;
   change(all(frozen, "input")[0], true);
-  byText(editor, ".qmm-btn", "✔️")!.click();
+  byText(editor, ".qmm-btn", "Save")!.click();
   checkEqual("a saved recipe row is stored", JSON.stringify(settings().weatherRecipes), '[["Frozen"]]');
 
   // --- Overrides -------------------------------------------------------------
@@ -72,19 +71,27 @@ async function main() {
 
   // --- Restrictions ----------------------------------------------------------
   const restrictions = view("locker-restrictions");
-  const decorCard = all(restrictions, ".qmm-card").find((c) => c.textContent?.includes("Decor pick locker"))!;
+  const decorCard = all(restrictions, ".qmm-card").find((c) => c.textContent?.includes("Decor pickup"))!;
   change(all(decorCard, ".qmm-switch")[0], true);
   checkEqual("the decor switch locks decor pickup", lockerRestrictionsService.isDecorPickupLocked(), true);
 
-  const eggCard = all(restrictions, ".qmm-card").find((c) => c.textContent?.includes("Egg hatch locker"))!;
+  const eggCard = all(restrictions, ".qmm-card").find((c) => c.textContent?.includes("Egg hatching"))!;
   const eggRows = all(eggCard, ".qmm-setting-row");
   checkEqual("every egg of the catalog is listed", eggRows.length > 3, true);
   change(all(eggRows[0], ".qmm-switch")[0], true);
   checkEqual("an egg switch locks that egg", Object.values(lockerRestrictionsService.getState().eggLocks).includes(true), true);
 
-  const petsCard = all(restrictions, ".qmm-card").find((c) => c.textContent?.includes("Sell all pets protections"))!;
+  const petsCard = all(restrictions, ".qmm-card").find((c) => c.textContent?.includes("Sell all pets"))!;
   change(all(petsCard, ".qmm-switch")[1], false);
   checkEqual("a protection switch is saved", lockerRestrictionsService.getSellAllPetsRules().protectGold, false);
+
+  const rareChip = all(petsCard, ".lk-rarity").find((chip) => chip.dataset.rarity === "Rare")!;
+  const protectsRare = () => lockerRestrictionsService.getSellAllPetsRules().protectedRarities.includes("Rare");
+  const rareBefore = protectsRare();
+  rareChip.click();
+  checkEqual("a rarity chip toggles that rarity's protection", protectsRare(), !rareBefore);
+  rareChip.click();
+  checkEqual("and a second tap puts it back", protectsRare(), rareBefore);
 }
 
 run(main);

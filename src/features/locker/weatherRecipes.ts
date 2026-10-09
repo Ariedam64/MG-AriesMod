@@ -2,6 +2,7 @@
 // when it carries every tag of it, and the filter matches when any row does.
 
 import { button } from "../../ui/kit/button";
+import { h } from "../../ui/kit/dom";
 import { weatherIcon } from "./menuIcons";
 import type { SettingsDraft } from "./settingsDraft";
 import { weatherGrid, weatherTile, type WeatherTile } from "./weatherPicker";
@@ -19,35 +20,27 @@ function showSummary(summary: HTMLElement, selection: Set<string>): HTMLElement 
   summary.replaceChildren();
   const tags = weatherMutations().filter((info) => selection.has(info.key));
   for (const { key, label } of tags) {
-    const tag = document.createElement("div");
-    tag.className = "lk-tag";
-    const text = document.createElement("span");
-    text.textContent = label;
-    tag.append(weatherIcon(key, 20), text);
+    const tag = h("div", "lk-tag");
+    tag.append(weatherIcon(key, 18), h("span", undefined, label));
     summary.appendChild(tag);
   }
-  if (!tags.length) {
-    const empty = document.createElement("div");
-    empty.className = "lk-empty";
-    empty.textContent = "No weather mutation selected.";
-    summary.appendChild(empty);
-  }
+  if (!tags.length) summary.appendChild(h("div", "lk-empty", "Pick at least one effect below."));
   return summary;
 }
 
 export function weatherRecipeEditor(state: SettingsDraft, onChange: () => void): RecipeEditor {
-  const root = document.createElement("div");
-  root.className = "lk-recipes";
+  const root = h("div", "lk-recipes");
 
-  const title = document.createElement("div");
-  title.className = "lk-recipes__title";
-  const addButton = button("+ Recipe", { size: "sm", onClick: () => startEditing(state.weatherRecipes.length) });
-  const head = document.createElement("div");
-  head.className = "lk-recipes__head";
+  const title = h("div", "lk-hint");
+  const addButton = button("Add recipe", {
+    size: "sm",
+    variant: "primary",
+    onClick: () => startEditing(state.weatherRecipes.length),
+  });
+  const head = h("div", "lk-recipes__head");
   head.append(title, addButton);
 
-  const list = document.createElement("div");
-  list.className = "lk-recipes__list";
+  const list = h("div", "lk-recipes__list");
   root.append(head, list);
 
   /** The row being edited (`state.weatherRecipes.length` for a new one) and its working copy. */
@@ -94,9 +87,8 @@ export function weatherRecipeEditor(state: SettingsDraft, onChange: () => void):
 
   /** Picking a tag drops the other tags of its kind: a row holds one condition and one lighting. */
   function editingRow(index: number): HTMLElement {
-    const row = document.createElement("div");
-    row.className = "lk-recipe is-editing";
-    const summary = showSummary(document.createElement("div"), draft);
+    const row = h("div", "lk-recipe is-editing");
+    const summary = showSummary(h("div"), draft);
 
     const tiles = new Map<string, WeatherTile>();
     const grid = weatherGrid(true);
@@ -117,34 +109,32 @@ export function weatherRecipeEditor(state: SettingsDraft, onChange: () => void):
       grid.appendChild(tile.root);
     }
 
-    const actions = document.createElement("div");
-    actions.className = "lk-recipe__actions";
-    actions.append(
-      button("❌", { size: "sm", tooltip: "Cancel", onClick: stopEditing }),
-      button("✔️", { size: "sm", tooltip: "Save", onClick: commit }),
-    );
+    const actions = h("div", "lk-recipe__actions");
     if (index < state.weatherRecipes.length) {
-      actions.append(button("🗑️", { size: "sm", tooltip: "Delete", ariaLabel: "Delete", onClick: () => remove(index) }));
+      actions.append(button("Delete", { size: "sm", variant: "ghost", onClick: () => remove(index) }));
     }
+    actions.append(
+      h("div", "qmm-spacer"),
+      button("Cancel", { size: "sm", onClick: stopEditing }),
+      button("Save", { size: "sm", variant: "primary", onClick: commit }),
+    );
     row.append(summary, grid, actions);
     return row;
   }
 
   function savedRow(recipe: Set<string>, index: number): HTMLElement {
-    const row = document.createElement("div");
-    row.className = "lk-recipe";
-    const actions = document.createElement("div");
-    actions.className = "lk-recipe__actions";
+    const row = h("div", "lk-recipe");
+    const actions = h("div", "lk-recipe__actions");
     actions.append(
-      button("✏️", { size: "xs", tooltip: "Edit", ariaLabel: "Edit", onClick: () => startEditing(index) }),
-      button("🗑️", { size: "xs", tooltip: "Delete", ariaLabel: "Delete", onClick: () => remove(index) }),
+      button("Edit", { size: "xs", onClick: () => startEditing(index) }),
+      button("Delete", { size: "xs", variant: "ghost", onClick: () => remove(index) }),
     );
-    row.append(showSummary(document.createElement("div"), recipe), actions);
+    row.append(showSummary(h("div"), recipe), actions);
     return row;
   }
 
   function repaint() {
-    title.textContent = `${state.lockMode === "ALLOW" ? "Allow" : "Lock"} when any recipe row matches (OR between rows)`;
+    title.textContent = `A crop with every effect of a recipe is ${state.lockMode === "ALLOW" ? "allowed" : "locked"}.`;
     addButton.setEnabled(editingIndex === null);
     list.replaceChildren();
     state.weatherRecipes.forEach((recipe, index) => {
@@ -155,10 +145,7 @@ export function weatherRecipeEditor(state: SettingsDraft, onChange: () => void):
       list.appendChild(editingRow(editingIndex));
     }
     if (!list.childElementCount) {
-      const empty = document.createElement("div");
-      empty.className = "lk-empty";
-      empty.textContent = "No recipe rows yet.";
-      list.appendChild(empty);
+      list.appendChild(h("div", "lk-empty-state", "No recipes yet. Add one with the button above."));
     }
   }
 

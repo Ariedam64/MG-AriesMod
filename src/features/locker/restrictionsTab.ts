@@ -4,12 +4,13 @@
 
 import { Atoms } from "../../game/store/atoms";
 import { pill, setTone } from "../../ui/kit/badges";
-import { card } from "../../ui/kit/card";
+import { h } from "../../ui/kit/dom";
 import { settingRow } from "../../ui/kit/layout";
 import { slider } from "../../ui/kit/sliders";
 import { switchInput, type SwitchInput } from "../../ui/kit/toggles";
 import { lockableEggs, catalogEggs, type EggOption } from "./eggOptions";
 import { currentFriendBonus, onFriendBonusChange } from "./friendBonus";
+import { lockerCard } from "./lockerCard";
 import { eggIcon } from "./menuIcons";
 import {
   FRIEND_BONUS_MAX,
@@ -28,39 +29,36 @@ const toBonusStep = (value: number) =>
 function friendBonusCard() {
   let requiredPlayers = lockerRestrictionsService.getState().minRequiredPlayers;
   const status = pill("");
-  const { root, body } = card("Friend bonus locker", { align: "stretch", actions: [status] });
+  const { root, body } = lockerCard("Friend bonus", {
+    subtitle: "Crops only sell with at least this bonus.",
+    control: status,
+  });
 
-  const value = pill("", "warn");
-  const head = document.createElement("div");
-  head.className = "qmm-flex";
-  head.style.justifyContent = "space-between";
-  const title = document.createElement("div");
-  title.className = "qmm-setting-row__title";
-  title.textContent = "Minimum friend bonus required";
-  head.append(title, value);
-
+  const value = pill("");
+  value.classList.add("lk-slider-value");
   const bonusSlider = slider(0, FRIEND_BONUS_MAX, FRIEND_BONUS_STEP, friendBonusPercentFromPlayers(requiredPlayers) ?? 0, { fill: true });
-  const statusText = document.createElement("div");
-  statusText.className = "qmm-setting-row__hint";
-  statusText.style.fontSize = "12.5px";
-  body.append(head, bonusSlider, statusText);
+  bonusSlider.setAttribute("aria-label", "Minimum friend bonus");
+  const line = h("div", "lk-slider-line");
+  line.append(bonusSlider, value);
+  const statusText = h("div", "lk-hint");
+  body.append(line, statusText);
 
   const showStatus = () => {
     const requiredPct = toBonusStep(friendBonusPercentFromPlayers(requiredPlayers) ?? 0);
     const currentPct = currentFriendBonus() ?? 0;
     const currentPlayers = percentToRequiredFriendCount(currentPct);
     if (requiredPct <= 0) {
-      status.textContent = "Unlocked";
+      status.textContent = "Off";
       setTone(status);
-      statusText.textContent = `Current friend bonus: ${currentPct}% (${currentPlayers} players).`;
+      statusText.textContent = `Your bonus now: ${currentPct}% (${currentPlayers} players).`;
       return;
     }
     const allowed = currentPct + 0.0001 >= requiredPct;
     status.textContent = allowed ? "Sale allowed" : "Sale locked";
     setTone(status, allowed ? "ok" : "bad");
     statusText.textContent = allowed
-      ? `Current bonus ${currentPct}% (${currentPlayers} players) meets the requirement (${requiredPct}%).`
-      : `Requires ${requiredPct}% (${requiredPlayers} players) or more`;
+      ? `Your bonus of ${currentPct}% (${currentPlayers} players) meets the ${requiredPct}% needed.`
+      : `Needs ${requiredPct}% (${requiredPlayers} players) or more.`;
   };
 
   const showSlider = (pct: number) => {
@@ -91,7 +89,9 @@ function friendBonusCard() {
 }
 
 function eggLocksCard() {
-  const { root, body } = card("Egg hatch locker", { align: "stretch" });
+  const { root, body } = lockerCard("Egg hatching", { subtitle: "Locked eggs can't be hatched." });
+  const grid = h("div", "lk-egg-grid");
+  body.appendChild(grid);
   const rows = new Map<string, { row: HTMLElement; title: HTMLElement; toggle: SwitchInput }>();
   let eggs: EggOption[] = catalogEggs();
 
@@ -101,7 +101,7 @@ function eggLocksCard() {
       const toggle = switchInput(false, (locked) => lockerRestrictionsService.setEggLock(egg.id, locked));
       toggle.title = "Lock hatching";
       const { row } = settingRow(egg.name, null, toggle);
-      row.prepend(eggIcon(egg.id, egg.name, 32));
+      row.prepend(eggIcon(egg.id, egg.name, 28));
       entry = { row, title: row.querySelector<HTMLElement>(".qmm-setting-row__title")!, toggle };
       rows.set(egg.id, entry);
     }
@@ -110,16 +110,14 @@ function eggLocksCard() {
 
   const render = () => {
     if (!eggs.length) {
-      const empty = document.createElement("div");
-      empty.className = "lk-empty";
-      empty.textContent = "No eggs available.";
-      body.replaceChildren(empty);
+      grid.replaceChildren(h("div", "lk-empty-state", "No eggs found yet. They show up once the shop loads."));
       return;
     }
-    body.replaceChildren(
+    grid.replaceChildren(
       ...eggs.map((egg) => {
         const entry = rowFor(egg);
         entry.title.textContent = egg.name || egg.id;
+        entry.toggle.setAttribute("aria-label", `Lock ${egg.name || egg.id}`);
         entry.toggle.setChecked(lockerRestrictionsService.isEggLocked(egg.id));
         return entry.row;
       }),
@@ -137,17 +135,16 @@ function eggLocksCard() {
 }
 
 export function restrictionsTab(): LockerTab {
-  const layout = document.createElement("div");
-  layout.className = "lk-restrictions";
+  const layout = h("div", "lk-tab");
 
   const friendBonus = friendBonusCard();
   const decorToggle = switchInput(lockerRestrictionsService.isDecorPickupLocked(), (locked) =>
     lockerRestrictionsService.setDecorPickupLocked(locked),
   );
-  const decor = card("Decor pick locker", {
-    align: "stretch",
-    subtitle: "Prevents placed decors from being picked up",
-    actions: [decorToggle],
+  decorToggle.setAttribute("aria-label", "Lock decor pickup");
+  const decor = lockerCard("Decor pickup", {
+    subtitle: "Stops placed decor from being picked up.",
+    control: decorToggle,
   });
   const eggLocks = eggLocksCard();
   const sellPets = sellPetsRulesCard();
@@ -177,7 +174,7 @@ export function restrictionsTab(): LockerTab {
 
   return {
     render(view) {
-      view.classList.add("lk-view");
+      view.classList.add("lk-view", "qmm-scroll");
       view.replaceChildren(layout);
       syncFromService();
       follow();
