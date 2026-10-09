@@ -1,7 +1,9 @@
+import { pill, setTone } from "../../ui/kit/badges";
 import { button } from "../../ui/kit/button";
 import { card } from "../../ui/kit/card";
+import { h } from "../../ui/kit/dom";
 import { textInput } from "../../ui/kit/fields";
-import { flexRow } from "../../ui/kit/layout";
+import { flexRow, settingRow } from "../../ui/kit/layout";
 import {
   ensureStore,
   isStoreCaptured,
@@ -11,66 +13,49 @@ import {
   jSet,
   jSub,
 } from "../../game/store/jotai";
-import { copy, createTwoColumns, safeRegex, stylePre, toast } from "./shared";
+import { bar, barEnd, cardColumns,codeBox, copy, grow, safeRegex, setBtnLabel, tabRoot, toast } from "./shared";
 
 export function renderJotaiTab(view: HTMLElement) {
-  view.innerHTML = "";
-  view.classList.add("dd-debug-view");
+  const root = tabRoot(view);
 
-  const { leftCol, rightCol } = createTwoColumns(view);
-
-  // LEFT: Capture store + helpers
+  // Store status
   {
-    const section = card("🗄️ Capture store", {
-      tone: "muted",
-      subtitle: "Initialize the Jotai store so atoms can be inspected.",
-    });
-    leftCol.appendChild(section.root);
-
-    const status = document.createElement("span");
-    status.className = "dd-status-chip";
+    const status = pill("");
     const refreshStatus = () => {
       const captured = isStoreCaptured();
-      status.textContent = captured ? "Store captured" : "Store not captured";
-      status.classList.toggle("is-ok", captured);
-      status.classList.toggle("is-warn", !captured);
+      status.textContent = captured ? "Captured" : "Not captured";
+      setTone(status, captured ? "ok" : "warn");
     };
     refreshStatus();
 
-    const actions = flexRow({ gap: 10, align: "center", wrap: true });
     const btnCap = button("Capture store", {
       variant: "primary",
-      icon: "⏺",
+      size: "sm",
       onClick: async () => {
         try { await ensureStore(); } catch {}
         refreshStatus();
       },
     });
 
-    actions.append(btnCap, status);
-    section.body.appendChild(actions);
+    const controls = flexRow({ gap: 8 });
+    controls.append(status, btnCap);
+    const { row } = settingRow("Jotai store", "Atoms can be read and written once it is captured.", controls);
+    row.classList.add("dd-status");
+    root.appendChild(row);
   }
 
-  // LEFT: Find / List atoms
+  const [left, right] = cardColumns(root);
+
+  // Find atoms
   {
-    const section = card("🔍 Explore atoms", {
-      tone: "muted",
-      subtitle: "Filter labels using a regular expression.",
-    });
-    leftCol.appendChild(section.root);
+    const section = card("Find atoms", { subtitle: "Filter atom labels with a regular expression." });
+    left.appendChild(section.root);
 
-    const queryRow = flexRow({ gap: 10, wrap: true, fullWidth: true });
-    const q = textInput("regex label (ex: position|health)", "");
-    q.classList.add("dd-grow");
-    const btnList = button("List", { icon: "📄", onClick: () => doList() });
-    const btnCopy = button("Copy", { icon: "📋", onClick: () => copy(pre.textContent || "") });
-    queryRow.append(q, btnList, btnCopy);
+    const q = grow(textInput("Regex, e.g. position|health", ""));
+    const pre = codeBox("Matching labels show here.", true);
+    pre.classList.add("dd-code--list");
 
-    const pre = document.createElement("pre");
-    stylePre(pre);
-    pre.style.minHeight = "140px";
-
-    async function doList() {
+    function doList() {
       const raw = q.value.trim();
       const rx = safeRegex(raw || ".*");
       const all = findAtomsByLabel(/.*/);
@@ -78,28 +63,28 @@ export function renderJotaiTab(view: HTMLElement) {
       const labels = atoms.map(a => String(a?.debugLabel || a?.label || "<?>"));
       pre.textContent = labels.join("\n");
     }
+    q.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") { ev.preventDefault(); doList(); }
+    });
 
-    section.body.append(queryRow, pre);
+    const btnList = button("List", { variant: "primary", size: "sm", onClick: () => doList() });
+    const btnCopy = button("Copy", { variant: "ghost", size: "sm", onClick: () => copy(pre.textContent || "") });
+    section.body.append(bar(q, btnList, btnCopy), pre);
   }
 
-  // RIGHT: Get / Subscribe
+  // Read an atom, once or as it changes
   {
-    const section = card("🧭 Inspect an atom", {
-      tone: "muted",
-      subtitle: "Get the current value or subscribe to updates.",
-    });
-    rightCol.appendChild(section.root);
+    const section = card("Inspect an atom", { subtitle: "Read its value once, or follow it as it changes." });
+    right.appendChild(section.root);
 
-    const controls = flexRow({ gap: 10, wrap: true, fullWidth: true });
-    const q = textInput("atom label (ex: positionAtom)", "");
-    q.classList.add("dd-grow");
-    const pre = document.createElement("pre");
-    stylePre(pre);
-    pre.style.minHeight = "160px";
+    const q = textInput("Atom label, e.g. positionAtom", "");
+    q.classList.add("dd-full");
+    const pre = codeBox("The value shows here.", true);
     let unsubRef: null | (() => void) = null;
 
     const btnGet = button("Get", {
-      icon: "👁",
+      variant: "primary",
+      size: "sm",
       onClick: async () => {
         const atom = getAtomByLabel(q.value.trim());
         if (!atom) { pre.textContent = `Atom "${q.value}" not found`; return; }
@@ -107,8 +92,9 @@ export function renderJotaiTab(view: HTMLElement) {
         catch (e: any) { setText(pre, e?.message || String(e)); }
       },
     });
-    const btnSub = button("Subscribe", {
-      icon: "🔔",
+    const btnSub = button("Follow", {
+      size: "sm",
+      title: "Update the value after each change",
       onClick: async () => {
         const label = q.value.trim();
         if (!label) return;
@@ -117,41 +103,33 @@ export function renderJotaiTab(view: HTMLElement) {
         if (unsubRef) {
           unsubRef();
           unsubRef = null;
-          btnSub.textContent = "Subscribe";
+          setBtnLabel(btnSub, "Follow");
+          btnSub.setActive(false);
           return;
         }
         unsubRef = await jSub(atom, async () => { try { setText(pre, await jGet(atom)); } catch {} });
-        btnSub.textContent = "Unsubscribe";
+        setBtnLabel(btnSub, "Stop following");
+        btnSub.setActive(true);
       },
     });
-    const btnCopy = button("Copy", { icon: "📋", onClick: () => copy(pre.textContent || "") });
-    controls.append(q, btnGet, btnSub, btnCopy);
+    const btnCopy = button("Copy", { variant: "ghost", size: "sm", onClick: () => copy(pre.textContent || "") });
 
-    const note = document.createElement("p");
-    note.className = "dd-inline-note";
-    note.textContent = "Tip: subscriptions keep the value updated after each mutation.";
-
-    section.body.append(controls, note, pre);
+    section.body.append(q, bar(barEnd(btnCopy, btnSub, btnGet)), pre);
   }
 
-  // RIGHT: Set atom
+  // Write an atom
   {
-    const section = card("✏️ Update an atom", {
-      tone: "muted",
-      subtitle: "Publish a new value (JSON).",
-    });
-    rightCol.appendChild(section.root);
+    const section = card("Write an atom", { subtitle: "Sends JSON, or plain text when it does not parse." });
+    right.appendChild(section.root);
 
-    const controls = flexRow({ gap: 10, wrap: true, fullWidth: true });
-    const q = textInput("atom label (ex: activeModalStateAtom)", "");
-    q.classList.add("dd-grow");
-    const ta = document.createElement("textarea");
-    ta.className = "qmm-input dd-textarea";
-    ta.placeholder = `JSON or text value, e.g. inventory or { "x": 1, "y": 2 }`;
+    const q = textInput("Atom label, e.g. activeModalStateAtom", "");
+    q.classList.add("dd-full");
+    const ta = h("textarea", "qmm-input dd-textarea");
+    ta.placeholder = `{ "x": 1, "y": 2 }`;
 
-    const btnSet = button("Set", {
-      icon: "✅",
+    const btnSet = button("Set value", {
       variant: "primary",
+      size: "sm",
       onClick: async () => {
         const label = q.value.trim();
         if (!label) { toast("Enter an atom label"); return; }
@@ -192,14 +170,12 @@ export function renderJotaiTab(view: HTMLElement) {
         }
       },
     });
-    const btnCopy = button("Copy JSON", { icon: "📋", onClick: () => copy(ta.value) });
-    controls.append(q, btnSet, btnCopy);
+    const btnCopy = button("Copy", { variant: "ghost", size: "sm", onClick: () => copy(ta.value) });
 
-    section.body.append(controls, ta);
+    section.body.append(q, ta, bar(barEnd(btnCopy, btnSet)));
   }
 
   function setText(el: HTMLElement, v: any) {
     el.textContent = typeof v === "string" ? v : JSON.stringify(v, null, 2);
   }
 }
-

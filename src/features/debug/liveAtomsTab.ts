@@ -1,10 +1,25 @@
+import { pill } from "../../ui/kit/badges";
 import { button } from "../../ui/kit/button";
-import { card } from "../../ui/kit/card";
+import { card, sectionLabel } from "../../ui/kit/card";
+import { h } from "../../ui/kit/dom";
 import { textInput } from "../../ui/kit/fields";
-import { flexRow } from "../../ui/kit/layout";
 import { ensureStore, findAtomsByLabel, jGet, jSub } from "../../game/store/jotai";
 import { fmtTime } from "./wsCapture";
-import { copy, createTwoColumns, safeRegex, stylePre, setBtnLabel, toast } from "./shared";
+import { snapshot, stringify, summarizeValue } from "./atomValues";
+import {
+  bar,
+  barEnd,
+  cardGrid,
+  codeBox,
+  copy,
+  emptyNote,
+  grow,
+  hint,
+  safeRegex,
+  setBtnLabel,
+  tabRoot,
+  toast,
+} from "./shared";
 
 type AtomLiveEntry = {
   atom: any;
@@ -25,42 +40,27 @@ export function renderLiveAtomsTab(view: HTMLElement) {
     try { (view as any).__atoms_live_cleanup__(); } catch {}
   }
 
-  view.innerHTML = "";
-  view.classList.add("dd-debug-view");
+  const root = tabRoot(view);
 
   const entries = new Map<string, AtomLiveEntry>();
   const records: AtomLiveRecord[] = [];
   let recording = false;
   let selectedRecord: number | null = null;
 
-  const { leftCol, rightCol } = createTwoColumns(view);
+  const grid = cardGrid(root);
 
-  // ---------- Selection controls ----------
-  const selectCard = card("🧪 Pick atoms", {
-    tone: "muted",
-    subtitle: "Filter labels with a regex then toggle atoms to monitor.",
+  // ---------- Atoms to watch ----------
+  const selectedInfo = pill("");
+  const selectCard = card("Atoms to watch", {
+    subtitle: "Filter with a regex, then tick the atoms to record.",
+    actions: [selectedInfo],
   });
-  leftCol.appendChild(selectCard.root);
+  grid.appendChild(selectCard.root);
 
-  const filterRow = flexRow({ gap: 10, wrap: true, fullWidth: true });
-  const filterInput = textInput("regex label (ex: position|health)", "");
-  filterInput.classList.add("dd-grow");
-  const btnFilter = button("Refresh", { icon: "🔍", onClick: () => refreshMatches() });
-  filterRow.append(filterInput, btnFilter);
-
-  const matchesWrap = document.createElement("div");
-  matchesWrap.className = "dd-atom-list";
-
-  const emptyMatches = document.createElement("p");
-  emptyMatches.className = "dd-card-description";
-  emptyMatches.textContent = "No atoms match the current filter.";
-  emptyMatches.style.display = "none";
-
-  const selectedInfo = document.createElement("p");
-  selectedInfo.className = "dd-card-description";
-  selectedInfo.style.marginTop = "8px";
-
-  selectCard.body.append(filterRow, matchesWrap, emptyMatches, selectedInfo);
+  const filterInput = grow(textInput("Regex, e.g. position|health", ""));
+  const btnFilter = button("Refresh", { size: "sm", onClick: () => refreshMatches() });
+  const matchesWrap = h("div", "dd-well dd-well--short qmm-scroll");
+  selectCard.body.append(bar(filterInput, btnFilter), matchesWrap);
 
   filterInput.addEventListener("keydown", (ev) => {
     if (ev.key === "Enter") {
@@ -69,21 +69,23 @@ export function renderLiveAtomsTab(view: HTMLElement) {
     }
   });
 
-  // ---------- Live log ----------
-  const logCard = card("📡 Live atom log", {
-    tone: "muted",
-    subtitle: "Start recording to capture updates for the selected atoms.",
+  // ---------- Change log ----------
+  const recordingPill = pill("Recording", "ok");
+  recordingPill.hidden = true;
+  const logCard = card("Change log", {
+    subtitle: "Every change of the ticked atoms while recording.",
+    actions: [recordingPill],
   });
-  rightCol.appendChild(logCard.root);
+  grid.appendChild(logCard.root);
 
-  const controlsRow = flexRow({ gap: 10, wrap: true, fullWidth: true });
   const btnRecord = button("Start recording", {
     variant: "primary",
+    size: "sm",
     onClick: () => toggleRecording(),
   });
-  const btnClear = button("Clear log", {
+  const btnClear = button("Clear", {
     variant: "ghost",
-    icon: "🧹",
+    size: "sm",
     onClick: () => {
       records.length = 0;
       selectedRecord = null;
@@ -92,69 +94,39 @@ export function renderLiveAtomsTab(view: HTMLElement) {
       updateControls();
     },
   });
-  const btnCopyLog = button("Copy log", {
+  const btnCopyLog = button("Copy", {
     variant: "ghost",
-    icon: "📋",
+    size: "sm",
     onClick: () => copyLog(),
   });
-  controlsRow.append(btnRecord, btnClear, btnCopyLog);
-  logCard.body.appendChild(controlsRow);
+  logCard.body.appendChild(bar(btnRecord, barEnd(btnClear, btnCopyLog)));
 
-  const logWrap = document.createElement("div");
-  logWrap.className = "dd-log";
-  logWrap.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
-  const logEmpty = document.createElement("div");
-  logEmpty.className = "dd-log__empty";
-  logEmpty.textContent = "No updates yet.";
+  const logWrap = h("div", "dd-well qmm-scroll");
+  const logEmpty = emptyNote("Nothing recorded yet. Tick some atoms, then start recording.");
   logWrap.appendChild(logEmpty);
   logCard.body.appendChild(logWrap);
 
-  const detailHeader = document.createElement("p");
-  detailHeader.className = "dd-card-description";
-  detailHeader.textContent = "Select a log entry to inspect previous and next values.";
+  // ---------- Change details ----------
+  const detailCard = card("Change details");
+  root.appendChild(detailCard.root);
 
-  const detailWrap = flexRow({ gap: 12, wrap: true, fullWidth: true });
-  const prevBox = document.createElement("div");
-  prevBox.style.flex = "1 1 320px";
-  const prevTitle = document.createElement("strong");
-  prevTitle.textContent = "Previous";
-  prevTitle.style.display = "block";
-  prevTitle.style.marginBottom = "6px";
-  const prevPre = document.createElement("pre");
-  stylePre(prevPre);
-  prevPre.style.minHeight = "140px";
-  prevPre.textContent = "";
+  const detailHeader = hint("");
+  const prevTitle = sectionLabel("Before");
+  const prevPre = codeBox("Nothing to show.");
+  const nextTitle = sectionLabel("After");
+  const nextPre = codeBox("Nothing to show.");
+  const compare = h("div", "dd-grid dd-grid--tight");
+  const prevBox = h("div", "dd-stack");
   prevBox.append(prevTitle, prevPre);
-
-  const nextBox = document.createElement("div");
-  nextBox.style.flex = "1 1 320px";
-  const nextTitle = document.createElement("strong");
-  nextTitle.textContent = "Next";
-  nextTitle.style.display = "block";
-  nextTitle.style.marginBottom = "6px";
-  const nextPre = document.createElement("pre");
-  stylePre(nextPre);
-  nextPre.style.minHeight = "140px";
-  nextPre.textContent = "";
+  const nextBox = h("div", "dd-stack");
   nextBox.append(nextTitle, nextPre);
+  compare.append(prevBox, nextBox);
 
-  const historyBox = document.createElement("div");
-  historyBox.style.flex = "1 1 100%";
-  historyBox.style.minWidth = "0";
-  const historyTitle = document.createElement("strong");
-  historyTitle.textContent = "History";
-  historyTitle.style.display = "block";
-  historyTitle.style.marginBottom = "6px";
-  const historyList = document.createElement("div");
-  historyList.style.display = "flex";
-  historyList.style.flexDirection = "column";
-  historyList.style.gap = "10px";
-  historyList.style.maxHeight = "320px";
-  historyList.style.overflow = "auto";
-  historyBox.append(historyTitle, historyList);
+  const historyList = h("div", "dd-well qmm-scroll");
+  const historyBox = h("div", "dd-stack");
+  historyBox.append(sectionLabel("History of this atom"), historyList);
 
-  detailWrap.append(prevBox, nextBox, historyBox);
-  logCard.body.append(detailHeader, detailWrap);
+  detailCard.body.append(detailHeader, compare, historyBox);
 
   // ---------- Logic helpers ----------
   function refreshMatches() {
@@ -162,25 +134,20 @@ export function renderLiveAtomsTab(view: HTMLElement) {
     const rx = safeRegex(raw || ".*");
     const atoms = findAtomsByLabel(rx);
     matchesWrap.innerHTML = "";
-    emptyMatches.style.display = atoms.length ? "none" : "block";
+    if (!atoms.length) matchesWrap.appendChild(emptyNote("No atom matches this filter."));
     atoms
       .map((atom) => ({ atom, label: String(atom?.debugLabel || atom?.label || "<unknown>") }))
       .sort((a, b) => a.label.localeCompare(b.label))
       .forEach(({ atom, label }) => {
-        const row = document.createElement("label");
-        row.className = "dd-atom-list__item";
+        const row = h("label", "dd-pick");
         row.title = label;
 
-        const checkbox = document.createElement("input");
+        const checkbox = h("input");
         checkbox.type = "checkbox";
         checkbox.checked = entries.has(label);
-        checkbox.className = "dd-atom-list__checkbox";
+        row.classList.toggle("is-on", checkbox.checked);
 
-        const text = document.createElement("span");
-        text.className = "dd-atom-list__label";
-        text.textContent = label;
-
-        row.append(checkbox, text);
+        row.append(checkbox, h("span", undefined, label));
 
         checkbox.addEventListener("change", async () => {
           if (checkbox.checked) {
@@ -201,6 +168,7 @@ export function renderLiveAtomsTab(view: HTMLElement) {
             }
             entries.delete(label);
           }
+          row.classList.toggle("is-on", checkbox.checked);
           updateSelectedInfo();
           updateControls();
         });
@@ -215,18 +183,22 @@ export function renderLiveAtomsTab(view: HTMLElement) {
   }
 
   function updateSelectedInfo() {
-    const size = entries.size;
-    selectedInfo.textContent = size
-      ? `${size} atom${size > 1 ? "s" : ""} selected.`
-      : "No atom selected.";
+    selectedInfo.textContent = `${entries.size} selected`;
   }
 
   function updateControls() {
     setBtnLabel(btnRecord, recording ? "Stop recording" : "Start recording");
     btnRecord.classList.toggle("active", recording);
+    recordingPill.hidden = !recording;
     btnRecord.disabled = !recording && !entries.size;
     btnClear.disabled = records.length === 0;
     btnCopyLog.disabled = records.length === 0;
+  }
+
+  function entryHead(title: string, time: string): HTMLDivElement {
+    const head = h("div", "dd-entry__head");
+    head.append(h("span", "dd-entry__title", title), h("span", "dd-entry__time", time));
+    return head;
   }
 
   function renderRecords(autoScroll = false) {
@@ -237,30 +209,10 @@ export function renderLiveAtomsTab(view: HTMLElement) {
       return;
     }
     records.forEach((rec, idx) => {
-      const row = document.createElement("div");
-      row.className = selectedRecord === idx ? "dd-atom-entry dd-atom-entry--row is-selected" : "dd-atom-entry dd-atom-entry--row";
+      const row = h("div", selectedRecord === idx ? "dd-entry is-selected" : "dd-entry");
       row.dataset.idx = String(idx);
-
-      const left = document.createElement("div");
-      left.style.display = "flex";
-      left.style.flexDirection = "column";
-      left.style.gap = "2px";
-      const lbl = document.createElement("strong");
-      lbl.textContent = rec.label;
-      const ts = document.createElement("span");
-      ts.style.opacity = "0.7";
-      ts.style.fontSize = "12px";
-      ts.textContent = `${fmtTime(rec.timestamp)}${rec.type === "initial" ? " • initial" : ""}`;
-      left.append(lbl, ts);
-
-      const summary = document.createElement("div");
-      summary.style.fontSize = "12px";
-      summary.style.lineHeight = "1.45";
-      summary.style.whiteSpace = "pre-wrap";
-      const prefix = rec.type === "initial" ? "[initial] " : "";
-      summary.textContent = prefix + summarizeValue(rec.next);
-
-      row.append(left, summary);
+      const time = `${fmtTime(rec.timestamp)}${rec.type === "initial" ? " · initial" : ""}`;
+      row.append(entryHead(rec.label, time), h("div", "dd-entry__text", summarizeValue(rec.next)));
       row.addEventListener("click", () => {
         selectedRecord = idx;
         renderRecords(false);
@@ -279,19 +231,19 @@ export function renderLiveAtomsTab(view: HTMLElement) {
 
   function updateDetails(rec: AtomLiveRecord | null) {
     if (!rec) {
-      detailHeader.textContent = "Select a log entry to inspect previous and next values.";
-      prevTitle.textContent = "Previous";
+      detailHeader.textContent = "Pick an entry in the log to compare its values.";
+      prevTitle.textContent = "Before";
       prevPre.textContent = "";
-      nextTitle.textContent = "Next";
+      nextTitle.textContent = "After";
       nextPre.textContent = "";
       renderHistoryFor(null, null);
       return;
     }
     const typeSuffix = rec.type === "initial" ? " (initial)" : "";
     detailHeader.textContent = `${rec.label} · ${fmtTime(rec.timestamp)}${typeSuffix}`;
-    prevTitle.textContent = rec.type === "initial" ? "Previous (none)" : "Previous";
+    prevTitle.textContent = rec.type === "initial" ? "Before (none)" : "Before";
     prevPre.textContent = rec.type === "initial" ? "(no previous snapshot)" : stringify(rec.previous);
-    nextTitle.textContent = rec.type === "initial" ? "Initial value" : "Next";
+    nextTitle.textContent = rec.type === "initial" ? "Initial value" : "After";
     nextPre.textContent = stringify(rec.next);
     renderHistoryFor(rec.label, selectedRecord);
   }
@@ -299,10 +251,7 @@ export function renderLiveAtomsTab(view: HTMLElement) {
   function renderHistoryFor(label: string | null, selectedIdx: number | null) {
     historyList.innerHTML = "";
     if (!label) {
-      const empty = document.createElement("p");
-      empty.className = "dd-card-description";
-      empty.textContent = "Select a log entry to inspect the value history.";
-      historyList.appendChild(empty);
+      historyList.appendChild(emptyNote("Pick an entry in the log to see every value its atom took."));
       return;
     }
 
@@ -311,58 +260,22 @@ export function renderLiveAtomsTab(view: HTMLElement) {
       .filter(({ rec }) => rec.label === label);
 
     if (!relevant.length) {
-      const empty = document.createElement("p");
-      empty.className = "dd-card-description";
-      empty.textContent = "No history recorded yet.";
-      historyList.appendChild(empty);
+      historyList.appendChild(emptyNote("No history recorded yet."));
       return;
     }
 
     relevant.forEach(({ rec, idx }, order) => {
-      const item = document.createElement("div");
-      item.className = idx === selectedIdx ? "dd-atom-entry dd-atom-entry--history is-selected" : "dd-atom-entry dd-atom-entry--history";
-
+      const item = h("div", idx === selectedIdx ? "dd-entry is-selected" : "dd-entry");
       item.addEventListener("click", () => {
         selectedRecord = idx;
         renderRecords(false);
         updateDetails(records[selectedRecord]);
       });
 
-      const head = document.createElement("div");
-      head.style.display = "flex";
-      head.style.alignItems = "center";
-      head.style.justifyContent = "space-between";
-
-      const meta = document.createElement("div");
-      meta.style.display = "flex";
-      meta.style.alignItems = "center";
-      meta.style.gap = "8px";
-
-      const orderBadge = document.createElement("span");
-      orderBadge.className = "dd-atom-badge";
-      orderBadge.textContent = `#${order + 1}`;
-
-      const type = document.createElement("span");
-      type.textContent = rec.type === "initial" ? "Initial" : "Update";
-      type.style.fontSize = "11px";
-      type.style.opacity = "0.75";
-      type.style.textTransform = "uppercase";
-
-      meta.append(orderBadge, type);
-
-      const ts = document.createElement("span");
-      ts.textContent = fmtTime(rec.timestamp);
-      ts.style.fontSize = "12px";
-      ts.style.opacity = "0.75";
-
-      head.append(meta, ts);
-
-      const val = document.createElement("pre");
-      stylePre(val);
-      val.style.margin = "0";
+      const val = codeBox("");
       val.textContent = stringify(rec.next);
-
-      item.append(head, val);
+      const title = `#${order + 1} ${rec.type === "initial" ? "Initial" : "Update"}`;
+      item.append(entryHead(title, fmtTime(rec.timestamp)), val);
       historyList.appendChild(item);
     });
   }
@@ -472,30 +385,8 @@ export function renderLiveAtomsTab(view: HTMLElement) {
     copy(text);
   }
 
-  function snapshot<T = any>(value: T): T {
-    if (value == null) return value;
-    try {
-      if (typeof structuredClone === "function") return structuredClone(value);
-    } catch {}
-    try {
-      return JSON.parse(JSON.stringify(value));
-    } catch {
-      return value;
-    }
-  }
-
-  function stringify(value: any): string {
-    if (typeof value === "string") return value;
-    try { return JSON.stringify(value, null, 2); }
-    catch { return String(value); }
-  }
-
-  function summarizeValue(value: any): string {
-    const str = stringify(value).replace(/\s+/g, " ").trim();
-    return str.length > 140 ? str.slice(0, 140) + "…" : str;
-  }
-
   refreshMatches();
+  updateDetails(null);
   updateControls();
 
   (view as any).__atoms_live_cleanup__ = () => {
@@ -510,4 +401,3 @@ export function renderLiveAtomsTab(view: HTMLElement) {
     selectedRecord = null;
   };
 }
-

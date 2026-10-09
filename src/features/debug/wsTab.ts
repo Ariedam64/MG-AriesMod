@@ -1,8 +1,9 @@
+import { pill, setTone } from "../../ui/kit/badges";
 import { button } from "../../ui/kit/button";
 import { card } from "../../ui/kit/card";
-import { refreshWhileVisible } from "../../ui/kit/dom";
-import { radioGroup, select, textInput } from "../../ui/kit/fields";
-import { flexRow } from "../../ui/kit/layout";
+import { h, refreshWhileVisible } from "../../ui/kit/dom";
+import { select, textInput } from "../../ui/kit/fields";
+import { segmented } from "../../ui/kit/segmented";
 import { toggleChip } from "../../ui/kit/toggles";
 import {
   Frame,
@@ -15,14 +16,13 @@ import {
   quinoaWS,
   wsFrames,
 } from "./wsCapture";
-import { copy, setBtnLabel } from "./shared";
+import { bar, barEnd, copy, emptyNote, grow, setBtnLabel, tabRoot } from "./shared";
 
 export function renderWSTab(view: HTMLElement) {
   if (typeof (view as any).__ws_cleanup__ === "function") {
     try { (view as any).__ws_cleanup__(); } catch {}
   }
-  view.innerHTML = "";
-  view.classList.add("dd-debug-view");
+  const root = tabRoot(view);
 
   // ---------- State ----------
   type FrameEx = Frame & { id: number };
@@ -53,40 +53,19 @@ export function renderWSTab(view: HTMLElement) {
   };
   const matchesMutes = (text: string) => mutePatterns.some(rx => rx.test(text));
 
-  // ---------- Layout containers ----------
-  const statusCard = card("📡 Live traffic", {
-    tone: "muted",
-    subtitle: "Monitor, filter, and replay WebSocket frames.",
+  // ---------- Live traffic ----------
+  const lblConn = pill("");
+  const trafficCard = card("Live traffic", {
+    subtitle: "Every frame the game sends and receives. Click one to load it below.",
+    actions: [lblConn],
   });
-  view.appendChild(statusCard.root);
+  root.appendChild(trafficCard.root);
 
-  const muteCard = card("🙉 Mutes (regex)", {
-    tone: "muted",
-    subtitle: "Hide unwanted messages.",
-  });
-  view.appendChild(muteCard.root);
-
-  const logCard = card("🧾 Frame log", { tone: "muted" });
-  view.appendChild(logCard.root);
-
-  const sendCard = card("📤 Send a frame", {
-    tone: "muted",
-    subtitle: "Pick or compose a payload and send it.",
-  });
-  view.appendChild(sendCard.root);
-
-  // ---------- SOCKET PICKER & CONTROLS ----------
-  const statusToolbar = document.createElement("div");
-  statusToolbar.className = "dd-toolbar dd-toolbar--stretch";
-  statusCard.body.appendChild(statusToolbar);
-
-  const lblConn = document.createElement("span");
-  lblConn.className = "dd-status-chip";
-
-  const sel = select({ width: "220px" });
+  const sel = grow(select());
+  sel.title = "Socket";
 
   const btnPause = button("Pause", {
-    variant: "secondary",
+    size: "sm",
     onClick: () => {
       paused = !paused;
       setBtnLabel(btnPause, paused ? "Resume" : "Pause");
@@ -98,107 +77,102 @@ export function renderWSTab(view: HTMLElement) {
 
   const btnClear = button("Clear", {
     variant: "ghost",
-    icon: "🧹",
+    size: "sm",
     onClick: () => { frames.clear(); setSelectedRow(null); repaint(true); },
   });
 
-  const btnCopy = button("Copy visible", {
+  const btnCopy = button("Copy shown", {
     variant: "ghost",
-    icon: "📋",
+    size: "sm",
     onClick: () => copyVisible(),
   });
 
-  statusToolbar.append(lblConn, sel, btnPause, btnClear, btnCopy);
-
-  const filterToolbar = document.createElement("div");
-  filterToolbar.className = "dd-toolbar dd-toolbar--stretch";
-  statusCard.body.appendChild(filterToolbar);
-
-  const inputFilter = textInput("filter text (case-insensitive)", "");
-  inputFilter.classList.add("dd-grow");
+  const inputFilter = grow(textInput("Filter text", ""));
   inputFilter.addEventListener("input", () => { filterText = inputFilter.value.trim().toLowerCase(); repaint(true); });
 
-  const inToggle = toggleChip("IN", { checked: true, icon: "←", tooltip: "Show incoming messages" });
+  const inToggle = toggleChip("In", { checked: true, icon: "←", tooltip: "Show incoming messages" });
   inToggle.input.addEventListener("change", () => { showIn = inToggle.input.checked; repaint(true); });
 
-  const outToggle = toggleChip("OUT", { checked: true, icon: "→", tooltip: "Show outgoing messages" });
+  const outToggle = toggleChip("Out", { checked: true, icon: "→", tooltip: "Show outgoing messages" });
   outToggle.input.addEventListener("change", () => { showOut = outToggle.input.checked; repaint(true); });
 
-  const currentToggle = toggleChip("Active socket", { checked: false, icon: "🎯", tooltip: "Limit to the selected socket" });
+  const currentToggle = toggleChip("This socket only", { checked: false, tooltip: "Limit to the selected socket" });
   currentToggle.input.addEventListener("change", () => { onlyCurrentSocket = currentToggle.input.checked; repaint(true); });
 
-  const autoScrollToggle = toggleChip("Auto-scroll", { checked: true, icon: "📜", tooltip: "Keep the log aligned with the latest frames" });
+  const autoScrollToggle = toggleChip("Auto-scroll", { checked: true, tooltip: "Keep the log aligned with the latest frames" });
   autoScrollToggle.input.addEventListener("change", () => { autoScroll = autoScrollToggle.input.checked; });
 
-  filterToolbar.append(inputFilter, inToggle.root, outToggle.root, currentToggle.root, autoScrollToggle.root);
-
-  // ---------- MUTE patterns ----------
-  const muteRow = flexRow({ gap: 10, wrap: true, fullWidth: true });
-  const muteInput = textInput("add regex (e.g. ping|keepalive)", "");
-  muteInput.classList.add("dd-grow");
-  const btnAddMute = button("Add", {
-    icon: "➕",
-    onClick: () => {
-      const raw = muteInput.value.trim();
-      if (!raw) return;
-      try {
-        mutePatterns.push(new RegExp(raw, "i"));
-        muteInput.value = "";
-        repaintMutes();
-        repaint(true);
-      } catch { /* ignore invalid */ }
-    },
+  // ---------- Hidden patterns ----------
+  const muteInput = grow(textInput("Hide frames matching a regex, e.g. ping", ""));
+  const addMute = () => {
+    const raw = muteInput.value.trim();
+    if (!raw) return;
+    try {
+      mutePatterns.push(new RegExp(raw, "i"));
+      muteInput.value = "";
+      repaintMutes();
+      repaint(true);
+    } catch { /* ignore invalid */ }
+  };
+  muteInput.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") { ev.preventDefault(); addMute(); }
   });
-  muteRow.append(muteInput, btnAddMute);
-  muteCard.body.appendChild(muteRow);
+  const btnAddMute = button("Hide", { size: "sm", onClick: addMute });
 
-  const mutesWrap = document.createElement("div");
-  mutesWrap.className = "dd-mute-chips";
-  muteCard.body.appendChild(mutesWrap);
+  const mutesWrap = h("div", "dd-mutes");
 
   function repaintMutes() {
     mutesWrap.innerHTML = "";
     mutePatterns.forEach((rx, i) => {
       const chip = button(`/${rx.source}/i ×`, {
-        variant: "ghost",
-        size: "sm",
+        size: "xs",
+        title: "Show these frames again",
         onClick: () => { mutePatterns.splice(i, 1); repaintMutes(); repaint(true); },
       });
+      chip.classList.add("dd-mute");
       mutesWrap.appendChild(chip);
     });
   }
 
-  // ---------- LOG AREA ----------
-  const logWrap = document.createElement("div");
-  logWrap.className = "dd-log";
-  const emptyState = document.createElement("div");
-  emptyState.className = "dd-log__empty";
-  emptyState.textContent = "No frames visible yet.";
+  // ---------- Log ----------
+  const logWrap = h("div", "dd-well dd-frames qmm-scroll");
+  const emptyState = emptyNote("");
   logWrap.appendChild(emptyState);
-  logCard.body.appendChild(logWrap);
 
-  // ---------- SEND AREA ----------
-  const ta = document.createElement("textarea");
-  ta.className = "qmm-input dd-textarea";
-  ta.placeholder = `Select a frame or paste a payload here. Choose Text or JSON below.`;
+  trafficCard.body.append(
+    bar(sel, btnPause, barEnd(btnClear, btnCopy)),
+    bar(inputFilter, inToggle.root, outToggle.root, currentToggle.root, autoScrollToggle.root),
+    bar(muteInput, btnAddMute),
+    mutesWrap,
+    logWrap,
+  );
 
-  const sendControls = document.createElement("div");
-  sendControls.className = "dd-send-controls";
-  const asJson = radioGroup<"text" | "json">(
-    "ws-send-mode",
+  // ---------- Send a frame ----------
+  const sendCard = card("Send a frame", { subtitle: "Edit a captured frame or write your own." });
+  root.appendChild(sendCard.root);
+
+  const ta = h("textarea", "qmm-input dd-textarea");
+  ta.placeholder = "Click a frame above, or paste a payload here.";
+
+  const sendMode = segmented<"text" | "json">(
     [{ value: "text", label: "Text" }, { value: "json", label: "JSON" }],
     "text",
-    () => {}
+    undefined,
+    { ariaLabel: "Send as" },
   );
-  const replayToggle = toggleChip("Use source WS", { checked: false, icon: "↩" });
+  const replayToggle = toggleChip("Use the frame's socket", {
+    checked: false,
+    tooltip: "Send to the socket the selected frame came from",
+  });
   replayToggle.input.addEventListener("change", () => { replayToSource = replayToggle.input.checked; });
-  const btnSend = button("Send", { variant: "primary", icon: "📨", onClick: () => doSend() });
-  const btnCopyPayload = button("Copy payload", { variant: "ghost", icon: "📋", onClick: () => copy(ta.value) });
+  const btnSend = button("Send", { variant: "primary", size: "sm", onClick: () => doSend() });
+  const btnCopyPayload = button("Copy", { variant: "ghost", size: "sm", onClick: () => copy(ta.value) });
 
-  sendControls.append(asJson, replayToggle.root, btnSend, btnCopyPayload);
+  const sendControls = h("div", "dd-send");
+  sendControls.append(sendMode, replayToggle.root, barEnd(btnCopyPayload, btnSend));
   sendCard.body.append(ta, sendControls);
 
-  // ---------- SOCKET PICKER ----------
+  // ---------- Socket picker ----------
   function refreshSocketPicker() {
     const wsArr = getWSInfos();
     sel.innerHTML = "";
@@ -219,17 +193,19 @@ export function renderWSTab(view: HTMLElement) {
   }
 
   function updateStatus() {
-    const text = getWSStatusText();
-    lblConn.textContent = text;
-    const low = text.toLowerCase();
-    lblConn.classList.toggle("is-ok", /open|connected|ready/.test(low));
-    lblConn.classList.toggle("is-warn", /closing|connecting|pending/.test(low));
+    const low = getWSStatusText().toLowerCase();
+    const open = /open|connected|ready/.test(low);
+    lblConn.textContent = open ? "Connected" : "Not connected";
+    setTone(lblConn, open ? "ok" : "warn");
   }
 
   // ---------- Rendering helpers ----------
   function updateEmptyState() {
-    const hasRows = logWrap.querySelector(".ws-row") != null;
-    emptyState.style.display = hasRows ? "none" : "";
+    const hasRows = logWrap.querySelector(".dd-frame") != null;
+    emptyState.hidden = hasRows;
+    emptyState.textContent = frames.toArray().length
+      ? "No frame matches these filters."
+      : "No frames yet. They show here as the game talks to the server.";
   }
   function passesFilters(f: FrameEx): boolean {
     if ((f.dir === "in" && !showIn) || (f.dir === "out" && !showOut)) return false;
@@ -240,8 +216,7 @@ export function renderWSTab(view: HTMLElement) {
   }
 
   function rowActions(fid: number, f: FrameEx) {
-    const acts = document.createElement("div");
-    acts.className = "acts";
+    const acts = h("div", "dd-frame__acts");
 
     const action = (label: string, run: () => void, title?: string) =>
       button(label, {
@@ -250,7 +225,7 @@ export function renderWSTab(view: HTMLElement) {
         onClick: () => run(),
       });
     const bCopy = action("Copy", () => copy(f.text));
-    const bToEd = action("→ Editor", () => { ta.value = f.text; setSelectedRow(fid); });
+    const bToEd = action("To editor", () => { ta.value = f.text; setSelectedRow(fid); });
     const bReplay = action("Replay", () => replayFrame(f), "Send right away (to current WS or source WS if enabled)");
     // A click on an action must not also select the row underneath.
     acts.addEventListener("click", (e) => e.stopPropagation());
@@ -260,25 +235,17 @@ export function renderWSTab(view: HTMLElement) {
   }
 
   function buildRow(f: FrameEx) {
-    const row = document.createElement("div");
-    row.className = "ws-row";
+    const row = h("div", "dd-frame");
     row.dataset.fid = String(f.id);
 
-    const ts = document.createElement("div");
-    ts.className = "ts";
-    ts.textContent = fmtTime(f.t);
+    const ts = h("div", "dd-frame__ts", fmtTime(f.t));
+    const arrow = h("div", f.dir === "in" ? "dd-frame__dir is-in" : "dd-frame__dir is-out", f.dir === "in" ? "←" : "→");
+    arrow.title = f.dir === "in" ? "Received" : "Sent";
 
-    const arrow = document.createElement("div");
-    arrow.className = f.dir === "in" ? "arrow is-in" : "arrow is-out";
-    arrow.textContent = f.dir === "in" ? "←" : "→";
-
-    const body = document.createElement("div");
-    body.className = "body";
+    const body = h("div", "dd-frame__body");
     body.innerHTML = `<code>${escapeLite(f.text)}</code>`;
 
-    const acts = rowActions(f.id, f);
-
-    row.append(ts, arrow, body, acts);
+    row.append(ts, arrow, body, rowActions(f.id, f));
 
     row.onclick = () => setSelectedRow(f.id);
     row.ondblclick = () => { ta.value = f.text; setSelectedRow(f.id); };
@@ -294,7 +261,7 @@ export function renderWSTab(view: HTMLElement) {
   }
 
   function repaint(_full = false) {
-    logWrap.querySelectorAll(".ws-row").forEach((n) => n.remove());
+    logWrap.querySelectorAll(".dd-frame").forEach((n) => n.remove());
     frames.toArray().forEach((f: any) => { if (passesFilters(f)) logWrap.appendChild(buildRow(f)); });
     updateEmptyState();
     if (selectedId != null) setSelectedRow(selectedId);
@@ -312,8 +279,7 @@ export function renderWSTab(view: HTMLElement) {
   function replayFrame(f: FrameEx) {
     const target = (replayToSource && f.ws) ? f.ws : currentWS();
     if (!target || target.readyState !== WebSocket.OPEN) return;
-    const mode = (asJson.querySelector('input[type="radio"]:checked') as HTMLInputElement)?.value || "text";
-    if (mode === "json") {
+    if (sendMode.get() === "json") {
       try { target.send(JSON.parse(f.text)); }
       catch { target.send(f.text); }
     } else {
@@ -327,15 +293,14 @@ export function renderWSTab(view: HTMLElement) {
     const target = (replayToSource ? wsAlt : ws) || ws;
     if (!target || target.readyState !== WebSocket.OPEN) return;
 
-    const mode = (asJson.querySelector('input[type="radio"]:checked') as HTMLInputElement)?.value || "text";
-    if (mode === "json") {
+    if (sendMode.get() === "json") {
       try { target.send(JSON.parse(ta.value)); } catch { target.send(ta.value); }
     } else {
       target.send(ta.value);
     }
   }
 
-  // ---------- HOOK & STREAM ----------
+  // ---------- Hook & stream ----------
   installWSHookIfNeeded();
   const stopFrames = wsFrames.on((f) => {
     if (paused) return;
@@ -347,10 +312,9 @@ export function renderWSTab(view: HTMLElement) {
   refreshSocketPicker();
   repaint(true);
 
-  const stopPolling = refreshWhileVisible(view, refreshSocketPicker, 1000);
+  const stopPolling = refreshWhileVisible(root, refreshSocketPicker, 1000);
   (view as any).__ws_cleanup__ = () => {
     stopPolling();
     stopFrames();
   };
 }
-

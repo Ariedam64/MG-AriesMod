@@ -15,6 +15,6 @@ export async function renderDebugDataMenu(root: HTMLElement) {
   ui.addTab("jotai", "Jotai", renderJotaiTab);
   ui.addTab("atoms-live", "Live atoms", renderLiveAtomsTab);
   ui.addTab("sprite-assets", "Sprites", renderSpritesTab);
-  ui.addTab("audio-player", "Audio player", renderAudioPlayerTab);
+  ui.addTab("audio-player", "Audio", renderAudioPlayerTab);
   ui.addTab("websocket", "WebSocket", renderWSTab);
 }

@@ -1,10 +1,15 @@
+import { pill } from "../../ui/kit/badges";
 import { button } from "../../ui/kit/button";
 import { card, errorBar } from "../../ui/kit/card";
+import { h } from "../../ui/kit/dom";
 import { textInput } from "../../ui/kit/fields";
-import { flexRow } from "../../ui/kit/layout";
-import { copy, createTwoColumns, safeRegex } from "./shared";
+import { flexRow, settingRow } from "../../ui/kit/layout";
+import { bar, copy, emptyNote, grow, hint, safeRegex, tabRoot } from "./shared";
 import { getAudioUrlSafe } from "../../platform/discordCsp";
 import { fetchAudioCatalog, type AudioCatalogResponse, type AudioSfxItem } from "../../platform/mgApi";
+
+/** A play triangle, kept as text so no platform swaps in an emoji. */
+const PLAY_GLYPH = "▶︎";
 
 let catalogPromise: Promise<AudioCatalogResponse | null> | null = null;
 
@@ -21,11 +26,19 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function renderAudioPlayerTab(view: HTMLElement) {
-  view.innerHTML = "";
-  view.classList.add("dd-debug-view");
+/** A list row: a name and a detail line, with its buttons on the right. */
+function audioRow(title: string, meta: string, actions: HTMLElement[]): HTMLDivElement {
+  const row = h("div", "dd-row");
+  const info = h("div", "dd-row__info");
+  info.append(h("div", "dd-row__title", title), h("div", "dd-row__meta", meta));
+  const acts = h("div", "dd-row__actions");
+  acts.append(...actions);
+  row.append(info, acts);
+  return row;
+}
 
-  const { leftCol, rightCol } = createTwoColumns(view);
+export function renderAudioPlayerTab(view: HTMLElement) {
+  const root = tabRoot(view);
 
   let catalog: AudioCatalogResponse | null = null;
   let visibleSfx: AudioSfxItem[] = [];
@@ -33,91 +46,73 @@ export function renderAudioPlayerTab(view: HTMLElement) {
   // Shared player: only one clip (theme or sfx) plays at a time.
   const audioEl = document.createElement("audio");
   audioEl.preload = "none";
-  view.appendChild(audioEl);
+  root.appendChild(audioEl);
   let stopAtHandler: (() => void) | null = null;
   let nowPlayingLabel = "";
 
-  const overviewCard = card("🎧 Audio catalog", {
-    tone: "muted",
-    subtitle: "Browse themes and SFX from mg-api.ariedam.fr /assets/audios.",
+  // ---------- Player ----------
+  const btnStop = button("Stop", {
+    size: "sm",
+    onClick: () => stopPlayback(),
   });
-  leftCol.appendChild(overviewCard.root);
-
-  const summary = document.createElement("div");
-  summary.className = "dd-audio-summary";
-  const summaryThemes = document.createElement("div");
-  const summarySfx = document.createElement("div");
-  summary.append(summaryThemes, summarySfx);
-
-  const nowPlaying = document.createElement("div");
-  nowPlaying.className = "dd-audio-volume";
+  const btnReload = button("Reload catalog", {
+    variant: "ghost",
+    size: "sm",
+    onClick: () => { void refreshAll(true); },
+  });
+  const playerControls = flexRow({ gap: 6 });
+  playerControls.append(btnStop, btnReload);
+  const player = settingRow("Player", "Not playing.", playerControls);
+  player.row.classList.add("dd-status");
+  const nowPlaying = player.row.querySelector<HTMLElement>(".qmm-setting-row__hint")!;
+  nowPlaying.classList.add("dd-now");
 
   const overviewError = errorBar();
+  root.append(player.row, overviewError.el);
 
-  const actionsRow = flexRow({ gap: 10, wrap: true, fullWidth: true });
-  const btnReload = button("Reload catalog", {
-    icon: "🔄",
-    variant: "primary",
-    onClick: () => { void refreshAll(true); },
-  }) as HTMLButtonElement;
-  const btnStop = button("Stop playback", {
-    icon: "⏹️",
-    onClick: () => stopPlayback(),
-  }) as HTMLButtonElement;
-  actionsRow.append(btnReload, btnStop);
+  // The lists stack rather than sit side by side, so each row keeps its buttons on one line.
 
-  overviewCard.body.append(summary, nowPlaying, overviewError.el, actionsRow);
-
-  const themesCard = card("🎵 Themes", {
-    tone: "muted",
-    subtitle: "Per-area music and ambience tracks.",
+  // ---------- Themes ----------
+  const themeCount = pill("0");
+  const themesCard = card("Themes", {
+    subtitle: "Music and ambience for each area.",
+    actions: [themeCount],
   });
-  leftCol.appendChild(themesCard.root);
-  const themeList = document.createElement("div");
-  themeList.className = "dd-audio-list";
-  const themeEmpty = document.createElement("div");
-  themeEmpty.className = "dd-audio-empty";
-  themeEmpty.textContent = "No themes loaded yet.";
-  themesCard.body.append(themeList, themeEmpty);
+  root.appendChild(themesCard.root);
+  const themeList = h("div", "dd-well qmm-scroll");
+  themesCard.body.append(themeList);
 
-  const sfxCard = card("🔉 SFX", {
-    tone: "muted",
-    subtitle: "Sliced from the single SFX atlas file.",
+  // ---------- Sound effects ----------
+  const sfxCount = pill("0");
+  const sfxCard = card("Sound effects", {
+    subtitle: "Cut from the single sound effect file.",
+    actions: [sfxCount],
   });
-  rightCol.appendChild(sfxCard.root);
+  root.appendChild(sfxCard.root);
 
-  const sfxToolbar = flexRow({ gap: 10, wrap: true, fullWidth: true });
-  const sfxFilter = textInput("filter sfx (regex)", "");
-  sfxFilter.classList.add("dd-grow");
+  const sfxFilter = grow(textInput("Filter, regex allowed", ""));
   const btnSfxClear = button("Clear", {
-    icon: "🧹",
+    variant: "ghost",
+    size: "sm",
     onClick: () => {
       sfxFilter.value = "";
       renderSfx();
       sfxFilter.focus();
     },
-  }) as HTMLButtonElement;
-  const btnCopyVisible = button("Copy visible names", {
-    icon: "📋",
+  });
+  const btnCopyVisible = button("Copy names", {
+    variant: "ghost",
+    size: "sm",
+    title: "Copy the names of the sounds shown",
     onClick: () => {
       if (!visibleSfx.length) return;
       copy(visibleSfx.map(s => s.name).join("\n"));
     },
-  }) as HTMLButtonElement;
-  sfxToolbar.append(sfxFilter, btnSfxClear, btnCopyVisible);
+  });
 
-  const sfxInfo = document.createElement("p");
-  sfxInfo.className = "dd-card-description";
-  sfxInfo.style.margin = "0";
-
-  const sfxList = document.createElement("div");
-  sfxList.className = "dd-audio-list";
-
-  const sfxEmpty = document.createElement("div");
-  sfxEmpty.className = "dd-audio-empty";
-  sfxEmpty.textContent = "No SFX match the current filter.";
-
-  sfxCard.body.append(sfxToolbar, sfxInfo, sfxList, sfxEmpty);
+  const sfxInfo = hint("");
+  const sfxList = h("div", "dd-well qmm-scroll");
+  sfxCard.body.append(bar(sfxFilter, btnSfxClear, btnCopyVisible), sfxInfo, sfxList);
 
   sfxFilter.addEventListener("input", () => renderSfx());
   sfxFilter.addEventListener("keydown", ev => {
@@ -127,12 +122,6 @@ export function renderAudioPlayerTab(view: HTMLElement) {
     }
   });
 
-  function setButtonEnabled(btn: HTMLButtonElement, enabled: boolean) {
-    const setter = (btn as any).setEnabled;
-    if (typeof setter === "function") setter(enabled);
-    else btn.disabled = !enabled;
-  }
-
   function stopPlayback() {
     if (stopAtHandler) {
       audioEl.removeEventListener("timeupdate", stopAtHandler);
@@ -141,12 +130,14 @@ export function renderAudioPlayerTab(view: HTMLElement) {
     audioEl.pause();
     nowPlayingLabel = "";
     nowPlaying.textContent = "Not playing.";
+    btnStop.setEnabled(false);
   }
 
   async function playClip(url: string, label: string, start?: number, end?: number) {
     stopPlayback();
     nowPlayingLabel = label;
-    nowPlaying.textContent = `Loading: ${label}…`;
+    nowPlaying.textContent = `Loading ${label}…`;
+    btnStop.setEnabled(true);
     const safeUrl = await getAudioUrlSafe(url);
     if (nowPlayingLabel !== label) return; // superseded by another play() call
     audioEl.src = safeUrl;
@@ -163,9 +154,9 @@ export function renderAudioPlayerTab(view: HTMLElement) {
     }
     try {
       await audioEl.play();
-      nowPlaying.textContent = `Playing: ${label}`;
+      nowPlaying.textContent = `Playing ${label}`;
     } catch {
-      nowPlaying.textContent = `Failed to play: ${label}`;
+      nowPlaying.textContent = `Could not play ${label}`;
     }
   }
 
@@ -173,45 +164,29 @@ export function renderAudioPlayerTab(view: HTMLElement) {
     themeList.innerHTML = "";
     const themes = catalog?.themes ?? [];
     themes.forEach(theme => {
-      const row = document.createElement("div");
-      row.className = "dd-audio-row";
-
-      const infoWrap = document.createElement("div");
-      infoWrap.className = "dd-audio-row__info";
-      const title = document.createElement("div");
-      title.className = "dd-audio-row__title";
-      title.textContent = theme.name;
-      const urlEl = document.createElement("div");
-      urlEl.className = "dd-audio-url";
-      urlEl.textContent = [theme.music && "music", theme.ambience && "ambience"].filter(Boolean).join(" · ") || "(no tracks)";
-      infoWrap.append(title, urlEl);
-      row.appendChild(infoWrap);
-
-      const actions = flexRow({ gap: 6, wrap: true, align: "center" });
-      actions.className = "dd-audio-actions";
+      const actions: HTMLElement[] = [];
       if (theme.music) {
-        actions.appendChild(button("Play music", {
-          icon: "▶️", size: "sm",
+        actions.push(button("Music", {
+          icon: PLAY_GLYPH, size: "sm", title: "Play the music",
           onClick: () => { void playClip(theme.music!, `${theme.name} · music`); },
-        }) as HTMLButtonElement);
+        }));
       }
       if (theme.ambience) {
-        actions.appendChild(button("Play ambience", {
-          icon: "▶️", size: "sm",
+        actions.push(button("Ambience", {
+          icon: PLAY_GLYPH, size: "sm", title: "Play the ambience",
           onClick: () => { void playClip(theme.ambience!, `${theme.name} · ambience`); },
-        }) as HTMLButtonElement);
+        }));
       }
-      actions.appendChild(button("Copy URLs", {
-        icon: "📋", size: "sm",
+      actions.push(button("Copy URLs", {
+        variant: "ghost", size: "sm",
         onClick: () => copy([theme.music, theme.ambience].filter(Boolean).join("\n")),
-      }) as HTMLButtonElement);
-      row.appendChild(actions);
-
-      themeList.appendChild(row);
+      }));
+      const meta = [theme.music && "music", theme.ambience && "ambience"].filter(Boolean).join(" · ") || "(no tracks)";
+      themeList.appendChild(audioRow(theme.name, meta, actions));
     });
-    themeList.style.display = themes.length ? "" : "none";
-    themeEmpty.style.display = themes.length ? "none" : "block";
-    themeEmpty.textContent = catalog ? "No themes in the catalog." : "No themes loaded yet.";
+    if (!themes.length) {
+      themeList.appendChild(emptyNote(catalog ? "The catalog has no themes." : "No themes loaded yet."));
+    }
   }
 
   function renderSfx() {
@@ -225,66 +200,49 @@ export function renderAudioPlayerTab(view: HTMLElement) {
       if (!rx.test(item.name)) continue;
       visibleSfx.push(item);
 
-      const row = document.createElement("div");
-      row.className = "dd-audio-row";
-
-      const infoWrap = document.createElement("div");
-      infoWrap.className = "dd-audio-row__info";
-      const title = document.createElement("div");
-      title.className = "dd-audio-row__title";
-      title.textContent = item.name;
-      const meta = document.createElement("div");
-      meta.className = "dd-audio-meta";
-      meta.textContent = `${formatTime(item.start)} → ${formatTime(item.end)} (${item.duration.toFixed(2)}s)`;
-      infoWrap.append(title, meta);
-      row.appendChild(infoWrap);
-
-      const actions = flexRow({ gap: 6, wrap: false, align: "center" });
-      actions.className = "dd-audio-actions";
       const playBtn = button("Play", {
-        icon: "▶️", size: "sm",
+        icon: PLAY_GLYPH, size: "sm",
         onClick: () => { void playClip(atlasUrl, item.name, item.start, item.end); },
-      }) as HTMLButtonElement;
+      });
       const copyBtn = button("Copy URL", {
-        icon: "📋", size: "sm",
+        variant: "ghost", size: "sm",
         onClick: () => copy(atlasUrl),
-      }) as HTMLButtonElement;
-      actions.append(playBtn, copyBtn);
-      row.appendChild(actions);
-
-      sfxList.appendChild(row);
+      });
+      const meta = `${formatTime(item.start)} → ${formatTime(item.end)} · ${item.duration.toFixed(2)}s`;
+      sfxList.appendChild(audioRow(item.name, meta, [playBtn, copyBtn]));
     }
 
-    sfxInfo.textContent = items.length
-      ? `${visibleSfx.length} / ${items.length} SFX shown.`
-      : "No SFX loaded yet.";
-    sfxList.style.display = visibleSfx.length ? "" : "none";
-    sfxEmpty.style.display = visibleSfx.length ? "none" : "block";
-    setButtonEnabled(btnCopyVisible, visibleSfx.length > 0);
-    setButtonEnabled(btnSfxClear, sfxFilter.value.trim().length > 0);
+    if (!visibleSfx.length) {
+      sfxList.appendChild(emptyNote(items.length ? "No sound matches this filter." : "No sounds loaded yet."));
+    }
+    sfxInfo.textContent = items.length ? `${visibleSfx.length} of ${items.length} shown.` : "";
+    sfxInfo.hidden = !items.length;
+    btnCopyVisible.setEnabled(visibleSfx.length > 0);
+    btnSfxClear.setEnabled(sfxFilter.value.trim().length > 0);
   }
 
   function updateSummary() {
-    summaryThemes.innerHTML = `<strong>${catalog?.themes.length ?? 0}</strong> themes`;
-    summarySfx.innerHTML = `<strong>${catalog?.sfx.items.length ?? 0}</strong> SFX`;
+    themeCount.textContent = String(catalog?.themes.length ?? 0);
+    sfxCount.textContent = String(catalog?.sfx.items.length ?? 0);
     if (!nowPlayingLabel) nowPlaying.textContent = "Not playing.";
   }
 
   async function refreshAll(forceReload = false) {
-    setButtonEnabled(btnReload, false);
+    btnReload.setEnabled(false);
     overviewError.clear();
     try {
       catalog = await loadCatalog(forceReload);
       if (!catalog) {
-        overviewError.show("Failed to load the audio catalog from mg-api.ariedam.fr.");
+        overviewError.show("The audio catalog did not load from mg-api.ariedam.fr.");
       }
       updateSummary();
       renderThemes();
       renderSfx();
     } finally {
-      setButtonEnabled(btnReload, true);
+      btnReload.setEnabled(true);
     }
   }
 
+  btnStop.setEnabled(false);
   void refreshAll();
 }

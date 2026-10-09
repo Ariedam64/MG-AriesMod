@@ -1,7 +1,9 @@
 import { button } from "../../ui/kit/button";
-import { card } from "../../ui/kit/card";
-import { select } from "../../ui/kit/fields";
-import { createTwoColumns } from "./shared";
+import { card, sectionLabel } from "../../ui/kit/card";
+import { h } from "../../ui/kit/dom";
+import { select, textInput } from "../../ui/kit/fields";
+import { toggleChip } from "../../ui/kit/toggles";
+import { bar, barEnd, emptyNote, grow, hint, setBtnLabel, tabRoot } from "./shared";
 import { packFilesToZip, triggerBlobDownload } from "./zip";
 import { setImageSafe } from "../../platform/discordCsp";
 import { MUT_G1, MUT_G2, MUT_G3, type MutationName } from "../../game/sprites/settings";
@@ -63,96 +65,56 @@ type MutationFilterState = {
 type MutationGroupKey = "color" | "condition" | "lighting";
 
 export function renderSpritesTab(view: HTMLElement) {
-  view.innerHTML = "";
-  view.classList.add("dd-debug-view");
+  const root = tabRoot(view);
 
-  const { leftCol, rightCol } = createTwoColumns(view);
-
-  const explorerCard = card("Sprite Explorer", {
-    tone: "muted",
-    subtitle: "Browse the live sprite catalog from mg-api.ariedam.fr.",
-  });
-  leftCol.appendChild(explorerCard.root);
-
-  const listCard = card("Sprites", {
-    tone: "muted",
-    subtitle: "Preview sprites for the selected category.",
-  });
-  rightCol.appendChild(listCard.root);
-
-  const categorySelect = select({ width: "100%" });
-  categorySelect.disabled = true;
-
-  const searchInput = document.createElement("input");
-  searchInput.type = "search";
-  searchInput.placeholder = "Search name";
-  searchInput.className = "dd-sprite-search";
-
-  const reloadBtn = button("Reload sprites", {
+  const reloadBtn = button("Reload", {
     size: "sm",
     variant: "ghost",
     onClick: () => {
       void updateList(true);
     },
-  }) as HTMLButtonElement;
-  const downloadBtnLabel = "Download visible sprites";
+  });
+  const filtersCard = card("Sprites", {
+    subtitle: "The live catalog from mg-api.ariedam.fr. Click a sprite to download it.",
+    actions: [reloadBtn],
+  });
+  root.appendChild(filtersCard.root);
+
+  const categorySelect = select();
+  categorySelect.disabled = true;
+
+  const searchInput = textInput("Name", "");
+  searchInput.type = "search";
+
+  const downloadBtnLabel = "Download all shown";
   const downloadBtn = button(downloadBtnLabel, {
     size: "sm",
     variant: "primary",
     onClick: () => {
       void downloadVisibleSprites();
     },
-  }) as HTMLButtonElement;
+  });
   downloadBtn.disabled = true;
 
-  const controlsGrid = document.createElement("div");
-  controlsGrid.className = "dd-sprite-control-grid";
-  controlsGrid.append(
-    createSelectControl("Asset category", categorySelect),
-    createSelectControl("Search", searchInput),
-  );
-  explorerCard.body.appendChild(controlsGrid);
-  const actionRow = document.createElement("div");
-  actionRow.className = "dd-sprite-actions";
-  actionRow.append(reloadBtn, downloadBtn);
-  explorerCard.body.appendChild(actionRow);
+  const fields = h("div", "dd-fields");
+  fields.append(field("Category", categorySelect), field("Search", searchInput));
 
   const mutationFilters: MutationFilterState = { color: "None", condition: "None", lighting: "None" };
-  const mutationGroupContainers: Record<MutationGroupKey, HTMLDivElement> = {
-    color: document.createElement("div"),
-    condition: document.createElement("div"),
-    lighting: document.createElement("div"),
-  };
-
-  const mutationCard = card("Mutations", {
-    tone: "muted",
-    subtitle: "Apply color or weather overlays via /assets/sprites/composed.",
-  });
-  leftCol.appendChild(mutationCard.root);
-  const mutationBody = document.createElement("div");
-  mutationBody.className = "dd-sprite-mutation-card";
-  mutationCard.body.appendChild(mutationBody);
-  mutationGroupContainers.color.className = "dd-sprite-mutation-group";
-  mutationGroupContainers.condition.className = "dd-sprite-mutation-group";
-  mutationGroupContainers.lighting.className = "dd-sprite-mutation-group";
-  mutationBody.append(
-    mutationGroupContainers.color,
-    mutationGroupContainers.condition,
-    mutationGroupContainers.lighting,
+  const mutations = h("div", "dd-stack");
+  mutations.append(
+    mutationGroup("color", COLOR_SELECTIONS, "Colour"),
+    mutationGroup("condition", CONDITION_SELECTIONS, "Weather"),
+    mutationGroup("lighting", LIGHTING_SELECTIONS, "Lighting"),
   );
-  renderMutationControls();
 
-  const stats = document.createElement("p");
-  stats.className = "dd-sprite-stats";
-  stats.textContent = "Loading sprite catalog…";
-  explorerCard.body.appendChild(stats);
+  const stats = hint("Loading sprite catalog…");
+  stats.classList.add("dd-grow");
+  filtersCard.body.append(fields, mutations, bar(stats, barEnd(downloadBtn)));
 
-  const previewArea = document.createElement("div");
-  previewArea.className = "dd-sprite-grid";
-  const previewWrap = document.createElement("div");
-  previewWrap.className = "dd-sprite-grid-wrap";
+  const previewArea = h("div", "dd-sprite-grid");
+  const previewWrap = h("div", "dd-sprites qmm-scroll");
   previewWrap.appendChild(previewArea);
-  listCard.body.appendChild(previewWrap);
+  root.appendChild(previewWrap);
 
   let selectedCategory = ANY_CATEGORY;
   let searchTerm = "";
@@ -179,11 +141,7 @@ export function renderSpritesTab(view: HTMLElement) {
   };
 
   const renderEmptyState = (message: string) => {
-    previewArea.innerHTML = "";
-    const empty = document.createElement("div");
-    empty.className = "dd-sprite-grid__empty";
-    empty.textContent = message;
-    previewArea.appendChild(empty);
+    previewArea.replaceChildren(emptyNote(message));
   };
 
   const getActiveMutations = (): MutationName[] => {
@@ -194,40 +152,30 @@ export function renderSpritesTab(view: HTMLElement) {
     return active;
   };
 
-  function renderMutationControls(): void {
-    renderMutationGroup("color", COLOR_SELECTIONS, "Color", mutationGroupContainers.color);
-    renderMutationGroup("condition", CONDITION_SELECTIONS, "Weather", mutationGroupContainers.condition);
-    renderMutationGroup("lighting", LIGHTING_SELECTIONS, "Lighting", mutationGroupContainers.lighting);
-  }
-
-  function renderMutationGroup(
+  /** One mutation slot: a caption and a pill per option, only one on at a time. */
+  function mutationGroup(
     key: MutationGroupKey,
     options: readonly ("None" | MutationName)[],
     label: string,
-    container: HTMLElement,
-  ): void {
-    container.innerHTML = "";
-    const heading = document.createElement("span");
-    heading.className = "dd-sprite-mutation-group-title";
-    heading.textContent = label;
-    const row = document.createElement("div");
-    row.className = "dd-sprite-mutation-buttons";
+  ): HTMLElement {
+    const row = h("div", "dd-mutation");
+    const chips = h("div", "dd-mutation__chips");
     options.forEach(option => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "dd-sprite-mutation-btn";
-      btn.textContent = option === "None" ? "None" : option;
-      if (mutationFilters[key] === option) btn.classList.add("active");
-      btn.setAttribute("aria-pressed", mutationFilters[key] === option ? "true" : "false");
-      btn.addEventListener("click", () => {
-        if (mutationFilters[key] === option) return;
+      const chip = toggleChip(option, {
+        type: "radio",
+        name: `dd-sprite-mutation-${key}`,
+        value: option,
+        checked: mutationFilters[key] === option,
+      });
+      chip.input.addEventListener("change", () => {
+        if (!chip.input.checked || mutationFilters[key] === option) return;
         mutationFilters[key] = option as any;
-        renderMutationControls();
         if (visibleSpriteRecords.length) renderSpriteCards(visibleSpriteRecords);
       });
-      row.appendChild(btn);
+      chips.appendChild(chip.root);
     });
-    container.append(heading, row);
+    row.append(sectionLabel(label), chips);
+    return row;
   }
 
   function previewUrlFor(record: SpriteRecord, mutations: MutationName[]): string {
@@ -236,22 +184,19 @@ export function renderSpritesTab(view: HTMLElement) {
 
   function renderSpriteCards(records: SpriteRecord[]): void {
     if (!records.length) {
-      renderEmptyState("No sprites match the current filters.");
+      renderEmptyState("No sprite matches these filters.");
       return;
     }
     const activeMutations = getActiveMutations();
     previewArea.innerHTML = "";
     records.forEach(record => {
-      const card = document.createElement("div");
-      card.className = "dd-sprite-grid__item";
-      card.title = `${record.category}/${record.name}`;
+      const tile = h("div", "dd-sprite");
+      tile.title = `${record.category}/${record.name}\nClick to download`;
 
-      const imgWrap = document.createElement("div");
-      imgWrap.className = "dd-sprite-grid__img";
+      const imgWrap = h("div", "dd-sprite__img");
       imgWrap.style.setProperty("--sprite-size", `${SPRITE_ICON_SIZE}px`);
 
-      const iconSlot = document.createElement("span");
-      iconSlot.className = "dd-sprite-grid__icon";
+      const iconSlot = h("span", "dd-sprite__icon");
       const img = document.createElement("img");
       img.alt = record.name;
       img.decoding = "async";
@@ -265,28 +210,24 @@ export function renderSpritesTab(view: HTMLElement) {
       setImageSafe(img, previewUrlFor(record, activeMutations));
       imgWrap.appendChild(iconSlot);
 
-      const nameEl = document.createElement("span");
-      nameEl.className = "dd-sprite-grid__name";
-      nameEl.textContent = record.name;
-
-      const meta = document.createElement("span");
-      meta.className = "dd-sprite-grid__meta";
-      meta.textContent = `${record.category}/${record.name}`;
-
-      card.append(imgWrap, nameEl, meta);
+      tile.append(
+        imgWrap,
+        h("span", "dd-sprite__name", record.name),
+        h("span", "dd-sprite__meta", record.category),
+      );
       const triggerDownload = () => {
         if (downloadInProgress) return;
         void downloadSpriteRecord(record, getActiveMutations());
       };
-      card.addEventListener("click", triggerDownload);
-      card.addEventListener("keydown", event => {
+      tile.addEventListener("click", triggerDownload);
+      tile.addEventListener("keydown", event => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           triggerDownload();
         }
       });
-      card.tabIndex = 0;
-      previewArea.appendChild(card);
+      tile.tabIndex = 0;
+      previewArea.appendChild(tile);
     });
   }
 
@@ -294,8 +235,8 @@ export function renderSpritesTab(view: HTMLElement) {
     stats.textContent = "Loading sprite catalog…";
     const catalog = await loadCatalog(forceReload);
     if (!catalog) {
-      renderEmptyState("Failed to load the sprite catalog from mg-api.ariedam.fr.");
-      stats.textContent = "Catalog load failed. Try Reload.";
+      renderEmptyState("The sprite catalog did not load from mg-api.ariedam.fr. Try Reload.");
+      stats.textContent = "Catalog load failed.";
       return;
     }
 
@@ -309,19 +250,19 @@ export function renderSpritesTab(view: HTMLElement) {
 
     const limited = filtered.slice(0, MAX_VISIBLE_SPRITES);
     visibleSpriteRecords = limited;
-    if (!downloadInProgress) downloadBtn.textContent = downloadBtnLabel;
+    if (!downloadInProgress) setBtnLabel(downloadBtn, downloadBtnLabel);
     downloadBtn.disabled = !limited.length || downloadInProgress;
     if (!limited.length) {
-      renderEmptyState("No sprites match the current filters.");
+      renderEmptyState("No sprite matches these filters.");
     } else {
       renderSpriteCards(limited);
     }
 
     const clipped = filtered.length > MAX_VISIBLE_SPRITES;
-    const categoryLabel = selectedCategory === ANY_CATEGORY ? "all categories" : `category "${selectedCategory}"`;
+    const categoryLabel = selectedCategory === ANY_CATEGORY ? "all categories" : `"${selectedCategory}"`;
     stats.textContent = clipped
-      ? `Showing ${limited.length}/${filtered.length} sprites for ${categoryLabel}.`
-      : `${filtered.length} sprites for ${categoryLabel}.`;
+      ? `Showing ${limited.length} of ${filtered.length} sprites in ${categoryLabel}.`
+      : `${filtered.length} sprites in ${categoryLabel}.`;
   };
 
   categorySelect.addEventListener("change", () => {
@@ -350,7 +291,7 @@ export function renderSpritesTab(view: HTMLElement) {
     if (!visibleSpriteRecords.length || downloadInProgress) return;
     downloadInProgress = true;
     downloadBtn.disabled = true;
-    downloadBtn.textContent = "Preparing zip...";
+    setBtnLabel(downloadBtn, "Preparing zip...");
     try {
       const activeMutations = getActiveMutations();
       const files: Array<{ name: string; bytes: Uint8Array }> = [];
@@ -358,26 +299,23 @@ export function renderSpritesTab(view: HTMLElement) {
         const bytes = await mgApiGetBinary(previewUrlFor(record, activeMutations));
         if (!bytes) continue;
         files.push({ name: buildSpriteFilename(record, activeMutations), bytes: new Uint8Array(bytes) });
-        downloadBtn.textContent = `Collected ${files.length}/${visibleSpriteRecords.length}`;
+        setBtnLabel(downloadBtn, `Collected ${files.length}/${visibleSpriteRecords.length}`);
       }
       if (!files.length) return;
-      downloadBtn.textContent = "Bundling zip...";
+      setBtnLabel(downloadBtn, "Bundling zip...");
       const zipBlob = packFilesToZip(files);
       triggerBlobDownload(zipBlob, `sprites-${Date.now()}.zip`);
     } finally {
       downloadInProgress = false;
-      downloadBtn.textContent = downloadBtnLabel;
+      setBtnLabel(downloadBtn, downloadBtnLabel);
       downloadBtn.disabled = !visibleSpriteRecords.length;
     }
   }
 }
 
-function createSelectControl(labelText: string, control: HTMLElement): HTMLLabelElement {
-  const wrapper = document.createElement("label");
-  wrapper.className = "dd-sprite-control";
-  const label = document.createElement("span");
-  label.className = "dd-sprite-control__label";
-  label.textContent = labelText;
-  wrapper.append(label, control);
+/** A caption above a control. */
+function field(labelText: string, control: HTMLElement): HTMLLabelElement {
+  const wrapper = h("label", "dd-field");
+  wrapper.append(sectionLabel(labelText), control);
   return wrapper;
 }
