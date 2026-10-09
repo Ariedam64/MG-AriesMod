@@ -1,8 +1,10 @@
-// Detail view: back button, hero header, markdown description, carousel and
-// the tool's links.
+// Detail view: back button, the tool's header, its links, the About card and
+// the screenshot carousel.
 
 import { renderMarkdown } from "../../lib/markdown";
 import { button } from "../../ui/kit/button";
+import { card } from "../../ui/kit/card";
+import { h } from "../../ui/kit/dom";
 import type { ExternalTool, ExternalToolCreator } from "./fetchTools";
 import { openLink } from "./openLink";
 import { renderCarousel } from "./carousel";
@@ -10,86 +12,44 @@ import { createIconTile, loadImageInto } from "./image";
 import { createTagRow } from "./tag";
 
 function createCreatorChip(creator: ExternalToolCreator): HTMLElement {
-  const chip = document.createElement("div");
-  chip.className = creator.avatar ? "mgt-creator" : "mgt-creator mgt-creator--plain";
+  const chip = h("span", "mgt-creator");
 
   if (creator.avatar) {
-    const avatar = document.createElement("img");
-    avatar.alt = creator.name;
+    const avatar = h("img");
+    avatar.alt = "";
     loadImageInto(avatar, creator.avatar);
     chip.appendChild(avatar);
   }
 
-  const name = document.createElement("span");
-  name.textContent = creator.name;
-  chip.appendChild(name);
-
+  chip.appendChild(h("span", undefined, creator.name));
   return chip;
 }
 
-/**
- * One card holding the whole identity of the tool: icon, title and tags on the
- * left, creators on the right, then the description under a divider. Keeping
- * them together avoids stacking two near-identical panels.
- */
+/** Icon, title, creators and tags, straight on the page with no frame around them. */
 function createHero(tool: ExternalTool): HTMLElement {
-  const hero = document.createElement("div");
-  hero.className = "mgt-hero";
+  const hero = h("div", "mgt-hero");
+  if (tool.icon) hero.appendChild(createIconTile(tool.icon, "lg"));
 
-  const top = document.createElement("div");
-  top.className = "mgt-hero__top";
-
-  if (tool.icon) {
-    top.appendChild(createIconTile(tool.icon, "lg"));
-  }
-
-  const titles = document.createElement("div");
-  titles.className = "mgt-hero__titles";
-
-  const title = document.createElement("h2");
-  title.className = "mgt-hero__title";
-  title.textContent = tool.title;
-  titles.appendChild(title);
-
-  if (tool.tags?.length) {
-    titles.appendChild(createTagRow(tool.tags));
-  }
-
-  top.appendChild(titles);
+  const titles = h("div", "mgt-hero__titles");
+  titles.appendChild(h("h2", "mgt-hero__title", tool.title));
 
   if (tool.creators?.length) {
-    const meta = document.createElement("div");
-    meta.className = "mgt-meta";
-
-    const label = document.createElement("span");
-    label.className = "mgt-label";
-    label.textContent = tool.creators.length > 1 ? "Created by" : "Creator";
-    meta.appendChild(label);
-
-    tool.creators.forEach((creator) => meta.appendChild(createCreatorChip(creator)));
-    top.appendChild(meta);
+    const creators = h("div", "mgt-creators");
+    creators.appendChild(h("span", "mgt-creators__label", "Made by"));
+    tool.creators.forEach((creator) => creators.appendChild(createCreatorChip(creator)));
+    titles.appendChild(creators);
   }
 
-  hero.appendChild(top);
+  if (tool.tags?.length) titles.appendChild(createTagRow(tool.tags));
 
-  const divider = document.createElement("div");
-  divider.className = "mgt-divider";
-  hero.appendChild(divider);
-
-  const description = document.createElement("div");
-  description.className = "mgt-md";
-  description.innerHTML = renderMarkdown(tool.description);
-  hero.appendChild(description);
-
+  hero.appendChild(titles);
   return hero;
 }
 
 function createActions(actions: ExternalTool["actions"]): HTMLElement | null {
   if (!actions?.length) return null;
 
-  const row = document.createElement("div");
-  row.className = "mgt-actions";
-
+  const row = h("div", "mgt-actions");
   actions.forEach((action, index) => {
     row.appendChild(
       button(action.label, {
@@ -102,7 +62,6 @@ function createActions(actions: ExternalTool["actions"]): HTMLElement | null {
       }),
     );
   });
-
   return row;
 }
 
@@ -110,21 +69,26 @@ export function renderDetailView(
   tool: ExternalTool,
   onBack: () => void
 ): { root: HTMLElement } {
-  const root = document.createElement("div");
-  root.className = "mgt-detail";
+  const root = h("div", "mgt-detail");
 
-  const back = button("All tools", { icon: "←", size: "sm", onClick: onBack });
+  const back = button("All tools", { icon: "‹", size: "sm", variant: "ghost", onClick: onBack });
   back.classList.add("mgt-back");
   root.appendChild(back);
 
   root.appendChild(createHero(tool));
 
+  const actions = createActions(tool.actions);
+  if (actions) root.appendChild(actions);
+
+  const about = card("About");
+  const description = h("div", "mgt-md");
+  description.innerHTML = renderMarkdown(tool.description);
+  about.body.appendChild(description);
+  root.appendChild(about.root);
+
   if (tool.images?.length) {
     root.appendChild(renderCarousel(tool.images).root);
   }
-
-  const actions = createActions(tool.actions);
-  if (actions) root.appendChild(actions);
 
   return { root };
 }

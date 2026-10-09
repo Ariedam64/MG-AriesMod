@@ -75,7 +75,8 @@
     "check:themecolors": "node scripts/runChecks.mjs themecolors",
     "check:modversion": "node scripts/runChecks.mjs modversion",
     "check:accent": "node scripts/runChecks.mjs accent",
-    "check:appearance": "node scripts/runChecks.mjs appearance"
+    "check:appearance": "node scripts/runChecks.mjs appearance",
+    "check:toolslist": "node scripts/runChecks.mjs toolslist"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",

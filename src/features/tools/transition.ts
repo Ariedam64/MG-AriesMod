@@ -9,17 +9,17 @@ export async function swapViews(
 ): Promise<void> {
   const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  // Clearing the inline display hands it back to the view's own flex rule.
   if (prefersReduced) {
     from.style.display = "none";
-    to.style.display = "block";
+    to.style.display = "";
     return;
   }
 
   container.style.position = "relative";
   container.style.overflow = "hidden";
 
-  // Both views lay out as flex.
-  to.style.display = "flex";
+  to.style.display = "";
 
   // Position the outgoing panel absolutely so the incoming one can be laid out below
   from.style.position = "absolute";
@@ -62,4 +62,7 @@ export async function swapViews(
 
   to.style.transform = "";
   to.style.opacity = "";
+
+  // Left hidden, it would clip the focus ring of the cards along the edges.
+  container.style.overflow = "";
 }
