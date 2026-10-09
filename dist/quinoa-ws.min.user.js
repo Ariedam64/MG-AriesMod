@@ -1489,6 +1489,23 @@
     document.head.appendChild(style);
     return style;
   }
+  function onSubtreeChange(target, onChange) {
+    let queued = false;
+    let stopped = false;
+    const observer2 = new MutationObserver(() => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        if (!stopped) onChange();
+      });
+    });
+    observer2.observe(target, { childList: true, subtree: true });
+    return () => {
+      stopped = true;
+      observer2.disconnect();
+    };
+  }
   var init_dom = __esm({
     "src/lib/dom.ts"() {
       "use strict";
@@ -18708,7 +18725,7 @@
         if (applied2) hutchNeedsInit = false;
       });
     };
-    const bodyObserver = new MutationObserver(() => {
+    const onPageChange = () => {
       const current3 = grid && document.contains(grid) ? grid : null;
       if (grid && !current3) setGrid(null);
       const next = document.querySelector(GRID_SELECTOR);
@@ -18718,13 +18735,13 @@
       }
       maybeInitPetHutch();
       refreshPetHutch();
-    });
+    };
     const onGridInput = (event) => {
       const target = event.target;
       const within = target?.closest(GRID_SELECTOR);
       if (within && within === resolveGrid()) setTimeout(refresh, 0);
     };
-    bodyObserver.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    const stopPageWatch = onSubtreeChange(document.body || document.documentElement, onPageChange);
     setGrid(document.querySelector(GRID_SELECTOR));
     document.addEventListener("change", onGridInput, true);
     document.addEventListener("input", onGridInput, true);
@@ -18733,7 +18750,7 @@
     refreshPetHutch();
     subs.add(() => {
       gridObserver.disconnect();
-      bodyObserver.disconnect();
+      stopPageWatch();
       noiseObserver.disconnect();
       refresh.cancel();
       refreshPetHutch.cancel();
@@ -18748,7 +18765,7 @@
     if (typeof window === "undefined" || typeof document === "undefined") return () => {
     };
     let stop = null;
-    let waiter = null;
+    let stopWaiting = null;
     const attachIfReady = () => {
       if (stop) return true;
       if (!document.querySelector(GRID_SELECTOR) && !document.querySelector(PET_HUTCH_ROOT_SELECTOR)) return false;
@@ -18759,19 +18776,18 @@
       if (attachIfReady()) return;
       const target = document.body || document.documentElement;
       if (!target) return;
-      waiter = new MutationObserver(() => {
+      stopWaiting = onSubtreeChange(target, () => {
         if (attachIfReady()) {
-          waiter?.disconnect();
-          waiter = null;
+          stopWaiting?.();
+          stopWaiting = null;
         }
       });
-      waiter.observe(target, { childList: true, subtree: true });
     };
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start2, { once: true });
     else start2();
     return () => {
       document.removeEventListener("DOMContentLoaded", start2);
-      waiter?.disconnect();
+      stopWaiting?.();
       stop?.();
     };
   }
@@ -18780,6 +18796,7 @@
     "src/features/inventory/sorting.ts"() {
       "use strict";
       init_async2();
+      init_dom();
       init_emitter();
       init_domSorter();
       init_filters();
@@ -18964,7 +18981,10 @@
             this.attachDoc(this.doc);
             this.attachAllFrames();
             if (this.win.MutationObserver) {
-              const mo = new this.win.MutationObserver(() => this.attachAllFrames());
+              const iframes = this.doc.getElementsByTagName("iframe");
+              const mo = new this.win.MutationObserver(() => {
+                if (iframes.length) this.attachAllFrames();
+              });
               mo.observe(this.doc.documentElement || this.doc, { childList: true, subtree: true });
               this.observers.push(mo);
             }
@@ -22464,7 +22484,9 @@
           window.addEventListener(BELL_MODE_EVENT, () => this.startBell());
           window.addEventListener("pointerdown", (e) => this.closeOnOutsideClick(e));
           window.addEventListener("resize", () => this.reposition());
-          window.setInterval(() => this.reposition(), REPOSITION_INTERVAL_MS);
+          window.setInterval(() => {
+            if (this.items.length || this.panel.isOpen) this.reposition();
+          }, REPOSITION_INTERVAL_MS);
           alerts.onChange((items) => this.show(items));
         }
         show(items) {

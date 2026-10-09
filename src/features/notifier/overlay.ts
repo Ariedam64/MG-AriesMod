@@ -43,7 +43,10 @@ class Overlay {
     window.addEventListener(BELL_MODE_EVENT, () => this.startBell());
     window.addEventListener("pointerdown", (e) => this.closeOnOutsideClick(e));
     window.addEventListener("resize", () => this.reposition());
-    window.setInterval(() => this.reposition(), REPOSITION_INTERVAL_MS);
+    // Follows the bell as the game moves it, while there is something to place.
+    window.setInterval(() => {
+      if (this.items.length || this.panel.isOpen) this.reposition();
+    }, REPOSITION_INTERVAL_MS);
 
     alerts.onChange((items) => this.show(items));
   }

@@ -4,9 +4,12 @@
 //
 // Everything is driven by DOM mutations: the game redraws the inventory with
 // React, so the bar is re-attached, the options recomputed and the cards
-// reordered whenever the grid, its filters or its list change.
+// reordered whenever the grid, its filters or its list change. The watch on
+// the whole page runs at most once a frame; the grid's own observer, scoped
+// to the grid, reacts to every change.
 
 import { debounce } from "../../lib/async";
+import { onSubtreeChange } from "../../lib/dom";
 import { Subscriptions } from "../../lib/emitter";
 import { createDomSorter } from "./domSorter";
 import { filterContextKey, getActiveFilters, getSearchQuery, onShownItemTypesChange, shownItemTypes } from "./filters";
@@ -206,7 +209,7 @@ function attachInventorySorting(): () => void {
     });
   };
 
-  const bodyObserver = new MutationObserver(() => {
+  const onPageChange = () => {
     const current = grid && document.contains(grid) ? grid : null;
     if (grid && !current) setGrid(null);
     const next = document.querySelector(GRID_SELECTOR);
@@ -216,7 +219,7 @@ function attachInventorySorting(): () => void {
     }
     maybeInitPetHutch();
     refreshPetHutch();
-  });
+  };
 
   const onGridInput = (event: Event) => {
     const target = event.target as Element | null;
@@ -224,7 +227,7 @@ function attachInventorySorting(): () => void {
     if (within && within === resolveGrid()) setTimeout(refresh, 0);
   };
 
-  bodyObserver.observe(document.body || document.documentElement, { childList: true, subtree: true });
+  const stopPageWatch = onSubtreeChange(document.body || document.documentElement, onPageChange);
   setGrid(document.querySelector(GRID_SELECTOR));
   document.addEventListener("change", onGridInput, true);
   document.addEventListener("input", onGridInput, true);
@@ -234,7 +237,7 @@ function attachInventorySorting(): () => void {
 
   subs.add(() => {
     gridObserver.disconnect();
-    bodyObserver.disconnect();
+    stopPageWatch();
     noiseObserver.disconnect();
     refresh.cancel();
     refreshPetHutch.cancel();
@@ -254,7 +257,7 @@ export function startInventorySortingObserver(): () => void {
   if (typeof window === "undefined" || typeof document === "undefined") return () => {};
 
   let stop: (() => void) | null = null;
-  let waiter: MutationObserver | null = null;
+  let stopWaiting: (() => void) | null = null;
 
   const attachIfReady = (): boolean => {
     if (stop) return true;
@@ -267,13 +270,12 @@ export function startInventorySortingObserver(): () => void {
     if (attachIfReady()) return;
     const target = document.body || document.documentElement;
     if (!target) return;
-    waiter = new MutationObserver(() => {
+    stopWaiting = onSubtreeChange(target, () => {
       if (attachIfReady()) {
-        waiter?.disconnect();
-        waiter = null;
+        stopWaiting?.();
+        stopWaiting = null;
       }
     });
-    waiter.observe(target, { childList: true, subtree: true });
   };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
@@ -281,7 +283,7 @@ export function startInventorySortingObserver(): () => void {
 
   return () => {
     document.removeEventListener("DOMContentLoaded", start);
-    waiter?.disconnect();
+    stopWaiting?.();
     stop?.();
   };
 }
