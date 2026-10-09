@@ -37,7 +37,7 @@ Fixes land here first, then get ported. The fork is **not** a mirror: it has fea
 - A watcher keeps its unsubscribers in a `Subscriptions` and undoes them in its `stop`.
 - Strings the game owns (atom labels, message types, field names) are never renamed, even when they read badly.
 - `any` is fine at the boundary with the minified game; inside the mod, give things types.
-- Menus use the components in `ui/kit/` and its colour tokens, not hand-rolled buttons or literal colours.
+- Menus use the components in `ui/kit/`, its colour tokens and `--qmm-font`; a literal colour outside the data and Pixi files fails `check:themecolors`.
 
 ## Commands
 
