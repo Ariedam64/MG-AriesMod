@@ -1,15 +1,14 @@
 // The seed and decor bulk deleters differ only in labels, sprites and the
 // controller behind them, so they share one section builder.
 //
-// The card shows the selection rather than describing it: three headline
-// figures, then the picked categories as sprite chips. While a run is going
-// those swap for a progress bar, so there is one thing on screen at a time and
-// the card never reads as a wall of controls.
+// The card shows one state at a time. With nothing picked, an empty state and
+// the button to pick. With a selection, its totals, the picked kinds as sprite
+// chips, how long it will take, and the button to start. While a run is going,
+// a progress bar and the buttons to pause or stop it.
 
 import { formatInteger } from "../../lib/format";
-import { meter } from "../../ui/kit/badges";
+import { meter, pill } from "../../ui/kit/badges";
 import { button, setButtonEnabled } from "../../ui/kit/button";
-import { sectionLabel } from "../../ui/kit/card";
 import { h } from "../../ui/kit/dom";
 import { iconBox } from "../../ui/kit/icons";
 import { collapsibleCard } from "../../ui/kit/layout";
@@ -20,10 +19,11 @@ import { ensureDeleterStyles } from "./styles";
 /** Per-delete slack the run spends outside its own delay. */
 const EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS = 10;
 
-/** Chips beyond this collapse into a "+N more" pill. */
+/** Chips beyond this collapse into a "+N more" chip. */
 const MAX_VISIBLE_CHIPS = 4;
 
 const CHIP_SPRITE_PX = 22;
+const EMPTY_SPRITE_PX = 30;
 
 /** `850 ms`, `4.2 s`, `37 s`, `3 min 5 s`: precise for short runs, rounded for long ones. */
 const formatDurationShort = (ms: number): string => {
@@ -39,19 +39,23 @@ const formatDurationShort = (ms: number): string => {
 const formatFinishTime = (timestamp: number): string =>
   new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
+/** A noun in its two forms, so a count reads as a phrase: `1 seed`, `3 seeds`. */
+export type Noun = { one: string; many: string };
+
+const counted = (count: number, noun: Noun) => `${formatInteger(count)} ${count === 1 ? noun.one : noun.many}`;
+
 export interface DeleterSectionConfig {
-  /** Game sprite shown in the section header, e.g. `sprite/ui/SeedIcon`. */
-  headerSprite: string;
+  /** Game sprite shown in the empty state, e.g. `sprite/ui/SeedIcon`. */
+  sprite: string;
   title: string;
   description: string;
-  /** Plural noun for the group count, e.g. "species". */
-  groupNoun: string;
-  /** Plural noun for the unit count, e.g. "seeds". */
-  unitNoun: string;
+  /** What a picked kind is called, e.g. species. */
+  groupNoun: Noun;
+  /** What one deleted unit is called, e.g. seed. */
+  unitNoun: Noun;
   /** Where the non-inventory half lives, e.g. "Seed Silo". */
   storageLabel: string;
   selectLabel: string;
-  /** Says what gets cleared, e.g. "Clear selected seeds". */
   clearLabel: string;
   /** Sprite categories for the chips, e.g. `["seed"]`. */
   spriteCategories: string[];
@@ -67,53 +71,38 @@ export interface DeleterSectionConfig {
   openSelector: () => Promise<void>;
 }
 
-/** One headline figure with its caption underneath. */
-function statTile(): { root: HTMLElement; set: (value: string, caption: string, warn?: boolean) => void } {
-  const root = h("div", "qws-del-stat");
-  const value = h("div", "qws-del-stat__value");
-  const caption = h("div", "qws-del-stat__caption");
-  root.append(value, caption);
-  return {
-    root,
-    set: (nextValue, nextCaption, warn = false) => {
-      value.textContent = nextValue;
-      value.classList.toggle("is-warn", warn);
-      caption.textContent = nextCaption;
-    },
-  };
-}
-
 export function createDeleterSection(config: DeleterSectionConfig): HTMLElement {
   ensureDeleterStyles();
   const { controller } = config;
 
-  // A real game sprite in the header rather than an emoji, so the card reads
-  // like the thing it acts on. `collapsibleCard` builds its own title from a
-  // string, so the whole header is handed over instead.
-  const headerText = h("div", "qws-del-head__text");
-  headerText.append(sectionLabel(config.title), h("div", "qws-del-head__desc", config.description));
-  const header = h("div", "qws-del-head");
-  header.append(iconBox(config.headerSprite, 22, "misc"), headerText);
-
   const section = collapsibleCard({
-    header,
+    title: config.title,
+    description: config.description,
     collapsed: config.collapsed,
     onToggle: config.onToggleCollapsed,
   });
   section.root.classList.add("qws-del-section");
 
-  /* ----- Headline figures ----- */
-  const stats = h("div", "qws-del-stats");
-  const statGroups = statTile();
-  const statUnits = statTile();
-  const statStorage = statTile();
-  stats.append(statGroups.root, statUnits.root, statStorage.root);
+  /* ----- Nothing picked ----- */
+  const emptyText = h("div", "qws-del-empty__text");
+  emptyText.append(
+    h("div", "qws-del-empty__title", "Nothing picked yet"),
+    h("div", "qws-del-empty__hint", `Choose from your inventory and your ${config.storageLabel}.`),
+  );
+  const empty = h("div", "qws-del-empty");
+  empty.append(iconBox(config.sprite, EMPTY_SPRITE_PX, "misc"), emptyText);
 
-  /* ----- Selected categories ----- */
+  /* ----- Selection ----- */
+  const totalValue = h("span", "qws-del-totals__value");
+  const totalGroups = h("span", "qws-del-totals__groups");
+  const fromStoragePill = pill("", "warn");
+  const totals = h("div", "qws-del-totals");
+  totals.append(totalValue, totalGroups, fromStoragePill);
+
   const chips = h("div", "qws-del-chips");
-
-  /* ----- Estimate ----- */
   const estimate = h("div", "qws-del-estimate");
+  const selectionWrap = h("div", "qws-del-selection");
+  selectionWrap.append(totals, chips, estimate);
 
   /* ----- Progress, shown while running ----- */
   const bar = meter();
@@ -122,16 +111,16 @@ export function createDeleterSection(config: DeleterSectionConfig): HTMLElement 
   const progressLine = h("div", "qws-del-progress__line");
   progressLine.append(progressTargetEl, progressCount);
   const progressWrap = h("div", "qws-del-progress");
-  progressWrap.append(bar.root, progressLine);
+  progressWrap.append(progressLine, bar.root);
 
   /* ----- Actions ----- */
   const btnSelect = button(config.selectLabel, {
-    variant: "primary",
     size: "sm",
     lockWhilePending: true,
     onClick: () => runSelect(),
   });
   const btnClear = button(config.clearLabel, {
+    variant: "ghost",
     size: "sm",
     onClick: () => {
       controller.clearSelection();
@@ -145,13 +134,13 @@ export function createDeleterSection(config: DeleterSectionConfig): HTMLElement 
     onClick: () => runDelete(),
   });
   const btnPause = button("Pause", { size: "sm", onClick: () => { controller.pause(); updateControls(); } });
-  const btnPlay = button("Resume", { size: "sm", onClick: () => { controller.resume(); updateControls(); } });
+  const btnPlay = button("Resume", { variant: "primary", size: "sm", onClick: () => { controller.resume(); updateControls(); } });
   const btnStop = button("Stop", { variant: "danger", size: "sm", onClick: () => { controller.cancel(); updateControls(); } });
 
   const actions = h("div", "qws-del-actions");
   actions.append(btnSelect, btnClear, h("div", "qws-del-spacer"), btnDelete, btnPause, btnPlay, btnStop);
 
-  section.body.append(stats, chips, estimate, progressWrap, actions);
+  section.body.append(empty, selectionWrap, progressWrap, actions);
 
   /* ----- Progress state ----- */
   const progress = { target: "-", done: 0, total: 0 };
@@ -161,6 +150,7 @@ export function createDeleterSection(config: DeleterSectionConfig): HTMLElement 
     attachSpriteIcon(icon, config.spriteCategories, [item.id], CHIP_SPRITE_PX, "deleter-chip");
 
     const chip = h("div", "qws-del-chip");
+    chip.title = item.label || item.id;
     chip.append(
       icon,
       h("span", "qws-del-chip__name", item.label || item.id || "?"),
@@ -196,38 +186,36 @@ export function createDeleterSection(config: DeleterSectionConfig): HTMLElement 
 
   function updateSummary(): void {
     const { selection, groupCount, totalQty, fromStorage } = readSelection();
+    const running = controller.isRunning();
+    const hasSelection = groupCount > 0 && totalQty > 0;
 
-    statGroups.set(formatInteger(groupCount), config.groupNoun);
-    statUnits.set(formatInteger(totalQty), config.unitNoun);
-    statStorage.set(formatInteger(fromStorage), "from storage", fromStorage > 0);
+    totalValue.textContent = counted(totalQty, config.unitNoun);
+    totalGroups.textContent = counted(groupCount, config.groupNoun);
+    fromStoragePill.textContent = `${formatInteger(fromStorage)} from the ${config.storageLabel}`;
+    fromStoragePill.hidden = fromStorage <= 0;
 
     chips.replaceChildren();
-    if (groupCount === 0) {
-      chips.append(
-        h("div", "qws-del-hint", `Nothing picked yet. Choose from your inventory and your ${config.storageLabel}.`),
-      );
-    } else {
-      const sorted = [...selection].sort((a, b) => b.qty - a.qty);
-      for (const item of sorted.slice(0, MAX_VISIBLE_CHIPS)) chips.append(buildChip(item));
-      if (sorted.length > MAX_VISIBLE_CHIPS) {
-        chips.append(h("div", "qws-del-chip qws-del-chip--more", `+${sorted.length - MAX_VISIBLE_CHIPS} more`));
-      }
+    const sorted = [...selection].sort((a, b) => b.qty - a.qty);
+    for (const item of sorted.slice(0, MAX_VISIBLE_CHIPS)) chips.append(buildChip(item));
+    if (sorted.length > MAX_VISIBLE_CHIPS) {
+      chips.append(h("div", "qws-del-chip qws-del-chip--more", `+${sorted.length - MAX_VISIBLE_CHIPS} more`));
     }
 
-    const running = controller.isRunning();
     const estimateMs = estimateMsFor(totalQty);
     const finishTimestamp = running ? estimatedFinish : estimateMs > 0 ? Date.now() + estimateMs : null;
-
     estimate.textContent = totalQty <= 0
       ? ""
       : finishTimestamp
-        ? `About ${formatDurationShort(estimateMs)} · done around ${formatFinishTime(finishTimestamp)}`
+        ? `About ${formatDurationShort(estimateMs)}, done around ${formatFinishTime(finishTimestamp)}`
         : `About ${formatDurationShort(estimateMs)}`;
 
-    const hasSelection = groupCount > 0 && totalQty > 0;
+    // Picking is the one thing to do on an empty card; once there is a
+    // selection, starting the run is.
+    btnSelect.classList.toggle("qmm-btn--primary", !hasSelection);
     setButtonEnabled(btnDelete, hasSelection && !running);
     setButtonEnabled(btnClear, hasSelection && !running);
     setButtonEnabled(btnSelect, !running);
+    syncVisibility();
 
     // The countdown only means something while idle: once running, the finish
     // time is pinned and the progress events drive the card instead.
@@ -237,22 +225,39 @@ export function createDeleterSection(config: DeleterSectionConfig): HTMLElement 
     }
   }
 
+  /**
+   * One state on screen at a time. Idle, the empty state or the selection,
+   * with the buttons that act on it; running, the progress and the buttons
+   * that steer the run.
+   */
+  function syncVisibility(): void {
+    const running = controller.isRunning();
+    const paused = controller.isPaused();
+    const groupCount = controller.getSelection().length;
+    const hasSelection = readSelection().totalQty > 0;
+    section.root.classList.toggle("is-running", running);
+    empty.hidden = running || groupCount > 0;
+    selectionWrap.hidden = running || groupCount === 0;
+    progressWrap.hidden = !running;
+    btnSelect.hidden = running;
+    btnClear.hidden = running || groupCount === 0;
+    btnDelete.hidden = running || !hasSelection;
+    btnPause.hidden = !running || paused;
+    btnPlay.hidden = !running || !paused;
+    btnStop.hidden = !running;
+  }
+
   function updateControls(): void {
     const running = controller.isRunning();
     const paused = controller.isPaused();
 
-    section.root.classList.toggle("is-running", running);
-    btnPause.hidden = !running || paused;
-    btnPlay.hidden = !running || !paused;
-    btnStop.hidden = !running;
-    btnDelete.hidden = running;
+    syncVisibility();
 
     if (running) {
       const ratio = progress.total > 0 ? progress.done / progress.total : 0;
       bar.set(ratio, paused ? "warn" : "accent");
-      progressTargetEl.textContent = paused ? `Paused · ${progress.target || "-"}` : progress.target || "-";
+      progressTargetEl.textContent = paused ? `Paused, ${progress.target || "-"}` : progress.target || "-";
       progressCount.textContent = `${formatInteger(progress.done)} / ${formatInteger(progress.total)}`;
-      estimate.textContent = "";
     }
 
     setButtonEnabled(btnPause, running && !paused);

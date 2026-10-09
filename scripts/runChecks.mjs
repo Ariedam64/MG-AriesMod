@@ -43,6 +43,7 @@ const SUITES = {
   lockerrules: ["checkLockerRules", "window-storage"],
   lockerslot: ["checkLockerSlot", "dom-stub"],
   lockermenu: ["checkLockerMenu"],
+  miscmenu: ["checkMiscMenu"],
   sellallpetsconfirm: ["checkSellAllPetsConfirm"],
   abilitylogs: ["checkAbilityLogIds", "dom-stub"],
   growslot: ["checkGrowSlot"],
