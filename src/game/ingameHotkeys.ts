@@ -119,7 +119,12 @@ class InGameHotkeys implements InGameHotkeysAPI {
       this.attachDoc(this.doc);
       this.attachAllFrames();
       if (this.win.MutationObserver) {
-        const mo = new this.win.MutationObserver(() => this.attachAllFrames());
+        // A live list: checking it is free, so a page without iframes (the
+        // usual case) pays nothing on each DOM change.
+        const iframes = this.doc.getElementsByTagName("iframe");
+        const mo = new this.win.MutationObserver(() => {
+          if (iframes.length) this.attachAllFrames();
+        });
         mo.observe(this.doc.documentElement || this.doc, { childList: true, subtree: true });
         this.observers.push(mo);
       }

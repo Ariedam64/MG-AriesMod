@@ -1,5 +1,6 @@
 import { button } from "../../ui/kit/button";
 import { card } from "../../ui/kit/card";
+import { refreshWhileVisible } from "../../ui/kit/dom";
 import { radioGroup, select, textInput } from "../../ui/kit/fields";
 import { flexRow } from "../../ui/kit/layout";
 import { toggleChip } from "../../ui/kit/toggles";
@@ -346,9 +347,9 @@ export function renderWSTab(view: HTMLElement) {
   refreshSocketPicker();
   repaint(true);
 
-  const pollId = window.setInterval(() => { refreshSocketPicker(); }, 1000);
+  const stopPolling = refreshWhileVisible(view, refreshSocketPicker, 1000);
   (view as any).__ws_cleanup__ = () => {
-    window.clearInterval(pollId);
+    stopPolling();
     stopFrames();
   };
 }

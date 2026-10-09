@@ -42,7 +42,6 @@ const SUITES = {
   locker: ["checkLockerDefaults", "window-storage"],
   lockerrules: ["checkLockerRules", "window-storage"],
   lockerslot: ["checkLockerSlot", "dom-stub"],
-  domlockmarks: ["checkDomLockMarks", "dom-stub"],
   lockermenu: ["checkLockerMenu"],
   sellallpetsconfirm: ["checkSellAllPetsConfirm"],
   abilitylogs: ["checkAbilityLogIds", "dom-stub"],
@@ -89,6 +88,8 @@ const SUITES = {
   ghostmode: ["checkGhostMode"],
   inventorysummary: ["checkInventoryValueSummary", "dom-stub"],
   floating: ["checkFloating", "dom-stub"],
+  stagewatch: ["checkStageWatch", "dom-stub"],
+  visiblerefresh: ["checkVisibleRefresh", "dom-stub"],
 };
 
 /** Problems with how suites are registered: a file with no entry, or package.json out of step. */

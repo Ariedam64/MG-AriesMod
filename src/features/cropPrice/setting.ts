@@ -1,6 +1,6 @@
-// Whether the mod shows a crop's coin value on the garden card. Both displays
-// (the Pixi badge and the old DOM tooltip line) read it and follow its
-// changes, so the Misc menu toggle takes effect without a reload.
+// Whether the mod shows a crop's coin value on the garden card. The Pixi
+// badge reads it and follows its changes, so the Misc menu toggle takes
+// effect without a reload.
 
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
 import { Emitter } from "../../lib/emitter";

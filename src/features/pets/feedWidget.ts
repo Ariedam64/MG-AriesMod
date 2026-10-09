@@ -1,10 +1,8 @@
 // Floating, draggable widget hosting the Instant Feed buttons.
-// Replaces the old in-game DOM injection (instantFeedButton.ts), which was
+// Replaces the old in-game DOM injection, which was
 // disabled at the request of the game developers. The widget lives in its own
 // overlay element and never touches the game's UI tree.
 
-import { PetsService } from "./pets";
-import { PlayerService, type PetInfo } from "../../game/player";
 import { Store } from "../../game/store/api";
 import { Atoms } from "../../game/store/atoms";
 import {
@@ -13,11 +11,19 @@ import {
   onSpriteWarmupProgress,
 } from "../../ui/kit/sprites/iconCache";
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
-import { getPetStrength, getPetMaxStrength } from "../../data/rules/petValue";
 import { makeDraggable, placeInViewport, readStoredPosition, storePosition, type ScreenPosition } from "../../ui/kit/floating";
+import {
+  DEFAULT_LABEL,
+  MAX_BUTTONS,
+  activePetsSignature,
+  buttonTitle,
+  normalizeActivePets,
+  petDisplayName,
+  strengthLabel,
+  type ActivePetSlot,
+} from "./activePetSlots";
+import { instantFeedPet } from "./instantFeed";
 
-const DEFAULT_LABEL = "Instant Feed";
-const MAX_BUTTONS = 3;
 const ICON_SIZE = 18;
 const WIDGET_Z_INDEX = 1_999_900; // above game UI, below HUD windows (2_000_000+)
 const SCREEN_MARGIN = 8;
@@ -26,16 +32,6 @@ const GLOBAL_START_FLAG = "__qws_instant_feed_widget_started";
 const INVENTORY_CARD_ATOM = "inventoryCardIsOpenAtom";
 const ENABLED_PATH = "pets.instantFeedWidget.enabled";
 const POS_PATH = "pets.instantFeedWidget.pos";
-
-type ActivePetSlot = {
-  id: string;
-  name?: string | null;
-  petSpecies?: string | null;
-  mutations?: string[];
-  xp?: number;
-  targetScale?: number;
-};
-
 
 let started = false;
 let enabled = true;
@@ -361,7 +357,7 @@ function updateButtons(): void {
     const nameEl = btn.querySelector<HTMLSpanElement>('[data-instant-feed-name="1"]');
     const strEl = btn.querySelector<HTMLSpanElement>('[data-instant-feed-str="1"]');
     const pet = activePets[i] ?? null;
-    const title = pet ? buildButtonTitle(pet) : DEFAULT_LABEL;
+    const title = pet ? buttonTitle(pet) : DEFAULT_LABEL;
     btn.setAttribute("aria-label", title);
     btn.title = title;
     btn.dataset.petId = pet?.id ?? "";
@@ -369,9 +365,9 @@ function updateButtons(): void {
     btn.style.opacity = pet ? "" : "0.6";
     btn.style.cursor = pet ? "pointer" : "default";
 
-    if (nameEl) nameEl.textContent = pet ? buildPetDisplayName(pet) : DEFAULT_LABEL;
+    if (nameEl) nameEl.textContent = pet ? petDisplayName(pet) : DEFAULT_LABEL;
     if (strEl) {
-      const strength = pet ? buildStrengthLabel(pet) : null;
+      const strength = pet ? strengthLabel(pet) : null;
       strEl.textContent = strength?.text ?? "";
       strEl.style.color = strength?.maxed ? "#facc15" : "";
       strEl.style.display = strength ? "" : "none";
@@ -401,142 +397,29 @@ function updateButtons(): void {
   if (widget && positioned && isWidgetVisible()) clampIntoViewport();
 }
 
-function buildPetDisplayName(pet: ActivePetSlot): string {
-  const name = String(pet.name ?? "").trim();
-  if (name) return name;
-  const species = String(pet.petSpecies ?? "").trim();
-  if (species) return species.charAt(0).toUpperCase() + species.slice(1);
-  return "Pet";
-}
-
-function buildStrengthLabel(pet: ActivePetSlot): { text: string; maxed: boolean } | null {
-  const petLike = {
-    petSpecies: String(pet.petSpecies ?? ""),
-    xp: pet.xp,
-    targetScale: pet.targetScale,
-    mutations: pet.mutations,
-  };
-  const maxStr = getPetMaxStrength(petLike);
-  if (maxStr <= 0) return null;
-  const str = getPetStrength(petLike);
-  const maxed = str >= maxStr;
-  return { text: maxed ? `STR ${maxStr}` : `STR ${str}/${maxStr}`, maxed };
-}
-
-function buildButtonTitle(pet: ActivePetSlot): string {
-  const name = buildPetDisplayName(pet);
-  const strength = buildStrengthLabel(pet);
-  return strength ? `${DEFAULT_LABEL}: ${name} (${strength.text})` : `${DEFAULT_LABEL}: ${name}`;
-}
-
 /* ------------------------------ Active pets ------------------------------ */
 
 function updateActivePets(next: unknown): void {
   const normalized = normalizeActivePets(next);
-  const sig = buildActivePetsSignature(normalized);
+  const sig = activePetsSignature(normalized);
   if (sig === activePetsSig) return;
   activePetsSig = sig;
   activePets = normalized;
   updateButtons();
 }
 
-function normalizeActivePets(value: unknown): ActivePetSlot[] {
-  const list = Array.isArray(value) ? value : [];
-  const out: ActivePetSlot[] = [];
-  for (const entry of list) {
-    if (!entry || typeof entry !== "object") continue;
-    const raw = entry as any;
-    // Prefer slot.* when a slot wrapper exists (matches _activeSlotToPet in pets.ts)
-    const slot = raw?.slot && typeof raw.slot === "object" ? raw.slot : raw;
-    const id = String(slot?.id ?? "").trim();
-    if (!id) continue;
-    const name = (slot?.name ?? raw?.name ?? raw?.petName ?? null) as string | null;
-    const petSpecies = (slot?.petSpecies ?? raw?.petSpecies ?? raw?.species ?? null) as
-      | string
-      | null;
-    const mutationsRaw =
-      slot?.mutations ??
-      raw?.mutations ??
-      raw?.data?.mutations ??
-      raw?.slot?.data?.mutations ??
-      raw?.pet?.mutations ??
-      null;
-    const mutations = Array.isArray(mutationsRaw)
-      ? mutationsRaw.map((m: unknown) => String(m ?? "").trim()).filter(Boolean)
-      : undefined;
-    const xpRaw = Number(slot?.xp ?? raw?.xp);
-    const xp = Number.isFinite(xpRaw) ? xpRaw : undefined;
-    const targetScaleRaw = Number(slot?.targetScale ?? raw?.targetScale);
-    const targetScale = Number.isFinite(targetScaleRaw) ? targetScaleRaw : undefined;
-    out.push({ id, name, petSpecies, mutations, xp, targetScale });
-    if (out.length >= MAX_BUTTONS) break;
-  }
-  return out;
-}
-
-function buildActivePetsSignature(list: ActivePetSlot[]): string {
-  if (!list.length) return "";
-  return list
-    .map((pet) => {
-      const id = String(pet.id ?? "");
-      const species = String(pet.petSpecies ?? "");
-      const name = String(pet.name ?? "");
-      const muts = Array.isArray(pet.mutations)
-        ? pet.mutations.map((m) => String(m ?? "").trim()).filter(Boolean).sort().join(",")
-        : "";
-      // Use the displayed strength (not raw xp) so xp ticks that don't change
-      // the visible value never trigger a re-render.
-      const strength = buildStrengthLabel(pet)?.text ?? "";
-      return `${id}|${species}|${name}|${muts}|${strength}`;
-    })
-    .join(";");
-}
-
 /* ------------------------------ Feed action ------------------------------ */
-
-async function findPetById(petId: string): Promise<PetInfo | null> {
-  try {
-    const list = await PetsService.getPets();
-    const arr = Array.isArray(list) ? list : [];
-    return arr.find((p) => String(p?.slot?.id || "") === petId) ?? null;
-  } catch (err) {
-    console.warn("[InstantFeed] Failed to fetch pets", err);
-    return null;
-  }
-}
 
 async function handleInstantFeedForPet(petId: string, btn: HTMLButtonElement): Promise<void> {
   if (!petId) return;
   const prevDisabled = btn.disabled;
-  const expectedPetId = petId;
   btn.disabled = true;
   try {
-    const pet = await findPetById(petId);
-    if (!pet) return;
-
-    const species = String(pet?.slot?.petSpecies || "");
-    const compatible = PetsService.getInstantFeedAllowedCrops(species);
-    if (!compatible.size) return;
-
-    const inventory = await PlayerService.getCropInventoryState();
-    const items = Array.isArray(inventory) ? inventory : [];
-    const favoriteSet = await PlayerService.getFavoriteIdSet().catch(() => new Set<string>());
-
-    const chosen = items.find((item) => {
-      const speciesId = String((item as any)?.species || "");
-      if (!speciesId || !compatible.has(speciesId)) return false;
-      const id = String((item as any)?.id || "");
-      return id && !favoriteSet.has(id);
-    }) as any;
-
-    const chosenId = String(chosen?.id || "");
-    if (!chosenId) return;
-
-    await PlayerService.feedPet(petId, chosenId);
+    await instantFeedPet(petId);
   } catch (err) {
     console.error("[InstantFeed] Failed to feed pet", err);
   } finally {
-    if (btn.dataset.petId === expectedPetId) {
+    if (btn.dataset.petId === petId) {
       btn.disabled = prevDisabled;
     }
   }

@@ -2,7 +2,8 @@
 // breakdown. Shared by the Team Builder cards (collapsed by default) and the
 // Manager tab's equipped team (always open).
 //
-// All maths lives in teamStats.ts; this file only formats.
+// All maths lives in teamStats.ts and the wording in teamStatsText.ts; this
+// file only lays it out.
 
 import {
   computeTeamStats,
@@ -12,55 +13,19 @@ import {
 } from "./teamStats";
 import { color } from "../../ui/kit/theme";
 import type { InventoryPet } from "./pets";
-
-/**
- * Human labels and units for the game's baseParameter keys. UI vocabulary,
- * not game data: the values themselves always come from the catalog.
- */
-const PARAMETER_LABELS: Record<string, { label: string; unit: string }> = {
-  // Crop Size is a whole number in [50, 100]; the boost adds points, not a percentage.
-  sizeIncrease: { label: "Crop size", unit: "" },
-  scaleIncreasePercentage: { label: "Crop size", unit: "%" },
-  cropSellPriceIncreasePercentage: { label: "Sell price", unit: "%" },
-  mutationChanceIncreasePercentage: { label: "Mutation chance", unit: "%" },
-  hungerRestorePercentage: { label: "Hunger restore", unit: "%" },
-  hungerRefundPercentage: { label: "Hunger refund", unit: "%" },
-  hungerDepletionRateDecreasePercentage: { label: "Hunger drain", unit: "%" },
-  plantGrowthReductionMinutes: { label: "Plant growth", unit: "min" },
-  eggGrowthTimeReductionMinutes: { label: "Egg growth", unit: "min" },
-  baseMaxCoinsFindable: { label: "Coins (max)", unit: "" },
-  bonusXp: { label: "Bonus XP", unit: "" },
-  maxStrengthIncreasePercentage: { label: "Max STR", unit: "%" },
-  plantAbilityChanceBoostPercentage: { label: "Plant ability", unit: "%" },
-};
+import {
+  CONTINUOUS_ROLLS_PER_HOUR,
+  formatDuration,
+  formatPercent,
+  groupTitle,
+  perProcMagnitude,
+  triggerUnit,
+} from "./teamStatsText";
 
 const MUTED = color.textSoft;
 /** Green for "at its best", kept apart from the teal accent used for selection. */
 const ACCENT = "#34d399";
 const DIM = color.textDim;
-
-/** Rolls a `continuous` ability gets per hour: the game rolls them each minute. */
-const CONTINUOUS_ROLLS_PER_HOUR = 60;
-
-/**
- * What one roll of an effect corresponds to, by trigger. `continuous`
- * abilities roll once a minute (the game's own tooltip reads "chance per
- * minute"); everything else rolls once per matching player action, so
- * labelling those per minute would be plainly wrong.
- */
-const TRIGGER_UNITS: Record<string, string> = {
-  continuous: "/min",
-  harvest: "/harvest",
-  sellAllCrops: "/sale",
-  sellPet: "/pet sold",
-  hatchEgg: "/hatch",
-  playerActivated: "/use",
-  weather: "/weather",
-};
-
-function triggerUnit(trigger: string | null): string {
-  return (trigger && TRIGGER_UNITS[trigger]) || "/roll";
-}
 
 /**
  * Shading for how close the team is to its OWN ceiling, not to 100%. A team
@@ -103,78 +68,6 @@ function mkBar(current: number, atMax: number): HTMLElement {
 
   track.appendChild(fill);
   return track;
-}
-
-function formatPercent(value: number): string {
-  if (value >= 10) return `${value.toFixed(1)}%`;
-  if (value >= 1) return `${value.toFixed(2)}%`;
-  return `${value.toFixed(3)}%`;
-}
-
-function formatAmount(value: number, unit: string): string {
-  // Coin ranges reach seven digits, where "9900000" is unreadable: group
-  // thousands so the magnitude is legible at a glance.
-  const decimals = Math.abs(value) >= 10 ? 0 : 1;
-  const text = value.toLocaleString("en-US", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
-  return unit ? `${text}${unit === "%" ? "%" : ` ${unit}`}` : text;
-}
-
-function formatDuration(minutes: number): string {
-  const total = Math.max(0, Math.round(minutes));
-  const hours = Math.floor(total / 60);
-  const mins = total % 60;
-  if (hours > 0) return `${hours}h${String(mins).padStart(2, "0")}`;
-  return `${mins}m`;
-}
-
-/**
- * Team totals for one effect. Deliberately no per-pet breakdown: the useful
- * figure is what the whole team does, and three extra lines per group made
- * the cards unreadable.
- */
-/** The parameter this effect is really about, or null when it carries none. */
-function primaryParameterKey(group: EffectGroup): string | null {
-  for (const contributor of group.contributors) {
-    for (const key of Object.keys(contributor.scaledParameters)) {
-      if (PARAMETER_LABELS[key]) return key;
-    }
-  }
-  return null;
-}
-
-/**
- * Titles the card by what the effect does ("Crop size") rather than by the
- * ability's name ("Crop Size Boost"), which only repeated the line below it.
- * Effects with no numeric parameter (granters, Seed Finder, Double Hatch)
- * keep their ability name, since there is nothing else to call them.
- */
-function groupTitle(group: EffectGroup): string {
-  const key = primaryParameterKey(group);
-  return key ? PARAMETER_LABELS[key].label : group.label;
-}
-
-/**
- * What one proc delivers. Magnitudes do not add up across the team: a proc is
- * one pet firing, and it applies that pet's own value. When contributors
- * differ (different tiers or strengths) this is a range, never a total.
- */
-function perProcMagnitude(group: EffectGroup): string | null {
-  const key = primaryParameterKey(group);
-  if (!key) return null;
-
-  const meta = PARAMETER_LABELS[key];
-  const values = group.contributors
-    .map((contributor) => contributor.scaledParameters[key])
-    .filter((value): value is number => typeof value === "number" && value !== 0);
-  if (!values.length) return null;
-
-  const low = formatAmount(Math.min(...values), meta.unit);
-  const high = formatAmount(Math.max(...values), meta.unit);
-  // Spaces around the dash: "3.5 min–5.0 min" reads as one broken token.
-  return low === high ? high : `${low} – ${high}`;
 }
 
 type GroupNav = { index: number; total: number; onStep: (delta: number) => void };
@@ -226,6 +119,11 @@ function mkNav(nav: GroupNav): HTMLElement {
   return wrap;
 }
 
+/**
+ * Team totals for one effect. Deliberately no per-pet breakdown: the useful
+ * figure is what the whole team does, and three extra lines per group made
+ * the cards unreadable.
+ */
 function renderGroup(group: EffectGroup, nav?: GroupNav): HTMLElement {
   const block = document.createElement("div");
   Object.assign(block.style, {

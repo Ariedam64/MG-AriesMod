@@ -12,9 +12,8 @@
 // Multiple features need this same card (the crop coin-value badge and the
 // locker purple-border indicator); they share this one card-system search
 // via `watchGardenInfoCard` instead of each running their own copy of it.
-import { shareGlobal, pageWindow } from "../../platform/pageContext";
-import { getReadySpriteState } from "../sprites/context";
-import type { SpriteState } from "../sprites/types";
+import { shareGlobal } from "../../platform/pageContext";
+import { findByLabel, watchStageNode, type StageNodeWatch } from "./stageSearch";
 
 export interface GardenInfoCardGeometry {
   /** Local-space y of the card's own content top (title row), used to place things above it. */
@@ -36,98 +35,23 @@ const TITLE_ROW_LABEL = "GardenInfoObjectTitleRow";
 // crops with an active ability/mutation proc callout (e.g. Dawnbinder).
 const ABILITIES_SECTION_LABEL = "GardenInfoPlantAbilities";
 const SECTION_GAP_ESTIMATE = 8;
-const CARD_SYSTEM_FIND_RETRY_MS = 1000;
-const CARD_SYSTEM_FIND_LOG_EVERY = 30;
 
 interface GardenInfoCardDebugState {
   findAttempts: number;
   attached: boolean;
-  rafTicks: number;
   scriptStartedAt: number;
   listenerCount: number;
 }
 
-export function getStage(state: SpriteState): any {
-  return state.renderer.lastObjectRendered ?? state.renderer.stage ?? state.app?.stage ?? null;
-}
-
-export function findByLabel(root: any, label: string, limit = 25000): any {
-  if (!root) return null;
-  const stack = [root];
-  const seen = new Set<any>();
-  let n = 0;
-  while (stack.length && n++ < limit) {
-    const node = stack.pop();
-    if (!node || seen.has(node)) continue;
-    seen.add(node);
-    if (node.label === label) return node;
-    const children = node.children;
-    if (Array.isArray(children)) for (const child of children) stack.push(child);
-  }
-  return null;
-}
-
-/**
- * Same walk as findByLabel, but gives each top-level branch of `root` its
- * own search budget instead of pooling one `limit` across the whole tree.
- * The game's world/tile layer alone can hold tens of thousands of sprite
- * nodes: a single shared budget starting there exhausts before ever
- * reaching sibling UI layers, making anything only found there (the card
- * system) unreachable once the world grows large enough. That's a race
- * against world size, not a real "not found".
- */
-export function findAcrossBranches(root: any, pred: (node: any) => boolean, limitPerBranch = 25000): any {
-  if (!root) return null;
-  if (pred(root)) return root;
-  const children = root.children;
-  if (!Array.isArray(children)) return null;
-  for (const child of children) {
-    const stack = [child];
-    const seen = new Set<any>();
-    let n = 0;
-    while (stack.length && n++ < limitPerBranch) {
-      const node = stack.pop();
-      if (!node || seen.has(node)) continue;
-      seen.add(node);
-      if (pred(node)) return node;
-      const kids = node.children;
-      if (Array.isArray(kids)) for (const kid of kids) stack.push(kid);
-    }
-  }
-  return null;
-}
-
-// `roundRect`/`clear` are public PIXI.Graphics API methods, so unlike
-// minified identifiers they survive the game's build unchanged, so they are used to
-// borrow the game's own Graphics constructor for our own drawn elements.
-//
-// Cached at module level once found: it's a stable class reference for the
-// whole page session, never per-card state. Callers used to re-derive it on
-// every card change, which re-walks the whole stage (including the
-// world/tile layer), and with multiple consumers each doing that on every
-// tooltip open/close while the player walks around, that was visible lag.
-let cachedGraphicsCtor: any = null;
-export function findGraphicsCtor(root: any): any {
-  if (cachedGraphicsCtor) return cachedGraphicsCtor;
-  const found = findAcrossBranches(
-    root,
-    (node: any) => typeof node?.roundRect === "function" && typeof node?.clear === "function",
-  )?.constructor ?? null;
-  if (found) cachedGraphicsCtor = found;
-  return found;
-}
-
 let cardSystem: any = null;
 let currentCard: any = null;
-let findAttempts = 0;
-let findRafId: number | null = null;
-let lastFindCheckAt = 0;
+/** The card system search, running while anyone listens. */
+let search: StageNodeWatch | null = null;
 const listeners = new Set<GardenInfoCardListener>();
 
 const debugState: GardenInfoCardDebugState = {
   findAttempts: 0,
   attached: false,
-  rafTicks: 0,
   scriptStartedAt: Date.now(),
   listenerCount: 0,
 };
@@ -191,78 +115,40 @@ function onChildAdded(row: any) {
 function attachToCardSystem(system: any) {
   cardSystem = system;
   cardSystem.on("childAdded", onChildAdded);
-  cardSystem.once("destroyed", () => {
-    if (cardSystem === system) {
-      cardSystem = null;
-      debugState.attached = false;
-      currentCard = null;
-      notifyListeners(null, null);
-      // The game can destroy and fully recreate its whole Pixi tree (e.g.
-      // WebGL context loss after the tab/window is backgrounded a while,
-      // such as switching away and back with alt-tab). The search loop
-      // had already stopped scheduling itself once found the first time,
-      // so without this it would never look for the new one again.
-      restartSearchIfNeeded();
-    }
-  });
   debugState.attached = true;
-  console.info(`[gardenInfoCardPixi] attached to ${CARD_SYSTEM_LABEL} after ${findAttempts} attempt(s)`);
   const existingRow = (system.children ?? []).find((c: any) => c?.label === CARD_ROW_LABEL);
   if (existingRow) onChildAdded(existingRow);
 }
 
-// No attempt cap: the sprite catalog (renderer/ctors) can take a variable
-// amount of time to become ready depending on how fast the page loads, so
-// giving up after a fixed number of attempts risked never finding the card
-// system at all on a fast load. Retrying forever costs nothing once found
-// (scheduling stops immediately below).
-function tryFindCardSystem() {
-  if (cardSystem) return;
-  const state = getReadySpriteState();
-  if (!state) return;
-  const stage = getStage(state);
-  const found = findAcrossBranches(stage, (node: any) => node?.label === CARD_SYSTEM_LABEL);
-  if (found) {
-    attachToCardSystem(found);
-    return;
-  }
-  findAttempts += 1;
-  debugState.findAttempts = findAttempts;
-  if (findAttempts % CARD_SYSTEM_FIND_LOG_EVERY === 0) {
-    console.info(`[gardenInfoCardPixi] still searching for ${CARD_SYSTEM_LABEL} (${findAttempts} attempts so far)`);
-  }
+// The game can destroy and fully recreate its whole Pixi tree (e.g. WebGL
+// context loss after the tab/window is backgrounded a while, such as
+// switching away and back with alt-tab): the search then starts again.
+function detachFromCardSystem() {
+  cardSystem = null;
+  debugState.attached = false;
+  currentCard = null;
+  notifyListeners(null, null);
+  stopSearchIfUnused();
 }
 
-// Driven by requestAnimationFrame rather than setInterval: browsers can
-// throttle setInterval/setTimeout heavily depending on tab/frame focus
-// state. The game's own renderer keeps calling RAF as long as it's
-// rendering at all, so piggybacking on it avoids that throttling.
-//
-// Critically, this must be `pageWindow.requestAnimationFrame`, not the bare
-// global: Tampermonkey's sandboxed script context has its own `window`
-// separate from the page's real `unsafeWindow` in some injection modes, and
-// that sandbox realm isn't tied to the page's actual rendering.
-const raf: (cb: (t: number) => void) => number = (pageWindow as any).requestAnimationFrame.bind(pageWindow);
-
-function scheduleFind(now: number) {
-  findRafId = null;
-  debugState.rafTicks += 1;
-  if (!listeners.size || cardSystem) return;
-  if (now - lastFindCheckAt >= CARD_SYSTEM_FIND_RETRY_MS) {
-    lastFindCheckAt = now;
-    tryFindCardSystem();
-  }
-  if (!listeners.size || cardSystem) return;
-  findRafId = raf(scheduleFind);
+function startSearchIfNeeded() {
+  if (!listeners.size || search) return;
+  search = watchStageNode({
+    label: CARD_SYSTEM_LABEL,
+    logTag: "[gardenInfoCardPixi]",
+    onFound: attachToCardSystem,
+    onLost: detachFromCardSystem,
+    onSearch: (attempts) => {
+      debugState.findAttempts = attempts;
+    },
+  });
 }
 
-/** (Re)kicks the search loop if there are subscribers but nothing found yet. */
-function restartSearchIfNeeded() {
-  if (!listeners.size || cardSystem) return;
-  tryFindCardSystem();
-  if (!cardSystem && findRafId == null) {
-    findRafId = raf(scheduleFind);
-  }
+/** Nobody listens and nothing is attached: no point searching. */
+function stopSearchIfUnused() {
+  if (listeners.size || cardSystem || !search) return;
+  search.stop();
+  search = null;
 }
 
 /**
@@ -275,7 +161,7 @@ function restartSearchIfNeeded() {
 export function watchGardenInfoCard(listener: GardenInfoCardListener): () => void {
   listeners.add(listener);
   debugState.listenerCount = listeners.size;
-  restartSearchIfNeeded();
+  startSearchIfNeeded();
   if (currentCard) {
     try {
       listener(currentCard, computeGeometry(currentCard));
@@ -286,5 +172,6 @@ export function watchGardenInfoCard(listener: GardenInfoCardListener): () => voi
   return () => {
     listeners.delete(listener);
     debugState.listenerCount = listeners.size;
+    stopSearchIfUnused();
   };
 }

@@ -38,10 +38,6 @@
   var __esm = (fn, res) => function __init() {
     return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
   };
-  var __export = (target, all) => {
-    for (var name in all)
-      __defProp(target, name, { get: all[name], enumerable: true });
-  };
   var __copyProps = (to, from, except, desc) => {
     if (from && typeof from === "object" || typeof from === "function") {
       for (let key2 of __getOwnPropNames(from))
@@ -83,37 +79,12 @@
   });
 
   // src/game/sprites/settings.ts
-  var DEFAULT_CFG, MUT_META, MUT_G1, MUT_G2, MUT_G3;
+  var DEFAULT_CFG, MUT_G1, MUT_G2, MUT_G3;
   var init_settings = __esm({
     "src/game/sprites/settings.ts"() {
       "use strict";
       DEFAULT_CFG = {
-        origin: "https://magicgarden.gg",
-        jobOn: true,
-        jobBudgetMs: 5,
-        jobBurstMs: 12,
-        jobBurstWindowMs: 400,
-        jobCapPerTick: 20,
-        cacheOn: true,
-        cacheMaxEntries: 1200,
-        cacheMaxCost: 5e3,
-        keepCacheOnClose: true,
-        srcCanvasMax: 450,
-        debugLog: true,
-        debugLimitDefault: 25
-      };
-      MUT_META = {
-        Gold: { overlayTall: null, tallIconOverride: null },
-        Rainbow: { overlayTall: null, tallIconOverride: null, angle: 130, angleTall: 0 },
-        Wet: { overlayTall: "sprite/mutation-overlay/WetTallPlant", tallIconOverride: "sprite/mutation/Puddle" },
-        Chilled: { overlayTall: "sprite/mutation-overlay/ChilledTallPlant", tallIconOverride: null },
-        Frozen: { overlayTall: "sprite/mutation-overlay/FrozenTallPlant", tallIconOverride: null },
-        Thunderstruck: { overlayTall: "sprite/mutation-overlay/ThunderstruckTallPlant", tallIconOverride: "sprite/mutation/ThunderstruckGround" },
-        Thundercharged: { overlayTall: null, tallIconOverride: null },
-        Dawnlit: { overlayTall: null, tallIconOverride: null },
-        Ambershine: { overlayTall: null, tallIconOverride: null },
-        Dawncharged: { overlayTall: null, tallIconOverride: null },
-        Ambercharged: { overlayTall: null, tallIconOverride: null }
+        origin: "https://magicgarden.gg"
       };
       MUT_G1 = ["", "Gold", "Rainbow"].filter(Boolean);
       MUT_G2 = ["", "Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged"].filter(Boolean);
@@ -125,42 +96,14 @@
   function createInitialState() {
     return {
       started: false,
-      open: false,
       loaded: false,
       version: null,
       base: null,
       ctors: null,
       app: null,
       renderer: null,
-      cat: "__all__",
-      q: "",
-      f: "",
-      mutOn: false,
-      mutations: [],
-      scroll: 0,
-      items: [],
-      filtered: [],
-      cats: /* @__PURE__ */ new Map(),
       tex: /* @__PURE__ */ new Map(),
-      lru: /* @__PURE__ */ new Map(),
-      cost: 0,
-      jobs: [],
-      jobMap: /* @__PURE__ */ new Set(),
-      srcCan: /* @__PURE__ */ new Map(),
-      atlasBases: /* @__PURE__ */ new Set(),
-      dbgCount: {},
-      sig: "",
-      changedAt: 0,
-      needsLayout: false,
-      overlay: null,
-      bg: null,
-      grid: null,
-      dom: null,
-      selCat: null,
-      count: null,
-      pool: [],
-      active: /* @__PURE__ */ new Map(),
-      anim: /* @__PURE__ */ new Set()
+      atlasBases: /* @__PURE__ */ new Set()
     };
   }
   function createSpriteContext() {
@@ -221,36 +164,7 @@
   // src/game/sprites/pixi/hooks.ts
   function mkSyntheticApp(renderer) {
     const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
-    const listeners2 = /* @__PURE__ */ new Set();
-    let rafId = 0;
-    let last = 0;
-    const tick = (now) => {
-      const delta = last ? (now - last) / (1e3 / 60) : 1;
-      last = now;
-      for (const fn of listeners2) {
-        try {
-          fn(delta);
-        } catch {
-        }
-      }
-      rafId = requestAnimationFrame(tick);
-    };
-    const ticker = {
-      add(fn) {
-        if (!listeners2.size) {
-          rafId = requestAnimationFrame(tick);
-        }
-        listeners2.add(fn);
-      },
-      remove(fn) {
-        listeners2.delete(fn);
-        if (!listeners2.size) {
-          cancelAnimationFrame(rafId);
-        }
-      },
-      deltaMS: 16.67
-    };
-    return { renderer, stage, ticker };
+    return { renderer, stage };
   }
   function createPixiHooks() {
     let appResolver;
@@ -599,11 +513,6 @@
       out.push(part);
     }
     return out.join("/");
-  }
-  function categoryOf(key2) {
-    const parts = splitKey(key2);
-    const start2 = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
-    return parts[start2] || "misc";
   }
   function animParse(key2) {
     const parts = splitKey(key2);
@@ -985,901 +894,6 @@
     }
   });
 
-  // src/game/sprites/data/catalogIndexer.ts
-  function buildItemsFromTextures(tex) {
-    const keys = [...tex.keys()].sort((a, b) => a.localeCompare(b));
-    const used = /* @__PURE__ */ new Set();
-    const items = [];
-    const cats = /* @__PURE__ */ new Map();
-    const addToCat = (key2, item) => {
-      const cat = categoryOf(key2);
-      if (!cats.has(cat)) cats.set(cat, []);
-      cats.get(cat).push(item);
-    };
-    for (const key2 of keys) {
-      const texEntry = tex.get(key2);
-      if (!texEntry || used.has(key2)) continue;
-      const anim = animParse(key2);
-      if (!anim) {
-        const item = { key: key2, isAnim: false, first: texEntry };
-        items.push(item);
-        addToCat(key2, item);
-        continue;
-      }
-      const frames = [];
-      for (const candidate of keys) {
-        const maybe = animParse(candidate);
-        if (!maybe || maybe.baseKey !== anim.baseKey) continue;
-        const t = tex.get(candidate);
-        if (!t) continue;
-        frames.push({ idx: maybe.idx, tex: t });
-        used.add(candidate);
-      }
-      frames.sort((a, b) => a.idx - b.idx);
-      const ordered = frames.map((f) => f.tex);
-      if (ordered.length === 1) {
-        const item = { key: anim.baseKey, isAnim: false, first: ordered[0] };
-        items.push(item);
-        addToCat(anim.baseKey, item);
-      } else if (ordered.length > 1) {
-        const item = {
-          key: anim.baseKey,
-          isAnim: true,
-          frames: ordered,
-          first: ordered[0],
-          count: ordered.length
-        };
-        items.push(item);
-        addToCat(anim.baseKey, item);
-      }
-    }
-    return { items, cats };
-  }
-  var init_catalogIndexer = __esm({
-    "src/game/sprites/data/catalogIndexer.ts"() {
-      "use strict";
-      init_path();
-    }
-  });
-
-  // src/game/sprites/mutations/variantBuilder.ts
-  function buildVariantFromMutations(list) {
-    const raw = list.filter((value) => hasMutationFilter(value));
-    const selected = sortMutations(raw);
-    const muts = normalizeMutListColor(raw);
-    const overlayMuts = normalizeMutListOverlay(raw);
-    return {
-      mode: "M",
-      muts,
-      overlayMuts,
-      selectedMuts: selected,
-      sig: `M:${selected.join(",")}|${muts.join(",")}|${overlayMuts.join(",")}`
-    };
-  }
-  function mutationAliases(mut) {
-    switch (mut) {
-      case "Ambershine":
-        return ["Ambershine", "Amberlit"];
-      case "Dawncharged":
-        return ["Dawncharged", "Dawnbound"];
-      case "Ambercharged":
-        return ["Ambercharged", "Amberbound"];
-      case "Thunderstruck":
-        return ["Thunderstruck", "ThunderstruckGround"];
-      default:
-        return [mut];
-    }
-  }
-  function applyFilterOnto(ctx2, sourceCanvas, name, isTall) {
-    const base = FILTERS[name];
-    if (!base) return;
-    const f = { ...base };
-    if (name === "Rainbow" && isTall && f.angTall != null) f.ang = f.angTall;
-    const fullSpan = name === "Rainbow" && isTall;
-    const w = sourceCanvas.width;
-    const h2 = sourceCanvas.height;
-    ctx2.save();
-    const blendOp = f.masked ? pickBlendOp(f.op) : "source-in";
-    ctx2.globalCompositeOperation = blendOp;
-    if (f.a != null) ctx2.globalAlpha = f.a;
-    if (f.masked) {
-      const m = document.createElement("canvas");
-      m.width = w;
-      m.height = h2;
-      const mctx = m.getContext("2d");
-      mctx.imageSmoothingEnabled = false;
-      fillGrad(mctx, w, h2, f, fullSpan);
-      mctx.globalCompositeOperation = "destination-in";
-      mctx.drawImage(sourceCanvas, 0, 0);
-      ctx2.drawImage(m, 0, 0);
-    } else {
-      fillGrad(ctx2, w, h2, f, fullSpan);
-    }
-    ctx2.restore();
-  }
-  function tallOverlayFromSheet(mutName, state5) {
-    const target = String(mutName || "").toLowerCase();
-    for (const k of state5.tex.keys()) {
-      const m = /sprite\/mutation-overlay\/([A-Za-z0-9]+)TallPlant/i.exec(String(k));
-      if (!m || !m[1]) continue;
-      const prefix = m[1].toLowerCase();
-      if (prefix === target) {
-        const t = state5.tex.get(k);
-        if (t) return { tex: t, key: k };
-      }
-    }
-    return null;
-  }
-  function findOverlayTexture(itKey, mutName, state5, preferTall) {
-    if (!mutName) return null;
-    const base = baseNameOf(itKey);
-    const aliases = mutationAliases(mutName);
-    for (const name of aliases) {
-      const tries = [
-        `sprite/mutation/${name}${base}`,
-        `sprite/mutation/${name}-${base}`,
-        `sprite/mutation/${name}_${base}`,
-        `sprite/mutation/${name}/${base}`,
-        `sprite/mutation/${name}`
-      ];
-      for (const k of tries) {
-        const t = state5.tex.get(k);
-        if (t) return { tex: t, key: k };
-      }
-      if (preferTall) {
-        const hit = state5.tex.get(`sprite/mutation-overlay/${name}TallPlant`) && {
-          tex: state5.tex.get(`sprite/mutation-overlay/${name}TallPlant`),
-          key: `sprite/mutation-overlay/${name}TallPlant`
-        } || state5.tex.get(`sprite/mutation-overlay/${name}`) && {
-          tex: state5.tex.get(`sprite/mutation-overlay/${name}`),
-          key: `sprite/mutation-overlay/${name}`
-        } || tallOverlayFromSheet(mutName, state5);
-        if (hit) return hit;
-      }
-    }
-    return null;
-  }
-  function findIconTexture(itKey, mutName, isTall, state5) {
-    if (!mutName) return null;
-    const meta = MUT_META[mutName];
-    if (isTall && meta?.tallIconOverride) {
-      const t = state5.tex.get(meta.tallIconOverride);
-      if (t) return t;
-    }
-    const base = baseNameOf(itKey);
-    const aliases = mutationAliases(mutName);
-    for (const name of aliases) {
-      const tries = [
-        `sprite/mutation/${name}Icon`,
-        `sprite/mutation/${name}`,
-        `sprite/mutation/${name}${base}`,
-        `sprite/mutation/${name}-${base}`,
-        `sprite/mutation/${name}_${base}`,
-        `sprite/mutation/${name}/${base}`
-      ];
-      for (const k of tries) {
-        const t = state5.tex.get(k);
-        if (t) return t;
-      }
-      if (isTall) {
-        const t = state5.tex.get(`sprite/mutation-overlay/${name}TallPlantIcon`) || state5.tex.get(`sprite/mutation-overlay/${name}TallPlant`);
-        if (t) return t;
-      }
-    }
-    return null;
-  }
-  function computeIconLayout(tex, baseName, isTall) {
-    const width = tex?.orig?.width ?? tex?.frame?.width ?? tex?.width ?? 1;
-    const height = tex?.orig?.height ?? tex?.frame?.height ?? tex?.height ?? 1;
-    const anchorX = tex?.defaultAnchor?.x ?? 0;
-    const anchorY = tex?.defaultAnchor?.y ?? 0;
-    let targetX = MUT_ICON_X_EXCEPT[baseName] ?? anchorX;
-    const isVerticalShape = height > width * 1.5;
-    let targetY = MUT_ICON_Y_EXCEPT[baseName] ?? (isVerticalShape ? anchorY : 0.4);
-    const offset = {
-      x: (targetX - anchorX) * width,
-      y: (targetY - anchorY) * height
-    };
-    const minDimension = Math.min(width, height);
-    const scaleFactor = Math.min(1.5, minDimension / TILE_SIZE_WORLD);
-    let iconScale = BASE_ICON_SCALE * scaleFactor;
-    if (isTall) iconScale *= TALL_PLANT_MUTATION_ICON_SCALE_BOOST;
-    return {
-      width,
-      height,
-      anchorX,
-      anchorY,
-      offset,
-      iconScale,
-      content: {
-        x: 0,
-        y: 0,
-        width,
-        height,
-        centerX: 0.5,
-        centerY: 0.5,
-        top: 0
-      }
-    };
-  }
-  function textureToCanvas(tex, state5, cfg) {
-    const hit = state5.srcCan.get(tex);
-    if (hit) return hit;
-    let c = null;
-    const RDR = state5.renderer;
-    try {
-      if (RDR?.extract?.canvas && (RDR?.resolution ?? 1) === 1) {
-        const s = new state5.ctors.Sprite(tex);
-        c = RDR.extract.canvas(s);
-        s.destroy?.({ children: true, texture: false, baseTexture: false });
-      }
-    } catch {
-    }
-    if (!c) {
-      const fr = tex?.frame || tex?._frame;
-      const orig = tex?.orig || tex?._orig;
-      const trim = tex?.trim || tex?._trim;
-      const rot = tex?.rotate || tex?._rotate || 0;
-      const src = tex?.baseTexture?.resource?.source || tex?.baseTexture?.resource || tex?.source?.resource?.source || tex?.source?.resource || tex?._source?.resource?.source || null;
-      if (!fr || !src) throw new Error("texToCanvas fail");
-      c = document.createElement("canvas");
-      const fullW = Math.max(1, (orig?.width ?? fr.width) | 0);
-      const fullH = Math.max(1, (orig?.height ?? fr.height) | 0);
-      const offX = trim?.x ?? 0;
-      const offY = trim?.y ?? 0;
-      c.width = fullW;
-      c.height = fullH;
-      const ctx2 = c.getContext("2d");
-      ctx2.imageSmoothingEnabled = false;
-      const rotated = rot === true || rot === 2 || rot === 8;
-      if (rotated) {
-        ctx2.save();
-        ctx2.translate(offX + fr.height / 2, offY + fr.width / 2);
-        ctx2.rotate(-Math.PI / 2);
-        ctx2.drawImage(src, fr.x, fr.y, fr.width, fr.height, -fr.width / 2, -fr.height / 2, fr.width, fr.height);
-        ctx2.restore();
-      } else {
-        ctx2.drawImage(src, fr.x, fr.y, fr.width, fr.height, offX, offY, fr.width, fr.height);
-      }
-    }
-    state5.srcCan.set(tex, c);
-    if (state5.srcCan.size > cfg.srcCanvasMax) {
-      const k = state5.srcCan.keys().next().value;
-      if (k !== void 0) state5.srcCan.delete(k);
-    }
-    return c;
-  }
-  function buildColorLayerSprites(tex, dims, pipeline, state5, cfg, disposables, TextureCtor) {
-    const { w, h: h2, aX, aY, basePos } = dims;
-    const layers = [];
-    for (const step of pipeline) {
-      const clone2 = new state5.ctors.Sprite(tex);
-      clone2.anchor?.set?.(aX, aY);
-      clone2.position.set(basePos.x, basePos.y);
-      clone2.zIndex = 1;
-      const layerCanvas = document.createElement("canvas");
-      layerCanvas.width = w;
-      layerCanvas.height = h2;
-      const lctx = layerCanvas.getContext("2d");
-      lctx.imageSmoothingEnabled = false;
-      lctx.save();
-      lctx.translate(w * aX, h2 * aY);
-      lctx.drawImage(textureToCanvas(tex, state5, cfg), -w * aX, -h2 * aY);
-      lctx.restore();
-      applyFilterOnto(lctx, layerCanvas, step.name, step.isTall);
-      const filteredTex = TextureCtor.from(layerCanvas);
-      disposables.push(filteredTex);
-      clone2.texture = filteredTex;
-      layers.push(clone2);
-    }
-    return layers;
-  }
-  function buildTallOverlaySprites(itKey, dims, overlayPipeline, state5, cfg, baseCanvas, TextureCtor, disposables) {
-    const { aX, basePos } = dims;
-    if (!baseCanvas) return [];
-    const overlays = [];
-    for (const step of overlayPipeline) {
-      const hit = step.overlayTall && state5.tex.get(step.overlayTall) && { tex: state5.tex.get(step.overlayTall), key: step.overlayTall } || findOverlayTexture(itKey, step.name, state5, true);
-      if (!hit?.tex) continue;
-      const oCan = textureToCanvas(hit.tex, state5, cfg);
-      if (!oCan) continue;
-      const ow = oCan.width;
-      const overlayAnchor = { x: 0, y: 0 };
-      const overlayPos = { x: basePos.x - aX * ow, y: 0 };
-      const overlayOffset = TALL_OVERLAY_OFFSETS[step.name];
-      if (overlayOffset) {
-        overlayPos.x += overlayOffset.x ?? 0;
-        overlayPos.y += overlayOffset.y ?? 0;
-      }
-      const maskedCanvas = document.createElement("canvas");
-      maskedCanvas.width = ow;
-      maskedCanvas.height = oCan.height;
-      const mctx = maskedCanvas.getContext("2d");
-      if (!mctx) continue;
-      mctx.imageSmoothingEnabled = false;
-      mctx.drawImage(oCan, 0, 0);
-      mctx.globalCompositeOperation = "destination-in";
-      mctx.drawImage(baseCanvas, -overlayPos.x, -overlayPos.y);
-      const maskedTex = TextureCtor.from(maskedCanvas);
-      disposables.push(maskedTex);
-      const ov = new state5.ctors.Sprite(maskedTex);
-      ov.anchor?.set?.(overlayAnchor.x, overlayAnchor.y);
-      ov.position.set(overlayPos.x, overlayPos.y);
-      ov.scale.set(1);
-      ov.alpha = 1;
-      ov.zIndex = 3;
-      overlays.push(ov);
-    }
-    return overlays;
-  }
-  function buildIconSprites(itKey, dims, iconPipeline, state5, iconLayout) {
-    const { basePos } = dims;
-    const icons = [];
-    for (const step of iconPipeline) {
-      if (step.name === "Gold" || step.name === "Rainbow") continue;
-      const itex = findIconTexture(itKey, step.name, step.isTall, state5);
-      if (!itex) continue;
-      const icon2 = new state5.ctors.Sprite(itex);
-      const iconAnchorX = itex?.defaultAnchor?.x ?? 0.5;
-      const iconAnchorY = itex?.defaultAnchor?.y ?? 0.5;
-      icon2.anchor?.set?.(iconAnchorX, iconAnchorY);
-      icon2.position.set(basePos.x + iconLayout.offset.x, basePos.y + iconLayout.offset.y);
-      icon2.scale.set(iconLayout.iconScale);
-      if (step.isTall) icon2.zIndex = -1;
-      if (FLOATING_MUTATION_ICONS.has(step.name)) icon2.zIndex = 10;
-      if (!icon2.zIndex) icon2.zIndex = 2;
-      icons.push(icon2);
-    }
-    return icons;
-  }
-  function lruEvict(state5, cfg) {
-    if (!cfg.cacheOn) return;
-    while (state5.lru.size > cfg.cacheMaxEntries || state5.cost > cfg.cacheMaxCost) {
-      const k = state5.lru.keys().next().value;
-      if (k === void 0) break;
-      const e = state5.lru.get(k);
-      state5.lru.delete(k);
-      state5.cost = Math.max(0, state5.cost - entryCost(e));
-    }
-  }
-  function clearVariantCache(state5) {
-    state5.lru.clear();
-    state5.cost = 0;
-    state5.srcCan.clear();
-  }
-  function renderMutatedTexture(tex, itKey, V, state5, cfg) {
-    try {
-      if (!tex || !state5.renderer || !state5.ctors?.Container || !state5.ctors?.Sprite || !state5.ctors?.Texture) return null;
-      const { Container, Sprite, Texture } = state5.ctors;
-      const w = tex?.orig?.width ?? tex?.frame?.width ?? tex?.width ?? 1;
-      const h2 = tex?.orig?.height ?? tex?.frame?.height ?? tex?.height ?? 1;
-      const aX = tex?.defaultAnchor?.x ?? 0.5;
-      const aY = tex?.defaultAnchor?.y ?? 0.5;
-      const basePos = { x: w * aX, y: h2 * aY };
-      const baseCanvas = textureToCanvas(tex, state5, cfg);
-      const root4 = new Container();
-      root4.sortableChildren = true;
-      try {
-        const lock = new Sprite(tex);
-        lock.anchor?.set?.(aX, aY);
-        lock.position.set(basePos.x, basePos.y);
-        lock.width = w;
-        lock.height = h2;
-        lock.alpha = 0;
-        lock.zIndex = -1e3;
-        root4.addChild(lock);
-      } catch {
-      }
-      const base = new Sprite(tex);
-      base.anchor?.set?.(aX, aY);
-      base.position.set(basePos.x, basePos.y);
-      base.zIndex = 0;
-      root4.addChild(base);
-      const isTall = isTallKey(itKey);
-      const pipeline = buildMutationPipeline(V.muts, isTall);
-      const overlayPipeline = buildMutationPipeline(V.overlayMuts, isTall);
-      const iconPipeline = buildMutationPipeline(V.selectedMuts, isTall);
-      const disposables = [];
-      const baseName = baseNameOf(itKey);
-      const iconLayout = computeIconLayout(tex, baseName, isTall);
-      const dims = { w, h: h2, aX, aY, basePos };
-      buildColorLayerSprites(tex, dims, pipeline, state5, cfg, disposables, Texture).forEach((layer2) => root4.addChild(layer2));
-      if (isTall) {
-        buildTallOverlaySprites(itKey, dims, overlayPipeline, state5, cfg, baseCanvas, Texture, disposables).forEach((ov) => root4.addChild(ov));
-      }
-      buildIconSprites(itKey, dims, iconPipeline, state5, iconLayout).forEach((icon2) => root4.addChild(icon2));
-      const RDR = state5.renderer;
-      let rt = null;
-      const RectCtor = state5.ctors?.Rectangle;
-      const crop = RectCtor ? new RectCtor(0, 0, w, h2) : null;
-      if (typeof RDR?.generateTexture === "function")
-        rt = RDR.generateTexture(root4, { resolution: 1, region: crop ?? void 0 });
-      else if (RDR?.textureGenerator?.generateTexture)
-        rt = RDR.textureGenerator.generateTexture({ target: root4, resolution: 1 });
-      if (!rt) throw new Error("no render texture");
-      const outTex = rt instanceof Texture ? rt : Texture.from(RDR.extract.canvas(rt));
-      if (rt && rt !== outTex) rt.destroy?.(true);
-      root4.destroy({ children: true, texture: false, baseTexture: false });
-      disposables.forEach(() => {
-      });
-      try {
-        outTex.__mg_gen = true;
-        outTex.label = `${itKey}|${V.sig}`;
-      } catch {
-      }
-      return outTex;
-    } catch {
-      return null;
-    }
-  }
-  function processVariantJobs(state5, cfg) {
-    if (!cfg.jobOn || !state5.open || !state5.jobs.length) return false;
-    const now = performance.now();
-    const burst = now - state5.changedAt <= cfg.jobBurstWindowMs;
-    const budget = burst ? cfg.jobBurstMs : cfg.jobBudgetMs;
-    const t0 = performance.now();
-    let done = 0;
-    let needsLayout = false;
-    while (state5.jobs.length) {
-      if (performance.now() - t0 >= budget) break;
-      if (done >= cfg.jobCapPerTick) break;
-      const job = state5.jobs[0];
-      if (job.sig !== state5.sig) {
-        state5.jobs.shift();
-        state5.jobMap.delete(job.k);
-        continue;
-      }
-      const tex = job.src[job.i];
-      if (!tex) {
-        state5.jobs.shift();
-        state5.jobMap.delete(job.k);
-        continue;
-      }
-      const ft = renderMutatedTexture(tex, job.itKey, job.V, state5, cfg);
-      if (ft) job.out.push(ft);
-      job.i++;
-      done++;
-      if (job.i >= job.src.length) {
-        state5.jobs.shift();
-        state5.jobMap.delete(job.k);
-        let entry = null;
-        if (job.isAnim) {
-          if (job.out.length >= 2) entry = { isAnim: true, frames: job.out };
-          else job.out.forEach(() => {
-          });
-        } else {
-          if (job.out[0]) entry = { isAnim: false, tex: job.out[0] };
-        }
-        if (entry) {
-          state5.lru.set(job.k, entry);
-          state5.cost += entryCost(entry);
-          lruEvict(state5, cfg);
-          needsLayout = true;
-        }
-      }
-    }
-    return needsLayout;
-  }
-  var TILE_SIZE_WORLD, BASE_ICON_SCALE, TALL_PLANT_MUTATION_ICON_SCALE_BOOST, FLOATING_MUTATION_ICONS, MUT_ICON_Y_EXCEPT, MUT_ICON_X_EXCEPT, TALL_OVERLAY_OFFSETS, MUTATION_ORDER, MUTATION_INDEX, sortMutations, SUPPORTED_BLEND_OPS, pickBlendOp, FILTERS, hasMutationFilter, isTallKey, computeVariantSignature, curVariant, normalizeMutListColor, normalizeMutListOverlay, buildMutationPipeline, angleGrad, fillGrad, baseNameOf, entryCost, processJobs;
-  var init_variantBuilder = __esm({
-    "src/game/sprites/mutations/variantBuilder.ts"() {
-      "use strict";
-      init_settings();
-      TILE_SIZE_WORLD = 256;
-      BASE_ICON_SCALE = 0.5;
-      TALL_PLANT_MUTATION_ICON_SCALE_BOOST = 2;
-      FLOATING_MUTATION_ICONS = /* @__PURE__ */ new Set([
-        "Dawnlit",
-        "Ambershine",
-        "Dawncharged",
-        "Ambercharged"
-      ]);
-      MUT_ICON_Y_EXCEPT = {
-        Banana: 0.68,
-        Beet: 0.65,
-        Carrot: 0.6,
-        Sunflower: 0.5,
-        Starweaver: 0.5,
-        FavaBean: 0.25,
-        BurrosTail: 0.2
-      };
-      MUT_ICON_X_EXCEPT = {
-        Pepper: 0.6,
-        Banana: 0.6
-      };
-      TALL_OVERLAY_OFFSETS = {
-        Thunderstruck: { x: 0, y: 250 }
-      };
-      MUTATION_ORDER = ["Gold", "Rainbow", "Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged", "Ambershine", "Dawnlit", "Dawncharged", "Ambercharged"];
-      MUTATION_INDEX = new Map(MUTATION_ORDER.map((m, idx) => [m, idx]));
-      sortMutations = (list) => {
-        const uniq = [...new Set(list.filter(Boolean))];
-        return uniq.sort((a, b) => (MUTATION_INDEX.get(a) ?? Infinity) - (MUTATION_INDEX.get(b) ?? Infinity));
-      };
-      SUPPORTED_BLEND_OPS = (() => {
-        try {
-          const c = document.createElement("canvas");
-          const g = c.getContext("2d");
-          if (!g) return /* @__PURE__ */ new Set();
-          const ops = ["color", "hue", "saturation", "luminosity", "overlay", "screen", "lighter", "source-atop"];
-          const ok = /* @__PURE__ */ new Set();
-          for (const op of ops) {
-            g.globalCompositeOperation = op;
-            if (g.globalCompositeOperation === op) ok.add(op);
-          }
-          return ok;
-        } catch {
-          return /* @__PURE__ */ new Set();
-        }
-      })();
-      pickBlendOp = (desired) => {
-        if (SUPPORTED_BLEND_OPS.has(desired)) return desired;
-        if (SUPPORTED_BLEND_OPS.has("overlay")) return "overlay";
-        if (SUPPORTED_BLEND_OPS.has("screen")) return "screen";
-        if (SUPPORTED_BLEND_OPS.has("lighter")) return "lighter";
-        return "source-atop";
-      };
-      FILTERS = {
-        Gold: { op: "source-atop", colors: ["rgb(235,200,0)"], a: 0.7 },
-        Rainbow: { op: "color", colors: ["#FF1744", "#FF9100", "#FFEA00", "#00E676", "#2979FF", "#D500F9"], ang: 130, angTall: 0, masked: true },
-        Wet: { op: "source-atop", colors: ["rgb(50,180,200)"], a: 0.25 },
-        Chilled: { op: "source-atop", colors: ["rgb(100,160,210)"], a: 0.45 },
-        Frozen: { op: "source-atop", colors: ["rgb(100,130,220)"], a: 0.5 },
-        Thunderstruck: { op: "source-atop", colors: ["rgb(16, 141, 163)"], a: 0.45 },
-        Thundercharged: { op: "source-atop", colors: ["rgb(10, 100, 190)"], a: 0.5 },
-        Dawnlit: { op: "source-atop", colors: ["rgb(209,70,231)"], a: 0.5 },
-        Ambershine: { op: "source-atop", colors: ["rgb(190,100,40)"], a: 0.5 },
-        Dawncharged: { op: "source-atop", colors: ["rgb(140,80,200)"], a: 0.5 },
-        Ambercharged: { op: "source-atop", colors: ["rgb(170,60,25)"], a: 0.5 }
-      };
-      hasMutationFilter = (value) => Boolean(value && FILTERS[value]);
-      isTallKey = (k) => /tallplant/i.test(k);
-      computeVariantSignature = (state5) => {
-        if (!state5.mutOn) {
-          const f = hasMutationFilter(state5.f) ? state5.f : null;
-          const baseMuts = f ? [f] : [];
-          return { mode: "F", muts: baseMuts, overlayMuts: baseMuts, selectedMuts: baseMuts, sig: `F:${f ?? ""}` };
-        }
-        const raw = state5.mutations.filter((value) => hasMutationFilter(value));
-        const selected = sortMutations(raw);
-        const muts = normalizeMutListColor(raw);
-        const overlayMuts = normalizeMutListOverlay(raw);
-        return {
-          mode: "M",
-          muts,
-          overlayMuts,
-          selectedMuts: selected,
-          sig: `M:${selected.join(",")}|${muts.join(",")}|${overlayMuts.join(",")}`
-        };
-      };
-      curVariant = computeVariantSignature;
-      normalizeMutListColor = (list) => {
-        const names = list.filter((m, idx, arr) => FILTERS[m] && arr.indexOf(m) === idx);
-        if (!names.length) return [];
-        if (names.includes("Gold")) return ["Gold"];
-        if (names.includes("Rainbow")) return ["Rainbow"];
-        const warm = ["Ambershine", "Dawnlit", "Dawncharged", "Ambercharged"];
-        const hasWarm = names.some((n) => warm.includes(n));
-        if (hasWarm) {
-          return sortMutations(names.filter((n) => !["Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged"].includes(n)));
-        }
-        return sortMutations(names);
-      };
-      normalizeMutListOverlay = (list) => {
-        const names = list.filter((m, idx, arr) => MUT_META[m]?.overlayTall && arr.indexOf(m) === idx);
-        return sortMutations(names);
-      };
-      buildMutationPipeline = (mutNames, isTall) => mutNames.map((m) => ({ name: m, meta: MUT_META[m], overlayTall: MUT_META[m]?.overlayTall, isTall }));
-      angleGrad = (ctx2, w, h2, ang, fullSpan = false) => {
-        const rad = (ang - 90) * Math.PI / 180;
-        const cx = w / 2;
-        const cy = h2 / 2;
-        if (!fullSpan) {
-          const R2 = Math.min(w, h2) / 2;
-          return ctx2.createLinearGradient(cx - Math.cos(rad) * R2, cy - Math.sin(rad) * R2, cx + Math.cos(rad) * R2, cy + Math.sin(rad) * R2);
-        }
-        const dx = Math.cos(rad);
-        const dy = Math.sin(rad);
-        const R = Math.abs(dx) * w / 2 + Math.abs(dy) * h2 / 2;
-        return ctx2.createLinearGradient(cx - dx * R, cy - dy * R, cx + dx * R, cy + dy * R);
-      };
-      fillGrad = (ctx2, w, h2, f, fullSpan = false) => {
-        const cols = f.colors?.length ? f.colors : ["#fff"];
-        const g = f.ang != null ? angleGrad(ctx2, w, h2, f.ang, fullSpan) : ctx2.createLinearGradient(0, 0, 0, h2);
-        if (cols.length === 1) {
-          g.addColorStop(0, cols[0]);
-          g.addColorStop(1, cols[0]);
-        } else cols.forEach((c, i) => g.addColorStop(i / (cols.length - 1), c));
-        ctx2.fillStyle = g;
-        ctx2.fillRect(0, 0, w, h2);
-      };
-      baseNameOf = (k) => {
-        const p = String(k || "").split("/");
-        return p[p.length - 1] || "";
-      };
-      entryCost = (e) => e?.isAnim ? e.frames?.length || 0 : e?.tex ? 1 : 0;
-      processJobs = processVariantJobs;
-    }
-  });
-
-  // src/game/sprites/api/expose.ts
-  function exposeApi(state5, hud) {
-    const root4 = pageWindow;
-    const api = {
-      open() {
-        hud.root?.style && (hud.root.style.display = "block");
-        state5.open = true;
-      },
-      close() {
-        hud.root?.style && (hud.root.style.display = "none");
-        state5.open = false;
-      },
-      toggle() {
-        state5.open ? api.close() : api.open();
-      },
-      setCategory(cat) {
-        state5.cat = cat || "__all__";
-      },
-      setFilterText(text2) {
-        state5.q = String(text2 || "").trim();
-      },
-      setSpriteFilter(name) {
-        state5.f = name;
-        state5.mutOn = false;
-      },
-      setMutation(on, ...muts) {
-        state5.mutOn = !!on;
-        state5.f = "";
-        state5.mutations = state5.mutOn ? muts.filter(Boolean).map((name) => name) : [];
-      },
-      filters() {
-        return [];
-      },
-      categories() {
-        return [...state5.cats.keys()].sort((a, b) => a.localeCompare(b));
-      },
-      cacheStats() {
-        return { entries: state5.lru.size, cost: state5.cost };
-      },
-      clearCache() {
-        clearVariantCache(state5);
-      },
-      curVariant: () => curVariant(state5)
-    };
-    root4.MGSpriteCatalog = api;
-    return api;
-  }
-  var init_expose = __esm({
-    "src/game/sprites/api/expose.ts"() {
-      "use strict";
-      init_variantBuilder();
-      init_pageContext();
-    }
-  });
-
-  // src/game/sprites/api/spriteApi.ts
-  var spriteApi_exports = {};
-  __export(spriteApi_exports, {
-    buildVariant: () => buildVariant,
-    getBaseSprite: () => getBaseSprite,
-    getSpriteWithMutations: () => getSpriteWithMutations,
-    listItemsByCategory: () => listItemsByCategory
-  });
-  function findItem(state5, category, id) {
-    const normId = normalizeKey(id);
-    for (const it of state5.items) {
-      const keyCat = keyCategoryOf(it.key);
-      if (!matchesCategory(keyCat, category)) continue;
-      const base = normalizeKey(baseNameOf2(it.key));
-      if (base === normId) return it;
-    }
-    return null;
-  }
-  function listItemsByCategory(state5, category = "any") {
-    return state5.items.filter((it) => matchesCategory(keyCategoryOf(it.key), category));
-  }
-  function buildVariant(mutations) {
-    return buildVariantFromMutations(mutations);
-  }
-  function getSpriteWithMutations(params, state5, cfg) {
-    const it = findItem(state5, params.category, params.id);
-    if (!it) return null;
-    const tex = it.isAnim ? it.frames?.[0] : it.first;
-    if (!tex) return null;
-    const V = buildVariantFromMutations(params.mutations);
-    return renderMutatedTexture(tex, it.key, V, state5, cfg);
-  }
-  function getBaseSprite(params, state5) {
-    const it = findItem(state5, params.category, params.id);
-    if (!it) return null;
-    return it.isAnim ? it.frames?.[0] ?? null : it.first;
-  }
-  var normalizeKey, categoryAlias, keyCategoryOf, matchesCategory, baseNameOf2;
-  var init_spriteApi = __esm({
-    "src/game/sprites/api/spriteApi.ts"() {
-      "use strict";
-      init_variantBuilder();
-      normalizeKey = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-      categoryAlias = {
-        plant: ["plant"],
-        tallplant: ["tallplant"],
-        crop: ["crop"],
-        decor: ["decor"],
-        item: ["item"],
-        pet: ["pet"],
-        seed: ["seed"],
-        mutation: ["mutation"],
-        "mutation-overlay": ["mutation-overlay"],
-        ui: ["ui"],
-        any: []
-      };
-      keyCategoryOf = (key2) => {
-        const parts = key2.split("/").filter(Boolean);
-        if (parts[0] === "sprite" || parts[0] === "sprites") return parts[1] ?? "";
-        return parts[0] ?? "";
-      };
-      matchesCategory = (keyCat, requested) => {
-        if (requested === "any") return true;
-        const aliases = categoryAlias[requested] || [];
-        return aliases.some((a) => normalizeKey(keyCat) === normalizeKey(a));
-      };
-      baseNameOf2 = (key2) => {
-        const parts = key2.split("/").filter(Boolean);
-        return parts[parts.length - 1] || "";
-      };
-    }
-  });
-
-  // src/game/sprites/api/consoleService.ts
-  function ensureOverlayHost() {
-    let host = document.getElementById(OVERLAY_ID);
-    if (!host) {
-      host = document.createElement("div");
-      host.id = OVERLAY_ID;
-      host.style.cssText = "position:fixed;top:8px;left:8px;z-index:2147480000;display:flex;flex-wrap:wrap;gap:8px;pointer-events:auto;background:transparent;align-items:flex-start;";
-      document.body.appendChild(host);
-    }
-    return host;
-  }
-  function getSpriteDim(tex, key2) {
-    for (const src of [tex?.orig, tex?._orig, tex?.frame, tex?._frame, tex]) {
-      const value = src?.[key2];
-      if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
-    }
-    return null;
-  }
-  function padCanvasToSpriteBounds(source, tex) {
-    const rawW = source.width || 1;
-    const rawH = source.height || 1;
-    const baseW = Math.max(rawW, Math.round(getSpriteDim(tex, "width") ?? rawW) || rawW);
-    const baseH = Math.max(rawH, Math.round(getSpriteDim(tex, "height") ?? rawH) || rawH);
-    const trim = tex?.trim ?? tex?._trim ?? null;
-    let offsetX = trim && typeof trim.x === "number" ? Math.round(trim.x) : Math.round((baseW - rawW) / 2);
-    let offsetY = trim && typeof trim.y === "number" ? Math.round(trim.y) : Math.round((baseH - rawH) / 2);
-    offsetX = Math.max(0, Math.min(baseW - rawW, offsetX));
-    offsetY = Math.max(0, Math.min(baseH - rawH, offsetY));
-    if (baseW === rawW && baseH === rawH && offsetX === 0 && offsetY === 0) return source;
-    const canvas = document.createElement("canvas");
-    canvas.width = baseW;
-    canvas.height = baseH;
-    const ctx2 = canvas.getContext("2d");
-    if (!ctx2) return source;
-    ctx2.imageSmoothingEnabled = false;
-    ctx2.clearRect(0, 0, baseW, baseH);
-    ctx2.drawImage(source, offsetX, offsetY);
-    return canvas;
-  }
-  function exposeSpriteService(ctx2) {
-    const renderTextureToCanvas = (tex) => {
-      try {
-        const spr = new ctx2.state.ctors.Sprite(tex);
-        const extracted = ctx2.state.renderer.extract.canvas(spr, { resolution: 1 });
-        spr.destroy?.({ children: true, texture: false, baseTexture: false });
-        return padCanvasToSpriteBounds(extracted, tex);
-      } catch {
-        return null;
-      }
-    };
-    const service = {
-      ready: Promise.resolve(),
-      state: ctx2.state,
-      cfg: ctx2.cfg,
-      list(category = "any") {
-        return listItemsByCategory(ctx2.state, category);
-      },
-      getBaseSprite(params) {
-        return getBaseSprite(params, ctx2.state);
-      },
-      getSpriteWithMutations(params) {
-        return getSpriteWithMutations(params, ctx2.state, ctx2.cfg);
-      },
-      buildVariant(mutations) {
-        return buildVariant(mutations);
-      },
-      renderToCanvas(arg) {
-        const tex = arg?.isTexture || arg?.frame ? arg : service.getSpriteWithMutations(arg);
-        if (!tex) return null;
-        return renderTextureToCanvas(tex);
-      },
-      async renderToDataURL(arg, type = "image/png", quality) {
-        const c = service.renderToCanvas(arg);
-        if (!c) return null;
-        return c.toDataURL(type, quality);
-      },
-      /** Renders into a fixed overlay, each sprite in its own wrapper. */
-      renderOnCanvas(arg, opts = {}) {
-        const c = service.renderToCanvas(arg);
-        if (!c) return null;
-        c.style.background = "transparent";
-        c.style.display = "block";
-        const mutW = c.width || c.clientWidth;
-        const mutH = c.height || c.clientHeight;
-        let baseW = mutW;
-        let baseH = mutH;
-        if (arg && !arg.isTexture && !arg.frame) {
-          const baseTex = service.getBaseSprite(arg);
-          if (baseTex) {
-            baseW = baseTex?.orig?.width ?? baseTex?._orig?.width ?? baseTex?.frame?.width ?? baseTex?._frame?.width ?? baseTex?.width ?? baseW;
-            baseH = baseTex?.orig?.height ?? baseTex?._orig?.height ?? baseTex?.frame?.height ?? baseTex?._frame?.height ?? baseTex?.height ?? baseH;
-          }
-        }
-        const scaleToBase = Math.min(baseW / mutW, baseH / mutH, 1);
-        let logicalW = mutW * scaleToBase;
-        let logicalH = mutH * scaleToBase;
-        const { maxWidth, maxHeight, allowScaleUp } = opts;
-        if (maxWidth || maxHeight) {
-          const scaleW = maxWidth ? maxWidth / logicalW : 1;
-          const scaleH = maxHeight ? maxHeight / logicalH : 1;
-          let scale = Math.min(scaleW || 1, scaleH || 1);
-          if (!allowScaleUp) scale = Math.min(scale, 1);
-          logicalW = Math.floor(logicalW * scale);
-          logicalH = Math.floor(logicalH * scale);
-        }
-        if (logicalW) c.style.width = `${logicalW}px`;
-        if (logicalH) c.style.height = `${logicalH}px`;
-        const wrap = document.createElement("div");
-        wrap.style.cssText = "display:inline-flex;align-items:flex-start;justify-content:flex-start;padding:0;margin:0;background:transparent;border:none;flex:0 0 auto;";
-        wrap.appendChild(c);
-        ensureOverlayHost().appendChild(wrap);
-        return { wrap, canvas: c };
-      },
-      clearOverlay() {
-        document.getElementById(OVERLAY_ID)?.remove();
-      },
-      renderAnimToCanvases(params) {
-        const item = ctx2.state.items.find((it) => it.key === `sprite/${params.category}/${params.id}` || it.key === params.id);
-        if (!item) return [];
-        if (item.isAnim && item.frames?.length) {
-          const texes = params?.mutations?.length ? [service.getSpriteWithMutations(params)] : item.frames;
-          return texes.map((t2) => renderTextureToCanvas(t2)).filter(Boolean);
-        }
-        const t = service.getSpriteWithMutations(params);
-        return t ? [renderTextureToCanvas(t)] : [];
-      }
-    };
-    const uw = pageWindow;
-    uw.__MG_SPRITE_STATE__ = ctx2.state;
-    uw.__MG_SPRITE_CFG__ = ctx2.cfg;
-    uw.__MG_SPRITE_API__ = spriteApi_exports;
-    uw.__MG_SPRITE_SERVICE__ = service;
-    uw.getSpriteWithMutations = service.getSpriteWithMutations;
-    uw.getBaseSprite = service.getBaseSprite;
-    uw.buildSpriteVariant = service.buildVariant;
-    uw.listSpritesByCategory = service.list;
-    uw.renderSpriteToCanvas = service.renderToCanvas;
-    uw.renderSpriteToDataURL = service.renderToDataURL;
-    uw.MG_SPRITE_HELPERS = service;
-  }
-  var OVERLAY_ID;
-  var init_consoleService = __esm({
-    "src/game/sprites/api/consoleService.ts"() {
-      "use strict";
-      init_pageContext();
-      init_spriteApi();
-      OVERLAY_ID = "mg-sprite-overlay";
-    }
-  });
-
   // src/game/gameVersion.ts
   function fromUrls(urls) {
     for (const url of urls) {
@@ -1982,10 +996,6 @@
         console.warn("[MG SpriteCatalog] skipping atlas (texture load failed)", { path, imgPath, error });
       }
     }
-    const { items, cats } = buildItemsFromTextures(ctx.state.tex);
-    ctx.state.items = items;
-    ctx.state.filtered = items.slice();
-    ctx.state.cats = cats;
     ctx.state.loaded = true;
   }
   function ensureDocumentReady() {
@@ -2015,36 +1025,13 @@
     ctx.state.renderer = renderer;
     ctx.state.version = pixiVersion ?? version;
     ctx.state.base = base;
-    ctx.state.sig = curVariant(ctx.state).sig;
     watchRendererHealth(ctx.state, hooks);
     pageWindow.__MG_SPRITE_STATE__ = ctx.state;
     await loadTextures(ctx.state.base, await prefetchPromise);
-    const hud = {
-      open() {
-        ctx.state.open = true;
-      },
-      close() {
-        ctx.state.open = false;
-      },
-      toggle() {
-        ctx.state.open ? this.close() : this.open();
-      },
-      layout() {
-      },
-      root: void 0
-    };
-    ctx.state.open = true;
-    app.ticker?.add?.(() => {
-      processJobs(ctx.state, ctx.cfg);
-    });
-    exposeApi(ctx.state, hud);
-    exposeSpriteService(ctx);
     console.log("[MG SpriteCatalog] ready", {
       version: ctx.state.version,
       pixi: version,
-      textures: ctx.state.tex.size,
-      items: ctx.state.items.length,
-      cats: ctx.state.cats.size
+      textures: ctx.state.tex.size
     });
   }
   async function startWithRetry() {
@@ -2072,11 +1059,7 @@
       init_async();
       init_assetFetcher();
       init_atlasToTextures();
-      init_catalogIndexer();
       init_path();
-      init_expose();
-      init_consoleService();
-      init_variantBuilder();
       init_gameVersion();
       ctx = spriteContext;
       hooks = createPixiHooks();
@@ -2505,6 +1488,23 @@
     style.textContent = css4;
     document.head.appendChild(style);
     return style;
+  }
+  function onSubtreeChange(target, onChange) {
+    let queued = false;
+    let stopped = false;
+    const observer2 = new MutationObserver(() => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        if (!stopped) onChange();
+      });
+    });
+    observer2.observe(target, { childList: true, subtree: true });
+    return () => {
+      stopped = true;
+      observer2.disconnect();
+    };
   }
   var init_dom = __esm({
     "src/lib/dom.ts"() {
@@ -3136,6 +2136,40 @@
     const node = typeof icon2 === "string" ? h("span", void 0, icon2) : icon2;
     node.classList.add(className);
     return node;
+  }
+  function refreshWhileVisible(el, refresh, everyMs) {
+    let timer2 = null;
+    const run = () => {
+      try {
+        refresh();
+      } catch (error) {
+        console.warn("[kit] refresh failed", error);
+      }
+    };
+    const start2 = () => {
+      if (timer2 == null) timer2 = setInterval(run, everyMs);
+    };
+    const stop = () => {
+      if (timer2 != null) clearInterval(timer2);
+      timer2 = null;
+    };
+    if (typeof IntersectionObserver === "undefined") {
+      start2();
+      return stop;
+    }
+    const observer2 = new IntersectionObserver((entries) => {
+      if (entries[entries.length - 1]?.isIntersecting) {
+        run();
+        start2();
+      } else {
+        stop();
+      }
+    });
+    observer2.observe(el);
+    return () => {
+      observer2.disconnect();
+      stop();
+    };
   }
   var init_dom2 = __esm({
     "src/ui/kit/dom.ts"() {
@@ -4906,7 +3940,7 @@
       }
     };
   }
-  var LOG_PREFIX, log, DEBOUNCE_MS, RECENT_REMOVE_MS, INVENTORY_POLL_MS, READY_TIMEOUT_MS, normalizeKey2, normalizeQty, buildQtyMap, buildKeySet, diffIncreases, diffSet, pruneRecentMap, summarizeQtyDelta, storageKeyFromSpecies, storageKeyFromDecorId, storageKeyFromToolId;
+  var LOG_PREFIX, log, DEBOUNCE_MS, RECENT_REMOVE_MS, INVENTORY_POLL_MS, READY_TIMEOUT_MS, normalizeKey, normalizeQty, buildQtyMap, buildKeySet, diffIncreases, diffSet, pruneRecentMap, summarizeQtyDelta, storageKeyFromSpecies, storageKeyFromDecorId, storageKeyFromToolId;
   var init_autoStore = __esm({
     "src/features/autoStore/autoStore.ts"() {
       "use strict";
@@ -4926,7 +3960,7 @@
       RECENT_REMOVE_MS = 2e3;
       INVENTORY_POLL_MS = 400;
       READY_TIMEOUT_MS = 10 * 6e4;
-      normalizeKey2 = (value) => typeof value === "string" ? value.trim() : "";
+      normalizeKey = (value) => typeof value === "string" ? value.trim() : "";
       normalizeQty = (value) => {
         const n = Number(value);
         return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
@@ -4969,9 +4003,9 @@
         before: prev.get(key2) ?? 0,
         after: next.get(key2) ?? 0
       }));
-      storageKeyFromSpecies = (item) => normalizeKey2(item?.species);
-      storageKeyFromDecorId = (item) => normalizeKey2(item?.decorId);
-      storageKeyFromToolId = (item) => normalizeKey2(item?.toolId);
+      storageKeyFromSpecies = (item) => normalizeKey(item?.species);
+      storageKeyFromDecorId = (item) => normalizeKey(item?.decorId);
+      storageKeyFromToolId = (item) => normalizeKey(item?.toolId);
     }
   });
 
@@ -10519,7 +9553,7 @@
     const numeric = typeof value === "number" ? value : Number(value);
     return Number.isFinite(numeric) ? numeric : null;
   }
-  function normalizeKey3(value) {
+  function normalizeKey2(value) {
     return String(value ?? "").trim().toLowerCase();
   }
   function clampCropSize(value) {
@@ -10528,7 +9562,7 @@
     return Math.min(CROP_SIZE_MAX, Math.max(CROP_SIZE_MIN, Math.round(numeric)));
   }
   function findPlantCatalogEntry(species) {
-    const wanted = normalizeKey3(species);
+    const wanted = normalizeKey2(species);
     if (!wanted) return null;
     const catalog = plantCatalog2;
     const direct = typeof species === "string" ? catalog[species] : void 0;
@@ -10536,10 +9570,10 @@
     for (const key2 of Object.keys(catalog)) {
       const entry = catalog[key2];
       if (!entry) continue;
-      if (normalizeKey3(key2) === wanted) return entry;
-      if (normalizeKey3(entry.crop?.name) === wanted) return entry;
-      if (normalizeKey3(entry.plant?.name) === wanted) return entry;
-      if (normalizeKey3(entry.seed?.name) === wanted) return entry;
+      if (normalizeKey2(key2) === wanted) return entry;
+      if (normalizeKey2(entry.crop?.name) === wanted) return entry;
+      if (normalizeKey2(entry.plant?.name) === wanted) return entry;
+      if (normalizeKey2(entry.seed?.name) === wanted) return entry;
     }
     return null;
   }
@@ -11269,10 +10303,11 @@
     }
     return null;
   }
-  var INTERNAL_TO_API, API_TO_INTERNAL, SEARCH_CATS, indexEntries, nameIndex, CATALOG_SOURCES, catalogIndex, catalogSourcesIndexed, catalogReader;
+  var API_BASE, INTERNAL_TO_API, API_TO_INTERNAL, SEARCH_CATS, indexEntries, nameIndex, CATALOG_SOURCES, catalogIndex, catalogSourcesIndexed, catalogReader;
   var init_resolver = __esm({
     "src/ui/kit/sprites/resolver.ts"() {
       "use strict";
+      API_BASE = "https://mg-api.ariedam.fr";
       INTERNAL_TO_API = {
         plant: "plants",
         tallplant: "tallPlants",
@@ -11345,21 +10380,7 @@
     }
   });
 
-  // src/ui/kit/sprites/iconCache.ts
-  function fetchIndex() {
-    if (indexReady) return indexReady;
-    indexReady = getJSON(
-      `${API_BASE}/assets/sprite-data?flat=1`,
-      SPRITE_REQUEST
-    ).then((data) => {
-      setSpriteIndex(data.items || [], API_BASE);
-      console.log("[SpriteIconCache] sprite index loaded", { count: spriteIndexSize() });
-    }).catch((err) => {
-      console.error("[SpriteIconCache] failed to fetch sprite index", err);
-      indexReady = null;
-    });
-    return indexReady;
-  }
+  // src/ui/kit/sprites/mutationTint.ts
   function knownMutations(list) {
     if (!Array.isArray(list)) return [];
     const names = list.map((value) => typeof value === "string" ? value.trim() : "").filter((name) => !!name && (!!MUTATION_FILTERS[name] || !!MUTATION_ICONS[name]));
@@ -11376,14 +10397,14 @@
     }
     return names;
   }
-  function pickBlendOp2(desired) {
-    if (SUPPORTED_BLEND_OPS2.has(desired)) return desired;
-    if (SUPPORTED_BLEND_OPS2.has("overlay")) return "overlay";
-    if (SUPPORTED_BLEND_OPS2.has("screen")) return "screen";
-    if (SUPPORTED_BLEND_OPS2.has("lighter")) return "lighter";
+  function pickBlendOp(desired) {
+    if (SUPPORTED_BLEND_OPS.has(desired)) return desired;
+    if (SUPPORTED_BLEND_OPS.has("overlay")) return "overlay";
+    if (SUPPORTED_BLEND_OPS.has("screen")) return "screen";
+    if (SUPPORTED_BLEND_OPS.has("lighter")) return "lighter";
     return "source-atop";
   }
-  function fillGrad2(ctx2, width, height, filter) {
+  function fillGrad(ctx2, width, height, filter) {
     const cols = filter.colors?.length ? filter.colors : ["#fff"];
     let gradient2;
     if (filter.ang != null) {
@@ -11409,7 +10430,7 @@
     ctx2.fillStyle = gradient2;
     ctx2.fillRect(0, 0, width, height);
   }
-  async function applyMutationFilters(img, mutations) {
+  async function applyMutationFilters(img, mutations, loadIcon) {
     const allMuts = [...new Set(mutations.filter((m) => MUTATION_FILTERS[m]))];
     const colorMuts = normalizeMutations(mutations);
     if (!colorMuts.length && !allMuts.length) return img.src;
@@ -11433,11 +10454,11 @@
         const gctx = gradCanvas.getContext("2d");
         if (!gctx) continue;
         gctx.imageSmoothingEnabled = false;
-        fillGrad2(gctx, width, height, filter);
+        fillGrad(gctx, width, height, filter);
         gctx.globalCompositeOperation = "destination-in";
         gctx.drawImage(img, 0, 0);
         ctx2.save();
-        ctx2.globalCompositeOperation = pickBlendOp2(filter.op);
+        ctx2.globalCompositeOperation = pickBlendOp(filter.op);
         if (filter.a != null) ctx2.globalAlpha = filter.a;
         ctx2.drawImage(gradCanvas, 0, 0);
         ctx2.restore();
@@ -11450,7 +10471,7 @@
         cctx.imageSmoothingEnabled = false;
         cctx.drawImage(img, 0, 0);
         cctx.globalCompositeOperation = "source-in";
-        fillGrad2(cctx, width, height, filter);
+        fillGrad(cctx, width, height, filter);
         ctx2.save();
         ctx2.globalCompositeOperation = "source-over";
         if (filter.a != null) ctx2.globalAlpha = filter.a;
@@ -11466,7 +10487,7 @@
       const iconDef = MUTATION_ICONS[name];
       if (!iconDef) continue;
       try {
-        const iconImg = await loadImage(iconDef.url);
+        const iconImg = await loadIcon(iconDef.url);
         const iconW = iconImg.naturalWidth || iconImg.width;
         const iconH = iconImg.naturalHeight || iconImg.height;
         if (!iconW || !iconH) continue;
@@ -11484,6 +10505,71 @@
       }
     }
     return canvas.toDataURL("image/png");
+  }
+  var MUTATION_ICONS, MUTATION_FILTERS, SUPPORTED_BLEND_OPS;
+  var init_mutationTint = __esm({
+    "src/ui/kit/sprites/mutationTint.ts"() {
+      "use strict";
+      init_resolver();
+      MUTATION_ICONS = {
+        // Ground-level icons (anchor.y about 0.5), drawn at the plant's base.
+        Wet: { url: `${API_BASE}/assets/sprites/mutations/Wet.png`, anchor: { x: 0.5, y: 0.487 } },
+        Chilled: { url: `${API_BASE}/assets/sprites/mutations/Chilled.png`, anchor: { x: 0.502, y: 0.543 } },
+        Frozen: { url: `${API_BASE}/assets/sprites/mutations/Frozen.png`, anchor: { x: 0.5, y: 0.474 } },
+        Thunderstruck: { url: `${API_BASE}/assets/sprites/mutations/Thunderstruck.png`, anchor: { x: 0.495, y: 0.525 } },
+        Thundercharged: { url: `${API_BASE}/assets/sprites/mutations/Thundercharged.png`, anchor: { x: 0.495, y: 0.525 } },
+        // Floating icons (anchor.y about 0.8), drawn above the plant.
+        Dawnlit: { url: `${API_BASE}/assets/sprites/mutations/Dawnlit.png`, anchor: { x: 0.506, y: 0.809 } },
+        Ambershine: { url: `${API_BASE}/assets/sprites/mutations/Amberlit.png`, anchor: { x: 0.5, y: 0.82 } },
+        Dawncharged: { url: `${API_BASE}/assets/sprites/mutations/Dawncharged.png`, anchor: { x: 0.519, y: 0.796 } },
+        Ambercharged: { url: `${API_BASE}/assets/sprites/mutations/Ambercharged.png`, anchor: { x: 0.501, y: 0.795 } }
+      };
+      MUTATION_FILTERS = {
+        Gold: { op: "source-atop", colors: ["rgb(235,200,0)"], a: 0.7 },
+        Rainbow: { op: "color", colors: ["#FF1744", "#FF9100", "#FFEA00", "#00E676", "#2979FF", "#D500F9"], ang: 130, masked: true },
+        Wet: { op: "source-atop", colors: ["rgb(50,180,200)"], a: 0.25 },
+        Chilled: { op: "source-atop", colors: ["rgb(100,160,210)"], a: 0.45 },
+        Frozen: { op: "source-atop", colors: ["rgb(100,130,220)"], a: 0.5 },
+        Thunderstruck: { op: "source-atop", colors: ["rgb(16, 141, 163)"], a: 0.45 },
+        Thundercharged: { op: "source-atop", colors: ["rgb(10, 100, 190)"], a: 0.5 },
+        Dawnlit: { op: "source-atop", colors: ["rgb(209,70,231)"], a: 0.5 },
+        Ambershine: { op: "source-atop", colors: ["rgb(190,100,40)"], a: 0.5 },
+        Dawncharged: { op: "source-atop", colors: ["rgb(140,80,200)"], a: 0.5 },
+        Ambercharged: { op: "source-atop", colors: ["rgb(170,60,25)"], a: 0.5 }
+      };
+      SUPPORTED_BLEND_OPS = (() => {
+        try {
+          const canvas = document.createElement("canvas");
+          const ctx2 = canvas.getContext("2d");
+          if (!ctx2) return /* @__PURE__ */ new Set();
+          const ops = ["color", "hue", "saturation", "luminosity", "overlay", "screen", "lighter", "source-atop"];
+          const ok = /* @__PURE__ */ new Set();
+          for (const op of ops) {
+            ctx2.globalCompositeOperation = op;
+            if (ctx2.globalCompositeOperation === op) ok.add(op);
+          }
+          return ok;
+        } catch {
+          return /* @__PURE__ */ new Set();
+        }
+      })();
+    }
+  });
+
+  // src/ui/kit/sprites/iconCache.ts
+  function fetchIndex() {
+    if (indexReady) return indexReady;
+    indexReady = getJSON(
+      `${API_BASE}/assets/sprite-data?flat=1`,
+      SPRITE_REQUEST
+    ).then((data) => {
+      setSpriteIndex(data.items || [], API_BASE);
+      console.log("[SpriteIconCache] sprite index loaded", { count: spriteIndexSize() });
+    }).catch((err) => {
+      console.error("[SpriteIconCache] failed to fetch sprite index", err);
+      indexReady = null;
+    });
+    return indexReady;
   }
   function loadImage(url) {
     let promise = imageCache.get(url);
@@ -11607,7 +10693,7 @@
       let promise = spriteDataUrlCache.get(ck);
       if (!promise) {
         promise = loadImage(entry.url).then(async (imgEl) => {
-          const dataUrl = await applyMutationFilters(imgEl, mutations);
+          const dataUrl = await applyMutationFilters(imgEl, mutations, loadImage);
           spriteDataUrlResolved.set(ck, dataUrl);
           return dataUrl;
         }).catch(() => null);
@@ -11632,60 +10718,18 @@
       return null;
     }
   }
-  var SPRITE_REQUEST, API_BASE, indexReady, MUTATION_ICONS, MUTATION_FILTERS, SUPPORTED_BLEND_OPS2, imageCache, objectUrlCache, spriteDataUrlCache, spriteDataUrlResolved, warmupState, warmupListeners;
+  var SPRITE_REQUEST, indexReady, imageCache, objectUrlCache, spriteDataUrlCache, spriteDataUrlResolved, warmupState, warmupListeners;
   var init_iconCache = __esm({
     "src/ui/kit/sprites/iconCache.ts"() {
       "use strict";
       init_http();
       init_live();
       init_resolver();
+      init_mutationTint();
       SPRITE_REQUEST = { preferGm: true };
-      API_BASE = "https://mg-api.ariedam.fr";
       indexReady = null;
       setCatalogReader((key2) => MGData.get(key2));
       fetchIndex();
-      MUTATION_ICONS = {
-        // Ground-level icons (anchor.y about 0.5), drawn at the plant's base.
-        Wet: { url: `${API_BASE}/assets/sprites/mutations/Wet.png`, anchor: { x: 0.5, y: 0.487 } },
-        Chilled: { url: `${API_BASE}/assets/sprites/mutations/Chilled.png`, anchor: { x: 0.502, y: 0.543 } },
-        Frozen: { url: `${API_BASE}/assets/sprites/mutations/Frozen.png`, anchor: { x: 0.5, y: 0.474 } },
-        Thunderstruck: { url: `${API_BASE}/assets/sprites/mutations/Thunderstruck.png`, anchor: { x: 0.495, y: 0.525 } },
-        Thundercharged: { url: `${API_BASE}/assets/sprites/mutations/Thundercharged.png`, anchor: { x: 0.495, y: 0.525 } },
-        // Floating icons (anchor.y about 0.8), drawn above the plant.
-        Dawnlit: { url: `${API_BASE}/assets/sprites/mutations/Dawnlit.png`, anchor: { x: 0.506, y: 0.809 } },
-        Ambershine: { url: `${API_BASE}/assets/sprites/mutations/Amberlit.png`, anchor: { x: 0.5, y: 0.82 } },
-        Dawncharged: { url: `${API_BASE}/assets/sprites/mutations/Dawncharged.png`, anchor: { x: 0.519, y: 0.796 } },
-        Ambercharged: { url: `${API_BASE}/assets/sprites/mutations/Ambercharged.png`, anchor: { x: 0.501, y: 0.795 } }
-      };
-      MUTATION_FILTERS = {
-        Gold: { op: "source-atop", colors: ["rgb(235,200,0)"], a: 0.7 },
-        Rainbow: { op: "color", colors: ["#FF1744", "#FF9100", "#FFEA00", "#00E676", "#2979FF", "#D500F9"], ang: 130, masked: true },
-        Wet: { op: "source-atop", colors: ["rgb(50,180,200)"], a: 0.25 },
-        Chilled: { op: "source-atop", colors: ["rgb(100,160,210)"], a: 0.45 },
-        Frozen: { op: "source-atop", colors: ["rgb(100,130,220)"], a: 0.5 },
-        Thunderstruck: { op: "source-atop", colors: ["rgb(16, 141, 163)"], a: 0.45 },
-        Thundercharged: { op: "source-atop", colors: ["rgb(10, 100, 190)"], a: 0.5 },
-        Dawnlit: { op: "source-atop", colors: ["rgb(209,70,231)"], a: 0.5 },
-        Ambershine: { op: "source-atop", colors: ["rgb(190,100,40)"], a: 0.5 },
-        Dawncharged: { op: "source-atop", colors: ["rgb(140,80,200)"], a: 0.5 },
-        Ambercharged: { op: "source-atop", colors: ["rgb(170,60,25)"], a: 0.5 }
-      };
-      SUPPORTED_BLEND_OPS2 = (() => {
-        try {
-          const canvas = document.createElement("canvas");
-          const ctx2 = canvas.getContext("2d");
-          if (!ctx2) return /* @__PURE__ */ new Set();
-          const ops = ["color", "hue", "saturation", "luminosity", "overlay", "screen", "lighter", "source-atop"];
-          const ok = /* @__PURE__ */ new Set();
-          for (const op of ops) {
-            ctx2.globalCompositeOperation = op;
-            if (ctx2.globalCompositeOperation === op) ok.add(op);
-          }
-          return ok;
-        } catch {
-          return /* @__PURE__ */ new Set();
-        }
-      })();
       imageCache = /* @__PURE__ */ new Map();
       objectUrlCache = /* @__PURE__ */ new Map();
       spriteDataUrlCache = /* @__PURE__ */ new Map();
@@ -13224,10 +12268,10 @@
       gap: "8px",
       minHeight: "0"
     });
-    const search2 = textInput("Search\u2026", picker.query, { small: true });
-    Object.assign(search2.style, { width: "100%", boxSizing: "border-box" });
-    search2.oninput = () => {
-      picker.query = search2.value;
+    const search3 = textInput("Search\u2026", picker.query, { small: true });
+    Object.assign(search3.style, { width: "100%", boxSizing: "border-box" });
+    search3.oninput = () => {
+      picker.query = search3.value;
       renderEntryGrid();
     };
     const mode = segmented(
@@ -13240,7 +12284,7 @@
         if (picker.mode === next) return;
         picker.mode = next;
         picker.query = "";
-        search2.value = "";
+        search3.value = "";
         renderEntryGrid();
         renderDetails();
       },
@@ -13252,7 +12296,7 @@
     detailsWrap = panelSection();
     detailsWrap.id = "qws-editor-side-details";
     Object.assign(detailsWrap.style, { display: "grid", gridTemplateRows: "minmax(0, 1fr)", padding: "10px", overflow: "hidden" });
-    content2.append(mode, search2, listWrap, detailsWrap);
+    content2.append(mode, search3, listWrap, detailsWrap);
     panel.root.appendChild(content2);
     root2 = panel.root;
     renderEntryGrid();
@@ -15291,6 +14335,118 @@
     }
   });
 
+  // src/ui/kit/badges.ts
+  function pill(text2, tone) {
+    const el = h("span", "qmm-pill", text2);
+    setTone(el, tone);
+    return el;
+  }
+  function setTone(el, tone) {
+    el.classList.remove("is-ok", "is-warn", "is-bad");
+    if (tone) el.classList.add(`is-${tone}`);
+  }
+  function badge(text2, tone) {
+    return h("span", `qmm-badge is-${tone}`, text2);
+  }
+  function meter() {
+    const root4 = h("div", "qmm-meter");
+    const fill = h("div", "qmm-meter__fill");
+    root4.appendChild(fill);
+    return {
+      root: root4,
+      set(ratio, tone = "accent") {
+        fill.style.width = `${clampFinite(ratio, 0, 1, 0) * 100}%`;
+        fill.classList.toggle("is-warn", tone === "warn");
+      }
+    };
+  }
+  var init_badges = __esm({
+    "src/ui/kit/badges.ts"() {
+      "use strict";
+      init_math();
+      init_dom2();
+    }
+  });
+
+  // src/ui/hudPlacement.ts
+  function currentPos(el) {
+    const rect = el.getBoundingClientRect();
+    const cs = getComputedStyle(el);
+    let r = parseFloat(cs.right);
+    let b = parseFloat(cs.bottom);
+    if (Number.isNaN(r)) r = window.innerWidth - rect.right;
+    if (Number.isNaN(b)) b = window.innerHeight - rect.bottom;
+    return { r, b };
+  }
+  function placeClamped(el, r, b) {
+    const rect = el.getBoundingClientRect();
+    const maxRight = Math.max(MARGIN, window.innerWidth - rect.width - MARGIN);
+    const maxBottom = Math.max(MARGIN, window.innerHeight - rect.height - MARGIN);
+    el.style.right = `${Math.min(Math.max(r, MARGIN), maxRight)}px`;
+    el.style.bottom = `${Math.min(Math.max(b, MARGIN), maxBottom)}px`;
+  }
+  function clampRect(el) {
+    const { r, b } = currentPos(el);
+    placeClamped(el, r, b);
+  }
+  function ensureOnScreen(el) {
+    clampRect(el);
+    const rect = el.getBoundingClientRect();
+    const head = el.querySelector(".w-head")?.getBoundingClientRect() ?? rect;
+    let { r, b } = currentPos(el);
+    const maxRight = Math.max(MARGIN, window.innerWidth - rect.width - MARGIN);
+    const maxBottom = Math.max(MARGIN, window.innerHeight - rect.height - MARGIN);
+    if (head.top < MARGIN) b = Math.max(MARGIN, Math.min(maxBottom, b - (MARGIN - head.top)));
+    if (rect.left < MARGIN) r = Math.max(MARGIN, Math.min(maxRight, r - (MARGIN - rect.left)));
+    el.style.right = `${r}px`;
+    el.style.bottom = `${b}px`;
+  }
+  function attachAutoClamp(win) {
+    if (typeof ResizeObserver === "undefined") return;
+    let raf2 = 0;
+    new ResizeObserver(() => {
+      if (raf2) cancelAnimationFrame(raf2);
+      raf2 = requestAnimationFrame(() => ensureOnScreen(win));
+    }).observe(win);
+  }
+  function withTopLocked(el, mutate) {
+    const before = el.getBoundingClientRect();
+    const { b } = currentPos(el);
+    mutate();
+    requestAnimationFrame(() => {
+      const after = el.getBoundingClientRect();
+      const maxBottom = Math.max(MARGIN, window.innerHeight - after.height - MARGIN);
+      el.style.bottom = `${Math.min(Math.max(MARGIN, b + after.top - before.top), maxBottom)}px`;
+      ensureOnScreen(el);
+    });
+  }
+  function makeDraggable(handle, target, opts) {
+    let start2 = null;
+    handle.addEventListener("mousedown", (e) => {
+      if (opts.ignore?.(e.target)) return;
+      start2 = { x: e.clientX, y: e.clientY, pos: currentPos(target) };
+      document.body.style.userSelect = "none";
+      opts.onStart?.();
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!start2) return;
+      placeClamped(target, start2.pos.r - (e.clientX - start2.x), start2.pos.b - (e.clientY - start2.y));
+    });
+    window.addEventListener("mouseup", () => {
+      if (!start2) return;
+      start2 = null;
+      document.body.style.userSelect = "";
+      opts.onEnd();
+    });
+  }
+  var MARGIN;
+  var init_hudPlacement = __esm({
+    "src/ui/hudPlacement.ts"() {
+      "use strict";
+      MARGIN = 8;
+    }
+  });
+
   // src/platform/modVersion.ts
   function getLocalVersion() {
     if (true) {
@@ -15359,110 +14515,112 @@
     }
   });
 
-  // src/ui/kit/badges.ts
-  function pill(text2, tone) {
-    const el = h("span", "qmm-pill", text2);
-    setTone(el, tone);
-    return el;
+  // src/ui/hudStatus.ts
+  function openDownloadLink(url) {
+    const gmObject = globalThis.GM;
+    const gmOpen = typeof GM_openInTab === "function" ? GM_openInTab : typeof gmObject?.openInTab === "function" ? gmObject.openInTab.bind(gmObject) : null;
+    if (isDiscordSurface() && gmOpen) {
+      try {
+        gmOpen(url, { active: true, setParent: true });
+        return;
+      } catch (error) {
+        console.warn("[MagicGarden] GM_openInTab failed, falling back to window.open", error);
+      }
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
   }
-  function setTone(el, tone) {
-    el.classList.remove("is-ok", "is-warn", "is-bad");
-    if (tone) el.classList.add(`is-${tone}`);
-  }
-  function badge(text2, tone) {
-    return h("span", `qmm-badge is-${tone}`, text2);
-  }
-  function meter() {
-    const root4 = h("div", "qmm-meter");
-    const fill = h("div", "qmm-meter__fill");
-    root4.appendChild(fill);
-    return {
-      root: root4,
-      set(ratio, tone = "accent") {
-        fill.style.width = `${clampFinite(ratio, 0, 1, 0) * 100}%`;
-        fill.classList.toggle("is-warn", tone === "warn");
+  function initVersionBadge(badge2) {
+    const show = (text2, tone, downloadUrl) => {
+      badge2.textContent = text2;
+      setTone(badge2, tone);
+      badge2.classList.toggle("is-link", !!downloadUrl);
+      if (downloadUrl) {
+        badge2.dataset.download = downloadUrl;
+        badge2.title = "Download the new version";
+      } else {
+        delete badge2.dataset.download;
+        badge2.removeAttribute("title");
       }
     };
+    show("checking\u2026", "warn");
+    badge2.addEventListener("click", () => {
+      const url = badge2.dataset.download;
+      if (url) openDownloadLink(url);
+    });
+    void (async () => {
+      const localVersion = getLocalVersion();
+      try {
+        const remoteData = await fetchRemoteVersion();
+        const remoteVersion = remoteData?.version?.trim();
+        if (!remoteVersion) show(localVersion || "Unknown", "warn");
+        else if (!localVersion) show(remoteVersion, "warn", remoteData?.download);
+        else if (localVersion === remoteVersion) show(localVersion, "ok");
+        else show(`${localVersion} \u2192 ${remoteVersion}`, "warn", remoteData?.download);
+      } catch (error) {
+        console.error("[MagicGarden] Failed to check version:", error);
+        show(localVersion || "Unknown", "warn");
+      }
+    })();
   }
-  var init_badges = __esm({
-    "src/ui/kit/badges.ts"() {
+  function getWSStatus() {
+    if (sockets.some((ws) => ws.readyState === NativeWS.OPEN)) return { level: "ok", message: "ws open" };
+    if (window.__QWS_workerFound || workerFound) return { level: "ok", message: "ws via worker" };
+    return { level: "bad", message: "ws none" };
+  }
+  function getStoreStatus() {
+    try {
+      const info = getCapturedInfo();
+      if (isStoreCaptured()) return { level: "ok", message: `store ${info.via || "ready"}` };
+      if (info.via === "polyfill" || info.polyfill) return { level: "warn", message: "store polyfill" };
+      return { level: "bad", message: "store none" };
+    } catch {
+      return { level: "bad", message: "store error" };
+    }
+  }
+  function showStatus(el, text2, title, tone) {
+    if (el.textContent !== text2) el.textContent = text2;
+    if (el.title !== title) el.title = title;
+    if (!el.classList.contains(`is-${tone}`)) setTone(el, tone);
+  }
+  function startStatusLoop(box2, full, mini) {
+    let warmup = getSpriteWarmupState();
+    const update = () => {
+      if (!warmup.completed) {
+        const progress = warmup.total > 0 ? `${warmup.done}/${warmup.total}` : `${warmup.done}`;
+        const summary = warmup.total > 0 ? `Sprites warming: ${progress}` : "Sprites warming up";
+        showStatus(full, `Sprites ${progress}`, summary, "warn");
+        showStatus(mini, progress, summary, "warn");
+        mini.style.display = "";
+        return;
+      }
+      const ws = getWSStatus();
+      const store = getStoreStatus();
+      const level = store.message === "store none" && ws.level === "bad" ? "bad" : ws.level === "ok" && store.level === "ok" ? "ok" : "warn";
+      const title = `${ws.message}, ${store.message}`;
+      showStatus(full, "status", title, level);
+      showStatus(mini, level === "ok" ? "OK" : level === "warn" ? "WARN" : "ISSUES", title, level);
+      mini.style.display = level === "ok" ? "none" : "";
+    };
+    onSpriteWarmupProgress((state5) => {
+      warmup = state5;
+      update();
+    });
+    refreshWhileVisible(box2, update, 800);
+  }
+  var init_hudStatus = __esm({
+    "src/ui/hudStatus.ts"() {
       "use strict";
-      init_math();
+      init_sockets();
+      init_jotai();
+      init_iconCache();
+      init_modVersion();
+      init_environment();
+      init_badges();
       init_dom2();
     }
   });
 
   // src/ui/hud.ts
-  function currentPos(el) {
-    const rect = el.getBoundingClientRect();
-    const cs = getComputedStyle(el);
-    let r = parseFloat(cs.right);
-    let b = parseFloat(cs.bottom);
-    if (Number.isNaN(r)) r = window.innerWidth - rect.right;
-    if (Number.isNaN(b)) b = window.innerHeight - rect.bottom;
-    return { r, b };
-  }
-  function placeClamped(el, r, b) {
-    const rect = el.getBoundingClientRect();
-    const maxRight = Math.max(MARGIN, window.innerWidth - rect.width - MARGIN);
-    const maxBottom = Math.max(MARGIN, window.innerHeight - rect.height - MARGIN);
-    el.style.right = `${Math.min(Math.max(r, MARGIN), maxRight)}px`;
-    el.style.bottom = `${Math.min(Math.max(b, MARGIN), maxBottom)}px`;
-  }
-  function clampRect(el) {
-    const { r, b } = currentPos(el);
-    placeClamped(el, r, b);
-  }
-  function ensureOnScreen(el) {
-    clampRect(el);
-    const rect = el.getBoundingClientRect();
-    const head = el.querySelector(".w-head")?.getBoundingClientRect() ?? rect;
-    let { r, b } = currentPos(el);
-    const maxRight = Math.max(MARGIN, window.innerWidth - rect.width - MARGIN);
-    const maxBottom = Math.max(MARGIN, window.innerHeight - rect.height - MARGIN);
-    if (head.top < MARGIN) b = Math.max(MARGIN, Math.min(maxBottom, b - (MARGIN - head.top)));
-    if (rect.left < MARGIN) r = Math.max(MARGIN, Math.min(maxRight, r - (MARGIN - rect.left)));
-    el.style.right = `${r}px`;
-    el.style.bottom = `${b}px`;
-  }
-  function attachAutoClamp(win) {
-    if (typeof ResizeObserver === "undefined") return;
-    let raf3 = 0;
-    new ResizeObserver(() => {
-      if (raf3) cancelAnimationFrame(raf3);
-      raf3 = requestAnimationFrame(() => ensureOnScreen(win));
-    }).observe(win);
-  }
-  function withTopLocked(el, mutate) {
-    const before = el.getBoundingClientRect();
-    const { b } = currentPos(el);
-    mutate();
-    requestAnimationFrame(() => {
-      const after = el.getBoundingClientRect();
-      const maxBottom = Math.max(MARGIN, window.innerHeight - after.height - MARGIN);
-      el.style.bottom = `${Math.min(Math.max(MARGIN, b + after.top - before.top), maxBottom)}px`;
-      ensureOnScreen(el);
-    });
-  }
-  function makeDraggable(handle, target, opts) {
-    let start2 = null;
-    handle.addEventListener("mousedown", (e) => {
-      if (opts.ignore?.(e.target)) return;
-      start2 = { x: e.clientX, y: e.clientY, pos: currentPos(target) };
-      document.body.style.userSelect = "none";
-      opts.onStart?.();
-    });
-    window.addEventListener("mousemove", (e) => {
-      if (!start2) return;
-      placeClamped(target, start2.pos.r - (e.clientX - start2.x), start2.pos.b - (e.clientY - start2.y));
-    });
-    window.addEventListener("mouseup", () => {
-      if (!start2) return;
-      start2 = null;
-      document.body.style.userSelect = "";
-      opts.onEnd();
-    });
-  }
   function installInputKeyTrap() {
     const isTextField = (el) => {
       if (el instanceof HTMLTextAreaElement) return true;
@@ -15478,19 +14636,6 @@
       ev.stopImmediatePropagation();
     };
     for (const type of ["keydown", "keypress", "keyup"]) window.addEventListener(type, trap, true);
-  }
-  function openDownloadLink(url) {
-    const gmObject = globalThis.GM;
-    const gmOpen = typeof GM_openInTab === "function" ? GM_openInTab : typeof gmObject?.openInTab === "function" ? gmObject.openInTab.bind(gmObject) : null;
-    if (isDiscordSurface() && gmOpen) {
-      try {
-        gmOpen(url, { active: true, setParent: true });
-        return;
-      } catch (error) {
-        console.warn("[MagicGarden] GM_openInTab failed, falling back to window.open", error);
-      }
-    }
-    window.open(url, "_blank", "noopener,noreferrer");
   }
   function mountHUD(opts) {
     if (document.readyState === "loading") {
@@ -15764,108 +14909,27 @@
     initVersionBadge(versionPill);
     void ensureStore().catch(() => {
     });
-    startStatusLoop(statusFull, statusMini);
+    startStatusLoop(box2, statusFull, statusMini);
   }
-  function initVersionBadge(badge2) {
-    const show = (text2, tone, downloadUrl) => {
-      badge2.textContent = text2;
-      setTone(badge2, tone);
-      badge2.classList.toggle("is-link", !!downloadUrl);
-      if (downloadUrl) {
-        badge2.dataset.download = downloadUrl;
-        badge2.title = "Download the new version";
-      } else {
-        delete badge2.dataset.download;
-        badge2.removeAttribute("title");
-      }
-    };
-    show("checking\u2026", "warn");
-    badge2.addEventListener("click", () => {
-      const url = badge2.dataset.download;
-      if (url) openDownloadLink(url);
-    });
-    void (async () => {
-      const localVersion = getLocalVersion();
-      try {
-        const remoteData = await fetchRemoteVersion();
-        const remoteVersion = remoteData?.version?.trim();
-        if (!remoteVersion) show(localVersion || "Unknown", "warn");
-        else if (!localVersion) show(remoteVersion, "warn", remoteData?.download);
-        else if (localVersion === remoteVersion) show(localVersion, "ok");
-        else show(`${localVersion} \u2192 ${remoteVersion}`, "warn", remoteData?.download);
-      } catch (error) {
-        console.error("[MagicGarden] Failed to check version:", error);
-        show(localVersion || "Unknown", "warn");
-      }
-    })();
-  }
-  function getWSStatus() {
-    if (sockets.some((ws) => ws.readyState === NativeWS.OPEN)) return { level: "ok", message: "ws open" };
-    if (window.__QWS_workerFound || workerFound) return { level: "ok", message: "ws via worker" };
-    return { level: "bad", message: "ws none" };
-  }
-  function getStoreStatus() {
-    try {
-      const info = getCapturedInfo();
-      if (isStoreCaptured()) return { level: "ok", message: `store ${info.via || "ready"}` };
-      if (info.via === "polyfill" || info.polyfill) return { level: "warn", message: "store polyfill" };
-      return { level: "bad", message: "store none" };
-    } catch {
-      return { level: "bad", message: "store error" };
-    }
-  }
-  function startStatusLoop(full, mini) {
-    let warmup = getSpriteWarmupState();
-    const update = () => {
-      if (!warmup.completed) {
-        const progress = warmup.total > 0 ? `${warmup.done}/${warmup.total}` : `${warmup.done}`;
-        const summary = warmup.total > 0 ? `Sprites warming: ${progress}` : "Sprites warming up";
-        full.textContent = `Sprites ${progress}`;
-        mini.textContent = progress;
-        full.title = mini.title = summary;
-        setTone(full, "warn");
-        setTone(mini, "warn");
-        mini.style.display = "";
-        return;
-      }
-      const ws = getWSStatus();
-      const store = getStoreStatus();
-      const level = store.message === "store none" && ws.level === "bad" ? "bad" : ws.level === "ok" && store.level === "ok" ? "ok" : "warn";
-      full.textContent = "status";
-      mini.textContent = level === "ok" ? "OK" : level === "warn" ? "WARN" : "ISSUES";
-      full.title = mini.title = `${ws.message}, ${store.message}`;
-      setTone(full, level);
-      setTone(mini, level);
-      mini.style.display = level === "ok" ? "none" : "";
-    };
-    onSpriteWarmupProgress((state5) => {
-      warmup = state5;
-      update();
-    });
-    setInterval(update, 800);
-  }
-  var HUD_POS_PATH, HUD_COLLAPSED_PATH, HUD_HIDDEN_PATH, HUD_WIN_PATH, MARGIN, isEditing;
+  var HUD_POS_PATH, HUD_COLLAPSED_PATH, HUD_HIDDEN_PATH, HUD_WIN_PATH, isEditing;
   var init_hud = __esm({
     "src/ui/hud.ts"() {
       "use strict";
-      init_sockets();
       init_jotai();
       init_keybinds();
       init_keyboard();
       init_hotkey();
-      init_iconCache();
-      init_modVersion();
-      init_environment();
       init_storage();
       init_badges();
       init_button();
       init_dom2();
       init_theme();
+      init_hudPlacement();
+      init_hudStatus();
       HUD_POS_PATH = "hud.pos";
       HUD_COLLAPSED_PATH = "hud.collapsed";
       HUD_HIDDEN_PATH = "hud.hidden";
       HUD_WIN_PATH = (id) => `hud.windows.${id}`;
-      MARGIN = 8;
       isEditing = (el) => {
         const t = el;
         return !!t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName));
@@ -15873,7 +14937,7 @@
     }
   });
 
-  // src/game/pixi/gardenInfoCard.ts
+  // src/game/pixi/stageSearch.ts
   function getStage(state5) {
     return state5.renderer.lastObjectRendered ?? state5.renderer.stage ?? state5.app?.stage ?? null;
   }
@@ -15921,143 +14985,78 @@
     if (found) cachedGraphicsCtor = found;
     return found;
   }
-  function computeGeometry(card4) {
-    const cardBounds = card4.getLocalBounds();
-    const width = card4.hitArea?.width ?? cardBounds.width;
-    const height = card4.hitArea?.height ?? cardBounds.height;
-    const titleRow = (card4.children ?? []).find((c) => c?.label === TITLE_ROW_LABEL);
-    const contentTop = titleRow ? titleRow.position.y + titleRow.getLocalBounds().minY : cardBounds.minY;
-    const abilitiesSection = (cardSystem?.children ?? []).find((c) => c?.label === ABILITIES_SECTION_LABEL);
-    const extraTopOffset = abilitiesSection ? abilitiesSection.getLocalBounds().height + SECTION_GAP_ESTIMATE : 0;
-    return { top: contentTop - extraTopOffset, width, height };
-  }
-  function notifyListeners(card4, geometry) {
-    for (const listener of listeners) {
-      try {
-        listener(card4, geometry);
-      } catch (error) {
-        console.warn("[gardenInfoCardPixi] listener failed", error);
+  function watchStageNode(opts) {
+    const raf2 = pageWindow.requestAnimationFrame.bind(pageWindow);
+    const cancelRaf = pageWindow.cancelAnimationFrame.bind(pageWindow);
+    let running = true;
+    let node = null;
+    let attempts = 0;
+    let rafId = null;
+    let lastCheckAt = 0;
+    const lose = (lost) => {
+      if (node !== lost) return;
+      node = null;
+      opts.onLost();
+      search3();
+    };
+    const attach2 = (found) => {
+      node = found;
+      found.once("destroyed", () => lose(found));
+      console.info(`${opts.logTag} attached to ${opts.label} after ${attempts} attempt(s)`);
+      opts.onFound(found);
+    };
+    const tryFind = () => {
+      if (!running || node) return;
+      const state5 = getReadySpriteState();
+      if (!state5) return;
+      const found = findAcrossBranches(getStage(state5), (n) => n?.label === opts.label);
+      if (found) {
+        attach2(found);
+        return;
       }
-    }
-  }
-  function onChildAddedUnsafe(row5) {
-    if (row5?.label !== CARD_ROW_LABEL) return;
-    const card4 = findByLabel(row5, OBJECT_CARD_LABEL);
-    if (!card4) return;
-    currentCard = card4;
-    const geometry = computeGeometry(card4);
-    card4.once("destroyed", () => {
-      if (currentCard === card4) {
-        currentCard = null;
-        notifyListeners(null, null);
+      attempts += 1;
+      opts.onSearch?.(attempts);
+      if (attempts % SEARCH_LOG_EVERY === 0) {
+        console.info(`${opts.logTag} still searching for ${opts.label} (${attempts} attempts so far)`);
       }
-    });
-    notifyListeners(card4, geometry);
-  }
-  function onChildAdded(row5) {
-    try {
-      onChildAddedUnsafe(row5);
-    } catch (error) {
-      console.warn("[gardenInfoCardPixi] onChildAdded failed", error);
-    }
-  }
-  function attachToCardSystem(system) {
-    cardSystem = system;
-    cardSystem.on("childAdded", onChildAdded);
-    cardSystem.once("destroyed", () => {
-      if (cardSystem === system) {
-        cardSystem = null;
-        debugState.attached = false;
-        currentCard = null;
-        notifyListeners(null, null);
-        restartSearchIfNeeded();
+    };
+    const tick = (now) => {
+      rafId = null;
+      if (!running || node) return;
+      if (now - lastCheckAt >= SEARCH_RETRY_MS) {
+        lastCheckAt = now;
+        tryFind();
       }
-    });
-    debugState.attached = true;
-    console.info(`[gardenInfoCardPixi] attached to ${CARD_SYSTEM_LABEL} after ${findAttempts} attempt(s)`);
-    const existingRow = (system.children ?? []).find((c) => c?.label === CARD_ROW_LABEL);
-    if (existingRow) onChildAdded(existingRow);
-  }
-  function tryFindCardSystem() {
-    if (cardSystem) return;
-    const state5 = getReadySpriteState();
-    if (!state5) return;
-    const stage = getStage(state5);
-    const found = findAcrossBranches(stage, (node) => node?.label === CARD_SYSTEM_LABEL);
-    if (found) {
-      attachToCardSystem(found);
-      return;
-    }
-    findAttempts += 1;
-    debugState.findAttempts = findAttempts;
-    if (findAttempts % CARD_SYSTEM_FIND_LOG_EVERY === 0) {
-      console.info(`[gardenInfoCardPixi] still searching for ${CARD_SYSTEM_LABEL} (${findAttempts} attempts so far)`);
-    }
-  }
-  function scheduleFind(now) {
-    findRafId = null;
-    debugState.rafTicks += 1;
-    if (!listeners.size || cardSystem) return;
-    if (now - lastFindCheckAt >= CARD_SYSTEM_FIND_RETRY_MS) {
-      lastFindCheckAt = now;
-      tryFindCardSystem();
-    }
-    if (!listeners.size || cardSystem) return;
-    findRafId = raf(scheduleFind);
-  }
-  function restartSearchIfNeeded() {
-    if (!listeners.size || cardSystem) return;
-    tryFindCardSystem();
-    if (!cardSystem && findRafId == null) {
-      findRafId = raf(scheduleFind);
-    }
-  }
-  function watchGardenInfoCard(listener) {
-    listeners.add(listener);
-    debugState.listenerCount = listeners.size;
-    restartSearchIfNeeded();
-    if (currentCard) {
-      try {
-        listener(currentCard, computeGeometry(currentCard));
-      } catch (error) {
-        console.warn("[gardenInfoCardPixi] listener failed", error);
+      if (running && !node) rafId = raf2(tick);
+    };
+    const search3 = () => {
+      tryFind();
+      if (running && !node && rafId == null) rafId = raf2(tick);
+    };
+    search3();
+    return {
+      get node() {
+        return node;
+      },
+      reset() {
+        if (node) lose(node);
+      },
+      stop() {
+        running = false;
+        if (rafId != null) cancelRaf(rafId);
+        rafId = null;
       }
-    }
-    return () => {
-      listeners.delete(listener);
-      debugState.listenerCount = listeners.size;
     };
   }
-  var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, CARD_SYSTEM_FIND_RETRY_MS, CARD_SYSTEM_FIND_LOG_EVERY, cachedGraphicsCtor, cardSystem, currentCard, findAttempts, findRafId, lastFindCheckAt, listeners, debugState, raf;
-  var init_gardenInfoCard = __esm({
-    "src/game/pixi/gardenInfoCard.ts"() {
+  var SEARCH_RETRY_MS, SEARCH_LOG_EVERY, cachedGraphicsCtor;
+  var init_stageSearch = __esm({
+    "src/game/pixi/stageSearch.ts"() {
       "use strict";
       init_pageContext();
       init_context();
-      CARD_SYSTEM_LABEL = "GardenInfoCardSystem";
-      CARD_ROW_LABEL = "GardenInfoCardRow";
-      OBJECT_CARD_LABEL = "GardenInfoObjectCard";
-      TITLE_ROW_LABEL = "GardenInfoObjectTitleRow";
-      ABILITIES_SECTION_LABEL = "GardenInfoPlantAbilities";
-      SECTION_GAP_ESTIMATE = 8;
-      CARD_SYSTEM_FIND_RETRY_MS = 1e3;
-      CARD_SYSTEM_FIND_LOG_EVERY = 30;
+      SEARCH_RETRY_MS = 1e3;
+      SEARCH_LOG_EVERY = 30;
       cachedGraphicsCtor = null;
-      cardSystem = null;
-      currentCard = null;
-      findAttempts = 0;
-      findRafId = null;
-      lastFindCheckAt = 0;
-      listeners = /* @__PURE__ */ new Set();
-      debugState = {
-        findAttempts: 0,
-        attached: false,
-        rafTicks: 0,
-        scriptStartedAt: Date.now(),
-        listenerCount: 0
-      };
-      shareGlobal("__MG_GARDEN_INFO_CARD_DEBUG__", debugState);
-      raf = pageWindow.requestAnimationFrame.bind(pageWindow);
     }
   });
 
@@ -16089,19 +15088,19 @@
     if (!viewport || !content2 || !Array.isArray(content2.children)) return null;
     return { mask: viewport.mask, content: content2 };
   }
-  function logsContentKind(contentChildren2) {
+  function logsContentKind(contentChildren) {
     let kind = "unknown";
-    for (const child of contentChildren2) {
+    for (const child of contentChildren) {
       if (child?.label === STAT_CARD_LABEL) return "stats";
       if (child?.label === LOG_ROW_LABEL) kind = "logs";
     }
     return kind;
   }
-  function planLogRowsShift(contentChildren2, toolbarSpace) {
-    const first = contentChildren2[0];
+  function planLogRowsShift(contentChildren, toolbarSpace) {
+    const first = contentChildren[0];
     const isNote = !!first && first.label !== LOG_ROW_LABEL && (typeof first.textComponent?.text === "string" || typeof first.text === "string" && !(first.children?.length > 0));
     if (!isNote) return { hideFirst: false, shift: toolbarSpace };
-    const next = contentChildren2[1];
+    const next = contentChildren[1];
     const firstY = first.position?.y ?? first.y ?? 0;
     const noteSpace = next ? (next.position?.y ?? next.y ?? firstY) - firstY : first.height ?? 0;
     return { hideFirst: true, shift: toolbarSpace - noteSpace };
@@ -16936,10 +15935,10 @@
     });
   }
   function onFrame(now) {
-    findRafId2 = null;
+    findRafId = null;
     const open = isActivityLogModalOpen();
-    if (open && !modalNode && now - lastFindCheckAt2 >= FIND_RETRY_MS) {
-      lastFindCheckAt2 = now;
+    if (open && !modalNode && now - lastFindCheckAt >= FIND_RETRY_MS) {
+      lastFindCheckAt = now;
       tryFindModal();
     }
     if (modalNode) syncToolbar();
@@ -16947,7 +15946,10 @@
       modalNode = null;
       teardownToolbar();
     }
-    findRafId2 = raf2(onFrame);
+    if (open || modalNode) findRafId = raf(onFrame);
+  }
+  function ensureFrameLoop() {
+    if (findRafId == null && (isActivityLogModalOpen() || modalNode)) findRafId = raf(onFrame);
   }
   function startActivityLogFilterPixi() {
     void (async () => {
@@ -16958,6 +15960,7 @@
       try {
         await Atoms.ui.activeModal.onChange((next) => {
           setActivityLogModalOpen(next === ACTIVITY_LOG_MODAL_ID);
+          ensureFrameLoop();
         });
       } catch {
       }
@@ -16968,28 +15971,28 @@
         });
       } catch {
       }
-      if (findRafId2 == null) findRafId2 = raf2(onFrame);
+      ensureFrameLoop();
     })();
   }
-  var FIND_RETRY_MS, TOOLBAR_GAP_BELOW, raf2, activeTab, modalNode, toolbar, findRafId2, lastFindCheckAt2, touchedScroll, shiftedRows, plannedFirst, plannedShift, syncDebug;
+  var FIND_RETRY_MS, TOOLBAR_GAP_BELOW, raf, activeTab, modalNode, toolbar, findRafId, lastFindCheckAt, touchedScroll, shiftedRows, plannedFirst, plannedShift, syncDebug;
   var init_filterBar = __esm({
     "src/features/activityLog/filterBar.ts"() {
       "use strict";
       init_pageContext();
       init_atoms();
-      init_gardenInfoCard();
+      init_stageSearch();
       init_context();
       init_activityLogModalLayout();
       init_filter();
       init_filterToolbar();
       FIND_RETRY_MS = 1e3;
       TOOLBAR_GAP_BELOW = 6;
-      raf2 = pageWindow.requestAnimationFrame.bind(pageWindow);
+      raf = pageWindow.requestAnimationFrame.bind(pageWindow);
       activeTab = "logs";
       modalNode = null;
       toolbar = null;
-      findRafId2 = null;
-      lastFindCheckAt2 = 0;
+      findRafId = null;
+      lastFindCheckAt = 0;
       touchedScroll = null;
       shiftedRows = /* @__PURE__ */ new WeakSet();
       plannedFirst = null;
@@ -17532,6 +16535,121 @@
     }
   });
 
+  // src/game/pixi/gardenInfoCard.ts
+  function computeGeometry(card4) {
+    const cardBounds = card4.getLocalBounds();
+    const width = card4.hitArea?.width ?? cardBounds.width;
+    const height = card4.hitArea?.height ?? cardBounds.height;
+    const titleRow = (card4.children ?? []).find((c) => c?.label === TITLE_ROW_LABEL);
+    const contentTop = titleRow ? titleRow.position.y + titleRow.getLocalBounds().minY : cardBounds.minY;
+    const abilitiesSection = (cardSystem?.children ?? []).find((c) => c?.label === ABILITIES_SECTION_LABEL);
+    const extraTopOffset = abilitiesSection ? abilitiesSection.getLocalBounds().height + SECTION_GAP_ESTIMATE : 0;
+    return { top: contentTop - extraTopOffset, width, height };
+  }
+  function notifyListeners(card4, geometry) {
+    for (const listener of listeners) {
+      try {
+        listener(card4, geometry);
+      } catch (error) {
+        console.warn("[gardenInfoCardPixi] listener failed", error);
+      }
+    }
+  }
+  function onChildAddedUnsafe(row5) {
+    if (row5?.label !== CARD_ROW_LABEL) return;
+    const card4 = findByLabel(row5, OBJECT_CARD_LABEL);
+    if (!card4) return;
+    currentCard = card4;
+    const geometry = computeGeometry(card4);
+    card4.once("destroyed", () => {
+      if (currentCard === card4) {
+        currentCard = null;
+        notifyListeners(null, null);
+      }
+    });
+    notifyListeners(card4, geometry);
+  }
+  function onChildAdded(row5) {
+    try {
+      onChildAddedUnsafe(row5);
+    } catch (error) {
+      console.warn("[gardenInfoCardPixi] onChildAdded failed", error);
+    }
+  }
+  function attachToCardSystem(system) {
+    cardSystem = system;
+    cardSystem.on("childAdded", onChildAdded);
+    debugState.attached = true;
+    const existingRow = (system.children ?? []).find((c) => c?.label === CARD_ROW_LABEL);
+    if (existingRow) onChildAdded(existingRow);
+  }
+  function detachFromCardSystem() {
+    cardSystem = null;
+    debugState.attached = false;
+    currentCard = null;
+    notifyListeners(null, null);
+    stopSearchIfUnused();
+  }
+  function startSearchIfNeeded() {
+    if (!listeners.size || search) return;
+    search = watchStageNode({
+      label: CARD_SYSTEM_LABEL,
+      logTag: "[gardenInfoCardPixi]",
+      onFound: attachToCardSystem,
+      onLost: detachFromCardSystem,
+      onSearch: (attempts) => {
+        debugState.findAttempts = attempts;
+      }
+    });
+  }
+  function stopSearchIfUnused() {
+    if (listeners.size || cardSystem || !search) return;
+    search.stop();
+    search = null;
+  }
+  function watchGardenInfoCard(listener) {
+    listeners.add(listener);
+    debugState.listenerCount = listeners.size;
+    startSearchIfNeeded();
+    if (currentCard) {
+      try {
+        listener(currentCard, computeGeometry(currentCard));
+      } catch (error) {
+        console.warn("[gardenInfoCardPixi] listener failed", error);
+      }
+    }
+    return () => {
+      listeners.delete(listener);
+      debugState.listenerCount = listeners.size;
+      stopSearchIfUnused();
+    };
+  }
+  var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, cardSystem, currentCard, search, listeners, debugState;
+  var init_gardenInfoCard = __esm({
+    "src/game/pixi/gardenInfoCard.ts"() {
+      "use strict";
+      init_pageContext();
+      init_stageSearch();
+      CARD_SYSTEM_LABEL = "GardenInfoCardSystem";
+      CARD_ROW_LABEL = "GardenInfoCardRow";
+      OBJECT_CARD_LABEL = "GardenInfoObjectCard";
+      TITLE_ROW_LABEL = "GardenInfoObjectTitleRow";
+      ABILITIES_SECTION_LABEL = "GardenInfoPlantAbilities";
+      SECTION_GAP_ESTIMATE = 8;
+      cardSystem = null;
+      currentCard = null;
+      search = null;
+      listeners = /* @__PURE__ */ new Set();
+      debugState = {
+        findAttempts: 0,
+        attached: false,
+        scriptStartedAt: Date.now(),
+        listenerCount: 0
+      };
+      shareGlobal("__MG_GARDEN_INFO_CARD_DEBUG__", debugState);
+    }
+  });
+
   // src/features/cropPrice/badge.ts
   function isPlantObject3(obj) {
     return !!obj && typeof obj === "object" && obj.objectType === "plant";
@@ -17730,6 +16848,7 @@
       init_data();
       init_atoms();
       init_gardenInfoCard();
+      init_stageSearch();
       init_context();
       VALUE_TEXT_STYLE = { fontFamily: "Arial", fontSize: 14, fontWeight: "700", fill: "#FFD84D" };
       VALUE_BADGE_GAP = 20;
@@ -17742,282 +16861,6 @@
       BADGE_ALPHA = 0.55;
       coinTexture = null;
       coinTexturePromise = null;
-    }
-  });
-
-  // src/features/locker/domLockMarks.ts
-  function markLocked(el, look) {
-    const key2 = datasetKey(look.owner);
-    if (el.dataset[key2] === void 0) {
-      const saved = {};
-      for (const prop of [...Object.keys(look.style), "position"]) saved[prop] = el.style.getPropertyValue(prop);
-      el.dataset[key2] = JSON.stringify(saved);
-    }
-    for (const [prop, value] of Object.entries(look.style)) el.style.setProperty(prop, value);
-    if (getComputedStyle(el).position === "static") el.style.setProperty("position", "relative");
-    const cls = glyphClass(look.owner);
-    if (el.querySelector(`span.${cls}`)) return;
-    const glyph = document.createElement("span");
-    glyph.className = cls;
-    glyph.textContent = LOCK_GLYPH;
-    for (const [prop, value] of Object.entries(look.glyph)) glyph.style.setProperty(prop, value);
-    el.appendChild(glyph);
-  }
-  function unmarkLocked(el, owner2) {
-    const key2 = datasetKey(owner2);
-    const raw = el.dataset[key2];
-    if (raw !== void 0) {
-      let saved = {};
-      try {
-        saved = JSON.parse(raw);
-      } catch {
-      }
-      for (const [prop, value] of Object.entries(saved)) {
-        if (value) el.style.setProperty(prop, value);
-        else el.style.removeProperty(prop);
-      }
-      delete el.dataset[key2];
-    }
-    el.querySelectorAll(`span.${glyphClass(owner2)}`).forEach((node) => node.remove());
-  }
-  function startDomLockIndicator(opts) {
-    const subs = new Subscriptions();
-    let running = true;
-    const elements = () => Array.from(document.querySelectorAll(opts.selector));
-    const refresh = () => {
-      if (!running) return;
-      const locked = opts.isLocked();
-      for (const el of elements()) {
-        if (locked && opts.isTarget(el)) markLocked(el, opts.look);
-        else unmarkLocked(el, opts.look.owner);
-      }
-    };
-    const observer2 = new MutationObserver(refresh);
-    observer2.observe(document.documentElement, { childList: true, subtree: true });
-    subs.add(() => observer2.disconnect());
-    refresh();
-    return {
-      refresh,
-      add: (unsubscribe2) => subs.add(unsubscribe2),
-      stop() {
-        running = false;
-        subs.dispose();
-        for (const el of elements()) unmarkLocked(el, opts.look.owner);
-      }
-    };
-  }
-  var LOCK_GLYPH, cornerGlyph, datasetKey, glyphClass, datasetAttr, markedElements;
-  var init_domLockMarks = __esm({
-    "src/features/locker/domLockMarks.ts"() {
-      "use strict";
-      init_emitter();
-      LOCK_GLYPH = "\u{1F512}";
-      cornerGlyph = (offsetPx) => ({
-        position: "absolute",
-        top: `-${offsetPx}px`,
-        right: `-${offsetPx}px`,
-        "font-size": "16px",
-        "pointer-events": "none",
-        "user-select": "none",
-        "z-index": "2"
-      });
-      datasetKey = (owner2) => `tm${owner2.replace(/(^|-)(\w)/g, (_, _dash, c) => c.toUpperCase())}LockStyles`;
-      glyphClass = (owner2) => `tm-${owner2}-lock`;
-      datasetAttr = (owner2) => `tm-${owner2}-lock-styles`;
-      markedElements = (owner2) => Array.from(document.querySelectorAll(`[data-${datasetAttr(owner2)}]`));
-    }
-  });
-
-  // src/features/cropPrice/domTooltip.ts
-  function startCropValuesObserverFromGardenAtom() {
-    const priceWatcher = startCropPriceWatcherViaGardenObject();
-    let running = true;
-    let harvestAllowed = lockerService.currentHarvestAllowed();
-    let lockerReady = !lockerService.isEnabled();
-    let needsReposition = false;
-    let last = null;
-    const render = () => {
-      if (!running || !lockerReady) return;
-      unmarkStrayTooltips();
-      const next = { value: priceWatcher.get(), locked: harvestAllowed === false, showPrice: readShowCropPrice() };
-      if (!needsReposition && last && last.value === next.value && last.locked === next.locked && last.showPrice === next.showPrice) {
-        return;
-      }
-      last = next;
-      needsReposition = false;
-      const text2 = next.value == null ? "-" : formatInteger(next.value, "round");
-      for (const panel of Array.from(document.querySelectorAll(PANEL_SELECTOR))) {
-        for (const block of Array.from(panel.querySelectorAll(BLOCK_SELECTOR))) {
-          if (!(block instanceof HTMLElement)) continue;
-          updateTooltipLock(block, next.locked);
-          if (!next.showPrice || isWrapperBlock(block)) removePriceLine(block);
-          else ensurePriceLine(block, text2);
-        }
-      }
-    };
-    const readyTimer = lockerReady ? null : setTimeout(() => {
-      lockerReady = true;
-      render();
-    }, LOCKER_FIRST_VERDICT_WAIT_MS);
-    const offLocker = lockerService.onSlotInfoChange((event) => {
-      harvestAllowed = event.harvestAllowed;
-      if (readyTimer != null) clearTimeout(readyTimer);
-      lockerReady = true;
-      render();
-    });
-    const qpmObserver = new MutationObserver((mutations) => {
-      const added = mutations.some(
-        (m) => Array.from(m.addedNodes).some(
-          (node) => node instanceof Element && (node.classList.contains("qpm-crop-size") || !!node.querySelector(".qpm-crop-size"))
-        )
-      );
-      if (!added) return;
-      needsReposition = true;
-      render();
-    });
-    qpmObserver.observe(document.body ?? document.documentElement, { childList: true, subtree: true });
-    render();
-    const offPrice = priceWatcher.onChange(render);
-    const offShowPrice = onShowCropPriceChange(render);
-    return {
-      stop() {
-        if (!running) return;
-        running = false;
-        if (readyTimer != null) clearTimeout(readyTimer);
-        qpmObserver.disconnect();
-        offPrice();
-        offShowPrice();
-        offLocker();
-        priceWatcher.stop();
-      }
-    };
-  }
-  function isWrapperBlock(block) {
-    if (!block.matches(BLOCK_SELECTOR)) return false;
-    const own = BLOCK_SELECTORS.find((selector) => block.matches(selector));
-    if (own) {
-      const inner = Array.from(block.children).find((child) => child.matches(own));
-      if (inner && contentChildren(inner).length > 1) return true;
-    }
-    return contentChildren(block).length === 1;
-  }
-  function removePriceLine(block) {
-    block.querySelectorAll(`:scope > span.${PRICE_CLASS}`).forEach((line) => line.remove());
-  }
-  function ensurePriceLine(block, text2) {
-    const lines = Array.from(block.querySelectorAll(`:scope > span.${PRICE_CLASS}`));
-    lines.slice(1).forEach((extra) => extra.remove());
-    let line = lines[0];
-    if (!line) {
-      line = document.createElement("span");
-      line.className = PRICE_CLASS;
-      Object.assign(line.style, { display: "block", marginTop: "6px", fontWeight: "700", color: "#FFD84D", fontSize: "14px" });
-    }
-    let icon2 = line.querySelector(`:scope > span.${PRICE_ICON_CLASS}`);
-    if (!icon2) {
-      icon2 = document.createElement("span");
-      icon2.className = PRICE_ICON_CLASS;
-      icon2.setAttribute("aria-hidden", "true");
-      Object.assign(icon2.style, {
-        width: "18px",
-        height: "18px",
-        display: "inline-block",
-        verticalAlign: "middle",
-        marginRight: "6px",
-        userSelect: "none",
-        pointerEvents: "none",
-        backgroundSize: "contain",
-        backgroundRepeat: "no-repeat",
-        backgroundPosition: "center"
-      });
-      line.insertBefore(icon2, line.firstChild);
-    }
-    const background = `url("${coin2.img64}")`;
-    if (icon2.style.backgroundImage !== background) icon2.style.backgroundImage = background;
-    let label2 = line.querySelector(`:scope > span.${PRICE_LABEL_CLASS}`);
-    if (!label2) {
-      label2 = document.createElement("span");
-      label2.className = PRICE_LABEL_CLASS;
-      label2.style.display = "inline";
-      line.appendChild(label2);
-    }
-    if (label2.textContent !== text2) label2.textContent = text2;
-    const qpmSize = readSharedGlobal("QPM") ? block.querySelector("span.qpm-crop-size") : null;
-    if (qpmSize) {
-      if (qpmSize.nextElementSibling !== line) block.insertBefore(line, qpmSize.nextElementSibling);
-    } else if (block.lastElementChild !== line) {
-      block.appendChild(line);
-    }
-  }
-  function isTooltipRoot(el) {
-    if (TOOLTIP_ROOT_CLASSES.some((cls) => el.classList.contains(cls))) return true;
-    const children = Array.from(el.children);
-    const grid = children.find((child) => child.classList.contains("McGrid"));
-    return !!grid && children.every((child) => child === grid || child.classList.contains(TOOLTIP_GLYPH_CLASS));
-  }
-  function tooltipRootOf(block) {
-    for (const cls of TOOLTIP_ROOT_CLASSES) {
-      const root5 = block.closest(`.${cls}`);
-      if (root5) return root5;
-    }
-    const grid = block.parentElement;
-    if (!grid?.classList.contains("McGrid")) return null;
-    const root4 = grid.parentElement;
-    return root4 && isTooltipRoot(root4) ? root4 : null;
-  }
-  function unmarkStrayTooltips() {
-    for (const el of markedElements(TOOLTIP_LOCK_LOOK.owner)) {
-      if (!isTooltipRoot(el)) unmarkLocked(el, TOOLTIP_LOCK_LOOK.owner);
-    }
-    document.querySelectorAll(`span.${TOOLTIP_GLYPH_CLASS}`).forEach((glyph) => {
-      const parent = glyph.parentElement;
-      if (!parent || !isTooltipRoot(parent)) glyph.remove();
-    });
-  }
-  function updateTooltipLock(block, locked) {
-    const root4 = tooltipRootOf(block);
-    if (!root4) return;
-    if (locked) markLocked(root4, TOOLTIP_LOCK_LOOK);
-    else unmarkLocked(root4, TOOLTIP_LOCK_LOOK.owner);
-  }
-  var PANEL_SELECTOR, BLOCK_SELECTORS, BLOCK_SELECTOR, PRICE_CLASS, PRICE_ICON_CLASS, PRICE_LABEL_CLASS, TOOLTIP_ROOT_CLASSES, TOOLTIP_LOCK_LOOK, TOOLTIP_GLYPH_CLASS, LOCKER_FIRST_VERDICT_WAIT_MS, contentChildren;
-  var init_domTooltip = __esm({
-    "src/features/cropPrice/domTooltip.ts"() {
-      "use strict";
-      init_priceWatcher();
-      init_setting();
-      init_data();
-      init_format();
-      init_locker();
-      init_domLockMarks();
-      init_pageContext();
-      PANEL_SELECTOR = ".McFlex.css-fsggty, .McFlex.css-6prrn";
-      BLOCK_SELECTORS = [".McFlex.css-1l3zq7", ".McFlex.css-11dqzw"];
-      BLOCK_SELECTOR = BLOCK_SELECTORS.join(", ");
-      PRICE_CLASS = "tm-crop-price";
-      PRICE_ICON_CLASS = "tm-crop-price-icon";
-      PRICE_LABEL_CLASS = "tm-crop-price-label";
-      TOOLTIP_ROOT_CLASSES = ["css-129757o", "css-7cru8u"];
-      TOOLTIP_LOCK_LOOK = {
-        owner: "locker-tooltip",
-        style: { border: "2px solid rgb(188, 53, 215)", "border-radius": "15px", overflow: "visible" },
-        glyph: {
-          position: "absolute",
-          top: "0",
-          right: "0",
-          transform: "translate(50%, -50%)",
-          "font-size": "18px",
-          padding: "2px 8px",
-          "border-radius": "999px",
-          color: "white",
-          "pointer-events": "none",
-          "user-select": "none",
-          "z-index": "1"
-        }
-      };
-      TOOLTIP_GLYPH_CLASS = `tm-${TOOLTIP_LOCK_LOOK.owner}-lock`;
-      LOCKER_FIRST_VERDICT_WAIT_MS = 500;
-      contentChildren = (block) => Array.from(block.children).filter((el) => !(el.tagName === "SPAN" && el.classList.contains(PRICE_CLASS)));
     }
   });
 
@@ -19000,10 +17843,10 @@
     const input = grid?.querySelector(SEARCH_INPUT_SELECTOR);
     return normalize(typeof input?.value === "string" ? input.value : "");
   }
-  function filterContextKey(filters, search2) {
+  function filterContextKey(filters, search3) {
     const keys = filters.map(normalize).filter((value) => value && value !== "all");
     keys.sort();
-    return `${keys.join("|")}::${normalize(search2)}`;
+    return `${keys.join("|")}::${normalize(search3)}`;
   }
   function rememberShownTypes(contextKey, types) {
     const next = new Set([...types].map(normalize).filter(Boolean));
@@ -19023,14 +17866,14 @@
   function filterInventoryItems(items, filters, searchQuery) {
     const itemTypes = new Set(filters.flatMap(filterLabelToItemTypes).filter(Boolean));
     const byType = itemTypes.size ? items.filter((item) => itemTypes.has(itemTypeOf(item))) : items.slice();
-    const search2 = normalize(searchQuery);
-    const shown = search2 ? byType.filter((item) => itemMatchesSearch(item, search2)) : byType;
+    const search3 = normalize(searchQuery);
+    const shown = search3 ? byType.filter((item) => itemMatchesSearch(item, search3)) : byType;
     const playersInRoom3 = playersInRoomForValues();
     for (const item of shown) {
       if (item && typeof item === "object") item.value = computeInventoryItemValue(item, { playersInRoom: playersInRoom3 }) ?? null;
     }
     const types = new Set(shown.map(itemTypeOf).filter(Boolean));
-    rememberShownTypes(filterContextKey(filters, search2), types);
+    rememberShownTypes(filterContextKey(filters, search3), types);
     return shown;
   }
   var FILTER_CHECKBOX_SELECTOR, FILTER_CHECKBOX_LABEL_SELECTOR, SEARCH_INPUT_SELECTOR, isChecked, shownTypesByContext, shownTypesChanged, onShownItemTypesChange, shownItemTypes;
@@ -19048,7 +17891,7 @@
       shownTypesByContext = /* @__PURE__ */ new Map();
       shownTypesChanged = new Emitter();
       onShownItemTypesChange = (listener) => shownTypesChanged.on(listener);
-      shownItemTypes = (filters, search2) => shownTypesByContext.get(filterContextKey(filters, search2)) ?? null;
+      shownItemTypes = (filters, search3) => shownTypesByContext.get(filterContextKey(filters, search3)) ?? null;
     }
   });
 
@@ -19871,14 +18714,14 @@
       }
       current3.showValues.checked = showValues;
       const filters = getActiveFilters(target);
-      const search2 = getSearchQuery(target);
+      const search3 = getSearchQuery(target);
       const container = getItemsContainer(target);
       observeNoise(container);
       const entries = container ? getDomEntries(container) : [];
       const domChanged = domOrderChanged(lastSortedOrder, entries);
-      lastContextKey = filterContextKey(filters, search2);
-      void current3.summary.update(filters, search2);
-      const options2 = computeSortOptions(filters, shownItemTypes(filters, search2));
+      lastContextKey = filterContextKey(filters, search3);
+      void current3.summary.update(filters, search3);
+      const options2 = computeSortOptions(filters, shownItemTypes(filters, search3));
       const offered2 = (key2) => key2 && options2.some((o) => o.value === key2) ? key2 : null;
       if (lastRenderedEntryCount !== entries.length || !current3.sortSelect.options.length) {
         renderSortOptions(current3.sortSelect, options2, offered2(current3.lastSortKey) || offered2(loadSortKey()));
@@ -19912,7 +18755,7 @@
         if (applied2) hutchNeedsInit = false;
       });
     };
-    const bodyObserver = new MutationObserver(() => {
+    const onPageChange = () => {
       const current3 = grid && document.contains(grid) ? grid : null;
       if (grid && !current3) setGrid(null);
       const next = document.querySelector(GRID_SELECTOR);
@@ -19922,13 +18765,13 @@
       }
       maybeInitPetHutch();
       refreshPetHutch();
-    });
+    };
     const onGridInput = (event) => {
       const target = event.target;
       const within = target?.closest(GRID_SELECTOR);
       if (within && within === resolveGrid()) setTimeout(refresh, 0);
     };
-    bodyObserver.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    const stopPageWatch = onSubtreeChange(document.body || document.documentElement, onPageChange);
     setGrid(document.querySelector(GRID_SELECTOR));
     document.addEventListener("change", onGridInput, true);
     document.addEventListener("input", onGridInput, true);
@@ -19937,7 +18780,7 @@
     refreshPetHutch();
     subs.add(() => {
       gridObserver.disconnect();
-      bodyObserver.disconnect();
+      stopPageWatch();
       noiseObserver.disconnect();
       refresh.cancel();
       refreshPetHutch.cancel();
@@ -19952,7 +18795,7 @@
     if (typeof window === "undefined" || typeof document === "undefined") return () => {
     };
     let stop = null;
-    let waiter = null;
+    let stopWaiting = null;
     const attachIfReady = () => {
       if (stop) return true;
       if (!document.querySelector(GRID_SELECTOR) && !document.querySelector(PET_HUTCH_ROOT_SELECTOR)) return false;
@@ -19963,19 +18806,18 @@
       if (attachIfReady()) return;
       const target = document.body || document.documentElement;
       if (!target) return;
-      waiter = new MutationObserver(() => {
+      stopWaiting = onSubtreeChange(target, () => {
         if (attachIfReady()) {
-          waiter?.disconnect();
-          waiter = null;
+          stopWaiting?.();
+          stopWaiting = null;
         }
       });
-      waiter.observe(target, { childList: true, subtree: true });
     };
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start2, { once: true });
     else start2();
     return () => {
       document.removeEventListener("DOMContentLoaded", start2);
-      waiter?.disconnect();
+      stopWaiting?.();
       stop?.();
     };
   }
@@ -19984,6 +18826,7 @@
     "src/features/inventory/sorting.ts"() {
       "use strict";
       init_async2();
+      init_dom();
       init_emitter();
       init_domSorter();
       init_filters();
@@ -20168,7 +19011,10 @@
             this.attachDoc(this.doc);
             this.attachAllFrames();
             if (this.win.MutationObserver) {
-              const mo = new this.win.MutationObserver(() => this.attachAllFrames());
+              const iframes = this.doc.getElementsByTagName("iframe");
+              const mo = new this.win.MutationObserver(() => {
+                if (iframes.length) this.attachAllFrames();
+              });
               mo.observe(this.doc.documentElement || this.doc, { childList: true, subtree: true });
               this.observers.push(mo);
             }
@@ -20620,70 +19466,6 @@
     }
   });
 
-  // src/features/locker/decorPickupLockIndicator.ts
-  function looksLikeDecorTooltip(el) {
-    const text2 = (el.textContent || "").toLowerCase();
-    return !!text2 && !!el.querySelector("canvas") && decorLabels().some((label2) => text2.includes(label2));
-  }
-  function startDecorPickupLockIndicator() {
-    const indicator = startDomLockIndicator({
-      look: { owner: "decor", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyph: cornerGlyph(8) },
-      selector: ".css-502lyi",
-      isTarget: looksLikeDecorTooltip,
-      isLocked: () => lockerRestrictionsService.isDecorPickupLocked()
-    });
-    indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
-    return indicator;
-  }
-  var decorLabels;
-  var init_decorPickupLockIndicator = __esm({
-    "src/features/locker/decorPickupLockIndicator.ts"() {
-      "use strict";
-      init_data();
-      init_domLockMarks();
-      init_restrictions();
-      decorLabels = memoOnCatalogs(() => {
-        const labels = /* @__PURE__ */ new Set();
-        for (const [decorId, entry] of Object.entries(decorCatalog2)) {
-          if (decorId) labels.add(decorId.toLowerCase());
-          if (typeof entry?.name === "string" && entry.name) labels.add(entry.name.toLowerCase());
-        }
-        return Array.from(labels);
-      });
-    }
-  });
-
-  // src/features/locker/eggHatchLockIndicator.ts
-  function startEggHatchLockIndicator() {
-    let currentEggId = null;
-    const indicator = startDomLockIndicator({
-      look: { owner: "egg", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyph: cornerGlyph(8) },
-      selector: ".css-502lyi",
-      isTarget: (el) => (el.textContent || "").toLowerCase().includes("egg"),
-      isLocked: () => lockerRestrictionsService.isEggLocked(currentEggId)
-    });
-    indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
-    void Atoms.data.myCurrentGardenObject.get().then((initial) => {
-      currentEggId = eggIdOf(initial);
-    }).catch(() => {
-    });
-    indicator.add(
-      Atoms.data.myCurrentGardenObject.onChange((next) => {
-        currentEggId = eggIdOf(next);
-        indicator.refresh();
-      })
-    );
-    return indicator;
-  }
-  var init_eggHatchLockIndicator = __esm({
-    "src/features/locker/eggHatchLockIndicator.ts"() {
-      "use strict";
-      init_atoms();
-      init_domLockMarks();
-      init_restrictions();
-    }
-  });
-
   // src/features/locker/indicator.ts
   function isDecorObject(obj) {
     return !!obj && typeof obj === "object" && obj.objectType === "decor";
@@ -20808,6 +19590,7 @@
       init_emitter();
       init_pageContext();
       init_gardenInfoCard();
+      init_stageSearch();
       init_context();
       BORDER_COLOR = 12334551;
       BORDER_WIDTH = 3;
@@ -20817,42 +19600,6 @@
       LOCK_ICON_STYLE = { fontSize: 16 };
       LOCK_ICON_X_NUDGE = 4;
       LOCK_ICON_Y_NUDGE = 4;
-    }
-  });
-
-  // src/features/locker/sellCropsLock.ts
-  function startSellCropsLockWatcher() {
-    const indicator = startDomLockIndicator({
-      look: SELL_CROPS_LOCK_LOOK,
-      selector: ".css-vmnhaw",
-      isTarget: hasSellCropsButton,
-      isLocked: () => !lockerRestrictionsService.allowsCropSale(currentFriendBonus() ?? 0)
-    });
-    indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
-    indicator.add(onFriendBonusChange(indicator.refresh));
-    return indicator;
-  }
-  var SELL_CROPS_LOCK_LOOK, hasSellCropsButton;
-  var init_sellCropsLock = __esm({
-    "src/features/locker/sellCropsLock.ts"() {
-      "use strict";
-      init_domLockMarks();
-      init_friendBonus();
-      init_restrictions();
-      SELL_CROPS_LOCK_LOOK = {
-        owner: "sell-crops",
-        style: {
-          border: "none",
-          "border-radius": "",
-          padding: "",
-          "box-sizing": "",
-          "box-shadow": "none",
-          overflow: "",
-          "z-index": "1000"
-        },
-        glyph: cornerGlyph(4)
-      };
-      hasSellCropsButton = (container) => /sell\s*crops/i.test((container.querySelector("button")?.textContent || "").trim());
     }
   });
 
@@ -21589,9 +20336,6 @@
     let bellContainer = null;
     let bellText = null;
     let lastSize = DEFAULT_SLOT_SIZE;
-    let findAttempts2 = 0;
-    let findRafId3 = null;
-    let lastFindCheckAt3 = 0;
     let wiggleActive = false;
     let wiggleRafId = null;
     let wiggleT = 0;
@@ -21609,7 +20353,7 @@
       screenScaleY: null
     };
     shareGlobal("__MG_NOTIFICATION_BELL_PIXI_DEBUG__", debugState3);
-    const raf3 = pageWindow.requestAnimationFrame.bind(pageWindow);
+    const raf2 = pageWindow.requestAnimationFrame.bind(pageWindow);
     const cancelRaf = pageWindow.cancelAnimationFrame.bind(pageWindow);
     const forgetButtonRefs = () => {
       bellContainer = null;
@@ -21798,53 +20542,25 @@
       }
     };
     const onRailChildrenChanged = () => sync2();
-    const restartSearchIfNeeded2 = () => {
-      if (!running || rail) return;
-      tryFindRail();
-      if (!rail && findRafId3 == null) findRafId3 = raf3(scheduleFind2);
-    };
-    const attachToRail = (node) => {
-      rail = node;
-      rail.on("childAdded", onRailChildrenChanged);
-      rail.on("childRemoved", onRailChildrenChanged);
-      rail.once("destroyed", () => {
-        if (rail === node) {
-          rail = null;
-          debugState3.attached = false;
-          removeButton();
-          restartSearchIfNeeded2();
-        }
-      });
-      debugState3.attached = true;
-      console.info(`[PixiBell] attached to ${RAIL_LABEL} after ${findAttempts2} attempt(s)`);
-      sync2();
-    };
-    const tryFindRail = () => {
-      if (!running || rail) return;
-      const state5 = getReadySpriteState();
-      if (!state5) return;
-      const stage = getStage(state5);
-      const found = findAcrossBranches(stage, (node) => node?.label === RAIL_LABEL);
-      if (found) {
-        attachToRail(found);
-        return;
+    const railSearch = watchStageNode({
+      label: RAIL_LABEL,
+      logTag: "[PixiBell]",
+      onFound(node) {
+        rail = node;
+        rail.on("childAdded", onRailChildrenChanged);
+        rail.on("childRemoved", onRailChildrenChanged);
+        debugState3.attached = true;
+        sync2();
+      },
+      onLost() {
+        rail = null;
+        debugState3.attached = false;
+        removeButton();
+      },
+      onSearch(attempts) {
+        debugState3.findAttempts = attempts;
       }
-      findAttempts2 += 1;
-      debugState3.findAttempts = findAttempts2;
-      if (findAttempts2 % RAIL_FIND_LOG_EVERY === 0) {
-        console.info(`[PixiBell] still searching for ${RAIL_LABEL} (${findAttempts2} attempts so far)`);
-      }
-    };
-    const scheduleFind2 = (now) => {
-      findRafId3 = null;
-      if (!running || rail) return;
-      if (now - lastFindCheckAt3 >= RAIL_FIND_RETRY_MS) {
-        lastFindCheckAt3 = now;
-        tryFindRail();
-      }
-      if (!running || rail) return;
-      findRafId3 = raf3(scheduleFind2);
-    };
+    });
     const isReachableFromLiveStage = (node) => {
       const state5 = getReadySpriteState();
       if (!state5) return false;
@@ -21862,10 +20578,7 @@
       if (!running || !rail || rail.destroyed) return;
       if (!isReachableFromLiveStage(rail)) {
         console.warn("[PixiBell] rail orphaned from the live stage (no destroyed event fired), resetting");
-        rail = null;
-        debugState3.attached = false;
-        removeButton();
-        restartSearchIfNeeded2();
+        railSearch.reset();
         return;
       }
       sync2();
@@ -21896,18 +20609,13 @@
       wiggleT += dt;
       const cycleOffset = wiggleT % BELL_RING_DURATION_MS / BELL_RING_DURATION_MS;
       bellText.rotation = bellRingAngleAt(cycleOffset);
-      wiggleRafId = raf3(wiggleTick);
+      wiggleRafId = raf2(wiggleTick);
     };
-    tryFindRail();
-    if (!rail) findRafId3 = raf3(scheduleFind2);
     return {
       stop() {
         if (!running) return;
         running = false;
-        if (findRafId3 != null) {
-          cancelRaf(findRafId3);
-          findRafId3 = null;
-        }
+        railSearch.stop();
         pageWindow.clearInterval(maintenanceIntervalId);
         pageWindow.removeEventListener("resize", onWindowResize);
         stopWiggleAnimation();
@@ -21941,24 +20649,22 @@
         if (active3) {
           wiggleT = 0;
           wiggleLastFrameAt = null;
-          if (wiggleRafId == null) wiggleRafId = raf3(wiggleTick);
+          if (wiggleRafId == null) wiggleRafId = raf2(wiggleTick);
         } else {
           stopWiggleAnimation();
         }
       }
     };
   }
-  var RAIL_LABEL, RAIL_FIND_RETRY_MS, RAIL_FIND_LOG_EVERY, RAIL_REACHABILITY_CHECK_MS, RAIL_REACHABILITY_MAX_HOPS, CHAT_SLOT_MARKER_LABEL, DEFAULT_SLOT_SIZE, DEFAULT_SLOT_SPACING, SLOT_OCCUPIED_TOLERANCE_RATIO, MAX_SLOT_SEARCH_STEPS;
+  var RAIL_LABEL, RAIL_REACHABILITY_CHECK_MS, RAIL_REACHABILITY_MAX_HOPS, CHAT_SLOT_MARKER_LABEL, DEFAULT_SLOT_SIZE, DEFAULT_SLOT_SPACING, SLOT_OCCUPIED_TOLERANCE_RATIO, MAX_SLOT_SEARCH_STEPS;
   var init_pixiBell = __esm({
     "src/features/notifier/bell/pixiBell.ts"() {
       "use strict";
-      init_gardenInfoCard();
+      init_stageSearch();
       init_context();
       init_pageContext();
       init_ring();
       RAIL_LABEL = "RightSideRail";
-      RAIL_FIND_RETRY_MS = 1e3;
-      RAIL_FIND_LOG_EVERY = 30;
       RAIL_REACHABILITY_CHECK_MS = 2e3;
       RAIL_REACHABILITY_MAX_HOPS = 64;
       CHAT_SLOT_MARKER_LABEL = "RightSideRailChatBadge";
@@ -23808,7 +22514,9 @@
           window.addEventListener(BELL_MODE_EVENT, () => this.startBell());
           window.addEventListener("pointerdown", (e) => this.closeOnOutsideClick(e));
           window.addEventListener("resize", () => this.reposition());
-          window.setInterval(() => this.reposition(), REPOSITION_INTERVAL_MS);
+          window.setInterval(() => {
+            if (this.items.length || this.panel.isOpen) this.reposition();
+          }, REPOSITION_INTERVAL_MS);
           alerts.onChange((items) => this.show(items));
         }
         show(items) {
@@ -25584,6 +24292,113 @@
     }
   });
 
+  // src/features/pets/activePetSlots.ts
+  function normalizeActivePets(value) {
+    const list = Array.isArray(value) ? value : [];
+    const out = [];
+    for (const entry of list) {
+      if (!entry || typeof entry !== "object") continue;
+      const raw = entry;
+      const slot = raw?.slot && typeof raw.slot === "object" ? raw.slot : raw;
+      const id = String(slot?.id ?? "").trim();
+      if (!id) continue;
+      const name = slot?.name ?? raw?.name ?? raw?.petName ?? null;
+      const petSpecies = slot?.petSpecies ?? raw?.petSpecies ?? raw?.species ?? null;
+      const mutationsRaw = slot?.mutations ?? raw?.mutations ?? raw?.data?.mutations ?? raw?.slot?.data?.mutations ?? raw?.pet?.mutations ?? null;
+      const mutations = Array.isArray(mutationsRaw) ? mutationsRaw.map((m) => String(m ?? "").trim()).filter(Boolean) : void 0;
+      const xpRaw = Number(slot?.xp ?? raw?.xp);
+      const xp = Number.isFinite(xpRaw) ? xpRaw : void 0;
+      const targetScaleRaw = Number(slot?.targetScale ?? raw?.targetScale);
+      const targetScale = Number.isFinite(targetScaleRaw) ? targetScaleRaw : void 0;
+      out.push({ id, name, petSpecies, mutations, xp, targetScale });
+      if (out.length >= MAX_BUTTONS) break;
+    }
+    return out;
+  }
+  function activePetsSignature(list) {
+    if (!list.length) return "";
+    return list.map((pet) => {
+      const id = String(pet.id ?? "");
+      const species = String(pet.petSpecies ?? "");
+      const name = String(pet.name ?? "");
+      const muts = Array.isArray(pet.mutations) ? pet.mutations.map((m) => String(m ?? "").trim()).filter(Boolean).sort().join(",") : "";
+      const strength = strengthLabel(pet)?.text ?? "";
+      return `${id}|${species}|${name}|${muts}|${strength}`;
+    }).join(";");
+  }
+  function petDisplayName(pet) {
+    const name = String(pet.name ?? "").trim();
+    if (name) return name;
+    const species = String(pet.petSpecies ?? "").trim();
+    if (species) return species.charAt(0).toUpperCase() + species.slice(1);
+    return "Pet";
+  }
+  function strengthLabel(pet) {
+    const petLike = {
+      petSpecies: String(pet.petSpecies ?? ""),
+      xp: pet.xp,
+      targetScale: pet.targetScale,
+      mutations: pet.mutations
+    };
+    const maxStr = getPetMaxStrength(petLike);
+    if (maxStr <= 0) return null;
+    const str = getPetStrength2(petLike);
+    const maxed = str >= maxStr;
+    return { text: maxed ? `STR ${maxStr}` : `STR ${str}/${maxStr}`, maxed };
+  }
+  function buttonTitle(pet) {
+    const name = petDisplayName(pet);
+    const strength = strengthLabel(pet);
+    return strength ? `${DEFAULT_LABEL}: ${name} (${strength.text})` : `${DEFAULT_LABEL}: ${name}`;
+  }
+  var DEFAULT_LABEL, MAX_BUTTONS;
+  var init_activePetSlots = __esm({
+    "src/features/pets/activePetSlots.ts"() {
+      "use strict";
+      init_petValue();
+      DEFAULT_LABEL = "Instant Feed";
+      MAX_BUTTONS = 3;
+    }
+  });
+
+  // src/features/pets/instantFeed.ts
+  async function findPetById(petId) {
+    try {
+      const list = await PetsService.getPets();
+      const arr = Array.isArray(list) ? list : [];
+      return arr.find((p) => String(p?.slot?.id || "") === petId) ?? null;
+    } catch (err) {
+      console.warn("[InstantFeed] Failed to fetch pets", err);
+      return null;
+    }
+  }
+  async function instantFeedPet(petId) {
+    const pet = await findPetById(petId);
+    if (!pet) return;
+    const species = String(pet?.slot?.petSpecies || "");
+    const compatible = PetsService.getInstantFeedAllowedCrops(species);
+    if (!compatible.size) return;
+    const inventory = await PlayerService.getCropInventoryState();
+    const items = Array.isArray(inventory) ? inventory : [];
+    const favoriteSet = await PlayerService.getFavoriteIdSet().catch(() => /* @__PURE__ */ new Set());
+    const chosen = items.find((item) => {
+      const speciesId = String(item?.species || "");
+      if (!speciesId || !compatible.has(speciesId)) return false;
+      const id = String(item?.id || "");
+      return id && !favoriteSet.has(id);
+    });
+    const chosenId = String(chosen?.id || "");
+    if (!chosenId) return;
+    await PlayerService.feedPet(petId, chosenId);
+  }
+  var init_instantFeed = __esm({
+    "src/features/pets/instantFeed.ts"() {
+      "use strict";
+      init_player();
+      init_pets();
+    }
+  });
+
   // src/features/pets/feedWidget.ts
   function isInstantFeedWidgetEnabled() {
     return readAriesPath(ENABLED_PATH2, true) !== false;
@@ -25865,16 +24680,16 @@
       const nameEl = btn.querySelector('[data-instant-feed-name="1"]');
       const strEl = btn.querySelector('[data-instant-feed-str="1"]');
       const pet = activePets[i] ?? null;
-      const title = pet ? buildButtonTitle(pet) : DEFAULT_LABEL;
+      const title = pet ? buttonTitle(pet) : DEFAULT_LABEL;
       btn.setAttribute("aria-label", title);
       btn.title = title;
       btn.dataset.petId = pet?.id ?? "";
       btn.disabled = !pet;
       btn.style.opacity = pet ? "" : "0.6";
       btn.style.cursor = pet ? "pointer" : "default";
-      if (nameEl) nameEl.textContent = pet ? buildPetDisplayName(pet) : DEFAULT_LABEL;
+      if (nameEl) nameEl.textContent = pet ? petDisplayName(pet) : DEFAULT_LABEL;
       if (strEl) {
-        const strength = pet ? buildStrengthLabel(pet) : null;
+        const strength = pet ? strengthLabel(pet) : null;
         strEl.textContent = strength?.text ?? "";
         strEl.style.color = strength?.maxed ? "#facc15" : "";
         strEl.style.display = strength ? "" : "none";
@@ -25900,127 +24715,39 @@
     }
     if (widget && positioned && isWidgetVisible()) clampIntoViewport();
   }
-  function buildPetDisplayName(pet) {
-    const name = String(pet.name ?? "").trim();
-    if (name) return name;
-    const species = String(pet.petSpecies ?? "").trim();
-    if (species) return species.charAt(0).toUpperCase() + species.slice(1);
-    return "Pet";
-  }
-  function buildStrengthLabel(pet) {
-    const petLike = {
-      petSpecies: String(pet.petSpecies ?? ""),
-      xp: pet.xp,
-      targetScale: pet.targetScale,
-      mutations: pet.mutations
-    };
-    const maxStr = getPetMaxStrength(petLike);
-    if (maxStr <= 0) return null;
-    const str = getPetStrength2(petLike);
-    const maxed = str >= maxStr;
-    return { text: maxed ? `STR ${maxStr}` : `STR ${str}/${maxStr}`, maxed };
-  }
-  function buildButtonTitle(pet) {
-    const name = buildPetDisplayName(pet);
-    const strength = buildStrengthLabel(pet);
-    return strength ? `${DEFAULT_LABEL}: ${name} (${strength.text})` : `${DEFAULT_LABEL}: ${name}`;
-  }
   function updateActivePets(next) {
     const normalized = normalizeActivePets(next);
-    const sig = buildActivePetsSignature(normalized);
+    const sig = activePetsSignature(normalized);
     if (sig === activePetsSig) return;
     activePetsSig = sig;
     activePets = normalized;
     updateButtons();
   }
-  function normalizeActivePets(value) {
-    const list = Array.isArray(value) ? value : [];
-    const out = [];
-    for (const entry of list) {
-      if (!entry || typeof entry !== "object") continue;
-      const raw = entry;
-      const slot = raw?.slot && typeof raw.slot === "object" ? raw.slot : raw;
-      const id = String(slot?.id ?? "").trim();
-      if (!id) continue;
-      const name = slot?.name ?? raw?.name ?? raw?.petName ?? null;
-      const petSpecies = slot?.petSpecies ?? raw?.petSpecies ?? raw?.species ?? null;
-      const mutationsRaw = slot?.mutations ?? raw?.mutations ?? raw?.data?.mutations ?? raw?.slot?.data?.mutations ?? raw?.pet?.mutations ?? null;
-      const mutations = Array.isArray(mutationsRaw) ? mutationsRaw.map((m) => String(m ?? "").trim()).filter(Boolean) : void 0;
-      const xpRaw = Number(slot?.xp ?? raw?.xp);
-      const xp = Number.isFinite(xpRaw) ? xpRaw : void 0;
-      const targetScaleRaw = Number(slot?.targetScale ?? raw?.targetScale);
-      const targetScale = Number.isFinite(targetScaleRaw) ? targetScaleRaw : void 0;
-      out.push({ id, name, petSpecies, mutations, xp, targetScale });
-      if (out.length >= MAX_BUTTONS) break;
-    }
-    return out;
-  }
-  function buildActivePetsSignature(list) {
-    if (!list.length) return "";
-    return list.map((pet) => {
-      const id = String(pet.id ?? "");
-      const species = String(pet.petSpecies ?? "");
-      const name = String(pet.name ?? "");
-      const muts = Array.isArray(pet.mutations) ? pet.mutations.map((m) => String(m ?? "").trim()).filter(Boolean).sort().join(",") : "";
-      const strength = buildStrengthLabel(pet)?.text ?? "";
-      return `${id}|${species}|${name}|${muts}|${strength}`;
-    }).join(";");
-  }
-  async function findPetById(petId) {
-    try {
-      const list = await PetsService.getPets();
-      const arr = Array.isArray(list) ? list : [];
-      return arr.find((p) => String(p?.slot?.id || "") === petId) ?? null;
-    } catch (err) {
-      console.warn("[InstantFeed] Failed to fetch pets", err);
-      return null;
-    }
-  }
   async function handleInstantFeedForPet(petId, btn) {
     if (!petId) return;
     const prevDisabled = btn.disabled;
-    const expectedPetId = petId;
     btn.disabled = true;
     try {
-      const pet = await findPetById(petId);
-      if (!pet) return;
-      const species = String(pet?.slot?.petSpecies || "");
-      const compatible = PetsService.getInstantFeedAllowedCrops(species);
-      if (!compatible.size) return;
-      const inventory = await PlayerService.getCropInventoryState();
-      const items = Array.isArray(inventory) ? inventory : [];
-      const favoriteSet = await PlayerService.getFavoriteIdSet().catch(() => /* @__PURE__ */ new Set());
-      const chosen = items.find((item) => {
-        const speciesId = String(item?.species || "");
-        if (!speciesId || !compatible.has(speciesId)) return false;
-        const id = String(item?.id || "");
-        return id && !favoriteSet.has(id);
-      });
-      const chosenId = String(chosen?.id || "");
-      if (!chosenId) return;
-      await PlayerService.feedPet(petId, chosenId);
+      await instantFeedPet(petId);
     } catch (err) {
       console.error("[InstantFeed] Failed to feed pet", err);
     } finally {
-      if (btn.dataset.petId === expectedPetId) {
+      if (btn.dataset.petId === petId) {
         btn.disabled = prevDisabled;
       }
     }
   }
-  var DEFAULT_LABEL, MAX_BUTTONS, ICON_SIZE, WIDGET_Z_INDEX, SCREEN_MARGIN2, DEFAULT_TOP, GLOBAL_START_FLAG, INVENTORY_CARD_ATOM, ENABLED_PATH2, POS_PATH2, started3, enabled, modalOpen2, inventoryCardOpen, activePets, activePetsSig, widget, widgetButtons, savedPos, positioned;
+  var ICON_SIZE, WIDGET_Z_INDEX, SCREEN_MARGIN2, DEFAULT_TOP, GLOBAL_START_FLAG, INVENTORY_CARD_ATOM, ENABLED_PATH2, POS_PATH2, started3, enabled, modalOpen2, inventoryCardOpen, activePets, activePetsSig, widget, widgetButtons, savedPos, positioned;
   var init_feedWidget = __esm({
     "src/features/pets/feedWidget.ts"() {
       "use strict";
-      init_pets();
-      init_player();
       init_api();
       init_atoms();
       init_iconCache();
       init_storage();
-      init_petValue();
       init_floating();
-      DEFAULT_LABEL = "Instant Feed";
-      MAX_BUTTONS = 3;
+      init_activePetSlots();
+      init_instantFeed();
       ICON_SIZE = 18;
       WIDGET_Z_INDEX = 1999900;
       SCREEN_MARGIN2 = 8;
@@ -26397,111 +25124,6 @@
     }
   });
 
-  // src/features/sellAllPets/domButton.ts
-  function findSellPetButton(panel) {
-    for (const btn of Array.from(panel.querySelectorAll(BUTTON_SELECTOR))) {
-      if (!(btn instanceof HTMLButtonElement) || btn.classList.contains(INJECTED_CLASS)) continue;
-      const label2 = labelOf(btn);
-      if (/crops/i.test(label2)) continue;
-      const words = label2.split(/\s+/).filter(Boolean);
-      if (words.length === 2 && /^sell$/i.test(words[0])) return btn;
-      if (/^sell$/i.test(label2) && btn.querySelector("canvas")) return btn;
-    }
-    return null;
-  }
-  function placeNextTo(target) {
-    const parent = target.parentElement || target.closest(".McFlex, .css-0");
-    if (!parent) return;
-    const existing = parent.querySelector(`.${INJECTED_CLASS}`);
-    if (existing) {
-      if (target.nextElementSibling !== existing) parent.insertBefore(existing, target.nextSibling);
-      if (existing.textContent !== LABEL) existing.textContent = LABEL;
-      return;
-    }
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = `${INJECTED_CLASS} chakra-button`;
-    btn.textContent = LABEL;
-    btn.title = LABEL;
-    btn.setAttribute("aria-label", LABEL);
-    btn.style.marginLeft = "8px";
-    if (getComputedStyle(parent).display !== "flex") {
-      btn.style.display = "inline-flex";
-      btn.style.alignItems = "center";
-    }
-    btn.addEventListener("click", () => {
-      void runSellAllPetsFlow().catch(() => {
-      });
-    });
-    parent.insertBefore(btn, target.nextSibling);
-  }
-  function ensureStyle() {
-    const id = `${INJECTED_CLASS}-style`;
-    if (document.getElementById(id)) return;
-    const style = document.createElement("style");
-    style.id = id;
-    style.textContent = `
-.${INJECTED_CLASS} {
-  display: inline-flex; align-items: center; justify-content: center; appearance: none; cursor: pointer;
-  user-select: none; white-space: nowrap; vertical-align: middle; text-transform: none; overflow: hidden;
-  -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; font-synthesis: none;
-  outline: transparent solid 2px; outline-offset: 2px; line-height: 1.2; height: auto;
-  min-width: var(--chakra-sizes-10, 2.5rem);
-  padding: var(--chakra-space-3, 0.75rem) var(--chakra-space-4, 1rem);
-  border: 2px solid ${THEME.border}; border-radius: 15px;
-  color: ${THEME.text}; background: ${THEME.bg};
-  font-size: 20px; font-weight: 700;
-  box-shadow: rgba(0, 0, 0, 0.3) 0px 4px 12px; transform: translateY(0px); transition: 0.2s;
-}
-.${INJECTED_CLASS}:hover { transform: translateY(-1px); background: ${THEME.hoverBg}; border-color: ${THEME.hoverBorder}; }
-.${INJECTED_CLASS}:active { transform: translateY(1px); background: ${THEME.activeBg}; }
-.${INJECTED_CLASS}:focus-visible { box-shadow: 0 0 0 3px ${THEME.ring}; }
-`.trim();
-    document.head.appendChild(style);
-  }
-  function startInjectSellAllPets() {
-    ensureStyle();
-    let pending3 = false;
-    const processPanels = () => {
-      if (pending3) return;
-      pending3 = true;
-      requestAnimationFrame(() => {
-        pending3 = false;
-        for (const panel of Array.from(document.querySelectorAll(PANEL_SELECTOR2))) {
-          const target = panel.querySelector(PANEL_GATE_SELECTOR) ? findSellPetButton(panel) : null;
-          if (target) placeNextTo(target);
-          else panel.querySelectorAll(`.${INJECTED_CLASS}`).forEach((n) => n.remove());
-        }
-      });
-    };
-    const observer2 = new MutationObserver(processPanels);
-    observer2.observe(document.documentElement, { childList: true, subtree: true });
-    processPanels();
-    return { stop: () => observer2.disconnect() };
-  }
-  var PANEL_SELECTOR2, PANEL_GATE_SELECTOR, BUTTON_SELECTOR, INJECTED_CLASS, LABEL, THEME, labelOf;
-  var init_domButton = __esm({
-    "src/features/sellAllPets/domButton.ts"() {
-      "use strict";
-      init_flow();
-      PANEL_SELECTOR2 = ".McFlex.css-1svwxx0";
-      PANEL_GATE_SELECTOR = ".McGrid";
-      BUTTON_SELECTOR = "button.chakra-button.css-1glc7hj, button.chakra-button, button.css-1glc7hj";
-      INJECTED_CLASS = "tm-injected-sell-all";
-      LABEL = "Sell all Pets";
-      THEME = {
-        text: "var(--chakra-colors-Neutral-TrueWhite, #FFFFFF)",
-        bg: "var(--chakra-colors-Blue-Magic, #0067B4)",
-        border: "var(--chakra-colors-Blue-Light, #48ADF4)",
-        hoverBg: "var(--chakra-colors-Blue-Light, #48ADF4)",
-        hoverBorder: "var(--chakra-colors-Blue-Baby, #25AAE2)",
-        activeBg: "var(--chakra-colors-Blue-Dark, #264093)",
-        ring: "var(--chakra-ring-color, rgba(66,153,225,0.6))"
-      };
-      labelOf = (el) => (el.textContent || "").replace(/\s+/g, " ").trim() || (el.getAttribute("aria-label") ?? "").replace(/\s+/g, " ").trim();
-    }
-  });
-
   // src/features/sellAllPets/keybind.ts
   function installSellKeybindsOnce() {
     if (sellKeybindsInstalled || typeof window === "undefined") return;
@@ -26534,76 +25156,6 @@
       init_keyboard();
       init_flow();
       sellKeybindsInstalled = false;
-    }
-  });
-
-  // src/features/sellAllPets/actionHud.ts
-  function watchActionHud(watch) {
-    const raf3 = pageWindow.requestAnimationFrame.bind(pageWindow);
-    const cancelRaf = pageWindow.cancelAnimationFrame.bind(pageWindow);
-    let running = true;
-    let hud = null;
-    let attempts = 0;
-    let rafId = null;
-    let lastCheckAt = 0;
-    const attach2 = (found) => {
-      hud = found;
-      found.once("destroyed", () => {
-        if (hud !== found) return;
-        hud = null;
-        watch.detach();
-        search2();
-      });
-      console.info(`[sellAllPets] attached to ${ACTION_HUD_LABEL} after ${attempts} attempt(s)`);
-      watch.attach(found);
-    };
-    const tryFind = () => {
-      if (!running || hud) return;
-      const state5 = getReadySpriteState();
-      if (!state5) return;
-      const found = findAcrossBranches(getStage(state5), (node) => node?.label === ACTION_HUD_LABEL);
-      if (found) {
-        attach2(found);
-        return;
-      }
-      attempts += 1;
-      watch.onSearch?.(attempts);
-      if (attempts % LOG_EVERY === 0) {
-        console.info(`[sellAllPets] still searching for ${ACTION_HUD_LABEL} (${attempts} attempts so far)`);
-      }
-    };
-    const tick = (now) => {
-      rafId = null;
-      if (!running || hud) return;
-      if (now - lastCheckAt >= RETRY_MS) {
-        lastCheckAt = now;
-        tryFind();
-      }
-      if (running && !hud) rafId = raf3(tick);
-    };
-    const search2 = () => {
-      tryFind();
-      if (running && !hud && rafId == null) rafId = raf3(tick);
-    };
-    search2();
-    return {
-      stop() {
-        running = false;
-        if (rafId != null) cancelRaf(rafId);
-        rafId = null;
-      }
-    };
-  }
-  var ACTION_HUD_LABEL, RETRY_MS, LOG_EVERY;
-  var init_actionHud = __esm({
-    "src/features/sellAllPets/actionHud.ts"() {
-      "use strict";
-      init_gardenInfoCard();
-      init_context();
-      init_pageContext();
-      ACTION_HUD_LABEL = "ActionHud";
-      RETRY_MS = 1e3;
-      LOG_EVERY = 30;
     }
   });
 
@@ -26667,7 +25219,7 @@
       currentAction: null
     };
     shareGlobal("__MG_SELL_ALL_PETS_PIXI_DEBUG__", debugState3);
-    const raf3 = pageWindow.requestAnimationFrame.bind(pageWindow);
+    const raf2 = pageWindow.requestAnimationFrame.bind(pageWindow);
     const cancelRaf = pageWindow.cancelAnimationFrame.bind(pageWindow);
     const stopScaleAnimation = () => {
       if (scaleRafId != null) {
@@ -26683,11 +25235,11 @@
       if (Math.abs(target - currentScale) < HOVER_SCALE_SETTLE_EPSILON) currentScale = target;
       buttonContainer.scale.set(currentScale);
       if (currentScale !== target) {
-        scaleRafId = raf3(scaleAnimationTick);
+        scaleRafId = raf2(scaleAnimationTick);
       }
     };
     const ensureScaleAnimationRunning = () => {
-      if (scaleRafId == null) scaleRafId = raf3(scaleAnimationTick);
+      if (scaleRafId == null) scaleRafId = raf2(scaleAnimationTick);
     };
     const forgetButtonRefs = () => {
       stopScaleAnimation();
@@ -26839,14 +25391,16 @@
       }
     };
     const onChildAdded2 = () => sync2();
-    const hudWatch = watchActionHud({
-      attach(hud) {
+    const hudWatch = watchStageNode({
+      label: ACTION_HUD_LABEL,
+      logTag: "[sellAllPets]",
+      onFound(hud) {
         actionHud = hud;
         hud.on("childAdded", onChildAdded2);
         debugState3.attached = true;
         sync2();
       },
-      detach() {
+      onLost() {
         actionHud = null;
         debugState3.attached = false;
         removeButton();
@@ -26893,17 +25447,17 @@
       }
     };
   }
-  var BUTTON_FACE_LABEL, SELL_PET_ACTION_TYPES, BUTTON_GAP2, BUTTON_TEXT, BUTTON_TEXT_STYLE, BUTTON_PADDING_X2, BUTTON_RADIUS2, BUTTON_FILL_COLOR, BUTTON_BORDER_COLOR, BUTTON_BORDER_WIDTH, HOVER_SCALE, HOVER_SCALE_EASE, HOVER_SCALE_SETTLE_EPSILON;
+  var ACTION_HUD_LABEL, BUTTON_FACE_LABEL, SELL_PET_ACTION_TYPES, BUTTON_GAP2, BUTTON_TEXT, BUTTON_TEXT_STYLE, BUTTON_PADDING_X2, BUTTON_RADIUS2, BUTTON_FILL_COLOR, BUTTON_BORDER_COLOR, BUTTON_BORDER_WIDTH, HOVER_SCALE, HOVER_SCALE_EASE, HOVER_SCALE_SETTLE_EPSILON;
   var init_pixiButton = __esm({
     "src/features/sellAllPets/pixiButton.ts"() {
       "use strict";
-      init_gardenInfoCard();
+      init_stageSearch();
       init_context();
       init_pageContext();
       init_flow();
-      init_actionHud();
       init_atoms();
       init_emitter();
+      ACTION_HUD_LABEL = "ActionHud";
       BUTTON_FACE_LABEL = "McButtonFace";
       SELL_PET_ACTION_TYPES = /* @__PURE__ */ new Set(["sellPet", "sellRainbowPet", "sellGoldPet"]);
       BUTTON_GAP2 = 10;
@@ -26964,13 +25518,8 @@
       } catch {
       }
       startActivityLogFilterPixi();
-      startCropValuesObserverFromGardenAtom();
       startCropValueOverlayInPixi();
-      startSellCropsLockWatcher();
-      startDecorPickupLockIndicator();
-      startEggHatchLockIndicator();
       startLockerIndicatorInPixi();
-      startInjectSellAllPets();
       startSellAllPetsPixi();
       startInstantFeedWidget();
       startInventorySortingObserver();
@@ -26983,21 +25532,16 @@
       init_historyWatcher();
       init_keybind();
       init_badge();
-      init_domTooltip();
       init_tracker();
       init_sorting();
       init_gameRemap();
       init_modalToggles();
-      init_decorPickupLockIndicator();
-      init_eggHatchLockIndicator();
       init_indicator();
-      init_sellCropsLock();
       init_overlay2();
       init_petAlerts();
       init_feedWidget();
       init_pets();
       init_teamHotkeys();
-      init_domButton();
       init_keybind2();
       init_pixiButton();
       init_shops();
@@ -28804,11 +27348,9 @@ next: ${next}`;
     });
     refreshSocketPicker();
     repaint(true);
-    const pollId = window.setInterval(() => {
-      refreshSocketPicker();
-    }, 1e3);
+    const stopPolling = refreshWhileVisible(view, refreshSocketPicker, 1e3);
     view.__ws_cleanup__ = () => {
-      window.clearInterval(pollId);
+      stopPolling();
       stopFrames();
     };
   }
@@ -28817,6 +27359,7 @@ next: ${next}`;
       "use strict";
       init_button();
       init_card();
+      init_dom2();
       init_fields();
       init_layout();
       init_toggles();
@@ -30271,15 +28814,15 @@ next: ${next}`;
       header.root.removeChild(header.body);
       const status2 = document.createElement("div");
       status2.className = "lk-hint lk-wide";
-      const showStatus = () => {
+      const showStatus2 = () => {
         status2.textContent = entry.enabled ? "This crop uses its own locker filters." : "Uses the global locker settings.";
       };
       const form = lockerSettingsCard(entry.settings, () => store.notifyOverrideSettingsChanged(key2));
       form.setDisabled(!entry.enabled);
-      showStatus();
+      showStatus2();
       detail.replaceChildren(header.root, status2, form.root);
       detail.scrollTop = scrollMemory.get(key2) ?? 0;
-      shown = { key: key2, entry, form, toggle, showStatus };
+      shown = { key: key2, entry, form, toggle, showStatus: showStatus2 };
     }
     const refresh = () => {
       list.setItems(listItems());
@@ -30581,7 +29124,7 @@ next: ${next}`;
     statusText.className = "qmm-setting-row__hint";
     statusText.style.fontSize = "12.5px";
     body.append(head, bonusSlider, statusText);
-    const showStatus = () => {
+    const showStatus2 = () => {
       const requiredPct = toBonusStep2(friendBonusPercentFromPlayers(requiredPlayers) ?? 0);
       const currentPct = currentFriendBonus() ?? 0;
       const currentPlayers = percentToRequiredFriendCount(currentPct);
@@ -30605,18 +29148,18 @@ next: ${next}`;
       const pct = toBonusStep2(Number.isFinite(raw) ? raw : 0);
       showSlider(pct);
       requiredPlayers = percentToRequiredFriendCount(pct);
-      showStatus();
+      showStatus2();
       if (commit) lockerRestrictionsService.setMinRequiredPlayers(requiredPlayers);
     };
     bonusSlider.addEventListener("input", () => readSlider(false));
     bonusSlider.addEventListener("change", () => readSlider(true));
     return {
       root: root4,
-      showStatus,
+      showStatus: showStatus2,
       sync(players) {
         requiredPlayers = players;
         showSlider(friendBonusPercentFromPlayers(players) ?? 0);
-        showStatus();
+        showStatus2();
       }
     };
   }
@@ -32369,7 +30912,7 @@ next: ${next}`;
     let logs2 = [];
     let abilityFilter = "";
     let sortDir = "desc";
-    let search2 = "";
+    let search3 = "";
     function whenCell(log2) {
       const cell = document.createElement("div");
       css3(cell, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
@@ -32456,8 +30999,8 @@ next: ${next}`;
           return byId === wanted || byName === wanted;
         });
       }
-      if (search2.trim()) {
-        const needle = search2.toLowerCase();
+      if (search3.trim()) {
+        const needle = search3.toLowerCase();
         result = result.filter((log2) => (log2.petName || log2.species || "").toLowerCase().includes(needle) || (log2.abilityName || "").toLowerCase().includes(needle) || (log2.abilityId || "").toLowerCase().includes(needle) || detailsOf(log2).toLowerCase().includes(needle) || (log2.petId || "").toLowerCase().includes(needle));
       }
       result.sort((a, b) => sortDir === "asc" ? a.performedAt - b.performedAt : b.performedAt - a.performedAt);
@@ -32500,7 +31043,7 @@ next: ${next}`;
       repaint();
     };
     inputSearch.addEventListener("input", () => {
-      search2 = inputSearch.value.trim();
+      search3 = inputSearch.value.trim();
       repaint();
     });
     void (async () => {
@@ -32863,36 +31406,9 @@ next: ${next}`;
     }
   });
 
-  // src/features/pets/teamStatsView.ts
+  // src/features/pets/teamStatsText.ts
   function triggerUnit(trigger) {
     return trigger && TRIGGER_UNITS[trigger] || "/roll";
-  }
-  function fillRatioColor(ratio) {
-    if (ratio >= 0.99) return ACCENT;
-    if (ratio >= 0.9) return "#a3e635";
-    if (ratio >= 0.75) return color.warn;
-    return "#f87171";
-  }
-  function mkBar(current3, atMax) {
-    const ratio = atMax > 0 ? Math.max(0, Math.min(1, current3 / atMax)) : 0;
-    const track = document.createElement("div");
-    Object.assign(track.style, {
-      height: "3px",
-      borderRadius: "999px",
-      background: color.track,
-      overflow: "hidden",
-      margin: "3px 0 1px"
-    });
-    const fill = document.createElement("div");
-    Object.assign(fill.style, {
-      height: "100%",
-      width: `${Math.max(1.5, ratio * 100)}%`,
-      borderRadius: "999px",
-      background: fillRatioColor(ratio),
-      opacity: "0.85"
-    });
-    track.appendChild(fill);
-    return track;
   }
   function formatPercent(value) {
     if (value >= 10) return `${value.toFixed(1)}%`;
@@ -32935,6 +31451,67 @@ next: ${next}`;
     const low = formatAmount(Math.min(...values), meta.unit);
     const high = formatAmount(Math.max(...values), meta.unit);
     return low === high ? high : `${low} \u2013 ${high}`;
+  }
+  var PARAMETER_LABELS, CONTINUOUS_ROLLS_PER_HOUR, TRIGGER_UNITS;
+  var init_teamStatsText = __esm({
+    "src/features/pets/teamStatsText.ts"() {
+      "use strict";
+      PARAMETER_LABELS = {
+        // Crop Size is a whole number in [50, 100]; the boost adds points, not a percentage.
+        sizeIncrease: { label: "Crop size", unit: "" },
+        scaleIncreasePercentage: { label: "Crop size", unit: "%" },
+        cropSellPriceIncreasePercentage: { label: "Sell price", unit: "%" },
+        mutationChanceIncreasePercentage: { label: "Mutation chance", unit: "%" },
+        hungerRestorePercentage: { label: "Hunger restore", unit: "%" },
+        hungerRefundPercentage: { label: "Hunger refund", unit: "%" },
+        hungerDepletionRateDecreasePercentage: { label: "Hunger drain", unit: "%" },
+        plantGrowthReductionMinutes: { label: "Plant growth", unit: "min" },
+        eggGrowthTimeReductionMinutes: { label: "Egg growth", unit: "min" },
+        baseMaxCoinsFindable: { label: "Coins (max)", unit: "" },
+        bonusXp: { label: "Bonus XP", unit: "" },
+        maxStrengthIncreasePercentage: { label: "Max STR", unit: "%" },
+        plantAbilityChanceBoostPercentage: { label: "Plant ability", unit: "%" }
+      };
+      CONTINUOUS_ROLLS_PER_HOUR = 60;
+      TRIGGER_UNITS = {
+        continuous: "/min",
+        harvest: "/harvest",
+        sellAllCrops: "/sale",
+        sellPet: "/pet sold",
+        hatchEgg: "/hatch",
+        playerActivated: "/use",
+        weather: "/weather"
+      };
+    }
+  });
+
+  // src/features/pets/teamStatsView.ts
+  function fillRatioColor(ratio) {
+    if (ratio >= 0.99) return ACCENT;
+    if (ratio >= 0.9) return "#a3e635";
+    if (ratio >= 0.75) return color.warn;
+    return "#f87171";
+  }
+  function mkBar(current3, atMax) {
+    const ratio = atMax > 0 ? Math.max(0, Math.min(1, current3 / atMax)) : 0;
+    const track = document.createElement("div");
+    Object.assign(track.style, {
+      height: "3px",
+      borderRadius: "999px",
+      background: color.track,
+      overflow: "hidden",
+      margin: "3px 0 1px"
+    });
+    const fill = document.createElement("div");
+    Object.assign(fill.style, {
+      height: "100%",
+      width: `${Math.max(1.5, ratio * 100)}%`,
+      borderRadius: "999px",
+      background: fillRatioColor(ratio),
+      opacity: "0.85"
+    });
+    track.appendChild(fill);
+    return track;
   }
   function mkNav(nav) {
     const wrap = document.createElement("div");
@@ -33214,41 +31791,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     wrap.appendChild(renderDetails2(stats, groups, options2.showAllGroups === true));
     return wrap;
   }
-  var PARAMETER_LABELS, MUTED, ACCENT, DIM, CONTINUOUS_ROLLS_PER_HOUR, TRIGGER_UNITS;
+  var MUTED, ACCENT, DIM;
   var init_teamStatsView = __esm({
     "src/features/pets/teamStatsView.ts"() {
       "use strict";
       init_teamStats();
       init_theme();
-      PARAMETER_LABELS = {
-        // Crop Size is a whole number in [50, 100]; the boost adds points, not a percentage.
-        sizeIncrease: { label: "Crop size", unit: "" },
-        scaleIncreasePercentage: { label: "Crop size", unit: "%" },
-        cropSellPriceIncreasePercentage: { label: "Sell price", unit: "%" },
-        mutationChanceIncreasePercentage: { label: "Mutation chance", unit: "%" },
-        hungerRestorePercentage: { label: "Hunger restore", unit: "%" },
-        hungerRefundPercentage: { label: "Hunger refund", unit: "%" },
-        hungerDepletionRateDecreasePercentage: { label: "Hunger drain", unit: "%" },
-        plantGrowthReductionMinutes: { label: "Plant growth", unit: "min" },
-        eggGrowthTimeReductionMinutes: { label: "Egg growth", unit: "min" },
-        baseMaxCoinsFindable: { label: "Coins (max)", unit: "" },
-        bonusXp: { label: "Bonus XP", unit: "" },
-        maxStrengthIncreasePercentage: { label: "Max STR", unit: "%" },
-        plantAbilityChanceBoostPercentage: { label: "Plant ability", unit: "%" }
-      };
+      init_teamStatsText();
       MUTED = color.textSoft;
       ACCENT = "#34d399";
       DIM = color.textDim;
-      CONTINUOUS_ROLLS_PER_HOUR = 60;
-      TRIGGER_UNITS = {
-        continuous: "/min",
-        harvest: "/harvest",
-        sellAllCrops: "/sale",
-        sellPet: "/pet sold",
-        hatchEgg: "/hatch",
-        playerActivated: "/use",
-        weather: "/weather"
-      };
     }
   });
 
@@ -34319,7 +32871,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/pets/teamBuilder.ts
+  // src/features/pets/teamBuilderTraits.ts
   function abilityTrigger(id) {
     return petAbilities2[id]?.trigger;
   }
@@ -34342,36 +32894,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (hasRestore && hasBoost) return 2;
     if (hasRestore || hasBoost) return 1;
     return 0;
-  }
-  function pickSustainPet(pets, category, afkOnly) {
-    const NOT_USEFUL = Number.POSITIVE_INFINITY;
-    const wantedMutations = category ? categoryGrantedMutations(category) : /* @__PURE__ */ new Set();
-    const ranked = pets.map((pet) => {
-      const abilities = petAbilityIds(pet);
-      const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
-      const tierIndex = category ? bestTierIndex(category, relevant) : -1;
-      const { hardAvoidCount, softAvoidCount } = granterPenaltyFor(pet, wantedMutations);
-      return {
-        pet,
-        score: sustainScore(pet),
-        hardAvoidCount,
-        // Lower is better; pets that do nothing for the goal sort last.
-        goalRank: tierIndex === -1 ? NOT_USEFUL : tierIndex,
-        effectiveStrength: getPetMaxStrength(pet) - GRANTER_STRENGTH_PENALTY * softAvoidCount
-      };
-    }).filter((candidate) => candidate.score > 0);
-    if (!ranked.length) return null;
-    ranked.sort((a, b) => {
-      if (a.score !== b.score) return b.score - a.score;
-      if (a.hardAvoidCount !== b.hardAvoidCount) return a.hardAvoidCount - b.hardAvoidCount;
-      if (a.goalRank !== b.goalRank) return a.goalRank - b.goalRank;
-      if (a.effectiveStrength !== b.effectiveStrength) return b.effectiveStrength - a.effectiveStrength;
-      return a.pet.petSpecies.localeCompare(b.pet.petSpecies);
-    });
-    return ranked[0].pet;
-  }
-  function getBestSustainPet(pets) {
-    return pickSustainPet(pets, null, false);
   }
   function abilityGrantedMutations(abilityId) {
     const raw = getAbilityRawParameters(abilityId).grantedMutations;
@@ -34410,6 +32932,49 @@ Restore figures are averages; unlucky streaks do worse.`;
       softAvoidCount += penalty.softAvoidCount;
     }
     return { hardAvoidCount, softAvoidCount };
+  }
+  var HARD_AVOID_MUTATIONS, SOFT_AVOID_MUTATIONS, GRANTER_STRENGTH_PENALTY;
+  var init_teamBuilderTraits = __esm({
+    "src/features/pets/teamBuilderTraits.ts"() {
+      "use strict";
+      init_data();
+      init_abilityStats();
+      HARD_AVOID_MUTATIONS = /* @__PURE__ */ new Set(["Gold"]);
+      SOFT_AVOID_MUTATIONS = /* @__PURE__ */ new Set(["Rainbow"]);
+      GRANTER_STRENGTH_PENALTY = 10;
+    }
+  });
+
+  // src/features/pets/teamBuilder.ts
+  function pickSustainPet(pets, category, afkOnly) {
+    const NOT_USEFUL = Number.POSITIVE_INFINITY;
+    const wantedMutations = category ? categoryGrantedMutations(category) : /* @__PURE__ */ new Set();
+    const ranked = pets.map((pet) => {
+      const abilities = petAbilityIds(pet);
+      const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
+      const tierIndex = category ? bestTierIndex(category, relevant) : -1;
+      const { hardAvoidCount, softAvoidCount } = granterPenaltyFor(pet, wantedMutations);
+      return {
+        pet,
+        score: sustainScore(pet),
+        hardAvoidCount,
+        // Lower is better; pets that do nothing for the goal sort last.
+        goalRank: tierIndex === -1 ? NOT_USEFUL : tierIndex,
+        effectiveStrength: getPetMaxStrength(pet) - GRANTER_STRENGTH_PENALTY * softAvoidCount
+      };
+    }).filter((candidate) => candidate.score > 0);
+    if (!ranked.length) return null;
+    ranked.sort((a, b) => {
+      if (a.score !== b.score) return b.score - a.score;
+      if (a.hardAvoidCount !== b.hardAvoidCount) return a.hardAvoidCount - b.hardAvoidCount;
+      if (a.goalRank !== b.goalRank) return a.goalRank - b.goalRank;
+      if (a.effectiveStrength !== b.effectiveStrength) return b.effectiveStrength - a.effectiveStrength;
+      return a.pet.petSpecies.localeCompare(b.pet.petSpecies);
+    });
+    return ranked[0].pet;
+  }
+  function getBestSustainPet(pets) {
+    return pickSustainPet(pets, null, false);
   }
   function combinations(items, size) {
     if (size <= 0 || size > items.length) return [];
@@ -34653,18 +33218,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       unusedPets: findUnusedPets(pets, usedIds, sustainPet)
     };
   }
-  var HARD_AVOID_MUTATIONS, SOFT_AVOID_MUTATIONS, GRANTER_STRENGTH_PENALTY, AFK_POOL_LIMIT, AFK_FEEDER_LIMIT;
+  var AFK_POOL_LIMIT, AFK_FEEDER_LIMIT;
   var init_teamBuilder = __esm({
     "src/features/pets/teamBuilder.ts"() {
       "use strict";
-      init_data();
       init_petValue();
       init_abilityStats();
       init_teamStats();
       init_teamBuilderCategories();
-      HARD_AVOID_MUTATIONS = /* @__PURE__ */ new Set(["Gold"]);
-      SOFT_AVOID_MUTATIONS = /* @__PURE__ */ new Set(["Rainbow"]);
-      GRANTER_STRENGTH_PENALTY = 10;
+      init_teamBuilderTraits();
       AFK_POOL_LIMIT = 6;
       AFK_FEEDER_LIMIT = 4;
     }
@@ -35404,10 +33966,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     const picked = new Map(options2.initial);
     let entries = [];
     let filter = "";
-    const search2 = textInput(`Search ${options2.unitNoun}\u2026`, "", { small: true });
-    search2.classList.add("qws-del-search");
-    search2.addEventListener("input", () => {
-      filter = search2.value.trim().toLowerCase();
+    const search3 = textInput(`Search ${options2.unitNoun}\u2026`, "", { small: true });
+    search3.classList.add("qws-del-search");
+    search3.addEventListener("input", () => {
+      filter = search3.value.trim().toLowerCase();
       renderRows();
     });
     const setAll = (qtyFor) => {
@@ -35420,7 +33982,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     const controls = h("div", "qws-del-controls");
     controls.append(
-      search2,
+      search3,
       button("All", { size: "sm", onClick: () => setAll((entry) => entry.total) }),
       button("None", { size: "sm", onClick: () => setAll(() => 0) })
     );
@@ -36546,11 +35108,11 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
       }
     });
-    const search2 = textInput("Find a plant\u2026", "", { small: true });
-    search2.classList.add("qws-gv-search");
+    const search3 = textInput("Find a plant\u2026", "", { small: true });
+    search3.classList.add("qws-gv-search");
     const summary = h("div", "qws-gv-summary");
     const toolbar2 = h("div", "qws-gv-toolbar");
-    toolbar2.append(search2, summary);
+    toolbar2.append(search3, summary);
     const grid = h("div", "qws-gv-grid");
     grid.style.gridTemplateColumns = `repeat(${GARDEN_COLS / 2}, 1fr) ${HALF_GAP_PX}px repeat(${GARDEN_COLS / 2}, 1fr)`;
     grid.style.gridTemplateRows = `repeat(${GARDEN_ROWS}, 1fr)`;
@@ -36578,7 +35140,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return content2.name.toLowerCase().includes(query) || content2.id.toLowerCase().includes(query);
     }
     function applyFilter() {
-      const query = search2.value.trim().toLowerCase();
+      const query = search3.value.trim().toLowerCase();
       let hits = 0;
       let filled = 0;
       for (const [tileIndex, cell] of cells) {
@@ -36613,7 +35175,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       applyFilter();
     }
-    search2.addEventListener("input", applyFilter);
+    search3.addEventListener("input", applyFilter);
     void (async () => {
       try {
         owned2 = new Set(await readOwnedTiles());
@@ -36632,7 +35194,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         render();
       }
     })();
-    search2.focus();
+    search3.focus();
   }
   var HALF_GAP_PX, CELL_ICON_PX, GARDEN_VIEW_CSS, stylesInjected2;
   var init_gardenView = __esm({
@@ -38881,11 +37443,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       NotifierRules.onChange(() => grid.refreshRules());
     })();
-    window.setInterval(refreshLastSeen, LAST_SEEN_REFRESH_MS);
-    window.setInterval(() => {
-      NotifierService.getWeatherState().then(show).catch(() => {
-      });
-    }, STATE_REFRESH_MS);
+    refreshWhileVisible(wrap, refreshLastSeen, LAST_SEEN_REFRESH_MS);
+    refreshWhileVisible(
+      wrap,
+      () => {
+        NotifierService.getWeatherState().then(show).catch(() => {
+        });
+      },
+      STATE_REFRESH_MS
+    );
   }
   var LAST_SEEN_REFRESH_MS, STATE_REFRESH_MS;
   var init_weatherTab = __esm({
@@ -41377,7 +39943,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       pageWindow.app
     ].filter(Boolean);
   }
-  function search(property, matches) {
+  function search2(property, matches) {
     const seen = /* @__PURE__ */ new Set();
     let queue = holders();
     for (let depth = 0; depth < 3 && queue.length; depth += 1) {
@@ -41400,7 +39966,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     for (const holder2 of holders()) {
       if (hasRebake(holder2?.renderTextureCache)) return holder2.renderTextureCache;
     }
-    return search("renderTextureCache", hasRebake);
+    return search2("renderTextureCache", hasRebake);
   }
   function rebakeAll() {
     try {
@@ -42164,11 +40730,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     header.append(enableWrap, clearBtn);
     const categorySelect = select2({ small: true });
     categorySelect.classList.add("qws-skins__category");
-    const search2 = textInput("Search", "", { small: true });
-    search2.type = "search";
-    search2.classList.add("qws-skins__search");
+    const search3 = textInput("Search", "", { small: true });
+    search3.type = "search";
+    search3.classList.add("qws-skins__search");
     const filters = h("div", "qws-skins__filters");
-    filters.append(categorySelect, search2);
+    filters.append(categorySelect, search3);
     const grid = h("div", "qws-pnl-scroll qws-skins__grid");
     const status2 = h("div", "qws-skins__status");
     browser.append(header, filters, grid, status2);
@@ -42259,11 +40825,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       menuState.category = categorySelect.value;
       renderGrid();
     });
-    search2.addEventListener("input", () => {
-      menuState.query = search2.value;
+    search3.addEventListener("input", () => {
+      menuState.query = search3.value;
       renderGrid();
     });
-    search2.value = menuState.query;
+    search3.value = menuState.query;
     const unsubscribe2 = onSkinsChanged(() => {
       if (!container.isConnected) {
         unsubscribe2();
@@ -45125,10 +43691,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return new Set(compatibles.filter((crop) => rules3[crop] ? rules3[crop].allowed : true));
   }
-  async function reviewFeeding(search2) {
+  async function reviewFeeding(search3) {
     const settings = loadCompanionSettings();
-    const thresholdPct = search2?.thresholdPct ?? settings.feedThresholdPct;
-    const allowGarden = search2?.allowGarden ?? settings.feedFromGarden;
+    const thresholdPct = search3?.thresholdPct ?? settings.feedThresholdPct;
+    const allowGarden = search3?.allowGarden ?? settings.feedFromGarden;
     const empty = { candidates: [], hungry: 0, waitingOnGardenRule: 0 };
     let pets = [];
     try {
@@ -45197,8 +43763,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       waitingOnGardenRule
     };
   }
-  async function findFeedable(search2) {
-    return (await reviewFeeding(search2)).candidates;
+  async function findFeedable(search3) {
+    return (await reviewFeeding(search3)).candidates;
   }
   var init_feedRead = __esm({
     "src/features/companion/chat/feedRead.ts"() {
@@ -45430,9 +43996,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       npcSelect.append(new Option("Unavailable", ""));
     });
     const status2 = styled("div", { fontSize: "12px", color: color.textDim, padding: "2px 2px 0" });
+    const showStatus2 = (text2) => {
+      if (status2.textContent !== text2) status2.textContent = text2;
+    };
     function refresh() {
       if (!CompanionService.isRunning()) {
-        status2.textContent = "Inactive.";
+        showStatus2("Inactive.");
         return;
       }
       const npcId = CompanionService.getNpcId();
@@ -45440,7 +44009,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const wanted = CompanionService.getSettings().mode;
       const actual = CompanionService.getEffectiveMode();
       const fallback = actual && actual !== wanted ? " (no garden found, following you)" : "";
-      status2.textContent = `Active as ${name}${fallback}. Only you can see it.`;
+      showStatus2(`Active as ${name}${fallback}. Only you can see it.`);
     }
     const askToggle = switchInput(settings.askOnScreen, (on) => {
       void CompanionService.applySettings({ askOnScreen: on });
@@ -45457,7 +44026,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       status2
     );
     refresh();
-    window.setInterval(refresh, STATUS_REFRESH_MS);
+    refreshWhileVisible(status2, refresh, STATUS_REFRESH_MS);
     view.append(card4.root);
   }
   var STATUS_REFRESH_MS, MODE_LABELS;
@@ -45468,6 +44037,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_feedWatch();
       init_fields();
       init_layout();
+      init_dom2();
       init_theme();
       init_toggles();
       init_dom3();
@@ -48091,19 +46661,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       renderAll();
     });
-    const identityTimer = window.setInterval(() => {
-      if (!root4.isConnected) {
-        clearInterval(identityTimer);
-        return;
-      }
-      renderStatus();
-    }, IDENTITY_REFRESH_MS);
+    refreshWhileVisible(root4, renderStatus, IDENTITY_REFRESH_MS);
   }
   var EMPTY_HINT, IDENTITY_REFRESH_MS, SMALL;
   var init_chatTab = __esm({
     "src/features/companion/menu/chatTab.ts"() {
       "use strict";
       init_button();
+      init_dom2();
       init_chat();
       init_companion();
       init_actionsModal();
@@ -49983,7 +48548,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/menu/askBanner.ts
-  function ensureStyle2() {
+  function ensureStyle() {
     if (document.getElementById(STYLE_ID5)) return;
     const style = document.createElement("style");
     style.id = STYLE_ID5;
@@ -50045,7 +48610,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return message2.positioned ? renderTagged(message2.text, message2.icons, ICON_PX6) : [document.createTextNode(message2.text)];
   }
   function build(proposal) {
-    ensureStyle2();
+    ensureStyle();
     const root4 = h("div");
     root4.id = CARD_ID;
     const face = h("div", "mgask-face", "\u{1F916}");
@@ -50188,9 +48753,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   function showRoomPrivacyNoticeOnce() {
     if (typeof document === "undefined" || !document.body) return;
     if (hasSeenRoomPrivacyNotice()) return;
-    if (document.getElementById(OVERLAY_ID2)) return;
+    if (document.getElementById(OVERLAY_ID)) return;
     const overlay2 = h("div");
-    overlay2.id = OVERLAY_ID2;
+    overlay2.id = OVERLAY_ID;
     Object.assign(overlay2.style, {
       position: "fixed",
       inset: "0",
@@ -50237,14 +48802,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     document.body.appendChild(overlay2);
   }
-  var OVERLAY_ID2, HUB_INSTALL_URL;
+  var OVERLAY_ID, HUB_INSTALL_URL;
   var init_privacyNotice = __esm({
     "src/features/room/privacyNotice.ts"() {
       "use strict";
       init_storage();
       init_button();
       init_dom2();
-      OVERLAY_ID2 = "mgRoomPrivacyNotice";
+      OVERLAY_ID = "mgRoomPrivacyNotice";
       HUB_INSTALL_URL = "https://github.com/Ariedam64/MG-CommunityHub/raw/refs/heads/main/dist/mg-community-hub.user.js";
     }
   });
@@ -50293,7 +48858,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function buildOverlay(entry) {
     const overlay2 = h("div");
-    overlay2.id = OVERLAY_ID3;
+    overlay2.id = OVERLAY_ID2;
     const dismiss = () => {
       markChangelogVersionSeen(entry.version);
       overlay2.remove();
@@ -50329,7 +48894,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const version = getLocalVersion();
     if (!version) return;
     if (getSeenChangelogVersion() === version) return;
-    if (document.getElementById(OVERLAY_ID3)) return;
+    if (document.getElementById(OVERLAY_ID2)) return;
     let entry;
     try {
       entry = await fetchChangelogEntryForVersion(version);
@@ -50341,7 +48906,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     ensureStyles2();
     document.body.appendChild(buildOverlay(entry));
   }
-  var OVERLAY_ID3, NOTICE_CSS, stylesInjected3;
+  var OVERLAY_ID2, NOTICE_CSS, stylesInjected3;
   var init_notice = __esm({
     "src/features/changelog/notice.ts"() {
       "use strict";
@@ -50354,15 +48919,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_carousel();
       init_styles6();
       init_fetchChangelog();
-      OVERLAY_ID3 = "mgChangelogNotice";
+      OVERLAY_ID2 = "mgChangelogNotice";
       NOTICE_CSS = `
-#${OVERLAY_ID3} {
+#${OVERLAY_ID2} {
   position: fixed; inset: 0; z-index: 2147483647;
   display: grid; place-items: center; padding: 20px;
   background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
-#${OVERLAY_ID3} .mgcl-box {
+#${OVERLAY_ID2} .mgcl-box {
   width: 440px; max-width: 92vw; max-height: 85vh; overflow-y: auto;
   padding: 22px 24px; border-radius: 16px;
   border: 1px solid var(--qmm-accent-border);
@@ -50372,14 +48937,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   box-shadow: var(--qmm-shadow-modal);
   color: var(--qmm-text);
 }
-#${OVERLAY_ID3} .mgcl-eyebrow {
+#${OVERLAY_ID2} .mgcl-eyebrow {
   margin: 0 0 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
   color: var(--qmm-accent);
 }
-#${OVERLAY_ID3} .mgcl-title { margin: 0 0 4px; font-size: 18px; font-weight: 750; }
-#${OVERLAY_ID3} .mgcl-version { margin: 0 0 16px; font-size: 11.5px; color: var(--qmm-text-soft); }
-#${OVERLAY_ID3} .mgcl-media { margin-top: 14px; }
-#${OVERLAY_ID3} .mgcl-close { margin-top: 18px; }
+#${OVERLAY_ID2} .mgcl-title { margin: 0 0 4px; font-size: 18px; font-weight: 750; }
+#${OVERLAY_ID2} .mgcl-version { margin: 0 0 16px; font-size: 11.5px; color: var(--qmm-text-soft); }
+#${OVERLAY_ID2} .mgcl-media { margin-top: 14px; }
+#${OVERLAY_ID2} .mgcl-close { margin-top: 18px; }
 `;
       stylesInjected3 = false;
     }
@@ -50463,7 +49028,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/platform/ariesApi/playerStateReport.ts
+  // src/platform/ariesApi/playerStatePayload.ts
   function clampPlayers(n) {
     const value = Math.floor(Number(n));
     if (!Number.isFinite(value)) return 1;
@@ -50626,6 +49191,20 @@ Restore figures are averages; unlucky streaks do worse.`;
       return null;
     }
   }
+  var init_playerStatePayload = __esm({
+    "src/platform/ariesApi/playerStatePayload.ts"() {
+      "use strict";
+      init_atoms();
+      init_pageContext();
+      init_storage();
+      init_modVersion();
+      init_playerIdentity();
+      shareGlobal("buildPlayerStatePayload", buildPlayerStatePayload);
+      shareGlobal("logPlayerStatePayload", buildPlayerStatePayload);
+    }
+  });
+
+  // src/platform/ariesApi/playerStateReport.ts
   function snapshotPayloadForComparison(payload) {
     try {
       const log2 = payload.state.activityLog;
@@ -50679,7 +49258,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     preferredReportingIntervalMs = intervalMs;
     void tryInitializeReporting();
     void Atoms.root.state.onChange((next) => {
+      if (gameReadyTriggered) {
+        unwatchState?.();
+        return;
+      }
       void tryInitializeReporting(next);
+    }).then((unsubscribe2) => {
+      unwatchState = unsubscribe2;
+      if (gameReadyTriggered) unsubscribe2();
+    }).catch(() => {
     });
   }
   async function buildAndSendPlayerState() {
@@ -50732,23 +49319,22 @@ Restore figures are averages; unlucky streaks do worse.`;
       void buildAndSendPlayerState();
     }, normalizedMs);
   }
-  var DEFAULT_HEARTBEAT_INTERVAL_MS, MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND, MAX_INITIAL_RETRIES, gameReadyWatcherInitialized, gameReadyTriggered, preferredReportingIntervalMs, payloadReportingTimer, isPayloadReporting, lastSentPayloadSnapshot, unchangedSnapshotCount, initialSendRetries;
+  var DEFAULT_HEARTBEAT_INTERVAL_MS, MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND, MAX_INITIAL_RETRIES, gameReadyWatcherInitialized, gameReadyTriggered, unwatchState, preferredReportingIntervalMs, payloadReportingTimer, isPayloadReporting, lastSentPayloadSnapshot, unchangedSnapshotCount, initialSendRetries;
   var init_playerStateReport = __esm({
     "src/platform/ariesApi/playerStateReport.ts"() {
       "use strict";
       init_atoms();
       init_pageContext();
       init_storage();
-      init_modVersion();
       init_playerIdentity();
       init_http3();
+      init_playerStatePayload();
       DEFAULT_HEARTBEAT_INTERVAL_MS = 6e4;
       MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND = 5;
       MAX_INITIAL_RETRIES = 3;
-      shareGlobal("buildPlayerStatePayload", buildPlayerStatePayload);
-      shareGlobal("logPlayerStatePayload", buildPlayerStatePayload);
       gameReadyWatcherInitialized = false;
       gameReadyTriggered = false;
+      unwatchState = null;
       payloadReportingTimer = null;
       isPayloadReporting = false;
       lastSentPayloadSnapshot = null;

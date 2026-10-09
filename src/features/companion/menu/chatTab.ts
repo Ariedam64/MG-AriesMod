@@ -10,6 +10,7 @@
 // are `actionsModal.ts`.
 
 import { button, type ButtonOptions } from "../../../ui/kit/button";
+import { refreshWhileVisible } from "../../../ui/kit/dom";
 import { CompanionChat } from "../chat";
 import { CompanionService } from "..";
 import { openActionsModal } from "./actionsModal";
@@ -181,11 +182,6 @@ export function renderChatTab(view: HTMLElement): void {
   // The NPC is only known once the companion has started, which posts no
   // message: without this beat the portrait would stay anonymous until the
   // first exchange. `setIdentity` does nothing when the identity is unchanged.
-  const identityTimer = window.setInterval(() => {
-    if (!root.isConnected) {
-      clearInterval(identityTimer);
-      return;
-    }
-    renderStatus();
-  }, IDENTITY_REFRESH_MS);
+  // Only while the tab shows: a detached or hidden view runs nothing.
+  refreshWhileVisible(root, renderStatus, IDENTITY_REFRESH_MS);
 }

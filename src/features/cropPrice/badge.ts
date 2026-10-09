@@ -12,12 +12,8 @@ import { formatInteger } from "../../lib/format";
 import { Subscriptions } from "../../lib/emitter";
 import { coin } from "../../data";
 import { Atoms } from "../../game/store/atoms";
-import {
-  watchGardenInfoCard,
-  getStage,
-  findGraphicsCtor,
-  type GardenInfoCardGeometry,
-} from "../../game/pixi/gardenInfoCard";
+import { watchGardenInfoCard, type GardenInfoCardGeometry } from "../../game/pixi/gardenInfoCard";
+import { getStage, findGraphicsCtor } from "../../game/pixi/stageSearch";
 import { getReadySpriteState } from "../../game/sprites/context";
 
 // DevTools only shows console output captured while it is open, so a live
@@ -48,8 +44,8 @@ function isPlantObject(obj: any): boolean {
   return !!obj && typeof obj === "object" && obj.objectType === "plant";
 }
 
-// The coin texture is decoded once, from the same image the DOM tooltip uses,
-// and shared by every card.
+// The coin texture is decoded once, from the coin catalog image, and shared
+// by every card.
 let coinTexture: any = null;
 let coinTexturePromise: Promise<any> | null = null;
 function ensureCoinTexture(TextureCtor: any): Promise<any> {

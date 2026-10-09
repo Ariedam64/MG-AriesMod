@@ -9,6 +9,9 @@
 // The index is a convenience, never a dependency: it is rebuilt from the game
 // bundle on every release and has silently lost whole categories before.
 
+/** The mod's own API, which serves the sprite index, the sprites and the mutation icons. */
+export const API_BASE = "https://mg-api.ariedam.fr";
+
 export type SpriteEntry = {
   id: string;          // e.g. "sprite/plant/Bamboo"
   name: string;        // e.g. "Bamboo", the PNG basename

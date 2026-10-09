@@ -7,12 +7,8 @@ import { eggIdOf, lockerRestrictionsService } from "./restrictions";
 import { Atoms } from "../../game/store/atoms";
 import { Subscriptions } from "../../lib/emitter";
 import { shareGlobal } from "../../platform/pageContext";
-import {
-  watchGardenInfoCard,
-  getStage,
-  findGraphicsCtor,
-  type GardenInfoCardGeometry,
-} from "../../game/pixi/gardenInfoCard";
+import { watchGardenInfoCard, type GardenInfoCardGeometry } from "../../game/pixi/gardenInfoCard";
+import { getStage, findGraphicsCtor } from "../../game/pixi/stageSearch";
 import { getReadySpriteState } from "../../game/sprites/context";
 
 // The purple of the locker's DOM outlines, rgb(188, 53, 215).

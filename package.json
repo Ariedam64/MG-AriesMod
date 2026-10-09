@@ -16,7 +16,6 @@
     "check:locker": "node scripts/runChecks.mjs locker",
     "check:lockerrules": "node scripts/runChecks.mjs lockerrules",
     "check:lockerslot": "node scripts/runChecks.mjs lockerslot",
-    "check:domlockmarks": "node scripts/runChecks.mjs domlockmarks",
     "check:lockermenu": "node scripts/runChecks.mjs lockermenu",
     "check:sellallpetsconfirm": "node scripts/runChecks.mjs sellallpetsconfirm",
     "check:abilitylogs": "node scripts/runChecks.mjs abilitylogs",
@@ -63,7 +62,9 @@
     "check:debugsockets": "node scripts/runChecks.mjs debugsockets",
     "check:ghostmode": "node scripts/runChecks.mjs ghostmode",
     "check:inventorysummary": "node scripts/runChecks.mjs inventorysummary",
-    "check:floating": "node scripts/runChecks.mjs floating"
+    "check:floating": "node scripts/runChecks.mjs floating",
+    "check:stagewatch": "node scripts/runChecks.mjs stagewatch",
+    "check:visiblerefresh": "node scripts/runChecks.mjs visiblerefresh"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",

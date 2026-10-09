@@ -1,9 +1,9 @@
 // Puts the filter toolbar into the game's Pixi activity log modal and keeps it
-// placed, every frame, while the modal is open.
+// placed, every frame, while the modal is open. Nothing runs while it is closed.
 
 import { shareGlobal, pageWindow } from "../../platform/pageContext";
 import { Atoms } from "../../game/store/atoms";
-import { getStage, findAcrossBranches, findGraphicsCtor } from "../../game/pixi/gardenInfoCard";
+import { getStage, findAcrossBranches, findGraphicsCtor } from "../../game/pixi/stageSearch";
 import { getReadySpriteState } from "../../game/sprites/context";
 import {
   ACTIVITY_LOG_MODAL_ID,
@@ -225,7 +225,12 @@ function onFrame(now: number): void {
     modalNode = null;
     teardownToolbar();
   }
-  findRafId = raf(onFrame);
+  if (open || modalNode) findRafId = raf(onFrame);
+}
+
+/** Runs the frame loop while the modal is open; it stops itself once closed and cleaned up. */
+function ensureFrameLoop(): void {
+  if (findRafId == null && (isActivityLogModalOpen() || modalNode)) findRafId = raf(onFrame);
 }
 
 export function startActivityLogFilterPixi(): void {
@@ -236,6 +241,7 @@ export function startActivityLogFilterPixi(): void {
     try {
       await Atoms.ui.activeModal.onChange((next: string | null) => {
         setActivityLogModalOpen(next === ACTIVITY_LOG_MODAL_ID);
+        ensureFrameLoop();
       });
     } catch {}
     try {
@@ -244,7 +250,7 @@ export function startActivityLogFilterPixi(): void {
         activeTab = activityLogTabOf(next);
       });
     } catch {}
-    if (findRafId == null) findRafId = raf(onFrame);
+    ensureFrameLoop();
   })();
 }
 

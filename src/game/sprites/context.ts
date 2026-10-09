@@ -34,7 +34,7 @@ export function getReadySpriteState(): SpriteState | null {
  *
  * Deliberately not `state.app` first: Pixi v8 builds the renderer before calling
  * `__PIXI_APP_INIT__`, so `__PIXI_RENDERER_INIT__` fires first and the hooks
- * resolve the app with a synthetic stand-in `{ renderer, stage, ticker }`. That
+ * resolve the app with a synthetic stand-in `{ renderer, stage }`. That
  * stand-in is what `state.app` holds, and it carries none of the game's own
  * Application extensions (`renderTextureCache`, ...). The hooks keep tracking
  * the latest value and do end up holding the genuine Application.
