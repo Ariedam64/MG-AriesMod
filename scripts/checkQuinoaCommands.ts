@@ -8,7 +8,7 @@
 // same socket, but the game's counter is module-local to its bundle and cannot
 // know about the commands we inject. Every mod command shifts the game's next
 // number by one, and a sequence the server does not expect takes the command
-// with it — silently.
+// with it, silently.
 //
 // Run with: npm run check:commands
 

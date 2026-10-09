@@ -1,7 +1,7 @@
 // What the Harvest Locker does before the player has asked it for anything.
 //
 // Turning the Locker on, or switching a single species on, used to start from
-// "Range 50–100". That is an *active* size criterion which every crop matches,
+// "Range 50 to 100". That is an *active* size criterion which every crop matches,
 // so in LOCK mode it locked the whole species outright while the sliders sat at
 // their extremes and read as no filter at all. Someone reported exactly that:
 // Aloe became unharvestable with no visible reason.

@@ -79,7 +79,7 @@ check("...yet fills its own bar completely",
 
 console.log("\n--- magnitudes are per proc, only the chance stacks ---");
 // Three Crop Size Boost I pets at full strength. Each proc applies ONE pet's
-// +4 Size, so every contributor must still report 4 — not a shared 12.
+// +4 Size, so every contributor must still report 4, not a shared 12.
 const cropTrio = computeTeamStats([
   mkPet("c1", "Turtle", 2.5, 1e9, ["ProduceScaleBoost"]),
   mkPet("c2", "Turtle", 2.5, 1e9, ["ProduceScaleBoost"]),
@@ -134,7 +134,7 @@ check("a different effect does not", effectGroupKeyForAbility("PlantGrowthBoostI
 check("unknown ability id -> null", effectGroupKeyForAbility("NotARealAbility"), "null");
 
 // The filter only works if the key derived from a category's best-tier id
-// equals the key of the group the pets actually land in — including when a
+// equals the key of the group the pets actually land in, including when a
 // pet carries a *lower* tier than the category advertises.
 const mixed = computeTeamStats([
   mkPet("m1", "Turtle", 2.5, 1e9, ["ProduceScaleBoost", "CoinFinderI", "GoldGranter"]),
@@ -316,7 +316,7 @@ const equalFeederCase = buildSuggestedTeams([
 ]).teams.find((t) => t.mode === "afk" && t.categories.some((c) => c.id === "cropSize"));
 check("F' · an equally capable clean feeder still beats Gold",
   equalFeederCase?.petIds.includes("clean88"), true);
-// G: a Rainbow team wants its Rainbow granter — the rule must not fire.
+// G: a Rainbow team wants its Rainbow granter, so the rule must not fire.
 const rainbowGoal = buildSuggestedTeams([
   mkPet("rg1", "Turtle", 2.5, 1e9, ["RainbowGranter", ...HUNGER]),
   mkPet("rg2", "Turtle", 2.5, 1e9, ["RainbowGranter", ...HUNGER]),
@@ -335,7 +335,7 @@ check("H' · an Ambershine granter is ignored too",
 
 console.log("\n--- granter avoidance applies to every pet, not just feeders ---");
 // An ACTIVE Plant Growth team of Turtles. None of these is a feeder, so this
-// goes through rankCandidates — which used to sort on strength alone and
+// goes through rankCandidates, which used to sort on strength alone and
 // happily put a Gold Granter in the team.
 const plantActive = (pets: ReturnType<typeof mkPet>[]) =>
   buildSuggestedTeams(pets).teams.find(
@@ -355,7 +355,7 @@ check("...even when it is 20 strength ahead of every clean one",
     grower("gold100", 100, ["GoldGranter"]),
     grower("clean80", 80), grower("clean81", 81), grower("clean82", 82),
   ])?.petIds.includes("gold100"), false);
-// With nothing else to field it still gets in — an empty slot is worse.
+// With nothing else to field it still gets in: an empty slot is worse.
 check("but it is kept when there is no alternative",
   plantActive([grower("gold100", 100, ["GoldGranter"]), grower("clean88", 88)])
     ?.petIds.includes("gold100"), true);
@@ -393,7 +393,7 @@ check("it reports Sell Boost", sellTeam?.focusAbilityIds.includes("SellBoostIV")
 check("...and the Crop Refund it was padded with",
   sellTeam?.focusAbilityIds.includes("ProduceRefund"), true);
 
-// A sustain pet joins an AFK team for feeding only — its hunger abilities
+// A sustain pet joins an AFK team for feeding only, so its hunger abilities
 // must never show up as procs.
 const afkTeams = buildSuggestedTeams([
   mkPet("g", "Turtle", 2.5, 1e9, ["GoldGranter"]),
@@ -407,7 +407,7 @@ check("the AFK team still reports its own goal",
   afkTeam?.focusAbilityIds.includes("GoldGranter"), true);
 
 console.log("\n--- AFK feeder prefers one that also serves the goal ---");
-// The reported bug: two Rainbow Granter pets, plus two possible feeders —
+// The reported bug: two Rainbow Granter pets, plus two possible feeders:
 // a max-strength one WITHOUT Rainbow Granter and a slightly weaker one WITH
 // it. The weaker one turns a dead slot into a third proc source and must win.
 // targetScale 2.5 on a Turtle -> max strength 100; 2.2 -> 96.

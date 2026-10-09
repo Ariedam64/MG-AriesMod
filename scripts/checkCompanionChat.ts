@@ -68,6 +68,8 @@ const check = (label: string, got: unknown, want: unknown) => {
   console.log(`${ok ? "PASS" : "FAIL"}  ${label}${ok ? "" : `\n        got=${got}  want=${want}`}`);
 };
 
+const EM_DASH = "\u2014";
+
 const row = (over: Partial<HarvestRow> = {}): HarvestRow => ({
   tileIndex: 1,
   slotId: 0,
@@ -80,9 +82,9 @@ const row = (over: Partial<HarvestRow> = {}): HarvestRow => ({
   ...over,
 });
 
-console.log("\n--- variantes ---");
+console.log("\n--- variants ---");
 {
-  // Les variantes sont celles qui existent, pas les combinaisons possibles.
+  // The variants are the ones that exist, not every possible combination.
   const rows = [
     row({ tileIndex: 1, slotId: 0, species: "Aloe", mutations: ["Frozen"] }),
     row({ tileIndex: 1, slotId: 1, species: "Aloe", mutations: ["Frozen"] }),
@@ -91,30 +93,29 @@ console.log("\n--- variantes ---");
     row({ tileIndex: 4, slotId: 0, species: "Carrot" }),
   ];
   const variants = groupVariants(rows);
-  check("une variante par apparence", variants.length, 4);
-  check("la plus nombreuse en tete", `${variants[0].species}:${variants[0].count}`, "Aloe:2");
+  check("one variant per look", variants.length, 4);
+  check("the most numerous comes first", `${variants[0].species}:${variants[0].count}`, "Aloe:2");
   check(
-    "les mutations d'une variante sont triees",
+    "a variant's mutations are sorted",
     variants.find((v) => v.mutations.length === 2)?.mutations.join(","),
     "Amberlit,Frozen"
   );
 
-  // Deux crops portant les memes mutations dans un ordre different sont la
-  // meme apparence : sans tri, ils compteraient pour deux vignettes.
+  // Two crops carrying the same mutations in a different order look the same:
+  // without sorting, they would count as two thumbnails.
   const mixed = groupVariants([
     row({ tileIndex: 1, slotId: 0, mutations: ["Gold", "Wet"] }),
     row({ tileIndex: 2, slotId: 0, mutations: ["Wet", "Gold"] }),
   ]);
-  check("l'ordre des mutations ne cree pas de doublon", mixed.length, 1);
-  check("et l'effectif est cumule", mixed[0].count, 2);
+  check("mutation order does not create a duplicate", mixed.length, 1);
+  check("and the count adds up", mixed[0].count, 2);
 
-  // Un crop non mur n'a rien a faire dans un apercu de recolte.
-  // La maturite est tranchee par la lecture du jardin, pas ici : une ligne non
-  // mure ne devrait jamais arriver jusqu'au regroupement.
-  check("une seule ligne, une seule variante", groupVariants([row()]).length, 1);
+  // An unripe crop has no place in a harvest preview. Ripeness is decided when
+  // the garden is read, not here: an unripe row should never reach grouping.
+  check("a single row, a single variant", groupVariants([row()]).length, 1);
 }
 
-console.log("\n--- filtres de recolte ---");
+console.log("\n--- harvest filters ---");
 {
   const rows = [
     row({ tileIndex: 1, slotId: 0, species: "Carrot", sizePct: 60 }),
@@ -122,90 +123,90 @@ console.log("\n--- filtres de recolte ---");
     row({ tileIndex: 3, slotId: 0, species: "Aloe", sizePct: 80, mutations: ["Frozen"] }),
     row({ tileIndex: 4, slotId: 0, species: "Aloe", sizePct: 90, ready: false }),
   ];
-  // Une plante qui pousse encore ne se recolte pas : aucun reglage ne la fait
-  // rentrer dans la selection.
-  check("le non mur ne passe jamais", filterRows(rows, DEFAULT_FILTERS).length, 3);
-  check("especes presentes, triees", speciesPresent(rows).join(","), "Aloe,Carrot");
-  check("filtre espece", filterRows(rows, { ...DEFAULT_FILTERS, species: ["Carrot"] }).length, 2);
-  check("plusieurs especes sont un OU", filterRows(rows, { ...DEFAULT_FILTERS, species: ["Carrot", "Aloe"] }).length, 3);
-  check("taille minimale", filterRows(rows, { ...DEFAULT_FILTERS, minSizePct: 85 }).length, 1);
-  check("mutation presente", filterRows(rows, { ...DEFAULT_FILTERS, mutations: ["Gold"] }).length, 1);
-  check("mutation absente", filterRows(rows, { ...DEFAULT_FILTERS, mutations: ["Gold"], mutationMode: "none" }).length, 2);
-  check("mutations cumulees", filterRows(rows, { ...DEFAULT_FILTERS, mutations: ["Gold", "Frozen"], mutationMode: "all" }).length, 0);
-  check("mutations presentes, triees", mutationsPresent(rows).join(","), "Frozen,Gold");
+  // A plant that is still growing is not harvested: no setting brings it into
+  // the selection.
+  check("an unripe crop never passes", filterRows(rows, DEFAULT_FILTERS).length, 3);
+  check("species present, sorted", speciesPresent(rows).join(","), "Aloe,Carrot");
+  check("species filter", filterRows(rows, { ...DEFAULT_FILTERS, species: ["Carrot"] }).length, 2);
+  check("several species are an OR", filterRows(rows, { ...DEFAULT_FILTERS, species: ["Carrot", "Aloe"] }).length, 3);
+  check("minimum size", filterRows(rows, { ...DEFAULT_FILTERS, minSizePct: 85 }).length, 1);
+  check("mutation present", filterRows(rows, { ...DEFAULT_FILTERS, mutations: ["Gold"] }).length, 1);
+  check("mutation absent", filterRows(rows, { ...DEFAULT_FILTERS, mutations: ["Gold"], mutationMode: "none" }).length, 2);
+  check("all mutations required", filterRows(rows, { ...DEFAULT_FILTERS, mutations: ["Gold", "Frozen"], mutationMode: "all" }).length, 0);
+  check("mutations present, sorted", mutationsPresent(rows).join(","), "Frozen,Gold");
 
-  // Preserver se paie au crop : le defaut ferme, contrairement a tous les
-  // autres criteres. En laisser un de cote ne coute qu'un second passage,
-  // en recolter un par erreur coute ce qu'on vient de payer.
+  // Preserving is paid per crop, so the default is closed, unlike every other
+  // criterion. Leaving one behind only costs a second pass; harvesting one by
+  // mistake costs what was just paid.
   const withPreserved = [...rows, row({ tileIndex: 9, slotId: 0, species: "Carrot", preserved: true })];
-  check("un crop preserve est ecarte par defaut", filterRows(withPreserved, DEFAULT_FILTERS).length, 3);
+  check("a preserved crop is left out by default", filterRows(withPreserved, DEFAULT_FILTERS).length, 3);
   check(
-    "et repris quand on l'autorise",
+    "and taken back when allowed",
     filterRows(withPreserved, { ...DEFAULT_FILTERS, includePreserved: true }).length,
     4
   );
-  // L'option ouvre, elle ne contourne pas : les autres criteres tiennent.
+  // The option opens the gate, it does not bypass it: the other criteria still hold.
   check(
-    "mais il reste soumis aux autres criteres",
+    "but it is still subject to the other criteria",
     filterRows(withPreserved, { ...DEFAULT_FILTERS, includePreserved: true, species: ["Aloe"] }).length,
     1
   );
-  // Un preserve encore en croissance ne se recolte pas plus qu'un autre.
+  // A preserved crop that is still growing is no more harvestable than any other.
   const growing = [row({ tileIndex: 8, slotId: 0, ready: false, preserved: true })];
   check(
-    "la maturite passe avant l'option",
+    "ripeness comes before the option",
     filterRows(growing, { ...DEFAULT_FILTERS, includePreserved: true }).length,
     0
   );
 }
 {
-  // La bulle cote joueur decrit la demande, pas le resultat.
-  check("demande par defaut", describeFilters(DEFAULT_FILTERS), "Harvest everything that's ready");
-  check("espece nommee", describeFilters({ ...DEFAULT_FILTERS, species: ["Carrot"] }), "Harvest my Carrot, please");
+  // The player's bubble describes the request, not the result.
+  check("default request", describeFilters(DEFAULT_FILTERS), "Harvest everything that's ready");
+  check("named species", describeFilters({ ...DEFAULT_FILTERS, species: ["Carrot"] }), "Harvest my Carrot, please");
   check(
-    "taille et mutation",
+    "size and mutation",
     describeFilters({ ...DEFAULT_FILTERS, minSizePct: 90, mutations: ["Gold"] }),
     "Harvest everything, with Gold, at least 90% size"
   );
-  // Seul l'ecart au defaut se dit : rappeler la regle ordinaire a chaque
-  // demande alourdirait la phrase sans rien apprendre.
+  // Only the departure from the default is said: repeating the ordinary rule
+  // on every request would weigh the sentence down and tell nothing.
   check(
-    "le defaut ne dit rien des preserves",
+    "the default says nothing about preserved crops",
     describeFilters(DEFAULT_FILTERS).includes("preserved"),
     false
   );
   check(
-    "les inclure se dit",
+    "including them is said",
     describeFilters({ ...DEFAULT_FILTERS, includePreserved: true }),
     "Harvest everything, preserved ones included"
   );
-  check("aucun cadratin", describeFilters({ ...DEFAULT_FILTERS, species: ["Carrot"] }).includes("—"), false);
+  check("no em dash", describeFilters({ ...DEFAULT_FILTERS, species: ["Carrot"] }).includes(EM_DASH), false);
 }
 
-console.log("\n--- identite et signature d'un lot de recolte ---");
+console.log("\n--- identity and signature of a harvest batch ---");
 {
   const a = row({ tileIndex: 3, slotId: 2 });
   const b = row({ tileIndex: 3, slotId: 5 });
-  // Deux sous-slots de la meme tuile sont deux crops distincts.
-  check("la cle porte la tuile et le slot", rowKey(a), "3:2");
-  check("deux sous-slots ne se confondent pas", rowKey(a) === rowKey(b), false);
+  // Two sub-slots of the same tile are two separate crops.
+  check("the key carries the tile and the slot", rowKey(a), "3:2");
+  check("two sub-slots are not mixed up", rowKey(a) === rowKey(b), false);
 
-  // La signature ne doit pas dependre de l'ordre d'affichage, sinon un simple
-  // reordonnancement passerait pour un changement de perimetre.
-  check("signature stable par ordre", selectionSignature([a, b]), selectionSignature([b, a]));
-  check("un crop de plus change la signature", selectionSignature([a]) === selectionSignature([a, b]), false);
+  // The signature must not depend on display order, or a mere reordering
+  // would look like a change of scope.
+  check("signature is stable across order", selectionSignature([a, b]), selectionSignature([b, a]));
+  check("one more crop changes the signature", selectionSignature([a]) === selectionSignature([a, b]), false);
 }
 {
-  check("rien a annoncer", describeSelection([]), "nothing");
-  check("une seule espece se suffit", describeSelection([row(), row({ tileIndex: 2 })]), "2 Carrot ready");
+  check("nothing to announce", describeSelection([]), "nothing");
+  check("a single species is enough", describeSelection([row(), row({ tileIndex: 2 })]), "2 Carrot ready");
   check(
-    "plusieurs especes donnent le total",
+    "several species give the total",
     describeSelection([row(), row({ tileIndex: 2 }), row({ tileIndex: 3, species: "Aloe" })]),
     "3 crops ready: 2 Carrot and 1 Aloe"
   );
 }
 
-console.log("\n--- perimetre de nourrissage ---");
+console.log("\n--- feeding scope ---");
 {
   const pet = (over: Partial<FeedCandidate> = {}): FeedCandidate => ({
     petId: "p1",
@@ -216,44 +217,44 @@ console.log("\n--- perimetre de nourrissage ---");
     ...over,
   });
 
-  // La signature porte les pets, pas les crops : l'inventaire est servi dans un
-  // ordre variable, et faire entrer le crop rendait la proposition instable.
+  // The signature carries the pets, not the crops: the inventory comes in a
+  // varying order, and including the crop made the proposal unstable.
   const withCarrot = pet();
   const withApple = pet({ source: { kind: "inventory", itemId: "i2", species: "Apple" } });
-  check("le crop retenu ne change pas la signature", feedSignature([withCarrot]), feedSignature([withApple]));
+  check("the chosen crop does not change the signature", feedSignature([withCarrot]), feedSignature([withApple]));
   check(
-    "signature stable par ordre",
+    "signature is stable across order",
     feedSignature([pet(), pet({ petId: "p2" })]),
     feedSignature([pet({ petId: "p2" }), pet()])
   );
 
-  // Deux tortues sans nom donne s'appellent pareil : « Turtle, Turtle » ne
-  // designe rien.
+  // Two turtles with no given name are called the same: "Turtle, Turtle"
+  // points at nothing.
   const twins = disambiguate([pet({ petId: "b" }), pet({ petId: "a" })]);
   const names = twins.map((candidate) => candidate.petName).sort();
-  check("les homonymes sont numerotes", names.join(","), "Turtle #1,Turtle #2");
-  check("le numero suit l'identifiant", twins.find((c) => c.petId === "a")?.petName, "Turtle #1");
-  check("un nom unique reste intact", disambiguate([pet()])[0].petName, "Turtle");
+  check("namesakes are numbered", names.join(","), "Turtle #1,Turtle #2");
+  check("the number follows the id", twins.find((c) => c.petId === "a")?.petName, "Turtle #1");
+  check("a unique name is left alone", disambiguate([pet()])[0].petName, "Turtle");
 
-  // Tant qu'un pet reste concerne, la question garde du sens.
+  // As long as one pet is still concerned, the question still makes sense.
   const picks = [pet({ petId: "p1" }), pet({ petId: "p2" })];
-  check("un seul pet restant : on garde la question", isSettled(picks, new Set(["p2"])), false);
-  check("plus aucun pet concerne : on se retire", isSettled(picks, new Set(["p9"])), true);
+  check("one pet left: the question stays", isSettled(picks, new Set(["p2"])), false);
+  check("no pet concerned any more: it withdraws", isSettled(picks, new Set(["p9"])), true);
 
-  check("un pet nomme est annonce avec son taux", describeFeed([pet()]), "Turtle is down to 8% and I have Carrot");
+  check("a named pet is announced with its level", describeFeed([pet()]), "Turtle is down to 8% and I have Carrot");
   check(
-    "un crop a recolter est annonce comme tel",
+    "a crop still to harvest is announced as such",
     describeFeed([pet({ source: { kind: "garden", row: row(), species: "Carrot" } })]),
     "Turtle is down to 8% and I have Carrot, which I would pick first"
   );
   check(
-    "plusieurs pets sont enumeres",
+    "several pets are listed",
     describeFeed([pet(), pet({ petId: "p2", petName: "Bunny" })]),
     "2 pets are hungry: Turtle, Bunny"
   );
 }
 
-console.log("\n--- plan de plantation ---");
+console.log("\n--- planting plan ---");
 {
   const at = (tileIndex: number, id = "Carrot", kind: PlantAssignment["kind"] = "seed"): PlantAssignment => ({
     tileIndex,
@@ -268,115 +269,115 @@ console.log("\n--- plan de plantation ---");
     ...over,
   });
 
-  // Un oeuf et une graine peuvent porter le meme identifiant : les confondre
-  // reviendrait a puiser dans la mauvaise reserve.
-  check("le genre fait partie de l'identite", itemKey({ kind: "egg", id: "Carrot" }) === itemKey({ kind: "seed", id: "Carrot" }), false);
+  // An egg and a seed can carry the same id: mixing them up would draw from
+  // the wrong stock.
+  check("the kind is part of the identity", itemKey({ kind: "egg", id: "Carrot" }) === itemKey({ kind: "seed", id: "Carrot" }), false);
 
-  // Une case prise refuse tout, et une case qu'on ne possede pas n'existe pas.
-  check("une case occupee tombe", viablePlan([at(0), at(1)], scopeOf({ occupied: new Set([1]) })).length, 1);
-  check("une case hors parcelle tombe", viablePlan([at(0), at(9)], scopeOf()).length, 1);
+  // A taken tile refuses everything, and a tile we do not own does not exist.
+  check("an occupied tile drops out", viablePlan([at(0), at(1)], scopeOf({ occupied: new Set([1]) })).length, 1);
+  check("a tile outside the plot drops out", viablePlan([at(0), at(9)], scopeOf()).length, 1);
 
-  // La reserve est un plafond : le plan ne peut pas promettre plus qu'on n'a.
+  // The stock is a ceiling: the plan cannot promise more than there is.
   const tooMany = [at(0), at(1), at(2), at(3)];
   const short = viablePlan(tooMany, scopeOf({ items: [{ kind: "seed", id: "Carrot", name: "Carrot", stock: 2 }] }));
-  check("le plan est plafonne par la reserve", short.length, 2);
-  // Premiere case dessinee, premiere servie : une regle qui changerait d'avis
-  // ferait croire a un changement de perimetre a chaque relecture.
-  check("le premier dessine est le premier servi", short.map((a) => a.tileIndex).join(","), "0,1");
-  check("deux lectures donnent le meme plan", plantSignature(short), plantSignature(viablePlan(tooMany, scopeOf({ items: [{ kind: "seed", id: "Carrot", name: "Carrot", stock: 2 }] }))));
+  check("the plan is capped by the stock", short.length, 2);
+  // First tile drawn, first served: a rule that changed its mind would look
+  // like a change of scope on every reread.
+  check("the first drawn is the first served", short.map((a) => a.tileIndex).join(","), "0,1");
+  check("two reads give the same plan", plantSignature(short), plantSignature(viablePlan(tooMany, scopeOf({ items: [{ kind: "seed", id: "Carrot", name: "Carrot", stock: 2 }] }))));
 
-  // Une sorte absente de la reserve ne se pose pas.
-  check("sans reserve, rien ne passe", viablePlan([at(0, "Aloe")], scopeOf()).length, 0);
+  // A kind missing from the stock is not placed.
+  check("with no stock, nothing passes", viablePlan([at(0, "Aloe")], scopeOf()).length, 0);
 
-  check("signature stable par ordre", plantSignature([at(0), at(1)]), plantSignature([at(1), at(0)]));
-  check("changer d'espece change la signature", plantSignature([at(0)]) === plantSignature([at(0, "Aloe")]), false);
-  check("changer de case change la signature", plantSignature([at(0)]) === plantSignature([at(1)]), false);
+  check("signature is stable across order", plantSignature([at(0), at(1)]), plantSignature([at(1), at(0)]));
+  check("changing the species changes the signature", plantSignature([at(0)]) === plantSignature([at(0, "Aloe")]), false);
+  check("changing the tile changes the signature", plantSignature([at(0)]) === plantSignature([at(1)]), false);
 
   const mixed = [at(0), at(1), at(2, "Aloe")];
-  check("compte par sorte, le plus nombreux en tete", countByItem(mixed).map((e) => `${e.count} ${e.name}`).join(", "), "2 Carrot, 1 Aloe");
-  check("ce qui reste en reserve", stockLeft([at(0), at(1)], scopeOf().items).get(itemKey({ kind: "seed", id: "Carrot" })), 8);
+  check("count per kind, the most numerous first", countByItem(mixed).map((e) => `${e.count} ${e.name}`).join(", "), "2 Carrot, 1 Aloe");
+  check("what is left in stock", stockLeft([at(0), at(1)], scopeOf().items).get(itemKey({ kind: "seed", id: "Carrot" })), 8);
 
-  check("demande cote joueur", describePlan(mixed), "Plant 2 Carrot and 1 Aloe for me");
-  check("une seule sorte se suffit", summarizePlan([at(0), at(1)]), "2 Carrot to plant");
-  check("plusieurs sortes donnent le total", summarizePlan(mixed), "2 Carrot and 1 Aloe to plant, over 3 tiles");
-  check("aucun cadratin", describePlan(mixed).includes("—"), false);
+  check("the player's request", describePlan(mixed), "Plant 2 Carrot and 1 Aloe for me");
+  check("a single kind is enough", summarizePlan([at(0), at(1)]), "2 Carrot to plant");
+  check("several kinds give the total", summarizePlan(mixed), "2 Carrot and 1 Aloe to plant, over 3 tiles");
+  check("no em dash", describePlan(mixed).includes(EM_DASH), false);
 }
 
-console.log("\n--- icones de bulle ---");
+console.log("\n--- bubble icons ---");
 {
-  // Le jeu bascule sur son rendu balise des que `tags` existe, meme vide : une
-  // phrase sans icone ne doit pas emporter de champ `tags` du tout.
+  // The game switches to its tagged rendering as soon as `tags` exists, even
+  // empty: a sentence with no icon must not carry a `tags` field at all.
   const plain = compose("nothing to show");
-  check("sans icone, aucun champ tags", plain.tags, undefined);
-  check("le texte passe tel quel", plain.message, "nothing to show");
+  check("no icon, no tags field", plain.tags, undefined);
+  check("the text passes through as is", plain.message, "nothing to show");
 
   const icon = { gameThing: { name: "", sprite: "sprite/plant/Carrot" } };
   const one = compose("I found ", icon, " for you");
-  check("la balise est auto-fermante et numerotee", one.message, "I found <0/> for you");
-  check("et la voila dans les tags", one.tags?.[0], icon);
+  check("the tag is self-closing and numbered", one.message, "I found <0/> for you");
+  check("and there it is in the tags", one.tags?.[0], icon);
 
   const two = compose(icon, " and ", { mutation: "Frozen" });
-  check("les numeros se suivent", two.message, "<0/> and <1/>");
-  check("chacun a son entree", Object.keys(two.tags ?? {}).join(","), "0,1");
+  check("the numbers follow on", two.message, "<0/> and <1/>");
+  check("each has its own entry", Object.keys(two.tags ?? {}).join(","), "0,1");
 
-  // Un fabricant rend `null` quand le catalogue ne connait pas l'objet : une
-  // cle d'atlas inventee dessinerait un carre vide, pire qu'une phrase nue.
+  // A maker returns `null` when the catalog does not know the object: a made-up
+  // atlas key would draw an empty square, worse than a bare sentence.
   const missing = compose("plain ", null, "text");
-  check("un fragment nul disparait sans trou", missing.message, "plain text");
-  check("et ne cree pas de tags", missing.tags, undefined);
-  check("la numerotation ignore les nuls", compose(null, icon).message, "<0/>");
+  check("a null fragment disappears without a gap", missing.message, "plain text");
+  check("and creates no tags", missing.tags, undefined);
+  check("numbering skips the nulls", compose(null, icon).message, "<0/>");
 
-  // Les phrases sont ecrites en supposant l'icone presente : quand elle manque,
-  // il reste « 12  ready » ou « 12 . Pick ». On repare au composeur plutot qu'a
-  // chaque appel, sinon le prochain point d'appel reintroduira le defaut.
-  check("les espaces doublees se resorbent", compose("12 ", null, " ready").message, "12 ready");
-  check("l'espace avant un point disparait", compose("12 ", null, ". Pick them?").message, "12. Pick them?");
-  check("et avant une virgule aussi", compose("a ", null, ", b").message, "a, b");
-  check("les bords sont rognes", compose(" ", "hello", " ").message, "hello");
+  // Sentences are written assuming the icon is there: when it is missing,
+  // "12  ready" or "12 . Pick" is left over. The composer repairs it rather
+  // than each call site, or the next call site would bring the flaw back.
+  check("doubled spaces collapse", compose("12 ", null, " ready").message, "12 ready");
+  check("the space before a full stop goes", compose("12 ", null, ". Pick them?").message, "12. Pick them?");
+  check("and before a comma too", compose("a ", null, ", b").message, "a, b");
+  check("the edges are trimmed", compose(" ", "hello", " ").message, "hello");
 
-  // Une liste ou chaque nom porte son sprite : c'est la difference entre « une
-  // icone puis trois noms » et une liste qu'on lit.
+  // A list where each name carries its sprite: that is the difference between
+  // "one icon then three names" and a list you can read.
   const listed = compose(icon, " Bee, ", icon, " Worm");
-  check("chaque nom garde son icone", listed.message, "<0/> Bee, <1/> Worm");
-  check("et chaque icone son entree", Object.keys(listed.tags ?? {}).join(","), "0,1");
+  check("each name keeps its icon", listed.message, "<0/> Bee, <1/> Worm");
+  check("and each icon its entry", Object.keys(listed.tags ?? {}).join(","), "0,1");
 
-  // Un objet de catalogue ne parle pas au jeu : ni `tileRef`, qui nomme un
-  // sprite des atlas du mod, ni `sprite`, qui est une URL de l'API du mod. Le
-  // fil sait les dessiner, `Sprite.from` non.
+  // A catalog object means nothing to the game: neither `tileRef`, which names
+  // a sprite in the mod's atlases, nor `sprite`, which is a URL of the mod's
+  // API. The chat thread can draw them, `Sprite.from` cannot.
   const modOnly = { gameThing: { name: "", sprite: "sprite/plant/Carrot" }, modOnly: true } as const;
   const mixed = compose("2 ", modOnly, " and ", { mutation: "Frozen" }, ". Pick them?");
-  check("le fil garde tout", Object.keys(mixed.tags ?? {}).join(","), "0,1");
+  check("the chat thread keeps everything", Object.keys(mixed.tags ?? {}).join(","), "0,1");
 
-  // Retirer le tag sans sa balise laissait « 2 . Pick them? » : le jeu saute
-  // bien la balise orpheline, mais le texte se refermait mal.
+  // Removing the tag without its marker left "2 . Pick them?": the game does
+  // skip the orphan marker, but the text closed up badly.
   const spoken = forGame(mixed);
-  check("la balise part avec son tag", spoken.message, "2 and <1/>. Pick them?");
-  check("et le tag survivant garde son numero", Object.keys(spoken.tags ?? {}).join(","), "1");
+  check("the marker goes with its tag", spoken.message, "2 and <1/>. Pick them?");
+  check("and the surviving tag keeps its number", Object.keys(spoken.tags ?? {}).join(","), "1");
 
-  // Plus rien d'affichable : pas de champ `tags`, sinon le jeu basculerait sur
-  // son rendu balise pour une phrase qui n'a plus de balise.
+  // Nothing left to display: no `tags` field, or the game would switch to its
+  // tagged rendering for a sentence that no longer has a marker.
   const bare = forGame(compose("2 ", modOnly, " ready"));
-  check("tout retirer nettoie la phrase", bare.message, "2 ready");
-  check("et ne laisse aucun tag", bare.tags, undefined);
-  check("une ligne sans tags passe telle quelle", forGame({ message: "plain" }).message, "plain");
-  check("une phrase saine ne bouge pas", compose("12 ", icon, " with ", icon).message, "12 <0/> with <1/>");
+  check("removing everything cleans the sentence", bare.message, "2 ready");
+  check("and leaves no tag", bare.tags, undefined);
+  check("a line with no tags passes through as is", forGame({ message: "plain" }).message, "plain");
+  check("a sound sentence does not change", compose("12 ", icon, " with ", icon).message, "12 <0/> with <1/>");
 }
 {
-  // La bulle d'une recolte montre UNE variante pour tout un lot : celle qu'on
-  // verra le plus dans le panier. C'est `groupVariants` qui la designe, en tete
-  // de son classement, mutations comprises.
+  // A harvest bubble shows ONE variant for a whole batch: the one you will see
+  // most in the basket. `groupVariants` picks it, at the top of its ranking,
+  // mutations included.
   const rows = [
     row({ tileIndex: 1, species: "Carrot" }),
     row({ tileIndex: 2, species: "Aloe", mutations: ["Frozen"] }),
     row({ tileIndex: 3, species: "Aloe", mutations: ["Frozen"] }),
   ];
   const top = groupVariants(rows)[0];
-  check("la variante dominante mene le classement", `${top.species}:${top.count}`, "Aloe:2");
-  check("et elle porte ses mutations", top.mutations.join(","), "Frozen");
-  check("un lot vide n'en a aucune", groupVariants([]).length, 0);
+  check("the dominant variant leads the ranking", `${top.species}:${top.count}`, "Aloe:2");
+  check("and it carries its mutations", top.mutations.join(","), "Frozen");
+  check("an empty batch has none", groupVariants([]).length, 0);
 }
 
-console.log("\n--- couvee : ce qu'on garde, ce qui part ---");
+console.log("\n--- hatching: what stays, what goes ---");
 {
   const pet = (over: Partial<PetRow> = {}): PetRow => ({
     petId: "a",
@@ -391,19 +392,19 @@ console.log("\n--- couvee : ce qu'on garde, ce qui part ---");
   });
   const rules = (over: Partial<KeepRules> = {}): KeepRules => ({ ...DEFAULT_KEEP_RULES, ...over });
 
-  check("sans critere, rien n'est garde par les regles", matchesKeep(pet(), DEFAULT_KEEP_RULES), false);
-  check("espece", matchesKeep(pet(), rules({ species: ["Bee"] })), true);
-  check("capacite", matchesKeep(pet({ abilities: ["SeedFinderI"] }), rules({ abilities: ["SeedFinderI"] })), true);
-  // Les sources ecrivent les mutations tantot en majuscules tantot non.
-  check("mutation, quelle que soit la casse", matchesKeep(pet({ mutations: ["gold"] }), rules({ mutations: ["Gold"] })), true);
-  check("force suffisante", matchesKeep(pet({ maxStrength: 96 }), rules({ minMaxStr: 95 })), true);
-  check("force insuffisante", matchesKeep(pet({ maxStrength: 94 }), rules({ minMaxStr: 95 })), false);
-  // Une force inconnue ne doit pas passer pour une force suffisante.
-  check("force inconnue ne garde pas", matchesKeep(pet({ maxStrength: null }), rules({ minMaxStr: 95 })), false);
+  check("with no criterion, the rules keep nothing", matchesKeep(pet(), DEFAULT_KEEP_RULES), false);
+  check("species", matchesKeep(pet(), rules({ species: ["Bee"] })), true);
+  check("ability", matchesKeep(pet({ abilities: ["SeedFinderI"] }), rules({ abilities: ["SeedFinderI"] })), true);
+  // The sources write mutations sometimes capitalised, sometimes not.
+  check("mutation, whatever the case", matchesKeep(pet({ mutations: ["gold"] }), rules({ mutations: ["Gold"] })), true);
+  check("enough strength", matchesKeep(pet({ maxStrength: 96 }), rules({ minMaxStr: 95 })), true);
+  check("not enough strength", matchesKeep(pet({ maxStrength: 94 }), rules({ minMaxStr: 95 })), false);
+  // An unknown strength must not pass for enough strength.
+  check("an unknown strength does not keep", matchesKeep(pet({ maxStrength: null }), rules({ minMaxStr: 95 })), false);
 
-  // Deux protections que rien ne discute : elles viennent du joueur, pas des regles.
-  check("un favori est protege", isProtected(pet({ favorited: true }), DEFAULT_KEEP_RULES), true);
-  check("un pet d'equipe est protege", isProtected(pet({ onTeam: true }), DEFAULT_KEEP_RULES), true);
+  // Two protections nothing overrides: they come from the player, not the rules.
+  check("a favourite is protected", isProtected(pet({ favorited: true }), DEFAULT_KEEP_RULES), true);
+  check("a team pet is protected", isProtected(pet({ onTeam: true }), DEFAULT_KEEP_RULES), true);
 
   const bag = [
     pet({ petId: "keep-species", species: "Bee" }),
@@ -414,89 +415,89 @@ console.log("\n--- couvee : ce qu'on garde, ce qui part ---");
   ];
   const keepBees = rules({ species: ["Bee"] });
 
-  // Sans critere, « ce qui ne correspond pas » designerait tout le sac : on
-  // refuse plutot que de faire du vide par defaut.
-  check("aucun critere : aucune vente", toSell(bag, DEFAULT_KEEP_RULES).length, 0);
-  check("ne partent que les non proteges", toSell(bag, keepBees).map((p) => p.petId).sort().join(","), "sell-1,sell-2");
-  // Refavoriser un favori n'apporte rien et allongerait la liste a relire ;
-  // en revanche un pet d'equipe qui correspond merite de l'etre, sinon il
-  // perdrait toute protection en quittant l'equipe.
+  // With no criterion, "whatever does not match" would mean the whole bag: we
+  // refuse rather than clear everything out by default.
+  check("no criterion: no sale", toSell(bag, DEFAULT_KEEP_RULES).length, 0);
+  check("only unprotected pets go", toSell(bag, keepBees).map((p) => p.petId).sort().join(","), "sell-1,sell-2");
+  // Favouriting a favourite again brings nothing and lengthens the list to
+  // review; a matching team pet does deserve it, or it would lose all
+  // protection on leaving the team.
   const worms = toFavourite(bag, rules({ species: ["Worm"] })).map((p) => p.petId);
-  check("on ne refavorise pas un favori", worms.includes("keep-fav"), false);
-  check("un pet d'equipe qui correspond est favorise", worms.sort().join(","), "keep-team,sell-1,sell-2");
-  check("un favori d'espece gardee reste hors liste", toFavourite(bag, keepBees).map((p) => p.petId).join(","), "keep-species");
+  check("a favourite is not favourited again", worms.includes("keep-fav"), false);
+  check("a matching team pet is favourited", worms.sort().join(","), "keep-team,sell-1,sell-2");
+  check("a favourite of a kept species stays off the list", toFavourite(bag, keepBees).map((p) => p.petId).join(","), "keep-species");
 
-  // Une vente ne se rattrape pas : la moindre difference invalide la confirmation.
-  check("signature stable par ordre", petSignature([bag[3], bag[4]]), petSignature([bag[4], bag[3]]));
-  check("un pet de plus change la signature", petSignature([bag[3]]) === petSignature([bag[3], bag[4]]), false);
-  check("signature de couvee triee", slotSignature([12, 3, 7]), "3|7|12");
-  check("l'ordre des cases ne compte pas", slotSignature([3, 12, 7]), slotSignature([12, 7, 3]));
+  // A sale cannot be undone: the slightest difference voids the confirmation.
+  check("signature is stable across order", petSignature([bag[3], bag[4]]), petSignature([bag[4], bag[3]]));
+  check("one more pet changes the signature", petSignature([bag[3]]) === petSignature([bag[3], bag[4]]), false);
+  check("hatch signature is sorted", slotSignature([12, 3, 7]), "3|7|12");
+  check("slot order does not matter", slotSignature([3, 12, 7]), slotSignature([12, 7, 3]));
 
-  check("une seule espece se suffit", summarizeSell([bag[3], bag[4]]), "2 Worm");
-  check("plusieurs especes donnent le total", summarizeSell([bag[0], bag[3], bag[4]]), "3 pets: 2 Worm and 1 Bee");
-  check("une couvee s'annonce", summarizeHatch([1, 2]), "2 eggs ready to hatch");
-  check("un oeuf seul reste au singulier", summarizeHatch([1]), "1 egg ready to hatch");
+  check("a single species is enough", summarizeSell([bag[3], bag[4]]), "2 Worm");
+  check("several species give the total", summarizeSell([bag[0], bag[3], bag[4]]), "3 pets: 2 Worm and 1 Bee");
+  check("a hatch is announced", summarizeHatch([1, 2]), "2 eggs ready to hatch");
+  check("a single egg stays singular", summarizeHatch([1]), "1 egg ready to hatch");
 
-  check("critere vide se dit", describeKeep(DEFAULT_KEEP_RULES), "Nothing set yet");
+  check("an empty criterion is said", describeKeep(DEFAULT_KEEP_RULES), "Nothing set yet");
   check(
-    "criteres cumules se lisent",
+    "combined criteria read well",
     describeKeep(rules({ species: ["Bee"], minMaxStr: 95 })),
     "Bee, max STR 95 and up"
   );
   check(
-    "une capacite est nommee, pas identifiee",
+    "an ability is named, not given by id",
     describeKeep(rules({ abilities: ["SeedFinderI"] }), new Map([["SeedFinderI", "Seed Finder I"]])),
     "Seed Finder I"
   );
-  check("aucun cadratin", describeKeep(rules({ species: ["Bee"], minMaxStr: 95 })).includes("—"), false);
+  check("no em dash", describeKeep(rules({ species: ["Bee"], minMaxStr: 95 })).includes(EM_DASH), false);
 
-  // La celebration suit les criteres, pas l'eclosion : applaudir un animal
-  // qu'on proposera de vendre juste apres n'aurait aucun sens.
+  // The celebration follows the criteria, not the hatching: applauding a pet
+  // we will offer to sell right after would make no sense.
   const keepBee = rules({ species: ["Bee"] });
-  check("ce qui ne correspond pas ne se fete pas", hatchCheer([pet({ species: "Worm" })], keepBee), null);
-  check("sans critere, rien ne se fete", hatchCheer([pet({ species: "Bee" })], DEFAULT_KEEP_RULES), null);
-  check("une portee vide non plus", hatchCheer([], keepBee), null);
+  check("what does not match is not celebrated", hatchCheer([pet({ species: "Worm" })], keepBee), null);
+  check("with no criterion, nothing is celebrated", hatchCheer([pet({ species: "Bee" })], DEFAULT_KEEP_RULES), null);
+  check("nor is an empty litter", hatchCheer([], keepBee), null);
 
   const plain = hatchCheer([pet({ species: "Bee" })], keepBee);
-  check("ce qu'on garde vaut des applaudissements", plain?.emote, EmoteType.Clapping);
-  check("mais aucune vedette", plain?.star, null);
-  check("et rien a nommer", plain?.mutation, null);
+  check("a keeper is worth applause", plain?.emote, EmoteType.Clapping);
+  check("but no star", plain?.star, null);
+  check("and nothing to name", plain?.mutation, null);
 
   const rainbow = hatchCheer([pet({ petId: "r", species: "Bee", mutations: ["Rainbow"] })], keepBee);
-  check("un gros tirage vaut mieux que ca", rainbow?.emote, EmoteType.Love);
-  check("il passe en vedette", rainbow?.star?.petId, "r");
-  check("et la phrase le nomme", rainbow?.mutation, "Rainbow");
+  check("a big pull is worth more than that", rainbow?.emote, EmoteType.Love);
+  check("it becomes the star", rainbow?.star?.petId, "r");
+  check("and the sentence names it", rainbow?.mutation, "Rainbow");
 
-  // Les sources ecrivent les mutations tantot en majuscules tantot non, mais le
-  // nom rendu est celui de notre liste : c'est lui qui part dans la phrase.
+  // The sources write mutations sometimes capitalised, sometimes not, but the
+  // name returned is the one from our list: that is the one in the sentence.
   const gold = hatchCheer([pet({ species: "Bee", mutations: ["gold"] })], keepBee);
-  check("quelle que soit la casse", gold?.emote, EmoteType.Love);
-  check("le nom rendu est canonique", gold?.mutation, "Gold");
+  check("whatever the case", gold?.emote, EmoteType.Love);
+  check("the returned name is canonical", gold?.mutation, "Gold");
 
-  // Un Gold qui ne correspond a rien reste un Gold qu'on vendra : la regle du
-  // joueur passe avant la rarete.
+  // A Gold that matches nothing is still a Gold we will sell: the player's rule
+  // comes before rarity.
   check(
-    "un gros tirage hors criteres reste muet",
+    "a big pull outside the criteria stays quiet",
     hatchCheer([pet({ species: "Worm", mutations: ["Gold"] })], keepBee),
     null
   );
-  // Plusieurs peuvent sortir entre deux lectures du sac, et le beau n'est pas
-  // toujours le premier.
+  // Several can hatch between two reads of the bag, and the good one is not
+  // always the first.
   const litter = hatchCheer(
     [pet({ petId: "a", species: "Bee" }), pet({ petId: "b", species: "Bee", mutations: ["Gold"] })],
     keepBee
   );
-  check("le meilleur de la portee passe devant", litter?.star?.petId, "b");
-  // Une portee qui sort les deux fete la plus rare, pas la premiere trouvee.
+  check("the best of the litter goes first", litter?.star?.petId, "b");
+  // A litter with both celebrates the rarer one, not the first found.
   const both = hatchCheer(
     [pet({ petId: "g", species: "Bee", mutations: ["Gold"] }), pet({ petId: "r", species: "Bee", mutations: ["Rainbow"] })],
     keepBee
   );
-  check("le rainbow passe avant l'or", both?.mutation, "Rainbow");
-  check("et c'est lui la vedette", both?.star?.petId, "r");
+  check("rainbow comes before gold", both?.mutation, "Rainbow");
+  check("and it is the star", both?.star?.petId, "r");
 }
 
-console.log("\n--- propositions ---");
+console.log("\n--- proposals ---");
 {
   const proposal: Proposal = {
     id: "p1",
@@ -507,76 +508,76 @@ console.log("\n--- propositions ---");
     createdAtMs: 1000,
   };
 
-  check("fraiche, elle tient", isExpired(proposal, 1000 + PROPOSAL_TTL_MS - 1), false);
-  // Au-dela, une confirmation n'est plus une decision mais un declencheur.
-  check("passe le delai, elle est perimee", isExpired(proposal, 1000 + PROPOSAL_TTL_MS), true);
+  check("fresh, it holds", isExpired(proposal, 1000 + PROPOSAL_TTL_MS - 1), false);
+  // Past that, a confirmation is no longer a decision but a trigger.
+  check("past the delay, it has expired", isExpired(proposal, 1000 + PROPOSAL_TTL_MS), true);
 
-  check("perimetre inchange : on execute", verdict(proposal, "a|b", 1001).ok, true);
-  check("aucune proposition : on refuse", verdict(null, "a|b", 1001).ok, false);
+  check("scope unchanged: it runs", verdict(proposal, "a|b", 1001).ok, true);
+  check("no proposal: refused", verdict(null, "a|b", 1001).ok, false);
 
-  // Le perimetre a bouge entre la question et la reponse : on redemande plutot
-  // que de recolter 40 crops sur une confirmation qui en annoncait 12.
+  // The scope moved between the question and the answer: ask again rather
+  // than harvest 40 crops on a confirmation that announced 12.
   const moved = verdict(proposal, "a|b|c", 1001);
-  check("perimetre modifie : on refuse", moved.ok, false);
-  check("et on dit pourquoi", moved.ok === false && moved.reason, "changed");
+  check("scope changed: refused", moved.ok, false);
+  check("and the reason is given", moved.ok === false && moved.reason, "changed");
 
   const stale = verdict(proposal, "a|b", 1000 + PROPOSAL_TTL_MS);
-  check("perimee : on refuse", stale.ok, false);
-  check("et on dit pourquoi", stale.ok === false && stale.reason, "expired");
+  check("expired: refused", stale.ok, false);
+  check("and the reason is given", stale.ok === false && stale.reason, "expired");
 
   const empty = verdict({ ...proposal, size: 0 }, "", 1001);
-  check("lot vide : on refuse", empty.ok === false && empty.reason, "empty");
+  check("empty batch: refused", empty.ok === false && empty.reason, "empty");
 }
 
-console.log("\n--- journal ---");
+console.log("\n--- log ---");
 {
   const at = (n: number) => 1000 + n;
   let log = emptyLog();
-  check("un journal neuf est vide", log.messages.length, 0);
+  check("a new log is empty", log.messages.length, 0);
 
   log = append(log, { from: "you", kind: "command", text: "Harvest everything", atMs: at(0) });
   log = append(log, { from: "companion", kind: "reply", text: "12 ready?", atMs: at(1), proposalId: "p1" });
-  check("les messages s'empilent", log.messages.length, 2);
-  check("les identifiants sont ordonnes", log.messages.map((m) => m.id).join(","), "m1,m2");
-  check("la proposition est attachee", log.messages[1].proposalId, "p1");
+  check("messages pile up", log.messages.length, 2);
+  check("ids are in order", log.messages.map((m) => m.id).join(","), "m1,m2");
+  check("the proposal is attached", log.messages[1].proposalId, "p1");
 
-  // Une proposition traitee ne doit plus proposer quoi que ce soit.
+  // A handled proposal must not propose anything any more.
   const cleared = clearProposal(log, "p1");
-  check("la proposition traitee disparait", cleared.messages[1].proposalId, undefined);
-  check("un identifiant inconnu ne touche a rien", clearProposal(log, "p9"), log);
+  check("the handled proposal disappears", cleared.messages[1].proposalId, undefined);
+  check("an unknown id touches nothing", clearProposal(log, "p9"), log);
 
-  // Le journal ne mute jamais son entree : l'UI compare les references.
-  check("l'entree n'est pas mutee", log.messages[1].proposalId, "p1");
+  // The log never mutates its input: the UI compares references.
+  check("the input is not mutated", log.messages[1].proposalId, "p1");
 
   let long = emptyLog();
   for (let i = 0; i < MAX_MESSAGES + 10; i++) {
     long = append(long, { from: "companion", kind: "system", text: `m${i}`, atMs: at(i) });
   }
-  check("le journal est borne", long.messages.length, MAX_MESSAGES);
-  check("ce sont les plus anciens qui partent", long.messages[0].text, "m10");
+  check("the log is bounded", long.messages.length, MAX_MESSAGES);
+  check("the oldest ones are the ones that go", long.messages[0].text, "m10");
 }
 
-console.log("\n--- equipe de travail ---");
+console.log("\n--- working team ---");
 {
-  check("l'equipe entre dans la signature", withTeam("a|b", "t1"), "a|b#team:t1");
-  check("sans equipe, la signature le dit aussi", withTeam("a|b", null), "a|b#team:");
-  check("une equipe change la signature", withTeam("a|b", "t1") === withTeam("a|b", "t2"), false);
-  check("la question nomme l'equipe portee", teamPromise("Harvesters"), " I would wear Harvesters, then give yours back.");
-  check("et ne dit rien sans equipe", teamPromise(null), "");
+  check("the team is part of the signature", withTeam("a|b", "t1"), "a|b#team:t1");
+  check("with no team, the signature says so too", withTeam("a|b", null), "a|b#team:");
+  check("a team changes the signature", withTeam("a|b", "t1") === withTeam("a|b", "t2"), false);
+  check("the question names the team worn", teamPromise("Harvesters"), " I would wear Harvesters, then give yours back.");
+  check("and says nothing without a team", teamPromise(null), "");
 }
 
-console.log("\n--- apres la couvee ---");
+console.log("\n--- after hatching ---");
 {
   const rules = { ...DEFAULT_KEEP_RULES, species: ["Bee"] };
-  check("couvee finie, rien a vendre : il se tait", afterHatchNote("done", 0, rules, 0), null);
-  check("couvee finie, des ventes possibles", afterHatchNote("done", 0, rules, 2), "All open. Now the ones you did not want.");
+  check("hatching done, nothing to sell: it stays quiet", afterHatchNote("done", 0, rules, 0), null);
+  check("hatching done, sales possible", afterHatchNote("done", 0, rules, 2), "All open. Now the ones you did not want.");
   check(
-    "sac plein sans critere : il le dit",
+    "bag full with no criterion: it says so",
     afterHatchNote("full", 3, DEFAULT_KEEP_RULES, 0),
     "Your bag is full. 3 eggs still waiting. Nothing set to keep, so I am not selling."
   );
   check(
-    "sac plein avec critere, rien a vendre",
+    "bag full with a criterion, nothing to sell",
     afterHatchNote("full", 1, rules, 0),
     "Your bag is full, nothing in it is up for sale. 1 egg still waiting."
   );

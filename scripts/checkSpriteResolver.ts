@@ -8,7 +8,7 @@
 // entries (pets plus a handful of decor). Seeds, crops, tools and most decor
 // resolved *only* through that index, so every one of their icons silently
 // vanished from the alerts, the notification overlay, the locker and the
-// calculator — while the PNGs themselves were still served fine.
+// calculator, while the PNGs themselves were still served fine.
 //
 // The fixture below is the real shape of both sources as of game v1029.
 //
