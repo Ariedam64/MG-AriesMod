@@ -7,7 +7,7 @@ export const chromeCss = `
    elements restate it, important to also beat compound selectors. */
 [class*="qmm"][hidden], [class*="qws"][hidden] { display: none !important; }
 
-.qmm, .qws-win, .qws-dock, .qws2, .qmm-modal { font-family: var(--qmm-font); }
+.qmm, .qws-win, .qws-dock, .qmm-modal { font-family: var(--qmm-font); }
 
 .qmm-scroll, .qws-pnl-scroll, .qmm-views, .qws-win .w-body, .qws-dock {
   scrollbar-width: thin; scrollbar-color: var(--qmm-scrollbar) transparent;
@@ -119,23 +119,6 @@ export const chromeCss = `
 }
 .qws-dock-tip.shown { opacity: 1; }
 
-/* The launcher box, until the dock replaces it. */
-.qws2 {
-  position: fixed; right: 16px; bottom: 16px; z-index: ${layer.hud};
-  display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 160px; padding: 12px 14px;
-  font-size: var(--qmm-fs-md); color: var(--qmm-text);
-  background: var(--qmm-paper); border: 3px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-lg);
-  box-shadow: var(--qmm-shadow-raise-small);
-}
-.qws2.hidden { display: none; }
-.qws2 .row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
-.qws2 .title { font-weight: 900; }
-.qws2 .drag { cursor: move; }
-.qws2 .mini { display: none; }
-.qws2.min .mini { display: inline-flex; }
-.qws2.min .body { display: none; }
-.qws2 .is-link { cursor: pointer; }
-.qws-launch { margin-top: 4px; padding-top: 6px; border-top: 2px solid var(--qmm-sand-edge); }
-.qws-launch .launch-item { display: flex; align-items: center; gap: var(--qmm-space-md); margin: 4px 0; }
-.qws-launch .launch-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+/* The version pill in Settings, Infos links to the download when behind. */
+.qmm-pill.is-link { cursor: pointer; }
 `;

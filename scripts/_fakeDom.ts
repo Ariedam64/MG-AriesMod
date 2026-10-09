@@ -50,13 +50,14 @@ class FakeStyle {
 function matches(el: FakeElement, selector: string): boolean {
   return selector.split(",").some((part) => {
     const sel = part.trim();
-    if (sel.startsWith(".")) return sel.slice(1).split(".").every((c) => el.classList.contains(c));
-    if (sel.startsWith("#")) return el.id === sel.slice(1);
-    const attr = /^(\w*)\[data-(\w+)="([^"]*)"\]$/.exec(sel);
+    // `tag[data-x="y"]` or `.class[data-x="y"]`: the prefix matches like a selector of its own.
+    const attr = /^([\w.-]*)\[data-(\w+)="([^"]*)"\]$/.exec(sel);
     if (attr) {
-      if (attr[1] && el.tagName.toLowerCase() !== attr[1]) return false;
+      if (attr[1] && !matches(el, attr[1])) return false;
       return el.dataset[attr[2]] === attr[3];
     }
+    if (sel.startsWith(".")) return sel.slice(1).split(".").every((c) => el.classList.contains(c));
+    if (sel.startsWith("#")) return el.id === sel.slice(1);
     return el.tagName.toLowerCase() === sel.toLowerCase();
   });
 }
@@ -246,8 +247,11 @@ export function installFakeDom(): { localStorage: FakeStorage } {
     value: { userAgent: "node", platform: "node" },
     configurable: true,
   });
-  g.addEventListener = () => {};
-  g.removeEventListener = () => {};
+  // Window events go through a fake element, so checks can dispatch them.
+  const windowEvents = new FakeElement("#window");
+  g.addEventListener = windowEvents.addEventListener.bind(windowEvents);
+  g.removeEventListener = windowEvents.removeEventListener.bind(windowEvents);
+  g.dispatchEvent = windowEvents.dispatchEvent.bind(windowEvents);
   g.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
   g.getComputedStyle = () => ({ getPropertyValue: () => "" });
   g.requestAnimationFrame = (fn: () => void) => setTimeout(fn, 0);

@@ -81,19 +81,19 @@ import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/play
 
   mountHUD({
     onRegister(register) {
-      register('pets', '🐾 Pets', renderPetsMenu);
-      register('locker', '🔒 Locker', renderLockerMenu);
-      register('alerts', '🔔 Alerts', renderNotifierMenu);
-      register('calculator', '🤓 Calculator', renderCalculatorMenu);
-      register('room', '🏠 Room', renderRoomMenu);
-      register('editor', '📝 Editor', renderEditorMenu);
-      register('skins', '🎨 Skins', renderSkinsMenu);
-      register('misc', '🧩 Misc', renderMiscMenu);
-      register('keybinds', '⌨️ Keybinds', renderKeybindsMenu);
-      register('tools', '🛠️ Tools', renderToolsMenu);
-      register('settings', '⚙️ Settings', renderSettingsMenu);
-      register('companion', '🤖 Companion', renderCompanionMenu);
-      register('debug-data', '🐞 Debug', renderDebugDataMenu);
+      register('pets', 'Pets', renderPetsMenu);
+      register('locker', 'Locker', renderLockerMenu);
+      register('alerts', 'Alerts', renderNotifierMenu);
+      register('calculator', 'Calculator', renderCalculatorMenu);
+      register('room', 'Room', renderRoomMenu);
+      register('editor', 'Editor', renderEditorMenu);
+      register('skins', 'Skins', renderSkinsMenu);
+      register('misc', 'Misc', renderMiscMenu);
+      register('keybinds', 'Keybinds', renderKeybindsMenu);
+      register('tools', 'Tools', renderToolsMenu);
+      register('settings', 'Settings', renderSettingsMenu);
+      register('companion', 'Companion', renderCompanionMenu);
+      register('debug-data', 'Debug', renderDebugDataMenu);
     }
   });
 

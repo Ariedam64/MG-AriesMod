@@ -70,7 +70,8 @@
     "check:liveatoms": "node scripts/runChecks.mjs liveatoms",
     "check:contrast": "node scripts/runChecks.mjs contrast",
     "check:kitstyles": "node scripts/runChecks.mjs kitstyles",
-    "check:dock": "node scripts/runChecks.mjs dock"
+    "check:dock": "node scripts/runChecks.mjs dock",
+    "check:huddock": "node scripts/runChecks.mjs huddock"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",

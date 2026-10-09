@@ -1,5 +1,6 @@
-// The HUD's status row: the mod version against the latest release, and the
-// health of the socket and store hooks once the sprite warm-up is done.
+// The mod's health: the version against the latest release (shown in
+// Settings, Infos) and the socket and store hooks once the sprite warm-up is
+// done (shown on the dock's status dot).
 
 import { NativeWS, sockets, workerFound } from "../game/ws/sockets";
 import { isStoreCaptured, getCapturedInfo } from "../game/store/jotai";
@@ -7,6 +8,7 @@ import { getSpriteWarmupState, onSpriteWarmupProgress } from "./kit/sprites/icon
 import { fetchRemoteVersion, getLocalVersion } from "../platform/modVersion";
 import { isDiscordSurface } from "../platform/environment";
 import { setTone, type StatusTone } from "./kit/badges";
+import type { Dock } from "./kit/dock";
 import { refreshWhileVisible } from "./kit/dom";
 
 /** Opens a link in a new tab; inside Discord the userscript manager has to do it. */
@@ -83,24 +85,22 @@ function getStoreStatus(): StatusInfo {
   }
 }
 
-/** Rewrites a pill only when something changed: a write is a DOM mutation every observer sees. */
-function showStatus(el: HTMLElement, text: string, title: string, tone: StatusTone): void {
-  if (el.textContent !== text) el.textContent = text;
-  if (el.title !== title) el.title = title;
-  if (!el.classList.contains(`is-${tone}`)) setTone(el, tone);
-}
-
-/** Sprite warm-up progress first, then socket and store health, refreshed while the HUD shows. */
-export function startStatusLoop(box: HTMLElement, full: HTMLElement, mini: HTMLElement): void {
+/** Sprite warm-up progress first, then socket and store health, on the dock's status dot. */
+export function startStatusLoop(dock: Dock): void {
   let warmup = getSpriteWarmupState();
+  let shown = "";
+
+  // Only touch the dot when something changed: a write is a DOM mutation every observer sees.
+  const show = (tone: StatusTone, text: string) => {
+    if (shown === `${tone}|${text}`) return;
+    shown = `${tone}|${text}`;
+    dock.setStatus(tone, text);
+  };
 
   const update = () => {
     if (!warmup.completed) {
       const progress = warmup.total > 0 ? `${warmup.done}/${warmup.total}` : `${warmup.done}`;
-      const summary = warmup.total > 0 ? `Sprites warming: ${progress}` : "Sprites warming up";
-      showStatus(full, `Sprites ${progress}`, summary, "warn");
-      showStatus(mini, progress, summary, "warn");
-      mini.style.display = "";
+      show("warn", warmup.total > 0 ? `Sprites warming: ${progress}` : "Sprites warming up");
       return;
     }
 
@@ -109,15 +109,12 @@ export function startStatusLoop(box: HTMLElement, full: HTMLElement, mini: HTMLE
     const level: StatusTone = store.message === "store none" && ws.level === "bad"
       ? "bad"
       : ws.level === "ok" && store.level === "ok" ? "ok" : "warn";
-    const title = `${ws.message}, ${store.message}`;
-    showStatus(full, "status", title, level);
-    showStatus(mini, level === "ok" ? "OK" : level === "warn" ? "WARN" : "ISSUES", title, level);
-    mini.style.display = level === "ok" ? "none" : "";
+    show(level, `${ws.message}, ${store.message}`);
   };
 
   onSpriteWarmupProgress((state) => {
     warmup = state;
     update();
   });
-  refreshWhileVisible(box, update, 800);
+  refreshWhileVisible(dock.root, update, 800);
 }

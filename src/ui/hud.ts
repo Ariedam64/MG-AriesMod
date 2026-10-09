@@ -9,20 +9,18 @@ import {
 import { isKeybindCaptureActive } from "../lib/keyboard";
 import { codesMatch, matchHotkey } from "../lib/hotkey";
 import { readAriesPath, writeAriesPath } from "../platform/storage";
-import { pill } from "./kit/badges";
 import { button } from "./kit/button";
+import { createDock } from "./kit/dock";
 import { h } from "./kit/dom";
 import { layer } from "./kit/theme";
 import { type Pos, attachAutoClamp, clampRect, currentPos, ensureOnScreen, makeDraggable, placeClamped, withTopLocked } from "./hudPlacement";
-import { initVersionBadge, startStatusLoop } from "./hudStatus";
+import { startStatusLoop } from "./hudStatus";
 
 export type PanelRender = (root: HTMLElement) => void;
 export interface HUDOptions {
   onRegister?: (register: (id: string, title: string, render: PanelRender) => void) => void;
 }
 
-const HUD_POS_PATH = "hud.pos";
-const HUD_COLLAPSED_PATH = "hud.collapsed";
 const HUD_HIDDEN_PATH = "hud.hidden";
 const HUD_WIN_PATH = (id: string) => `hud.windows.${id}`;
 const isEditing = (el: EventTarget | null) => {
@@ -40,7 +38,7 @@ function installInputKeyTrap(): void {
     if (el instanceof HTMLInputElement) return ["text", "number", "search"].includes((el.type || "").toLowerCase());
     return el instanceof HTMLElement && el.isContentEditable;
   };
-  const ours = (el: Element | null) => !!el?.closest?.(".qws-win, .qws2");
+  const ours = (el: Element | null) => !!el?.closest?.(".qws-win");
   const trap = (ev: KeyboardEvent) => {
     const target = ev.target as Element | null;
     const active = document.activeElement;
@@ -57,51 +55,18 @@ export function mountHUD(opts?: HUDOptions) {
     return;
   }
 
-  // ---------- HUD box ----------
-  const statusMini = pill("…", "warn");
-  statusMini.classList.add("mini");
-  const btnMin = button("–", { size: "sm", title: "Minimize/Expand" });
-  const btnHide = button("✕", { size: "sm", title: "Hide" });
-  const header = h("div", "row drag");
-  header.append(h("div", "title", "Arie's Mod"), h("div", "qmm-spacer"), statusMini, btnMin, btnHide);
-
-  const statusFull = pill("status", "warn");
-  const versionPill = pill("…", "warn");
-  const statusRow = h("div", "row");
-  statusRow.append(statusFull, versionPill);
-
-  const launch = h("div", "qws-launch");
-  const body = h("div", "body");
-  body.appendChild(launch);
-
-  const box = h("div", "qws2");
-  box.append(header, statusRow, body);
-  (document.documentElement || document.body).appendChild(box);
+  // ---------- Dock ----------
+  const dock = createDock((id) => toggleWindow(id));
+  (document.documentElement || document.body).appendChild(dock.root);
 
   const setHUDHidden = (hidden: boolean) => {
-    box.classList.toggle("hidden", hidden);
+    dock.setHidden(hidden);
     writeAriesPath(HUD_HIDDEN_PATH, hidden);
   };
-  const toggleHUDHidden = () => setHUDHidden(!box.classList.contains("hidden"));
+  const toggleHUDHidden = () => setHUDHidden(!dock.isHidden());
 
-  const saveHUDPos = () => {
-    writeAriesPath(HUD_POS_PATH, { r: parseFloat(box.style.right) || 16, b: parseFloat(box.style.bottom) || 16 });
-  };
-
-  // ---------- Restore ----------
   const isOn = (v: unknown) => v === true || v === "1" || v === 1;
-  const pos = readAriesPath<{ r?: number; b?: number }>(HUD_POS_PATH);
-  if (pos && typeof pos.r === "number" && typeof pos.b === "number") {
-    box.style.right = `${pos.r}px`;
-    box.style.bottom = `${pos.b}px`;
-  }
-  if (isOn(readAriesPath(HUD_COLLAPSED_PATH))) {
-    box.classList.add("min");
-    btnMin.textContent = "+";
-  }
-  if (isOn(readAriesPath(HUD_HIDDEN_PATH))) box.classList.add("hidden");
-  requestAnimationFrame(() => clampRect(box));
-  window.addEventListener("resize", () => clampRect(box));
+  dock.setHidden(isOn(readAriesPath(HUD_HIDDEN_PATH)));
 
   // ---------- Keys: Insert, the toggle hotkey and the drag hotkey ----------
   // Insert tapped on its own toggles the HUD; held, it is a drag modifier.
@@ -185,7 +150,7 @@ export function mountHUD(opts?: HUDOptions) {
     const keys: string[] = [];
     if (toggleHotkey) keys.push(getKeybindLabel(KEY_TOGGLE));
     keys.push("Insert");
-    btnHide.title = `Hide (${keys.join(" / ")})`;
+    dock.root.title = `Hide the menus with ${keys.join(" / ")}`;
   };
   updateHideButtonTitle();
   onKeybindChange(KEY_TOGGLE, (hk) => {
@@ -196,17 +161,6 @@ export function mountHUD(opts?: HUDOptions) {
     dragHotkey = hk;
     updateDragState();
   });
-
-  // ---------- HUD controls ----------
-  makeDraggable(header, box, { onEnd: saveHUDPos });
-  btnMin.onclick = () => {
-    withTopLocked(box, () => {
-      box.classList.toggle("min");
-      btnMin.textContent = box.classList.contains("min") ? "+" : "–";
-      writeAriesPath(HUD_COLLAPSED_PATH, box.classList.contains("min"));
-    });
-  };
-  btnHide.onclick = () => setHUDHidden(true);
 
   // ---------- Windows ----------
   type Win = { id: string; el: HTMLElement };
@@ -239,7 +193,7 @@ export function mountHUD(opts?: HUDOptions) {
       existing.el.style.display = "";
       bumpZ(existing.el);
       ensureOnScreen(existing.el);
-      setLaunchState(id, true);
+      dock.setOpen(id, true);
       return;
     }
 
@@ -275,7 +229,7 @@ export function mountHUD(opts?: HUDOptions) {
     };
     winClose.onclick = () => {
       win.style.display = "none";
-      setLaunchState(id, false);
+      dock.setOpen(id, false);
     };
 
     restoreWinPos(id, win);
@@ -289,18 +243,18 @@ export function mountHUD(opts?: HUDOptions) {
     requestAnimationFrame(() => ensureOnScreen(win));
     saveWinPos(id, win);
     windows.set(id, { id, el: win });
-    setLaunchState(id, true);
+    dock.setOpen(id, true);
   }
 
   window.addEventListener("resize", () => windows.forEach((w) => ensureOnScreen(w.el)));
 
-  // Holding the drag hotkey (or Insert) lets any HUD box be dragged from anywhere.
+  // Holding the drag hotkey (or Insert) lets any window be dragged from anywhere.
   (function enableModifierDrag() {
     let drag: { el: HTMLElement; x: number; y: number; pos: Pos } | null = null;
 
     window.addEventListener("mousedown", (e) => {
       if (!isModifierActive(e) || e.button !== 0) return;
-      const root = (e.target as HTMLElement | null)?.closest?.(".qws-win, .qws2") as HTMLElement | null;
+      const root = (e.target as HTMLElement | null)?.closest?.(".qws-win") as HTMLElement | null;
       if (!root || root.style.display === "none") return;
       drag = { el: root, x: e.clientX, y: e.clientY, pos: currentPos(root) };
       document.body.style.userSelect = "none";
@@ -322,7 +276,6 @@ export function mountHUD(opts?: HUDOptions) {
       clampRect(el);
       const win = [...windows.values()].find((w) => w.el === el);
       if (win) saveWinPos(win.id, el);
-      else if (el === box) saveHUDPos();
     };
     window.addEventListener("mouseup", stopDrag, true);
     window.addEventListener("keyup", (e) => {
@@ -332,35 +285,24 @@ export function mountHUD(opts?: HUDOptions) {
 
   installInputKeyTrap();
 
-  // ---------- Launcher ----------
-  const registry: { id: string; title: string; render: PanelRender }[] = [];
-  const launchButtons = new Map<string, HTMLButtonElement>();
+  // ---------- Menus ----------
+  const registry = new Map<string, { title: string; render: PanelRender }>();
 
-  function setLaunchState(id: string, open: boolean) {
-    const btn = launchButtons.get(id);
-    if (!btn) return;
-    btn.textContent = open ? "Close" : "Open";
-    btn.dataset.open = open ? "1" : "0";
-    btn.classList.toggle("active", open);
+  function toggleWindow(id: string) {
+    const entry = registry.get(id);
+    if (!entry) return;
+    const w = windows.get(id);
+    if (w && w.el.style.display !== "none") {
+      w.el.style.display = "none";
+      dock.setOpen(id, false);
+    } else {
+      showWindow(id, entry.title, entry.render);
+    }
   }
 
   function register(id: string, title: string, render: PanelRender) {
-    registry.push({ id, title, render });
-    const openBtn = button("Open", { size: "sm" });
-    openBtn.dataset.open = "0";
-    launchButtons.set(id, openBtn);
-    openBtn.onclick = () => {
-      const w = windows.get(id);
-      if (w && w.el.style.display !== "none") {
-        w.el.style.display = "none";
-        setLaunchState(id, false);
-      } else {
-        showWindow(id, title, render);
-      }
-    };
-    const item = h("div", "launch-item");
-    item.append(h("div", "name", title), openBtn);
-    launch.appendChild(item);
+    registry.set(id, { title, render });
+    dock.add({ id, label: title });
   }
 
   try {
@@ -372,11 +314,10 @@ export function mountHUD(opts?: HUDOptions) {
   // Opens a registered window from anywhere, e.g. the instant feed widget.
   window.addEventListener("qws:open-panel", (ev: Event) => {
     const id = String((ev as CustomEvent).detail?.id || "");
-    const entry = registry.find((r) => r.id === id);
+    const entry = registry.get(id);
     if (entry) showWindow(id, entry.title, entry.render);
   });
 
-  initVersionBadge(versionPill);
   void ensureStore().catch(() => {});
-  startStatusLoop(box, statusFull, statusMini);
+  startStatusLoop(dock);
 }

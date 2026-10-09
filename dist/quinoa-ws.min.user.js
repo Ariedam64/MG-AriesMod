@@ -1649,7 +1649,7 @@
    elements restate it, important to also beat compound selectors. */
 [class*="qmm"][hidden], [class*="qws"][hidden] { display: none !important; }
 
-.qmm, .qws-win, .qws-dock, .qws2, .qmm-modal { font-family: var(--qmm-font); }
+.qmm, .qws-win, .qws-dock, .qmm-modal { font-family: var(--qmm-font); }
 
 .qmm-scroll, .qws-pnl-scroll, .qmm-views, .qws-win .w-body, .qws-dock {
   scrollbar-width: thin; scrollbar-color: var(--qmm-scrollbar) transparent;
@@ -1761,25 +1761,8 @@
 }
 .qws-dock-tip.shown { opacity: 1; }
 
-/* The launcher box, until the dock replaces it. */
-.qws2 {
-  position: fixed; right: 16px; bottom: 16px; z-index: ${layer.hud};
-  display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 160px; padding: 12px 14px;
-  font-size: var(--qmm-fs-md); color: var(--qmm-text);
-  background: var(--qmm-paper); border: 3px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-lg);
-  box-shadow: var(--qmm-shadow-raise-small);
-}
-.qws2.hidden { display: none; }
-.qws2 .row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
-.qws2 .title { font-weight: 900; }
-.qws2 .drag { cursor: move; }
-.qws2 .mini { display: none; }
-.qws2.min .mini { display: inline-flex; }
-.qws2.min .body { display: none; }
-.qws2 .is-link { cursor: pointer; }
-.qws-launch { margin-top: 4px; padding-top: 6px; border-top: 2px solid var(--qmm-sand-edge); }
-.qws-launch .launch-item { display: flex; align-items: center; gap: var(--qmm-space-md); margin: 4px 0; }
-.qws-launch .launch-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+/* The version pill in Settings, Infos links to the download when behind. */
+.qmm-pill.is-link { cursor: pointer; }
 `;
     }
   });
@@ -11856,11 +11839,11 @@
     const label2 = document.createElement("span");
     label2.textContent = `Slots ${count}/${maxSlots}`;
     const editSlots = (edit) => {
-      const changed5 = updateGardenObjectAtCurrentTile((obj) => {
+      const changed6 = updateGardenObjectAtCurrentTile((obj) => {
         if (obj?.objectType !== "plant") return obj;
         return { ...obj, slots: edit(Array.isArray(obj.slots) ? obj.slots.slice() : []) };
       });
-      if (changed5) currentItemChanged.emit();
+      if (changed6) currentItemChanged.emit();
     };
     const remove = roundButton("-", () => {
       if (count > 1) editSlots((slots) => slots.slice(0, Math.max(1, slots.length - 1)));
@@ -14216,13 +14199,13 @@
     base.garden = readGroup(raw.garden, base.garden, GARDEN_INT_KEYS);
     base.shops = readGroup(raw.shops, base.shops, SHOP_INT_KEYS);
     if (isRecord2(raw.pets) && isRecord2(raw.pets.hatchedByType)) {
-      for (const [key2, counts] of Object.entries(raw.pets.hatchedByType)) {
+      for (const [key2, counts2] of Object.entries(raw.pets.hatchedByType)) {
         const species = key2.toLowerCase();
         const fallback = base.pets.hatchedByType[species] ?? zeroHatched();
-        base.pets.hatchedByType[species] = isRecord2(counts) ? {
-          normal: readCount(counts.normal, fallback.normal, true),
-          gold: readCount(counts.gold, fallback.gold, true),
-          rainbow: readCount(counts.rainbow, fallback.rainbow, true)
+        base.pets.hatchedByType[species] = isRecord2(counts2) ? {
+          normal: readCount(counts2.normal, fallback.normal, true),
+          gold: readCount(counts2.gold, fallback.gold, true),
+          rainbow: readCount(counts2.rainbow, fallback.rainbow, true)
         } : { ...fallback };
       }
     }
@@ -14320,7 +14303,7 @@
         garden: { ...stats.garden },
         shops: { ...stats.shops },
         pets: {
-          hatchedByType: Object.fromEntries(Object.entries(stats.pets.hatchedByType).map(([key2, counts]) => [key2, { ...counts }]))
+          hatchedByType: Object.fromEntries(Object.entries(stats.pets.hatchedByType).map(([key2, counts2]) => [key2, { ...counts2 }]))
         },
         abilities: Object.fromEntries(Object.entries(stats.abilities).map(([key2, value]) => [key2, { ...value }])),
         weather: Object.fromEntries(Object.entries(stats.weather).map(([key2, value]) => [key2, { ...value }]))
@@ -14919,36 +14902,147 @@
     }
   });
 
-  // src/ui/kit/badges.ts
-  function pill(text2, tone) {
-    const el = h("span", "qmm-pill", text2);
-    setTone(el, tone);
-    return el;
+  // src/ui/kit/menuIcons.ts
+  function menuIcon(id) {
+    const svg2 = document.createElementNS(SVG_NS, "svg");
+    svg2.setAttribute("viewBox", "0 0 24 24");
+    svg2.setAttribute("fill", "none");
+    svg2.setAttribute("stroke", "currentColor");
+    svg2.setAttribute("stroke-width", "2.2");
+    svg2.setAttribute("stroke-linecap", "round");
+    svg2.setAttribute("stroke-linejoin", "round");
+    svg2.setAttribute("aria-hidden", "true");
+    svg2.innerHTML = PATHS[id] ?? FALLBACK;
+    return svg2;
   }
-  function setTone(el, tone) {
-    el.classList.remove("is-ok", "is-warn", "is-bad");
-    if (tone) el.classList.add(`is-${tone}`);
+  var SVG_NS, PATHS, FALLBACK;
+  var init_menuIcons = __esm({
+    "src/ui/kit/menuIcons.ts"() {
+      "use strict";
+      SVG_NS = "http://www.w3.org/2000/svg";
+      PATHS = {
+        pets: '<circle cx="7" cy="9" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="17" cy="9" r="2"/><path d="M8 17c0-3 2-5 4-5s4 2 4 5c0 2-2 2-4 2s-4 0-4-2z"/>',
+        locker: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+        alerts: '<path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+        calculator: '<rect x="6" y="3" width="12" height="18" rx="2"/><path d="M9 7h6M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01"/>',
+        room: '<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-5h4v5"/>',
+        editor: '<path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/>',
+        skins: '<circle cx="12" cy="12" r="8"/><circle cx="9" cy="10" r="1"/><circle cx="14" cy="9" r="1"/><circle cx="15" cy="13" r="1"/><path d="M12 20a3 3 0 0 1 0-5"/>',
+        misc: '<path d="M5 8h4a2 2 0 1 1 4 0h4v4a2 2 0 1 1 0 4v4H5z"/>',
+        keybinds: '<rect x="3" y="7" width="18" height="11" rx="2"/><path d="M7 11h.01M11 11h.01M15 11h.01M7 14h10"/>',
+        tools: '<path d="M14.5 6.5a4 4 0 0 0 4.6 4.6L11 19.2 8.8 17l-1.8-1.8z"/><path d="M14.5 6.5L17 4l3 3-2.5 2.5"/>',
+        settings: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
+        companion: '<rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M10 16h4"/>',
+        "debug-data": '<rect x="8" y="7" width="8" height="12" rx="4"/><path d="M4 12h4M16 12h4M5 7l3 2M19 7l-3 2M5 18l3-2M19 18l-3-2M10 4l1 2M14 4l-1 2"/>'
+      };
+      FALLBACK = '<path d="M5 19c0-8 6-14 14-14 0 8-6 14-14 14z"/><path d="M5 19l8-8"/>';
+    }
+  });
+
+  // src/ui/kit/menuBadges.ts
+  function setMenuBadge(id, count) {
+    const next = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
+    if (counts.get(id) === next) return;
+    counts.set(id, next);
+    changed2.emit([id, next]);
   }
-  function badge(text2, tone) {
-    return h("span", `qmm-badge is-${tone}`, text2);
+  function onMenuBadge(cb) {
+    for (const [id, count] of counts) cb(id, count);
+    return changed2.on(([id, count]) => cb(id, count));
   }
-  function meter() {
-    const root4 = h("div", "qmm-meter");
-    const fill = h("div", "qmm-meter__fill");
-    root4.appendChild(fill);
+  var counts, changed2;
+  var init_menuBadges = __esm({
+    "src/ui/kit/menuBadges.ts"() {
+      "use strict";
+      init_emitter();
+      counts = /* @__PURE__ */ new Map();
+      changed2 = new Emitter();
+    }
+  });
+
+  // src/ui/kit/dock.ts
+  function createDock(onSelect) {
+    ensureKitStyles();
+    const root4 = h("nav", "qws-dock");
+    root4.setAttribute("aria-label", "Aries Mod menus");
+    const status2 = h("span", "qws-dock-status");
+    status2.dataset.tone = "warn";
+    root4.appendChild(status2);
+    const tip = h("div", "qws-dock-tip");
+    const buttons = /* @__PURE__ */ new Map();
+    const pendingBadges = /* @__PURE__ */ new Map();
+    const showTip = (btn, label2) => {
+      tip.textContent = label2;
+      if (!tip.isConnected) (document.documentElement || document.body).appendChild(tip);
+      const rect = btn.getBoundingClientRect();
+      tip.style.left = `${Math.round(rect.right + TIP_GAP_PX)}px`;
+      tip.style.top = `${Math.round(rect.top + rect.height / 2)}px`;
+      tip.style.transform = "translateY(-50%)";
+      tip.classList.add("shown");
+    };
+    const hideTip = () => tip.classList.remove("shown");
+    const setBadge = (id, count) => {
+      const badge2 = buttons.get(id)?.querySelector(".qws-dock-badge");
+      if (!badge2) {
+        pendingBadges.set(id, count);
+        return;
+      }
+      const shown = Number.isFinite(count) && count > 0;
+      badge2.hidden = !shown;
+      badge2.textContent = shown ? count > 99 ? "99+" : String(Math.floor(count)) : "";
+    };
+    const add = ({ id, label: label2 }) => {
+      if (buttons.has(id)) return;
+      const btn = h("button", "qws-dock-btn");
+      btn.type = "button";
+      btn.dataset.id = id;
+      btn.setAttribute("aria-label", label2);
+      const badge2 = h("span", "qws-dock-badge");
+      badge2.hidden = true;
+      btn.append(menuIcon(id), badge2);
+      btn.addEventListener("click", () => onSelect(id));
+      btn.addEventListener("mouseenter", () => showTip(btn, label2));
+      btn.addEventListener("focus", () => showTip(btn, label2));
+      btn.addEventListener("mouseleave", hideTip);
+      btn.addEventListener("blur", hideTip);
+      root4.appendChild(btn);
+      buttons.set(id, btn);
+      if (pendingBadges.has(id)) setBadge(id, pendingBadges.get(id) ?? 0);
+    };
+    onMenuBadge(setBadge);
     return {
       root: root4,
-      set(ratio, tone = "accent") {
-        fill.style.width = `${clampFinite(ratio, 0, 1, 0) * 100}%`;
-        fill.classList.toggle("is-warn", tone === "warn");
+      add,
+      setOpen(id, open) {
+        const btn = buttons.get(id);
+        if (!btn) return;
+        btn.classList.toggle("open", open);
+        btn.setAttribute("aria-pressed", open ? "true" : "false");
+      },
+      setBadge,
+      setStatus(tone, text2) {
+        status2.dataset.tone = tone;
+        status2.setAttribute("title", text2);
+        status2.setAttribute("aria-label", text2);
+      },
+      setHidden(hidden) {
+        root4.classList.toggle("hidden", hidden);
+        if (hidden) hideTip();
+      },
+      isHidden() {
+        return root4.classList.contains("hidden");
       }
     };
   }
-  var init_badges = __esm({
-    "src/ui/kit/badges.ts"() {
+  var TIP_GAP_PX;
+  var init_dock = __esm({
+    "src/ui/kit/dock.ts"() {
       "use strict";
-      init_math();
+      init_styles();
       init_dom2();
+      init_menuIcons();
+      init_menuBadges();
+      TIP_GAP_PX = 10;
     }
   });
 
@@ -15099,6 +15193,39 @@
     }
   });
 
+  // src/ui/kit/badges.ts
+  function pill(text2, tone) {
+    const el = h("span", "qmm-pill", text2);
+    setTone(el, tone);
+    return el;
+  }
+  function setTone(el, tone) {
+    el.classList.remove("is-ok", "is-warn", "is-bad");
+    if (tone) el.classList.add(`is-${tone}`);
+  }
+  function badge(text2, tone) {
+    return h("span", `qmm-badge is-${tone}`, text2);
+  }
+  function meter() {
+    const root4 = h("div", "qmm-meter");
+    const fill = h("div", "qmm-meter__fill");
+    root4.appendChild(fill);
+    return {
+      root: root4,
+      set(ratio, tone = "accent") {
+        fill.style.width = `${clampFinite(ratio, 0, 1, 0) * 100}%`;
+        fill.classList.toggle("is-warn", tone === "warn");
+      }
+    };
+  }
+  var init_badges = __esm({
+    "src/ui/kit/badges.ts"() {
+      "use strict";
+      init_math();
+      init_dom2();
+    }
+  });
+
   // src/ui/hudStatus.ts
   function openDownloadLink(url) {
     const gmObject = globalThis.GM;
@@ -15161,35 +15288,30 @@
       return { level: "bad", message: "store error" };
     }
   }
-  function showStatus(el, text2, title, tone) {
-    if (el.textContent !== text2) el.textContent = text2;
-    if (el.title !== title) el.title = title;
-    if (!el.classList.contains(`is-${tone}`)) setTone(el, tone);
-  }
-  function startStatusLoop(box2, full, mini) {
+  function startStatusLoop(dock) {
     let warmup = getSpriteWarmupState();
+    let shown = "";
+    const show = (tone, text2) => {
+      if (shown === `${tone}|${text2}`) return;
+      shown = `${tone}|${text2}`;
+      dock.setStatus(tone, text2);
+    };
     const update = () => {
       if (!warmup.completed) {
         const progress = warmup.total > 0 ? `${warmup.done}/${warmup.total}` : `${warmup.done}`;
-        const summary = warmup.total > 0 ? `Sprites warming: ${progress}` : "Sprites warming up";
-        showStatus(full, `Sprites ${progress}`, summary, "warn");
-        showStatus(mini, progress, summary, "warn");
-        mini.style.display = "";
+        show("warn", warmup.total > 0 ? `Sprites warming: ${progress}` : "Sprites warming up");
         return;
       }
       const ws = getWSStatus();
       const store = getStoreStatus();
       const level = store.message === "store none" && ws.level === "bad" ? "bad" : ws.level === "ok" && store.level === "ok" ? "ok" : "warn";
-      const title = `${ws.message}, ${store.message}`;
-      showStatus(full, "status", title, level);
-      showStatus(mini, level === "ok" ? "OK" : level === "warn" ? "WARN" : "ISSUES", title, level);
-      mini.style.display = level === "ok" ? "none" : "";
+      show(level, `${ws.message}, ${store.message}`);
     };
     onSpriteWarmupProgress((state5) => {
       warmup = state5;
       update();
     });
-    refreshWhileVisible(box2, update, 800);
+    refreshWhileVisible(dock.root, update, 800);
   }
   var init_hudStatus = __esm({
     "src/ui/hudStatus.ts"() {
@@ -15211,7 +15333,7 @@
       if (el instanceof HTMLInputElement) return ["text", "number", "search"].includes((el.type || "").toLowerCase());
       return el instanceof HTMLElement && el.isContentEditable;
     };
-    const ours = (el) => !!el?.closest?.(".qws-win, .qws2");
+    const ours = (el) => !!el?.closest?.(".qws-win");
     const trap = (ev) => {
       const target = ev.target;
       const active3 = document.activeElement;
@@ -15226,43 +15348,15 @@
       document.addEventListener("DOMContentLoaded", () => mountHUD(opts), { once: true });
       return;
     }
-    const statusMini = pill("\u2026", "warn");
-    statusMini.classList.add("mini");
-    const btnMin = button("\u2013", { size: "sm", title: "Minimize/Expand" });
-    const btnHide = button("\u2715", { size: "sm", title: "Hide" });
-    const header = h("div", "row drag");
-    header.append(h("div", "title", "Arie's Mod"), h("div", "qmm-spacer"), statusMini, btnMin, btnHide);
-    const statusFull = pill("status", "warn");
-    const versionPill = pill("\u2026", "warn");
-    const statusRow = h("div", "row");
-    statusRow.append(statusFull, versionPill);
-    const launch = h("div", "qws-launch");
-    const body = h("div", "body");
-    body.appendChild(launch);
-    const box2 = h("div", "qws2");
-    box2.append(header, statusRow, body);
-    (document.documentElement || document.body).appendChild(box2);
+    const dock = createDock((id) => toggleWindow(id));
+    (document.documentElement || document.body).appendChild(dock.root);
     const setHUDHidden = (hidden) => {
-      box2.classList.toggle("hidden", hidden);
+      dock.setHidden(hidden);
       writeAriesPath(HUD_HIDDEN_PATH, hidden);
     };
-    const toggleHUDHidden = () => setHUDHidden(!box2.classList.contains("hidden"));
-    const saveHUDPos = () => {
-      writeAriesPath(HUD_POS_PATH, { r: parseFloat(box2.style.right) || 16, b: parseFloat(box2.style.bottom) || 16 });
-    };
+    const toggleHUDHidden = () => setHUDHidden(!dock.isHidden());
     const isOn = (v) => v === true || v === "1" || v === 1;
-    const pos = readAriesPath(HUD_POS_PATH);
-    if (pos && typeof pos.r === "number" && typeof pos.b === "number") {
-      box2.style.right = `${pos.r}px`;
-      box2.style.bottom = `${pos.b}px`;
-    }
-    if (isOn(readAriesPath(HUD_COLLAPSED_PATH))) {
-      box2.classList.add("min");
-      btnMin.textContent = "+";
-    }
-    if (isOn(readAriesPath(HUD_HIDDEN_PATH))) box2.classList.add("hidden");
-    requestAnimationFrame(() => clampRect(box2));
-    window.addEventListener("resize", () => clampRect(box2));
+    dock.setHidden(isOn(readAriesPath(HUD_HIDDEN_PATH)));
     let insertDown = false;
     let insertUsedAsModifier = false;
     const KEY_TOGGLE = "gui.toggle";
@@ -15329,7 +15423,7 @@
       const keys = [];
       if (toggleHotkey) keys.push(getKeybindLabel(KEY_TOGGLE));
       keys.push("Insert");
-      btnHide.title = `Hide (${keys.join(" / ")})`;
+      dock.root.title = `Hide the menus with ${keys.join(" / ")}`;
     };
     updateHideButtonTitle();
     onKeybindChange(KEY_TOGGLE, (hk) => {
@@ -15340,15 +15434,6 @@
       dragHotkey = hk;
       updateDragState();
     });
-    makeDraggable(header, box2, { onEnd: saveHUDPos });
-    btnMin.onclick = () => {
-      withTopLocked(box2, () => {
-        box2.classList.toggle("min");
-        btnMin.textContent = box2.classList.contains("min") ? "+" : "\u2013";
-        writeAriesPath(HUD_COLLAPSED_PATH, box2.classList.contains("min"));
-      });
-    };
-    btnHide.onclick = () => setHUDHidden(true);
     const windows = /* @__PURE__ */ new Map();
     let cascade = 0;
     function bumpZ(el) {
@@ -15374,7 +15459,7 @@
         existing.el.style.display = "";
         bumpZ(existing.el);
         ensureOnScreen(existing.el);
-        setLaunchState(id, true);
+        dock.setOpen(id, true);
         return;
       }
       const win = h("div", "qws-win");
@@ -15406,7 +15491,7 @@
       };
       winClose.onclick = () => {
         win.style.display = "none";
-        setLaunchState(id, false);
+        dock.setOpen(id, false);
       };
       restoreWinPos(id, win);
       try {
@@ -15418,14 +15503,14 @@
       requestAnimationFrame(() => ensureOnScreen(win));
       saveWinPos(id, win);
       windows.set(id, { id, el: win });
-      setLaunchState(id, true);
+      dock.setOpen(id, true);
     }
     window.addEventListener("resize", () => windows.forEach((w) => ensureOnScreen(w.el)));
     (function enableModifierDrag() {
       let drag = null;
       window.addEventListener("mousedown", (e) => {
         if (!isModifierActive(e) || e.button !== 0) return;
-        const root4 = e.target?.closest?.(".qws-win, .qws2");
+        const root4 = e.target?.closest?.(".qws-win");
         if (!root4 || root4.style.display === "none") return;
         drag = { el: root4, x: e.clientX, y: e.clientY, pos: currentPos(root4) };
         document.body.style.userSelect = "none";
@@ -15445,7 +15530,6 @@
         clampRect(el);
         const win = [...windows.values()].find((w) => w.el === el);
         if (win) saveWinPos(win.id, el);
-        else if (el === box2) saveHUDPos();
       };
       window.addEventListener("mouseup", stopDrag, true);
       window.addEventListener("keyup", (e) => {
@@ -15453,32 +15537,21 @@
       }, true);
     })();
     installInputKeyTrap();
-    const registry2 = [];
-    const launchButtons = /* @__PURE__ */ new Map();
-    function setLaunchState(id, open) {
-      const btn = launchButtons.get(id);
-      if (!btn) return;
-      btn.textContent = open ? "Close" : "Open";
-      btn.dataset.open = open ? "1" : "0";
-      btn.classList.toggle("active", open);
+    const registry2 = /* @__PURE__ */ new Map();
+    function toggleWindow(id) {
+      const entry = registry2.get(id);
+      if (!entry) return;
+      const w = windows.get(id);
+      if (w && w.el.style.display !== "none") {
+        w.el.style.display = "none";
+        dock.setOpen(id, false);
+      } else {
+        showWindow(id, entry.title, entry.render);
+      }
     }
     function register2(id, title, render) {
-      registry2.push({ id, title, render });
-      const openBtn = button("Open", { size: "sm" });
-      openBtn.dataset.open = "0";
-      launchButtons.set(id, openBtn);
-      openBtn.onclick = () => {
-        const w = windows.get(id);
-        if (w && w.el.style.display !== "none") {
-          w.el.style.display = "none";
-          setLaunchState(id, false);
-        } else {
-          showWindow(id, title, render);
-        }
-      };
-      const item = h("div", "launch-item");
-      item.append(h("div", "name", title), openBtn);
-      launch.appendChild(item);
+      registry2.set(id, { title, render });
+      dock.add({ id, label: title });
     }
     try {
       opts?.onRegister?.(register2);
@@ -15487,15 +15560,14 @@
     }
     window.addEventListener("qws:open-panel", (ev) => {
       const id = String(ev.detail?.id || "");
-      const entry = registry2.find((r) => r.id === id);
+      const entry = registry2.get(id);
       if (entry) showWindow(id, entry.title, entry.render);
     });
-    initVersionBadge(versionPill);
     void ensureStore().catch(() => {
     });
-    startStatusLoop(box2, statusFull, statusMini);
+    startStatusLoop(dock);
   }
-  var HUD_POS_PATH, HUD_COLLAPSED_PATH, HUD_HIDDEN_PATH, HUD_WIN_PATH, isEditing;
+  var HUD_HIDDEN_PATH, HUD_WIN_PATH, isEditing;
   var init_hud = __esm({
     "src/ui/hud.ts"() {
       "use strict";
@@ -15504,14 +15576,12 @@
       init_keyboard();
       init_hotkey();
       init_storage();
-      init_badges();
       init_button();
+      init_dock();
       init_dom2();
       init_theme();
       init_hudPlacement();
       init_hudStatus();
-      HUD_POS_PATH = "hud.pos";
-      HUD_COLLAPSED_PATH = "hud.collapsed";
       HUD_HIDDEN_PATH = "hud.hidden";
       HUD_WIN_PATH = (id) => `hud.windows.${id}`;
       isEditing = (el) => {
@@ -16156,16 +16226,16 @@
     if (!added.length && !updated.length) return;
     const byKey = /* @__PURE__ */ new Map();
     for (const entry of getActivityLogHistory()) byKey.set(entryKey(entry), entry);
-    let changed5 = false;
+    let changed6 = false;
     for (const entry of [...updated, ...added]) {
       const key2 = entryKey(entry);
       const cur = byKey.get(key2);
       if (!cur || !entriesEqual(cur, entry)) {
         byKey.set(key2, entry);
-        changed5 = true;
+        changed6 = true;
       }
     }
-    if (changed5) saveHistory(Array.from(byKey.values()));
+    if (changed6) saveHistory(Array.from(byKey.values()));
   }
   var HISTORY_STORAGE_KEY, HISTORY_LIMIT, IDENTITY_FIELDS, entriesEqual;
   var init_history = __esm({
@@ -16256,15 +16326,15 @@
 
   // src/features/activityLog/filterToolbar.ts
   function countActions(history) {
-    const counts = /* @__PURE__ */ new Map();
+    const counts2 = /* @__PURE__ */ new Map();
     for (const entry of history) {
       const key2 = classifyEntryAction(entry.action);
-      counts.set(key2, (counts.get(key2) ?? 0) + 1);
+      counts2.set(key2, (counts2.get(key2) ?? 0) + 1);
     }
-    return counts;
+    return counts2;
   }
-  function labelFor(key2, counts, total) {
-    const count = key2 === "all" ? total : counts.get(key2) ?? 0;
+  function labelFor(key2, counts2, total) {
+    const count = key2 === "all" ? total : counts2.get(key2) ?? 0;
     return `${getActionLabel(key2)}${count ? ` (${count})` : ""}`;
   }
   function drawButtonBg(bg, width, active3) {
@@ -16294,15 +16364,15 @@
     layoutClosedButton(button2);
     return button2;
   }
-  function buildOptions(ctors, maxWidth, counts, total) {
-    const keys = ["all", ...mergeActions(Array.from(counts.keys()))];
+  function buildOptions(ctors, maxWidth, counts2, total) {
+    const keys = ["all", ...mergeActions(Array.from(counts2.keys()))];
     const container = new ctors.Container();
     const buttons = [];
     const active3 = getActiveFilter();
     let x = 0;
     let y = 0;
     for (const key2 of keys) {
-      const text2 = new ctors.Text({ text: labelFor(key2, counts, total), style: TEXT_STYLE });
+      const text2 = new ctors.Text({ text: labelFor(key2, counts2, total), style: TEXT_STYLE });
       const width = text2.width + BUTTON_PADDING_X * 2;
       if (x > 0 && x + width > maxWidth) {
         x = 0;
@@ -16331,17 +16401,17 @@
   }
   function buildFilterToolbar(ctors, maxWidth) {
     const history = getActivityLogHistory();
-    const counts = countActions(history);
+    const counts2 = countActions(history);
     const total = history.length;
     const container = new ctors.Container();
     container.label = FILTER_TOOLBAR_LABEL;
-    const closedButton = buildClosedButton(ctors, closedLabel({ counts, total }));
+    const closedButton = buildClosedButton(ctors, closedLabel({ counts: counts2, total }));
     container.addChild(closedButton.container);
-    const options2 = buildOptions(ctors, maxWidth, counts, total);
+    const options2 = buildOptions(ctors, maxWidth, counts2, total);
     options2.container.position.set(0, BUTTON_HEIGHT + PANEL_GAP);
     options2.container.visible = false;
     container.addChild(options2.container);
-    const toolbar2 = { container, closedButton, options: options2, counts, total, isExpanded: false };
+    const toolbar2 = { container, closedButton, options: options2, counts: counts2, total, isExpanded: false };
     closedButton.container.on("pointertap", () => setExpanded(toolbar2, !toolbar2.isExpanded));
     for (const button2 of options2.buttons) {
       button2.container.on("pointertap", () => {
@@ -17422,12 +17492,12 @@
     if (!events.length) return false;
     const state5 = loadState();
     const seen = new Set(state5.seenPetIds);
-    let changed5 = false;
+    let changed6 = false;
     for (const event of events) {
       if (seen.has(event.petId)) continue;
       seen.add(event.petId);
       state5.seenPetIds.push(event.petId);
-      changed5 = true;
+      changed6 = true;
       if (countStats) {
         try {
           StatsService.incrementPetHatched(event.species, rarityOf(event));
@@ -17439,8 +17509,8 @@
       const counters = (_a = state5.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
       applyPull(counters, event, protectedSpecies(event.eggId));
     }
-    if (changed5) saveState(state5);
-    return changed5;
+    if (changed6) saveState(state5);
+    return changed6;
   }
   async function startHatchTracker() {
     const firstRun = !loadState().bootstrapped;
@@ -20095,17 +20165,17 @@
             if (prefer && this.library.has(prefer)) return prefer;
             return fallback;
           };
-          let changed5 = false;
+          let changed6 = false;
           const shops2 = valid(this.ctx("shops").defaultSoundName);
           for (const key2 of AUDIO_CONTEXTS) {
             const target = this.ctx(key2);
             const next = key2 === "shops" ? shops2 : valid(target.defaultSoundName, shops2);
             if (next !== target.defaultSoundName) {
               target.defaultSoundName = next;
-              changed5 = true;
+              changed6 = true;
             }
           }
-          return changed5;
+          return changed6;
         }
         /* ================================ Library ================================ */
         listSounds() {
@@ -21711,10 +21781,10 @@
   });
 
   // src/features/notifier/inventoryCaps.ts
-  function isCapReachedIn(catalog, counts, itemId) {
+  function isCapReachedIn(catalog, counts2, itemId) {
     const meta = catalog[itemId];
     if (!meta) return false;
-    const owned2 = counts.get(itemId) || 0;
+    const owned2 = counts2.get(itemId) || 0;
     if (meta.isOneTimePurchase && owned2 >= 1) return true;
     const max = Number(meta.maxInventoryQuantity);
     return Number.isFinite(max) && max > 0 && owned2 >= max;
@@ -21725,12 +21795,12 @@
     return false;
   }
   function countsOf(items, idOf) {
-    const counts = /* @__PURE__ */ new Map();
+    const counts2 = /* @__PURE__ */ new Map();
     for (const item of Array.isArray(items) ? items : []) {
       const id = String(idOf(item) ?? "");
-      if (id) counts.set(id, Number(item?.quantity) || 0);
+      if (id) counts2.set(id, Number(item?.quantity) || 0);
     }
-    return counts;
+    return counts2;
   }
   async function follow(view, apply) {
     const update = (value) => {
@@ -21738,7 +21808,7 @@
         apply(value);
       } catch {
       }
-      changed2.emit();
+      changed3.emit();
     };
     try {
       update(await view.get());
@@ -21749,7 +21819,7 @@
     } catch {
     }
   }
-  var toolCounts, decorCounts, changed2, InventoryCaps;
+  var toolCounts, decorCounts, changed3, InventoryCaps;
   var init_inventoryCaps = __esm({
     "src/features/notifier/inventoryCaps.ts"() {
       "use strict";
@@ -21758,7 +21828,7 @@
       init_data();
       toolCounts = /* @__PURE__ */ new Map();
       decorCounts = /* @__PURE__ */ new Map();
-      changed2 = new Emitter();
+      changed3 = new Emitter();
       InventoryCaps = {
         async start() {
           await follow(Atoms.inventory.myToolInventory, (items) => {
@@ -21770,7 +21840,7 @@
         },
         /** Fires after every inventory update. */
         onChange(cb) {
-          return changed2.on(cb);
+          return changed3.on(cb);
         }
       };
     }
@@ -21839,7 +21909,7 @@
     }
     return rows;
   }
-  var FOLLOWED_PATH, followed, DISPLAY_RARITY, BASE_SHOPS, state2, idsSig, changed3, countFollowed, emit, ShopRows;
+  var FOLLOWED_PATH, followed, DISPLAY_RARITY, BASE_SHOPS, state2, idsSig, changed4, countFollowed, emit, ShopRows;
   var init_shopRows = __esm({
     "src/features/notifier/shopRows.ts"() {
       "use strict";
@@ -21863,10 +21933,10 @@
       BASE_SHOPS = /* @__PURE__ */ new Set(["Seed", "Egg", "Tool", "Decor"]);
       state2 = null;
       idsSig = "";
-      changed3 = new Emitter();
+      changed4 = new Emitter();
       countFollowed = (rows) => rows.reduce((n, r) => n + (r.followed ? 1 : 0), 0);
       emit = () => {
-        if (state2) changed3.emit({ ...state2, rows: state2.rows.slice() });
+        if (state2) changed4.emit({ ...state2, rows: state2.rows.slice() });
       };
       ShopRows = {
         /** Rebuilds the rows from the catalogs. Listeners hear of it only when the set of items changed. */
@@ -21899,7 +21969,7 @@
           return state2;
         },
         onChange(cb) {
-          return changed3.on(cb);
+          return changed4.on(cb);
         },
         /** Whether an item's alert is on. A capped item reads as off. */
         isFollowed(id) {
@@ -22431,7 +22501,7 @@
     const isNew = sig !== stateSig;
     stateSig = sig;
     state3 = { updatedAt: Date.now(), currentId, rows };
-    if (isNew) changed4.emit(state3);
+    if (isNew) changed5.emit(state3);
   }
   function ring(id) {
     if (!weatherById(id)) return;
@@ -22456,7 +22526,7 @@
     if (def) savePrefs();
     recomputeState();
   }
-  var PREFS_PATH, prefs, prefsLoaded, state3, stateSig, currentId, currentValue, changed4, weatherStateSignature, WeatherAlerts;
+  var PREFS_PATH, prefs, prefsLoaded, state3, stateSig, currentId, currentValue, changed5, weatherStateSignature, WeatherAlerts;
   var init_weatherAlerts = __esm({
     "src/features/notifier/weatherAlerts.ts"() {
       "use strict";
@@ -22474,7 +22544,7 @@
       stateSig = null;
       currentId = null;
       currentValue = null;
-      changed4 = new Emitter();
+      changed5 = new Emitter();
       weatherStateSignature = (rows) => JSON.stringify(rows.map((r) => [r.id, r.notify ? 1 : 0, r.lastSeen || 0, r.isCurrent ? 1 : 0]));
       WeatherAlerts = {
         /** Reads the weather once, then follows it. */
@@ -22499,7 +22569,7 @@
           return state3;
         },
         onChange(cb) {
-          return changed4.on(cb);
+          return changed5.on(cb);
         },
         setNotify(id, enabled2) {
           if (!id) return;
@@ -22608,6 +22678,7 @@
     "src/features/notifier/overlay.ts"() {
       "use strict";
       init_dom2();
+      init_menuBadges();
       init_audio();
       init_pixiBell();
       init_floatingBell();
@@ -22641,6 +22712,7 @@
         }
         show(items) {
           this.items = items;
+          setMenuBadge("alerts", items.length);
           this.badge.textContent = items.length ? String(items.length) : "";
           this.badge.style.display = items.length ? "inline-flex" : "none";
           this.placeBadge();
@@ -28389,7 +28461,7 @@ next: ${next}`;
     attachWeatherSpriteIcon(holder2, tag, sizePx);
     return holder2;
   }
-  var init_menuIcons = __esm({
+  var init_menuIcons2 = __esm({
     "src/features/locker/menuIcons.ts"() {
       "use strict";
       init_iconCache();
@@ -28428,7 +28500,7 @@ next: ${next}`;
   var init_weatherPicker = __esm({
     "src/features/locker/weatherPicker.ts"() {
       "use strict";
-      init_menuIcons();
+      init_menuIcons2();
     }
   });
 
@@ -28572,7 +28644,7 @@ next: ${next}`;
     "src/features/locker/weatherRecipes.ts"() {
       "use strict";
       init_button();
-      init_menuIcons();
+      init_menuIcons2();
       init_weatherPicker();
       init_weatherTags();
     }
@@ -28912,15 +28984,15 @@ next: ${next}`;
       header.root.removeChild(header.body);
       const status2 = document.createElement("div");
       status2.className = "lk-hint lk-wide";
-      const showStatus2 = () => {
+      const showStatus = () => {
         status2.textContent = entry.enabled ? "This crop uses its own locker filters." : "Uses the global locker settings.";
       };
       const form = lockerSettingsCard(entry.settings, () => store.notifyOverrideSettingsChanged(key2));
       form.setDisabled(!entry.enabled);
-      showStatus2();
+      showStatus();
       detail.replaceChildren(header.root, status2, form.root);
       detail.scrollTop = scrollMemory.get(key2) ?? 0;
-      shown = { key: key2, entry, form, toggle, showStatus: showStatus2 };
+      shown = { key: key2, entry, form, toggle, showStatus };
     }
     const refresh = () => {
       list.setItems(listItems());
@@ -28946,7 +29018,7 @@ next: ${next}`;
       init_toggles();
       init_vtabs();
       init_theme();
-      init_menuIcons();
+      init_menuIcons2();
       init_settingsCard();
       init_seedOptions();
       OVERRIDE_ON = "#2ecc71";
@@ -29222,7 +29294,7 @@ next: ${next}`;
     statusText.className = "qmm-setting-row__hint";
     statusText.style.fontSize = "12.5px";
     body.append(head, bonusSlider, statusText);
-    const showStatus2 = () => {
+    const showStatus = () => {
       const requiredPct = toBonusStep2(friendBonusPercentFromPlayers(requiredPlayers) ?? 0);
       const currentPct = currentFriendBonus() ?? 0;
       const currentPlayers = percentToRequiredFriendCount(currentPct);
@@ -29246,18 +29318,18 @@ next: ${next}`;
       const pct = toBonusStep2(Number.isFinite(raw) ? raw : 0);
       showSlider(pct);
       requiredPlayers = percentToRequiredFriendCount(pct);
-      showStatus2();
+      showStatus();
       if (commit) lockerRestrictionsService.setMinRequiredPlayers(requiredPlayers);
     };
     bonusSlider.addEventListener("input", () => readSlider(false));
     bonusSlider.addEventListener("change", () => readSlider(true));
     return {
       root: root4,
-      showStatus: showStatus2,
+      showStatus,
       sync(players) {
         requiredPlayers = players;
         showSlider(friendBonusPercentFromPlayers(players) ?? 0);
-        showStatus2();
+        showStatus();
       }
     };
   }
@@ -29356,7 +29428,7 @@ next: ${next}`;
       init_toggles();
       init_eggOptions();
       init_friendBonus();
-      init_menuIcons();
+      init_menuIcons2();
       init_restrictions();
       init_sellPetsRulesCard();
       toBonusStep2 = (value) => Math.max(0, Math.min(FRIEND_BONUS_MAX, Math.round(value / FRIEND_BONUS_STEP) * FRIEND_BONUS_STEP));
@@ -30018,8 +30090,8 @@ next: ${next}`;
   function countsFor(stats, species) {
     return stats.pets.hatchedByType[species.toLowerCase()] ?? { normal: 0, gold: 0, rainbow: 0 };
   }
-  function totalOf(counts) {
-    return (counts.normal ?? 0) + (counts.gold ?? 0) + (counts.rainbow ?? 0);
+  function totalOf(counts2) {
+    return (counts2.normal ?? 0) + (counts2.gold ?? 0) + (counts2.rainbow ?? 0);
   }
   function sortSpeciesByRarity(species) {
     return species.slice().sort((a, b) => {
@@ -30110,17 +30182,17 @@ next: ${next}`;
     let totalGold = 0;
     let totalRainbow = 0;
     for (const row5 of rows) {
-      const counts = countsFor(stats, row5.species);
-      totalNormal += counts.normal ?? 0;
-      totalGold += counts.gold ?? 0;
-      totalRainbow += counts.rainbow ?? 0;
+      const counts2 = countsFor(stats, row5.species);
+      totalNormal += counts2.normal ?? 0;
+      totalGold += counts2.gold ?? 0;
+      totalRainbow += counts2.rainbow ?? 0;
       const line = gridRow();
       line.append(
         speciesCell(row5),
-        numberCell(counts.normal, color.text),
-        numberCell(counts.gold, color.gold),
-        numberCell(counts.rainbow, color.rainbow),
-        numberCell(totalOf(counts), color.accent, true)
+        numberCell(counts2.normal, color.text),
+        numberCell(counts2.gold, color.gold),
+        numberCell(counts2.rainbow, color.rainbow),
+        numberCell(totalOf(counts2), color.accent, true)
       );
       wrap.appendChild(line);
     }
@@ -30366,16 +30438,16 @@ next: ${next}`;
   }
   function isTableEmpty(stats) {
     const entries = Object.values(stats.pets?.hatchedByType ?? {});
-    return entries.length === 0 || entries.every((counts) => totalOf(counts) <= 0);
+    return entries.length === 0 || entries.every((counts2) => totalOf(counts2) <= 0);
   }
   function addSpecies(map2, species, mutations) {
     const name = typeof species === "string" ? species.trim() : "";
     if (!name) return;
     const key2 = name.toLowerCase();
-    const counts = map2.get(key2) ?? { normal: 0, gold: 0, rainbow: 0 };
+    const counts2 = map2.get(key2) ?? { normal: 0, gold: 0, rainbow: 0 };
     const bucket = mutationTypeOf(mutations);
-    counts[bucket] = (counts[bucket] ?? 0) + 1;
-    map2.set(key2, counts);
+    counts2[bucket] = (counts2[bucket] ?? 0) + 1;
+    map2.set(key2, counts2);
   }
   async function seedFromOwnedPets(stats) {
     if (!isTableEmpty(stats)) return;
@@ -30391,21 +30463,21 @@ next: ${next}`;
     } catch (error) {
       console.warn("[PetsHatch] Failed to read active pet data", error);
     }
-    const counts = /* @__PURE__ */ new Map();
+    const counts2 = /* @__PURE__ */ new Map();
     for (const item of inventoryItems2(inventory)) {
       if (!isRecord5(item)) continue;
       const itemType = typeof item.itemType === "string" ? item.itemType.toLowerCase() : "";
       if (itemType !== "pet") continue;
-      addSpecies(counts, item.petSpecies, item.mutations);
+      addSpecies(counts2, item.petSpecies, item.mutations);
     }
     for (const entry of Array.isArray(activePets2) ? activePets2 : []) {
       if (!isRecord5(entry) || !isRecord5(entry.slot)) continue;
-      addSpecies(counts, entry.slot.petSpecies, entry.slot.mutations);
+      addSpecies(counts2, entry.slot.petSpecies, entry.slot.mutations);
     }
-    if (!counts.size) return;
+    if (!counts2.size) return;
     StatsService.update((draft) => {
       if (!isTableEmpty(draft)) return;
-      for (const [species, seeded] of counts) {
+      for (const [species, seeded] of counts2) {
         const entry = draft.pets.hatchedByType[species] ?? { normal: 0, gold: 0, rainbow: 0 };
         entry.normal += seeded.normal ?? 0;
         entry.gold += seeded.gold ?? 0;
@@ -34456,13 +34528,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     return [...all].sort((a, b) => a.localeCompare(b));
   }
   function tally(rows, of) {
-    const counts = /* @__PURE__ */ new Map();
+    const counts2 = /* @__PURE__ */ new Map();
     for (const row5 of rows) {
       for (const value of of(row5)) {
-        if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+        if (value) counts2.set(value, (counts2.get(value) ?? 0) + 1);
       }
     }
-    return counts;
+    return counts2;
   }
   function matchesMutations(row5, wanted, mode) {
     if (wanted.length === 0) return true;
@@ -34558,14 +34630,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     return plan.map(assignmentKey).sort().join("|");
   }
   function countByItem(plan) {
-    const counts = /* @__PURE__ */ new Map();
+    const counts2 = /* @__PURE__ */ new Map();
     for (const assignment of plan) {
       const key2 = itemKey(assignment);
-      const known = counts.get(key2);
+      const known = counts2.get(key2);
       if (known) known.count++;
-      else counts.set(key2, { kind: assignment.kind, id: assignment.id, name: assignment.name, count: 1 });
+      else counts2.set(key2, { kind: assignment.kind, id: assignment.id, name: assignment.name, count: 1 });
     }
-    return [...counts.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    return [...counts2.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   }
   function stockLeft(plan, items) {
     const left = new Map(items.map((item) => [itemKey(item), item.stock]));
@@ -36201,10 +36273,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     ensureSettingsStyles();
     const nav = typeof navigator !== "undefined" ? navigator : null;
     const environment = typeof window !== "undefined" ? detectEnvironment() : null;
+    const version = pill("", "warn");
+    initVersionBadge(version);
     const hero = h("div", "qws-set-hero");
     hero.append(
       h("div", "qws-set-hero__title", "Arie's Mod"),
-      pill(`v${getLocalVersion() ?? "unknown"}`, "ok"),
+      version,
       h("div", "qws-set-hero__sub", "Browser userscript for MagicGarden")
     );
     const runtimeRows = [
@@ -36237,10 +36311,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_gameVersion();
       init_environment();
-      init_modVersion();
       init_badges();
       init_button();
       init_dom2();
+      init_hudStatus();
       init_openLink();
       init_styles4();
       KOFI_URL = "https://ko-fi.com/E1E11TWTM1";
@@ -37528,10 +37602,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     const show = (next) => {
       const sig = weatherStateSignature(next.rows);
-      const changed5 = sig !== stateSig2;
+      const changed6 = sig !== stateSig2;
       state5 = next;
       stateSig2 = sig;
-      if (changed5) rebuild2();
+      if (changed6) rebuild2();
       else refreshLastSeen();
     };
     void (async () => {
@@ -40395,16 +40469,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     retriesLeft -= 1;
     const targets = await loadTargets();
     const index = sharedStageIndex();
-    let changed5 = false;
+    let changed6 = false;
     for (const result of pending3) {
       const canvas = skinCanvases.get(result.frameKey);
       const target = targets.get(result.frameKey);
       if (!canvas || !target) continue;
       if (!applySkinTexture(target, canvas, index)) continue;
       snapshot.results.set(result.frameKey, { frameKey: result.frameKey, applied: true });
-      changed5 = true;
+      changed6 = true;
     }
-    if (!changed5) return;
+    if (!changed6) return;
     snapshot.rebaked = rebakeAll();
     notifyChanged();
   }
@@ -42067,9 +42141,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     return [...slots].sort((a, b) => a - b).join("|");
   }
   function bySpecies(pets) {
-    const counts = /* @__PURE__ */ new Map();
-    for (const pet of pets) counts.set(pet.species, (counts.get(pet.species) ?? 0) + 1);
-    return [...counts.entries()].map(([species, count]) => ({ species, count })).sort((a, b) => b.count - a.count || a.species.localeCompare(b.species));
+    const counts2 = /* @__PURE__ */ new Map();
+    for (const pet of pets) counts2.set(pet.species, (counts2.get(pet.species) ?? 0) + 1);
+    return [...counts2.entries()].map(([species, count]) => ({ species, count })).sort((a, b) => b.count - a.count || a.species.localeCompare(b.species));
   }
   function describeKeep(rules3, abilityNames = /* @__PURE__ */ new Map()) {
     if (!hasAnyRule(rules3)) return "Nothing set yet";
@@ -42952,14 +43026,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function clearProposal(log2, proposalId) {
-    let changed5 = false;
+    let changed6 = false;
     const messages = log2.messages.map((entry) => {
       if (entry.proposalId !== proposalId) return entry;
-      changed5 = true;
+      changed6 = true;
       const { proposalId: _dropped, ...rest2 } = entry;
       return rest2;
     });
-    return changed5 ? { ...log2, messages } : log2;
+    return changed6 ? { ...log2, messages } : log2;
   }
   var MAX_MESSAGES;
   var init_log = __esm({
@@ -43177,9 +43251,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { petThing: { name, pet: item }, iconSizePx: PET_ICON_PX2 };
   }
   function petRowIcons(pets, limit = 2) {
-    const counts = /* @__PURE__ */ new Map();
-    for (const pet of pets) counts.set(pet.species, (counts.get(pet.species) ?? 0) + 1);
-    const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, limit).map(([species]) => species);
+    const counts2 = /* @__PURE__ */ new Map();
+    for (const pet of pets) counts2.set(pet.species, (counts2.get(pet.species) ?? 0) + 1);
+    const ranked = [...counts2.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, limit).map(([species]) => species);
     const icons = [];
     for (const species of ranked) {
       const one = pets.find((pet) => pet.species === species);
@@ -44142,12 +44216,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       npcSelect.append(new Option("Unavailable", ""));
     });
     const status2 = styled("div", { fontSize: "12px", color: color.textDim, padding: "2px 2px 0" });
-    const showStatus2 = (text2) => {
+    const showStatus = (text2) => {
       if (status2.textContent !== text2) status2.textContent = text2;
     };
     function refresh() {
       if (!CompanionService.isRunning()) {
-        showStatus2("Inactive.");
+        showStatus("Inactive.");
         return;
       }
       const npcId = CompanionService.getNpcId();
@@ -44155,7 +44229,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const wanted = CompanionService.getSettings().mode;
       const actual = CompanionService.getEffectiveMode();
       const fallback = actual && actual !== wanted ? " (no garden found, following you)" : "";
-      showStatus2(`Active as ${name}${fallback}. Only you can see it.`);
+      showStatus(`Active as ${name}${fallback}. Only you can see it.`);
     }
     const askToggle = switchInput(settings.askOnScreen, (on) => {
       void CompanionService.applySettings({ askOnScreen: on });
@@ -47971,9 +48045,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       MILESTONES = Array.from({ length: 14 }, (_, i) => 10 ** (i + 2));
       sumHatched = (s, key2) => {
         let total = 0;
-        for (const counts of Object.values(s?.pets?.hatchedByType ?? {})) {
-          if (!counts) continue;
-          total += key2 ? Number(counts[key2]) || 0 : (Number(counts.normal) || 0) + (Number(counts.gold) || 0) + (Number(counts.rainbow) || 0);
+        for (const counts2 of Object.values(s?.pets?.hatchedByType ?? {})) {
+          if (!counts2) continue;
+          total += key2 ? Number(counts2[key2]) || 0 : (Number(counts2.normal) || 0) + (Number(counts2.gold) || 0) + (Number(counts2.rainbow) || 0);
         }
         return total;
       };
@@ -49566,19 +49640,19 @@ Restore figures are averages; unlucky streaks do worse.`;
         void initSkins();
         mountHUD({
           onRegister(register2) {
-            register2("pets", "\u{1F43E} Pets", renderPetsMenu);
-            register2("locker", "\u{1F512} Locker", renderLockerMenu);
-            register2("alerts", "\u{1F514} Alerts", renderNotifierMenu);
-            register2("calculator", "\u{1F913} Calculator", renderCalculatorMenu);
-            register2("room", "\u{1F3E0} Room", renderRoomMenu);
-            register2("editor", "\u{1F4DD} Editor", renderEditorMenu);
-            register2("skins", "\u{1F3A8} Skins", renderSkinsMenu);
-            register2("misc", "\u{1F9E9} Misc", renderMiscMenu);
-            register2("keybinds", "\u2328\uFE0F Keybinds", renderKeybindsMenu);
-            register2("tools", "\u{1F6E0}\uFE0F Tools", renderToolsMenu);
-            register2("settings", "\u2699\uFE0F Settings", renderSettingsMenu);
-            register2("companion", "\u{1F916} Companion", renderCompanionMenu);
-            register2("debug-data", "\u{1F41E} Debug", renderDebugDataMenu);
+            register2("pets", "Pets", renderPetsMenu);
+            register2("locker", "Locker", renderLockerMenu);
+            register2("alerts", "Alerts", renderNotifierMenu);
+            register2("calculator", "Calculator", renderCalculatorMenu);
+            register2("room", "Room", renderRoomMenu);
+            register2("editor", "Editor", renderEditorMenu);
+            register2("skins", "Skins", renderSkinsMenu);
+            register2("misc", "Misc", renderMiscMenu);
+            register2("keybinds", "Keybinds", renderKeybindsMenu);
+            register2("tools", "Tools", renderToolsMenu);
+            register2("settings", "Settings", renderSettingsMenu);
+            register2("companion", "Companion", renderCompanionMenu);
+            register2("debug-data", "Debug", renderDebugDataMenu);
           }
         });
         startFeatures();

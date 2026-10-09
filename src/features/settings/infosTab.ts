@@ -2,10 +2,10 @@
 
 import { gameVersion } from "../../game/gameVersion";
 import { detectEnvironment, type EnvironmentInfo } from "../../platform/environment";
-import { getLocalVersion } from "../../platform/modVersion";
 import { pill } from "../../ui/kit/badges";
 import { button } from "../../ui/kit/button";
 import { h } from "../../ui/kit/dom";
+import { initVersionBadge } from "../../ui/hudStatus";
 import { openLink } from "../tools/openLink";
 import { ensureSettingsStyles } from "./styles";
 
@@ -75,10 +75,13 @@ export function renderInfosTab(view: HTMLElement): void {
   const nav = typeof navigator !== "undefined" ? navigator : null;
   const environment = typeof window !== "undefined" ? detectEnvironment() : null;
 
+  // The version against the latest release; it links to the download when behind.
+  const version = pill("", "warn");
+  initVersionBadge(version);
   const hero = h("div", "qws-set-hero");
   hero.append(
     h("div", "qws-set-hero__title", "Arie's Mod"),
-    pill(`v${getLocalVersion() ?? "unknown"}`, "ok"),
+    version,
     h("div", "qws-set-hero__sub", "Browser userscript for MagicGarden"),
   );
 

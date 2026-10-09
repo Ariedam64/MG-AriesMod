@@ -1,4 +1,5 @@
 import { h } from "../../ui/kit/dom";
+import { setMenuBadge } from "../../ui/kit/menuBadges";
 import { audio } from "./audio/audio";
 import { startPixiBell } from "./bell/pixiBell";
 import { BELL_MODE_EVENT, BELL_WIDGET_Z_INDEX, isFloatingBellEnabled, startFloatingBell } from "./bell/floatingBell";
@@ -53,6 +54,7 @@ class Overlay {
 
   private show(items: AvailableItem[]): void {
     this.items = items;
+    setMenuBadge("alerts", items.length);
     this.badge.textContent = items.length ? String(items.length) : "";
     this.badge.style.display = items.length ? "inline-flex" : "none";
     this.placeBadge();
