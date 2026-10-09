@@ -1,15 +1,18 @@
 // The size controls of one slot, shared by the brush and the placed-plant
 // editors: a value, a "custom" switch, the slider, and the custom size field.
 
+import { pill } from "../../../ui/kit/badges";
+import { h } from "../../../ui/kit/dom";
 import { textInput } from "../../../ui/kit/fields";
 import { slider } from "../../../ui/kit/sliders";
 import { switchInput, type SwitchInput } from "../../../ui/kit/toggles";
 import { CROP_SIZE_MAX, CROP_SIZE_MIN } from "../../../data/rules/cropSize";
 import type { SlotScaleMode } from "../slotSize";
 import { blockGameKeys, keepSizeCharacters } from "./inputGuards";
+import { ensureEditorStyles } from "./styles";
 
 export type SizeControls = {
-  /** The size shown next to the "Size" label. */
+  /** The size, shown at the end of the slot's header. */
   value: HTMLSpanElement;
   /** The custom switch with its text. */
   modeLabel: HTMLLabelElement;
@@ -22,32 +25,26 @@ export type SizeControls = {
   show(view: { pct: number; mode: SlotScaleMode; customText?: string }): void;
 };
 
-const smallRow = (): HTMLDivElement => {
-  const row = document.createElement("div");
-  Object.assign(row.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "11px" });
-  return row;
-};
-
-export function sizeControls(modeText: string): SizeControls {
-  const value = document.createElement("span");
+export function sizeControls(): SizeControls {
+  ensureEditorStyles();
+  const value = pill("");
 
   const modeSwitch = switchInput(false);
-  const modeLabel = document.createElement("label");
-  Object.assign(modeLabel.style, { display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" });
-  modeLabel.append(modeSwitch, document.createTextNode(modeText));
+  const modeLabel = h("label", "qws-ed-slot__mode");
+  modeLabel.append("Custom", modeSwitch);
 
   const range = slider(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, CROP_SIZE_MAX, { fill: true });
+  range.setAttribute("aria-label", "Size");
 
   const customInput = textInput("", "", { small: true });
   customInput.inputMode = "numeric";
   customInput.autocomplete = "off";
-  customInput.style.width = "90px";
+  customInput.setAttribute("aria-label", "Custom size");
   blockGameKeys(customInput);
   keepSizeCharacters(customInput);
 
-  const customRow = smallRow();
-  customRow.style.opacity = "0.9";
-  customRow.append(document.createTextNode("Custom size"), customInput);
+  const customRow = h("div", "qws-ed-custom");
+  customRow.append("Custom size", customInput);
 
   const show: SizeControls["show"] = ({ pct, mode, customText }) => {
     const custom = mode === "custom";
@@ -55,24 +52,28 @@ export function sizeControls(modeText: string): SizeControls {
     modeSwitch.checked = custom;
     range.value = String(pct);
     range.disabled = custom;
-    range.style.display = custom ? "none" : "";
+    range.hidden = custom;
     customInput.disabled = !custom;
-    customRow.style.display = custom ? "flex" : "none";
+    customRow.hidden = !custom;
     if (customText !== undefined) customInput.value = customText;
   };
 
   return { value, modeLabel, modeSwitch, slider: range, customRow, customInput, show };
 }
 
-/** "Size", then `beside` when given, and `value` at the far right. */
-export function sizeHeader(value: HTMLElement, beside?: HTMLElement): HTMLDivElement {
-  const row = smallRow();
-  row.style.opacity = "0.85";
-  const label = document.createElement("span");
-  label.textContent = "Size";
-  row.appendChild(label);
-  if (beside) row.appendChild(beside);
-  value.style.marginLeft = "auto";
-  row.appendChild(value);
+/** A slot's header: its title, the custom switch, and the size. */
+export function slotHeader(title: string, size: SizeControls): HTMLDivElement {
+  const row = h("div", "qws-ed-slot__head");
+  row.append(h("span", "qws-ed-slot__title", title), size.modeLabel, size.value);
   return row;
 }
+
+/** A slot's card: header, slider or custom field, then its mutations. */
+export function slotCard(title: string, size: SizeControls, mutations: HTMLElement[]): HTMLDivElement {
+  const card = h("div", "qws-ed-slot");
+  card.append(slotHeader(title, size), size.slider, size.customRow, ...mutations);
+  return card;
+}
+
+/** "Slot 2" when the plant has several, plain "Size" otherwise. */
+export const slotTitle = (idx: number, maxSlots: number): string => (maxSlots > 1 ? `Slot ${idx + 1}` : "Size");

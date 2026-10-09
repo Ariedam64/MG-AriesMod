@@ -44,7 +44,8 @@ async function main(): Promise<void> {
 
   const container = doc.createElement("div");
   renderEditorMenu(container);
-  checkEqual("menu: mode, current garden, import and saved cards", container.children[0].children.length, 4);
+  checkEqual("menu: mode, current garden and saved cards", container.children[0].children.length, 3);
+  checkEqual("menu: the import drop zone sits in the saved card", all(container.children[0].children[2], ".qws-ed-drop").length, 1);
   checkEqual("menu: the saved list starts empty", container.textContent.includes("No saved gardens yet."), true);
   checkEqual("menu: the mode switch is a kit switch", all(container, ".qmm-switch").length, 1);
 
@@ -56,6 +57,9 @@ async function main(): Promise<void> {
   showItemPicker();
   const details = () => byId("qws-editor-side-details");
   checkEqual("picker: one slot box per brush slot", all(details(), ".qws-pnl-range").length, 5);
+  const slotButton = (label: string) => all(details(), "button").find((b: El) => b.getAttribute("aria-label") === label);
+  checkEqual("brush: + is off at the species' slot limit", slotButton("Add a slot").disabled, true);
+  checkEqual("brush: - stays on above one slot", slotButton("Remove a slot").disabled, false);
 
   setValue(all(details(), ".qws-pnl-range")[1], "80", "input");
   checkEqual(

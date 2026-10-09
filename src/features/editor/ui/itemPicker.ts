@@ -1,9 +1,9 @@
 // The left panel: plants or decor, a search box, the grid of entries, and the
 // selected entry's brush settings underneath.
 
+import { h } from "../../../ui/kit/dom";
 import { textInput } from "../../../ui/kit/fields";
 import { segmented } from "../../../ui/kit/segmented";
-import { color } from "../../../ui/kit/theme";
 import { getSelectedId, picker, pickerEntries, setSelectedId, type PickerMode } from "../brush";
 import { renderBrushDetails } from "./brushDetails";
 import { entryIcon } from "./entryIcon";
@@ -19,22 +19,16 @@ export function showItemPicker(): void {
   const panel = floatingPanel({
     id: "qws-editor-side",
     side: "left",
-    title: "🌿 Item picker",
-    style: { minHeight: "420px", height: "min(720px, 86vh)" },
+    title: "Items",
+    style: { height: "min(720px, calc(86vh / var(--qmm-scale, 1)))" },
   });
-  panel.header.style.opacity = "0.85";
 
   // Stacked: mode, search, the grid to pick from, then the settings to edit.
-  const content = document.createElement("div");
-  Object.assign(content.style, {
-    display: "grid",
-    gridTemplateRows: "auto auto minmax(120px, 0.7fr) minmax(0, 1fr)",
-    gap: "8px",
-    minHeight: "0",
-  });
+  panel.body.style.gridTemplateRows = "auto auto minmax(120px, 0.7fr) minmax(0, 1fr)";
 
-  const search = textInput("Search…", picker.query, { small: true });
-  Object.assign(search.style, { width: "100%", boxSizing: "border-box" });
+  const search = textInput("Search", picker.query, { small: true });
+  search.style.width = "100%";
+  search.style.boxSizing = "border-box";
   search.oninput = () => {
     picker.query = search.value;
     renderEntryGrid();
@@ -42,8 +36,8 @@ export function showItemPicker(): void {
 
   const mode = segmented<PickerMode>(
     [
-      { value: "plants", label: "🌱 Plants" },
-      { value: "decor", label: "🎨 Decor" },
+      { value: "plants", label: "Plants" },
+      { value: "decor", label: "Decor" },
     ],
     picker.mode,
     (next) => {
@@ -59,14 +53,13 @@ export function showItemPicker(): void {
 
   listWrap = panelSection();
   listWrap.id = "qws-editor-side-list";
-  Object.assign(listWrap.style, { overflow: "auto", padding: "6px" });
+  listWrap.classList.add("qws-ed-scroll", "qmm-scroll");
 
   detailsWrap = panelSection();
   detailsWrap.id = "qws-editor-side-details";
-  Object.assign(detailsWrap.style, { display: "grid", gridTemplateRows: "minmax(0, 1fr)", padding: "10px", overflow: "hidden" });
+  detailsWrap.classList.add("qws-ed-scroll", "qmm-scroll");
 
-  content.append(mode, search, listWrap, detailsWrap);
-  panel.root.appendChild(content);
+  panel.body.append(mode, search, listWrap, detailsWrap);
   root = panel.root;
 
   renderEntryGrid();
@@ -82,43 +75,24 @@ function renderDetails(): void {
   if (detailsWrap) renderBrushDetails(detailsWrap);
 }
 
-function styleEntry(btn: HTMLButtonElement, selected: boolean): void {
-  Object.assign(btn.style, {
-    border: `1px solid ${selected ? color.accent : color.borderStrong}`,
-    background: selected ? color.accentSoft : color.cardBg,
-    boxShadow: selected ? `0 0 0 1px ${color.accentBorder}` : "none",
-    transform: selected ? "scale(1.06)" : "scale(1)",
-  });
+function markSelected(btn: HTMLButtonElement, selected: boolean): void {
+  btn.classList.toggle("is-selected", selected);
+  btn.setAttribute("aria-pressed", selected ? "true" : "false");
 }
 
 function entryButton(id: string, label: string, selected: boolean): HTMLButtonElement {
-  const btn = document.createElement("button");
+  const btn = h("button", "qws-ed-entry");
   btn.type = "button";
   btn.dataset.id = id;
   btn.title = label;
-  Object.assign(btn.style, {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "4px",
-    borderRadius: "8px",
-    color: color.text,
-    cursor: "pointer",
-    transition: "background 120ms ease, border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease",
-  });
-  styleEntry(btn, selected);
-  btn.onmouseenter = () => {
-    if (id === getSelectedId()) return;
-    btn.style.background = color.accentSoft;
-    btn.style.borderColor = color.accentBorder;
-  };
-  btn.onmouseleave = () => styleEntry(btn, id === getSelectedId());
+  btn.setAttribute("aria-label", label);
+  markSelected(btn, selected);
   btn.onclick = () => {
     setSelectedId(id);
     renderEntryGrid();
     renderDetails();
   };
-  btn.appendChild(entryIcon(picker.mode === "decor" ? "decor" : "plant", id, label, 26));
+  btn.appendChild(entryIcon(picker.mode === "decor" ? "decor" : "plant", id, label, 28));
   return btn;
 }
 
@@ -132,20 +106,21 @@ function renderEntryGrid(): void {
   const existing = listWrap.querySelector<HTMLDivElement>('[data-editor-side-list="list"]');
   if (existing && existing.dataset.sig === signature) {
     existing.querySelectorAll<HTMLButtonElement>("button[data-id]").forEach((btn) => {
-      styleEntry(btn, btn.dataset.id === selectedId);
+      markSelected(btn, btn.dataset.id === selectedId);
     });
     return;
   }
 
   if (!entries.length) {
-    listWrap.replaceChildren(hint("No entries."));
+    const empty = hint(picker.query ? "Nothing matches this search." : "Nothing to place here yet.");
+    empty.style.padding = "var(--qmm-space-xl) var(--qmm-space-lg)";
+    listWrap.replaceChildren(empty);
     return;
   }
 
-  const grid = document.createElement("div");
+  const grid = h("div", "qws-ed-grid");
   grid.dataset.editorSideList = "list";
   grid.dataset.sig = signature;
-  Object.assign(grid.style, { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(34px, 1fr))", gap: "4px" });
   for (const entry of entries) grid.appendChild(entryButton(entry.id, entry.label, entry.id === selectedId));
   listWrap.replaceChildren(grid);
 }

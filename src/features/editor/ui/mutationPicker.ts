@@ -3,13 +3,14 @@
 import { memoOnCatalogs, mutationCatalog, weatherCatalog } from "../../../data";
 import { mutationName } from "../../../data/names";
 import { attachSpriteIcon } from "../../../ui/kit/sprites/iconCache";
-import { color } from "../../../ui/kit/theme";
+import { h } from "../../../ui/kit/dom";
 import {
   mutationCatalogKeyFor,
   sortMutationCatalogKeys,
   sortStoredMutationIds,
   storedMutationIdFor,
 } from "../mutationOrder";
+import { ensureEditorStyles } from "./styles";
 
 /** Every catalog mutation key in display order. */
 const orderedMutationKeys = memoOnCatalogs(() =>
@@ -35,10 +36,6 @@ const FALLBACK_COLORS: Record<string, string> = {
 };
 
 const ICON_CATEGORIES = ["ui", "mutation", "weather"];
-
-const TILE_PX = 34;
-const PLUS_BG_CLOSED = color.sunken;
-const PLUS_BG_OPEN = color.hoverBg;
 
 /** A mutation's sprite, or its coloured initial when there is no sprite. */
 function mutationIcon(storedId: string, size = 22): HTMLElement {
@@ -80,39 +77,13 @@ function mutationIcon(storedId: string, size = 22): HTMLElement {
   return wrap;
 }
 
-function squareButton(): HTMLButtonElement {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  Object.assign(btn.style, {
-    width: `${TILE_PX}px`,
-    height: `${TILE_PX}px`,
-    padding: "0",
-    borderRadius: "8px",
-    border: `1px solid ${color.borderStrong}`,
-    background: color.sunken,
-    color: color.text,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-  });
-  return btn;
-}
-
 /** A square mutation button, lit when the mutation is on the slot. */
 function mutationToggle(storedId: string, active: boolean, onClick: () => void): HTMLButtonElement {
   const label = mutationName(mutationCatalogKeyFor(storedId));
-  const btn = squareButton();
-  if (active) {
-    Object.assign(btn.style, {
-      border: `1px solid ${color.accentBorderHover}`,
-      background: color.accentSoft,
-      boxShadow: `0 0 0 1px ${color.accentBorder} inset`,
-    });
-  } else {
-    btn.style.opacity = "0.85";
-  }
+  const btn = h("button", active ? "qws-ed-mut is-on" : "qws-ed-mut");
+  btn.type = "button";
   btn.title = active ? `Remove ${label}` : `Add ${label}`;
+  btn.setAttribute("aria-label", btn.title);
   btn.appendChild(mutationIcon(storedId, 24));
   btn.onclick = onClick;
   return btn;
@@ -120,17 +91,8 @@ function mutationToggle(storedId: string, active: boolean, onClick: () => void):
 
 /** A tag showing one mutation, for read-only lists. */
 export function mutationTag(storedId: string): HTMLElement {
-  const tag = document.createElement("span");
-  Object.assign(tag.style, {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "28px",
-    height: "28px",
-    borderRadius: "8px",
-    border: `1px solid ${color.borderStrong}`,
-    background: color.sunken,
-  });
+  ensureEditorStyles();
+  const tag = h("span", "qws-ed-tag");
   tag.title = mutationName(mutationCatalogKeyFor(storedId));
   tag.appendChild(mutationIcon(storedId, 20));
   return tag;
@@ -151,22 +113,13 @@ export type MutationPicker = {
  * the start of the row.
  */
 export function mutationPicker(onToggle: (storedId: string) => void, prefix?: HTMLElement): MutationPicker {
-  const row = document.createElement("div");
-  Object.assign(row.style, { display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" });
-
-  const dropdown = document.createElement("div");
-  Object.assign(dropdown.style, {
-    display: "none",
-    flexWrap: "wrap",
-    gap: "6px",
-    padding: "6px",
-    border: `1px solid ${color.borderStrong}`,
-    borderRadius: "8px",
-    background: color.sunken,
-  });
+  ensureEditorStyles();
+  const row = h("div", "qws-ed-muts");
+  const dropdown = h("div", "qws-ed-muts__more");
+  dropdown.hidden = true;
 
   const render = (active: string[]) => {
-    const wasOpen = dropdown.style.display !== "none";
+    const wasOpen = !dropdown.hidden;
     row.replaceChildren();
     dropdown.replaceChildren();
     if (prefix) row.appendChild(prefix);
@@ -177,18 +130,21 @@ export function mutationPicker(onToggle: (storedId: string) => void, prefix?: HT
       .map(storedMutationIdFor)
       .filter((id) => !active.includes(id));
     if (!available.length) {
-      dropdown.style.display = "none";
+      dropdown.hidden = true;
       return;
     }
 
-    const plus = squareButton();
-    plus.textContent = "+";
+    const plus = h("button", "qws-ed-mut is-add", "+");
+    plus.type = "button";
     plus.title = "Add mutation";
-    Object.assign(plus.style, { fontWeight: "900", fontSize: "16px", background: wasOpen ? PLUS_BG_OPEN : PLUS_BG_CLOSED });
+    const showOpen = (open: boolean) => {
+      plus.classList.toggle("is-open", open);
+      plus.setAttribute("aria-expanded", open ? "true" : "false");
+    };
+    showOpen(wasOpen);
     plus.onclick = () => {
-      const open = dropdown.style.display === "none";
-      dropdown.style.display = open ? "flex" : "none";
-      plus.style.background = open ? PLUS_BG_OPEN : PLUS_BG_CLOSED;
+      dropdown.hidden = !dropdown.hidden;
+      showOpen(!dropdown.hidden);
     };
     row.appendChild(plus);
 

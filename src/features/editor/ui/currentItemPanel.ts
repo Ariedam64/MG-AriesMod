@@ -2,6 +2,7 @@
 // Remove button. With no object there, it shows the picker's brush instead.
 
 import { button } from "../../../ui/kit/button";
+import { h } from "../../../ui/kit/dom";
 import { cropName, decorLabel } from "../../../data/names";
 import type { Unsubscribe } from "../../../lib/emitter";
 import { brushSlotsFor, entryLabel, getSelectedId, picker } from "../brush";
@@ -11,7 +12,7 @@ import { readTileObjectAt, removeGardenObjectAtCurrentTile, updateGardenObjectAt
 import { currentItemChanged, getCurrentEditorTile } from "../session";
 import { entryIcon } from "./entryIcon";
 import { mutationTag, sortMutationIds } from "./mutationPicker";
-import { floatingPanel, hint, iconWithName } from "./panelChrome";
+import { floatingPanel, hint, iconWithName, panelLabel } from "./panelChrome";
 import { renderPlantSlotsEditor } from "./plantSlotsEditor";
 
 let root: HTMLDivElement | null = null;
@@ -21,17 +22,10 @@ let stopFollowing: Unsubscribe | null = null;
 export function showCurrentItemPanel(): void {
   if (root && document.contains(root)) return;
 
-  const panel = floatingPanel({
-    id: "qws-editor-current-item",
-    side: "right",
-    title: "✨ Current item",
-    style: { minHeight: "200px" },
-  });
-
-  content = document.createElement("div");
+  const panel = floatingPanel({ id: "qws-editor-current-item", side: "right", title: "Current item" });
+  content = panel.body;
   content.id = "qws-editor-current-item-content";
-  Object.assign(content.style, { display: "grid", gap: "10px", minHeight: "0", overflow: "auto" });
-  panel.root.appendChild(content);
+  content.classList.add("qws-ed-scroll", "qmm-scroll");
   root = panel.root;
 
   stopFollowing = currentItemChanged.on(renderCurrentItem);
@@ -86,13 +80,19 @@ function renderCurrentItem(): void {
 
 /** No object on the tile: the hint, then what the next click would place. */
 function renderBrushSummary(into: HTMLElement): void {
-  into.appendChild(hint("Click on a plant or item to edit it."));
+  const empty = hint("Click a plant or decor to edit it.");
+  empty.style.padding = "var(--qmm-space-md) 0";
+  into.appendChild(empty);
 
   const id = getSelectedId();
   if (!id) return;
   const isDecor = picker.mode === "decor";
   const label = entryLabel(picker.mode, id);
-  into.appendChild(iconWithName(entryIcon(isDecor ? "decor" : "plant", id, label, 40), label, 14));
+
+  const brush = h("div", "qws-ed-section qws-ed-brush");
+  brush.style.justifyItems = "center";
+  brush.append(panelLabel("Next placement"), iconWithName(entryIcon(isDecor ? "decor" : "plant", id, label, 40), label, 14));
+  into.appendChild(brush);
   if (isDecor) return;
 
   const active = new Set<string>();
@@ -100,15 +100,11 @@ function renderBrushSummary(into: HTMLElement): void {
     if (cfg.enabled) cfg.mutations.forEach((m) => active.add(m));
   }
 
-  const row = document.createElement("div");
-  Object.assign(row.style, { display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "center" });
+  const tags = h("div", "qws-ed-tags");
   if (active.size) {
-    for (const mutationId of sortMutationIds([...active])) row.appendChild(mutationTag(mutationId));
+    for (const mutationId of sortMutationIds([...active])) tags.appendChild(mutationTag(mutationId));
   } else {
-    const none = document.createElement("div");
-    none.textContent = "No mutations";
-    Object.assign(none.style, { opacity: "0.7", fontSize: "11px" });
-    row.appendChild(none);
+    tags.appendChild(h("div", "qws-ed-note", "No mutations"));
   }
-  into.appendChild(row);
+  brush.appendChild(tags);
 }
