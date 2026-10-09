@@ -21,8 +21,9 @@
 // so there is nothing selectable per decor. They show the preview only.
 
 import { decorCatalog } from "../../data";
+import { h } from "../../ui/kit/dom";
 import { attachSpriteIcon } from "../../ui/kit/sprites/iconCache";
-import { color } from "../../ui/kit/theme";
+import { ROTATION_THUMB_PX, ensureEditorStyles } from "./ui/styles";
 
 /** Neutral rotation. */
 const ANGLE_NONE = 0;
@@ -31,49 +32,12 @@ const ANGLE_MIRRORED_NONE = -360;
 const FULL_TURN_DEGREES = 360;
 
 const PREVIEW_SIZE_PX = 64;
-const CONTENT_MAX_WIDTH_PX = 168;
-// Slack on each side of the track so the first and last tick labels, which are
-// centred on their notch, stay inside the panel instead of forcing a scrollbar.
-const TRACK_INSET_PX = 14;
 const SPRITE_LOG_TAG = "editor-decor-rotation";
 
 // The thumb travels between its own half-widths, not the full track, so the
-// notches can only line up if we pin the thumb to a known size.
-const THUMB_SIZE_PX = 14;
-const SLIDER_CLASS = "qws-decor-rot-slider";
-const STYLE_ID = "qws-decor-rotation-css";
-
-function ensureSliderStyle(): void {
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
-.${SLIDER_CLASS} {
-  -webkit-appearance: none; appearance: none;
-  width: 100%; height: ${THUMB_SIZE_PX}px;
-  background: transparent; cursor: pointer; margin: 0;
-}
-.${SLIDER_CLASS}::-webkit-slider-runnable-track {
-  height: 4px; border-radius: 999px; background: ${color.track};
-}
-.${SLIDER_CLASS}::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none;
-  width: ${THUMB_SIZE_PX}px; height: ${THUMB_SIZE_PX}px;
-  margin-top: ${(4 - THUMB_SIZE_PX) / 2}px;
-  border-radius: 50%; background: ${color.accent}; border: none;
-  box-shadow: 0 1px 4px ${color.shade};
-}
-.${SLIDER_CLASS}::-moz-range-track {
-  height: 4px; border-radius: 999px; background: ${color.track};
-}
-.${SLIDER_CLASS}::-moz-range-thumb {
-  width: ${THUMB_SIZE_PX}px; height: ${THUMB_SIZE_PX}px;
-  border-radius: 50%; background: ${color.accent}; border: none;
-}
-.${SLIDER_CLASS}:focus-visible { outline: 2px solid ${color.accent}; outline-offset: 2px; }
-  `;
-  document.head.appendChild(style);
-}
+// notches can only line up if we pin the thumb to a known size. The slider's
+// CSS in `ui/styles.ts` uses the same constant.
+const THUMB_SIZE_PX = ROTATION_THUMB_PX;
 
 type RotationVariant = { sprite?: string; flipH?: boolean };
 type DecorEntry = {
@@ -145,50 +109,10 @@ function formatRotationLabel(rotation: number): string {
   return value < 0 ? `${angle}° mirrored` : `${angle}°`;
 }
 
-function createLabel(text: string): HTMLDivElement {
-  const label = document.createElement("div");
-  label.textContent = text;
-  label.style.fontSize = "12px";
-  label.style.opacity = "0.8";
-  label.style.textAlign = "center";
-  return label;
-}
-
-function createPreviewBox(): HTMLDivElement {
-  const box = document.createElement("div");
-  Object.assign(box.style, {
-    width: "100%",
-    maxWidth: `${CONTENT_MAX_WIDTH_PX}px`,
-    justifySelf: "center",
-    boxSizing: "border-box",
-    height: `${PREVIEW_SIZE_PX + 14}px`,
-    display: "grid",
-    placeItems: "center",
-    borderRadius: "8px",
-    border: `1px solid ${color.borderStrong}`,
-    background: color.sunken,
-    overflow: "hidden",
-  } as Partial<CSSStyleDeclaration>);
-  return box;
-}
-
-/** Holds the track narrower than the panel, leaving room for the edge labels. */
-function createTrackWrap(): HTMLDivElement {
-  const wrap = document.createElement("div");
-  wrap.style.width = "100%";
-  wrap.style.maxWidth = `${CONTENT_MAX_WIDTH_PX - TRACK_INSET_PX * 2}px`;
-  wrap.style.justifySelf = "center";
-  wrap.style.display = "grid";
-  wrap.style.gap = "2px";
-  return wrap;
-}
-
 function createSlider(stopCount: number, value: number): HTMLInputElement {
-  ensureSliderStyle();
-
-  const slider = document.createElement("input");
+  const slider = h("input", "qws-ed-rot__slider");
   slider.type = "range";
-  slider.className = SLIDER_CLASS;
+  slider.setAttribute("aria-label", "Rotation");
   slider.min = "0";
   slider.max = String(stopCount - 1);
   slider.step = "1";
@@ -205,48 +129,20 @@ function createSlider(stopCount: number, value: number): HTMLInputElement {
  * visibly at the two ends.
  */
 function createTicks(labels: string[]): { root: HTMLDivElement; setActive: (index: number) => void } {
-  const root = document.createElement("div");
-  root.style.position = "relative";
-  root.style.width = "100%";
-  root.style.height = "20px";
-
+  const root = h("div", "qws-ed-rot__ticks");
   const lastIndex = Math.max(1, labels.length - 1);
 
   const cells = labels.map((text, index) => {
     const fraction = index / lastIndex;
-
-    const cell = document.createElement("div");
-    cell.style.position = "absolute";
-    cell.style.top = "0";
+    const cell = h("div", "qws-ed-rot__tick");
     cell.style.left = `calc(${THUMB_SIZE_PX / 2}px + (100% - ${THUMB_SIZE_PX}px) * ${fraction})`;
-    cell.style.transform = "translateX(-50%)";
-    cell.style.display = "grid";
-    cell.style.justifyItems = "center";
-    cell.style.gap = "2px";
-
-    const mark = document.createElement("div");
-    mark.style.width = "1px";
-    mark.style.height = "5px";
-    mark.style.background = color.track;
-
-    const caption = document.createElement("div");
-    caption.textContent = text;
-    caption.style.fontSize = "10px";
-    caption.style.whiteSpace = "nowrap";
-    caption.style.color = color.textDim;
-
-    cell.append(mark, caption);
+    cell.append(h("div", "qws-ed-rot__mark"), h("div", "qws-ed-rot__caption", text));
     root.appendChild(cell);
-    return { mark, caption };
+    return cell;
   });
 
   const setActive = (index: number) => {
-    cells.forEach(({ mark, caption }, i) => {
-      const active = i === index;
-      mark.style.background = active ? color.accent : color.track;
-      caption.style.color = active ? color.accent : color.textDim;
-      caption.style.fontWeight = active ? "700" : "400";
-    });
+    cells.forEach((cell, i) => cell.classList.toggle("is-active", i === index));
   };
 
   return { root, setActive };
@@ -263,16 +159,11 @@ export function createDecorRotationControl(
   currentRotation: number,
   onSelect: (rotation: number) => void,
 ): HTMLDivElement {
-  const root = document.createElement("div");
-  root.style.display = "grid";
-  root.style.gap = "6px";
-  root.style.width = "100%";
-  root.style.maxWidth = "100%";
-  root.style.boxSizing = "border-box";
-  root.style.overflow = "hidden";
+  ensureEditorStyles();
+  const root = h("div", "qws-ed-rot");
 
-  const preview = createPreviewBox();
-  const holder = document.createElement("div");
+  const preview = h("div", "qws-ed-rot__preview");
+  const holder = h("div");
   holder.style.width = `${PREVIEW_SIZE_PX}px`;
   holder.style.height = `${PREVIEW_SIZE_PX}px`;
   holder.style.display = "grid";
@@ -292,7 +183,7 @@ export function createDecorRotationControl(
   const states = getDecorRotationStates(decorId);
   let index = Math.max(0, states.indexOf(Number(currentRotation) || 0));
 
-  root.append(createLabel("Rotation"), preview);
+  root.append(h("div", "qws-ed-label", "Rotation"), preview);
 
   if (states.length > 1) {
     const slider = createSlider(states.length, index);
@@ -310,7 +201,7 @@ export function createDecorRotationControl(
       onSelect(states[index] ?? ANGLE_NONE);
     };
 
-    const track = createTrackWrap();
+    const track = h("div", "qws-ed-rot__track");
     track.append(slider, ticks.root);
     root.appendChild(track);
 

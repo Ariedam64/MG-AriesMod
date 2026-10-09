@@ -2,8 +2,7 @@
 // placed is configured (slots, size and mutations for a plant, rotation for a
 // decor).
 
-import { plainCard, sectionLabel } from "../../../ui/kit/card";
-import { switchInput } from "../../../ui/kit/toggles";
+import { h } from "../../../ui/kit/dom";
 import { createDecorRotationControl } from "../decorRotation";
 import {
   addBrushSlot,
@@ -18,24 +17,21 @@ import { brushSlotsFor, editBrushSlots, entryLabel, getMaxSlotsForSpecies, getSe
 import { clampSizePercent, parseSizeText, type SlotScaleMode } from "../slotSize";
 import { entryIcon } from "./entryIcon";
 import { mutationPicker } from "./mutationPicker";
-import { hint, roundButton } from "./panelChrome";
-import { sizeControls, sizeHeader } from "./sizeControls";
+import { hint, panelLabel } from "./panelChrome";
+import { sizeControls, slotCard, slotTitle } from "./sizeControls";
+import { editAllRow, slotCountRow } from "./slotOptions";
+import { ensureEditorStyles } from "./styles";
 
 export function renderBrushDetails(wrap: HTMLElement): void {
-  const content = document.createElement("div");
-  Object.assign(content.style, {
-    display: "grid",
-    gap: "10px",
-    minHeight: "0",
-    overflow: "auto",
-    alignContent: "flex-start",
-    justifyItems: "center",
-  });
+  ensureEditorStyles();
+  const content = h("div", "qws-ed-brush");
   wrap.replaceChildren(content);
 
   const id = getSelectedId();
   if (!id) {
-    content.appendChild(hint("Select an item on the left."));
+    const empty = hint("Pick a plant or decor above to place it.");
+    empty.style.padding = "var(--qmm-space-lg) 0";
+    content.appendChild(empty);
     return;
   }
 
@@ -46,22 +42,18 @@ export function renderBrushDetails(wrap: HTMLElement): void {
   } else {
     // The control repaints its own preview, so the panel is not redrawn here:
     // that would recreate the slider and lose the drag.
-    const rotation = createDecorRotationControl(id, picker.decorRotation, (angle) => {
-      picker.decorRotation = angle;
-    });
-    rotation.style.marginTop = "6px";
-    content.appendChild(rotation);
+    content.appendChild(
+      createDecorRotationControl(id, picker.decorRotation, (angle) => {
+        picker.decorRotation = angle;
+      }),
+    );
   }
 }
 
 function selectedEntryRow(id: string): HTMLElement {
   const label = entryLabel(picker.mode, id);
-  const row = document.createElement("div");
-  Object.assign(row.style, { display: "grid", gridTemplateColumns: "auto 1fr", alignItems: "center", gap: "10px" });
-  const name = document.createElement("div");
-  name.textContent = label;
-  Object.assign(name.style, { fontWeight: "700", fontSize: "15px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" });
-  row.append(entryIcon(picker.mode === "decor" ? "decor" : "plant", id, label, 48), name);
+  const row = h("div", "qws-ed-selected");
+  row.append(entryIcon(picker.mode === "decor" ? "decor" : "plant", id, label, 44), h("div", "qws-ed-selected__name", label));
   return row;
 }
 
@@ -69,13 +61,28 @@ function brushSlotsPanel(species: string, rerender: () => void): HTMLElement {
   const maxSlots = getMaxSlotsForSpecies(species);
   const state = brushSlotsFor(species);
 
-  const panel = document.createElement("div");
-  Object.assign(panel.style, { display: "grid", gap: "6px", marginTop: "6px", width: "100%" });
+  const panel = h("div", "qws-ed-opts");
 
-  if (maxSlots > 1) panel.append(...slotCountRows(species, state, maxSlots, rerender));
+  if (maxSlots > 1) {
+    panel.append(
+      slotCountRow(state.slots.length, maxSlots, {
+        onRemove: () => {
+          editBrushSlots(species, removeBrushSlot);
+          rerender();
+        },
+        onAdd: () => {
+          editBrushSlots(species, (s) => addBrushSlot(s, maxSlots));
+          rerender();
+        },
+      }),
+      editAllRow(state.applyAll, (on) => {
+        editBrushSlots(species, (s) => ({ ...s, applyAll: on }));
+        rerender();
+      }),
+    );
+  }
 
-  const list = document.createElement("div");
-  Object.assign(list.style, { display: "grid", gap: "6px" });
+  const list = h("div", "qws-ed-slots");
 
   const boxes: Array<(cfg: BrushSlotConfig) => void> = [];
   /** After an edit with "edit all", every other box shows its new config. */
@@ -87,7 +94,7 @@ function brushSlotsPanel(species: string, rerender: () => void): HTMLElement {
   };
 
   state.slots.forEach((cfg, idx) => {
-    const { root, show } = brushSlotBox(species, idx, cfg, syncOthers, rerender);
+    const { root, show } = brushSlotBox(species, idx, slotTitle(idx, maxSlots), cfg, syncOthers, rerender);
     boxes.push(show);
     list.appendChild(root);
   });
@@ -96,53 +103,17 @@ function brushSlotsPanel(species: string, rerender: () => void): HTMLElement {
   return panel;
 }
 
-/** "Slots n/max" with its +/- buttons, then the "edit all slots together" switch. */
-function slotCountRows(species: string, state: BrushSlots, maxSlots: number, rerender: () => void): HTMLElement[] {
-  const header = document.createElement("div");
-  Object.assign(header.style, { display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", opacity: "0.9" });
-
-  const right = document.createElement("div");
-  Object.assign(right.style, { display: "flex", gap: "6px", alignItems: "center" });
-  const count = document.createElement("span");
-  count.textContent = `${state.slots.length}/${maxSlots}`;
-  right.append(
-    count,
-    roundButton("-", () => {
-      editBrushSlots(species, removeBrushSlot);
-      rerender();
-    }, "danger"),
-    roundButton("+", () => {
-      editBrushSlots(species, (s) => addBrushSlot(s, maxSlots));
-      rerender();
-    }),
-  );
-  const title = document.createElement("span");
-  title.textContent = "Slots";
-  header.append(title, right);
-
-  const applyAllRow = document.createElement("label");
-  Object.assign(applyAllRow.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", opacity: "0.9", cursor: "pointer" });
-  const applyAll = switchInput(state.applyAll, (on) => {
-    editBrushSlots(species, (s) => ({ ...s, applyAll: on }));
-    rerender();
-  });
-  applyAllRow.append(applyAll, document.createTextNode("Edit all slots together"));
-
-  return [header, applyAllRow];
-}
-
 /** The size and mutations of one brush slot. `show` redraws it for a config changed elsewhere. */
 function brushSlotBox(
   species: string,
   idx: number,
+  title: string,
   initial: BrushSlotConfig,
   syncOthers: (next: BrushSlots, from: number) => void,
   rerender: () => void,
 ): { root: HTMLElement; show: (cfg: BrushSlotConfig) => void } {
   let cfg = initial;
-  const size = sizeControls("Custom");
-  size.modeLabel.style.fontSize = "10px";
-  size.modeLabel.style.opacity = "0.75";
+  const size = sizeControls();
 
   /** Shows a config. The custom field keeps what the player is typing unless `rewriteField`. */
   const show = (next: BrushSlotConfig, rewriteField: boolean) => {
@@ -182,21 +153,13 @@ function brushSlotBox(
     }
   };
 
-  const prefix = sectionLabel("Mutations:");
-  prefix.style.flexShrink = "0";
   const mutations = mutationPicker((mutationId) => {
     editBrushSlots(species, (s) => toggleBrushMutation(s, idx, mutationId));
     rerender();
-  }, prefix);
+  }, panelLabel("Mutations"));
   mutations.render(Array.isArray(initial.mutations) ? initial.mutations : []);
 
-  const mutationsWrap = document.createElement("div");
-  Object.assign(mutationsWrap.style, { display: "grid", gap: "4px" });
-  mutationsWrap.append(mutations.row, mutations.dropdown);
-
-  const root = plainCard();
-  root.style.gap = "8px";
-  root.append(sizeHeader(size.value, size.modeLabel), size.slider, size.customRow, mutationsWrap);
+  const root = slotCard(title, size, [mutations.row, mutations.dropdown]);
   show(initial, true);
   return { root, show: (next) => show(next, true) };
 }

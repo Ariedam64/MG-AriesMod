@@ -1,8 +1,7 @@
 // The current-item panel's editor for a placed plant: how many slots it has,
 // and the size and mutations of each, written straight to the plan.
 
-import { plainCard, sectionLabel } from "../../../ui/kit/card";
-import { switchInput } from "../../../ui/kit/toggles";
+import { h } from "../../../ui/kit/dom";
 import { getMaxSlotsForSpecies } from "../brush";
 import { DEFAULT_SIZE_PERCENT, makeGrowSlot } from "../brushSlots";
 import type { TileObject } from "../gardenModel";
@@ -18,8 +17,9 @@ import {
   type SlotSizeState,
 } from "../slotSize";
 import { mutationPicker } from "./mutationPicker";
-import { roundButton } from "./panelChrome";
-import { sizeControls, sizeHeader } from "./sizeControls";
+import { panelLabel } from "./panelChrome";
+import { sizeControls, slotCard, slotTitle } from "./sizeControls";
+import { editAllRow, slotCountRow } from "./slotOptions";
 
 /** Each slot's size mode, by tile, so a redraw keeps custom slots in custom mode. */
 const slotModesByTile: Record<string, Record<number, SlotScaleMode>> = {};
@@ -81,10 +81,9 @@ export function renderPlantSlotsEditor(content: HTMLElement, plant: TileObject, 
     for (const t of targets) boxes[t]?.showMutations(mutationLists[t]);
   };
 
-  const list = document.createElement("div");
-  Object.assign(list.style, { display: "grid", gap: "8px" });
+  const list = h("div", "qws-ed-slots");
   slots.forEach((_, idx) => {
-    const box = plantSlotBox({
+    const box = plantSlotBox(slotTitle(idx, maxSlots), {
       onSlide: (value) => applySize(editSlotPercent(sizes, idx, value, editAllSlots)),
       onCustom: (raw) => applySize(editSlotCustom(sizes, idx, raw, editAllSlots)),
       onMode: (mode) => applySize(editSlotMode(sizes, idx, mode, editAllSlots)),
@@ -96,64 +95,40 @@ export function renderPlantSlotsEditor(content: HTMLElement, plant: TileObject, 
     list.appendChild(box.root);
   });
 
-  if (maxSlots > 1) content.append(slotCountRow(species, slots.length, maxSlots), editAllRow());
-  content.appendChild(list);
+  const options = h("div", "qws-ed-opts");
+  if (maxSlots > 1) {
+    options.append(
+      slotCountRow(slots.length, maxSlots, {
+        onRemove: () => {
+          if (slots.length > 1) editSlotList((current) => current.slice(0, Math.max(1, current.length - 1)));
+        },
+        onAdd: () => {
+          if (slots.length >= maxSlots) return;
+          editSlotList((current) =>
+            current.length >= maxSlots ? current : [...current, makeGrowSlot(species, DEFAULT_SIZE_PERCENT)],
+          );
+        },
+      }),
+      editAllRow(editAllSlots, (on) => {
+        editAllSlots = on;
+      }),
+    );
+  }
+  options.appendChild(list);
+  content.appendChild(options);
 }
 
-/** "Slots n/max" with buttons that add or remove the last slot. */
-function slotCountRow(species: string, count: number, maxSlots: number): HTMLElement {
-  const row = document.createElement("div");
-  Object.assign(row.style, {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "8px",
-    fontSize: "12px",
-    opacity: "0.9",
+/** Replaces the slot list of the plant on the current tile, then redraws the panel. */
+function editSlotList(edit: (slots: unknown[]) => unknown[]): void {
+  const changed = updateGardenObjectAtCurrentTile((obj) => {
+    if (obj?.objectType !== "plant") return obj;
+    return { ...obj, slots: edit(Array.isArray(obj.slots) ? obj.slots.slice() : []) };
   });
-
-  const label = document.createElement("span");
-  label.textContent = `Slots ${count}/${maxSlots}`;
-
-  const editSlots = (edit: (slots: unknown[]) => unknown[]) => {
-    const changed = updateGardenObjectAtCurrentTile((obj) => {
-      if (obj?.objectType !== "plant") return obj;
-      return { ...obj, slots: edit(Array.isArray(obj.slots) ? obj.slots.slice() : []) };
-    });
-    if (changed) currentItemChanged.emit();
-  };
-  const remove = roundButton("-", () => {
-    if (count > 1) editSlots((slots) => slots.slice(0, Math.max(1, slots.length - 1)));
-  });
-  const add = roundButton("+", () => {
-    if (count >= maxSlots) return;
-    editSlots((slots) => (slots.length >= maxSlots ? slots : [...slots, makeGrowSlot(species, DEFAULT_SIZE_PERCENT)]));
-  });
-  remove.setEnabled(count > 1);
-  add.setEnabled(count < maxSlots);
-
-  const buttons = document.createElement("div");
-  Object.assign(buttons.style, { display: "flex", gap: "6px", alignItems: "center" });
-  buttons.append(remove, add);
-  row.append(label, buttons);
-  return row;
+  if (changed) currentItemChanged.emit();
 }
 
-function editAllRow(): HTMLElement {
-  const row = document.createElement("label");
-  Object.assign(row.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", opacity: "0.9", cursor: "pointer" });
-  row.append(
-    switchInput(editAllSlots, (on) => {
-      editAllSlots = on;
-    }),
-    document.createTextNode("Edit all slots together"),
-  );
-  return row;
-}
-
-function plantSlotBox(handlers: SlotBoxHandlers): SlotBox {
-  const size = sizeControls("Use custom size");
-  Object.assign(size.modeLabel.style, { fontSize: "11px", opacity: "0.9" });
+function plantSlotBox(title: string, handlers: SlotBoxHandlers): SlotBox {
+  const size = sizeControls();
 
   size.slider.oninput = () => handlers.onSlide(Number(size.slider.value));
   // `change` fires on blur and on Enter. A keydown handler would never see
@@ -162,14 +137,8 @@ function plantSlotBox(handlers: SlotBoxHandlers): SlotBox {
   size.customInput.onchange = () => handlers.onCustom(size.customInput.value);
   size.modeSwitch.onchange = () => handlers.onMode(size.modeSwitch.checked ? "custom" : "percent");
 
-  const mutations = mutationPicker(handlers.onToggleMutation);
-  const mutationsWrap = document.createElement("div");
-  Object.assign(mutationsWrap.style, { display: "grid", gap: "6px" });
-  mutationsWrap.append(sectionLabel("Mutations"), mutations.row, mutations.dropdown);
-
-  const root = plainCard();
-  root.style.gap = "8px";
-  root.append(sizeHeader(size.value), size.modeLabel, size.slider, size.customRow, mutationsWrap);
+  const mutations = mutationPicker(handlers.onToggleMutation, panelLabel("Mutations"));
+  const root = slotCard(title, size, [mutations.row, mutations.dropdown]);
 
   return {
     root,

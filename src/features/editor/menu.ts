@@ -1,11 +1,11 @@
 // The Editor window: the editor mode switch, saving and clearing the current
-// garden, importing garden files, and the saved garden list.
+// garden, and the saved garden list with its file import.
 
 import { downloadJSONFile } from "../../lib/download";
 import { button } from "../../ui/kit/button";
-import { plainCard, sectionLabel } from "../../ui/kit/card";
+import { card } from "../../ui/kit/card";
+import { h } from "../../ui/kit/dom";
 import { textInput } from "../../ui/kit/fields";
-import { color } from "../../ui/kit/theme";
 import { switchInput } from "../../ui/kit/toggles";
 import { toastSimple } from "../../ui/toast";
 import { EditorService } from "./editor";
@@ -20,97 +20,71 @@ import {
   saveCurrentGarden,
   type SavedGarden,
 } from "./savedGardens";
+import { ensureEditorStyles } from "./ui/styles";
 
 const STATUS_CLEAR_MS = 4000;
 
 type StatusTone = "ok" | "warn" | "err";
-const TONE_COLOR: Record<StatusTone, string> = { ok: color.accent, warn: color.warn, err: color.danger };
 
-function card(...children: HTMLElement[]): HTMLDivElement {
-  const el = plainCard();
-  el.style.padding = "14px";
-  el.append(...children);
-  return el;
-}
-
-const row = (gap = "8px"): HTMLDivElement => {
-  const el = document.createElement("div");
-  Object.assign(el.style, { display: "flex", alignItems: "center", gap });
-  return el;
-};
-
-/** A one-line status message that fades back to empty. */
+/** A one-line status message that fades back to empty. The full text is its tooltip. */
 function statusLine(): { el: HTMLDivElement; set(msg: string, tone?: StatusTone): void } {
-  const el = document.createElement("div");
-  Object.assign(el.style, { fontSize: "11px", color: color.textDim, minHeight: "16px", paddingLeft: "2px" });
+  const el = h("div", "qws-ed-status");
+  el.setAttribute("role", "status");
   let timer: ReturnType<typeof setTimeout> | undefined;
   return {
     el,
     set(msg, tone = "ok") {
-      el.textContent = msg;
-      el.style.color = TONE_COLOR[tone];
+      el.textContent = el.title = msg;
+      el.className = `qws-ed-status is-${tone}`;
       clearTimeout(timer);
       timer = setTimeout(() => {
-        el.textContent = "";
-        el.style.color = color.textDim;
+        el.textContent = el.title = "";
+        el.className = "qws-ed-status";
       }, STATUS_CLEAR_MS);
     },
   };
 }
 
-function modeCard(): { root: HTMLElement; modeSwitch: ReturnType<typeof switchInput> } {
-  const head = row("12px");
-  head.style.justifyContent = "space-between";
-  const title = document.createElement("div");
-  Object.assign(title.style, { fontSize: "13px", fontWeight: "600", color: color.text });
-  title.textContent = "Editor mode";
-  const modeSwitch = switchInput(EditorService.isEnabled(), (on) => EditorService.setEnabled(on));
-  head.append(title, modeSwitch);
-
-  const desc = document.createElement("div");
-  Object.assign(desc.style, { fontSize: "11px", color: color.textDim, lineHeight: "1.5" });
-  desc.textContent =
-    "Sandbox garden with every plant and decor unlocked. Left click to place, right click to remove, drag to paint.";
-
-  return { root: card(head, desc), modeSwitch };
+function tip(key: string, action: string): HTMLElement {
+  const el = h("span", "qws-ed-tip");
+  el.append(h("b", undefined, key), action);
+  return el;
 }
 
-function dropZone(onFiles: (files: FileList | null | undefined) => void): HTMLElement[] {
-  const zone = document.createElement("div");
-  const idle = { borderColor: color.borderHover, background: color.cardBg };
-  Object.assign(zone.style, {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "4px",
-    padding: "22px 12px",
-    border: `2px dashed ${color.borderHover}`,
-    borderRadius: "10px",
-    background: color.cardBg,
-    color: color.textDim,
-    fontSize: "11px",
-    textAlign: "center",
-    cursor: "pointer",
-    transition: "border-color 150ms ease, background 150ms ease",
+function modeCard(): { root: HTMLElement; modeSwitch: ReturnType<typeof switchInput> } {
+  const modeSwitch = switchInput(EditorService.isEnabled(), (on) => EditorService.setEnabled(on));
+  modeSwitch.setAttribute("aria-label", "Editor mode");
+  const section = card("Editor mode", {
+    subtitle: "A sandbox garden with every plant and decor unlocked.",
+    actions: [modeSwitch],
   });
-  const setActive = (active: boolean) =>
-    Object.assign(zone.style, active ? { borderColor: color.accentBorderHover, background: color.accentSoft } : idle);
+  const tips = h("div", "qws-ed-tips");
+  tips.append(tip("Left click", "place"), tip("Right click", "remove"), tip("Drag", "paint"));
+  section.body.appendChild(tips);
+  return { root: section.root, modeSwitch };
+}
 
-  const title = document.createElement("div");
-  Object.assign(title.style, { fontWeight: "600", fontSize: "12px", color: color.text });
-  title.textContent = "Drop a garden JSON file here";
-  const sub = document.createElement("div");
-  sub.textContent = "…or click to browse";
-  zone.append(title, sub);
-
-  const fileInput = document.createElement("input");
+/** The dashed area that takes garden files, dropped or browsed. */
+function dropZone(onFiles: (files: FileList | null | undefined) => void): HTMLElement {
+  const fileInput = h("input");
   fileInput.type = "file";
   fileInput.accept = ".json,application/json,text/plain";
   fileInput.multiple = true;
-  fileInput.style.display = "none";
+  fileInput.hidden = true;
 
+  const zone = h("div", "qws-ed-drop");
+  zone.tabIndex = 0;
+  zone.setAttribute("role", "button");
+  zone.setAttribute("aria-label", "Import garden files");
+  zone.append(h("div", "qws-ed-drop__title", "Import a garden file"), h("div", "qws-ed-drop__hint", "Drop JSON files here, or click to browse."));
+
+  const setActive = (active: boolean) => zone.classList.toggle("is-active", active);
   zone.onclick = () => fileInput.click();
+  zone.addEventListener("keydown", (ev) => {
+    if (ev.key !== "Enter" && ev.key !== " ") return;
+    ev.preventDefault();
+    fileInput.click();
+  });
   fileInput.onchange = () => {
     onFiles(fileInput.files);
     fileInput.value = "";
@@ -127,27 +101,20 @@ function dropZone(onFiles: (files: FileList | null | undefined) => void): HTMLEl
     setActive(false);
     onFiles(ev.dataTransfer?.files);
   });
-  return [zone, fileInput];
+
+  const wrap = h("div");
+  wrap.append(fileInput, zone);
+  return wrap;
 }
 
 const fileSafeName = (name: string): string => String(name || "garden").replace(/[\\/:*?"<>|]+/g, "").trim() || "garden";
 
-export function renderEditorMenu(container: HTMLElement) {
-  Object.assign(container.style, { padding: "0", overflow: "hidden" });
+const savedOn = (ms: number): string =>
+  new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 
-  const wrap = document.createElement("div");
-  wrap.className = "qmm-scroll";
-  Object.assign(wrap.style, {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-    padding: "14px",
-    overflowY: "auto",
-    height: "100%",
-    width: "380px",
-    boxSizing: "border-box",
-    background: "var(--qmm-gradient-panel)",
-  });
+export function renderEditorMenu(container: HTMLElement) {
+  ensureEditorStyles();
+  const wrap = h("div", "qws-ed-menu");
   container.appendChild(wrap);
 
   const status = statusLine();
@@ -155,12 +122,10 @@ export function renderEditorMenu(container: HTMLElement) {
   wrap.appendChild(mode.root);
 
   /* Current garden */
-  const nameInput = textInput("Garden name…");
-  Object.assign(nameInput.style, { width: "100%", boxSizing: "border-box" });
+  const nameInput = textInput("Garden name");
+  nameInput.setAttribute("aria-label", "Garden name");
 
-  const actions = row();
-  const grow = { flex: "1" };
-  const save = button("Save current garden", {
+  const save = button("Save", {
     variant: "primary",
     lockWhilePending: true,
     onClick: async () => {
@@ -170,18 +135,24 @@ export function renderEditorMenu(container: HTMLElement) {
     },
   });
   const clear = button("Clear garden", {
+    size: "sm",
     lockWhilePending: true,
     onClick: async () => {
       const ok = await setCurrentGarden(makeEmptyGarden());
       status.set(ok ? "Garden cleared." : "Clear failed.", ok ? "ok" : "err");
     },
   });
-  Object.assign(save.style, grow);
-  Object.assign(clear.style, grow);
-  actions.append(save, clear);
-  wrap.appendChild(card(sectionLabel("Current garden"), nameInput, actions));
+  const saveRow = h("div", "qws-ed-save");
+  saveRow.append(nameInput, save);
 
-  /* Import */
+  const current = card("Current garden", {
+    subtitle: "Saves your plan while editing, your real garden otherwise.",
+    actions: [clear],
+  });
+  current.body.appendChild(saveRow);
+  wrap.appendChild(current.root);
+
+  /* Saved gardens, and the import that adds to them */
   const importFiles = async (files: FileList | null | undefined) => {
     const list = Array.from(files || []);
     if (!list.length) return;
@@ -202,39 +173,18 @@ export function renderEditorMenu(container: HTMLElement) {
     if (!imported) return status.set("Import failed (invalid JSON).", "err");
     status.set(imported === 1 ? `Imported "${lastName}".` : `Imported ${imported} gardens.`);
   };
-  wrap.appendChild(card(sectionLabel("Import"), ...dropZone((files) => void importFiles(files))));
 
-  /* Saved gardens */
-  const listWrap = document.createElement("div");
-  Object.assign(listWrap.style, { display: "flex", flexDirection: "column", gap: "6px" });
+  const editorNote = h("div", "qws-ed-note", "Turn on editor mode to load a garden.");
+  const listWrap = h("div", "qws-ed-list");
 
   const savedRow = (g: SavedGarden, editorOn: boolean): HTMLElement => {
-    const el = row();
-    Object.assign(el.style, {
-      padding: "10px 12px",
-      background: color.cardBg,
-      borderRadius: "10px",
-      border: `1px solid ${color.border}`,
-      transition: "border-color 120ms ease",
-    });
-    el.onmouseenter = () => (el.style.borderColor = color.borderHover);
-    el.onmouseleave = () => (el.style.borderColor = color.border);
-
-    const name = document.createElement("div");
-    Object.assign(name.style, {
-      flex: "1",
-      fontSize: "12px",
-      fontWeight: "600",
-      color: color.text,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-      minWidth: "0",
-    });
-    name.textContent = name.title = g.name || "Untitled";
+    const name = g.name || "Untitled";
+    const text = h("div", "qws-ed-row__text");
+    const nameEl = h("div", "qws-ed-row__name", name);
+    nameEl.title = name;
+    text.append(nameEl, h("div", "qws-ed-row__date", savedOn(g.createdAt)));
 
     const load = button("Load", {
-      variant: "primary",
       size: "sm",
       lockWhilePending: true,
       disabled: !editorOn,
@@ -246,6 +196,7 @@ export function renderEditorMenu(container: HTMLElement) {
       },
     });
     const exportBtn = button("Export", {
+      variant: "ghost",
       size: "sm",
       lockWhilePending: true,
       onClick: async () => {
@@ -257,7 +208,7 @@ export function renderEditorMenu(container: HTMLElement) {
       },
     });
     const remove = button("Delete", {
-      variant: "danger",
+      variant: "ghost",
       size: "sm",
       onClick: () => {
         if (!deleteSavedGarden(g.id)) return;
@@ -265,26 +216,30 @@ export function renderEditorMenu(container: HTMLElement) {
         renderSavedList();
       },
     });
+    remove.classList.add("qws-ed-delete");
 
-    el.append(name, load, exportBtn, remove);
-    return el;
+    const actions = h("div", "qws-ed-row__actions");
+    actions.append(load, exportBtn, remove);
+    const row = h("div", "qws-ed-row");
+    row.append(text, actions);
+    return row;
   };
 
   const renderSavedList = () => {
     const items = listSavedGardens();
+    const editorOn = EditorService.isEnabled();
+    editorNote.hidden = editorOn || !items.length;
     if (!items.length) {
-      const empty = document.createElement("div");
-      Object.assign(empty.style, { fontSize: "12px", color: color.textDim, padding: "4px 0" });
-      empty.textContent = "No saved gardens yet.";
-      listWrap.replaceChildren(empty);
+      listWrap.replaceChildren(h("div", "qws-ed-empty", "No saved gardens yet. Save the current one above, or import a file."));
       return;
     }
-    const editorOn = EditorService.isEnabled();
     listWrap.replaceChildren(...items.map((g) => savedRow(g, editorOn)));
   };
 
   renderSavedList();
-  wrap.appendChild(card(sectionLabel("Saved gardens"), status.el, listWrap));
+  const saved = card("Saved gardens", { actions: [status.el] });
+  saved.body.append(editorNote, listWrap, dropZone((files) => void importFiles(files)));
+  wrap.appendChild(saved.root);
 
   EditorService.onChange((enabled) => {
     mode.modeSwitch.checked = enabled;

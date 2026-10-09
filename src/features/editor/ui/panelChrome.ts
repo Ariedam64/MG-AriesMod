@@ -1,9 +1,9 @@
 // The look shared by the editor's on-screen panels: the two floating side
-// panels, the boxes inside them, and the small round buttons.
+// panels, the areas inside them, and the small round buttons.
 
 import { button, type KitButton } from "../../../ui/kit/button";
-import { ensureKitStyles } from "../../../ui/kit/styles";
-import { color } from "../../../ui/kit/theme";
+import { h } from "../../../ui/kit/dom";
+import { ensureEditorStyles } from "./styles";
 
 /** Just under the HUD (`layer.hud`), so the mod's windows stay on top of the editor. */
 export const EDITOR_LAYER = "1000001";
@@ -18,92 +18,55 @@ export type FloatingPanelOptions = {
   style?: Partial<CSSStyleDeclaration>;
 };
 
-/** A panel pinned to one side of the screen, with a title over its content. Appended to the page. */
-export function floatingPanel(opts: FloatingPanelOptions): { root: HTMLDivElement; header: HTMLDivElement } {
-  ensureKitStyles();
-  const root = document.createElement("div");
+/**
+ * A panel pinned to one side of the screen: a title band over `body`.
+ * Appended to the page.
+ */
+export function floatingPanel(opts: FloatingPanelOptions): { root: HTMLDivElement; body: HTMLDivElement } {
+  ensureEditorStyles();
+  const root = h("div", `qws-ed-panel is-${opts.side}`);
   root.id = opts.id;
-  Object.assign(root.style, {
-    position: "fixed",
-    top: "12%",
-    [opts.side]: "12px",
-    zIndex: EDITOR_LAYER,
-    width: "300px",
-    maxHeight: "86vh",
-    display: "grid",
-    gridTemplateRows: "auto 1fr",
-    gap: "10px",
-    padding: "10px",
-    borderRadius: "12px",
-    border: `1px solid ${color.accentBorder}`,
-    background: "var(--qmm-gradient-panel)",
-    color: color.text,
-    boxShadow: "var(--qmm-shadow-window)",
-    pointerEvents: "auto",
-    ...opts.style,
-  });
+  root.style.zIndex = EDITOR_LAYER;
+  if (opts.style) Object.assign(root.style, opts.style);
 
-  const header = document.createElement("div");
-  header.textContent = opts.title;
-  Object.assign(header.style, {
-    borderBottom: `1px solid ${color.accentSoft}`,
-    paddingBottom: "8px",
-    color: color.accent,
-    fontWeight: "700",
-    fontSize: "13px",
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-    textAlign: "center",
-  });
-
-  root.appendChild(header);
+  const body = h("div", "qws-ed-panel__body");
+  root.append(h("div", "qws-ed-panel__head", opts.title), body);
   appendToPage(root);
-  return { root, header };
+  return { root, body };
 }
 
-/** A bordered inner area of a side panel. */
+/** A sunken area of a side panel. */
 export function panelSection(): HTMLDivElement {
-  const el = document.createElement("div");
-  Object.assign(el.style, {
-    border: `1px solid ${color.accentSoft}`,
-    borderRadius: "10px",
-    background: color.mutedBg,
-    minHeight: "0",
-  });
-  return el;
+  ensureEditorStyles();
+  return h("div", "qws-ed-section");
 }
 
 /** A small round "+" or "-" button. */
-export function roundButton(glyph: string, onClick: () => void, tone: "default" | "danger" = "default"): KitButton {
-  const btn = button(glyph, { size: "xs", variant: tone === "danger" ? "danger" : "default", onClick });
-  Object.assign(btn.style, { width: "28px", height: "28px", padding: "0", borderRadius: "50%", fontSize: "14px" });
+export function roundButton(glyph: string, onClick: () => void, label?: string): KitButton {
+  ensureEditorStyles();
+  const btn = button(glyph, { size: "xs", onClick, ariaLabel: label, tooltip: label });
+  btn.classList.add("qws-ed-round");
   return btn;
 }
 
-/** A muted one-line message, such as an empty state. */
+/** A muted centred message, such as an empty state. */
 export function hint(text: string): HTMLDivElement {
-  const el = document.createElement("div");
-  el.textContent = text;
-  el.style.opacity = "0.7";
-  el.style.textAlign = "center";
-  return el;
+  ensureEditorStyles();
+  return h("div", "qws-ed-hint", text);
+}
+
+/** A small uppercase heading inside a panel. */
+export function panelLabel(text: string): HTMLDivElement {
+  ensureEditorStyles();
+  return h("div", "qws-ed-label", text);
 }
 
 /** An icon above a name, centred. */
 export function iconWithName(icon: HTMLElement, name: string, fontSize: number): HTMLDivElement {
-  const row = document.createElement("div");
-  Object.assign(row.style, { display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" });
-  const nameEl = document.createElement("div");
-  nameEl.textContent = name;
-  Object.assign(nameEl.style, {
-    fontWeight: "700",
-    fontSize: `${fontSize}px`,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    textAlign: "center",
-    maxWidth: "100%",
-  });
+  ensureEditorStyles();
+  const row = h("div", "qws-ed-named");
+  const nameEl = h("div", "qws-ed-named__name", name);
+  nameEl.style.fontSize = `${fontSize}px`;
   row.append(icon, nameEl);
   return row;
 }
