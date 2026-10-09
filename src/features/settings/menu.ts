@@ -7,7 +7,7 @@ export function renderSettingsMenu(container: HTMLElement) {
   const ui = new Menu({ id: "settings", compact: true });
   ui.mount(container);
   ui.addTabs([
-    { id: "settings-data", title: "Settings", render: renderDataTab },
+    { id: "settings-data", title: "Backups", render: renderDataTab },
     { id: "settings-appearance", title: "Appearance", render: renderAppearanceTab },
     { id: "settings-infos", title: "Infos", render: renderInfosTab },
   ]);

@@ -3,6 +3,7 @@
 import { gameVersion } from "../../game/gameVersion";
 import { detectEnvironment, type EnvironmentInfo } from "../../platform/environment";
 import { button } from "../../ui/kit/button";
+import { card } from "../../ui/kit/card";
 import { h } from "../../ui/kit/dom";
 import { openLink } from "../tools/openLink";
 import { ensureSettingsStyles } from "./styles";
@@ -44,28 +45,23 @@ function detectOsLabel(nav: Navigator | null): string {
 }
 
 /**
- * Inside Discord the Ko-fi badge image is blocked and a plain link does not
- * open, so it becomes a kit button that opens the page through the userscript
- * manager. Elsewhere it is Ko-fi's own badge.
+ * Inside Discord a plain link does not open, so the button opens the page
+ * through the userscript manager. Elsewhere it is a real link dressed as a
+ * kit button.
  */
 function kofiLink(isDiscord: boolean): HTMLElement {
   if (isDiscord) {
-    return button("☕ Support on Ko-fi", {
+    return button("Support on Ko-fi", {
       variant: "primary",
       title: KOFI_TITLE,
       onClick: () => void openLink(KOFI_URL),
     });
   }
-  const link = h("a", "qws-set-kofi");
+  const link = h("a", "qmm-btn qmm-btn--primary qws-set-link-btn", "Support on Ko-fi");
   link.href = KOFI_URL;
   link.target = "_blank";
   link.rel = "noopener noreferrer";
   link.title = KOFI_TITLE;
-  const img = h("img");
-  img.src = "https://storage.ko-fi.com/cdn/kofi5.png?v=6";
-  img.alt = KOFI_TITLE;
-  img.height = 36;
-  link.appendChild(img);
   return link;
 }
 
@@ -78,32 +74,38 @@ export function renderInfosTab(view: HTMLElement): void {
   hero.append(
     h("div", "qws-set-hero__title", "Arie's Mod"),
     versionPill(),
-    h("div", "qws-set-hero__sub", "Browser userscript for MagicGarden"),
+    h("div", "qws-set-hero__sub", "A userscript for Magic Garden"),
   );
 
+  const host = environment?.host || (typeof location !== "undefined" ? location.hostname : "") || "n/a";
   const runtimeRows: Array<[string, string]> = [
     ["Game version", gameVersion ?? "unknown"],
-    ["Host", environment?.host ?? (typeof location !== "undefined" ? location.hostname : "n/a")],
+    ["Host", host],
     ["Surface", describeSurface(environment)],
     ["Platform", describePlatform(environment, nav)],
     ["OS", detectOsLabel(nav)],
   ];
-  const grid = h("div", "qws-set-grid");
+  const details = card("Details");
+  const list = h("dl", "qws-set-facts");
   for (const [label, value] of runtimeRows) {
-    const row = h("div", "qws-set-grid__row");
-    row.append(h("span", "qws-set-grid__label", label), h("span", "qws-set-grid__value", value));
-    grid.appendChild(row);
+    const row = h("div", "qws-set-facts__row");
+    row.append(h("dt", "qws-set-facts__label", label), h("dd", "qws-set-facts__value", value));
+    list.appendChild(row);
   }
+  details.body.appendChild(list);
 
-  const support = h("div", "qws-set-support");
-  support.append(
+  const support = card("Support the mod");
+  support.body.classList.add("qws-set-stack");
+  support.body.append(
     h(
       "div",
-      "qws-set-support__text",
+      "qws-set-note",
       "Some features rely on paid server hosting. If you enjoy the mod, a coffee is always appreciated!",
     ),
     kofiLink(environment?.surface === "discord"),
   );
 
-  view.replaceChildren(hero, h("div", "qws-set-sep"), grid, support);
+  const tab = h("div", "qws-set-tab");
+  tab.append(hero, details.root, support.root);
+  view.replaceChildren(tab);
 }

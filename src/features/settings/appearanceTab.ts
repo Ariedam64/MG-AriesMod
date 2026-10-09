@@ -66,24 +66,27 @@ export function renderAppearanceTab(view: HTMLElement): void {
   const accentControls = flexRow({ gap: 8 });
   accentControls.append(picker, themeAccent);
 
-  const size = slider(SCALE_MIN * 100, SCALE_MAX * 100, 5, look.scale * 100);
-  const sizeValue = pill("", "ok");
+  const size = slider(SCALE_MIN * 100, SCALE_MAX * 100, 5, look.scale * 100, { fill: true });
+  size.setAttribute("aria-label", "Menu size");
+  const sizeValue = pill("");
   const readSize = () => Number(size.value) / 100;
   size.addEventListener("input", () => {
     sizeValue.textContent = `${size.value}%`;
     applyAppearance({ ...look, scale: readSize() });
   });
   size.addEventListener("change", () => commit({ scale: readSize() }));
-  const sizeControls = flexRow({ gap: 8 });
-  sizeControls.append(size, sizeValue);
+  // The value sits beside the title and the slider takes the whole line under it.
+  const sizeRow = settingRow("Menu size", "Windows and the launcher.", sizeValue).row;
+  sizeRow.classList.add("qws-set-size");
+  sizeRow.appendChild(size);
 
   const tuneCard = card("Fine tuning");
-  tuneCard.body.append(
-    settingRow("Accent colour", "Buttons, title bands and selections.", accentControls).row,
-    settingRow("Menu size", "Windows and the launcher.", sizeControls).row,
-  );
+  tuneCard.root.classList.add("qws-set-tune");
+  tuneCard.body.append(settingRow("Accent colour", "Buttons, title bands and selections.", accentControls).row, sizeRow);
 
-  const reset = button("Reset appearance", { onClick: () => commit(DEFAULT_APPEARANCE) });
+  const reset = button("Reset appearance", { size: "sm", variant: "ghost", onClick: () => commit(DEFAULT_APPEARANCE) });
+  const resetRow = h("div", "qws-set-end");
+  resetRow.appendChild(reset);
 
   function refresh() {
     for (const btn of themeButtons) {
@@ -106,6 +109,6 @@ export function renderAppearanceTab(view: HTMLElement): void {
 
   refresh();
   const tab = h("div", "qws-set-tab");
-  tab.append(themeCard.root, tuneCard.root, reset);
+  tab.append(themeCard.root, tuneCard.root, resetRow);
   view.replaceChildren(tab);
 }
