@@ -5,14 +5,14 @@
 // (`Atoms.player.action`), not from the button's text: the label varies
 // (Sell Pet, Sell Rainbow Pet, Sell Gold Pet) while the action's type is what
 // the game itself dispatches on.
-import { getStage, findByLabel, findGraphicsCtor } from "../../game/pixi/gardenInfoCard";
+import { getStage, findByLabel, findGraphicsCtor, watchStageNode } from "../../game/pixi/stageSearch";
 import { getReadySpriteState } from "../../game/sprites/context";
 import { pageWindow, shareGlobal } from "../../platform/pageContext";
 import { runSellAllPetsFlow } from "./flow";
-import { watchActionHud } from "./actionHud";
 import { Atoms } from "../../game/store/atoms";
 import { Subscriptions } from "../../lib/emitter";
 
+const ACTION_HUD_LABEL = "ActionHud";
 const BUTTON_FACE_LABEL = "McButtonFace";
 
 // Matches the game's own action-dispatch identifiers for selling a single
@@ -332,14 +332,16 @@ export function startSellAllPetsPixi(): SellAllPetsPixiController {
   };
 
   const onChildAdded = () => sync();
-  const hudWatch = watchActionHud({
-    attach(hud) {
+  const hudWatch = watchStageNode({
+    label: ACTION_HUD_LABEL,
+    logTag: "[sellAllPets]",
+    onFound(hud) {
       actionHud = hud;
       hud.on("childAdded", onChildAdded);
       debugState.attached = true;
       sync();
     },
-    detach() {
+    onLost() {
       actionHud = null;
       debugState.attached = false;
       removeButton();

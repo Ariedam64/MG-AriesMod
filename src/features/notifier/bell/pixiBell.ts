@@ -3,14 +3,12 @@
 // rail used to be a DOM toolbar the bell was cloned into; the game moved it to
 // native Pixi rendering, so the bell now lives in the Pixi scene graph. The
 // badge, panel and sounds stay plain DOM and anchor on `getScreenRect()`.
-import { getStage, findAcrossBranches, findByLabel } from "../../../game/pixi/gardenInfoCard";
+import { getStage, findByLabel, watchStageNode } from "../../../game/pixi/stageSearch";
 import { getReadySpriteState } from "../../../game/sprites/context";
 import { pageWindow, shareGlobal } from "../../../platform/pageContext";
 import { BELL_GLYPH, BELL_RING_DURATION_MS, bellRingAngleAt, type BellController, type ScreenRect } from "./ring";
 
 const RAIL_LABEL = "RightSideRail";
-const RAIL_FIND_RETRY_MS = 1000;
-const RAIL_FIND_LOG_EVERY = 30;
 // After a renderer rebuild (a WebGL context lost while the tab sat in the
 // background) the rail's "destroyed" event tells the bell to search again,
 // but only if the game calls `.destroy()` on the old tree rather than leaving
@@ -55,10 +53,6 @@ export function startPixiBell(opts: PixiBellOptions): BellController {
   let bellContainer: any = null;
   let bellText: any = null;
   let lastSize = DEFAULT_SLOT_SIZE;
-
-  let findAttempts = 0;
-  let findRafId: number | null = null;
-  let lastFindCheckAt = 0;
 
   let wiggleActive = false;
   let wiggleRafId: number | null = null;
@@ -332,56 +326,25 @@ export function startPixiBell(opts: PixiBellOptions): BellController {
 
   const onRailChildrenChanged = () => sync();
 
-  const restartSearchIfNeeded = () => {
-    if (!running || rail) return;
-    tryFindRail();
-    if (!rail && findRafId == null) findRafId = raf(scheduleFind);
-  };
-
-  const attachToRail = (node: any) => {
-    rail = node;
-    rail.on("childAdded", onRailChildrenChanged);
-    rail.on("childRemoved", onRailChildrenChanged);
-    rail.once("destroyed", () => {
-      if (rail === node) {
-        rail = null;
-        debugState.attached = false;
-        removeButton();
-        restartSearchIfNeeded();
-      }
-    });
-    debugState.attached = true;
-    console.info(`[PixiBell] attached to ${RAIL_LABEL} after ${findAttempts} attempt(s)`);
-    sync();
-  };
-
-  const tryFindRail = () => {
-    if (!running || rail) return;
-    const state = getReadySpriteState();
-    if (!state) return;
-    const stage = getStage(state);
-    const found = findAcrossBranches(stage, (node: any) => node?.label === RAIL_LABEL);
-    if (found) {
-      attachToRail(found);
-      return;
-    }
-    findAttempts += 1;
-    debugState.findAttempts = findAttempts;
-    if (findAttempts % RAIL_FIND_LOG_EVERY === 0) {
-      console.info(`[PixiBell] still searching for ${RAIL_LABEL} (${findAttempts} attempts so far)`);
-    }
-  };
-
-  const scheduleFind = (now: number) => {
-    findRafId = null;
-    if (!running || rail) return;
-    if (now - lastFindCheckAt >= RAIL_FIND_RETRY_MS) {
-      lastFindCheckAt = now;
-      tryFindRail();
-    }
-    if (!running || rail) return;
-    findRafId = raf(scheduleFind);
-  };
+  const railSearch = watchStageNode({
+    label: RAIL_LABEL,
+    logTag: "[PixiBell]",
+    onFound(node) {
+      rail = node;
+      rail.on("childAdded", onRailChildrenChanged);
+      rail.on("childRemoved", onRailChildrenChanged);
+      debugState.attached = true;
+      sync();
+    },
+    onLost() {
+      rail = null;
+      debugState.attached = false;
+      removeButton();
+    },
+    onSearch(attempts) {
+      debugState.findAttempts = attempts;
+    },
+  });
 
   const isReachableFromLiveStage = (node: any): boolean => {
     const state = getReadySpriteState();
@@ -401,10 +364,7 @@ export function startPixiBell(opts: PixiBellOptions): BellController {
     if (!running || !rail || rail.destroyed) return;
     if (!isReachableFromLiveStage(rail)) {
       console.warn("[PixiBell] rail orphaned from the live stage (no destroyed event fired), resetting");
-      rail = null;
-      debugState.attached = false;
-      removeButton();
-      restartSearchIfNeeded();
+      railSearch.reset();
       return;
     }
     // Re-sync even when the rail looks healthy. The button can be missing
@@ -443,14 +403,11 @@ export function startPixiBell(opts: PixiBellOptions): BellController {
     wiggleRafId = raf(wiggleTick);
   };
 
-  tryFindRail();
-  if (!rail) findRafId = raf(scheduleFind);
-
   return {
     stop() {
       if (!running) return;
       running = false;
-      if (findRafId != null) { cancelRaf(findRafId); findRafId = null; }
+      railSearch.stop();
       (pageWindow as any).clearInterval(maintenanceIntervalId);
       (pageWindow as any).removeEventListener("resize", onWindowResize);
       stopWiggleAnimation();

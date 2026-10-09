@@ -12207,10 +12207,10 @@
       gap: "8px",
       minHeight: "0"
     });
-    const search2 = textInput("Search\u2026", picker.query, { small: true });
-    Object.assign(search2.style, { width: "100%", boxSizing: "border-box" });
-    search2.oninput = () => {
-      picker.query = search2.value;
+    const search3 = textInput("Search\u2026", picker.query, { small: true });
+    Object.assign(search3.style, { width: "100%", boxSizing: "border-box" });
+    search3.oninput = () => {
+      picker.query = search3.value;
       renderEntryGrid();
     };
     const mode = segmented(
@@ -12223,7 +12223,7 @@
         if (picker.mode === next) return;
         picker.mode = next;
         picker.query = "";
-        search2.value = "";
+        search3.value = "";
         renderEntryGrid();
         renderDetails();
       },
@@ -12235,7 +12235,7 @@
     detailsWrap = panelSection();
     detailsWrap.id = "qws-editor-side-details";
     Object.assign(detailsWrap.style, { display: "grid", gridTemplateRows: "minmax(0, 1fr)", padding: "10px", overflow: "hidden" });
-    content2.append(mode, search2, listWrap, detailsWrap);
+    content2.append(mode, search3, listWrap, detailsWrap);
     panel.root.appendChild(content2);
     root2 = panel.root;
     renderEntryGrid();
@@ -14410,10 +14410,10 @@
   }
   function attachAutoClamp(win) {
     if (typeof ResizeObserver === "undefined") return;
-    let raf3 = 0;
+    let raf2 = 0;
     new ResizeObserver(() => {
-      if (raf3) cancelAnimationFrame(raf3);
-      raf3 = requestAnimationFrame(() => ensureOnScreen(win));
+      if (raf2) cancelAnimationFrame(raf2);
+      raf2 = requestAnimationFrame(() => ensureOnScreen(win));
     }).observe(win);
   }
   function withTopLocked(el, mutate) {
@@ -14856,7 +14856,7 @@
     }
   });
 
-  // src/game/pixi/gardenInfoCard.ts
+  // src/game/pixi/stageSearch.ts
   function getStage(state5) {
     return state5.renderer.lastObjectRendered ?? state5.renderer.stage ?? state5.app?.stage ?? null;
   }
@@ -14904,143 +14904,78 @@
     if (found) cachedGraphicsCtor = found;
     return found;
   }
-  function computeGeometry(card4) {
-    const cardBounds = card4.getLocalBounds();
-    const width = card4.hitArea?.width ?? cardBounds.width;
-    const height = card4.hitArea?.height ?? cardBounds.height;
-    const titleRow = (card4.children ?? []).find((c) => c?.label === TITLE_ROW_LABEL);
-    const contentTop = titleRow ? titleRow.position.y + titleRow.getLocalBounds().minY : cardBounds.minY;
-    const abilitiesSection = (cardSystem?.children ?? []).find((c) => c?.label === ABILITIES_SECTION_LABEL);
-    const extraTopOffset = abilitiesSection ? abilitiesSection.getLocalBounds().height + SECTION_GAP_ESTIMATE : 0;
-    return { top: contentTop - extraTopOffset, width, height };
-  }
-  function notifyListeners(card4, geometry) {
-    for (const listener of listeners) {
-      try {
-        listener(card4, geometry);
-      } catch (error) {
-        console.warn("[gardenInfoCardPixi] listener failed", error);
+  function watchStageNode(opts) {
+    const raf2 = pageWindow.requestAnimationFrame.bind(pageWindow);
+    const cancelRaf = pageWindow.cancelAnimationFrame.bind(pageWindow);
+    let running = true;
+    let node = null;
+    let attempts = 0;
+    let rafId = null;
+    let lastCheckAt = 0;
+    const lose = (lost) => {
+      if (node !== lost) return;
+      node = null;
+      opts.onLost();
+      search3();
+    };
+    const attach2 = (found) => {
+      node = found;
+      found.once("destroyed", () => lose(found));
+      console.info(`${opts.logTag} attached to ${opts.label} after ${attempts} attempt(s)`);
+      opts.onFound(found);
+    };
+    const tryFind = () => {
+      if (!running || node) return;
+      const state5 = getReadySpriteState();
+      if (!state5) return;
+      const found = findAcrossBranches(getStage(state5), (n) => n?.label === opts.label);
+      if (found) {
+        attach2(found);
+        return;
       }
-    }
-  }
-  function onChildAddedUnsafe(row5) {
-    if (row5?.label !== CARD_ROW_LABEL) return;
-    const card4 = findByLabel(row5, OBJECT_CARD_LABEL);
-    if (!card4) return;
-    currentCard = card4;
-    const geometry = computeGeometry(card4);
-    card4.once("destroyed", () => {
-      if (currentCard === card4) {
-        currentCard = null;
-        notifyListeners(null, null);
+      attempts += 1;
+      opts.onSearch?.(attempts);
+      if (attempts % SEARCH_LOG_EVERY === 0) {
+        console.info(`${opts.logTag} still searching for ${opts.label} (${attempts} attempts so far)`);
       }
-    });
-    notifyListeners(card4, geometry);
-  }
-  function onChildAdded(row5) {
-    try {
-      onChildAddedUnsafe(row5);
-    } catch (error) {
-      console.warn("[gardenInfoCardPixi] onChildAdded failed", error);
-    }
-  }
-  function attachToCardSystem(system) {
-    cardSystem = system;
-    cardSystem.on("childAdded", onChildAdded);
-    cardSystem.once("destroyed", () => {
-      if (cardSystem === system) {
-        cardSystem = null;
-        debugState.attached = false;
-        currentCard = null;
-        notifyListeners(null, null);
-        restartSearchIfNeeded();
+    };
+    const tick = (now) => {
+      rafId = null;
+      if (!running || node) return;
+      if (now - lastCheckAt >= SEARCH_RETRY_MS) {
+        lastCheckAt = now;
+        tryFind();
       }
-    });
-    debugState.attached = true;
-    console.info(`[gardenInfoCardPixi] attached to ${CARD_SYSTEM_LABEL} after ${findAttempts} attempt(s)`);
-    const existingRow = (system.children ?? []).find((c) => c?.label === CARD_ROW_LABEL);
-    if (existingRow) onChildAdded(existingRow);
-  }
-  function tryFindCardSystem() {
-    if (cardSystem) return;
-    const state5 = getReadySpriteState();
-    if (!state5) return;
-    const stage = getStage(state5);
-    const found = findAcrossBranches(stage, (node) => node?.label === CARD_SYSTEM_LABEL);
-    if (found) {
-      attachToCardSystem(found);
-      return;
-    }
-    findAttempts += 1;
-    debugState.findAttempts = findAttempts;
-    if (findAttempts % CARD_SYSTEM_FIND_LOG_EVERY === 0) {
-      console.info(`[gardenInfoCardPixi] still searching for ${CARD_SYSTEM_LABEL} (${findAttempts} attempts so far)`);
-    }
-  }
-  function scheduleFind(now) {
-    findRafId = null;
-    debugState.rafTicks += 1;
-    if (!listeners.size || cardSystem) return;
-    if (now - lastFindCheckAt >= CARD_SYSTEM_FIND_RETRY_MS) {
-      lastFindCheckAt = now;
-      tryFindCardSystem();
-    }
-    if (!listeners.size || cardSystem) return;
-    findRafId = raf(scheduleFind);
-  }
-  function restartSearchIfNeeded() {
-    if (!listeners.size || cardSystem) return;
-    tryFindCardSystem();
-    if (!cardSystem && findRafId == null) {
-      findRafId = raf(scheduleFind);
-    }
-  }
-  function watchGardenInfoCard(listener) {
-    listeners.add(listener);
-    debugState.listenerCount = listeners.size;
-    restartSearchIfNeeded();
-    if (currentCard) {
-      try {
-        listener(currentCard, computeGeometry(currentCard));
-      } catch (error) {
-        console.warn("[gardenInfoCardPixi] listener failed", error);
+      if (running && !node) rafId = raf2(tick);
+    };
+    const search3 = () => {
+      tryFind();
+      if (running && !node && rafId == null) rafId = raf2(tick);
+    };
+    search3();
+    return {
+      get node() {
+        return node;
+      },
+      reset() {
+        if (node) lose(node);
+      },
+      stop() {
+        running = false;
+        if (rafId != null) cancelRaf(rafId);
+        rafId = null;
       }
-    }
-    return () => {
-      listeners.delete(listener);
-      debugState.listenerCount = listeners.size;
     };
   }
-  var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, CARD_SYSTEM_FIND_RETRY_MS, CARD_SYSTEM_FIND_LOG_EVERY, cachedGraphicsCtor, cardSystem, currentCard, findAttempts, findRafId, lastFindCheckAt, listeners, debugState, raf;
-  var init_gardenInfoCard = __esm({
-    "src/game/pixi/gardenInfoCard.ts"() {
+  var SEARCH_RETRY_MS, SEARCH_LOG_EVERY, cachedGraphicsCtor;
+  var init_stageSearch = __esm({
+    "src/game/pixi/stageSearch.ts"() {
       "use strict";
       init_pageContext();
       init_context();
-      CARD_SYSTEM_LABEL = "GardenInfoCardSystem";
-      CARD_ROW_LABEL = "GardenInfoCardRow";
-      OBJECT_CARD_LABEL = "GardenInfoObjectCard";
-      TITLE_ROW_LABEL = "GardenInfoObjectTitleRow";
-      ABILITIES_SECTION_LABEL = "GardenInfoPlantAbilities";
-      SECTION_GAP_ESTIMATE = 8;
-      CARD_SYSTEM_FIND_RETRY_MS = 1e3;
-      CARD_SYSTEM_FIND_LOG_EVERY = 30;
+      SEARCH_RETRY_MS = 1e3;
+      SEARCH_LOG_EVERY = 30;
       cachedGraphicsCtor = null;
-      cardSystem = null;
-      currentCard = null;
-      findAttempts = 0;
-      findRafId = null;
-      lastFindCheckAt = 0;
-      listeners = /* @__PURE__ */ new Set();
-      debugState = {
-        findAttempts: 0,
-        attached: false,
-        rafTicks: 0,
-        scriptStartedAt: Date.now(),
-        listenerCount: 0
-      };
-      shareGlobal("__MG_GARDEN_INFO_CARD_DEBUG__", debugState);
-      raf = pageWindow.requestAnimationFrame.bind(pageWindow);
     }
   });
 
@@ -15919,10 +15854,10 @@
     });
   }
   function onFrame(now) {
-    findRafId2 = null;
+    findRafId = null;
     const open = isActivityLogModalOpen();
-    if (open && !modalNode && now - lastFindCheckAt2 >= FIND_RETRY_MS) {
-      lastFindCheckAt2 = now;
+    if (open && !modalNode && now - lastFindCheckAt >= FIND_RETRY_MS) {
+      lastFindCheckAt = now;
       tryFindModal();
     }
     if (modalNode) syncToolbar();
@@ -15930,7 +15865,10 @@
       modalNode = null;
       teardownToolbar();
     }
-    findRafId2 = raf2(onFrame);
+    if (open || modalNode) findRafId = raf(onFrame);
+  }
+  function ensureFrameLoop() {
+    if (findRafId == null && (isActivityLogModalOpen() || modalNode)) findRafId = raf(onFrame);
   }
   function startActivityLogFilterPixi() {
     void (async () => {
@@ -15941,6 +15879,7 @@
       try {
         await Atoms.ui.activeModal.onChange((next) => {
           setActivityLogModalOpen(next === ACTIVITY_LOG_MODAL_ID);
+          ensureFrameLoop();
         });
       } catch {
       }
@@ -15951,28 +15890,28 @@
         });
       } catch {
       }
-      if (findRafId2 == null) findRafId2 = raf2(onFrame);
+      ensureFrameLoop();
     })();
   }
-  var FIND_RETRY_MS, TOOLBAR_GAP_BELOW, raf2, activeTab, modalNode, toolbar, findRafId2, lastFindCheckAt2, touchedScroll, shiftedRows, plannedFirst, plannedShift, syncDebug;
+  var FIND_RETRY_MS, TOOLBAR_GAP_BELOW, raf, activeTab, modalNode, toolbar, findRafId, lastFindCheckAt, touchedScroll, shiftedRows, plannedFirst, plannedShift, syncDebug;
   var init_filterBar = __esm({
     "src/features/activityLog/filterBar.ts"() {
       "use strict";
       init_pageContext();
       init_atoms();
-      init_gardenInfoCard();
+      init_stageSearch();
       init_context();
       init_activityLogModalLayout();
       init_filter();
       init_filterToolbar();
       FIND_RETRY_MS = 1e3;
       TOOLBAR_GAP_BELOW = 6;
-      raf2 = pageWindow.requestAnimationFrame.bind(pageWindow);
+      raf = pageWindow.requestAnimationFrame.bind(pageWindow);
       activeTab = "logs";
       modalNode = null;
       toolbar = null;
-      findRafId2 = null;
-      lastFindCheckAt2 = 0;
+      findRafId = null;
+      lastFindCheckAt = 0;
       touchedScroll = null;
       shiftedRows = /* @__PURE__ */ new WeakSet();
       plannedFirst = null;
@@ -16515,6 +16454,121 @@
     }
   });
 
+  // src/game/pixi/gardenInfoCard.ts
+  function computeGeometry(card4) {
+    const cardBounds = card4.getLocalBounds();
+    const width = card4.hitArea?.width ?? cardBounds.width;
+    const height = card4.hitArea?.height ?? cardBounds.height;
+    const titleRow = (card4.children ?? []).find((c) => c?.label === TITLE_ROW_LABEL);
+    const contentTop = titleRow ? titleRow.position.y + titleRow.getLocalBounds().minY : cardBounds.minY;
+    const abilitiesSection = (cardSystem?.children ?? []).find((c) => c?.label === ABILITIES_SECTION_LABEL);
+    const extraTopOffset = abilitiesSection ? abilitiesSection.getLocalBounds().height + SECTION_GAP_ESTIMATE : 0;
+    return { top: contentTop - extraTopOffset, width, height };
+  }
+  function notifyListeners(card4, geometry) {
+    for (const listener of listeners) {
+      try {
+        listener(card4, geometry);
+      } catch (error) {
+        console.warn("[gardenInfoCardPixi] listener failed", error);
+      }
+    }
+  }
+  function onChildAddedUnsafe(row5) {
+    if (row5?.label !== CARD_ROW_LABEL) return;
+    const card4 = findByLabel(row5, OBJECT_CARD_LABEL);
+    if (!card4) return;
+    currentCard = card4;
+    const geometry = computeGeometry(card4);
+    card4.once("destroyed", () => {
+      if (currentCard === card4) {
+        currentCard = null;
+        notifyListeners(null, null);
+      }
+    });
+    notifyListeners(card4, geometry);
+  }
+  function onChildAdded(row5) {
+    try {
+      onChildAddedUnsafe(row5);
+    } catch (error) {
+      console.warn("[gardenInfoCardPixi] onChildAdded failed", error);
+    }
+  }
+  function attachToCardSystem(system) {
+    cardSystem = system;
+    cardSystem.on("childAdded", onChildAdded);
+    debugState.attached = true;
+    const existingRow = (system.children ?? []).find((c) => c?.label === CARD_ROW_LABEL);
+    if (existingRow) onChildAdded(existingRow);
+  }
+  function detachFromCardSystem() {
+    cardSystem = null;
+    debugState.attached = false;
+    currentCard = null;
+    notifyListeners(null, null);
+    stopSearchIfUnused();
+  }
+  function startSearchIfNeeded() {
+    if (!listeners.size || search) return;
+    search = watchStageNode({
+      label: CARD_SYSTEM_LABEL,
+      logTag: "[gardenInfoCardPixi]",
+      onFound: attachToCardSystem,
+      onLost: detachFromCardSystem,
+      onSearch: (attempts) => {
+        debugState.findAttempts = attempts;
+      }
+    });
+  }
+  function stopSearchIfUnused() {
+    if (listeners.size || cardSystem || !search) return;
+    search.stop();
+    search = null;
+  }
+  function watchGardenInfoCard(listener) {
+    listeners.add(listener);
+    debugState.listenerCount = listeners.size;
+    startSearchIfNeeded();
+    if (currentCard) {
+      try {
+        listener(currentCard, computeGeometry(currentCard));
+      } catch (error) {
+        console.warn("[gardenInfoCardPixi] listener failed", error);
+      }
+    }
+    return () => {
+      listeners.delete(listener);
+      debugState.listenerCount = listeners.size;
+      stopSearchIfUnused();
+    };
+  }
+  var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, cardSystem, currentCard, search, listeners, debugState;
+  var init_gardenInfoCard = __esm({
+    "src/game/pixi/gardenInfoCard.ts"() {
+      "use strict";
+      init_pageContext();
+      init_stageSearch();
+      CARD_SYSTEM_LABEL = "GardenInfoCardSystem";
+      CARD_ROW_LABEL = "GardenInfoCardRow";
+      OBJECT_CARD_LABEL = "GardenInfoObjectCard";
+      TITLE_ROW_LABEL = "GardenInfoObjectTitleRow";
+      ABILITIES_SECTION_LABEL = "GardenInfoPlantAbilities";
+      SECTION_GAP_ESTIMATE = 8;
+      cardSystem = null;
+      currentCard = null;
+      search = null;
+      listeners = /* @__PURE__ */ new Set();
+      debugState = {
+        findAttempts: 0,
+        attached: false,
+        scriptStartedAt: Date.now(),
+        listenerCount: 0
+      };
+      shareGlobal("__MG_GARDEN_INFO_CARD_DEBUG__", debugState);
+    }
+  });
+
   // src/features/cropPrice/badge.ts
   function isPlantObject3(obj) {
     return !!obj && typeof obj === "object" && obj.objectType === "plant";
@@ -16713,6 +16767,7 @@
       init_data();
       init_atoms();
       init_gardenInfoCard();
+      init_stageSearch();
       init_context();
       VALUE_TEXT_STYLE = { fontFamily: "Arial", fontSize: 14, fontWeight: "700", fill: "#FFD84D" };
       VALUE_BADGE_GAP = 20;
@@ -17707,10 +17762,10 @@
     const input = grid?.querySelector(SEARCH_INPUT_SELECTOR);
     return normalize(typeof input?.value === "string" ? input.value : "");
   }
-  function filterContextKey(filters, search2) {
+  function filterContextKey(filters, search3) {
     const keys = filters.map(normalize).filter((value) => value && value !== "all");
     keys.sort();
-    return `${keys.join("|")}::${normalize(search2)}`;
+    return `${keys.join("|")}::${normalize(search3)}`;
   }
   function rememberShownTypes(contextKey, types) {
     const next = new Set([...types].map(normalize).filter(Boolean));
@@ -17730,14 +17785,14 @@
   function filterInventoryItems(items, filters, searchQuery) {
     const itemTypes = new Set(filters.flatMap(filterLabelToItemTypes).filter(Boolean));
     const byType = itemTypes.size ? items.filter((item) => itemTypes.has(itemTypeOf(item))) : items.slice();
-    const search2 = normalize(searchQuery);
-    const shown = search2 ? byType.filter((item) => itemMatchesSearch(item, search2)) : byType;
+    const search3 = normalize(searchQuery);
+    const shown = search3 ? byType.filter((item) => itemMatchesSearch(item, search3)) : byType;
     const playersInRoom3 = playersInRoomForValues();
     for (const item of shown) {
       if (item && typeof item === "object") item.value = computeInventoryItemValue(item, { playersInRoom: playersInRoom3 }) ?? null;
     }
     const types = new Set(shown.map(itemTypeOf).filter(Boolean));
-    rememberShownTypes(filterContextKey(filters, search2), types);
+    rememberShownTypes(filterContextKey(filters, search3), types);
     return shown;
   }
   var FILTER_CHECKBOX_SELECTOR, FILTER_CHECKBOX_LABEL_SELECTOR, SEARCH_INPUT_SELECTOR, isChecked, shownTypesByContext, shownTypesChanged, onShownItemTypesChange, shownItemTypes;
@@ -17755,7 +17810,7 @@
       shownTypesByContext = /* @__PURE__ */ new Map();
       shownTypesChanged = new Emitter();
       onShownItemTypesChange = (listener) => shownTypesChanged.on(listener);
-      shownItemTypes = (filters, search2) => shownTypesByContext.get(filterContextKey(filters, search2)) ?? null;
+      shownItemTypes = (filters, search3) => shownTypesByContext.get(filterContextKey(filters, search3)) ?? null;
     }
   });
 
@@ -18578,14 +18633,14 @@
       }
       current3.showValues.checked = showValues;
       const filters = getActiveFilters(target);
-      const search2 = getSearchQuery(target);
+      const search3 = getSearchQuery(target);
       const container = getItemsContainer(target);
       observeNoise(container);
       const entries = container ? getDomEntries(container) : [];
       const domChanged = domOrderChanged(lastSortedOrder, entries);
-      lastContextKey = filterContextKey(filters, search2);
-      void current3.summary.update(filters, search2);
-      const options2 = computeSortOptions(filters, shownItemTypes(filters, search2));
+      lastContextKey = filterContextKey(filters, search3);
+      void current3.summary.update(filters, search3);
+      const options2 = computeSortOptions(filters, shownItemTypes(filters, search3));
       const offered2 = (key2) => key2 && options2.some((o) => o.value === key2) ? key2 : null;
       if (lastRenderedEntryCount !== entries.length || !current3.sortSelect.options.length) {
         renderSortOptions(current3.sortSelect, options2, offered2(current3.lastSortKey) || offered2(loadSortKey()));
@@ -19451,6 +19506,7 @@
       init_emitter();
       init_pageContext();
       init_gardenInfoCard();
+      init_stageSearch();
       init_context();
       BORDER_COLOR = 12334551;
       BORDER_WIDTH = 3;
@@ -20196,9 +20252,6 @@
     let bellContainer = null;
     let bellText = null;
     let lastSize = DEFAULT_SLOT_SIZE;
-    let findAttempts2 = 0;
-    let findRafId3 = null;
-    let lastFindCheckAt3 = 0;
     let wiggleActive = false;
     let wiggleRafId = null;
     let wiggleT = 0;
@@ -20216,7 +20269,7 @@
       screenScaleY: null
     };
     shareGlobal("__MG_NOTIFICATION_BELL_PIXI_DEBUG__", debugState3);
-    const raf3 = pageWindow.requestAnimationFrame.bind(pageWindow);
+    const raf2 = pageWindow.requestAnimationFrame.bind(pageWindow);
     const cancelRaf = pageWindow.cancelAnimationFrame.bind(pageWindow);
     const forgetButtonRefs = () => {
       bellContainer = null;
@@ -20405,53 +20458,25 @@
       }
     };
     const onRailChildrenChanged = () => sync2();
-    const restartSearchIfNeeded2 = () => {
-      if (!running || rail) return;
-      tryFindRail();
-      if (!rail && findRafId3 == null) findRafId3 = raf3(scheduleFind2);
-    };
-    const attachToRail = (node) => {
-      rail = node;
-      rail.on("childAdded", onRailChildrenChanged);
-      rail.on("childRemoved", onRailChildrenChanged);
-      rail.once("destroyed", () => {
-        if (rail === node) {
-          rail = null;
-          debugState3.attached = false;
-          removeButton();
-          restartSearchIfNeeded2();
-        }
-      });
-      debugState3.attached = true;
-      console.info(`[PixiBell] attached to ${RAIL_LABEL} after ${findAttempts2} attempt(s)`);
-      sync2();
-    };
-    const tryFindRail = () => {
-      if (!running || rail) return;
-      const state5 = getReadySpriteState();
-      if (!state5) return;
-      const stage = getStage(state5);
-      const found = findAcrossBranches(stage, (node) => node?.label === RAIL_LABEL);
-      if (found) {
-        attachToRail(found);
-        return;
+    const railSearch = watchStageNode({
+      label: RAIL_LABEL,
+      logTag: "[PixiBell]",
+      onFound(node) {
+        rail = node;
+        rail.on("childAdded", onRailChildrenChanged);
+        rail.on("childRemoved", onRailChildrenChanged);
+        debugState3.attached = true;
+        sync2();
+      },
+      onLost() {
+        rail = null;
+        debugState3.attached = false;
+        removeButton();
+      },
+      onSearch(attempts) {
+        debugState3.findAttempts = attempts;
       }
-      findAttempts2 += 1;
-      debugState3.findAttempts = findAttempts2;
-      if (findAttempts2 % RAIL_FIND_LOG_EVERY === 0) {
-        console.info(`[PixiBell] still searching for ${RAIL_LABEL} (${findAttempts2} attempts so far)`);
-      }
-    };
-    const scheduleFind2 = (now) => {
-      findRafId3 = null;
-      if (!running || rail) return;
-      if (now - lastFindCheckAt3 >= RAIL_FIND_RETRY_MS) {
-        lastFindCheckAt3 = now;
-        tryFindRail();
-      }
-      if (!running || rail) return;
-      findRafId3 = raf3(scheduleFind2);
-    };
+    });
     const isReachableFromLiveStage = (node) => {
       const state5 = getReadySpriteState();
       if (!state5) return false;
@@ -20469,10 +20494,7 @@
       if (!running || !rail || rail.destroyed) return;
       if (!isReachableFromLiveStage(rail)) {
         console.warn("[PixiBell] rail orphaned from the live stage (no destroyed event fired), resetting");
-        rail = null;
-        debugState3.attached = false;
-        removeButton();
-        restartSearchIfNeeded2();
+        railSearch.reset();
         return;
       }
       sync2();
@@ -20503,18 +20525,13 @@
       wiggleT += dt;
       const cycleOffset = wiggleT % BELL_RING_DURATION_MS / BELL_RING_DURATION_MS;
       bellText.rotation = bellRingAngleAt(cycleOffset);
-      wiggleRafId = raf3(wiggleTick);
+      wiggleRafId = raf2(wiggleTick);
     };
-    tryFindRail();
-    if (!rail) findRafId3 = raf3(scheduleFind2);
     return {
       stop() {
         if (!running) return;
         running = false;
-        if (findRafId3 != null) {
-          cancelRaf(findRafId3);
-          findRafId3 = null;
-        }
+        railSearch.stop();
         pageWindow.clearInterval(maintenanceIntervalId);
         pageWindow.removeEventListener("resize", onWindowResize);
         stopWiggleAnimation();
@@ -20548,24 +20565,22 @@
         if (active3) {
           wiggleT = 0;
           wiggleLastFrameAt = null;
-          if (wiggleRafId == null) wiggleRafId = raf3(wiggleTick);
+          if (wiggleRafId == null) wiggleRafId = raf2(wiggleTick);
         } else {
           stopWiggleAnimation();
         }
       }
     };
   }
-  var RAIL_LABEL, RAIL_FIND_RETRY_MS, RAIL_FIND_LOG_EVERY, RAIL_REACHABILITY_CHECK_MS, RAIL_REACHABILITY_MAX_HOPS, CHAT_SLOT_MARKER_LABEL, DEFAULT_SLOT_SIZE, DEFAULT_SLOT_SPACING, SLOT_OCCUPIED_TOLERANCE_RATIO, MAX_SLOT_SEARCH_STEPS;
+  var RAIL_LABEL, RAIL_REACHABILITY_CHECK_MS, RAIL_REACHABILITY_MAX_HOPS, CHAT_SLOT_MARKER_LABEL, DEFAULT_SLOT_SIZE, DEFAULT_SLOT_SPACING, SLOT_OCCUPIED_TOLERANCE_RATIO, MAX_SLOT_SEARCH_STEPS;
   var init_pixiBell = __esm({
     "src/features/notifier/bell/pixiBell.ts"() {
       "use strict";
-      init_gardenInfoCard();
+      init_stageSearch();
       init_context();
       init_pageContext();
       init_ring();
       RAIL_LABEL = "RightSideRail";
-      RAIL_FIND_RETRY_MS = 1e3;
-      RAIL_FIND_LOG_EVERY = 30;
       RAIL_REACHABILITY_CHECK_MS = 2e3;
       RAIL_REACHABILITY_MAX_HOPS = 64;
       CHAT_SLOT_MARKER_LABEL = "RightSideRailChatBadge";
@@ -25039,76 +25054,6 @@
     }
   });
 
-  // src/features/sellAllPets/actionHud.ts
-  function watchActionHud(watch) {
-    const raf3 = pageWindow.requestAnimationFrame.bind(pageWindow);
-    const cancelRaf = pageWindow.cancelAnimationFrame.bind(pageWindow);
-    let running = true;
-    let hud = null;
-    let attempts = 0;
-    let rafId = null;
-    let lastCheckAt = 0;
-    const attach2 = (found) => {
-      hud = found;
-      found.once("destroyed", () => {
-        if (hud !== found) return;
-        hud = null;
-        watch.detach();
-        search2();
-      });
-      console.info(`[sellAllPets] attached to ${ACTION_HUD_LABEL} after ${attempts} attempt(s)`);
-      watch.attach(found);
-    };
-    const tryFind = () => {
-      if (!running || hud) return;
-      const state5 = getReadySpriteState();
-      if (!state5) return;
-      const found = findAcrossBranches(getStage(state5), (node) => node?.label === ACTION_HUD_LABEL);
-      if (found) {
-        attach2(found);
-        return;
-      }
-      attempts += 1;
-      watch.onSearch?.(attempts);
-      if (attempts % LOG_EVERY === 0) {
-        console.info(`[sellAllPets] still searching for ${ACTION_HUD_LABEL} (${attempts} attempts so far)`);
-      }
-    };
-    const tick = (now) => {
-      rafId = null;
-      if (!running || hud) return;
-      if (now - lastCheckAt >= RETRY_MS) {
-        lastCheckAt = now;
-        tryFind();
-      }
-      if (running && !hud) rafId = raf3(tick);
-    };
-    const search2 = () => {
-      tryFind();
-      if (running && !hud && rafId == null) rafId = raf3(tick);
-    };
-    search2();
-    return {
-      stop() {
-        running = false;
-        if (rafId != null) cancelRaf(rafId);
-        rafId = null;
-      }
-    };
-  }
-  var ACTION_HUD_LABEL, RETRY_MS, LOG_EVERY;
-  var init_actionHud = __esm({
-    "src/features/sellAllPets/actionHud.ts"() {
-      "use strict";
-      init_gardenInfoCard();
-      init_context();
-      init_pageContext();
-      ACTION_HUD_LABEL = "ActionHud";
-      RETRY_MS = 1e3;
-      LOG_EVERY = 30;
-    }
-  });
-
   // src/features/sellAllPets/pixiButton.ts
   function isSellPetAction(action2) {
     if (typeof action2 === "string") return SELL_PET_ACTION_TYPES.has(action2);
@@ -25169,7 +25114,7 @@
       currentAction: null
     };
     shareGlobal("__MG_SELL_ALL_PETS_PIXI_DEBUG__", debugState3);
-    const raf3 = pageWindow.requestAnimationFrame.bind(pageWindow);
+    const raf2 = pageWindow.requestAnimationFrame.bind(pageWindow);
     const cancelRaf = pageWindow.cancelAnimationFrame.bind(pageWindow);
     const stopScaleAnimation = () => {
       if (scaleRafId != null) {
@@ -25185,11 +25130,11 @@
       if (Math.abs(target - currentScale) < HOVER_SCALE_SETTLE_EPSILON) currentScale = target;
       buttonContainer.scale.set(currentScale);
       if (currentScale !== target) {
-        scaleRafId = raf3(scaleAnimationTick);
+        scaleRafId = raf2(scaleAnimationTick);
       }
     };
     const ensureScaleAnimationRunning = () => {
-      if (scaleRafId == null) scaleRafId = raf3(scaleAnimationTick);
+      if (scaleRafId == null) scaleRafId = raf2(scaleAnimationTick);
     };
     const forgetButtonRefs = () => {
       stopScaleAnimation();
@@ -25341,14 +25286,16 @@
       }
     };
     const onChildAdded2 = () => sync2();
-    const hudWatch = watchActionHud({
-      attach(hud) {
+    const hudWatch = watchStageNode({
+      label: ACTION_HUD_LABEL,
+      logTag: "[sellAllPets]",
+      onFound(hud) {
         actionHud = hud;
         hud.on("childAdded", onChildAdded2);
         debugState3.attached = true;
         sync2();
       },
-      detach() {
+      onLost() {
         actionHud = null;
         debugState3.attached = false;
         removeButton();
@@ -25395,17 +25342,17 @@
       }
     };
   }
-  var BUTTON_FACE_LABEL, SELL_PET_ACTION_TYPES, BUTTON_GAP2, BUTTON_TEXT, BUTTON_TEXT_STYLE, BUTTON_PADDING_X2, BUTTON_RADIUS2, BUTTON_FILL_COLOR, BUTTON_BORDER_COLOR, BUTTON_BORDER_WIDTH, HOVER_SCALE, HOVER_SCALE_EASE, HOVER_SCALE_SETTLE_EPSILON;
+  var ACTION_HUD_LABEL, BUTTON_FACE_LABEL, SELL_PET_ACTION_TYPES, BUTTON_GAP2, BUTTON_TEXT, BUTTON_TEXT_STYLE, BUTTON_PADDING_X2, BUTTON_RADIUS2, BUTTON_FILL_COLOR, BUTTON_BORDER_COLOR, BUTTON_BORDER_WIDTH, HOVER_SCALE, HOVER_SCALE_EASE, HOVER_SCALE_SETTLE_EPSILON;
   var init_pixiButton = __esm({
     "src/features/sellAllPets/pixiButton.ts"() {
       "use strict";
-      init_gardenInfoCard();
+      init_stageSearch();
       init_context();
       init_pageContext();
       init_flow();
-      init_actionHud();
       init_atoms();
       init_emitter();
+      ACTION_HUD_LABEL = "ActionHud";
       BUTTON_FACE_LABEL = "McButtonFace";
       SELL_PET_ACTION_TYPES = /* @__PURE__ */ new Set(["sellPet", "sellRainbowPet", "sellGoldPet"]);
       BUTTON_GAP2 = 10;
@@ -30861,7 +30808,7 @@ next: ${next}`;
     let logs2 = [];
     let abilityFilter = "";
     let sortDir = "desc";
-    let search2 = "";
+    let search3 = "";
     function whenCell(log2) {
       const cell = document.createElement("div");
       css3(cell, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
@@ -30948,8 +30895,8 @@ next: ${next}`;
           return byId === wanted || byName === wanted;
         });
       }
-      if (search2.trim()) {
-        const needle = search2.toLowerCase();
+      if (search3.trim()) {
+        const needle = search3.toLowerCase();
         result = result.filter((log2) => (log2.petName || log2.species || "").toLowerCase().includes(needle) || (log2.abilityName || "").toLowerCase().includes(needle) || (log2.abilityId || "").toLowerCase().includes(needle) || detailsOf(log2).toLowerCase().includes(needle) || (log2.petId || "").toLowerCase().includes(needle));
       }
       result.sort((a, b) => sortDir === "asc" ? a.performedAt - b.performedAt : b.performedAt - a.performedAt);
@@ -30992,7 +30939,7 @@ next: ${next}`;
       repaint();
     };
     inputSearch.addEventListener("input", () => {
-      search2 = inputSearch.value.trim();
+      search3 = inputSearch.value.trim();
       repaint();
     });
     void (async () => {
@@ -33896,10 +33843,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     const picked = new Map(options2.initial);
     let entries = [];
     let filter = "";
-    const search2 = textInput(`Search ${options2.unitNoun}\u2026`, "", { small: true });
-    search2.classList.add("qws-del-search");
-    search2.addEventListener("input", () => {
-      filter = search2.value.trim().toLowerCase();
+    const search3 = textInput(`Search ${options2.unitNoun}\u2026`, "", { small: true });
+    search3.classList.add("qws-del-search");
+    search3.addEventListener("input", () => {
+      filter = search3.value.trim().toLowerCase();
       renderRows();
     });
     const setAll = (qtyFor) => {
@@ -33912,7 +33859,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     const controls = h("div", "qws-del-controls");
     controls.append(
-      search2,
+      search3,
       button("All", { size: "sm", onClick: () => setAll((entry) => entry.total) }),
       button("None", { size: "sm", onClick: () => setAll(() => 0) })
     );
@@ -35038,11 +34985,11 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
       }
     });
-    const search2 = textInput("Find a plant\u2026", "", { small: true });
-    search2.classList.add("qws-gv-search");
+    const search3 = textInput("Find a plant\u2026", "", { small: true });
+    search3.classList.add("qws-gv-search");
     const summary = h("div", "qws-gv-summary");
     const toolbar2 = h("div", "qws-gv-toolbar");
-    toolbar2.append(search2, summary);
+    toolbar2.append(search3, summary);
     const grid = h("div", "qws-gv-grid");
     grid.style.gridTemplateColumns = `repeat(${GARDEN_COLS / 2}, 1fr) ${HALF_GAP_PX}px repeat(${GARDEN_COLS / 2}, 1fr)`;
     grid.style.gridTemplateRows = `repeat(${GARDEN_ROWS}, 1fr)`;
@@ -35070,7 +35017,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return content2.name.toLowerCase().includes(query) || content2.id.toLowerCase().includes(query);
     }
     function applyFilter() {
-      const query = search2.value.trim().toLowerCase();
+      const query = search3.value.trim().toLowerCase();
       let hits = 0;
       let filled = 0;
       for (const [tileIndex, cell] of cells) {
@@ -35105,7 +35052,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       applyFilter();
     }
-    search2.addEventListener("input", applyFilter);
+    search3.addEventListener("input", applyFilter);
     void (async () => {
       try {
         owned2 = new Set(await readOwnedTiles());
@@ -35124,7 +35071,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         render();
       }
     })();
-    search2.focus();
+    search3.focus();
   }
   var HALF_GAP_PX, CELL_ICON_PX, GARDEN_VIEW_CSS, stylesInjected2;
   var init_gardenView = __esm({
@@ -39869,7 +39816,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       pageWindow.app
     ].filter(Boolean);
   }
-  function search(property, matches) {
+  function search2(property, matches) {
     const seen = /* @__PURE__ */ new Set();
     let queue = holders();
     for (let depth = 0; depth < 3 && queue.length; depth += 1) {
@@ -39892,7 +39839,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     for (const holder2 of holders()) {
       if (hasRebake(holder2?.renderTextureCache)) return holder2.renderTextureCache;
     }
-    return search("renderTextureCache", hasRebake);
+    return search2("renderTextureCache", hasRebake);
   }
   function rebakeAll() {
     try {
@@ -40656,11 +40603,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     header.append(enableWrap, clearBtn);
     const categorySelect = select2({ small: true });
     categorySelect.classList.add("qws-skins__category");
-    const search2 = textInput("Search", "", { small: true });
-    search2.type = "search";
-    search2.classList.add("qws-skins__search");
+    const search3 = textInput("Search", "", { small: true });
+    search3.type = "search";
+    search3.classList.add("qws-skins__search");
     const filters = h("div", "qws-skins__filters");
-    filters.append(categorySelect, search2);
+    filters.append(categorySelect, search3);
     const grid = h("div", "qws-pnl-scroll qws-skins__grid");
     const status2 = h("div", "qws-skins__status");
     browser.append(header, filters, grid, status2);
@@ -40751,11 +40698,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       menuState.category = categorySelect.value;
       renderGrid();
     });
-    search2.addEventListener("input", () => {
-      menuState.query = search2.value;
+    search3.addEventListener("input", () => {
+      menuState.query = search3.value;
       renderGrid();
     });
-    search2.value = menuState.query;
+    search3.value = menuState.query;
     const unsubscribe2 = onSkinsChanged(() => {
       if (!container.isConnected) {
         unsubscribe2();
@@ -43617,10 +43564,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return new Set(compatibles.filter((crop) => rules3[crop] ? rules3[crop].allowed : true));
   }
-  async function reviewFeeding(search2) {
+  async function reviewFeeding(search3) {
     const settings = loadCompanionSettings();
-    const thresholdPct = search2?.thresholdPct ?? settings.feedThresholdPct;
-    const allowGarden = search2?.allowGarden ?? settings.feedFromGarden;
+    const thresholdPct = search3?.thresholdPct ?? settings.feedThresholdPct;
+    const allowGarden = search3?.allowGarden ?? settings.feedFromGarden;
     const empty = { candidates: [], hungry: 0, waitingOnGardenRule: 0 };
     let pets = [];
     try {
@@ -43689,8 +43636,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       waitingOnGardenRule
     };
   }
-  async function findFeedable(search2) {
-    return (await reviewFeeding(search2)).candidates;
+  async function findFeedable(search3) {
+    return (await reviewFeeding(search3)).candidates;
   }
   var init_feedRead = __esm({
     "src/features/companion/chat/feedRead.ts"() {

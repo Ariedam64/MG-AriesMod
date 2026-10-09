@@ -12,12 +12,8 @@ import { formatInteger } from "../../lib/format";
 import { Subscriptions } from "../../lib/emitter";
 import { coin } from "../../data";
 import { Atoms } from "../../game/store/atoms";
-import {
-  watchGardenInfoCard,
-  getStage,
-  findGraphicsCtor,
-  type GardenInfoCardGeometry,
-} from "../../game/pixi/gardenInfoCard";
+import { watchGardenInfoCard, type GardenInfoCardGeometry } from "../../game/pixi/gardenInfoCard";
+import { getStage, findGraphicsCtor } from "../../game/pixi/stageSearch";
 import { getReadySpriteState } from "../../game/sprites/context";
 
 // DevTools only shows console output captured while it is open, so a live
