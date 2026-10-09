@@ -63,6 +63,7 @@
     "check:ghostmode": "esbuild scripts/checkGhostMode.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkGhostMode.cjs --log-level=error && node node_modules/.cache/checkGhostMode.cjs",
     "check:inventorysummary": "esbuild scripts/checkInventoryValueSummary.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkInventoryValueSummary.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkInventoryValueSummary.cjs",
     "check:stagewatch": "esbuild scripts/checkStageWatch.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkStageWatch.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkStageWatch.cjs",
+    "check:visiblerefresh": "esbuild scripts/checkVisibleRefresh.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkVisibleRefresh.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkVisibleRefresh.cjs",
     "check:floating": "esbuild scripts/checkFloating.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkFloating.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkFloating.cjs"
   },
   "devDependencies": {

@@ -1,5 +1,5 @@
 import { pill } from "../../../ui/kit/badges";
-import { h } from "../../../ui/kit/dom";
+import { h, refreshWhileVisible } from "../../../ui/kit/dom";
 import { color } from "../../../ui/kit/theme";
 import { attachSpriteIcon } from "../../../ui/kit/sprites/iconCache";
 import { NotifierService } from "../notifier";
@@ -175,11 +175,16 @@ export function renderWeatherTab(view: HTMLElement): void {
     NotifierRules.onChange(() => grid.refreshRules());
   })();
 
-  // "3 mins ago" ages, and the state is re-read in case a change was missed.
-  window.setInterval(refreshLastSeen, LAST_SEEN_REFRESH_MS);
-  window.setInterval(() => {
-    NotifierService.getWeatherState()
-      .then(show)
-      .catch(() => {});
-  }, STATE_REFRESH_MS);
+  // "3 mins ago" ages, and the state is re-read in case a change was missed,
+  // both only while the tab shows.
+  refreshWhileVisible(wrap, refreshLastSeen, LAST_SEEN_REFRESH_MS);
+  refreshWhileVisible(
+    wrap,
+    () => {
+      NotifierService.getWeatherState()
+        .then(show)
+        .catch(() => {});
+    },
+    STATE_REFRESH_MS,
+  );
 }

@@ -2120,6 +2120,40 @@
     node.classList.add(className);
     return node;
   }
+  function refreshWhileVisible(el, refresh, everyMs) {
+    let timer2 = null;
+    const run = () => {
+      try {
+        refresh();
+      } catch (error) {
+        console.warn("[kit] refresh failed", error);
+      }
+    };
+    const start2 = () => {
+      if (timer2 == null) timer2 = setInterval(run, everyMs);
+    };
+    const stop = () => {
+      if (timer2 != null) clearInterval(timer2);
+      timer2 = null;
+    };
+    if (typeof IntersectionObserver === "undefined") {
+      start2();
+      return stop;
+    }
+    const observer2 = new IntersectionObserver((entries) => {
+      if (entries[entries.length - 1]?.isIntersecting) {
+        run();
+        start2();
+      } else {
+        stop();
+      }
+    });
+    observer2.observe(el);
+    return () => {
+      observer2.disconnect();
+      stop();
+    };
+  }
   var init_dom2 = __esm({
     "src/ui/kit/dom.ts"() {
       "use strict";
@@ -14747,7 +14781,7 @@
     initVersionBadge(versionPill);
     void ensureStore().catch(() => {
     });
-    startStatusLoop(statusFull, statusMini);
+    startStatusLoop(box2, statusFull, statusMini);
   }
   function initVersionBadge(badge2) {
     const show = (text2, tone, downloadUrl) => {
@@ -14797,35 +14831,35 @@
       return { level: "bad", message: "store error" };
     }
   }
-  function startStatusLoop(full, mini) {
+  function showStatus(el, text2, title, tone) {
+    if (el.textContent !== text2) el.textContent = text2;
+    if (el.title !== title) el.title = title;
+    if (!el.classList.contains(`is-${tone}`)) setTone(el, tone);
+  }
+  function startStatusLoop(box2, full, mini) {
     let warmup = getSpriteWarmupState();
     const update = () => {
       if (!warmup.completed) {
         const progress = warmup.total > 0 ? `${warmup.done}/${warmup.total}` : `${warmup.done}`;
         const summary = warmup.total > 0 ? `Sprites warming: ${progress}` : "Sprites warming up";
-        full.textContent = `Sprites ${progress}`;
-        mini.textContent = progress;
-        full.title = mini.title = summary;
-        setTone(full, "warn");
-        setTone(mini, "warn");
+        showStatus(full, `Sprites ${progress}`, summary, "warn");
+        showStatus(mini, progress, summary, "warn");
         mini.style.display = "";
         return;
       }
       const ws = getWSStatus();
       const store = getStoreStatus();
       const level = store.message === "store none" && ws.level === "bad" ? "bad" : ws.level === "ok" && store.level === "ok" ? "ok" : "warn";
-      full.textContent = "status";
-      mini.textContent = level === "ok" ? "OK" : level === "warn" ? "WARN" : "ISSUES";
-      full.title = mini.title = `${ws.message}, ${store.message}`;
-      setTone(full, level);
-      setTone(mini, level);
+      const title = `${ws.message}, ${store.message}`;
+      showStatus(full, "status", title, level);
+      showStatus(mini, level === "ok" ? "OK" : level === "warn" ? "WARN" : "ISSUES", title, level);
       mini.style.display = level === "ok" ? "none" : "";
     };
     onSpriteWarmupProgress((state5) => {
       warmup = state5;
       update();
     });
-    setInterval(update, 800);
+    refreshWhileVisible(box2, update, 800);
   }
   var HUD_POS_PATH, HUD_COLLAPSED_PATH, HUD_HIDDEN_PATH, HUD_WIN_PATH, MARGIN, isEditing;
   var init_hud = __esm({
@@ -27243,11 +27277,9 @@ next: ${next}`;
     });
     refreshSocketPicker();
     repaint(true);
-    const pollId = window.setInterval(() => {
-      refreshSocketPicker();
-    }, 1e3);
+    const stopPolling = refreshWhileVisible(view, refreshSocketPicker, 1e3);
     view.__ws_cleanup__ = () => {
-      window.clearInterval(pollId);
+      stopPolling();
       stopFrames();
     };
   }
@@ -27256,6 +27288,7 @@ next: ${next}`;
       "use strict";
       init_button();
       init_card();
+      init_dom2();
       init_fields();
       init_layout();
       init_toggles();
@@ -28710,15 +28743,15 @@ next: ${next}`;
       header.root.removeChild(header.body);
       const status2 = document.createElement("div");
       status2.className = "lk-hint lk-wide";
-      const showStatus = () => {
+      const showStatus2 = () => {
         status2.textContent = entry.enabled ? "This crop uses its own locker filters." : "Uses the global locker settings.";
       };
       const form = lockerSettingsCard(entry.settings, () => store.notifyOverrideSettingsChanged(key2));
       form.setDisabled(!entry.enabled);
-      showStatus();
+      showStatus2();
       detail.replaceChildren(header.root, status2, form.root);
       detail.scrollTop = scrollMemory.get(key2) ?? 0;
-      shown = { key: key2, entry, form, toggle, showStatus };
+      shown = { key: key2, entry, form, toggle, showStatus: showStatus2 };
     }
     const refresh = () => {
       list.setItems(listItems());
@@ -29020,7 +29053,7 @@ next: ${next}`;
     statusText.className = "qmm-setting-row__hint";
     statusText.style.fontSize = "12.5px";
     body.append(head, bonusSlider, statusText);
-    const showStatus = () => {
+    const showStatus2 = () => {
       const requiredPct = toBonusStep2(friendBonusPercentFromPlayers(requiredPlayers) ?? 0);
       const currentPct = currentFriendBonus() ?? 0;
       const currentPlayers = percentToRequiredFriendCount(currentPct);
@@ -29044,18 +29077,18 @@ next: ${next}`;
       const pct = toBonusStep2(Number.isFinite(raw) ? raw : 0);
       showSlider(pct);
       requiredPlayers = percentToRequiredFriendCount(pct);
-      showStatus();
+      showStatus2();
       if (commit) lockerRestrictionsService.setMinRequiredPlayers(requiredPlayers);
     };
     bonusSlider.addEventListener("input", () => readSlider(false));
     bonusSlider.addEventListener("change", () => readSlider(true));
     return {
       root: root4,
-      showStatus,
+      showStatus: showStatus2,
       sync(players) {
         requiredPlayers = players;
         showSlider(friendBonusPercentFromPlayers(players) ?? 0);
-        showStatus();
+        showStatus2();
       }
     };
   }
@@ -37320,11 +37353,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       NotifierRules.onChange(() => grid.refreshRules());
     })();
-    window.setInterval(refreshLastSeen, LAST_SEEN_REFRESH_MS);
-    window.setInterval(() => {
-      NotifierService.getWeatherState().then(show).catch(() => {
-      });
-    }, STATE_REFRESH_MS);
+    refreshWhileVisible(wrap, refreshLastSeen, LAST_SEEN_REFRESH_MS);
+    refreshWhileVisible(
+      wrap,
+      () => {
+        NotifierService.getWeatherState().then(show).catch(() => {
+        });
+      },
+      STATE_REFRESH_MS
+    );
   }
   var LAST_SEEN_REFRESH_MS, STATE_REFRESH_MS;
   var init_weatherTab = __esm({
@@ -43869,9 +43906,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       npcSelect.append(new Option("Unavailable", ""));
     });
     const status2 = styled("div", { fontSize: "12px", color: color.textDim, padding: "2px 2px 0" });
+    const showStatus2 = (text2) => {
+      if (status2.textContent !== text2) status2.textContent = text2;
+    };
     function refresh() {
       if (!CompanionService.isRunning()) {
-        status2.textContent = "Inactive.";
+        showStatus2("Inactive.");
         return;
       }
       const npcId = CompanionService.getNpcId();
@@ -43879,7 +43919,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const wanted = CompanionService.getSettings().mode;
       const actual = CompanionService.getEffectiveMode();
       const fallback = actual && actual !== wanted ? " (no garden found, following you)" : "";
-      status2.textContent = `Active as ${name}${fallback}. Only you can see it.`;
+      showStatus2(`Active as ${name}${fallback}. Only you can see it.`);
     }
     const askToggle = switchInput(settings.askOnScreen, (on) => {
       void CompanionService.applySettings({ askOnScreen: on });
@@ -43896,7 +43936,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       status2
     );
     refresh();
-    window.setInterval(refresh, STATUS_REFRESH_MS);
+    refreshWhileVisible(status2, refresh, STATUS_REFRESH_MS);
     view.append(card4.root);
   }
   var STATUS_REFRESH_MS, MODE_LABELS;
@@ -43907,6 +43947,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_feedWatch();
       init_fields();
       init_layout();
+      init_dom2();
       init_theme();
       init_toggles();
       init_dom3();
@@ -46530,19 +46571,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       renderAll();
     });
-    const identityTimer = window.setInterval(() => {
-      if (!root4.isConnected) {
-        clearInterval(identityTimer);
-        return;
-      }
-      renderStatus();
-    }, IDENTITY_REFRESH_MS);
+    refreshWhileVisible(root4, renderStatus, IDENTITY_REFRESH_MS);
   }
   var EMPTY_HINT, IDENTITY_REFRESH_MS, SMALL;
   var init_chatTab = __esm({
     "src/features/companion/menu/chatTab.ts"() {
       "use strict";
       init_button();
+      init_dom2();
       init_chat();
       init_companion();
       init_actionsModal();

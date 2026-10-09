@@ -9,6 +9,7 @@ import { checkFeedNow } from "../feedWatch";
 import type { CompanionMode } from "../anchors";
 import { select } from "../../../ui/kit/fields";
 import { collapsibleCard, settingRow } from "../../../ui/kit/layout";
+import { refreshWhileVisible } from "../../../ui/kit/dom";
 import { color } from "../../../ui/kit/theme";
 import { switchInput } from "../../../ui/kit/toggles";
 import { styled } from "./dom";
@@ -87,9 +88,13 @@ export function renderBehaviorTab(view: HTMLElement): void {
 
   const status = styled("div", { fontSize: "12px", color: color.textDim, padding: "2px 2px 0" });
 
+  const showStatus = (text: string) => {
+    if (status.textContent !== text) status.textContent = text;
+  };
+
   function refresh(): void {
     if (!CompanionService.isRunning()) {
-      status.textContent = "Inactive.";
+      showStatus("Inactive.");
       return;
     }
     const npcId = CompanionService.getNpcId();
@@ -98,7 +103,7 @@ export function renderBehaviorTab(view: HTMLElement): void {
     const actual = CompanionService.getEffectiveMode();
     // A silent fallback would make no sense to the player: it is said.
     const fallback = actual && actual !== wanted ? " (no garden found, following you)" : "";
-    status.textContent = `Active as ${name}${fallback}. Only you can see it.`;
+    showStatus(`Active as ${name}${fallback}. Only you can see it.`);
   }
 
   const askToggle = switchInput(settings.askOnScreen, (on) => {
@@ -119,7 +124,7 @@ export function renderBehaviorTab(view: HTMLElement): void {
   );
 
   refresh();
-  window.setInterval(refresh, STATUS_REFRESH_MS);
+  refreshWhileVisible(status, refresh, STATUS_REFRESH_MS);
 
   view.append(card.root);
 }

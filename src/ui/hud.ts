@@ -15,7 +15,7 @@ import { isDiscordSurface } from "../platform/environment";
 import { readAriesPath, writeAriesPath } from "../platform/storage";
 import { pill, setTone, type StatusTone } from "./kit/badges";
 import { button } from "./kit/button";
-import { h } from "./kit/dom";
+import { h, refreshWhileVisible } from "./kit/dom";
 import { layer } from "./kit/theme";
 
 export type PanelRender = (root: HTMLElement) => void;
@@ -491,7 +491,7 @@ export function mountHUD(opts?: HUDOptions) {
 
   initVersionBadge(versionPill);
   void ensureStore().catch(() => {});
-  startStatusLoop(statusFull, statusMini);
+  startStatusLoop(box, statusFull, statusMini);
 }
 
 function initVersionBadge(badge: HTMLElement): void {
@@ -549,19 +549,23 @@ function getStoreStatus(): StatusInfo {
   }
 }
 
-/** Sprite warm-up progress first, then socket and store health. */
-function startStatusLoop(full: HTMLElement, mini: HTMLElement): void {
+/** Rewrites a pill only when something changed: a write is a DOM mutation every observer sees. */
+function showStatus(el: HTMLElement, text: string, title: string, tone: StatusTone): void {
+  if (el.textContent !== text) el.textContent = text;
+  if (el.title !== title) el.title = title;
+  if (!el.classList.contains(`is-${tone}`)) setTone(el, tone);
+}
+
+/** Sprite warm-up progress first, then socket and store health, refreshed while the HUD shows. */
+function startStatusLoop(box: HTMLElement, full: HTMLElement, mini: HTMLElement): void {
   let warmup = getSpriteWarmupState();
 
   const update = () => {
     if (!warmup.completed) {
       const progress = warmup.total > 0 ? `${warmup.done}/${warmup.total}` : `${warmup.done}`;
       const summary = warmup.total > 0 ? `Sprites warming: ${progress}` : "Sprites warming up";
-      full.textContent = `Sprites ${progress}`;
-      mini.textContent = progress;
-      full.title = mini.title = summary;
-      setTone(full, "warn");
-      setTone(mini, "warn");
+      showStatus(full, `Sprites ${progress}`, summary, "warn");
+      showStatus(mini, progress, summary, "warn");
       mini.style.display = "";
       return;
     }
@@ -571,11 +575,9 @@ function startStatusLoop(full: HTMLElement, mini: HTMLElement): void {
     const level: StatusTone = store.message === "store none" && ws.level === "bad"
       ? "bad"
       : ws.level === "ok" && store.level === "ok" ? "ok" : "warn";
-    full.textContent = "status";
-    mini.textContent = level === "ok" ? "OK" : level === "warn" ? "WARN" : "ISSUES";
-    full.title = mini.title = `${ws.message}, ${store.message}`;
-    setTone(full, level);
-    setTone(mini, level);
+    const title = `${ws.message}, ${store.message}`;
+    showStatus(full, "status", title, level);
+    showStatus(mini, level === "ok" ? "OK" : level === "warn" ? "WARN" : "ISSUES", title, level);
     mini.style.display = level === "ok" ? "none" : "";
   };
 
@@ -583,5 +585,5 @@ function startStatusLoop(full: HTMLElement, mini: HTMLElement): void {
     warmup = state;
     update();
   });
-  setInterval(update, 800);
+  refreshWhileVisible(box, update, 800);
 }
