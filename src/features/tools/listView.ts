@@ -1,18 +1,21 @@
-// List view: the tag filter bar and one clickable card per tool.
+// List view: a short header, the tag filter chips and one clickable card per tool.
 
 import { markdownToPlainText } from "../../lib/markdown";
+import { pill } from "../../ui/kit/badges";
 import { button, type KitButton } from "../../ui/kit/button";
+import { h } from "../../ui/kit/dom";
 import type { ExternalTool } from "./fetchTools";
 import { createIconTile } from "./image";
 import { createTagRow } from "./tag";
 
 const ALL_FILTER_LABEL = "All";
 
+const countLabel = (count: number) => (count === 1 ? "1 tool" : `${count} tools`);
+
 function createCard(tool: ExternalTool, onSelect: () => void): HTMLElement {
   // A <div role="button"> rather than a real <button>: the card holds block
   // content (paragraph, tag row), which a <button> is not allowed to contain.
-  const card = document.createElement("div");
-  card.className = "mgt-card";
+  const card = h("div", "mgt-card");
   card.setAttribute("role", "button");
   card.tabIndex = 0;
   card.title = tool.title;
@@ -23,31 +26,16 @@ function createCard(tool: ExternalTool, onSelect: () => void): HTMLElement {
     onSelect();
   };
 
-  const head = document.createElement("div");
-  head.className = "mgt-card__head";
-
-  if (tool.icon) {
-    head.appendChild(createIconTile(tool.icon));
-  }
-
-  const title = document.createElement("span");
-  title.className = "mgt-card__title";
-  title.textContent = tool.title;
-  head.appendChild(title);
-
-  const arrow = document.createElement("span");
-  arrow.className = "mgt-card__arrow";
-  arrow.textContent = "→";
+  const head = h("div", "mgt-card__head");
+  if (tool.icon) head.appendChild(createIconTile(tool.icon));
+  head.appendChild(h("span", "mgt-card__title", tool.title));
+  const arrow = h("span", "mgt-card__arrow", "›");
   arrow.setAttribute("aria-hidden", "true");
   head.appendChild(arrow);
-
   card.appendChild(head);
 
   // CSS clamps this to two lines, so the full text can be handed over as-is.
-  const desc = document.createElement("p");
-  desc.className = "mgt-card__desc";
-  desc.textContent = markdownToPlainText(tool.description);
-  card.appendChild(desc);
+  card.appendChild(h("p", "mgt-card__desc", markdownToPlainText(tool.description)));
 
   if (tool.tags?.length) {
     const foot = createTagRow(tool.tags);
@@ -62,48 +50,44 @@ export function renderListView(
   tools: ExternalTool[],
   onSelectTool: (tool: ExternalTool) => void
 ): { root: HTMLElement } {
-  const root = document.createElement("div");
-  root.className = "mgt-list";
+  const root = h("div", "mgt-list");
 
   const allTags = Array.from(new Set(tools.flatMap((tool) => tool.tags ?? [])));
   const selectedTags = new Set<string>();
 
-  const grid = document.createElement("div");
-  grid.className = "mgt-grid";
+  const count = pill(countLabel(tools.length));
+  const introText = h("div", "mgt-intro__text");
+  introText.append(
+    h("div", "mgt-intro__title", "Community tools"),
+    h("div", "mgt-intro__sub", "Sites and apps made by players."),
+  );
+  const intro = h("div", "mgt-intro");
+  intro.append(introText, count);
+  root.appendChild(intro);
+
+  const grid = h("div", "mgt-grid");
 
   const renderCards = () => {
-    grid.replaceChildren();
-
     const filtered = selectedTags.size
       ? tools.filter((tool) => tool.tags?.some((tag) => selectedTags.has(tag)))
       : tools;
+    count.textContent = countLabel(filtered.length);
 
     if (!filtered.length) {
-      const empty = document.createElement("div");
-      empty.className = "mgt-state";
-      empty.style.gridColumn = "1 / -1";
-      const text = document.createElement("p");
-      text.className = "mgt-state__text";
-      text.textContent = "No tools match the selected tags.";
-      empty.appendChild(text);
-      grid.appendChild(empty);
+      const empty = h("div", "mgt-state");
+      empty.appendChild(h("p", "mgt-state__text", "No tools match the selected tags."));
+      grid.replaceChildren(empty);
       return;
     }
 
-    filtered.forEach((tool) => {
-      grid.appendChild(createCard(tool, () => onSelectTool(tool)));
-    });
+    grid.replaceChildren(...filtered.map((tool) => createCard(tool, () => onSelectTool(tool))));
   };
 
-  // The filter bar is only worth showing when there is something to filter on.
+  // The filter chips are only worth showing when there is something to filter on.
   if (allTags.length) {
-    const filters = document.createElement("div");
-    filters.className = "mgt-filters";
-
-    const label = document.createElement("span");
-    label.className = "mgt-label";
-    label.textContent = "Filter";
-    filters.appendChild(label);
+    const filters = h("div", "mgt-filters");
+    filters.setAttribute("role", "group");
+    filters.setAttribute("aria-label", "Filter by tag");
 
     const tagButtons = new Map<string, KitButton>();
 

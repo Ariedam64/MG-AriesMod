@@ -76,7 +76,8 @@
     "check:modversion": "node scripts/runChecks.mjs modversion",
     "check:accent": "node scripts/runChecks.mjs accent",
     "check:appearance": "node scripts/runChecks.mjs appearance",
-    "check:keybindsmenu": "node scripts/runChecks.mjs keybindsmenu"
+    "check:keybindsmenu": "node scripts/runChecks.mjs keybindsmenu",
+    "check:toolslist": "node scripts/runChecks.mjs toolslist"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",

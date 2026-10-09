@@ -102,6 +102,7 @@ const SUITES = {
   accent: ["checkAccent"],
   appearance: ["checkAppearance", "dom-stub"],
   keybindsmenu: ["checkKeybindsMenu", "dom-stub"],
+  toolslist: ["checkToolsList", "dom-stub"],
 };
 
 /** Problems with how suites are registered: a file with no entry, or package.json out of step. */

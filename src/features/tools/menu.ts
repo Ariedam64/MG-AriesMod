@@ -10,8 +10,6 @@ import { renderDetailView } from "./detailView";
 import { ensureToolsStyles } from "./styles";
 import { swapViews } from "./transition";
 
-const WRAPPER_WIDTH_PX = 720;
-
 export async function renderToolsMenu(container: HTMLElement) {
   ensureToolsStyles();
 
@@ -20,27 +18,23 @@ export async function renderToolsMenu(container: HTMLElement) {
 
   const view = ui.root.querySelector(".qmm-views") as HTMLElement;
   view.replaceChildren();
-  Object.assign(view.style, {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    padding: "8px",
-    width: "100%",
-    maxHeight: "70vh",
-    overflowY: "auto",
-  });
+  view.classList.add("mgt-host");
 
   const wrapper = h("div", "mgt-wrap");
-  Object.assign(wrapper.style, {
-    width: `${WRAPPER_WIDTH_PX}px`,
-    minWidth: `${WRAPPER_WIDTH_PX}px`,
-    maxWidth: "100%",
-    boxSizing: "border-box",
-  });
-
   const viewContainer = h("div", "mgt-views");
   wrapper.appendChild(viewContainer);
   view.appendChild(wrapper);
+
+  /** A centred message in place of the list, with one button to try again. */
+  const showState = (title: string, text: string, retryLabel: string) => {
+    const state = h("div", "mgt-state");
+    state.append(
+      h("span", "mgt-state__title", title),
+      h("p", "mgt-state__text", text),
+      button(retryLabel, { variant: "primary", onClick: () => void init() }),
+    );
+    viewContainer.replaceChildren(state);
+  };
 
   const showLoading = () => {
     const state = h("div", "mgt-state");
@@ -48,25 +42,26 @@ export async function renderToolsMenu(container: HTMLElement) {
     viewContainer.replaceChildren(state);
   };
 
-  const showError = (message: string) => {
-    const state = h("div", "mgt-state");
-    state.append(
-      h("span", "mgt-state__title", "Couldn't load the tools"),
-      h("p", "mgt-state__text", message),
-      button("Retry", { variant: "primary", onClick: () => init() }),
-    );
-    viewContainer.replaceChildren(state);
-  };
-
   let tools: ExternalTool[] = [];
   let listViewRoot: HTMLElement | null = null;
   let detailViewRoot: HTMLElement | null = null;
+  // The window body is what scrolls. The list keeps its place while a tool is open.
+  let listScrollTop = 0;
+  let swapping = false;
 
   const showListView = async () => {
     if (listViewRoot) {
       // The list stays mounted, so returning to it only needs the animation.
-      if (detailViewRoot && detailViewRoot.parentNode === viewContainer) {
-        await swapViews(viewContainer, detailViewRoot, listViewRoot, "back");
+      const detail = detailViewRoot;
+      if (!detail || detail.parentNode !== viewContainer || swapping) return;
+      swapping = true;
+      try {
+        await swapViews(viewContainer, detail, listViewRoot, "back");
+        container.scrollTop = listScrollTop;
+      } finally {
+        detail.remove();
+        if (detailViewRoot === detail) detailViewRoot = null;
+        swapping = false;
       }
       return;
     }
@@ -76,11 +71,20 @@ export async function renderToolsMenu(container: HTMLElement) {
   };
 
   const showDetailView = async (tool: ExternalTool) => {
+    // A second click during the slide would stack two detail pages.
+    if (swapping) return;
     detailViewRoot = renderDetailView(tool, showListView).root;
     viewContainer.appendChild(detailViewRoot);
 
     if (listViewRoot && listViewRoot.parentNode === viewContainer) {
-      await swapViews(viewContainer, listViewRoot, detailViewRoot, "forward");
+      swapping = true;
+      listScrollTop = container.scrollTop;
+      container.scrollTop = 0;
+      try {
+        await swapViews(viewContainer, listViewRoot, detailViewRoot, "forward");
+      } finally {
+        swapping = false;
+      }
     }
   };
 
@@ -91,7 +95,7 @@ export async function renderToolsMenu(container: HTMLElement) {
       tools = await fetchTools();
 
       if (!tools.length) {
-        showError("No tools are available right now.");
+        showState("No tools yet", "None are listed right now. Check back soon.", "Check again");
         return;
       }
 
@@ -101,7 +105,7 @@ export async function renderToolsMenu(container: HTMLElement) {
 
       await showListView();
     } catch (error) {
-      showError(error instanceof Error ? error.message : "Unknown error.");
+      showState("Couldn't load the tools", error instanceof Error ? error.message : "Unknown error.", "Retry");
     }
   };
 
