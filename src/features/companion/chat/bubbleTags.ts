@@ -1,6 +1,6 @@
 // Game icons inside the companion's bubble.
 //
-// The game accepts a `tags` field next to `message` in `npcChatBubblesAtom`,
+// The game accepts a `tags` field next to `message` in an NPC line (game/npcSpeech.ts),
 // and only for NPCs: the player bubble path does not pass it on. The companion
 // being one, it qualifies.
 //

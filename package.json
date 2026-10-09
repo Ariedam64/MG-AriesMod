@@ -64,7 +64,8 @@
     "check:inventorysummary": "node scripts/runChecks.mjs inventorysummary",
     "check:floating": "node scripts/runChecks.mjs floating",
     "check:stagewatch": "node scripts/runChecks.mjs stagewatch",
-    "check:visiblerefresh": "node scripts/runChecks.mjs visiblerefresh"
+    "check:visiblerefresh": "node scripts/runChecks.mjs visiblerefresh",
+    "check:speech": "node scripts/runChecks.mjs speech"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",

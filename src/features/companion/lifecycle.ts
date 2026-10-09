@@ -4,6 +4,7 @@
 // injection; stop undoes every timer and subscription and gives the game its
 // NPC back. Both are safe to call more than once.
 
+import { waitUntil } from "../../lib/async";
 import { Subscriptions } from "../../lib/emitter";
 import { Atoms } from "../../game/store/atoms";
 import { makeAtom } from "../../game/store/hub";
@@ -21,6 +22,8 @@ import { refreshContextual, resolveSpeech } from "./talk";
 
 /** How often the contextual lines are collected again. */
 const CONTEXTUAL_REFRESH_MS = 10_000;
+/** How long to keep looking for the NPC lines atom when the companion starts first. */
+const SPEECH_HOOK_WAIT_MS = 120_000;
 
 /** What the avatar layer really reads: serves as the render receipt. */
 const npcQuinoaUsers = makeAtom<Array<{ playerId: string; position?: XY | null }>>("npcQuinoaUsersAtom");
@@ -75,7 +78,14 @@ async function startInternal(): Promise<boolean> {
   setRuntime(rt);
 
   await installInjection();
-  installSpeechRewriter(npcId, resolveSpeech);
+  if (!installSpeechRewriter(npcId, resolveSpeech)) {
+    // The lines atom registers with the game's world systems, which can load
+    // after the companion starts.
+    void waitUntil(() => currentRuntime() === rt && installSpeechRewriter(npcId, resolveSpeech), {
+      timeoutMs: SPEECH_HOOK_WAIT_MS,
+      intervalMs: 1000,
+    });
+  }
   void refreshContextual().catch(() => {});
   every(rt.subscriptions, CONTEXTUAL_REFRESH_MS, refreshContextual);
 

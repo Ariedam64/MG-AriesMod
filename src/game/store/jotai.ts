@@ -235,6 +235,20 @@ export function findAtomsByLabel(regex: RegExp): any[] {
   return out;
 }
 
+/**
+ * The atom registered under a cache key ending with `suffix`. Some atoms carry no
+ * debugLabel but are still keyed by their source path, e.g.
+ * `.../avatarSpeechAtoms.ts/npcLineEmoteTypesAtom`.
+ */
+export function findAtomByCacheKeySuffix(suffix: string): any | null {
+  const cache = getAtomCache();
+  if (!cache) return null;
+  for (const [key, atom] of cache) {
+    if (typeof key === "string" && key.endsWith(suffix)) return atom;
+  }
+  return null;
+}
+
 /** The atom with exactly this label, or null. */
 export function getAtomByLabel(label: string): any | null {
   const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

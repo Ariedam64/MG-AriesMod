@@ -4,7 +4,7 @@
 // The game reads NPC bubbles from a local atom, so none of this goes over the
 // network.
 
-import { makeAtom } from "../../game/store/hub";
+import { writeNpcLine } from "../../game/npcSpeech";
 import type { BubbleTag } from "./chat/bubbleTags";
 import { DEFAULT_CONTEXTUAL_COOLDOWN_MS, pickDialogueLine } from "./dialogue";
 import { collectContextualLines } from "./dialogueContext";
@@ -13,7 +13,7 @@ import { timeLines } from "./dialogueTime";
 import { playEmote } from "./emote";
 import type { EmoteType } from "./emoteTypes";
 import { currentRuntime, type Runtime } from "./runtime";
-import { AUTHORED_BY_MOD } from "./speech";
+import { AUTHORED_BY_MOD, gameLineTime } from "./speech";
 import { loadCompanionSettings } from "./state";
 
 /**
@@ -25,8 +25,6 @@ import { loadCompanionSettings } from "./state";
  * every 500 ms. Anything worth reading now gets through.
  */
 const CHAT_BUBBLE_MIN_INTERVAL_MS = 250;
-
-const npcChatBubbles = makeAtom<Record<string, unknown>>("npcChatBubblesAtom");
 
 /**
  * Plays a pose right after the line.
@@ -106,10 +104,8 @@ export async function say(message: string, opts: SayOptions = {}): Promise<void>
   const tagged = opts.tags && Object.keys(opts.tags).length > 0 ? { tags: opts.tags } : {};
 
   try {
-    await npcChatBubbles.set({
-      // Marked as written by the mod: otherwise the bubble hook would replace
-      // our own message with a random line.
-      [rt.npcId]: { seq: 0, playerId: rt.npcId, message, timestamp: now, ...tagged, [AUTHORED_BY_MOD]: true },
-    });
+    // Marked as written by the mod: otherwise the line hook would replace our
+    // own message with a random line.
+    await writeNpcLine(rt.npcId, { message, saidAtMs: gameLineTime(), ...tagged, [AUTHORED_BY_MOD]: true });
   } catch {}
 }

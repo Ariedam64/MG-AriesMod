@@ -88,6 +88,7 @@ const SUITES = {
   ghostmode: ["checkGhostMode"],
   inventorysummary: ["checkInventoryValueSummary", "dom-stub"],
   floating: ["checkFloating", "dom-stub"],
+  speech: ["checkCompanionSpeech", "dom-stub"],
   stagewatch: ["checkStageWatch", "dom-stub"],
   visiblerefresh: ["checkVisibleRefresh", "dom-stub"],
 };

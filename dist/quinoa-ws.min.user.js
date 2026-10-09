@@ -2994,6 +2994,14 @@
     }
     return out;
   }
+  function findAtomByCacheKeySuffix(suffix) {
+    const cache3 = getAtomCache();
+    if (!cache3) return null;
+    for (const [key2, atom] of cache3) {
+      if (typeof key2 === "string" && key2.endsWith(suffix)) return atom;
+    }
+    return null;
+  }
   function getAtomByLabel(label2) {
     const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     return findAtomsByLabel(new RegExp("^" + escape(label2) + "$"))[0] || null;
@@ -42197,18 +42205,57 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/game/npcSpeech.ts
+  function findNpcLinesAtom() {
+    const lineEmotes = findAtomByCacheKeySuffix(LINE_EMOTES_CACHE_KEY);
+    if (!lineEmotes || typeof lineEmotes.read !== "function") return null;
+    let first = null;
+    const recordingGet = (atom) => {
+      if (first === null) first = atom;
+      return void 0;
+    };
+    try {
+      lineEmotes.read(recordingGet, {});
+    } catch {
+    }
+    return first && typeof first === "object" && typeof first.write === "function" ? first : null;
+  }
+  async function writeNpcLine(npcId, line) {
+    const atom = findNpcLinesAtom();
+    if (!atom) return false;
+    const current3 = await jGet(atom).catch(() => null) ?? {};
+    await jSet(atom, { ...current3, [npcId]: line });
+    return true;
+  }
+  var LINE_EMOTES_CACHE_KEY;
+  var init_npcSpeech = __esm({
+    "src/game/npcSpeech.ts"() {
+      "use strict";
+      init_jotai();
+      LINE_EMOTES_CACHE_KEY = "/avatarSpeechAtoms.ts/npcLineEmoteTypesAtom";
+    }
+  });
+
   // src/features/companion/speech.ts
-  function rewritePayload(payload) {
+  function gameLineTime() {
+    return Date.now() + gameClockOffsetMs;
+  }
+  function rewritePayload(payload, current3) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
     if (!targetNpcId || !resolver) return payload;
     const entries = payload;
     const entry = entries[targetNpcId];
     if (!entry || typeof entry !== "object") return payload;
+    const previous = current3 && typeof current3 === "object" ? current3[targetNpcId] : void 0;
+    if (previous === entry || previous && previous.message === entry.message && previous.saidAtMs === entry.saidAtMs) {
+      return payload;
+    }
     markSpoke(targetNpcId);
-    const proposed = Number(entry.timestamp);
-    const timestamp = nextBubbleTimestamp(lastTimestamp, proposed);
-    if (Number.isFinite(timestamp)) lastTimestamp = timestamp;
-    const stamped = timestamp === proposed ? entry : { ...entry, timestamp };
+    const proposed = Number(entry.saidAtMs);
+    if (entry[AUTHORED_BY_MOD] !== true && Number.isFinite(proposed)) gameClockOffsetMs = proposed - Date.now();
+    const saidAtMs = nextBubbleTimestamp(lastSaidAt, proposed);
+    if (Number.isFinite(saidAtMs)) lastSaidAt = saidAtMs;
+    const stamped = saidAtMs === proposed ? entry : { ...entry, saidAtMs };
     if (entry[AUTHORED_BY_MOD] === true) {
       return stamped === entry ? payload : { ...entries, [targetNpcId]: stamped };
     }
@@ -42228,11 +42275,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     targetNpcId = npcId;
     resolver = resolve;
     if (wrapped) return true;
-    const atom = getAtomByLabel(CHAT_BUBBLES_LABEL);
+    const atom = findNpcLinesAtom();
     if (!atom || typeof atom.write !== "function") return false;
     const original = atom.write;
     atom.write = function(get, set2, update, ...rest2) {
-      const next = typeof update === "function" ? update : rewritePayload(update);
+      let current3;
+      try {
+        current3 = get(atom);
+      } catch {
+        current3 = void 0;
+      }
+      const next = typeof update === "function" ? update : rewritePayload(update, current3);
       return original.call(this, get, set2, next, ...rest2);
     };
     wrapped = { atom, original };
@@ -42240,7 +42293,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function uninstallSpeechRewriter() {
     targetNpcId = null;
-    lastTimestamp = null;
+    lastSaidAt = null;
     resolver = null;
     if (!wrapped) return;
     try {
@@ -42249,19 +42302,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     wrapped = null;
   }
-  var CHAT_BUBBLES_LABEL, AUTHORED_BY_MOD, wrapped, resolver, targetNpcId, lastTimestamp;
+  var AUTHORED_BY_MOD, wrapped, resolver, targetNpcId, lastSaidAt, gameClockOffsetMs;
   var init_speech = __esm({
     "src/features/companion/speech.ts"() {
       "use strict";
-      init_jotai();
+      init_npcSpeech();
       init_dialogue();
       init_emote();
-      CHAT_BUBBLES_LABEL = "npcChatBubblesAtom";
       AUTHORED_BY_MOD = "ariesAuthored";
       wrapped = null;
       resolver = null;
       targetNpcId = null;
-      lastTimestamp = null;
+      lastSaidAt = null;
+      gameClockOffsetMs = 0;
     }
   });
 
@@ -42368,19 +42421,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     rt.lastBubbleAt = now;
     const tagged = opts.tags && Object.keys(opts.tags).length > 0 ? { tags: opts.tags } : {};
     try {
-      await npcChatBubbles.set({
-        // Marked as written by the mod: otherwise the bubble hook would replace
-        // our own message with a random line.
-        [rt.npcId]: { seq: 0, playerId: rt.npcId, message: message2, timestamp: now, ...tagged, [AUTHORED_BY_MOD]: true }
-      });
+      await writeNpcLine(rt.npcId, { message: message2, saidAtMs: gameLineTime(), ...tagged, [AUTHORED_BY_MOD]: true });
     } catch {
     }
   }
-  var CHAT_BUBBLE_MIN_INTERVAL_MS, npcChatBubbles;
+  var CHAT_BUBBLE_MIN_INTERVAL_MS;
   var init_talk = __esm({
     "src/features/companion/talk.ts"() {
       "use strict";
-      init_hub();
+      init_npcSpeech();
       init_dialogue();
       init_dialogueContext();
       init_dialogueLines();
@@ -42390,7 +42439,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_speech();
       init_state3();
       CHAT_BUBBLE_MIN_INTERVAL_MS = 250;
-      npcChatBubbles = makeAtom("npcChatBubblesAtom");
     }
   });
 
@@ -42431,7 +42479,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     setRuntime(rt);
     await installInjection();
-    installSpeechRewriter(npcId, resolveSpeech);
+    if (!installSpeechRewriter(npcId, resolveSpeech)) {
+      void waitUntil(() => currentRuntime() === rt && installSpeechRewriter(npcId, resolveSpeech), {
+        timeoutMs: SPEECH_HOOK_WAIT_MS,
+        intervalMs: 1e3
+      });
+    }
     void refreshContextual().catch(() => {
     });
     every(rt.subscriptions, CONTEXTUAL_REFRESH_MS, refreshContextual);
@@ -42478,10 +42531,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     await disposeInjection();
   }
-  var CONTEXTUAL_REFRESH_MS, npcQuinoaUsers2, starting2;
+  var CONTEXTUAL_REFRESH_MS, SPEECH_HOOK_WAIT_MS, npcQuinoaUsers2, starting2;
   var init_lifecycle = __esm({
     "src/features/companion/lifecycle.ts"() {
       "use strict";
+      init_async2();
       init_emitter();
       init_atoms();
       init_hub();
@@ -42497,6 +42551,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_state3();
       init_talk();
       CONTEXTUAL_REFRESH_MS = 1e4;
+      SPEECH_HOOK_WAIT_MS = 12e4;
       npcQuinoaUsers2 = makeAtom("npcQuinoaUsersAtom");
       starting2 = null;
     }
