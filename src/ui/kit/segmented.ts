@@ -117,12 +117,14 @@ function slidingIndicator(root: HTMLElement, rail: HTMLElement) {
       const borderRight = parseFloat(cs.borderRightWidth || "0") || 0;
       const rootRect = root.getBoundingClientRect();
       const btnRect = active.getBoundingClientRect();
+      // Rects include the window's menu size scale; the highlight is placed in layout pixels.
+      const scale = root.offsetWidth ? rootRect.width / root.offsetWidth : 1;
 
       // Relative to the padding box. The end segments reach the padding edge and
       // inner ones take half the gap on each side, so the highlight tiles.
-      let left = btnRect.left - rootRect.left - borderLeft;
-      let width = btnRect.width;
-      const inner = rootRect.width - borderLeft - borderRight;
+      let left = (btnRect.left - rootRect.left) / scale - borderLeft;
+      let width = btnRect.width / scale;
+      const inner = rootRect.width / scale - borderLeft - borderRight;
       if (n === 1) {
         left = 0;
         width = inner;

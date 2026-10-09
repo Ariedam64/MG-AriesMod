@@ -78,7 +78,8 @@
     "check:accent": "node scripts/runChecks.mjs accent",
     "check:appearance": "node scripts/runChecks.mjs appearance",
     "check:keybindsmenu": "node scripts/runChecks.mjs keybindsmenu",
-    "check:toolslist": "node scripts/runChecks.mjs toolslist"
+    "check:toolslist": "node scripts/runChecks.mjs toolslist",
+    "check:segscale": "node scripts/runChecks.mjs segscale"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",
