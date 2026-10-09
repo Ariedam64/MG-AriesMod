@@ -8,7 +8,6 @@ const ALLOWED = new Set([
   "src/ui/kit/theme.ts",
   "src/data/live/abilityColors.ts",
   "src/features/pets/abilityChipColors.ts",
-  "src/ui/kit/rarityBadge.ts",
   "src/ui/kit/sprites/mutationTint.ts",
   "src/features/cropPrice/badge.ts",
   "src/features/locker/indicator.ts",

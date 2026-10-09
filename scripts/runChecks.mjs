@@ -106,6 +106,7 @@ const SUITES = {
   toolslist: ["checkToolsList", "dom-stub"],
   segscale: ["checkSegmentedScale", "dom-stub"],
   kitpolish: ["checkKitPolish", "dom-stub"],
+  rarityicons: ["checkRarityIcons", "dom-stub"],
 };
 
 /** Problems with how suites are registered: a file with no entry, or package.json out of step. */

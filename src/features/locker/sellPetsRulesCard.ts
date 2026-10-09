@@ -63,7 +63,7 @@ export function sellPetsRulesCard(): SellPetsRulesCard {
     const chip = h("button", "lk-rarity");
     chip.type = "button";
     chip.dataset.rarity = rarity;
-    chip.appendChild(rarityBadge(rarity));
+    chip.appendChild(rarityBadge(rarity, { label: true }));
     chip.addEventListener("click", () => toggleRarity(rarity));
     chips.appendChild(chip);
     return chip;

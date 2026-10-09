@@ -52,15 +52,10 @@ function weatherChip(weather: string, only: boolean): HTMLSpanElement {
   return chip;
 }
 
-function rarityChip(rarity: string): HTMLElement {
-  const badge = rarityBadge(rarity);
-  Object.assign(badge.style, { margin: "0", padding: "2px 8px", fontSize: "11px", borderRadius: "999px" });
-  return badge;
-}
 
 function details(row: NotifierRow): HTMLDivElement {
   const meta = h("div", "qws-al-meta");
-  meta.append(rarityChip(String(row.rarity ?? "-")), h("span", undefined, row.type));
+  meta.append(rarityBadge(String(row.rarity ?? "-")), h("span", undefined, row.type));
   for (const weather of row.weathers ?? []) meta.appendChild(weatherChip(weather, !!row.weatherOnly));
   return meta;
 }

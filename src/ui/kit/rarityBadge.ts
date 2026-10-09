@@ -1,19 +1,10 @@
+// A rarity as the game draws it: its icon from the API (`sprite/ui/Rarity*`),
+// named in a tooltip, with the name as text only where a caller asks for it.
+
+import { raritySprite } from "../../data";
 import { h } from "./dom";
-
-/** The game's rarity colours. Celestial has none: it gets an animated gradient. */
-const RARITY_COLORS: Record<string, string> = {
-  Common: "#E7E7E7",
-  Uncommon: "#67BD4D",
-  Rare: "#0071C6",
-  Legendary: "#FFC734",
-  Mythical: "#9944A7",
-  Divine: "#FF7835",
-};
-
-/** Rarities light enough to need dark text on top. */
-const DARK_TEXT = new Set(["Common", "Uncommon", "Legendary", "Divine"]);
-
-const CELESTIAL_KEYFRAMES_ID = "qws-celestial-kf";
+import { iconBox } from "./icons";
+import { ensureKitStyles } from "./styles";
 
 /** The display name of a rarity, whichever spelling the catalog used. */
 function rarityLabel(raw: string): string {
@@ -40,49 +31,23 @@ function rarityLabel(raw: string): string {
   }
 }
 
-function ensureCelestialKeyframes(): void {
-  if (document.getElementById(CELESTIAL_KEYFRAMES_ID)) return;
-  const style = document.createElement("style");
-  style.id = CELESTIAL_KEYFRAMES_ID;
-  style.textContent = `
-@keyframes qwsCelestialShift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}`;
-  document.head.appendChild(style);
-}
+export function rarityBadge(raw: string, opts: { size?: number; label?: boolean } = {}): HTMLSpanElement {
+  ensureKitStyles();
+  const name = rarityLabel(raw);
+  const el = h("span", "qmm-rarity");
+  el.setAttribute("title", name);
 
-/** A rarity chip in the game's colours. */
-export function rarityBadge(raw: string): HTMLDivElement {
-  const label = rarityLabel(raw);
-  const el = h("div", undefined, label);
-  Object.assign(el.style, {
-    display: "inline-flex",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: "4px 8px",
-    borderRadius: "5px",
-    fontSize: "12px",
-    fontWeight: "700",
-    margin: "2px auto",
-    color: DARK_TEXT.has(label) ? "#0b0b0b" : "#ffffff",
-    boxShadow: "0 0 0 1px #0006 inset",
-    lineHeight: "1.1",
-    whiteSpace: "nowrap",
-  } as Partial<CSSStyleDeclaration>);
-
-  if (label === "Celestial") {
-    ensureCelestialKeyframes();
-    el.style.background = `linear-gradient(130deg,
-      rgb(0,180,216) 0%,
-      rgb(124,42,232) 40%,
-      rgb(160,0,126) 60%,
-      rgb(255,215,0) 100%)`;
-    el.style.backgroundSize = "200% 200%";
-    el.style.animation = "qwsCelestialShift 4s linear infinite";
-  } else {
-    el.style.background = RARITY_COLORS[label] || "#444";
+  const frame = raritySprite(name);
+  if (frame) {
+    const icon = iconBox(frame, opts.size ?? 18, "rarity");
+    // Until the sprite arrives (or if it never does), the initial stands in.
+    icon.appendChild(h("span", "qmm-rarity__fallback", name.charAt(0)));
+    el.appendChild(icon);
+  }
+  if (opts.label || !frame) el.appendChild(h("span", "qmm-rarity__label", name));
+  else {
+    el.setAttribute("role", "img");
+    el.setAttribute("aria-label", name);
   }
   return el;
 }

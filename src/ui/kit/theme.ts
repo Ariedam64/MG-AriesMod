@@ -205,7 +205,7 @@ export const themes: Record<ThemeId, { label: string; swatches: Swatches }> = {
   },
 };
 
-export const DEFAULT_THEME: ThemeId = "sepia";
+export const DEFAULT_THEME: ThemeId = "night";
 
 /** Names that point at a swatch, so a theme or an accent moves them along. */
 const aliases = {

@@ -128,14 +128,13 @@ const LOCKER_MENU_CSS = `
 .lk-rarities.is-disabled { opacity: .5; }
 .lk-rarities__chips { display: flex; flex-wrap: wrap; gap: var(--qmm-space-sm); }
 .lk-rarity {
-  display: inline-flex; padding: 2px; border: 0; border-radius: var(--qmm-radius-sm);
-  background: transparent; cursor: pointer; opacity: .45; filter: grayscale(.7);
+  display: inline-flex; padding: 4px 10px 4px 6px; border: 0; border-radius: var(--qmm-radius-pill);
+  font: inherit; background: var(--qmm-sand); cursor: pointer; opacity: .45; filter: grayscale(.7);
   transition: opacity 120ms ease, filter 120ms ease, box-shadow 120ms ease;
 }
 .lk-rarity:hover { opacity: .8; filter: none; }
 .lk-rarity.is-on { opacity: 1; filter: none; box-shadow: 0 0 0 2px var(--qmm-accent-border); }
 .lk-rarity:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 1px; }
-.lk-rarity > div { margin: 0 !important; }
 `;
 
 let installed = false;

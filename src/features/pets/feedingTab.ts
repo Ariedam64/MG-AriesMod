@@ -37,10 +37,7 @@ function renderSpeciesItem(item: SpeciesItem, btn: HTMLButtonElement): void {
 
   const rarity = String(item.rarity || "").trim();
   if (rarity) {
-    const badge = rarityBadge(rarity);
-    badge.style.margin = "0";
-    badge.style.alignSelf = "center";
-    btn.appendChild(badge);
+    btn.appendChild(rarityBadge(rarity, { size: 20 }));
   }
 }
 

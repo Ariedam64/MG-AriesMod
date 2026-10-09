@@ -136,6 +136,11 @@ export const containersCss = `
   background: var(--qmm-accent);
 }
 
+/* A rarity: the game's icon, its name as text only when asked for. */
+.qmm-rarity { display: inline-flex; align-items: center; gap: var(--qmm-space-sm); vertical-align: middle; flex: 0 0 auto; }
+.qmm-rarity__label { font-size: var(--qmm-fs-sm); font-weight: 800; color: var(--qmm-text); white-space: nowrap; }
+.qmm-rarity__fallback { font-size: var(--qmm-fs-xs); font-weight: 900; color: var(--qmm-text-dim); }
+
 .qmm-icon-box { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
 .qmm-icon-box > img { max-width: 100%; max-height: 100%; image-rendering: auto; }
 

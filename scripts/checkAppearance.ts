@@ -8,10 +8,10 @@ import { readAriesPath, writeAriesPath } from "../src/platform/storage";
 import { color } from "../src/ui/kit/theme";
 
 checkEqual("inline colours follow the theme", color.text, "var(--qmm-text)");
-checkEqual("the default look", readAppearance(), { theme: "sepia", accent: null, scale: 1 });
+checkEqual("the default look is the Night theme", readAppearance(), { theme: "night", accent: null, scale: 1 });
 
 writeAriesPath("ui.appearance", { theme: "neon", accent: "red", scale: 9 });
-checkEqual("unknown or broken values fall back", readAppearance(), { theme: "sepia", accent: null, scale: 1.3 });
+checkEqual("unknown or broken values fall back", readAppearance(), { theme: "night", accent: null, scale: 1.3 });
 
 saveAppearance({ theme: "night", accent: "#3366cc", scale: 1.15 });
 const css = (document.getElementById("qmm-appearance") as HTMLElement | null)?.textContent ?? "";

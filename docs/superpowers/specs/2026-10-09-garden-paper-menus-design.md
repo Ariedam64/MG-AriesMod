@@ -28,6 +28,9 @@ Amended the same day, after the owner saw the first build:
   accent is pushed darker or lighter until its shades stay readable. To make
   this possible `color.*` holds `var(--qmm-...)` references, so inline styles
   follow the theme too.
+- The owner then made Night the default theme, and rarities everywhere show
+  the game's own rarity icons from the API (`sprite/ui/Rarity*`) instead of
+  coloured text chips.
 
 ## Goal
 

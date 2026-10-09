@@ -1688,7 +1688,7 @@
           }
         }
       };
-      DEFAULT_THEME = "sepia";
+      DEFAULT_THEME = "night";
       aliases = {
         accent: "sepiaStrong",
         accentSoft: "sepiaSoft",
@@ -2034,6 +2034,11 @@
   content: ''; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%;
   background: var(--qmm-accent);
 }
+
+/* A rarity: the game's icon, its name as text only when asked for. */
+.qmm-rarity { display: inline-flex; align-items: center; gap: var(--qmm-space-sm); vertical-align: middle; flex: 0 0 auto; }
+.qmm-rarity__label { font-size: var(--qmm-fs-sm); font-weight: 800; color: var(--qmm-text); white-space: nowrap; }
+.qmm-rarity__fallback { font-size: var(--qmm-fs-xs); font-weight: 900; color: var(--qmm-text-dim); }
 
 .qmm-icon-box { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
 .qmm-icon-box > img { max-width: 100%; max-height: 100%; image-rendering: auto; }
@@ -28284,14 +28289,13 @@ Click to download`;
 .lk-rarities.is-disabled { opacity: .5; }
 .lk-rarities__chips { display: flex; flex-wrap: wrap; gap: var(--qmm-space-sm); }
 .lk-rarity {
-  display: inline-flex; padding: 2px; border: 0; border-radius: var(--qmm-radius-sm);
-  background: transparent; cursor: pointer; opacity: .45; filter: grayscale(.7);
+  display: inline-flex; padding: 4px 10px 4px 6px; border: 0; border-radius: var(--qmm-radius-pill);
+  font: inherit; background: var(--qmm-sand); cursor: pointer; opacity: .45; filter: grayscale(.7);
   transition: opacity 120ms ease, filter 120ms ease, box-shadow 120ms ease;
 }
 .lk-rarity:hover { opacity: .8; filter: none; }
 .lk-rarity.is-on { opacity: 1; filter: none; box-shadow: 0 0 0 2px var(--qmm-accent-border); }
 .lk-rarity:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 1px; }
-.lk-rarity > div { margin: 0 !important; }
 `;
       installed4 = false;
     }
@@ -29130,64 +29134,31 @@ Click to download`;
         return rarity3 || "-";
     }
   }
-  function ensureCelestialKeyframes() {
-    if (document.getElementById(CELESTIAL_KEYFRAMES_ID)) return;
-    const style = document.createElement("style");
-    style.id = CELESTIAL_KEYFRAMES_ID;
-    style.textContent = `
-@keyframes qwsCelestialShift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}`;
-    document.head.appendChild(style);
-  }
-  function rarityBadge(raw) {
-    const label2 = rarityLabel(raw);
-    const el4 = h("div", void 0, label2);
-    Object.assign(el4.style, {
-      display: "inline-flex",
-      justifyContent: "center",
-      alignItems: "center",
-      padding: "4px 8px",
-      borderRadius: "5px",
-      fontSize: "12px",
-      fontWeight: "700",
-      margin: "2px auto",
-      color: DARK_TEXT.has(label2) ? "#0b0b0b" : "#ffffff",
-      boxShadow: "0 0 0 1px #0006 inset",
-      lineHeight: "1.1",
-      whiteSpace: "nowrap"
-    });
-    if (label2 === "Celestial") {
-      ensureCelestialKeyframes();
-      el4.style.background = `linear-gradient(130deg,
-      rgb(0,180,216) 0%,
-      rgb(124,42,232) 40%,
-      rgb(160,0,126) 60%,
-      rgb(255,215,0) 100%)`;
-      el4.style.backgroundSize = "200% 200%";
-      el4.style.animation = "qwsCelestialShift 4s linear infinite";
-    } else {
-      el4.style.background = RARITY_COLORS[label2] || "#444";
+  function rarityBadge(raw, opts = {}) {
+    ensureKitStyles();
+    const name = rarityLabel(raw);
+    const el4 = h("span", "qmm-rarity");
+    el4.setAttribute("title", name);
+    const frame = raritySprite(name);
+    if (frame) {
+      const icon2 = iconBox(frame, opts.size ?? 18, "rarity");
+      icon2.appendChild(h("span", "qmm-rarity__fallback", name.charAt(0)));
+      el4.appendChild(icon2);
+    }
+    if (opts.label || !frame) el4.appendChild(h("span", "qmm-rarity__label", name));
+    else {
+      el4.setAttribute("role", "img");
+      el4.setAttribute("aria-label", name);
     }
     return el4;
   }
-  var RARITY_COLORS, DARK_TEXT, CELESTIAL_KEYFRAMES_ID;
   var init_rarityBadge = __esm({
     "src/ui/kit/rarityBadge.ts"() {
       "use strict";
+      init_data();
       init_dom2();
-      RARITY_COLORS = {
-        Common: "#E7E7E7",
-        Uncommon: "#67BD4D",
-        Rare: "#0071C6",
-        Legendary: "#FFC734",
-        Mythical: "#9944A7",
-        Divine: "#FF7835"
-      };
-      DARK_TEXT = /* @__PURE__ */ new Set(["Common", "Uncommon", "Legendary", "Divine"]);
-      CELESTIAL_KEYFRAMES_ID = "qws-celestial-kf";
+      init_icons();
+      init_styles();
     }
   });
 
@@ -29238,7 +29209,7 @@ Click to download`;
       const chip = h("button", "lk-rarity");
       chip.type = "button";
       chip.dataset.rarity = rarity3;
-      chip.appendChild(rarityBadge(rarity3));
+      chip.appendChild(rarityBadge(rarity3, { label: true }));
       chip.addEventListener("click", () => toggleRarity(rarity3));
       chips.appendChild(chip);
       return chip;
@@ -31014,10 +30985,7 @@ Click to download`;
     btn.append(petIcon({ petSpecies: item.id, name: item.title }, LIST_ICON_PX2), title);
     const rarity3 = String(item.rarity || "").trim();
     if (rarity3) {
-      const badge2 = rarityBadge(rarity3);
-      badge2.style.margin = "0";
-      badge2.style.alignSelf = "center";
-      btn.appendChild(badge2);
+      btn.appendChild(rarityBadge(rarity3, { size: 20 }));
     }
   }
   function message(text2) {
@@ -37472,14 +37440,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     chip.title = only ? `Only available during ${weather2}` : `Also available during ${weather2}`;
     return chip;
   }
-  function rarityChip(rarity3) {
-    const badge2 = rarityBadge(rarity3);
-    Object.assign(badge2.style, { margin: "0", padding: "2px 8px", fontSize: "11px", borderRadius: "999px" });
-    return badge2;
-  }
   function details(row2) {
     const meta = h("div", "qws-al-meta");
-    meta.append(rarityChip(String(row2.rarity ?? "-")), h("span", void 0, row2.type));
+    meta.append(rarityBadge(String(row2.rarity ?? "-")), h("span", void 0, row2.type));
     for (const weather2 of row2.weathers ?? []) meta.appendChild(weatherChip(weather2, !!row2.weatherOnly));
     return meta;
   }
