@@ -4181,7 +4181,7 @@
 
   // src/game/pixi/tileCapture.ts
   function looksLikeTileObjectSystem(o) {
-    return !!(o && typeof o === "object" && o.name === TILE_OBJECT_SYSTEM_NAME && o.tileViews && typeof o.tileViews.get === "function" && typeof o.getOrCreateTileView === "function");
+    return !!(o && typeof o === "object" && TILE_SYSTEM_NAMES.has(o.name) && o.tileViews && typeof o.tileViews.get === "function" && typeof o.getOrCreateTileView === "function");
   }
   function tileObjectSystemFrom(value) {
     if (looksLikeTileObjectSystem(value)) return value;
@@ -4260,7 +4260,7 @@
     if (typeof original !== "function") return;
     const wrapper = function(key2, value) {
       const result = original.call(this, key2, value);
-      if (key2 === TILE_OBJECT_SYSTEM_NAME) {
+      if (TILE_SYSTEM_NAMES.has(key2)) {
         try {
           const system = tileObjectSystemFrom(value);
           if (system) {
@@ -4335,7 +4335,7 @@
     const system = entry.system ?? entry;
     return system && typeof system === "object" && system.destroyed !== true ? system : null;
   }
-  var tileState, TILE_OBJECT_SYSTEM_NAME, SCOPE_SEARCH_DEPTH;
+  var tileState, TILE_SYSTEM_NAMES, SCOPE_SEARCH_DEPTH;
   var init_tileCapture = __esm({
     "src/game/pixi/tileCapture.ts"() {
       "use strict";
@@ -4358,7 +4358,7 @@
         origMapSet: null,
         ourMapSet: null
       };
-      TILE_OBJECT_SYSTEM_NAME = "tileObject";
+      TILE_SYSTEM_NAMES = /* @__PURE__ */ new Set(["gardenObject", "tileObject"]);
       SCOPE_SEARCH_DEPTH = 6;
     }
   });

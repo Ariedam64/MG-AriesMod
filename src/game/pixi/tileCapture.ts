@@ -9,9 +9,10 @@
 // could never match again and every editor action threw.
 //
 // What survived is the system itself. `Scope.addSystem` still does
-// `systems.set(system.name, { system, enabled })`, and the tile system is still
-// called `tileObject`, so the capture now watches `Map.prototype.set` for that
-// one key. The patch is installed at boot, fires when the world builds, and
+// `systems.set(system.name, { system, enabled })`, so the capture watches
+// `Map.prototype.set` for the tile system's name. Build 1449 renamed it from
+// `tileObject` to `gardenObject` without changing its shape, which silently
+// broke the editor again; both names are accepted. The patch is installed at boot, fires when the world builds, and
 // takes itself back off straight away.
 
 import { pageWindow, readSharedGlobal, shareGlobal } from "../../platform/pageContext";
@@ -37,14 +38,14 @@ export const tileState = {
   ourMapSet: null as AnyFn | null,
 };
 
-/** The name the game gives the tile system, and the key it registers it under. */
-const TILE_OBJECT_SYSTEM_NAME = "tileObject";
+/** The names the game has given the tile system, and the keys it registers it under. */
+const TILE_SYSTEM_NAMES: ReadonlySet<unknown> = new Set(["gardenObject", "tileObject"]);
 /** How deep to follow a scope tree when searching an engine handed to us. */
 const SCOPE_SEARCH_DEPTH = 6;
 
 function looksLikeTileObjectSystem(o: any): boolean {
   return !!(o && typeof o === "object"
-    && o.name === TILE_OBJECT_SYSTEM_NAME
+    && TILE_SYSTEM_NAMES.has(o.name)
     && o.tileViews && typeof o.tileViews.get === "function"
     && typeof o.getOrCreateTileView === "function");
 }
@@ -168,7 +169,7 @@ function armCapture(): void {
 
   const wrapper = function (this: any, key: any, value: any) {
     const result = original.call(this, key, value);
-    if (key === TILE_OBJECT_SYSTEM_NAME) {
+    if (TILE_SYSTEM_NAMES.has(key)) {
       try {
         const system = tileObjectSystemFrom(value);
         if (system) {

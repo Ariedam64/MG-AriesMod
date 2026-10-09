@@ -1,9 +1,10 @@
-// Mirrors how build 1206 registers the tile system, so the editor's capture is
+// Mirrors how the game registers the tile system, so the editor's capture is
 // checked against the game's real shape rather than the one it used to have.
 //
 // The game's scope does, in `addSystem`:
 //   systems.set(system.name, { system, enabled })
-// and the tile system is `{ name: "tileObject", tileViews, getOrCreateTileView }`.
+// and the tile system is `{ name, tileViews, getOrCreateTileView }`, named
+// "tileObject" until build 1449 renamed it "gardenObject".
 // Crucially the scope has no `start`, no `destroy` and nothing calls `.bind()`
 // on it, which is exactly what the old capture waited for.
 import { checkEqual, done } from "./_check";
@@ -17,7 +18,7 @@ type FakeTileView = { tileObject: any; onDataChanged(next: any): void; update(ct
 function makeTileSystem() {
   const tileViews = new Map<number, FakeTileView>();
   return {
-    name: "tileObject",
+    name: "gardenObject",
     tileViews,
     map: { cols: COLS, rows: ROWS },
     worldContainer: { destroyed: false, toLocal: (p: any) => p },
