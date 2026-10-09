@@ -86,6 +86,13 @@ export const chromeCss = `
   box-shadow: var(--qmm-shadow-raise-small);
 }
 .qws-dock.hidden { display: none; }
+.qws-dock.placed { transform: none; }
+.qws-dock-grip {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  width: 100%; padding: 2px 0 4px; cursor: grab; touch-action: none; user-select: none;
+}
+.qws-dock-grip-bar { width: 22px; height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-sand-shade); }
+.qws-dock-grip:hover .qws-dock-grip-bar { background: var(--qmm-text-dim); }
 .qws-dock.folded .qws-dock-btn { display: none; }
 .qws-dock-fold {
   flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
@@ -96,7 +103,7 @@ export const chromeCss = `
 .qws-dock-fold:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
 .qws-dock-fold svg { width: 18px; height: 18px; pointer-events: none; }
 .qws-dock-status {
-  flex: 0 0 auto; width: 10px; height: 10px; margin: 2px 0 4px; border-radius: 50%;
+  flex: 0 0 auto; width: 10px; height: 10px; margin-top: 2px; border-radius: 50%;
   background: var(--qmm-amber); box-shadow: 0 0 0 2px var(--qmm-paper-deep);
 }
 .qws-dock-status[data-tone="ok"] { background: var(--qmm-ok); }

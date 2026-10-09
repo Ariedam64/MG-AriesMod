@@ -47,6 +47,14 @@ fold?.click();
 check("a second click unfolds it", !dock?.classList.contains("folded"));
 checkEqual("unfolding is remembered", readAriesPath("hud.dockFolded"), false);
 
+const grip = dock?.querySelector(".qws-dock-grip");
+const pointer = (type: string, x: number, y: number) => event(type, { pointerId: 1, button: 0, clientX: x, clientY: y });
+grip?.dispatchEvent(pointer("pointerdown", 20, 300));
+(document as unknown as { dispatchEvent(e: Event): void }).dispatchEvent(pointer("pointermove", 320, 500));
+(document as unknown as { dispatchEvent(e: Event): void }).dispatchEvent(pointer("pointerup", 320, 500));
+check("dragging the grip moves the dock", dock?.style.left === "300px" && dock?.style.top === "200px" && !!dock?.classList.contains("placed"));
+checkEqual("the dock's place is remembered", readAriesPath("hud.dockPos"), { left: 300, top: 200 });
+
 window.dispatchEvent(event("keydown", { code: "Insert", key: "Insert" }));
 window.dispatchEvent(event("keyup", { code: "Insert", key: "Insert" }));
 check("a tap on Insert hides the dock", !!dock?.classList.contains("hidden"));

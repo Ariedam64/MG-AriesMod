@@ -12,6 +12,7 @@ import { checkModVersion } from "../platform/modVersion";
 import { readAriesPath, writeAriesPath } from "../platform/storage";
 import { button } from "./kit/button";
 import { createDock } from "./kit/dock";
+import { readStoredPosition, storePosition } from "./kit/floating";
 import { h } from "./kit/dom";
 import { setMenuBadge } from "./kit/menuBadges";
 import { layer } from "./kit/theme";
@@ -25,6 +26,7 @@ export interface HUDOptions {
 
 const HUD_HIDDEN_PATH = "hud.hidden";
 const HUD_FOLDED_PATH = "hud.dockFolded";
+const HUD_DOCK_POS_PATH = "hud.dockPos";
 const HUD_WIN_PATH = (id: string) => `hud.windows.${id}`;
 const isEditing = (el: EventTarget | null) => {
   const t = el as HTMLElement | null;
@@ -59,11 +61,12 @@ export function mountHUD(opts?: HUDOptions) {
   }
 
   // ---------- Dock ----------
-  const dock = createDock(
-    (id) => toggleWindow(id),
-    (folded) => writeAriesPath(HUD_FOLDED_PATH, folded),
-  );
+  const dock = createDock((id) => toggleWindow(id), {
+    onFold: (folded) => writeAriesPath(HUD_FOLDED_PATH, folded),
+    onMove: (pos) => storePosition(HUD_DOCK_POS_PATH, pos),
+  });
   (document.documentElement || document.body).appendChild(dock.root);
+  dock.place(readStoredPosition(HUD_DOCK_POS_PATH));
 
   const setHUDHidden = (hidden: boolean) => {
     dock.setHidden(hidden);

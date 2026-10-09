@@ -14,6 +14,9 @@ Amended the same day, after the owner saw the first build:
 - a fold button at the bottom of the dock shrinks it to the status dot, so
   players without an Insert key can put it away;
 - a build behind the latest release badges the Settings dock button.
+- after the first in-game test: the palette is one step darker (paper, sand,
+  cards and sepia), and the dock can be dragged anywhere by the grip around its
+  status dot, which is remembered.
 
 ## Goal
 

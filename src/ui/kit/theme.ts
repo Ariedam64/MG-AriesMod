@@ -9,20 +9,20 @@
 
 /** The palette. Text pairs are held to WCAG contrast by `contrastPairs` below. */
 const palette = {
-  paper: "#fbf4e4",
-  paperDeep: "#f6ecd5",
-  sand: "#efe3c6",
-  sandEdge: "#e3d3b0",
-  sandShade: "#c9b48a",
-  card: "#ffffff",
-  sepia: "#a0703f",
-  sepiaStrong: "#80562d",
-  sepiaShade: "#5e3d1e",
-  sepiaSoft: "#ecd3ae",
-  sepiaInk: "#77502a",
+  paper: "#f0e2c4",
+  paperDeep: "#e8d6b2",
+  sand: "#e1cca3",
+  sandEdge: "#cfb486",
+  sandShade: "#ad9265",
+  card: "#f8efdc",
+  sepia: "#8f6236",
+  sepiaStrong: "#74492a",
+  sepiaShade: "#52331c",
+  sepiaSoft: "#e2c597",
+  sepiaInk: "#6b4423",
   bark: "#3b2f22",
-  barkSoft: "#6b5537",
-  barkDim: "#76634a",
+  barkSoft: "#5f4a2f",
+  barkDim: "#64523b",
   clay: "#c24a2a",
   amber: "#d18a1a",
   onSepia: "#ffffff",
@@ -33,8 +33,8 @@ export const color = {
 
   accent: palette.sepiaStrong,
   accentSoft: palette.sepiaSoft,
-  accentHover: "#e4c79c",
-  accentBorder: "#c99d6b",
+  accentHover: "#d6b682",
+  accentBorder: "#b28657",
   accentBorderHover: palette.sepia,
 
   text: palette.bark,
@@ -42,7 +42,7 @@ export const color = {
   textDim: palette.barkDim,
 
   border: palette.sandEdge,
-  borderHover: "#d6c193",
+  borderHover: "#c2a574",
   borderStrong: palette.sandEdge,
 
   cardBg: palette.card,
@@ -54,27 +54,27 @@ export const color = {
   sunken: palette.paperDeep,
   surface: palette.paper,
   panelBg: palette.paper,
-  scrollbar: "#d6c193",
+  scrollbar: "#c2a574",
   scrim: "rgba(59,47,34,0.45)",
   /** A small drop shadow under a knob or a chip. */
   shade: "rgba(59,47,34,0.25)",
 
   /** Status only (connected, active, at its best), never the accent. */
   ok: "#4f9a58",
-  okInk: "#2f6e39",
-  okSoft: "#e3efd9",
+  okInk: "#2a6233",
+  okSoft: "#d7e6c6",
 
   danger: palette.clay,
-  dangerInk: "#a33a1e",
-  dangerSoft: "#f6ddd5",
-  dangerHover: "#f0cbbf",
-  dangerBorder: "#e2a493",
+  dangerInk: "#8f2f16",
+  dangerSoft: "#eccbbd",
+  dangerHover: "#e4b8a6",
+  dangerBorder: "#d38f7a",
   dangerBorderHover: palette.clay,
 
   warn: palette.amber,
   warnInk: "#7a4f0a",
-  warnSoft: "#f6e7c6",
-  warnBorder: "#e2bf7a",
+  warnSoft: "#ecd6a8",
+  warnBorder: "#d4a85e",
   /** The pulse around a hotkey button that is recording. */
   warnGlow: "rgba(209,138,26,0.45)",
 
@@ -82,8 +82,8 @@ export const color = {
   gold: "#FFC734",
   rainbow: "#c084fc",
   /** Gold and Rainbow as text on paper or a card. */
-  goldInk: "#8a6100",
-  rainbowInk: "#8a3fc0",
+  goldInk: "#7a5500",
+  rainbowInk: "#7a35b0",
 } as const;
 
 const gradient = {

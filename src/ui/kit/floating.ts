@@ -53,6 +53,8 @@ export function placeInViewport(
 }
 
 export interface DragOptions {
+  /** Where the press starts, when only part of the widget is a handle. Defaults to the widget. */
+  handle?: HTMLElement;
   /** Pointer travel below which a press stays a click. 0 makes every press a drag. */
   thresholdPx?: number;
   /** Presses that start on such a target do not drag (for example a button inside the widget). */
@@ -70,6 +72,7 @@ export interface DragOptions {
 /** Lets the player drag `el`. Returns a function that ends any drag and detaches it. */
 export function makeDraggable(el: HTMLElement, opts: DragOptions): () => void {
   const threshold = opts.thresholdPx ?? 0;
+  const handle = opts.handle ?? el;
   let drag: {
     pointerId: number;
     startX: number;
@@ -94,10 +97,10 @@ export function makeDraggable(el: HTMLElement, opts: DragOptions): () => void {
     document.removeEventListener("pointermove", onMove);
     document.removeEventListener("pointerup", stop);
     document.removeEventListener("pointercancel", stop);
-    try { el.releasePointerCapture(drag.pointerId); } catch {}
+    try { handle.releasePointerCapture(drag.pointerId); } catch {}
     const { moved, last } = drag;
     drag = null;
-    el.style.cursor = "grab";
+    handle.style.cursor = "grab";
     if (moved) opts.onDrop(last);
     else if (ev?.type === "pointerup") {
       try { opts.onClick?.(); } catch (error) {
@@ -121,18 +124,18 @@ export function makeDraggable(el: HTMLElement, opts: DragOptions): () => void {
       last: base,
       moved: threshold <= 0,
     };
-    try { el.setPointerCapture(ev.pointerId); } catch {}
+    try { handle.setPointerCapture(ev.pointerId); } catch {}
     document.addEventListener("pointermove", onMove);
     document.addEventListener("pointerup", stop);
     document.addEventListener("pointercancel", stop);
-    el.style.cursor = "grabbing";
+    handle.style.cursor = "grabbing";
     ev.preventDefault();
     if (opts.stopPropagation) ev.stopPropagation();
   };
 
-  el.addEventListener("pointerdown", onDown);
+  handle.addEventListener("pointerdown", onDown);
   return () => {
     stop();
-    el.removeEventListener("pointerdown", onDown);
+    handle.removeEventListener("pointerdown", onDown);
   };
 }

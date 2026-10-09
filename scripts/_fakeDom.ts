@@ -240,6 +240,7 @@ export function installFakeDom(): { localStorage: FakeStorage } {
     querySelectorAll: (sel: string) => documentElement.querySelectorAll(sel),
     addEventListener: docListeners.addEventListener.bind(docListeners),
     removeEventListener: docListeners.removeEventListener.bind(docListeners),
+    dispatchEvent: docListeners.dispatchEvent.bind(docListeners),
   };
   g.localStorage = localStorage;
   // Node 21+ ships a read-only `navigator` getter.
@@ -257,6 +258,8 @@ export function installFakeDom(): { localStorage: FakeStorage } {
   g.requestAnimationFrame = (fn: () => void) => setTimeout(fn, 0);
   g.cancelAnimationFrame = (id: any) => clearTimeout(id);
   g.devicePixelRatio = 1;
+  g.innerWidth = 1280;
+  g.innerHeight = 800;
   g.HTMLElement = FakeElement;
   g.Node = FakeElement;
   g.Event = class {

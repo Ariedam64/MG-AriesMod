@@ -1546,20 +1546,20 @@
     "src/ui/kit/theme.ts"() {
       "use strict";
       palette = {
-        paper: "#fbf4e4",
-        paperDeep: "#f6ecd5",
-        sand: "#efe3c6",
-        sandEdge: "#e3d3b0",
-        sandShade: "#c9b48a",
-        card: "#ffffff",
-        sepia: "#a0703f",
-        sepiaStrong: "#80562d",
-        sepiaShade: "#5e3d1e",
-        sepiaSoft: "#ecd3ae",
-        sepiaInk: "#77502a",
+        paper: "#f0e2c4",
+        paperDeep: "#e8d6b2",
+        sand: "#e1cca3",
+        sandEdge: "#cfb486",
+        sandShade: "#ad9265",
+        card: "#f8efdc",
+        sepia: "#8f6236",
+        sepiaStrong: "#74492a",
+        sepiaShade: "#52331c",
+        sepiaSoft: "#e2c597",
+        sepiaInk: "#6b4423",
         bark: "#3b2f22",
-        barkSoft: "#6b5537",
-        barkDim: "#76634a",
+        barkSoft: "#5f4a2f",
+        barkDim: "#64523b",
         clay: "#c24a2a",
         amber: "#d18a1a",
         onSepia: "#ffffff"
@@ -1568,14 +1568,14 @@
         ...palette,
         accent: palette.sepiaStrong,
         accentSoft: palette.sepiaSoft,
-        accentHover: "#e4c79c",
-        accentBorder: "#c99d6b",
+        accentHover: "#d6b682",
+        accentBorder: "#b28657",
         accentBorderHover: palette.sepia,
         text: palette.bark,
         textSoft: palette.barkSoft,
         textDim: palette.barkDim,
         border: palette.sandEdge,
-        borderHover: "#d6c193",
+        borderHover: "#c2a574",
         borderStrong: palette.sandEdge,
         cardBg: palette.card,
         hoverBg: palette.sand,
@@ -1586,32 +1586,32 @@
         sunken: palette.paperDeep,
         surface: palette.paper,
         panelBg: palette.paper,
-        scrollbar: "#d6c193",
+        scrollbar: "#c2a574",
         scrim: "rgba(59,47,34,0.45)",
         /** A small drop shadow under a knob or a chip. */
         shade: "rgba(59,47,34,0.25)",
         /** Status only (connected, active, at its best), never the accent. */
         ok: "#4f9a58",
-        okInk: "#2f6e39",
-        okSoft: "#e3efd9",
+        okInk: "#2a6233",
+        okSoft: "#d7e6c6",
         danger: palette.clay,
-        dangerInk: "#a33a1e",
-        dangerSoft: "#f6ddd5",
-        dangerHover: "#f0cbbf",
-        dangerBorder: "#e2a493",
+        dangerInk: "#8f2f16",
+        dangerSoft: "#eccbbd",
+        dangerHover: "#e4b8a6",
+        dangerBorder: "#d38f7a",
         dangerBorderHover: palette.clay,
         warn: palette.amber,
         warnInk: "#7a4f0a",
-        warnSoft: "#f6e7c6",
-        warnBorder: "#e2bf7a",
+        warnSoft: "#ecd6a8",
+        warnBorder: "#d4a85e",
         /** The pulse around a hotkey button that is recording. */
         warnGlow: "rgba(209,138,26,0.45)",
         /** Gold and Rainbow as fills, or as text on a dark chip. */
         gold: "#FFC734",
         rainbow: "#c084fc",
         /** Gold and Rainbow as text on paper or a card. */
-        goldInk: "#8a6100",
-        rainbowInk: "#8a3fc0"
+        goldInk: "#7a5500",
+        rainbowInk: "#7a35b0"
       };
       gradient = {
         panel: palette.paper,
@@ -1748,6 +1748,13 @@
   box-shadow: var(--qmm-shadow-raise-small);
 }
 .qws-dock.hidden { display: none; }
+.qws-dock.placed { transform: none; }
+.qws-dock-grip {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  width: 100%; padding: 2px 0 4px; cursor: grab; touch-action: none; user-select: none;
+}
+.qws-dock-grip-bar { width: 22px; height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-sand-shade); }
+.qws-dock-grip:hover .qws-dock-grip-bar { background: var(--qmm-text-dim); }
 .qws-dock.folded .qws-dock-btn { display: none; }
 .qws-dock-fold {
   flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
@@ -1758,7 +1765,7 @@
 .qws-dock-fold:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
 .qws-dock-fold svg { width: 18px; height: 18px; pointer-events: none; }
 .qws-dock-status {
-  flex: 0 0 auto; width: 10px; height: 10px; margin: 2px 0 4px; border-radius: 50%;
+  flex: 0 0 auto; width: 10px; height: 10px; margin-top: 2px; border-radius: 50%;
   background: var(--qmm-amber); box-shadow: 0 0 0 2px var(--qmm-paper-deep);
 }
 .qws-dock-status[data-tone="ok"] { background: var(--qmm-ok); }
@@ -15009,6 +15016,108 @@
     }
   });
 
+  // src/ui/kit/floating.ts
+  function readStoredPosition(path) {
+    const raw = readAriesPath(path);
+    if (!raw || typeof raw !== "object") return null;
+    const left = Number(raw.left);
+    const top = Number(raw.top);
+    if (!Number.isFinite(left) || !Number.isFinite(top)) return null;
+    return { left, top };
+  }
+  function storePosition(path, pos) {
+    writeAriesPath(path, { left: Math.round(pos.left), top: Math.round(pos.top) });
+  }
+  function clampCoord(value, min, max) {
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
+    if (max < min) return min;
+    return Math.min(Math.max(value, min), max);
+  }
+  function clampToViewport(pos, size, margin, viewport = { width: window.innerWidth, height: window.innerHeight }) {
+    return {
+      left: clampCoord(pos.left, margin, viewport.width - size.width - margin),
+      top: clampCoord(pos.top, margin, viewport.height - size.height - margin)
+    };
+  }
+  function placeInViewport(el, pos, size, margin) {
+    const placed = clampToViewport(pos, size, margin);
+    el.style.left = `${Math.round(placed.left)}px`;
+    el.style.top = `${Math.round(placed.top)}px`;
+    return placed;
+  }
+  function makeDraggable(el, opts) {
+    const threshold = opts.thresholdPx ?? 0;
+    const handle = opts.handle ?? el;
+    let drag = null;
+    const onMove = (ev) => {
+      if (!drag || ev.pointerId !== drag.pointerId) return;
+      const dx = ev.clientX - drag.startX;
+      const dy = ev.clientY - drag.startY;
+      if (!drag.moved && Math.hypot(dx, dy) < threshold) return;
+      drag.moved = true;
+      drag.last = opts.moveTo({ left: drag.base.left + dx, top: drag.base.top + dy });
+    };
+    const stop = (ev) => {
+      if (!drag) return;
+      if (ev && ev.pointerId !== drag.pointerId) return;
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", stop);
+      document.removeEventListener("pointercancel", stop);
+      try {
+        handle.releasePointerCapture(drag.pointerId);
+      } catch {
+      }
+      const { moved, last } = drag;
+      drag = null;
+      handle.style.cursor = "grab";
+      if (moved) opts.onDrop(last);
+      else if (ev?.type === "pointerup") {
+        try {
+          opts.onClick?.();
+        } catch (error) {
+          console.error("[Aries] floating widget click failed:", error);
+        }
+      }
+    };
+    const onDown = (ev) => {
+      if (ev.button !== 0) return;
+      const target = ev.target;
+      if (target && opts.ignore?.(target)) return;
+      if (drag) stop();
+      const rect = el.getBoundingClientRect();
+      const base = { left: rect.left, top: rect.top };
+      drag = {
+        pointerId: ev.pointerId,
+        startX: ev.clientX,
+        startY: ev.clientY,
+        base,
+        last: base,
+        moved: threshold <= 0
+      };
+      try {
+        handle.setPointerCapture(ev.pointerId);
+      } catch {
+      }
+      document.addEventListener("pointermove", onMove);
+      document.addEventListener("pointerup", stop);
+      document.addEventListener("pointercancel", stop);
+      handle.style.cursor = "grabbing";
+      ev.preventDefault();
+      if (opts.stopPropagation) ev.stopPropagation();
+    };
+    handle.addEventListener("pointerdown", onDown);
+    return () => {
+      stop();
+      handle.removeEventListener("pointerdown", onDown);
+    };
+  }
+  var init_floating = __esm({
+    "src/ui/kit/floating.ts"() {
+      "use strict";
+      init_storage();
+    }
+  });
+
   // src/ui/kit/menuIcons.ts
   function menuIcon(id) {
     const svg2 = document.createElementNS(SVG_NS, "svg");
@@ -15068,13 +15177,16 @@
   });
 
   // src/ui/kit/dock.ts
-  function createDock(onSelect, onFold) {
+  function createDock(onSelect, events = {}) {
     ensureKitStyles();
     const root4 = h("nav", "qws-dock");
     root4.setAttribute("aria-label", "Aries Mod menus");
     const status2 = h("span", "qws-dock-status");
     status2.dataset.tone = "warn";
-    root4.appendChild(status2);
+    const grip = h("div", "qws-dock-grip");
+    grip.setAttribute("title", "Drag to move the menus");
+    grip.append(status2, h("span", "qws-dock-grip-bar"));
+    root4.appendChild(grip);
     const fold = h("button", "qws-dock-fold");
     fold.type = "button";
     const foldIcon = menuIcon("");
@@ -15087,9 +15199,10 @@
       tip.textContent = label2;
       if (!tip.isConnected) (document.documentElement || document.body).appendChild(tip);
       const rect = btn.getBoundingClientRect();
-      tip.style.left = `${Math.round(rect.right + TIP_GAP_PX)}px`;
+      const onRight = rect.left > window.innerWidth / 2;
+      tip.style.left = `${Math.round(onRight ? rect.left - TIP_GAP_PX : rect.right + TIP_GAP_PX)}px`;
       tip.style.top = `${Math.round(rect.top + rect.height / 2)}px`;
-      tip.style.transform = "translateY(-50%)";
+      tip.style.transform = onRight ? "translate(-100%, -50%)" : "translateY(-50%)";
       tip.classList.add("shown");
     };
     const hideTip = () => tip.classList.remove("shown");
@@ -15122,18 +15235,47 @@
       if (pendingBadges.has(id)) setBadge(id, pendingBadges.get(id) ?? 0);
     };
     onMenuBadge(setBadge);
+    const moveTo = (pos) => {
+      root4.classList.add("placed");
+      const rect = root4.getBoundingClientRect();
+      return placeInViewport(root4, pos, { width: rect.width, height: rect.height }, EDGE_MARGIN_PX);
+    };
+    const place = (pos) => {
+      if (pos) {
+        moveTo(pos);
+        return;
+      }
+      root4.classList.remove("placed");
+      root4.style.left = "";
+      root4.style.top = "";
+    };
+    const reclamp = () => {
+      if (!root4.classList.contains("placed")) return;
+      const rect = root4.getBoundingClientRect();
+      moveTo({ left: rect.left, top: rect.top });
+    };
+    makeDraggable(root4, {
+      handle: grip,
+      moveTo: (pos) => {
+        hideTip();
+        return moveTo(pos);
+      },
+      onDrop: (pos) => events.onMove?.(pos)
+    });
+    window.addEventListener("resize", reclamp);
     const setFolded = (folded) => {
       root4.classList.toggle("folded", folded);
       fold.setAttribute("aria-label", folded ? "Show the menus" : "Fold the menus");
       fold.setAttribute("aria-expanded", folded ? "false" : "true");
       foldIcon.innerHTML = folded ? UNFOLD_ICON : FOLD_ICON;
       if (folded) hideTip();
+      reclamp();
     };
     setFolded(false);
     fold.addEventListener("click", () => {
       const folded = !root4.classList.contains("folded");
       setFolded(folded);
-      onFold?.(folded);
+      events.onFold?.(folded);
     });
     return {
       root: root4,
@@ -15158,20 +15300,23 @@
         return root4.classList.contains("hidden");
       },
       setFolded,
+      place,
       setFoldHint(text2) {
         fold.setAttribute("title", text2);
       }
     };
   }
-  var TIP_GAP_PX, FOLD_ICON, UNFOLD_ICON;
+  var TIP_GAP_PX, EDGE_MARGIN_PX, FOLD_ICON, UNFOLD_ICON;
   var init_dock = __esm({
     "src/ui/kit/dock.ts"() {
       "use strict";
       init_styles();
       init_dom2();
+      init_floating();
       init_menuIcons();
       init_menuBadges();
       TIP_GAP_PX = 10;
+      EDGE_MARGIN_PX = 8;
       FOLD_ICON = '<path d="M15 6l-6 6 6 6"/>';
       UNFOLD_ICON = '<path d="M9 6l6 6-6 6"/>';
     }
@@ -15229,7 +15374,7 @@
       ensureOnScreen(el);
     });
   }
-  function makeDraggable(handle, target, opts) {
+  function makeDraggable2(handle, target, opts) {
     let start2 = null;
     handle.addEventListener("mousedown", (e) => {
       if (opts.ignore?.(e.target)) return;
@@ -15329,11 +15474,12 @@
       document.addEventListener("DOMContentLoaded", () => mountHUD(opts), { once: true });
       return;
     }
-    const dock = createDock(
-      (id) => toggleWindow(id),
-      (folded) => writeAriesPath(HUD_FOLDED_PATH, folded)
-    );
+    const dock = createDock((id) => toggleWindow(id), {
+      onFold: (folded) => writeAriesPath(HUD_FOLDED_PATH, folded),
+      onMove: (pos) => storePosition(HUD_DOCK_POS_PATH, pos)
+    });
     (document.documentElement || document.body).appendChild(dock.root);
+    dock.place(readStoredPosition(HUD_DOCK_POS_PATH));
     const setHUDHidden = (hidden) => {
       dock.setHidden(hidden);
       writeAriesPath(HUD_HIDDEN_PATH, hidden);
@@ -15462,7 +15608,7 @@
       win.style.bottom = `${16 + offset}px`;
       clampRect(win);
       bumpZ(win);
-      makeDraggable(head, win, {
+      makeDraggable2(head, win, {
         ignore: (t) => !!t.closest(".w-btn"),
         onStart: () => bumpZ(win),
         onEnd: () => saveWinPos(id, win)
@@ -15553,7 +15699,7 @@
     startStatusLoop(dock);
     void checkModVersion().then((status2) => setMenuBadge("settings", status2.behind ? 1 : 0));
   }
-  var HUD_HIDDEN_PATH, HUD_FOLDED_PATH, HUD_WIN_PATH, isEditing;
+  var HUD_HIDDEN_PATH, HUD_FOLDED_PATH, HUD_DOCK_POS_PATH, HUD_WIN_PATH, isEditing;
   var init_hud = __esm({
     "src/ui/hud.ts"() {
       "use strict";
@@ -15565,6 +15711,7 @@
       init_storage();
       init_button();
       init_dock();
+      init_floating();
       init_dom2();
       init_menuBadges();
       init_theme();
@@ -15572,6 +15719,7 @@
       init_hudStatus();
       HUD_HIDDEN_PATH = "hud.hidden";
       HUD_FOLDED_PATH = "hud.dockFolded";
+      HUD_DOCK_POS_PATH = "hud.dockPos";
       HUD_WIN_PATH = (id) => `hud.windows.${id}`;
       isEditing = (el) => {
         const t = el;
@@ -20854,107 +21002,6 @@
     }
   });
 
-  // src/ui/kit/floating.ts
-  function readStoredPosition(path) {
-    const raw = readAriesPath(path);
-    if (!raw || typeof raw !== "object") return null;
-    const left = Number(raw.left);
-    const top = Number(raw.top);
-    if (!Number.isFinite(left) || !Number.isFinite(top)) return null;
-    return { left, top };
-  }
-  function storePosition(path, pos) {
-    writeAriesPath(path, { left: Math.round(pos.left), top: Math.round(pos.top) });
-  }
-  function clampCoord(value, min, max) {
-    if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
-    if (max < min) return min;
-    return Math.min(Math.max(value, min), max);
-  }
-  function clampToViewport(pos, size, margin, viewport = { width: window.innerWidth, height: window.innerHeight }) {
-    return {
-      left: clampCoord(pos.left, margin, viewport.width - size.width - margin),
-      top: clampCoord(pos.top, margin, viewport.height - size.height - margin)
-    };
-  }
-  function placeInViewport(el, pos, size, margin) {
-    const placed = clampToViewport(pos, size, margin);
-    el.style.left = `${Math.round(placed.left)}px`;
-    el.style.top = `${Math.round(placed.top)}px`;
-    return placed;
-  }
-  function makeDraggable2(el, opts) {
-    const threshold = opts.thresholdPx ?? 0;
-    let drag = null;
-    const onMove = (ev) => {
-      if (!drag || ev.pointerId !== drag.pointerId) return;
-      const dx = ev.clientX - drag.startX;
-      const dy = ev.clientY - drag.startY;
-      if (!drag.moved && Math.hypot(dx, dy) < threshold) return;
-      drag.moved = true;
-      drag.last = opts.moveTo({ left: drag.base.left + dx, top: drag.base.top + dy });
-    };
-    const stop = (ev) => {
-      if (!drag) return;
-      if (ev && ev.pointerId !== drag.pointerId) return;
-      document.removeEventListener("pointermove", onMove);
-      document.removeEventListener("pointerup", stop);
-      document.removeEventListener("pointercancel", stop);
-      try {
-        el.releasePointerCapture(drag.pointerId);
-      } catch {
-      }
-      const { moved, last } = drag;
-      drag = null;
-      el.style.cursor = "grab";
-      if (moved) opts.onDrop(last);
-      else if (ev?.type === "pointerup") {
-        try {
-          opts.onClick?.();
-        } catch (error) {
-          console.error("[Aries] floating widget click failed:", error);
-        }
-      }
-    };
-    const onDown = (ev) => {
-      if (ev.button !== 0) return;
-      const target = ev.target;
-      if (target && opts.ignore?.(target)) return;
-      if (drag) stop();
-      const rect = el.getBoundingClientRect();
-      const base = { left: rect.left, top: rect.top };
-      drag = {
-        pointerId: ev.pointerId,
-        startX: ev.clientX,
-        startY: ev.clientY,
-        base,
-        last: base,
-        moved: threshold <= 0
-      };
-      try {
-        el.setPointerCapture(ev.pointerId);
-      } catch {
-      }
-      document.addEventListener("pointermove", onMove);
-      document.addEventListener("pointerup", stop);
-      document.addEventListener("pointercancel", stop);
-      el.style.cursor = "grabbing";
-      ev.preventDefault();
-      if (opts.stopPropagation) ev.stopPropagation();
-    };
-    el.addEventListener("pointerdown", onDown);
-    return () => {
-      stop();
-      el.removeEventListener("pointerdown", onDown);
-    };
-  }
-  var init_floating = __esm({
-    "src/ui/kit/floating.ts"() {
-      "use strict";
-      init_storage();
-    }
-  });
-
   // src/features/notifier/bell/floatingBell.ts
   function isFloatingBellEnabled() {
     return readAriesPath(ENABLED_PATH, false) === true;
@@ -21032,7 +21079,7 @@
       if (!running) return;
       applyDesiredPosition();
     };
-    const detachDrag = makeDraggable2(button2, {
+    const detachDrag = makeDraggable(button2, {
       thresholdPx: DRAG_THRESHOLD_PX,
       stopPropagation: true,
       moveTo: (pos) => {
@@ -24698,7 +24745,7 @@
       buttonsRow.appendChild(btn);
       widgetButtons.push(btn);
     }
-    makeDraggable2(el, {
+    makeDraggable(el, {
       ignore: (target) => !!target.closest("button"),
       moveTo: (pos) => applyPosition(pos.left, pos.top),
       onDrop: (pos) => {
