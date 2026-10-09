@@ -6,7 +6,7 @@
     "build": "node esbuild.config.mjs",
     "watch": "node esbuild.config.mjs --watch",
     "check": "node scripts/runChecks.mjs",
-    "typecheck": "npx -y -p typescript@5 tsc -p .",
+    "typecheck": "npx -y -p typescript@5 tsc -p . && npx -y -p typescript@5 tsc -p scripts",
     "check:stats": "node scripts/runChecks.mjs stats",
     "check:identity": "node scripts/runChecks.mjs identity",
     "check:commands": "node scripts/runChecks.mjs commands",

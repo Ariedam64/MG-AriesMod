@@ -15,7 +15,7 @@ const flagged: FlaggedPet[] = [
 ];
 const dialogs = () => document.documentElement.querySelectorAll(".qmm-modal-scrim");
 const buttonIn = (root: Element, text: string) =>
-  root.querySelectorAll(".qmm-btn").find((b: any) => b.textContent.trim() === text) as unknown as HTMLElement;
+  Array.from(root.querySelectorAll<HTMLElement>(".qmm-btn")).find((b) => b.textContent?.trim() === text)!;
 const settled = <T>(promise: Promise<T>) =>
   Promise.race([promise, new Promise<string>((resolve) => setTimeout(() => resolve("pending"), 20))]);
 

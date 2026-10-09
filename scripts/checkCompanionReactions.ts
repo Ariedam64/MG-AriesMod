@@ -163,7 +163,7 @@ console.log("\n--- session and local time ---");
   checkEqual("the hours start again from zero", back.session.announcedHours, 0);
   checkEqual("a damaged blob counts as a first launch", resumeSession({ startedAt: "x" }, now).greeting?.first, true);
 
-  checkEqual("2 h 30 makes 2 full hours", sessionHours({ startedAt: now - 2.5 * 3_600_000, lastSeenAt: now, announcedHours: 0 }, now), 2);
+  checkEqual("2 h 30 makes 2 full hours", sessionHours({ startedAt: now - 2.5 * 3_600_000, lastSeenAt: now, announcedHours: 0, firstMetAt: now, celebratedDays: 0 }, now), 2);
   checkEqual("under an hour, nothing", sessionHourReaction(0, r0), null);
   checkEqual("two hours", sessionHourReaction(2, r0)?.message.toLowerCase().includes("two hours"), true);
   checkEqual("from 3 h on it suggests a break", sessionHourReaction(4, r0)?.message.includes("4 hours"), true);
