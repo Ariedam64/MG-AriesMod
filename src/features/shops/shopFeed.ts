@@ -2,6 +2,7 @@ import { Atoms } from "../../game/store/atoms";
 import { Emitter } from "../../lib/emitter";
 import { decorCatalog, eggCatalog, plantCatalog, toolCatalog } from "../../data";
 import { playerShopView, type PlayerShopView, type ShopKind } from "./purchases";
+import type { Restocks } from "./restock";
 
 /**
  * The shops as this player sees them, and what they bought in the current
@@ -22,7 +23,7 @@ export type ShopItem = {
   [field: string]: unknown;
 };
 
-type ShopSection = { inventory: ShopItem[]; secondsUntilRestock: number };
+type ShopSection = { inventory: ShopItem[]; restocks: Restocks };
 
 export type ShopsSnapshot = Record<ShopKind, ShopSection>;
 
@@ -41,21 +42,24 @@ function itemKind(itemId: string): ShopKind | null {
 
 const viewOf = (shops: unknown, slot: unknown): PlayerShopView => playerShopView(shops, slot, itemKind);
 
-/** Every open shop's stock, grouped by item kind (weather shops included). */
-function toShopsSnapshot(shops: any): ShopsSnapshot {
-  const snap: ShopsSnapshot = {
-    seed: { inventory: [], secondsUntilRestock: Number(shops?.seed?.secondsUntilRestock) || 0 },
-    egg: { inventory: [], secondsUntilRestock: Number(shops?.egg?.secondsUntilRestock) || 0 },
-    tool: { inventory: [], secondsUntilRestock: Number(shops?.tool?.secondsUntilRestock) || 0 },
-    decor: { inventory: [], secondsUntilRestock: Number(shops?.decor?.secondsUntilRestock) || 0 },
-  };
+const restockIdOf = (shop: any): string | null => (typeof shop?.restockId === "string" ? shop.restockId : null);
+
+/**
+ * Every open shop's stock, grouped by item kind (weather shops included). Each
+ * kind keeps the restock id of every shop that stocks it, its own shop first.
+ */
+export function toShopsSnapshot(shops: any): ShopsSnapshot {
+  const section = (kind: ShopKind): ShopSection => ({ inventory: [], restocks: { [kind]: restockIdOf(shops?.[kind]) } });
+  const snap: ShopsSnapshot = { seed: section("seed"), egg: section("egg"), tool: section("tool"), decor: section("decor") };
   if (!shops || typeof shops !== "object") return snap;
-  for (const shop of Object.values<any>(shops)) {
+  for (const [shopKey, shop] of Object.entries<any>(shops)) {
     if (!shop || typeof shop !== "object" || !Array.isArray(shop.inventory)) continue;
     for (const item of shop.inventory) {
       if (!item || typeof item !== "object") continue;
       const kind = ITEM_TYPE_KIND[item.itemType];
-      if (kind) snap[kind].inventory.push(item);
+      if (!kind) continue;
+      snap[kind].inventory.push(item);
+      snap[kind].restocks[shopKey] = restockIdOf(shop);
     }
   }
   return snap;

@@ -21575,19 +21575,17 @@ label.qws-ed-opt { cursor: pointer; }
     return null;
   }
   function toShopsSnapshot(shops2) {
-    const snap = {
-      seed: { inventory: [], secondsUntilRestock: Number(shops2?.seed?.secondsUntilRestock) || 0 },
-      egg: { inventory: [], secondsUntilRestock: Number(shops2?.egg?.secondsUntilRestock) || 0 },
-      tool: { inventory: [], secondsUntilRestock: Number(shops2?.tool?.secondsUntilRestock) || 0 },
-      decor: { inventory: [], secondsUntilRestock: Number(shops2?.decor?.secondsUntilRestock) || 0 }
-    };
+    const section = (kind) => ({ inventory: [], restocks: { [kind]: restockIdOf(shops2?.[kind]) } });
+    const snap = { seed: section("seed"), egg: section("egg"), tool: section("tool"), decor: section("decor") };
     if (!shops2 || typeof shops2 !== "object") return snap;
-    for (const shop of Object.values(shops2)) {
+    for (const [shopKey, shop] of Object.entries(shops2)) {
       if (!shop || typeof shop !== "object" || !Array.isArray(shop.inventory)) continue;
       for (const item of shop.inventory) {
         if (!item || typeof item !== "object") continue;
         const kind = ITEM_TYPE_KIND[item.itemType];
-        if (kind) snap[kind].inventory.push(item);
+        if (!kind) continue;
+        snap[kind].inventory.push(item);
+        snap[kind].restocks[shopKey] = restockIdOf(shop);
       }
     }
     return snap;
@@ -21623,7 +21621,7 @@ label.qws-ed-opt { cursor: pointer; }
     const n = purchases[kind]?.purchases?.[raw];
     return typeof n === "number" && n > 0 ? n : 0;
   }
-  var ITEM_TYPE_KIND, viewOf, sameShopParts, rawShops, rawSlot, shopsChanged, purchasesChanged, watching, emitShops, emitPurchases, ShopFeed, ALERT_ID_PREFIX;
+  var ITEM_TYPE_KIND, viewOf, restockIdOf, sameShopParts, rawShops, rawSlot, shopsChanged, purchasesChanged, watching, emitShops, emitPurchases, ShopFeed, ALERT_ID_PREFIX;
   var init_shopFeed = __esm({
     "src/features/shops/shopFeed.ts"() {
       "use strict";
@@ -21633,6 +21631,7 @@ label.qws-ed-opt { cursor: pointer; }
       init_purchases();
       ITEM_TYPE_KIND = { Seed: "seed", Egg: "egg", Tool: "tool", Decor: "decor" };
       viewOf = (shops2, slot) => playerShopView(shops2, slot, itemKind);
+      restockIdOf = (shop) => typeof shop?.restockId === "string" ? shop.restockId : null;
       sameShopParts = (a, b) => a?.data?.shopPurchases === b?.data?.shopPurchases && a?.data?.customRestocks === b?.data?.customRestocks && a?.customRestockInventories === b?.customRestockInventories;
       rawShops = null;
       rawSlot = null;
@@ -21671,6 +21670,21 @@ label.qws-ed-opt { cursor: pointer; }
         }
       };
       ALERT_ID_PREFIX = { seed: "Seed", egg: "Egg", tool: "Tool", decor: "Decor" };
+    }
+  });
+
+  // src/features/shops/restock.ts
+  function hasRestocked(prev, next) {
+    if (!prev || !next) return false;
+    return Object.entries(next).some(([shop, id]) => {
+      if (id == null) return false;
+      if (!(shop in prev)) return true;
+      return prev[shop] != null && prev[shop] !== id;
+    });
+  }
+  var init_restock = __esm({
+    "src/features/shops/restock.ts"() {
+      "use strict";
     }
   });
 
@@ -22150,6 +22164,7 @@ label.qws-ed-opt { cursor: pointer; }
       "use strict";
       init_emitter();
       init_shopFeed();
+      init_restock();
       init_audio();
       init_rules();
       init_shopRows();
@@ -22190,7 +22205,7 @@ label.qws-ed-opt { cursor: pointer; }
           const prev = this.shops;
           this.shops = next;
           this.shopUpdates++;
-          this.justRestocked = !!prev && SHOP_KINDS.some((k) => (prev[k]?.secondsUntilRestock ?? 0) < (next[k]?.secondsUntilRestock ?? 0));
+          this.justRestocked = !!prev && SHOP_KINDS.some((k) => hasRestocked(prev[k]?.restocks, next[k]?.restocks));
           this.update();
         }
         setPurchases(next) {
@@ -47901,9 +47916,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     if (!prev || !next) return [];
     const out = [];
     for (const kind of Object.keys(SHOP_ID)) {
-      const before = Number(prev[kind]?.secondsUntilRestock) || 0;
-      const after = Number(next[kind]?.secondsUntilRestock) || 0;
-      if (after <= before) continue;
+      if (!hasRestocked(prev[kind]?.restocks, next[kind]?.restocks)) continue;
       const inventory = next[kind]?.inventory;
       if (!Array.isArray(inventory)) continue;
       const [prefix, field3] = SHOP_ID[kind];
@@ -47937,6 +47950,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       init_random();
       init_dialogueLines();
       init_emoteTypes();
+      init_restock();
       SHOP_ID = {
         seed: ["Seed", "species"],
         egg: ["Egg", "eggId"],

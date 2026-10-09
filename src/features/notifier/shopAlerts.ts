@@ -7,6 +7,7 @@ import {
   type ShopsSnapshot,
 } from "../shops/shopFeed";
 import type { ShopKind } from "../shops/purchases";
+import { hasRestocked } from "../shops/restock";
 import type { Kind as BuyKind } from "../shops/shops";
 import { audio, type PlaybackMode, type TriggerOverrides } from "./audio/audio";
 import { ruleOverrides, type NotifierRule } from "./rules";
@@ -87,9 +88,7 @@ export class ShopAlerts {
     const prev = this.shops;
     this.shops = next;
     this.shopUpdates++;
-    // A restock timer that went up means at least one shop restocked.
-    this.justRestocked =
-      !!prev && SHOP_KINDS.some((k) => (prev[k]?.secondsUntilRestock ?? 0) < (next[k]?.secondsUntilRestock ?? 0));
+    this.justRestocked = !!prev && SHOP_KINDS.some((k) => hasRestocked(prev[k]?.restocks, next[k]?.restocks));
     this.update();
   }
 

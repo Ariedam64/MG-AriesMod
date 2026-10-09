@@ -5,6 +5,7 @@
 import { pickOne, type Random } from "../../../lib/random";
 import { weatherEmote } from "../dialogueLines";
 import { EmoteType } from "../emoteTypes";
+import { hasRestocked, type Restocks } from "../../shops/restock";
 import type { Reaction } from "./gate";
 
 /**
@@ -81,7 +82,7 @@ export function shopReaction(names: string[], random: Random): Reaction | null {
   };
 }
 
-type ShopSection = { inventory?: unknown; secondsUntilRestock?: unknown };
+type ShopSection = { inventory?: unknown; restocks?: Restocks };
 type ShopsLike = Partial<Record<"seed" | "egg" | "tool" | "decor", ShopSection>>;
 
 /** A shop item's key, in the notifier's preference format (`Seed:Carrot`). */
@@ -95,17 +96,15 @@ const SHOP_ID: Record<keyof ShopsLike, [string, string]> = {
 /**
  * Followed items in a shop that just restocked.
  *
- * A restock shows as the countdown going back up: between two restocks it only
- * goes down. The first reading (`prev === null`) is the reference and says
- * nothing, or every reload would announce the stock.
+ * A restock is a shop's new restock id, or a weather shop opening. The first
+ * reading (`prev === null`) is the reference and says nothing, or every reload
+ * would announce the stock.
  */
 export function restockedFollowed(prev: ShopsLike | null, next: ShopsLike, isFollowed: (id: string) => boolean): string[] {
   if (!prev || !next) return [];
   const out: string[] = [];
   for (const kind of Object.keys(SHOP_ID) as Array<keyof ShopsLike>) {
-    const before = Number(prev[kind]?.secondsUntilRestock) || 0;
-    const after = Number(next[kind]?.secondsUntilRestock) || 0;
-    if (after <= before) continue;
+    if (!hasRestocked(prev[kind]?.restocks, next[kind]?.restocks)) continue;
     const inventory = next[kind]?.inventory;
     if (!Array.isArray(inventory)) continue;
     const [prefix, field] = SHOP_ID[kind];

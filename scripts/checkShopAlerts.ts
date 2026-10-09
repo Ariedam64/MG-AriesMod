@@ -16,7 +16,7 @@ import { checkEqual, done } from "./_check";
 import { audio } from "../src/features/notifier/audio/audio";
 import { ShopRows } from "../src/features/notifier/shopRows";
 import { ShopAlerts, findStockItem } from "../src/features/notifier/shopAlerts";
-import type { PurchasesSnapshot, ShopsSnapshot } from "../src/features/shops/shopFeed";
+import { toShopsSnapshot, type PurchasesSnapshot, type ShopsSnapshot } from "../src/features/shops/shopFeed";
 
 // Record the sounds instead of playing them.
 const calls: string[] = [];
@@ -38,13 +38,15 @@ ShopRows.setFollowed("Seed:Carrot", true);
 ShopRows.setFollowed("Seed:Daisy", true);
 ShopRows.setFollowed("Egg:CommonEgg", true);
 
-type Stock = { seeds?: Array<[string, number]>; eggs?: Array<[string, number]>; restockIn?: number };
-function shops({ seeds = [], eggs = [], restockIn = 100 }: Stock): ShopsSnapshot {
+// Since 1449 a shop is `{ restockId, startedAtMs, inventory, deadlineMs }`: a new
+// restockId is a restock.
+type Stock = { seeds?: Array<[string, number]>; eggs?: Array<[string, number]>; restock?: string };
+function shops({ seeds = [], eggs = [], restock = "r1" }: Stock): ShopsSnapshot {
   return {
-    seed: { inventory: seeds.map(([species, initialStock]) => ({ itemType: "Seed", species, initialStock })), secondsUntilRestock: restockIn },
-    egg: { inventory: eggs.map(([eggId, initialStock]) => ({ itemType: "Egg", eggId, initialStock })), secondsUntilRestock: restockIn },
-    tool: { inventory: [], secondsUntilRestock: restockIn },
-    decor: { inventory: [], secondsUntilRestock: restockIn },
+    seed: { inventory: seeds.map(([species, initialStock]) => ({ itemType: "Seed", species, initialStock })), restocks: { seed: restock } },
+    egg: { inventory: eggs.map(([eggId, initialStock]) => ({ itemType: "Egg", eggId, initialStock })), restocks: { egg: restock } },
+    tool: { inventory: [], restocks: { tool: restock } },
+    decor: { inventory: [], restocks: { decor: restock } },
   };
 }
 function purchases(seed: Record<string, number> = {}): PurchasesSnapshot {
@@ -86,20 +88,20 @@ checkEqual("a new item rings alone", takeCalls(), ["ring Seed:Daisy"]);
 alerts.setShops(shops({ seeds: [["Daisy", 1]] }));
 checkEqual("an item that leaves stops its loop", takeCalls(), ["stop Seed:Carrot"]);
 
-alerts.setShops(shops({ seeds: [["Carrot", 5], ["Daisy", 1]], eggs: [["CommonEgg", 2]], restockIn: 300 }));
+alerts.setShops(shops({ seeds: [["Carrot", 5], ["Daisy", 1]], eggs: [["CommonEgg", 2]], restock: "r2" }));
 checkEqual("a restock rings once for items sharing the default sound", takeCalls(), ["ring Seed:Carrot"]);
 
 alerts.setPurchases(purchases({ Carrot: 5, Daisy: 1 }));
 checkEqual("the egg stays listed", listed, ["Egg:CommonEgg x2"]);
 takeCalls();
-alerts.setShops(shops({ restockIn: 300 }));
+alerts.setShops(shops({ restock: "r2" }));
 checkEqual("an empty list stops every loop", takeCalls(), ["stop all"]);
 
 // Loops: every looping item rings, and a rule change restarts them.
 shopsMode = "loop";
 alerts.setPurchases(purchases());
 takeCalls();
-alerts.setShops(shops({ seeds: [["Carrot", 5], ["Daisy", 1]], restockIn: 600 }));
+alerts.setShops(shops({ seeds: [["Carrot", 5], ["Daisy", 1]], restock: "r3" }));
 checkEqual("in loop mode every item starts its own loop", takeCalls(), ["ring Seed:Carrot", "ring Seed:Daisy"]);
 alerts.setRules({ "Seed:Daisy": { playbackMode: "oneshot" } });
 checkEqual("a rule change restarts the loops still looping", takeCalls(), ["stop Seed:Carrot", "ring Seed:Carrot"]);
@@ -109,4 +111,13 @@ const found = findStockItem(shops({ seeds: [["Carrot", 5]] }), "Seed:Carrot");
 checkEqual("an item resolves to its stock entry and buy kind", [found?.kind, found?.item.species], ["seeds", "Carrot"]);
 checkEqual("an item out of the shops does not resolve", findStockItem(shops({}), "Seed:Carrot"), null);
 
+// The store's shops (1449 shape) grouped by item kind, each kind knowing the
+// restock of every shop that stocks it, weather shops included.
+const fromStore = toShopsSnapshot({
+  seed: { restockId: "seed:9", startedAtMs: 1, deadlineMs: 2, inventory: [{ itemType: "Seed", species: "Carrot", initialStock: 5 }] },
+  egg: { restockId: "egg:4", startedAtMs: 1, deadlineMs: 2, inventory: [] },
+  dawn: { restockId: "dawn:2", startedAtMs: 1, deadlineMs: 2, inventory: [{ itemType: "Seed", species: "Daisy", initialStock: 1 }] },
+});
+checkEqual("a kind knows the restocks of the shops that stock it", fromStore.seed.restocks, { seed: "seed:9", dawn: "dawn:2" });
+checkEqual("an empty base shop still has its restock", fromStore.egg.restocks, { egg: "egg:4" });
 done();

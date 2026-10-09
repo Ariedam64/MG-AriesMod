@@ -129,14 +129,17 @@ console.log("\n--- abilities, eggs, shop, rare crops ---");
   checkEqual("three items and more", shopReaction(["A", "B", "C"], r0)?.message.includes("A, B and more"), true);
 
   const followed = (id: string) => id === "Seed:Starweaver";
-  const before = { seed: { secondsUntilRestock: 10, inventory: [{ species: "Starweaver", initialStock: 1 }] } };
-  const restock = { seed: { secondsUntilRestock: 300, inventory: [{ species: "Starweaver", initialStock: 1 }, { species: "Carrot", initialStock: 5 }] } };
-  const ticking = { seed: { secondsUntilRestock: 9, inventory: before.seed.inventory } };
+  const before = { seed: { restocks: { seed: "r1" }, inventory: [{ species: "Starweaver", initialStock: 1 }] } };
+  const restock = { seed: { restocks: { seed: "r2" }, inventory: [{ species: "Starweaver", initialStock: 1 }, { species: "Carrot", initialStock: 5 }] } };
+  const ticking = { seed: { restocks: { seed: "r1" }, inventory: before.seed.inventory } };
   checkEqual("a restock with a followed item reports it", restockedFollowed(before, restock, followed).join(), "Seed:Starweaver");
   checkEqual("no restock, no announcement", restockedFollowed(before, ticking, followed).length, 0);
   checkEqual("the first reading says nothing", restockedFollowed(null, restock, followed).length, 0);
-  const soldOut = { seed: { secondsUntilRestock: 300, inventory: [{ species: "Starweaver", initialStock: 0 }] } };
+  const soldOut = { seed: { restocks: { seed: "r2" }, inventory: [{ species: "Starweaver", initialStock: 0 }] } };
   checkEqual("a followed item with no stock does not count", restockedFollowed(before, soldOut, followed).length, 0);
+  const dawnOpens = { seed: { restocks: { seed: "r1", dawn: "d1" }, inventory: [{ species: "Starweaver", initialStock: 1 }] } };
+  checkEqual("a weather shop opening counts as a restock", restockedFollowed(before, dawnOpens, followed).join(), "Seed:Starweaver");
+  checkEqual("a weather shop closing does not", restockedFollowed(dawnOpens, before, followed).length, 0);
 
   const rare = new Set(["Gold", "Rainbow"]);
   const g1 = { "0": { objectType: "plant", species: "Carrot", slots: [{ startTime: 1, mutations: [] }] } };

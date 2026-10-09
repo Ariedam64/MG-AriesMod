@@ -12,7 +12,7 @@ const kindOf = (id: string): ShopKind | null =>
   id === "Daisy" ? "seed" : id === "DawnEgg" ? "egg" : id === "RainWardShard" ? "tool" : null;
 
 const shop = (restockId: string | null, startedAtMs: number) =>
-  ({ restockId, startedAtMs, inventory: [], secondsUntilRestock: 100 });
+  ({ restockId, startedAtMs, inventory: [], deadlineMs: 0 });
 
 // Bought 1 Starweaver and 5 Carrots last cycle, then the seed shop restocked.
 {
@@ -64,7 +64,7 @@ const shop = (restockId: string | null, startedAtMs: number) =>
 //   otherwise                   -> shops[key], or nothing when its restockId is null
 // and an item whose purchases are unknown is shown sold out.
 const withStock = (restockId: string | null, startedAtMs: number, inventory: any[]) =>
-  ({ restockId, startedAtMs, inventory, secondsUntilRestock: 100 });
+  ({ restockId, startedAtMs, inventory, deadlineMs: 0 });
 const shard = { itemType: "Tool", toolId: "RainWardShard", initialStock: 2 };
 const carrot = { itemType: "Seed", species: "Carrot", initialStock: 10 };
 const starweaver = { itemType: "Seed", species: "Starweaver", initialStock: 1 };

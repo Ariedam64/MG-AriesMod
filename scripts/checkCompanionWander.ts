@@ -379,6 +379,8 @@ console.log("\n--- random pauses, over time ---");
   let state: MovementState = { ...initialMovementState(), activity: "wander", tile: { x: 20, y: 21 }, lastAnchorTile: { x: 20, y: 20 } };
   const pauses: number[] = [];
   let still = 0;
+  // The ticks before its first step are the start, not a stop between strolls.
+  let walked = false;
   const ticks = Math.round(3_600_000 / 150);
   for (let i = 0; i < ticks; i++) {
     const before = state.tile!;
@@ -386,7 +388,8 @@ console.log("\n--- random pauses, over time ---");
     state = d.state;
     const moved = d.tile !== null && manhattan(before, d.tile) > 0;
     if (moved) {
-      if (still > 0) pauses.push(still);
+      if (walked && still > 0) pauses.push(still);
+      walked = true;
       still = 0;
     } else {
       still++;
