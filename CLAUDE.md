@@ -44,12 +44,12 @@ Fixes land here first, then get ported. The fork is **not** a mirror: it has fea
 ```bash
 npm run build          # -> dist/quinoa-ws.min.user.js
 npm run watch
-npm run typecheck      # strict tsc over src/, esbuild itself never type checks
+npm run typecheck      # strict tsc over src/ and scripts/, esbuild itself never type checks
 npm run check          # every check suite
 npm run check:<name>   # one suite
 ```
 
-Each suite is `scripts/check<Name>.ts`, bundled by esbuild and run in node against a DOM stub (`scripts/_nodeStub.cjs` for the ones that pull in UI code). They print `ok`/`FAIL` lines and exit non-zero on failure. All of them, and the typecheck, must pass before shipping.
+Each suite is `scripts/check<Name>.ts`, built on the helpers in `scripts/_check.ts` (`check`, `checkEqual`, `done`, `run`). `scripts/runChecks.mjs` bundles it with esbuild and runs it in node, with the environment its `SUITES` entry names (`dom-stub` loads `scripts/_nodeStub.cjs` for suites that pull in UI code; `scripts/_fakeDom.ts` is a fuller DOM for menu tests). A new suite needs its line in `SUITES` and a `check:<name>` entry in `package.json`; a full run fails until both exist. All suites, and the typecheck, must pass before shipping.
 
 ## Releasing
 
@@ -85,7 +85,7 @@ Root cause before any fix, every time. The last four reports all turned out to b
 - "can't harvest Aloe" was everything being blocked, all species
 - "Double Hatch missing from logs" was a frozen module constant dropping 19 abilities
 
-Write the failing check **before** the fix, register it in `package.json`, and confirm it fails on the old behaviour before keeping it.
+Write the failing check **before** the fix, register it in `SUITES` (`scripts/runChecks.mjs`) and `package.json`, and confirm it fails on the old behaviour before keeping it.
 
 ## Writing
 
