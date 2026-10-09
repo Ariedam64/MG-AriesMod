@@ -13,22 +13,7 @@ export interface PixiHandles {
 function mkSyntheticApp(renderer: any): any {
   // Prefer renderer's last rendered object as stage; fall back to null.
   const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
-  // Minimal ticker backed by requestAnimationFrame so processJobs can run.
-  const listeners = new Set<(delta: number) => void>();
-  let rafId = 0;
-  let last = 0;
-  const tick = (now: number) => {
-    const delta = last ? (now - last) / (1000 / 60) : 1;
-    last = now;
-    for (const fn of listeners) { try { fn(delta); } catch { /* ignore */ } }
-    rafId = requestAnimationFrame(tick);
-  };
-  const ticker = {
-    add(fn: (delta: number) => void) { if (!listeners.size) { rafId = requestAnimationFrame(tick); } listeners.add(fn); },
-    remove(fn: (delta: number) => void) { listeners.delete(fn); if (!listeners.size) { cancelAnimationFrame(rafId); } },
-    deltaMS: 16.67,
-  };
-  return { renderer, stage, ticker };
+  return { renderer, stage };
 }
 
 export function createPixiHooks(): PixiHandles {

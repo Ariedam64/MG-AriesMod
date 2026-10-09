@@ -6,11 +6,7 @@ import { watchRendererHealth } from './pixi/rendererHealth';
 import { sleep } from './utils/async';
 import { getJSON, getBlob, blobToImage, loadAtlasJsons, isKtx2Path, loadKtx2AsTexture } from './data/assetFetcher';
 import { buildAtlasTextures, isAtlas } from './pixi/atlasToTextures';
-import { buildItemsFromTextures } from './data/catalogIndexer';
 import { joinPath, relPath } from './utils/path';
-import { exposeApi, type HudHandles } from './api/expose';
-import { exposeSpriteService } from './api/consoleService';
-import { curVariant, processJobs } from './mutations/variantBuilder';
 import { detectGameVersion } from '../gameVersion';
 
 /**
@@ -144,10 +140,6 @@ async function loadTextures(base: string, prefetched?: PrefetchedAtlas | null) {
     }
   }
 
-  const { items, cats } = buildItemsFromTextures(ctx.state.tex);
-  ctx.state.items = items;
-  ctx.state.filtered = items.slice();
-  ctx.state.cats = cats;
   ctx.state.loaded = true;
 }
 
@@ -183,46 +175,19 @@ async function start() {
   ctx.state.renderer = renderer;
   ctx.state.version = pixiVersion ?? version;
   ctx.state.base = base;
-  ctx.state.sig = curVariant(ctx.state).sig;
   watchRendererHealth(ctx.state, hooks);
 
-  // Expose the (still filling) state as soon as renderer and ctors are ready,
-  // without waiting for loadTextures below: features such as the crop value
-  // overlay only need those two and should not wait on slow or failing atlas
-  // loads. It is the same object throughout, so later fields (tex, items,
+  // Published for diagnosis from the console as soon as renderer and ctors
+  // are ready. It is the same object throughout, so later fields (tex, items,
   // loaded, ...) show up through this early reference too.
   (pageWindow as any).__MG_SPRITE_STATE__ = ctx.state;
 
   await loadTextures(ctx.state.base, await prefetchPromise);
 
-  // No HUD any more: the catalog runs headless, and the variant job queue keeps running.
-  const hud: HudHandles = {
-    open() {
-      ctx.state.open = true;
-    },
-    close() {
-      ctx.state.open = false;
-    },
-    toggle() {
-      ctx.state.open ? this.close() : this.open();
-    },
-    layout() {},
-    root: undefined as any,
-  };
-  ctx.state.open = true;
-  app.ticker?.add?.(() => {
-    processJobs(ctx.state, ctx.cfg);
-  });
-
-  exposeApi(ctx.state, hud);
-  exposeSpriteService(ctx);
-
   console.log('[MG SpriteCatalog] ready', {
     version: ctx.state.version,
     pixi: version,
     textures: ctx.state.tex.size,
-    items: ctx.state.items.length,
-    cats: ctx.state.cats.size,
   });
 }
 

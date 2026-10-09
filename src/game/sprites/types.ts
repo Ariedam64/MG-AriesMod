@@ -1,4 +1,4 @@
-import type { MutationName, SpriteConfig } from './settings';
+import type { SpriteConfig } from './settings';
 
 // Minimal PIXI-like texture types to keep compilation light without hard PIXI dependency.
 export interface SpriteTexture {
@@ -15,85 +15,17 @@ export interface SpriteTexture {
   _trim?: { x: number; y: number; width: number; height: number };
 }
 
-export interface AnimFrameGroup {
-  key: string;
-  isAnim: true;
-  frames: SpriteTexture[];
-  first: SpriteTexture;
-  count: number;
-}
-
-interface SingleSpriteItem {
-  key: string;
-  isAnim: false;
-  first: SpriteTexture;
-}
-
-export type SpriteItem = AnimFrameGroup | SingleSpriteItem;
-
 export interface SpriteState {
   started: boolean;
-  open: boolean;
   loaded: boolean;
   version: string | null;
   base: string | null;
   ctors: any | null;
   app: any | null;
   renderer: any | null;
-  cat: string;
-  q: string;
-  f: MutationName | '' | null;
-  mutOn: boolean;
-  mutations: MutationName[];
-  scroll: number;
-  items: SpriteItem[];
-  filtered: SpriteItem[];
-  cats: Map<string, SpriteItem[]>;
+  /** Every atlas frame, by frame key, built on the game's own base textures. */
   tex: Map<string, SpriteTexture>;
-  lru: Map<string, CacheEntry>;
-  cost: number;
-  jobs: SpriteJob[];
-  jobMap: Set<string>;
-  srcCan: Map<string, HTMLCanvasElement>;
   atlasBases: Set<unknown>;
-  dbgCount: Record<string, number>;
-  sig: string;
-  changedAt: number;
-  needsLayout: boolean;
-  overlay: any;
-  bg: any;
-  grid: any;
-  dom: HTMLElement | null;
-  selCat: HTMLSelectElement | null;
-  count: HTMLElement | null;
-  pool: any[];
-  active: Map<number, any>;
-  anim: Set<any>;
-}
-
-export interface VariantSignature {
-  mode: 'F' | 'M';
-  muts: MutationName[];
-  overlayMuts: MutationName[];
-  selectedMuts: MutationName[];
-  sig: string;
-}
-
-interface CacheEntry {
-  tex?: SpriteTexture;
-  frames?: SpriteTexture[];
-  isAnim?: boolean;
-}
-
-interface SpriteJob {
-  k: string;
-  sig: string;
-  itKey: string;
-  isAnim: boolean;
-  src: SpriteTexture[];
-  i: number;
-  out: SpriteTexture[];
-  V: VariantSignature;
 }
 
 export interface SpriteContext {

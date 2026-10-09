@@ -22,14 +22,6 @@ export const relPath = (base: string, path: string) =>
     ? normalizeSegments(path.startsWith('/') ? path.slice(1) : dirOf(base) + path)
     : path;
 
-/** First path segment after an optional `sprite/` or `sprites/` prefix. */
-export function categoryOf(key: string): string {
-  const parts = splitKey(key);
-  const start = parts[0] === 'sprite' || parts[0] === 'sprites' ? 1 : 0;
-  return parts[start] || 'misc';
-}
-
-
 export function animParse(key: string) {
   const parts = splitKey(key);
   const last = parts[parts.length - 1];

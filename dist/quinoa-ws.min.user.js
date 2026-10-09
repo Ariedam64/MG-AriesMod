@@ -38,10 +38,6 @@
   var __esm = (fn, res) => function __init() {
     return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
   };
-  var __export = (target, all) => {
-    for (var name in all)
-      __defProp(target, name, { get: all[name], enumerable: true });
-  };
   var __copyProps = (to, from, except, desc) => {
     if (from && typeof from === "object" || typeof from === "function") {
       for (let key2 of __getOwnPropNames(from))
@@ -83,37 +79,12 @@
   });
 
   // src/game/sprites/settings.ts
-  var DEFAULT_CFG, MUT_META, MUT_G1, MUT_G2, MUT_G3;
+  var DEFAULT_CFG, MUT_G1, MUT_G2, MUT_G3;
   var init_settings = __esm({
     "src/game/sprites/settings.ts"() {
       "use strict";
       DEFAULT_CFG = {
-        origin: "https://magicgarden.gg",
-        jobOn: true,
-        jobBudgetMs: 5,
-        jobBurstMs: 12,
-        jobBurstWindowMs: 400,
-        jobCapPerTick: 20,
-        cacheOn: true,
-        cacheMaxEntries: 1200,
-        cacheMaxCost: 5e3,
-        keepCacheOnClose: true,
-        srcCanvasMax: 450,
-        debugLog: true,
-        debugLimitDefault: 25
-      };
-      MUT_META = {
-        Gold: { overlayTall: null, tallIconOverride: null },
-        Rainbow: { overlayTall: null, tallIconOverride: null, angle: 130, angleTall: 0 },
-        Wet: { overlayTall: "sprite/mutation-overlay/WetTallPlant", tallIconOverride: "sprite/mutation/Puddle" },
-        Chilled: { overlayTall: "sprite/mutation-overlay/ChilledTallPlant", tallIconOverride: null },
-        Frozen: { overlayTall: "sprite/mutation-overlay/FrozenTallPlant", tallIconOverride: null },
-        Thunderstruck: { overlayTall: "sprite/mutation-overlay/ThunderstruckTallPlant", tallIconOverride: "sprite/mutation/ThunderstruckGround" },
-        Thundercharged: { overlayTall: null, tallIconOverride: null },
-        Dawnlit: { overlayTall: null, tallIconOverride: null },
-        Ambershine: { overlayTall: null, tallIconOverride: null },
-        Dawncharged: { overlayTall: null, tallIconOverride: null },
-        Ambercharged: { overlayTall: null, tallIconOverride: null }
+        origin: "https://magicgarden.gg"
       };
       MUT_G1 = ["", "Gold", "Rainbow"].filter(Boolean);
       MUT_G2 = ["", "Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged"].filter(Boolean);
@@ -125,42 +96,14 @@
   function createInitialState() {
     return {
       started: false,
-      open: false,
       loaded: false,
       version: null,
       base: null,
       ctors: null,
       app: null,
       renderer: null,
-      cat: "__all__",
-      q: "",
-      f: "",
-      mutOn: false,
-      mutations: [],
-      scroll: 0,
-      items: [],
-      filtered: [],
-      cats: /* @__PURE__ */ new Map(),
       tex: /* @__PURE__ */ new Map(),
-      lru: /* @__PURE__ */ new Map(),
-      cost: 0,
-      jobs: [],
-      jobMap: /* @__PURE__ */ new Set(),
-      srcCan: /* @__PURE__ */ new Map(),
-      atlasBases: /* @__PURE__ */ new Set(),
-      dbgCount: {},
-      sig: "",
-      changedAt: 0,
-      needsLayout: false,
-      overlay: null,
-      bg: null,
-      grid: null,
-      dom: null,
-      selCat: null,
-      count: null,
-      pool: [],
-      active: /* @__PURE__ */ new Map(),
-      anim: /* @__PURE__ */ new Set()
+      atlasBases: /* @__PURE__ */ new Set()
     };
   }
   function createSpriteContext() {
@@ -221,36 +164,7 @@
   // src/game/sprites/pixi/hooks.ts
   function mkSyntheticApp(renderer) {
     const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
-    const listeners2 = /* @__PURE__ */ new Set();
-    let rafId = 0;
-    let last = 0;
-    const tick = (now) => {
-      const delta = last ? (now - last) / (1e3 / 60) : 1;
-      last = now;
-      for (const fn of listeners2) {
-        try {
-          fn(delta);
-        } catch {
-        }
-      }
-      rafId = requestAnimationFrame(tick);
-    };
-    const ticker = {
-      add(fn) {
-        if (!listeners2.size) {
-          rafId = requestAnimationFrame(tick);
-        }
-        listeners2.add(fn);
-      },
-      remove(fn) {
-        listeners2.delete(fn);
-        if (!listeners2.size) {
-          cancelAnimationFrame(rafId);
-        }
-      },
-      deltaMS: 16.67
-    };
-    return { renderer, stage, ticker };
+    return { renderer, stage };
   }
   function createPixiHooks() {
     let appResolver;
@@ -599,11 +513,6 @@
       out.push(part);
     }
     return out.join("/");
-  }
-  function categoryOf(key2) {
-    const parts = splitKey(key2);
-    const start2 = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
-    return parts[start2] || "misc";
   }
   function animParse(key2) {
     const parts = splitKey(key2);
@@ -985,901 +894,6 @@
     }
   });
 
-  // src/game/sprites/data/catalogIndexer.ts
-  function buildItemsFromTextures(tex) {
-    const keys = [...tex.keys()].sort((a, b) => a.localeCompare(b));
-    const used = /* @__PURE__ */ new Set();
-    const items = [];
-    const cats = /* @__PURE__ */ new Map();
-    const addToCat = (key2, item) => {
-      const cat = categoryOf(key2);
-      if (!cats.has(cat)) cats.set(cat, []);
-      cats.get(cat).push(item);
-    };
-    for (const key2 of keys) {
-      const texEntry = tex.get(key2);
-      if (!texEntry || used.has(key2)) continue;
-      const anim = animParse(key2);
-      if (!anim) {
-        const item = { key: key2, isAnim: false, first: texEntry };
-        items.push(item);
-        addToCat(key2, item);
-        continue;
-      }
-      const frames = [];
-      for (const candidate of keys) {
-        const maybe = animParse(candidate);
-        if (!maybe || maybe.baseKey !== anim.baseKey) continue;
-        const t = tex.get(candidate);
-        if (!t) continue;
-        frames.push({ idx: maybe.idx, tex: t });
-        used.add(candidate);
-      }
-      frames.sort((a, b) => a.idx - b.idx);
-      const ordered = frames.map((f) => f.tex);
-      if (ordered.length === 1) {
-        const item = { key: anim.baseKey, isAnim: false, first: ordered[0] };
-        items.push(item);
-        addToCat(anim.baseKey, item);
-      } else if (ordered.length > 1) {
-        const item = {
-          key: anim.baseKey,
-          isAnim: true,
-          frames: ordered,
-          first: ordered[0],
-          count: ordered.length
-        };
-        items.push(item);
-        addToCat(anim.baseKey, item);
-      }
-    }
-    return { items, cats };
-  }
-  var init_catalogIndexer = __esm({
-    "src/game/sprites/data/catalogIndexer.ts"() {
-      "use strict";
-      init_path();
-    }
-  });
-
-  // src/game/sprites/mutations/variantBuilder.ts
-  function buildVariantFromMutations(list) {
-    const raw = list.filter((value) => hasMutationFilter(value));
-    const selected = sortMutations(raw);
-    const muts = normalizeMutListColor(raw);
-    const overlayMuts = normalizeMutListOverlay(raw);
-    return {
-      mode: "M",
-      muts,
-      overlayMuts,
-      selectedMuts: selected,
-      sig: `M:${selected.join(",")}|${muts.join(",")}|${overlayMuts.join(",")}`
-    };
-  }
-  function mutationAliases(mut) {
-    switch (mut) {
-      case "Ambershine":
-        return ["Ambershine", "Amberlit"];
-      case "Dawncharged":
-        return ["Dawncharged", "Dawnbound"];
-      case "Ambercharged":
-        return ["Ambercharged", "Amberbound"];
-      case "Thunderstruck":
-        return ["Thunderstruck", "ThunderstruckGround"];
-      default:
-        return [mut];
-    }
-  }
-  function applyFilterOnto(ctx2, sourceCanvas, name, isTall) {
-    const base = FILTERS[name];
-    if (!base) return;
-    const f = { ...base };
-    if (name === "Rainbow" && isTall && f.angTall != null) f.ang = f.angTall;
-    const fullSpan = name === "Rainbow" && isTall;
-    const w = sourceCanvas.width;
-    const h2 = sourceCanvas.height;
-    ctx2.save();
-    const blendOp = f.masked ? pickBlendOp(f.op) : "source-in";
-    ctx2.globalCompositeOperation = blendOp;
-    if (f.a != null) ctx2.globalAlpha = f.a;
-    if (f.masked) {
-      const m = document.createElement("canvas");
-      m.width = w;
-      m.height = h2;
-      const mctx = m.getContext("2d");
-      mctx.imageSmoothingEnabled = false;
-      fillGrad(mctx, w, h2, f, fullSpan);
-      mctx.globalCompositeOperation = "destination-in";
-      mctx.drawImage(sourceCanvas, 0, 0);
-      ctx2.drawImage(m, 0, 0);
-    } else {
-      fillGrad(ctx2, w, h2, f, fullSpan);
-    }
-    ctx2.restore();
-  }
-  function tallOverlayFromSheet(mutName, state5) {
-    const target = String(mutName || "").toLowerCase();
-    for (const k of state5.tex.keys()) {
-      const m = /sprite\/mutation-overlay\/([A-Za-z0-9]+)TallPlant/i.exec(String(k));
-      if (!m || !m[1]) continue;
-      const prefix = m[1].toLowerCase();
-      if (prefix === target) {
-        const t = state5.tex.get(k);
-        if (t) return { tex: t, key: k };
-      }
-    }
-    return null;
-  }
-  function findOverlayTexture(itKey, mutName, state5, preferTall) {
-    if (!mutName) return null;
-    const base = baseNameOf(itKey);
-    const aliases = mutationAliases(mutName);
-    for (const name of aliases) {
-      const tries = [
-        `sprite/mutation/${name}${base}`,
-        `sprite/mutation/${name}-${base}`,
-        `sprite/mutation/${name}_${base}`,
-        `sprite/mutation/${name}/${base}`,
-        `sprite/mutation/${name}`
-      ];
-      for (const k of tries) {
-        const t = state5.tex.get(k);
-        if (t) return { tex: t, key: k };
-      }
-      if (preferTall) {
-        const hit = state5.tex.get(`sprite/mutation-overlay/${name}TallPlant`) && {
-          tex: state5.tex.get(`sprite/mutation-overlay/${name}TallPlant`),
-          key: `sprite/mutation-overlay/${name}TallPlant`
-        } || state5.tex.get(`sprite/mutation-overlay/${name}`) && {
-          tex: state5.tex.get(`sprite/mutation-overlay/${name}`),
-          key: `sprite/mutation-overlay/${name}`
-        } || tallOverlayFromSheet(mutName, state5);
-        if (hit) return hit;
-      }
-    }
-    return null;
-  }
-  function findIconTexture(itKey, mutName, isTall, state5) {
-    if (!mutName) return null;
-    const meta = MUT_META[mutName];
-    if (isTall && meta?.tallIconOverride) {
-      const t = state5.tex.get(meta.tallIconOverride);
-      if (t) return t;
-    }
-    const base = baseNameOf(itKey);
-    const aliases = mutationAliases(mutName);
-    for (const name of aliases) {
-      const tries = [
-        `sprite/mutation/${name}Icon`,
-        `sprite/mutation/${name}`,
-        `sprite/mutation/${name}${base}`,
-        `sprite/mutation/${name}-${base}`,
-        `sprite/mutation/${name}_${base}`,
-        `sprite/mutation/${name}/${base}`
-      ];
-      for (const k of tries) {
-        const t = state5.tex.get(k);
-        if (t) return t;
-      }
-      if (isTall) {
-        const t = state5.tex.get(`sprite/mutation-overlay/${name}TallPlantIcon`) || state5.tex.get(`sprite/mutation-overlay/${name}TallPlant`);
-        if (t) return t;
-      }
-    }
-    return null;
-  }
-  function computeIconLayout(tex, baseName, isTall) {
-    const width = tex?.orig?.width ?? tex?.frame?.width ?? tex?.width ?? 1;
-    const height = tex?.orig?.height ?? tex?.frame?.height ?? tex?.height ?? 1;
-    const anchorX = tex?.defaultAnchor?.x ?? 0;
-    const anchorY = tex?.defaultAnchor?.y ?? 0;
-    let targetX = MUT_ICON_X_EXCEPT[baseName] ?? anchorX;
-    const isVerticalShape = height > width * 1.5;
-    let targetY = MUT_ICON_Y_EXCEPT[baseName] ?? (isVerticalShape ? anchorY : 0.4);
-    const offset = {
-      x: (targetX - anchorX) * width,
-      y: (targetY - anchorY) * height
-    };
-    const minDimension = Math.min(width, height);
-    const scaleFactor = Math.min(1.5, minDimension / TILE_SIZE_WORLD);
-    let iconScale = BASE_ICON_SCALE * scaleFactor;
-    if (isTall) iconScale *= TALL_PLANT_MUTATION_ICON_SCALE_BOOST;
-    return {
-      width,
-      height,
-      anchorX,
-      anchorY,
-      offset,
-      iconScale,
-      content: {
-        x: 0,
-        y: 0,
-        width,
-        height,
-        centerX: 0.5,
-        centerY: 0.5,
-        top: 0
-      }
-    };
-  }
-  function textureToCanvas(tex, state5, cfg) {
-    const hit = state5.srcCan.get(tex);
-    if (hit) return hit;
-    let c = null;
-    const RDR = state5.renderer;
-    try {
-      if (RDR?.extract?.canvas && (RDR?.resolution ?? 1) === 1) {
-        const s = new state5.ctors.Sprite(tex);
-        c = RDR.extract.canvas(s);
-        s.destroy?.({ children: true, texture: false, baseTexture: false });
-      }
-    } catch {
-    }
-    if (!c) {
-      const fr = tex?.frame || tex?._frame;
-      const orig = tex?.orig || tex?._orig;
-      const trim = tex?.trim || tex?._trim;
-      const rot = tex?.rotate || tex?._rotate || 0;
-      const src = tex?.baseTexture?.resource?.source || tex?.baseTexture?.resource || tex?.source?.resource?.source || tex?.source?.resource || tex?._source?.resource?.source || null;
-      if (!fr || !src) throw new Error("texToCanvas fail");
-      c = document.createElement("canvas");
-      const fullW = Math.max(1, (orig?.width ?? fr.width) | 0);
-      const fullH = Math.max(1, (orig?.height ?? fr.height) | 0);
-      const offX = trim?.x ?? 0;
-      const offY = trim?.y ?? 0;
-      c.width = fullW;
-      c.height = fullH;
-      const ctx2 = c.getContext("2d");
-      ctx2.imageSmoothingEnabled = false;
-      const rotated = rot === true || rot === 2 || rot === 8;
-      if (rotated) {
-        ctx2.save();
-        ctx2.translate(offX + fr.height / 2, offY + fr.width / 2);
-        ctx2.rotate(-Math.PI / 2);
-        ctx2.drawImage(src, fr.x, fr.y, fr.width, fr.height, -fr.width / 2, -fr.height / 2, fr.width, fr.height);
-        ctx2.restore();
-      } else {
-        ctx2.drawImage(src, fr.x, fr.y, fr.width, fr.height, offX, offY, fr.width, fr.height);
-      }
-    }
-    state5.srcCan.set(tex, c);
-    if (state5.srcCan.size > cfg.srcCanvasMax) {
-      const k = state5.srcCan.keys().next().value;
-      if (k !== void 0) state5.srcCan.delete(k);
-    }
-    return c;
-  }
-  function buildColorLayerSprites(tex, dims, pipeline, state5, cfg, disposables, TextureCtor) {
-    const { w, h: h2, aX, aY, basePos } = dims;
-    const layers = [];
-    for (const step of pipeline) {
-      const clone2 = new state5.ctors.Sprite(tex);
-      clone2.anchor?.set?.(aX, aY);
-      clone2.position.set(basePos.x, basePos.y);
-      clone2.zIndex = 1;
-      const layerCanvas = document.createElement("canvas");
-      layerCanvas.width = w;
-      layerCanvas.height = h2;
-      const lctx = layerCanvas.getContext("2d");
-      lctx.imageSmoothingEnabled = false;
-      lctx.save();
-      lctx.translate(w * aX, h2 * aY);
-      lctx.drawImage(textureToCanvas(tex, state5, cfg), -w * aX, -h2 * aY);
-      lctx.restore();
-      applyFilterOnto(lctx, layerCanvas, step.name, step.isTall);
-      const filteredTex = TextureCtor.from(layerCanvas);
-      disposables.push(filteredTex);
-      clone2.texture = filteredTex;
-      layers.push(clone2);
-    }
-    return layers;
-  }
-  function buildTallOverlaySprites(itKey, dims, overlayPipeline, state5, cfg, baseCanvas, TextureCtor, disposables) {
-    const { aX, basePos } = dims;
-    if (!baseCanvas) return [];
-    const overlays = [];
-    for (const step of overlayPipeline) {
-      const hit = step.overlayTall && state5.tex.get(step.overlayTall) && { tex: state5.tex.get(step.overlayTall), key: step.overlayTall } || findOverlayTexture(itKey, step.name, state5, true);
-      if (!hit?.tex) continue;
-      const oCan = textureToCanvas(hit.tex, state5, cfg);
-      if (!oCan) continue;
-      const ow = oCan.width;
-      const overlayAnchor = { x: 0, y: 0 };
-      const overlayPos = { x: basePos.x - aX * ow, y: 0 };
-      const overlayOffset = TALL_OVERLAY_OFFSETS[step.name];
-      if (overlayOffset) {
-        overlayPos.x += overlayOffset.x ?? 0;
-        overlayPos.y += overlayOffset.y ?? 0;
-      }
-      const maskedCanvas = document.createElement("canvas");
-      maskedCanvas.width = ow;
-      maskedCanvas.height = oCan.height;
-      const mctx = maskedCanvas.getContext("2d");
-      if (!mctx) continue;
-      mctx.imageSmoothingEnabled = false;
-      mctx.drawImage(oCan, 0, 0);
-      mctx.globalCompositeOperation = "destination-in";
-      mctx.drawImage(baseCanvas, -overlayPos.x, -overlayPos.y);
-      const maskedTex = TextureCtor.from(maskedCanvas);
-      disposables.push(maskedTex);
-      const ov = new state5.ctors.Sprite(maskedTex);
-      ov.anchor?.set?.(overlayAnchor.x, overlayAnchor.y);
-      ov.position.set(overlayPos.x, overlayPos.y);
-      ov.scale.set(1);
-      ov.alpha = 1;
-      ov.zIndex = 3;
-      overlays.push(ov);
-    }
-    return overlays;
-  }
-  function buildIconSprites(itKey, dims, iconPipeline, state5, iconLayout) {
-    const { basePos } = dims;
-    const icons = [];
-    for (const step of iconPipeline) {
-      if (step.name === "Gold" || step.name === "Rainbow") continue;
-      const itex = findIconTexture(itKey, step.name, step.isTall, state5);
-      if (!itex) continue;
-      const icon2 = new state5.ctors.Sprite(itex);
-      const iconAnchorX = itex?.defaultAnchor?.x ?? 0.5;
-      const iconAnchorY = itex?.defaultAnchor?.y ?? 0.5;
-      icon2.anchor?.set?.(iconAnchorX, iconAnchorY);
-      icon2.position.set(basePos.x + iconLayout.offset.x, basePos.y + iconLayout.offset.y);
-      icon2.scale.set(iconLayout.iconScale);
-      if (step.isTall) icon2.zIndex = -1;
-      if (FLOATING_MUTATION_ICONS.has(step.name)) icon2.zIndex = 10;
-      if (!icon2.zIndex) icon2.zIndex = 2;
-      icons.push(icon2);
-    }
-    return icons;
-  }
-  function lruEvict(state5, cfg) {
-    if (!cfg.cacheOn) return;
-    while (state5.lru.size > cfg.cacheMaxEntries || state5.cost > cfg.cacheMaxCost) {
-      const k = state5.lru.keys().next().value;
-      if (k === void 0) break;
-      const e = state5.lru.get(k);
-      state5.lru.delete(k);
-      state5.cost = Math.max(0, state5.cost - entryCost(e));
-    }
-  }
-  function clearVariantCache(state5) {
-    state5.lru.clear();
-    state5.cost = 0;
-    state5.srcCan.clear();
-  }
-  function renderMutatedTexture(tex, itKey, V, state5, cfg) {
-    try {
-      if (!tex || !state5.renderer || !state5.ctors?.Container || !state5.ctors?.Sprite || !state5.ctors?.Texture) return null;
-      const { Container, Sprite, Texture } = state5.ctors;
-      const w = tex?.orig?.width ?? tex?.frame?.width ?? tex?.width ?? 1;
-      const h2 = tex?.orig?.height ?? tex?.frame?.height ?? tex?.height ?? 1;
-      const aX = tex?.defaultAnchor?.x ?? 0.5;
-      const aY = tex?.defaultAnchor?.y ?? 0.5;
-      const basePos = { x: w * aX, y: h2 * aY };
-      const baseCanvas = textureToCanvas(tex, state5, cfg);
-      const root4 = new Container();
-      root4.sortableChildren = true;
-      try {
-        const lock = new Sprite(tex);
-        lock.anchor?.set?.(aX, aY);
-        lock.position.set(basePos.x, basePos.y);
-        lock.width = w;
-        lock.height = h2;
-        lock.alpha = 0;
-        lock.zIndex = -1e3;
-        root4.addChild(lock);
-      } catch {
-      }
-      const base = new Sprite(tex);
-      base.anchor?.set?.(aX, aY);
-      base.position.set(basePos.x, basePos.y);
-      base.zIndex = 0;
-      root4.addChild(base);
-      const isTall = isTallKey(itKey);
-      const pipeline = buildMutationPipeline(V.muts, isTall);
-      const overlayPipeline = buildMutationPipeline(V.overlayMuts, isTall);
-      const iconPipeline = buildMutationPipeline(V.selectedMuts, isTall);
-      const disposables = [];
-      const baseName = baseNameOf(itKey);
-      const iconLayout = computeIconLayout(tex, baseName, isTall);
-      const dims = { w, h: h2, aX, aY, basePos };
-      buildColorLayerSprites(tex, dims, pipeline, state5, cfg, disposables, Texture).forEach((layer2) => root4.addChild(layer2));
-      if (isTall) {
-        buildTallOverlaySprites(itKey, dims, overlayPipeline, state5, cfg, baseCanvas, Texture, disposables).forEach((ov) => root4.addChild(ov));
-      }
-      buildIconSprites(itKey, dims, iconPipeline, state5, iconLayout).forEach((icon2) => root4.addChild(icon2));
-      const RDR = state5.renderer;
-      let rt = null;
-      const RectCtor = state5.ctors?.Rectangle;
-      const crop = RectCtor ? new RectCtor(0, 0, w, h2) : null;
-      if (typeof RDR?.generateTexture === "function")
-        rt = RDR.generateTexture(root4, { resolution: 1, region: crop ?? void 0 });
-      else if (RDR?.textureGenerator?.generateTexture)
-        rt = RDR.textureGenerator.generateTexture({ target: root4, resolution: 1 });
-      if (!rt) throw new Error("no render texture");
-      const outTex = rt instanceof Texture ? rt : Texture.from(RDR.extract.canvas(rt));
-      if (rt && rt !== outTex) rt.destroy?.(true);
-      root4.destroy({ children: true, texture: false, baseTexture: false });
-      disposables.forEach(() => {
-      });
-      try {
-        outTex.__mg_gen = true;
-        outTex.label = `${itKey}|${V.sig}`;
-      } catch {
-      }
-      return outTex;
-    } catch {
-      return null;
-    }
-  }
-  function processVariantJobs(state5, cfg) {
-    if (!cfg.jobOn || !state5.open || !state5.jobs.length) return false;
-    const now = performance.now();
-    const burst = now - state5.changedAt <= cfg.jobBurstWindowMs;
-    const budget = burst ? cfg.jobBurstMs : cfg.jobBudgetMs;
-    const t0 = performance.now();
-    let done = 0;
-    let needsLayout = false;
-    while (state5.jobs.length) {
-      if (performance.now() - t0 >= budget) break;
-      if (done >= cfg.jobCapPerTick) break;
-      const job = state5.jobs[0];
-      if (job.sig !== state5.sig) {
-        state5.jobs.shift();
-        state5.jobMap.delete(job.k);
-        continue;
-      }
-      const tex = job.src[job.i];
-      if (!tex) {
-        state5.jobs.shift();
-        state5.jobMap.delete(job.k);
-        continue;
-      }
-      const ft = renderMutatedTexture(tex, job.itKey, job.V, state5, cfg);
-      if (ft) job.out.push(ft);
-      job.i++;
-      done++;
-      if (job.i >= job.src.length) {
-        state5.jobs.shift();
-        state5.jobMap.delete(job.k);
-        let entry = null;
-        if (job.isAnim) {
-          if (job.out.length >= 2) entry = { isAnim: true, frames: job.out };
-          else job.out.forEach(() => {
-          });
-        } else {
-          if (job.out[0]) entry = { isAnim: false, tex: job.out[0] };
-        }
-        if (entry) {
-          state5.lru.set(job.k, entry);
-          state5.cost += entryCost(entry);
-          lruEvict(state5, cfg);
-          needsLayout = true;
-        }
-      }
-    }
-    return needsLayout;
-  }
-  var TILE_SIZE_WORLD, BASE_ICON_SCALE, TALL_PLANT_MUTATION_ICON_SCALE_BOOST, FLOATING_MUTATION_ICONS, MUT_ICON_Y_EXCEPT, MUT_ICON_X_EXCEPT, TALL_OVERLAY_OFFSETS, MUTATION_ORDER, MUTATION_INDEX, sortMutations, SUPPORTED_BLEND_OPS, pickBlendOp, FILTERS, hasMutationFilter, isTallKey, computeVariantSignature, curVariant, normalizeMutListColor, normalizeMutListOverlay, buildMutationPipeline, angleGrad, fillGrad, baseNameOf, entryCost, processJobs;
-  var init_variantBuilder = __esm({
-    "src/game/sprites/mutations/variantBuilder.ts"() {
-      "use strict";
-      init_settings();
-      TILE_SIZE_WORLD = 256;
-      BASE_ICON_SCALE = 0.5;
-      TALL_PLANT_MUTATION_ICON_SCALE_BOOST = 2;
-      FLOATING_MUTATION_ICONS = /* @__PURE__ */ new Set([
-        "Dawnlit",
-        "Ambershine",
-        "Dawncharged",
-        "Ambercharged"
-      ]);
-      MUT_ICON_Y_EXCEPT = {
-        Banana: 0.68,
-        Beet: 0.65,
-        Carrot: 0.6,
-        Sunflower: 0.5,
-        Starweaver: 0.5,
-        FavaBean: 0.25,
-        BurrosTail: 0.2
-      };
-      MUT_ICON_X_EXCEPT = {
-        Pepper: 0.6,
-        Banana: 0.6
-      };
-      TALL_OVERLAY_OFFSETS = {
-        Thunderstruck: { x: 0, y: 250 }
-      };
-      MUTATION_ORDER = ["Gold", "Rainbow", "Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged", "Ambershine", "Dawnlit", "Dawncharged", "Ambercharged"];
-      MUTATION_INDEX = new Map(MUTATION_ORDER.map((m, idx) => [m, idx]));
-      sortMutations = (list) => {
-        const uniq = [...new Set(list.filter(Boolean))];
-        return uniq.sort((a, b) => (MUTATION_INDEX.get(a) ?? Infinity) - (MUTATION_INDEX.get(b) ?? Infinity));
-      };
-      SUPPORTED_BLEND_OPS = (() => {
-        try {
-          const c = document.createElement("canvas");
-          const g = c.getContext("2d");
-          if (!g) return /* @__PURE__ */ new Set();
-          const ops = ["color", "hue", "saturation", "luminosity", "overlay", "screen", "lighter", "source-atop"];
-          const ok = /* @__PURE__ */ new Set();
-          for (const op of ops) {
-            g.globalCompositeOperation = op;
-            if (g.globalCompositeOperation === op) ok.add(op);
-          }
-          return ok;
-        } catch {
-          return /* @__PURE__ */ new Set();
-        }
-      })();
-      pickBlendOp = (desired) => {
-        if (SUPPORTED_BLEND_OPS.has(desired)) return desired;
-        if (SUPPORTED_BLEND_OPS.has("overlay")) return "overlay";
-        if (SUPPORTED_BLEND_OPS.has("screen")) return "screen";
-        if (SUPPORTED_BLEND_OPS.has("lighter")) return "lighter";
-        return "source-atop";
-      };
-      FILTERS = {
-        Gold: { op: "source-atop", colors: ["rgb(235,200,0)"], a: 0.7 },
-        Rainbow: { op: "color", colors: ["#FF1744", "#FF9100", "#FFEA00", "#00E676", "#2979FF", "#D500F9"], ang: 130, angTall: 0, masked: true },
-        Wet: { op: "source-atop", colors: ["rgb(50,180,200)"], a: 0.25 },
-        Chilled: { op: "source-atop", colors: ["rgb(100,160,210)"], a: 0.45 },
-        Frozen: { op: "source-atop", colors: ["rgb(100,130,220)"], a: 0.5 },
-        Thunderstruck: { op: "source-atop", colors: ["rgb(16, 141, 163)"], a: 0.45 },
-        Thundercharged: { op: "source-atop", colors: ["rgb(10, 100, 190)"], a: 0.5 },
-        Dawnlit: { op: "source-atop", colors: ["rgb(209,70,231)"], a: 0.5 },
-        Ambershine: { op: "source-atop", colors: ["rgb(190,100,40)"], a: 0.5 },
-        Dawncharged: { op: "source-atop", colors: ["rgb(140,80,200)"], a: 0.5 },
-        Ambercharged: { op: "source-atop", colors: ["rgb(170,60,25)"], a: 0.5 }
-      };
-      hasMutationFilter = (value) => Boolean(value && FILTERS[value]);
-      isTallKey = (k) => /tallplant/i.test(k);
-      computeVariantSignature = (state5) => {
-        if (!state5.mutOn) {
-          const f = hasMutationFilter(state5.f) ? state5.f : null;
-          const baseMuts = f ? [f] : [];
-          return { mode: "F", muts: baseMuts, overlayMuts: baseMuts, selectedMuts: baseMuts, sig: `F:${f ?? ""}` };
-        }
-        const raw = state5.mutations.filter((value) => hasMutationFilter(value));
-        const selected = sortMutations(raw);
-        const muts = normalizeMutListColor(raw);
-        const overlayMuts = normalizeMutListOverlay(raw);
-        return {
-          mode: "M",
-          muts,
-          overlayMuts,
-          selectedMuts: selected,
-          sig: `M:${selected.join(",")}|${muts.join(",")}|${overlayMuts.join(",")}`
-        };
-      };
-      curVariant = computeVariantSignature;
-      normalizeMutListColor = (list) => {
-        const names = list.filter((m, idx, arr) => FILTERS[m] && arr.indexOf(m) === idx);
-        if (!names.length) return [];
-        if (names.includes("Gold")) return ["Gold"];
-        if (names.includes("Rainbow")) return ["Rainbow"];
-        const warm = ["Ambershine", "Dawnlit", "Dawncharged", "Ambercharged"];
-        const hasWarm = names.some((n) => warm.includes(n));
-        if (hasWarm) {
-          return sortMutations(names.filter((n) => !["Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged"].includes(n)));
-        }
-        return sortMutations(names);
-      };
-      normalizeMutListOverlay = (list) => {
-        const names = list.filter((m, idx, arr) => MUT_META[m]?.overlayTall && arr.indexOf(m) === idx);
-        return sortMutations(names);
-      };
-      buildMutationPipeline = (mutNames, isTall) => mutNames.map((m) => ({ name: m, meta: MUT_META[m], overlayTall: MUT_META[m]?.overlayTall, isTall }));
-      angleGrad = (ctx2, w, h2, ang, fullSpan = false) => {
-        const rad = (ang - 90) * Math.PI / 180;
-        const cx = w / 2;
-        const cy = h2 / 2;
-        if (!fullSpan) {
-          const R2 = Math.min(w, h2) / 2;
-          return ctx2.createLinearGradient(cx - Math.cos(rad) * R2, cy - Math.sin(rad) * R2, cx + Math.cos(rad) * R2, cy + Math.sin(rad) * R2);
-        }
-        const dx = Math.cos(rad);
-        const dy = Math.sin(rad);
-        const R = Math.abs(dx) * w / 2 + Math.abs(dy) * h2 / 2;
-        return ctx2.createLinearGradient(cx - dx * R, cy - dy * R, cx + dx * R, cy + dy * R);
-      };
-      fillGrad = (ctx2, w, h2, f, fullSpan = false) => {
-        const cols = f.colors?.length ? f.colors : ["#fff"];
-        const g = f.ang != null ? angleGrad(ctx2, w, h2, f.ang, fullSpan) : ctx2.createLinearGradient(0, 0, 0, h2);
-        if (cols.length === 1) {
-          g.addColorStop(0, cols[0]);
-          g.addColorStop(1, cols[0]);
-        } else cols.forEach((c, i) => g.addColorStop(i / (cols.length - 1), c));
-        ctx2.fillStyle = g;
-        ctx2.fillRect(0, 0, w, h2);
-      };
-      baseNameOf = (k) => {
-        const p = String(k || "").split("/");
-        return p[p.length - 1] || "";
-      };
-      entryCost = (e) => e?.isAnim ? e.frames?.length || 0 : e?.tex ? 1 : 0;
-      processJobs = processVariantJobs;
-    }
-  });
-
-  // src/game/sprites/api/expose.ts
-  function exposeApi(state5, hud) {
-    const root4 = pageWindow;
-    const api = {
-      open() {
-        hud.root?.style && (hud.root.style.display = "block");
-        state5.open = true;
-      },
-      close() {
-        hud.root?.style && (hud.root.style.display = "none");
-        state5.open = false;
-      },
-      toggle() {
-        state5.open ? api.close() : api.open();
-      },
-      setCategory(cat) {
-        state5.cat = cat || "__all__";
-      },
-      setFilterText(text2) {
-        state5.q = String(text2 || "").trim();
-      },
-      setSpriteFilter(name) {
-        state5.f = name;
-        state5.mutOn = false;
-      },
-      setMutation(on, ...muts) {
-        state5.mutOn = !!on;
-        state5.f = "";
-        state5.mutations = state5.mutOn ? muts.filter(Boolean).map((name) => name) : [];
-      },
-      filters() {
-        return [];
-      },
-      categories() {
-        return [...state5.cats.keys()].sort((a, b) => a.localeCompare(b));
-      },
-      cacheStats() {
-        return { entries: state5.lru.size, cost: state5.cost };
-      },
-      clearCache() {
-        clearVariantCache(state5);
-      },
-      curVariant: () => curVariant(state5)
-    };
-    root4.MGSpriteCatalog = api;
-    return api;
-  }
-  var init_expose = __esm({
-    "src/game/sprites/api/expose.ts"() {
-      "use strict";
-      init_variantBuilder();
-      init_pageContext();
-    }
-  });
-
-  // src/game/sprites/api/spriteApi.ts
-  var spriteApi_exports = {};
-  __export(spriteApi_exports, {
-    buildVariant: () => buildVariant,
-    getBaseSprite: () => getBaseSprite,
-    getSpriteWithMutations: () => getSpriteWithMutations,
-    listItemsByCategory: () => listItemsByCategory
-  });
-  function findItem(state5, category, id) {
-    const normId = normalizeKey(id);
-    for (const it of state5.items) {
-      const keyCat = keyCategoryOf(it.key);
-      if (!matchesCategory(keyCat, category)) continue;
-      const base = normalizeKey(baseNameOf2(it.key));
-      if (base === normId) return it;
-    }
-    return null;
-  }
-  function listItemsByCategory(state5, category = "any") {
-    return state5.items.filter((it) => matchesCategory(keyCategoryOf(it.key), category));
-  }
-  function buildVariant(mutations) {
-    return buildVariantFromMutations(mutations);
-  }
-  function getSpriteWithMutations(params, state5, cfg) {
-    const it = findItem(state5, params.category, params.id);
-    if (!it) return null;
-    const tex = it.isAnim ? it.frames?.[0] : it.first;
-    if (!tex) return null;
-    const V = buildVariantFromMutations(params.mutations);
-    return renderMutatedTexture(tex, it.key, V, state5, cfg);
-  }
-  function getBaseSprite(params, state5) {
-    const it = findItem(state5, params.category, params.id);
-    if (!it) return null;
-    return it.isAnim ? it.frames?.[0] ?? null : it.first;
-  }
-  var normalizeKey, categoryAlias, keyCategoryOf, matchesCategory, baseNameOf2;
-  var init_spriteApi = __esm({
-    "src/game/sprites/api/spriteApi.ts"() {
-      "use strict";
-      init_variantBuilder();
-      normalizeKey = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-      categoryAlias = {
-        plant: ["plant"],
-        tallplant: ["tallplant"],
-        crop: ["crop"],
-        decor: ["decor"],
-        item: ["item"],
-        pet: ["pet"],
-        seed: ["seed"],
-        mutation: ["mutation"],
-        "mutation-overlay": ["mutation-overlay"],
-        ui: ["ui"],
-        any: []
-      };
-      keyCategoryOf = (key2) => {
-        const parts = key2.split("/").filter(Boolean);
-        if (parts[0] === "sprite" || parts[0] === "sprites") return parts[1] ?? "";
-        return parts[0] ?? "";
-      };
-      matchesCategory = (keyCat, requested) => {
-        if (requested === "any") return true;
-        const aliases = categoryAlias[requested] || [];
-        return aliases.some((a) => normalizeKey(keyCat) === normalizeKey(a));
-      };
-      baseNameOf2 = (key2) => {
-        const parts = key2.split("/").filter(Boolean);
-        return parts[parts.length - 1] || "";
-      };
-    }
-  });
-
-  // src/game/sprites/api/consoleService.ts
-  function ensureOverlayHost() {
-    let host = document.getElementById(OVERLAY_ID);
-    if (!host) {
-      host = document.createElement("div");
-      host.id = OVERLAY_ID;
-      host.style.cssText = "position:fixed;top:8px;left:8px;z-index:2147480000;display:flex;flex-wrap:wrap;gap:8px;pointer-events:auto;background:transparent;align-items:flex-start;";
-      document.body.appendChild(host);
-    }
-    return host;
-  }
-  function getSpriteDim(tex, key2) {
-    for (const src of [tex?.orig, tex?._orig, tex?.frame, tex?._frame, tex]) {
-      const value = src?.[key2];
-      if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
-    }
-    return null;
-  }
-  function padCanvasToSpriteBounds(source, tex) {
-    const rawW = source.width || 1;
-    const rawH = source.height || 1;
-    const baseW = Math.max(rawW, Math.round(getSpriteDim(tex, "width") ?? rawW) || rawW);
-    const baseH = Math.max(rawH, Math.round(getSpriteDim(tex, "height") ?? rawH) || rawH);
-    const trim = tex?.trim ?? tex?._trim ?? null;
-    let offsetX = trim && typeof trim.x === "number" ? Math.round(trim.x) : Math.round((baseW - rawW) / 2);
-    let offsetY = trim && typeof trim.y === "number" ? Math.round(trim.y) : Math.round((baseH - rawH) / 2);
-    offsetX = Math.max(0, Math.min(baseW - rawW, offsetX));
-    offsetY = Math.max(0, Math.min(baseH - rawH, offsetY));
-    if (baseW === rawW && baseH === rawH && offsetX === 0 && offsetY === 0) return source;
-    const canvas = document.createElement("canvas");
-    canvas.width = baseW;
-    canvas.height = baseH;
-    const ctx2 = canvas.getContext("2d");
-    if (!ctx2) return source;
-    ctx2.imageSmoothingEnabled = false;
-    ctx2.clearRect(0, 0, baseW, baseH);
-    ctx2.drawImage(source, offsetX, offsetY);
-    return canvas;
-  }
-  function exposeSpriteService(ctx2) {
-    const renderTextureToCanvas = (tex) => {
-      try {
-        const spr = new ctx2.state.ctors.Sprite(tex);
-        const extracted = ctx2.state.renderer.extract.canvas(spr, { resolution: 1 });
-        spr.destroy?.({ children: true, texture: false, baseTexture: false });
-        return padCanvasToSpriteBounds(extracted, tex);
-      } catch {
-        return null;
-      }
-    };
-    const service = {
-      ready: Promise.resolve(),
-      state: ctx2.state,
-      cfg: ctx2.cfg,
-      list(category = "any") {
-        return listItemsByCategory(ctx2.state, category);
-      },
-      getBaseSprite(params) {
-        return getBaseSprite(params, ctx2.state);
-      },
-      getSpriteWithMutations(params) {
-        return getSpriteWithMutations(params, ctx2.state, ctx2.cfg);
-      },
-      buildVariant(mutations) {
-        return buildVariant(mutations);
-      },
-      renderToCanvas(arg) {
-        const tex = arg?.isTexture || arg?.frame ? arg : service.getSpriteWithMutations(arg);
-        if (!tex) return null;
-        return renderTextureToCanvas(tex);
-      },
-      async renderToDataURL(arg, type = "image/png", quality) {
-        const c = service.renderToCanvas(arg);
-        if (!c) return null;
-        return c.toDataURL(type, quality);
-      },
-      /** Renders into a fixed overlay, each sprite in its own wrapper. */
-      renderOnCanvas(arg, opts = {}) {
-        const c = service.renderToCanvas(arg);
-        if (!c) return null;
-        c.style.background = "transparent";
-        c.style.display = "block";
-        const mutW = c.width || c.clientWidth;
-        const mutH = c.height || c.clientHeight;
-        let baseW = mutW;
-        let baseH = mutH;
-        if (arg && !arg.isTexture && !arg.frame) {
-          const baseTex = service.getBaseSprite(arg);
-          if (baseTex) {
-            baseW = baseTex?.orig?.width ?? baseTex?._orig?.width ?? baseTex?.frame?.width ?? baseTex?._frame?.width ?? baseTex?.width ?? baseW;
-            baseH = baseTex?.orig?.height ?? baseTex?._orig?.height ?? baseTex?.frame?.height ?? baseTex?._frame?.height ?? baseTex?.height ?? baseH;
-          }
-        }
-        const scaleToBase = Math.min(baseW / mutW, baseH / mutH, 1);
-        let logicalW = mutW * scaleToBase;
-        let logicalH = mutH * scaleToBase;
-        const { maxWidth, maxHeight, allowScaleUp } = opts;
-        if (maxWidth || maxHeight) {
-          const scaleW = maxWidth ? maxWidth / logicalW : 1;
-          const scaleH = maxHeight ? maxHeight / logicalH : 1;
-          let scale = Math.min(scaleW || 1, scaleH || 1);
-          if (!allowScaleUp) scale = Math.min(scale, 1);
-          logicalW = Math.floor(logicalW * scale);
-          logicalH = Math.floor(logicalH * scale);
-        }
-        if (logicalW) c.style.width = `${logicalW}px`;
-        if (logicalH) c.style.height = `${logicalH}px`;
-        const wrap = document.createElement("div");
-        wrap.style.cssText = "display:inline-flex;align-items:flex-start;justify-content:flex-start;padding:0;margin:0;background:transparent;border:none;flex:0 0 auto;";
-        wrap.appendChild(c);
-        ensureOverlayHost().appendChild(wrap);
-        return { wrap, canvas: c };
-      },
-      clearOverlay() {
-        document.getElementById(OVERLAY_ID)?.remove();
-      },
-      renderAnimToCanvases(params) {
-        const item = ctx2.state.items.find((it) => it.key === `sprite/${params.category}/${params.id}` || it.key === params.id);
-        if (!item) return [];
-        if (item.isAnim && item.frames?.length) {
-          const texes = params?.mutations?.length ? [service.getSpriteWithMutations(params)] : item.frames;
-          return texes.map((t2) => renderTextureToCanvas(t2)).filter(Boolean);
-        }
-        const t = service.getSpriteWithMutations(params);
-        return t ? [renderTextureToCanvas(t)] : [];
-      }
-    };
-    const uw = pageWindow;
-    uw.__MG_SPRITE_STATE__ = ctx2.state;
-    uw.__MG_SPRITE_CFG__ = ctx2.cfg;
-    uw.__MG_SPRITE_API__ = spriteApi_exports;
-    uw.__MG_SPRITE_SERVICE__ = service;
-    uw.getSpriteWithMutations = service.getSpriteWithMutations;
-    uw.getBaseSprite = service.getBaseSprite;
-    uw.buildSpriteVariant = service.buildVariant;
-    uw.listSpritesByCategory = service.list;
-    uw.renderSpriteToCanvas = service.renderToCanvas;
-    uw.renderSpriteToDataURL = service.renderToDataURL;
-    uw.MG_SPRITE_HELPERS = service;
-  }
-  var OVERLAY_ID;
-  var init_consoleService = __esm({
-    "src/game/sprites/api/consoleService.ts"() {
-      "use strict";
-      init_pageContext();
-      init_spriteApi();
-      OVERLAY_ID = "mg-sprite-overlay";
-    }
-  });
-
   // src/game/gameVersion.ts
   function fromUrls(urls) {
     for (const url of urls) {
@@ -1982,10 +996,6 @@
         console.warn("[MG SpriteCatalog] skipping atlas (texture load failed)", { path, imgPath, error });
       }
     }
-    const { items, cats } = buildItemsFromTextures(ctx.state.tex);
-    ctx.state.items = items;
-    ctx.state.filtered = items.slice();
-    ctx.state.cats = cats;
     ctx.state.loaded = true;
   }
   function ensureDocumentReady() {
@@ -2015,36 +1025,13 @@
     ctx.state.renderer = renderer;
     ctx.state.version = pixiVersion ?? version;
     ctx.state.base = base;
-    ctx.state.sig = curVariant(ctx.state).sig;
     watchRendererHealth(ctx.state, hooks);
     pageWindow.__MG_SPRITE_STATE__ = ctx.state;
     await loadTextures(ctx.state.base, await prefetchPromise);
-    const hud = {
-      open() {
-        ctx.state.open = true;
-      },
-      close() {
-        ctx.state.open = false;
-      },
-      toggle() {
-        ctx.state.open ? this.close() : this.open();
-      },
-      layout() {
-      },
-      root: void 0
-    };
-    ctx.state.open = true;
-    app.ticker?.add?.(() => {
-      processJobs(ctx.state, ctx.cfg);
-    });
-    exposeApi(ctx.state, hud);
-    exposeSpriteService(ctx);
     console.log("[MG SpriteCatalog] ready", {
       version: ctx.state.version,
       pixi: version,
-      textures: ctx.state.tex.size,
-      items: ctx.state.items.length,
-      cats: ctx.state.cats.size
+      textures: ctx.state.tex.size
     });
   }
   async function startWithRetry() {
@@ -2072,11 +1059,7 @@
       init_async();
       init_assetFetcher();
       init_atlasToTextures();
-      init_catalogIndexer();
       init_path();
-      init_expose();
-      init_consoleService();
-      init_variantBuilder();
       init_gameVersion();
       ctx = spriteContext;
       hooks = createPixiHooks();
@@ -4906,7 +3889,7 @@
       }
     };
   }
-  var LOG_PREFIX, log, DEBOUNCE_MS, RECENT_REMOVE_MS, INVENTORY_POLL_MS, READY_TIMEOUT_MS, normalizeKey2, normalizeQty, buildQtyMap, buildKeySet, diffIncreases, diffSet, pruneRecentMap, summarizeQtyDelta, storageKeyFromSpecies, storageKeyFromDecorId, storageKeyFromToolId;
+  var LOG_PREFIX, log, DEBOUNCE_MS, RECENT_REMOVE_MS, INVENTORY_POLL_MS, READY_TIMEOUT_MS, normalizeKey, normalizeQty, buildQtyMap, buildKeySet, diffIncreases, diffSet, pruneRecentMap, summarizeQtyDelta, storageKeyFromSpecies, storageKeyFromDecorId, storageKeyFromToolId;
   var init_autoStore = __esm({
     "src/features/autoStore/autoStore.ts"() {
       "use strict";
@@ -4926,7 +3909,7 @@
       RECENT_REMOVE_MS = 2e3;
       INVENTORY_POLL_MS = 400;
       READY_TIMEOUT_MS = 10 * 6e4;
-      normalizeKey2 = (value) => typeof value === "string" ? value.trim() : "";
+      normalizeKey = (value) => typeof value === "string" ? value.trim() : "";
       normalizeQty = (value) => {
         const n = Number(value);
         return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
@@ -4969,9 +3952,9 @@
         before: prev.get(key2) ?? 0,
         after: next.get(key2) ?? 0
       }));
-      storageKeyFromSpecies = (item) => normalizeKey2(item?.species);
-      storageKeyFromDecorId = (item) => normalizeKey2(item?.decorId);
-      storageKeyFromToolId = (item) => normalizeKey2(item?.toolId);
+      storageKeyFromSpecies = (item) => normalizeKey(item?.species);
+      storageKeyFromDecorId = (item) => normalizeKey(item?.decorId);
+      storageKeyFromToolId = (item) => normalizeKey(item?.toolId);
     }
   });
 
@@ -10519,7 +9502,7 @@
     const numeric = typeof value === "number" ? value : Number(value);
     return Number.isFinite(numeric) ? numeric : null;
   }
-  function normalizeKey3(value) {
+  function normalizeKey2(value) {
     return String(value ?? "").trim().toLowerCase();
   }
   function clampCropSize(value) {
@@ -10528,7 +9511,7 @@
     return Math.min(CROP_SIZE_MAX, Math.max(CROP_SIZE_MIN, Math.round(numeric)));
   }
   function findPlantCatalogEntry(species) {
-    const wanted = normalizeKey3(species);
+    const wanted = normalizeKey2(species);
     if (!wanted) return null;
     const catalog = plantCatalog2;
     const direct = typeof species === "string" ? catalog[species] : void 0;
@@ -10536,10 +9519,10 @@
     for (const key2 of Object.keys(catalog)) {
       const entry = catalog[key2];
       if (!entry) continue;
-      if (normalizeKey3(key2) === wanted) return entry;
-      if (normalizeKey3(entry.crop?.name) === wanted) return entry;
-      if (normalizeKey3(entry.plant?.name) === wanted) return entry;
-      if (normalizeKey3(entry.seed?.name) === wanted) return entry;
+      if (normalizeKey2(key2) === wanted) return entry;
+      if (normalizeKey2(entry.crop?.name) === wanted) return entry;
+      if (normalizeKey2(entry.plant?.name) === wanted) return entry;
+      if (normalizeKey2(entry.seed?.name) === wanted) return entry;
     }
     return null;
   }
@@ -11376,14 +10359,14 @@
     }
     return names;
   }
-  function pickBlendOp2(desired) {
-    if (SUPPORTED_BLEND_OPS2.has(desired)) return desired;
-    if (SUPPORTED_BLEND_OPS2.has("overlay")) return "overlay";
-    if (SUPPORTED_BLEND_OPS2.has("screen")) return "screen";
-    if (SUPPORTED_BLEND_OPS2.has("lighter")) return "lighter";
+  function pickBlendOp(desired) {
+    if (SUPPORTED_BLEND_OPS.has(desired)) return desired;
+    if (SUPPORTED_BLEND_OPS.has("overlay")) return "overlay";
+    if (SUPPORTED_BLEND_OPS.has("screen")) return "screen";
+    if (SUPPORTED_BLEND_OPS.has("lighter")) return "lighter";
     return "source-atop";
   }
-  function fillGrad2(ctx2, width, height, filter) {
+  function fillGrad(ctx2, width, height, filter) {
     const cols = filter.colors?.length ? filter.colors : ["#fff"];
     let gradient2;
     if (filter.ang != null) {
@@ -11433,11 +10416,11 @@
         const gctx = gradCanvas.getContext("2d");
         if (!gctx) continue;
         gctx.imageSmoothingEnabled = false;
-        fillGrad2(gctx, width, height, filter);
+        fillGrad(gctx, width, height, filter);
         gctx.globalCompositeOperation = "destination-in";
         gctx.drawImage(img, 0, 0);
         ctx2.save();
-        ctx2.globalCompositeOperation = pickBlendOp2(filter.op);
+        ctx2.globalCompositeOperation = pickBlendOp(filter.op);
         if (filter.a != null) ctx2.globalAlpha = filter.a;
         ctx2.drawImage(gradCanvas, 0, 0);
         ctx2.restore();
@@ -11450,7 +10433,7 @@
         cctx.imageSmoothingEnabled = false;
         cctx.drawImage(img, 0, 0);
         cctx.globalCompositeOperation = "source-in";
-        fillGrad2(cctx, width, height, filter);
+        fillGrad(cctx, width, height, filter);
         ctx2.save();
         ctx2.globalCompositeOperation = "source-over";
         if (filter.a != null) ctx2.globalAlpha = filter.a;
@@ -11632,7 +10615,7 @@
       return null;
     }
   }
-  var SPRITE_REQUEST, API_BASE, indexReady, MUTATION_ICONS, MUTATION_FILTERS, SUPPORTED_BLEND_OPS2, imageCache, objectUrlCache, spriteDataUrlCache, spriteDataUrlResolved, warmupState, warmupListeners;
+  var SPRITE_REQUEST, API_BASE, indexReady, MUTATION_ICONS, MUTATION_FILTERS, SUPPORTED_BLEND_OPS, imageCache, objectUrlCache, spriteDataUrlCache, spriteDataUrlResolved, warmupState, warmupListeners;
   var init_iconCache = __esm({
     "src/ui/kit/sprites/iconCache.ts"() {
       "use strict";
@@ -11670,7 +10653,7 @@
         Dawncharged: { op: "source-atop", colors: ["rgb(140,80,200)"], a: 0.5 },
         Ambercharged: { op: "source-atop", colors: ["rgb(170,60,25)"], a: 0.5 }
       };
-      SUPPORTED_BLEND_OPS2 = (() => {
+      SUPPORTED_BLEND_OPS = (() => {
         try {
           const canvas = document.createElement("canvas");
           const ctx2 = canvas.getContext("2d");
@@ -50188,9 +49171,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   function showRoomPrivacyNoticeOnce() {
     if (typeof document === "undefined" || !document.body) return;
     if (hasSeenRoomPrivacyNotice()) return;
-    if (document.getElementById(OVERLAY_ID2)) return;
+    if (document.getElementById(OVERLAY_ID)) return;
     const overlay2 = h("div");
-    overlay2.id = OVERLAY_ID2;
+    overlay2.id = OVERLAY_ID;
     Object.assign(overlay2.style, {
       position: "fixed",
       inset: "0",
@@ -50237,14 +49220,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     document.body.appendChild(overlay2);
   }
-  var OVERLAY_ID2, HUB_INSTALL_URL;
+  var OVERLAY_ID, HUB_INSTALL_URL;
   var init_privacyNotice = __esm({
     "src/features/room/privacyNotice.ts"() {
       "use strict";
       init_storage();
       init_button();
       init_dom2();
-      OVERLAY_ID2 = "mgRoomPrivacyNotice";
+      OVERLAY_ID = "mgRoomPrivacyNotice";
       HUB_INSTALL_URL = "https://github.com/Ariedam64/MG-CommunityHub/raw/refs/heads/main/dist/mg-community-hub.user.js";
     }
   });
@@ -50293,7 +49276,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function buildOverlay(entry) {
     const overlay2 = h("div");
-    overlay2.id = OVERLAY_ID3;
+    overlay2.id = OVERLAY_ID2;
     const dismiss = () => {
       markChangelogVersionSeen(entry.version);
       overlay2.remove();
@@ -50329,7 +49312,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const version = getLocalVersion();
     if (!version) return;
     if (getSeenChangelogVersion() === version) return;
-    if (document.getElementById(OVERLAY_ID3)) return;
+    if (document.getElementById(OVERLAY_ID2)) return;
     let entry;
     try {
       entry = await fetchChangelogEntryForVersion(version);
@@ -50341,7 +49324,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     ensureStyles2();
     document.body.appendChild(buildOverlay(entry));
   }
-  var OVERLAY_ID3, NOTICE_CSS, stylesInjected3;
+  var OVERLAY_ID2, NOTICE_CSS, stylesInjected3;
   var init_notice = __esm({
     "src/features/changelog/notice.ts"() {
       "use strict";
@@ -50354,15 +49337,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_carousel();
       init_styles6();
       init_fetchChangelog();
-      OVERLAY_ID3 = "mgChangelogNotice";
+      OVERLAY_ID2 = "mgChangelogNotice";
       NOTICE_CSS = `
-#${OVERLAY_ID3} {
+#${OVERLAY_ID2} {
   position: fixed; inset: 0; z-index: 2147483647;
   display: grid; place-items: center; padding: 20px;
   background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
-#${OVERLAY_ID3} .mgcl-box {
+#${OVERLAY_ID2} .mgcl-box {
   width: 440px; max-width: 92vw; max-height: 85vh; overflow-y: auto;
   padding: 22px 24px; border-radius: 16px;
   border: 1px solid var(--qmm-accent-border);
@@ -50372,14 +49355,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   box-shadow: var(--qmm-shadow-modal);
   color: var(--qmm-text);
 }
-#${OVERLAY_ID3} .mgcl-eyebrow {
+#${OVERLAY_ID2} .mgcl-eyebrow {
   margin: 0 0 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
   color: var(--qmm-accent);
 }
-#${OVERLAY_ID3} .mgcl-title { margin: 0 0 4px; font-size: 18px; font-weight: 750; }
-#${OVERLAY_ID3} .mgcl-version { margin: 0 0 16px; font-size: 11.5px; color: var(--qmm-text-soft); }
-#${OVERLAY_ID3} .mgcl-media { margin-top: 14px; }
-#${OVERLAY_ID3} .mgcl-close { margin-top: 18px; }
+#${OVERLAY_ID2} .mgcl-title { margin: 0 0 4px; font-size: 18px; font-weight: 750; }
+#${OVERLAY_ID2} .mgcl-version { margin: 0 0 16px; font-size: 11.5px; color: var(--qmm-text-soft); }
+#${OVERLAY_ID2} .mgcl-media { margin-top: 14px; }
+#${OVERLAY_ID2} .mgcl-close { margin-top: 18px; }
 `;
       stylesInjected3 = false;
     }
