@@ -6,15 +6,10 @@
 // on screen at once. The kit stylesheet has to restate `display: none` for
 // hidden kit elements, strongly enough to beat its own compound selectors.
 
+import { check, done } from "./_check";
 import { chromeCss } from "../src/ui/kit/styles/chrome";
 import { containersCss } from "../src/ui/kit/styles/containers";
 import { controlsCss } from "../src/ui/kit/styles/controls";
-
-let failed = 0;
-const check = (label: string, ok: boolean, detail = "") => {
-  if (!ok) failed++;
-  console.log(`${ok ? "ok  " : "FAIL"} ${label}${ok || !detail ? "" : `: ${detail}`}`);
-};
 
 type Rule = { selectors: string[]; body: string };
 
@@ -67,8 +62,4 @@ const uncovered = [...displayed]
 check("every kit class with a display hides when [hidden]", uncovered.length === 0, uncovered.join(", "));
 check("a hidden .qmm-btn is hidden", hiddenRuleCovers("qmm-btn"));
 
-if (failed) {
-  console.log(`\n${failed} check(s) failed`);
-  process.exit(1);
-}
-console.log("\nall kit hidden checks passed");
+done();

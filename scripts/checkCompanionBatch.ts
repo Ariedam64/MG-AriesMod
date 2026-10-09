@@ -9,20 +9,9 @@
 //
 // Run with: npm run check:batch
 
+import { checkEqual, run } from "./_check";
 import { runSteps, type BatchReporter, type Crew } from "../src/features/companion/chat/batch";
 import type { Walker } from "../src/features/companion/chat/walk";
-
-let failures = 0;
-function check(label: string, actual: unknown, expected: unknown): void {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
-  if (a === e) {
-    console.log(`ok   ${label}`);
-    return;
-  }
-  failures += 1;
-  console.error(`FAIL ${label}\n  expected ${e}\n  actual   ${a}`);
-}
 
 const idleWalker: Walker = {
   async toGardenTile() {},
@@ -79,8 +68,8 @@ async function main(): Promise<void> {
     } catch (error) {
       thrown = error;
     }
-    check("an action that throws still ends the batch with an error", (thrown as Error | null)?.message, "socket closed");
-    check("and the team and the walker are given back", h.dismissed(), 1);
+    checkEqual("an action that throws still ends the batch with an error", (thrown as Error | null)?.message, "socket closed");
+    checkEqual("and the team and the walker are given back", h.dismissed(), 1);
   }
 
   {
@@ -94,10 +83,10 @@ async function main(): Promise<void> {
       },
       progressNote: (done, total) => `${done} of ${total}`,
     });
-    check("a full batch handles every item", outcome, { done: 12, cancelled: false });
-    check("progress is reported after each item", h.progress.length, 12);
-    check("a progress line is posted every ten items, not at the end", h.lines, ["10 of 12"]);
-    check("the crew is dismissed once", h.dismissed(), 1);
+    checkEqual("a full batch handles every item", outcome, { done: 12, cancelled: false });
+    checkEqual("progress is reported after each item", h.progress.length, 12);
+    checkEqual("a progress line is posted every ten items, not at the end", h.lines, ["10 of 12"]);
+    checkEqual("the crew is dismissed once", h.dismissed(), 1);
   }
 
   {
@@ -110,8 +99,8 @@ async function main(): Promise<void> {
         h.handle();
       },
     });
-    check("a stop is honoured before the next item", outcome, { done: 2, cancelled: true });
-    check("a stopped batch dismisses the crew too", h.dismissed(), 1);
+    checkEqual("a stop is honoured before the next item", outcome, { done: 2, cancelled: true });
+    checkEqual("a stopped batch dismisses the crew too", h.dismissed(), 1);
   }
 
   {
@@ -125,19 +114,8 @@ async function main(): Promise<void> {
         h.handle();
       },
     });
-    check("a step can end the batch without counting", outcome, { done: 1, cancelled: false });
+    checkEqual("a step can end the batch without counting", outcome, { done: 1, cancelled: false });
   }
 }
 
-main()
-  .catch((error) => {
-    failures += 1;
-    console.error("FAIL the check threw", error);
-  })
-  .finally(() => {
-    if (failures) {
-      console.error(`\n${failures} check(s) failed`);
-      process.exit(1);
-    }
-    console.log("\nall batch checks passed");
-  });
+run(main);

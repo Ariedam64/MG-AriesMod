@@ -9,22 +9,10 @@
 //
 // Run with: npm run check:cataloglive
 
+import { checkEqual, done } from "./_check";
 import { captureState } from "../src/data/live/state";
 import { memoOnCatalogs } from "../src/data";
 import { estimateProduceValue } from "../src/data/rules/cropValue";
-
-let failures = 0;
-
-function check(label: string, actual: unknown, expected: unknown): void {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
-  if (a === e) {
-    console.log(`ok   ${label}`);
-    return;
-  }
-  failures += 1;
-  console.error(`FAIL ${label}\n  expected ${e}\n  actual   ${a}`);
-}
 
 const flatPrice = { getBasePrice: () => 100, sizeMultiplier: () => 1 };
 const price = (mutations: string[]) => estimateProduceValue("Carrot", 50, mutations, flatPrice);
@@ -35,11 +23,11 @@ const mutationKeys = memoOnCatalogs(() => {
   derivations += 1;
   return Object.keys(captureState.data.mutations ?? {});
 });
-check("a memo derives on first use", mutationKeys(), []);
+checkEqual("a memo derives on first use", mutationKeys(), []);
 mutationKeys();
-check("and not again while the catalogs are unchanged", derivations, 1);
+checkEqual("and not again while the catalogs are unchanged", derivations, 1);
 
-check("Wet doubles the price from the bundled copy", price(["Wet"]), 200);
+checkEqual("Wet doubles the price from the bundled copy", price(["Wet"]), 200);
 
 // The API answers, shaped like the real payload.
 (captureState.data as Record<string, unknown>).mutations = {
@@ -51,11 +39,7 @@ check("Wet doubles the price from the bundled copy", price(["Wet"]), 200);
   Dawnlit: { name: "Dawnlit", baseChance: 0, coinMultiplier: 4, group: "Lunar" },
 };
 
-check("the memo derives again once live data lands", mutationKeys().includes("Prismatic"), true);
-check("a multiplier the game changed reaches the price", price(["Wet"]), 300);
+checkEqual("the memo derives again once live data lands", mutationKeys().includes("Prismatic"), true);
+checkEqual("a multiplier the game changed reaches the price", price(["Wet"]), 300);
 
-if (failures) {
-  console.error(`\n${failures} check(s) failed`);
-  process.exit(1);
-}
-console.log("\nall live catalog checks passed");
+done();

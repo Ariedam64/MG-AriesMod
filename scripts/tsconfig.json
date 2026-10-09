@@ -1,0 +1,6 @@
+{
+  // The check suites, typechecked with the same options as src/. Node's own
+  // types come from _node.d.ts, since @types/node is not installed.
+  "extends": "../tsconfig.json",
+  "include": ["./**/*.ts", "../src/**/*.d.ts"]
+}

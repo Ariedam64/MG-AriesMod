@@ -7,6 +7,7 @@
 //
 // Run with: npm run check:editor
 
+import { checkEqual, done } from "./_check";
 import {
   ensureSlotIds,
   findPlayerSlot,
@@ -49,55 +50,42 @@ import {
 } from "../src/features/editor/brushSlots";
 import { sortMutationCatalogKeys, sortStoredMutationIds } from "../src/features/editor/mutationOrder";
 
-let failures = 0;
-
-function check(label: string, actual: unknown, expected: unknown): void {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
-  if (a === e) {
-    console.log(`ok   ${label}`);
-    return;
-  }
-  failures += 1;
-  console.error(`FAIL ${label}\n  expected ${e}\n  actual   ${a}`);
-}
-
 /* ------------------------------- garden model ------------------------------ */
 
-check(
+checkEqual(
   "slot ids: existing ids are kept, gaps filled from 0",
   ensureSlotIds([{ slotId: 1 }, { a: 1 }, {}]).map((s) => s.slotId),
   [1, 0, 2],
 );
-check("slot ids: not an array gives no slots", ensureSlotIds(null), []);
+checkEqual("slot ids: not an array gives no slots", ensureSlotIds(null), []);
 
 const sanitized = sanitizeGarden({
   tileObjects: { 3: { objectType: "plant", species: "Carrot", slots: [{ size: 60 }] }, 4: { objectType: "decor" } },
 });
-check("sanitize: plant slots get a slot id", sanitized.tileObjects["3"].slots, [{ size: 60, slotId: 0 }]);
-check("sanitize: decor is left alone", sanitized.tileObjects["4"], { objectType: "decor" });
-check("sanitize: a missing boardwalk map becomes empty", sanitized.boardwalkTileObjects, {});
-check("sanitize: garbage becomes an empty garden", sanitizeGarden(42), makeEmptyGarden());
+checkEqual("sanitize: plant slots get a slot id", sanitized.tileObjects["3"].slots, [{ size: 60, slotId: 0 }]);
+checkEqual("sanitize: decor is left alone", sanitized.tileObjects["4"], { objectType: "decor" });
+checkEqual("sanitize: a missing boardwalk map becomes empty", sanitized.boardwalkTileObjects, {});
+checkEqual("sanitize: garbage becomes an empty garden", sanitizeGarden(42), makeEmptyGarden());
 
 const placed = withTileObject(makeEmptyGarden(), "Boardwalk", 7, { objectType: "decor", decorId: "Bench" });
-check("withTileObject places on the right map", tileObjectAt(placed, "Boardwalk", 7), { objectType: "decor", decorId: "Bench" });
-check("withTileObject leaves the other map alone", tileObjectAt(placed, "Dirt", 7), null);
+checkEqual("withTileObject places on the right map", tileObjectAt(placed, "Boardwalk", 7), { objectType: "decor", decorId: "Bench" });
+checkEqual("withTileObject leaves the other map alone", tileObjectAt(placed, "Dirt", 7), null);
 const removed = withTileObject(placed, "Boardwalk", 7, null);
-check("withTileObject with null empties the tile", removed.boardwalkTileObjects, {});
-check("withTileObject does not touch its input", Object.keys(placed.boardwalkTileObjects), ["7"]);
+checkEqual("withTileObject with null empties the tile", removed.boardwalkTileObjects, {});
+checkEqual("withTileObject does not touch its input", Object.keys(placed.boardwalkTileObjects), ["7"]);
 
-check(
+checkEqual(
   "findPlayerSlot: array, by userId",
   findPlayerSlot([{ userId: "a" }, { userId: "b" }], "b")?.index,
   1,
 );
-check(
+checkEqual(
   "findPlayerSlot: keyed object, numeric key order, index is the key",
   findPlayerSlot({ 10: { playerId: "x" }, 2: { playerId: "y" } }, "x")?.index,
   10,
 );
-check("findPlayerSlot: non numeric key gives 0", findPlayerSlot({ foo: { id: "z" } }, "z")?.index, 0);
-check("findPlayerSlot: nobody matches", findPlayerSlot([{ userId: "a" }], "q"), null);
+checkEqual("findPlayerSlot: non numeric key gives 0", findPlayerSlot({ foo: { id: "z" } }, "z")?.index, 0);
+checkEqual("findPlayerSlot: nobody matches", findPlayerSlot([{ userId: "a" }], "q"), null);
 
 /* ------------------------------- saved gardens ----------------------------- */
 
@@ -109,30 +97,30 @@ const parsed = parseSavedGardens(
   ],
   1000,
 );
-check("saved gardens: entries without an id are dropped", parsed.map((g) => g.id), ["1", "2"]);
-check("saved gardens: defaults for name and date", [parsed[1].name, parsed[1].createdAt], ["Untitled", 1000]);
-check("saved gardens: stored plants get slot ids", parsed[0].garden.tileObjects["0"].slots, [{ slotId: 0 }]);
-check("saved gardens: not a list reads as empty", parseSavedGardens({ id: "1" }), []);
+checkEqual("saved gardens: entries without an id are dropped", parsed.map((g) => g.id), ["1", "2"]);
+checkEqual("saved gardens: defaults for name and date", [parsed[1].name, parsed[1].createdAt], ["Untitled", 1000]);
+checkEqual("saved gardens: stored plants get slot ids", parsed[0].garden.tileObjects["0"].slots, [{ slotId: 0 }]);
+checkEqual("saved gardens: not a list reads as empty", parseSavedGardens({ id: "1" }), []);
 
-check("unique name: free name is kept", uniqueGardenName("B", ["A"]), "B");
-check("unique name: numbered after the taken ones", uniqueGardenName("A", ["A", "A (1)"]), "A (2)");
-check("save name: blank becomes Untitled", gardenSaveName("   "), "Untitled");
-check("save name: trimmed", gardenSaveName("  Farm "), "Farm");
+checkEqual("unique name: free name is kept", uniqueGardenName("B", ["A"]), "B");
+checkEqual("unique name: numbered after the taken ones", uniqueGardenName("A", ["A", "A (1)"]), "A (2)");
+checkEqual("save name: blank becomes Untitled", gardenSaveName("   "), "Untitled");
+checkEqual("save name: trimmed", gardenSaveName("  Farm "), "Farm");
 
 const save = (id: string): SavedGarden => ({ id, name: id, createdAt: 0, garden: makeEmptyGarden() });
 const full = Array.from({ length: MAX_SAVED_GARDENS }, (_, i) => save(String(i)));
 const afterPrepend = prependSaved(full, save("new"));
-check("prepend: new save first, list capped", [afterPrepend[0].id, afterPrepend.length, afterPrepend.at(-1)?.id], ["new", MAX_SAVED_GARDENS, "48"]);
-check(
+checkEqual("prepend: new save first, list capped", [afterPrepend[0].id, afterPrepend.length, afterPrepend.at(-1)?.id], ["new", MAX_SAVED_GARDENS, "48"]);
+checkEqual(
   "replace: same position, new content",
   replaceSaved([save("a"), save("b")], { ...save("a"), name: "renamed" }).map((g) => g.name),
   ["renamed", "b"],
 );
 
 const garden = sanitizeGarden({ tileObjects: { 1: { objectType: "plant", species: "Carrot", slots: [{ size: 80 }] } } });
-check("export then import gives the same garden", parseGardenJson(serializeGarden(garden)), garden);
-check("import of something that is not JSON fails", parseGardenJson("{oops"), null);
-check("import of an empty file fails", parseGardenJson(""), null);
+checkEqual("export then import gives the same garden", parseGardenJson(serializeGarden(garden)), garden);
+checkEqual("import of something that is not JSON fails", parseGardenJson("{oops"), null);
+checkEqual("import of an empty file fails", parseGardenJson(""), null);
 
 /* --------------------------------- tile map -------------------------------- */
 
@@ -147,15 +135,15 @@ const map = {
   },
 };
 
-check("ownTileAt: own dirt tile", ownTileAt(map, 2, 1, 0), { tileType: "Dirt", localTileIndex: 3, userSlotIdx: 0 });
-check("ownTileAt: someone else's tile", ownTileAt(map, 3, 1, 0), null);
-check("ownTileAt: own boardwalk tile", ownTileAt(map, 5, 2, 0), { tileType: "Boardwalk", localTileIndex: 1, userSlotIdx: 0 });
-check("ownTileAt: past the map's width", ownTileAt(map, 12, 1, 0), null);
-check("ownTileAt: no map", ownTileAt(null, 2, 1, 0), null);
-check("tileCoordsOf: dirt", tileCoordsOf(map, { tileType: "Dirt", localTileIndex: 3, userSlotIdx: 0 }), { x: 2, y: 1 });
-check("tileCoordsOf: boardwalk", tileCoordsOf(map, { tileType: "Boardwalk", localTileIndex: 1, userSlotIdx: 0 }), { x: 5, y: 2 });
-check("tileCoordsOf: unknown tile", tileCoordsOf(map, { tileType: "Dirt", localTileIndex: 9, userSlotIdx: 0 }), null);
-check(
+checkEqual("ownTileAt: own dirt tile", ownTileAt(map, 2, 1, 0), { tileType: "Dirt", localTileIndex: 3, userSlotIdx: 0 });
+checkEqual("ownTileAt: someone else's tile", ownTileAt(map, 3, 1, 0), null);
+checkEqual("ownTileAt: own boardwalk tile", ownTileAt(map, 5, 2, 0), { tileType: "Boardwalk", localTileIndex: 1, userSlotIdx: 0 });
+checkEqual("ownTileAt: past the map's width", ownTileAt(map, 12, 1, 0), null);
+checkEqual("ownTileAt: no map", ownTileAt(null, 2, 1, 0), null);
+checkEqual("tileCoordsOf: dirt", tileCoordsOf(map, { tileType: "Dirt", localTileIndex: 3, userSlotIdx: 0 }), { x: 2, y: 1 });
+checkEqual("tileCoordsOf: boardwalk", tileCoordsOf(map, { tileType: "Boardwalk", localTileIndex: 1, userSlotIdx: 0 }), { x: 5, y: 2 });
+checkEqual("tileCoordsOf: unknown tile", tileCoordsOf(map, { tileType: "Dirt", localTileIndex: 9, userSlotIdx: 0 }), null);
+checkEqual(
   "slotTiles: one garden's tiles, dirt first",
   slotTiles(map, 0),
   [
@@ -163,33 +151,33 @@ check(
     { gidx: 25, tx: 5, ty: 2, localIdx: 1, tileType: "Boardwalk" },
   ],
 );
-check("mapColumns: zero columns is not a map", mapColumns({ cols: 0 }), null);
+checkEqual("mapColumns: zero columns is not a map", mapColumns({ cols: 0 }), null);
 
 /* ------------------------- slot size (placed plant) ------------------------ */
 
-check("clamp: rounds into [50, 100]", [49.6, 75.5, 100.4].map(clampSizePercent), [50, 76, 100]);
-check("clamp: not a number is the maximum", clampSizePercent(NaN), 100);
-check("parse size: comma and spaces", [parseSizeText("7,5"), parseSizeText(" 80 ")], [7.5, 80]);
-check("parse size: blank and text are not sizes", [parseSizeText(""), parseSizeText("abc")], [null, null]);
+checkEqual("clamp: rounds into [50, 100]", [49.6, 75.5, 100.4].map(clampSizePercent), [50, 76, 100]);
+checkEqual("clamp: not a number is the maximum", clampSizePercent(NaN), 100);
+checkEqual("parse size: comma and spaces", [parseSizeText("7,5"), parseSizeText(" 80 ")], [7.5, 80]);
+checkEqual("parse size: blank and text are not sizes", [parseSizeText(""), parseSizeText("abc")], [null, null]);
 
-check("initial size: read from the slot", initialSlotSize({ size: 72 }, undefined), { pct: 72, size: 72, mode: "percent" });
-check("initial size: unreadable slot shows the maximum", initialSlotSize({}, "custom"), { pct: 100, size: 100, mode: "custom" });
+checkEqual("initial size: read from the slot", initialSlotSize({ size: 72 }, undefined), { pct: 72, size: 72, mode: "percent" });
+checkEqual("initial size: unreadable slot shows the maximum", initialSlotSize({}, "custom"), { pct: 100, size: 100, mode: "custom" });
 
 const three = [initialSlotSize({ size: 60 }, undefined), initialSlotSize({ size: 70 }, "custom"), initialSlotSize({ size: 80 }, undefined)];
 const one = editSlotPercent(three, 1, 90.2, false);
-check("slider, one slot: only that slot changes", one.states.map((s) => [s.pct, s.mode]), [[60, "percent"], [90, "percent"], [80, "percent"]]);
-check("slider, one slot: writes the clamped size to that slot", [one.size, one.targets], [90, [1]]);
+checkEqual("slider, one slot: only that slot changes", one.states.map((s) => [s.pct, s.mode]), [[60, "percent"], [90, "percent"], [80, "percent"]]);
+checkEqual("slider, one slot: writes the clamped size to that slot", [one.size, one.targets], [90, [1]]);
 const all = editSlotPercent(three, 0, 55, true);
-check("slider, all slots: every slot follows", all.states.map((s) => s.pct), [55, 55, 55]);
-check("slider, all slots: written to every slot", all.targets, [0, 1, 2]);
+checkEqual("slider, all slots: every slot follows", all.states.map((s) => s.pct), [55, 55, 55]);
+checkEqual("slider, all slots: written to every slot", all.targets, [0, 1, 2]);
 
 const custom = editSlotCustom(three, 0, "150", false);
-check("custom size: written as typed, shown clamped", [custom?.size, custom?.states[0]], [150, { pct: 100, size: 150, mode: "custom" }]);
-check("custom size: blank changes nothing", editSlotCustom(three, 0, "", false), null);
+checkEqual("custom size: written as typed, shown clamped", [custom?.size, custom?.states[0]], [150, { pct: 100, size: 150, mode: "custom" }]);
+checkEqual("custom size: blank changes nothing", editSlotCustom(three, 0, "", false), null);
 const back = editSlotMode(custom!.states, 0, "percent", false);
-check("leaving custom mode brings the size back in range", [back.size, back.states[0]], [100, { pct: 100, size: 100, mode: "percent" }]);
+checkEqual("leaving custom mode brings the size back in range", [back.size, back.states[0]], [100, { pct: 100, size: 100, mode: "percent" }]);
 const allCustom = editSlotMode(three, 2, "custom", true);
-check("custom toggle, all slots: every slot takes the size and mode", allCustom.states, [
+checkEqual("custom toggle, all slots: every slot takes the size and mode", allCustom.states, [
   { pct: 80, size: 80, mode: "custom" },
   { pct: 80, size: 80, mode: "custom" },
   { pct: 80, size: 80, mode: "custom" },
@@ -197,7 +185,7 @@ check("custom toggle, all slots: every slot takes the size and mode", allCustom.
 
 /* -------------------------------- brush slots ------------------------------ */
 
-check(
+checkEqual(
   "max slots: multi harvest uses its offsets",
   [
     maxSlotsForPlant({ plant: { harvestType: "Multiple", slotOffsets: [1, 2, 3] } }),
@@ -208,40 +196,40 @@ check(
 );
 
 const fresh = syncBrushSlots(emptyBrushSlots(), "Tomato", 3);
-check("brush: a new species starts with every slot at the default", fresh.slots, [defaultBrushSlot(), defaultBrushSlot(), defaultBrushSlot()]);
-check("brush: same species keeps its slots, cut to the max", syncBrushSlots(fresh, "Tomato", 2).slots.length, 2);
-check("brush: never fewer than one slot", syncBrushSlots({ ...fresh, slots: [] }, "Tomato", 3).slots.length, 1);
-check(
+checkEqual("brush: a new species starts with every slot at the default", fresh.slots, [defaultBrushSlot(), defaultBrushSlot(), defaultBrushSlot()]);
+checkEqual("brush: same species keeps its slots, cut to the max", syncBrushSlots(fresh, "Tomato", 2).slots.length, 2);
+checkEqual("brush: never fewer than one slot", syncBrushSlots({ ...fresh, slots: [] }, "Tomato", 3).slots.length, 1);
+checkEqual(
   "brush: a custom slot is normalized to its clamped size",
   syncBrushSlots({ ...fresh, slots: [{ ...defaultBrushSlot(), sizeMode: "custom", customScale: 300 }] }, "Tomato", 3).slots[0],
   { enabled: true, sizePercent: 100, customScale: 100, sizeMode: "custom", mutations: [] },
 );
-check(
+checkEqual(
   "brush: a different species resets",
   syncBrushSlots({ ...fresh, applyAll: true }, "Carrot", 1),
   { species: "Carrot", slots: [defaultBrushSlot()], applyAll: false },
 );
 
 const patchedOne = patchBrushSlot(fresh, 1, "percent", { sizePercent: 80 });
-check("brush patch: one slot", patchedOne.slots.map((s) => s.sizePercent), [50, 80, 50]);
+checkEqual("brush patch: one slot", patchedOne.slots.map((s) => s.sizePercent), [50, 80, 50]);
 const patchedAll = patchBrushSlot({ ...fresh, applyAll: true }, 1, "custom", { customScale: 90 });
-check("brush patch: edit all writes every slot and its mode", patchedAll.slots.map((s) => [s.sizeMode, s.customScale]), [["custom", 90], ["custom", 90], ["custom", 90]]);
+checkEqual("brush patch: edit all writes every slot and its mode", patchedAll.slots.map((s) => [s.sizeMode, s.customScale]), [["custom", 90], ["custom", 90], ["custom", 90]]);
 
 const withGold = toggleBrushMutation(fresh, 0, "Gold");
-check("brush mutation: added", withGold.slots.map((s) => s.mutations), [["Gold"], [], []]);
-check("brush mutation: toggled off", toggleBrushMutation(withGold, 0, "Gold").slots[0].mutations, []);
-check("brush slots: add stops at the max", addBrushSlot(fresh, 3).slots.length, 3);
-check("brush slots: remove keeps one", removeBrushSlot({ ...fresh, slots: [defaultBrushSlot()] }).slots.length, 1);
-check(
+checkEqual("brush mutation: added", withGold.slots.map((s) => s.mutations), [["Gold"], [], []]);
+checkEqual("brush mutation: toggled off", toggleBrushMutation(withGold, 0, "Gold").slots[0].mutations, []);
+checkEqual("brush slots: add stops at the max", addBrushSlot(fresh, 3).slots.length, 3);
+checkEqual("brush slots: remove keeps one", removeBrushSlot({ ...fresh, slots: [defaultBrushSlot()] }).slots.length, 1);
+checkEqual(
   "brush size: custom uses the typed size, percent the slider",
   [brushSlotSize({ ...defaultBrushSlot(), sizeMode: "custom", customScale: 77 }), brushSlotSize({ ...defaultBrushSlot(), sizePercent: 66 })],
   [77, 66],
 );
 
 const plant = brushPlantObject("Tomato", [{ ...defaultBrushSlot(), sizePercent: 70, mutations: ["Wet"] }, { ...defaultBrushSlot(), enabled: false }, defaultBrushSlot()], 3);
-check("brush plant: one slot per enabled config, with ids", plant?.slots.map((s: any) => [s.slotId, s.size, s.mutations]), [[0, 70, ["Wet"]], [1, 50, []]]);
-check("brush plant: a plant tile object", [plant?.objectType, plant?.species], ["plant", "Tomato"]);
-check("brush plant: nothing enabled places nothing", brushPlantObject("Tomato", [{ ...defaultBrushSlot(), enabled: false }], 1), null);
+checkEqual("brush plant: one slot per enabled config, with ids", plant?.slots.map((s: any) => [s.slotId, s.size, s.mutations]), [[0, 70, ["Wet"]], [1, 50, []]]);
+checkEqual("brush plant: a plant tile object", [plant?.objectType, plant?.species], ["plant", "Tomato"]);
+checkEqual("brush plant: nothing enabled places nothing", brushPlantObject("Tomato", [{ ...defaultBrushSlot(), enabled: false }], 1), null);
 
 /* ------------------------------ mutation order ----------------------------- */
 
@@ -265,19 +253,15 @@ const weathers = {
   Thunderstorm: { mutations: [{ name: "Thunderstruck" }] },
 };
 const ordered = sortMutationCatalogKeys(Object.keys(mutations), mutations, weathers);
-check("mutation order: colour, hydro, lunar, each by multiplier", ordered, [
+checkEqual("mutation order: colour, hydro, lunar, each by multiplier", ordered, [
   "Gold", "Rainbow",
   "Chilled", "Wet", "Thunderstruck", "Thundercharged", "Frozen",
   "Dawnlit", "Dawncharged", "Amberlit",
 ]);
-check(
+checkEqual(
   "mutation order: stored ids follow it, Ambershine as Amberlit, unknown last",
   sortStoredMutationIds(["Unknown", "Ambershine", "Wet", "Gold"], ordered),
   ["Gold", "Wet", "Ambershine", "Unknown"],
 );
 
-if (failures) {
-  console.error(`\n${failures} check(s) failed`);
-  process.exit(1);
-}
-console.log("\nall editor model checks passed");
+done();

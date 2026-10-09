@@ -1,15 +1,10 @@
 // The generic helpers in src/lib that every feature builds on.
+import { check, run } from "./_check";
 import { debounce, sleep, waitUntil } from "../src/lib/async";
 import { Emitter, Subscriptions } from "../src/lib/emitter";
 import { formatInteger, formatPrice, pad2 } from "../src/lib/format";
 import { clamp, clampFinite } from "../src/lib/math";
 import { chance, pickOne } from "../src/lib/random";
-
-let failed = 0;
-function check(name: string, ok: boolean, detail = ""): void {
-  if (!ok) failed++;
-  console.log(`${ok ? "ok  " : "FAIL"} ${name}${detail ? ` ${detail}` : ""}`);
-}
 
 async function main(): Promise<void> {
   check("clamp inside", clamp(5, 0, 10) === 5);
@@ -74,9 +69,6 @@ async function main(): Promise<void> {
   debounced.cancel();
   await sleep(30);
   check("debounce cancel", calls.join() === "3");
-
-  console.log(failed ? `${failed} FAILURES` : "all good");
-  process.exit(failed ? 1 : 0);
 }
 
-main();
+run(main);

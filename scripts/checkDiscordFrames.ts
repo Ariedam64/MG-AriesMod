@@ -13,22 +13,10 @@
 //
 // Run with: npm run check:discordframes
 
+import { checkEqual, done } from "./_check";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { isDiscordHostFrame } from "../src/platform/discordFrame";
-
-let failures = 0;
-
-function check(label: string, actual: unknown, expected: unknown): void {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
-  if (a === e) {
-    console.log(`ok   ${label}`);
-    return;
-  }
-  failures += 1;
-  console.error(`FAIL ${label}\n  expected ${e}\n  actual   ${a}`);
-}
 
 const header = readFileSync(join(process.cwd(), "meta.userscript.js"), "utf8");
 
@@ -61,11 +49,11 @@ const launch =
 const discordHost = `https://1227719606223765687.discordsays.com/?${launch}`;
 const discordGame = `${discordHost}&mc_shell_frame=1`;
 
-check("Discord: the frame running the game gets the mod", runsOn(discordGame), true);
-check("Discord: the host frame around it does not", runsOn(discordHost), false);
-check("Discord: a marker that only looks alike is not the game frame", runsOn(`${discordHost}&mc_shell_frame_x=1`), false);
-check("Discord: the game frame of a host nested in a host gets it too", runsOn(`https://1227719606223765687.discordsays.com/r/abc?${launch}&mc_shell_frame=1`), true);
-check("Discord: the top page is never touched", runsOn("https://discord.com/channels/@me/1412369893080305765"), false);
+checkEqual("Discord: the frame running the game gets the mod", runsOn(discordGame), true);
+checkEqual("Discord: the host frame around it does not", runsOn(discordHost), false);
+checkEqual("Discord: a marker that only looks alike is not the game frame", runsOn(`${discordHost}&mc_shell_frame_x=1`), false);
+checkEqual("Discord: the game frame of a host nested in a host gets it too", runsOn(`https://1227719606223765687.discordsays.com/r/abc?${launch}&mc_shell_frame=1`), true);
+checkEqual("Discord: the top page is never touched", runsOn("https://discord.com/channels/@me/1412369893080305765"), false);
 
 // The header alone is not enough: a personal loader header, or a manager that
 // widens the rule, still injects into the host. The bundle then checks for
@@ -74,18 +62,14 @@ const at = (url: string) => {
   const u = new URL(url);
   return { hostname: u.hostname, search: u.search };
 };
-check("code: the Discord host frame is recognised", isDiscordHostFrame(at(discordHost)), true);
-check("code: the Discord game frame is not the host", isDiscordHostFrame(at(discordGame)), false);
-check("code: a look-alike marker does not make a game frame", isDiscordHostFrame(at(`${discordHost}&mc_shell_frame_x=1`)), true);
-check("code: a web room is never a Discord host", isDiscordHostFrame(at("https://magicgarden.gg/r/ABCD")), false);
+checkEqual("code: the Discord host frame is recognised", isDiscordHostFrame(at(discordHost)), true);
+checkEqual("code: the Discord game frame is not the host", isDiscordHostFrame(at(discordGame)), false);
+checkEqual("code: a look-alike marker does not make a game frame", isDiscordHostFrame(at(`${discordHost}&mc_shell_frame_x=1`)), true);
+checkEqual("code: a web room is never a Discord host", isDiscordHostFrame(at("https://magicgarden.gg/r/ABCD")), false);
 
-check("web: a magicgarden.gg room", runsOn("https://magicgarden.gg/r/ABCD"), true);
-check("web: a magiccircle.gg room", runsOn("https://magiccircle.gg/r/ABCD"), true);
-check("web: a starweaver.org room", runsOn("https://starweaver.org/r/ABCD"), true);
-check("web: the API page for the auth bridge", runsOn("https://ariesmod-api.ariedam.fr/auth/callback"), true);
+checkEqual("web: a magicgarden.gg room", runsOn("https://magicgarden.gg/r/ABCD"), true);
+checkEqual("web: a magiccircle.gg room", runsOn("https://magiccircle.gg/r/ABCD"), true);
+checkEqual("web: a starweaver.org room", runsOn("https://starweaver.org/r/ABCD"), true);
+checkEqual("web: the API page for the auth bridge", runsOn("https://ariesmod-api.ariedam.fr/auth/callback"), true);
 
-if (failures > 0) {
-  console.error(`\n${failures} check(s) failed`);
-  process.exit(1);
-}
-console.log("\nall discord frame checks passed");
+done();

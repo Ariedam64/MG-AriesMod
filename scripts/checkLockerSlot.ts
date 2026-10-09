@@ -9,14 +9,8 @@
 // crop price badge priced.
 //
 // Run with: npm run check:lockerslot
+import { checkEqual, done } from "./_check";
 import { selectedSlotInfo } from "../src/features/locker/slotWatcher";
-
-let failed = 0;
-const check = (label: string, got: unknown, want: unknown) => {
-  const ok = String(got) === String(want);
-  if (!ok) failed++;
-  console.log(`${ok ? "ok  " : "FAIL"} ${label}: ${got}${ok ? "" : ` (expected ${want})`}`);
-};
 
 const slot = (slotId: number, extra: Record<string, unknown> = {}) => ({
   slotId,
@@ -33,23 +27,22 @@ const plant = (slots: unknown[]) => ({ objectType: "plant", species: "Carrot", s
 const carrot = plant([slot(4), slot(1), slot(7)]);
 const picked = (cursor: number | null) => selectedSlotInfo(carrot, cursor).slot?.slotId;
 
-check("an exact id is that fruit", picked(7), 7);
-check("a harvested id moves to the next id upwards", picked(5), 7);
-check("an id below every fruit is the lowest", picked(0), 1);
-check("an id past every fruit wraps to the lowest", picked(9), 1);
-check("no cursor yet is the lowest id", picked(null), 1);
+checkEqual("an exact id is that fruit", picked(7), 7);
+checkEqual("a harvested id moves to the next id upwards", picked(5), 7);
+checkEqual("an id below every fruit is the lowest", picked(0), 1);
+checkEqual("an id past every fruit wraps to the lowest", picked(9), 1);
+checkEqual("no cursor yet is the lowest id", picked(null), 1);
 
 const info = selectedSlotInfo(carrot, 4);
-check("the size is the selected fruit's", info.sizePercent, 64);
-check("its index is its place in slots[]", info.slotIndex, 0);
+checkEqual("the size is the selected fruit's", info.sizePercent, 64);
+checkEqual("its index is its place in slots[]", info.slotIndex, 0);
 
 const clover = selectedSlotInfo(plant([slot(0, { species: "FourLeafClover", mutations: ["gold"] })]), 0);
-check("a fruit of its own species is judged as that species", clover.seedKey, "FourLeafClover");
-check("its mutations are read in the locker's spelling", clover.mutations.join(","), "Gold");
+checkEqual("a fruit of its own species is judged as that species", clover.seedKey, "FourLeafClover");
+checkEqual("its mutations are read in the locker's spelling", clover.mutations.join(","), "Gold");
 
-check("an empty plant selects nothing", selectedSlotInfo(plant([]), 0).slot, null);
-check("an empty plant is still a plant", selectedSlotInfo(plant([]), 0).isPlant, true);
-check("an egg is not a plant", selectedSlotInfo({ objectType: "egg", eggId: "CommonEgg" }, 0).isPlant, false);
+checkEqual("an empty plant selects nothing", selectedSlotInfo(plant([]), 0).slot, null);
+checkEqual("an empty plant is still a plant", selectedSlotInfo(plant([]), 0).isPlant, true);
+checkEqual("an egg is not a plant", selectedSlotInfo({ objectType: "egg", eggId: "CommonEgg" }, 0).isPlant, false);
 
-console.log(failed ? `${failed} FAILURE(S)` : "All checks passed.");
-process.exit(failed ? 1 : 0);
+done();

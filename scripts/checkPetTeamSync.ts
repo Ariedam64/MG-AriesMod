@@ -5,14 +5,8 @@
 // The server side is simulated from the game's own SavePetTeam reducer
 // (v1284): the name is trimmed and cut to 16 grapheme clusters, and a created
 // team is put at the FRONT of `petTeams`.
+import { checkEqual, done } from "./_check";
 import { reconcilePetTeams, type PetTeam, type ServerPetTeam } from "../src/features/pets/teamReconcile";
-
-let failed = 0;
-const check = (label: string, got: unknown, want: unknown) => {
-  const ok = String(got) === String(want);
-  if (!ok) failed++;
-  console.log(`${ok ? "ok  " : "FAIL"} ${label}: ${got}${ok ? "" : ` (expected ${want})`}`);
-};
 
 const gameName = (name: string) => {
   const segs = Array.from(new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(name.trim()));
@@ -55,11 +49,11 @@ function session(teams: PetTeam[], server: ServerPetTeam[]) {
   let teams: PetTeam[] = [{ id: "a", name: "Crop Size Boosters", slots: ["p1", "p2", null], serverId: null }];
   const s1 = session(teams, server);
   teams = s1.teams;
-  check("long name: one local team after the create", teams.length, 1);
-  check("long name: linked to the server team", teams[0]?.serverId != null, true);
+  checkEqual("long name: one local team after the create", teams.length, 1);
+  checkEqual("long name: linked to the server team", teams[0]?.serverId != null, true);
   const s2 = session(teams, server);
-  check("long name: reload creates nothing more", s2.creates, 0);
-  check("long name: still one server team after reload", server.length, 1);
+  checkEqual("long name: reload creates nothing more", s2.creates, 0);
+  checkEqual("long name: still one server team after reload", server.length, 1);
 }
 
 // 2. A second team named like an existing one ("Team 3" again after a delete).
@@ -71,11 +65,11 @@ function session(teams: PetTeam[], server: ServerPetTeam[]) {
   ];
   const s1 = session(teams, server);
   teams = s1.teams;
-  check("same name: two local teams, no import", teams.length, 2);
-  check("same name: the new team got linked", teams.find(t => t.id === "new")?.serverId != null, true);
+  checkEqual("same name: two local teams, no import", teams.length, 2);
+  checkEqual("same name: the new team got linked", teams.find(t => t.id === "new")?.serverId != null, true);
   const s2 = session(teams, server);
-  check("same name: reload creates nothing more", s2.creates, 0);
-  check("same name: two server teams after reload", server.length, 2);
+  checkEqual("same name: reload creates nothing more", s2.creates, 0);
+  checkEqual("same name: two server teams after reload", server.length, 2);
 }
 
 // 3. A roster already damaged by the bug: the original local team never
@@ -91,18 +85,17 @@ function session(teams: PetTeam[], server: ServerPetTeam[]) {
     { id: "dup", name: "Team 3", slots: ["y", null, null], serverId: "N" },
   ];
   const s = session(teams, server);
-  check("damaged roster: reload creates nothing", s.creates, 0);
-  check("damaged roster: the copy is folded back", s.teams.length, 2);
-  check("damaged roster: the original id keeps the link", s.teams.find(t => t.id === "orig")?.serverId, "N");
+  checkEqual("damaged roster: reload creates nothing", s.creates, 0);
+  checkEqual("damaged roster: the copy is folded back", s.teams.length, 2);
+  checkEqual("damaged roster: the original id keeps the link", s.teams.find(t => t.id === "orig")?.serverId, "N");
 }
 
 // 4. The ordinary case still works.
 {
   const server: ServerPetTeam[] = [];
   const s = session([{ id: "a", name: "Hatchers", slots: ["p1", null, null], serverId: null }], server);
-  check("plain name: linked", s.teams[0]?.serverId != null, true);
-  check("plain name: one team", s.teams.length, 1);
+  checkEqual("plain name: linked", s.teams[0]?.serverId != null, true);
+  checkEqual("plain name: one team", s.teams.length, 1);
 }
 
-console.log(failed ? `${failed} FAILURE(S)` : "All checks passed.");
-process.exit(failed ? 1 : 0);
+done();

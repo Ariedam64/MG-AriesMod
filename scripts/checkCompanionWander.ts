@@ -1,12 +1,13 @@
-// Vérifie ce qui donne un but à ses flâneries, et quand il en parle.
+// Checks what gives its wandering a purpose, and when it talks about it.
 //
-// Tout est pur (src/features/companion/wander.ts et movement.ts) : la
-// lecture du jardin et les poses vivent à part, dans wanderWatch.ts, et ne
-// décident de rien.
+// Everything here is pure (src/features/companion/wander.ts and movement.ts):
+// reading the garden and playing poses live apart, in wanderWatch.ts, and
+// decide nothing.
 //
-// Aucune espèce, mutation ou œuf du jeu n'apparaît ici : les noms sont
-// inventés exprès, pour prouver qu'ils viennent bien des fonctions injectées.
+// No species, mutation or egg from the game appears here: the names are made
+// up on purpose, to prove they really come from the injected functions.
 
+import { checkEqual, done } from "./_check";
 import {
   ALMOST_READY_MS,
   COMMENT_COOLDOWN_MS,
@@ -34,15 +35,8 @@ import {
 } from "../src/features/companion/movement";
 import { EmoteType } from "../src/features/companion/emoteTypes";
 
-let fails = 0;
-const check = (label: string, got: unknown, want: unknown) => {
-  const ok = String(got) === String(want);
-  if (!ok) fails++;
-  console.log(`${ok ? "ok  " : "FAIL"}  ${label}${ok ? "" : `\n        got=${got}  want=${want}`}`);
-};
-
 const fixedRandom = (v: number) => () => v;
-/** Suite de tirages imposée, puis 0 indéfiniment. */
+/** A fixed run of draws, then 0 forever. */
 const sequence = (...values: number[]) => {
   let i = 0;
   return () => (i < values.length ? values[i++] : 0);
@@ -51,13 +45,13 @@ const sequence = (...values: number[]) => {
 const NOW = 1_800_000_000_000;
 const chebyshev = (a: XY, b: XY) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
 
-/** Parcelle de 10 cases de large : la case de terre n s'y trouve en (n % 10, floor(n / 10)) + (10, 10). */
+/** A plot 10 tiles wide: dirt tile n sits at (n % 10, floor(n / 10)) + (10, 10). */
 const tileXY = (idx: number): XY | null => (idx >= 0 && idx < 100 ? { x: 10 + (idx % 10), y: 10 + Math.floor(idx / 10) } : null);
 const idxAt = (x: number, y: number) => (y - 10) * 10 + (x - 10);
 
 const openMap: IsWalkable = (x, y) => x >= 0 && y >= 0 && x < 40 && y < 40;
 
-/** Zone de flânerie telle que movement.ts la fournit : rayon, ni centre ni case courante. */
+/** The wander area as movement.ts provides it: a radius, excluding both the centre and the current tile. */
 function areaAround(center: XY, radius: number, from: XY, walkable: IsWalkable = openMap): WanderArea {
   return {
     center,
@@ -106,23 +100,23 @@ const egg = (maturedAt: number, eggId = "Wobbly") => ({ objectType: "egg", eggId
 
 /* ------------------------------------------------------------------ */
 
-console.log("--- le tirage de chance ---");
+console.log("--- the chance draw ---");
 {
   const garden = { [idxAt(16, 15)]: plant([ripeSlot()]) };
-  check("chance par defaut : une flanerie sur deux", INTEREST_CHANCE, 0.5);
-  check("tirage au-dessus de la chance -> balade au hasard", pickWanderInterest(baseInput(garden, { chance: 0.5, random: fixedRandom(0.6) })), "null");
-  check("tirage sous la chance -> un but", pickWanderInterest(baseInput(garden, { chance: 0.5, random: fixedRandom(0.1) })) !== null, true);
-  check("chance nulle -> jamais", pickWanderInterest(baseInput(garden, { chance: 0, random: fixedRandom(0) })), "null");
+  checkEqual("default chance: one stroll in two", INTEREST_CHANCE, 0.5);
+  checkEqual("draw above the chance -> random stroll", pickWanderInterest(baseInput(garden, { chance: 0.5, random: fixedRandom(0.6) })), null);
+  checkEqual("draw below the chance -> a purpose", pickWanderInterest(baseInput(garden, { chance: 0.5, random: fixedRandom(0.1) })) !== null, true);
+  checkEqual("zero chance -> never", pickWanderInterest(baseInput(garden, { chance: 0, random: fixedRandom(0) })), null);
 }
 
-console.log("\n--- entrees invalides ---");
+console.log("\n--- invalid inputs ---");
 {
   for (const [label, value] of [
     ["null", null],
     ["undefined", undefined],
-    ["chaine", "garden"],
-    ["nombre", 42],
-    ["objet vide", {}],
+    ["string", "garden"],
+    ["number", 42],
+    ["empty object", {}],
   ] as Array<[string, unknown]>) {
     let crashed = false;
     let result: unknown = "x";
@@ -131,7 +125,7 @@ console.log("\n--- entrees invalides ---");
     } catch {
       crashed = true;
     }
-    check(`jardin ${label} -> null sans crash`, !crashed && result === null, true);
+    checkEqual(`garden ${label} -> null without a crash`, !crashed && result === null, true);
   }
   const junk = {
     "0": null,
@@ -142,117 +136,117 @@ console.log("\n--- entrees invalides ---");
     abc: plant([ripeSlot()]),
     "-1": plant([ripeSlot()]),
   };
-  check("tuiles malformees ou etrangeres ignorees", listInterests(baseInput(junk)).length, 0);
+  checkEqual("malformed or foreign tiles are ignored", listInterests(baseInput(junk)).length, 0);
 }
 
 console.log("\n--- crops ---");
 {
   const garden = { [idxAt(16, 15)]: plant([ripeSlot()]) };
   const got = pickWanderInterest(baseInput(garden));
-  check("crop mur -> interet", got?.kind, "ripe");
-  check("crop mur -> pose Clapping", got?.emote, EmoteType.Clapping);
-  check("le nom vient du catalogue injecte", got?.label, "crop<Zorblax>");
-  check("la cible est le crop", got && `${got.target.x},${got.target.y}`, "16,15");
-  check("la cle de tuile est gardee pour verifier a l'arrivee", got?.dirtTileIdx, idxAt(16, 15));
-  check("il se poste a cote, pas dessus", got && chebyshev(got.tile, got.target), 1);
-  check("et sur une case que la flanerie accepte", got && baseInput(garden).area.isWalkable(got.tile.x, got.tile.y), true);
-  check("orthogonale de preference", got && manhattan(got.tile, got.target), 1);
+  checkEqual("ripe crop -> interest", got?.kind, "ripe");
+  checkEqual("ripe crop -> Clapping pose", got?.emote, EmoteType.Clapping);
+  checkEqual("the name comes from the injected catalog", got?.label, "crop<Zorblax>");
+  checkEqual("the target is the crop", got && `${got.target.x},${got.target.y}`, "16,15");
+  checkEqual("the tile key is kept to check on arrival", got?.dirtTileIdx, idxAt(16, 15));
+  checkEqual("it stands next to it, not on it", got && chebyshev(got.tile, got.target), 1);
+  checkEqual("and on a tile wandering accepts", got && baseInput(garden).area.isWalkable(got.tile.x, got.tile.y), true);
+  checkEqual("orthogonal by preference", got && manhattan(got.tile, got.target), 1);
 }
 {
   const garden = { [idxAt(16, 15)]: plant([ripeSlot({ preserved: true })]) };
-  check("crop preserve : rien a remarquer", listInterests(baseInput(garden)).length, 0);
+  checkEqual("preserved crop: nothing to notice", listInterests(baseInput(garden)).length, 0);
 }
 {
   const garden = { [idxAt(16, 15)]: plant([growingSlot()]) };
-  check("crop loin d'etre mur : ignore", listInterests(baseInput(garden)).length, 0);
+  checkEqual("a crop far from ripe: ignored", listInterests(baseInput(garden)).length, 0);
 }
 {
   const soon = { [idxAt(16, 15)]: plant([growingSlot({ endTime: NOW + ALMOST_READY_MS - 1_000 })]) };
   const got = pickWanderInterest(baseInput(soon));
-  check("crop a moins de 2 min -> presque pret", got?.kind, "almostRipe");
-  check("presque pret -> pose Questioning", got?.emote, EmoteType.Questioning);
+  checkEqual("crop under 2 min away -> almost ready", got?.kind, "almostRipe");
+  checkEqual("almost ready -> Questioning pose", got?.emote, EmoteType.Questioning);
   const longCrop = { [idxAt(16, 15)]: plant([growingSlot({ startTime: NOW - 95 * 3_600_000, endTime: NOW + 5 * 3_600_000 })]) };
-  check("crop long a 95 % -> presque pret aussi", pickWanderInterest(baseInput(longCrop))?.kind, "almostRipe");
+  checkEqual("a long crop at 95% -> almost ready too", pickWanderInterest(baseInput(longCrop))?.kind, "almostRipe");
 }
 {
   const garden = { [idxAt(16, 15)]: plant([growingSlot({ mutations: ["Glimmer"] })]) };
   const got = pickWanderInterest(baseInput(garden));
-  check("mutation rare -> interet, meme pas mur", got?.kind, "rare");
-  check("mutation rare -> pose Love", got?.emote, EmoteType.Love);
-  check("label : mutation puis crop, tous deux du catalogue", got?.label, "mut<Glimmer> crop<Zorblax>");
+  checkEqual("rare mutation -> interest, even unripe", got?.kind, "rare");
+  checkEqual("rare mutation -> Love pose", got?.emote, EmoteType.Love);
+  checkEqual("label: mutation then crop, both from the catalog", got?.label, "mut<Glimmer> crop<Zorblax>");
   const common = { [idxAt(16, 15)]: plant([growingSlot({ mutations: ["Soggy"] })]) };
-  check("mutation sans baseChance (hors liste) : pas rare", listInterests(baseInput(common)).length, 0);
+  checkEqual("a mutation with no baseChance (not listed): not rare", listInterests(baseInput(common)).length, 0);
   const noRare = pickWanderInterest(baseInput(garden, { rareMutations: new Set() }));
-  check("liste rare vide (catalogue illisible) : rien d'invente", noRare, "null");
+  checkEqual("empty rare list (unreadable catalog): nothing made up", noRare, null);
 }
 {
-  // Une plante a plusieurs sous-slots : le plus remarquable l'emporte.
+  // A plant with several sub-slots: the most remarkable one wins.
   const garden = { [idxAt(16, 15)]: plant([ripeSlot(), growingSlot({ mutations: ["Prism"] }), growingSlot()]) };
   const all = listInterests(baseInput(garden));
-  check("une seule entree par plante", all.length, 1);
-  check("le rare passe devant le mur", all[0]?.kind, "rare");
+  checkEqual("a single entry per plant", all.length, 1);
+  checkEqual("rare comes before ripe", all[0]?.kind, "rare");
 }
 {
-  // L'espece du sous-slot prime ; a defaut, celle de la plante.
+  // The sub-slot's species comes first; failing that, the plant's.
   const garden = { [idxAt(16, 15)]: plant([{ startTime: NOW - 10, endTime: NOW - 1, mutations: [] }], "Quibble") };
-  check("espece de la plante en repli", pickWanderInterest(baseInput(garden))?.label, "crop<Quibble>");
+  checkEqual("the plant's species as a fallback", pickWanderInterest(baseInput(garden))?.label, "crop<Quibble>");
 }
 {
-  // Horodatages en secondes : normalises comme ailleurs dans le mod.
+  // Timestamps in seconds: normalised as elsewhere in the mod.
   const garden = { [idxAt(16, 15)]: plant([ripeSlot({ startTime: (NOW - 600_000) / 1000, endTime: (NOW - 1_000) / 1000 })]) };
-  check("endTime en secondes compris", pickWanderInterest(baseInput(garden))?.kind, "ripe");
+  checkEqual("endTime in seconds is understood", pickWanderInterest(baseInput(garden))?.kind, "ripe");
 }
 
-console.log("\n--- oeufs ---");
+console.log("\n--- eggs ---");
 {
   const ready = { [idxAt(16, 15)]: egg(NOW - 5_000) };
   const got = pickWanderInterest(baseInput(ready));
-  check("oeuf mur -> interet", got?.kind, "eggReady");
-  check("oeuf mur -> pose Clapping", got?.emote, EmoteType.Clapping);
-  check("nom de l'oeuf injecte", got?.label, "egg<Wobbly>");
+  checkEqual("ripe egg -> interest", got?.kind, "eggReady");
+  checkEqual("ripe egg -> Clapping pose", got?.emote, EmoteType.Clapping);
+  checkEqual("the egg's name is injected", got?.label, "egg<Wobbly>");
   const inSeconds = { [idxAt(16, 15)]: egg((NOW - 5_000) / 1000) };
-  check("maturedAt en secondes compris", pickWanderInterest(baseInput(inSeconds))?.kind, "eggReady");
+  checkEqual("maturedAt in seconds is understood", pickWanderInterest(baseInput(inSeconds))?.kind, "eggReady");
   const soon = { [idxAt(16, 15)]: egg(NOW + 60_000) };
-  check("oeuf a 1 min -> sur le point d'eclore", pickWanderInterest(baseInput(soon))?.kind, "eggSoon");
-  check("sur le point -> pose Questioning", pickWanderInterest(baseInput(soon))?.emote, EmoteType.Questioning);
+  checkEqual("egg 1 min away -> about to hatch", pickWanderInterest(baseInput(soon))?.kind, "eggSoon");
+  checkEqual("about to hatch -> Questioning pose", pickWanderInterest(baseInput(soon))?.emote, EmoteType.Questioning);
   const far = { [idxAt(16, 15)]: egg(NOW + 3_600_000) };
-  check("oeuf a 1 h : ignore", listInterests(baseInput(far)).length, 0);
+  checkEqual("egg 1 h away: ignored", listInterests(baseInput(far)).length, 0);
   const noDate = { [idxAt(16, 15)]: { objectType: "egg", eggId: "Wobbly" } };
-  check("oeuf sans echeance : on ne devine pas", listInterests(baseInput(noDate)).length, 0);
+  checkEqual("egg with no due time: no guessing", listInterests(baseInput(noDate)).length, 0);
 }
 
-console.log("\n--- portee ---");
+console.log("\n--- reach ---");
 {
-  // Zone : rayon 3 autour de (15,15). Un crop en (19,15) a une voisine (18,15) dans le rayon.
+  // Area: radius 3 around (15,15). A crop at (19,15) has a neighbour (18,15) within the radius.
   const edge = { [idxAt(19, 15)]: plant([ripeSlot()]) };
   const got = pickWanderInterest(baseInput(edge));
-  check("crop juste au bord : poste depuis l'interieur", got && `${got.tile.x},${got.tile.y}`, "18,15");
+  checkEqual("crop right at the edge: stands on the inside", got && `${got.tile.x},${got.tile.y}`, "18,15");
   const far = { [idxAt(19, 10)]: plant([ripeSlot()]), [idxAt(10, 10)]: plant([ripeSlot()]) };
-  check("crops hors de portee ignores", listInterests(baseInput(far)).length, 0);
-  // En coin, a rayon + 1 : la voisine diagonale (18,18) est dans le rayon.
+  checkEqual("crops out of reach are ignored", listInterests(baseInput(far)).length, 0);
+  // In a corner, at radius + 1: the diagonal neighbour (18,18) is within the radius.
   const corner = { [idxAt(19, 19)]: plant([ripeSlot()]) };
   const viaCorner = pickWanderInterest(baseInput(corner));
-  check("crop en coin a rayon + 1 : atteint par la diagonale", viaCorner && `${viaCorner.tile.x},${viaCorner.tile.y}`, "18,18");
+  checkEqual("corner crop at radius + 1: reached by the diagonal", viaCorner && `${viaCorner.tile.x},${viaCorner.tile.y}`, "18,18");
   const lost = { [idxAt(16, 15)]: plant([ripeSlot()]) };
-  check("tuile sans position connue ignoree", listInterests(baseInput(lost, { tileXY: () => null })).length, 0);
+  checkEqual("a tile with no known position is ignored", listInterests(baseInput(lost, { tileXY: () => null })).length, 0);
 }
 {
-  // Crop cerne : aucune voisine praticable, il n'y a nulle part ou se poster.
+  // A surrounded crop: no usable neighbour, nowhere to stand.
   const target = { x: 16, y: 15 };
   const walled: IsWalkable = (x, y) => openMap(x, y) && chebyshev({ x, y }, target) !== 1;
   const garden = { [idxAt(16, 15)]: plant([ripeSlot()]) };
-  check(
-    "crop cerne : ignore",
+  checkEqual(
+    "surrounded crop: ignored",
     listInterests(baseInput(garden, { area: areaAround({ x: 15, y: 15 }, 3, { x: 13, y: 13 }, walled) })).length,
     0
   );
-  // Seules les diagonales sont libres : on s'en contente.
+  // Only the diagonals are free: it makes do with them.
   const diagOnly: IsWalkable = (x, y) => openMap(x, y) && !(manhattan({ x, y }, target) === 1);
   const got = pickWanderInterest(baseInput(garden, { area: areaAround({ x: 15, y: 15 }, 3, { x: 13, y: 13 }, diagOnly) }));
-  check("diagonales seules : il se poste en diagonale", got && chebyshev(got.tile, target) === 1 && manhattan(got.tile, target) === 2, true);
+  checkEqual("diagonals only: it stands on a diagonal", got && chebyshev(got.tile, target) === 1 && manhattan(got.tile, target) === 2, true);
 }
 {
-  // Fuzz : quoi qu'il arrive, la case rendue est acceptee par la zone.
+  // Fuzz: whatever happens, the tile returned is accepted by the area.
   const garden: Record<string, unknown> = {};
   for (let i = 0; i < 100; i += 3) garden[i] = i % 2 ? plant([ripeSlot()]) : egg(NOW - 1);
   let bad = 0;
@@ -265,13 +259,13 @@ console.log("\n--- portee ---");
     found++;
     if (!area.isWalkable(got.tile.x, got.tile.y) || chebyshev(got.tile, got.target) !== 1) bad++;
   }
-  check("500 tirages : toujours une case acceptee, voisine de l'objet", bad, 0);
-  check("et il en trouve bien", found > 400, true);
+  checkEqual("500 draws: always an accepted tile next to the object", bad, 0);
+  checkEqual("and it does find some", found > 400, true);
 }
 
-console.log("\n--- le choix entre plusieurs ---");
+console.log("\n--- choosing among several ---");
 {
-  // Un seul Gold perdu parmi des crops murs : le tirage par sorte le fait ressortir.
+  // A single Gold lost among ripe crops: drawing by kind brings it out.
   const garden: Record<string, unknown> = {
     [idxAt(14, 14)]: plant([ripeSlot()]),
     [idxAt(15, 14)]: plant([ripeSlot()]),
@@ -286,11 +280,11 @@ console.log("\n--- le choix entre plusieurs ---");
     if (got) counts[got.kind] = (counts[got.kind] ?? 0) + 1;
   }
   const rareShare = (counts.rare ?? 0) / 4000;
-  check("le rare ressort souvent malgre 5 crops murs (~71 %)", rareShare > 0.6 && rareShare < 0.82, true);
-  check("les murs ne disparaissent pas pour autant", (counts.ripe ?? 0) > 600, true);
+  checkEqual("the rare one comes up often despite 5 ripe crops (~71%)", rareShare > 0.6 && rareShare < 0.82, true);
+  checkEqual("the ripe ones do not vanish for all that", (counts.ripe ?? 0) > 600, true);
 }
 
-console.log("\n--- repliques ---");
+console.log("\n--- lines ---");
 {
   const kinds: InterestKind[] = ["rare", "ripe", "almostRipe", "eggReady", "eggSoon"];
   let empty = 0;
@@ -308,42 +302,42 @@ console.log("\n--- repliques ---");
     }
     variety.set(kind, lines);
   }
-  check("aucune replique vide", empty, 0);
-  check("aucun tiret long ou moyen", dashes, 0);
-  check("aucun trou dans un gabarit", undef, 0);
-  check("chaque sorte a de 2 a 4 variantes", kinds.every((k) => (variety.get(k)?.size ?? 0) >= 2 && (variety.get(k)?.size ?? 0) <= 4), true);
-  check("article devant une voyelle", interestLine("rare", "Opal Fig", fixedRandom(0)), "Ooh, an Opal Fig.");
-  check("article devant une consonne", interestLine("rare", "Glimmer Fig", fixedRandom(0)), "Ooh, a Glimmer Fig.");
-  check("majuscule en debut de phrase", interestLine("rare", "Opal Fig", fixedRandom(0.5)), "An Opal Fig. Pretty, isn't it?");
-  check("pose de chaque sorte definie", kinds.every((k) => typeof KIND_EMOTE[k] === "number"), true);
+  checkEqual("no empty line", empty, 0);
+  checkEqual("no em or en dash", dashes, 0);
+  checkEqual("no hole in a template", undef, 0);
+  checkEqual("each kind has 2 to 4 variants", kinds.every((k) => (variety.get(k)?.size ?? 0) >= 2 && (variety.get(k)?.size ?? 0) <= 4), true);
+  checkEqual("article before a vowel", interestLine("rare", "Opal Fig", fixedRandom(0)), "Ooh, an Opal Fig.");
+  checkEqual("article before a consonant", interestLine("rare", "Glimmer Fig", fixedRandom(0)), "Ooh, a Glimmer Fig.");
+  checkEqual("capital at the start of a sentence", interestLine("rare", "Opal Fig", fixedRandom(0.5)), "An Opal Fig. Pretty, isn't it?");
+  checkEqual("every kind has a pose", kinds.every((k) => typeof KIND_EMOTE[k] === "number"), true);
   const got = pickWanderInterest(baseInput({ [idxAt(16, 15)]: plant([ripeSlot()]) }));
-  check("la replique rendue est deja prete a dire", got?.line, "This crop<Zorblax> looks ready.");
+  checkEqual("the returned line is ready to say", got?.line, "This crop<Zorblax> looks ready.");
 }
 
-console.log("\n--- parler, ou seulement poser ---");
+console.log("\n--- speaking, or only posing ---");
 {
   const base = { now: NOW, lastCommentAt: 0, distanceToPlayer: 3, busy: false, random: fixedRandom(0.1) };
-  check("pres, libre, tirage favorable -> parle", shouldComment(base), true);
-  check("tirage defavorable -> pose seulement", shouldComment({ ...base, random: fixedRandom(0.3) }), false);
-  check("occupe -> jamais", shouldComment({ ...base, busy: true }), false);
-  check("joueur trop loin -> jamais", shouldComment({ ...base, distanceToPlayer: COMMENT_MAX_DISTANCE + 1 }), false);
-  check("joueur juste a portee -> possible", shouldComment({ ...base, distanceToPlayer: COMMENT_MAX_DISTANCE }), true);
-  check("distance inconnue -> jamais", shouldComment({ ...base, distanceToPlayer: null }), false);
-  check("tout juste parle -> se tait", shouldComment({ ...base, lastCommentAt: NOW - 60_000 }), false);
-  check("pause ecoulee -> peut reparler", shouldComment({ ...base, lastCommentAt: NOW - COMMENT_COOLDOWN_MS }), true);
-  // Pas de hasard consomme pour une replique deja interdite.
+  checkEqual("near, free, lucky draw -> speaks", shouldComment(base), true);
+  checkEqual("unlucky draw -> pose only", shouldComment({ ...base, random: fixedRandom(0.3) }), false);
+  checkEqual("busy -> never", shouldComment({ ...base, busy: true }), false);
+  checkEqual("player too far -> never", shouldComment({ ...base, distanceToPlayer: COMMENT_MAX_DISTANCE + 1 }), false);
+  checkEqual("player just in range -> possible", shouldComment({ ...base, distanceToPlayer: COMMENT_MAX_DISTANCE }), true);
+  checkEqual("unknown distance -> never", shouldComment({ ...base, distanceToPlayer: null }), false);
+  checkEqual("just spoke -> stays quiet", shouldComment({ ...base, lastCommentAt: NOW - 60_000 }), false);
+  checkEqual("pause over -> may speak again", shouldComment({ ...base, lastCommentAt: NOW - COMMENT_COOLDOWN_MS }), true);
+  // No randomness is used up for a line that is already ruled out.
   let draws = 0;
   shouldComment({ ...base, busy: true, random: () => (draws++, 0) });
-  check("aucun tirage quand c'est deja non", draws, 0);
-  // Environ une fois sur quatre.
+  checkEqual("no draw when the answer is already no", draws, 0);
+  // About one time in four.
   let spoke = 0;
   for (let i = 0; i < 4000; i++) if (shouldComment({ ...base, random: Math.random })) spoke++;
-  check("environ une arrivee sur quatre", spoke > 800 && spoke < 1200, true);
+  checkEqual("about one arrival in four", spoke > 800 && spoke < 1200, true);
 }
 
-console.log("\n--- bout a bout avec la boucle de deplacement ---");
+console.log("\n--- end to end with the movement loop ---");
 {
-  // Mode jardin : il flane, va voir l'oeuf mur, et l'arrivee est signalee.
+  // Garden mode: it wanders, goes to look at the ripe egg, and the arrival is reported.
   const inGarden: IsWalkable = (x, y) => x >= 10 && x < 20 && y >= 10 && y < 20;
   const anchor: Anchor = { tile: { x: 15, y: 15 }, onArrival: "wander", tracksPlayer: false, zone: inGarden, wanderRadius: 4 };
   const garden = { [idxAt(18, 12)]: egg(NOW - 1) };
@@ -371,16 +365,16 @@ console.log("\n--- bout a bout avec la boucle de deplacement ---");
   }
   const pickedTile = picked as XY | null;
   const reached = reachedAt as XY | null;
-  check("il choisit une case a cote de l'oeuf", pickedTile && chebyshev(pickedTile, { x: 18, y: 12 }), 1);
-  check("il y arrive, et l'arrivee est signalee", reached && pickedTile && reached.x === pickedTile.x && reached.y === pickedTile.y, true);
-  check("a pied, sans pas illegal", illegal, 0);
-  check("puis il marque une pause tiree dans la plage", state.wanderCooldown >= DEFAULT_MOVEMENT_CONFIG.wanderPauseTicks, true);
+  checkEqual("it picks a tile next to the egg", pickedTile && chebyshev(pickedTile, { x: 18, y: 12 }), 1);
+  checkEqual("it gets there, and the arrival is reported", reached && pickedTile && reached.x === pickedTile.x && reached.y === pickedTile.y, true);
+  checkEqual("on foot, with no illegal step", illegal, 0);
+  checkEqual("then it takes a pause drawn within the range", state.wanderCooldown >= DEFAULT_MOVEMENT_CONFIG.wanderPauseTicks, true);
 }
 
-console.log("\n--- pauses tirees au hasard, sur la duree ---");
+console.log("\n--- random pauses, over time ---");
 {
-  // Il flane une heure simulee : les arrets entre deux balades doivent varier
-  // et rester dans la plage 8 a 45 s.
+  // It wanders for a simulated hour: the stops between two strolls must vary
+  // and stay within the 8 to 45 s range.
   const anchor: Anchor = { tile: { x: 20, y: 20 }, onArrival: "wander", tracksPlayer: false, wanderRadius: 3 };
   let state: MovementState = { ...initialMovementState(), activity: "wander", tile: { x: 20, y: 21 }, lastAnchorTile: { x: 20, y: 20 } };
   const pauses: number[] = [];
@@ -400,15 +394,14 @@ console.log("\n--- pauses tirees au hasard, sur la duree ---");
   }
   const min = DEFAULT_MOVEMENT_CONFIG.wanderPauseTicks;
   const max = DEFAULT_MOVEMENT_CONFIG.wanderPauseMaxTicks!;
-  // Un arret compte aussi le tick d'arrivee et celui du choix de la cible suivante.
+  // A stop also counts the arrival tick and the tick that picks the next target.
   const outside = pauses.filter((p) => p < min || p > max + 2);
-  check("une heure de flanerie produit des dizaines d'arrets", pauses.length > 60, true);
-  check("chaque arret reste dans la plage 8 a 45 s", outside.length, 0);
-  check("les arrets varient (plus de 20 durees differentes)", new Set(pauses).size > 20, true);
+  checkEqual("an hour of wandering makes dozens of stops", pauses.length > 60, true);
+  checkEqual("every stop stays within the 8 to 45 s range", outside.length, 0);
+  checkEqual("the stops vary (more than 20 different lengths)", new Set(pauses).size > 20, true);
   const spread = Math.max(...pauses) - Math.min(...pauses);
-  check("et couvrent l'essentiel de la plage", spread > (max - min) * 0.7, true);
-  check("drawWanderPause et la config par defaut s'accordent", drawWanderPause(DEFAULT_MOVEMENT_CONFIG, fixedRandom(0)), min);
+  checkEqual("and cover most of the range", spread > (max - min) * 0.7, true);
+  checkEqual("drawWanderPause and the default config agree", drawWanderPause(DEFAULT_MOVEMENT_CONFIG, fixedRandom(0)), min);
 }
 
-console.log(fails === 0 ? "\nAll checks passed." : `\n${fails} check(s) failed.`);
-process.exit(fails === 0 ? 0 : 1);
+done();

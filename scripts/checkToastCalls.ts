@@ -10,14 +10,9 @@
 // so its "Copied" toast and its warnings never appeared. Toasts come from the
 // `ui/toast` import, never from a global.
 
+import { check, done } from "./_check";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-
-let failed = 0;
-const check = (label: string, ok: boolean, detail = "") => {
-  if (!ok) failed++;
-  console.log(`${ok ? "ok  " : "FAIL"} ${label}${ok || !detail ? "" : `: ${detail}`}`);
-};
 
 const SRC = join(process.cwd(), "src");
 const VARIANTS = new Set(["success", "error", "info", "warn"]);
@@ -89,8 +84,4 @@ check("toastSimple calls were found (sanity)", calls > 10, String(calls));
 check("no toast passes its variant as the description", misplaced.length === 0, misplaced.join(", "));
 check("no code looks for toastSimple on window", throughWindow.length === 0, throughWindow.join(", "));
 
-if (failed) {
-  console.log(`\n${failed} check(s) failed`);
-  process.exit(1);
-}
-console.log("\nall toast call checks passed");
+done();

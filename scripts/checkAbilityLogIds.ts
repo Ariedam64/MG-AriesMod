@@ -6,23 +6,17 @@
 // the live one has not arrived, so the set was pinned to the bundled copy for
 // the whole session. Every ability shipped since that copy was taken was
 // dropped on arrival: Double Hatch II among them, which is how someone noticed.
+import { checkEqual, done } from "./_check";
 import { captureState } from "../src/data/live/state";
 import { getLoggablePetAbilityIds } from "../src/features/pets/abilityNames";
 import { formatAbilityLog, isPetAbilityAction } from "../src/data/live/abilityFormatter";
 
-let failed = 0;
-const check = (label: string, got: unknown, want: unknown) => {
-  const ok = String(got) === String(want);
-  if (!ok) failed++;
-  console.log(`${ok ? "ok  " : "FAIL"} ${label}: ${got}${ok ? "" : ` (expected ${want})`}`);
-};
-
 // --- before the API answers --------------------------------------------------
 const bundled = getLoggablePetAbilityIds();
-check("the bundled catalog is available at once", bundled.size > 0, true);
-check("Double Hatch I is known from the start", bundled.has("DoubleHatch"), true);
+checkEqual("the bundled catalog is available at once", bundled.size > 0, true);
+checkEqual("Double Hatch I is known from the start", bundled.has("DoubleHatch"), true);
 // Not a requirement, just what makes the bug reachable: the bundled copy is old.
-check("Double Hatch II is not in the bundled copy", bundled.has("DoubleHatchII"), false);
+checkEqual("Double Hatch II is not in the bundled copy", bundled.has("DoubleHatchII"), false);
 
 // --- the API answers, as it does a moment after boot -------------------------
 // Shaped like the real payload: the live catalog, keyed by ability id.
@@ -34,9 +28,9 @@ live.Rebirth = { name: "Rebirth", trigger: "sellPet" };
 (captureState.data as Record<string, unknown>).abilities = live;
 
 const afterLoad = getLoggablePetAbilityIds();
-check("the late catalog is picked up", afterLoad.has("DoubleHatchII"), true);
-check("and so is everything else it added", afterLoad.has("Rebirth") && afterLoad.has("ThunderCoinFinder"), true);
-check("without losing what was already known", afterLoad.has("DoubleHatch"), true);
+checkEqual("the late catalog is picked up", afterLoad.has("DoubleHatchII"), true);
+checkEqual("and so is everything else it added", afterLoad.has("Rebirth") && afterLoad.has("ThunderCoinFinder"), true);
+checkEqual("without losing what was already known", afterLoad.has("DoubleHatch"), true);
 
 // --- weather mutation boosters stay out -------------------------------------
 // The game never logs these as discrete entries, so they must not slip back in
@@ -45,20 +39,19 @@ check("without losing what was already known", afterLoad.has("DoubleHatch"), tru
   ...live,
   ProduceMutationBoost: { name: "Produce Mutation Boost", trigger: "weather" },
 };
-check("weather mutation boosters stay filtered out", getLoggablePetAbilityIds().has("ProduceMutationBoost"), false);
+checkEqual("weather mutation boosters stay filtered out", getLoggablePetAbilityIds().has("ProduceMutationBoost"), false);
 
 // --- the log line reads properly --------------------------------------------
-check("Double Hatch II is formatted, not generic", isPetAbilityAction("DoubleHatchII"), true);
-check(
+checkEqual("Double Hatch II is formatted, not generic", isPetAbilityAction("DoubleHatchII"), true);
+checkEqual(
   "and it reads like Double Hatch I",
   formatAbilityLog({ action: "DoubleHatchII", timestamp: 0, parameters: { extraPet: { petSpecies: "Rooster" } } }),
   "Double hatched Rooster",
 );
-check(
+checkEqual(
   "Double Hatch I is unchanged",
   formatAbilityLog({ action: "DoubleHatch", timestamp: 0, parameters: { extraPet: { petSpecies: "Turkey" } } }),
   "Double hatched Turkey",
 );
 
-console.log(failed ? `${failed} FAILURE(S)` : "All checks passed.");
-process.exit(failed ? 1 : 0);
+done();

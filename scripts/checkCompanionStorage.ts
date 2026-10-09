@@ -1,11 +1,11 @@
-// Vérifie qu'une section du blob `aries_mod` survit à un rechargement de page.
+// Checks that a section of the `aries_mod` blob survives a page reload.
 //
-// Le bug d'origine : la relecture du blob passe par une liste blanche de
-// sections connues. Une section absente de cette liste était écrite sur le
-// disque puis silencieusement jetée à la lecture suivante — les réglages
-// tenaient toute la session grâce au cache mémoire, et disparaissaient au
-// premier refresh. Ce test simule exactement ce moment : un blob déjà sur le
-// disque, lu par un module qui n'a encore rien en cache.
+// The original bug: reading the blob back goes through an allow-list of known
+// sections. A section missing from that list was written to disk, then
+// silently dropped on the next read. The settings held for the whole session
+// thanks to the memory cache, and vanished on the first refresh. This test
+// simulates exactly that moment: a blob already on disk, read by a module
+// that has nothing cached yet.
 
 type StubStorage = {
   getItem(key: string): string | null;
@@ -26,8 +26,8 @@ globalAny.document = { addEventListener() {}, documentElement: {}, visibilitySta
 globalAny.addEventListener = () => {};
 globalAny.localStorage = storage;
 
-// Le blob est posé AVANT le premier import : c'est ce que voit une page qui
-// vient de se charger.
+// The blob is in place BEFORE the first import: that is what a page that has
+// just loaded sees.
 stored.set(
   "aries_mod",
   JSON.stringify({
@@ -38,6 +38,7 @@ stored.set(
   })
 );
 
+import { checkEqual, done } from "./_check";
 import { readAriesPath } from "../src/platform/storage";
 import {
   isUnreviewed,
@@ -46,70 +47,62 @@ import {
   patchCompanionSettings,
 } from "../src/features/companion/state";
 
-let fails = 0;
-const check = (label: string, got: unknown, want: unknown) => {
-  const ok = String(got) === String(want);
-  if (!ok) fails++;
-  console.log(`${ok ? "PASS" : "FAIL"}  ${label}${ok ? "" : `\n        got=${got}  want=${want}`}`);
-};
+console.log("--- companion persistence ---");
+checkEqual("the section survives a reload", typeof readAriesPath("companion"), "object");
+checkEqual("the enabled flag is read back", readAriesPath("companion.enabled"), true);
+checkEqual("so is the mode", readAriesPath("companion.mode"), "garden");
+checkEqual("and the feeding settings", readAriesPath("companion.feedThresholdPct"), 25);
+checkEqual("and the borrowed NPC", readAriesPath("companion.npcId"), "NPC_Vendor");
+// The sections already known must not have been damaged along the way.
+checkEqual("the other sections are intact", readAriesPath("misc.ghostMode"), true);
+// The companion session lives outside `companion`, which every settings save
+// rewrites in full: without its own entry in the allow-list, "it's been 2 h"
+// would start from zero on every F5.
+checkEqual("the companion session survives a reload", readAriesPath("companionSession.startedAt"), 1000);
+checkEqual("with the hours already announced", readAriesPath("companionSession.announcedHours"), 3);
 
-console.log("--- persistance du companion ---");
-check("la section survit au rechargement", typeof readAriesPath("companion"), "object");
-check("l'activation est relue", readAriesPath("companion.enabled"), true);
-check("le mode aussi", readAriesPath("companion.mode"), "garden");
-check("et les reglages de nourrissage", readAriesPath("companion.feedThresholdPct"), 25);
-check("et le PNJ emprunte", readAriesPath("companion.npcId"), "NPC_Vendor");
-// Les sections deja connues ne doivent pas avoir ete abimees au passage.
-check("les autres sections sont intactes", readAriesPath("misc.ghostMode"), true);
-// La session du companion vit hors de `companion`, que chaque sauvegarde des
-// réglages réécrit en entier : sans sa propre entrée dans la liste blanche,
-// « ça fait 2 h » repartirait de zéro à chaque F5.
-check("la session du companion survit au rechargement", readAriesPath("companionSession.startedAt"), 1000);
-check("avec ses heures deja annoncees", readAriesPath("companionSession.announcedHours"), 3);
-
-console.log("\n--- reglages du companion, repares a la lecture ---");
+console.log("\n--- companion settings, repaired on read ---");
 {
-  // Le blob pose plus haut ne contient ni equipes ni groupes consultes : c'est
-  // exactement l'etat d'un joueur qui met le mod a jour.
+  // The blob set above holds neither teams nor reviewed groups: exactly the
+  // state of a player who updates the mod.
   const settings = loadCompanionSettings();
 
-  check("les valeurs presentes sont gardees", settings.mode, "garden");
-  check("une equipe absente vaut « ne pas y toucher »", settings.harvestTeamId, null);
-  // Un reglage ajoute apres coup doit s'activer tout seul chez qui met a jour,
-  // sinon la fonctionnalite n'existe que pour les nouveaux venus.
-  check("une carte de question absente du blob est active", settings.askOnScreen, true);
-  check("aucun groupe n'a ete consulte", settings.reviewedSettings.length, 0);
-  check("les reactions sont actives chez qui met a jour", settings.reactions, true);
-  // Sans critere, aucune vente ne sera proposee : c'est le defaut sur lequel il
-  // faut retomber, jamais un critere invente.
-  check("aucun critere de conservation par defaut", settings.hatchKeepRules.species.length, 0);
-  check("et pas de seuil de force", settings.hatchKeepRules.minMaxStr, null);
+  checkEqual("the values present are kept", settings.mode, "garden");
+  checkEqual("a missing team means \"leave it alone\"", settings.harvestTeamId, null);
+  // A setting added later must turn itself on for whoever updates, or the
+  // feature only exists for newcomers.
+  checkEqual("a question card missing from the blob is on", settings.askOnScreen, true);
+  checkEqual("no group has been reviewed", settings.reviewedSettings.length, 0);
+  checkEqual("reactions are on for whoever updates", settings.reactions, true);
+  // With no criterion, no sale will be offered: that is the default to fall
+  // back on, never a made-up criterion.
+  checkEqual("no keep criterion by default", settings.hatchKeepRules.species.length, 0);
+  checkEqual("and no strength threshold", settings.hatchKeepRules.minMaxStr, null);
 
-  // Une equipe vide n'est pas une equipe : elle ne doit pas passer pour un choix.
+  // An empty team is not a team: it must not pass for a choice.
   patchCompanionSettings({ harvestTeamId: "" as unknown as string });
-  check("une equipe vide retombe sur null", loadCompanionSettings().harvestTeamId, null);
+  checkEqual("an empty team falls back to null", loadCompanionSettings().harvestTeamId, null);
 
   patchCompanionSettings({ hatchTeamId: "team-hatch", hatchSellTeamId: "team-sell" });
   const withTeams = loadCompanionSettings();
-  check("les trois equipes sont distinctes", `${withTeams.harvestTeamId}|${withTeams.hatchTeamId}|${withTeams.hatchSellTeamId}`, "null|team-hatch|team-sell");
+  checkEqual("the three teams are distinct", `${withTeams.harvestTeamId}|${withTeams.hatchTeamId}|${withTeams.hatchSellTeamId}`, "null|team-hatch|team-sell");
 
   markReviewed("harvest");
   markReviewed("harvest");
-  check("un groupe consulte est note une seule fois", loadCompanionSettings().reviewedSettings.join(","), "harvest");
-  check("il ne l'est plus a signaler", isUnreviewed("harvest"), false);
-  check("les autres le restent", isUnreviewed("hatch"), true);
+  checkEqual("a reviewed group is noted only once", loadCompanionSettings().reviewedSettings.join(","), "harvest");
+  checkEqual("it is no longer flagged", isUnreviewed("harvest"), false);
+  checkEqual("the others still are", isUnreviewed("hatch"), true);
 
   patchCompanionSettings({ reactions: false });
-  check("les reactions se coupent et se retiennent", loadCompanionSettings().reactions, false);
-  check("sauver les reglages n'efface pas la session", readAriesPath("companionSession.startedAt"), 1000);
+  checkEqual("reactions can be turned off and stay off", loadCompanionSettings().reactions, false);
+  checkEqual("saving the settings does not erase the session", readAriesPath("companionSession.startedAt"), 1000);
 
   patchCompanionSettings({ askOnScreen: false });
-  check("mais elle se coupe et se retient", loadCompanionSettings().askOnScreen, false);
+  checkEqual("but it can be turned off and stays off", loadCompanionSettings().askOnScreen, false);
 
-  // Une valeur inconnue venue d'une version future ne doit pas entrer.
+  // An unknown value from a future version must not get in.
   patchCompanionSettings({ reviewedSettings: ["harvest", "nope"] as never });
-  check("un groupe inconnu est ecarte", loadCompanionSettings().reviewedSettings.join(","), "harvest");
+  checkEqual("an unknown group is left out", loadCompanionSettings().reviewedSettings.join(","), "harvest");
 }
 
-console.log(fails === 0 ? "\nAll checks passed." : `\n${fails} check(s) failed.`);
-process.exit(fails === 0 ? 0 : 1);
+done();

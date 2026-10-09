@@ -11,6 +11,7 @@
 //
 // Run with: npm run check:editorpanels
 
+import { checkEqual, run } from "./_check";
 import { installFakeDom } from "./_fakeDom";
 import { renderEditorMenu } from "../src/features/editor/menu";
 import { showItemPicker, hideItemPicker } from "../src/features/editor/ui/itemPicker";
@@ -21,18 +22,6 @@ import { makeEmptyGarden, tileObjectAt, withTileObject } from "../src/features/e
 import { getPlannedGarden, setPlannedGarden } from "../src/features/editor/plannedGarden";
 import { setCurrentEditorTile } from "../src/features/editor/session";
 import type { EditorTileTarget } from "../src/features/editor/tileMap";
-
-let failures = 0;
-function check(label: string, actual: unknown, expected: unknown): void {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
-  if (a === e) {
-    console.log(`ok   ${label}`);
-    return;
-  }
-  failures += 1;
-  console.error(`FAIL ${label}\n  expected ${e}\n  actual   ${a}`);
-}
 
 installFakeDom();
 const doc = document as any;
@@ -55,9 +44,9 @@ async function main(): Promise<void> {
 
   const container = doc.createElement("div");
   renderEditorMenu(container);
-  check("menu: mode, current garden, import and saved cards", container.children[0].children.length, 4);
-  check("menu: the saved list starts empty", container.textContent.includes("No saved gardens yet."), true);
-  check("menu: the mode switch is a kit switch", all(container, ".qmm-switch").length, 1);
+  checkEqual("menu: mode, current garden, import and saved cards", container.children[0].children.length, 4);
+  checkEqual("menu: the saved list starts empty", container.textContent.includes("No saved gardens yet."), true);
+  checkEqual("menu: the mode switch is a kit switch", all(container, ".qmm-switch").length, 1);
 
   /* --------------------------- picker, brush slots -------------------------- */
 
@@ -66,10 +55,10 @@ async function main(): Promise<void> {
   picker.selectedPlantId = "Strawberry";
   showItemPicker();
   const details = () => byId("qws-editor-side-details");
-  check("picker: one slot box per brush slot", all(details(), ".qws-pnl-range").length, 5);
+  checkEqual("picker: one slot box per brush slot", all(details(), ".qws-pnl-range").length, 5);
 
   setValue(all(details(), ".qws-pnl-range")[1], "80", "input");
-  check(
+  checkEqual(
     "brush: a slider moves only its own slot",
     brushSlotsFor("Strawberry").slots.map((s) => s.sizePercent),
     [50, 80, 50, 50, 50],
@@ -79,12 +68,12 @@ async function main(): Promise<void> {
   editAll.checked = true;
   fire(editAll, "change");
   setValue(all(details(), ".qws-pnl-range")[0], "65", "input");
-  check(
+  checkEqual(
     "brush, edit all: every slot takes the size",
     brushSlotsFor("Strawberry").slots.map((s) => s.sizePercent),
     [65, 65, 65, 65, 65],
   );
-  check(
+  checkEqual(
     "brush, edit all: every slider shows it",
     all(details(), ".qws-pnl-range").map((s: El) => s.value),
     ["65", "65", "65", "65", "65"],
@@ -95,11 +84,11 @@ async function main(): Promise<void> {
   fire(firstMode, "change");
   const field = all(details(), ".qmm-input")[0];
   setValue(field, "7", "input");
-  check("brush: a half typed custom size stays in its field", field.value, "7");
-  check("brush: it is stored clamped", brushSlotsFor("Strawberry").slots[0].customScale, 50);
-  check("brush, edit all: the other fields show the stored size", all(details(), ".qmm-input")[1].value, "50");
+  checkEqual("brush: a half typed custom size stays in its field", field.value, "7");
+  checkEqual("brush: it is stored clamped", brushSlotsFor("Strawberry").slots[0].customScale, 50);
+  checkEqual("brush, edit all: the other fields show the stored size", all(details(), ".qmm-input")[1].value, "50");
   hideItemPicker();
-  check("picker: hiding removes it", byId("qws-editor-side"), null);
+  checkEqual("picker: hiding removes it", byId("qws-editor-side"), null);
 
   /* ----------------------- current item, placed plant ----------------------- */
 
@@ -111,14 +100,14 @@ async function main(): Promise<void> {
   const panel = () => byId("qws-editor-current-item");
   const planSlots = () => tileObjectAt(getPlannedGarden(), "Dirt", 4)?.slots ?? [];
 
-  check("current item: one slot box per slot", all(panel(), ".qws-pnl-range").length, 3);
+  checkEqual("current item: one slot box per slot", all(panel(), ".qws-pnl-range").length, 3);
 
   setValue(all(panel(), ".qws-pnl-range")[1], "90", "input");
-  check("placed plant: a slider writes only its slot", planSlots().map((s: any) => s.size), [50, 90, 50]);
+  checkEqual("placed plant: a slider writes only its slot", planSlots().map((s: any) => s.size), [50, 90, 50]);
 
   const customInputs = () => all(panel(), ".qmm-input");
   setValue(customInputs()[0], "", "change");
-  check("placed plant: a blank custom size writes nothing", planSlots().map((s: any) => s.size), [50, 90, 50]);
+  checkEqual("placed plant: a blank custom size writes nothing", planSlots().map((s: any) => s.size), [50, 90, 50]);
 
   const switches = () => all(panel(), ".qmm-switch");
   // The first switch is "Edit all slots together", then one per slot.
@@ -128,16 +117,16 @@ async function main(): Promise<void> {
   const modeOfLast = switches()[3];
   modeOfLast.checked = true;
   fire(modeOfLast, "change");
-  check(
+  checkEqual(
     "placed plant, edit all: the custom toggle switches every slot",
     switches().slice(1).map((s: El) => s.checked),
     [true, true, true],
   );
-  check("placed plant, edit all: every slot gets that slot's size", planSlots().map((s: any) => s.size), [50, 50, 50]);
+  checkEqual("placed plant, edit all: every slot gets that slot's size", planSlots().map((s: any) => s.size), [50, 50, 50]);
 
   setValue(customInputs()[2], "75", "change");
-  check("placed plant, edit all: a custom size lands on every slot", planSlots().map((s: any) => s.size), [75, 75, 75]);
-  check(
+  checkEqual("placed plant, edit all: a custom size lands on every slot", planSlots().map((s: any) => s.size), [75, 75, 75]);
+  checkEqual(
     "placed plant, edit all: every field shows it",
     customInputs().map((i: El) => i.value),
     ["75", "75", "75"],
@@ -148,8 +137,8 @@ async function main(): Promise<void> {
   const addGold = all(panel(), "button").find((b: El) => b.title === "Add Gold");
   addGold.click();
   await tick();
-  check("placed plant: a mutation lands on its slot", planSlots().map((s: any) => s.mutations), [["Gold"], [], []]);
-  check(
+  checkEqual("placed plant: a mutation lands on its slot", planSlots().map((s: any) => s.mutations), [["Gold"], [], []]);
+  checkEqual(
     "placed plant: the slot shows it as active",
     all(panel(), "button").filter((b: El) => b.title === "Remove Gold").length,
     1,
@@ -158,23 +147,11 @@ async function main(): Promise<void> {
   const plus = all(panel(), "button").find((b: El) => b.textContent === "+");
   plus.click();
   await tick();
-  check("placed plant: + adds a slot", planSlots().length, 4);
-  check("placed plant: the panel redraws with it", all(panel(), ".qws-pnl-range").length, 4);
+  checkEqual("placed plant: + adds a slot", planSlots().length, 4);
+  checkEqual("placed plant: the panel redraws with it", all(panel(), ".qws-pnl-range").length, 4);
 
   hideCurrentItemPanel();
-  check("current item: hiding removes it", byId("qws-editor-current-item"), null);
+  checkEqual("current item: hiding removes it", byId("qws-editor-current-item"), null);
 }
 
-main()
-  .catch((error) => {
-    failures += 1;
-    console.error("FAIL the check threw", error);
-  })
-  .finally(() => {
-    if (failures) {
-      console.error(`\n${failures} check(s) failed`);
-      process.exit(1);
-    }
-    console.log("\nall editor panel checks passed");
-    process.exit(0);
-  });
+run(main);

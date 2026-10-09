@@ -9,23 +9,12 @@
 //
 // Run with: npm run check:watch
 
+import { checkEqual, run } from "./_check";
 import { defineWatcher } from "../src/features/companion/watch";
 import { CompanionService } from "../src/features/companion";
 import { CompanionChat } from "../src/features/companion/chat";
 import { patchCompanionSettings } from "../src/features/companion/state";
 import { AFK_IDLE_AFTER_MS, IDLE_LINES } from "../src/features/companion/afk";
-
-let failures = 0;
-function check(label: string, actual: unknown, expected: unknown): void {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
-  if (a === e) {
-    console.log(`ok   ${label}`);
-    return;
-  }
-  failures += 1;
-  console.error(`FAIL ${label}\n  expected ${e}\n  actual   ${a}`);
-}
 
 const flush = async () => {
   for (let i = 0; i < 20; i++) await Promise.resolve();
@@ -69,29 +58,29 @@ async function main(): Promise<void> {
 
     watcher.start();
     watcher.start();
-    check("starting twice runs the setup once", intervals.filter((i) => i.ms === 1234).length, 1);
+    checkEqual("starting twice runs the setup once", intervals.filter((i) => i.ms === 1234).length, 1);
     tickAll(1234);
-    check("a running watcher ticks", ticks, 1);
+    checkEqual("a running watcher ticks", ticks, 1);
     fire!();
-    check("a live callback runs while the watcher runs", liveCalls, 1);
+    checkEqual("a live callback runs while the watcher runs", liveCalls, 1);
 
     const oldFire = fire!;
     watcher.stop();
     await flush();
     tickAll(1234);
-    check("a stopped watcher no longer ticks", ticks, 1);
+    checkEqual("a stopped watcher no longer ticks", ticks, 1);
 
     resolveLate(() => lateUndone++);
     await flush();
-    check("a subscription that resolves after stop is undone", lateUndone, 1);
+    checkEqual("a subscription that resolves after stop is undone", lateUndone, 1);
 
     oldFire();
-    check("a live callback from a stopped run does nothing", liveCalls, 1);
+    checkEqual("a live callback from a stopped run does nothing", liveCalls, 1);
 
     watcher.start();
     oldFire();
-    check("even after the watcher starts again", liveCalls, 1);
-    check("the watcher reports it runs", watcher.running, true);
+    checkEqual("even after the watcher starts again", liveCalls, 1);
+    checkEqual("the watcher reports it runs", watcher.running, true);
     watcher.stop();
   }
 
@@ -129,14 +118,14 @@ async function main(): Promise<void> {
   const { afkWatch } = await import("../src/features/companion/afkWatch");
   afkWatch.start();
   const afkTicks = intervals.filter((i) => i.ms === 5_000 && !i.cleared);
-  check("the AFK watch runs a clock", afkTicks.length, 1);
+  checkEqual("the AFK watch runs a clock", afkTicks.length, 1);
 
   now += AFK_IDLE_AFTER_MS + 1;
   tickAll(5_000);
   await flush();
   const idleLines = IDLE_LINES.map((line) => line.message);
-  check("a quiet player is asked whether they are still there", said.some((line) => idleLines.includes(line)), true);
-  check("he walks over to ask", walkedOver, 1);
+  checkEqual("a quiet player is asked whether they are still there", said.some((line) => idleLines.includes(line)), true);
+  checkEqual("he walks over to ask", walkedOver, 1);
   afkWatch.stop();
 
   /* --------------------------- the hunger poll --------------------------- */
@@ -145,24 +134,17 @@ async function main(): Promise<void> {
   feedWatch.start();
   await flush();
   const afterStart = staleChecks;
-  check("the hunger watch checks once on start", afterStart, 1);
+  checkEqual("the hunger watch checks once on start", afterStart, 1);
   tickAll(30_000);
   await flush();
-  check("and again on its own, without a pet update", staleChecks, 2);
+  checkEqual("and again on its own, without a pet update", staleChecks, 2);
   feedWatch.stop();
 }
 
-main()
-  .catch((error) => {
-    failures += 1;
-    console.error("FAIL the check threw", error);
-  })
-  .finally(() => {
+run(async () => {
+  try {
+    await main();
+  } finally {
     globalThis.setInterval = realSetInterval;
-    if (failures) {
-      console.error(`\n${failures} check(s) failed`);
-      process.exit(1);
-    }
-    console.log("\nall companion watch checks passed");
-    process.exit(0);
-  });
+  }
+});
