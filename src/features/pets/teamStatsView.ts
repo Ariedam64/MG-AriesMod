@@ -1,6 +1,6 @@
-// Renders what a team is worth: a one-line summary strip plus an expandable
-// breakdown. Shared by the Team Builder cards (collapsed by default) and the
-// Manager tab's equipped team (always open).
+// Renders what a team is worth: one block per effect plus how long the team
+// lasts without feeding. Shared by the Team Builder cards (one effect at a
+// time) and the Teams tab's editor (every effect).
 //
 // All maths lives in teamStats.ts and the wording in teamStatsText.ts; this
 // file only lays it out.
@@ -13,6 +13,7 @@ import {
 } from "./teamStats";
 import { color } from "../../ui/kit/theme";
 import type { InventoryPet } from "./pets";
+import { ensurePetsStyles } from "./styles";
 import {
   CONTINUOUS_ROLLS_PER_HOUR,
   formatDuration,
@@ -22,18 +23,27 @@ import {
   triggerUnit,
 } from "./teamStatsText";
 
-const MUTED = color.textSoft;
-/** Green for "at its best". */
-const ACCENT = color.okInk;
-const DIM = color.textDim;
+function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text?: string): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
+}
 
 /**
  * Shading for how close the team is to its OWN ceiling, not to 100%. A team
  * whose pets are all at max strength reads green however small its absolute
- * proc chance is: there is nothing left to improve about it.
+ * proc chance is: there is nothing left to improve about it. Text takes the
+ * ink shades, which stay readable on every theme; the bar takes the fills.
  */
-function fillRatioColor(ratio: number): string {
-  if (ratio >= 0.99) return ACCENT;
+function ratioInk(ratio: number): string {
+  if (ratio >= 0.9) return color.okInk;
+  if (ratio >= 0.75) return color.warnInk;
+  return color.dangerInk;
+}
+
+function ratioFill(ratio: number): string {
+  if (ratio >= 0.99) return color.okInk;
   if (ratio >= 0.9) return color.ok;
   if (ratio >= 0.75) return color.warn;
   return color.danger;
@@ -47,25 +57,10 @@ function fillRatioColor(ratio: number): string {
  */
 function mkBar(current: number, atMax: number): HTMLElement {
   const ratio = atMax > 0 ? Math.max(0, Math.min(1, current / atMax)) : 0;
-
-  const track = document.createElement("div");
-  Object.assign(track.style, {
-    height: "3px",
-    borderRadius: "999px",
-    background: color.track,
-    overflow: "hidden",
-    margin: "3px 0 1px",
-  } as CSSStyleDeclaration);
-
-  const fill = document.createElement("div");
-  Object.assign(fill.style, {
-    height: "100%",
-    width: `${Math.max(1.5, ratio * 100)}%`,
-    borderRadius: "999px",
-    background: fillRatioColor(ratio),
-    opacity: "0.85",
-  } as CSSStyleDeclaration);
-
+  const track = el("div", "pt-stat__bar");
+  const fill = el("div", "pt-stat__fill");
+  fill.style.width = `${Math.max(1.5, ratio * 100)}%`;
+  fill.style.background = ratioFill(ratio);
   track.appendChild(fill);
   return track;
 }
@@ -74,32 +69,13 @@ type GroupNav = { index: number; total: number; onStep: (delta: number) => void 
 
 /** Small ‹ 1/3 › stepper, only built when there is more than one effect. */
 function mkNav(nav: GroupNav): HTMLElement {
-  const wrap = document.createElement("div");
-  Object.assign(wrap.style, {
-    display: "flex",
-    alignItems: "center",
-    gap: "2px",
-    flex: "0 0 auto",
-  } as CSSStyleDeclaration);
+  const wrap = el("div", "pt-stat__nav");
 
   const mkArrow = (glyph: string, delta: number, label: string): HTMLElement => {
-    const button = document.createElement("button");
+    const button = el("button", "pt-stat__arrow", glyph);
     button.type = "button";
-    button.textContent = glyph;
     button.title = label;
-    Object.assign(button.style, {
-      border: "none",
-      background: "transparent",
-      color: MUTED,
-      font: "inherit",
-      fontSize: "11px",
-      lineHeight: "1",
-      padding: "0 3px",
-      cursor: "pointer",
-      borderRadius: "3px",
-    } as CSSStyleDeclaration);
-    button.onmouseenter = () => { button.style.color = color.text; };
-    button.onmouseleave = () => { button.style.color = MUTED; };
+    button.setAttribute("aria-label", label);
     button.addEventListener("click", (event) => {
       // The card underneath has its own handlers; stepping must not reach it.
       event.stopPropagation();
@@ -109,13 +85,11 @@ function mkNav(nav: GroupNav): HTMLElement {
     return button;
   };
 
-  const counter = document.createElement("span");
-  counter.textContent = `${nav.index + 1}/${nav.total}`;
-  counter.style.fontSize = "9px";
-  counter.style.color = DIM;
-  counter.style.fontVariantNumeric = "tabular-nums";
-
-  wrap.append(mkArrow("‹", -1, "Previous effect"), counter, mkArrow("›", 1, "Next effect"));
+  wrap.append(
+    mkArrow("‹", -1, "Previous effect"),
+    el("span", "pt-stat__count", `${nav.index + 1}/${nav.total}`),
+    mkArrow("›", 1, "Next effect"),
+  );
   return wrap;
 }
 
@@ -125,56 +99,20 @@ function mkNav(nav: GroupNav): HTMLElement {
  * the cards unreadable.
  */
 function renderGroup(group: EffectGroup, nav?: GroupNav): HTMLElement {
-  const block = document.createElement("div");
-  Object.assign(block.style, {
-    padding: "5px 7px",
-    borderRadius: "7px",
-    background: color.cardBg,
-    border: `1px solid ${color.border}`,
-    marginBottom: "4px",
-  } as CSSStyleDeclaration);
+  const block = el("div", "pt-stat");
 
-  const nameRow = document.createElement("div");
-  Object.assign(nameRow.style, {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "6px",
-    minHeight: "13px",
-  } as CSSStyleDeclaration);
-
-  const name = document.createElement("div");
+  const head = el("div", "pt-stat__head");
   const weatherSuffix = group.requiredWeathers.length ? ` · ${group.requiredWeathers.join("/")}` : "";
-  name.textContent = `${groupTitle(group)}${weatherSuffix}`;
-  Object.assign(name.style, {
-    fontSize: "9px",
-    fontWeight: "600",
-    letterSpacing: "0.05em",
-    textTransform: "uppercase",
-    color: DIM,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  } as CSSStyleDeclaration);
+  const name = el("div", "pt-stat__name", `${groupTitle(group)}${weatherSuffix}`);
   if (weatherSuffix) name.title = "Only fires while this weather is active.";
+  head.appendChild(name);
+  if (nav) head.appendChild(mkNav(nav));
+  block.appendChild(head);
 
-  nameRow.appendChild(name);
-  if (nav) nameRow.appendChild(mkNav(nav));
-  block.appendChild(nameRow);
-
-  const value = document.createElement("div");
-  Object.assign(value.style, {
-    display: "flex",
-    alignItems: "baseline",
-    gap: "3px",
-    fontVariantNumeric: "tabular-nums",
-  } as CSSStyleDeclaration);
+  const value = el("div", "pt-stat__value");
 
   if (group.combinedProbability === null) {
-    const always = document.createElement("span");
-    always.textContent = "always on";
-    always.style.fontSize = "12px";
-    always.style.color = MUTED;
+    const always = el("span", "pt-stat__always", "always on");
     always.title = "This ability has no proc chance: it applies continuously.";
     value.appendChild(always);
     block.appendChild(value);
@@ -184,29 +122,13 @@ function renderGroup(group: EffectGroup, nav?: GroupNav): HTMLElement {
     const ratio = atMax > 0 ? Math.min(1, group.combinedProbability / atMax) : 1;
     const isMaxed = ratio >= 0.995;
 
-    const big = document.createElement("span");
-    big.textContent = formatPercent(group.combinedProbability);
-    big.style.fontSize = "15px";
-    big.style.fontWeight = "700";
-    big.style.color = fillRatioColor(ratio);
-    big.style.lineHeight = "1.1";
-
-    const unit = document.createElement("span");
-    unit.textContent = triggerUnit(group.trigger);
-    unit.style.fontSize = "9px";
-    unit.style.color = DIM;
-    value.append(big, unit);
+    const big = el("span", "pt-stat__big", formatPercent(group.combinedProbability));
+    big.style.color = ratioInk(ratio);
+    value.append(big, el("span", "pt-stat__unit", triggerUnit(group.trigger)));
 
     // Only worth showing when there is headroom left: repeating the same
     // number as "max" on an already-maxed team is noise.
-    if (!isMaxed) {
-      const ceiling = document.createElement("span");
-      ceiling.textContent = `max ${formatPercent(atMax)}`;
-      ceiling.style.fontSize = "9px";
-      ceiling.style.color = DIM;
-      ceiling.style.marginLeft = "auto";
-      value.appendChild(ceiling);
-    }
+    if (!isMaxed) value.appendChild(el("span", "pt-stat__max", `max ${formatPercent(atMax)}`));
 
     // Rolling once a minute makes an expected hourly count meaningful, but
     // only for continuous abilities: the rest fire on player actions whose
@@ -223,8 +145,7 @@ function renderGroup(group: EffectGroup, nav?: GroupNav): HTMLElement {
         ? "Every pet is at max strength: this is the most this team can do."
         : `At ${(ratio * 100).toFixed(0)}% of what these same pets would do at max strength ` +
           `(${formatPercent(atMax)}).`);
-    block.appendChild(value);
-    block.appendChild(mkBar(group.combinedProbability, atMax));
+    block.append(value, mkBar(group.combinedProbability, atMax));
   }
 
   // What a proc actually delivers. Labelled "per proc" because it is one
@@ -232,32 +153,13 @@ function renderGroup(group: EffectGroup, nav?: GroupNav): HTMLElement {
   // old summed figure misleading.
   const magnitude = perProcMagnitude(group);
   if (magnitude) {
-    const row = document.createElement("div");
-    Object.assign(row.style, {
-      display: "flex",
-      alignItems: "baseline",
-      justifyContent: "space-between",
-      gap: "8px",
-      fontSize: "10px",
-      marginTop: "1px",
-    } as CSSStyleDeclaration);
+    const row = el("div", "pt-stat__proc");
     row.title =
       group.contributors.length > 1
         ? "What a single proc gives. Each pet applies its own value, so this is\n" +
           "a range across the team; the values never add up."
         : "What a single proc gives.";
-
-    const label = document.createElement("span");
-    label.textContent = "per proc";
-    label.style.color = MUTED;
-
-    const amount = document.createElement("span");
-    amount.textContent = magnitude;
-    amount.style.fontWeight = "600";
-    amount.style.flex = "0 0 auto";
-    amount.style.fontVariantNumeric = "tabular-nums";
-
-    row.append(label, amount);
+    row.append(el("span", "", "per proc"), el("b", "", magnitude));
     block.appendChild(row);
   }
 
@@ -282,11 +184,11 @@ function focusGroups(groups: EffectGroup[], focusAbilityIds: string[]): EffectGr
 
 /**
  * One effect at a time with a ‹ › stepper. Showing every group at once made
- * the equipped-team panel run several screens long; the card only ever needs
- * to answer "how good is this team at one thing".
+ * the cards run several screens long; a card only ever needs to answer "how
+ * good is this team at one thing".
  */
 function renderGroupCarousel(groups: EffectGroup[]): HTMLElement {
-  const host = document.createElement("div");
+  const host = el("div", "pt-stats__carousel");
   if (!groups.length) return host;
 
   if (groups.length === 1) {
@@ -313,19 +215,16 @@ function renderGroupCarousel(groups: EffectGroup[]): HTMLElement {
 }
 
 function renderDetails(stats: TeamStats, groups: EffectGroup[], showAllGroups: boolean): HTMLElement {
-  const details = document.createElement("div");
-  details.style.paddingTop = "4px";
+  const details = el("div", showAllGroups ? "pt-stats is-all" : "pt-stats");
 
   if (stats.unknownSpecies.length) {
-    const warn = document.createElement("div");
-    warn.textContent = `⚠ unknown species: ${stats.unknownSpecies.join(", ")}`;
-    warn.style.fontSize = "10px";
-    warn.style.color = color.warn;
-    details.appendChild(warn);
+    details.appendChild(el("div", "pt-stats__warn", `Unknown species: ${stats.unknownSpecies.join(", ")}`));
   }
 
   if (showAllGroups) {
-    for (const group of groups) details.appendChild(renderGroup(group));
+    const grid = el("div", "pt-stats__groups");
+    for (const group of groups) grid.appendChild(renderGroup(group));
+    details.appendChild(grid);
   } else {
     details.appendChild(renderGroupCarousel(groups));
   }
@@ -357,53 +256,29 @@ function renderFeedRow(stats: TeamStats): HTMLElement {
 
   if (autonomy.status === "sustained") {
     text = "indefinitely";
-    tint = ACCENT;
+    tint = color.okInk;
     title =
       "Expected hunger restore covers the drain for every pet, so the team\n" +
       `feeds itself.${boostLine}${restoreLine}${weatherLine}\n\n` +
       "This is an average: a bad run of Restore luck can still empty a pet.";
   } else if (autonomy.status === "runs-out" && autonomy.minutesFromFull !== null) {
     text = `~${formatDuration(autonomy.minutesFromFull)}`;
-    tint = autonomy.minutesFromFull < 60 ? color.warn : ACCENT;
+    tint = autonomy.minutesFromFull < 60 ? color.warnInk : color.okInk;
     title =
       `Starting from full, ${autonomy.limitingPetName ?? "the first pet"} empties first.\n` +
       `Rates the team itself: current hunger is not taken into account.${boostLine}${restoreLine}${weatherLine}\n\n` +
       "Restore figures are averages; unlucky streaks do worse.";
   } else {
     text = "unknown";
-    tint = MUTED;
+    tint = color.textSoft;
     title = `No known hunger data for: ${autonomy.speciesMissingDepletion.join(", ")}.`;
   }
 
-  const row = document.createElement("div");
-  Object.assign(row.style, {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "8px",
-    padding: "4px 7px",
-    borderRadius: "7px",
-    background: color.cardBg,
-    border: `1px solid ${color.border}`,
-    fontSize: "10px",
-  } as CSSStyleDeclaration);
+  const row = el("div", "pt-feedrow");
   row.title = title;
-
-  const label = document.createElement("span");
-  label.textContent = "🍖 Lasts without feeding (from full)";
-  label.style.color = MUTED;
-  label.style.overflow = "hidden";
-  label.style.textOverflow = "ellipsis";
-  label.style.whiteSpace = "nowrap";
-
-  const valueSpan = document.createElement("span");
-  valueSpan.textContent = text;
+  const valueSpan = el("span", "pt-feedrow__value", text);
   valueSpan.style.color = tint;
-  valueSpan.style.fontWeight = "600";
-  valueSpan.style.flex = "0 0 auto";
-  valueSpan.style.fontVariantNumeric = "tabular-nums";
-
-  row.append(label, valueSpan);
+  row.append(el("span", "pt-feedrow__label", "Lasts without feeding"), valueSpan);
   return row;
 }
 
@@ -415,9 +290,9 @@ export type TeamStatsOptions = {
    */
   focusAbilityIds?: string[];
   /**
-   * Stack every effect instead of stepping through them. For the Manager,
-   * which has a full-width panel; the Team Builder's cards sit in a
-   * three-column grid and would grow unreadably tall.
+   * Lay every effect out side by side instead of stepping through them. For
+   * the Teams tab, which has a wide panel; the Team Builder's cards sit in a
+   * grid and would grow unreadably tall.
    */
   showAllGroups?: boolean;
 };
@@ -432,25 +307,14 @@ export function renderTeamStats(
   pets: InventoryPet[],
   options: TeamStatsOptions = {},
 ): HTMLElement {
-  const wrap = document.createElement("div");
-  wrap.style.display = "grid";
-  wrap.style.gap = "2px";
-
+  ensurePetsStyles();
   const realPets = pets.filter(Boolean);
-  if (!realPets.length) {
-    const empty = document.createElement("div");
-    empty.textContent = "No pets in this team.";
-    empty.style.fontSize = "10px";
-    empty.style.color = MUTED;
-    wrap.appendChild(empty);
-    return wrap;
-  }
+  if (!realPets.length) return el("div", "pt-empty", "No pets in this team.");
 
   const stats = computeTeamStats(realPets);
   const groups = options.focusAbilityIds?.length
     ? focusGroups(stats.groups, options.focusAbilityIds)
     : stats.groups;
 
-  wrap.appendChild(renderDetails(stats, groups, options.showAllGroups === true));
-  return wrap;
+  return renderDetails(stats, groups, options.showAllGroups === true);
 }

@@ -1,4 +1,4 @@
-// The Pets window: Manager, Team Builder, Feeding, Hatch and Logs tabs.
+// The Pets window: Teams (id "manager"), Team Builder, Feeding, Hatch and Logs tabs.
 
 import { Menu } from "../../ui/kit/menu";
 import { renderHatchTab } from "../hatch/tab";
@@ -17,11 +17,11 @@ export function renderPetsMenu(root: HTMLElement): void {
   const ui = new Menu({ id: "pets", compact: true, windowSelector: ".qws-win" });
   ui.mount(root);
 
-  ui.addTab("manager", "🧰 Manager", (view) => renderManagerTab(view, ui));
-  ui.addTab("teambuilder", "🧩 Team Builder", (view) => renderTeamBuilderTab(view));
-  ui.addTab("feeding", "🍖 Feeding", (view) => renderFeedingTab(view));
-  ui.addTab("hatch", "🥚 Hatch", (view) => renderHatchTab(view));
-  ui.addTab("logs", "📝 Logs", (view) => renderLogsTab(view));
+  ui.addTab("manager", "Teams", (view) => renderManagerTab(view, ui));
+  ui.addTab("teambuilder", "Team Builder", (view) => renderTeamBuilderTab(view));
+  ui.addTab("feeding", "Feeding", (view) => renderFeedingTab(view));
+  ui.addTab("hatch", "Hatch", (view) => renderHatchTab(view));
+  ui.addTab("logs", "Logs", (view) => renderLogsTab(view));
 
   const onOpenTab = (ev: Event) => {
     const tab = String((ev as CustomEvent).detail?.tab || "");

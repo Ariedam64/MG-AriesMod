@@ -16,8 +16,8 @@ import { createEggCard } from "./eggCard";
 import { countsFor, sortSpeciesByRarity, speciesCountsGrid, totalOf } from "./counts";
 import { button } from "../../ui/kit/button";
 import { collapsibleCard } from "../../ui/kit/layout";
-import { color } from "../../ui/kit/theme";
 import { getAriesStorage, updateAriesStorage } from "../../platform/storage";
+import { ensureHatchStyles } from "./styles";
 
 type HatchedCounts = StatsSnapshot["pets"]["hatchedByType"][string];
 
@@ -153,42 +153,36 @@ function otherSpecies(stats: StatsSnapshot, fromEggs: Set<string>): string[] {
 /* ----------------------------------- tab ----------------------------------- */
 
 export function renderHatchTab(view: HTMLElement): void {
+  ensureHatchStyles();
   view.replaceChildren();
 
   // Style an inner wrapper, never the tab view itself: an inline display on
   // the view would override the menu's .qmm-view show/hide rule.
   const wrap = document.createElement("div");
-  wrap.classList.add("qws-pnl-scroll");
-  Object.assign(wrap.style, {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-    // Wide enough for the counts grid to breathe, but capped against the
-    // viewport so the HUD window never runs off a small screen.
-    width: "min(680px, 86vw)",
-    maxWidth: "100%",
-    minHeight: "0",
-    maxHeight: "68vh",
-    overflowY: "auto",
-    boxSizing: "border-box",
-  });
+  wrap.className = "ht-tab";
   view.appendChild(wrap);
 
   /* ----- Header ----- */
   const header = document.createElement("div");
-  Object.assign(header.style, { display: "flex", alignItems: "center", gap: "8px", flexShrink: "0", padding: "0 2px" });
+  header.className = "ht-head";
 
+  const text = document.createElement("div");
+  text.className = "ht-head__text";
   const title = document.createElement("div");
-  Object.assign(title.style, { fontSize: "14.5px", fontWeight: "700", color: color.text, flex: "1 1 auto" });
-  title.textContent = "🥚 Hatches & bad luck protection";
-  title.title =
-    "Counted from the hatches Arie's Mod has watched: the game never sends the real counters. Use Calibrate to set your actual head start.";
-  header.appendChild(title);
+  title.className = "ht-title";
+  title.textContent = "Hatches";
+  const subtitle = document.createElement("div");
+  subtitle.className = "ht-sub";
+  subtitle.textContent = "What each egg gave you, and how close its next guarantee is.";
+  text.append(title, subtitle);
+  header.appendChild(text);
 
   let showOffsets = false;
-  const calibrateBtn = button("Calibrate", {
+  const calibrateBtn = button("Set counters", {
     size: "sm",
-    title: "Show a head start field on every counter.",
+    title:
+      "Counted from the hatches Arie's Mod has watched: the game never sends the real counters. " +
+      "Shows a field on every counter to type in your real one.",
     onClick: () => {
       showOffsets = !showOffsets;
       repaint();
@@ -198,7 +192,7 @@ export function renderHatchTab(view: HTMLElement): void {
   wrap.appendChild(header);
 
   const body = document.createElement("div");
-  Object.assign(body.style, { display: "flex", flexDirection: "column", gap: "8px" });
+  body.className = "ht-list qws-pnl-scroll";
   wrap.appendChild(body);
 
   /* ----- Painting ----- */
@@ -229,20 +223,20 @@ export function renderHatchTab(view: HTMLElement): void {
     const others = otherSpecies(stats, fromEggs);
     if (others.length) {
       const card = collapsibleCard({
-        icon: "🐾",
         title: "Other pets",
         description: "Species no egg hatches.",
         collapsed: isCollapsed(OTHER_SECTION_ID),
         onToggle: collapsed => setCollapsed(OTHER_SECTION_ID, collapsed),
       });
+      card.root.classList.add("ht-egg");
       card.body.appendChild(speciesCountsGrid(others.map(species => ({ species })), stats));
       body.appendChild(card.root);
     }
 
     if (!body.childElementCount) {
       const empty = document.createElement("div");
-      Object.assign(empty.style, { fontSize: "12.5px", color: color.textDim, padding: "6px 2px" });
-      empty.textContent = "No egg data available yet.";
+      empty.className = "ht-empty";
+      empty.textContent = "No egg data yet. It shows up once the game's catalogs have loaded.";
       body.appendChild(empty);
     }
   }

@@ -6,12 +6,10 @@ import type { StatsSnapshot } from "../stats/stats";
 import { formatInteger } from "../../lib/format";
 import { iconBox } from "../../ui/kit/icons";
 import { color } from "../../ui/kit/theme";
-
-const css = (el: HTMLElement, style: Partial<CSSStyleDeclaration>) => Object.assign(el.style, style);
+import { ensureHatchStyles } from "./styles";
 
 const SPECIES_ICON_PX = 24;
 const HEADER_ICON_PX = 18;
-const GRID_TEMPLATE = "minmax(0, 2.2fr) repeat(4, minmax(54px, 1fr))";
 
 export interface SpeciesRow {
   species: string;
@@ -39,76 +37,42 @@ export function sortSpeciesByRarity(species: string[]): string[] {
   });
 }
 
-function gridRow(): HTMLElement {
-  const row = document.createElement("div");
-  css(row, {
-    display: "grid",
-    gridTemplateColumns: GRID_TEMPLATE,
-    alignItems: "center",
-    gap: "6px",
-  });
-  return row;
+function span(className: string, text?: string): HTMLSpanElement {
+  const el = document.createElement("span");
+  el.className = className;
+  if (text != null) el.textContent = text;
+  return el;
 }
 
-function headerCell(label: string, align: "left" | "center" = "center"): HTMLElement {
-  const cell = document.createElement("span");
-  css(cell, {
-    fontSize: "10.5px",
-    fontWeight: "700",
-    letterSpacing: "0.06em",
-    textTransform: "uppercase",
-    textAlign: align,
-    color: color.textDim,
-  });
-  cell.textContent = label;
-  return cell;
+function gridRow(extraClass = ""): HTMLElement {
+  const row = document.createElement("div");
+  row.className = `ht-counts__row ${extraClass}`.trim();
+  return row;
 }
 
 /** Gold and Rainbow head their columns with the mutation sprite, not a word. */
 function mutationHeaderCell(mutationId: string): HTMLElement {
-  const cell = document.createElement("span");
-  css(cell, { display: "flex", justifyContent: "center" });
+  const cell = span("ht-counts__mutation");
   cell.title = mutationId;
   cell.appendChild(iconBox(mutationIcon(mutationId), HEADER_ICON_PX, "hatch"));
   return cell;
 }
 
+/** A count, in its column's colour once there is one; zeros stay dim. */
 function numberCell(value: number, tint: string, strong = false): HTMLElement {
-  const cell = document.createElement("span");
-  css(cell, {
-    fontSize: "12.5px",
-    fontVariantNumeric: "tabular-nums",
-    fontWeight: strong ? "700" : "500",
-    color: value > 0 ? tint : color.textDim,
-    textAlign: "center",
-  });
-  cell.textContent = formatInteger(value);
+  const cell = span(strong ? "ht-num is-strong" : "ht-num", formatInteger(value));
+  if (value > 0) cell.style.color = tint;
   return cell;
 }
 
 function speciesCell(row: SpeciesRow): HTMLElement {
-  const cell = document.createElement("span");
-  css(cell, { display: "flex", alignItems: "center", gap: "7px", minWidth: "0" });
-
+  const cell = span("ht-species");
   cell.appendChild(iconBox(`sprite/pet/${row.species}`, SPECIES_ICON_PX, "hatch"));
-
-  const label = document.createElement("span");
-  css(label, {
-    fontSize: "12.5px",
-    color: color.text,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  });
-  label.textContent = row.species;
-  cell.appendChild(label);
+  cell.appendChild(span("ht-species__name", row.species));
 
   if (row.share !== undefined) {
-    const share = document.createElement("span");
-    css(share, { fontSize: "10px", color: color.textDim, whiteSpace: "nowrap", flex: "0 0 auto" });
     const percent = row.share * 100;
-    share.textContent = `${percent >= 1 ? Math.round(percent) : percent.toFixed(1)}%`;
-    cell.appendChild(share);
+    cell.appendChild(span("ht-species__share", `${percent >= 1 ? Math.round(percent) : percent.toFixed(1)}%`));
   }
 
   return cell;
@@ -117,22 +81,23 @@ function speciesCell(row: SpeciesRow): HTMLElement {
 /**
  * Renders the counts grid for `rows`.
  *
- * Unframed on purpose: callers drop it inside a panel that already draws the
- * border, so the egg card can hold its pity rows and these counts in one box.
+ * Unframed on purpose: callers drop it inside a card that already draws the
+ * border, so the egg card holds its pity rows and these counts in one box.
  * The totals line is only worth a row when there is more than one species to
  * add up.
  */
 export function speciesCountsGrid(rows: SpeciesRow[], stats: StatsSnapshot): HTMLElement {
+  ensureHatchStyles();
   const wrap = document.createElement("div");
-  css(wrap, { display: "flex", flexDirection: "column", gap: "3px" });
+  wrap.className = "ht-counts";
 
   const header = gridRow();
   header.append(
-    headerCell("Mutation counters", "left"),
-    headerCell("Normal"),
+    span("ht-counts__head is-left", "Hatched"),
+    span("ht-counts__head", "Normal"),
     mutationHeaderCell(GOLD_MUTATION),
     mutationHeaderCell(RAINBOW_MUTATION),
-    headerCell("Total"),
+    span("ht-counts__head", "Total"),
   );
   wrap.appendChild(header);
 
@@ -152,27 +117,19 @@ export function speciesCountsGrid(rows: SpeciesRow[], stats: StatsSnapshot): HTM
       numberCell(counts.normal, color.text),
       numberCell(counts.gold, color.goldInk),
       numberCell(counts.rainbow, color.rainbowInk),
-      numberCell(totalOf(counts), color.accent, true),
+      numberCell(totalOf(counts), color.sepiaInk, true),
     );
     wrap.appendChild(line);
   }
 
   if (rows.length > 1) {
-    const separator = document.createElement("div");
-    css(separator, { height: "1px", background: color.border, margin: "2px 0" });
-    wrap.appendChild(separator);
-
-    const label = document.createElement("span");
-    css(label, { fontSize: "11px", fontWeight: "700", color: color.textDim, textTransform: "uppercase" });
-    label.textContent = "Total";
-
-    const totals = gridRow();
+    const totals = gridRow("is-total");
     totals.append(
-      label,
+      span("ht-counts__head is-left", "Total"),
       numberCell(totalNormal, color.text, true),
       numberCell(totalGold, color.goldInk, true),
       numberCell(totalRainbow, color.rainbowInk, true),
-      numberCell(totalNormal + totalGold + totalRainbow, color.accent, true),
+      numberCell(totalNormal + totalGold + totalRainbow, color.sepiaInk, true),
     );
     wrap.appendChild(totals);
   }

@@ -1,8 +1,8 @@
 // The small framed pet portrait used across the Pets menu: team list, Team
 // Builder, Feeding list and Logs.
 
-import { color } from "../../ui/kit/theme";
 import { attachSpriteIcon } from "../../ui/kit/sprites/iconCache";
+import { ensurePetsStyles } from "./styles";
 
 export type PetIconSource = {
   petSpecies?: string | null;
@@ -24,7 +24,7 @@ function spriteImg(src: string, size: number): HTMLImageElement {
   img.height = size;
   img.alt = "";
   img.draggable = false;
-  Object.assign(img.style, { width: `${size}px`, height: `${size}px`, objectFit: "contain" });
+  img.style.width = img.style.height = `${size}px`;
   return img;
 }
 
@@ -34,23 +34,15 @@ function spriteImg(src: string, size: number): HTMLImageElement {
  * empty, faded slot.
  */
 export function petIcon(pet: PetIconSource | null, size: number): HTMLElement {
+  ensurePetsStyles();
   const holder = document.createElement("div");
-  Object.assign(holder.style, {
-    width: `${size}px`,
-    height: `${size}px`,
-    flex: "0 0 auto",
-    display: "grid",
-    placeItems: "center",
-    overflow: "hidden",
-    borderRadius: `${Math.round(size / 3.5)}px`,
-    background: color.surface,
-    border: `1px solid ${color.border}`,
-    fontSize: `${Math.max(9, Math.round(size * 0.45))}px`,
-    color: color.text,
-  });
+  holder.className = "pt-pet-icon";
+  holder.style.width = holder.style.height = `${size}px`;
+  holder.style.borderRadius = `${Math.round(size / 3.5)}px`;
+  holder.style.fontSize = `${Math.max(9, Math.round(size * 0.45))}px`;
 
   if (!pet) {
-    holder.style.opacity = "0.35";
+    holder.classList.add("is-empty");
     holder.textContent = "·";
     return holder;
   }

@@ -1,9 +1,10 @@
-// The Manager tab of the Pets menu: the team list on the left, the selected
-// team's editor on the right.
+// The Teams tab of the Pets menu (id "manager"): the team list on the left,
+// the selected team's editor on the right.
 
 import { onActivePetsStructuralChangeNow } from "../../game/player";
 import type { Menu } from "../../ui/kit/menu";
 import { PetsService, type PetTeam } from "./pets";
+import { ensurePetsStyles } from "./styles";
 import { createTeamEditor } from "./teamEditor";
 import { createTeamList } from "./teamList";
 
@@ -18,16 +19,15 @@ export function renderManagerTab(view: HTMLElement, ui: Menu): void {
 
   const selectedTeam = () => teams.find((t) => t.id === selectedId) ?? null;
 
+  ensurePetsStyles();
+  // Style inner wrappers, never the tab view itself: an inline display on the
+  // view would override the menu's .qmm-view show/hide rule.
+  const tab = document.createElement("div");
+  tab.className = "pt-tab";
   const layout = document.createElement("div");
-  Object.assign(layout.style, {
-    display: "grid",
-    gridTemplateColumns: "minmax(220px, 280px) minmax(0, 1fr)",
-    gap: "10px",
-    alignItems: "stretch",
-    height: "54vh",
-    overflow: "hidden",
-  });
-  view.appendChild(layout);
+  layout.className = "pt-split";
+  tab.appendChild(layout);
+  view.appendChild(tab);
 
   const list = createTeamList({
     onSelect(teamId) {
@@ -45,9 +45,6 @@ export function renderManagerTab(view: HTMLElement, ui: Menu): void {
       void refreshList();
       void editor.show(selectedTeam());
     },
-    onDelete() {
-      if (selectedId) PetsService.deleteTeam(selectedId);
-    },
     isSyncEnabled: () => PetsService.isTeamSyncEnabled(),
     setSyncEnabled: (on) => PetsService.setTeamSyncEnabled(on),
   });
@@ -56,6 +53,9 @@ export function renderManagerTab(view: HTMLElement, ui: Menu): void {
     selectedTeam,
     onRenamed: () => void refreshList(true),
     onUseTeam: useTeam,
+    onDelete() {
+      if (selectedId) PetsService.deleteTeam(selectedId);
+    },
     setWindowVisible: (visible) => ui.setWindowVisible(visible),
   });
 
