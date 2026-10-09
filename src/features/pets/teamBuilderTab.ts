@@ -4,61 +4,40 @@
 
 import { getPetMaxStrength, getPetStrength } from "../../data/rules/petValue";
 import { button } from "../../ui/kit/button";
+import { pill } from "../../ui/kit/badges";
 import { card } from "../../ui/kit/card";
-import { flexRow } from "../../ui/kit/layout";
-import { color } from "../../ui/kit/theme";
+import { collapsibleCard } from "../../ui/kit/layout";
 import { toastSimple } from "../../ui/toast";
 import { abilityDots } from "./abilityChips";
 import { getAbilityChipColors } from "./abilityChipColors";
 import { PetsService, type InventoryPet } from "./pets";
 import { petIcon } from "./petIcon";
+import { ensurePetsStyles } from "./styles";
 import { buildSuggestedTeams, type SuggestedTeam, type UnusedPetInfo } from "./teamBuilder";
 import { renderTeamStats } from "./teamStatsView";
 
 const MINI_ICON_PX = 24;
 
+function span(className: string, text: string): HTMLSpanElement {
+  const el = document.createElement("span");
+  el.className = className;
+  el.textContent = text;
+  return el;
+}
+
 // One line per pet: icon, name (cut with an ellipsis), strength, ability
 // dots. A second line is what made the cards tall before.
 function renderPetChip(pet: InventoryPet | undefined): HTMLElement {
   const chip = document.createElement("div");
-  Object.assign(chip.style, {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    minWidth: "0",
-    padding: "3px 4px",
-    borderRadius: "6px",
-    transition: "background 100ms ease",
-  } as CSSStyleDeclaration);
-  chip.onmouseenter = () => { chip.style.background = color.hoverBg; };
-  chip.onmouseleave = () => { chip.style.background = "transparent"; };
-
+  chip.className = "pt-chip";
   chip.appendChild(petIcon(pet ?? null, MINI_ICON_PX));
-
-  const nameSpan = document.createElement("span");
-  nameSpan.style.fontSize = "11px";
-  nameSpan.style.fontWeight = "600";
-  nameSpan.style.overflow = "hidden";
-  nameSpan.style.textOverflow = "ellipsis";
-  nameSpan.style.whiteSpace = "nowrap";
-  nameSpan.style.flex = "1 1 auto";
-  nameSpan.style.minWidth = "0";
-  nameSpan.textContent = pet ? (pet.name || pet.petSpecies || "?") : "-";
-  chip.appendChild(nameSpan);
+  chip.appendChild(span("pt-chip__name", pet ? (pet.name || pet.petSpecies || "?") : "-"));
 
   if (pet) {
-    const strBadge = document.createElement("span");
-    strBadge.textContent = `${getPetStrength(pet)}/${getPetMaxStrength(pet)}`;
+    const strength = getPetStrength(pet);
+    const maxStrength = getPetMaxStrength(pet);
+    const strBadge = span(strength >= maxStrength && maxStrength > 0 ? "pt-str is-max" : "pt-str", `${strength}/${maxStrength}`);
     strBadge.title = "Strength (current/max). Teams rank by max strength.";
-    Object.assign(strBadge.style, {
-      fontSize: "10px",
-      fontVariantNumeric: "tabular-nums",
-      color: color.textSoft,
-      background: color.hoverBg,
-      padding: "1px 6px",
-      borderRadius: "999px",
-      flex: "0 0 auto",
-    } as CSSStyleDeclaration);
     chip.appendChild(strBadge);
     chip.appendChild(abilityDots(pet.abilities, { size: 9, gap: 4 }));
   }
@@ -160,62 +139,10 @@ function buildSaveName(team: SuggestedTeam, isAfk: boolean): string {
 
 function renderTeamCard(team: SuggestedTeam, petsById: Map<string, InventoryPet>): HTMLElement {
   const isAfk = team.mode === "afk";
-  const glow = isAfk ? color.warn : color.sepia;
-  const title = isAfk ? `${abilityLabel(team)} (AFK)` : abilityLabel(team);
-  const teamCard = card(title, {
-    tone: isAfk ? "accent" : "default",
-    compactHeader: true,
-    gap: 6,
-  });
-  Object.assign(teamCard.root.style, {
-    padding: "8px 10px 10px",
-    position: "relative",
-    overflow: "hidden",
-    transition: "transform 140ms ease, box-shadow 140ms ease",
-  } as CSSStyleDeclaration);
-  teamCard.root.onmouseenter = () => {
-    teamCard.root.style.transform = "translateY(-2px)";
-    teamCard.root.style.boxShadow = `0 4px 0 ${color.sandShade}, 0 0 0 2px ${glow}`;
-  };
-  teamCard.root.onmouseleave = () => {
-    teamCard.root.style.transform = "none";
-    teamCard.root.style.boxShadow = "";
-  };
 
-  // The left strip shows the ability colours the team is built around (the
-  // same palette as the ability dots), blended top to bottom when the team
-  // merges more than one category.
-  const stripColors = team.categories.map((c) => getAbilityChipColors(c.abilityId).bg);
-  const strip = document.createElement("div");
-  Object.assign(strip.style, {
-    position: "absolute",
-    left: "0",
-    top: "0",
-    bottom: "0",
-    width: "4px",
-    background: stripColors.length > 1 ? `linear-gradient(180deg, ${stripColors.join(", ")})` : stripColors[0],
-  } as CSSStyleDeclaration);
-  teamCard.root.appendChild(strip);
-
-  const petsCol = document.createElement("div");
-  petsCol.style.display = "grid";
-  petsCol.style.gap = "1px";
-  for (const id of team.petIds) {
-    petsCol.appendChild(renderPetChip(petsById.get(id)));
-  }
-  teamCard.body.appendChild(petsCol);
-
-  // What the team is worth at these pets' strengths, for the goal it was built
-  // for only: a Crop Size team reports Crop Size, not every unrelated ability
-  // its pets carry. Collapsed by default, since the grid holds many cards.
-  const teamPets = team.petIds
-    .map((id) => petsById.get(id))
-    .filter((pet): pet is InventoryPet => Boolean(pet));
-  teamCard.body.appendChild(renderTeamStats(teamPets, { focusAbilityIds: team.focusAbilityIds }));
-
-  const saveBtn = button("💾 Save", {
-    variant: "primary",
+  const saveBtn = button("Save", {
     size: "sm",
+    tooltip: "Save as a new team in the Teams tab",
     onClick: () => {
       const name = buildSaveName(team, isAfk);
       const created = PetsService.createTeam(name);
@@ -223,21 +150,39 @@ function renderTeamCard(team: SuggestedTeam, petsById: Map<string, InventoryPet>
       void toastSimple("Team saved", name, "success");
     },
   });
-  Object.assign(saveBtn.style, {
-    marginTop: "2px",
-    width: "84px",
-    height: "24px",
-    minHeight: "24px",
-    maxHeight: "24px",
-    boxSizing: "border-box",
-    padding: "0",
-    fontSize: "11px",
-    lineHeight: "1",
-    justifySelf: "center",
-    alignSelf: "center",
-    flexShrink: "0",
-  } as CSSStyleDeclaration);
-  teamCard.body.appendChild(saveBtn);
+  const actions: HTMLElement[] = [saveBtn];
+  if (isAfk) {
+    const afk = pill("AFK", "warn");
+    afk.title = "Every ability here works while you are away.";
+    actions.unshift(afk);
+  }
+
+  const teamCard = card(abilityLabel(team), { tone: isAfk ? "accent" : "default", actions });
+  teamCard.root.classList.add("pt-suggest");
+
+  // The left strip shows the ability colours the team is built around (the
+  // same palette as the ability dots), blended top to bottom when the team
+  // merges more than one category.
+  const stripColors = team.categories.map((c) => getAbilityChipColors(c.abilityId).bg);
+  const strip = document.createElement("div");
+  strip.className = "pt-suggest__strip";
+  strip.style.background = stripColors.length > 1 ? `linear-gradient(180deg, ${stripColors.join(", ")})` : stripColors[0];
+  teamCard.root.appendChild(strip);
+
+  const petsCol = document.createElement("div");
+  petsCol.className = "pt-suggest__pets";
+  for (const id of team.petIds) {
+    petsCol.appendChild(renderPetChip(petsById.get(id)));
+  }
+  teamCard.body.appendChild(petsCol);
+
+  // What the team is worth at these pets' strengths, for the goal it was built
+  // for only: a Crop Size team reports Crop Size, not every unrelated ability
+  // its pets carry.
+  const teamPets = team.petIds
+    .map((id) => petsById.get(id))
+    .filter((pet): pet is InventoryPet => Boolean(pet));
+  teamCard.body.appendChild(renderTeamStats(teamPets, { focusAbilityIds: team.focusAbilityIds }));
 
   return teamCard.root;
 }
@@ -251,60 +196,26 @@ function unusedReasonText(info: UnusedPetInfo): string {
 
 function renderUnusedRow(info: UnusedPetInfo): HTMLElement {
   const row = document.createElement("div");
-  row.style.display = "flex";
-  row.style.alignItems = "center";
-  row.style.gap = "6px";
-  row.style.padding = "3px 0";
-  row.style.opacity = "0.75";
-
+  row.className = "pt-unused";
   row.appendChild(renderPetChip(info.pet));
-
-  const reason = document.createElement("span");
-  reason.textContent = unusedReasonText(info);
-  reason.style.fontSize = "10px";
-  reason.style.opacity = "0.7";
-  reason.style.flex = "0 0 auto";
-  reason.style.whiteSpace = "nowrap";
-  reason.style.overflow = "hidden";
-  reason.style.textOverflow = "ellipsis";
-  reason.style.maxWidth = "45%";
+  const reason = span("pt-unused__why", unusedReasonText(info));
+  reason.title = reason.textContent ?? "";
   row.appendChild(reason);
-
   return row;
 }
 
-// Collapsed by default: the list can get long, and it matters less than the
-// suggested teams above.
+// Collapsed each time the tab draws: the list can get long, and it matters
+// less than the suggested teams above.
 function renderUnusedSection(unusedPets: UnusedPetInfo[]): HTMLElement {
-  const section = card(`🗑️ Not used in any team (${unusedPets.length})`, { tone: "muted", compactHeader: true, gap: 4 });
-  section.root.style.gridColumn = "1 / -1";
-  section.root.style.padding = "8px 10px";
-
-  const chevron = document.createElement("span");
-  chevron.textContent = "▸";
-  chevron.style.display = "inline-block";
-  chevron.style.marginLeft = "8px";
-  chevron.style.opacity = "0.6";
-  chevron.style.transition = "transform 120ms ease";
-  section.header.appendChild(chevron);
-  section.header.style.cursor = "pointer";
-  section.header.style.userSelect = "none";
-
-  const list = document.createElement("div");
-  list.style.display = "none";
-  list.style.gap = "1px";
-  for (const info of unusedPets) {
-    list.appendChild(renderUnusedRow(info));
-  }
-  section.body.appendChild(list);
-
-  let expanded = false;
-  section.header.addEventListener("click", () => {
-    expanded = !expanded;
-    list.style.display = expanded ? "grid" : "none";
-    chevron.style.transform = expanded ? "rotate(90deg)" : "none";
+  const section = collapsibleCard({
+    title: `Not used in any team (${unusedPets.length})`,
+    description: "Pets another one outranks, or with no ability a team is built on.",
+    collapsed: true,
+    onToggle: () => {},
   });
-
+  for (const info of unusedPets) {
+    section.body.appendChild(renderUnusedRow(info));
+  }
   return section.root;
 }
 
@@ -316,48 +227,38 @@ async function loadTeams(): Promise<{ teams: SuggestedTeam[]; sustainPet: Invent
 }
 
 export function renderTeamBuilderTab(view: HTMLElement): void {
-  view.innerHTML = "";
+  ensurePetsStyles();
+  view.replaceChildren();
 
   const wrap = document.createElement("div");
-  wrap.style.display = "grid";
-  wrap.style.gap = "10px";
-  wrap.style.alignContent = "start";
-  wrap.style.minHeight = "0";
-  wrap.style.maxHeight = "54vh";
-  wrap.style.overflow = "auto";
+  wrap.className = "pt-tab";
   view.appendChild(wrap);
 
-  const header = flexRow({ justify: "end", fullWidth: true });
-  header.style.paddingBottom = "8px";
-  header.style.borderBottom = `1px solid ${color.border}`;
-
-  const refreshBtn = button("🔄 Refresh", { size: "sm" });
-  header.appendChild(refreshBtn);
+  const header = document.createElement("div");
+  header.className = "pt-builder__bar";
+  const refreshBtn = button("Refresh", { size: "sm", tooltip: "Look at your pets again" });
+  header.append(span("pt-hint", "Teams made from the pets you own, best first. Save one to use it."), refreshBtn);
   wrap.appendChild(header);
 
+  const scroller = document.createElement("div");
+  scroller.className = "pt-scroll";
   const content = document.createElement("div");
-  content.style.display = "grid";
-  content.style.gridTemplateColumns = "repeat(3, minmax(0, 1fr))";
-  content.style.gap = "8px";
-  wrap.appendChild(content);
+  content.className = "pt-builder__grid";
+  scroller.appendChild(content);
+  wrap.appendChild(scroller);
+
+  const message = (text: string) => content.replaceChildren(span("pt-empty", text));
 
   async function repaint() {
-    content.innerHTML = "";
-    const loading = document.createElement("div");
-    loading.textContent = "Loading…";
-    loading.style.opacity = "0.6";
-    content.appendChild(loading);
+    message("Looking at your pets…");
 
     const { teams, unusedPets, petsById } = await loadTeams();
     if (!view.isConnected) return;
 
-    content.innerHTML = "";
+    content.replaceChildren();
 
     if (!teams.length) {
-      const empty = document.createElement("div");
-      empty.textContent = "No useful team found. Hatch pets with offensive abilities.";
-      empty.style.opacity = "0.7";
-      content.appendChild(empty);
+      message("No useful team found. Hatch pets with offensive abilities.");
       return;
     }
 

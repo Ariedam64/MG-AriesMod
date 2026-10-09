@@ -1,23 +1,20 @@
-// The right column of the Manager tab: the selected team's name, its three
-// pet slots, and what the team is worth.
+// The right column of the Teams tab: the selected team's name, its three pet
+// slots, what the team is worth, and its delete button.
 
 import { getPetMaxStrength, getPetStrength } from "../../data/rules/petValue";
 import { button } from "../../ui/kit/button";
 import { card } from "../../ui/kit/card";
 import { textInput } from "../../ui/kit/fields";
-import { flexRow } from "../../ui/kit/layout";
-import { color } from "../../ui/kit/theme";
 import { attachSpriteIcon } from "../../ui/kit/sprites/iconCache";
 import { abilityDots } from "./abilityChips";
 import type { InventoryPet } from "./inventoryPets";
 import { PetsService } from "./pets";
+import { ensurePetsStyles } from "./styles";
 import { petTeamName } from "./teamReconcile";
 import { renderTeamStats } from "./teamStatsView";
 import type { PetTeam } from "./teamStore";
 
 const SLOT_ICON_PX = 40;
-const SLOT_BUTTON_PX = 34;
-const MAX_STRENGTH_COLOR = color.gold;
 
 export type TeamEditorHandlers = {
   /** The team the editor shows, read fresh at each action. */
@@ -26,6 +23,8 @@ export type TeamEditorHandlers = {
   onRenamed(): void;
   /** "Use this team" was pressed. */
   onUseTeam(team: PetTeam): Promise<void>;
+  /** "Delete team" was pressed. */
+  onDelete(): void;
   /** Hides or shows the window while the game's inventory is open for a pick. */
   setWindowVisible(visible: boolean): void;
 };
@@ -38,13 +37,6 @@ export type TeamEditor = {
   repaint(team: PetTeam | null): Promise<void>;
 };
 
-function framed(title: string, content: HTMLElement): HTMLElement {
-  const section = card(title, { tone: "muted", align: "center" });
-  section.body.append(content);
-  section.root.style.maxWidth = "720px";
-  return section.root;
-}
-
 const emptyPet = (id: string): InventoryPet => ({
   id, itemType: "Pet", petSpecies: "", name: null, xp: 0, hunger: 0, mutations: [], abilities: [],
 });
@@ -53,48 +45,14 @@ type SlotRow = { root: HTMLElement; update(pet: InventoryPet | null): void };
 
 function slotRow(onChoose: () => Promise<void>, onClear: () => Promise<void>): SlotRow {
   const root = document.createElement("div");
-  Object.assign(root.style, {
-    display: "grid",
-    gridTemplateColumns: `${SLOT_ICON_PX}px minmax(0,1fr) ${SLOT_BUTTON_PX}px ${SLOT_BUTTON_PX}px`,
-    alignItems: "center",
-    gap: "8px",
-    width: "min(560px, 100%)",
-    border: `1px solid ${color.border}`,
-    borderRadius: "10px",
-    padding: "8px 10px",
-    background: color.cardBg,
-  });
+  root.className = "pt-slot";
 
-  // The sprite, with the strength badge under it.
-  const iconColumn = document.createElement("div");
-  Object.assign(iconColumn.style, { display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", flexShrink: "0" });
   const iconWrap = document.createElement("div");
-  Object.assign(iconWrap.style, {
-    width: `${SLOT_ICON_PX}px`,
-    height: `${SLOT_ICON_PX}px`,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-  });
-  const strengthBadge = document.createElement("div");
-  Object.assign(strengthBadge.style, {
-    fontSize: "9px",
-    fontWeight: "700",
-    lineHeight: "1",
-    padding: "1px 4px",
-    borderRadius: "4px",
-    background: color.bark,
-    color: color.paper,
-    whiteSpace: "nowrap",
-    display: "none",
-    pointerEvents: "none",
-  });
-  iconColumn.append(iconWrap, strengthBadge);
+  iconWrap.className = "pt-slot__icon";
 
   const pawFallback = () => {
     const paw = document.createElement("span");
     paw.textContent = "🐾";
-    paw.style.fontSize = `${SLOT_ICON_PX - 6}px`;
     paw.setAttribute("aria-hidden", "true");
     iconWrap.replaceChildren(paw);
   };
@@ -112,16 +70,23 @@ function slotRow(onChoose: () => Promise<void>, onClear: () => Promise<void>): S
   };
 
   const text = document.createElement("div");
-  Object.assign(text.style, { display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" });
+  text.className = "pt-slot__text";
+  const titleRow = document.createElement("div");
+  titleRow.className = "pt-slot__title";
   const nameEl = document.createElement("div");
-  Object.assign(nameEl.style, { fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
-  text.append(nameEl, abilityDots([], { emptyText: "No ability" }));
+  nameEl.className = "pt-slot__name";
+  const strengthBadge = document.createElement("span");
+  strengthBadge.className = "pt-str";
+  titleRow.append(nameEl, strengthBadge);
+  text.append(titleRow, abilityDots([], { emptyText: "No ability" }));
 
-  const btnChoose = button("", { icon: "+", tooltip: "Choose a pet", ariaLabel: "Choose a pet" });
-  const btnClear = button("", { icon: "−", variant: "danger", tooltip: "Remove this pet", ariaLabel: "Remove this pet" });
+  const btnChoose = button("Choose", { size: "sm", tooltip: "Pick a pet from your inventory" });
+  const btnClear = button("", { icon: "✕", variant: "ghost", size: "sm", tooltip: "Remove this pet", ariaLabel: "Remove this pet" });
+
+  let empty = true;
   const setBusy = (busy: boolean) => {
     btnChoose.disabled = busy;
-    btnClear.disabled = busy;
+    btnClear.disabled = busy || empty;
   };
   btnChoose.onclick = async () => {
     setBusy(true);
@@ -129,9 +94,15 @@ function slotRow(onChoose: () => Promise<void>, onClear: () => Promise<void>): S
   };
   btnClear.onclick = () => void onClear();
 
-  root.append(iconColumn, text, btnChoose, btnClear);
+  root.append(iconWrap, text, btnChoose, btnClear);
 
   function update(pet: InventoryPet | null): void {
+    empty = !pet;
+    root.classList.toggle("is-empty", empty);
+    btnClear.disabled = empty;
+    const chooseLabel = btnChoose.querySelector(".label");
+    if (chooseLabel) chooseLabel.textContent = empty ? "Choose" : "Change";
+
     const species = String(pet?.petSpecies || "").trim();
     setIcon(species, pet?.mutations ?? []);
 
@@ -140,15 +111,16 @@ function slotRow(onChoose: () => Promise<void>, onClear: () => Promise<void>): S
       const strength = getPetStrength(pet);
       const maxed = strength >= maxStrength;
       strengthBadge.textContent = maxed ? `${maxStrength}` : `${strength}/${maxStrength}`;
-      strengthBadge.style.color = maxed ? MAX_STRENGTH_COLOR : color.paper;
-      strengthBadge.style.display = "block";
+      strengthBadge.title = maxed ? "Strength, at its max" : "Strength (current/max)";
+      strengthBadge.classList.toggle("is-max", maxed);
+      strengthBadge.hidden = false;
     } else {
-      strengthBadge.style.display = "none";
+      strengthBadge.hidden = true;
     }
 
     const speciesLabel = species ? species.charAt(0).toUpperCase() + species.slice(1) : "";
-    nameEl.textContent = pet ? pet.name?.trim() || speciesLabel || "Pet" : "None";
-    text.lastElementChild!.replaceWith(abilityDots(pet?.abilities ?? [], { emptyText: "No ability" }));
+    nameEl.textContent = pet ? pet.name?.trim() || speciesLabel || "Pet" : "Empty slot";
+    text.lastElementChild!.replaceWith(abilityDots(pet?.abilities ?? [], { emptyText: pet ? "No ability" : "Pick a pet to fill it." }));
   }
 
   update(null);
@@ -156,43 +128,27 @@ function slotRow(onChoose: () => Promise<void>, onClear: () => Promise<void>): S
 }
 
 export function createTeamEditor(handlers: TeamEditorHandlers): TeamEditor {
+  ensurePetsStyles();
   const root = document.createElement("div");
-  Object.assign(root.style, { display: "grid", gridTemplateRows: "auto 1fr", gap: "10px", minHeight: "0" });
+  root.className = "pt-editor";
 
-  const header = document.createElement("div");
-  Object.assign(header.style, { display: "flex", alignItems: "center", gap: "8px" });
-  const title = document.createElement("div");
-  title.textContent = "Team editor";
-  Object.assign(title.style, {
-    fontWeight: "700",
-    fontSize: "14px",
-    flex: "1 1 0",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  });
+  /* ------------------------------ name and use ------------------------------ */
+
+  const head = document.createElement("div");
+  head.className = "pt-editor__head";
+  const nameInput = textInput("Team name", "");
+  nameInput.classList.add("pt-editor__name");
+  nameInput.setAttribute("aria-label", "Team name");
   const btnUseTeam = button("Use this team", {
     variant: "primary",
-    size: "sm",
     disabled: true,
     onClick: async () => {
       const team = handlers.selectedTeam();
       if (team) await handlers.onUseTeam(team);
     },
   });
-  header.append(title, btnUseTeam);
-
-  const body = document.createElement("div");
-  Object.assign(body.style, { display: "flex", flexDirection: "column", gap: "12px", overflow: "auto", minHeight: "0" });
-  root.append(header, body);
-
-  /* ---------------------------------- name ---------------------------------- */
-
-  const nameRow = flexRow({ justify: "center", fullWidth: true });
-  const nameInput = textInput("Team name", "");
-  Object.assign(nameInput.style, { flex: "1", minWidth: "0" });
-  nameRow.append(nameInput);
-  body.appendChild(framed("🏷️ Team name", nameRow));
+  head.append(nameInput, btnUseTeam);
+  root.appendChild(head);
 
   const saveName = () => {
     const team = handlers.selectedTeam();
@@ -242,12 +198,9 @@ export function createTeamEditor(handlers: TeamEditorHandlers): TeamEditor {
     ),
   );
 
-  const slotGrid = document.createElement("div");
-  Object.assign(slotGrid.style, { display: "grid", gridTemplateColumns: "1fr", rowGap: "10px", justifyItems: "center" });
-  slotGrid.append(...rows.map((r) => r.root));
-
-  const btnUseCurrent = button("Current active", {
-    variant: "primary",
+  const btnUseCurrent = button("Use equipped", {
+    size: "sm",
+    tooltip: "Fill the slots with the pets you have out now",
     onClick: async () => {
       try {
         const ids = await PetsService.getActivePetIds();
@@ -255,29 +208,36 @@ export function createTeamEditor(handlers: TeamEditorHandlers): TeamEditor {
       } catch {}
     },
   });
-  const btnClearSlots = button("Clear slots", { onClick: () => saveSlots([null, null, null]) });
-  btnUseCurrent.style.minWidth = btnClearSlots.style.minWidth = "140px";
-  const slotActions = flexRow({ gap: 6, justify: "center" });
-  slotActions.append(btnUseCurrent, btnClearSlots);
+  const btnClearSlots = button("Clear", { size: "sm", variant: "ghost", tooltip: "Empty all three slots", onClick: () => saveSlots([null, null, null]) });
 
-  const slotsColumn = document.createElement("div");
-  Object.assign(slotsColumn.style, { display: "flex", flexDirection: "column", gap: "8px" });
-  slotsColumn.append(slotGrid, slotActions);
-  body.appendChild(framed("⚡ Active pets (3 slots)", slotsColumn));
+  const petsCard = card("Pets", { actions: [btnUseCurrent, btnClearSlots] });
+  const slotList = document.createElement("div");
+  slotList.className = "pt-slots";
+  slotList.append(...rows.map((r) => r.root));
+  petsCard.body.appendChild(slotList);
+  root.appendChild(petsCard.root);
 
   /* ---------------------------------- stats --------------------------------- */
 
   // Follows the selected team as it is edited, before it is ever equipped.
-  const statsHost = document.createElement("div");
-  statsHost.style.width = "100%";
-  body.appendChild(framed("📊 Team stats", statsHost));
+  const statsCard = card("Stats", { subtitle: "Hover a number to see how it is worked out." });
+  const statsHost = statsCard.body;
+  root.appendChild(statsCard.root);
 
   const statsMessage = (message: string) => {
     const empty = document.createElement("div");
+    empty.className = "pt-empty";
     empty.textContent = message;
-    Object.assign(empty.style, { opacity: "0.7", fontSize: "11px" });
     statsHost.replaceChildren(empty);
   };
+
+  /* --------------------------------- delete --------------------------------- */
+
+  const foot = document.createElement("div");
+  foot.className = "pt-editor__foot";
+  const btnDelete = button("Delete team", { variant: "danger", size: "sm", disabled: true, onClick: handlers.onDelete });
+  foot.appendChild(btnDelete);
+  root.appendChild(foot);
 
   /* --------------------------------- painting -------------------------------- */
 
@@ -298,7 +258,7 @@ export function createTeamEditor(handlers: TeamEditorHandlers): TeamEditor {
       .map((id) => (id ? pets.get(String(id)) : undefined))
       .filter((pet): pet is InventoryPet => Boolean(pet));
     if (teamPets.length) statsHost.replaceChildren(renderTeamStats(teamPets, { showAllGroups: true }));
-    else statsMessage("No pets in this team.");
+    else statsMessage("Add a pet to see what this team does.");
   }
 
   async function show(team: PetTeam | null): Promise<void> {
@@ -307,6 +267,7 @@ export function createTeamEditor(handlers: TeamEditorHandlers): TeamEditor {
     btnClearSlots.setEnabled(has);
     btnUseCurrent.setEnabled(has);
     btnUseTeam.setEnabled(has);
+    btnDelete.setEnabled(has);
 
     if (!team) {
       rows.forEach((r, i) => {
@@ -314,7 +275,7 @@ export function createTeamEditor(handlers: TeamEditorHandlers): TeamEditor {
         drawnSlotIds[i] = null;
       });
       nameInput.value = "";
-      statsMessage("No team selected.");
+      statsMessage("No team selected. Pick one on the left, or make a new one.");
       return;
     }
     nameInput.value = String(team.name || "");

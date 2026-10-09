@@ -12,17 +12,20 @@ import { sectionLabel } from "../../ui/kit/card";
 import { textInput } from "../../ui/kit/fields";
 import { iconBox } from "../../ui/kit/icons";
 import { collapsibleCard } from "../../ui/kit/layout";
-import { color } from "../../ui/kit/theme";
-
-const css = (el: HTMLElement, style: Partial<CSSStyleDeclaration>) => Object.assign(el.style, style);
+import { ensureHatchStyles } from "./styles";
 
 const EGG_ICON_PX = 30;
 const TARGET_ICON_PX = 22;
 const RARITY_ICON_PX = 20;
-/** Row: label | meter | value | head start. */
-const ROW_TEMPLATE = "minmax(96px, 1fr) minmax(70px, 1.5fr) auto auto";
 /** Within this many pulls of the guarantee, the row is worth flagging. */
 const NEAR_GUARANTEE_PULLS = 10;
+
+function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text?: string): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
+}
 
 function formatChance(chance: number): string {
   if (!Number.isFinite(chance) || chance <= 0) return "";
@@ -48,65 +51,31 @@ function targetRow(egg: EggPity, target: PityTarget, showOffsets: boolean): HTML
   const due = remaining === 0;
   const near = !due && remaining <= NEAR_GUARANTEE_PULLS;
 
-  // No border of its own: the card holds every pity row and the counts grid in
-  // a single panel, so the rows read as one block rather than three cards.
-  const row = document.createElement("div");
-  css(row, {
-    display: "grid",
-    gridTemplateColumns: ROW_TEMPLATE,
-    alignItems: "center",
-    gap: "10px",
-    padding: "3px 0",
-  });
+  const row = el("div", "ht-row");
 
-  const label = document.createElement("div");
-  css(label, { display: "flex", alignItems: "center", gap: "6px", minWidth: "0" });
+  const label = el("div", "ht-row__label");
   label.title = target.label;
-
-  const icon = iconBox(target.icon, TARGET_ICON_PX, "hatch");
-  label.appendChild(icon);
+  label.appendChild(iconBox(target.icon, TARGET_ICON_PX, "hatch"));
 
   // The Gold and Rainbow sprites say what they are on their own, so only a
   // species needs its name spelled out.
-  if (target.kind === "species") {
-    const name = document.createElement("span");
-    css(name, {
-      fontSize: "12.5px",
-      color: color.text,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-    });
-    name.textContent = target.label;
-    label.appendChild(name);
-  }
+  if (target.kind === "species") label.appendChild(el("span", "ht-row__name", target.label));
 
   const chance = formatChance(target.chance);
-  if (chance) {
-    const rate = document.createElement("span");
-    css(rate, { fontSize: "10.5px", color: color.textDim, whiteSpace: "nowrap" });
-    rate.textContent = chance;
-    label.appendChild(rate);
-  }
+  if (chance) label.appendChild(el("span", "ht-row__rate", chance));
 
   const bar = meter();
   bar.set(misses / ceiling, due || near ? "warn" : "accent");
 
-  const value = document.createElement("span");
-  css(value, {
-    fontSize: "11.5px",
-    fontVariantNumeric: "tabular-nums",
-    color: due || near ? color.warn : color.textDim,
-    whiteSpace: "nowrap",
-    textAlign: "right",
-  });
   // Without a head start the count is only what this install watched, so it is
   // a floor rather than the real counter. Saying so beats quietly showing a
   // number the game would disagree with.
   const isFloor = offset <= 0;
-  value.textContent = due
-    ? "Guaranteed"
-    : `${isFloor ? "≥ " : ""}${formatInt(misses)} / ${formatInt(ceiling)}`;
+  const value = el(
+    "span",
+    due || near ? "ht-row__value is-near" : "ht-row__value",
+    due ? "Guaranteed" : `${isFloor ? "≥ " : ""}${formatInt(misses)} / ${formatInt(ceiling)}`,
+  );
   value.title = due
     ? `Due: the next pull is forced (threshold ${formatInt(target.threshold)}).`
     : isFloor
@@ -118,8 +87,9 @@ function targetRow(egg: EggPity, target: PityTarget, showOffsets: boolean): HTML
   if (showOffsets) {
     const input = textInput("", String(offset), { small: true });
     Object.assign(input, { type: "number", min: "0", max: String(ceiling), step: "1" });
-    css(input, { width: "70px", padding: "5px 7px", fontSize: "11px", textAlign: "right" });
+    input.classList.add("ht-offset");
     input.title = "Your real in-game counter for this outcome. The mod adds what it has seen since.";
+    input.setAttribute("aria-label", `In-game counter for ${target.label}`);
     input.addEventListener("change", () => {
       HatchTracker.setOffset(egg.eggId, target.key, Number(input.value));
     });
@@ -141,37 +111,23 @@ function targetRow(egg: EggPity, target: PityTarget, showOffsets: boolean): HTML
  * low on an old account and why the head start exists.
  */
 function trackingNote(): HTMLElement {
-  const note = document.createElement("div");
-  css(note, { fontSize: "10px", color: color.textDim, lineHeight: "1.45", padding: "1px 0 4px" });
-
   const startedAt = HatchTracker.getTrackingStartedAt();
   const since = startedAt > 0
     ? `since ${new Date(startedAt).toLocaleDateString()}`
     : "since this install started watching";
-  note.textContent =
-    `The game keeps its real counters private, so these only count hatches seen ${since}. ` +
-    `Hatched before that? Type your in-game counter to correct it.`;
-  return note;
+  return el(
+    "div",
+    "ht-note",
+    `Counts the hatches seen ${since}; the game keeps its real counters private. ` +
+      `Hatched before that? Use Set counters to type yours in.`,
+  );
 }
 
 /** Single line, so a collapsed card costs one row rather than two. */
 function eggHeader(egg: EggPity, pulls: number): HTMLElement {
-  const head = document.createElement("div");
-  css(head, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
-
+  const head = el("div", "ht-egg-head");
   head.appendChild(iconBox(`sprite/pet/${egg.eggId}`, EGG_ICON_PX, "hatch"));
-
-  const name = document.createElement("span");
-  css(name, {
-    fontSize: "13.5px",
-    fontWeight: "600",
-    color: color.text,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  });
-  name.textContent = egg.name;
-  head.appendChild(name);
+  head.appendChild(el("span", "ht-egg-name", egg.name));
 
   const rarityFrame = raritySprite(egg.rarity);
   if (rarityFrame) {
@@ -180,11 +136,7 @@ function eggHeader(egg: EggPity, pulls: number): HTMLElement {
     head.appendChild(badge);
   }
 
-  const seen = document.createElement("span");
-  css(seen, { fontSize: "11px", color: color.textDim, whiteSpace: "nowrap", marginLeft: "auto" });
-  seen.textContent = pulls === 1 ? "1 hatch seen" : `${formatInt(pulls)} hatches seen`;
-  head.appendChild(seen);
-
+  head.appendChild(el("span", "ht-egg-seen", pulls === 1 ? "1 hatch seen" : `${formatInt(pulls)} hatches seen`));
   return head;
 }
 
@@ -197,6 +149,7 @@ export interface EggCardOptions {
 }
 
 export function createEggCard(options: EggCardOptions): HTMLElement {
+  ensureHatchStyles();
   const { egg, stats, showOffsets } = options;
   const counters = HatchTracker.getCounters(egg.eggId);
 
@@ -205,32 +158,19 @@ export function createEggCard(options: EggCardOptions): HTMLElement {
     collapsed: options.collapsed,
     onToggle: options.onToggle,
   });
-
-  const panel = document.createElement("div");
-  css(panel, {
-    display: "flex",
-    flexDirection: "column",
-    gap: "2px",
-    padding: "7px 9px",
-    borderRadius: "8px",
-    background: color.cardBg,
-    border: `1px solid ${color.border}`,
-  });
+  card.root.classList.add("ht-egg");
 
   // Species and mutation guarantees are separate rolls, but both are Bad Luck
   // Protection, so one heading covers the lot.
-  panel.appendChild(sectionLabel("Bad luck protection"));
-  panel.appendChild(trackingNote());
+  const pity = el("div", "ht-section");
+  pity.append(sectionLabel("Bad luck protection"), trackingNote());
   for (const target of egg.targets) {
-    panel.appendChild(targetRow(egg, target, showOffsets));
+    pity.appendChild(targetRow(egg, target, showOffsets));
   }
+  card.body.appendChild(pity);
 
   if (egg.fauna.length) {
-    const separator = document.createElement("div");
-    css(separator, { height: "1px", background: color.border, margin: "5px 0 4px" });
-    panel.appendChild(separator);
-
-    panel.appendChild(
+    card.body.appendChild(
       speciesCountsGrid(
         egg.fauna.map(entry => ({ species: entry.species, share: entry.share })),
         stats,
@@ -238,6 +178,5 @@ export function createEggCard(options: EggCardOptions): HTMLElement {
     );
   }
 
-  card.body.appendChild(panel);
   return card.root;
 }

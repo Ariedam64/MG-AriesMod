@@ -1,20 +1,18 @@
-// The left column of the Manager tab: the sync switch, the team list (drag a
-// team by its handle to reorder), and the New and Delete buttons.
+// The left column of the Teams tab: the team list (drag a team by its handle
+// to reorder), the New team button, and the sync switch.
 
 import { button } from "../../ui/kit/button";
-import { flexRow } from "../../ui/kit/layout";
-import { color } from "../../ui/kit/theme";
+import { sectionLabel } from "../../ui/kit/card";
 import { switchInput } from "../../ui/kit/toggles";
 import type { InventoryPet } from "./inventoryPets";
 import { petIcon } from "./petIcon";
+import { ensurePetsStyles } from "./styles";
 import type { PetTeam } from "./teamStore";
 
-const ACTIVE_DOT = color.ok;
-const INACTIVE_DOT = color.sandShade;
 /** Within this distance of the list's edge, a drag scrolls the list. */
 const AUTOSCROLL_EDGE_PX = 28;
 const AUTOSCROLL_STEP_PX = 18;
-const MINI_ICON_PX = 18;
+const MINI_ICON_PX = 20;
 
 type TeamListView = {
   teams: PetTeam[];
@@ -28,7 +26,6 @@ export type TeamListHandlers = {
   /** Called with the full new order after a drop that moved a team. */
   onReorder(teamIds: string[]): void;
   onCreate(): void;
-  onDelete(): void;
   isSyncEnabled(): boolean;
   setSyncEnabled(on: boolean): void;
 };
@@ -50,40 +47,25 @@ function grabHandle(): HTMLElement {
 }
 
 export function createTeamList(handlers: TeamListHandlers): TeamList {
+  ensurePetsStyles();
   const root = document.createElement("div");
-  Object.assign(root.style, { display: "grid", gridTemplateRows: "auto 1fr auto", gap: "8px", minHeight: "0" });
+  root.className = "pt-teams";
 
-  const syncRow = document.createElement("label");
-  // The padding lines the switch up with the team rows (1px border + 6px padding).
-  Object.assign(syncRow.style, { display: "flex", alignItems: "center", gap: "8px", padding: "2px 7px", cursor: "pointer" });
-  const syncSwitch = switchInput(handlers.isSyncEnabled(), (on) => handlers.setSyncEnabled(on));
-  syncSwitch.style.flexShrink = "0";
-  const syncLabel = document.createElement("span");
-  syncLabel.textContent = "Sync teams with the game";
-  syncLabel.style.fontSize = "13px";
-  syncRow.append(syncSwitch, syncLabel);
+  const head = document.createElement("div");
+  head.className = "pt-teams__head";
+  const btnNew = button("New team", { icon: "+", size: "sm", onClick: handlers.onCreate });
+  head.append(sectionLabel("Your teams"), btnNew);
 
   const list = document.createElement("div");
-  Object.assign(list.style, {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
-    overflow: "auto",
-    padding: "6px",
-    border: `1px solid ${color.border}`,
-    borderRadius: "10px",
-    background: color.cardBg,
-    scrollBehavior: "smooth",
-    minHeight: "0",
-  });
+  list.className = "pt-teams__rows";
 
-  const footer = flexRow({ gap: 6 });
-  const btnNew = button("➕ New", { variant: "primary", size: "sm", fullWidth: true, onClick: handlers.onCreate });
-  const btnDelete = button("🗑️ Delete", { variant: "danger", size: "sm", fullWidth: true, onClick: handlers.onDelete });
-  btnNew.style.flex = btnDelete.style.flex = "1 1 0";
-  footer.append(btnNew, btnDelete);
+  const syncRow = document.createElement("label");
+  syncRow.className = "pt-sync";
+  syncRow.title = "Keeps these teams and the game's own pet teams the same.";
+  const syncSwitch = switchInput(handlers.isSyncEnabled(), (on) => handlers.setSyncEnabled(on));
+  syncRow.append(syncSwitch, document.createTextNode("Sync with the game"));
 
-  root.append(syncRow, list, footer);
+  root.append(head, list, syncRow);
 
   /* ------------------------------ drag and drop ----------------------------- */
 
@@ -169,42 +151,20 @@ export function createTeamList(handlers: TeamListHandlers): TeamList {
     const active = team.id === view.activeTeamId;
 
     const row = document.createElement("div");
+    row.className = selected ? "pt-team is-selected" : "pt-team";
     row.dataset.index = String(index);
     row.dataset.teamId = team.id;
-    Object.assign(row.style, {
-      height: "36px",
-      padding: "0 10px",
-      borderRadius: "8px",
-      cursor: "pointer",
-      fontSize: "13px",
-      overflow: "hidden",
-      whiteSpace: "nowrap",
-      display: "flex",
-      flex: "0 0 auto",
-      gap: "8px",
-      alignItems: "center",
-      transition: "background 120ms ease, border-color 120ms ease",
-      border: `1px solid ${selected ? color.accentBorderHover : color.border}`,
-      background: selected ? color.accentSoft : color.cardBg,
-    });
 
     const dot = document.createElement("span");
-    Object.assign(dot.style, {
-      width: "10px",
-      height: "10px",
-      borderRadius: "50%",
-      flex: "0 0 auto",
-      boxShadow: `0 0 0 1px ${color.shade} inset`,
-      background: active ? ACTIVE_DOT : INACTIVE_DOT,
-    });
+    dot.className = active ? "pt-team__dot is-active" : "pt-team__dot";
     dot.title = active ? "This team is currently active" : "Inactive team";
 
     const label = document.createElement("span");
+    label.className = "pt-team__name";
     label.textContent = team.name || "(unnamed)";
-    Object.assign(label.style, { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 0" });
 
     const minis = document.createElement("div");
-    Object.assign(minis.style, { display: "flex", gap: "4px", alignItems: "center", marginLeft: "auto" });
+    minis.className = "pt-team__pets";
     for (let i = 0; i < 3; i++) {
       const id = team.slots[i];
       minis.appendChild(petIcon(id ? view.pets.get(String(id)) ?? null : null, MINI_ICON_PX));
@@ -212,9 +172,6 @@ export function createTeamList(handlers: TeamListHandlers): TeamList {
 
     const grab = grabHandle();
     row.append(dot, label, minis, grab);
-
-    row.onmouseenter = () => { if (!selected) row.style.borderColor = color.accentBorder; };
-    row.onmouseleave = () => { if (!selected) row.style.borderColor = color.border; };
     row.onclick = () => handlers.onSelect(team.id);
 
     grab.addEventListener("dragstart", (ev) => {
@@ -254,8 +211,8 @@ export function createTeamList(handlers: TeamListHandlers): TeamList {
     list.replaceChildren();
     if (!teams.length) {
       const empty = document.createElement("div");
-      empty.textContent = "No teams yet. Create one!";
-      Object.assign(empty.style, { opacity: "0.75", textAlign: "center", padding: "8px" });
+      empty.className = "pt-empty";
+      empty.textContent = "No teams yet. Make one with New team above.";
       list.appendChild(empty);
       return;
     }

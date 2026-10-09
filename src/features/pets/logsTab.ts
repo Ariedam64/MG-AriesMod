@@ -1,15 +1,21 @@
 // The Logs tab of the Pets menu: every pet ability proc recorded, with
 // filters by ability, sort order and free text.
 
+import { pill } from "../../ui/kit/badges";
 import { button } from "../../ui/kit/button";
-import { plainCard, sectionLabel } from "../../ui/kit/card";
+import { sectionLabel } from "../../ui/kit/card";
 import { select, textInput } from "../../ui/kit/fields";
-import { color } from "../../ui/kit/theme";
 import { abilityPill } from "./abilityChips";
 import { PetsService } from "./pets";
 import { petIcon } from "./petIcon";
+import { ensurePetsStyles } from "./styles";
 
-const css = (el: HTMLElement, style: Partial<CSSStyleDeclaration>) => Object.assign(el.style, style);
+function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text?: string): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
+}
 
 function options(el: HTMLSelectElement, entries: Array<[value: string, label: string]>): void {
   el.replaceChildren(
@@ -22,11 +28,7 @@ function options(el: HTMLSelectElement, entries: Array<[value: string, label: st
   );
 }
 
-const PANEL_WIDTH = "min(760px, 88vw)";
-const LIST_MAX_HEIGHT = "min(56vh, 520px)";
 const PET_ICON_PX = 24;
-/** Time | pet | ability | details. */
-const ROW_TEMPLATE = "104px minmax(120px, 1.2fr) minmax(110px, 0.9fr) minmax(0, 2fr)";
 
 type UILog = {
   petId: string;
@@ -71,90 +73,61 @@ const normalizeAbilityKey = (value?: string | null) =>
     .replace(/([ivx]+)$/i, "");
 
 export function renderLogsTab(view: HTMLElement): void {
+  ensurePetsStyles();
   view.replaceChildren();
 
   // Style an inner wrapper, never the tab view itself: an inline display on
   // the view would override the menu's .qmm-view show/hide rule.
   const wrap = document.createElement("div");
-  css(wrap, {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-    width: PANEL_WIDTH,
-    maxWidth: "100%",
-    minHeight: "0",
-    boxSizing: "border-box",
-  });
+  wrap.className = "pt-tab";
   view.appendChild(wrap);
 
-  const panel = plainCard();
-  css(panel, { minHeight: "0" });
-  wrap.appendChild(panel);
-
-  /* ----- Toolbar ----- */
+  /* ----- Title, count and clear ----- */
   const head = document.createElement("div");
-  css(head, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
-
-  const title = document.createElement("div");
-  css(title, { fontSize: "14.5px", fontWeight: "700", color: color.text, flex: "1 1 auto" });
-  title.textContent = "📝 Ability logs";
-  head.appendChild(title);
-
-  const count = document.createElement("span");
-  css(count, { fontSize: "11px", color: color.textDim, whiteSpace: "nowrap" });
-  head.appendChild(count);
-
-  panel.appendChild(head);
-
-  const toolbar = document.createElement("div");
-  css(toolbar, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
-
-  const selAbility = select({ small: true });
-  options(selAbility, [["", "All abilities"]]);
-  css(selAbility, { minWidth: "170px" });
-
-  const selSort = select({ small: true });
-  options(selSort, [["desc", "Newest first"], ["asc", "Oldest first"]]);
-  selSort.value = "desc";
-
-  const inputSearch = textInput("Search pet / ability / details", "", { small: true });
-  css(inputSearch, { flex: "1 1 200px", minWidth: "160px" });
-
-  const btnClear = button("🧹 Clear", {
+  head.className = "pt-logs__head";
+  const count = pill("");
+  const btnClear = button("Clear", {
     variant: "danger",
     size: "sm",
     title: "Clear all recorded logs",
     onClick: () => PetsService.clearAbilityLogs(),
   });
+  head.append(el("div", "pt-logs__title", "Ability logs"), count, btnClear);
+  wrap.appendChild(head);
 
-  toolbar.append(selAbility, selSort, inputSearch, btnClear);
-  panel.appendChild(toolbar);
+  /* ----- Filters ----- */
+  const toolbar = document.createElement("div");
+  toolbar.className = "pt-logs__tools";
+
+  const inputSearch = textInput("Search pets, abilities, details", "", { small: true });
+  inputSearch.classList.add("pt-logs__search");
+  inputSearch.setAttribute("aria-label", "Search the logs");
+
+  const selAbility = select({ small: true });
+  selAbility.classList.add("pt-logs__ability");
+  selAbility.setAttribute("aria-label", "Ability");
+  options(selAbility, [["", "All abilities"]]);
+
+  const selSort = select({ small: true });
+  selSort.setAttribute("aria-label", "Order");
+  options(selSort, [["desc", "Newest first"], ["asc", "Oldest first"]]);
+  selSort.value = "desc";
+
+  toolbar.append(inputSearch, selAbility, selSort);
+  wrap.appendChild(toolbar);
 
   /* ----- Column header ----- */
   const columns = document.createElement("div");
-  css(columns, {
-    display: "grid",
-    gridTemplateColumns: ROW_TEMPLATE,
-    gap: "10px",
-    padding: "0 8px",
-  });
+  columns.className = "pt-logs__cols";
   for (const label of ["When", "Pet", "Ability", "Details"]) {
     columns.appendChild(sectionLabel(label));
   }
-  panel.appendChild(columns);
+  wrap.appendChild(columns);
 
   /* ----- List ----- */
   const list = document.createElement("div");
-  list.classList.add("qws-pnl-scroll");
-  css(list, {
-    display: "flex",
-    flexDirection: "column",
-    gap: "3px",
-    maxHeight: LIST_MAX_HEIGHT,
-    overflowY: "auto",
-    minHeight: "0",
-  });
-  panel.appendChild(list);
+  list.className = "pt-logs__list qws-pnl-scroll";
+  wrap.appendChild(list);
 
   /* ----- State ----- */
   const sessionStart = PetsService.getAbilityLogsSessionStart?.() ?? 0;
@@ -166,88 +139,37 @@ export function renderLogsTab(view: HTMLElement): void {
 
   /* ----- Cells ----- */
   function whenCell(log: UILog): HTMLElement {
-    const cell = document.createElement("div");
-    css(cell, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
-
-    if (log.date) {
-      const date = document.createElement("span");
-      css(date, { fontSize: "10px", color: color.textDim, fontVariantNumeric: "tabular-nums" });
-      date.textContent = log.date;
-      cell.appendChild(date);
-    }
-
-    const time = document.createElement("span");
-    css(time, {
-      fontSize: "11.5px",
-      color: log.isActiveSession ? color.accent : color.text,
-      fontWeight: log.isActiveSession ? "600" : "500",
-      fontVariantNumeric: "tabular-nums",
-      whiteSpace: "nowrap",
-    });
-    time.textContent = log.time12;
-    cell.appendChild(time);
-
+    const cell = el("div", "pt-log__when");
+    if (log.date) cell.appendChild(el("span", "pt-log__date", log.date));
+    cell.appendChild(el("span", "pt-log__time", log.time12));
     return cell;
   }
 
   function petCell(log: UILog): HTMLElement {
-    const cell = document.createElement("div");
-    css(cell, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
-
-    const name = document.createElement("span");
-    css(name, {
-      fontSize: "12px",
-      color: color.text,
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-    });
-    name.textContent = log.petName || log.species || "Pet";
-    name.title = name.textContent;
-
+    const cell = el("div", "pt-log__pet");
+    const name = el("span", "pt-log__name", log.petName || log.species || "Pet");
+    name.title = name.textContent ?? "";
     const icon = petIcon({ petSpecies: log.species, mutations: log.mutations, name: log.petName }, PET_ICON_PX);
     cell.append(icon, name);
     return cell;
   }
 
   function abilityCell(log: UILog): HTMLElement {
-    const cell = document.createElement("div");
-    css(cell, { display: "flex", minWidth: "0" });
-
+    const cell = el("div", "pt-log__ability");
     cell.appendChild(abilityPill(log.abilityId, log.abilityName || log.abilityId || "-"));
     return cell;
   }
 
   function detailsCell(log: UILog): HTMLElement {
-    const cell = document.createElement("div");
     const text = detailsOf(log);
-    css(cell, {
-      fontSize: "11.5px",
-      color: color.textDim,
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      minWidth: "0",
-    });
-    cell.textContent = text;
+    const cell = el("div", "pt-log__details", text);
     cell.title = text;
     return cell;
   }
 
   function logRow(log: UILog): HTMLElement {
-    const row = document.createElement("div");
-    css(row, {
-      display: "grid",
-      gridTemplateColumns: ROW_TEMPLATE,
-      alignItems: "center",
-      gap: "10px",
-      padding: "5px 8px",
-      borderRadius: "8px",
-      background: log.isActiveSession ? color.accentSoft : color.cardBg,
-      border: `1px solid ${color.border}`,
-      // A proc from this session reads at a glance without a legend.
-      borderLeft: log.isActiveSession ? `2px solid ${color.accent}` : `1px solid ${color.border}`,
-    });
+    const row = el("div", log.isActiveSession ? "pt-log is-session" : "pt-log");
+    if (log.isActiveSession) row.title = "From this session";
     row.append(whenCell(log), petCell(log), abilityCell(log), detailsCell(log));
     return row;
   }
@@ -296,18 +218,13 @@ export function renderLogsTab(view: HTMLElement): void {
       visible.length === logs.length
         ? `${logs.length} entries`
         : `${visible.length} of ${logs.length} entries`;
+    btnClear.setEnabled(logs.length > 0);
 
-    list.innerHTML = "";
+    list.replaceChildren();
     if (!visible.length) {
-      const empty = document.createElement("div");
-      css(empty, {
-        fontSize: "12px",
-        color: color.textDim,
-        textAlign: "center",
-        padding: "24px 8px",
-      });
-      empty.textContent = logs.length ? "No log matches these filters." : "🗒️ No logs yet.";
-      list.appendChild(empty);
+      list.appendChild(el("div", "pt-empty", logs.length
+        ? "No log matches these filters."
+        : "No logs yet. Abilities show up here as your pets trigger them."));
       return;
     }
 
