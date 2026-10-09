@@ -6,8 +6,8 @@
 
 import { CompanionService } from "..";
 import { settingRow } from "../../../ui/kit/layout";
-import { openModal } from "../../../ui/kit/modal";
 import { loadCompanionSettings, markReviewed } from "../state";
+import { openCompanionModal } from "./dom";
 import { NO_TEAMS_HINT, addBackButton, settingsHint, teamSelect } from "./settingsParts";
 
 export function openHatchSettingsModal(host: HTMLElement, back: () => void): void {
@@ -15,7 +15,7 @@ export function openHatchSettingsModal(host: HTMLElement, back: () => void): voi
   // reminding them forever would be nagging.
   markReviewed("hatch");
 
-  const modal = openModal({ host, title: "Hatching", widthPx: 460 });
+  const modal = openCompanionModal({ host, title: "Hatching", widthPx: 460 });
   const settings = loadCompanionSettings();
 
   const hatchTeam = teamSelect(settings.hatchTeamId, (teamId) => {
@@ -27,8 +27,8 @@ export function openHatchSettingsModal(host: HTMLElement, back: () => void): voi
   });
 
   modal.body.append(
-    settingRow("Team to wear while hatching", "For abilities that change what hatches.", hatchTeam.el).row,
-    settingRow("Team to wear while selling", "Only during the sale. Yours comes straight back after.", sellTeam.el).row,
+    settingRow("Hatch team", "Worn while he hatches, for abilities that change what comes out.", hatchTeam.el).row,
+    settingRow("Sell team", "Worn only during the sale. Yours comes straight back after.", sellTeam.el).row,
     settingsHint(
       hatchTeam.empty
         ? NO_TEAMS_HINT

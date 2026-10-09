@@ -14,9 +14,7 @@
 // opening to the next: it is a one-off request, not a setting.
 
 import { button } from "../../../ui/kit/button";
-import { sectionLabel } from "../../../ui/kit/card";
-import { openModal } from "../../../ui/kit/modal";
-import { color } from "../../../ui/kit/theme";
+import { plainCard, sectionLabel } from "../../../ui/kit/card";
 import type { ChatRequest } from "../chat";
 import { plantRequest } from "../chat/commands/plant";
 import {
@@ -31,7 +29,8 @@ import {
   type PlantScope,
 } from "../chat/plant";
 import { readPlantScope } from "../chat/plantRead";
-import { styled } from "./dom";
+import { openCompanionModal, part } from "./dom";
+import { tileRow } from "./harvestChips";
 import { countedIcon, resultBox } from "./harvestFields";
 import { plantItemIcon, plantTile, type PlantTile } from "./plantChips";
 import { plantGrid } from "./plantGrid";
@@ -49,8 +48,8 @@ const STRIP_ICON_PX = 24;
  * says nothing.
  */
 function paletteGroup(title: string): { root: HTMLElement; row: HTMLElement } {
-  const root = styled("div", { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
-  const row = styled("div", { display: "flex", flexWrap: "wrap", gap: "5px" });
+  const root = part("div", "qws-cmp-palette");
+  const row = tileRow();
   root.append(sectionLabel(title), row);
   return { root, row };
 }
@@ -72,7 +71,7 @@ export function openPlantModal(host: HTMLElement, onAsk: (request: ChatRequest) 
   /** The strip's thumbnails, reused from one pass to the next so they do not flicker. */
   const stripIcons = new Map<string, HTMLElement>();
 
-  const modal = openModal({
+  const modal = openCompanionModal({
     host,
     title: "What should I plant?",
     widthPx: 700,
@@ -85,12 +84,11 @@ export function openPlantModal(host: HTMLElement, onAsk: (request: ChatRequest) 
   const seedGroup = paletteGroup("Seeds");
   const eggGroup = paletteGroup("Eggs");
 
-  const paletteEmpty = styled("div", { fontSize: "12px", color: color.textDim, lineHeight: "1.5" }, "Nothing to plant. No seeds, no eggs.");
-  const hint = styled(
-    "div",
-    { fontSize: "11px", color: color.textDim, lineHeight: "1.5" },
-    "Pick one and draw. Right click erases, red is taken.",
-  );
+  const paletteEmpty = part("div", "qws-cmp-empty", "Nothing to plant. No seeds, no eggs.");
+  const hint = part("div", "qws-cmp-hint", "Pick one and draw. Right click erases, red is taken.");
+  // Seeds and eggs are one choice, so they share one card.
+  const palette = plainCard();
+  palette.append(seedGroup.root, eggGroup.root, hint);
 
   const grid = plantGrid({
     owned: () => owned,
@@ -101,12 +99,11 @@ export function openPlantModal(host: HTMLElement, onAsk: (request: ChatRequest) 
   });
 
   const strip = resultBox();
-  const stripIconRow = styled("div", { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" });
+  const stripIconRow = part("div", "qws-cmp-result__icons");
   strip.root.append(stripIconRow);
 
   const clearButton = button("Clear", {
     size: "sm",
-    block: true,
     onClick: () => {
       plan = new Map();
       render();
@@ -115,7 +112,6 @@ export function openPlantModal(host: HTMLElement, onAsk: (request: ChatRequest) 
 
   const askButton = button("Ask to plant these", {
     size: "sm",
-    block: true,
     variant: "primary",
     onClick: () => {
       const drawn = [...plan.values()];
@@ -125,9 +121,9 @@ export function openPlantModal(host: HTMLElement, onAsk: (request: ChatRequest) 
       modal.close();
     },
   });
-  askButton.style.marginLeft = "auto";
+  askButton.classList.add("qws-cmp-foot-end");
 
-  modal.body.append(seedGroup.root, eggGroup.root, paletteEmpty, hint, grid.root, strip.root);
+  modal.body.append(palette, paletteEmpty, grid.root, strip.root);
   modal.footer.append(clearButton, askButton);
 
   /* --------------------------------- drawing -------------------------------- */
@@ -186,7 +182,7 @@ export function openPlantModal(host: HTMLElement, onAsk: (request: ChatRequest) 
   function renderStrip(): void {
     const drawn = [...plan.values()];
     strip.headline.textContent = drawn.length === 0 ? "Nothing to plant yet" : `${drawn.length} tile${drawn.length === 1 ? "" : "s"}`;
-    stripIconRow.style.display = drawn.length === 0 ? "none" : "flex";
+    stripIconRow.hidden = drawn.length === 0;
 
     stripIconRow.replaceChildren(
       ...countByItem(drawn).map((entry) => {
@@ -212,12 +208,10 @@ export function openPlantModal(host: HTMLElement, onAsk: (request: ChatRequest) 
     }
 
     const hasItems = scope.items.length > 0;
-    for (const group of [seedGroup, eggGroup]) {
-      group.root.style.display = group.row.childElementCount > 0 ? "flex" : "none";
-    }
-    paletteEmpty.style.display = hasItems ? "none" : "";
-    hint.style.display = hasItems ? "" : "none";
-    grid.root.style.display = hasItems ? "grid" : "none";
+    for (const group of [seedGroup, eggGroup]) group.root.hidden = group.row.childElementCount === 0;
+    palette.hidden = !hasItems;
+    paletteEmpty.hidden = hasItems;
+    grid.root.hidden = !hasItems;
 
     grid.update();
     renderStrip();

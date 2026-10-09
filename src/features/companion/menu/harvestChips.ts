@@ -12,8 +12,8 @@ import { setImageSafe } from "../../../platform/discordCsp";
 import { segmented, type SegmentedControl } from "../../../ui/kit/segmented";
 import { attachSpriteIcon } from "../../../ui/kit/sprites/iconCache";
 import { INTERNAL_TO_API } from "../../../ui/kit/sprites/resolver";
-import { color } from "../../../ui/kit/theme";
-import { iconSlot, spriteSpellings, styled } from "./dom";
+import { iconSlot, part, spriteSpellings, styled } from "./dom";
+import { ensureCompanionStyles } from "./styles";
 
 const SPRITE_LOG_TAG = "companion-harvest";
 const ICON_PX = 26;
@@ -123,19 +123,13 @@ export function mutationIconEl(mutation: string, sizePx = ICON_PX): HTMLElement 
 
 /* ---------------------------------- tiles --------------------------------- */
 
-/** A tile's look, selected or not, through its border and background. */
-function tileLook(selected: boolean): Partial<CSSStyleDeclaration> {
-  return {
-    background: selected ? color.accentSoft : color.cardBg,
-    border: `1px solid ${selected ? color.accentBorder : color.border}`,
-  };
-}
-
-/** A hover highlight, kept off the selected tile. */
-function hoverable(tile: HTMLElement, selected: boolean): void {
-  if (selected) return;
-  tile.addEventListener("mouseenter", () => (tile.style.background = color.hoverBg));
-  tile.addEventListener("mouseleave", () => (tile.style.background = color.cardBg));
+/** A tile button: selection shows through its fill and border (see the stylesheet). */
+function tileButton(className: string, selected: boolean, onClick: () => void): HTMLButtonElement {
+  const tile = part("button", selected ? `${className} is-selected` : className);
+  tile.type = "button";
+  tile.setAttribute("aria-pressed", selected ? "true" : "false");
+  tile.addEventListener("click", onClick);
+  return tile;
 }
 
 type TileOptions = {
@@ -161,29 +155,10 @@ type TileOptions = {
  * an already coloured picture a label tint would not show.
  */
 export function spriteTile(options: TileOptions): HTMLButtonElement {
-  const tile = styled("button", {
-    display: "inline-flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: "1px",
-    padding: "5px 6px 3px",
-    borderRadius: "10px",
-    cursor: "pointer",
-    lineHeight: "1",
-    transition: "background 120ms ease, border-color 120ms ease",
-    ...tileLook(options.selected),
-  });
-  tile.type = "button";
+  const tile = tileButton("qws-cmp-tile", options.selected, options.onClick);
   tile.title = options.title;
-
   tile.append(options.icon);
-  if (options.count !== undefined) {
-    tile.append(
-      styled("span", { fontSize: "10px", color: options.selected ? color.accent : color.textDim }, String(options.count)),
-    );
-  }
-  tile.addEventListener("click", options.onClick);
-  hoverable(tile, options.selected);
+  if (options.count !== undefined) tile.append(part("span", "qws-cmp-tile__count", String(options.count)));
   return tile;
 }
 
@@ -195,65 +170,22 @@ export function spriteTile(options: TileOptions): HTMLButtonElement {
  * hovering the squares one by one.
  */
 export function labelledTile(options: { icon: HTMLElement; label: string; selected: boolean; onClick: () => void }): HTMLButtonElement {
-  const tile = styled("button", {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    padding: "4px 9px 4px 5px",
-    borderRadius: "10px",
-    cursor: "pointer",
-    lineHeight: "1",
-    transition: "background 120ms ease, border-color 120ms ease",
-    ...tileLook(options.selected),
-  });
-  tile.type = "button";
+  const tile = tileButton("qws-cmp-tile qws-cmp-tile--named", options.selected, options.onClick);
   tile.title = options.label;
-
-  const name = styled(
-    "span",
-    {
-      fontSize: "11.5px",
-      fontWeight: options.selected ? "600" : "500",
-      color: options.selected ? color.accent : color.text,
-      whiteSpace: "nowrap",
-    },
-    options.label,
-  );
-
-  tile.append(options.icon, name);
-  tile.addEventListener("click", options.onClick);
-  hoverable(tile, options.selected);
+  tile.append(options.icon, part("span", "", options.label));
   return tile;
 }
 
 /** The "all" tile, which has no sprite: a word is enough. */
 export function allTile(label: string, selected: boolean, onClick: () => void): HTMLButtonElement {
-  const tile = styled(
-    "button",
-    {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      minWidth: "40px",
-      padding: "0 10px",
-      alignSelf: "stretch",
-      borderRadius: "10px",
-      cursor: "pointer",
-      fontSize: "11px",
-      lineHeight: "1",
-      color: selected ? color.accent : color.text,
-      ...tileLook(selected),
-    },
-    label,
-  );
-  tile.type = "button";
-  tile.addEventListener("click", onClick);
+  const tile = tileButton("qws-cmp-tile qws-cmp-tile--all", selected, onClick);
+  tile.textContent = label;
   return tile;
 }
 
 /** A wrapping row of tiles. */
 export function tileRow(): HTMLElement {
-  return styled("div", { display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: "5px" });
+  return part("div", "qws-cmp-tiles");
 }
 
 type ChoiceOption<T extends string> = { value: T; label: string; title: string };
@@ -280,10 +212,9 @@ export function choiceControl<T extends string>(
       onChange(value);
     },
   );
-  // Dense, like the rest of the popup: compact padding and the small font.
-  control.classList.add("qmm-compact");
-  control.style.fontSize = "11px";
-  control.style.setProperty("--seg-pad", "2px");
+  // Dense, like the rest of the popup: tighter padding and the small font.
+  ensureCompanionStyles();
+  control.classList.add("qws-cmp-choice");
   control.querySelectorAll<HTMLButtonElement>(".qmm-seg__btn").forEach((btn, i) => {
     btn.title = options[i]?.title ?? "";
   });

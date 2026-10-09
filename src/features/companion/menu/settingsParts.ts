@@ -3,9 +3,8 @@
 import { button } from "../../../ui/kit/button";
 import { select } from "../../../ui/kit/fields";
 import type { Modal } from "../../../ui/kit/modal";
-import { color } from "../../../ui/kit/theme";
 import { PetsService } from "../../pets/pets";
-import { styled } from "./dom";
+import { part } from "./dom";
 
 /** A `<select>` cannot hold `null`: the empty string means "leave my team alone". */
 const NO_TEAM = "";
@@ -45,7 +44,7 @@ export function teamSelect(current: string | null, onPick: (teamId: string | nul
 
 /** The explanation under a screen's settings. */
 export function settingsHint(text: string): HTMLElement {
-  return styled("div", { fontSize: "11px", lineHeight: "1.5", color: color.textDim }, text);
+  return part("div", "qws-cmp-hint", text);
 }
 
 /** The footer's Back button, which returns to wherever the screen was opened from. */
@@ -53,7 +52,6 @@ export function addBackButton(modal: Modal, back: () => void): void {
   modal.footer.append(
     button("Back", {
       size: "sm",
-      block: true,
       onClick: () => {
         modal.close();
         back();

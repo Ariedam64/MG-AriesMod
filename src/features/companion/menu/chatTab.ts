@@ -24,28 +24,22 @@ import {
   isSameGroup,
   messageRow,
   threadBody,
-  type NpcIdentityView,
 } from "./chatView";
-import { styled } from "./dom";
+import { part } from "./dom";
+import { borrowedIdentity } from "./portrait";
 import { openSettingsModal } from "./settingsModal";
 
-const EMPTY_HINT = "Pick something below. I always ask first.";
+const EMPTY_HINT = "Nothing said yet. Pick an action below, I always ask first.";
 
 /** The companion starts quietly: who he became is looked at regularly. */
 const IDENTITY_REFRESH_MS = 2000;
 
-const SMALL: ButtonOptions = { size: "sm", block: true, lockWhilePending: true };
-
-/** The borrowed NPC: its id for the outfit, its name for the fallback. */
-function borrowed(): NpcIdentityView {
-  const npcId = CompanionService.getNpcId();
-  return { npcId, name: npcId ? npcId.replace(/^NPC_/, "") : null };
-}
+const SMALL: ButtonOptions = { size: "sm", lockWhilePending: true };
 
 export function renderChatTab(view: HTMLElement): void {
   view.innerHTML = "";
 
-  const root = styled("div", { display: "flex", flexDirection: "column", gap: "8px" });
+  const root = part("div", "qws-cmp-tab");
   view.append(root);
 
   const header = chatHeader("Companion");
@@ -58,7 +52,7 @@ export function renderChatTab(view: HTMLElement): void {
   /* --------------------------------- thread --------------------------------- */
 
   function confirmRow(proposalId: string): HTMLElement {
-    const row = styled("div", { display: "flex", gap: "6px", alignSelf: "flex-start", marginLeft: "34px", marginTop: "2px" });
+    const row = part("div", "qws-cmp-confirm");
     row.append(
       button("Yes, go ahead", {
         ...SMALL,
@@ -72,7 +66,7 @@ export function renderChatTab(view: HTMLElement): void {
 
   function renderThread(): void {
     thread.innerHTML = "";
-    const identity = borrowed();
+    const identity = borrowedIdentity();
     const { messages } = CompanionChat.getLog();
     const proposal = CompanionChat.getProposal();
 
@@ -118,10 +112,13 @@ export function renderChatTab(view: HTMLElement): void {
 
   /* ------------------------------- action bar ------------------------------- */
 
+  // Asking for something is what the tab is for, so it gets the weight.
   const actionsButton = button("Actions", {
     ...SMALL,
+    variant: "primary",
     onClick: () => openActionsModal(host, (request) => void CompanionChat.ask(request).catch(() => {})),
   });
+  actionsButton.classList.add("qws-cmp-bar__grow");
   const settingsButton = button("Settings", { ...SMALL, onClick: () => openSettingsModal(host) });
 
   function renderBar(): void {
@@ -142,18 +139,19 @@ export function renderChatTab(view: HTMLElement): void {
   /* --------------------------------- header --------------------------------- */
 
   function renderStatus(): void {
-    header.setIdentity(borrowed());
+    header.setIdentity(borrowedIdentity());
     const run = CompanionChat.getRun();
     if (run) {
       // Neutral: the same line serves harvesting, planting, hatching and selling.
-      header.setStatus(`On it, ${run.done} of ${run.total}`, true);
+      header.setStatus(`On it, ${run.done} of ${run.total}`, "busy");
       return;
     }
     if (CompanionChat.getProposal()) {
-      header.setStatus("Waiting on you", true);
+      header.setStatus("Waiting on you", "busy");
       return;
     }
-    header.setStatus(CompanionService.isRunning() ? "Ready when you are" : "Not out yet, but I can still help", false);
+    if (CompanionService.isRunning()) header.setStatus("Ready when you are", "ready");
+    else header.setStatus("Not out yet, but I can still help", "idle");
   }
 
   function renderAll(): void {
@@ -184,4 +182,14 @@ export function renderChatTab(view: HTMLElement): void {
   // first exchange. `setIdentity` does nothing when the identity is unchanged.
   // Only while the tab shows: a detached or hidden view runs nothing.
   refreshWhileVisible(root, renderStatus, IDENTITY_REFRESH_MS);
+
+  // A thread drawn while its tab was hidden has no height yet, so it could
+  // not scroll to the latest message: that is done when it shows.
+  if (typeof IntersectionObserver !== "undefined") {
+    const observer = new IntersectionObserver((entries) => {
+      if (!root.isConnected) observer.disconnect();
+      else if (entries[entries.length - 1]?.isIntersecting) thread.scrollTop = thread.scrollHeight;
+    });
+    observer.observe(thread);
+  }
 }

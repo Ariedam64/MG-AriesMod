@@ -3,14 +3,14 @@
 // An unavailable action stays visible but greyed out, with the reason: hiding
 // it would suggest it does not exist.
 
-import { menuCard, openModal } from "../../../ui/kit/modal";
+import { menuCard } from "../../../ui/kit/modal";
 import type { ChatRequest } from "../chat";
 import { reviewFeeding, type FeedReview } from "../chat/feedRead";
 import { readHarvestable } from "../chat/gardenRead";
 import { EMPTY_HATCH_SCOPE, readHatchScope, type HatchScope } from "../chat/hatchRead";
 import { EMPTY_SCOPE, type PlantScope } from "../chat/plant";
 import { readPlantScope } from "../chat/plantRead";
-import { styled } from "./dom";
+import { openCompanionModal, part } from "./dom";
 import { openFeedModal } from "./feedModal";
 import { openHarvestModal } from "./harvestModal";
 import { openHatchModal } from "./hatchModal";
@@ -33,9 +33,9 @@ const DESCRIPTIONS = {
 };
 
 export function openActionsModal(host: HTMLElement, onAsk: (request: ChatRequest) => void): void {
-  const modal = openModal({ host, title: "What can you do?", widthPx: 420 });
+  const modal = openCompanionModal({ host, title: "What can you do?", widthPx: 420 });
 
-  const list = styled("div", { display: "flex", flexDirection: "column", gap: "8px" });
+  const list = part("div", "qws-cmp-list");
   modal.body.append(list);
 
   function renderRows(rows: ActionRow[]): void {

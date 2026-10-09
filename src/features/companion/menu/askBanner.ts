@@ -13,6 +13,7 @@
 
 import { button } from "../../../ui/kit/button";
 import { h } from "../../../ui/kit/dom";
+import { ensureKitStyles } from "../../../ui/kit/styles";
 import { layer } from "../../../ui/kit/theme";
 import { CompanionService } from "..";
 import { CompanionChat } from "../chat";
@@ -32,21 +33,20 @@ const TICK_MS = 100;
 
 function ensureStyle(): void {
   if (document.getElementById(STYLE_ID)) return;
+  // The card reads the kit's theme variables, which may not be in yet.
+  ensureKitStyles();
   const style = document.createElement("style");
   style.id = STYLE_ID;
   style.textContent = `
 #${CARD_ID} {
   position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
   z-index: ${Z_INDEX};
-  width: 430px; max-width: calc(100vw - 24px);
-  border-radius: 14px; overflow: hidden;
-  border: 1px solid var(--qmm-accent-border);
-  background:
-    radial-gradient(120% 140% at 0% 0%, var(--qmm-accent-soft), transparent 55%),
-    var(--qmm-gradient-panel);
-  backdrop-filter: blur(8px);
-  box-shadow: var(--qmm-shadow-modal);
-  font: 12.5px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  width: 430px; max-width: calc(100vw - 24px); box-sizing: border-box;
+  border-radius: var(--qmm-radius-xl); overflow: hidden;
+  border: 3px solid var(--qmm-sand-edge);
+  background: var(--qmm-paper);
+  box-shadow: var(--qmm-shadow-raise);
+  font-family: var(--qmm-font); font-size: var(--qmm-fs-md); font-weight: 700; line-height: 1.45;
   color: var(--qmm-text);
   animation: mgAskIn 160ms ease-out;
 }
@@ -54,25 +54,27 @@ function ensureStyle(): void {
   from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
-#${CARD_ID} .mgask-body { display: flex; gap: 11px; padding: 13px 14px 11px; }
+@media (prefers-reduced-motion: reduce) { #${CARD_ID} { animation: none; } }
+#${CARD_ID} .mgask-body { display: flex; gap: var(--qmm-space-lg); padding: 14px 16px 12px; }
 #${CARD_ID} .mgask-face {
-  width: 46px; height: 46px; flex: 0 0 auto;
-  border-radius: 11px; overflow: hidden;
-  border: 1px solid var(--qmm-accent-border);
-  background: var(--qmm-hover-bg);
+  width: 48px; height: 48px; flex: 0 0 auto;
+  border-radius: 50%; overflow: hidden;
+  box-shadow: 0 0 0 2px var(--qmm-accent-border);
+  background: var(--qmm-sepia-soft);
   display: grid; place-items: center;
   font-size: 22px; line-height: 1;
 }
-#${CARD_ID} .mgask-right { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
-#${CARD_ID} .mgask-who { font-size: 11px; font-weight: 700; color: var(--qmm-accent); letter-spacing: 0.02em; }
+#${CARD_ID} .mgask-face canvas { image-rendering: pixelated; }
+#${CARD_ID} .mgask-right { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: var(--qmm-space-md); }
+#${CARD_ID} .mgask-who {
+  font-size: var(--qmm-fs-xs); font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--qmm-sepia-ink);
+}
 #${CARD_ID} .mgask-text { display: block; overflow-wrap: anywhere; }
 #${CARD_ID} .mgask-text img, #${CARD_ID} .mgask-text canvas { vertical-align: -3px; }
-#${CARD_ID} .mgask-buttons { display: flex; gap: 8px; }
-#${CARD_ID} .mgask-clock { height: 3px; background: var(--qmm-hover-bg); }
-#${CARD_ID} .mgask-clock > i {
-  display: block; height: 100%; width: 100%;
-  background: linear-gradient(90deg, var(--qmm-accent), var(--qmm-accent-border-hover));
-}
+#${CARD_ID} .mgask-buttons { display: flex; flex-wrap: wrap; gap: var(--qmm-space-md); }
+#${CARD_ID} .mgask-clock { height: 4px; background: var(--qmm-sand); }
+#${CARD_ID} .mgask-clock > i { display: block; height: 100%; width: 100%; background: var(--qmm-sepia); }
 `;
   document.head.appendChild(style);
 }
