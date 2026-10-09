@@ -59,7 +59,6 @@ export interface KeybindSection {
   id: string;
   title: string;
   description: string;
-  icon: string;
   actions: KeybindAction[];
 }
 
@@ -67,7 +66,6 @@ export interface KeybindSectionConfig {
   id: string;
   title: string;
   description: string;
-  icon: string;
   actions: KeybindActionConfig[];
 }
 
@@ -76,22 +74,21 @@ export const PET_SECTION_ID = "pets";
 export const SECTION_CONFIG: KeybindSectionConfig[] = [
   {
     id: "gui",
-    title: "GUI",
-    icon: "🖥️",
-    description: "Choose how you open and move the overlay.",
+    title: "Mod menus",
+    description: "Show, hide and move the mod's windows.",
     actions: [
       {
         id: "gui.toggle",
-        label: "Toggle menu visibility",
+        label: "Show or hide menus",
         icon: "sprite/ui/CameraOff",
-        hint: "Opens or closes the Arie's Mod overlay.",
+        hint: "Every Arie's Mod window and the launcher.",
         defaultHotkey: { alt: true, code: "KeyX" },
       },
       {
         id: "gui.drag",
-        label: "Drag HUD",
+        label: "Move windows",
         icon: "sprite/ui/Touchpad",
-        hint: "Hold to drag menus interfaces around the screen.",
+        hint: "Hold it, then drag a window anywhere.",
         defaultHotkey: { alt: true, code: "AltLeft" },
         allowModifierOnly: true,
       },
@@ -100,8 +97,7 @@ export const SECTION_CONFIG: KeybindSectionConfig[] = [
   {
     id: "shops",
     title: "Shops",
-    icon: "🛒",
-    description: "Quick shortcuts to every shop tab.",
+    description: "Open a shop straight on its tab.",
     actions: [
       { id: "shops.seeds", label: "Seeds shop", icon: "sprite/ui/SeedIcon", defaultHotkey: { alt: true, code: "KeyS" } },
       { id: "shops.eggs", label: "Eggs shop", icon: "sprite/ui/EggIcon", defaultHotkey: { alt: true, code: "KeyE" } },
@@ -112,8 +108,7 @@ export const SECTION_CONFIG: KeybindSectionConfig[] = [
   {
     id: "game",
     title: "Game",
-    icon: "🎮",
-    description: "Remap the in-game actions",
+    description: "Change the game's own keys.",
     actions: [
       {
         id: "game.action",
@@ -138,22 +133,21 @@ export const SECTION_CONFIG: KeybindSectionConfig[] = [
   },
   {
     id: "sell",
-    title: "Sell",
-    icon: "💰",
-    description: "Streamline selling actions.",
+    title: "Selling",
+    description: "Sell everything in one key press.",
     actions: [
       {
         id: "sell.sell-all",
         label: "All crops",
         icon: "sprite/ui/IconSell",
-        hint: "Trigger the sell-all flow for harvested crops.",
+        hint: "Sells every harvested crop.",
         defaultHotkey: null,
       },
       {
         id: "sell.sell-all-pets",
         label: "All pets",
         icon: "sprite/ui/IconShop",
-        hint: "Sell every non-favorited pet in your inventory.",
+        hint: "Sells every pet that is not a favorite.",
         defaultHotkey: null,
       },
     ],
@@ -161,24 +155,22 @@ export const SECTION_CONFIG: KeybindSectionConfig[] = [
   {
     id: "companion",
     title: "Companion",
-    icon: "🤖",
-    description: "Reach your companion without going through the launcher.",
+    description: "Reach your companion without the launcher.",
     actions: [
       {
         id: "companion.chat",
         label: "Open the chat",
         // No icon: the `ui` atlas has no chat pictogram, and a made-up key
         // would show an empty box.
-        hint: "Opens the Companion window straight on its Chat tab.",
+        hint: "Opens the Companion window on its Chat tab.",
         defaultHotkey: { alt: true, code: "KeyC" },
       },
     ],
   },
   {
     id: PET_SECTION_ID,
-    title: "Pets",
-    icon: "🐷",
-    description: "Assign shortcuts to your pet teams and cycle through them instantly.",
+    title: "Pet teams",
+    description: "Switch teams with a single key.",
     actions: [
       { id: "pets.team.prev", label: "Previous team", defaultHotkey: null },
       { id: "pets.team.next", label: "Next team", defaultHotkey: null },
