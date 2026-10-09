@@ -49176,7 +49176,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     preferredReportingIntervalMs = intervalMs;
     void tryInitializeReporting();
     void Atoms.root.state.onChange((next) => {
+      if (gameReadyTriggered) {
+        unwatchState?.();
+        return;
+      }
       void tryInitializeReporting(next);
+    }).then((unsubscribe2) => {
+      unwatchState = unsubscribe2;
+      if (gameReadyTriggered) unsubscribe2();
+    }).catch(() => {
     });
   }
   async function buildAndSendPlayerState() {
@@ -49229,7 +49237,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       void buildAndSendPlayerState();
     }, normalizedMs);
   }
-  var DEFAULT_HEARTBEAT_INTERVAL_MS, MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND, MAX_INITIAL_RETRIES, gameReadyWatcherInitialized, gameReadyTriggered, preferredReportingIntervalMs, payloadReportingTimer, isPayloadReporting, lastSentPayloadSnapshot, unchangedSnapshotCount, initialSendRetries;
+  var DEFAULT_HEARTBEAT_INTERVAL_MS, MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND, MAX_INITIAL_RETRIES, gameReadyWatcherInitialized, gameReadyTriggered, unwatchState, preferredReportingIntervalMs, payloadReportingTimer, isPayloadReporting, lastSentPayloadSnapshot, unchangedSnapshotCount, initialSendRetries;
   var init_playerStateReport = __esm({
     "src/platform/ariesApi/playerStateReport.ts"() {
       "use strict";
@@ -49246,6 +49254,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       shareGlobal("logPlayerStatePayload", buildPlayerStatePayload);
       gameReadyWatcherInitialized = false;
       gameReadyTriggered = false;
+      unwatchState = null;
       payloadReportingTimer = null;
       isPayloadReporting = false;
       lastSentPayloadSnapshot = null;

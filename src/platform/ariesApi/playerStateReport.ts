@@ -346,6 +346,7 @@ async function sendPlayerState(
 
 let gameReadyWatcherInitialized = false;
 let gameReadyTriggered = false;
+let unwatchState: (() => void) | null = null;
 let preferredReportingIntervalMs: number | undefined;
 
 async function tryInitializeReporting(state?: any): Promise<void> {
@@ -382,9 +383,21 @@ export function startPlayerStateReportingWhenGameReady(intervalMs?: number): voi
   gameReadyWatcherInitialized = true;
   preferredReportingIntervalMs = intervalMs;
   void tryInitializeReporting();
-  void Atoms.root.state.onChange((next) => {
-    void tryInitializeReporting(next);
-  });
+  // The room state changes many times a second; once reporting has started
+  // there is nothing left to watch for.
+  void Atoms.root.state
+    .onChange((next) => {
+      if (gameReadyTriggered) {
+        unwatchState?.();
+        return;
+      }
+      void tryInitializeReporting(next);
+    })
+    .then((unsubscribe) => {
+      unwatchState = unsubscribe;
+      if (gameReadyTriggered) unsubscribe();
+    })
+    .catch(() => {});
 }
 
 let payloadReportingTimer: ReturnType<typeof setInterval> | null = null;
