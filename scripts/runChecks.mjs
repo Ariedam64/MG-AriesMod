@@ -65,6 +65,7 @@ const SUITES = {
   shopmessage: ["checkShopPurchaseMessage"],
   moveitem: ["checkMoveItemMessage"],
   modalstate: ["checkModalState"],
+  modalkeybinds: ["checkModalKeybinds", "dom-stub"],
   activitylogmodal: ["checkActivityLogModal"],
   discordframes: ["checkDiscordFrames"],
   menutabs: ["checkMenuTabs", "dom-stub"],

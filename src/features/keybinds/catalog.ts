@@ -17,6 +17,7 @@ export type KeybindId =
   | "game.action"
   | "game.inventory"
   | "game.journal"
+  | "game.daily-quests"
   | "game.pet-hutch"
   | "game.decor-shed"
   | "game.tool-shack"
@@ -125,6 +126,7 @@ export const SECTION_CONFIG: KeybindSectionConfig[] = [
       { id: "game.feeding-trough", label: "Feeding trough", icon: "sprite/decor/FeedingTrough", defaultHotkey: null, allowClear: true },
       { id: "game.weather-station", label: "Weather station", icon: "sprite/object/WeatherStation", defaultHotkey: null, allowClear: true },
       { id: "game.journal", label: "Journal", icon: "sprite/ui/JournalStamp", defaultHotkey: null, allowClear: true },
+      { id: "game.daily-quests", label: "Daily quests", icon: "sprite/ui/QuestIcon", defaultHotkey: null, allowClear: true },
       { id: "game.move-up", label: "Move up", icon: "https://i.imgur.com/EkbKUgi.png", defaultHotkey: { code: "KeyW" } },
       { id: "game.move-down", label: "Move down", icon: "https://i.imgur.com/tdJ7IGP.png", defaultHotkey: { code: "KeyS" } },
       { id: "game.move-left", label: "Move left", icon: "https://i.imgur.com/86VbR70.png", defaultHotkey: { code: "KeyA" } },

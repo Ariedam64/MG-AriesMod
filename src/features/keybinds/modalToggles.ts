@@ -9,6 +9,8 @@ import { eventMatchesKeybind, type KeybindId } from "./keybinds";
 const MODAL_TOGGLES: ReadonlyArray<readonly [KeybindId, string]> = [
   ["game.pet-hutch", "petHutch"],
   ["game.journal", JOURNAL_MODAL_ID],
+  // The quest booth's modal, added in build 1449.
+  ["game.daily-quests", "dailyQuests"],
   ["game.seed-silo", "seedSilo"],
   ["game.decor-shed", "decorShed"],
   ["game.tool-shack", "toolShack"],

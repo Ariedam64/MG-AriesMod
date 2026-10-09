@@ -81,7 +81,8 @@
     "check:toolslist": "node scripts/runChecks.mjs toolslist",
     "check:segscale": "node scripts/runChecks.mjs segscale",
     "check:kitpolish": "node scripts/runChecks.mjs kitpolish",
-    "check:rarityicons": "node scripts/runChecks.mjs rarityicons"
+    "check:rarityicons": "node scripts/runChecks.mjs rarityicons",
+    "check:modalkeybinds": "node scripts/runChecks.mjs modalkeybinds"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",
