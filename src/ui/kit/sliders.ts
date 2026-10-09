@@ -10,6 +10,28 @@ export function slider(min = 0, max = 100, step = 1, value = 0, opts: { fill?: b
   input.max = String(max);
   input.step = String(step);
   input.value = String(value);
+  // Chrome draws no filled part on its own: the track paints up to --qmm-range-fill.
+  const paint = () => {
+    const lo = Number(input.min);
+    const span = Number(input.max) - lo;
+    const pct = span > 0 ? ((Number(input.value) - lo) / span) * 100 : 0;
+    input.style.setProperty("--qmm-range-fill", `${Math.min(100, Math.max(0, pct))}%`);
+  };
+  input.addEventListener("input", paint);
+  input.addEventListener("change", paint);
+  // A value set from code repaints too.
+  const native = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), "value");
+  if (native?.get && native.set) {
+    Object.defineProperty(input, "value", {
+      configurable: true,
+      get: () => native.get!.call(input),
+      set: (next: string) => {
+        native.set!.call(input, next);
+        paint();
+      },
+    });
+  }
+  paint();
   return input;
 }
 

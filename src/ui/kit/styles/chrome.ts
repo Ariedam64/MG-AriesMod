@@ -26,6 +26,8 @@ export const chromeCss = `
 .qmm.qmm-alt-drag { cursor: grab; }
 .qmm.qmm-alt-drag:active { cursor: grabbing; }
 
+/* A menu with one tab needs no tab bar. */
+.qmm-tabs.is-single { display: none; }
 .qmm-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-sm); padding: 0 0 12px; }
 .qmm-tab {
   flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: var(--qmm-space-sm);
@@ -78,7 +80,7 @@ export const chromeCss = `
   outline: none; border-color: var(--qmm-sepia); box-shadow: 0 0 0 3px var(--qmm-sepia-soft);
 }
 /* Windows give text and number fields one width; an inline width still wins. */
-.qws-win input[type="text"], .qws-win input[type="number"] { width: 120px; }
+.qws-win input[type="text"]:not([class]), .qws-win input[type="number"]:not([class]) { width: 120px; }
 
 .qws-dock {
   position: fixed; right: 16px; bottom: 16px; z-index: ${layer.hud};

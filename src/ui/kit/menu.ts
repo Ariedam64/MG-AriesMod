@@ -151,6 +151,7 @@ export class Menu {
 
   /** A menu without tabs drops the bar so its panel starts at the top. */
   private updateTabBar(): void {
+    this.tabBar.classList.toggle("is-single", this.tabs.size === 1);
     if (this.tabs.size > 0) {
       if (!this.tabBar.parentElement) this.root.insertBefore(this.tabBar, this.views);
     } else {

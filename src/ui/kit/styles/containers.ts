@@ -2,7 +2,7 @@
 
 export const containersCss = `
 .qmm-card {
-  display: grid; gap: var(--qmm-space-xl); width: 100%; padding: 14px; box-sizing: border-box;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--qmm-space-xl); width: 100%; padding: 14px; box-sizing: border-box;
   border: 3px solid var(--qmm-sand-edge); border-radius: 18px; background: var(--qmm-card);
 }
 .qmm-card--plain { display: flex; flex-direction: column; gap: var(--qmm-space-lg); width: auto; min-height: 0; padding: 10px; }
@@ -14,9 +14,10 @@ export const containersCss = `
 .qmm-card__header.is-compact { gap: var(--qmm-space-sm); }
 .qmm-card__icon { font-size: 18px; }
 .qmm-card__title { font-size: var(--qmm-fs-xl); font-weight: 900; letter-spacing: .01em; }
-.qmm-card__subtitle { flex-basis: 100%; font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
-.qmm-card__actions { display: flex; gap: var(--qmm-space-sm); margin-left: auto; }
-.qmm-card__body { display: grid; gap: var(--qmm-space-lg); }
+/* Title and actions share the first line; the subtitle takes the line below. */
+.qmm-card__subtitle { order: 2; flex-basis: 100%; font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
+.qmm-card__actions { order: 1; display: flex; gap: var(--qmm-space-sm); margin-left: auto; }
+.qmm-card__body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--qmm-space-lg); }
 
 .qmm-section-label {
   font-size: var(--qmm-fs-xs); font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
@@ -39,14 +40,15 @@ export const containersCss = `
 .qmm-collapse__body { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
 .qmm-collapse.is-collapsed > .qmm-collapse__body { display: none; }
 
+/* In a narrow window the controls drop under the text instead of crushing it. */
 .qmm-setting-row {
-  display: flex; align-items: center; gap: var(--qmm-space-lg); flex-shrink: 0; padding: 10px 12px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-lg); flex-shrink: 0; padding: 10px 12px;
   border: 0; border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
 }
-.qmm-setting-row__text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.qmm-setting-row__text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 140px; min-width: 0; }
 .qmm-setting-row__title { font-size: var(--qmm-fs-lg); font-weight: 800; color: var(--qmm-text); }
 .qmm-setting-row__hint { font-size: var(--qmm-fs-xs); line-height: 1.4; color: var(--qmm-text-dim); }
-.qmm-setting-row__controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--qmm-space-md); flex: 0 0 auto; }
+.qmm-setting-row__controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--qmm-space-md); flex: 0 1 auto; margin-left: auto; }
 
 .qmm-label { font-weight: 700; }
 .qmm-flex { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }

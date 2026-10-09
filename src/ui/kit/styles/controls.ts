@@ -100,8 +100,10 @@ export const controlsCss = `
 }
 .qmm-range { width: 180px; }
 .qws-pnl-range { width: 100%; }
+/* Chrome has no progress pseudo-element: the slider sets --qmm-range-fill to its value. */
 .qmm-range::-webkit-slider-runnable-track, .qws-pnl-range::-webkit-slider-runnable-track {
-  height: 10px; border-radius: var(--qmm-radius-pill); background: var(--qmm-sand-edge);
+  height: 10px; border-radius: var(--qmm-radius-pill);
+  background: linear-gradient(to right, var(--qmm-sepia) var(--qmm-range-fill, 0%), var(--qmm-sand-edge) var(--qmm-range-fill, 0%));
 }
 .qmm-range::-moz-range-track, .qws-pnl-range::-moz-range-track {
   height: 10px; border-radius: var(--qmm-radius-pill); background: var(--qmm-sand-edge);
@@ -154,7 +156,8 @@ export const controlsCss = `
   position: relative; display: inline-flex; align-items: center; gap: var(--qmm-space-xs); overflow: hidden;
   padding: var(--seg-pad, 4px); border-radius: var(--qmm-radius-pill); background: var(--qmm-sand);
 }
-.qmm-seg--full { display: flex; width: 100%; }
+.qmm-seg--full { display: flex; width: 100%; box-sizing: border-box; }
+.qmm-seg--full .qmm-seg__btn { flex: 1 1 0; min-width: 0; }
 .qmm-seg__btn {
   position: relative; z-index: 1; padding: 8px 14px; border: 0; border-radius: var(--qmm-radius-pill);
   appearance: none; background: transparent; color: var(--qmm-text-soft);

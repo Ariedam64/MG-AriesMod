@@ -79,7 +79,8 @@
     "check:appearance": "node scripts/runChecks.mjs appearance",
     "check:keybindsmenu": "node scripts/runChecks.mjs keybindsmenu",
     "check:toolslist": "node scripts/runChecks.mjs toolslist",
-    "check:segscale": "node scripts/runChecks.mjs segscale"
+    "check:segscale": "node scripts/runChecks.mjs segscale",
+    "check:kitpolish": "node scripts/runChecks.mjs kitpolish"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",
