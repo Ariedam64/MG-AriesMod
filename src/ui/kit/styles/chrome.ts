@@ -48,10 +48,12 @@ export const chromeCss = `
 
 .qws-win {
   position: fixed; z-index: ${layer.window}; display: flex; flex-direction: column;
-  min-width: 280px; max-width: 900px; max-height: 90vh; overflow: hidden;
+  min-width: 280px; max-width: 900px; max-height: calc(90vh / var(--qmm-scale, 1)); overflow: hidden;
   color: var(--qmm-text); background: var(--qmm-paper);
   border: 3px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-xl);
   box-shadow: var(--qmm-shadow-raise);
+  /* The menu size grows a window from the corner it is anchored by. */
+  scale: var(--qmm-scale, 1); transform-origin: 100% 100%;
 }
 .qws-win.is-hidden { display: none !important; }
 .qws-win .w-head {
@@ -80,12 +82,14 @@ export const chromeCss = `
 
 .qws-dock {
   position: fixed; right: 16px; bottom: 16px; z-index: ${layer.hud};
+  scale: var(--qmm-scale, 1); transform-origin: 100% 100%;
   display: flex; flex-direction: column; gap: var(--qmm-space-md); padding: 10px 10px 8px;
   color: var(--qmm-text); background: var(--qmm-paper);
   border: 3px solid var(--qmm-sand-edge); border-radius: 20px; box-shadow: var(--qmm-shadow-raise-small);
 }
 .qws-dock.hidden { display: none; }
-.qws-dock.placed { right: auto; bottom: auto; }
+/* A moved launcher is placed by its top left corner, so it grows from there. */
+.qws-dock.placed { right: auto; bottom: auto; transform-origin: 0 0; }
 .qws-dock.folded .qws-dock-grid { display: none; }
 .qws-dock-head {
   display: flex; align-items: center; gap: var(--qmm-space-md); padding: 0 2px;
@@ -95,7 +99,7 @@ export const chromeCss = `
 .qws-dock-head .qmm-pill { font-size: var(--qmm-fs-xs); }
 .qws-dock-grid {
   display: grid; grid-template-columns: repeat(3, 48px); gap: var(--qmm-space-md); justify-content: center;
-  max-height: calc(100vh - 120px); overflow-y: auto; padding: 6px 6px 6px 2px;
+  max-height: calc((100vh - 120px) / var(--qmm-scale, 1)); overflow-y: auto; padding: 6px 6px 6px 2px;
 }
 .qws-dock-fold {
   flex: 0 0 auto; display: flex; align-items: center; justify-content: center;

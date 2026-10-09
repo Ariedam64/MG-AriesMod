@@ -22,6 +22,12 @@ Amended the same day, after the owner saw the first build:
   link when a newer release is out) and the fold button; below it the menus
   sit three to a row. Dragging the header moves the panel, which starts in the
   bottom right corner as before. The version pill replaces the Settings badge.
+- Settings gained an Appearance tab: four themes (Sepia, Garden, Lavender,
+  Night), an accent colour of the player's own, and a menu size from 80 to
+  130 percent. Every theme is held to the same contrast pairs, and a custom
+  accent is pushed darker or lighter until its shades stay readable. To make
+  this possible `color.*` holds `var(--qmm-...)` references, so inline styles
+  follow the theme too.
 
 ## Goal
 

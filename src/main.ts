@@ -16,6 +16,7 @@ import { renderCalculatorMenu } from "./features/calculator/menu";
 import { renderPetsMenu } from "./features/pets/menu";
 import { renderMiscMenu } from "./features/misc/menu";
 import { renderSettingsMenu } from "./features/settings/menu";
+import { applyAppearance } from "./features/settings/appearance";
 import { renderNotifierMenu } from "./features/notifier/menu/menu";
 import { renderToolsMenu } from "./features/tools/menu";
 import { renderEditorMenu } from "./features/editor/menu";
@@ -78,6 +79,9 @@ import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/play
   // screen when the player arrives. Resolves on its own once the sprite
   // catalog has the atlases ready.
   void initSkins();
+
+  // The player's menu theme and size, before any menu is drawn.
+  applyAppearance();
 
   mountHUD({
     onRegister(register) {

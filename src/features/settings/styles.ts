@@ -55,6 +55,24 @@ const SETTINGS_CSS = `
 .qws-set-kofi { display: inline-block; border: 0; transition: opacity .15s ease, transform .15s ease; }
 .qws-set-kofi:hover { opacity: .82; transform: translateY(-2px); }
 .qws-set-kofi img { display: block; height: 36px; border: 0; }
+.qws-set-themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+.qws-set-theme {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px; cursor: pointer;
+  font: inherit; color: var(--qmm-text); background: var(--qmm-card);
+  border: 2px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-md);
+}
+.qws-set-theme:hover { border-color: var(--qmm-border-hover); }
+.qws-set-theme:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
+.qws-set-theme.is-active { border-color: var(--qmm-sepia); box-shadow: 0 0 0 2px var(--qmm-accent-border); }
+.qws-set-theme__preview {
+  position: relative; display: block; width: 100%; height: 54px; overflow: hidden;
+  border: 2px solid; border-radius: 10px; box-sizing: border-box;
+}
+.qws-set-theme__band { position: absolute; inset: 0 0 auto 0; height: 14px; }
+.qws-set-theme__text { position: absolute; left: 8px; bottom: 6px; font-weight: 900; font-size: 15px; }
+.qws-set-theme__chip { position: absolute; right: 8px; bottom: 10px; width: 26px; height: 12px; border-radius: 6px; }
+.qws-set-theme__label { font-size: var(--qmm-fs-sm); font-weight: 800; }
+.qws-set-color { width: 44px; height: 30px; padding: 0 2px; cursor: pointer; border: 2px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-sm); background: var(--qmm-card); }
 `;
 
 let injected = false;

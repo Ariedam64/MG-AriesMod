@@ -1516,10 +1516,14 @@
   function group(prefix, values, unit = "") {
     return Object.entries(values).map(([key2, value]) => `--qmm-${prefix}${kebab(key2)}:${value}${unit};`);
   }
+  function colorVariables(swatches) {
+    return group("", swatches).join("");
+  }
   function themeVariables() {
     return [
       ":root{",
-      ...group("", color),
+      ...group("", themes[DEFAULT_THEME].swatches),
+      ...Object.entries(aliases).map(([name, target]) => `--qmm-${kebab(name)}:${ref(target)};`),
       ...group("gradient-", gradient),
       ...group("shadow-", shadow),
       ...group("radius-", radius, "px"),
@@ -1527,6 +1531,8 @@
       ...group("fs-", fontSize, "px"),
       `--qmm-font:${fontFamily};`,
       `--qmm-font-mono:${fontMono};`,
+      // The menu size from Settings, Appearance.
+      "--qmm-scale:1;",
       // Compatibility names read by feature code that predates the tokens.
       // Remove each once nothing outside the kit references it.
       "--qmm-border-2:var(--qmm-border);",
@@ -1541,92 +1547,189 @@
       "}"
     ].join("\n");
   }
-  var palette, color, gradient, shadow, radius, space, fontSize, fontFamily, fontMono, layer, contrastPairs, kebab;
+  var lightStatus, cream, themes, DEFAULT_THEME, aliases, kebab, ref, color, gradient, shadow, radius, space, fontSize, fontFamily, fontMono, layer;
   var init_theme = __esm({
     "src/ui/kit/theme.ts"() {
       "use strict";
-      palette = {
+      lightStatus = {
+        ok: "#4f9a58",
+        okInk: "#2a6233",
+        okSoft: "#d7e6c6",
+        clay: "#c24a2a",
+        dangerInk: "#8f2f16",
+        dangerSoft: "#eccbbd",
+        dangerHover: "#e4b8a6",
+        dangerBorder: "#d38f7a",
+        amber: "#d18a1a",
+        warnInk: "#7a4f0a",
+        warnSoft: "#ecd6a8",
+        warnBorder: "#d4a85e",
+        warnGlow: "rgba(209,138,26,0.45)",
+        gold: "#FFC734",
+        rainbow: "#c084fc",
+        goldInk: "#7a5500",
+        rainbowInk: "#7a35b0",
+        onSepia: "#ffffff"
+      };
+      cream = {
         paper: "#f0e2c4",
         paperDeep: "#e8d6b2",
         sand: "#e1cca3",
         sandEdge: "#cfb486",
         sandShade: "#ad9265",
         card: "#f8efdc",
-        sepia: "#8f6236",
-        sepiaStrong: "#74492a",
-        sepiaShade: "#52331c",
-        sepiaSoft: "#e2c597",
-        sepiaInk: "#6b4423",
         bark: "#3b2f22",
         barkSoft: "#5f4a2f",
         barkDim: "#64523b",
-        clay: "#c24a2a",
-        amber: "#d18a1a",
-        onSepia: "#ffffff"
-      };
-      color = {
-        ...palette,
-        accent: palette.sepiaStrong,
-        accentSoft: palette.sepiaSoft,
-        accentHover: "#d6b682",
-        accentBorder: "#b28657",
-        accentBorderHover: palette.sepia,
-        text: palette.bark,
-        textSoft: palette.barkSoft,
-        textDim: palette.barkDim,
-        border: palette.sandEdge,
         borderHover: "#c2a574",
-        borderStrong: palette.sandEdge,
-        cardBg: palette.card,
-        hoverBg: palette.sand,
-        mutedBg: palette.paperDeep,
-        fieldBg: palette.card,
-        fieldBorder: palette.sandEdge,
-        track: palette.sandEdge,
-        sunken: palette.paperDeep,
-        surface: palette.paper,
-        panelBg: palette.paper,
         scrollbar: "#c2a574",
         scrim: "rgba(59,47,34,0.45)",
-        /** A small drop shadow under a knob or a chip. */
         shade: "rgba(59,47,34,0.25)",
-        /** Status only (connected, active, at its best), never the accent. */
-        ok: "#4f9a58",
-        okInk: "#2a6233",
-        okSoft: "#d7e6c6",
-        danger: palette.clay,
-        dangerInk: "#8f2f16",
-        dangerSoft: "#eccbbd",
-        dangerHover: "#e4b8a6",
-        dangerBorder: "#d38f7a",
-        dangerBorderHover: palette.clay,
-        warn: palette.amber,
-        warnInk: "#7a4f0a",
-        warnSoft: "#ecd6a8",
-        warnBorder: "#d4a85e",
-        /** The pulse around a hotkey button that is recording. */
-        warnGlow: "rgba(209,138,26,0.45)",
-        /** Gold and Rainbow as fills, or as text on a dark chip. */
-        gold: "#FFC734",
-        rainbow: "#c084fc",
-        /** Gold and Rainbow as text on paper or a card. */
-        goldInk: "#7a5500",
-        rainbowInk: "#7a35b0"
+        shadowInk: "rgba(59,47,34,0.28)"
       };
+      themes = {
+        sepia: {
+          label: "Sepia",
+          swatches: {
+            ...cream,
+            ...lightStatus,
+            sepia: "#8f6236",
+            sepiaStrong: "#74492a",
+            sepiaShade: "#52331c",
+            sepiaSoft: "#e2c597",
+            sepiaInk: "#6b4423",
+            accentHover: "#d6b682",
+            accentBorder: "#b28657"
+          }
+        },
+        garden: {
+          label: "Garden",
+          swatches: {
+            ...cream,
+            ...lightStatus,
+            sepia: "#4f8a57",
+            sepiaStrong: "#3b6f43",
+            sepiaShade: "#2a5030",
+            sepiaSoft: "#cfdfb8",
+            sepiaInk: "#2f5f37",
+            accentHover: "#bed3a3",
+            accentBorder: "#83ab7f"
+          }
+        },
+        lavender: {
+          label: "Lavender",
+          swatches: {
+            ...lightStatus,
+            paper: "#ece5f2",
+            paperDeep: "#e2d8ec",
+            sand: "#d9cbe6",
+            sandEdge: "#c3b0d6",
+            sandShade: "#9c86b5",
+            card: "#f6f1fa",
+            bark: "#2f2638",
+            barkSoft: "#4f4260",
+            barkDim: "#574a68",
+            borderHover: "#b9a2d1",
+            scrollbar: "#b9a2d1",
+            scrim: "rgba(47,38,56,0.45)",
+            shade: "rgba(47,38,56,0.25)",
+            shadowInk: "rgba(47,38,56,0.28)",
+            sepia: "#7e5aa8",
+            sepiaStrong: "#64428c",
+            sepiaShade: "#452c63",
+            sepiaSoft: "#dccbee",
+            sepiaInk: "#583882",
+            accentHover: "#cdb6e6",
+            accentBorder: "#a487c8"
+          }
+        },
+        night: {
+          label: "Night",
+          swatches: {
+            paper: "#2b2520",
+            paperDeep: "#241f1b",
+            sand: "#3a322b",
+            sandEdge: "#4d4238",
+            sandShade: "#141110",
+            card: "#332c26",
+            bark: "#f2e7d5",
+            barkSoft: "#d8c8af",
+            barkDim: "#bba98f",
+            borderHover: "#5e5146",
+            scrollbar: "#5e5146",
+            scrim: "rgba(0,0,0,0.55)",
+            shade: "rgba(0,0,0,0.4)",
+            shadowInk: "rgba(0,0,0,0.45)",
+            sepia: "#a8743f",
+            sepiaStrong: "#8a5a2c",
+            sepiaShade: "#5a3a1c",
+            sepiaSoft: "#4a3826",
+            sepiaInk: "#e9bb84",
+            accentHover: "#5a4430",
+            accentBorder: "#8a6a48",
+            onSepia: "#ffffff",
+            ok: "#6fbf73",
+            okInk: "#a6dfa9",
+            okSoft: "#2c4630",
+            clay: "#c24a2a",
+            dangerInk: "#f4a48e",
+            dangerSoft: "#4f2a22",
+            dangerHover: "#5e3127",
+            dangerBorder: "#8a4634",
+            amber: "#d18a1a",
+            warnInk: "#f2c879",
+            warnSoft: "#4a3a1c",
+            warnBorder: "#8a6a2e",
+            warnGlow: "rgba(209,138,26,0.45)",
+            gold: "#FFC734",
+            rainbow: "#c084fc",
+            goldInk: "#f2c94c",
+            rainbowInk: "#d4a8ff"
+          }
+        }
+      };
+      DEFAULT_THEME = "sepia";
+      aliases = {
+        accent: "sepiaStrong",
+        accentSoft: "sepiaSoft",
+        accentBorderHover: "sepia",
+        text: "bark",
+        textSoft: "barkSoft",
+        textDim: "barkDim",
+        border: "sandEdge",
+        borderStrong: "sandEdge",
+        cardBg: "card",
+        hoverBg: "sand",
+        mutedBg: "paperDeep",
+        fieldBg: "card",
+        fieldBorder: "sandEdge",
+        track: "sandEdge",
+        sunken: "paperDeep",
+        surface: "paper",
+        panelBg: "paper",
+        danger: "clay",
+        dangerBorderHover: "clay",
+        warn: "amber"
+      };
+      kebab = (key2) => key2.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+      ref = (key2) => `var(--qmm-${kebab(key2)})`;
+      color = Object.fromEntries(
+        [...Object.keys(themes[DEFAULT_THEME].swatches), ...Object.keys(aliases)].map((key2) => [key2, ref(key2)])
+      );
       gradient = {
-        panel: palette.paper,
-        tabBar: palette.paper,
-        head: palette.sepia,
+        panel: ref("paper"),
+        tabBar: ref("paper"),
+        head: ref("sepia"),
         /** Text fills for the Gold and Rainbow mutation names. */
         gold: "linear-gradient(120deg, #e0b43c, #b07d1a, #e8c766)",
         rainbow: "linear-gradient(90deg, #e05555, #d9a520, #2aa7d6, #7f55e0, #e05555)"
       };
       shadow = {
-        raise: `0 8px 0 ${palette.sandShade}, 0 20px 40px rgba(59,47,34,0.28)`,
-        raiseSmall: `0 4px 0 ${palette.sandShade}`,
-        panel: `0 8px 0 ${palette.sandShade}, 0 20px 40px rgba(59,47,34,0.28)`,
-        window: `0 8px 0 ${palette.sandShade}, 0 20px 40px rgba(59,47,34,0.28)`,
-        modal: `0 10px 0 ${palette.sandShade}, 0 28px 60px rgba(59,47,34,0.35)`
+        raise: `0 8px 0 ${ref("sandShade")}, 0 20px 40px ${ref("shadowInk")}`,
+        raiseSmall: `0 4px 0 ${ref("sandShade")}`,
+        panel: `0 8px 0 ${ref("sandShade")}, 0 20px 40px ${ref("shadowInk")}`,
+        window: `0 8px 0 ${ref("sandShade")}, 0 20px 40px ${ref("shadowInk")}`,
+        modal: `0 10px 0 ${ref("sandShade")}, 0 28px 60px ${ref("shadowInk")}`
       };
       radius = { sm: 8, md: 12, lg: 16, xl: 24, pill: 999 };
       space = { xs: 4, sm: 6, md: 8, lg: 12, xl: 16 };
@@ -1634,27 +1737,6 @@
       fontFamily = "'Nunito', ui-rounded, system-ui, sans-serif";
       fontMono = "ui-monospace, SFMono-Regular, Consolas, monospace";
       layer = { hud: 1000010, window: 2000001 };
-      contrastPairs = [
-        ...["paper", "paperDeep", "sand", "card"].flatMap((bg) => [
-          { fg: palette.bark, bg: palette[bg], min: 4.5, use: `text on ${bg}` },
-          { fg: palette.barkSoft, bg: palette[bg], min: 4.5, use: `soft text on ${bg}` },
-          { fg: palette.barkDim, bg: palette[bg], min: 4.5, use: `caption on ${bg}` }
-        ]),
-        { fg: palette.sepiaInk, bg: palette.sepiaSoft, min: 4.5, use: "selected label" },
-        { fg: palette.sepiaInk, bg: palette.paper, min: 4.5, use: "sepia text on paper" },
-        { fg: palette.onSepia, bg: palette.sepiaStrong, min: 4.5, use: "primary button text" },
-        { fg: palette.onSepia, bg: palette.sepia, min: 3, use: "window title (18 px bold)" },
-        { fg: palette.onSepia, bg: palette.clay, min: 4.5, use: "danger button and badge text" },
-        { fg: palette.paper, bg: palette.bark, min: 4.5, use: "active tab and tooltip" },
-        { fg: color.okInk, bg: color.okSoft, min: 4.5, use: "ok pill" },
-        ...["paper", "card"].flatMap((bg) => [
-          { fg: color.goldInk, bg: palette[bg], min: 4.5, use: `gold numbers on ${bg}` },
-          { fg: color.rainbowInk, bg: palette[bg], min: 4.5, use: `rainbow numbers on ${bg}` }
-        ]),
-        { fg: color.warnInk, bg: color.warnSoft, min: 4.5, use: "warning pill" },
-        { fg: color.dangerInk, bg: color.dangerSoft, min: 4.5, use: "error pill" }
-      ];
-      kebab = (key2) => key2.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
     }
   });
 
@@ -1710,10 +1792,12 @@
 
 .qws-win {
   position: fixed; z-index: ${layer.window}; display: flex; flex-direction: column;
-  min-width: 280px; max-width: 900px; max-height: 90vh; overflow: hidden;
+  min-width: 280px; max-width: 900px; max-height: calc(90vh / var(--qmm-scale, 1)); overflow: hidden;
   color: var(--qmm-text); background: var(--qmm-paper);
   border: 3px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-xl);
   box-shadow: var(--qmm-shadow-raise);
+  /* The menu size grows a window from the corner it is anchored by. */
+  scale: var(--qmm-scale, 1); transform-origin: 100% 100%;
 }
 .qws-win.is-hidden { display: none !important; }
 .qws-win .w-head {
@@ -1742,12 +1826,14 @@
 
 .qws-dock {
   position: fixed; right: 16px; bottom: 16px; z-index: ${layer.hud};
+  scale: var(--qmm-scale, 1); transform-origin: 100% 100%;
   display: flex; flex-direction: column; gap: var(--qmm-space-md); padding: 10px 10px 8px;
   color: var(--qmm-text); background: var(--qmm-paper);
   border: 3px solid var(--qmm-sand-edge); border-radius: 20px; box-shadow: var(--qmm-shadow-raise-small);
 }
 .qws-dock.hidden { display: none; }
-.qws-dock.placed { right: auto; bottom: auto; }
+/* A moved launcher is placed by its top left corner, so it grows from there. */
+.qws-dock.placed { right: auto; bottom: auto; transform-origin: 0 0; }
 .qws-dock.folded .qws-dock-grid { display: none; }
 .qws-dock-head {
   display: flex; align-items: center; gap: var(--qmm-space-md); padding: 0 2px;
@@ -1757,7 +1843,7 @@
 .qws-dock-head .qmm-pill { font-size: var(--qmm-fs-xs); }
 .qws-dock-grid {
   display: grid; grid-template-columns: repeat(3, 48px); gap: var(--qmm-space-md); justify-content: center;
-  max-height: calc(100vh - 120px); overflow-y: auto; padding: 6px 6px 6px 2px;
+  max-height: calc((100vh - 120px) / var(--qmm-scale, 1)); overflow-y: auto; padding: 6px 6px 6px 2px;
 }
 .qws-dock-fold {
   flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
@@ -4500,7 +4586,7 @@
     const start2 = performance.now();
     const tick = (now) => {
       const progress = Math.min(1, (now - start2) / durationMs);
-      const mix = startMix * (1 - progress);
+      const mix2 = startMix * (1 - progress);
       const parent = resolveParent();
       if (parent) {
         for (const node of collectTintable(parent)) {
@@ -4508,7 +4594,7 @@
           entry.touched.add(node);
           const base = entry.baseline.get(node);
           try {
-            node.tint = lerpColor(base, color2, mix);
+            node.tint = lerpColor(base, color2, mix2);
           } catch {
           }
         }
@@ -10870,8 +10956,8 @@
     const entry = getEntry(decorId);
     return typeof entry?.baseCapacitySlots === "number";
   }
-  function spriteIdFromRef(ref) {
-    const parts = String(ref || "").split("/");
+  function spriteIdFromRef(ref2) {
+    const parts = String(ref2 || "").split("/");
     return parts[parts.length - 1]?.trim() || "";
   }
   function positiveAngles(entry) {
@@ -26435,8 +26521,8 @@
     }
     function renderThemes() {
       themeList.innerHTML = "";
-      const themes = catalog?.themes ?? [];
-      themes.forEach((theme) => {
+      const themes2 = catalog?.themes ?? [];
+      themes2.forEach((theme) => {
         const row5 = document.createElement("div");
         row5.className = "dd-audio-row";
         const infoWrap = document.createElement("div");
@@ -26477,8 +26563,8 @@
         row5.appendChild(actions2);
         themeList.appendChild(row5);
       });
-      themeList.style.display = themes.length ? "" : "none";
-      themeEmpty.style.display = themes.length ? "none" : "block";
+      themeList.style.display = themes2.length ? "" : "none";
+      themeEmpty.style.display = themes2.length ? "none" : "block";
       themeEmpty.textContent = catalog ? "No themes in the catalog." : "No themes loaded yet.";
     }
     function renderSfx() {
@@ -28517,7 +28603,7 @@ next: ${next}`;
       NOT_CROP_MUTATIONS = /* @__PURE__ */ new Set(["Puddle", "ThunderstruckGround"]);
       weatherMutations = memoOnCatalogs(() => [
         { key: NO_WEATHER_TAG, label: "No weather effect" },
-        ...Object.entries(tileRefsMutations2).filter(([key2, ref]) => !NOT_CROP_MUTATIONS.has(key2) && (typeof ref === "number" || typeof ref === "string")).map(([key2]) => ({ key: key2, label: weatherMutationLabel(key2) }))
+        ...Object.entries(tileRefsMutations2).filter(([key2, ref2]) => !NOT_CROP_MUTATIONS.has(key2) && (typeof ref2 === "number" || typeof ref2 === "string")).map(([key2]) => ({ key: key2, label: weatherMutationLabel(key2) }))
       ]);
       isOffered = (tag) => weatherMutations().some((info) => info.key === tag);
       RECIPE_GROUP_MEMBERS = {
@@ -35856,6 +35942,318 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/lib/color.ts
+  function parseHex(value) {
+    const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value.trim());
+    if (!m) return null;
+    const hex = m[1].length === 3 ? [...m[1]].map((c) => c + c).join("") : m[1];
+    return [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  }
+  function toHex(rgb) {
+    return `#${rgb.map((c) => Math.round(Math.min(255, Math.max(0, c))).toString(16).padStart(2, "0")).join("")}`;
+  }
+  function mix(a, b, t) {
+    return [0, 1, 2].map((i) => a[i] + (b[i] - a[i]) * t);
+  }
+  function luminance([r, g, b]) {
+    const lin = (c) => {
+      const v = c / 255;
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  }
+  function contrastRatio(a, b) {
+    const x = typeof a === "string" ? parseHex(a) : a;
+    const y = typeof b === "string" ? parseHex(b) : b;
+    if (!x || !y) return 1;
+    const [l1, l2] = [luminance(x), luminance(y)];
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  }
+  function isDark(rgb) {
+    return luminance(rgb) < 0.2;
+  }
+  var BLACK, WHITE;
+  var init_color = __esm({
+    "src/lib/color.ts"() {
+      "use strict";
+      BLACK = [0, 0, 0];
+      WHITE = [255, 255, 255];
+    }
+  });
+
+  // src/ui/kit/accent.ts
+  function pushUntil(from, to, ok) {
+    for (let t = 0; t <= 1; t += 0.02) {
+      const c = mix(from, to, t);
+      if (ok(c)) return c;
+    }
+    return to;
+  }
+  function deriveAccent(hex, base) {
+    const pick = parseHex(hex);
+    const paper = parseHex(base.paper);
+    if (!pick || !paper) return {};
+    const on = parseHex(base.onSepia) ?? WHITE;
+    const surfaces = [base.paper, base.paperDeep, base.sand, base.card];
+    const head = pushUntil(pick, BLACK, (c) => contrastRatio(on, c) >= 3 + MARGIN2);
+    const strong = pushUntil(pick, BLACK, (c) => contrastRatio(on, c) >= 4.5 + MARGIN2);
+    const soft = mix(pick, paper, 0.72);
+    const inkTarget = isDark(paper) ? WHITE : BLACK;
+    const ink = pushUntil(pick, inkTarget, (c) => [...surfaces, toHex(soft)].every((bg) => contrastRatio(c, bg) >= 4.5 + MARGIN2));
+    return {
+      sepia: toHex(head),
+      sepiaStrong: toHex(strong),
+      sepiaShade: toHex(mix(strong, BLACK, 0.3)),
+      sepiaSoft: toHex(soft),
+      sepiaInk: toHex(ink),
+      accentHover: toHex(mix(pick, paper, 0.55)),
+      accentBorder: toHex(mix(pick, paper, 0.3))
+    };
+  }
+  var MARGIN2;
+  var init_accent = __esm({
+    "src/ui/kit/accent.ts"() {
+      "use strict";
+      init_color();
+      MARGIN2 = 0.1;
+    }
+  });
+
+  // src/features/settings/appearance.ts
+  function cleanScale(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return 1;
+    return Math.round(clamp(n, SCALE_MIN, SCALE_MAX) * 20) / 20;
+  }
+  function cleanAccent(value) {
+    const rgb = typeof value === "string" ? parseHex(value) : null;
+    return rgb ? toHex(rgb) : null;
+  }
+  function readAppearance() {
+    const raw = readAriesPath(PATH) ?? {};
+    const theme = typeof raw.theme === "string" && raw.theme in themes ? raw.theme : DEFAULT_THEME;
+    return { theme, accent: cleanAccent(raw.accent), scale: raw.scale === void 0 ? 1 : cleanScale(raw.scale) };
+  }
+  function appearanceCss({ theme, accent, scale }) {
+    const swatches = themes[theme].swatches;
+    const overrides = { ...swatches, ...accent ? deriveAccent(accent, swatches) : {} };
+    return `:root:root{${colorVariables(overrides)}--qmm-scale:${scale};}`;
+  }
+  function applyAppearance(look = readAppearance()) {
+    if (typeof document === "undefined") return;
+    ensureKitStyles();
+    let style = document.getElementById(STYLE_ID3);
+    if (!style) {
+      style = document.createElement("style");
+      style.id = STYLE_ID3;
+      (document.head || document.documentElement).appendChild(style);
+    }
+    style.textContent = appearanceCss(look);
+  }
+  function saveAppearance(look) {
+    const clean = { theme: look.theme in themes ? look.theme : DEFAULT_THEME, accent: cleanAccent(look.accent), scale: cleanScale(look.scale) };
+    writeAriesPath(PATH, clean);
+    applyAppearance(clean);
+  }
+  var PATH, STYLE_ID3, SCALE_MIN, SCALE_MAX, DEFAULT_APPEARANCE;
+  var init_appearance = __esm({
+    "src/features/settings/appearance.ts"() {
+      "use strict";
+      init_color();
+      init_math();
+      init_storage();
+      init_accent();
+      init_styles();
+      init_theme();
+      PATH = "ui.appearance";
+      STYLE_ID3 = "qmm-appearance";
+      SCALE_MIN = 0.8;
+      SCALE_MAX = 1.3;
+      DEFAULT_APPEARANCE = { theme: DEFAULT_THEME, accent: null, scale: 1 };
+    }
+  });
+
+  // src/features/settings/styles.ts
+  function ensureSettingsStyles() {
+    if (injected4) return;
+    injected4 = true;
+    addStyle(SETTINGS_CSS);
+  }
+  var SETTINGS_CSS, injected4;
+  var init_styles4 = __esm({
+    "src/features/settings/styles.ts"() {
+      "use strict";
+      init_dom();
+      SETTINGS_CSS = `
+.qws-set-tab { display: flex; flex-direction: column; gap: 12px; }
+.qws-set-card-body { display: flex; flex-direction: column; gap: 10px; }
+.qws-set-status { min-height: 18px; font-size: 13px; opacity: .9; }
+.qws-set-status.is-ok { color: var(--qmm-accent); }
+.qws-set-status.is-error { color: var(--qmm-danger); }
+
+.qws-set-drop {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; min-height: 110px; padding: 18px 22px; box-sizing: border-box; text-align: center; cursor: pointer;
+  border-radius: 14px; border: 1px dashed var(--qmm-border-hover); background: var(--qmm-field-bg);
+  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.qws-set-drop.is-active, .qws-set-drop:focus-visible {
+  outline: none; border-color: var(--qmm-accent-border-hover); background: var(--qmm-accent-soft);
+  box-shadow: 0 0 0 3px var(--qmm-accent-soft);
+}
+.qws-set-drop__title { font-size: 14px; font-weight: 600; letter-spacing: .02em; }
+.qws-set-drop__hint { font-size: 12px; opacity: .75; }
+
+.qws-set-row { display: flex; align-items: center; gap: 8px; }
+.qws-set-row > .qmm-input { flex: 1; }
+.qws-set-list { display: flex; flex-direction: column; gap: 10px; }
+.qws-set-empty { opacity: .6; }
+.qws-set-backup {
+  display: flex; flex-direction: column; gap: 6px; padding: 10px;
+  border-radius: 8px; border: 1px solid var(--qmm-border); background: var(--qmm-card-bg);
+}
+.qws-set-backup__head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.qws-set-backup__name { font-size: 13px; font-weight: 600; }
+.qws-set-backup__date { font-size: 11px; opacity: .65; }
+.qws-set-backup__actions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.qws-set-hero { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 0 14px; text-align: center; }
+.qws-set-hero__title { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; color: var(--qmm-text); }
+.qws-set-hero__sub { margin-top: 2px; font-size: 11px; color: var(--qmm-text-dim); }
+.qws-set-sep { height: 1px; margin: 0 0 12px; background: var(--qmm-border); }
+.qws-set-grid {
+  display: flex; flex-direction: column; margin-bottom: 14px; overflow: hidden;
+  border-radius: 10px; border: 1px solid var(--qmm-border);
+}
+.qws-set-grid__row { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; font-size: 12px; }
+.qws-set-grid__row:nth-child(odd) { background: var(--qmm-card-bg); }
+.qws-set-grid__label { color: var(--qmm-text-dim); }
+.qws-set-grid__value { font-weight: 600; color: var(--qmm-text); }
+.qws-set-support {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 12px;
+  border-radius: 10px; border: 1px solid var(--qmm-border); background: var(--qmm-card-bg);
+}
+.qws-set-support__text { font-size: 12px; line-height: 1.5; text-align: center; color: var(--qmm-text-soft); }
+.qws-set-kofi { display: inline-block; border: 0; transition: opacity .15s ease, transform .15s ease; }
+.qws-set-kofi:hover { opacity: .82; transform: translateY(-2px); }
+.qws-set-kofi img { display: block; height: 36px; border: 0; }
+.qws-set-themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+.qws-set-theme {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px; cursor: pointer;
+  font: inherit; color: var(--qmm-text); background: var(--qmm-card);
+  border: 2px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-md);
+}
+.qws-set-theme:hover { border-color: var(--qmm-border-hover); }
+.qws-set-theme:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
+.qws-set-theme.is-active { border-color: var(--qmm-sepia); box-shadow: 0 0 0 2px var(--qmm-accent-border); }
+.qws-set-theme__preview {
+  position: relative; display: block; width: 100%; height: 54px; overflow: hidden;
+  border: 2px solid; border-radius: 10px; box-sizing: border-box;
+}
+.qws-set-theme__band { position: absolute; inset: 0 0 auto 0; height: 14px; }
+.qws-set-theme__text { position: absolute; left: 8px; bottom: 6px; font-weight: 900; font-size: 15px; }
+.qws-set-theme__chip { position: absolute; right: 8px; bottom: 10px; width: 26px; height: 12px; border-radius: 6px; }
+.qws-set-theme__label { font-size: var(--qmm-fs-sm); font-weight: 800; }
+.qws-set-color { width: 44px; height: 30px; padding: 0 2px; cursor: pointer; border: 2px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-sm); background: var(--qmm-card); }
+`;
+      injected4 = false;
+    }
+  });
+
+  // src/features/settings/appearanceTab.ts
+  function themeButton(id, onPick) {
+    const { label: label2, swatches } = themes[id];
+    const btn = h("button", "qws-set-theme");
+    btn.type = "button";
+    btn.dataset.theme = id;
+    btn.setAttribute("aria-label", `${label2} theme`);
+    const preview = h("span", "qws-set-theme__preview");
+    preview.style.background = swatches.paper;
+    preview.style.borderColor = swatches.sandEdge;
+    const band = h("span", "qws-set-theme__band");
+    band.style.background = swatches.sepia;
+    const text2 = h("span", "qws-set-theme__text", "Aa");
+    text2.style.color = swatches.bark;
+    const chip = h("span", "qws-set-theme__chip");
+    chip.style.background = swatches.sepiaStrong;
+    chip.style.boxShadow = `0 3px 0 ${swatches.sepiaShade}`;
+    preview.append(band, text2, chip);
+    btn.append(preview, h("span", "qws-set-theme__label", label2));
+    btn.addEventListener("click", onPick);
+    return btn;
+  }
+  function renderAppearanceTab(view) {
+    ensureSettingsStyles();
+    let look = readAppearance();
+    const themeButtons = Object.keys(themes).map((id) => (
+      // A theme comes with its own accent, so picking one drops a custom colour.
+      themeButton(id, () => commit({ theme: id, accent: null }))
+    ));
+    const themeGrid = h("div", "qws-set-themes");
+    themeGrid.append(...themeButtons);
+    const themeCard = card("Theme", { subtitle: "The colours of every menu." });
+    themeCard.body.appendChild(themeGrid);
+    const picker2 = h("input", "qws-set-color");
+    picker2.type = "color";
+    picker2.setAttribute("aria-label", "Accent colour");
+    picker2.addEventListener("input", () => applyAppearance({ ...look, accent: picker2.value }));
+    picker2.addEventListener("change", () => commit({ accent: picker2.value }));
+    const themeAccent = button("Theme colour", { size: "sm", onClick: () => commit({ accent: null }) });
+    const accentControls = flexRow({ gap: 8 });
+    accentControls.append(picker2, themeAccent);
+    const size = slider(SCALE_MIN * 100, SCALE_MAX * 100, 5, look.scale * 100);
+    const sizeValue = pill("", "ok");
+    const readSize = () => Number(size.value) / 100;
+    size.addEventListener("input", () => {
+      sizeValue.textContent = `${size.value}%`;
+      applyAppearance({ ...look, scale: readSize() });
+    });
+    size.addEventListener("change", () => commit({ scale: readSize() }));
+    const sizeControls2 = flexRow({ gap: 8 });
+    sizeControls2.append(size, sizeValue);
+    const tuneCard = card("Fine tuning");
+    tuneCard.body.append(
+      settingRow("Accent colour", "Buttons, title bands and selections.", accentControls).row,
+      settingRow("Menu size", "Windows and the launcher.", sizeControls2).row
+    );
+    const reset = button("Reset appearance", { onClick: () => commit(DEFAULT_APPEARANCE) });
+    function refresh() {
+      for (const btn of themeButtons) {
+        const active3 = btn.dataset.theme === look.theme;
+        btn.classList.toggle("is-active", active3);
+        btn.setAttribute("aria-pressed", active3 ? "true" : "false");
+      }
+      picker2.value = look.accent ?? themes[look.theme].swatches.sepia;
+      themeAccent.setEnabled(look.accent !== null);
+      size.value = String(Math.round(look.scale * 100));
+      sizeValue.textContent = `${size.value}%`;
+    }
+    function commit(next) {
+      look = { ...look, ...next };
+      saveAppearance(look);
+      look = readAppearance();
+      refresh();
+    }
+    refresh();
+    const tab = h("div", "qws-set-tab");
+    tab.append(themeCard.root, tuneCard.root, reset);
+    view.replaceChildren(tab);
+  }
+  var init_appearanceTab = __esm({
+    "src/features/settings/appearanceTab.ts"() {
+      "use strict";
+      init_button();
+      init_badges();
+      init_card();
+      init_dom2();
+      init_layout();
+      init_sliders();
+      init_theme();
+      init_appearance();
+      init_styles4();
+    }
+  });
+
   // src/lib/download.ts
   function copyTextToClipboard(text2) {
     if (navigator.clipboard?.writeText) {
@@ -36076,75 +36474,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       STORAGE_KEY = "aries_backups";
       MAX_BACKUPS = 25;
       DEFAULT_VERSION = 1;
-    }
-  });
-
-  // src/features/settings/styles.ts
-  function ensureSettingsStyles() {
-    if (injected4) return;
-    injected4 = true;
-    addStyle(SETTINGS_CSS);
-  }
-  var SETTINGS_CSS, injected4;
-  var init_styles4 = __esm({
-    "src/features/settings/styles.ts"() {
-      "use strict";
-      init_dom();
-      SETTINGS_CSS = `
-.qws-set-tab { display: flex; flex-direction: column; gap: 12px; }
-.qws-set-card-body { display: flex; flex-direction: column; gap: 10px; }
-.qws-set-status { min-height: 18px; font-size: 13px; opacity: .9; }
-.qws-set-status.is-ok { color: var(--qmm-accent); }
-.qws-set-status.is-error { color: var(--qmm-danger); }
-
-.qws-set-drop {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-  width: 100%; min-height: 110px; padding: 18px 22px; box-sizing: border-box; text-align: center; cursor: pointer;
-  border-radius: 14px; border: 1px dashed var(--qmm-border-hover); background: var(--qmm-field-bg);
-  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
-}
-.qws-set-drop.is-active, .qws-set-drop:focus-visible {
-  outline: none; border-color: var(--qmm-accent-border-hover); background: var(--qmm-accent-soft);
-  box-shadow: 0 0 0 3px var(--qmm-accent-soft);
-}
-.qws-set-drop__title { font-size: 14px; font-weight: 600; letter-spacing: .02em; }
-.qws-set-drop__hint { font-size: 12px; opacity: .75; }
-
-.qws-set-row { display: flex; align-items: center; gap: 8px; }
-.qws-set-row > .qmm-input { flex: 1; }
-.qws-set-list { display: flex; flex-direction: column; gap: 10px; }
-.qws-set-empty { opacity: .6; }
-.qws-set-backup {
-  display: flex; flex-direction: column; gap: 6px; padding: 10px;
-  border-radius: 8px; border: 1px solid var(--qmm-border); background: var(--qmm-card-bg);
-}
-.qws-set-backup__head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-.qws-set-backup__name { font-size: 13px; font-weight: 600; }
-.qws-set-backup__date { font-size: 11px; opacity: .65; }
-.qws-set-backup__actions { display: flex; flex-wrap: wrap; gap: 6px; }
-
-.qws-set-hero { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 0 14px; text-align: center; }
-.qws-set-hero__title { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; color: var(--qmm-text); }
-.qws-set-hero__sub { margin-top: 2px; font-size: 11px; color: var(--qmm-text-dim); }
-.qws-set-sep { height: 1px; margin: 0 0 12px; background: var(--qmm-border); }
-.qws-set-grid {
-  display: flex; flex-direction: column; margin-bottom: 14px; overflow: hidden;
-  border-radius: 10px; border: 1px solid var(--qmm-border);
-}
-.qws-set-grid__row { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; font-size: 12px; }
-.qws-set-grid__row:nth-child(odd) { background: var(--qmm-card-bg); }
-.qws-set-grid__label { color: var(--qmm-text-dim); }
-.qws-set-grid__value { font-weight: 600; color: var(--qmm-text); }
-.qws-set-support {
-  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 12px;
-  border-radius: 10px; border: 1px solid var(--qmm-border); background: var(--qmm-card-bg);
-}
-.qws-set-support__text { font-size: 12px; line-height: 1.5; text-align: center; color: var(--qmm-text-soft); }
-.qws-set-kofi { display: inline-block; border: 0; transition: opacity .15s ease, transform .15s ease; }
-.qws-set-kofi:hover { opacity: .82; transform: translateY(-2px); }
-.qws-set-kofi img { display: block; height: 36px; border: 0; }
-`;
-      injected4 = false;
     }
   });
 
@@ -36443,6 +36772,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     ui.mount(container);
     ui.addTabs([
       { id: "settings-data", title: "Settings", render: renderDataTab },
+      { id: "settings-appearance", title: "Appearance", render: renderAppearanceTab },
       { id: "settings-infos", title: "Infos", render: renderInfosTab }
     ]);
     ui.switchTo("settings-data");
@@ -36451,6 +36781,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/features/settings/menu.ts"() {
       "use strict";
       init_menu();
+      init_appearanceTab();
       init_dataTab();
       init_infosTab();
     }
@@ -36986,17 +37317,17 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/notifier/menu/styles.ts
   function ensureMenuStyles() {
-    if (document.getElementById(STYLE_ID3)) return;
+    if (document.getElementById(STYLE_ID4)) return;
     const style = document.createElement("style");
-    style.id = STYLE_ID3;
+    style.id = STYLE_ID4;
     style.textContent = CSS;
     document.head.appendChild(style);
   }
-  var STYLE_ID3, CSS;
+  var STYLE_ID4, CSS;
   var init_styles5 = __esm({
     "src/features/notifier/menu/styles.ts"() {
       "use strict";
-      STYLE_ID3 = "qws-rule-style";
+      STYLE_ID4 = "qws-rule-style";
       CSS = `
 .qws-rule-btn {
   display: inline-grid;
@@ -37069,8 +37400,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function makeDraggable3(pop, handle, ignore) {
     const place = (left, top) => {
-      pop.style.left = `${Math.round(clampBetween(left, MARGIN2, window.innerWidth - pop.offsetWidth - MARGIN2))}px`;
-      pop.style.top = `${Math.round(clampBetween(top, MARGIN2, window.innerHeight - pop.offsetHeight - MARGIN2))}px`;
+      pop.style.left = `${Math.round(clampBetween(left, MARGIN3, window.innerWidth - pop.offsetWidth - MARGIN3))}px`;
+      pop.style.top = `${Math.round(clampBetween(top, MARGIN3, window.innerHeight - pop.offsetHeight - MARGIN3))}px`;
     };
     let drag = null;
     const onMove = (ev) => {
@@ -37113,10 +37444,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     const height = pop.offsetHeight;
     const left = anchorRect.right - width;
     let top = anchorRect.bottom + 8;
-    if (top + height > window.innerHeight - MARGIN2) top = anchorRect.top - height - 8;
-    if (top < MARGIN2) top = MARGIN2;
-    pop.style.left = `${Math.round(clampBetween(left, MARGIN2, window.innerWidth - width - MARGIN2))}px`;
-    pop.style.top = `${Math.round(clampBetween(top, MARGIN2, window.innerHeight - height - MARGIN2))}px`;
+    if (top + height > window.innerHeight - MARGIN3) top = anchorRect.top - height - 8;
+    if (top < MARGIN3) top = MARGIN3;
+    pop.style.left = `${Math.round(clampBetween(left, MARGIN3, window.innerWidth - width - MARGIN3))}px`;
+    pop.style.top = `${Math.round(clampBetween(top, MARGIN3, window.innerHeight - height - MARGIN3))}px`;
   }
   function digitsOnly(input) {
     const editing = /* @__PURE__ */ new Set(["Backspace", "Delete", "Tab", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"]);
@@ -37265,7 +37596,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       { capture: true, passive: true }
     );
   }
-  var MARGIN2, popover, teardown, clampBetween;
+  var MARGIN3, popover, teardown, clampBetween;
   var init_ruleEditor = __esm({
     "src/features/notifier/menu/ruleEditor.ts"() {
       "use strict";
@@ -37280,7 +37611,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_playbackDefaults();
       init_rules();
       init_styles5();
-      MARGIN2 = 12;
+      MARGIN3 = 12;
       popover = null;
       teardown = new Subscriptions();
       clampBetween = (value, a, b) => clamp(value, Math.min(a, b), Math.max(a, b));
@@ -38381,9 +38712,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/tools/styles.ts
   function ensureToolsStyles() {
-    if (document.getElementById(STYLE_ID4)) return;
+    if (document.getElementById(STYLE_ID5)) return;
     const style = document.createElement("style");
-    style.id = STYLE_ID4;
+    style.id = STYLE_ID5;
     style.textContent = `
 .mgt-card:focus-visible, .mgt-nav:focus-visible, .mgt-dot:focus-visible {
   outline: 2px solid var(--qmm-accent);
@@ -38594,11 +38925,11 @@ Restore figures are averages; unlucky streaks do worse.`;
 `;
     document.head.appendChild(style);
   }
-  var STYLE_ID4;
+  var STYLE_ID5;
   var init_styles6 = __esm({
     "src/features/tools/styles.ts"() {
       "use strict";
-      STYLE_ID4 = "gemini-tools-styles";
+      STYLE_ID5 = "gemini-tools-styles";
     }
   });
 
@@ -48882,9 +49213,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/menu/askBanner.ts
   function ensureStyle() {
-    if (document.getElementById(STYLE_ID5)) return;
+    if (document.getElementById(STYLE_ID6)) return;
     const style = document.createElement("style");
-    style.id = STYLE_ID5;
+    style.id = STYLE_ID6;
     style.textContent = `
 #${CARD_ID} {
   position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
@@ -49009,7 +49340,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     unsubscribe = CompanionChat.subscribe(sync);
     sync();
   }
-  var CARD_ID, STYLE_ID5, Z_INDEX, ICON_PX6, TICK_MS2, card3, clockBar, timer, shownId, unsubscribe;
+  var CARD_ID, STYLE_ID6, Z_INDEX, ICON_PX6, TICK_MS2, card3, clockBar, timer, shownId, unsubscribe;
   var init_askBanner = __esm({
     "src/features/companion/menu/askBanner.ts"() {
       "use strict";
@@ -49023,7 +49354,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_chatIcons();
       init_npcAvatar();
       CARD_ID = "mgCompanionAsk";
-      STYLE_ID5 = "mgCompanionAskStyle";
+      STYLE_ID6 = "mgCompanionAskStyle";
       Z_INDEX = layer.window + 49;
       ICON_PX6 = 17;
       TICK_MS2 = 100;
@@ -49702,6 +50033,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_menu5();
       init_menu6();
       init_menu7();
+      init_appearance();
       init_menu8();
       init_menu9();
       init_menu10();
@@ -49749,6 +50081,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         EditorService.init();
         installEditorPointerControls();
         void initSkins();
+        applyAppearance();
         mountHUD({
           onRegister(register2) {
             register2("pets", "Pets", renderPetsMenu);

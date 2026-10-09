@@ -13,6 +13,8 @@ import { switchInput } from "../src/ui/kit/toggles";
 import { VTabs } from "../src/ui/kit/vtabs";
 import { createDock } from "../src/ui/kit/dock";
 import { setMenuBadge } from "../src/ui/kit/menuBadges";
+import { applyAppearance } from "../src/features/settings/appearance";
+import { renderAppearanceTab } from "../src/features/settings/appearanceTab";
 
 function windowFrame(title: string, left: number, top: number, width: number): HTMLElement {
   const win = h("div", "qws-win");
@@ -92,5 +94,7 @@ dock.setOpen("pets", true);
 dock.setStatus("ok", "Connected");
 setMenuBadge("alerts", 3);
 
+applyAppearance();
+renderAppearanceTab(windowFrame("Settings, Appearance", 110, 40, 460));
 petsMenu(windowFrame("Pets", 110, 40, 560));
 controlsMenu(windowFrame("Kit", 700, 40, 520));
