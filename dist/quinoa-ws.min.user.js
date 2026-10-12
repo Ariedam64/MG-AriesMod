@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      4.0.1
+// @version      4.0.2
 // @include      /^https:\/\/1227719606223765687\.discordsays\.com\/.*[?&]mc_shell_frame=1(&|#|$)/
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -4190,7 +4190,7 @@
       }));
       storageKeyFromSpecies = (item) => normalizeKey(item?.species);
       storageKeyFromDecorId = (item) => normalizeKey(item?.decorId);
-      storageKeyFromToolId = (item) => normalizeKey(item?.toolId);
+      storageKeyFromToolId = (item) => item && typeof item === "object" && "remainingActiveSeconds" in item ? "" : normalizeKey(item?.toolId);
     }
   });
 
@@ -14944,7 +14944,7 @@ label.qws-ed-opt { cursor: pointer; }
   // src/platform/modVersion.ts
   function getLocalVersion() {
     if (true) {
-      return "4.0.1";
+      return "4.0.2";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -15553,23 +15553,42 @@ label.qws-ed-opt { cursor: pointer; }
     }
   });
 
-  // src/ui/hud.ts
+  // src/ui/inputKeyTrap.ts
+  function isTextField(el4) {
+    const node = el4;
+    const tag = typeof node?.tagName === "string" ? node.tagName.toUpperCase() : "";
+    if (tag === "TEXTAREA") return true;
+    if (tag === "INPUT") return TEXT_INPUT_TYPES.has(String(node?.type ?? "").toLowerCase());
+    return node?.isContentEditable === true;
+  }
+  function isInsideModSurface(el4) {
+    for (let node = el4; node; node = node.parentElement) {
+      if (typeof node.className === "string" && MOD_CLASS.test(node.className)) return true;
+    }
+    return false;
+  }
   function installInputKeyTrap() {
-    const isTextField = (el4) => {
-      if (el4 instanceof HTMLTextAreaElement) return true;
-      if (el4 instanceof HTMLInputElement) return ["text", "number", "search"].includes((el4.type || "").toLowerCase());
-      return el4 instanceof HTMLElement && el4.isContentEditable;
-    };
-    const ours = (el4) => !!el4?.closest?.(".qws-win");
+    if (installed || typeof window === "undefined") return;
+    installed = true;
     const trap = (ev) => {
-      const target = ev.target;
-      const active3 = document.activeElement;
-      if (!(ours(target) && isTextField(target) || ours(active3) && isTextField(active3))) return;
+      if (!isModTextField(ev.target) && !isModTextField(document.activeElement)) return;
       ev.stopPropagation();
       ev.stopImmediatePropagation();
     };
     for (const type of ["keydown", "keypress", "keyup"]) window.addEventListener(type, trap, true);
   }
+  var TEXT_INPUT_TYPES, MOD_CLASS, isModTextField, installed;
+  var init_inputKeyTrap = __esm({
+    "src/ui/inputKeyTrap.ts"() {
+      "use strict";
+      TEXT_INPUT_TYPES = /* @__PURE__ */ new Set(["", "text", "number", "search", "email", "password", "url", "tel"]);
+      MOD_CLASS = /(^|\s)(qmm-|qws-|qws2)/;
+      isModTextField = (el4) => isTextField(el4) && isInsideModSurface(el4);
+      installed = false;
+    }
+  });
+
+  // src/ui/hud.ts
   function mountHUD(opts) {
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", () => mountHUD(opts), { once: true });
@@ -15824,6 +15843,7 @@ label.qws-ed-opt { cursor: pointer; }
       init_theme();
       init_hudPlacement();
       init_hudStatus();
+      init_inputKeyTrap();
       HUD_HIDDEN_PATH = "hud.hidden";
       HUD_FOLDED_PATH = "hud.dockFolded";
       HUD_DOCK_POS_PATH = "hud.dockPos";
@@ -16085,9 +16105,6 @@ label.qws-ed-opt { cursor: pointer; }
   async function disableFakeInventory() {
     await fakeHide(INVENTORY_ATOM_PATCH.label);
     await fakeHide(SHARED_MYDATA_PATCH.label);
-  }
-  function isInventoryOpen(v) {
-    return isModalOpen(v, INVENTORY_MODAL_ID);
   }
   async function openActivityLogTab(tab) {
     const target = activityLogOpenTarget(tab);
@@ -17010,8 +17027,8 @@ label.qws-ed-opt { cursor: pointer; }
     window.dispatchEvent(new CustomEvent(COMPANION_TAB_EVENT, { detail: { tab: CHAT_TAB_ID } }));
   }
   function installCompanionKeybindsOnce() {
-    if (installed || typeof window === "undefined") return;
-    installed = true;
+    if (installed2 || typeof window === "undefined") return;
+    installed2 = true;
     window.addEventListener(
       "keydown",
       (event) => {
@@ -17024,7 +17041,7 @@ label.qws-ed-opt { cursor: pointer; }
       true
     );
   }
-  var COMPANION_PANEL_ID, CHAT_TAB_ID, COMPANION_TAB_EVENT, installed;
+  var COMPANION_PANEL_ID, CHAT_TAB_ID, COMPANION_TAB_EVENT, installed2;
   var init_keybind = __esm({
     "src/features/companion/keybind.ts"() {
       "use strict";
@@ -17033,7 +17050,7 @@ label.qws-ed-opt { cursor: pointer; }
       COMPANION_PANEL_ID = "companion";
       CHAT_TAB_ID = "chat";
       COMPANION_TAB_EVENT = "qws:companion-tab";
-      installed = false;
+      installed2 = false;
     }
   });
 
@@ -19826,15 +19843,15 @@ label.qws-ed-opt { cursor: pointer; }
     }
   }
   function installGameKeybindsOnce() {
-    if (installed2 || typeof window === "undefined") return;
-    installed2 = true;
+    if (installed3 || typeof window === "undefined") return;
+    installed3 = true;
     for (const id of Object.keys(GAME_KEYS)) {
       syncGameKeybind(id);
       onKeybindChange(id, () => syncGameKeybind(id));
       onKeybindHoldDetectionChange(id, () => syncGameKeybind(id));
     }
   }
-  var GAME_KEYS, rapidFireCombos, installed2;
+  var GAME_KEYS, rapidFireCombos, installed3;
   var init_gameRemap = __esm({
     "src/features/keybinds/gameRemap.ts"() {
       "use strict";
@@ -19850,7 +19867,7 @@ label.qws-ed-opt { cursor: pointer; }
         "game.move-right": "KeyD"
       };
       rapidFireCombos = /* @__PURE__ */ new Map();
-      installed2 = false;
+      installed3 = false;
     }
   });
 
@@ -22515,13 +22532,13 @@ label.qws-ed-opt { cursor: pointer; }
     const safeName = String(key2 || "").trim();
     if (!safeName) return null;
     const rawDisplayName = trimmedString(entry.displayName) || trimmedString(entry.name);
-    const displayName = spaceWords(rawDisplayName || safeName).replace(/_/g, " ").replace(/\s+/g, " ").trim();
+    const displayName2 = spaceWords(rawDisplayName || safeName).replace(/_/g, " ").replace(/\s+/g, " ").trim();
     const atomValue = "atomValue" in entry ? trimmedString(entry.atomValue) : entry.mutator ? safeName : "";
     return {
       id: `${WEATHER_ID_PREFIX}${safeName}`,
-      name: displayName || safeName,
+      name: displayName2 || safeName,
       atomValue,
-      type: atomValue || displayName,
+      type: atomValue || displayName2,
       description: trimmedString(entry.description) || null,
       cycle: readCycle(entry.cycle),
       weightInCycle: finiteNumber2(entry.weightInCycle) ?? null,
@@ -23189,19 +23206,6 @@ label.qws-ed-opt { cursor: pointer; }
       abilities: stringList(slot.abilities)
     };
   }
-  function petToInventoryItem(p) {
-    return {
-      id: p.id,
-      itemType: "Pet",
-      petSpecies: canonicalSpecies(p.petSpecies),
-      name: p.name ?? null,
-      xp: p.xp,
-      hunger: p.hunger,
-      mutations: p.mutations.slice(),
-      targetScale: p.targetScale,
-      abilities: p.abilities.slice()
-    };
-  }
   function stableSignature(list) {
     return list.filter((p) => !!p).map((p) => JSON.stringify([p.id, p.petSpecies, p.name ?? null, p.mutations, p.targetScale ?? null, p.abilities])).join("\n");
   }
@@ -23533,6 +23537,853 @@ label.qws-ed-opt { cursor: pointer; }
       DEFAULT_MAX_HUNGER = 3e3;
       isAllowed = (rules3, crop) => rules3[crop] ? !!rules3[crop].allowed : true;
       catalogEntry = (species) => petCatalog2[species];
+    }
+  });
+
+  // src/ui/kit/modal.ts
+  function menuCard(options2) {
+    const card3 = h("button", "qmm-menu-card");
+    card3.type = "button";
+    card3.disabled = options2.disabled === true;
+    card3.append(h("div", "qmm-menu-card__name", options2.name), h("div", "qmm-menu-card__detail", options2.detail));
+    if (!card3.disabled) card3.addEventListener("click", options2.onClick);
+    return card3;
+  }
+  function openModal2(options2) {
+    let closed = false;
+    const scrim = h("div", "qmm-modal-scrim");
+    const hostZ = Number.parseInt(getComputedStyle(options2.host).zIndex, 10);
+    scrim.style.zIndex = String((Number.isFinite(hostZ) ? hostZ : layer.window) + 1);
+    const panel = h("div", "qmm-modal");
+    panel.style.width = `min(${options2.widthPx ?? 420}px, 100%)`;
+    panel.style.maxHeight = `min(${options2.maxHeightPx ?? 520}px, 88vh)`;
+    panel.addEventListener("click", (event) => event.stopPropagation());
+    const closeButton = h("button", "qmm-modal__close", "\u2715");
+    closeButton.type = "button";
+    closeButton.title = "Close";
+    closeButton.addEventListener("click", () => close());
+    const header = h("div", "qmm-modal__head");
+    header.append(h("div", "qmm-modal__title", options2.title), closeButton);
+    const body = h("div", "qmm-modal__body qmm-scroll");
+    const footer = h("div", "qmm-modal__foot");
+    panel.append(header, body, footer);
+    scrim.append(panel);
+    function onKeyDown2(event) {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        close();
+      }
+    }
+    function close() {
+      if (closed) return;
+      closed = true;
+      clearInterval(hostWatch);
+      document.removeEventListener("keydown", onKeyDown2, true);
+      scrim.remove();
+      options2.onClose?.();
+    }
+    const hostWatch = window.setInterval(() => {
+      if (!options2.host.isConnected) close();
+    }, 1e3);
+    scrim.addEventListener("click", () => close());
+    document.addEventListener("keydown", onKeyDown2, true);
+    (document.documentElement || document.body).appendChild(scrim);
+    return { body, footer, close, isOpen: () => !closed };
+  }
+  var init_modal = __esm({
+    "src/ui/kit/modal.ts"() {
+      "use strict";
+      init_dom2();
+      init_theme();
+    }
+  });
+
+  // src/platform/discordCsp.ts
+  function isImgUrlSafe(url) {
+    if (url.startsWith("blob:") || url.startsWith("data:") || url.startsWith("/")) return true;
+    try {
+      const { hostname } = new URL(url);
+      return SAFE_IMG_HOSTS.some((host) => hostname === host || hostname.endsWith("." + host));
+    } catch {
+      return true;
+    }
+  }
+  function toBlobUrl(url, defaultMime) {
+    let pending3 = blobUrls.get(url);
+    if (!pending3) {
+      pending3 = gmRequest({ url }, "arraybuffer").then(
+        (res) => {
+          if (!res.body) {
+            blobUrls.delete(url);
+            return url;
+          }
+          const extension = url.split(".").pop()?.toLowerCase().split("?")[0] ?? "";
+          const blob = new Blob([res.body], { type: MIME_BY_EXTENSION[extension] ?? defaultMime });
+          return URL.createObjectURL(blob);
+        },
+        () => {
+          blobUrls.delete(url);
+          return url;
+        }
+      );
+      blobUrls.set(url, pending3);
+    }
+    return pending3;
+  }
+  function setImageSafe(img, url) {
+    if (!url) return;
+    if (!isDiscordActivityContext() || isImgUrlSafe(url)) {
+      img.src = url;
+      return;
+    }
+    void toBlobUrl(url, "image/png").then((src) => {
+      img.src = src;
+    });
+  }
+  function getAudioUrlSafe(url) {
+    if (!url || !isDiscordActivityContext()) return Promise.resolve(url);
+    return toBlobUrl(url, "audio/mpeg");
+  }
+  var SAFE_IMG_HOSTS, MIME_BY_EXTENSION, blobUrls;
+  var init_discordCsp = __esm({
+    "src/platform/discordCsp.ts"() {
+      "use strict";
+      init_environment();
+      init_http();
+      SAFE_IMG_HOSTS = ["cdn.discordapp.com", "media.discordapp.net"];
+      MIME_BY_EXTENSION = {
+        png: "image/png",
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        gif: "image/gif",
+        webp: "image/webp",
+        svg: "image/svg+xml",
+        mp3: "audio/mpeg",
+        ogg: "audio/ogg",
+        wav: "audio/wav",
+        m4a: "audio/mp4"
+      };
+      blobUrls = /* @__PURE__ */ new Map();
+    }
+  });
+
+  // src/ui/kit/icons.ts
+  function spriteLookup(frameKey) {
+    const parts = frameKey.split("/").filter(Boolean);
+    const name = parts[parts.length - 1] ?? frameKey;
+    const category = parts.length >= 2 ? parts[parts.length - 2] : "";
+    const categories = [category, `${category}s`, "ui", "decor", "objects"].filter(
+      (value, index, all) => value && all.indexOf(value) === index
+    );
+    return { categories, name };
+  }
+  function iconBox(source, sizePx, logTag) {
+    const box2 = h("div", "qmm-icon-box");
+    box2.style.width = `${sizePx}px`;
+    box2.style.height = `${sizePx}px`;
+    if (/^https?:\/\//i.test(source)) {
+      const img = document.createElement("img");
+      img.alt = "";
+      setImageSafe(img, source);
+      box2.appendChild(img);
+    } else {
+      const { categories, name } = spriteLookup(source);
+      attachSpriteIcon(box2, categories, name, sizePx, logTag);
+    }
+    return box2;
+  }
+  var init_icons = __esm({
+    "src/ui/kit/icons.ts"() {
+      "use strict";
+      init_iconCache();
+      init_discordCsp();
+      init_dom2();
+    }
+  });
+
+  // src/ui/kit/rarityBadge.ts
+  function rarityLabel(raw) {
+    const rarity3 = String(raw || "").trim();
+    switch (rarity3.toLowerCase()) {
+      // The live API says "Mythic" where the bundled catalog says "Mythical".
+      case "mythic":
+      case "mythical":
+        return "Mythical";
+      case "celestial":
+        return "Celestial";
+      case "divine":
+        return "Divine";
+      case "legendary":
+        return "Legendary";
+      case "rare":
+        return "Rare";
+      case "uncommon":
+        return "Uncommon";
+      case "common":
+        return "Common";
+      default:
+        return rarity3 || "-";
+    }
+  }
+  function rarityBadge(raw, opts = {}) {
+    ensureKitStyles();
+    const name = rarityLabel(raw);
+    const el4 = h("span", "qmm-rarity");
+    el4.setAttribute("title", name);
+    const frame = raritySprite(name);
+    if (frame) {
+      const icon2 = iconBox(frame, opts.size ?? 18, "rarity");
+      icon2.appendChild(h("span", "qmm-rarity__fallback", name.charAt(0)));
+      el4.appendChild(icon2);
+    }
+    if (opts.label || !frame) el4.appendChild(h("span", "qmm-rarity__label", name));
+    else {
+      el4.setAttribute("role", "img");
+      el4.setAttribute("aria-label", name);
+    }
+    return el4;
+  }
+  var init_rarityBadge = __esm({
+    "src/ui/kit/rarityBadge.ts"() {
+      "use strict";
+      init_data();
+      init_dom2();
+      init_icons();
+      init_styles();
+    }
+  });
+
+  // src/features/pets/abilityChipColors.ts
+  function getAbilityChipColors(id) {
+    const key2 = String(id || "");
+    const live = petAbilities2[key2]?.color;
+    if (live && typeof live.bg === "string" && live.bg) {
+      return { bg: live.bg, hover: typeof live.hover === "string" && live.hover ? live.hover : live.bg };
+    }
+    const base = abilityNameWithoutLevel(key2).replace(/[\s\-_]+/g, "").toLowerCase();
+    const matches = (family) => key2.startsWith(family) || base === family.toLowerCase();
+    for (const [families, colors] of FALLBACK_COLORS2) {
+      if (families.some(matches)) return colors;
+    }
+    return NEUTRAL;
+  }
+  var solid, NEUTRAL, FALLBACK_COLORS2;
+  var init_abilityChipColors = __esm({
+    "src/features/pets/abilityChipColors.ts"() {
+      "use strict";
+      init_data();
+      init_abilityNames();
+      solid = (r, g, b) => ({
+        bg: `rgba(${r},${g},${b},0.9)`,
+        hover: `rgba(${r},${g},${b},1)`
+      });
+      NEUTRAL = { bg: "rgba(100,100,100,0.9)", hover: "rgba(150,150,150,1)" };
+      FALLBACK_COLORS2 = [
+        [["MoonKisser"], solid(250, 166, 35)],
+        [["DawnKisser"], solid(162, 92, 242)],
+        [["DawnCapture"], solid(178, 90, 158)],
+        [["DawnbinderBoost"], solid(180, 104, 160)],
+        [["ProduceScaleBoost", "SnowyCropSizeBoost"], solid(34, 139, 34)],
+        [["PlantGrowthBoost", "SnowyPlantGrowthBoost", "DawnPlantGrowthBoost", "AmberPlantGrowthBoost", "ThunderPlantGrowthBoost"], solid(0, 128, 128)],
+        [["EggGrowthBoost", "SnowyEggGrowthBoost", "ThunderEggGrowthBoost"], solid(180, 90, 240)],
+        [["PetAgeBoost"], solid(147, 112, 219)],
+        [["PetHatchSizeBoost"], solid(128, 0, 128)],
+        [["PetXpBoost", "SnowyPetXpBoost", "DawnXpBoost", "ThunderXpBoost"], solid(30, 144, 255)],
+        [["HungerBoost", "SnowyHungerBoost"], solid(255, 20, 147)],
+        [["HungerRestore", "SnowyHungerRestore"], solid(255, 105, 180)],
+        [["SellBoost"], solid(220, 20, 60)],
+        [["CoinFinder", "SnowyCoinFinder", "DawnCoinFinder", "ThunderCoinFinder"], solid(180, 150, 0)],
+        [["SeedFinder"], solid(168, 102, 38)],
+        [["ProduceMutationBoost", "SnowyCropMutationBoost", "DawnBoost", "AmberMoonBoost", "ThunderBoost"], solid(140, 15, 70)],
+        [["PetMutationBoost"], solid(160, 50, 100)],
+        [["DoubleHarvest"], solid(0, 120, 180)],
+        [["DoubleHatch"], solid(60, 90, 180)],
+        [["ProduceEater"], solid(255, 69, 0)],
+        [["ProduceRefund"], solid(255, 99, 71)],
+        [["PetRefund"], solid(0, 80, 120)],
+        [["Copycat"], solid(255, 140, 0)],
+        [
+          ["GoldGranter"],
+          {
+            bg: "linear-gradient(135deg, rgba(225,200,55,0.9) 0%, rgba(225,180,10,0.9) 40%, rgba(215,185,45,0.9) 70%, rgba(210,185,45,0.9) 100%)",
+            hover: "linear-gradient(135deg, rgba(220,200,70,1) 0%, rgba(210,175,5,1) 40%, rgba(210,185,55,1) 70%, rgba(200,175,30,1) 100%)"
+          }
+        ],
+        [
+          ["RainbowGranter"],
+          {
+            bg: "linear-gradient(45deg, rgba(200,0,0,0.9), rgba(200,120,0,0.9), rgba(160,170,30,0.9), rgba(60,170,60,0.9), rgba(50,170,170,0.9), rgba(40,150,180,0.9), rgba(20,90,180,0.9), rgba(70,30,150,0.9))",
+            hover: "linear-gradient(45deg, rgba(200,0,0,1), rgba(200,120,0,1), rgba(160,170,30,1), rgba(60,170,60,1), rgba(50,170,170,1), rgba(40,150,180,1), rgba(20,90,180,1), rgba(70,30,150,1))"
+          }
+        ],
+        [["RainDance"], solid(76, 204, 204)],
+        [["SnowGranter"], solid(144, 184, 204)],
+        [["FrostGranter"], solid(148, 160, 204)],
+        [["DawnlitGranter"], solid(196, 124, 180)],
+        [["AmberlitGranter"], solid(204, 144, 96)],
+        [["ThunderstruckGranter"], solid(194, 184, 60)],
+        [["Thundercharger"], solid(31, 163, 130)],
+        [["Thunderbloom"], solid(112, 246, 203)]
+      ];
+    }
+  });
+
+  // src/features/pets/styles.ts
+  function ensurePetsStyles() {
+    if (installed4) return;
+    installed4 = true;
+    addStyle(PETS_CSS);
+  }
+  var PANE_HEIGHT, PETS_CSS, installed4;
+  var init_styles3 = __esm({
+    "src/features/pets/styles.ts"() {
+      "use strict";
+      init_dom();
+      PANE_HEIGHT = "calc(56vh / var(--qmm-scale, 1))";
+      PETS_CSS = `
+/* A tab takes a set width, so the window keeps its size from tab to tab, and
+   is the container its layouts query to stack on a narrow window. */
+.pt-tab {
+  display: flex; flex-direction: column; gap: var(--qmm-space-xl);
+  width: min(780px, calc((100vw - 64px) / var(--qmm-scale, 1))); max-width: 100%; box-sizing: border-box;
+  container-type: inline-size;
+}
+.pt-empty {
+  padding: var(--qmm-space-xl) var(--qmm-space-md); font-size: var(--qmm-fs-sm); line-height: 1.45;
+  color: var(--qmm-text-dim); text-align: center;
+}
+.pt-hint { font-size: var(--qmm-fs-sm); line-height: 1.4; color: var(--qmm-text-dim); }
+.pt-scroll { max-height: ${PANE_HEIGHT}; overflow-y: auto; min-height: 0; padding: 2px 2px 2px 0; }
+
+/* A list on the left, its detail on the right. */
+.pt-split {
+  display: grid; grid-template-columns: minmax(200px, 250px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr);
+  gap: var(--qmm-space-xl); height: ${PANE_HEIGHT}; min-height: 0;
+}
+.pt-split > * { min-height: 0; }
+
+/* ----------------------------- Teams: the list ---------------------------- */
+.pt-teams { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
+.pt-teams__head { display: flex; align-items: center; gap: var(--qmm-space-md); min-height: 32px; }
+.pt-teams__head .qmm-section-label { flex: 1 1 auto; }
+.pt-teams__rows {
+  flex: 1 1 auto; min-height: 0; overflow: auto; scroll-behavior: smooth;
+  display: flex; flex-direction: column; gap: var(--qmm-space-xs);
+  padding: var(--qmm-space-sm); border-radius: var(--qmm-radius-lg); background: var(--qmm-paper-deep);
+}
+.pt-team {
+  flex: 0 0 auto; display: flex; align-items: center; gap: var(--qmm-space-md);
+  height: 40px; padding: 0 var(--qmm-space-sm) 0 var(--qmm-space-lg); box-sizing: border-box;
+  border: 2px solid transparent; border-radius: var(--qmm-radius-md); background: var(--qmm-card);
+  font-size: var(--qmm-fs-md); font-weight: 700; white-space: nowrap; cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.pt-team:hover { border-color: var(--qmm-border-hover); }
+.pt-team.is-selected { background: var(--qmm-sepia-soft); border-color: var(--qmm-accent-border); color: var(--qmm-sepia-ink); }
+.pt-team__dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: var(--qmm-sand-edge); }
+.pt-team__dot.is-active { background: var(--qmm-ok); box-shadow: 0 0 0 3px var(--qmm-ok-soft); }
+.pt-team__name { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.pt-team__pets { flex: 0 0 auto; display: flex; align-items: center; gap: 3px; }
+.pt-team .qmm-grab { margin-left: 0; }
+.pt-sync {
+  display: flex; align-items: center; gap: var(--qmm-space-md); padding: var(--qmm-space-xs) var(--qmm-space-sm);
+  font-size: var(--qmm-fs-sm); font-weight: 700; color: var(--qmm-text-soft); cursor: pointer;
+}
+
+/* ---------------------------- Teams: the editor --------------------------- */
+.pt-editor { display: flex; flex-direction: column; gap: var(--qmm-space-xl); overflow-y: auto; padding-right: 2px; }
+.pt-editor__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.pt-editor__name { flex: 1 1 0; font-size: var(--qmm-fs-xl); font-weight: 800; }
+.pt-editor__foot { display: flex; justify-content: flex-end; }
+.pt-slots { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
+.pt-slot {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) auto auto; align-items: center; gap: var(--qmm-space-lg);
+  padding: var(--qmm-space-md) var(--qmm-space-md) var(--qmm-space-md) var(--qmm-space-lg);
+  border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+}
+.pt-slot.is-empty { background: transparent; outline: 2px dashed var(--qmm-sand-edge); outline-offset: -2px; }
+.pt-slot__icon { display: grid; place-items: center; width: 44px; height: 44px; font-size: 26px; }
+.pt-slot.is-empty .pt-slot__icon { opacity: .4; }
+.pt-slot__text { display: flex; flex-direction: column; gap: var(--qmm-space-sm); min-width: 0; }
+.pt-slot__title { display: flex; align-items: center; gap: var(--qmm-space-sm); min-width: 0; }
+.pt-slot__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--qmm-fs-lg); font-weight: 800; }
+.pt-slot.is-empty .pt-slot__name { color: var(--qmm-text-dim); font-weight: 700; }
+
+/* Strength, as current/max. Green once the pet is at its max. */
+.pt-str {
+  flex: 0 0 auto; padding: 2px 7px; border-radius: var(--qmm-radius-pill);
+  background: var(--qmm-sand); color: var(--qmm-text-soft);
+  font-size: var(--qmm-fs-xs); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.pt-str.is-max { background: var(--qmm-ok-soft); color: var(--qmm-ok-ink); }
+
+/* -------------------------------- Team stats ------------------------------ */
+.pt-stats { display: flex; flex-direction: column; gap: var(--qmm-space-sm); }
+.pt-stats__groups { display: grid; gap: var(--qmm-space-sm); }
+.pt-stats.is-all .pt-stats__groups { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--qmm-space-md); }
+.pt-stat {
+  display: flex; flex-direction: column; gap: 3px; min-width: 0;
+  padding: var(--qmm-space-md) var(--qmm-space-lg); border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+}
+.pt-stat__head { display: flex; align-items: center; justify-content: space-between; gap: var(--qmm-space-sm); min-height: 16px; }
+.pt-stat__name {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--qmm-fs-xs); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--qmm-text-dim);
+}
+.pt-stat__value { display: flex; align-items: baseline; gap: var(--qmm-space-xs); font-variant-numeric: tabular-nums; }
+.pt-stat__big { font-size: var(--qmm-fs-xl); font-weight: 900; line-height: 1.1; }
+.pt-stat__unit, .pt-stat__max { font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); }
+.pt-stat__max { margin-left: auto; white-space: nowrap; }
+.pt-stat__always { font-size: var(--qmm-fs-md); font-weight: 700; color: var(--qmm-text-soft); }
+.pt-stat__bar { height: 4px; margin-top: 2px; overflow: hidden; border-radius: var(--qmm-radius-pill); background: var(--qmm-sand-edge); }
+.pt-stat__fill { height: 100%; border-radius: inherit; }
+.pt-stat__proc { display: flex; align-items: baseline; justify-content: space-between; gap: var(--qmm-space-md); font-size: var(--qmm-fs-xs); color: var(--qmm-text-soft); }
+.pt-stat__proc b { flex: 0 0 auto; font-weight: 800; color: var(--qmm-text); font-variant-numeric: tabular-nums; }
+.pt-stat__nav { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; }
+.pt-stat__arrow {
+  padding: 1px 5px; border: 0; border-radius: var(--qmm-radius-sm); background: transparent; color: var(--qmm-text-soft);
+  font: 900 var(--qmm-fs-md) var(--qmm-font); line-height: 1; cursor: pointer;
+}
+.pt-stat__arrow:hover { background: var(--qmm-sand); color: var(--qmm-text); }
+.pt-stat__count { font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); font-variant-numeric: tabular-nums; }
+.pt-stats__warn { font-size: var(--qmm-fs-xs); font-weight: 700; color: var(--qmm-warn-ink); }
+.pt-feedrow {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--qmm-space-md);
+  padding: var(--qmm-space-sm) var(--qmm-space-lg); border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+  font-size: var(--qmm-fs-sm);
+}
+.pt-feedrow__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--qmm-text-soft); }
+.pt-feedrow__value { flex: 0 0 auto; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* ------------------------------ Team Builder ----------------------------- */
+.pt-builder__bar { display: flex; align-items: center; gap: var(--qmm-space-lg); }
+.pt-builder__bar .pt-hint { flex: 1 1 auto; }
+.pt-builder__grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--qmm-space-lg); align-items: start;
+}
+.pt-builder__grid > .qmm-collapse, .pt-builder__grid > .pt-empty { grid-column: 1 / -1; }
+/* The kit card is a grid: its one column must be allowed to shrink, or a long
+   pet name pushes the card wider than its cell. */
+.pt-suggest, .pt-suggest .qmm-card__body { grid-template-columns: minmax(0, 1fr); }
+.pt-suggest {
+  position: relative; overflow: hidden; gap: var(--qmm-space-md);
+  padding: var(--qmm-space-lg) var(--qmm-space-lg) var(--qmm-space-lg) calc(var(--qmm-space-lg) + 4px);
+  transition: transform 140ms ease, border-color 140ms ease;
+}
+.pt-suggest:hover { transform: translateY(-2px); border-color: var(--qmm-border-hover); }
+.pt-suggest .qmm-card__header { flex-wrap: nowrap; align-items: flex-start; gap: var(--qmm-space-md); }
+.pt-suggest .qmm-card__title { flex: 1 1 0; min-width: 0; font-size: var(--qmm-fs-lg); line-height: 1.3; }
+.pt-suggest .qmm-card__actions { align-items: center; }
+.pt-suggest .qmm-card__body { gap: var(--qmm-space-md); }
+/* The colours of the abilities the team is built around. */
+.pt-suggest__strip { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; }
+.pt-suggest__pets { display: grid; gap: 2px; }
+
+/* One pet on one line: portrait, name, strength, ability squares. */
+.pt-chip { display: flex; align-items: center; gap: var(--qmm-space-sm); min-width: 0; padding: 3px 4px; border-radius: var(--qmm-radius-sm); }
+.pt-chip:hover { background: var(--qmm-paper-deep); }
+.pt-chip__name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--qmm-fs-sm); font-weight: 700; }
+.pt-unused { display: flex; align-items: center; gap: var(--qmm-space-md); opacity: .85; }
+.pt-unused > .pt-chip { flex: 1 1 auto; }
+.pt-unused__why {
+  flex: 0 1 auto; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim);
+}
+
+/* -------------------------------- Feeding -------------------------------- */
+.pt-feed-side { display: flex; flex-direction: column; gap: var(--qmm-space-xl); overflow-y: auto; padding-right: 2px; }
+.pt-crops { display: flex; flex-direction: column; gap: var(--qmm-space-sm); }
+.qmm-vtab.pt-species { grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; }
+.pt-species__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pt-crop-icon { display: grid; place-items: center; flex: 0 0 auto; width: 28px; height: 28px; font-weight: 800; color: var(--qmm-text-dim); }
+
+/* ---------------------------------- Logs --------------------------------- */
+.pt-logs__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.pt-logs__title { font-size: var(--qmm-fs-xl); font-weight: 900; }
+.pt-logs__head .qmm-pill { margin-right: auto; }
+.pt-logs__tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.pt-logs__search { flex: 1 1 180px; }
+.pt-logs__ability { min-width: 150px; }
+.pt-logs__cols, .pt-log {
+  display: grid; grid-template-columns: 92px minmax(110px, 1.1fr) minmax(100px, .9fr) minmax(0, 2fr);
+  align-items: center; gap: var(--qmm-space-lg);
+}
+.pt-logs__cols { padding: 0 var(--qmm-space-lg); }
+.pt-logs__list { display: flex; flex-direction: column; gap: var(--qmm-space-xs); max-height: calc(50vh / var(--qmm-scale, 1)); overflow-y: auto; min-height: 0; }
+.pt-log { padding: var(--qmm-space-sm) var(--qmm-space-lg); border-radius: var(--qmm-radius-md); background: var(--qmm-card); }
+/* A proc from this session reads at a glance without a legend. */
+.pt-log.is-session { background: var(--qmm-sepia-soft); box-shadow: inset 3px 0 0 var(--qmm-accent); }
+.pt-log__when { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-variant-numeric: tabular-nums; }
+.pt-log__date { font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); }
+.pt-log__time { font-size: var(--qmm-fs-sm); font-weight: 600; white-space: nowrap; }
+.pt-log.is-session .pt-log__time { font-weight: 800; color: var(--qmm-sepia-ink); }
+.pt-log__pet { display: flex; align-items: center; gap: var(--qmm-space-md); min-width: 0; }
+.pt-log__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--qmm-fs-sm); font-weight: 700; }
+.pt-log__ability { display: flex; min-width: 0; }
+.pt-log__details {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--qmm-fs-sm); color: var(--qmm-text-dim);
+}
+
+/* ----------------------------- Ability chips ----------------------------- */
+.pt-abilities { display: inline-flex; flex-wrap: wrap; align-items: center; line-height: 1; }
+.pt-abilities__empty { font-size: var(--qmm-fs-sm); color: var(--qmm-text-dim); }
+.pt-ability-dot {
+  display: inline-block; flex: 0 0 auto; border-radius: 3px; cursor: default;
+  background: var(--pt-ability); box-shadow: 0 0 0 1px var(--qmm-shade) inset, 0 0 0 1px var(--qmm-border);
+  transition: transform 80ms ease, box-shadow 120ms ease;
+}
+.pt-ability-dot:hover {
+  background: var(--pt-ability-hover); transform: scale(1.08);
+  box-shadow: 0 0 0 1px var(--qmm-shade) inset, 0 0 0 1px var(--qmm-border-hover);
+}
+.pt-ability-pill {
+  display: inline-block; max-width: 100%; padding: 3px 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  border-radius: var(--qmm-radius-pill); background: var(--pt-ability); box-shadow: 0 0 0 1px var(--qmm-shade) inset;
+  color: var(--qmm-on-sepia); text-shadow: 0 1px 2px var(--qmm-shade);
+  font-size: var(--qmm-fs-xs); font-weight: 800; line-height: 1.5;
+}
+.pt-ability-pill:hover { background: var(--pt-ability-hover); }
+
+/* A pet portrait. Its size and corner come inline, from the caller's size. */
+.pt-pet-icon {
+  flex: 0 0 auto; display: grid; place-items: center; overflow: hidden;
+  background: var(--qmm-card); box-shadow: inset 0 0 0 1px var(--qmm-sand-edge);
+  color: var(--qmm-text-soft); font-weight: 800;
+}
+.pt-pet-icon.is-empty { opacity: .4; }
+.pt-pet-icon img { object-fit: contain; }
+
+/* ------------------------------ Narrow windows ---------------------------- */
+@container (max-width: 560px) {
+  .pt-split { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; height: auto; }
+  .pt-teams__rows { max-height: 200px; }
+  .pt-slot { grid-template-columns: 32px minmax(0, 1fr) auto auto; gap: var(--qmm-space-md); padding: var(--qmm-space-sm); }
+  .pt-slot__icon { width: 32px; height: 32px; font-size: 20px; }
+  .pt-slot__title { flex-wrap: wrap; row-gap: 2px; }
+  .pt-slot .qmm-btn--icon { width: 28px; }
+  .pt-split .qmm-vlist { max-height: 200px; }
+  .pt-logs__cols { display: none; }
+  .pt-log {
+    grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--qmm-space-xs);
+    grid-template-areas: "pet when" "ability ability" "details details";
+  }
+  .pt-log__pet { grid-area: pet; }
+  .pt-log__when { grid-area: when; align-items: flex-end; }
+  .pt-log__ability { grid-area: ability; }
+  .pt-log__details { grid-area: details; white-space: normal; }
+}
+`;
+      installed4 = false;
+    }
+  });
+
+  // src/features/pets/abilityChips.ts
+  function paint(el4, colors) {
+    el4.style.setProperty("--pt-ability", colors.bg);
+    el4.style.setProperty("--pt-ability-hover", colors.hover);
+  }
+  function abilityDots(abilityIds, opts = {}) {
+    ensurePetsStyles();
+    const size = opts.size ?? 12;
+    const wrap = document.createElement("span");
+    wrap.className = "pt-abilities";
+    wrap.style.gap = `${opts.gap ?? 8}px`;
+    const ids = abilityIds.filter(Boolean);
+    if (!ids.length && opts.emptyText) {
+      const empty = document.createElement("span");
+      empty.className = "pt-abilities__empty";
+      empty.textContent = opts.emptyText;
+      wrap.appendChild(empty);
+      return wrap;
+    }
+    for (const id of ids) {
+      const dot = document.createElement("span");
+      dot.className = "pt-ability-dot";
+      dot.title = abilityName(id) || id;
+      dot.setAttribute("aria-label", dot.title);
+      dot.style.width = dot.style.height = `${size}px`;
+      paint(dot, getAbilityChipColors(id));
+      wrap.appendChild(dot);
+    }
+    return wrap;
+  }
+  function abilityPill(abilityId, label2) {
+    ensurePetsStyles();
+    const pill2 = document.createElement("span");
+    pill2.className = "pt-ability-pill";
+    pill2.textContent = label2;
+    pill2.title = label2;
+    paint(pill2, getAbilityChipColors(abilityId));
+    return pill2;
+  }
+  var init_abilityChips = __esm({
+    "src/features/pets/abilityChips.ts"() {
+      "use strict";
+      init_abilityChipColors();
+      init_abilityNames();
+      init_styles3();
+    }
+  });
+
+  // src/features/pets/petIcon.ts
+  function spriteImg(src, size) {
+    const img = document.createElement("img");
+    img.src = src;
+    img.width = size;
+    img.height = size;
+    img.alt = "";
+    img.draggable = false;
+    img.style.width = img.style.height = `${size}px`;
+    return img;
+  }
+  function petIcon(pet, size) {
+    ensurePetsStyles();
+    const holder2 = document.createElement("div");
+    holder2.className = "pt-pet-icon";
+    holder2.style.width = holder2.style.height = `${size}px`;
+    holder2.style.borderRadius = `${Math.round(size / 3.5)}px`;
+    holder2.style.fontSize = `${Math.max(9, Math.round(size * 0.45))}px`;
+    if (!pet) {
+      holder2.classList.add("is-empty");
+      holder2.textContent = "\xB7";
+      return holder2;
+    }
+    const species = String(pet.petSpecies ?? "").trim();
+    const mutations = Array.isArray(pet.mutations) ? pet.mutations : [];
+    const cacheKey = `${species}|${mutations.join(",")}`;
+    const cached2 = resolvedSprites.get(cacheKey);
+    if (cached2) {
+      holder2.appendChild(spriteImg(cached2, size));
+      return holder2;
+    }
+    holder2.textContent = (pet.name || species || "pet").charAt(0).toUpperCase();
+    if (species) {
+      attachSpriteIcon(holder2, ["pet"], species, size, "pet-icon", {
+        mutations,
+        onSpriteApplied: (img) => resolvedSprites.set(cacheKey, img.src)
+      });
+    }
+    return holder2;
+  }
+  var resolvedSprites;
+  var init_petIcon = __esm({
+    "src/features/pets/petIcon.ts"() {
+      "use strict";
+      init_iconCache();
+      init_styles3();
+      resolvedSprites = /* @__PURE__ */ new Map();
+    }
+  });
+
+  // src/features/pets/petPickerStyles.ts
+  function ensurePetPickerStyles() {
+    if (installed5) return;
+    installed5 = true;
+    addStyle(PET_PICKER_CSS);
+  }
+  var PET_PICKER_CSS, installed5;
+  var init_petPickerStyles = __esm({
+    "src/features/pets/petPickerStyles.ts"() {
+      "use strict";
+      init_dom();
+      PET_PICKER_CSS = `
+.pt-pick-body { display: flex; flex-direction: column; gap: var(--qmm-space-lg); padding-top: 0; }
+.pt-pick-tools {
+  position: sticky; top: 0; z-index: 1; display: flex; flex-direction: column; gap: var(--qmm-space-md);
+  padding: var(--qmm-space-md) 0 var(--qmm-space-lg); background: var(--qmm-paper);
+}
+.pt-pick-subtitle { font-size: var(--qmm-fs-sm); color: var(--qmm-text-dim); }
+.pt-pick-search { width: 100%; box-sizing: border-box; }
+
+.pt-pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--qmm-space-md); }
+.pt-pick-card {
+  position: relative; display: flex; align-items: center; gap: var(--qmm-space-lg); min-width: 0;
+  padding: 10px 12px; text-align: left; font: inherit; color: var(--qmm-text); cursor: pointer;
+  background: var(--qmm-card); border: 2px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-lg);
+  transition: border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+}
+.pt-pick-card:hover { border-color: var(--qmm-accent-border); transform: translateY(-1px); box-shadow: 0 3px 0 var(--qmm-sand-shade); }
+.pt-pick-card:active { transform: translateY(1px); box-shadow: none; }
+.pt-pick-card:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
+.pt-pick-card__text { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 auto; padding-right: 44px; }
+.pt-pick-card__name { font-weight: 900; font-size: var(--qmm-fs-lg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pt-pick-card__species {
+  display: flex; align-items: center; gap: var(--qmm-space-xs); min-width: 0;
+  font-size: var(--qmm-fs-sm); color: var(--qmm-text-soft); white-space: nowrap; overflow: hidden;
+}
+.pt-pick-card__meta { display: flex; align-items: center; gap: var(--qmm-space-md); flex-wrap: wrap; }
+.pt-pick-card__str { font-size: var(--qmm-fs-xs); font-weight: 800; color: var(--qmm-text-dim); }
+.pt-pick-card__str.is-max { color: var(--qmm-gold-ink); }
+.pt-pick-card__where {
+  position: absolute; top: 8px; right: 8px; padding: 2px 8px; border-radius: var(--qmm-radius-pill);
+  font-size: var(--qmm-fs-xs); font-weight: 800; color: var(--qmm-text-soft); background: var(--qmm-sand);
+}
+.pt-pick-card__where.is-active { color: var(--qmm-ok-ink); background: var(--qmm-ok-soft); }
+.pt-pick-card__where.is-hutch { color: var(--qmm-sepia-ink); background: var(--qmm-sepia-soft); }
+
+.pt-pick-empty {
+  grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 28px 12px; text-align: center; border-radius: var(--qmm-radius-lg); background: var(--qmm-paper-deep);
+}
+.pt-pick-empty__title { font-weight: 900; }
+.pt-pick-empty__hint { font-size: var(--qmm-fs-sm); color: var(--qmm-text-dim); }
+.pt-pick-status { display: flex; justify-content: flex-end; width: 100%; }
+`;
+      installed5 = false;
+    }
+  });
+
+  // src/features/pets/petPickerModal.ts
+  function speciesName(species) {
+    const entry = petCatalog2[canonicalSpecies(species)];
+    return typeof entry?.name === "string" && entry.name ? entry.name : species;
+  }
+  function speciesRarity(species) {
+    const entry = petCatalog2[canonicalSpecies(species)];
+    return typeof entry?.rarity === "string" ? entry.rarity : null;
+  }
+  function labelPetSources(sources) {
+    const where = /* @__PURE__ */ new Map();
+    for (const pet of sources.hutch) where.set(pet.id, "hutch");
+    for (const pet of sources.active) where.set(pet.id, "active");
+    const out = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const pet of [...sources.active, ...sources.hutch, ...sources.owned]) {
+      if (sources.exclude.has(pet.id) || seen.has(pet.id)) continue;
+      seen.add(pet.id);
+      out.push({ pet, source: where.get(pet.id) ?? "bag" });
+    }
+    return out;
+  }
+  function searchText(pet) {
+    return [pet.name ?? "", pet.petSpecies, speciesName(pet.petSpecies), ...pet.mutations, ...pet.abilities.map(abilityName)].join(" ").toLowerCase();
+  }
+  function filterPickablePets(pets, filter) {
+    const words = filter.query.toLowerCase().split(/\s+/).filter(Boolean);
+    return pets.filter((entry) => filter.source === "all" || entry.source === filter.source).filter((entry) => {
+      const text2 = searchText(entry.pet);
+      return words.every((word) => text2.includes(word));
+    }).sort((a, b) => SOURCE_ORDER[a.source] - SOURCE_ORDER[b.source] || getPetStrength(b.pet) - getPetStrength(a.pet) || displayName(a.pet).localeCompare(displayName(b.pet)));
+  }
+  function strengthLabel(strength, maxStrength) {
+    return maxStrength > 0 && strength < maxStrength ? `STR ${strength}/${maxStrength}` : `STR ${strength}`;
+  }
+  function petCard(entry, onPick) {
+    const { pet } = entry;
+    const card3 = h("button", "pt-pick-card");
+    card3.type = "button";
+    card3.title = `Put ${displayName(pet)} in this slot`;
+    const name = h("div", "pt-pick-card__name", displayName(pet));
+    const species = h("div", "pt-pick-card__species");
+    const rarity3 = speciesRarity(pet.petSpecies);
+    if (rarity3) species.appendChild(rarityBadge(rarity3, { size: 14 }));
+    species.appendChild(h("span", void 0, speciesName(pet.petSpecies)));
+    const strength = getPetStrength(pet);
+    const maxStrength = getPetMaxStrength(pet);
+    const str = h("span", "pt-pick-card__str", strengthLabel(strength, maxStrength));
+    str.classList.toggle("is-max", maxStrength > 0 && strength >= maxStrength);
+    const meta = h("div", "pt-pick-card__meta");
+    meta.append(str, abilityDots(pet.abilities, { size: 10, gap: 3 }));
+    const text2 = h("div", "pt-pick-card__text");
+    text2.append(name, species, meta);
+    const where = h("span", `pt-pick-card__where is-${entry.source}`, SOURCE_LABEL[entry.source]);
+    card3.append(petIcon(pet, ICON_PX), text2, where);
+    card3.addEventListener("click", onPick);
+    return card3;
+  }
+  function openPetPickerModal(options2) {
+    ensurePetPickerStyles();
+    return new Promise((resolve) => {
+      let chosen = null;
+      const modal = openModal2({
+        host: options2.host,
+        title: options2.title,
+        widthPx: 560,
+        maxHeightPx: 640,
+        onClose: () => resolve(chosen)
+      });
+      let query = "";
+      let source = "all";
+      const counts2 = { all: options2.pets.length, active: 0, bag: 0, hutch: 0 };
+      for (const entry of options2.pets) counts2[entry.source] += 1;
+      const search3 = textInput("Search by name, species, ability or mutation");
+      search3.classList.add("pt-pick-search");
+      search3.addEventListener("input", () => {
+        query = search3.value;
+        render();
+      });
+      search3.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return;
+        const first = filterPickablePets(options2.pets, { query, source })[0];
+        if (first) pick(first.pet);
+      });
+      const sources = segmented(
+        ["all", "active", "bag", "hutch"].map((value) => ({
+          value,
+          label: `${value === "all" ? "All" : SOURCE_LABEL[value]} ${counts2[value]}`,
+          disabled: value !== "all" && counts2[value] === 0
+        })),
+        "all",
+        (value) => {
+          source = value;
+          render();
+        },
+        { fullWidth: true, ariaLabel: "Where the pet is" }
+      );
+      const tools = h("div", "pt-pick-tools");
+      if (options2.subtitle) tools.appendChild(h("div", "pt-pick-subtitle", options2.subtitle));
+      tools.append(search3, sources);
+      const grid = h("div", "pt-pick-grid");
+      const status2 = h("div", "pt-pick-status");
+      modal.body.classList.add("pt-pick-body");
+      modal.body.append(tools, grid);
+      modal.footer.appendChild(status2);
+      function pick(pet) {
+        chosen = pet;
+        modal.close();
+      }
+      function render() {
+        const shown = filterPickablePets(options2.pets, { query, source });
+        grid.replaceChildren(...shown.map((entry) => petCard(entry, () => pick(entry.pet))));
+        if (shown.length === 0) {
+          const empty = h("div", "pt-pick-empty");
+          empty.append(
+            h("div", "pt-pick-empty__title", options2.pets.length === 0 ? "No pets to choose" : "No pet matches"),
+            h("div", "pt-pick-empty__hint", options2.pets.length === 0 ? "Pets in your bag, your Pet Hutch or your active slots show up here." : "Try another name, species, ability or mutation.")
+          );
+          grid.appendChild(empty);
+        }
+        status2.replaceChildren(pill(`${shown.length} of ${options2.pets.length} pets`));
+      }
+      render();
+      try {
+        search3.focus();
+      } catch {
+      }
+    });
+  }
+  var SOURCE_ORDER, SOURCE_LABEL, ICON_PX, displayName;
+  var init_petPickerModal = __esm({
+    "src/features/pets/petPickerModal.ts"() {
+      "use strict";
+      init_data();
+      init_petValue();
+      init_badges();
+      init_dom2();
+      init_fields();
+      init_modal();
+      init_rarityBadge();
+      init_segmented();
+      init_abilityChips();
+      init_abilityNames();
+      init_inventoryPets();
+      init_petIcon();
+      init_petPickerStyles();
+      SOURCE_ORDER = { active: 0, bag: 1, hutch: 2 };
+      SOURCE_LABEL = { active: "Active", bag: "Bag", hutch: "Hutch" };
+      ICON_PX = 48;
+      displayName = (pet) => pet.name?.trim() || speciesName(pet.petSpecies);
     }
   });
 
@@ -24056,53 +24907,22 @@ label.qws-ed-opt { cursor: pointer; }
   });
 
   // src/features/pets/petPicker.ts
-  async function clearHandSelection() {
-    try {
-      await PlayerService.setSelectedItem(null);
-    } catch {
-    }
-    try {
-      await PlayerService.dropObject();
-    } catch {
-    }
-  }
-  async function waitForPickedIndex(timeoutMs) {
-    await clearHandSelection();
-    const deadline = performance.now() + timeoutMs;
-    while (performance.now() < deadline) {
-      try {
-        if (!isInventoryOpen(await Atoms.ui.activeModal.get())) return null;
-      } catch {
-        return null;
-      }
-      try {
-        const index = await Atoms.inventory.myValidatedSelectedItemIndex.get();
-        if (typeof index === "number" && Number.isInteger(index) && index >= 0) return index;
-      } catch {
-      }
-      await sleep2(80);
-    }
-    return null;
-  }
   async function pickablePets(exclude) {
-    const seen = /* @__PURE__ */ new Set();
-    const out = [];
-    const add = (pet) => {
-      if (!pet || exclude.has(pet.id) || seen.has(pet.id)) return;
-      seen.add(pet.id);
-      out.push(pet);
-    };
-    for (const pet of await getInventoryPets()) add(pet);
+    let active3 = [];
+    let hutch = [];
     try {
-      const hutch = await myPetHutchPetItems.get();
-      for (const item of Array.isArray(hutch) ? hutch : []) add(inventoryItemToPet(item));
-      const active3 = await PlayerService.getPets();
-      for (const entry of Array.isArray(active3) ? active3 : []) add(activeSlotToPet(entry));
+      const slots = await PlayerService.getPets();
+      active3 = (Array.isArray(slots) ? slots : []).map(activeSlotToPet).filter(isPet);
     } catch {
     }
-    return out;
+    try {
+      const items = await myPetHutchPetItems.get();
+      hutch = (Array.isArray(items) ? items : []).map(inventoryItemToPet).filter(isPet);
+    } catch {
+    }
+    return labelPetSources({ active: active3, hutch, owned: await getInventoryPets(), exclude });
   }
-  async function chooseSlotPet(teamId2, slotIndex) {
+  async function chooseSlotPet(teamId2, slotIndex, host) {
     const index = Math.max(0, Math.min(2, Math.floor(slotIndex || 0)));
     const team = getTeamById(teamId2);
     if (!team) return null;
@@ -24110,44 +24930,29 @@ label.qws-ed-opt { cursor: pointer; }
     team.slots.forEach((id, i) => {
       if (i !== index && id) exclude.add(String(id));
     });
-    const pets = await pickablePets(exclude);
-    if (!pets.length) return null;
-    let favoritedItemIds = [];
-    try {
-      const favorites = await Atoms.inventory.favoriteIds.get() || [];
-      const ids = new Set(pets.map((p) => p.id));
-      favoritedItemIds = favorites.filter((id) => ids.has(id));
-    } catch {
-    }
-    await fakeInventory.show({ items: pets.map(petToInventoryItem), favoritedItemIds }, { open: true });
-    const picked = await waitForPickedIndex(PICK_TIMEOUT_MS);
-    if (picked == null || picked >= pets.length) {
-      await fakeInventory.disable();
-      return null;
-    }
-    await fakeInventory.close();
-    const chosen = pets[picked];
+    const chosen = await openPetPickerModal({
+      host,
+      title: "Choose a pet",
+      subtitle: `Slot ${index + 1} of ${team.name || "this team"}`,
+      pets: await pickablePets(exclude)
+    });
+    if (!chosen) return null;
     const slots = team.slots.slice(0, 3);
     slots[index] = chosen.id;
     saveTeam({ id: team.id, slots });
-    try {
-      await clearHandSelection();
-    } catch {
-    }
     return chosen;
   }
-  var PICK_TIMEOUT_MS;
+  var isPet;
   var init_petPicker = __esm({
     "src/features/pets/petPicker.ts"() {
       "use strict";
-      init_fakeModal();
       init_player();
       init_atoms();
-      init_async2();
       init_inventoryPets();
+      init_petPickerModal();
       init_teamStore();
       init_teams();
-      PICK_TIMEOUT_MS = 2e4;
+      isPet = (pet) => pet !== null;
     }
   });
 
@@ -24635,7 +25440,7 @@ label.qws-ed-opt { cursor: pointer; }
       const species = String(pet.petSpecies ?? "");
       const name = String(pet.name ?? "");
       const muts = Array.isArray(pet.mutations) ? pet.mutations.map((m) => String(m ?? "").trim()).filter(Boolean).sort().join(",") : "";
-      const strength = strengthLabel(pet)?.text ?? "";
+      const strength = strengthLabel2(pet)?.text ?? "";
       return `${id}|${species}|${name}|${muts}|${strength}`;
     }).join(";");
   }
@@ -24646,7 +25451,7 @@ label.qws-ed-opt { cursor: pointer; }
     if (species) return species.charAt(0).toUpperCase() + species.slice(1);
     return "Pet";
   }
-  function strengthLabel(pet) {
+  function strengthLabel2(pet) {
     const petLike = {
       petSpecies: String(pet.petSpecies ?? ""),
       xp: pet.xp,
@@ -24661,7 +25466,7 @@ label.qws-ed-opt { cursor: pointer; }
   }
   function buttonTitle(pet) {
     const name = petDisplayName(pet);
-    const strength = strengthLabel(pet);
+    const strength = strengthLabel2(pet);
     return strength ? `${DEFAULT_LABEL}: ${name} (${strength.text})` : `${DEFAULT_LABEL}: ${name}`;
   }
   var DEFAULT_LABEL, MAX_BUTTONS;
@@ -25002,7 +25807,7 @@ label.qws-ed-opt { cursor: pointer; }
       btn.style.cursor = pet ? "pointer" : "default";
       if (nameEl) nameEl.textContent = pet ? petDisplayName(pet) : DEFAULT_LABEL;
       if (strEl) {
-        const strength = pet ? strengthLabel(pet) : null;
+        const strength = pet ? strengthLabel2(pet) : null;
         strEl.textContent = strength?.text ?? "";
         strEl.style.color = strength?.maxed ? color.gold : "";
         strEl.style.display = strength ? "" : "none";
@@ -25144,12 +25949,12 @@ label.qws-ed-opt { cursor: pointer; }
     });
   }
   function installPetTeamHotkeys(useTeam2) {
-    if (installed3 || typeof window === "undefined") return;
-    installed3 = true;
+    if (installed6 || typeof window === "undefined") return;
+    installed6 = true;
     onTeamsChange((teams2) => setPetTeamKeybinds(teams2));
     window.addEventListener("keydown", (e) => onKeyDown(e, useTeam2), true);
   }
-  var PET_TEAM_PREV_ID, PET_TEAM_NEXT_ID, LEGACY_HOTKEYS_PATH, teamIds, installed3, teamActionId;
+  var PET_TEAM_PREV_ID, PET_TEAM_NEXT_ID, LEGACY_HOTKEYS_PATH, teamIds, installed6, teamActionId;
   var init_teamHotkeys = __esm({
     "src/features/pets/teamHotkeys.ts"() {
       "use strict";
@@ -25164,66 +25969,8 @@ label.qws-ed-opt { cursor: pointer; }
       PET_TEAM_NEXT_ID = "pets.team.next";
       LEGACY_HOTKEYS_PATH = "pets.hotkeys";
       teamIds = [];
-      installed3 = false;
+      installed6 = false;
       teamActionId = (teamId2) => `pets.team.${teamId2}`;
-    }
-  });
-
-  // src/ui/kit/modal.ts
-  function menuCard(options2) {
-    const card3 = h("button", "qmm-menu-card");
-    card3.type = "button";
-    card3.disabled = options2.disabled === true;
-    card3.append(h("div", "qmm-menu-card__name", options2.name), h("div", "qmm-menu-card__detail", options2.detail));
-    if (!card3.disabled) card3.addEventListener("click", options2.onClick);
-    return card3;
-  }
-  function openModal2(options2) {
-    let closed = false;
-    const scrim = h("div", "qmm-modal-scrim");
-    const hostZ = Number.parseInt(getComputedStyle(options2.host).zIndex, 10);
-    scrim.style.zIndex = String((Number.isFinite(hostZ) ? hostZ : layer.window) + 1);
-    const panel = h("div", "qmm-modal");
-    panel.style.width = `min(${options2.widthPx ?? 420}px, 100%)`;
-    panel.style.maxHeight = `min(${options2.maxHeightPx ?? 520}px, 88vh)`;
-    panel.addEventListener("click", (event) => event.stopPropagation());
-    const closeButton = h("button", "qmm-modal__close", "\u2715");
-    closeButton.type = "button";
-    closeButton.title = "Close";
-    closeButton.addEventListener("click", () => close());
-    const header = h("div", "qmm-modal__head");
-    header.append(h("div", "qmm-modal__title", options2.title), closeButton);
-    const body = h("div", "qmm-modal__body qmm-scroll");
-    const footer = h("div", "qmm-modal__foot");
-    panel.append(header, body, footer);
-    scrim.append(panel);
-    function onKeyDown2(event) {
-      if (event.key === "Escape") {
-        event.stopPropagation();
-        close();
-      }
-    }
-    function close() {
-      if (closed) return;
-      closed = true;
-      clearInterval(hostWatch);
-      document.removeEventListener("keydown", onKeyDown2, true);
-      scrim.remove();
-      options2.onClose?.();
-    }
-    const hostWatch = window.setInterval(() => {
-      if (!options2.host.isConnected) close();
-    }, 1e3);
-    scrim.addEventListener("click", () => close());
-    document.addEventListener("keydown", onKeyDown2, true);
-    (document.documentElement || document.body).appendChild(scrim);
-    return { body, footer, close, isOpen: () => !closed };
-  }
-  var init_modal = __esm({
-    "src/ui/kit/modal.ts"() {
-      "use strict";
-      init_dom2();
-      init_theme();
     }
   });
 
@@ -25232,7 +25979,7 @@ label.qws-ed-opt { cursor: pointer; }
     const row2 = document.createElement("div");
     Object.assign(row2.style, {
       display: "grid",
-      gridTemplateColumns: `${ICON_PX}px 1fr`,
+      gridTemplateColumns: `${ICON_PX2}px 1fr`,
       gap: "10px",
       alignItems: "center",
       padding: "6px 8px",
@@ -25242,8 +25989,8 @@ label.qws-ed-opt { cursor: pointer; }
     });
     const icon2 = document.createElement("div");
     Object.assign(icon2.style, {
-      width: `${ICON_PX}px`,
-      height: `${ICON_PX}px`,
+      width: `${ICON_PX2}px`,
+      height: `${ICON_PX2}px`,
       borderRadius: "10px",
       background: color.hoverBg,
       display: "flex",
@@ -25256,7 +26003,7 @@ label.qws-ed-opt { cursor: pointer; }
     icon2.textContent = String(pet.petSpecies || pet.name || "Pet").slice(0, 2).toUpperCase();
     const species = String(pet.petSpecies || "").trim();
     if (species) {
-      attachSpriteIcon(icon2, ["pet"], [species, pet.name || ""], ICON_PX, "sell-all-pets-confirm", {
+      attachSpriteIcon(icon2, ["pet"], [species, pet.name || ""], ICON_PX2, "sell-all-pets-confirm", {
         mutations: mutations.map((m) => m.trim()).filter(Boolean)
       });
     }
@@ -25310,7 +26057,7 @@ label.qws-ed-opt { cursor: pointer; }
       sell.focus();
     });
   }
-  var ICON_PX, ON_TOP, current;
+  var ICON_PX2, ON_TOP, current;
   var init_confirmModal = __esm({
     "src/features/sellAllPets/confirmModal.ts"() {
       "use strict";
@@ -25319,7 +26066,7 @@ label.qws-ed-opt { cursor: pointer; }
       init_modal();
       init_theme();
       init_iconCache();
-      ICON_PX = 48;
+      ICON_PX2 = 48;
       ON_TOP = "2147483647";
       current = null;
     }
@@ -26074,109 +26821,6 @@ label.qws-ed-opt { cursor: pointer; }
   var init_card = __esm({
     "src/ui/kit/card.ts"() {
       "use strict";
-      init_dom2();
-    }
-  });
-
-  // src/platform/discordCsp.ts
-  function isImgUrlSafe(url) {
-    if (url.startsWith("blob:") || url.startsWith("data:") || url.startsWith("/")) return true;
-    try {
-      const { hostname } = new URL(url);
-      return SAFE_IMG_HOSTS.some((host) => hostname === host || hostname.endsWith("." + host));
-    } catch {
-      return true;
-    }
-  }
-  function toBlobUrl(url, defaultMime) {
-    let pending3 = blobUrls.get(url);
-    if (!pending3) {
-      pending3 = gmRequest({ url }, "arraybuffer").then(
-        (res) => {
-          if (!res.body) {
-            blobUrls.delete(url);
-            return url;
-          }
-          const extension = url.split(".").pop()?.toLowerCase().split("?")[0] ?? "";
-          const blob = new Blob([res.body], { type: MIME_BY_EXTENSION[extension] ?? defaultMime });
-          return URL.createObjectURL(blob);
-        },
-        () => {
-          blobUrls.delete(url);
-          return url;
-        }
-      );
-      blobUrls.set(url, pending3);
-    }
-    return pending3;
-  }
-  function setImageSafe(img, url) {
-    if (!url) return;
-    if (!isDiscordActivityContext() || isImgUrlSafe(url)) {
-      img.src = url;
-      return;
-    }
-    void toBlobUrl(url, "image/png").then((src) => {
-      img.src = src;
-    });
-  }
-  function getAudioUrlSafe(url) {
-    if (!url || !isDiscordActivityContext()) return Promise.resolve(url);
-    return toBlobUrl(url, "audio/mpeg");
-  }
-  var SAFE_IMG_HOSTS, MIME_BY_EXTENSION, blobUrls;
-  var init_discordCsp = __esm({
-    "src/platform/discordCsp.ts"() {
-      "use strict";
-      init_environment();
-      init_http();
-      SAFE_IMG_HOSTS = ["cdn.discordapp.com", "media.discordapp.net"];
-      MIME_BY_EXTENSION = {
-        png: "image/png",
-        jpg: "image/jpeg",
-        jpeg: "image/jpeg",
-        gif: "image/gif",
-        webp: "image/webp",
-        svg: "image/svg+xml",
-        mp3: "audio/mpeg",
-        ogg: "audio/ogg",
-        wav: "audio/wav",
-        m4a: "audio/mp4"
-      };
-      blobUrls = /* @__PURE__ */ new Map();
-    }
-  });
-
-  // src/ui/kit/icons.ts
-  function spriteLookup(frameKey) {
-    const parts = frameKey.split("/").filter(Boolean);
-    const name = parts[parts.length - 1] ?? frameKey;
-    const category = parts.length >= 2 ? parts[parts.length - 2] : "";
-    const categories = [category, `${category}s`, "ui", "decor", "objects"].filter(
-      (value, index, all) => value && all.indexOf(value) === index
-    );
-    return { categories, name };
-  }
-  function iconBox(source, sizePx, logTag) {
-    const box2 = h("div", "qmm-icon-box");
-    box2.style.width = `${sizePx}px`;
-    box2.style.height = `${sizePx}px`;
-    if (/^https?:\/\//i.test(source)) {
-      const img = document.createElement("img");
-      img.alt = "";
-      setImageSafe(img, source);
-      box2.appendChild(img);
-    } else {
-      const { categories, name } = spriteLookup(source);
-      attachSpriteIcon(box2, categories, name, sizePx, logTag);
-    }
-    return box2;
-  }
-  var init_icons = __esm({
-    "src/ui/kit/icons.ts"() {
-      "use strict";
-      init_iconCache();
-      init_discordCsp();
       init_dom2();
     }
   });
@@ -28009,7 +28653,7 @@ Click to download`;
     addStyle(DEBUG_CSS);
   }
   var DEBUG_CSS, injected3;
-  var init_styles3 = __esm({
+  var init_styles4 = __esm({
     "src/features/debug/styles.ts"() {
       "use strict";
       init_dom();
@@ -28176,7 +28820,7 @@ Click to download`;
       init_liveAtomsTab();
       init_wsTab();
       init_spritesTab();
-      init_styles3();
+      init_styles4();
     }
   });
 
@@ -28211,11 +28855,11 @@ Click to download`;
 
   // src/features/locker/menuStyles.ts
   function ensureLockerMenuStyles() {
-    if (installed4) return;
-    installed4 = true;
+    if (installed7) return;
+    installed7 = true;
     addStyle(LOCKER_MENU_CSS);
   }
-  var LOCKER_MENU_CSS, installed4;
+  var LOCKER_MENU_CSS, installed7;
   var init_menuStyles = __esm({
     "src/features/locker/menuStyles.ts"() {
       "use strict";
@@ -28353,7 +28997,7 @@ Click to download`;
 .lk-rarity.is-on { opacity: 1; filter: none; box-shadow: 0 0 0 2px var(--qmm-accent-border); }
 .lk-rarity:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 1px; }
 `;
-      installed4 = false;
+      installed7 = false;
     }
   });
 
@@ -29166,58 +29810,6 @@ Click to download`;
     }
   });
 
-  // src/ui/kit/rarityBadge.ts
-  function rarityLabel(raw) {
-    const rarity3 = String(raw || "").trim();
-    switch (rarity3.toLowerCase()) {
-      // The live API says "Mythic" where the bundled catalog says "Mythical".
-      case "mythic":
-      case "mythical":
-        return "Mythical";
-      case "celestial":
-        return "Celestial";
-      case "divine":
-        return "Divine";
-      case "legendary":
-        return "Legendary";
-      case "rare":
-        return "Rare";
-      case "uncommon":
-        return "Uncommon";
-      case "common":
-        return "Common";
-      default:
-        return rarity3 || "-";
-    }
-  }
-  function rarityBadge(raw, opts = {}) {
-    ensureKitStyles();
-    const name = rarityLabel(raw);
-    const el4 = h("span", "qmm-rarity");
-    el4.setAttribute("title", name);
-    const frame = raritySprite(name);
-    if (frame) {
-      const icon2 = iconBox(frame, opts.size ?? 18, "rarity");
-      icon2.appendChild(h("span", "qmm-rarity__fallback", name.charAt(0)));
-      el4.appendChild(icon2);
-    }
-    if (opts.label || !frame) el4.appendChild(h("span", "qmm-rarity__label", name));
-    else {
-      el4.setAttribute("role", "img");
-      el4.setAttribute("aria-label", name);
-    }
-    return el4;
-  }
-  var init_rarityBadge = __esm({
-    "src/ui/kit/rarityBadge.ts"() {
-      "use strict";
-      init_data();
-      init_dom2();
-      init_icons();
-      init_styles();
-    }
-  });
-
   // src/features/locker/sellPetsRulesCard.ts
   function sellPetsRulesCard() {
     const rules3 = () => lockerRestrictionsService.getSellAllPetsRules();
@@ -29725,8 +30317,8 @@ Click to download`;
       img.className = "qws-calc-seg__icon";
       img.src = url;
       img.alt = label2;
-      img.width = ICON_PX2;
-      img.height = ICON_PX2;
+      img.width = ICON_PX3;
+      img.height = ICON_PX3;
       img.draggable = false;
       labelSpan.replaceChildren(img);
     });
@@ -29750,7 +30342,7 @@ Click to download`;
     };
     return control;
   }
-  var MUTATION_ICON_NAMES, ICON_PX2;
+  var MUTATION_ICON_NAMES, ICON_PX3;
   var init_mutationPicker2 = __esm({
     "src/features/calculator/mutationPicker.ts"() {
       "use strict";
@@ -29769,7 +30361,7 @@ Click to download`;
         Dawnbound: "MutationDawncharged",
         Amberbound: "MutationAmbercharged"
       };
-      ICON_PX2 = 20;
+      ICON_PX3 = 20;
     }
   });
 
@@ -30017,7 +30609,7 @@ Click to download`;
     addStyle(CALCULATOR_CSS);
   }
   var CALCULATOR_CSS, injected4;
-  var init_styles4 = __esm({
+  var init_styles5 = __esm({
     "src/features/calculator/styles.ts"() {
       "use strict";
       init_dom();
@@ -30184,19 +30776,19 @@ Click to download`;
       init_compute();
       init_detail();
       init_sprites3();
-      init_styles4();
+      init_styles5();
       LIST_ICON_PX = 24;
     }
   });
 
   // src/features/hatch/styles.ts
   function ensureHatchStyles() {
-    if (installed5) return;
-    installed5 = true;
+    if (installed8) return;
+    installed8 = true;
     addStyle(HATCH_CSS);
   }
-  var HATCH_CSS, installed5;
-  var init_styles5 = __esm({
+  var HATCH_CSS, installed8;
+  var init_styles6 = __esm({
     "src/features/hatch/styles.ts"() {
       "use strict";
       init_dom();
@@ -30268,7 +30860,7 @@ Click to download`;
   .ht-species__share { display: none; }
 }
 `;
-      installed5 = false;
+      installed8 = false;
     }
   });
 
@@ -30372,7 +30964,7 @@ Click to download`;
       init_format();
       init_icons();
       init_theme();
-      init_styles5();
+      init_styles6();
       SPECIES_ICON_PX = 24;
       HEADER_ICON_PX = 18;
     }
@@ -30496,7 +31088,7 @@ Click to download`;
       init_fields();
       init_icons();
       init_layout();
-      init_styles5();
+      init_styles6();
       EGG_ICON_PX = 30;
       TARGET_ICON_PX = 22;
       RARITY_ICON_PX = 20;
@@ -30720,308 +31312,8 @@ Click to download`;
       init_button();
       init_layout();
       init_storage();
-      init_styles5();
-      OTHER_SECTION_ID = "__other__";
-    }
-  });
-
-  // src/features/pets/styles.ts
-  function ensurePetsStyles() {
-    if (installed6) return;
-    installed6 = true;
-    addStyle(PETS_CSS);
-  }
-  var PANE_HEIGHT, PETS_CSS, installed6;
-  var init_styles6 = __esm({
-    "src/features/pets/styles.ts"() {
-      "use strict";
-      init_dom();
-      PANE_HEIGHT = "calc(56vh / var(--qmm-scale, 1))";
-      PETS_CSS = `
-/* A tab takes a set width, so the window keeps its size from tab to tab, and
-   is the container its layouts query to stack on a narrow window. */
-.pt-tab {
-  display: flex; flex-direction: column; gap: var(--qmm-space-xl);
-  width: min(780px, calc((100vw - 64px) / var(--qmm-scale, 1))); max-width: 100%; box-sizing: border-box;
-  container-type: inline-size;
-}
-.pt-empty {
-  padding: var(--qmm-space-xl) var(--qmm-space-md); font-size: var(--qmm-fs-sm); line-height: 1.45;
-  color: var(--qmm-text-dim); text-align: center;
-}
-.pt-hint { font-size: var(--qmm-fs-sm); line-height: 1.4; color: var(--qmm-text-dim); }
-.pt-scroll { max-height: ${PANE_HEIGHT}; overflow-y: auto; min-height: 0; padding: 2px 2px 2px 0; }
-
-/* A list on the left, its detail on the right. */
-.pt-split {
-  display: grid; grid-template-columns: minmax(200px, 250px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr);
-  gap: var(--qmm-space-xl); height: ${PANE_HEIGHT}; min-height: 0;
-}
-.pt-split > * { min-height: 0; }
-
-/* ----------------------------- Teams: the list ---------------------------- */
-.pt-teams { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
-.pt-teams__head { display: flex; align-items: center; gap: var(--qmm-space-md); min-height: 32px; }
-.pt-teams__head .qmm-section-label { flex: 1 1 auto; }
-.pt-teams__rows {
-  flex: 1 1 auto; min-height: 0; overflow: auto; scroll-behavior: smooth;
-  display: flex; flex-direction: column; gap: var(--qmm-space-xs);
-  padding: var(--qmm-space-sm); border-radius: var(--qmm-radius-lg); background: var(--qmm-paper-deep);
-}
-.pt-team {
-  flex: 0 0 auto; display: flex; align-items: center; gap: var(--qmm-space-md);
-  height: 40px; padding: 0 var(--qmm-space-sm) 0 var(--qmm-space-lg); box-sizing: border-box;
-  border: 2px solid transparent; border-radius: var(--qmm-radius-md); background: var(--qmm-card);
-  font-size: var(--qmm-fs-md); font-weight: 700; white-space: nowrap; cursor: pointer;
-  transition: border-color 120ms ease, background 120ms ease;
-}
-.pt-team:hover { border-color: var(--qmm-border-hover); }
-.pt-team.is-selected { background: var(--qmm-sepia-soft); border-color: var(--qmm-accent-border); color: var(--qmm-sepia-ink); }
-.pt-team__dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: var(--qmm-sand-edge); }
-.pt-team__dot.is-active { background: var(--qmm-ok); box-shadow: 0 0 0 3px var(--qmm-ok-soft); }
-.pt-team__name { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.pt-team__pets { flex: 0 0 auto; display: flex; align-items: center; gap: 3px; }
-.pt-team .qmm-grab { margin-left: 0; }
-.pt-sync {
-  display: flex; align-items: center; gap: var(--qmm-space-md); padding: var(--qmm-space-xs) var(--qmm-space-sm);
-  font-size: var(--qmm-fs-sm); font-weight: 700; color: var(--qmm-text-soft); cursor: pointer;
-}
-
-/* ---------------------------- Teams: the editor --------------------------- */
-.pt-editor { display: flex; flex-direction: column; gap: var(--qmm-space-xl); overflow-y: auto; padding-right: 2px; }
-.pt-editor__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
-.pt-editor__name { flex: 1 1 0; font-size: var(--qmm-fs-xl); font-weight: 800; }
-.pt-editor__foot { display: flex; justify-content: flex-end; }
-.pt-slots { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
-.pt-slot {
-  display: grid; grid-template-columns: 44px minmax(0, 1fr) auto auto; align-items: center; gap: var(--qmm-space-lg);
-  padding: var(--qmm-space-md) var(--qmm-space-md) var(--qmm-space-md) var(--qmm-space-lg);
-  border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
-}
-.pt-slot.is-empty { background: transparent; outline: 2px dashed var(--qmm-sand-edge); outline-offset: -2px; }
-.pt-slot__icon { display: grid; place-items: center; width: 44px; height: 44px; font-size: 26px; }
-.pt-slot.is-empty .pt-slot__icon { opacity: .4; }
-.pt-slot__text { display: flex; flex-direction: column; gap: var(--qmm-space-sm); min-width: 0; }
-.pt-slot__title { display: flex; align-items: center; gap: var(--qmm-space-sm); min-width: 0; }
-.pt-slot__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--qmm-fs-lg); font-weight: 800; }
-.pt-slot.is-empty .pt-slot__name { color: var(--qmm-text-dim); font-weight: 700; }
-
-/* Strength, as current/max. Green once the pet is at its max. */
-.pt-str {
-  flex: 0 0 auto; padding: 2px 7px; border-radius: var(--qmm-radius-pill);
-  background: var(--qmm-sand); color: var(--qmm-text-soft);
-  font-size: var(--qmm-fs-xs); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap;
-}
-.pt-str.is-max { background: var(--qmm-ok-soft); color: var(--qmm-ok-ink); }
-
-/* -------------------------------- Team stats ------------------------------ */
-.pt-stats { display: flex; flex-direction: column; gap: var(--qmm-space-sm); }
-.pt-stats__groups { display: grid; gap: var(--qmm-space-sm); }
-.pt-stats.is-all .pt-stats__groups { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--qmm-space-md); }
-.pt-stat {
-  display: flex; flex-direction: column; gap: 3px; min-width: 0;
-  padding: var(--qmm-space-md) var(--qmm-space-lg); border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
-}
-.pt-stat__head { display: flex; align-items: center; justify-content: space-between; gap: var(--qmm-space-sm); min-height: 16px; }
-.pt-stat__name {
-  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-size: var(--qmm-fs-xs); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--qmm-text-dim);
-}
-.pt-stat__value { display: flex; align-items: baseline; gap: var(--qmm-space-xs); font-variant-numeric: tabular-nums; }
-.pt-stat__big { font-size: var(--qmm-fs-xl); font-weight: 900; line-height: 1.1; }
-.pt-stat__unit, .pt-stat__max { font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); }
-.pt-stat__max { margin-left: auto; white-space: nowrap; }
-.pt-stat__always { font-size: var(--qmm-fs-md); font-weight: 700; color: var(--qmm-text-soft); }
-.pt-stat__bar { height: 4px; margin-top: 2px; overflow: hidden; border-radius: var(--qmm-radius-pill); background: var(--qmm-sand-edge); }
-.pt-stat__fill { height: 100%; border-radius: inherit; }
-.pt-stat__proc { display: flex; align-items: baseline; justify-content: space-between; gap: var(--qmm-space-md); font-size: var(--qmm-fs-xs); color: var(--qmm-text-soft); }
-.pt-stat__proc b { flex: 0 0 auto; font-weight: 800; color: var(--qmm-text); font-variant-numeric: tabular-nums; }
-.pt-stat__nav { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; }
-.pt-stat__arrow {
-  padding: 1px 5px; border: 0; border-radius: var(--qmm-radius-sm); background: transparent; color: var(--qmm-text-soft);
-  font: 900 var(--qmm-fs-md) var(--qmm-font); line-height: 1; cursor: pointer;
-}
-.pt-stat__arrow:hover { background: var(--qmm-sand); color: var(--qmm-text); }
-.pt-stat__count { font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); font-variant-numeric: tabular-nums; }
-.pt-stats__warn { font-size: var(--qmm-fs-xs); font-weight: 700; color: var(--qmm-warn-ink); }
-.pt-feedrow {
-  display: flex; align-items: center; justify-content: space-between; gap: var(--qmm-space-md);
-  padding: var(--qmm-space-sm) var(--qmm-space-lg); border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
-  font-size: var(--qmm-fs-sm);
-}
-.pt-feedrow__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--qmm-text-soft); }
-.pt-feedrow__value { flex: 0 0 auto; font-weight: 800; font-variant-numeric: tabular-nums; }
-
-/* ------------------------------ Team Builder ----------------------------- */
-.pt-builder__bar { display: flex; align-items: center; gap: var(--qmm-space-lg); }
-.pt-builder__bar .pt-hint { flex: 1 1 auto; }
-.pt-builder__grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--qmm-space-lg); align-items: start;
-}
-.pt-builder__grid > .qmm-collapse, .pt-builder__grid > .pt-empty { grid-column: 1 / -1; }
-/* The kit card is a grid: its one column must be allowed to shrink, or a long
-   pet name pushes the card wider than its cell. */
-.pt-suggest, .pt-suggest .qmm-card__body { grid-template-columns: minmax(0, 1fr); }
-.pt-suggest {
-  position: relative; overflow: hidden; gap: var(--qmm-space-md);
-  padding: var(--qmm-space-lg) var(--qmm-space-lg) var(--qmm-space-lg) calc(var(--qmm-space-lg) + 4px);
-  transition: transform 140ms ease, border-color 140ms ease;
-}
-.pt-suggest:hover { transform: translateY(-2px); border-color: var(--qmm-border-hover); }
-.pt-suggest .qmm-card__header { flex-wrap: nowrap; align-items: flex-start; gap: var(--qmm-space-md); }
-.pt-suggest .qmm-card__title { flex: 1 1 0; min-width: 0; font-size: var(--qmm-fs-lg); line-height: 1.3; }
-.pt-suggest .qmm-card__actions { align-items: center; }
-.pt-suggest .qmm-card__body { gap: var(--qmm-space-md); }
-/* The colours of the abilities the team is built around. */
-.pt-suggest__strip { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; }
-.pt-suggest__pets { display: grid; gap: 2px; }
-
-/* One pet on one line: portrait, name, strength, ability squares. */
-.pt-chip { display: flex; align-items: center; gap: var(--qmm-space-sm); min-width: 0; padding: 3px 4px; border-radius: var(--qmm-radius-sm); }
-.pt-chip:hover { background: var(--qmm-paper-deep); }
-.pt-chip__name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--qmm-fs-sm); font-weight: 700; }
-.pt-unused { display: flex; align-items: center; gap: var(--qmm-space-md); opacity: .85; }
-.pt-unused > .pt-chip { flex: 1 1 auto; }
-.pt-unused__why {
-  flex: 0 1 auto; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim);
-}
-
-/* -------------------------------- Feeding -------------------------------- */
-.pt-feed-side { display: flex; flex-direction: column; gap: var(--qmm-space-xl); overflow-y: auto; padding-right: 2px; }
-.pt-crops { display: flex; flex-direction: column; gap: var(--qmm-space-sm); }
-.qmm-vtab.pt-species { grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; }
-.pt-species__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pt-crop-icon { display: grid; place-items: center; flex: 0 0 auto; width: 28px; height: 28px; font-weight: 800; color: var(--qmm-text-dim); }
-
-/* ---------------------------------- Logs --------------------------------- */
-.pt-logs__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
-.pt-logs__title { font-size: var(--qmm-fs-xl); font-weight: 900; }
-.pt-logs__head .qmm-pill { margin-right: auto; }
-.pt-logs__tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
-.pt-logs__search { flex: 1 1 180px; }
-.pt-logs__ability { min-width: 150px; }
-.pt-logs__cols, .pt-log {
-  display: grid; grid-template-columns: 92px minmax(110px, 1.1fr) minmax(100px, .9fr) minmax(0, 2fr);
-  align-items: center; gap: var(--qmm-space-lg);
-}
-.pt-logs__cols { padding: 0 var(--qmm-space-lg); }
-.pt-logs__list { display: flex; flex-direction: column; gap: var(--qmm-space-xs); max-height: calc(50vh / var(--qmm-scale, 1)); overflow-y: auto; min-height: 0; }
-.pt-log { padding: var(--qmm-space-sm) var(--qmm-space-lg); border-radius: var(--qmm-radius-md); background: var(--qmm-card); }
-/* A proc from this session reads at a glance without a legend. */
-.pt-log.is-session { background: var(--qmm-sepia-soft); box-shadow: inset 3px 0 0 var(--qmm-accent); }
-.pt-log__when { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-variant-numeric: tabular-nums; }
-.pt-log__date { font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); }
-.pt-log__time { font-size: var(--qmm-fs-sm); font-weight: 600; white-space: nowrap; }
-.pt-log.is-session .pt-log__time { font-weight: 800; color: var(--qmm-sepia-ink); }
-.pt-log__pet { display: flex; align-items: center; gap: var(--qmm-space-md); min-width: 0; }
-.pt-log__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--qmm-fs-sm); font-weight: 700; }
-.pt-log__ability { display: flex; min-width: 0; }
-.pt-log__details {
-  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-size: var(--qmm-fs-sm); color: var(--qmm-text-dim);
-}
-
-/* ----------------------------- Ability chips ----------------------------- */
-.pt-abilities { display: inline-flex; flex-wrap: wrap; align-items: center; line-height: 1; }
-.pt-abilities__empty { font-size: var(--qmm-fs-sm); color: var(--qmm-text-dim); }
-.pt-ability-dot {
-  display: inline-block; flex: 0 0 auto; border-radius: 3px; cursor: default;
-  background: var(--pt-ability); box-shadow: 0 0 0 1px var(--qmm-shade) inset, 0 0 0 1px var(--qmm-border);
-  transition: transform 80ms ease, box-shadow 120ms ease;
-}
-.pt-ability-dot:hover {
-  background: var(--pt-ability-hover); transform: scale(1.08);
-  box-shadow: 0 0 0 1px var(--qmm-shade) inset, 0 0 0 1px var(--qmm-border-hover);
-}
-.pt-ability-pill {
-  display: inline-block; max-width: 100%; padding: 3px 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  border-radius: var(--qmm-radius-pill); background: var(--pt-ability); box-shadow: 0 0 0 1px var(--qmm-shade) inset;
-  color: var(--qmm-on-sepia); text-shadow: 0 1px 2px var(--qmm-shade);
-  font-size: var(--qmm-fs-xs); font-weight: 800; line-height: 1.5;
-}
-.pt-ability-pill:hover { background: var(--pt-ability-hover); }
-
-/* A pet portrait. Its size and corner come inline, from the caller's size. */
-.pt-pet-icon {
-  flex: 0 0 auto; display: grid; place-items: center; overflow: hidden;
-  background: var(--qmm-card); box-shadow: inset 0 0 0 1px var(--qmm-sand-edge);
-  color: var(--qmm-text-soft); font-weight: 800;
-}
-.pt-pet-icon.is-empty { opacity: .4; }
-.pt-pet-icon img { object-fit: contain; }
-
-/* ------------------------------ Narrow windows ---------------------------- */
-@container (max-width: 560px) {
-  .pt-split { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; height: auto; }
-  .pt-teams__rows { max-height: 200px; }
-  .pt-slot { grid-template-columns: 32px minmax(0, 1fr) auto auto; gap: var(--qmm-space-md); padding: var(--qmm-space-sm); }
-  .pt-slot__icon { width: 32px; height: 32px; font-size: 20px; }
-  .pt-slot__title { flex-wrap: wrap; row-gap: 2px; }
-  .pt-slot .qmm-btn--icon { width: 28px; }
-  .pt-split .qmm-vlist { max-height: 200px; }
-  .pt-logs__cols { display: none; }
-  .pt-log {
-    grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--qmm-space-xs);
-    grid-template-areas: "pet when" "ability ability" "details details";
-  }
-  .pt-log__pet { grid-area: pet; }
-  .pt-log__when { grid-area: when; align-items: flex-end; }
-  .pt-log__ability { grid-area: ability; }
-  .pt-log__details { grid-area: details; white-space: normal; }
-}
-`;
-      installed6 = false;
-    }
-  });
-
-  // src/features/pets/petIcon.ts
-  function spriteImg(src, size) {
-    const img = document.createElement("img");
-    img.src = src;
-    img.width = size;
-    img.height = size;
-    img.alt = "";
-    img.draggable = false;
-    img.style.width = img.style.height = `${size}px`;
-    return img;
-  }
-  function petIcon(pet, size) {
-    ensurePetsStyles();
-    const holder2 = document.createElement("div");
-    holder2.className = "pt-pet-icon";
-    holder2.style.width = holder2.style.height = `${size}px`;
-    holder2.style.borderRadius = `${Math.round(size / 3.5)}px`;
-    holder2.style.fontSize = `${Math.max(9, Math.round(size * 0.45))}px`;
-    if (!pet) {
-      holder2.classList.add("is-empty");
-      holder2.textContent = "\xB7";
-      return holder2;
-    }
-    const species = String(pet.petSpecies ?? "").trim();
-    const mutations = Array.isArray(pet.mutations) ? pet.mutations : [];
-    const cacheKey = `${species}|${mutations.join(",")}`;
-    const cached2 = resolvedSprites.get(cacheKey);
-    if (cached2) {
-      holder2.appendChild(spriteImg(cached2, size));
-      return holder2;
-    }
-    holder2.textContent = (pet.name || species || "pet").charAt(0).toUpperCase();
-    if (species) {
-      attachSpriteIcon(holder2, ["pet"], species, size, "pet-icon", {
-        mutations,
-        onSpriteApplied: (img) => resolvedSprites.set(cacheKey, img.src)
-      });
-    }
-    return holder2;
-  }
-  var resolvedSprites;
-  var init_petIcon = __esm({
-    "src/features/pets/petIcon.ts"() {
-      "use strict";
-      init_iconCache();
       init_styles6();
-      resolvedSprites = /* @__PURE__ */ new Map();
+      OTHER_SECTION_ID = "__other__";
     }
   });
 
@@ -31135,132 +31427,9 @@ Click to download`;
       init_feedWidget();
       init_pets();
       init_petIcon();
-      init_styles6();
+      init_styles3();
       LIST_ICON_PX2 = 22;
       CROP_ICON_PX = 28;
-    }
-  });
-
-  // src/features/pets/abilityChipColors.ts
-  function getAbilityChipColors(id) {
-    const key2 = String(id || "");
-    const live = petAbilities2[key2]?.color;
-    if (live && typeof live.bg === "string" && live.bg) {
-      return { bg: live.bg, hover: typeof live.hover === "string" && live.hover ? live.hover : live.bg };
-    }
-    const base = abilityNameWithoutLevel(key2).replace(/[\s\-_]+/g, "").toLowerCase();
-    const matches = (family) => key2.startsWith(family) || base === family.toLowerCase();
-    for (const [families, colors] of FALLBACK_COLORS2) {
-      if (families.some(matches)) return colors;
-    }
-    return NEUTRAL;
-  }
-  var solid, NEUTRAL, FALLBACK_COLORS2;
-  var init_abilityChipColors = __esm({
-    "src/features/pets/abilityChipColors.ts"() {
-      "use strict";
-      init_data();
-      init_abilityNames();
-      solid = (r, g, b) => ({
-        bg: `rgba(${r},${g},${b},0.9)`,
-        hover: `rgba(${r},${g},${b},1)`
-      });
-      NEUTRAL = { bg: "rgba(100,100,100,0.9)", hover: "rgba(150,150,150,1)" };
-      FALLBACK_COLORS2 = [
-        [["MoonKisser"], solid(250, 166, 35)],
-        [["DawnKisser"], solid(162, 92, 242)],
-        [["DawnCapture"], solid(178, 90, 158)],
-        [["DawnbinderBoost"], solid(180, 104, 160)],
-        [["ProduceScaleBoost", "SnowyCropSizeBoost"], solid(34, 139, 34)],
-        [["PlantGrowthBoost", "SnowyPlantGrowthBoost", "DawnPlantGrowthBoost", "AmberPlantGrowthBoost", "ThunderPlantGrowthBoost"], solid(0, 128, 128)],
-        [["EggGrowthBoost", "SnowyEggGrowthBoost", "ThunderEggGrowthBoost"], solid(180, 90, 240)],
-        [["PetAgeBoost"], solid(147, 112, 219)],
-        [["PetHatchSizeBoost"], solid(128, 0, 128)],
-        [["PetXpBoost", "SnowyPetXpBoost", "DawnXpBoost", "ThunderXpBoost"], solid(30, 144, 255)],
-        [["HungerBoost", "SnowyHungerBoost"], solid(255, 20, 147)],
-        [["HungerRestore", "SnowyHungerRestore"], solid(255, 105, 180)],
-        [["SellBoost"], solid(220, 20, 60)],
-        [["CoinFinder", "SnowyCoinFinder", "DawnCoinFinder", "ThunderCoinFinder"], solid(180, 150, 0)],
-        [["SeedFinder"], solid(168, 102, 38)],
-        [["ProduceMutationBoost", "SnowyCropMutationBoost", "DawnBoost", "AmberMoonBoost", "ThunderBoost"], solid(140, 15, 70)],
-        [["PetMutationBoost"], solid(160, 50, 100)],
-        [["DoubleHarvest"], solid(0, 120, 180)],
-        [["DoubleHatch"], solid(60, 90, 180)],
-        [["ProduceEater"], solid(255, 69, 0)],
-        [["ProduceRefund"], solid(255, 99, 71)],
-        [["PetRefund"], solid(0, 80, 120)],
-        [["Copycat"], solid(255, 140, 0)],
-        [
-          ["GoldGranter"],
-          {
-            bg: "linear-gradient(135deg, rgba(225,200,55,0.9) 0%, rgba(225,180,10,0.9) 40%, rgba(215,185,45,0.9) 70%, rgba(210,185,45,0.9) 100%)",
-            hover: "linear-gradient(135deg, rgba(220,200,70,1) 0%, rgba(210,175,5,1) 40%, rgba(210,185,55,1) 70%, rgba(200,175,30,1) 100%)"
-          }
-        ],
-        [
-          ["RainbowGranter"],
-          {
-            bg: "linear-gradient(45deg, rgba(200,0,0,0.9), rgba(200,120,0,0.9), rgba(160,170,30,0.9), rgba(60,170,60,0.9), rgba(50,170,170,0.9), rgba(40,150,180,0.9), rgba(20,90,180,0.9), rgba(70,30,150,0.9))",
-            hover: "linear-gradient(45deg, rgba(200,0,0,1), rgba(200,120,0,1), rgba(160,170,30,1), rgba(60,170,60,1), rgba(50,170,170,1), rgba(40,150,180,1), rgba(20,90,180,1), rgba(70,30,150,1))"
-          }
-        ],
-        [["RainDance"], solid(76, 204, 204)],
-        [["SnowGranter"], solid(144, 184, 204)],
-        [["FrostGranter"], solid(148, 160, 204)],
-        [["DawnlitGranter"], solid(196, 124, 180)],
-        [["AmberlitGranter"], solid(204, 144, 96)],
-        [["ThunderstruckGranter"], solid(194, 184, 60)],
-        [["Thundercharger"], solid(31, 163, 130)],
-        [["Thunderbloom"], solid(112, 246, 203)]
-      ];
-    }
-  });
-
-  // src/features/pets/abilityChips.ts
-  function paint(el4, colors) {
-    el4.style.setProperty("--pt-ability", colors.bg);
-    el4.style.setProperty("--pt-ability-hover", colors.hover);
-  }
-  function abilityDots(abilityIds, opts = {}) {
-    ensurePetsStyles();
-    const size = opts.size ?? 12;
-    const wrap = document.createElement("span");
-    wrap.className = "pt-abilities";
-    wrap.style.gap = `${opts.gap ?? 8}px`;
-    const ids = abilityIds.filter(Boolean);
-    if (!ids.length && opts.emptyText) {
-      const empty = document.createElement("span");
-      empty.className = "pt-abilities__empty";
-      empty.textContent = opts.emptyText;
-      wrap.appendChild(empty);
-      return wrap;
-    }
-    for (const id of ids) {
-      const dot = document.createElement("span");
-      dot.className = "pt-ability-dot";
-      dot.title = abilityName(id) || id;
-      dot.setAttribute("aria-label", dot.title);
-      dot.style.width = dot.style.height = `${size}px`;
-      paint(dot, getAbilityChipColors(id));
-      wrap.appendChild(dot);
-    }
-    return wrap;
-  }
-  function abilityPill(abilityId, label2) {
-    ensurePetsStyles();
-    const pill2 = document.createElement("span");
-    pill2.className = "pt-ability-pill";
-    pill2.textContent = label2;
-    pill2.title = label2;
-    paint(pill2, getAbilityChipColors(abilityId));
-    return pill2;
-  }
-  var init_abilityChips = __esm({
-    "src/features/pets/abilityChips.ts"() {
-      "use strict";
-      init_abilityChipColors();
-      init_abilityNames();
-      init_styles6();
     }
   });
 
@@ -31463,7 +31632,7 @@ Click to download`;
       init_abilityChips();
       init_pets();
       init_petIcon();
-      init_styles6();
+      init_styles3();
       PET_ICON_PX = 24;
       normalizeAbilityKey = (value) => String(value ?? "").toLowerCase().replace(/\s+/g, "").replace(/([ivx]+)$/i, "");
     }
@@ -32048,7 +32217,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_teamStats();
       init_theme();
-      init_styles6();
+      init_styles3();
       init_teamStatsText();
     }
   });
@@ -32173,13 +32342,10 @@ Restore figures are averages; unlucky streaks do worse.`;
         async () => {
           const team = handlers.selectedTeam();
           if (!team) return;
-          handlers.setWindowVisible(false);
-          try {
-            await PetsService.chooseSlotPet(team.id, index);
-            await repaint(handlers.selectedTeam());
-          } finally {
-            handlers.setWindowVisible(true);
-          }
+          const row2 = rows[index].root;
+          const host = row2.closest(".qws-win") ?? row2;
+          await PetsService.chooseSlotPet(team.id, index, host);
+          await repaint(handlers.selectedTeam());
         },
         async () => {
           const team = handlers.selectedTeam();
@@ -32268,7 +32434,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_iconCache();
       init_abilityChips();
       init_pets();
-      init_styles6();
+      init_styles3();
       init_teamReconcile();
       init_teamStatsView();
       SLOT_ICON_PX = 40;
@@ -32453,7 +32619,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_card();
       init_toggles();
       init_petIcon();
-      init_styles6();
+      init_styles3();
       AUTOSCROLL_EDGE_PX = 28;
       AUTOSCROLL_STEP_PX = 18;
       MINI_ICON_PX = 20;
@@ -32500,8 +32666,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       onUseTeam: useTeam2,
       onDelete() {
         if (selectedId) PetsService.deleteTeam(selectedId);
-      },
-      setWindowVisible: (visible) => ui.setWindowVisible(visible)
+      }
     });
     layout.append(list.root, editor.root);
     async function detectActiveTeam() {
@@ -32581,7 +32746,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_player();
       init_pets();
-      init_styles6();
+      init_styles3();
       init_teamEditor();
       init_teamList();
     }
@@ -33589,7 +33754,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_abilityChipColors();
       init_pets();
       init_petIcon();
-      init_styles6();
+      init_styles3();
       init_teamBuilder();
       init_teamStatsView();
       MINI_ICON_PX2 = 24;
@@ -35255,7 +35420,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const all = [.../* @__PURE__ */ new Set([...candidates, ...bases.map((base) => `${base}Icon`)])];
     if (all.length) attachSpriteIcon(box2, ["crop", "tallplant", "plant"], all, sizePx, SPRITE_LOG_TAG2);
   }
-  function speciesIcon(species, sizePx = ICON_PX3) {
+  function speciesIcon(species, sizePx = ICON_PX4) {
     const box2 = iconSlot(sizePx);
     attachAtlasCrop(box2, species, sizePx);
     return box2;
@@ -35267,7 +35432,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const apiCategory = INTERNAL_TO_API[segment] ?? (isComposableCategory(segment) ? segment : "plants");
     return composedSpriteUrl(apiCategory, spriteBaseName(species), mutations);
   }
-  function variantIcon(species, mutations, sizePx = ICON_PX3) {
+  function variantIcon(species, mutations, sizePx = ICON_PX4) {
     if (mutations.length === 0) return speciesIcon(species, sizePx);
     const box2 = iconSlot(sizePx);
     const url = composedUrl(species, mutations);
@@ -35282,7 +35447,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     box2.append(img);
     return box2;
   }
-  function mutationIconEl(mutation, sizePx = ICON_PX3) {
+  function mutationIconEl(mutation, sizePx = ICON_PX4) {
     const box2 = iconSlot(sizePx);
     const candidates = spriteSpellings(mutation).flatMap((name) => [`Mutation${name}`, name]);
     attachSpriteIcon(box2, ["ui", "mutation"], candidates, sizePx, SPRITE_LOG_TAG2);
@@ -35334,7 +35499,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     return control;
   }
-  var SPRITE_LOG_TAG2, ICON_PX3;
+  var SPRITE_LOG_TAG2, ICON_PX4;
   var init_harvestChips = __esm({
     "src/features/companion/menu/harvestChips.ts"() {
       "use strict";
@@ -35347,7 +35512,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_dom3();
       init_styles8();
       SPRITE_LOG_TAG2 = "companion-harvest";
-      ICON_PX3 = 26;
+      ICON_PX4 = 26;
     }
   });
 
@@ -35359,7 +35524,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const tileRef = eggCatalog2[eggId]?.tileRef;
     return spriteSpellings(eggId, typeof tileRef === "string" ? tileRef : null, eggCatalogName(eggId), name);
   }
-  function plantItemIcon(item, sizePx = ICON_PX4) {
+  function plantItemIcon(item, sizePx = ICON_PX5) {
     const box2 = iconSlot(sizePx);
     const isEgg = item.kind === "egg";
     const candidates = isEgg ? eggCandidates(item.id, item.name) : seedCandidates(item.id, item.name);
@@ -35383,7 +35548,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
   }
-  var SPRITE_LOG_TAG3, ICON_PX4;
+  var SPRITE_LOG_TAG3, ICON_PX5;
   var init_plantChips = __esm({
     "src/features/companion/menu/plantChips.ts"() {
       "use strict";
@@ -35392,7 +35557,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_iconCache();
       init_dom3();
       SPRITE_LOG_TAG3 = "companion-plant";
-      ICON_PX4 = 24;
+      ICON_PX5 = 24;
     }
   });
 
@@ -41474,10 +41639,10 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
   async function writeEntries(entries) {
     const payload = { entries };
     try {
-      if (!installed7) {
+      if (!installed9) {
         ensureTickAtom();
         await fakeShow(EMOTE_PATCH, payload);
-        installed7 = true;
+        installed9 = true;
       } else {
         await fakeUpdate(EMOTE_SOURCE_LABEL, payload);
       }
@@ -41488,7 +41653,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     }
   }
   async function rest() {
-    if (!installed7) return;
+    if (!installed9) return;
     await writeEntries([]);
   }
   function cancelPending() {
@@ -41541,15 +41706,15 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     cancelStart();
     cancelPending();
     posing = null;
-    if (!installed7) return;
+    if (!installed9) return;
     try {
       await fakeHide(EMOTE_SOURCE_LABEL);
       await bumpTick();
     } catch {
     }
-    installed7 = false;
+    installed9 = false;
   }
-  var EMOTE_SOURCE_LABEL, EMOTE_PATCH, EMOTE_DURATION_MS, installed7, releaseTimer, posing, startTimer, lastSpokeAt;
+  var EMOTE_SOURCE_LABEL, EMOTE_PATCH, EMOTE_DURATION_MS, installed9, releaseTimer, posing, startTimer, lastSpokeAt;
   var init_emote = __esm({
     "src/features/companion/emote.ts"() {
       "use strict";
@@ -41567,7 +41732,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
         merge: (real, fake) => mergeEmoteSource(real, fake)
       };
       EMOTE_DURATION_MS = 1500;
-      installed7 = false;
+      installed9 = false;
       releaseTimer = null;
       posing = null;
       startTimer = null;
@@ -42202,10 +42367,10 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     }
     return spaceWords(weatherId);
   }
-  function weatherMessage(weatherId, displayName, random) {
+  function weatherMessage(weatherId, displayName2, random) {
     const own = WEATHER_LINES[weatherId];
     if (own && own.length > 0) return pickOne(own, random);
-    return pickOne(GENERIC_WEATHER_TEMPLATES, random)(displayName);
+    return pickOne(GENERIC_WEATHER_TEMPLATES, random)(displayName2);
   }
   function weatherEmote(weatherId) {
     return WEATHER_EMOTES[weatherId] ?? EmoteType.Questioning;
@@ -45966,7 +46131,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
   });
 
   // src/features/companion/menu/hatchChips.ts
-  function petSpeciesIcon2(species, sizePx = ICON_PX5) {
+  function petSpeciesIcon2(species, sizePx = ICON_PX6) {
     const box2 = iconSlot(sizePx);
     const candidates = [species, species.replace(/\s+/g, "")].filter(Boolean);
     attachSpriteIcon(box2, ["pet"], candidates, sizePx, SPRITE_LOG_TAG4, {
@@ -45976,14 +46141,14 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     });
     return box2;
   }
-  function abilityIcon(abilityId, sizePx = ICON_PX5) {
+  function abilityIcon(abilityId, sizePx = ICON_PX6) {
     const box2 = iconSlot(sizePx);
     const chip = part("span", "qws-cmp-ability");
     chip.style.background = getAbilityChipColors(abilityId).bg;
     box2.append(chip);
     return box2;
   }
-  var SPRITE_LOG_TAG4, ICON_PX5;
+  var SPRITE_LOG_TAG4, ICON_PX6;
   var init_hatchChips = __esm({
     "src/features/companion/menu/hatchChips.ts"() {
       "use strict";
@@ -45991,7 +46156,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       init_abilityChipColors();
       init_dom3();
       SPRITE_LOG_TAG4 = "companion-hatch";
-      ICON_PX5 = 26;
+      ICON_PX6 = 26;
     }
   });
 
@@ -47266,15 +47431,15 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     ev.preventDefault();
   }
   function installEditorPointerControls() {
-    if (installed8 || typeof window === "undefined") return;
-    installed8 = true;
+    if (installed10 || typeof window === "undefined") return;
+    installed10 = true;
     window.addEventListener("pointerdown", (ev) => void handlePointerDown(ev), true);
     window.addEventListener("pointermove", (ev) => void handlePointerMove(ev), true);
     window.addEventListener("pointerup", handlePointerUp, true);
     window.addEventListener("pointercancel", handlePointerUp, true);
     window.addEventListener("contextmenu", handleContextMenu, true);
   }
-  var installed8, dragMode, lastTileKey, tileKeyOf;
+  var installed10, dragMode, lastTileKey, tileKeyOf;
   var init_pointerControls = __esm({
     "src/features/editor/pointerControls.ts"() {
       "use strict";
@@ -47284,7 +47449,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       init_planEdits();
       init_session();
       init_tileMap();
-      installed8 = false;
+      installed10 = false;
       dragMode = null;
       lastTileKey = null;
       tileKeyOf = (target) => `${target.tileType}|${target.localTileIndex}`;
@@ -48927,7 +49092,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
   function questionOf(proposal) {
     const message2 = CompanionChat.getLog().messages.find((entry) => entry.proposalId === proposal.id);
     if (!message2) return [document.createTextNode(proposal.summary)];
-    return message2.positioned ? renderTagged(message2.text, message2.icons, ICON_PX6) : [document.createTextNode(message2.text)];
+    return message2.positioned ? renderTagged(message2.text, message2.icons, ICON_PX7) : [document.createTextNode(message2.text)];
   }
   function build(proposal) {
     ensureStyle();
@@ -48996,7 +49161,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     unsubscribe = CompanionChat.subscribe(sync);
     sync();
   }
-  var CARD_ID, STYLE_ID6, Z_INDEX, ICON_PX6, TICK_MS2, card2, clockBar, timer, shownId, unsubscribe;
+  var CARD_ID, STYLE_ID6, Z_INDEX, ICON_PX7, TICK_MS2, card2, clockBar, timer, shownId, unsubscribe;
   var init_askBanner = __esm({
     "src/features/companion/menu/askBanner.ts"() {
       "use strict";
@@ -49013,7 +49178,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       CARD_ID = "mgCompanionAsk";
       STYLE_ID6 = "mgCompanionAskStyle";
       Z_INDEX = layer.window + 49;
-      ICON_PX6 = 17;
+      ICON_PX7 = 17;
       TICK_MS2 = 100;
       card2 = null;
       clockBar = null;
