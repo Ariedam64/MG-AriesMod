@@ -18,6 +18,7 @@ import { h } from "./kit/dom";
 import { layer } from "./kit/theme";
 import { type Pos, attachAutoClamp, clampRect, currentPos, ensureOnScreen, makeDraggable, placeClamped, withTopLocked } from "./hudPlacement";
 import { startStatusLoop } from "./hudStatus";
+import { installInputKeyTrap } from "./inputKeyTrap";
 
 export type PanelRender = (root: HTMLElement) => void;
 export interface HUDOptions {
@@ -32,27 +33,6 @@ const isEditing = (el: EventTarget | null) => {
   const t = el as HTMLElement | null;
   return !!t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName));
 };
-
-/**
- * Stops keystrokes typed into the mod's own fields from reaching the game's
- * shortcuts. Typing still works: the event is stopped, not prevented.
- */
-function installInputKeyTrap(): void {
-  const isTextField = (el: Element | null) => {
-    if (el instanceof HTMLTextAreaElement) return true;
-    if (el instanceof HTMLInputElement) return ["text", "number", "search"].includes((el.type || "").toLowerCase());
-    return el instanceof HTMLElement && el.isContentEditable;
-  };
-  const ours = (el: Element | null) => !!el?.closest?.(".qws-win");
-  const trap = (ev: KeyboardEvent) => {
-    const target = ev.target as Element | null;
-    const active = document.activeElement;
-    if (!((ours(target) && isTextField(target)) || (ours(active) && isTextField(active)))) return;
-    ev.stopPropagation();
-    ev.stopImmediatePropagation();
-  };
-  for (const type of ["keydown", "keypress", "keyup"] as const) window.addEventListener(type, trap, true);
-}
 
 export function mountHUD(opts?: HUDOptions) {
   if (document.readyState === "loading") {
