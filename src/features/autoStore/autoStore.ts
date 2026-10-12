@@ -312,4 +312,11 @@ export function createAutoStore(config: AutoStoreConfig): AutoStoreController {
 
 export const storageKeyFromSpecies = (item: any) => normalizeKey(item?.species);
 export const storageKeyFromDecorId = (item: any) => normalizeKey(item?.decorId);
-export const storageKeyFromToolId = (item: any) => normalizeKey(item?.toolId);
+/**
+ * A picked-up crystal carries its shard's toolId but is a single item with its
+ * own lifetime (`remainingActiveSeconds`), not part of the shard stack: it gets
+ * no key, or a crystal left in the Tool Shack would make taken-out shards look
+ * like they belong back there.
+ */
+export const storageKeyFromToolId = (item: any) =>
+  item && typeof item === "object" && "remainingActiveSeconds" in item ? "" : normalizeKey(item?.toolId);
