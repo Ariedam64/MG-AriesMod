@@ -25,8 +25,6 @@ export type TeamEditorHandlers = {
   onUseTeam(team: PetTeam): Promise<void>;
   /** "Delete team" was pressed. */
   onDelete(): void;
-  /** Hides or shows the window while the game's inventory is open for a pick. */
-  setWindowVisible(visible: boolean): void;
 };
 
 export type TeamEditor = {
@@ -180,13 +178,11 @@ export function createTeamEditor(handlers: TeamEditorHandlers): TeamEditor {
       async () => {
         const team = handlers.selectedTeam();
         if (!team) return;
-        handlers.setWindowVisible(false);
-        try {
-          await PetsService.chooseSlotPet(team.id, index);
-          await repaint(handlers.selectedTeam());
-        } finally {
-          handlers.setWindowVisible(true);
-        }
+        // The picker stacks above the Pets window, so the window stays open.
+        const row = rows[index].root;
+        const host = row.closest<HTMLElement>(".qws-win") ?? row;
+        await PetsService.chooseSlotPet(team.id, index, host);
+        await repaint(handlers.selectedTeam());
       },
       async () => {
         const team = handlers.selectedTeam();

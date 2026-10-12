@@ -56,7 +56,6 @@ export function renderManagerTab(view: HTMLElement, ui: Menu): void {
     onDelete() {
       if (selectedId) PetsService.deleteTeam(selectedId);
     },
-    setWindowVisible: (visible) => ui.setWindowVisible(visible),
   });
 
   layout.append(list.root, editor.root);

@@ -169,11 +169,6 @@ export const fakeInventory = {
   },
 };
 
-/** Whether a raw active modal value is the inventory. */
-export function isInventoryOpen(v: any) {
-  return isModalOpen(v, INVENTORY_MODAL_ID);
-}
-
 /* ================================= Journal ================================ */
 
 export const fakeJournal = defineFakeModal({

@@ -77,21 +77,6 @@ export function activeSlotToPet(entry: any): InventoryPet | null {
   };
 }
 
-/** The game's item shape for a pet, as the fake inventory modal expects it. */
-export function petToInventoryItem(p: InventoryPet): Record<string, unknown> {
-  return {
-    id: p.id,
-    itemType: "Pet",
-    petSpecies: canonicalSpecies(p.petSpecies),
-    name: p.name ?? null,
-    xp: p.xp,
-    hunger: p.hunger,
-    mutations: p.mutations.slice(),
-    targetScale: p.targetScale,
-    abilities: p.abilities.slice(),
-  };
-}
-
 /* --------------------------------- the cache -------------------------------- */
 
 let inventoryRaw: any = null;
