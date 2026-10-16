@@ -65,6 +65,7 @@
     "check:inventorysummary": "node scripts/runChecks.mjs inventorysummary",
     "check:floating": "node scripts/runChecks.mjs floating",
     "check:stagewatch": "node scripts/runChecks.mjs stagewatch",
+    "check:notifierbell": "node scripts/runChecks.mjs notifierbell",
     "check:visiblerefresh": "node scripts/runChecks.mjs visiblerefresh",
     "check:speech": "node scripts/runChecks.mjs speech",
     "check:gametoasts": "node scripts/runChecks.mjs gametoasts",

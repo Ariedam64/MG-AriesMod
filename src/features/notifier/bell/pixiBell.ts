@@ -1,12 +1,14 @@
-// The notification bell drawn as an extra slot on the game's own
-// `RightSideRail`, the vertical icon rail (Chat, Leaderboard, Stats...). The
-// rail used to be a DOM toolbar the bell was cloned into; the game moved it to
-// native Pixi rendering, so the bell now lives in the Pixi scene graph. The
-// badge, panel and sounds stay plain DOM and anchor on `getScreenRect()`.
-import { getStage, findByLabel, watchStageNode } from "../../../game/pixi/stageSearch";
+// The notification bell as one more icon of the game's `RightSideRail`, the
+// column of round icons at the top right. It takes the next cell of the
+// rail's grid (`railSlot.ts`) and looks like the game's own icons
+// (`railBellView.ts`). The panel and the sounds stay DOM and anchor on
+// `getScreenRect()`.
+import { getStage, watchStageNode } from "../../../game/pixi/stageSearch";
 import { getReadySpriteState } from "../../../game/sprites/context";
 import { pageWindow, shareGlobal } from "../../../platform/pageContext";
-import { BELL_GLYPH, BELL_RING_DURATION_MS, bellRingAngleAt, type BellController, type ScreenRect } from "./ring";
+import { createRailBellView, type RailBellView } from "./railBellView";
+import { computeRailSlot, isShownOnStage, type RailSlot } from "./railSlot";
+import type { BellController, ScreenRect } from "./ring";
 
 const RAIL_LABEL = "RightSideRail";
 // After a renderer rebuild (a WebGL context lost while the tab sat in the
@@ -14,22 +16,12 @@ const RAIL_LABEL = "RightSideRail";
 // but only if the game calls `.destroy()` on the old tree rather than leaving
 // it to the garbage collector. When it does not, `rail` stays a stale
 // reference and the bell never comes back, so this periodic check verifies
-// the rail is still reachable from the live stage.
-const RAIL_REACHABILITY_CHECK_MS = 2000;
+// the rail is still reachable from the live stage. It also retries what can
+// be missing at first (the art, the Text constructor).
+const MAINTENANCE_MS = 2000;
 const RAIL_REACHABILITY_MAX_HOPS = 64;
-// The rail's slots carry no label of their own, but only the Chat slot has
-// this unread-badge child, which identifies it. The bell anchors right under
-// Chat: anchoring on the rail's last child made it hop down every time one of
-// the conditional icons (friend bonus, weather status...) streamed in.
-const CHAT_SLOT_MARKER_LABEL = "RightSideRailChatBadge";
-
-const DEFAULT_SLOT_SIZE = 45;
-const DEFAULT_SLOT_SPACING = 52;
-// A candidate slot counts as taken when an existing icon sits within half a
-// slot of it: loose enough to absorb sub-pixel jitter, tight enough not to
-// skip a free slot.
-const SLOT_OCCUPIED_TOLERANCE_RATIO = 0.5;
-const MAX_SLOT_SEARCH_STEPS = 20;
+/** Longest frame gap the animations step over, so a tab coming back does not jump. */
+const MAX_FRAME_DT_MS = 100;
 
 export interface PixiBellOptions {
   onClick: () => void;
@@ -40,8 +32,10 @@ interface PixiBellDebugState {
   findAttempts: number;
   hasButton: boolean;
   lastError: string | null;
-  /** Rail-local Y the bell was last placed at. */
-  slotY: number | null;
+  /** The bell's cell on the rail, null while the game has stripped the rail. */
+  slot: RailSlot | null;
+  usesGameArt: boolean;
+  hasGameBadge: boolean;
   /** CSS px per stage unit: 1 unless the canvas is CSS-scaled (zoom, DPR). */
   screenScaleX: number | null;
   screenScaleY: number | null;
@@ -50,14 +44,12 @@ interface PixiBellDebugState {
 export function startPixiBell(opts: PixiBellOptions): BellController {
   let running = true;
   let rail: any = null;
-  let bellContainer: any = null;
-  let bellText: any = null;
-  let lastSize = DEFAULT_SLOT_SIZE;
-
-  let wiggleActive = false;
-  let wiggleRafId: number | null = null;
-  let wiggleT = 0;
-  let wiggleLastFrameAt: number | null = null;
+  let view: RailBellView | null = null;
+  let slotSize = 0;
+  let layoutKey = "";
+  let count = 0;
+  let ringing = false;
+  let lastFrameAt: number | null = null;
 
   // Pixi's EventSystem never dispatches clicks to anything the mod adds to
   // the game's tree (even `stage.on("pointerdown")` stays silent while the
@@ -72,44 +64,44 @@ export function startPixiBell(opts: PixiBellOptions): BellController {
     findAttempts: 0,
     hasButton: false,
     lastError: null,
-    slotY: null,
+    slot: null,
+    usesGameArt: false,
+    hasGameBadge: false,
     screenScaleX: null,
     screenScaleY: null,
   };
   shareGlobal("__MG_NOTIFICATION_BELL_PIXI_DEBUG__", debugState);
 
-  const raf: (cb: (t: number) => void) => number = (pageWindow as any).requestAnimationFrame.bind(pageWindow);
-  const cancelRaf: (id: number) => void = (pageWindow as any).cancelAnimationFrame.bind(pageWindow);
+  const now = (): number => (pageWindow as any).performance?.now?.() ?? Date.now();
 
-  const forgetButtonRefs = () => {
-    bellContainer = null;
-    bellText = null;
+  const forgetView = () => {
+    view = null;
+    slotSize = 0;
+    layoutKey = "";
     debugState.hasButton = false;
+    debugState.usesGameArt = false;
+    debugState.hasGameBadge = false;
   };
 
-  const removeButton = () => {
-    if (bellContainer) {
-      try { bellContainer.destroy({ children: true }); } catch {}
+  const removeView = () => {
+    if (view) {
+      try { view.root.onRender = null; } catch {}
+      try { view.root.destroy({ children: true }); } catch {}
     }
-    forgetButtonRefs();
+    forgetView();
   };
 
-  const onClick = () => {
-    try { opts.onClick(); } catch (error) {
-      console.error("[PixiBell] onClick error:", error);
-    }
-  };
-
-  // The bell's on-screen box in page (client) coordinates, for the overlay's
-  // badge and panel and for the hit-test below.
+  // The bell's on-screen box in page (client) coordinates, for the panel and
+  // the hit-test below. Null while it is not drawn: the rail stripped, or
+  // faded out under a game modal, where it must not take clicks.
   //
   // `toGlobal` yields stage units, which equal CSS pixels only when the
   // canvas is displayed at exactly `renderer.screen` size. Windows display
   // scaling, browser zoom and Discord's Activity iframe all CSS-scale the
-  // canvas, and without the ratio below the badge, the panel and the
-  // hit-test drift proportionally.
+  // canvas, and without the ratio below the panel and the hit-test drift.
   const computeScreenRect = (): ScreenRect | null => {
-    if (!bellContainer || bellContainer.destroyed) return null;
+    const root = view?.root;
+    if (!view || !root || root.destroyed || !view.shown || slotSize <= 0 || !isShownOnStage(root)) return null;
     const state = getReadySpriteState();
     const canvas = state?.renderer?.canvas || state?.renderer?.view?.canvas || state?.renderer?.view;
     if (!canvas) return null;
@@ -122,8 +114,8 @@ export function startPixiBell(opts: PixiBellOptions): BellController {
       const scaleY = stageHeight > 0 ? rect.height / stageHeight : 1;
       debugState.screenScaleX = scaleX;
       debugState.screenScaleY = scaleY;
-      const topLeft = bellContainer.toGlobal({ x: 0, y: 0 });
-      const bottomRight = bellContainer.toGlobal({ x: lastSize, y: lastSize });
+      const topLeft = root.toGlobal({ x: 0, y: 0 });
+      const bottomRight = root.toGlobal({ x: slotSize, y: slotSize });
       return {
         left: rect.left + topLeft.x * scaleX,
         top: rect.top + topLeft.y * scaleY,
@@ -137,7 +129,7 @@ export function startPixiBell(opts: PixiBellOptions): BellController {
     }
   };
 
-  const hitTestButton = (clientX: number, clientY: number): boolean => {
+  const hitTestBell = (clientX: number, clientY: number): boolean => {
     const rect = computeScreenRect();
     if (!rect) return false;
     return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
@@ -150,31 +142,24 @@ export function startPixiBell(opts: PixiBellOptions): BellController {
   // so `stopPropagation` keeps the click from also walking the character
   // under the bell.
   const onWindowPointerDownCapture = (ev: PointerEvent) => {
-    if (!hitTestButton(ev.clientX, ev.clientY)) return;
+    if (!hitTestBell(ev.clientX, ev.clientY)) return;
     ev.stopPropagation();
     ev.stopImmediatePropagation();
     ev.preventDefault();
-    onClick();
-  };
-
-  const onCanvasPointerMove = (ev: PointerEvent) => {
-    if (!canvasEl) return;
-    const isHovering = hitTestButton(ev.clientX, ev.clientY);
-    if (isHovering && !weSetPointerCursor) {
-      canvasEl.style.cursor = "pointer";
-      weSetPointerCursor = true;
-    } else if (!isHovering && weSetPointerCursor) {
-      canvasEl.style.cursor = "";
-      weSetPointerCursor = false;
+    view?.press();
+    try { opts.onClick(); } catch (error) {
+      console.error("[PixiBell] onClick error:", error);
     }
   };
 
-  const onCanvasPointerLeave = () => {
-    if (weSetPointerCursor && canvasEl) {
-      canvasEl.style.cursor = "";
-      weSetPointerCursor = false;
-    }
+  const setHovered = (hovered: boolean) => {
+    view?.setHovered(hovered);
+    if (!canvasEl || hovered === weSetPointerCursor) return;
+    canvasEl.style.cursor = hovered ? "pointer" : "";
+    weSetPointerCursor = hovered;
   };
+  const onCanvasPointerMove = (ev: PointerEvent) => setHovered(hitTestBell(ev.clientX, ev.clientY));
+  const onCanvasPointerLeave = () => setHovered(false);
 
   const ensureCanvasListeners = (state: any) => {
     if (canvasListenersAttached) return;
@@ -187,130 +172,88 @@ export function startPixiBell(opts: PixiBellOptions): BellController {
     canvasListenersAttached = true;
   };
 
-  const findChatSlot = (): any | null => {
-    if (!Array.isArray(rail?.children)) return null;
-    for (const child of rail.children) {
-      if (child === bellContainer) continue;
-      if (findByLabel(child, CHAT_SLOT_MARKER_LABEL)) return child;
-    }
-    return null;
-  };
-
-  // Converts the visible screen's vertical extent into the rail's local
-  // coordinate space, so a candidate slot can be checked against the actual
-  // viewport. Null when the renderer's screen size isn't readable.
-  const railLocalScreenBounds = (): { top: number; bottom: number } | null => {
-    const state = getReadySpriteState();
-    const screenHeight = Number(state?.renderer?.screen?.height);
+  // The bottom of the screen in the rail's coordinates, for the slot to stay
+  // on screen. The game slides the rail away by moving its pivot: taking the
+  // pivot back out keeps the slot still while it does.
+  const screenBottomInRail = (): number | null => {
+    const screenHeight = Number(getReadySpriteState()?.renderer?.screen?.height);
     if (!Number.isFinite(screenHeight) || screenHeight <= 0) return null;
     try {
-      const top = rail.toLocal({ x: 0, y: 0 }).y;
-      const bottom = rail.toLocal({ x: 0, y: screenHeight }).y;
-      return { top, bottom };
+      return rail.toLocal({ x: 0, y: screenHeight }).y - (Number(rail.pivot?.y) || 0);
     } catch {
       return null;
     }
   };
 
-  // Reads the real spacing/size of the rail's existing icons instead of
-  // hardcoding them, so this keeps working if the game changes the rail's
-  // slot size in a future build.
-  const computeSlot = (): { size: number; nextY: number } => {
-    const siblings: any[] = Array.isArray(rail?.children)
-      ? rail.children.filter((c: any) => c !== bellContainer)
-      : [];
-    let size = DEFAULT_SLOT_SIZE;
-    const railWidth = Number(rail?.width);
-    if (Number.isFinite(railWidth) && railWidth > 0) size = railWidth;
-
-    const ys = siblings.map((c: any) => Number(c?.y) || 0).sort((a, b) => a - b);
-    let spacing = DEFAULT_SLOT_SPACING;
-    if (ys.length >= 2) {
-      const diffs: number[] = [];
-      for (let i = 1; i < ys.length; i++) diffs.push(ys[i] - ys[i - 1]);
-      diffs.sort((a, b) => a - b);
-      const median = diffs[Math.floor(diffs.length / 2)];
-      if (Number.isFinite(median) && median > 0) spacing = median;
+  // Follows the game's own layout. Cheap enough for every frame: it only
+  // reads the rail's few icons, and recomputes when one of them moved,
+  // appeared or disappeared, or the screen changed height.
+  const relayout = () => {
+    if (!rail || !view) return;
+    const bottom = screenBottomInRail();
+    let key = bottom === null ? "|" : `${Math.round(bottom)}|`;
+    for (const child of rail.children) {
+      if (child === view.root) continue;
+      key += child.visible === false ? "-;" : `${child.x},${child.y};`;
     }
+    if (key === layoutKey) return;
+    layoutKey = key;
 
-    const isSlotOccupied = (y: number): boolean =>
-      ys.some((siblingY) => Math.abs(siblingY - y) < spacing * SLOT_OCCUPIED_TOLERANCE_RATIO);
-
-    // Before Chat loads into the rail, anchor after whatever is there; the
-    // next resync (childAdded, childRemoved) re-anchors on Chat.
-    const chatSlot = findChatSlot();
-    const anchorY = chatSlot
-      ? (Number(chatSlot.y) || 0)
-      : (ys.length ? ys[ys.length - 1] : -spacing);
-
-    // The game parks its conditional icons (friend bonus, weather status...)
-    // right below Chat too, so walk down to the first free slot rather than
-    // stack the bell on one of them.
-    let nextY = anchorY + spacing;
-    for (let step = 0; step < MAX_SLOT_SEARCH_STEPS && isSlotOccupied(nextY); step++) {
-      nextY += spacing;
-    }
-
-    // On short screens (small laptop windows, browser zoom, Discord
-    // Activity) the first free slot below the rail can land outside the
-    // viewport, which reads as "the bell just isn't there". Fall back to
-    // the free space above the rail's topmost icon, and as a last resort
-    // clamp inside the screen even if that overlaps an existing icon.
-    const bounds = railLocalScreenBounds();
-    if (bounds && nextY + size > bounds.bottom) {
-      const aboveTopmost = (ys.length ? ys[0] : nextY) - spacing;
-      nextY = aboveTopmost >= bounds.top
-        ? aboveTopmost
-        : Math.max(bounds.top, bounds.bottom - size);
-    }
-
-    return { size, nextY };
+    const slot = computeRailSlot(rail, view.root, bottom);
+    debugState.slot = slot;
+    view.setShown(slot !== null);
+    if (!slot) return;
+    view.root.position.set(slot.x, slot.y);
+    slotSize = slot.size;
+    view.setSize(slot.size);
   };
 
-  const syncGeometry = () => {
-    const { size, nextY } = computeSlot();
-    lastSize = size;
-    debugState.slotY = nextY;
-    bellContainer.position.set(0, nextY);
-    if (bellText) {
-      bellText.style.fontSize = Math.round(size * 0.6);
-      // Anchor at top center so the ring animation swings the bell around
-      // its mounting point, matching the floating DOM bell.
-      if (typeof bellText.anchor?.set === "function") bellText.anchor.set(0.5, 0);
-      const textHeight = Number(bellText.height) || size * 0.6;
-      bellText.position.set(size / 2, Math.max(0, (size - textHeight) / 2));
+  const onFrame = () => {
+    if (!running || !view) return;
+    try {
+      relayout();
+      const t = now();
+      view.animate(lastFrameAt === null ? 0 : Math.min(t - lastFrameAt, MAX_FRAME_DT_MS));
+      lastFrameAt = t;
+    } catch (error) {
+      debugState.lastError = String((error as Error)?.message ?? error);
     }
   };
 
   const syncUnsafe = () => {
     if (!running || !rail || rail.destroyed) {
-      removeButton();
+      removeView();
       return;
     }
     const state = getReadySpriteState();
     if (!state?.ctors?.Text) return;
 
-    if (!bellContainer) {
-      const ContainerCtor = state.ctors.Container ?? rail.constructor;
-      bellContainer = new ContainerCtor();
-      bellContainer.label = "GeminiNotificationBell";
-      const thisContainer = bellContainer;
+    if (!view) {
+      const made = createRailBellView(state, rail, count);
+      made.setRinging(ringing);
       // The game can rebuild the rail's subtree without notice: drop the
       // stale reference rather than crash on it later.
-      thisContainer.once("destroyed", () => {
-        if (bellContainer === thisContainer) forgetButtonRefs();
+      made.root.once("destroyed", () => {
+        if (view === made) forgetView();
       });
-      rail.addChild(bellContainer);
+      view = made;
+    }
+    if (view.root.parent !== rail) {
+      // First in the rail, so the game's icons and their tooltips draw over it.
+      rail.addChildAt(view.root, 0);
+      // Registered on the render group the bell now belongs to: cleared
+      // first, since the setter only registers a callback it did not hold.
+      view.root.onRender = null;
+      view.root.onRender = onFrame;
+      layoutKey = "";
     }
 
-    if (!bellText) {
-      bellText = new state.ctors.Text({ text: BELL_GLYPH, style: { fontSize: DEFAULT_SLOT_SIZE } });
-      bellContainer.addChild(bellText);
-    }
-
+    view.refreshArt(state);
     ensureCanvasListeners(state);
-    syncGeometry();
+    relayout();
     debugState.hasButton = true;
+    debugState.usesGameArt = view.usesGameArt;
+    debugState.hasGameBadge = view.hasGameBadge;
   };
 
   const sync = () => {
@@ -320,26 +263,22 @@ export function startPixiBell(opts: PixiBellOptions): BellController {
     } catch (error) {
       debugState.lastError = String((error as Error)?.message ?? error);
       console.warn("[PixiBell] sync failed, clearing button", error);
-      try { removeButton(); } catch {}
+      try { removeView(); } catch {}
     }
   };
-
-  const onRailChildrenChanged = () => sync();
 
   const railSearch = watchStageNode({
     label: RAIL_LABEL,
     logTag: "[PixiBell]",
     onFound(node) {
       rail = node;
-      rail.on("childAdded", onRailChildrenChanged);
-      rail.on("childRemoved", onRailChildrenChanged);
       debugState.attached = true;
       sync();
     },
     onLost() {
       rail = null;
       debugState.attached = false;
-      removeButton();
+      removeView();
     },
     onSearch(attempts) {
       debugState.findAttempts = attempts;
@@ -360,48 +299,25 @@ export function startPixiBell(opts: PixiBellOptions): BellController {
     return false;
   };
 
-  const periodicRailMaintenance = () => {
+  const periodicMaintenance = () => {
     if (!running || !rail || rail.destroyed) return;
     if (!isReachableFromLiveStage(rail)) {
       console.warn("[PixiBell] rail orphaned from the live stage (no destroyed event fired), resetting");
       railSearch.reset();
       return;
     }
-    // Re-sync even when the rail looks healthy. The button can be missing
-    // (the Text constructor was not captured yet at attach time, or a sync
-    // error removed it), and childAdded/childRemoved never fire again on a
-    // complete rail, so without this the bell would stay away for good. It
-    // also re-runs the slot geometry after resizes and late icons.
+    // Re-sync even when the rail looks healthy: the bell can be missing (the
+    // Text constructor was not captured yet, or a sync error removed it) and
+    // the art can have loaded since.
     sync();
   };
-  const maintenanceIntervalId = (pageWindow as any).setInterval(periodicRailMaintenance, RAIL_REACHABILITY_CHECK_MS);
+  const maintenanceIntervalId = (pageWindow as any).setInterval(periodicMaintenance, MAINTENANCE_MS);
 
   const onWindowResize = () => {
     if (!running || !rail || rail.destroyed) return;
     sync();
   };
   (pageWindow as any).addEventListener("resize", onWindowResize);
-
-  const stopWiggleAnimation = () => {
-    if (wiggleRafId != null) { cancelRaf(wiggleRafId); wiggleRafId = null; }
-    wiggleLastFrameAt = null;
-    if (bellText && !bellText.destroyed) bellText.rotation = 0;
-  };
-
-  const wiggleTick = (time: number) => {
-    wiggleRafId = null;
-    if (!wiggleActive || !bellText || bellText.destroyed) {
-      stopWiggleAnimation();
-      return;
-    }
-    if (wiggleLastFrameAt == null) wiggleLastFrameAt = time;
-    const dt = time - wiggleLastFrameAt;
-    wiggleLastFrameAt = time;
-    wiggleT += dt;
-    const cycleOffset = (wiggleT % BELL_RING_DURATION_MS) / BELL_RING_DURATION_MS;
-    bellText.rotation = bellRingAngleAt(cycleOffset);
-    wiggleRafId = raf(wiggleTick);
-  };
 
   return {
     stop() {
@@ -410,13 +326,6 @@ export function startPixiBell(opts: PixiBellOptions): BellController {
       railSearch.stop();
       (pageWindow as any).clearInterval(maintenanceIntervalId);
       (pageWindow as any).removeEventListener("resize", onWindowResize);
-      stopWiggleAnimation();
-      if (rail) {
-        try {
-          rail.off("childAdded", onRailChildrenChanged);
-          rail.off("childRemoved", onRailChildrenChanged);
-        } catch {}
-      }
       if (canvasListenersAttached) {
         try {
           (pageWindow as any).removeEventListener("pointerdown", onWindowPointerDownCapture, true);
@@ -427,7 +336,7 @@ export function startPixiBell(opts: PixiBellOptions): BellController {
           }
         } catch {}
       }
-      removeButton();
+      removeView();
       rail = null;
     },
 
@@ -436,15 +345,17 @@ export function startPixiBell(opts: PixiBellOptions): BellController {
     },
 
     setWiggle(active: boolean) {
-      if (wiggleActive === active) return;
-      wiggleActive = active;
-      if (active) {
-        wiggleT = 0;
-        wiggleLastFrameAt = null;
-        if (wiggleRafId == null) wiggleRafId = raf(wiggleTick);
-      } else {
-        stopWiggleAnimation();
-      }
+      ringing = active;
+      view?.setRinging(active);
+    },
+
+    setCount(value: number) {
+      count = value;
+      view?.setCount(value);
+    },
+
+    drawsOwnBadge(): boolean {
+      return !!view?.hasGameBadge;
     },
   };
 }

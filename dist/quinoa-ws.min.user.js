@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      4.0.2
+// @version      4.0.3
 // @include      /^https:\/\/1227719606223765687\.discordsays\.com\/.*[?&]mc_shell_frame=1(&|#|$)/
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -14944,7 +14944,7 @@ label.qws-ed-opt { cursor: pointer; }
   // src/platform/modVersion.ts
   function getLocalVersion() {
     if (true) {
-      return "4.0.2";
+      return "4.0.3";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -20782,17 +20782,256 @@ label.qws-ed-opt { cursor: pointer; }
     }
   });
 
+  // src/features/notifier/bell/railBellView.ts
+  function createGameBadge(rail, count) {
+    const chatBadge = findByLabel(rail, CHAT_BADGE_LABEL);
+    const BadgeCtor = chatBadge?.constructor;
+    if (typeof BadgeCtor !== "function") return null;
+    let made = null;
+    try {
+      made = new BadgeCtor({ diameterPx: BADGE_DIAMETER, textOffsetYPx: BADGE_TEXT_OFFSET_Y, label: BADGE_LABEL });
+      if (typeof made?.setCount !== "function" || typeof made?.position?.set !== "function") throw new Error("not a count badge");
+      const x = Number(chatBadge.x);
+      const y = Number(chatBadge.y);
+      made.position.set(Number.isFinite(x) ? x : DEFAULT_BADGE_OFFSET.x, Number.isFinite(y) ? y : DEFAULT_BADGE_OFFSET.y);
+      made.setCount(count);
+      return made;
+    } catch (error) {
+      console.warn("[PixiBell] the game's badge could not be reused, falling back to the DOM badge", error);
+      try {
+        made?.destroy?.();
+      } catch {
+      }
+      return null;
+    }
+  }
+  function createRailBellView(state5, rail, count) {
+    const ContainerCtor = state5.ctors.Container ?? rail.constructor;
+    const root4 = new ContainerCtor();
+    root4.label = BELL_LABEL;
+    const content2 = new ContainerCtor();
+    const face = new ContainerCtor();
+    content2.addChild(face);
+    root4.addChild(content2);
+    const badge2 = createGameBadge(rail, count);
+    if (badge2) content2.addChild(badge2);
+    let icon2 = null;
+    let iconIsArt = false;
+    let size = 0;
+    let hovered = false;
+    let faceScale = 1;
+    let ringing = false;
+    let ringT = 0;
+    const layoutIcon = () => {
+      if (!icon2 || size <= 0) return;
+      icon2.anchor?.set?.(0.5, 0);
+      if (iconIsArt) {
+        const w = Number(icon2.texture?.width) || 1;
+        const h2 = Number(icon2.texture?.height) || 1;
+        const scale = size * ICON_REST_SCALE / Math.max(w, h2);
+        icon2.scale.set(scale);
+        icon2.position.set(size / 2, (size - h2 * scale) / 2);
+      } else {
+        icon2.style.fontSize = Math.round(size * EMOJI_SIZE_RATIO);
+        const textHeight = Number(icon2.height) || size * EMOJI_SIZE_RATIO;
+        icon2.position.set(size / 2, Math.max(0, (size - textHeight) / 2));
+      }
+    };
+    const view = {
+      root: root4,
+      get shown() {
+        return content2.visible !== false;
+      },
+      get usesGameArt() {
+        return iconIsArt;
+      },
+      get hasGameBadge() {
+        return !!badge2;
+      },
+      setShown(shown) {
+        content2.visible = shown;
+      },
+      setSize(next) {
+        if (next === size) return;
+        size = next;
+        face.pivot.set(size / 2, size / 2);
+        face.position.set(size / 2, size / 2);
+        layoutIcon();
+      },
+      refreshArt(current3) {
+        const art = current3.tex?.get?.(BELL_FRAME_KEY);
+        const canUseArt = !!art && typeof current3.ctors?.Sprite === "function";
+        if (icon2 && (iconIsArt || !canUseArt)) return;
+        const next = canUseArt ? new current3.ctors.Sprite(art) : new current3.ctors.Text({ text: BELL_GLYPH, style: { fontSize: DEFAULT_ICON_SIZE } });
+        if (icon2) {
+          try {
+            icon2.destroy();
+          } catch {
+          }
+        }
+        icon2 = next;
+        iconIsArt = canUseArt;
+        icon2.eventMode = "none";
+        face.addChild(icon2);
+        layoutIcon();
+      },
+      setHovered(value) {
+        hovered = value;
+      },
+      press() {
+        faceScale = PRESSED_SCALE;
+        face.scale.set(faceScale);
+      },
+      setRinging(value) {
+        if (ringing === value) return;
+        ringing = value;
+        ringT = 0;
+      },
+      setCount(value) {
+        try {
+          badge2?.setCount(value);
+        } catch {
+        }
+      },
+      animate(dtMs) {
+        const target = hovered ? HOVER_SCALE : 1;
+        if (faceScale !== target) {
+          const ease = 1 - (1 - SCALE_EASE_PER_FRAME) ** (dtMs / FRAME_MS);
+          faceScale += (target - faceScale) * ease;
+          if (Math.abs(target - faceScale) < SCALE_SNAP) faceScale = target;
+          face.scale.set(faceScale);
+        }
+        if (!icon2) return;
+        if (ringing) {
+          ringT += dtMs;
+          icon2.rotation = bellRingAngleAt(ringT % BELL_RING_DURATION_MS / BELL_RING_DURATION_MS);
+        } else if (icon2.rotation !== 0) {
+          icon2.rotation = 0;
+        }
+      }
+    };
+    view.refreshArt(state5);
+    return view;
+  }
+  var BELL_LABEL, BADGE_LABEL, BELL_FRAME_KEY, CHAT_BADGE_LABEL, BADGE_DIAMETER, BADGE_TEXT_OFFSET_Y, DEFAULT_BADGE_OFFSET, ICON_REST_SCALE, HOVER_SCALE, PRESSED_SCALE, SCALE_EASE_PER_FRAME, SCALE_SNAP, FRAME_MS, EMOJI_SIZE_RATIO, DEFAULT_ICON_SIZE;
+  var init_railBellView = __esm({
+    "src/features/notifier/bell/railBellView.ts"() {
+      "use strict";
+      init_stageSearch();
+      init_ring();
+      BELL_LABEL = "GeminiNotificationBell";
+      BADGE_LABEL = "GeminiNotificationBellBadge";
+      BELL_FRAME_KEY = "sprite/ui/NotifierBellOn";
+      CHAT_BADGE_LABEL = "RightSideRailChatBadge";
+      BADGE_DIAMETER = 25;
+      BADGE_TEXT_OFFSET_Y = -1;
+      DEFAULT_BADGE_OFFSET = { x: -10, y: -4 };
+      ICON_REST_SCALE = 0.94;
+      HOVER_SCALE = 1.06;
+      PRESSED_SCALE = 0.94;
+      SCALE_EASE_PER_FRAME = 0.22;
+      SCALE_SNAP = 2e-3;
+      FRAME_MS = 1e3 / 60;
+      EMOJI_SIZE_RATIO = 0.6;
+      DEFAULT_ICON_SIZE = 48;
+    }
+  });
+
+  // src/features/notifier/bell/railSlot.ts
+  function iconSize(icon2) {
+    const stack = [icon2];
+    let visited = 0;
+    while (stack.length && visited++ < FACE_SEARCH_LIMIT) {
+      const n = stack.pop();
+      if (!n || n.label === TOOLTIP_POPUP_LABEL) continue;
+      if (n.label === FACE_LABEL) {
+        const half = Number(n.pivot?.x);
+        if (Number.isFinite(half) && half > 0) return half * 2;
+      }
+      if (Array.isArray(n.children)) for (const child of n.children) stack.push(child);
+    }
+    return null;
+  }
+  function smallestStep(values) {
+    const sorted = [...values].sort((a, b) => a - b);
+    let best = null;
+    for (let i = 1; i < sorted.length; i++) {
+      const d = sorted[i] - sorted[i - 1];
+      if (d > 0.5 && (best === null || d < best)) best = d;
+    }
+    return best;
+  }
+  function countDistinct(values) {
+    return new Set(values.map((v) => Math.round(v))).size;
+  }
+  function gridCell(index, columns, step) {
+    if (columns <= 1) return { x: 0, y: index * step };
+    return { x: (columns - 1 - index % columns) * step, y: Math.floor(index / columns) * step };
+  }
+  function computeRailSlot(rail, bell, screenBottom) {
+    const icons = Array.isArray(rail?.children) ? rail.children.filter((c) => c && c !== bell && c.visible !== false) : [];
+    if (icons.length < MIN_ICONS_IN_NORMAL_PLAY) return null;
+    const cells = icons.map((c) => ({ x: Number(c.x) || 0, y: Number(c.y) || 0 }));
+    let size = null;
+    for (const icon2 of icons) {
+      size = iconSize(icon2);
+      if (size !== null) break;
+    }
+    const step = smallestStep([...cells.map((c) => c.x), ...cells.map((c) => c.y)]) ?? (size ?? DEFAULT_ICON_SIZE2) + ICON_GAP;
+    const cellSize = size ?? step - ICON_GAP;
+    const columns = countDistinct(cells.map((c) => c.x));
+    const isTaken = (cell) => cells.some((c) => Math.abs(c.x - cell.x) < step / 2 && Math.abs(c.y - cell.y) < step / 2);
+    let slot = gridCell(icons.length, columns, step);
+    for (let i = 0; i <= icons.length; i++) {
+      const cell = gridCell(i, columns, step);
+      if (!isTaken(cell)) {
+        slot = cell;
+        break;
+      }
+    }
+    if (screenBottom !== null && slot.y + cellSize > screenBottom) {
+      const leftmost = Math.min(...cells.map((c) => c.x));
+      const lowestRowThatFits = Math.floor((screenBottom - cellSize) / step);
+      slot = { x: leftmost - step, y: Math.max(0, lowestRowThatFits * step) };
+    }
+    return { x: slot.x, y: slot.y, size: cellSize };
+  }
+  function isShownOnStage(node) {
+    let cur = node;
+    let hops = 0;
+    while (cur && hops++ < MAX_ANCESTOR_HOPS) {
+      if (cur.visible === false || cur.renderable === false) return false;
+      const alpha = Number(cur.alpha);
+      if (Number.isFinite(alpha) && alpha < SHOWN_MIN_ALPHA) return false;
+      cur = cur.parent;
+    }
+    return true;
+  }
+  var DEFAULT_ICON_SIZE2, ICON_GAP, FACE_LABEL, TOOLTIP_POPUP_LABEL, MIN_ICONS_IN_NORMAL_PLAY, SHOWN_MIN_ALPHA, MAX_ANCESTOR_HOPS, FACE_SEARCH_LIMIT;
+  var init_railSlot = __esm({
+    "src/features/notifier/bell/railSlot.ts"() {
+      "use strict";
+      DEFAULT_ICON_SIZE2 = 48;
+      ICON_GAP = 4;
+      FACE_LABEL = "ContentButtonFace";
+      TOOLTIP_POPUP_LABEL = "TooltipPopup";
+      MIN_ICONS_IN_NORMAL_PLAY = 2;
+      SHOWN_MIN_ALPHA = 0.05;
+      MAX_ANCESTOR_HOPS = 64;
+      FACE_SEARCH_LIMIT = 200;
+    }
+  });
+
   // src/features/notifier/bell/pixiBell.ts
   function startPixiBell(opts) {
     let running = true;
     let rail = null;
-    let bellContainer = null;
-    let bellText = null;
-    let lastSize = DEFAULT_SLOT_SIZE;
-    let wiggleActive = false;
-    let wiggleRafId = null;
-    let wiggleT = 0;
-    let wiggleLastFrameAt = null;
+    let view = null;
+    let slotSize = 0;
+    let layoutKey = "";
+    let count = 0;
+    let ringing = false;
+    let lastFrameAt = null;
     let canvasEl = null;
     let canvasListenersAttached = false;
     let weSetPointerCursor = false;
@@ -20801,36 +21040,38 @@ label.qws-ed-opt { cursor: pointer; }
       findAttempts: 0,
       hasButton: false,
       lastError: null,
-      slotY: null,
+      slot: null,
+      usesGameArt: false,
+      hasGameBadge: false,
       screenScaleX: null,
       screenScaleY: null
     };
     shareGlobal("__MG_NOTIFICATION_BELL_PIXI_DEBUG__", debugState3);
-    const raf2 = pageWindow.requestAnimationFrame.bind(pageWindow);
-    const cancelRaf = pageWindow.cancelAnimationFrame.bind(pageWindow);
-    const forgetButtonRefs = () => {
-      bellContainer = null;
-      bellText = null;
+    const now = () => pageWindow.performance?.now?.() ?? Date.now();
+    const forgetView = () => {
+      view = null;
+      slotSize = 0;
+      layoutKey = "";
       debugState3.hasButton = false;
+      debugState3.usesGameArt = false;
+      debugState3.hasGameBadge = false;
     };
-    const removeButton = () => {
-      if (bellContainer) {
+    const removeView = () => {
+      if (view) {
         try {
-          bellContainer.destroy({ children: true });
+          view.root.onRender = null;
+        } catch {
+        }
+        try {
+          view.root.destroy({ children: true });
         } catch {
         }
       }
-      forgetButtonRefs();
-    };
-    const onClick = () => {
-      try {
-        opts.onClick();
-      } catch (error) {
-        console.error("[PixiBell] onClick error:", error);
-      }
+      forgetView();
     };
     const computeScreenRect = () => {
-      if (!bellContainer || bellContainer.destroyed) return null;
+      const root4 = view?.root;
+      if (!view || !root4 || root4.destroyed || !view.shown || slotSize <= 0 || !isShownOnStage(root4)) return null;
       const state5 = getReadySpriteState();
       const canvas = state5?.renderer?.canvas || state5?.renderer?.view?.canvas || state5?.renderer?.view;
       if (!canvas) return null;
@@ -20843,8 +21084,8 @@ label.qws-ed-opt { cursor: pointer; }
         const scaleY = stageHeight > 0 ? rect.height / stageHeight : 1;
         debugState3.screenScaleX = scaleX;
         debugState3.screenScaleY = scaleY;
-        const topLeft = bellContainer.toGlobal({ x: 0, y: 0 });
-        const bottomRight = bellContainer.toGlobal({ x: lastSize, y: lastSize });
+        const topLeft = root4.toGlobal({ x: 0, y: 0 });
+        const bottomRight = root4.toGlobal({ x: slotSize, y: slotSize });
         return {
           left: rect.left + topLeft.x * scaleX,
           top: rect.top + topLeft.y * scaleY,
@@ -20857,35 +21098,31 @@ label.qws-ed-opt { cursor: pointer; }
         return null;
       }
     };
-    const hitTestButton = (clientX, clientY) => {
+    const hitTestBell = (clientX, clientY) => {
       const rect = computeScreenRect();
       if (!rect) return false;
       return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
     };
     const onWindowPointerDownCapture = (ev) => {
-      if (!hitTestButton(ev.clientX, ev.clientY)) return;
+      if (!hitTestBell(ev.clientX, ev.clientY)) return;
       ev.stopPropagation();
       ev.stopImmediatePropagation();
       ev.preventDefault();
-      onClick();
-    };
-    const onCanvasPointerMove = (ev) => {
-      if (!canvasEl) return;
-      const isHovering = hitTestButton(ev.clientX, ev.clientY);
-      if (isHovering && !weSetPointerCursor) {
-        canvasEl.style.cursor = "pointer";
-        weSetPointerCursor = true;
-      } else if (!isHovering && weSetPointerCursor) {
-        canvasEl.style.cursor = "";
-        weSetPointerCursor = false;
+      view?.press();
+      try {
+        opts.onClick();
+      } catch (error) {
+        console.error("[PixiBell] onClick error:", error);
       }
     };
-    const onCanvasPointerLeave = () => {
-      if (weSetPointerCursor && canvasEl) {
-        canvasEl.style.cursor = "";
-        weSetPointerCursor = false;
-      }
+    const setHovered = (hovered) => {
+      view?.setHovered(hovered);
+      if (!canvasEl || hovered === weSetPointerCursor) return;
+      canvasEl.style.cursor = hovered ? "pointer" : "";
+      weSetPointerCursor = hovered;
     };
+    const onCanvasPointerMove = (ev) => setHovered(hitTestBell(ev.clientX, ev.clientY));
+    const onCanvasPointerLeave = () => setHovered(false);
     const ensureCanvasListeners = (state5) => {
       if (canvasListenersAttached) return;
       const canvas = state5.renderer?.canvas || state5.renderer?.view?.canvas || state5.renderer?.view;
@@ -20896,90 +21133,71 @@ label.qws-ed-opt { cursor: pointer; }
       canvas.addEventListener("pointerleave", onCanvasPointerLeave);
       canvasListenersAttached = true;
     };
-    const findChatSlot = () => {
-      if (!Array.isArray(rail?.children)) return null;
-      for (const child of rail.children) {
-        if (child === bellContainer) continue;
-        if (findByLabel(child, CHAT_SLOT_MARKER_LABEL)) return child;
-      }
-      return null;
-    };
-    const railLocalScreenBounds = () => {
-      const state5 = getReadySpriteState();
-      const screenHeight = Number(state5?.renderer?.screen?.height);
+    const screenBottomInRail = () => {
+      const screenHeight = Number(getReadySpriteState()?.renderer?.screen?.height);
       if (!Number.isFinite(screenHeight) || screenHeight <= 0) return null;
       try {
-        const top = rail.toLocal({ x: 0, y: 0 }).y;
-        const bottom = rail.toLocal({ x: 0, y: screenHeight }).y;
-        return { top, bottom };
+        return rail.toLocal({ x: 0, y: screenHeight }).y - (Number(rail.pivot?.y) || 0);
       } catch {
         return null;
       }
     };
-    const computeSlot = () => {
-      const siblings = Array.isArray(rail?.children) ? rail.children.filter((c) => c !== bellContainer) : [];
-      let size = DEFAULT_SLOT_SIZE;
-      const railWidth = Number(rail?.width);
-      if (Number.isFinite(railWidth) && railWidth > 0) size = railWidth;
-      const ys = siblings.map((c) => Number(c?.y) || 0).sort((a, b) => a - b);
-      let spacing = DEFAULT_SLOT_SPACING;
-      if (ys.length >= 2) {
-        const diffs = [];
-        for (let i = 1; i < ys.length; i++) diffs.push(ys[i] - ys[i - 1]);
-        diffs.sort((a, b) => a - b);
-        const median2 = diffs[Math.floor(diffs.length / 2)];
-        if (Number.isFinite(median2) && median2 > 0) spacing = median2;
+    const relayout = () => {
+      if (!rail || !view) return;
+      const bottom = screenBottomInRail();
+      let key2 = bottom === null ? "|" : `${Math.round(bottom)}|`;
+      for (const child of rail.children) {
+        if (child === view.root) continue;
+        key2 += child.visible === false ? "-;" : `${child.x},${child.y};`;
       }
-      const isSlotOccupied = (y) => ys.some((siblingY) => Math.abs(siblingY - y) < spacing * SLOT_OCCUPIED_TOLERANCE_RATIO);
-      const chatSlot = findChatSlot();
-      const anchorY = chatSlot ? Number(chatSlot.y) || 0 : ys.length ? ys[ys.length - 1] : -spacing;
-      let nextY = anchorY + spacing;
-      for (let step = 0; step < MAX_SLOT_SEARCH_STEPS && isSlotOccupied(nextY); step++) {
-        nextY += spacing;
-      }
-      const bounds = railLocalScreenBounds();
-      if (bounds && nextY + size > bounds.bottom) {
-        const aboveTopmost = (ys.length ? ys[0] : nextY) - spacing;
-        nextY = aboveTopmost >= bounds.top ? aboveTopmost : Math.max(bounds.top, bounds.bottom - size);
-      }
-      return { size, nextY };
+      if (key2 === layoutKey) return;
+      layoutKey = key2;
+      const slot = computeRailSlot(rail, view.root, bottom);
+      debugState3.slot = slot;
+      view.setShown(slot !== null);
+      if (!slot) return;
+      view.root.position.set(slot.x, slot.y);
+      slotSize = slot.size;
+      view.setSize(slot.size);
     };
-    const syncGeometry = () => {
-      const { size, nextY } = computeSlot();
-      lastSize = size;
-      debugState3.slotY = nextY;
-      bellContainer.position.set(0, nextY);
-      if (bellText) {
-        bellText.style.fontSize = Math.round(size * 0.6);
-        if (typeof bellText.anchor?.set === "function") bellText.anchor.set(0.5, 0);
-        const textHeight = Number(bellText.height) || size * 0.6;
-        bellText.position.set(size / 2, Math.max(0, (size - textHeight) / 2));
+    const onFrame2 = () => {
+      if (!running || !view) return;
+      try {
+        relayout();
+        const t = now();
+        view.animate(lastFrameAt === null ? 0 : Math.min(t - lastFrameAt, MAX_FRAME_DT_MS));
+        lastFrameAt = t;
+      } catch (error) {
+        debugState3.lastError = String(error?.message ?? error);
       }
     };
     const syncUnsafe = () => {
       if (!running || !rail || rail.destroyed) {
-        removeButton();
+        removeView();
         return;
       }
       const state5 = getReadySpriteState();
       if (!state5?.ctors?.Text) return;
-      if (!bellContainer) {
-        const ContainerCtor = state5.ctors.Container ?? rail.constructor;
-        bellContainer = new ContainerCtor();
-        bellContainer.label = "GeminiNotificationBell";
-        const thisContainer = bellContainer;
-        thisContainer.once("destroyed", () => {
-          if (bellContainer === thisContainer) forgetButtonRefs();
+      if (!view) {
+        const made = createRailBellView(state5, rail, count);
+        made.setRinging(ringing);
+        made.root.once("destroyed", () => {
+          if (view === made) forgetView();
         });
-        rail.addChild(bellContainer);
+        view = made;
       }
-      if (!bellText) {
-        bellText = new state5.ctors.Text({ text: BELL_GLYPH, style: { fontSize: DEFAULT_SLOT_SIZE } });
-        bellContainer.addChild(bellText);
+      if (view.root.parent !== rail) {
+        rail.addChildAt(view.root, 0);
+        view.root.onRender = null;
+        view.root.onRender = onFrame2;
+        layoutKey = "";
       }
+      view.refreshArt(state5);
       ensureCanvasListeners(state5);
-      syncGeometry();
+      relayout();
       debugState3.hasButton = true;
+      debugState3.usesGameArt = view.usesGameArt;
+      debugState3.hasGameBadge = view.hasGameBadge;
     };
     const sync2 = () => {
       try {
@@ -20989,26 +21207,23 @@ label.qws-ed-opt { cursor: pointer; }
         debugState3.lastError = String(error?.message ?? error);
         console.warn("[PixiBell] sync failed, clearing button", error);
         try {
-          removeButton();
+          removeView();
         } catch {
         }
       }
     };
-    const onRailChildrenChanged = () => sync2();
     const railSearch = watchStageNode({
       label: RAIL_LABEL,
       logTag: "[PixiBell]",
       onFound(node) {
         rail = node;
-        rail.on("childAdded", onRailChildrenChanged);
-        rail.on("childRemoved", onRailChildrenChanged);
         debugState3.attached = true;
         sync2();
       },
       onLost() {
         rail = null;
         debugState3.attached = false;
-        removeButton();
+        removeView();
       },
       onSearch(attempts) {
         debugState3.findAttempts = attempts;
@@ -21027,7 +21242,7 @@ label.qws-ed-opt { cursor: pointer; }
       }
       return false;
     };
-    const periodicRailMaintenance = () => {
+    const periodicMaintenance = () => {
       if (!running || !rail || rail.destroyed) return;
       if (!isReachableFromLiveStage(rail)) {
         console.warn("[PixiBell] rail orphaned from the live stage (no destroyed event fired), resetting");
@@ -21036,34 +21251,12 @@ label.qws-ed-opt { cursor: pointer; }
       }
       sync2();
     };
-    const maintenanceIntervalId = pageWindow.setInterval(periodicRailMaintenance, RAIL_REACHABILITY_CHECK_MS);
+    const maintenanceIntervalId = pageWindow.setInterval(periodicMaintenance, MAINTENANCE_MS);
     const onWindowResize = () => {
       if (!running || !rail || rail.destroyed) return;
       sync2();
     };
     pageWindow.addEventListener("resize", onWindowResize);
-    const stopWiggleAnimation = () => {
-      if (wiggleRafId != null) {
-        cancelRaf(wiggleRafId);
-        wiggleRafId = null;
-      }
-      wiggleLastFrameAt = null;
-      if (bellText && !bellText.destroyed) bellText.rotation = 0;
-    };
-    const wiggleTick = (time) => {
-      wiggleRafId = null;
-      if (!wiggleActive || !bellText || bellText.destroyed) {
-        stopWiggleAnimation();
-        return;
-      }
-      if (wiggleLastFrameAt == null) wiggleLastFrameAt = time;
-      const dt = time - wiggleLastFrameAt;
-      wiggleLastFrameAt = time;
-      wiggleT += dt;
-      const cycleOffset = wiggleT % BELL_RING_DURATION_MS / BELL_RING_DURATION_MS;
-      bellText.rotation = bellRingAngleAt(cycleOffset);
-      wiggleRafId = raf2(wiggleTick);
-    };
     return {
       stop() {
         if (!running) return;
@@ -21071,14 +21264,6 @@ label.qws-ed-opt { cursor: pointer; }
         railSearch.stop();
         pageWindow.clearInterval(maintenanceIntervalId);
         pageWindow.removeEventListener("resize", onWindowResize);
-        stopWiggleAnimation();
-        if (rail) {
-          try {
-            rail.off("childAdded", onRailChildrenChanged);
-            rail.off("childRemoved", onRailChildrenChanged);
-          } catch {
-          }
-        }
         if (canvasListenersAttached) {
           try {
             pageWindow.removeEventListener("pointerdown", onWindowPointerDownCapture, true);
@@ -21090,41 +21275,38 @@ label.qws-ed-opt { cursor: pointer; }
           } catch {
           }
         }
-        removeButton();
+        removeView();
         rail = null;
       },
       getScreenRect() {
         return computeScreenRect();
       },
       setWiggle(active3) {
-        if (wiggleActive === active3) return;
-        wiggleActive = active3;
-        if (active3) {
-          wiggleT = 0;
-          wiggleLastFrameAt = null;
-          if (wiggleRafId == null) wiggleRafId = raf2(wiggleTick);
-        } else {
-          stopWiggleAnimation();
-        }
+        ringing = active3;
+        view?.setRinging(active3);
+      },
+      setCount(value) {
+        count = value;
+        view?.setCount(value);
+      },
+      drawsOwnBadge() {
+        return !!view?.hasGameBadge;
       }
     };
   }
-  var RAIL_LABEL, RAIL_REACHABILITY_CHECK_MS, RAIL_REACHABILITY_MAX_HOPS, CHAT_SLOT_MARKER_LABEL, DEFAULT_SLOT_SIZE, DEFAULT_SLOT_SPACING, SLOT_OCCUPIED_TOLERANCE_RATIO, MAX_SLOT_SEARCH_STEPS;
+  var RAIL_LABEL, MAINTENANCE_MS, RAIL_REACHABILITY_MAX_HOPS, MAX_FRAME_DT_MS;
   var init_pixiBell = __esm({
     "src/features/notifier/bell/pixiBell.ts"() {
       "use strict";
       init_stageSearch();
       init_context();
       init_pageContext();
-      init_ring();
+      init_railBellView();
+      init_railSlot();
       RAIL_LABEL = "RightSideRail";
-      RAIL_REACHABILITY_CHECK_MS = 2e3;
+      MAINTENANCE_MS = 2e3;
       RAIL_REACHABILITY_MAX_HOPS = 64;
-      CHAT_SLOT_MARKER_LABEL = "RightSideRailChatBadge";
-      DEFAULT_SLOT_SIZE = 45;
-      DEFAULT_SLOT_SPACING = 52;
-      SLOT_OCCUPIED_TOLERANCE_RATIO = 0.5;
-      MAX_SLOT_SEARCH_STEPS = 20;
+      MAX_FRAME_DT_MS = 100;
     }
   });
 
@@ -21278,6 +21460,11 @@ label.qws-ed-opt { cursor: pointer; }
           duration: BELL_RING_DURATION_MS,
           iterations: Infinity
         });
+      },
+      setCount() {
+      },
+      drawsOwnBadge() {
+        return false;
       }
     };
   }
@@ -21304,6 +21491,21 @@ label.qws-ed-opt { cursor: pointer; }
         transform: `rotate(${deg}deg)`,
         offset
       }));
+    }
+  });
+
+  // src/features/notifier/bell/panelPlacement.ts
+  function panelPositionBeside(bell, panel, viewport) {
+    const onRightHalf = bell.left + bell.width / 2 > viewport.width / 2;
+    const left = onRightHalf ? bell.left - PANEL_GAP2 - panel.width : bell.right + PANEL_GAP2;
+    return clampToViewport({ left, top: bell.top }, panel, PANEL_GAP2, viewport);
+  }
+  var PANEL_GAP2;
+  var init_panelPlacement = __esm({
+    "src/features/notifier/bell/panelPlacement.ts"() {
+      "use strict";
+      init_floating();
+      PANEL_GAP2 = 8;
     }
   });
 
@@ -22840,6 +23042,7 @@ label.qws-ed-opt { cursor: pointer; }
       init_audio();
       init_pixiBell();
       init_floatingBell();
+      init_panelPlacement();
       init_buyPanel();
       init_notifier();
       init_shopAlerts();
@@ -22871,8 +23074,8 @@ label.qws-ed-opt { cursor: pointer; }
         show(items) {
           this.items = items;
           setMenuBadge("alerts", items.length);
+          this.bell?.setCount(items.length);
           this.badge.textContent = items.length ? String(items.length) : "";
-          this.badge.style.display = items.length ? "inline-flex" : "none";
           this.placeBadge();
           if (this.panel.isOpen) this.panel.render(items);
           this.updateWiggle();
@@ -22883,6 +23086,7 @@ label.qws-ed-opt { cursor: pointer; }
           const onClick = () => void this.toggleBell();
           const floating = isFloatingBellEnabled();
           this.bell = floating ? startFloatingBell({ onClick, onMoved: () => this.reposition() }) : startPixiBell({ onClick });
+          this.bell.setCount(this.items.length);
           this.slot.style.zIndex = String(floating ? BELL_WIDGET_Z_INDEX + 1 : SLOT_Z_INDEX);
           this.reposition();
           this.updateWiggle();
@@ -22898,8 +23102,8 @@ label.qws-ed-opt { cursor: pointer; }
           const open = !this.panel.isOpen;
           this.panel.setOpen(open);
           if (open) {
-            this.placePanel();
             this.panel.render(this.items);
+            this.placePanel();
             this.placeBadge();
           }
           this.updateWiggle();
@@ -22917,17 +23121,26 @@ label.qws-ed-opt { cursor: pointer; }
           this.placeBadge();
           if (this.panel.isOpen) this.placePanel();
         }
+        /** Shown only for a bell that does not draw its count, and only while that bell is on screen. */
         placeBadge() {
-          const rect = this.bell?.getScreenRect();
-          if (!rect) return;
+          const rect = this.bell?.getScreenRect() ?? null;
+          const shown = this.items.length > 0 && rect !== null && !this.bell?.drawsOwnBadge();
+          this.badge.style.display = shown ? "inline-flex" : "none";
+          if (!shown || !rect) return;
           this.badge.style.top = `${rect.top - 4}px`;
           this.badge.style.right = `${window.innerWidth - rect.right - 4}px`;
         }
         placePanel() {
           const rect = this.bell?.getScreenRect();
           if (!rect) return;
-          this.panel.el.style.top = `${rect.bottom + 8}px`;
-          this.panel.el.style.right = `${window.innerWidth - rect.right}px`;
+          const el4 = this.panel.el;
+          const pos = panelPositionBeside(
+            rect,
+            { width: el4.offsetWidth, height: el4.offsetHeight },
+            { width: window.innerWidth, height: window.innerHeight }
+          );
+          el4.style.left = `${Math.round(pos.left)}px`;
+          el4.style.top = `${Math.round(pos.top)}px`;
         }
         /** The bell rings while items wait and the panel is closed. */
         updateWiggle() {
@@ -26289,7 +26502,7 @@ label.qws-ed-opt { cursor: pointer; }
     const scaleAnimationTick = () => {
       scaleRafId = null;
       if (!buttonContainer || buttonContainer.destroyed) return;
-      const target = hovering ? HOVER_SCALE : 1;
+      const target = hovering ? HOVER_SCALE2 : 1;
       currentScale += (target - currentScale) * HOVER_SCALE_EASE;
       if (Math.abs(target - currentScale) < HOVER_SCALE_SETTLE_EPSILON) currentScale = target;
       buttonContainer.scale.set(currentScale);
@@ -26506,7 +26719,7 @@ label.qws-ed-opt { cursor: pointer; }
       }
     };
   }
-  var ACTION_HUD_LABEL, BUTTON_FACE_LABEL, SELL_PET_ACTION_TYPES, BUTTON_GAP2, BUTTON_TEXT, BUTTON_TEXT_STYLE, BUTTON_PADDING_X2, BUTTON_RADIUS2, BUTTON_FILL_COLOR, BUTTON_BORDER_COLOR, BUTTON_BORDER_WIDTH, HOVER_SCALE, HOVER_SCALE_EASE, HOVER_SCALE_SETTLE_EPSILON;
+  var ACTION_HUD_LABEL, BUTTON_FACE_LABEL, SELL_PET_ACTION_TYPES, BUTTON_GAP2, BUTTON_TEXT, BUTTON_TEXT_STYLE, BUTTON_PADDING_X2, BUTTON_RADIUS2, BUTTON_FILL_COLOR, BUTTON_BORDER_COLOR, BUTTON_BORDER_WIDTH, HOVER_SCALE2, HOVER_SCALE_EASE, HOVER_SCALE_SETTLE_EPSILON;
   var init_pixiButton = __esm({
     "src/features/sellAllPets/pixiButton.ts"() {
       "use strict";
@@ -26527,7 +26740,7 @@ label.qws-ed-opt { cursor: pointer; }
       BUTTON_FILL_COLOR = 26548;
       BUTTON_BORDER_COLOR = 4763124;
       BUTTON_BORDER_WIDTH = 2;
-      HOVER_SCALE = 1.08;
+      HOVER_SCALE2 = 1.08;
       HOVER_SCALE_EASE = 0.25;
       HOVER_SCALE_SETTLE_EPSILON = 1e-3;
     }

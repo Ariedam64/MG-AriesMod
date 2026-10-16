@@ -97,6 +97,7 @@ const SUITES = {
   gametoasts: ["checkGameToasts", "dom-stub"],
   liveatoms: ["checkLiveAtoms", "dom-stub"],
   stagewatch: ["checkStageWatch", "dom-stub"],
+  notifierbell: ["checkNotifierBell", "dom-stub"],
   visiblerefresh: ["checkVisibleRefresh", "dom-stub"],
   contrast: ["checkContrast"],
   kitstyles: ["checkKitStyles"],

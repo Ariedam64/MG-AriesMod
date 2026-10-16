@@ -208,5 +208,11 @@ export function startFloatingBell(opts: FloatingBellOptions): BellController {
         iterations: Infinity,
       });
     },
+
+    setCount() {},
+
+    drawsOwnBadge(): boolean {
+      return false;
+    },
   };
 }

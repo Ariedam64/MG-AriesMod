@@ -3,15 +3,17 @@ import { setMenuBadge } from "../../ui/kit/menuBadges";
 import { audio } from "./audio/audio";
 import { startPixiBell } from "./bell/pixiBell";
 import { BELL_MODE_EVENT, BELL_WIDGET_Z_INDEX, isFloatingBellEnabled, startFloatingBell } from "./bell/floatingBell";
+import { panelPositionBeside } from "./bell/panelPlacement";
 import type { BellController } from "./bell/ring";
 import { BuyPanel } from "./buyPanel";
 import { NotifierService } from "./notifier";
 import { ShopAlerts, type AvailableItem } from "./shopAlerts";
 
 /**
- * The notification bell with its count badge and its buy panel. The bell
- * sits in the game's icon rail, or floats when the player prefers; the badge
- * and the panel are DOM, glued to wherever the bell is.
+ * The notification bell with its count and its buy panel. The bell sits in
+ * the game's icon rail, or floats when the player prefers. The rail's bell
+ * draws its count like the game's own badges; otherwise the count is a DOM
+ * badge, and the panel is always DOM, glued to wherever the bell is.
  */
 
 // The Pixi bell can move after the fact (window resize, rail re-layout,
@@ -55,8 +57,8 @@ class Overlay {
   private show(items: AvailableItem[]): void {
     this.items = items;
     setMenuBadge("alerts", items.length);
+    this.bell?.setCount(items.length);
     this.badge.textContent = items.length ? String(items.length) : "";
-    this.badge.style.display = items.length ? "inline-flex" : "none";
     this.placeBadge();
     if (this.panel.isOpen) this.panel.render(items);
     this.updateWiggle();
@@ -70,6 +72,7 @@ class Overlay {
     this.bell = floating
       ? startFloatingBell({ onClick, onMoved: () => this.reposition() })
       : startPixiBell({ onClick });
+    this.bell.setCount(this.items.length);
     // The floating widget would hide the badge: lift the slot just above it.
     this.slot.style.zIndex = String(floating ? BELL_WIDGET_Z_INDEX + 1 : SLOT_Z_INDEX);
     this.reposition();
@@ -88,8 +91,9 @@ class Overlay {
     const open = !this.panel.isOpen;
     this.panel.setOpen(open);
     if (open) {
-      this.placePanel();
+      // Rendered first: where the panel fits depends on its height.
       this.panel.render(this.items);
+      this.placePanel();
       this.placeBadge();
     }
     this.updateWiggle();
@@ -111,9 +115,12 @@ class Overlay {
     if (this.panel.isOpen) this.placePanel();
   }
 
+  /** Shown only for a bell that does not draw its count, and only while that bell is on screen. */
   private placeBadge(): void {
-    const rect = this.bell?.getScreenRect();
-    if (!rect) return;
+    const rect = this.bell?.getScreenRect() ?? null;
+    const shown = this.items.length > 0 && rect !== null && !this.bell?.drawsOwnBadge();
+    this.badge.style.display = shown ? "inline-flex" : "none";
+    if (!shown || !rect) return;
     this.badge.style.top = `${rect.top - 4}px`;
     this.badge.style.right = `${window.innerWidth - rect.right - 4}px`;
   }
@@ -121,8 +128,14 @@ class Overlay {
   private placePanel(): void {
     const rect = this.bell?.getScreenRect();
     if (!rect) return;
-    this.panel.el.style.top = `${rect.bottom + 8}px`;
-    this.panel.el.style.right = `${window.innerWidth - rect.right}px`;
+    const el = this.panel.el;
+    const pos = panelPositionBeside(
+      rect,
+      { width: el.offsetWidth, height: el.offsetHeight },
+      { width: window.innerWidth, height: window.innerHeight },
+    );
+    el.style.left = `${Math.round(pos.left)}px`;
+    el.style.top = `${Math.round(pos.top)}px`;
   }
 
   /** The bell rings while items wait and the panel is closed. */

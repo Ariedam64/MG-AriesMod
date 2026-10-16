@@ -18,6 +18,10 @@ export interface BellController {
   /** The bell's on-screen box in page (client) coordinates, or null while it is not drawn. */
   getScreenRect(): ScreenRect | null;
   setWiggle(active: boolean): void;
+  /** How many items wait, for a bell that shows the count itself. */
+  setCount(count: number): void;
+  /** Whether the bell shows the count itself; otherwise the overlay puts a DOM badge on it. */
+  drawsOwnBadge(): boolean;
 }
 
 /**
