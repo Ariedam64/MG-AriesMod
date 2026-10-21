@@ -73,6 +73,7 @@ const SUITES = {
   discordframes: ["checkDiscordFrames"],
   menutabs: ["checkMenuTabs", "dom-stub"],
   lib: ["checkLib"],
+  bootdom: ["checkBootDom"],
   environment: ["checkEnvironment"],
   storagesections: ["checkStorageSections"],
   cataloglive: ["checkCatalogLive", "dom-stub"],

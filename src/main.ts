@@ -44,6 +44,7 @@ import { showAutoRecoDisabledNoticeOnce } from "./features/autoReco/disabledNoti
 import { showRoomPrivacyNoticeOnce } from "./features/room/privacyNotice";
 import { showChangelogNoticeOnce } from "./features/changelog/notice";
 import { tos } from "./game/pixi/tileObjects";
+import { whenBodyReady } from "./lib/dom";
 
 // The standalone Community Hub owns the rest of the mod's API. Only the
 // sign-in bridge and the collect-state heartbeat stay here.
@@ -112,9 +113,6 @@ import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/play
   // For diagnosis from the console: window.Companion.start() / .listNpcs() / .say()
   shareGlobal("Companion", CompanionService);
 
-  // One-time notice: auto-reconnect temporarily disabled at devs' request.
-  showAutoRecoDisabledNoticeOnce();
-
   const antiAfk = createAntiAfkController({
     getPosition: () => PlayerService.getPosition(),
     pingPosition: (x, y) => PlayerService.pingPosition(x, y),
@@ -126,11 +124,16 @@ import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/play
   // a page global and the standalone Community Hub stands down when both run.
   startPlayerStateReportingWhenGameReady();
 
-  // One-time notice: rooms are public by default so other mod users can find
-  // them, install MG Community Hub for a privacy toggle.
-  showRoomPrivacyNoticeOnce();
-
-  // One-time notice: release notes for the version just installed, resets
-  // automatically on the next version bump.
-  void showChangelogNoticeOnce();
+  // The one-time notices go into the body, which may not be parsed yet at
+  // document-start. Called before it exists, each would give up for good.
+  whenBodyReady(() => {
+    // Auto-reconnect temporarily disabled at devs' request.
+    showAutoRecoDisabledNoticeOnce();
+    // Rooms are public by default so other mod users can find them, install
+    // MG Community Hub for a privacy toggle.
+    showRoomPrivacyNoticeOnce();
+    // Release notes for the version just installed, resets automatically on
+    // the next version bump.
+    void showChangelogNoticeOnce();
+  });
 })();

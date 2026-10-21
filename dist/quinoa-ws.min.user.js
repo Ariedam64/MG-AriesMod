@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      4.0.3
+// @version      4.0.4
 // @include      /^https:\/\/1227719606223765687\.discordsays\.com\/.*[?&]mc_shell_frame=1(&|#|$)/
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -1490,6 +1490,10 @@
     style.textContent = css;
     document.head.appendChild(style);
     return style;
+  }
+  function whenBodyReady(fn) {
+    if (document.body) fn();
+    else document.addEventListener("DOMContentLoaded", () => fn(), { once: true });
   }
   function onSubtreeChange(target, onChange) {
     let queued = false;
@@ -14944,7 +14948,7 @@ label.qws-ed-opt { cursor: pointer; }
   // src/platform/modVersion.ts
   function getLocalVersion() {
     if (true) {
-      return "4.0.3";
+      return "4.0.4";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -25752,8 +25756,7 @@ label.qws-ed-opt { cursor: pointer; }
       ensureWidget();
       syncVisibility();
     };
-    if (document.body) mount();
-    else document.addEventListener("DOMContentLoaded", mount, { once: true });
+    whenBodyReady(mount);
     window.addEventListener("resize", () => {
       if (widget && isWidgetVisible() && positioned) clampIntoViewport();
     });
@@ -26073,6 +26076,7 @@ label.qws-ed-opt { cursor: pointer; }
     "src/features/pets/feedWidget.ts"() {
       "use strict";
       init_api();
+      init_dom();
       init_atoms();
       init_iconCache();
       init_storage();
@@ -26760,8 +26764,7 @@ label.qws-ed-opt { cursor: pointer; }
         console.error("[Aries] shop bell failed to mount:", error);
       }
     };
-    if (document.head) void mountShopBell();
-    else document.addEventListener("DOMContentLoaded", () => void mountShopBell(), { once: true });
+    whenBodyReady(() => void mountShopBell());
     void (async () => {
       try {
         await PetAlertService.start();
@@ -26817,6 +26820,7 @@ label.qws-ed-opt { cursor: pointer; }
       init_keybind2();
       init_pixiButton();
       init_shops();
+      init_dom();
     }
   });
 
@@ -50093,6 +50097,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       init_privacyNotice();
       init_notice();
       init_tileObjects();
+      init_dom();
       init_authBridge();
       init_playerStateReport();
       (async function() {
@@ -50140,15 +50145,17 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
         startCompanion();
         mountCompanionAsk();
         shareGlobal("Companion", CompanionService);
-        showAutoRecoDisabledNoticeOnce();
         const antiAfk = createAntiAfkController({
           getPosition: () => PlayerService.getPosition(),
           pingPosition: (x, y) => PlayerService.pingPosition(x, y)
         });
         antiAfk.start();
         startPlayerStateReportingWhenGameReady();
-        showRoomPrivacyNoticeOnce();
-        void showChangelogNoticeOnce();
+        whenBodyReady(() => {
+          showAutoRecoDisabledNoticeOnce();
+          showRoomPrivacyNoticeOnce();
+          void showChangelogNoticeOnce();
+        });
       })();
     }
   });

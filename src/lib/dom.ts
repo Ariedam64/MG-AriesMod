@@ -7,6 +7,16 @@ export function addStyle(css: string): HTMLStyleElement {
 }
 
 /**
+ * Runs `fn` once `document.body` exists: now if it does, else when the page
+ * is parsed. The mod starts at document-start, when the head can already be
+ * there while the body is not, so a head check is no substitute.
+ */
+export function whenBodyReady(fn: () => void): void {
+  if (document.body) fn();
+  else document.addEventListener("DOMContentLoaded", () => fn(), { once: true });
+}
+
+/**
  * Calls `onChange` after nodes are added or removed anywhere under `target`,
  * at most once per animation frame however many batches of changes arrive
  * in between. Returns a function that stops watching.

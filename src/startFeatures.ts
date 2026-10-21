@@ -19,6 +19,7 @@ import { installPetTeamHotkeys } from "./features/pets/teamHotkeys";
 import { installSellKeybindsOnce } from "./features/sellAllPets/keybind";
 import { startSellAllPetsPixi } from "./features/sellAllPets/pixiButton";
 import { installShopKeybindsOnce } from "./features/shops/shops";
+import { whenBodyReady } from "./lib/dom";
 
 export function startFeatures(): void {
   installShopKeybindsOnce();
@@ -34,8 +35,8 @@ export function startFeatures(): void {
       console.error("[Aries] shop bell failed to mount:", error);
     }
   };
-  if (document.head) void mountShopBell();
-  else document.addEventListener("DOMContentLoaded", () => void mountShopBell(), { once: true });
+  // The bell's overlay goes into the body, which may not exist yet at document-start.
+  whenBodyReady(() => void mountShopBell());
 
   void (async () => {
     try { await PetAlertService.start(); } catch {}

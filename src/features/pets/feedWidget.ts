@@ -4,6 +4,7 @@
 // overlay element and never touches the game's UI tree.
 
 import { Store } from "../../game/store/api";
+import { whenBodyReady } from "../../lib/dom";
 import { Atoms } from "../../game/store/atoms";
 import {
   attachSpriteIcon,
@@ -70,8 +71,7 @@ export function startInstantFeedWidget(): void {
     ensureWidget();
     syncVisibility();
   };
-  if (document.body) mount();
-  else document.addEventListener("DOMContentLoaded", mount, { once: true });
+  whenBodyReady(mount);
 
   window.addEventListener("resize", () => {
     if (widget && isWidgetVisible() && positioned) clampIntoViewport();
