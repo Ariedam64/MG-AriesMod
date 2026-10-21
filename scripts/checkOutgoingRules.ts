@@ -19,6 +19,7 @@ import { buildQuinoaMessage, resetCommandSequence, seedCommandSequence } from ".
 import { installStatsCounters } from "../src/features/stats/outgoingCounters";
 import { StatsService } from "../src/features/stats/stats";
 import { installLockerOutgoingRules } from "../src/features/locker/outgoingRules";
+import { lockerRestrictionsService } from "../src/features/locker/restrictions";
 
 // Rules run in order, a replacement is passed on, the first drop ends the chain.
 const seen: string[] = [];
@@ -64,5 +65,18 @@ checkEqual("a malformed harvest is not counted", harvested() - before, 1);
 interceptOutgoing("HarvestCrop", () => "drop");
 runOutgoing({ type: "HarvestCrop", slot: 12, slotsIndex: 1 });
 checkEqual("a blocked harvest is not counted", harvested() - before, 1);
+
+// Decor pickup lock: lights and wind chimes sit on tile edges and the game
+// picks them up with PickupEdgeDecor, not PickupDecor.
+lockerRestrictionsService.setDecorPickupLocked(true);
+checkEqual("a locked decor pickup is dropped", runOutgoing({ type: "PickupDecor", tileType: "Dirt", localTileIndex: 3 }), null);
+checkEqual(
+  "a locked edge decor pickup is dropped",
+  runOutgoing({ type: "PickupEdgeDecor", part: "fence", edge: { x: 1, y: 2, axis: "h" }, side: "up" }),
+  null,
+);
+lockerRestrictionsService.setDecorPickupLocked(false);
+const edgePickup = { type: "PickupEdgeDecor", part: "fence", edge: { x: 1, y: 2, axis: "h" }, side: "up" };
+checkEqual("an edge decor pickup goes out when unlocked", runOutgoing(edgePickup), edgePickup);
 
 done();

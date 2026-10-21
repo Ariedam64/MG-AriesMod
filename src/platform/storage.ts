@@ -12,9 +12,15 @@ export type { AriesStorage } from "./storageShape";
  * sections (`pets`, `locker`, `misc`, ...) and addressed by dotted paths such
  * as `misc.ghostMode`. A few values (the API key, notices already seen) live
  * in GM storage instead, which the website and the Discord activity share.
+ *
+ * The blob is also mirrored into GM storage. A browser set to clear site data
+ * on close, or a cleaner extension, empties localStorage on every restart and
+ * took every setting, the hatch history and the stats with it. The manager's
+ * own storage survives that, so an empty localStorage is refilled from it.
  */
 
 const ARIES_STORAGE_KEY = "aries_mod";
+const ARIES_MIRROR_KEY = "aries_mod_mirror";
 const API_KEY_STORAGE_KEY = "aries_api_key";
 const SEEN_ROOM_PRIVACY_NOTICE_KEY = "aries_seen_room_privacy_notice_v2";
 const SEEN_AUTO_RECO_DISABLED_NOTICE_KEY = "aries_seen_autoreco_disabled_notice";
@@ -25,11 +31,16 @@ const SEEN_CHANGELOG_VERSION_KEY = "aries_seen_changelog_version";
 // main thread on every stat increment, visible as freezes while buying or
 // harvesting. The parsed blob is cached and disk writes are batched.
 const FLUSH_DELAY_MS = 500;
+// The blob can weigh megabytes, so the mirror is refreshed at most this often,
+// and always when the page is hidden or closed.
+const MIRROR_INTERVAL_MS = 30_000;
 
 let cached: AriesStorage | null = null;
 let flushTimer: number | null = null;
 let flushPending = false;
 let lifecycleHooksInstalled = false;
+let mirrorPending = false;
+let lastMirrorAt = 0;
 
 function getHostStorage(): Storage | null {
   if (typeof window === "undefined") return null;
@@ -43,10 +54,14 @@ function getHostStorage(): Storage | null {
 function installLifecycleHooksOnce(): void {
   if (lifecycleHooksInstalled || typeof window === "undefined") return;
   lifecycleHooksInstalled = true;
-  window.addEventListener("pagehide", flushNow);
-  window.addEventListener("beforeunload", flushNow);
+  const flushAndMirror = () => {
+    flushNow();
+    mirrorNow();
+  };
+  window.addEventListener("pagehide", flushAndMirror);
+  window.addEventListener("beforeunload", flushAndMirror);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") flushNow();
+    if (document.visibilityState === "hidden") flushAndMirror();
   });
   // Another tab wrote the blob: drop the cache so the next read parses it
   // again. This tab's own writes do not fire `storage` here.
@@ -64,10 +79,32 @@ function flushNow(): void {
   }
   if (!flushPending || !cached) return;
   flushPending = false;
+  mirrorPending = true;
   try {
     getHostStorage()?.setItem(ARIES_STORAGE_KEY, JSON.stringify(cached));
   } catch {
     // Quota or privacy mode: the session keeps its cached copy.
+  }
+  if (Date.now() - lastMirrorAt >= MIRROR_INTERVAL_MS) mirrorNow();
+}
+
+/** Copies the blob into GM storage, when the manager grants it. */
+function mirrorNow(): void {
+  if (!mirrorPending || !cached || typeof GM_setValue !== "function") return;
+  mirrorPending = false;
+  lastMirrorAt = Date.now();
+  try {
+    GM_setValue(ARIES_MIRROR_KEY, JSON.stringify(cached));
+  } catch {}
+}
+
+function readMirror(): string | null {
+  try {
+    if (typeof GM_getValue !== "function") return null;
+    const raw = GM_getValue(ARIES_MIRROR_KEY, null);
+    return typeof raw === "string" && raw ? raw : null;
+  } catch {
+    return null;
   }
 }
 
@@ -75,7 +112,12 @@ function load(): AriesStorage {
   if (cached) return cached;
   installLifecycleHooksOnce();
 
-  const raw = getHostStorage()?.getItem(ARIES_STORAGE_KEY);
+  let raw: string | null = null;
+  try {
+    raw = getHostStorage()?.getItem(ARIES_STORAGE_KEY) ?? null;
+  } catch {}
+  // localStorage was cleared under the mod: take the mirror, and write it back.
+  const restored = !raw && (raw = readMirror()) !== null;
   let parsed: unknown = null;
   if (raw) {
     try {
@@ -83,6 +125,7 @@ function load(): AriesStorage {
     } catch {}
   }
   cached = parsed && typeof parsed === "object" ? normalizeAriesStorage(parsed) : createDefaultAriesStorage();
+  if (restored) persist(cached);
   return cached;
 }
 

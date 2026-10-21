@@ -73,6 +73,29 @@ grip?.dispatchEvent(pointer("pointerdown", 20, 300));
 check("dragging the header moves the panel", dock?.style.left === "300px" && dock?.style.top === "200px" && !!dock?.classList.contains("placed"));
 checkEqual("the dock's place is remembered", readAriesPath("hud.dockPos"), { left: 300, top: 200 });
 
+// Alt is the default "Move windows" modifier. Alt+Tab sends its keydown here
+// and its keyup to the other window, and the blur that would reset it is
+// swallowed by anti-AFK. Back in the game, a plain click inside a menu (on a
+// slider, say) must not be taken for the start of a window drag, which
+// cancels it and leaves the slider stuck.
+pets?.click();
+const win = doc.querySelector(".qws-win");
+const inside = win?.querySelector("div") ?? win;
+window.dispatchEvent(event("keydown", { code: "AltLeft", key: "Alt", altKey: true }));
+let cancelled = false;
+const mouse = (altKey: boolean) =>
+  event("mousedown", {
+    button: 0, clientX: 10, clientY: 10, target: inside, altKey, ctrlKey: false, shiftKey: false, metaKey: false,
+    preventDefault() { cancelled = true; },
+  });
+window.dispatchEvent(mouse(false));
+check("a click without Alt is not a window drag, even after a missed Alt keyup", !!win && !cancelled);
+window.dispatchEvent(mouse(true));
+check("a click with Alt held still drags the window", cancelled);
+window.dispatchEvent(event("mouseup", { clientX: 10, clientY: 10 }));
+window.dispatchEvent(event("keyup", { code: "AltLeft", key: "Alt", altKey: false }));
+pets?.click();
+
 window.dispatchEvent(event("keydown", { code: "Insert", key: "Insert" }));
 window.dispatchEvent(event("keyup", { code: "Insert", key: "Insert" }));
 check("a tap on Insert hides the dock", !!dock?.classList.contains("hidden"));

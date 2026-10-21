@@ -100,9 +100,9 @@ function checkHarvest(message: any) {
   return "drop" as const;
 }
 
-function checkDecorPickup() {
+function checkDecorPickup(message: any) {
   if (!lockerRestrictionsService.isDecorPickupLocked()) return;
-  console.log("[PickupDecor] Blocked by decor picker");
+  console.log(`[${message?.type}] Blocked by decor picker`);
   return "drop" as const;
 }
 
@@ -168,6 +168,8 @@ export function installLockerOutgoingRules(): void {
 
   interceptOutgoing("HarvestCrop", checkHarvest);
   interceptOutgoing("PickupDecor", checkDecorPickup);
+  // Lights, wind chimes and other decor hung on a tile edge.
+  interceptOutgoing("PickupEdgeDecor", checkDecorPickup);
   interceptOutgoing("HatchEgg", checkHatch);
   interceptOutgoing("SellAllCrops", checkSellAllCrops);
 }

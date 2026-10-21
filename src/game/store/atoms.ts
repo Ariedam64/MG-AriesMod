@@ -110,6 +110,14 @@ const mySelectedItemRotation = makeAtom<any>("mySelectedItemRotationAtom");
 export const myCurrentGardenObject = makeAtom<CurrentGardenObject>("myCurrentGardenObjectAtom");
 
 /**
+ * What the player's action button is aimed at: `{ key, subject, actions }`,
+ * where `subject.kind` names it (`plant`, `decor`, `edgeDecor`, ...). Decor
+ * hung on a tile edge, like lights, only shows up here: the garden object
+ * stays whatever sits on the tile itself.
+ */
+const selectedSubjectActions = makeAtom<any>("selectedSubjectActionsAtom");
+
+/**
  * slotId of the selected fruit, NOT its position in `slots[]`.
  *
  * v1169 moved crop selection into `data/tile/cropSelection.ts` and publishes
@@ -181,7 +189,7 @@ export const Atoms = {
   server: { numPlayers, friendBonusMultiplier },
   player: { position, avatarTriggerAnimationAtom, player, action, playerId },
   root: { state, map },
-  data: { myData, garden, gardenTileObjects, myCurrentGardenObject, weather },
+  data: { myData, garden, gardenTileObjects, myCurrentGardenObject, selectedSubjectActions, weather },
   inventory: {
     myInventory,
     myCropInventory,

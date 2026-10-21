@@ -85,8 +85,16 @@ export function mountHUD(opts?: HUDOptions) {
   };
   updateDragState();
 
+  // A mouse event carries the real state of Alt, Ctrl, Shift and Meta. The
+  // keys tracked above can miss a keyup: Alt+Tab sends it to the other window,
+  // and the blur that would reset them is swallowed by anti-AFK. Trusting the
+  // tracking alone left Alt "held", so every click in a menu started a window
+  // drag and was cancelled, which froze sliders.
+  const modifiersMatch = (hk: Hotkey, e: MouseEvent) =>
+    !!hk.alt === e.altKey && !!hk.ctrl === e.ctrlKey && !!hk.shift === e.shiftKey && !!hk.meta === e.metaKey;
+
   const isModifierActive = (e: MouseEvent) => {
-    if (dragHotkey && dragActive) return true;
+    if (dragHotkey && dragActive && modifiersMatch(dragHotkey, e)) return true;
     const insertModifier = insertDown && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey;
     if (insertModifier) insertUsedAsModifier = true;
     return insertModifier;

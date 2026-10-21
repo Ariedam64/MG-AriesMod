@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      4.0.4
+// @version      4.0.5
 // @include      /^https:\/\/1227719606223765687\.discordsays\.com\/.*[?&]mc_shell_frame=1(&|#|$)/
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -2635,10 +2635,14 @@
   function installLifecycleHooksOnce() {
     if (lifecycleHooksInstalled || typeof window === "undefined") return;
     lifecycleHooksInstalled = true;
-    window.addEventListener("pagehide", flushNow);
-    window.addEventListener("beforeunload", flushNow);
+    const flushAndMirror = () => {
+      flushNow();
+      mirrorNow();
+    };
+    window.addEventListener("pagehide", flushAndMirror);
+    window.addEventListener("beforeunload", flushAndMirror);
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") flushNow();
+      if (document.visibilityState === "hidden") flushAndMirror();
     });
     window.addEventListener("storage", (event) => {
       if (event.key !== ARIES_STORAGE_KEY) return;
@@ -2653,15 +2657,40 @@
     }
     if (!flushPending || !cached) return;
     flushPending = false;
+    mirrorPending = true;
     try {
       getHostStorage()?.setItem(ARIES_STORAGE_KEY, JSON.stringify(cached));
     } catch {
+    }
+    if (Date.now() - lastMirrorAt >= MIRROR_INTERVAL_MS) mirrorNow();
+  }
+  function mirrorNow() {
+    if (!mirrorPending || !cached || typeof GM_setValue !== "function") return;
+    mirrorPending = false;
+    lastMirrorAt = Date.now();
+    try {
+      GM_setValue(ARIES_MIRROR_KEY, JSON.stringify(cached));
+    } catch {
+    }
+  }
+  function readMirror() {
+    try {
+      if (typeof GM_getValue !== "function") return null;
+      const raw = GM_getValue(ARIES_MIRROR_KEY, null);
+      return typeof raw === "string" && raw ? raw : null;
+    } catch {
+      return null;
     }
   }
   function load() {
     if (cached) return cached;
     installLifecycleHooksOnce();
-    const raw = getHostStorage()?.getItem(ARIES_STORAGE_KEY);
+    let raw = null;
+    try {
+      raw = getHostStorage()?.getItem(ARIES_STORAGE_KEY) ?? null;
+    } catch {
+    }
+    const restored = !raw && (raw = readMirror()) !== null;
     let parsed = null;
     if (raw) {
       try {
@@ -2670,6 +2699,7 @@
       }
     }
     cached = parsed && typeof parsed === "object" ? normalizeAriesStorage(parsed) : createDefaultAriesStorage();
+    if (restored) persist(cached);
     return cached;
   }
   function persist(data) {
@@ -2769,21 +2799,25 @@
   function markChangelogVersionSeen(version) {
     writeLocalValue(SEEN_CHANGELOG_VERSION_KEY, version);
   }
-  var ARIES_STORAGE_KEY, API_KEY_STORAGE_KEY, SEEN_ROOM_PRIVACY_NOTICE_KEY, SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, SEEN_CHANGELOG_VERSION_KEY, FLUSH_DELAY_MS, cached, flushTimer, flushPending, lifecycleHooksInstalled, splitPath, readLocalString, readLocalFlag;
+  var ARIES_STORAGE_KEY, ARIES_MIRROR_KEY, API_KEY_STORAGE_KEY, SEEN_ROOM_PRIVACY_NOTICE_KEY, SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, SEEN_CHANGELOG_VERSION_KEY, FLUSH_DELAY_MS, MIRROR_INTERVAL_MS, cached, flushTimer, flushPending, lifecycleHooksInstalled, mirrorPending, lastMirrorAt, splitPath, readLocalString, readLocalFlag;
   var init_storage = __esm({
     "src/platform/storage.ts"() {
       "use strict";
       init_storageShape();
       ARIES_STORAGE_KEY = "aries_mod";
+      ARIES_MIRROR_KEY = "aries_mod_mirror";
       API_KEY_STORAGE_KEY = "aries_api_key";
       SEEN_ROOM_PRIVACY_NOTICE_KEY = "aries_seen_room_privacy_notice_v2";
       SEEN_AUTO_RECO_DISABLED_NOTICE_KEY = "aries_seen_autoreco_disabled_notice";
       SEEN_CHANGELOG_VERSION_KEY = "aries_seen_changelog_version";
       FLUSH_DELAY_MS = 500;
+      MIRROR_INTERVAL_MS = 3e4;
       cached = null;
       flushTimer = null;
       flushPending = false;
       lifecycleHooksInstalled = false;
+      mirrorPending = false;
+      lastMirrorAt = 0;
       splitPath = (path) => path.split(".").filter(Boolean);
       readLocalString = (key2) => {
         const raw = readLocalValue(key2);
@@ -3478,7 +3512,7 @@
   });
 
   // src/game/store/atoms.ts
-  var position, state, map, player, action, myData, myInventory, myCropInventory, mySeedInventory, myToolInventory, myEggInventory, myDecorInventory, mySeedSiloItems, myDecorShedItems, myToolShackItems, myPrimitivePetSlots, myCropItemsToSell, myPetHutchPetItems, myPetHutchItems, myPetHutchCapacitySlots, myUserSlot, numPlayers, totalCropSellPrice, friendBonusMultiplier, myValidatedSelectedItemIndex, mySelectedItemId, mySelectedItemRotation, myCurrentGardenObject, myCurrentGrowSlotIndex, weather, activeModalRaw, sameModal, activeModal, inventoryModalIsActive, activityLogTab, avatarTriggerAnimationAtom, garden, gardenTileObjects, favoriteIds, playerId, stateUserSlots, myActivityLog, shops, eggShop, Atoms;
+  var position, state, map, player, action, myData, myInventory, myCropInventory, mySeedInventory, myToolInventory, myEggInventory, myDecorInventory, mySeedSiloItems, myDecorShedItems, myToolShackItems, myPrimitivePetSlots, myCropItemsToSell, myPetHutchPetItems, myPetHutchItems, myPetHutchCapacitySlots, myUserSlot, numPlayers, totalCropSellPrice, friendBonusMultiplier, myValidatedSelectedItemIndex, mySelectedItemId, mySelectedItemRotation, myCurrentGardenObject, selectedSubjectActions, myCurrentGrowSlotIndex, weather, activeModalRaw, sameModal, activeModal, inventoryModalIsActive, activityLogTab, avatarTriggerAnimationAtom, garden, gardenTileObjects, favoriteIds, playerId, stateUserSlots, myActivityLog, shops, eggShop, Atoms;
   var init_atoms = __esm({
     "src/game/store/atoms.ts"() {
       "use strict";
@@ -3518,6 +3552,7 @@
       mySelectedItemId = makeAtom("mySelectedItemIdAtom");
       mySelectedItemRotation = makeAtom("mySelectedItemRotationAtom");
       myCurrentGardenObject = makeAtom("myCurrentGardenObjectAtom");
+      selectedSubjectActions = makeAtom("selectedSubjectActionsAtom");
       myCurrentGrowSlotIndex = makeAliasedAtom([
         "selectedCropSlotIdAtom",
         "myCurrentGrowSlotIdAtom",
@@ -3553,7 +3588,7 @@
         server: { numPlayers, friendBonusMultiplier },
         player: { position, avatarTriggerAnimationAtom, player, action, playerId },
         root: { state, map },
-        data: { myData, garden, gardenTileObjects, myCurrentGardenObject, weather },
+        data: { myData, garden, gardenTileObjects, myCurrentGardenObject, selectedSubjectActions, weather },
         inventory: {
           myInventory,
           myCropInventory,
@@ -13666,9 +13701,9 @@ label.qws-ed-opt { cursor: pointer; }
     console.log("[HarvestCrop] Blocked by locker", { slot, slotsIndex, seedKey, sizePercent, mutations });
     return "drop";
   }
-  function checkDecorPickup() {
+  function checkDecorPickup(message2) {
     if (!lockerRestrictionsService.isDecorPickupLocked()) return;
-    console.log("[PickupDecor] Blocked by decor picker");
+    console.log(`[${message2?.type}] Blocked by decor picker`);
     return "drop";
   }
   async function showEggLockToast(eggId) {
@@ -13725,6 +13760,7 @@ label.qws-ed-opt { cursor: pointer; }
     followFriendBonus();
     interceptOutgoing("HarvestCrop", checkHarvest);
     interceptOutgoing("PickupDecor", checkDecorPickup);
+    interceptOutgoing("PickupEdgeDecor", checkDecorPickup);
     interceptOutgoing("HatchEgg", checkHatch);
     interceptOutgoing("SellAllCrops", checkSellAllCrops);
   }
@@ -14948,7 +14984,7 @@ label.qws-ed-opt { cursor: pointer; }
   // src/platform/modVersion.ts
   function getLocalVersion() {
     if (true) {
-      return "4.0.4";
+      return "4.0.5";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -15627,8 +15663,9 @@ label.qws-ed-opt { cursor: pointer; }
       dragActive = !!hk && !!hk.alt === isCodePressed("AltLeft") && !!hk.ctrl === isCodePressed("ControlLeft") && !!hk.shift === isCodePressed("ShiftLeft") && !!hk.meta === isCodePressed("MetaLeft") && isCodePressed(hk.code);
     };
     updateDragState();
+    const modifiersMatch = (hk, e) => !!hk.alt === e.altKey && !!hk.ctrl === e.ctrlKey && !!hk.shift === e.shiftKey && !!hk.meta === e.metaKey;
     const isModifierActive = (e) => {
-      if (dragHotkey && dragActive) return true;
+      if (dragHotkey && dragActive && modifiersMatch(dragHotkey, e)) return true;
       const insertModifier = insertDown && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey;
       if (insertModifier) insertUsedAsModifier = true;
       return insertModifier;
@@ -19927,6 +19964,9 @@ label.qws-ed-opt { cursor: pointer; }
   function isDecorObject(obj) {
     return !!obj && typeof obj === "object" && obj.objectType === "decor";
   }
+  function isEdgeDecorSubject(selected) {
+    return selected?.subject?.kind === "edgeDecor";
+  }
   function startLockerIndicatorInPixi() {
     let running = true;
     let currentCard2 = null;
@@ -19935,9 +19975,11 @@ label.qws-ed-opt { cursor: pointer; }
     let lockIcon = null;
     let graphicsCtor = null;
     let currentGardenObject2 = null;
+    let selectedSubject = null;
     const debugState3 = { lastError: null, hasBorder: false, objectType: null };
     shareGlobal("__MG_LOCKER_INDICATOR_PIXI_DEBUG__", debugState3);
     const isLocked = () => {
+      if (isEdgeDecorSubject(selectedSubject)) return lockerRestrictionsService.isDecorPickupLocked();
       const eggId = eggIdOf(currentGardenObject2);
       if (eggId) return lockerRestrictionsService.isEggLocked(eggId);
       if (isDecorObject(currentGardenObject2)) return lockerRestrictionsService.isDecorPickupLocked();
@@ -20024,6 +20066,12 @@ label.qws-ed-opt { cursor: pointer; }
     subs.add(
       Atoms.data.myCurrentGardenObject.onChange((next) => {
         currentGardenObject2 = next;
+        sync2();
+      })
+    );
+    subs.add(
+      Atoms.data.selectedSubjectActions.onChange((next) => {
+        selectedSubject = next;
         sync2();
       })
     );

@@ -74,6 +74,7 @@ const SUITES = {
   menutabs: ["checkMenuTabs", "dom-stub"],
   lib: ["checkLib"],
   bootdom: ["checkBootDom"],
+  storagemirror: ["checkStorageMirror"],
   environment: ["checkEnvironment"],
   storagesections: ["checkStorageSections"],
   cataloglive: ["checkCatalogLive", "dom-stub"],

@@ -1,7 +1,7 @@
 // The purple border and lock glyph drawn around the game's Pixi garden card
 // (see game/pixi/gardenInfoCard.ts) while the selected crop, egg or decor is
 // locked: a crop the Harvest Locker refuses, an egg whose hatching is locked,
-// or any decor while decor pickup is locked.
+// or any decor, on a tile or on its edge, while decor pickup is locked.
 import { lockerService } from "./locker";
 import { eggIdOf, lockerRestrictionsService } from "./restrictions";
 import { Atoms } from "../../game/store/atoms";
@@ -38,6 +38,11 @@ function isDecorObject(obj: any): boolean {
   return !!obj && typeof obj === "object" && obj.objectType === "decor";
 }
 
+/** Lights, wind chimes and the other decor hung on a tile edge. */
+function isEdgeDecorSubject(selected: any): boolean {
+  return selected?.subject?.kind === "edgeDecor";
+}
+
 export function startLockerIndicatorInPixi(): LockerIndicatorController {
   let running = true;
   let currentCard: any = null;
@@ -46,11 +51,15 @@ export function startLockerIndicatorInPixi(): LockerIndicatorController {
   let lockIcon: any = null;
   let graphicsCtor: any = null;
   let currentGardenObject: any = null;
+  let selectedSubject: any = null;
 
   const debugState: LockerIndicatorDebugState = { lastError: null, hasBorder: false, objectType: null };
   shareGlobal("__MG_LOCKER_INDICATOR_PIXI_DEBUG__", debugState);
 
   const isLocked = (): boolean => {
+    // The card follows the selected subject, which can be the edge decor
+    // even while another object sits on the tile.
+    if (isEdgeDecorSubject(selectedSubject)) return lockerRestrictionsService.isDecorPickupLocked();
     const eggId = eggIdOf(currentGardenObject);
     if (eggId) return lockerRestrictionsService.isEggLocked(eggId);
     if (isDecorObject(currentGardenObject)) return lockerRestrictionsService.isDecorPickupLocked();
@@ -142,6 +151,12 @@ export function startLockerIndicatorInPixi(): LockerIndicatorController {
   subs.add(
     Atoms.data.myCurrentGardenObject.onChange((next) => {
       currentGardenObject = next;
+      sync();
+    }),
+  );
+  subs.add(
+    Atoms.data.selectedSubjectActions.onChange((next) => {
+      selectedSubject = next;
       sync();
     }),
   );

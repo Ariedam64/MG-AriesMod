@@ -45,6 +45,7 @@
     "serve": "npx http-server dist -p 5174 --cors",
     "check:lib": "node scripts/runChecks.mjs lib",
     "check:bootdom": "node scripts/runChecks.mjs bootdom",
+    "check:storagemirror": "node scripts/runChecks.mjs storagemirror",
     "check:environment": "node scripts/runChecks.mjs environment",
     "check:storagesections": "node scripts/runChecks.mjs storagesections",
     "check:cataloglive": "node scripts/runChecks.mjs cataloglive",
