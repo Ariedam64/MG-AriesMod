@@ -515,14 +515,14 @@
     return out.join("/");
   }
   function animParse(key2) {
-    const parts = splitKey(key2);
-    const last = parts[parts.length - 1];
+    const parts2 = splitKey(key2);
+    const last = parts2[parts2.length - 1];
     const match = last && last.match(/^(.*?)(?:[_-])(\d{1,6})(\.[a-z0-9]+)?$/i);
     if (!match) return null;
     const baseName = (match[1] || "") + (match[3] || "");
     const idx = Number(match[2]);
     if (!baseName || !Number.isFinite(idx)) return null;
-    return { baseKey: parts.slice(0, -1).concat(baseName).join("/"), idx, frameKey: key2 };
+    return { baseKey: parts2.slice(0, -1).concat(baseName).join("/"), idx, frameKey: key2 };
   }
   var splitKey, joinPath, dirOf, relPath;
   var init_path = __esm({
@@ -2581,11 +2581,11 @@
       const defaults = out[key2];
       out[key2] = isRecord(defaults) && isRecord(value) ? { ...defaults, ...value } : value;
     }
-    for (const [legacyKey, [section, field3]] of Object.entries(LEGACY_ROOT_KEYS)) {
+    for (const [legacyKey, [section, field4]] of Object.entries(LEGACY_ROOT_KEYS)) {
       if (!(legacyKey in raw)) continue;
       const target = isRecord(out[section]) ? out[section] : {};
       out[section] = target;
-      if (target[field3] === void 0) target[field3] = raw[legacyKey];
+      if (target[field4] === void 0) target[field4] = raw[legacyKey];
     }
     return out;
   }
@@ -2753,8 +2753,8 @@
   }
   function updateAriesPath(path, updater) {
     return updateAriesStorage((state5) => {
-      const parts = splitPath(path);
-      setValueAtPath(state5, parts, updater(getValueAtPath(state5, parts)));
+      const parts2 = splitPath(path);
+      setValueAtPath(state5, parts2, updater(getValueAtPath(state5, parts2)));
     });
   }
   function readLocalValue(key2) {
@@ -4956,8 +4956,8 @@
         } catch (err) {
           v = null;
         }
-        const isOpen = config.gate?.isOpen ? config.gate.isOpen(v) : !!v;
-        if (!isOpen && state5.enabled) state5.enabled = false;
+        const isOpen2 = config.gate?.isOpen ? config.gate.isOpen(v) : !!v;
+        if (!isOpen2 && state5.enabled) state5.enabled = false;
       });
     }
     state5.installed = true;
@@ -10409,9 +10409,9 @@
     indexEntries.length = 0;
     nameIndex.clear();
     for (const item of items) {
-      const parts = item.id.split("/").filter(Boolean);
-      const start2 = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
-      const internalCat = parts[start2] || "";
+      const parts2 = item.id.split("/").filter(Boolean);
+      const start2 = parts2[0] === "sprite" || parts2[0] === "sprites" ? 1 : 0;
+      const internalCat = parts2[start2] || "";
       const apiCat = INTERNAL_TO_API[internalCat] || internalCat;
       const entry = {
         id: item.id,
@@ -11189,8 +11189,8 @@ label.qws-ed-opt { cursor: pointer; }
     return typeof entry?.baseCapacitySlots === "number";
   }
   function spriteIdFromRef(ref2) {
-    const parts = String(ref2 || "").split("/");
-    return parts[parts.length - 1]?.trim() || "";
+    const parts2 = String(ref2 || "").split("/");
+    return parts2[parts2.length - 1]?.trim() || "";
   }
   function positiveAngles(entry) {
     return Object.keys(entry?.rotationVariants ?? {}).map(Number).filter((angle) => Number.isFinite(angle) && angle > 0).sort((a, b) => a - b);
@@ -12055,11 +12055,11 @@ label.qws-ed-opt { cursor: pointer; }
     content2.appendChild(options2);
   }
   function editSlotList(edit) {
-    const changed7 = updateGardenObjectAtCurrentTile((obj) => {
+    const changed8 = updateGardenObjectAtCurrentTile((obj) => {
       if (obj?.objectType !== "plant") return obj;
       return { ...obj, slots: edit(Array.isArray(obj.slots) ? obj.slots.slice() : []) };
     });
-    if (changed7) currentItemChanged.emit();
+    if (changed8) currentItemChanged.emit();
   }
   function plantSlotBox(title, handlers) {
     const size = sizeControls();
@@ -12929,11 +12929,11 @@ label.qws-ed-opt { cursor: pointer; }
   });
 
   // src/game/roomScope.ts
-  async function currentRoomAtom(field3) {
+  async function currentRoomAtom(field4) {
     const roomAtom = getAtomByLabel(CURRENT_ROOM_LABEL);
     if (!roomAtom) return null;
     const room = await jGet(roomAtom).catch(() => null);
-    const atom = room?.[field3];
+    const atom = room?.[field4];
     return atom && typeof atom === "object" ? atom : null;
   }
   var CURRENT_ROOM_LABEL;
@@ -13264,7 +13264,7 @@ label.qws-ed-opt { cursor: pointer; }
     let info = emptySlotInfo();
     let stopped = false;
     const changes8 = new Emitter();
-    const subs = new Subscriptions();
+    const subs2 = new Subscriptions();
     const recompute = () => {
       if (stopped) return;
       const next = selectedSlotInfo(gardenObject, selectedSlotId);
@@ -13305,12 +13305,12 @@ label.qws-ed-opt { cursor: pointer; }
       } catch {
       }
       if (stopped) return;
-      subs.add(
+      subs2.add(
         myCurrentGardenObject.onChange((next) => {
           if (takeGardenObject(next)) recomputeAfterIdSettles();
         })
       );
-      subs.add(
+      subs2.add(
         myCurrentGrowSlotIndex.onChange(async (id) => {
           selectedSlotId = Number.isFinite(id) ? id : 0;
           try {
@@ -13330,7 +13330,7 @@ label.qws-ed-opt { cursor: pointer; }
         stopped = true;
         cancelPendingGardenRecompute();
         changes8.clear();
-        subs.dispose();
+        subs2.dispose();
       }
     };
   }
@@ -14556,20 +14556,20 @@ label.qws-ed-opt { cursor: pointer; }
   }
   function hotkeyToString(hk) {
     if (!hk) return "";
-    const parts = [];
-    if (hk.ctrl) parts.push("Ctrl");
-    if (hk.shift) parts.push("Shift");
-    if (hk.alt) parts.push("Alt");
-    if (hk.meta) parts.push("Meta");
-    if (hk.code) parts.push(hk.code);
-    return parts.join("+");
+    const parts2 = [];
+    if (hk.ctrl) parts2.push("Ctrl");
+    if (hk.shift) parts2.push("Shift");
+    if (hk.alt) parts2.push("Alt");
+    if (hk.meta) parts2.push("Meta");
+    if (hk.code) parts2.push(hk.code);
+    return parts2.join("+");
   }
   function stringToHotkey(s) {
     if (!s) return null;
-    const parts = s.split("+").map((p) => p.trim()).filter(Boolean);
-    if (!parts.length) return null;
-    const hk = { code: canonicalizeCode(parts.pop() || "") };
-    for (const p of parts) {
+    const parts2 = s.split("+").map((p) => p.trim()).filter(Boolean);
+    if (!parts2.length) return null;
+    const hk = { code: canonicalizeCode(parts2.pop() || "") };
+    for (const p of parts2) {
       const mod = p.toLowerCase();
       if (mod === "ctrl" || mod === "control") hk.ctrl = true;
       else if (mod === "shift") hk.shift = true;
@@ -14617,9 +14617,9 @@ label.qws-ed-opt { cursor: pointer; }
     if (h2.shift) mods.push(mac ? "\u21E7" : "Shift");
     if (h2.meta) mods.push(mac ? "\u2318" : "Meta");
     const modifierAlone = h2.alt && (h2.code === "AltLeft" || h2.code === "AltRight") || h2.ctrl && (h2.code === "ControlLeft" || h2.code === "ControlRight") || h2.shift && (h2.code === "ShiftLeft" || h2.code === "ShiftRight") || h2.meta && (h2.code === "MetaLeft" || h2.code === "MetaRight");
-    const parts = mods.slice();
-    if (!modifierAlone || parts.length === 0) parts.push(prettyCode(h2.code));
-    return parts.join(mac ? "" : " + ");
+    const parts2 = mods.slice();
+    if (!modifierAlone || parts2.length === 0) parts2.push(prettyCode(h2.code));
+    return parts2.join(mac ? "" : " + ");
   }
   var MODIFIER_CODES, MODIFIER_PAIRS, CANONICAL_CODES, capitalize;
   var init_hotkey = __esm({
@@ -15257,7 +15257,9 @@ label.qws-ed-opt { cursor: pointer; }
         tools: '<path d="M14.5 6.5a4 4 0 0 0 4.6 4.6L11 19.2 8.8 17l-1.8-1.8z"/><path d="M14.5 6.5L17 4l3 3-2.5 2.5"/>',
         settings: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
         companion: '<rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M10 16h4"/>',
-        "debug-data": '<rect x="8" y="7" width="8" height="12" rx="4"/><path d="M4 12h4M16 12h4M5 7l3 2M19 7l-3 2M5 18l3-2M19 18l-3-2M10 4l1 2M14 4l-1 2"/>'
+        "debug-data": '<rect x="8" y="7" width="8" height="12" rx="4"/><path d="M4 12h4M16 12h4M5 7l3 2M19 7l-3 2M5 18l3-2M19 18l-3-2M10 4l1 2M14 4l-1 2"/>',
+        // A ladybug, round where the Debug menu's bug is long, so the two never get mixed up.
+        "bug-report": '<path d="M12 8a6.5 6.5 0 0 1 6.5 6.5c0 3.6-2.9 6.5-6.5 6.5s-6.5-2.9-6.5-6.5A6.5 6.5 0 0 1 12 8z"/><path d="M12 8v13M9 8.6a3 3 0 0 1 6 0M10 5.5 8.5 3.5M14 5.5l1.5-2M8.8 13.5h.01M15.2 13.5h.01M9.3 17.5h.01M14.7 17.5h.01"/>'
       };
       FALLBACK = '<path d="M5 19c0-8 6-14 14-14 0 8-6 14-14 14z"/><path d="M5 19l8-8"/>';
     }
@@ -15460,6 +15462,30 @@ label.qws-ed-opt { cursor: pointer; }
       EDGE_MARGIN_PX = 8;
       FOLD_ICON = '<path d="M6 15l6-6 6 6"/>';
       UNFOLD_ICON = '<path d="M6 9l6 6 6-6"/>';
+    }
+  });
+
+  // src/ui/kit/menuList.ts
+  function noteMenuRegistered(id, title) {
+    if (!menus.some((menu) => menu.id === id)) menus.push({ id, title });
+  }
+  function noteMenuOpened(id) {
+    const menu = menus.find((entry) => entry.id === id);
+    if (menu) opened.emit({ ...menu });
+  }
+  function registeredMenus() {
+    return menus.map((menu) => ({ ...menu }));
+  }
+  function onMenuOpened(cb) {
+    return opened.on(cb);
+  }
+  var menus, opened;
+  var init_menuList = __esm({
+    "src/ui/kit/menuList.ts"() {
+      "use strict";
+      init_emitter();
+      menus = [];
+      opened = new Emitter();
     }
   });
 
@@ -15747,6 +15773,7 @@ label.qws-ed-opt { cursor: pointer; }
       ensureOnScreen(el4);
     }
     function showWindow(id, title, render) {
+      noteMenuOpened(id);
       const existing = windows.get(id);
       if (existing) {
         existing.el.style.display = "";
@@ -15844,6 +15871,7 @@ label.qws-ed-opt { cursor: pointer; }
     }
     function register2(id, title, render) {
       registry2.set(id, { title, render });
+      noteMenuRegistered(id, title);
       dock.add({ id, label: title });
     }
     try {
@@ -15878,6 +15906,7 @@ label.qws-ed-opt { cursor: pointer; }
       init_storage();
       init_button();
       init_dock();
+      init_menuList();
       init_menuVisibility();
       init_floating();
       init_dom2();
@@ -16478,8 +16507,8 @@ label.qws-ed-opt { cursor: pointer; }
     const pick = (c) => typeof c === "string" && c.trim() ? c : null;
     const direct = pick(p.id) ?? pick(p.pet?.id);
     if (direct) return direct;
-    for (const field3 of IDENTITY_FIELDS) {
-      const value = pick(p[field3]);
+    for (const field4 of IDENTITY_FIELDS) {
+      const value = pick(p[field4]);
       if (value) return value;
     }
     return null;
@@ -16528,16 +16557,16 @@ label.qws-ed-opt { cursor: pointer; }
     if (!added.length && !updated.length) return;
     const byKey = /* @__PURE__ */ new Map();
     for (const entry of getActivityLogHistory()) byKey.set(entryKey(entry), entry);
-    let changed7 = false;
+    let changed8 = false;
     for (const entry of [...updated, ...added]) {
       const key2 = entryKey(entry);
       const cur = byKey.get(key2);
       if (!cur || !entriesEqual(cur, entry)) {
         byKey.set(key2, entry);
-        changed7 = true;
+        changed8 = true;
       }
     }
-    if (changed7) saveHistory(Array.from(byKey.values()));
+    if (changed8) saveHistory(Array.from(byKey.values()));
   }
   var HISTORY_STORAGE_KEY, HISTORY_LIMIT, IDENTITY_FIELDS, entriesEqual;
   var init_history = __esm({
@@ -16846,26 +16875,26 @@ label.qws-ed-opt { cursor: pointer; }
     toolbar ?? (toolbar = buildToolbarInto(anchors));
     if (!toolbar) return;
     const scrollContainer = anchors.scrollViewContainer;
-    const parts = locateScrollParts(scrollContainer);
-    syncDebug.scrollPartsFound = !!parts;
-    const kind = parts ? logsContentKind(parts.content.children) : "unknown";
+    const parts2 = locateScrollParts(scrollContainer);
+    syncDebug.scrollPartsFound = !!parts2;
+    const kind = parts2 ? logsContentKind(parts2.content.children) : "unknown";
     const onLogs = kind === "unknown" ? activeTab === "logs" : kind === "logs";
     toolbar.container.visible = onLogs;
     if (!onLogs && toolbar.isExpanded) setExpanded(toolbar, false);
     toolbar.container.position.set(scrollContainer.position.x, scrollContainer.position.y);
     refreshToolbarHighlight(toolbar);
-    if (!onLogs || !parts) {
+    if (!onLogs || !parts2) {
       restoreScroll();
       return;
     }
-    touchedScroll = { container: scrollContainer, mask: parts.mask };
+    touchedScroll = { container: scrollContainer, mask: parts2.mask };
     scrollContainer.visible = !toolbar.isExpanded;
     const toolbarSpace = COLLAPSED_HEIGHT + TOOLBAR_GAP_BELOW;
-    const maskHeight = parts.mask.getLocalBounds?.().height ?? 0;
+    const maskHeight = parts2.mask.getLocalBounds?.().height ?? 0;
     const transform = maskTransformFor(maskHeight, toolbarSpace);
-    parts.mask.position.y = transform.y;
-    parts.mask.scale.y = transform.scaleY;
-    shiftLogRows(parts.content, toolbarSpace);
+    parts2.mask.position.y = transform.y;
+    parts2.mask.scale.y = transform.scaleY;
+    shiftLogRows(parts2.content, toolbarSpace);
   }
   function syncToolbar() {
     try {
@@ -17010,7 +17039,7 @@ label.qws-ed-opt { cursor: pointer; }
     }
   }
   async function startActivityLogHistoryWatcher() {
-    const subs = new Subscriptions();
+    const subs2 = new Subscriptions();
     let lastSnapshot = [];
     const ingest2 = (logs2, prev) => {
       try {
@@ -17026,7 +17055,7 @@ label.qws-ed-opt { cursor: pointer; }
     } catch {
     }
     try {
-      subs.add(await myActivityLog.onChange((next, prev) => ingest2(next, prev)));
+      subs2.add(await myActivityLog.onChange((next, prev) => ingest2(next, prev)));
     } catch {
     }
     let lastModal = null;
@@ -17035,7 +17064,7 @@ label.qws-ed-opt { cursor: pointer; }
     } catch {
     }
     try {
-      subs.add(
+      subs2.add(
         await Atoms.ui.activeModal.onChange(async (modalId) => {
           const cur = modalId ?? null;
           const justOpened = cur === ACTIVITY_LOG_MODAL_ID && lastModal !== ACTIVITY_LOG_MODAL_ID;
@@ -17045,7 +17074,7 @@ label.qws-ed-opt { cursor: pointer; }
       );
     } catch {
     }
-    return () => subs.dispose();
+    return () => subs2.dispose();
   }
   var SKIP_NEXT_REOPEN_GLOBAL, skipNextReopen;
   var init_historyWatcher = __esm({
@@ -17102,7 +17131,7 @@ label.qws-ed-opt { cursor: pointer; }
     let selectedSlotId = null;
     let price = null;
     const changes8 = new Emitter();
-    const subs = new Subscriptions();
+    const subs2 = new Subscriptions();
     const computePrice = () => {
       if (!isPlantObject2(gardenObject)) return null;
       const slot = resolveGrowSlot(Array.isArray(gardenObject.slots) ? gardenObject.slots : [], selectedSlotId);
@@ -17137,14 +17166,14 @@ label.qws-ed-opt { cursor: pointer; }
         selectedSlotId = await myCurrentGrowSlotIndex.get();
       } catch {
       }
-      subs.add(numPlayers.onChange((n) => {
+      subs2.add(numPlayers.onChange((n) => {
         players = n;
       }));
-      subs.add(myCurrentGardenObject.onChange((next) => {
+      subs2.add(myCurrentGardenObject.onChange((next) => {
         gardenObject = next;
         scheduleRecompute();
       }));
-      subs.add(
+      subs2.add(
         myCurrentGrowSlotIndex.onChange((id) => {
           selectedSlotId = Number.isFinite(id) ? id : null;
           scheduleRecompute();
@@ -17157,7 +17186,7 @@ label.qws-ed-opt { cursor: pointer; }
       onChange: (cb) => changes8.on(cb),
       stop() {
         changes8.clear();
-        subs.dispose();
+        subs2.dispose();
       }
     };
   }
@@ -17471,8 +17500,8 @@ label.qws-ed-opt { cursor: pointer; }
         }
       }
     };
-    const subs = new Subscriptions();
-    subs.add(
+    const subs2 = new Subscriptions();
+    subs2.add(
       watchGardenInfoCard((card3, geom) => {
         currentCard2 = card3;
         geometry = geom;
@@ -17482,14 +17511,14 @@ label.qws-ed-opt { cursor: pointer; }
         if (card3) syncValueNode();
       })
     );
-    subs.add(priceWatcher.onChange(syncValueNode));
-    subs.add(onShowCropPriceChange(() => syncValueNode()));
+    subs2.add(priceWatcher.onChange(syncValueNode));
+    subs2.add(onShowCropPriceChange(() => syncValueNode()));
     void Atoms.data.myCurrentGardenObject.get().then((initial) => {
       currentGardenObject2 = initial;
       syncValueNode();
     }).catch(() => {
     });
-    subs.add(
+    subs2.add(
       Atoms.data.myCurrentGardenObject.onChange((next) => {
         currentGardenObject2 = next;
         syncValueNode();
@@ -17499,7 +17528,7 @@ label.qws-ed-opt { cursor: pointer; }
       stop() {
         if (!running) return;
         running = false;
-        subs.dispose();
+        subs2.dispose();
         priceWatcher.stop();
         detachValueText();
         currentCard2 = null;
@@ -17794,12 +17823,12 @@ label.qws-ed-opt { cursor: pointer; }
     if (!events.length) return false;
     const state5 = loadState();
     const seen = new Set(state5.seenPetIds);
-    let changed7 = false;
+    let changed8 = false;
     for (const event of events) {
       if (seen.has(event.petId)) continue;
       seen.add(event.petId);
       state5.seenPetIds.push(event.petId);
-      changed7 = true;
+      changed8 = true;
       if (countStats) {
         try {
           StatsService.incrementPetHatched(event.species, rarityOf(event));
@@ -17811,8 +17840,8 @@ label.qws-ed-opt { cursor: pointer; }
       const counters = (_a = state5.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
       applyPull(counters, event, protectedSpecies(event.eggId));
     }
-    if (changed7) saveState(state5);
-    return changed7;
+    if (changed8) saveState(state5);
+    return changed8;
   }
   async function startHatchTracker() {
     const firstRun = !loadState().bootstrapped;
@@ -17907,11 +17936,11 @@ label.qws-ed-opt { cursor: pointer; }
   });
 
   // src/features/inventory/itemInfo.ts
-  function readNestedValue(item, field3, parse) {
+  function readNestedValue(item, field4, parse) {
     if (!item || typeof item !== "object") return null;
     for (const source of [item, item.item, item.data]) {
       if (!source || typeof source !== "object") continue;
-      const parsed = parse(source[field3]);
+      const parsed = parse(source[field4]);
       if (parsed != null) return parsed;
     }
     return null;
@@ -17963,8 +17992,8 @@ label.qws-ed-opt { cursor: pointer; }
   }
   function collectSpeciesCandidates(source, out) {
     if (!source || typeof source !== "object") return;
-    for (const field3 of SPECIES_FIELDS) {
-      const value = stringOrEmpty(source[field3]);
+    for (const field4 of SPECIES_FIELDS) {
+      const value = stringOrEmpty(source[field4]);
       if (value) out.add(value);
     }
   }
@@ -18042,7 +18071,7 @@ label.qws-ed-opt { cursor: pointer; }
       return false;
     };
     const abilityNames = Array.isArray(item?.abilities) ? item.abilities.map(petAbilityName).filter(Boolean) : [];
-    const ownString = (field3) => typeof item?.[field3] === "string" ? item[field3] : null;
+    const ownString = (field4) => typeof item?.[field4] === "string" ? item[field4] : null;
     const candidates = [
       getInventoryItemName(item),
       ...["species", "seedSpecies", "plantSpecies", "petSpecies", "eggId", "decorId", "toolId", "id"].map(ownString),
@@ -18060,8 +18089,8 @@ label.qws-ed-opt { cursor: pointer; }
       normalize = (s) => (s ?? "").trim().toLowerCase();
       stringOrEmpty = (value) => typeof value === "string" ? value.trim() : "";
       itemTypeOf = (item) => stringOrEmpty(item?.itemType);
-      readNestedString = (item, field3) => readNestedValue(item, field3, (value) => stringOrEmpty(value) || null);
-      readNestedNumber = (item, field3) => readNestedValue(item, field3, (value) => {
+      readNestedString = (item, field4) => readNestedValue(item, field4, (value) => stringOrEmpty(value) || null);
+      readNestedNumber = (item, field4) => readNestedValue(item, field4, (value) => {
         if (typeof value === "number" && Number.isFinite(value)) return value;
         if (typeof value === "string" && value.trim()) {
           const parsed = Number(value);
@@ -18087,8 +18116,8 @@ label.qws-ed-opt { cursor: pointer; }
 
   // src/features/inventory/petStrength.ts
   function statsFor(item) {
-    for (const field3 of ["petSpecies", "species", "name"]) {
-      const candidate = readNestedString(item, field3);
+    for (const field4 of ["petSpecies", "species", "name"]) {
+      const candidate = readNestedString(item, field4);
       if (!candidate) continue;
       const key2 = speciesKey(candidate);
       const stats = key2 ? petStatsBySpecies().get(key2) : void 0;
@@ -18215,7 +18244,7 @@ label.qws-ed-opt { cursor: pointer; }
       init_itemInfo();
       init_petStrength();
       compareText = (a, b) => a.localeCompare(b, void 0, { sensitivity: "base" });
-      stringField = (item, field3) => typeof item?.[field3] === "string" ? item[field3] : "";
+      stringField = (item, field4) => typeof item?.[field4] === "string" ? item[field4] : "";
       ownValue = (item) => typeof item?.value === "number" ? item.value : null;
       sortedMutationLabel = (mutations) => mutations.slice().sort(compareText).join("\0");
     }
@@ -18470,23 +18499,23 @@ label.qws-ed-opt { cursor: pointer; }
     if (!Number.isFinite(max) || max <= 0) return;
     const current3 = clamp(currentStrength, 0, max);
     const isMax = current3 >= max;
-    const parts = ensureParts(textEl);
-    setText(parts.label, "STR ");
-    setText(parts.current, String(current3));
-    parts.current.style.setProperty("color", "#ffffff", "important");
-    parts.current.style.setProperty("font-weight", "700", "important");
+    const parts2 = ensureParts(textEl);
+    setText(parts2.label, "STR ");
+    setText(parts2.current, String(current3));
+    parts2.current.style.setProperty("color", "#ffffff", "important");
+    parts2.current.style.setProperty("font-weight", "700", "important");
     if (isMax) {
-      applyBadgeTone(ensureBadge(textEl, parts.label), badgeTone(item));
-      setText(parts.max, "");
-      parts.max.style.display = "none";
+      applyBadgeTone(ensureBadge(textEl, parts2.label), badgeTone(item));
+      setText(parts2.max, "");
+      parts2.max.style.display = "none";
     } else {
       textEl.querySelector(`.${BADGE_CLASS}`)?.remove();
-      setText(parts.max, `/${max}`);
-      parts.max.style.display = "";
-      parts.max.style.setProperty("font-weight", "700", "important");
+      setText(parts2.max, `/${max}`);
+      parts2.max.style.display = "";
+      parts2.max.style.setProperty("font-weight", "700", "important");
     }
-    parts.max.style.visibility = "";
-    parts.max.style.setProperty("color", "#ffffff", "important");
+    parts2.max.style.visibility = "";
+    parts2.max.style.setProperty("color", "#ffffff", "important");
     wrap.dataset[IS_MAX_DATASET_KEY] = isMax ? "1" : "0";
   }
   function ancestorContaining(start2, selector) {
@@ -19097,7 +19126,7 @@ label.qws-ed-opt { cursor: pointer; }
   // src/features/inventory/sorting.ts
   function attachInventorySorting() {
     const sortCards = createDomSorter();
-    const subs = new Subscriptions();
+    const subs2 = new Subscriptions();
     let showValues = loadShowValues() ?? true;
     let grid = null;
     let bar2 = null;
@@ -19260,8 +19289,8 @@ label.qws-ed-opt { cursor: pointer; }
     };
     const onGridInput = (event) => {
       const target = event.target;
-      const within = target?.closest(GRID_SELECTOR);
-      if (within && within === resolveGrid()) setTimeout(refresh, 0);
+      const within2 = target?.closest(GRID_SELECTOR);
+      if (within2 && within2 === resolveGrid()) setTimeout(refresh, 0);
     };
     const stopPageWatch = onSubtreeChange(document.body || document.documentElement, onPageChange);
     setGrid(document.querySelector(GRID_SELECTOR));
@@ -19270,7 +19299,7 @@ label.qws-ed-opt { cursor: pointer; }
     update();
     maybeInitPetHutch();
     refreshPetHutch();
-    subs.add(() => {
+    subs2.add(() => {
       gridObserver.disconnect();
       stopPageWatch();
       noiseObserver.disconnect();
@@ -19281,7 +19310,7 @@ label.qws-ed-opt { cursor: pointer; }
       gridListeners?.dispose();
       bar2?.wrap.remove();
     });
-    return () => subs.dispose();
+    return () => subs2.dispose();
   }
   function startInventorySortingObserver() {
     if (typeof window === "undefined" || typeof document === "undefined") return () => {
@@ -20047,8 +20076,8 @@ label.qws-ed-opt { cursor: pointer; }
         }
       }
     };
-    const subs = new Subscriptions();
-    subs.add(
+    const subs2 = new Subscriptions();
+    subs2.add(
       watchGardenInfoCard((card3, geom) => {
         removeBorder();
         currentCard2 = card3;
@@ -20056,20 +20085,20 @@ label.qws-ed-opt { cursor: pointer; }
         sync2();
       })
     );
-    subs.add(lockerService.onSlotInfoChange(sync2));
-    subs.add(lockerRestrictionsService.subscribe(sync2));
+    subs2.add(lockerService.onSlotInfoChange(sync2));
+    subs2.add(lockerRestrictionsService.subscribe(sync2));
     void Atoms.data.myCurrentGardenObject.get().then((initial) => {
       currentGardenObject2 = initial;
       sync2();
     }).catch(() => {
     });
-    subs.add(
+    subs2.add(
       Atoms.data.myCurrentGardenObject.onChange((next) => {
         currentGardenObject2 = next;
         sync2();
       })
     );
-    subs.add(
+    subs2.add(
       Atoms.data.selectedSubjectActions.onChange((next) => {
         selectedSubject = next;
         sync2();
@@ -20079,7 +20108,7 @@ label.qws-ed-opt { cursor: pointer; }
       stop() {
         if (!running) return;
         running = false;
-        subs.dispose();
+        subs2.dispose();
         removeBorder();
         currentCard2 = null;
       }
@@ -20480,17 +20509,17 @@ label.qws-ed-opt { cursor: pointer; }
             if (prefer && this.library.has(prefer)) return prefer;
             return fallback;
           };
-          let changed7 = false;
+          let changed8 = false;
           const shops2 = valid(this.ctx("shops").defaultSoundName);
           for (const key2 of AUDIO_CONTEXTS) {
             const target = this.ctx(key2);
             const next = key2 === "shops" ? shops2 : valid(target.defaultSoundName, shops2);
             if (next !== target.defaultSoundName) {
               target.defaultSoundName = next;
-              changed7 = true;
+              changed8 = true;
             }
           }
-          return changed7;
+          return changed8;
         }
         /* ================================ Library ================================ */
         listSounds() {
@@ -21708,10 +21737,10 @@ label.qws-ed-opt { cursor: pointer; }
     const ordered = [...keys.filter((k) => !BASE_SHOP_KEYS.includes(k)), ...keys.filter((k) => BASE_SHOP_KEYS.includes(k))];
     const target = itemIdOf(kind, it);
     if (target == null) return null;
-    const field3 = ITEM_FIELD[kind];
+    const field4 = ITEM_FIELD[kind];
     for (const key2 of ordered) {
       const inv = shops2[key2]?.inventory;
-      if (Array.isArray(inv) && inv.some((entry) => entry && typeof entry === "object" && entry[field3] === target)) {
+      if (Array.isArray(inv) && inv.some((entry) => entry && typeof entry === "object" && entry[field4] === target)) {
         return key2;
       }
     }
@@ -22115,21 +22144,21 @@ label.qws-ed-opt { cursor: pointer; }
   }
   function formatRuleSummary(rule) {
     if (!rule) return "";
-    const parts = [];
+    const parts2 = [];
     if (rule.sound) {
       const label2 = audio.listSounds().includes(rule.sound) ? rule.sound : shortSoundName(rule.sound);
-      parts.push(`Sound: ${label2}`);
+      parts2.push(`Sound: ${label2}`);
     }
-    if (rule.volume != null) parts.push(`Volume: ${Math.round(clamp(Number(rule.volume), 0, 1) * 100)}%`);
-    if (rule.playbackMode === "oneshot") parts.push("Mode: One-shot");
-    else if (rule.playbackMode === "loop") parts.push("Mode: Loop");
-    if (rule.stopMode === "purchase") parts.push("Stop: Until purchase");
-    else if (rule.stopMode === "manual") parts.push("Stop: Manual");
+    if (rule.volume != null) parts2.push(`Volume: ${Math.round(clamp(Number(rule.volume), 0, 1) * 100)}%`);
+    if (rule.playbackMode === "oneshot") parts2.push("Mode: One-shot");
+    else if (rule.playbackMode === "loop") parts2.push("Mode: Loop");
+    if (rule.stopMode === "purchase") parts2.push("Stop: Until purchase");
+    else if (rule.stopMode === "manual") parts2.push("Stop: Manual");
     if (rule.loopIntervalMs != null) {
       const raw = Number(rule.loopIntervalMs);
-      if (Number.isFinite(raw)) parts.push(`Interval: ${formatInterval(Math.max(1, Math.round(raw)))}`);
+      if (Number.isFinite(raw)) parts2.push(`Interval: ${formatInterval(Math.max(1, Math.round(raw)))}`);
     }
-    return parts.join(" \u2022 ");
+    return parts2.join(" \u2022 ");
   }
   function ruleDefaults(context) {
     const playback = audio.getPlaybackSettings(context);
@@ -22750,9 +22779,9 @@ label.qws-ed-opt { cursor: pointer; }
     const kindLc = rawKind.toLowerCase();
     const kind = kindLc === "weather" || kindLc === "lunar" || kindLc === "base" ? kindLc : "unknown";
     const meta = { kind, rawKind: rawKind || void 0 };
-    for (const field3 of ["startWindowMin", "startWindowMax", "durationMinutes", "periodMinutes"]) {
-      const value = finiteNumber2(entry[field3]);
-      if (value !== void 0) meta[field3] = value;
+    for (const field4 of ["startWindowMin", "startWindowMax", "durationMinutes", "periodMinutes"]) {
+      const value = finiteNumber2(entry[field4]);
+      if (value !== void 0) meta[field4] = value;
     }
     return meta;
   }
@@ -23934,9 +23963,9 @@ label.qws-ed-opt { cursor: pointer; }
 
   // src/ui/kit/icons.ts
   function spriteLookup(frameKey) {
-    const parts = frameKey.split("/").filter(Boolean);
-    const name = parts[parts.length - 1] ?? frameKey;
-    const category = parts.length >= 2 ? parts[parts.length - 2] : "";
+    const parts2 = frameKey.split("/").filter(Boolean);
+    const name = parts2[parts2.length - 1] ?? frameKey;
+    const category = parts2.length >= 2 ? parts2[parts2.length - 2] : "";
     const categories = [category, `${category}s`, "ui", "decor", "objects"].filter(
       (value, index, all) => value && all.indexOf(value) === index
     );
@@ -24755,14 +24784,14 @@ label.qws-ed-opt { cursor: pointer; }
   }
   function petTeamName(name) {
     const trimmed = String(name ?? "").trim();
-    let parts;
+    let parts2;
     try {
       const seg = new Intl.Segmenter(void 0, { granularity: "grapheme" });
-      parts = Array.from(seg.segment(trimmed), (s) => s.segment);
+      parts2 = Array.from(seg.segment(trimmed), (s) => s.segment);
     } catch {
-      parts = Array.from(trimmed);
+      parts2 = Array.from(trimmed);
     }
-    return parts.length <= PET_TEAM_NAME_MAX_CLUSTERS ? trimmed : parts.slice(0, PET_TEAM_NAME_MAX_CLUSTERS).join("");
+    return parts2.length <= PET_TEAM_NAME_MAX_CLUSTERS ? trimmed : parts2.slice(0, PET_TEAM_NAME_MAX_CLUSTERS).join("");
   }
   function nameKey(name) {
     return name ? petTeamName(name).toLowerCase() : "";
@@ -26733,13 +26762,13 @@ label.qws-ed-opt { cursor: pointer; }
         debugState3.findAttempts = attempts;
       }
     });
-    const subs = new Subscriptions();
+    const subs2 = new Subscriptions();
     void Atoms.player.action.get().then((initial) => {
       currentAction = initial;
       if (running) sync2();
     }).catch(() => {
     });
-    subs.add(
+    subs2.add(
       Atoms.player.action.onChange((next) => {
         currentAction = next;
         sync2();
@@ -26756,7 +26785,7 @@ label.qws-ed-opt { cursor: pointer; }
           } catch {
           }
         }
-        subs.dispose();
+        subs2.dispose();
         if (canvasListenersAttached && canvasEl) {
           try {
             canvasEl.removeEventListener("pointerdown", onCanvasPointerDown);
@@ -28340,8 +28369,8 @@ next: ${next}`;
       });
     }
     const logWrap = h("div", "dd-well dd-frames qmm-scroll");
-    const emptyState3 = emptyNote("");
-    logWrap.appendChild(emptyState3);
+    const emptyState4 = emptyNote("");
+    logWrap.appendChild(emptyState4);
     trafficCard.body.append(
       bar(sel, btnPause, barEnd(btnClear, btnCopy)),
       bar(inputFilter, inToggle.root, outToggle.root, currentToggle.root, autoScrollToggle.root),
@@ -28396,8 +28425,8 @@ next: ${next}`;
     }
     function updateEmptyState() {
       const hasRows = logWrap.querySelector(".dd-frame") != null;
-      emptyState3.hidden = hasRows;
-      emptyState3.textContent = frames.toArray().length ? "No frame matches these filters." : "No frames yet. They show here as the game talks to the server.";
+      emptyState4.hidden = hasRows;
+      emptyState4.textContent = frames.toArray().length ? "No frame matches these filters." : "No frames yet. They show here as the game talks to the server.";
     }
     function passesFilters(f) {
       if (f.dir === "in" && !showIn || f.dir === "out" && !showOut) return false;
@@ -28613,8 +28642,8 @@ next: ${next}`;
       offset += header.length + file.bytes.length;
     }
     const centralSize = central.reduce((sum, entry) => sum + entry.length, 0);
-    const parts = [...chunks, ...central, endRecord(files.length, centralSize, offset)];
-    return new Blob(parts.map((part2) => part2.slice()), { type: "application/zip" });
+    const parts2 = [...chunks, ...central, endRecord(files.length, centralSize, offset)];
+    return new Blob(parts2.map((part2) => part2.slice()), { type: "application/zip" });
   }
   function triggerBlobDownload(blob, filename) {
     const url = URL.createObjectURL(blob);
@@ -28720,10 +28749,10 @@ next: ${next}`;
       allOption.textContent = categories.length ? "All categories" : "No categories";
       categorySelect.appendChild(allOption);
       categories.forEach((category) => {
-        const option2 = document.createElement("option");
-        option2.value = category;
-        option2.textContent = category;
-        categorySelect.appendChild(option2);
+        const option3 = document.createElement("option");
+        option3.value = category;
+        option3.textContent = category;
+        categorySelect.appendChild(option3);
       });
       const valid = categories.includes(selectedCategory);
       selectedCategory = valid ? selectedCategory : ANY_CATEGORY;
@@ -28743,16 +28772,16 @@ next: ${next}`;
     function mutationGroup(key2, options2, label2) {
       const row2 = h("div", "dd-mutation");
       const chips = h("div", "dd-mutation__chips");
-      options2.forEach((option2) => {
-        const chip = toggleChip(option2, {
+      options2.forEach((option3) => {
+        const chip = toggleChip(option3, {
           type: "radio",
           name: `dd-sprite-mutation-${key2}`,
-          value: option2,
-          checked: mutationFilters[key2] === option2
+          value: option3,
+          checked: mutationFilters[key2] === option3
         });
         chip.input.addEventListener("change", () => {
-          if (!chip.input.checked || mutationFilters[key2] === option2) return;
-          mutationFilters[key2] = option2;
+          if (!chip.input.checked || mutationFilters[key2] === option3) return;
+          mutationFilters[key2] = option3;
           if (visibleSpriteRecords.length) renderSpriteCards(visibleSpriteRecords);
         });
         chips.appendChild(chip.root);
@@ -29411,10 +29440,10 @@ Click to download`;
         }));
         const byKey = /* @__PURE__ */ new Map();
         const bySeedName = /* @__PURE__ */ new Map();
-        options2.forEach((option2, index) => {
+        options2.forEach((option3, index) => {
           const emoji = SEED_EMOJIS[index % SEED_EMOJIS.length];
-          byKey.set(option2.key, emoji);
-          if (option2.seedName) bySeedName.set(option2.seedName, emoji);
+          byKey.set(option3.key, emoji);
+          if (option3.seedName) bySeedName.set(option3.seedName, emoji);
         });
         return { options: options2, byKey, bySeedName };
       });
@@ -30635,7 +30664,7 @@ Click to download`;
     const file = String(path || "").trim().split("/").pop() || "";
     return file.replace(/\.[a-z0-9]+(\?.*)?$/i, "") || null;
   }
-  function spriteCandidates3(species, option2) {
+  function spriteCandidates3(species, option3) {
     const names = /* @__PURE__ */ new Set();
     const add = (value) => {
       const trimmed = String(value ?? "").trim();
@@ -30643,29 +30672,29 @@ Click to download`;
       names.add(trimmed);
       names.add(trimmed.replace(/\W+/g, ""));
     };
-    if (option2?.spriteKey) add(spriteNameFromPath(option2.spriteKey));
+    if (option3?.spriteKey) add(spriteNameFromPath(option3.spriteKey));
     add(species);
-    if (option2) {
-      add(option2.cropName);
-      add(option2.seedName);
+    if (option3) {
+      add(option3.cropName);
+      add(option3.seedName);
     }
     const iconNames = Array.from(names, (name) => name.replace(/icon$/i, "")).filter(Boolean);
     const all = Array.from(/* @__PURE__ */ new Set([...iconNames.map((name) => `${name}Icon`), ...names])).filter(Boolean);
     return all.length ? all : [species];
   }
-  function spriteCategories(option2) {
-    for (const name of [option2.key, option2.seedName, option2.cropName]) {
+  function spriteCategories(option3) {
+    for (const name of [option3.key, option3.seedName, option3.cropName]) {
       if (PLANT_FIRST_SPECIES.has(String(name ?? "").trim().toLowerCase())) return ["plant", "tallplant", "crop"];
     }
     return [...DEFAULT_CATEGORIES];
   }
-  function cropEmoji(option2, key2) {
-    return getLockerSeedEmojiForKey(key2) || (option2?.seedName ? getLockerSeedEmojiForSeedName(option2.seedName) : void 0) || "\u{1F331}";
+  function cropEmoji(option3, key2) {
+    return getLockerSeedEmojiForKey(key2) || (option3?.seedName ? getLockerSeedEmojiForSeedName(option3.seedName) : void 0) || "\u{1F331}";
   }
-  function cropListIcon(option2, emoji, size) {
+  function cropListIcon(option3, emoji, size) {
     const wrap = h("span", "qws-calc-icon", emoji.trim() ? emoji : "??");
     wrap.style.width = wrap.style.height = `${size}px`;
-    attachSpriteIcon(wrap, spriteCategories(option2), spriteCandidates3(option2.key, option2), size, "calculator-list");
+    attachSpriteIcon(wrap, spriteCategories(option3), spriteCandidates3(option3.key, option3), size, "calculator-list");
     return wrap;
   }
   function cropPreview() {
@@ -30679,10 +30708,10 @@ Click to download`;
     };
     return {
       root: root4,
-      show(option2, mutations, emoji) {
+      show(option3, mutations, emoji) {
         fallback.textContent = emoji.trim() ? emoji : "??";
         syncFallback();
-        attachSpriteIcon(layer2, spriteCategories(option2), spriteCandidates3(option2.key, option2), PREVIEW_SPRITE_PX, "calculator", {
+        attachSpriteIcon(layer2, spriteCategories(option3), spriteCandidates3(option3.key, option3), PREVIEW_SPRITE_PX, "calculator", {
           mutations: mutations.length ? mutations.map((m) => MUTATION_SPRITE_NAMES[m] ?? m) : void 0,
           onSpriteApplied: syncFallback
         });
@@ -30998,8 +31027,8 @@ Click to download`;
       renderItem: (item, btn) => {
         let icon2 = listIcons.get(item.id);
         if (!icon2) {
-          const option2 = optionByKey.get(item.id);
-          icon2 = option2 ? cropListIcon(option2, cropEmoji(option2, option2.key), LIST_ICON_PX) : h("span");
+          const option3 = optionByKey.get(item.id);
+          icon2 = option3 ? cropListIcon(option3, cropEmoji(option3, option3.key), LIST_ICON_PX) : h("span");
           listIcons.set(item.id, icon2);
         }
         btn.append(icon2, h("span", "qws-calc-item__name", item.title), h("span"));
@@ -31010,8 +31039,8 @@ Click to download`;
       const options2 = getLockerSeedOptions();
       optionByKey.clear();
       listIcons.clear();
-      for (const option2 of options2) optionByKey.set(option2.key, option2);
-      tabs.setItems(options2.map((option2) => ({ id: option2.key, title: option2.cropName || option2.key })));
+      for (const option3 of options2) optionByKey.set(option3.key, option3);
+      tabs.setItems(options2.map((option3) => ({ id: option3.key, title: option3.cropName || option3.key })));
       const selected = tabs.getSelected()?.id ?? null;
       if (!selected && options2.length) {
         tabs.select(options2[0].key);
@@ -31708,10 +31737,10 @@ Click to download`;
   function options(el4, entries) {
     el4.replaceChildren(
       ...entries.map(([value, label2]) => {
-        const option2 = document.createElement("option");
-        option2.value = value;
-        option2.textContent = label2;
-        return option2;
+        const option3 = document.createElement("option");
+        option3.value = value;
+        option3.textContent = label2;
+        return option3;
       })
     );
   }
@@ -33934,9 +33963,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function unusedReasonText(info) {
     if (info.untracked) return "no tracked ability";
-    const parts = info.outrankedIn.slice();
-    if (info.outrankedAsSustain) parts.push("Sustain");
-    return `outranked in: ${parts.join(", ")}`;
+    const parts2 = info.outrankedIn.slice();
+    if (info.outrankedAsSustain) parts2.push("Sustain");
+    return `outranked in: ${parts2.join(", ")}`;
   }
   function renderUnusedRow(info) {
     const row2 = document.createElement("div");
@@ -35076,11 +35105,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (rows.length === 0) return "nothing";
     const bySpecies2 = /* @__PURE__ */ new Map();
     for (const row2 of rows) bySpecies2.set(row2.species, (bySpecies2.get(row2.species) ?? 0) + 1);
-    const parts = [...bySpecies2.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([species, count]) => `${count} ${species}`);
-    const head = parts.slice(0, 3);
-    const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
+    const parts2 = [...bySpecies2.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([species, count]) => `${count} ${species}`);
+    const head = parts2.slice(0, 3);
+    const rest2 = parts2.length > head.length ? ` and ${parts2.length - head.length} other kinds` : "";
     const total = `${rows.length} crop${rows.length === 1 ? "" : "s"}`;
-    if (parts.length === 1) return `${parts[0]} ready`;
+    if (parts2.length === 1) return `${parts2[0]} ready`;
     return `${total} ready: ${listWords(head)}${rest2}`;
   }
   var DEFAULT_FILTERS;
@@ -35141,10 +35170,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     return kept;
   }
   function listPlantItems(plan) {
-    const parts = countByItem(plan).map((entry) => `${entry.count} ${entry.name}`);
-    if (parts.length === 0) return "nothing";
-    const head = parts.slice(0, 3);
-    const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
+    const parts2 = countByItem(plan).map((entry) => `${entry.count} ${entry.name}`);
+    if (parts2.length === 0) return "nothing";
+    const head = parts2.slice(0, 3);
+    const rest2 = parts2.length > head.length ? ` and ${parts2.length - head.length} other kinds` : "";
     return `${listWords(head)}${rest2}`;
   }
   function describePlan(plan) {
@@ -35154,8 +35183,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   function summarizePlan(plan) {
     if (plan.length === 0) return "nothing";
     const tiles = `${plan.length} tile${plan.length === 1 ? "" : "s"}`;
-    const parts = countByItem(plan);
-    if (parts.length === 1) return `${parts[0].count} ${parts[0].name} to plant`;
+    const parts2 = countByItem(plan);
+    if (parts2.length === 1) return `${parts2[0].count} ${parts2[0].name} to plant`;
     return `${listPlantItems(plan)} to plant, over ${tiles}`;
   }
   var GARDEN_COLS, GARDEN_ROWS, GARDEN_TILE_COUNT, EMPTY_SCOPE;
@@ -35692,8 +35721,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function composedUrl(species, mutations) {
     const key2 = catalogCropKey(species);
-    const parts = key2 ? key2.split(/[?#]/)[0].split("/").filter(Boolean) : [];
-    const segment = parts.length >= 2 ? parts[parts.length - 2] : "";
+    const parts2 = key2 ? key2.split(/[?#]/)[0].split("/").filter(Boolean) : [];
+    const segment = parts2.length >= 2 ? parts2[parts2.length - 2] : "";
     const apiCategory = INTERNAL_TO_API[segment] ?? (isComposableCategory(segment) ? segment : "plants");
     return composedSpriteUrl(apiCategory, spriteBaseName(species), mutations);
   }
@@ -36539,7 +36568,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/lib/download.ts
   function copyTextToClipboard(text2) {
     if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(text2);
+      navigator.clipboard.writeText(text2).catch(() => {
+      });
       return;
     }
     const textarea = document.createElement("textarea");
@@ -37002,19 +37032,19 @@ Restore figures are averages; unlucky streaks do worse.`;
   function renderInfosTab(view) {
     ensureSettingsStyles();
     const nav = typeof navigator !== "undefined" ? navigator : null;
-    const environment = typeof window !== "undefined" ? detectEnvironment() : null;
+    const environment2 = typeof window !== "undefined" ? detectEnvironment() : null;
     const hero = h("div", "qws-set-hero");
     hero.append(
       h("div", "qws-set-hero__title", "Arie's Mod"),
       versionPill(),
       h("div", "qws-set-hero__sub", "A userscript for Magic Garden")
     );
-    const host = environment?.host || (typeof location !== "undefined" ? location.hostname : "") || "n/a";
+    const host = environment2?.host || (typeof location !== "undefined" ? location.hostname : "") || "n/a";
     const runtimeRows = [
       ["Game version", gameVersion ?? "unknown"],
       ["Host", host],
-      ["Surface", describeSurface(environment)],
-      ["Platform", describePlatform(environment, nav)],
+      ["Surface", describeSurface(environment2)],
+      ["Platform", describePlatform(environment2, nav)],
       ["OS", detectOsLabel(nav)]
     ];
     const details2 = card("Details");
@@ -37033,7 +37063,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         "qws-set-note",
         "Some features rely on paid server hosting. If you enjoy the mod, a coffee is always appreciated!"
       ),
-      kofiLink(environment?.surface === "discord")
+      kofiLink(environment2?.surface === "discord")
     );
     const tab = h("div", "qws-set-tab");
     tab.append(hero, details2.root, support.root);
@@ -38124,10 +38154,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     const show = (next) => {
       const sig = weatherStateSignature(next.rows);
-      const changed7 = sig !== stateSig2;
+      const changed8 = sig !== stateSig2;
       state5 = next;
       stateSig2 = sig;
-      if (changed7) rebuild2();
+      if (changed8) rebuild2();
       else refreshLastSeen();
     };
     void (async () => {
@@ -40415,9 +40445,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
     }
     if (sourceOf(texture) === source) return true;
-    for (const field3 of ["_source", "baseTexture", "_baseTexture"]) {
+    for (const field4 of ["_source", "baseTexture", "_baseTexture"]) {
       try {
-        texture[field3] = source;
+        texture[field4] = source;
         if (sourceOf(texture) === source) return true;
       } catch {
       }
@@ -40951,13 +40981,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_path();
       targetCache = null;
       categoryOfKey = (frameKey) => {
-        const parts = splitKey(frameKey);
-        const start2 = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
-        return parts[start2] || "misc";
+        const parts2 = splitKey(frameKey);
+        const start2 = parts2[0] === "sprite" || parts2[0] === "sprites" ? 1 : 0;
+        return parts2[start2] || "misc";
       };
       labelOfKey = (objectKey) => {
-        const parts = splitKey(objectKey);
-        return parts[parts.length - 1] || objectKey;
+        const parts2 = splitKey(objectKey);
+        return parts2[parts2.length - 1] || objectKey;
       };
     }
   });
@@ -41044,16 +41074,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     retriesLeft -= 1;
     const targets = await loadTargets();
     const index = sharedStageIndex();
-    let changed7 = false;
+    let changed8 = false;
     for (const result of pending3) {
       const canvas = skinCanvases.get(result.frameKey);
       const target = targets.get(result.frameKey);
       if (!canvas || !target) continue;
       if (!applySkinTexture(target, canvas, index)) continue;
       snapshot2.results.set(result.frameKey, { frameKey: result.frameKey, applied: true });
-      changed7 = true;
+      changed8 = true;
     }
-    if (!changed7) return;
+    if (!changed8) return;
     snapshot2.rebaked = rebakeAll();
     notifyChanged();
   }
@@ -41542,15 +41572,15 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     const enableToggle = switchInput(areSkinsEnabled(), (on) => void setSkinsEnabled(on));
     enableToggle.setAttribute("aria-label", "Show skins");
     const enableRow = settingRow("Show skins", "Your images in place of the game's sprites.", enableToggle).row;
-    const notice = h("div", "qws-skins__notice");
-    notice.hidden = true;
+    const notice2 = h("div", "qws-skins__notice");
+    notice2.hidden = true;
     const browser = plainCard();
     browser.classList.add("qws-skins__pane");
     const detail = plainCard();
     detail.classList.add("qws-skins__pane");
     const panes = h("div", "qws-skins__panes");
     panes.append(browser, detail);
-    root4.append(enableRow, notice, panes);
+    root4.append(enableRow, notice2, panes);
     const search3 = textInput("Search sprites", "", { small: true });
     search3.type = "search";
     search3.classList.add("qws-skins__search");
@@ -41664,8 +41694,8 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       const warnings = [];
       if (snapshot3.error) warnings.push(snapshot3.error);
       if (hasSkins && snapshot3.rebaked === null) warnings.push("Mutated plants keep their original look.");
-      notice.replaceChildren(...warnings.map((text2) => h("div", void 0, text2)));
-      notice.hidden = warnings.length === 0;
+      notice2.replaceChildren(...warnings.map((text2) => h("div", void 0, text2)));
+      notice2.hidden = warnings.length === 0;
     };
     const renderAll = () => {
       renderCategories(getSkinsSnapshot().objects);
@@ -42626,8 +42656,8 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
   }
   function weatherDisplayName(weatherId, catalog) {
     const entry = catalog && typeof catalog === "object" ? catalog[weatherId] : void 0;
-    for (const field3 of ["name", "displayName"]) {
-      const value = entry?.[field3];
+    for (const field4 of ["name", "displayName"]) {
+      const value = entry?.[field4];
       if (typeof value === "string" && value.trim()) return value.trim();
     }
     return spaceWords(weatherId);
@@ -42831,14 +42861,14 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
   }
   function describeKeep(rules3, abilityNames = /* @__PURE__ */ new Map()) {
     if (!hasAnyRule(rules3)) return "Nothing set yet";
-    const parts = [];
-    if (rules3.species.length) parts.push(listWords(rules3.species));
-    if (rules3.mutations.length) parts.push(listWords(rules3.mutations));
+    const parts2 = [];
+    if (rules3.species.length) parts2.push(listWords(rules3.species));
+    if (rules3.mutations.length) parts2.push(listWords(rules3.mutations));
     if (rules3.abilities.length) {
-      parts.push(listWords(rules3.abilities.map((id) => abilityNames.get(id) ?? id)));
+      parts2.push(listWords(rules3.abilities.map((id) => abilityNames.get(id) ?? id)));
     }
-    if (rules3.minMaxStr !== null) parts.push(`max STR ${rules3.minMaxStr} and up`);
-    return parts.join(", ");
+    if (rules3.minMaxStr !== null) parts2.push(`max STR ${rules3.minMaxStr} and up`);
+    return parts2.join(", ");
   }
   function describeHatchRequest(count) {
     return count === 1 ? "Hatch that egg for me" : `Hatch my ${count} eggs`;
@@ -42848,10 +42878,10 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
   }
   function summarizeSell(pets) {
     if (pets.length === 0) return "nothing";
-    const parts = bySpecies(pets).map((entry) => `${entry.count} ${entry.species}`);
-    const head = parts.slice(0, 3);
-    const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
-    if (parts.length === 1) return parts[0];
+    const parts2 = bySpecies(pets).map((entry) => `${entry.count} ${entry.species}`);
+    const head = parts2.slice(0, 3);
+    const rest2 = parts2.length > head.length ? ` and ${parts2.length - head.length} other kinds` : "";
+    if (parts2.length === 1) return parts2[0];
     return `${pets.length} pets: ${listWords(head)}${rest2}`;
   }
   function afterHatchNote(stop, eggsWaiting, rules3, sellable) {
@@ -43710,14 +43740,14 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     };
   }
   function clearProposal(log2, proposalId) {
-    let changed7 = false;
+    let changed8 = false;
     const messages = log2.messages.map((entry) => {
       if (entry.proposalId !== proposalId) return entry;
-      changed7 = true;
+      changed8 = true;
       const { proposalId: _dropped, ...rest2 } = entry;
       return rest2;
     });
-    return changed7 ? { ...log2, messages } : log2;
+    return changed8 ? { ...log2, messages } : log2;
   }
   var MAX_MESSAGES;
   var init_log = __esm({
@@ -43899,10 +43929,10 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     const url = entry?.sprite;
     if (typeof url !== "string" || !url) return null;
     if (url.startsWith("sprite/")) return url;
-    const parts = url.split(/[?#]/)[0].split("/").filter(Boolean);
-    if (parts.length < 2) return null;
-    const name = parts[parts.length - 1].replace(/\.[a-z0-9]+$/i, "");
-    const category = API_TO_INTERNAL[parts[parts.length - 2].toLowerCase()];
+    const parts2 = url.split(/[?#]/)[0].split("/").filter(Boolean);
+    if (parts2.length < 2) return null;
+    const name = parts2[parts2.length - 1].replace(/\.[a-z0-9]+$/i, "");
+    const category = API_TO_INTERNAL[parts2[parts2.length - 2].toLowerCase()];
     return name && category ? `sprite/${category}/${name}` : null;
   }
   function thing(entry, label2, iconSizePx = BUBBLE_ICON_PX) {
@@ -45541,11 +45571,11 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     });
     const list = part("div", "qws-cmp-list");
     const empty = part("div", "qws-cmp-empty", "Nobody is hungry, or I have nothing they eat.");
-    const notice = settingsNotice("feed", "Pet feed is not set up. I warn below 10% and may pick from the garden.", () => {
+    const notice2 = settingsNotice("feed", "Pet feed is not set up. I warn below 10% and may pick from the garden.", () => {
       modal.close();
       openFeedSettingsModal(host, () => openSettingsModal(host));
     });
-    modal.body.append(notice, list, empty);
+    modal.body.append(notice2, list, empty);
     const askButton = button("Ask to feed them", {
       size: "sm",
       variant: "primary",
@@ -45959,12 +45989,12 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       }
     });
     askButton.classList.add("qws-cmp-foot-end");
-    const notice = settingsNotice("harvest", "Harvest is not set up. I will pick with the team you have on.", () => {
+    const notice2 = settingsNotice("harvest", "Harvest is not set up. I will pick with the team you have on.", () => {
       modal.close();
       openHarvestSettingsModal(host, () => openSettingsModal(host));
     });
     preview.root.append(note.root);
-    modal.body.append(notice, preserved.row, speciesCard.root, mutationCard.root, sizeCard.root, preview.root);
+    modal.body.append(notice2, preserved.row, speciesCard.root, mutationCard.root, sizeCard.root, preview.root);
     modal.footer.append(resetButton, askButton);
     function render() {
       if (!modal.isOpen()) return;
@@ -46554,11 +46584,11 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       }
     });
     askButton.classList.add("qws-cmp-foot-end");
-    const notice = settingsNotice("hatch", "Hatching is not set up. I will use the team you have on.", () => {
+    const notice2 = settingsNotice("hatch", "Hatching is not set up. I will use the team you have on.", () => {
       modal.close();
       openHatchSettingsModal(host, () => openSettingsModal(host));
     });
-    modal.body.append(notice, speciesCard.root, mutationCard.root, abilityCard.root, strengthCard.root, strip.root);
+    modal.body.append(notice2, speciesCard.root, mutationCard.root, abilityCard.root, strengthCard.root, strip.root);
     modal.footer.append(resetButton, askButton);
     function render() {
       if (!modal.isOpen()) return;
@@ -47105,10 +47135,10 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
 
   // src/features/companion/menu/chatIcons.ts
   function splitSpriteKey(key2) {
-    const parts = key2.split(/[?#]/)[0].split("/").filter(Boolean);
-    if (parts.length < 2) return null;
-    const name = parts[parts.length - 1].replace(/\.[a-z0-9]+$/i, "");
-    return name ? { category: parts[parts.length - 2], name } : null;
+    const parts2 = key2.split(/[?#]/)[0].split("/").filter(Boolean);
+    if (parts2.length < 2) return null;
+    const name = parts2[parts2.length - 1].replace(/\.[a-z0-9]+$/i, "");
+    return name ? { category: parts2[parts2.length - 2], name } : null;
   }
   function holder(sizePx) {
     const box2 = iconSlot(sizePx, true);
@@ -47462,6 +47492,2692 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     }
   });
 
+  // src/lib/bugReport/limits.ts
+  function clipText(value, max) {
+    const text2 = typeof value === "string" ? value : value == null ? "" : String(value);
+    const clean = text2.indexOf("\0") === -1 ? text2 : text2.replace(NUL, "");
+    return clean.length > max ? clean.slice(0, max) : clean;
+  }
+  function optionalText(value, max) {
+    if (value == null) return null;
+    const text2 = clipText(value, Number.MAX_SAFE_INTEGER).trim();
+    return text2 ? text2.slice(0, max) : null;
+  }
+  function normalizeTitle(value) {
+    return clipText(value, Number.MAX_SAFE_INTEGER).replace(/\s+/g, " ").trim();
+  }
+  function clipLine(text2, max) {
+    return text2.length > max ? `${text2.slice(0, Math.max(0, max - 1))}\u2026` : text2;
+  }
+  var BUG_REPORT_LIMITS, NUL;
+  var init_limits = __esm({
+    "src/lib/bugReport/limits.ts"() {
+      "use strict";
+      BUG_REPORT_LIMITS = {
+        title: { min: 3, max: 140 },
+        description: { min: 10, max: 4e3 },
+        steps: 2e3,
+        expected: 2e3,
+        actual: 2e3,
+        contact: 100,
+        feature: 80,
+        playerName: 64,
+        playerId: 64,
+        modName: 80,
+        modVersion: 40,
+        gameVersion: 40,
+        /** `context` once serialized. */
+        contextChars: 3e5,
+        logEntries: 200,
+        logMessage: 500,
+        breadcrumbEntries: 200,
+        breadcrumbMessage: 500,
+        attachments: 3,
+        /** Decoded bytes the backend accepts for one screenshot. */
+        attachmentBytes: 75e4,
+        /** What the client aims for, to leave room under the hard limit. */
+        attachmentTargetBytes: 6e5,
+        /** Longest side of a screenshot before any further shrinking. */
+        imageMaxSide: 1920,
+        commentMessage: 2e3,
+        /** Follow tokens sent to `POST /bug-reports/mine` at once. */
+        mineReports: 50,
+        /** Sent reports a mod remembers locally. */
+        sentReports: 50
+      };
+      NUL = /\u0000/g;
+    }
+  });
+
+  // src/lib/bugReport/redact.ts
+  function isSecretKey(key2) {
+    const k = key2.toLowerCase().replace(/[_\-\s]/g, "");
+    if (SECRET_KEY_PARTS.some((part2) => k.includes(part2))) return true;
+    return /auth(?!or)/.test(k);
+  }
+  function redactString(text2) {
+    return text2.replace(JWT_RE, "[redacted-jwt]").replace(BEARER_RE, "Bearer [redacted]").replace(URL_SECRET_PARAM_RE, `$1${REDACTED}`);
+  }
+  function redactValue(value) {
+    return redactAt(value, 0, /* @__PURE__ */ new Set());
+  }
+  function redactAt(value, depth, ancestors) {
+    if (value === null || value === void 0) return null;
+    if (typeof value === "string") return redactString(value);
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
+    if (typeof value === "boolean") return value;
+    if (typeof value !== "object") return null;
+    if (ancestors.has(value)) return CIRCULAR;
+    if (depth >= MAX_DEPTH) return TRUNCATED;
+    ancestors.add(value);
+    try {
+      if (Array.isArray(value)) return value.map((item) => redactAt(item, depth + 1, ancestors));
+      const out = {};
+      for (const key2 of Object.keys(value)) {
+        let item;
+        try {
+          item = value[key2];
+        } catch {
+          item = null;
+        }
+        out[key2] = isSecretKey(key2) ? REDACTED : redactAt(item, depth + 1, ancestors);
+      }
+      return out;
+    } finally {
+      ancestors.delete(value);
+    }
+  }
+  var REDACTED, TRUNCATED, CIRCULAR, MAX_DEPTH, SECRET_KEY_PARTS, JWT_RE, BEARER_RE, URL_SECRET_PARAM_RE;
+  var init_redact = __esm({
+    "src/lib/bugReport/redact.ts"() {
+      "use strict";
+      REDACTED = "[redacted]";
+      TRUNCATED = "[truncated]";
+      CIRCULAR = "[circular]";
+      MAX_DEPTH = 12;
+      SECRET_KEY_PARTS = [
+        "apikey",
+        "token",
+        "password",
+        "passwd",
+        "secret",
+        "cookie",
+        "session",
+        "jwt",
+        "bearer",
+        "authorization",
+        "credential",
+        "privatekey"
+      ];
+      JWT_RE = /\beyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}/g;
+      BEARER_RE = /\bBearer\s+[A-Za-z0-9._~+/=-]{6,}/gi;
+      URL_SECRET_PARAM_RE = /([?&#](?:api[_-]?key|apikey|token|access_token|auth|key|secret|password)=)[^&#\s"']+/gi;
+    }
+  });
+
+  // src/lib/bugReport/types.ts
+  var BUG_REPORT_PROJECTS, BUG_REPORT_CATEGORIES, BUG_REPORT_FREQUENCIES, BUG_REPORT_WITHOUT_MOD, LOG_LEVELS;
+  var init_types = __esm({
+    "src/lib/bugReport/types.ts"() {
+      "use strict";
+      BUG_REPORT_PROJECTS = ["aries-mod", "mg-mod", "community-hub", "gemini", "mg-afk-app", "other"];
+      BUG_REPORT_CATEGORIES = ["bug", "crash", "visual", "performance", "feature", "question", "other"];
+      BUG_REPORT_FREQUENCIES = ["always", "often", "sometimes", "once", "unknown"];
+      BUG_REPORT_WITHOUT_MOD = ["yes", "no", "unknown"];
+      LOG_LEVELS = ["error", "warn", "info", "log"];
+    }
+  });
+
+  // src/lib/bugReport/prepare.ts
+  function titleProblem(title) {
+    const length = normalizeTitle(title).length;
+    return length < BUG_REPORT_LIMITS.title.min || length > BUG_REPORT_LIMITS.title.max ? "title" : null;
+  }
+  function descriptionProblem(description) {
+    const length = clipText(description, Number.MAX_SAFE_INTEGER).trim().length;
+    return length < BUG_REPORT_LIMITS.description.min || length > BUG_REPORT_LIMITS.description.max ? "description" : null;
+  }
+  function prepareBugReport(input) {
+    if (!BUG_REPORT_PROJECTS.includes(input.project)) return { ok: false, field: "project" };
+    const titleField = titleProblem(input.title);
+    if (titleField) return { ok: false, field: titleField };
+    const descriptionField = descriptionProblem(input.description);
+    if (descriptionField) return { ok: false, field: descriptionField };
+    const attachments = Math.trunc(Number(input.attachmentsExpected) || 0);
+    const payload = {
+      project: input.project,
+      modName: optionalText(input.modName, BUG_REPORT_LIMITS.modName),
+      modVersion: optionalText(input.modVersion, BUG_REPORT_LIMITS.modVersion),
+      gameVersion: optionalText(input.gameVersion, BUG_REPORT_LIMITS.gameVersion),
+      playerId: optionalText(input.playerId, BUG_REPORT_LIMITS.playerId),
+      playerName: optionalText(input.playerName, BUG_REPORT_LIMITS.playerName),
+      contact: optionalText(input.contact, BUG_REPORT_LIMITS.contact),
+      category: oneOf(BUG_REPORT_CATEGORIES, input.category, "other"),
+      title: normalizeTitle(input.title),
+      description: clipText(input.description, Number.MAX_SAFE_INTEGER).trim(),
+      steps: optionalText(input.steps, BUG_REPORT_LIMITS.steps),
+      expected: optionalText(input.expected, BUG_REPORT_LIMITS.expected),
+      actual: optionalText(input.actual, BUG_REPORT_LIMITS.actual),
+      frequency: oneOf(BUG_REPORT_FREQUENCIES, input.frequency, "unknown"),
+      withoutMod: oneOf(BUG_REPORT_WITHOUT_MOD, input.withoutMod, "unknown"),
+      feature: optionalText(input.feature, BUG_REPORT_LIMITS.feature),
+      includeAccountState: input.includeAccountState === true,
+      attachmentsExpected: Math.min(BUG_REPORT_LIMITS.attachments, Math.max(0, attachments)),
+      context: prepareContext(input.context)
+    };
+    return { ok: true, payload };
+  }
+  function prepareContext(raw, maxChars = BUG_REPORT_LIMITS.contextChars) {
+    const redacted = redactValue(isRecord6(raw) ? raw : {});
+    const context = isRecord6(redacted) ? redacted : {};
+    if (context.logs !== void 0) context.logs = normalizeLogs(context.logs);
+    if (context.breadcrumbs !== void 0) context.breadcrumbs = normalizeBreadcrumbs(context.breadcrumbs);
+    return fitContext(context, maxChars);
+  }
+  function normalizeLogs(list, max = BUG_REPORT_LIMITS.logEntries) {
+    if (!Array.isArray(list)) return [];
+    const out = [];
+    for (const entry of list.slice(-max)) {
+      if (!isRecord6(entry)) continue;
+      const item = {
+        t: typeof entry.t === "number" && Number.isFinite(entry.t) ? entry.t : 0,
+        level: oneOf(LOG_LEVELS, entry.level, "log"),
+        msg: clipLine(clipText(entry.msg, Number.MAX_SAFE_INTEGER), BUG_REPORT_LIMITS.logMessage)
+      };
+      if (typeof entry.repeat === "number" && entry.repeat > 0) item.repeat = Math.trunc(entry.repeat);
+      out.push(item);
+    }
+    return out;
+  }
+  function normalizeBreadcrumbs(list, max = BUG_REPORT_LIMITS.breadcrumbEntries) {
+    if (!Array.isArray(list)) return [];
+    const out = [];
+    for (const entry of list.slice(-max)) {
+      if (!isRecord6(entry)) continue;
+      const item = {
+        t: typeof entry.t === "number" && Number.isFinite(entry.t) ? entry.t : 0,
+        msg: clipLine(clipText(entry.msg, Number.MAX_SAFE_INTEGER), BUG_REPORT_LIMITS.breadcrumbMessage)
+      };
+      if (typeof entry.repeat === "number" && entry.repeat > 0) item.repeat = Math.trunc(entry.repeat);
+      out.push(item);
+    }
+    return out;
+  }
+  function fitContext(context, maxChars = BUG_REPORT_LIMITS.contextChars) {
+    const out = { ...context };
+    for (let guard = 0; guard < 64 && sizeOf(out) > maxChars; guard++) {
+      if (out.logs && out.logs.length > 1) out.logs = out.logs.slice(Math.ceil(out.logs.length / 2));
+      else if (out.breadcrumbs && out.breadcrumbs.length > 1) out.breadcrumbs = out.breadcrumbs.slice(Math.ceil(out.breadcrumbs.length / 2));
+      else if (out.extra !== void 0) delete out.extra;
+      else if (out.logs?.length) delete out.logs;
+      else if (out.breadcrumbs?.length) delete out.breadcrumbs;
+      else if (out.settings !== void 0) delete out.settings;
+      else return { extra: { contextTruncated: true } };
+    }
+    return out;
+  }
+  var oneOf, isRecord6, sizeOf;
+  var init_prepare = __esm({
+    "src/lib/bugReport/prepare.ts"() {
+      "use strict";
+      init_limits();
+      init_redact();
+      init_types();
+      oneOf = (list, value, fallback) => typeof value === "string" && list.includes(value) ? value : fallback;
+      isRecord6 = (value) => !!value && typeof value === "object" && !Array.isArray(value);
+      sizeOf = (value) => JSON.stringify(value).length;
+    }
+  });
+
+  // src/lib/bugReport/client.ts
+  function withDeadline(promise, ms) {
+    return new Promise((resolve, reject2) => {
+      const timer2 = setTimeout(() => reject2(new DeadlineError("deadline")), ms);
+      promise.then(
+        (value) => {
+          clearTimeout(timer2);
+          resolve(value);
+        },
+        (error) => {
+          clearTimeout(timer2);
+          reject2(error);
+        }
+      );
+    });
+  }
+  function joinUrl(base, path) {
+    return `${base.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
+  }
+  function parseJson(text2) {
+    try {
+      return text2 ? JSON.parse(text2) : null;
+    } catch {
+      return null;
+    }
+  }
+  function errorFromResponse(status2, data) {
+    const reason = stringOrNull2(data?.error);
+    if (status2 === 0) return { kind: "offline" };
+    if (status2 === 429) return { kind: "rate_limited", retryAfterSec: numberOrNull(data?.retryAfter) };
+    if (status2 === 409 && reason === "duplicate") return { kind: "duplicate", id: numberOrNull(data?.id), ref: stringOrNull2(data?.ref) };
+    if (status2 === 409 && reason === "closed") return { kind: "closed" };
+    if (status2 === 400) return { kind: "invalid", field: stringOrNull2(data?.field) };
+    if (status2 === 404) return { kind: "not_found" };
+    if (status2 === 413) return { kind: "too_large" };
+    if (status2 >= 500) return { kind: "server", status: status2 };
+    return { kind: "rejected", status: status2, reason };
+  }
+  async function postJson(client, path, body, timeoutMs) {
+    const headers = { "Content-Type": "application/json", Accept: "application/json" };
+    let apiKey = null;
+    try {
+      apiKey = client.getApiKey?.();
+    } catch {
+    }
+    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+    let response;
+    try {
+      response = await withDeadline(
+        client.request({ method: "POST", url: joinUrl(client.baseUrl, path), headers, body: JSON.stringify(body), timeoutMs }),
+        timeoutMs + DEADLINE_GRACE_MS
+      );
+    } catch (error) {
+      const timedOut = error instanceof DeadlineError || /time(d)?\s?out/i.test(String(error?.message ?? error));
+      return { ok: false, error: timedOut ? { kind: "timeout" } : { kind: "offline" } };
+    }
+    const data = parseJson(response.body);
+    if (response.status >= 200 && response.status < 300) return { ok: true, status: response.status, data };
+    return { ok: false, error: errorFromResponse(response.status, data) };
+  }
+  function readCreated(data) {
+    const id = numberOrNull(data?.id);
+    const followToken = stringOrNull2(data?.followToken);
+    if (!id || !followToken) return null;
+    return { id, ref: stringOrNull2(data?.ref) ?? `BR-${id}`, followToken, status: stringOrNull2(data?.status) ?? "new" };
+  }
+  async function uploadAttachment(client, report3, image) {
+    if (image.bytes > BUG_REPORT_LIMITS.attachmentBytes) return { ok: false, error: { kind: "too_large" } };
+    const body = {
+      followToken: report3.followToken,
+      mime: image.mime,
+      data: image.base64,
+      width: image.width,
+      height: image.height,
+      kind: image.kind
+    };
+    const timeoutMs = client.uploadTimeoutMs ?? UPLOAD_TIMEOUT_MS;
+    let result = await postJson(client, `bug-reports/${report3.id}/attachments`, body, timeoutMs);
+    if (!result.ok && isTransient(result.error)) {
+      result = await postJson(client, `bug-reports/${report3.id}/attachments`, body, timeoutMs);
+    }
+    return result.ok ? { ok: true } : result;
+  }
+  async function submitBugReport(client, payload, attachments = [], onProgress) {
+    const images = attachments.slice(0, BUG_REPORT_LIMITS.attachments);
+    const prepared = prepareBugReport({ ...payload, attachmentsExpected: images.length });
+    if (!prepared.ok) return { ok: false, error: { kind: "invalid", field: prepared.field } };
+    const progress = (value) => {
+      try {
+        onProgress?.(value);
+      } catch {
+      }
+    };
+    progress({ stage: "report" });
+    const sent = await postJson(client, "bug-reports", prepared.payload, client.reportTimeoutMs ?? REPORT_TIMEOUT_MS);
+    if (!sent.ok) return sent;
+    const report3 = readCreated(sent.data);
+    if (!report3) return { ok: false, error: { kind: "bad_response" } };
+    const attachmentFailures = [];
+    for (let index = 0; index < images.length; index++) {
+      progress({ stage: "attachment", index, total: images.length });
+      const uploaded = await uploadAttachment(client, report3, images[index]);
+      if (!uploaded.ok) attachmentFailures.push({ index, error: uploaded.error });
+    }
+    return { ok: true, report: report3, attachmentsSent: images.length - attachmentFailures.length, attachmentFailures };
+  }
+  function readComment(raw) {
+    if (!raw || typeof raw.message !== "string") return null;
+    return {
+      author: raw.author === "admin" ? "admin" : "reporter",
+      message: raw.message,
+      createdAt: stringOrNull2(raw.createdAt) ?? ""
+    };
+  }
+  function readMyReport(raw) {
+    const id = numberOrNull(raw?.id);
+    if (!id) return null;
+    const comments = Array.isArray(raw.comments) ? raw.comments.map(readComment).filter(Boolean) : [];
+    return {
+      id,
+      ref: stringOrNull2(raw.ref) ?? `BR-${id}`,
+      project: stringOrNull2(raw.project) ?? "",
+      title: stringOrNull2(raw.title) ?? "",
+      status: stringOrNull2(raw.status) ?? "new",
+      statusLabel: stringOrNull2(raw.statusLabel) ?? "",
+      modVersion: stringOrNull2(raw.modVersion),
+      fixedInVersion: stringOrNull2(raw.fixedInVersion),
+      publicReply: stringOrNull2(raw.publicReply),
+      publicReplyAt: stringOrNull2(raw.publicReplyAt),
+      createdAt: stringOrNull2(raw.createdAt) ?? "",
+      updatedAt: stringOrNull2(raw.updatedAt) ?? "",
+      comments,
+      canComment: raw.canComment === true
+    };
+  }
+  async function listMyReports(client, reports) {
+    const body = {
+      reports: reports.slice(0, BUG_REPORT_LIMITS.mineReports).map(({ id, followToken }) => ({ id, followToken }))
+    };
+    const result = await postJson(client, "bug-reports/mine", body, client.reportTimeoutMs ?? REPORT_TIMEOUT_MS);
+    if (!result.ok) return result;
+    const list = Array.isArray(result.data?.reports) ? result.data.reports : null;
+    if (!list) return { ok: false, error: { kind: "bad_response" } };
+    return { ok: true, reports: list.map(readMyReport).filter(Boolean) };
+  }
+  async function addReportComment(client, report3, message2) {
+    const text2 = message2.trim();
+    if (!text2 || text2.length > BUG_REPORT_LIMITS.commentMessage) return { ok: false, error: { kind: "invalid", field: "message" } };
+    const result = await postJson(
+      client,
+      `bug-reports/${report3.id}/comments`,
+      { followToken: report3.followToken, message: text2 },
+      client.reportTimeoutMs ?? REPORT_TIMEOUT_MS
+    );
+    return result.ok ? { ok: true } : result;
+  }
+  function formatWait(seconds2) {
+    if (seconds2 == null || !Number.isFinite(seconds2) || seconds2 <= 60) return "a minute";
+    const minutes = Math.ceil(seconds2 / 60);
+    if (minutes < 60) return `${minutes} minutes`;
+    const hours = Math.round(minutes / 60);
+    return hours <= 1 ? "about an hour" : `about ${hours} hours`;
+  }
+  function describeBugReportError(error) {
+    switch (error.kind) {
+      case "offline":
+        return "Could not reach the server. Check your connection and try again.";
+      case "timeout":
+        return "The server took too long to answer. Please try again in a moment.";
+      case "rate_limited":
+        return `You have sent several reports in a short time. Please try again in ${formatWait(error.retryAfterSec)}.`;
+      case "duplicate":
+        return error.ref ? `You already sent this report a few minutes ago, as ${error.ref}. No need to send it twice.` : "You already sent this report a few minutes ago. No need to send it twice.";
+      case "invalid":
+        return error.field && FIELD_HINTS[error.field] || `The server did not accept the ${error.field ?? "report"} field.`;
+      case "too_large":
+        return "The report is too large to send. Try removing a screenshot.";
+      case "not_found":
+        return "This report could not be found on the server.";
+      case "closed":
+        return "This report is closed, so it no longer takes replies.";
+      case "server":
+        return `The server ran into a problem (error ${error.status}). Please try again in a few minutes.`;
+      case "rejected":
+        return `The server refused the request (error ${error.status}${error.reason ? `, ${error.reason}` : ""}).`;
+      case "bad_response":
+        return "The server gave an answer the mod did not understand.";
+    }
+  }
+  var REPORT_TIMEOUT_MS, UPLOAD_TIMEOUT_MS, DEADLINE_GRACE_MS, DeadlineError, numberOrNull, stringOrNull2, isTransient, FIELD_HINTS;
+  var init_client = __esm({
+    "src/lib/bugReport/client.ts"() {
+      "use strict";
+      init_limits();
+      init_prepare();
+      REPORT_TIMEOUT_MS = 3e4;
+      UPLOAD_TIMEOUT_MS = 6e4;
+      DEADLINE_GRACE_MS = 5e3;
+      DeadlineError = class extends Error {
+      };
+      numberOrNull = (value) => typeof value === "number" && Number.isFinite(value) ? value : null;
+      stringOrNull2 = (value) => typeof value === "string" ? value : null;
+      isTransient = (error) => error.kind === "offline" || error.kind === "timeout" || error.kind === "server";
+      FIELD_HINTS = {
+        title: "The title needs between 3 and 140 characters.",
+        description: "Please describe what happened in at least 10 characters.",
+        message: "A reply needs between 1 and 2000 characters."
+      };
+    }
+  });
+
+  // src/lib/bugReport/status.ts
+  function isBugReportStatus(value) {
+    return typeof value === "string" && BUG_REPORT_STATUSES.includes(value);
+  }
+  function statusLabel(status2, serverLabel) {
+    if (isBugReportStatus(status2)) return STATUS_LABELS[status2];
+    return serverLabel?.trim() || "Unknown";
+  }
+  function acceptsComments(status2) {
+    return !COMMENT_CLOSED_STATUSES.includes(status2);
+  }
+  var BUG_REPORT_STATUSES, STATUS_LABELS, COMMENT_CLOSED_STATUSES;
+  var init_status = __esm({
+    "src/lib/bugReport/status.ts"() {
+      "use strict";
+      BUG_REPORT_STATUSES = [
+        "new",
+        "triaged",
+        "needs_info",
+        "confirmed",
+        "in_progress",
+        "fixed",
+        "duplicate",
+        "wont_fix",
+        "not_a_bug",
+        "spam",
+        "closed"
+      ];
+      STATUS_LABELS = {
+        new: "Received",
+        triaged: "Under review",
+        needs_info: "Need more info",
+        confirmed: "Confirmed",
+        in_progress: "Being fixed",
+        fixed: "Fixed",
+        duplicate: "Duplicate",
+        wont_fix: "Closed",
+        not_a_bug: "Closed",
+        spam: "Closed",
+        closed: "Closed"
+      };
+      COMMENT_CLOSED_STATUSES = ["closed", "spam", "duplicate", "wont_fix", "not_a_bug"];
+    }
+  });
+
+  // src/lib/bugReport/version.ts
+  function compareVersions(a, b) {
+    const left = parts(a);
+    const right = parts(b);
+    for (let i = 0; i < Math.max(left.length, right.length); i++) {
+      const x = left[i] ?? "0";
+      const y = right[i] ?? "0";
+      const nx = Number(x);
+      const ny = Number(y);
+      const diff = Number.isFinite(nx) && Number.isFinite(ny) ? nx - ny : x.localeCompare(y);
+      if (diff) return diff < 0 ? -1 : 1;
+    }
+    return 0;
+  }
+  function isVersionBelow(local, target) {
+    if (!local?.trim() || !target?.trim()) return false;
+    return compareVersions(local, target) < 0;
+  }
+  var parts;
+  var init_version = __esm({
+    "src/lib/bugReport/version.ts"() {
+      "use strict";
+      parts = (version) => version.trim().replace(/^v/i, "").split(/[.\-+]/);
+    }
+  });
+
+  // src/platform/ariesApi/http.ts
+  async function postToAriesApi(path, body) {
+    const headers = { "Content-Type": "application/json" };
+    const apiKey = getApiKey();
+    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+    try {
+      const res = await request(
+        { url: new URL(path, API_BASE_URL).toString(), method: "POST", headers, body: JSON.stringify(body) },
+        "text"
+      );
+      return res.status;
+    } catch {
+      return 0;
+    }
+  }
+  var API_BASE_URL, API_ORIGIN;
+  var init_http3 = __esm({
+    "src/platform/ariesApi/http.ts"() {
+      "use strict";
+      init_storage();
+      init_http();
+      API_BASE_URL = "https://ariesmod-api.ariedam.fr/";
+      API_ORIGIN = API_BASE_URL.replace(/\/$/, "");
+    }
+  });
+
+  // src/platform/ariesApi/bugReports.ts
+  async function send3(req) {
+    const res = await request(
+      { url: req.url, method: req.method, headers: req.headers, body: req.body, timeoutMs: req.timeoutMs },
+      "text"
+    );
+    return { status: res.status, body: res.body ?? "" };
+  }
+  var bugReportClient;
+  var init_bugReports = __esm({
+    "src/platform/ariesApi/bugReports.ts"() {
+      "use strict";
+      init_http();
+      init_storage();
+      init_http3();
+      bugReportClient = {
+        baseUrl: API_ORIGIN,
+        request: send3,
+        getApiKey
+      };
+    }
+  });
+
+  // src/platform/ariesApi/playerStatePayload.ts
+  function clampPlayers(n) {
+    const value = Math.floor(Number(n));
+    if (!Number.isFinite(value)) return 1;
+    return Math.max(1, Math.min(6, value));
+  }
+  function findPlayersDeep2(state5) {
+    if (!state5 || typeof state5 !== "object") return [];
+    const out = [];
+    const seen = /* @__PURE__ */ new Set();
+    const stack = [state5];
+    while (stack.length) {
+      const cur = stack.pop();
+      if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
+      seen.add(cur);
+      for (const key2 of Object.keys(cur)) {
+        const value = cur[key2];
+        if (Array.isArray(value) && value.length > 0 && value.every((item) => item && typeof item === "object")) {
+          const looksLikePlayer = value.some((item) => "id" in item && "name" in item);
+          if (looksLikePlayer && /player/i.test(key2)) {
+            out.push(...value);
+          }
+        }
+        if (value && typeof value === "object") {
+          stack.push(value);
+        }
+      }
+    }
+    const byId = /* @__PURE__ */ new Map();
+    for (const entry of out) {
+      if (entry?.id) {
+        byId.set(String(entry.id), entry);
+      }
+    }
+    return [...byId.values()];
+  }
+  function getPlayersArray(state5) {
+    const direct = state5?.fullState?.data?.players ?? state5?.data?.players ?? state5?.players;
+    return Array.isArray(direct) ? direct : findPlayersDeep2(state5);
+  }
+  function getSlotsArray(state5) {
+    const raw = state5?.child?.data?.userSlots ?? state5?.fullState?.child?.data?.userSlots ?? state5?.data?.userSlots;
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === "object") {
+      const entries = Object.entries(raw);
+      entries.sort((a, b) => {
+        const ai = Number(a[0]);
+        const bi = Number(b[0]);
+        if (Number.isFinite(ai) && Number.isFinite(bi)) return ai - bi;
+        return a[0].localeCompare(b[0]);
+      });
+      return entries.map(([, value]) => value);
+    }
+    return [];
+  }
+  async function getMyAccountId(state5) {
+    try {
+      const me = await player.get();
+      const snapshot3 = state5 ?? await Atoms.root.state.get();
+      return resolveMyAccountId(me, getPlayersArray(snapshot3));
+    } catch {
+      return null;
+    }
+  }
+  function resolvePlayer(players, slot, accountId) {
+    const byAccount = findPlayerByAccountId(players, accountId ?? readSlotId(slot));
+    if (byAccount) return byAccount;
+    const slotRoomId = slot?.playerId ?? slot?.data?.playerId ?? null;
+    if (slotRoomId != null) {
+      const normalized = String(slotRoomId);
+      for (const player2 of players) {
+        if (player2 && typeof player2 === "object" && String(player2.id ?? "") === normalized) {
+          return player2;
+        }
+      }
+    }
+    return null;
+  }
+  function normalizeActivityLog(slotData) {
+    const logs2 = slotData?.activityLog ?? slotData?.activityLogs ?? slotData?.activitylog;
+    return Array.isArray(logs2) ? logs2 : null;
+  }
+  async function buildPlayerStatePayload(options2 = {}) {
+    try {
+      const state5 = await Atoms.root.state.get();
+      if (!state5 || typeof state5 !== "object") return null;
+      const players = getPlayersArray(state5);
+      const normalizedPlayers = Array.isArray(players) ? players : [];
+      const slots = getSlotsArray(state5).filter((slot2) => !!slot2);
+      const coinsById = /* @__PURE__ */ new Map();
+      for (const slot2 of slots) {
+        const slotData2 = slot2?.data ?? slot2;
+        const normalizedSlotId = readSlotId(slot2);
+        if (normalizedSlotId == null) continue;
+        const coinCandidate2 = slotData2?.coinsCount ?? slotData2?.data?.coinsCount ?? slot2?.coinsCount ?? slot2?.data?.coinsCount ?? slotData2?.coins ?? slot2?.coins ?? null;
+        const coinValue2 = Number(coinCandidate2);
+        coinsById.set(normalizedSlotId, Number.isFinite(coinValue2) ? coinValue2 : null);
+      }
+      const userSlots = normalizedPlayers.map((player2) => {
+        const slotId = readAccountId(player2);
+        const coins = slotId ? coinsById.get(slotId) ?? null : null;
+        return {
+          name: typeof player2?.name === "string" ? player2.name : null,
+          discordAvatarUrl: typeof player2?.discordAvatarUrl === "string" ? player2.discordAvatarUrl : null,
+          playerId: slotId,
+          coins
+        };
+      });
+      if (slots.length === 0) return null;
+      const myAccountId = options2.playerId ?? await getMyAccountId(state5);
+      const slot = selectSlotForAccount(slots, {
+        slotIndex: options2.slotIndex,
+        accountId: myAccountId
+      });
+      if (!slot || typeof slot !== "object") {
+        return null;
+      }
+      const slotData = slot.data ?? slot;
+      if (!slotData || typeof slotData !== "object") return null;
+      const resolvedPlayer = resolvePlayer(normalizedPlayers, slot, myAccountId ?? null);
+      const playerName2 = resolvedPlayer?.name ?? slotData?.name ?? slot?.name ?? null;
+      const avatarRaw = resolvedPlayer?.cosmetic?.avatar ?? slotData?.cosmetic?.avatar ?? slot?.cosmetic?.avatar ?? null;
+      const avatar2 = Array.isArray(avatarRaw) && avatarRaw.length > 0 ? avatarRaw.map((entry) => String(entry)) : null;
+      const coinCandidate = slotData?.coinsCount ?? slot?.coinsCount ?? slotData?.coins ?? slot?.coins ?? null;
+      const coinValue = Number(coinCandidate);
+      const coinsRaw = Number.isFinite(coinValue) ? coinValue : null;
+      const roomId = state5?.data?.roomId ?? state5?.fullState?.data?.roomId ?? state5?.roomId ?? null;
+      let playersCount = normalizedPlayers.length > 0 ? normalizedPlayers.length : slots.length;
+      try {
+        const atomValue = await Atoms.server.numPlayers.get();
+        playersCount = clampPlayers(atomValue);
+      } catch {
+      }
+      const persistedActivityLog = readAriesPath("activityLog.history");
+      const activityLog = Array.isArray(persistedActivityLog) ? persistedActivityLog : normalizeActivityLog(slotData);
+      const journalEntry = slotData?.journal ?? slotData?.data?.journal ?? slot?.journal ?? slot?.data?.journal ?? null;
+      const localVersion = getLocalVersion();
+      const modVersion = localVersion ? `Arie's mod ${localVersion}` : null;
+      const payload = {
+        playerName: playerName2 ?? null,
+        avatar: avatar2 ?? null,
+        modVersion,
+        coins: coinsRaw,
+        room: {
+          id: roomId,
+          isPrivate: options2.roomIsPrivate ?? null,
+          playersCount,
+          userSlots
+        },
+        state: {
+          garden: slotData?.garden ?? null,
+          inventory: slotData?.inventory ?? slot?.inventory ?? null,
+          stats: typeof slotData?.stats === "object" && slotData?.stats ? slotData.stats : null,
+          activityLog: activityLog ?? null,
+          journal: journalEntry ?? null
+        }
+      };
+      return payload;
+    } catch (error) {
+      console.error("[PlayerPayload] buildPlayerStatePayload failed", error);
+      return null;
+    }
+  }
+  var init_playerStatePayload = __esm({
+    "src/platform/ariesApi/playerStatePayload.ts"() {
+      "use strict";
+      init_atoms();
+      init_pageContext();
+      init_storage();
+      init_modVersion();
+      init_playerIdentity();
+      shareGlobal("buildPlayerStatePayload", buildPlayerStatePayload);
+      shareGlobal("logPlayerStatePayload", buildPlayerStatePayload);
+    }
+  });
+
+  // src/lib/bugReport/logCapture.ts
+  function isErrorLike(value) {
+    if (!value || typeof value !== "object") return false;
+    const v = value;
+    return typeof v.message === "string" && (typeof v.stack === "string" || value instanceof Error);
+  }
+  function describeError(error) {
+    const name = typeof error.name === "string" && error.name ? error.name : "Error";
+    const head = `${name}: ${String(error.message)}`;
+    const stack = typeof error.stack === "string" ? error.stack : "";
+    const frames = stack.split("\n").map((line) => line.trim()).filter((line) => line && !line.startsWith(head)).slice(0, STACK_FRAMES);
+    return frames.length ? `${head} @ ${frames.join(" | ")}` : head;
+  }
+  function boundedJson(root4, budget) {
+    let out = "";
+    const ancestors = /* @__PURE__ */ new Set();
+    const write2 = (text2) => {
+      out += text2;
+      return out.length < budget;
+    };
+    const visit = (value, depth) => {
+      if (typeof value === "string") return write2(JSON.stringify(value.length > budget ? value.slice(0, budget) : value));
+      if (typeof value === "function") return write2('"[function]"');
+      if (value === null || typeof value !== "object") return write2(String(value));
+      if (ancestors.has(value)) return write2('"[circular]"');
+      if (depth >= MAX_DEPTH2) return write2(Array.isArray(value) ? "[...]" : "{...}");
+      ancestors.add(value);
+      try {
+        if (Array.isArray(value)) {
+          if (!write2("[")) return false;
+          const count2 = Math.min(value.length, MAX_ITEMS);
+          for (let i = 0; i < count2; i++) {
+            if (i && !write2(",")) return false;
+            if (!visit(value[i], depth + 1)) return false;
+          }
+          if (value.length > count2 && !write2(`,"+${value.length - count2} more"`)) return false;
+          return write2("]");
+        }
+        if (!write2("{")) return false;
+        const keys = Object.keys(value);
+        const count = Math.min(keys.length, MAX_KEYS);
+        for (let i = 0; i < count; i++) {
+          if (!write2(`${i ? "," : ""}${JSON.stringify(keys[i])}:`)) return false;
+          let item;
+          try {
+            item = value[keys[i]];
+          } catch {
+            item = "[throws]";
+          }
+          if (!visit(item, depth + 1)) return false;
+        }
+        if (keys.length > count && !write2(`,"...":"+${keys.length - count} keys"`)) return false;
+        return write2("}");
+      } finally {
+        ancestors.delete(value);
+      }
+    };
+    visit(root4, 0);
+    return out;
+  }
+  function describeLogValue(value, budget = 500) {
+    try {
+      if (typeof value === "string") return value.length > budget ? value.slice(0, budget) : value;
+      if (isErrorLike(value)) return describeError(value);
+      if (typeof value === "function") return `[function ${value.name || "anonymous"}]`;
+      if (value === null || typeof value !== "object") return String(value);
+      const node = value;
+      if (typeof node.nodeType === "number" && typeof node.tagName === "string") return `<${node.tagName.toLowerCase()}>`;
+      return boundedJson(value, budget);
+    } catch {
+      return "[unprintable]";
+    }
+  }
+  function formatLogArgs(args, max = 500) {
+    let out = "";
+    for (const arg of args) {
+      if (out.length >= max) break;
+      const part2 = describeLogValue(arg, max - out.length);
+      out = out ? `${out} ${part2}` : part2;
+    }
+    return clipLine(out, max);
+  }
+  function createLogCapture(options2 = {}) {
+    const maxMessage = options2.maxMessage ?? 500;
+    const maxBreadcrumb = options2.maxBreadcrumb ?? 200;
+    const now = options2.now ?? (() => Date.now());
+    const logs2 = new RingBuffer(options2.maxLogs ?? 200);
+    const crumbs = new RingBuffer(options2.maxBreadcrumbs ?? 100);
+    const consoles = /* @__PURE__ */ new WeakSet();
+    const targets = /* @__PURE__ */ new WeakSet();
+    let busy = false;
+    const pushFolded = (buffer, entry, same) => {
+      const last = buffer.last();
+      if (last && same(last)) last.repeat = (last.repeat ?? 1) + 1;
+      else buffer.push(entry);
+    };
+    const record2 = (level, args) => {
+      try {
+        const msg = formatLogArgs(args, maxMessage);
+        pushFolded(logs2, { t: now(), level, msg }, (last) => last.level === level && last.msg === msg);
+      } catch {
+      }
+    };
+    const guarded = (fn) => {
+      if (busy) return;
+      busy = true;
+      try {
+        fn();
+      } catch {
+      } finally {
+        busy = false;
+      }
+    };
+    const wrapConsole = (con, undo) => {
+      for (const level of WRAPPED_LEVELS) {
+        const original = con[level];
+        if (typeof original !== "function") continue;
+        const replacement = function(...args) {
+          const self = this ?? con;
+          if (busy) {
+            try {
+              return original.apply(self, args);
+            } catch {
+              return void 0;
+            }
+          }
+          busy = true;
+          try {
+            record2(level, args);
+            return original.apply(self, args);
+          } catch {
+            return void 0;
+          } finally {
+            busy = false;
+          }
+        };
+        con[level] = replacement;
+        undo.push(() => {
+          if (con[level] === replacement) con[level] = original;
+        });
+      }
+    };
+    const listen2 = (target, undo) => {
+      const onError = (event) => guarded(() => {
+        if (event?.error) {
+          record2("error", ["Uncaught", event.error]);
+          return;
+        }
+        const where = event?.filename ? ` (${event.filename}:${event.lineno ?? 0}:${event.colno ?? 0})` : "";
+        record2("error", [`Uncaught ${event?.message ?? "error"}${where}`]);
+      });
+      const onRejection = (event) => guarded(() => record2("error", ["Unhandled rejection:", event?.reason]));
+      target.addEventListener("error", onError);
+      target.addEventListener("unhandledrejection", onRejection);
+      undo.push(() => {
+        target.removeEventListener?.("error", onError);
+        target.removeEventListener?.("unhandledrejection", onRejection);
+      });
+    };
+    return {
+      record: (level, args) => guarded(() => record2(level, args)),
+      breadcrumb(message2) {
+        guarded(() => {
+          const msg = clipLine(String(message2), maxBreadcrumb);
+          pushFolded(crumbs, { t: now(), msg }, (last) => last.msg === msg);
+        });
+      },
+      logs: () => logs2.toArray().map((entry) => ({ ...entry })),
+      breadcrumbs: () => crumbs.toArray().map((entry) => ({ ...entry })),
+      clear() {
+        logs2.clear();
+        crumbs.clear();
+      },
+      install(target) {
+        const undo = [];
+        try {
+          const con = target.console;
+          if (con && typeof con === "object" && !consoles.has(con)) {
+            consoles.add(con);
+            wrapConsole(con, undo);
+            undo.push(() => consoles.delete(con));
+          }
+          if (typeof target.addEventListener === "function" && !targets.has(target)) {
+            targets.add(target);
+            listen2(target, undo);
+            undo.push(() => targets.delete(target));
+          }
+        } catch {
+        }
+        return () => {
+          for (const step of undo.splice(0).reverse()) {
+            try {
+              step();
+            } catch {
+            }
+          }
+        };
+      }
+    };
+  }
+  var RingBuffer, MAX_DEPTH2, MAX_KEYS, MAX_ITEMS, STACK_FRAMES, WRAPPED_LEVELS;
+  var init_logCapture = __esm({
+    "src/lib/bugReport/logCapture.ts"() {
+      "use strict";
+      init_limits();
+      RingBuffer = class {
+        constructor(max) {
+          this.max = max;
+          this.items = [];
+        }
+        push(item) {
+          this.items.push(item);
+          if (this.items.length > this.max) this.items.splice(0, this.items.length - this.max);
+        }
+        /** The newest item, to fold a repeat into it. */
+        last() {
+          return this.items[this.items.length - 1];
+        }
+        toArray() {
+          return this.items.slice();
+        }
+        clear() {
+          this.items = [];
+        }
+        get size() {
+          return this.items.length;
+        }
+      };
+      MAX_DEPTH2 = 3;
+      MAX_KEYS = 15;
+      MAX_ITEMS = 10;
+      STACK_FRAMES = 4;
+      WRAPPED_LEVELS = ["error", "warn"];
+    }
+  });
+
+  // src/platform/diagnostics.ts
+  function installDiagnostics() {
+    if (installed10 || typeof window === "undefined") return;
+    installed10 = true;
+    diagnostics.install(pageWindow);
+    if (pageWindow !== window) diagnostics.install(window);
+  }
+  function recordBreadcrumb(message2) {
+    diagnostics.breadcrumb(message2);
+  }
+  var diagnostics, installed10;
+  var init_diagnostics2 = __esm({
+    "src/platform/diagnostics.ts"() {
+      "use strict";
+      init_logCapture();
+      init_pageContext();
+      diagnostics = createLogCapture({ maxLogs: 200, maxBreadcrumbs: 100 });
+      installed10 = false;
+    }
+  });
+
+  // src/features/bugReport/project.ts
+  var BUG_REPORT_PROJECT;
+  var init_project = __esm({
+    "src/features/bugReport/project.ts"() {
+      "use strict";
+      BUG_REPORT_PROJECT = { id: "aries-mod", name: "Arie's Mod" };
+    }
+  });
+
+  // src/features/bugReport/settingsWhitelist.ts
+  function readReportedSettings() {
+    const out = {};
+    for (const path of REPORTED_SETTINGS) {
+      let value;
+      try {
+        value = readAriesPath(path);
+      } catch {
+        continue;
+      }
+      if (typeof value === "boolean") out[path] = value;
+      else if (typeof value === "number" && Number.isFinite(value)) out[path] = value;
+      else if (typeof value === "string" && value.length <= MAX_STRING) out[path] = value;
+    }
+    return out;
+  }
+  var REPORTED_SETTINGS, MAX_STRING;
+  var init_settingsWhitelist = __esm({
+    "src/features/bugReport/settingsWhitelist.ts"() {
+      "use strict";
+      init_storage();
+      REPORTED_SETTINGS = [
+        "misc.ghostMode",
+        "misc.ghostDelayMs",
+        "misc.autoRecoEnabled",
+        "misc.autoRecoDelayMs",
+        "misc.keepInventorySlotFree",
+        "misc.autoStoreSeedSiloEnabled",
+        "misc.autoStoreDecorShedEnabled",
+        "misc.autoStoreToolShackEnabled",
+        "misc.showCropPrice",
+        "misc.showDebugMenu",
+        "pets.instantFeedWidget.enabled",
+        "pets.teamSync",
+        "notifier.floatingBell.enabled",
+        "notifications.soundEnabled",
+        "skins.enabled",
+        "editor.enabled",
+        "inventory.showValues",
+        "inventory.sortKey",
+        "inventory.sortDirection",
+        "ui.appearance.theme",
+        "ui.appearance.scale",
+        "hud.hidden",
+        "hud.dockFolded"
+      ];
+      MAX_STRING = 40;
+    }
+  });
+
+  // src/features/bugReport/context.ts
+  function within(promise, ms, fallback) {
+    return new Promise((resolve) => {
+      const timer2 = setTimeout(() => resolve(fallback), ms);
+      promise.then(
+        (value) => {
+          clearTimeout(timer2);
+          resolve(value);
+        },
+        () => {
+          clearTimeout(timer2);
+          resolve(fallback);
+        }
+      );
+    });
+  }
+  function scriptHandler() {
+    try {
+      if (typeof GM_info === "undefined") return null;
+      return [GM_info.scriptHandler, GM_info.version].filter(Boolean).join(" ") || null;
+    } catch {
+      return null;
+    }
+  }
+  function environment() {
+    const env = detectEnvironment();
+    return {
+      surface: env.surface,
+      host: env.host,
+      platform: env.platform,
+      inIframe: env.isInIframe,
+      userAgent: navigator.userAgent,
+      viewport: `${window.innerWidth}x${window.innerHeight}`,
+      screen: typeof screen !== "undefined" ? `${screen.width}x${screen.height}` : null,
+      dpr: window.devicePixelRatio || 1,
+      scriptHandler: scriptHandler(),
+      language: navigator.language,
+      uptimeSec: Math.round(performance.now() / 1e3)
+    };
+  }
+  function latestVersion() {
+    return within(checkModVersion(), READ_TIMEOUT_MS, null);
+  }
+  async function collectAutoFields(attached) {
+    const [version, playerId2, state5, activeModal2] = await Promise.all([
+      latestVersion(),
+      within(getMyAccountId(), READ_TIMEOUT_MS, null),
+      within(buildPlayerStatePayload(), READ_TIMEOUT_MS, null),
+      within(Atoms.ui.activeModal.get(), READ_TIMEOUT_MS, null)
+    ]);
+    const sprites = getSpriteState();
+    const context = {
+      environment: environment(),
+      mod: { latestVersion: version?.remote ?? null, behind: version?.behind ?? false },
+      game: {
+        roomId: state5?.room.id ?? null,
+        playersInRoom: state5?.room.playersCount ?? null,
+        activeModal: typeof activeModal2 === "string" ? activeModal2 : null,
+        // Health signals: a store that was never captured or a renderer the mod
+        // never found explains a whole class of "nothing works" reports.
+        storeCaptured: isStoreCaptured(),
+        rendererReady: !!getReadySpriteState(),
+        pixiVersion: sprites.version ?? null
+      }
+    };
+    if (attached.settings) context.settings = readReportedSettings();
+    if (attached.logs) {
+      context.logs = diagnostics.logs();
+      context.breadcrumbs = diagnostics.breadcrumbs();
+    }
+    return {
+      project: BUG_REPORT_PROJECT.id,
+      modName: BUG_REPORT_PROJECT.name,
+      modVersion: getLocalVersion() ?? null,
+      gameVersion: gameVersion ?? detectGameVersion(),
+      playerId: playerId2,
+      playerName: state5?.playerName ?? null,
+      includeAccountState: attached.accountState,
+      context
+    };
+  }
+  var READ_TIMEOUT_MS;
+  var init_context2 = __esm({
+    "src/features/bugReport/context.ts"() {
+      "use strict";
+      init_gameVersion();
+      init_context();
+      init_atoms();
+      init_jotai();
+      init_playerStatePayload();
+      init_diagnostics2();
+      init_environment();
+      init_modVersion();
+      init_project();
+      init_settingsWhitelist();
+      READ_TIMEOUT_MS = 2500;
+    }
+  });
+
+  // src/lib/bugReport/sentReports.ts
+  function readEntry(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const r = raw;
+    const id = typeof r.id === "number" ? r.id : Number(r.id);
+    if (!Number.isSafeInteger(id) || id <= 0) return null;
+    if (typeof r.followToken !== "string" || !TOKEN_RE.test(r.followToken)) return null;
+    return {
+      id,
+      ref: typeof r.ref === "string" && r.ref ? r.ref : `BR-${id}`,
+      followToken: r.followToken,
+      title: typeof r.title === "string" ? r.title.slice(0, BUG_REPORT_LIMITS.title.max) : "",
+      createdAt: typeof r.createdAt === "string" ? r.createdAt : ""
+    };
+  }
+  function parseSentReports(raw, max = BUG_REPORT_LIMITS.sentReports) {
+    if (!Array.isArray(raw)) return [];
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const item of raw) {
+      const entry = readEntry(item);
+      if (!entry || seen.has(entry.id)) continue;
+      seen.add(entry.id);
+      out.push(entry);
+      if (out.length >= max) break;
+    }
+    return out;
+  }
+  function addSentReport(list, entry, max = BUG_REPORT_LIMITS.sentReports) {
+    return [entry, ...list.filter((item) => item.id !== entry.id)].slice(0, max);
+  }
+  function sentReportFrom(created, title, now = Date.now()) {
+    return {
+      id: created.id,
+      ref: created.ref,
+      followToken: created.followToken,
+      title: title.slice(0, BUG_REPORT_LIMITS.title.max),
+      createdAt: new Date(now).toISOString()
+    };
+  }
+  var TOKEN_RE;
+  var init_sentReports = __esm({
+    "src/lib/bugReport/sentReports.ts"() {
+      "use strict";
+      init_limits();
+      TOKEN_RE = /^[0-9a-f]{16,128}$/i;
+    }
+  });
+
+  // src/features/bugReport/sentStore.ts
+  function readSentReports() {
+    return parseSentReports(readAriesPath(SENT_PATH));
+  }
+  function rememberSentReport(entry) {
+    writeAriesPath(SENT_PATH, addSentReport(readSentReports(), entry));
+    changed7.emit();
+  }
+  function onSentReportsChange(cb) {
+    return changed7.on(cb);
+  }
+  var SENT_PATH, changed7;
+  var init_sentStore = __esm({
+    "src/features/bugReport/sentStore.ts"() {
+      "use strict";
+      init_emitter();
+      init_sentReports();
+      init_storage();
+      SENT_PATH = "bugReport.sent";
+      changed7 = new Emitter();
+    }
+  });
+
+  // src/features/bugReport/styles.ts
+  function ensureBugReportStyles() {
+    if (injected12) return;
+    injected12 = true;
+    addStyle(BUG_REPORT_CSS);
+  }
+  var BUG_REPORT_CSS, injected12;
+  var init_styles16 = __esm({
+    "src/features/bugReport/styles.ts"() {
+      "use strict";
+      init_dom();
+      BUG_REPORT_CSS = `
+.qws-bug-tab {
+  display: flex; flex-direction: column; gap: var(--qmm-space-lg); box-sizing: border-box;
+  width: min(500px, calc((100vw - 48px) / var(--qmm-scale, 1))); max-width: 100%;
+}
+.qws-bug-tab:focus { outline: none; }
+.qws-bug-stack { display: flex; flex-direction: column; gap: var(--qmm-space-lg); min-width: 0; }
+.qws-bug-note { margin: 0; font-size: var(--qmm-fs-md); line-height: 1.5; color: var(--qmm-text-soft); }
+.qws-bug-hint { display: block; margin: 0; font-size: var(--qmm-fs-xs); line-height: 1.45; color: var(--qmm-text-dim); }
+.qws-bug-hint:empty { display: none; }
+
+.qws-bug-field { display: flex; flex-direction: column; gap: var(--qmm-space-xs); min-width: 0; }
+.qws-bug-label { font-size: var(--qmm-fs-sm); font-weight: 800; color: var(--qmm-text-soft); }
+.qws-bug-label__optional { font-weight: 600; color: var(--qmm-text-dim); }
+.qws-bug-field > .qmm-input { width: 100%; box-sizing: border-box; }
+.qws-bug-textarea {
+  width: 100%; min-height: 96px; box-sizing: border-box; resize: vertical;
+  font-size: var(--qmm-fs-md); line-height: 1.45;
+}
+.qws-bug-textarea--short { min-height: 56px; }
+.qws-bug-field.is-invalid > .qmm-input { border-color: var(--qmm-danger-border); box-shadow: 0 0 0 3px var(--qmm-danger-soft); }
+.qws-bug-field.is-invalid .qws-bug-hint { color: var(--qmm-danger-ink); font-weight: 700; }
+
+.qws-bug-chips { display: flex; flex-wrap: wrap; gap: var(--qmm-space-sm); }
+.qws-bug-chips .qmm-chip-toggle__face { padding: 5px 11px; font-size: var(--qmm-fs-sm); }
+.qws-bug-row { display: flex; flex-wrap: wrap; gap: var(--qmm-space-lg); }
+.qws-bug-row > .qws-bug-field { flex: 1 1 180px; }
+
+.qws-bug-notice {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md);
+  padding: 10px 12px; border-radius: var(--qmm-radius-md); border: 2px solid var(--qmm-warn-border);
+  background: var(--qmm-warn-soft); color: var(--qmm-warn-ink);
+  font-size: var(--qmm-fs-sm); font-weight: 700; line-height: 1.45;
+}
+.qws-bug-notice > span { flex: 1 1 200px; }
+.qws-bug-notice--info { border-color: var(--qmm-border); background: var(--qmm-paper-deep); color: var(--qmm-text-soft); }
+.qws-bug-notice[hidden] { display: none; }
+
+.qws-bug-shots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--qmm-space-md); }
+.qws-bug-shots:empty { display: none; }
+.qws-bug-shot {
+  position: relative; aspect-ratio: 16 / 10; overflow: hidden; box-sizing: border-box; padding: 0;
+  border: 2px solid var(--qmm-sand-edge); border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+  cursor: zoom-in;
+}
+.qws-bug-shot:focus-visible { outline: 3px solid var(--qmm-accent-border); outline-offset: 2px; }
+.qws-bug-shot__img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.qws-bug-shot__label {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 6px;
+  background: var(--qmm-scrim); color: var(--qmm-on-sepia);
+  font-size: var(--qmm-fs-xs); font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.qws-bug-shot__remove.qmm-btn {
+  position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; min-width: 0; padding: 0;
+  border-radius: var(--qmm-radius-pill); font-size: var(--qmm-fs-xs);
+}
+.qws-bug-shot.is-pending { cursor: progress; display: flex; align-items: center; justify-content: center; }
+.qws-bug-shot.is-pending .qws-bug-shot__label { position: static; background: none; color: var(--qmm-text-dim); }
+.qws-bug-shot-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-sm); }
+.qws-bug-shot-bar .qws-bug-hint { flex: 1 1 140px; }
+.qws-bug-shot-full { display: block; max-width: 100%; height: auto; margin: 0 auto; border-radius: var(--qmm-radius-md); }
+
+.qws-bug-data .qmm-setting-row { padding: 8px 10px; }
+.qws-bug-data .qmm-setting-row__title { font-size: var(--qmm-fs-md); }
+.qws-bug-data .qmm-switch:disabled { opacity: .6; cursor: default; }
+
+.qws-bug-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--qmm-space-md); }
+.qws-bug-actions > .qws-bug-progress { flex: 1 1 160px; }
+.qws-bug-progress { font-size: var(--qmm-fs-sm); font-weight: 700; color: var(--qmm-text-soft); }
+.qws-bug-progress:empty { display: none; }
+
+.qws-bug-success { display: flex; flex-direction: column; align-items: center; gap: var(--qmm-space-md); padding: var(--qmm-space-xl) var(--qmm-space-md); text-align: center; }
+.qws-bug-success__title { font-size: 20px; font-weight: 900; color: var(--qmm-text); }
+.qws-bug-success__ref {
+  display: flex; align-items: center; gap: var(--qmm-space-md);
+  padding: 6px 8px 6px 14px; border-radius: var(--qmm-radius-pill); background: var(--qmm-accent-soft);
+}
+.qws-bug-success__code { font-family: var(--qmm-font-mono); font-size: 18px; font-weight: 800; color: var(--qmm-sepia-ink); user-select: all; }
+
+.qws-bug-json {
+  margin: 0; max-height: 50vh; overflow: auto; padding: 10px 12px; box-sizing: border-box;
+  border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep); color: var(--qmm-text);
+  font-family: var(--qmm-font-mono); font-size: var(--qmm-fs-xs); line-height: 1.5;
+  white-space: pre-wrap; word-break: break-word; user-select: text;
+}
+
+.qws-bug-list { display: flex; flex-direction: column; gap: var(--qmm-space-lg); }
+.qws-bug-list-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.qws-bug-list-head > .qws-bug-note { flex: 1 1 200px; }
+.qws-bug-empty {
+  padding: var(--qmm-space-xl) var(--qmm-space-lg); border-radius: var(--qmm-radius-md); background: var(--qmm-paper-deep);
+  font-size: var(--qmm-fs-md); line-height: 1.5; color: var(--qmm-text-soft); text-align: center;
+}
+.qws-bug-empty__title { margin-bottom: var(--qmm-space-sm); font-weight: 900; color: var(--qmm-text); }
+.qws-bug-report__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-sm); }
+.qws-bug-report__title { flex: 1 1 180px; min-width: 0; font-size: var(--qmm-fs-lg); font-weight: 900; color: var(--qmm-text); overflow-wrap: anywhere; }
+.qws-bug-report__meta { font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim); }
+.qws-bug-fix { padding: 8px 10px; border-radius: var(--qmm-radius-md); font-size: var(--qmm-fs-sm); font-weight: 700; background: var(--qmm-ok-soft); color: var(--qmm-ok-ink); }
+.qws-bug-fix.is-update { background: var(--qmm-warn-soft); color: var(--qmm-warn-ink); display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.qws-bug-fix.is-update > span { flex: 1 1 160px; }
+.qws-bug-thread { display: flex; flex-direction: column; gap: var(--qmm-space-sm); }
+.qws-bug-comment {
+  max-width: 88%; padding: 8px 10px; border-radius: var(--qmm-radius-md);
+  background: var(--qmm-paper-deep); color: var(--qmm-text);
+  font-size: var(--qmm-fs-md); line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.qws-bug-comment.is-admin { align-self: flex-start; background: var(--qmm-accent-soft); border: 2px solid var(--qmm-accent-border); }
+.qws-bug-comment.is-reporter { align-self: flex-end; }
+.qws-bug-comment__who { display: block; margin-bottom: 2px; font-size: var(--qmm-fs-xs); font-weight: 900; color: var(--qmm-text-dim); }
+.qws-bug-comment.is-admin .qws-bug-comment__who { color: var(--qmm-sepia-ink); }
+.qws-bug-reply { display: flex; flex-direction: column; gap: var(--qmm-space-sm); }
+.qws-bug-reply .qws-bug-actions { justify-content: flex-end; }
+`;
+      injected12 = false;
+    }
+  });
+
+  // src/features/bugReport/myReportsTab.ts
+  function formatDate(iso) {
+    const date = new Date(iso);
+    if (!iso || Number.isNaN(date.getTime())) return "";
+    try {
+      return date.toLocaleString(void 0, { dateStyle: "medium", timeStyle: "short" });
+    } catch {
+      return date.toLocaleString();
+    }
+  }
+  function toneOf(status2) {
+    if (status2 === "fixed") return "ok";
+    if (status2 === "needs_info") return "warn";
+    return void 0;
+  }
+  function renderMyReportsTab(view) {
+    ensureBugReportStyles();
+    const tab = h("div", "qws-bug-tab");
+    const refreshButton = button("Refresh", { size: "sm", variant: "ghost", lockWhilePending: true, onClick: () => refresh(true) });
+    const head = h("div", "qws-bug-list-head");
+    head.append(h("p", "qws-bug-note", "Reports sent from this browser, with their status and any reply."), refreshButton);
+    const errors = errorBar();
+    const list = h("div", "qws-bug-list");
+    tab.append(head, errors.el, list);
+    view.replaceChildren(tab);
+    let remote = /* @__PURE__ */ new Map();
+    let fetched = false;
+    let failed = false;
+    let stale = true;
+    let lastFetch = 0;
+    let inFlight = null;
+    let download = null;
+    const replyDrafts = /* @__PURE__ */ new Map();
+    void latestVersion().then((status2) => {
+      download = status2?.download ?? null;
+    });
+    onSentReportsChange(() => {
+      stale = true;
+    });
+    refreshWhileVisible(tab, () => void refresh(false), AUTO_REFRESH_MS);
+    function refresh(force) {
+      if (inFlight) return inFlight;
+      const local = readSentReports();
+      const typing = list.contains(document.activeElement) && document.activeElement?.tagName === "TEXTAREA";
+      if (!force && (typing || !stale && Date.now() - lastFetch < MIN_REFRESH_MS)) {
+        if (!typing) render(local);
+        return Promise.resolve();
+      }
+      render(local);
+      if (!local.length && !hasApiKey()) return Promise.resolve();
+      inFlight = (async () => {
+        const result = await listMyReports(bugReportClient, local);
+        lastFetch = Date.now();
+        stale = false;
+        if (result.ok) {
+          remote = new Map(result.reports.map((report3) => [report3.id, report3]));
+          fetched = true;
+          failed = false;
+          errors.clear();
+        } else {
+          failed = true;
+          errors.show(`Could not load the latest status. ${describeBugReportError(result.error)}`);
+        }
+        render(readSentReports());
+      })().finally(() => {
+        inFlight = null;
+      });
+      return inFlight;
+    }
+    function render(local) {
+      const rows = local.map((entry) => ({ id: entry.id, local: entry, remote: remote.get(entry.id) ?? null }));
+      const extra = [...remote.values()].filter((report3) => !local.some((entry) => entry.id === report3.id));
+      for (const report3 of extra.sort((a, b) => b.id - a.id)) rows.push({ id: report3.id, local: null, remote: report3 });
+      if (!rows.length) {
+        list.replaceChildren(emptyState3());
+        return;
+      }
+      list.replaceChildren(...rows.map(reportCard));
+    }
+    function reportCard(row2) {
+      const { local, remote: report3 } = row2;
+      const root4 = plainCard();
+      const title = report3?.title || local?.title || "Untitled report";
+      const headLine = h("div", "qws-bug-report__head");
+      headLine.append(h("div", "qws-bug-report__title", title), pill(report3?.ref ?? local?.ref ?? `BR-${row2.id}`));
+      const gone = !report3 && fetched && !!local && Date.parse(local.createdAt) <= lastFetch;
+      if (report3) headLine.append(pill(statusLabel(report3.status, report3.statusLabel), toneOf(report3.status)));
+      else headLine.append(pill(gone ? "Not found" : failed ? "Status unavailable" : "Checking..."));
+      root4.appendChild(headLine);
+      const sentAt = formatDate(report3?.createdAt || local?.createdAt || "");
+      const version = report3?.modVersion ? ` with v${report3.modVersion}` : "";
+      if (sentAt || version) root4.appendChild(h("div", "qws-bug-report__meta", `Sent ${sentAt}${version}`.trim()));
+      if (!report3) {
+        if (gone) root4.appendChild(h("p", "qws-bug-hint", "The server does not know this report any more. It may have been removed."));
+        return root4;
+      }
+      if (report3.fixedInVersion) root4.appendChild(fixLine(report3.fixedInVersion));
+      if (report3.status === "needs_info") {
+        const ask2 = h("div", "qws-bug-notice");
+        ask2.appendChild(h("span", void 0, "The developer needs a little more information. Please answer below."));
+        root4.appendChild(ask2);
+      }
+      const thread = h("div", "qws-bug-thread");
+      const reply = report3.publicReply?.trim();
+      if (reply && !report3.comments.some((comment) => comment.author === "admin" && comment.message.trim() === reply)) {
+        thread.appendChild(commentBubble("admin", reply, report3.publicReplyAt ?? ""));
+      }
+      for (const comment of report3.comments) thread.appendChild(commentBubble(comment.author, comment.message, comment.createdAt));
+      if (thread.childElementCount) root4.appendChild(thread);
+      if (report3.canComment && acceptsComments(report3.status)) {
+        if (local) root4.appendChild(replyBox({ id: local.id, followToken: local.followToken }));
+        else root4.appendChild(h("p", "qws-bug-hint", "Reply from the browser you sent this report from."));
+      }
+      return root4;
+    }
+    function fixLine(version) {
+      const local = getLocalVersion();
+      if (!isVersionBelow(local, version)) {
+        return h("div", "qws-bug-fix", local ? `Fixed in v${version}, which you already have.` : `Fixed in v${version}.`);
+      }
+      const line = h("div", "qws-bug-fix is-update");
+      line.appendChild(h("span", void 0, `Fixed in v${version}. Update to v${version} to get the fix.`));
+      const link = download;
+      if (link) line.appendChild(button("Update", { size: "sm", onClick: () => void openLink(link) }));
+      return line;
+    }
+    function commentBubble(author, message2, createdAt) {
+      const bubble = h("div", `qws-bug-comment ${author === "admin" ? "is-admin" : "is-reporter"}`);
+      const when = formatDate(createdAt);
+      bubble.appendChild(h("span", "qws-bug-comment__who", `${author === "admin" ? "Developer" : "You"}${when ? `, ${when}` : ""}`));
+      bubble.appendChild(document.createTextNode(message2));
+      return bubble;
+    }
+    function replyBox(report3) {
+      const box2 = h("div", "qws-bug-reply");
+      const area = h("textarea", "qmm-input qws-bug-textarea qws-bug-textarea--short");
+      area.placeholder = "Add a detail or answer a question";
+      area.maxLength = BUG_REPORT_LIMITS.commentMessage;
+      area.rows = 2;
+      area.value = replyDrafts.get(report3.id) ?? "";
+      area.addEventListener("input", () => replyDrafts.set(report3.id, area.value));
+      const status2 = h("span", "qws-bug-progress");
+      const sendReply = button("Send reply", {
+        size: "sm",
+        variant: "primary",
+        lockWhilePending: true,
+        onClick: async () => {
+          if (!area.value.trim()) {
+            status2.textContent = "Write something first.";
+            return;
+          }
+          status2.textContent = "Sending...";
+          const result = await addReportComment(bugReportClient, report3, area.value);
+          if (!result.ok) {
+            status2.textContent = describeBugReportError(result.error);
+            return;
+          }
+          replyDrafts.delete(report3.id);
+          area.value = "";
+          status2.textContent = "";
+          await refresh(true);
+        }
+      });
+      const actions2 = h("div", "qws-bug-actions");
+      actions2.append(status2, sendReply);
+      box2.append(area, actions2);
+      return box2;
+    }
+  }
+  function emptyState3() {
+    const box2 = h("div", "qws-bug-empty");
+    box2.append(
+      h("div", "qws-bug-empty__title", "No reports yet"),
+      h(
+        "div",
+        void 0,
+        "Reports you send from the New report tab show up here. Each one is read: you will see its status change as it is looked at, any question or reply from the developer, and the version that fixes it."
+      )
+    );
+    return box2;
+  }
+  var MY_REPORTS_TAB, MIN_REFRESH_MS, AUTO_REFRESH_MS;
+  var init_myReportsTab = __esm({
+    "src/features/bugReport/myReportsTab.ts"() {
+      "use strict";
+      init_client();
+      init_limits();
+      init_status();
+      init_version();
+      init_bugReports();
+      init_modVersion();
+      init_storage();
+      init_badges();
+      init_button();
+      init_card();
+      init_dom2();
+      init_openLink();
+      init_context2();
+      init_sentStore();
+      init_styles16();
+      MY_REPORTS_TAB = "bug-mine";
+      MIN_REFRESH_MS = 3e4;
+      AUTO_REFRESH_MS = 5 * 6e4;
+    }
+  });
+
+  // src/features/bugReport/attachedData.ts
+  function buildAttachedData(onPreview) {
+    const logs2 = switchInput(true);
+    const settings = switchInput(true);
+    const accountState = switchInput(true);
+    const technical = switchInput(true);
+    technical.disabled = true;
+    technical.title = "Always included";
+    const section = card("Attached data", { subtitle: "Sent with your report, only to the mod's developer." });
+    const rows = h("div", "qws-bug-stack qws-bug-data");
+    rows.append(
+      settingRow(
+        "Recent console errors",
+        "The last errors and warnings in this tab, and which menus you opened just before.",
+        logs2
+      ).row,
+      settingRow("Mod settings", "Which features are switched on, like ghost mode or auto store. Never your saved data or keys.", settings).row,
+      settingRow(
+        "Account state",
+        `Lets Romann see the garden and inventory ${BUG_REPORT_PROJECT.name} already syncs, as they are when you send this.`,
+        accountState
+      ).row,
+      settingRow(
+        "Technical info",
+        "Mod and game versions, browser and screen size, room and player count. Always included.",
+        technical
+      ).row
+    );
+    const previewRow = h("div", "qws-bug-actions");
+    previewRow.appendChild(button("Preview what will be sent", { size: "sm", variant: "ghost", lockWhilePending: true, onClick: onPreview }));
+    section.body.append(rows, previewRow);
+    return {
+      root: section.root,
+      read: () => ({ logs: logs2.checked, settings: settings.checked, accountState: accountState.checked }),
+      reset() {
+        logs2.checked = true;
+        settings.checked = true;
+        accountState.checked = true;
+      }
+    };
+  }
+  function showPreviewModal(host, body, screenshots, note) {
+    const modal = openModal2({ host, title: "What will be sent", widthPx: 620, maxHeightPx: 720 });
+    modal.body.appendChild(
+      h(
+        "p",
+        "qws-bug-note",
+        "This is the report exactly as it goes to the server, with anything that looks like a password or a key already hidden."
+      )
+    );
+    if (note) modal.body.appendChild(h("p", "qws-bug-hint", note));
+    const pre = h("pre", "qws-bug-json");
+    pre.textContent = JSON.stringify(body, null, 2);
+    modal.body.appendChild(pre);
+    const shots = screenshots.length ? `Then ${screenshots.length} screenshot${screenshots.length > 1 ? "s" : ""}, one request each: ${screenshots.map((shot) => `${shot.kind} ${shot.width} x ${shot.height}, ${Math.round(shot.bytes / 1024)} KB`).join("; ")}.` : "No screenshot.";
+    modal.body.appendChild(h("p", "qws-bug-hint", shots));
+    modal.footer.appendChild(button("Close", { variant: "primary", onClick: () => modal.close() }));
+  }
+  var init_attachedData = __esm({
+    "src/features/bugReport/attachedData.ts"() {
+      "use strict";
+      init_button();
+      init_card();
+      init_dom2();
+      init_layout();
+      init_modal();
+      init_toggles();
+      init_project();
+    }
+  });
+
+  // src/features/bugReport/draft.ts
+  function readDraft() {
+    const raw = readAriesPath(DRAFT_PATH);
+    const draft = {};
+    if (raw && typeof raw === "object") {
+      for (const field4 of DRAFT_FIELDS) {
+        const value = raw[field4];
+        if (typeof value === "string" && value) draft[field4] = value;
+      }
+    }
+    if (!draft.contact) {
+      const contact = readAriesPath(CONTACT_PATH);
+      if (typeof contact === "string" && contact) draft.contact = contact;
+    }
+    return draft;
+  }
+  function draftHasText(draft) {
+    return !!(draft.title?.trim() || draft.description?.trim() || draft.steps?.trim() || draft.expected?.trim() || draft.actual?.trim());
+  }
+  function writeDraft(draft) {
+    writeAriesPath(DRAFT_PATH, draftHasText(draft) ? draft : void 0);
+  }
+  function clearDraft() {
+    saveDraftSoon.cancel();
+    writeAriesPath(DRAFT_PATH, void 0);
+  }
+  function rememberContact(contact) {
+    writeAriesPath(CONTACT_PATH, contact?.trim() || void 0);
+  }
+  var DRAFT_PATH, CONTACT_PATH, SAVE_DELAY_MS, DRAFT_FIELDS, saveDraftSoon;
+  var init_draft = __esm({
+    "src/features/bugReport/draft.ts"() {
+      "use strict";
+      init_async2();
+      init_storage();
+      DRAFT_PATH = "bugReport.draft";
+      CONTACT_PATH = "bugReport.contact";
+      SAVE_DELAY_MS = 600;
+      DRAFT_FIELDS = [
+        "category",
+        "title",
+        "description",
+        "feature",
+        "steps",
+        "expected",
+        "actual",
+        "frequency",
+        "withoutMod",
+        "contact"
+      ];
+      saveDraftSoon = debounce(writeDraft, SAVE_DELAY_MS);
+    }
+  });
+
+  // src/features/bugReport/formFields.ts
+  function field3(labelText, control, opts = {}) {
+    const root4 = h("label", "qws-bug-field");
+    const label2 = h("span", "qws-bug-label", labelText);
+    if (opts.optional) label2.append(" ", h("span", "qws-bug-label__optional", "(optional)"));
+    const hint3 = h("span", "qws-bug-hint", opts.hint ?? "");
+    root4.append(label2, control, hint3);
+    return { root: root4, hint: hint3, defaultHint: opts.hint ?? "" };
+  }
+  function option2(label2, value) {
+    const opt = h("option", void 0, label2);
+    opt.value = value;
+    return opt;
+  }
+  function textArea(placeholder, max, rows, short = false) {
+    const area = h("textarea", short ? "qmm-input qws-bug-textarea qws-bug-textarea--short" : "qmm-input qws-bug-textarea");
+    area.placeholder = placeholder;
+    area.maxLength = max;
+    area.rows = rows;
+    return area;
+  }
+  function areaSelect() {
+    const sel = select2({ placeholder: "Pick a menu or feature" });
+    for (const menu of registeredMenus()) {
+      if (menu.id === "bug-report") continue;
+      sel.append(option2(menu.title, menu.title));
+    }
+    sel.append(option2("Something else, or not sure", OTHER_AREA));
+    return sel;
+  }
+  function buildReportFields() {
+    const listeners2 = [];
+    const changed8 = () => listeners2.forEach((cb) => cb());
+    const name = `qws-bug-category-${++uid}`;
+    const chips = h("div", "qws-bug-chips");
+    chips.setAttribute("role", "radiogroup");
+    chips.setAttribute("aria-label", "Category");
+    const categoryInputs = CATEGORIES2.map(([value, label2]) => {
+      const chip = toggleChip(label2, { type: "radio", name, value, checked: value === "bug" });
+      chip.input.addEventListener("change", changed8);
+      chips.appendChild(chip.root);
+      return chip.input;
+    });
+    const categoryRow = h("div", "qws-bug-field");
+    categoryRow.append(h("span", "qws-bug-label", "What kind of report?"), chips);
+    const title = textInput("Short summary, e.g. Pet team hotkeys do nothing");
+    title.maxLength = BUG_REPORT_LIMITS.title.max;
+    const titleField = field3("Title", title);
+    const description = textArea("What were you doing, what went wrong, and since when?", BUG_REPORT_LIMITS.description.max, 5);
+    const descriptionField = field3("What happened?", description, { hint: `At least ${BUG_REPORT_LIMITS.description.min} characters.` });
+    const area = areaSelect();
+    const areaField = field3("Which part of the mod?", area, { optional: true });
+    const steps = textArea("1. Open Pets\n2. Press 1\n3. ...", BUG_REPORT_LIMITS.steps, 3);
+    const expected = textArea("What should have happened?", BUG_REPORT_LIMITS.expected, 2, true);
+    const actual = textArea("What happened instead?", BUG_REPORT_LIMITS.actual, 2, true);
+    const frequency = select2();
+    for (const [value, label2] of FREQUENCIES) frequency.append(option2(label2, value));
+    const withoutMod = segmented(
+      [
+        { value: "yes", label: "Yes" },
+        { value: "no", label: "No" },
+        { value: "unknown", label: "Not sure" }
+      ],
+      "unknown",
+      changed8,
+      { ariaLabel: "Does it happen without the mod?" }
+    );
+    const details2 = collapsibleCard({
+      title: "More details",
+      description: "Steps, what you expected, how often. Optional, but it helps a lot.",
+      collapsed: readAriesPath(DETAILS_OPEN_PATH) !== true,
+      onToggle: (collapsed) => writeAriesPath(DETAILS_OPEN_PATH, collapsed ? void 0 : true)
+    });
+    const pair = h("div", "qws-bug-row");
+    pair.append(field3("Expected", expected).root, field3("Actual", actual).root);
+    const withoutModField = h("div", "qws-bug-field");
+    withoutModField.append(
+      h("span", "qws-bug-label", "Does it happen without the mod?"),
+      withoutMod,
+      h("p", "qws-bug-hint", "If you can, turn the mod off in your userscript manager, reload, and try again.")
+    );
+    details2.body.append(field3("Steps to make it happen", steps).root, pair, field3("How often?", frequency).root, withoutModField);
+    const contact = textInput("Discord name or email");
+    contact.maxLength = BUG_REPORT_LIMITS.contact;
+    const contactField = field3("Contact", contact, {
+      optional: true,
+      hint: "Only if you are happy to be contacted about this report."
+    });
+    for (const el4 of [title, description, steps, expected, actual, contact]) el4.addEventListener("input", changed8);
+    for (const el4 of [area, frequency]) el4.addEventListener("change", changed8);
+    const root4 = h("div", "qws-bug-stack");
+    root4.append(categoryRow, titleField.root, descriptionField.root, areaField.root, details2.root, contactField.root);
+    const texts = { title, description, steps, expected, actual, contact };
+    const setSelect = (sel, value) => {
+      if (value !== void 0 && Array.from(sel.options).some((opt) => opt.value === value && !opt.disabled)) sel.value = value;
+    };
+    const invalid = { title: titleField, description: descriptionField };
+    const handle = {
+      root: root4,
+      read() {
+        const checked = categoryInputs.find((input) => input.checked);
+        return {
+          category: checked?.value || "bug",
+          title: title.value,
+          description: description.value,
+          feature: area.value,
+          steps: steps.value,
+          expected: expected.value,
+          actual: actual.value,
+          frequency: frequency.value || "unknown",
+          withoutMod: withoutMod.get(),
+          contact: contact.value
+        };
+      },
+      fill(draft) {
+        for (const key2 of DRAFT_FIELDS) {
+          const value = draft[key2];
+          if (value === void 0) continue;
+          if (key2 in texts) texts[key2].value = value;
+        }
+        if (draft.category) categoryInputs.forEach((input) => input.checked = input.value === draft.category);
+        setSelect(area, draft.feature);
+        setSelect(frequency, draft.frequency);
+        if (draft.withoutMod === "yes" || draft.withoutMod === "no" || draft.withoutMod === "unknown") withoutMod.set(draft.withoutMod);
+        if ((draft.steps || draft.expected || draft.actual) && details2.root.classList.contains("is-collapsed")) {
+          details2.root.querySelector(".qmm-collapse__head")?.click();
+        }
+      },
+      reset(keepContact) {
+        for (const [key2, el4] of Object.entries(texts)) if (key2 !== "contact" || !keepContact) el4.value = "";
+        categoryInputs.forEach((input) => input.checked = input.value === "bug");
+        area.selectedIndex = 0;
+        frequency.value = "unknown";
+        withoutMod.set("unknown");
+        handle.markInvalid(null);
+      },
+      markInvalid(which, message2) {
+        for (const [key2, entry] of Object.entries(invalid)) {
+          const on = key2 === which;
+          entry.root.classList.toggle("is-invalid", on);
+          entry.hint.textContent = on && message2 ? message2 : entry.defaultHint;
+        }
+      },
+      focus(which) {
+        (which === "title" ? title : description).focus();
+      },
+      onChange(cb) {
+        listeners2.push(cb);
+      }
+    };
+    return handle;
+  }
+  var CATEGORIES2, FREQUENCIES, OTHER_AREA, DETAILS_OPEN_PATH, uid;
+  var init_formFields = __esm({
+    "src/features/bugReport/formFields.ts"() {
+      "use strict";
+      init_limits();
+      init_storage();
+      init_dom2();
+      init_fields();
+      init_layout();
+      init_menuList();
+      init_segmented();
+      init_toggles();
+      init_draft();
+      CATEGORIES2 = [
+        ["bug", "Bug"],
+        ["crash", "Crash or error"],
+        ["visual", "Visual"],
+        ["performance", "Performance"],
+        ["feature", "Feature idea"],
+        ["question", "Question"],
+        ["other", "Other"]
+      ];
+      FREQUENCIES = [
+        ["unknown", "Not sure"],
+        ["always", "Every time"],
+        ["often", "Often"],
+        ["sometimes", "Sometimes"],
+        ["once", "Only once"]
+      ];
+      OTHER_AREA = "Other";
+      DETAILS_OPEN_PATH = "bugReport.detailsOpen";
+      uid = 0;
+    }
+  });
+
+  // src/lib/bugReport/image.ts
+  async function decodeImage(source) {
+    if (!isBlob(source)) {
+      const { width, height } = source;
+      if (!width || !height) throw new ImageNormalizeError("unreadable", "The image is empty.");
+      return { image: source, width, height, release() {
+      } };
+    }
+    if (source.type && !source.type.startsWith("image/")) {
+      throw new ImageNormalizeError("unreadable", "That file is not an image.");
+    }
+    if (typeof createImageBitmap === "function") {
+      try {
+        const bitmap = await createImageBitmap(source);
+        return { image: bitmap, width: bitmap.width, height: bitmap.height, release: () => bitmap.close() };
+      } catch {
+      }
+    }
+    return decodeWithImageElement(source);
+  }
+  function decodeWithImageElement(blob) {
+    return new Promise((resolve, reject2) => {
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        if (!img.naturalWidth || !img.naturalHeight) {
+          URL.revokeObjectURL(url);
+          reject2(new ImageNormalizeError("unreadable", "The image is empty."));
+          return;
+        }
+        resolve({ image: img, width: img.naturalWidth, height: img.naturalHeight, release: () => URL.revokeObjectURL(url) });
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject2(new ImageNormalizeError("unreadable", "This image could not be read."));
+      };
+      img.src = url;
+    });
+  }
+  function toBlob(canvas, mime, quality) {
+    return new Promise((resolve) => {
+      try {
+        canvas.toBlob((blob) => resolve(blob), mime, quality);
+      } catch {
+        resolve(null);
+      }
+    });
+  }
+  function draw(decoded, width, height, opaque) {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx2 = canvas.getContext("2d");
+    if (!ctx2) throw new ImageNormalizeError("unreadable", "This browser cannot draw the image.");
+    if (opaque) {
+      ctx2.fillStyle = "white";
+      ctx2.fillRect(0, 0, width, height);
+    }
+    ctx2.imageSmoothingQuality = "high";
+    ctx2.drawImage(decoded.image, 0, 0, width, height);
+    return canvas;
+  }
+  async function encode(decoded, width, height) {
+    if (webpWorks !== false) {
+      const blob2 = await toBlob(draw(decoded, width, height, false), "image/webp", WEBP_QUALITY);
+      if (blob2 && blob2.type === "image/webp") {
+        webpWorks = true;
+        return blob2;
+      }
+      if (blob2) webpWorks = false;
+    }
+    const blob = await toBlob(draw(decoded, width, height, true), "image/jpeg", JPEG_QUALITY);
+    if (!blob || blob.type !== "image/jpeg") throw new ImageNormalizeError("unreadable", "This image could not be encoded.");
+    return blob;
+  }
+  async function blobToBase64(blob) {
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let binary = "";
+    const CHUNK = 32768;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+    }
+    return btoa(binary);
+  }
+  function normalizedImageBlob(image) {
+    const binary = atob(image.base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new Blob([bytes], { type: image.mime });
+  }
+  async function normalizeImage(source, options2 = {}) {
+    const maxSide = options2.maxSide ?? BUG_REPORT_LIMITS.imageMaxSide;
+    const target = options2.targetBytes ?? BUG_REPORT_LIMITS.attachmentTargetBytes;
+    const hardLimit = options2.maxBytes ?? BUG_REPORT_LIMITS.attachmentBytes;
+    const decoded = await decodeImage(source);
+    try {
+      let scale = Math.min(1, maxSide / Math.max(decoded.width, decoded.height));
+      let best = null;
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        const width = Math.max(1, Math.round(decoded.width * scale));
+        const height = Math.max(1, Math.round(decoded.height * scale));
+        const blob = await encode(decoded, width, height);
+        if (!best || blob.size < best.blob.size) best = { blob, width, height };
+        if (blob.size <= target) break;
+        scale *= Math.min(0.9, Math.max(0.5, Math.sqrt(target / blob.size) * 0.92));
+      }
+      if (!best || best.blob.size > hardLimit) {
+        throw new ImageNormalizeError("too_large", "This image is too large, even shrunk.");
+      }
+      return {
+        mime: best.blob.type,
+        base64: await blobToBase64(best.blob),
+        width: best.width,
+        height: best.height,
+        bytes: best.blob.size
+      };
+    } finally {
+      decoded.release();
+    }
+  }
+  var ImageNormalizeError, isBlob, webpWorks, WEBP_QUALITY, JPEG_QUALITY, MAX_ATTEMPTS;
+  var init_image2 = __esm({
+    "src/lib/bugReport/image.ts"() {
+      "use strict";
+      init_limits();
+      ImageNormalizeError = class extends Error {
+        constructor(reason, message2) {
+          super(message2);
+          this.reason = reason;
+          this.name = "ImageNormalizeError";
+        }
+      };
+      isBlob = (value) => typeof Blob !== "undefined" && value instanceof Blob;
+      webpWorks = null;
+      WEBP_QUALITY = 0.8;
+      JPEG_QUALITY = 0.85;
+      MAX_ATTEMPTS = 6;
+    }
+  });
+
+  // src/lib/bugReport/screenCapture.ts
+  function canCaptureScreen() {
+    try {
+      return typeof navigator !== "undefined" && typeof navigator.mediaDevices?.getDisplayMedia === "function";
+    } catch {
+      return false;
+    }
+  }
+  function nextVideoFrame(video) {
+    return new Promise((resolve) => {
+      const withCallback = video;
+      const fallback = setTimeout(resolve, 250);
+      withCallback.requestVideoFrameCallback?.(() => {
+        clearTimeout(fallback);
+        resolve();
+      });
+    });
+  }
+  async function captureScreenFrame(hooks2 = {}) {
+    const options2 = {
+      video: { displaySurface: "browser", frameRate: 5 },
+      audio: false,
+      preferCurrentTab: true,
+      selfBrowserSurface: "include",
+      surfaceSwitching: "exclude",
+      monitorTypeSurfaces: "exclude"
+    };
+    const stream = await navigator.mediaDevices.getDisplayMedia(options2);
+    const video = document.createElement("video");
+    try {
+      await hooks2.beforeFrame?.();
+      video.muted = true;
+      video.playsInline = true;
+      video.srcObject = stream;
+      await video.play();
+      await nextAnimationFrame();
+      await nextAnimationFrame();
+      await nextVideoFrame(video);
+      await nextVideoFrame(video);
+      if (!video.videoWidth || !video.videoHeight) throw new Error("The capture gave an empty frame.");
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx2 = canvas.getContext("2d");
+      if (!ctx2) throw new Error("This browser cannot draw the capture.");
+      ctx2.drawImage(video, 0, 0);
+      return canvas;
+    } finally {
+      for (const track of stream.getTracks()) track.stop();
+      video.srcObject = null;
+      try {
+        hooks2.afterFrame?.();
+      } catch {
+      }
+    }
+  }
+  var nextAnimationFrame;
+  var init_screenCapture = __esm({
+    "src/lib/bugReport/screenCapture.ts"() {
+      "use strict";
+      nextAnimationFrame = () => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+    }
+  });
+
+  // src/game/pixi/frameGrab.ts
+  function canvasOf2(renderer, app) {
+    const canvas = renderer?.canvas || renderer?.view?.canvas || renderer?.view || app?.canvas || app?.view || null;
+    return canvas && canvas.width > 0 && canvas.height > 0 ? canvas : null;
+  }
+  function scaledCopy(source, maxSide) {
+    const scale = Math.min(1, maxSide / Math.max(source.width, source.height));
+    const out = document.createElement("canvas");
+    out.width = Math.max(1, Math.round(source.width * scale));
+    out.height = Math.max(1, Math.round(source.height * scale));
+    const ctx2 = out.getContext("2d");
+    if (!ctx2) return null;
+    ctx2.drawImage(source, 0, 0, out.width, out.height);
+    return out;
+  }
+  function looksBlank(canvas) {
+    const probe = document.createElement("canvas");
+    probe.width = 16;
+    probe.height = 16;
+    const ctx2 = probe.getContext("2d", { willReadFrequently: true });
+    if (!ctx2) return false;
+    ctx2.drawImage(canvas, 0, 0, 16, 16);
+    const data = ctx2.getImageData(0, 0, 16, 16).data;
+    for (let i = 3; i < data.length; i += 4) if (data[i] !== 0) return false;
+    return true;
+  }
+  function extractFrame(renderer, stage, maxSide) {
+    const extract = renderer?.extract;
+    if (typeof extract?.canvas !== "function") return null;
+    const frame = renderer.screen;
+    const source = frame ? extract.canvas({ target: stage, frame }) : extract.canvas(stage);
+    return source && source.width > 0 ? scaledCopy(source, maxSide) : null;
+  }
+  function grabGameFrame(maxSide = 1920) {
+    try {
+      const state5 = getSpriteState();
+      const renderer = state5.renderer;
+      if (!renderer || typeof renderer.render !== "function") return null;
+      const app = getPixiApp();
+      const stage = getStage(state5) ?? app?.stage;
+      const canvas = canvasOf2(renderer, app);
+      if (!stage || !canvas) return null;
+      renderer.render(stage);
+      const copy3 = scaledCopy(canvas, maxSide);
+      if (copy3 && !looksBlank(copy3)) return copy3;
+      return extractFrame(renderer, stage, maxSide);
+    } catch {
+      return null;
+    }
+  }
+  var init_frameGrab = __esm({
+    "src/game/pixi/frameGrab.ts"() {
+      "use strict";
+      init_context();
+      init_stageSearch();
+    }
+  });
+
+  // src/features/bugReport/screenshots.ts
+  function imageFiles(list) {
+    if (!list) return [];
+    const out = [];
+    for (const item of Array.from(list)) {
+      const file = "getAsFile" in item ? item.kind === "file" ? item.getAsFile() : null : item;
+      if (file && file.type.startsWith("image/")) out.push(file);
+    }
+    return out;
+  }
+  function buildScreenshotStrip() {
+    let nextId = 0;
+    let shots = [];
+    let pendingCount = 0;
+    let autoDismissed = false;
+    const grid = h("div", "qws-bug-shots");
+    const message2 = h("p", "qws-bug-hint");
+    const counter2 = h("span", "qws-bug-hint");
+    const fileInput = h("input");
+    fileInput.type = "file";
+    fileInput.accept = ACCEPT;
+    fileInput.multiple = true;
+    fileInput.hidden = true;
+    const room = () => MAX - shots.length - pendingCount;
+    const windowOf = () => grid.closest(".qws-win");
+    const addButton = button("Add image", { size: "sm", onClick: () => fileInput.click() });
+    const gameButton = button("Add game view", { size: "sm", variant: "ghost", onClick: () => void addGameShot(false) });
+    const screenButton = button("Capture screen", {
+      size: "sm",
+      variant: "ghost",
+      title: "Takes a picture of this tab, game menus included. Your browser asks first.",
+      lockWhilePending: true,
+      onClick: () => captureScreen()
+    });
+    const screenAvailable = canCaptureScreen() && !isDiscordSurface();
+    const bar2 = h("div", "qws-bug-shot-bar");
+    bar2.append(addButton, gameButton);
+    if (screenAvailable) bar2.append(screenButton);
+    bar2.append(counter2);
+    const root4 = h("div", "qws-bug-stack");
+    root4.append(grid, bar2, message2, fileInput);
+    const say3 = (text2) => message2.textContent = text2;
+    function render() {
+      const tiles = shots.map(tile);
+      for (let i = 0; i < pendingCount; i++) {
+        const placeholder = h("div", "qws-bug-shot is-pending");
+        placeholder.appendChild(h("span", "qws-bug-shot__label", "Preparing..."));
+        tiles.push(placeholder);
+      }
+      grid.replaceChildren(...tiles);
+      const full = room() <= 0;
+      addButton.setEnabled(!full);
+      screenButton.setEnabled(!full);
+      gameButton.hidden = shots.some((shot) => shot.kind === "game");
+      gameButton.setEnabled(!full);
+      counter2.textContent = shots.length ? `${shots.length} of ${MAX}.${full ? "" : " You can also paste an image with Ctrl+V."}` : "Paste an image with Ctrl+V, or add one.";
+    }
+    function tile(shot) {
+      const el4 = h("div", "qws-bug-shot");
+      el4.tabIndex = 0;
+      el4.setAttribute("role", "button");
+      el4.title = "Click to see it full size";
+      const img = h("img", "qws-bug-shot__img");
+      img.src = shot.url;
+      img.alt = KIND_LABELS[shot.kind];
+      const label2 = h("span", "qws-bug-shot__label", `${KIND_LABELS[shot.kind]}, ${Math.max(1, Math.round(shot.image.bytes / 1024))} KB`);
+      const remove = button("\u2715", { size: "xs", title: "Remove this screenshot", onClick: () => removeShot(shot.id) });
+      remove.classList.add("qws-bug-shot__remove");
+      remove.addEventListener("click", (event) => event.stopPropagation());
+      el4.append(img, label2, remove);
+      const open = () => showFull(shot);
+      el4.addEventListener("click", open);
+      el4.addEventListener("keydown", (event) => {
+        if (event.target !== el4) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          open();
+        }
+      });
+      return el4;
+    }
+    function showFull(shot) {
+      const host = windowOf();
+      if (!host) return;
+      const modal = openModal2({ host, title: KIND_LABELS[shot.kind], widthPx: 900, maxHeightPx: 720 });
+      const img = h("img", "qws-bug-shot-full");
+      img.src = shot.url;
+      img.alt = KIND_LABELS[shot.kind];
+      modal.body.append(
+        img,
+        h("p", "qws-bug-hint", `${shot.image.width} x ${shot.image.height}, ${Math.round(shot.image.bytes / 1024)} KB. Check that nothing private shows before you send it.`)
+      );
+      const remove = () => {
+        removeShot(shot.id);
+        modal.close();
+      };
+      modal.footer.append(
+        button("Remove", { variant: "ghost", onClick: remove }),
+        button("Close", { variant: "primary", onClick: () => modal.close() })
+      );
+    }
+    function removeShot(id) {
+      const shot = shots.find((entry) => entry.id === id);
+      if (!shot) return;
+      if (shot.auto) autoDismissed = true;
+      URL.revokeObjectURL(shot.url);
+      shots = shots.filter((entry) => entry.id !== id);
+      render();
+    }
+    function store(kind, image, auto, replaceId) {
+      const index = replaceId === void 0 ? -1 : shots.findIndex((entry) => entry.id === replaceId);
+      if (replaceId !== void 0 && index < 0) return;
+      if (index < 0 && room() <= 0) return;
+      const shot = { id: ++nextId, kind, image, url: URL.createObjectURL(normalizedImageBlob(image)), auto, takenAt: Date.now() };
+      if (index >= 0) {
+        URL.revokeObjectURL(shots[index].url);
+        shots = [...shots.slice(0, index), shot, ...shots.slice(index + 1)];
+      } else {
+        shots = [...shots, shot];
+      }
+    }
+    async function addSource(source, kind, auto = false, replaceId) {
+      if (replaceId === void 0 && room() <= 0) {
+        if (!auto) say3(`At most ${MAX} screenshots per report.`);
+        return false;
+      }
+      if (replaceId === void 0) pendingCount++;
+      render();
+      try {
+        const image = await normalizeImage(source);
+        if (replaceId === void 0) pendingCount--;
+        store(kind, image, auto, replaceId);
+        say3("");
+        return true;
+      } catch (error) {
+        if (replaceId === void 0) pendingCount--;
+        if (!auto) say3(error instanceof ImageNormalizeError ? error.message : "This image could not be read.");
+        return false;
+      } finally {
+        render();
+      }
+    }
+    async function addGameShot(auto, replaceId) {
+      const frame = grabGameFrame();
+      if (!frame) {
+        if (!auto) say3("The game view cannot be captured right now.");
+        return;
+      }
+      await addSource(frame, "game", auto, replaceId);
+    }
+    async function addFiles(files) {
+      const fits = Math.max(0, room());
+      for (const file of files.slice(0, fits)) await addSource(file, "upload");
+      if (files.length > fits) say3(`Only ${MAX} screenshots fit in a report, so ${files.length - fits} ${files.length - fits > 1 ? "were" : "was"} left out.`);
+    }
+    async function captureScreen() {
+      if (room() <= 0) return;
+      const win = windowOf();
+      try {
+        const frame = await captureScreenFrame({
+          beforeFrame: () => {
+            if (win) win.style.visibility = "hidden";
+          },
+          afterFrame: () => {
+            if (win) win.style.visibility = "";
+          }
+        });
+        await addSource(frame, "screen");
+      } catch (error) {
+        const name = error?.name;
+        say3(name === "NotAllowedError" ? "Screen capture was cancelled." : "Screen capture is not available in this browser.");
+      }
+    }
+    fileInput.addEventListener("change", () => {
+      const files = imageFiles(fileInput.files);
+      fileInput.value = "";
+      void addFiles(files);
+    });
+    root4.addEventListener("dragover", (event) => {
+      if (!event.dataTransfer?.types.includes("Files")) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+    });
+    root4.addEventListener("drop", (event) => {
+      const files = imageFiles(event.dataTransfer?.files);
+      if (!files.length) return;
+      event.preventDefault();
+      void addFiles(files);
+    });
+    render();
+    return {
+      root: root4,
+      attachments: () => shots.map((shot) => ({ ...shot.image, kind: shot.kind })),
+      summary: () => shots.map(({ kind, image }) => ({ kind, mime: image.mime, width: image.width, height: image.height, bytes: image.bytes })),
+      pending: () => pendingCount,
+      takeAutoGameShot() {
+        autoDismissed = false;
+        setTimeout(() => void addGameShot(true), 0);
+      },
+      refreshAutoGameShot() {
+        const auto = shots.find((shot) => shot.auto);
+        if (autoDismissed || pendingCount) return;
+        if (!auto) {
+          if (!shots.some((shot) => shot.kind === "game")) void addGameShot(true);
+          return;
+        }
+        if (Date.now() - auto.takenAt >= STALE_AFTER_MS) void addGameShot(true, auto.id);
+      },
+      handlePaste(event) {
+        const files = imageFiles(event.clipboardData?.items ?? event.clipboardData?.files);
+        if (!files.length) return;
+        if (isTextField2(event.target) && event.clipboardData?.types.includes("text/plain")) return;
+        event.preventDefault();
+        void addFiles(files.slice(0, 1));
+      },
+      clear() {
+        for (const shot of shots) URL.revokeObjectURL(shot.url);
+        shots = [];
+        autoDismissed = false;
+        say3("");
+        render();
+      }
+    };
+  }
+  var MAX, STALE_AFTER_MS, ACCEPT, KIND_LABELS, isTextField2;
+  var init_screenshots = __esm({
+    "src/features/bugReport/screenshots.ts"() {
+      "use strict";
+      init_limits();
+      init_image2();
+      init_screenCapture();
+      init_frameGrab();
+      init_environment();
+      init_button();
+      init_dom2();
+      init_modal();
+      MAX = BUG_REPORT_LIMITS.attachments;
+      STALE_AFTER_MS = 2e4;
+      ACCEPT = "image/png,image/jpeg,image/webp,image/gif,image/bmp";
+      KIND_LABELS = { game: "Game view", screen: "Screen capture", upload: "Image" };
+      isTextField2 = (el4) => {
+        const node = el4;
+        return !!node && (node.isContentEditable || /^(input|textarea)$/i.test(node.tagName ?? ""));
+      };
+    }
+  });
+
+  // src/features/bugReport/sentView.ts
+  function showSentView(container, result, actions2) {
+    const { report: report3, attachmentFailures } = result;
+    const root4 = h("div", "qws-bug-success");
+    root4.appendChild(h("div", "qws-bug-success__title", "Thanks, your report was sent."));
+    const ref2 = h("div", "qws-bug-success__ref");
+    const setCopyLabel = (text2) => {
+      const label2 = copy3.querySelector(".label");
+      if (label2) label2.textContent = text2;
+    };
+    const copy3 = button("Copy", {
+      size: "sm",
+      title: "Copy the reference",
+      onClick: () => {
+        try {
+          copyTextToClipboard(report3.ref);
+          setCopyLabel("Copied");
+        } catch {
+          setCopyLabel("Copy failed");
+        }
+      }
+    });
+    ref2.append(h("span", "qws-bug-success__code", report3.ref), copy3);
+    root4.append(
+      ref2,
+      h(
+        "p",
+        "qws-bug-note",
+        "Mention this reference if you talk about it on Discord. Its status, and any reply, show up in My reports."
+      )
+    );
+    if (attachmentFailures.length) {
+      const count = attachmentFailures.length;
+      const reason = describeBugReportError(attachmentFailures[0].error);
+      const warning = h("div", "qws-bug-notice");
+      warning.appendChild(
+        h("span", void 0, `${count} screenshot${count > 1 ? "s" : ""} could not be uploaded, but the report itself arrived. ${reason}`)
+      );
+      root4.appendChild(warning);
+    }
+    const buttons = h("div", "qws-bug-actions");
+    buttons.append(
+      button("See my reports", { variant: "ghost", onClick: actions2.onMyReports }),
+      button("New report", { variant: "primary", onClick: actions2.onNewReport })
+    );
+    root4.appendChild(buttons);
+    container.replaceChildren(root4);
+  }
+  var init_sentView = __esm({
+    "src/features/bugReport/sentView.ts"() {
+      "use strict";
+      init_client();
+      init_download();
+      init_button();
+      init_dom2();
+    }
+  });
+
+  // src/features/bugReport/reportTab.ts
+  function toPayload(values, auto, attachments) {
+    return {
+      ...auto,
+      contact: values.contact || null,
+      category: values.category,
+      title: values.title,
+      description: values.description,
+      steps: values.steps || null,
+      expected: values.expected || null,
+      actual: values.actual || null,
+      frequency: values.frequency,
+      withoutMod: values.withoutMod,
+      feature: values.feature || null,
+      attachmentsExpected: attachments
+    };
+  }
+  function progressText(progress) {
+    if (progress.stage === "report") return "Sending report...";
+    return `Uploading screenshot ${progress.index + 1}/${progress.total}...`;
+  }
+  function notice(tone) {
+    const el4 = h("div", tone === "info" ? "qws-bug-notice qws-bug-notice--info" : "qws-bug-notice");
+    el4.hidden = true;
+    el4.setAttribute("role", "status");
+    return {
+      el: el4,
+      show(text2, ...actions2) {
+        el4.replaceChildren(h("span", void 0, text2), ...actions2);
+        el4.hidden = false;
+      },
+      hide: () => el4.hidden = true
+    };
+  }
+  function renderReportTab(view, menu) {
+    ensureBugReportStyles();
+    const tab = h("div", "qws-bug-tab");
+    tab.tabIndex = -1;
+    const form = h("div", "qws-bug-stack");
+    const sent = h("div", "qws-bug-stack");
+    sent.hidden = true;
+    tab.append(form, sent);
+    view.replaceChildren(tab);
+    const updateNotice = notice("warn");
+    const draftNotice = notice("info");
+    const fields = buildReportFields();
+    const shots = buildScreenshotStrip();
+    const attached = buildAttachedData(preview);
+    const errors = errorBar();
+    const progress = h("span", "qws-bug-progress");
+    progress.setAttribute("role", "status");
+    const details2 = card("Your report", { subtitle: "In English or your own language, as you prefer." });
+    details2.body.appendChild(fields.root);
+    const pictures = card("Screenshots", { subtitle: "The game view is added for you. Remove it if it shows something private." });
+    pictures.body.appendChild(shots.root);
+    let lastAttempt = null;
+    const saveButton = button("Save report to a file", { variant: "ghost", onClick: () => saveToFile() });
+    saveButton.hidden = true;
+    const sendButton = button("Send report", { variant: "primary", lockWhilePending: true, onClick: () => send4() });
+    const actions2 = h("div", "qws-bug-actions");
+    actions2.append(progress, saveButton, sendButton);
+    form.append(updateNotice.el, draftNotice.el, details2.root, pictures.root, attached.root, errors.el, actions2);
+    void latestVersion().then((status2) => {
+      if (!status2?.behind || !status2.remote) return;
+      const download = status2.download;
+      const update = download ? button("Update", { size: "sm", onClick: () => void openLink(download) }) : null;
+      updateNotice.show(
+        `You have v${status2.local ?? "?"} and v${status2.remote} is out. Please update first: the problem may already be fixed.`,
+        ...update ? [update] : []
+      );
+    });
+    const draft = readDraft();
+    fields.fill(draft);
+    if (draftHasText(draft)) {
+      const discard = button("Discard", {
+        size: "sm",
+        variant: "ghost",
+        onClick: () => {
+          fields.reset(true);
+          clearDraft();
+          draftNotice.hide();
+        }
+      });
+      draftNotice.show("Your unsent report was restored.", discard);
+    }
+    fields.onChange(() => {
+      saveDraftSoon(toDraft(fields.read()));
+      errors.clear();
+    });
+    tab.addEventListener("paste", (event) => shots.handlePaste(event));
+    shots.takeAutoGameShot();
+    watchReturns(tab, () => {
+      if (!form.hidden) shots.refreshAutoGameShot();
+    });
+    function validate(values) {
+      fields.markInvalid(null);
+      if (titleProblem(values.title)) {
+        fields.markInvalid("title", "Give it a short title, 3 to 140 characters.");
+        fields.focus("title");
+        return false;
+      }
+      if (descriptionProblem(values.description)) {
+        fields.markInvalid("description", "Describe what happened in at least 10 characters.");
+        fields.focus("description");
+        return false;
+      }
+      return true;
+    }
+    async function send4() {
+      errors.clear();
+      saveButton.hidden = true;
+      const values = fields.read();
+      if (!validate(values)) return;
+      try {
+        if (shots.pending()) {
+          progress.textContent = "Preparing screenshots...";
+          await waitUntil(() => shots.pending() === 0, { timeoutMs: 15e3 });
+        }
+        progress.textContent = "Sending report...";
+        const attachments = shots.attachments();
+        const payload = toPayload(values, await collectAutoFields(attached.read()), attachments.length);
+        lastAttempt = { payload, attachments };
+        const result = await submitBugReport(bugReportClient, payload, attachments, (step) => {
+          progress.textContent = progressText(step);
+        });
+        progress.textContent = "";
+        if (!result.ok) {
+          errors.show(describeBugReportError(result.error));
+          saveButton.hidden = !SAVE_WORTHY.has(result.error.kind);
+          return;
+        }
+        rememberSentReport(sentReportFrom(result.report, payload.title.trim()));
+        rememberContact(values.contact);
+        clearDraft();
+        draftNotice.hide();
+        form.hidden = true;
+        sent.hidden = false;
+        showSentView(sent, result, {
+          onMyReports: () => menu.switchTo(MY_REPORTS_TAB),
+          onNewReport: startOver
+        });
+      } catch (error) {
+        progress.textContent = "";
+        errors.show(`Something went wrong while sending (${error instanceof Error ? error.message : String(error)}).`);
+        saveButton.hidden = false;
+      }
+    }
+    function startOver() {
+      fields.reset(true);
+      attached.reset();
+      shots.clear();
+      errors.clear();
+      saveButton.hidden = true;
+      lastAttempt = null;
+      sent.hidden = true;
+      form.hidden = false;
+      shots.takeAutoGameShot();
+      view.closest(".w-body")?.scrollTo({ top: 0 });
+    }
+    async function preview() {
+      const host = view.closest(".qws-win");
+      if (!host) return;
+      const values = fields.read();
+      const attachments = shots.attachments();
+      const payload = toPayload(values, await collectAutoFields(attached.read()), attachments.length);
+      const prepared = prepareBugReport(payload);
+      const body = prepared.ok ? prepared.payload : { ...payload, context: prepareContext(payload.context) };
+      const note = prepared.ok ? null : `The ${prepared.field} is not filled in yet: it is checked when you send.`;
+      showPreviewModal(host, body, shots.summary(), note);
+    }
+    function saveToFile() {
+      if (!lastAttempt) return;
+      const prepared = prepareBugReport(lastAttempt.payload);
+      const report3 = prepared.ok ? prepared.payload : lastAttempt.payload;
+      const stamp = (/* @__PURE__ */ new Date()).toISOString().slice(0, 16).replace(/[:T]/g, "-");
+      const file = { report: report3, screenshots: lastAttempt.attachments };
+      downloadJSONFile(`${BUG_REPORT_PROJECT.id}-bug-report-${stamp}.json`, JSON.stringify(file, null, 2));
+      progress.textContent = "Saved. You can share the file on the mod's Discord, or try sending again later.";
+    }
+  }
+  function watchReturns(el4, onReturn) {
+    if (typeof IntersectionObserver === "undefined") return;
+    let shown = false;
+    let visible = false;
+    new IntersectionObserver((entries) => {
+      const now = entries[entries.length - 1]?.isIntersecting ?? false;
+      if (now && !visible && shown) onReturn();
+      if (now) shown = true;
+      visible = now;
+    }).observe(el4);
+  }
+  var SAVE_WORTHY, toDraft;
+  var init_reportTab = __esm({
+    "src/features/bugReport/reportTab.ts"() {
+      "use strict";
+      init_client();
+      init_prepare();
+      init_sentReports();
+      init_async2();
+      init_download();
+      init_bugReports();
+      init_button();
+      init_card();
+      init_dom2();
+      init_openLink();
+      init_attachedData();
+      init_context2();
+      init_draft();
+      init_formFields();
+      init_myReportsTab();
+      init_project();
+      init_screenshots();
+      init_sentStore();
+      init_styles16();
+      init_sentView();
+      SAVE_WORTHY = /* @__PURE__ */ new Set(["offline", "timeout", "server", "rate_limited", "too_large", "bad_response"]);
+      toDraft = (values) => ({ ...values });
+    }
+  });
+
+  // src/features/bugReport/menu.ts
+  function renderBugReportMenu(container) {
+    const ui = new Menu({ id: BUG_REPORT_PANEL_ID, compact: true });
+    ui.mount(container);
+    ui.addTabs([
+      { id: NEW_REPORT_TAB, title: "New report", render: (view, api) => renderReportTab(view, api) },
+      { id: MY_REPORTS_TAB, title: "My reports", render: (view) => renderMyReportsTab(view) }
+    ]);
+    ui.switchTo(NEW_REPORT_TAB);
+  }
+  var BUG_REPORT_PANEL_ID, NEW_REPORT_TAB;
+  var init_menu15 = __esm({
+    "src/features/bugReport/menu.ts"() {
+      "use strict";
+      init_menu();
+      init_myReportsTab();
+      init_reportTab();
+      BUG_REPORT_PANEL_ID = "bug-report";
+      NEW_REPORT_TAB = "bug-new";
+    }
+  });
+
   // src/features/antiAfk/antiAfk.ts
   function createAntiAfkController(deps) {
     const swallowed = [];
@@ -47696,15 +50412,15 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     ev.preventDefault();
   }
   function installEditorPointerControls() {
-    if (installed10 || typeof window === "undefined") return;
-    installed10 = true;
+    if (installed11 || typeof window === "undefined") return;
+    installed11 = true;
     window.addEventListener("pointerdown", (ev) => void handlePointerDown(ev), true);
     window.addEventListener("pointermove", (ev) => void handlePointerMove(ev), true);
     window.addEventListener("pointerup", handlePointerUp, true);
     window.addEventListener("pointercancel", handlePointerUp, true);
     window.addEventListener("contextmenu", handleContextMenu, true);
   }
-  var installed10, dragMode, lastTileKey, tileKeyOf;
+  var installed11, dragMode, lastTileKey, tileKeyOf;
   var init_pointerControls = __esm({
     "src/features/editor/pointerControls.ts"() {
       "use strict";
@@ -47714,7 +50430,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       init_planEdits();
       init_session();
       init_tileMap();
-      installed10 = false;
+      installed11 = false;
       dragMode = null;
       lastTileKey = null;
       tileKeyOf = (target) => `${target.tileType}|${target.localTileIndex}`;
@@ -48354,9 +51070,9 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       if (!hasRestocked(prev[kind]?.restocks, next[kind]?.restocks)) continue;
       const inventory = next[kind]?.inventory;
       if (!Array.isArray(inventory)) continue;
-      const [prefix, field3] = SHOP_ID[kind];
+      const [prefix, field4] = SHOP_ID[kind];
       for (const item of inventory) {
-        const key2 = item?.[field3];
+        const key2 = item?.[field4];
         const stock = Number(item?.initialStock);
         if (typeof key2 !== "string" || !key2 || !(stock > 0)) continue;
         const id = `${prefix}:${key2}`;
@@ -49699,29 +52415,91 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     }
   });
 
-  // src/platform/ariesApi/http.ts
-  async function postToAriesApi(path, body) {
-    const headers = { "Content-Type": "application/json" };
-    const apiKey = getApiKey();
-    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+  // src/features/bugReport/breadcrumbs.ts
+  function startBugReportBreadcrumbs() {
+    if (subs) return;
+    subs = new Subscriptions();
+    subs.add(onMenuOpened((menu) => recordBreadcrumb(`opened ${menu.title}`)));
+    subs.add(
+      onWebSocketClose((event) => {
+        const reason = event.reason ? ` (${event.reason.slice(0, 80)})` : "";
+        recordBreadcrumb(`connection closed, code ${event.code}${event.wasClean ? "" : ", not clean"}${reason}`);
+      })
+    );
+    subs.add(
+      Atoms.ui.activeModal.onChange((modal) => recordBreadcrumb(modal ? `game window ${modal}` : "game window closed")).catch(() => void 0)
+    );
+  }
+  var subs;
+  var init_breadcrumbs = __esm({
+    "src/features/bugReport/breadcrumbs.ts"() {
+      "use strict";
+      init_emitter();
+      init_socketHook();
+      init_atoms();
+      init_diagnostics2();
+      init_menuList();
+      subs = null;
+    }
+  });
+
+  // src/features/bugReport/menuCommand.ts
+  function isOpen() {
+    const win = document.querySelector(".qws-bug-tab")?.closest(".qws-win");
+    return !!win && win.style.display !== "none" && !win.classList.contains("is-hidden");
+  }
+  function openStandalone() {
+    if (standalone?.isConnected) {
+      standalone.style.display = "";
+      return;
+    }
+    const win = h("div", "qws-win");
+    win.style.right = "16px";
+    win.style.bottom = "16px";
+    win.style.zIndex = String(layer.window + 1);
+    const head = h("div", "w-head");
+    const close = button("\u2715", {
+      size: "xs",
+      title: "Close",
+      onClick: () => {
+        win.style.display = "none";
+      }
+    });
+    close.classList.add("w-btn");
+    head.append(h("div", "w-title", "Report a bug"), h("div", "qmm-spacer"), close);
+    const body = h("div", "w-body");
+    win.append(head, body);
+    (document.documentElement || document.body).appendChild(win);
+    renderBugReportMenu(body);
+    standalone = win;
+  }
+  function openBugReportPanel() {
+    window.dispatchEvent(new CustomEvent("qws:open-panel", { detail: { id: BUG_REPORT_PANEL_ID } }));
+    setTimeout(() => {
+      try {
+        if (!isOpen()) openStandalone();
+      } catch (error) {
+        console.error("[BugReport] could not open the report window", error);
+      }
+    }, OPEN_CHECK_MS);
+  }
+  function registerBugReportMenuCommand() {
+    if (typeof GM_registerMenuCommand !== "function") return;
     try {
-      const res = await request(
-        { url: new URL(path, API_BASE_URL).toString(), method: "POST", headers, body: JSON.stringify(body) },
-        "text"
-      );
-      return res.status;
+      GM_registerMenuCommand("Report a bug", openBugReportPanel);
     } catch {
-      return 0;
     }
   }
-  var API_BASE_URL, API_ORIGIN;
-  var init_http3 = __esm({
-    "src/platform/ariesApi/http.ts"() {
+  var OPEN_CHECK_MS, standalone;
+  var init_menuCommand = __esm({
+    "src/features/bugReport/menuCommand.ts"() {
       "use strict";
-      init_storage();
-      init_http();
-      API_BASE_URL = "https://ariesmod-api.ariedam.fr/";
-      API_ORIGIN = API_BASE_URL.replace(/\/$/, "");
+      init_dom2();
+      init_button();
+      init_theme();
+      init_menu15();
+      OPEN_CHECK_MS = 500;
+      standalone = null;
     }
   });
 
@@ -49774,182 +52552,6 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       "use strict";
       init_storage();
       init_http3();
-    }
-  });
-
-  // src/platform/ariesApi/playerStatePayload.ts
-  function clampPlayers(n) {
-    const value = Math.floor(Number(n));
-    if (!Number.isFinite(value)) return 1;
-    return Math.max(1, Math.min(6, value));
-  }
-  function findPlayersDeep2(state5) {
-    if (!state5 || typeof state5 !== "object") return [];
-    const out = [];
-    const seen = /* @__PURE__ */ new Set();
-    const stack = [state5];
-    while (stack.length) {
-      const cur = stack.pop();
-      if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
-      seen.add(cur);
-      for (const key2 of Object.keys(cur)) {
-        const value = cur[key2];
-        if (Array.isArray(value) && value.length > 0 && value.every((item) => item && typeof item === "object")) {
-          const looksLikePlayer = value.some((item) => "id" in item && "name" in item);
-          if (looksLikePlayer && /player/i.test(key2)) {
-            out.push(...value);
-          }
-        }
-        if (value && typeof value === "object") {
-          stack.push(value);
-        }
-      }
-    }
-    const byId = /* @__PURE__ */ new Map();
-    for (const entry of out) {
-      if (entry?.id) {
-        byId.set(String(entry.id), entry);
-      }
-    }
-    return [...byId.values()];
-  }
-  function getPlayersArray(state5) {
-    const direct = state5?.fullState?.data?.players ?? state5?.data?.players ?? state5?.players;
-    return Array.isArray(direct) ? direct : findPlayersDeep2(state5);
-  }
-  function getSlotsArray(state5) {
-    const raw = state5?.child?.data?.userSlots ?? state5?.fullState?.child?.data?.userSlots ?? state5?.data?.userSlots;
-    if (Array.isArray(raw)) return raw;
-    if (raw && typeof raw === "object") {
-      const entries = Object.entries(raw);
-      entries.sort((a, b) => {
-        const ai = Number(a[0]);
-        const bi = Number(b[0]);
-        if (Number.isFinite(ai) && Number.isFinite(bi)) return ai - bi;
-        return a[0].localeCompare(b[0]);
-      });
-      return entries.map(([, value]) => value);
-    }
-    return [];
-  }
-  async function getMyAccountId(state5) {
-    try {
-      const me = await player.get();
-      const snapshot3 = state5 ?? await Atoms.root.state.get();
-      return resolveMyAccountId(me, getPlayersArray(snapshot3));
-    } catch {
-      return null;
-    }
-  }
-  function resolvePlayer(players, slot, accountId) {
-    const byAccount = findPlayerByAccountId(players, accountId ?? readSlotId(slot));
-    if (byAccount) return byAccount;
-    const slotRoomId = slot?.playerId ?? slot?.data?.playerId ?? null;
-    if (slotRoomId != null) {
-      const normalized = String(slotRoomId);
-      for (const player2 of players) {
-        if (player2 && typeof player2 === "object" && String(player2.id ?? "") === normalized) {
-          return player2;
-        }
-      }
-    }
-    return null;
-  }
-  function normalizeActivityLog(slotData) {
-    const logs2 = slotData?.activityLog ?? slotData?.activityLogs ?? slotData?.activitylog;
-    return Array.isArray(logs2) ? logs2 : null;
-  }
-  async function buildPlayerStatePayload(options2 = {}) {
-    try {
-      const state5 = await Atoms.root.state.get();
-      if (!state5 || typeof state5 !== "object") return null;
-      const players = getPlayersArray(state5);
-      const normalizedPlayers = Array.isArray(players) ? players : [];
-      const slots = getSlotsArray(state5).filter((slot2) => !!slot2);
-      const coinsById = /* @__PURE__ */ new Map();
-      for (const slot2 of slots) {
-        const slotData2 = slot2?.data ?? slot2;
-        const normalizedSlotId = readSlotId(slot2);
-        if (normalizedSlotId == null) continue;
-        const coinCandidate2 = slotData2?.coinsCount ?? slotData2?.data?.coinsCount ?? slot2?.coinsCount ?? slot2?.data?.coinsCount ?? slotData2?.coins ?? slot2?.coins ?? null;
-        const coinValue2 = Number(coinCandidate2);
-        coinsById.set(normalizedSlotId, Number.isFinite(coinValue2) ? coinValue2 : null);
-      }
-      const userSlots = normalizedPlayers.map((player2) => {
-        const slotId = readAccountId(player2);
-        const coins = slotId ? coinsById.get(slotId) ?? null : null;
-        return {
-          name: typeof player2?.name === "string" ? player2.name : null,
-          discordAvatarUrl: typeof player2?.discordAvatarUrl === "string" ? player2.discordAvatarUrl : null,
-          playerId: slotId,
-          coins
-        };
-      });
-      if (slots.length === 0) return null;
-      const myAccountId = options2.playerId ?? await getMyAccountId(state5);
-      const slot = selectSlotForAccount(slots, {
-        slotIndex: options2.slotIndex,
-        accountId: myAccountId
-      });
-      if (!slot || typeof slot !== "object") {
-        return null;
-      }
-      const slotData = slot.data ?? slot;
-      if (!slotData || typeof slotData !== "object") return null;
-      const resolvedPlayer = resolvePlayer(normalizedPlayers, slot, myAccountId ?? null);
-      const playerName2 = resolvedPlayer?.name ?? slotData?.name ?? slot?.name ?? null;
-      const avatarRaw = resolvedPlayer?.cosmetic?.avatar ?? slotData?.cosmetic?.avatar ?? slot?.cosmetic?.avatar ?? null;
-      const avatar2 = Array.isArray(avatarRaw) && avatarRaw.length > 0 ? avatarRaw.map((entry) => String(entry)) : null;
-      const coinCandidate = slotData?.coinsCount ?? slot?.coinsCount ?? slotData?.coins ?? slot?.coins ?? null;
-      const coinValue = Number(coinCandidate);
-      const coinsRaw = Number.isFinite(coinValue) ? coinValue : null;
-      const roomId = state5?.data?.roomId ?? state5?.fullState?.data?.roomId ?? state5?.roomId ?? null;
-      let playersCount = normalizedPlayers.length > 0 ? normalizedPlayers.length : slots.length;
-      try {
-        const atomValue = await Atoms.server.numPlayers.get();
-        playersCount = clampPlayers(atomValue);
-      } catch {
-      }
-      const persistedActivityLog = readAriesPath("activityLog.history");
-      const activityLog = Array.isArray(persistedActivityLog) ? persistedActivityLog : normalizeActivityLog(slotData);
-      const journalEntry = slotData?.journal ?? slotData?.data?.journal ?? slot?.journal ?? slot?.data?.journal ?? null;
-      const localVersion = getLocalVersion();
-      const modVersion = localVersion ? `Arie's mod ${localVersion}` : null;
-      const payload = {
-        playerName: playerName2 ?? null,
-        avatar: avatar2 ?? null,
-        modVersion,
-        coins: coinsRaw,
-        room: {
-          id: roomId,
-          isPrivate: options2.roomIsPrivate ?? null,
-          playersCount,
-          userSlots
-        },
-        state: {
-          garden: slotData?.garden ?? null,
-          inventory: slotData?.inventory ?? slot?.inventory ?? null,
-          stats: typeof slotData?.stats === "object" && slotData?.stats ? slotData.stats : null,
-          activityLog: activityLog ?? null,
-          journal: journalEntry ?? null
-        }
-      };
-      return payload;
-    } catch (error) {
-      console.error("[PlayerPayload] buildPlayerStatePayload failed", error);
-      return null;
-    }
-  }
-  var init_playerStatePayload = __esm({
-    "src/platform/ariesApi/playerStatePayload.ts"() {
-      "use strict";
-      init_atoms();
-      init_pageContext();
-      init_storage();
-      init_modVersion();
-      init_playerIdentity();
-      shareGlobal("buildPlayerStatePayload", buildPlayerStatePayload);
-      shareGlobal("logPlayerStatePayload", buildPlayerStatePayload);
     }
   });
 
@@ -50129,6 +52731,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       init_menu12();
       init_menu13();
       init_menu14();
+      init_menu15();
       init_skins();
       init_player();
       init_antiAfk();
@@ -50146,11 +52749,15 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       init_notice();
       init_tileObjects();
       init_dom();
+      init_diagnostics2();
+      init_breadcrumbs();
+      init_menuCommand();
       init_authBridge();
       init_playerStateReport();
       (async function() {
         "use strict";
         if (initAuthBridgeIfNeeded()) return;
+        installDiagnostics();
         installPageWebSocketHook();
         startAutoReco();
         installEditorOutgoingRules();
@@ -50186,9 +52793,12 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
             register2("tools", "Tools", renderToolsMenu);
             register2("settings", "Settings", renderSettingsMenu);
             register2("companion", "Companion", renderCompanionMenu);
+            register2("bug-report", "Report a bug", renderBugReportMenu);
             register2("debug-data", "Debug", renderDebugDataMenu);
           }
         });
+        registerBugReportMenuCommand();
+        startBugReportBreadcrumbs();
         startFeatures();
         startCompanion();
         mountCompanionAsk();

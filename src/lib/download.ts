@@ -7,9 +7,10 @@ import { pageWindow } from "../platform/pageContext";
 
 declare const GM_download: ((options: { name?: string; url: string; saveAs?: boolean }) => void) | undefined;
 
-function copyTextToClipboard(text: string): void {
+export function copyTextToClipboard(text: string): void {
   if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(text);
+    // A refusal (no focus, no permission) is not worth an unhandled rejection.
+    navigator.clipboard.writeText(text).catch(() => {});
     return;
   }
   const textarea = document.createElement("textarea");

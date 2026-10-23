@@ -3,6 +3,8 @@
  * read back, including the flat keys left by builds that predate sections.
  */
 
+import type { SentReport } from "../lib/bugReport/sentReports";
+
 export const ARIES_STORAGE_VERSION = 1;
 
 type FriendSettings = {
@@ -88,6 +90,17 @@ export type AriesStorage = {
    */
   friends?: { settings?: FriendSettings };
   notifications?: { soundEnabled?: boolean; mutedGroupIds?: number[] };
+  /** The bug report form. Its draft's shape lives with the feature. */
+  bugReport?: {
+    /** The text of a report not sent yet, field name to value. */
+    draft?: Record<string, string>;
+    /** The contact the player gave last time, offered again on the next report. */
+    contact?: string;
+    /** Reports sent from this browser, newest first, with the follow token that reads them back. */
+    sent?: SentReport[];
+    /** Whether "More details" was left open. */
+    detailsOpen?: boolean;
+  };
   eggAutomation?: {
     config?: unknown;
     enabled?: boolean;

@@ -25,6 +25,7 @@ import { renderKeybindsMenu } from "./features/keybinds/menu";
 import { renderRoomMenu } from "./features/room/menu";
 import { renderSkinsMenu } from "./features/skins/menu";
 import { renderCompanionMenu } from "./features/companion/menu";
+import { renderBugReportMenu } from "./features/bugReport/menu";
 import { initSkins } from "./features/skins/index";
 
 import { PlayerService } from "./game/player";
@@ -45,6 +46,9 @@ import { showRoomPrivacyNoticeOnce } from "./features/room/privacyNotice";
 import { showChangelogNoticeOnce } from "./features/changelog/notice";
 import { tos } from "./game/pixi/tileObjects";
 import { whenBodyReady } from "./lib/dom";
+import { installDiagnostics } from "./platform/diagnostics";
+import { startBugReportBreadcrumbs } from "./features/bugReport/breadcrumbs";
+import { registerBugReportMenuCommand } from "./features/bugReport/menuCommand";
 
 // The standalone Community Hub owns the rest of the mod's API. Only the
 // sign-in bridge and the collect-state heartbeat stay here.
@@ -55,6 +59,9 @@ import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/play
   "use strict";
 
   if (initAuthBridgeIfNeeded()) return;
+
+  // First, so a bug report can show the errors from the very start of the session.
+  installDiagnostics();
 
   installPageWebSocketHook();
   startAutoReco();
@@ -101,9 +108,13 @@ import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/play
       register('tools', 'Tools', renderToolsMenu);
       register('settings', 'Settings', renderSettingsMenu);
       register('companion', 'Companion', renderCompanionMenu);
+      register('bug-report', 'Report a bug', renderBugReportMenu);
       register('debug-data', 'Debug', renderDebugDataMenu);
     }
   });
+  // The same form from the userscript manager's menu, for when the dock is out of reach.
+  registerBugReportMenuCommand();
+  startBugReportBreadcrumbs();
 
   startFeatures();
 

@@ -16,6 +16,8 @@ const PATHS: Record<string, string> = {
   settings: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
   companion: '<rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M10 16h4"/>',
   "debug-data": '<rect x="8" y="7" width="8" height="12" rx="4"/><path d="M4 12h4M16 12h4M5 7l3 2M19 7l-3 2M5 18l3-2M19 18l-3-2M10 4l1 2M14 4l-1 2"/>',
+  // A ladybug, round where the Debug menu's bug is long, so the two never get mixed up.
+  "bug-report": '<path d="M12 8a6.5 6.5 0 0 1 6.5 6.5c0 3.6-2.9 6.5-6.5 6.5s-6.5-2.9-6.5-6.5A6.5 6.5 0 0 1 12 8z"/><path d="M12 8v13M9 8.6a3 3 0 0 1 6 0M10 5.5 8.5 3.5M14 5.5l1.5-2M8.8 13.5h.01M15.2 13.5h.01M9.3 17.5h.01M14.7 17.5h.01"/>',
 };
 
 /** A leaf, for a menu with no icon of its own. */

@@ -12,6 +12,7 @@ import { codesMatch, matchHotkey } from "../lib/hotkey";
 import { readAriesPath, writeAriesPath } from "../platform/storage";
 import { button } from "./kit/button";
 import { createDock } from "./kit/dock";
+import { noteMenuOpened, noteMenuRegistered } from "./kit/menuList";
 import { onMenuHidden } from "./kit/menuVisibility";
 import { readStoredPosition, storePosition } from "./kit/floating";
 import { h } from "./kit/dom";
@@ -188,6 +189,7 @@ export function mountHUD(opts?: HUDOptions) {
   }
 
   function showWindow(id: string, title: string, render: PanelRender) {
+    noteMenuOpened(id);
     const existing = windows.get(id);
     if (existing) {
       existing.el.style.display = "";
@@ -302,6 +304,7 @@ export function mountHUD(opts?: HUDOptions) {
 
   function register(id: string, title: string, render: PanelRender) {
     registry.set(id, { title, render });
+    noteMenuRegistered(id, title);
     dock.add({ id, label: title });
   }
 
