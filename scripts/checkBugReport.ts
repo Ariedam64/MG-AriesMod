@@ -5,7 +5,10 @@
 // pins what must never regress: secrets never leave the browser, a report is
 // cut to what the backend accepts before it is sent, the console capture
 // cannot loop or throw into the code that logged, a failed screenshot never
-// loses its report, and the API key is never part of the attached settings.
+// loses its report, a retry after a lost answer gets the same report back
+// (follow token as idempotency key), and the API key is never part of the
+// attached settings. It also holds the core to what the other mods' builds
+// need: Community Hub's non-strict TypeScript, Gemini's lint rules.
 //
 // Run with: npm run check:bugreport
 
@@ -14,8 +17,10 @@ import { join } from "node:path";
 import { check, checkEqual, run } from "./_check";
 import {
   addReportComment,
+  createFollowToken,
   describeBugReportError,
   listMyReports,
+  pendingBugReport,
   submitBugReport,
   type BugReportAttachment,
   type BugReportClient,
@@ -26,12 +31,14 @@ import { BUG_REPORT_LIMITS } from "../src/lib/bugReport/limits";
 import { RingBuffer, createLogCapture, type LogCaptureTarget } from "../src/lib/bugReport/logCapture";
 import { fitContext, prepareBugReport, prepareContext } from "../src/lib/bugReport/prepare";
 import { REDACTED, isSecretKey, redactString, redactValue } from "../src/lib/bugReport/redact";
-import { addSentReport, parseSentReports, type SentReport } from "../src/lib/bugReport/sentReports";
+import { addSentReport, parseSentReports, sentReportFrom, type SentReport } from "../src/lib/bugReport/sentReports";
 import { STATUS_LABELS, acceptsComments, statusLabel } from "../src/lib/bugReport/status";
-import type { BugReportPayload } from "../src/lib/bugReport/types";
+import { FOLLOW_TOKEN_RE, isFollowToken, type BugReportPayload } from "../src/lib/bugReport/types";
 import { compareVersions, isVersionBelow } from "../src/lib/bugReport/version";
+import { clearDraft, pendingReport, saveDraftSoon } from "../src/features/bugReport/draft";
 import { REPORTED_SETTINGS, readReportedSettings } from "../src/features/bugReport/settingsWhitelist";
 import { readSentReports, rememberSentReport } from "../src/features/bugReport/sentStore";
+import { readAriesPath } from "../src/platform/storage";
 
 // A browser with storage, for the settings and the sent list. GM storage holds
 // the API key, as it does in the mod.
@@ -139,6 +146,58 @@ function fakeBackend(answer: (req: BugReportHttpRequest, body: any, n: number) =
 
 const created = { id: 42, ref: "BR-42", followToken: TOKEN, status: "new" };
 
+type HeldReport = { id: number; token: string; description: string; screenshots: number };
+
+/**
+ * A backend that keeps the contract's rules on follow tokens: a token it
+ * already has gets its report back (200, with the count of screenshots it
+ * holds), the same description again under another token is a duplicate
+ * (409). With `loseFirstAnswer`, the first report is created but its answer
+ * never arrives, as when the request times out.
+ */
+function idempotentBackend(options: { loseFirstAnswer?: boolean; onReport?: () => void } = {}) {
+  const reports: HeldReport[] = [];
+  let lose = options.loseFirstAnswer === true;
+  const answer = (report: HeldReport, status: number) => ({
+    status,
+    body: { id: report.id, ref: `BR-${report.id}`, followToken: report.token, status: "new", attachmentsReceived: report.screenshots },
+  });
+  const backend = fakeBackend((req, body) => {
+    if (req.url.endsWith("/bug-reports")) {
+      options.onReport?.();
+      const known = reports.find((r) => typeof body.followToken === "string" && r.token === body.followToken);
+      if (known) return answer(known, 200);
+      const twin = reports.find((r) => r.description === body.description);
+      if (twin) return { status: 409, body: { error: "duplicate", id: twin.id, ref: `BR-${twin.id}` } };
+      const report: HeldReport = { id: 900 + reports.length, token: body.followToken ?? "cd".repeat(32), description: body.description, screenshots: 0 };
+      reports.push(report);
+      if (lose) {
+        lose = false;
+        return "timeout";
+      }
+      return answer(report, 201);
+    }
+    const id = Number(/bug-reports\/(\d+)\/attachments$/.exec(req.url)?.[1]);
+    const report = reports.find((r) => r.id === id && r.token === body.followToken);
+    if (!report) return { status: 404, body: { error: "not_found" } };
+    report.screenshots++;
+    return { status: 201, body: { id: report.screenshots } };
+  });
+  return { ...backend, reports };
+}
+
+/** Swaps `globalThis.crypto` for the time of `fn`. */
+async function withCrypto<T>(replacement: unknown, fn: () => T | Promise<T>): Promise<T> {
+  const original = Object.getOwnPropertyDescriptor(globalThis, "crypto");
+  Object.defineProperty(globalThis, "crypto", { configurable: true, writable: true, value: replacement });
+  try {
+    return await fn();
+  } finally {
+    if (original) Object.defineProperty(globalThis, "crypto", original);
+    else delete (globalThis as { crypto?: unknown }).crypto;
+  }
+}
+
 run(async () => {
   // ---------- The core stays copyable ----------
   {
@@ -149,6 +208,25 @@ run(async () => {
       check(`core ${name} imports only from its own folder`, outside.length === 0, outside.join(", "));
       const globals = source.match(/\b(GM_\w+|GM\.\w+|unsafeWindow|pageWindow)\b/g) ?? [];
       check(`core ${name} uses no userscript or page global`, globals.length === 0, globals.join(", "));
+
+      // What the other mods' builds refuse. Community Hub compiles without
+      // strict mode, where `!result.ok` or `result.ok ? ... : result.error`
+      // does not narrow a result union, only `=== true` / `=== false` does
+      // (npm run typecheck also compiles the core that way). Gemini lints with
+      // no-empty, no-control-regex and no-explicit-any.
+      const code = source
+        .split("\n")
+        .filter((line) => !/^\s*(\/\/|\/?\*)/.test(line))
+        .join("\n");
+      const looseOk = code.match(/\.ok\b(?!\s*===)[^\n]*/g) ?? [];
+      check(`core ${name} tests results with === only`, looseOk.length === 0, looseOk.join("\n"));
+      // On the source itself: a comment inside the block is what no-empty asks for.
+      const emptyCatch = source.match(/catch\s*(\([^)]*\))?\s*\{\s*\}/g) ?? [];
+      check(`core ${name} has no empty catch block`, emptyCatch.length === 0, emptyCatch.join(", "));
+      const anyType = code.match(/(:\s*any\b|\bany\[\]|<any>|\bas any\b)[^\n]*/g) ?? [];
+      check(`core ${name} declares no any`, anyType.length === 0, anyType.join("\n"));
+      const control = code.match(/\\(x[01][0-9a-f]|u00[01][0-9a-f])/gi) ?? [];
+      check(`core ${name} writes no control-character escape`, control.length === 0, control.join(", "));
     }
   }
 
@@ -330,6 +408,7 @@ run(async () => {
       checkEqual("the failed one is listed with its error", result.attachmentFailures.map((f) => [f.index, f.error.kind]), [[1, "server"]]);
     }
     checkEqual("the report is posted first", backend.calls[0].url, "https://api.test/bug-reports");
+    check("it carries a follow token made by the client", isFollowToken(backend.calls[0].json.followToken), String(backend.calls[0].json.followToken));
     checkEqual("it announces its screenshots", backend.calls[0].json.attachmentsExpected, 2);
     checkEqual("the API key signs the request", backend.calls[0].headers.Authorization, `Bearer ${API_KEY}`);
     checkEqual("the body is JSON", backend.calls[0].headers["Content-Type"], "application/json");
@@ -346,6 +425,10 @@ run(async () => {
     checkEqual("429 maps to rate_limited with its wait", error, { kind: "rate_limited", retryAfterSec: 1800 });
     check("and reads as a wait in minutes", !!error && describeBugReportError(error).includes("30 minutes"));
     checkEqual("no screenshot is sent for a refused report", backend.calls.length, 1);
+  }
+  {
+    const busy = describeBugReportError({ kind: "rate_limited", retryAfterSec: 5 });
+    check("a 5 second wait reads as the earlier try still arriving", busy.includes("few seconds"), busy);
   }
   {
     const backend = fakeBackend(() => ({ status: 409, body: { error: "duplicate", id: 40, ref: "BR-40" } }));
@@ -395,6 +478,120 @@ run(async () => {
     checkEqual("a comment on a closed report maps to closed", closed.ok ? null : closed.error.kind, "closed");
     const empty = await addReportComment(fakeBackend(() => ({ status: 201, body: { ok: true } })).client, { id: 42, followToken: TOKEN }, "   ");
     checkEqual("an empty comment is refused before sending", empty.ok ? null : empty.error.kind, "invalid");
+  }
+
+  // ---------- Follow token and idempotent retry ----------
+  {
+    let draws = 0;
+    const real = globalThis.crypto;
+    const [a, b] = await withCrypto(
+      {
+        getRandomValues: (array: Uint8Array) => {
+          draws++;
+          return real.getRandomValues(array);
+        },
+      },
+      () => [createFollowToken(), createFollowToken()],
+    );
+    check("a follow token is 64 lowercase hex characters", FOLLOW_TOKEN_RE.test(a ?? ""), String(a));
+    checkEqual("drawn from crypto.getRandomValues", draws, 2);
+    check("two tokens differ", a !== b);
+    await withCrypto({ getRandomValues: (array: Uint8Array) => array.fill(1) }, () => {
+      checkEqual("a byte under 16 keeps its leading zero", createFollowToken(), "01".repeat(32));
+    });
+    await withCrypto(undefined, async () => {
+      checkEqual("without crypto.getRandomValues no token is made (never a weaker random)", createFollowToken(), null);
+      const backend = fakeBackend(() => ({ status: 201, body: created }));
+      const result = await submitBugReport(backend.client, basePayload());
+      check("and the report goes without one, for the server to make", result.ok === true && !("followToken" in backend.calls[0].json));
+    });
+
+    checkEqual("a saved token still well formed is kept", pendingBugReport(TOKEN).followToken, TOKEN);
+    const upper = "AB".repeat(32);
+    const replaced = pendingBugReport(upper).followToken;
+    check("a saved token the server would refuse is replaced", isFollowToken(replaced) && replaced !== upper, String(replaced));
+    check("each new report gets its own token", pendingBugReport().followToken !== pendingBugReport().followToken);
+    const kept = prepareBugReport(basePayload({ followToken: TOKEN }));
+    checkEqual("prepare keeps a well-formed token", kept.ok === true ? kept.payload.followToken : null, TOKEN);
+    const dropped = prepareBugReport(basePayload({ followToken: "nope" }));
+    check("and leaves out a malformed one", dropped.ok === true && !("followToken" in dropped.payload));
+    const form = prepareBugReport(basePayload());
+    check("a form's payload (preview, saved file) holds no token", form.ok === true && !("followToken" in form.payload));
+    const answerless = await submitBugReport(fakeBackend(() => ({ status: 201, body: { id: 43, ref: "BR-43" } })).client, basePayload(), [], undefined, pendingBugReport(TOKEN));
+    checkEqual("an answer without the token keeps the one sent", answerless.ok === true ? answerless.report.followToken : null, TOKEN);
+  }
+  {
+    // The first try is created on the server but its answer is lost; the
+    // player closes the window, opens it again and sends again.
+    clearDraft();
+    let tokenAtRequest: unknown = null;
+    const backend = idempotentBackend({
+      loseFirstAnswer: true,
+      onReport: () => {
+        tokenAtRequest ??= readAriesPath("bugReport.pendingToken");
+      },
+    });
+    const shots = [image("game"), image("upload")];
+    const first = pendingReport();
+    check("the new report's token is 64 hex characters", isFollowToken(first.followToken), String(first.followToken));
+    const firstTry = await submitBugReport(backend.client, basePayload(), shots, undefined, first);
+    checkEqual("the first try times out", firstTry.ok === false ? firstTry.error.kind : null, "timeout");
+    checkEqual("it carried the pending token", backend.calls[0].json.followToken, first.followToken);
+    checkEqual("which was saved before the request went out", tokenAtRequest, first.followToken);
+    checkEqual("no screenshot follows a failed try", backend.calls.length, 1);
+    check("and the sent list does not have it yet", !readSentReports().some((entry) => entry.id === 900));
+
+    const reopened = pendingReport();
+    checkEqual("reopening the panel finds the same token", reopened.followToken, first.followToken);
+    const retry = await submitBugReport(backend.client, basePayload(), shots, undefined, reopened);
+    check("the retry gets back the report the first try created", retry.ok === true && retry.resumed && retry.report.id === 900, JSON.stringify(retry));
+    checkEqual("instead of a duplicate on the server", backend.reports.length, 1);
+    checkEqual("the retry is posted again", backend.calls[1].url, "https://api.test/bug-reports");
+    checkEqual("then both screenshots, which never left, go up", backend.calls.slice(2).map((call) => [call.url, call.json.kind]), [
+      ["https://api.test/bug-reports/900/attachments", "game"],
+      ["https://api.test/bug-reports/900/attachments", "upload"],
+    ]);
+    if (retry.ok === true) {
+      rememberSentReport(sentReportFrom(retry.report, "Pet team hotkeys do nothing"));
+      clearDraft();
+    }
+    checkEqual("the sent list holds the report once", readSentReports().filter((entry) => entry.id === 900).length, 1);
+    checkEqual("with its follow token", readSentReports().find((entry) => entry.id === 900)?.followToken, first.followToken);
+    checkEqual("success forgets the pending token", readAriesPath("bugReport.pendingToken"), undefined);
+    const next = pendingReport();
+    check("the next report gets a new token", isFollowToken(next.followToken) && next.followToken !== first.followToken);
+
+    clearDraft();
+    check("discarding the draft starts a new token too", pendingReport().followToken !== next.followToken);
+    const typed = pendingReport().followToken;
+    saveDraftSoon({ title: "Still the same report" });
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    checkEqual("editing the draft keeps the token", pendingReport().followToken, typed);
+    saveDraftSoon({ category: "bug" });
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    check("a form emptied by hand drops it", pendingReport().followToken !== typed);
+    clearDraft();
+  }
+  {
+    // One screenshot had arrived before the page was closed: the retry sends only the others.
+    const backend = idempotentBackend();
+    const pending = pendingBugReport();
+    backend.reports.push({ id: 950, token: pending.followToken ?? "", description: basePayload().description, screenshots: 1 });
+    const steps: string[] = [];
+    const result = await submitBugReport(
+      backend.client,
+      basePayload(),
+      [image("game"), image("screen"), image("upload")],
+      (p) => steps.push(p.stage === "report" ? "report" : `shot ${p.index + 1}/${p.total}`),
+      pending,
+    );
+    check("a report already there comes back as resumed", result.ok === true && result.resumed);
+    checkEqual("only the screenshots the server lacks go up", backend.calls.slice(1).map((call) => call.json.kind), ["screen", "upload"]);
+    checkEqual("all three count as sent", result.ok === true ? result.attachmentsSent : -1, 3);
+    checkEqual("progress starts at the first missing one", steps, ["report", "shot 2/3", "shot 3/3"]);
+    checkEqual("and the server ends up with three", backend.reports[0].screenshots, 3);
+    const fresh = await submitBugReport(idempotentBackend().client, basePayload(), [image("game")]);
+    check("a report created now is not resumed", fresh.ok === true && !fresh.resumed && fresh.attachmentsSent === 1);
   }
 
   // ---------- Image normalization ----------

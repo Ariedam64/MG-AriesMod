@@ -1,0 +1,19 @@
+{
+  // The portable bug report core alone, compiled the way Community Hub builds
+  // it: without strict mode, on the ES2020 library, with no ambient types. The
+  // core is copied as it is into that mod (and into Gemini and MG-mod), so it
+  // must compile there too. src/ and scripts/ stay strict.
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "types": [],
+    "strict": false,
+    "noImplicitAny": false,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true
+  },
+  "include": ["../src/lib/bugReport/*.ts"]
+}

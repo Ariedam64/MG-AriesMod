@@ -39,12 +39,14 @@ export const BUG_REPORT_LIMITS = {
   sentReports: 50,
 } as const;
 
-const NUL = /\u0000/g;
+// A plain string, not a regex: the other mods' lint refuses control
+// characters in a regex (no-control-regex).
+const NUL = String.fromCharCode(0);
 
 /** `value` as a string of at most `max` characters, NUL characters removed (Postgres refuses them). */
 export function clipText(value: unknown, max: number): string {
   const text = typeof value === "string" ? value : value == null ? "" : String(value);
-  const clean = text.indexOf("\u0000") === -1 ? text : text.replace(NUL, "");
+  const clean = text.indexOf(NUL) === -1 ? text : text.split(NUL).join("");
   return clean.length > max ? clean.slice(0, max) : clean;
 }
 

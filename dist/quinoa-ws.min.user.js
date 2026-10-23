@@ -47495,7 +47495,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
   // src/lib/bugReport/limits.ts
   function clipText(value, max) {
     const text2 = typeof value === "string" ? value : value == null ? "" : String(value);
-    const clean = text2.indexOf("\0") === -1 ? text2 : text2.replace(NUL, "");
+    const clean = text2.indexOf(NUL) === -1 ? text2 : text2.split(NUL).join("");
     return clean.length > max ? clean.slice(0, max) : clean;
   }
   function optionalText(value, max) {
@@ -47545,7 +47545,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
         /** Sent reports a mod remembers locally. */
         sentReports: 50
       };
-      NUL = /\u0000/g;
+      NUL = String.fromCharCode(0);
     }
   });
 
@@ -47616,7 +47616,10 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
   });
 
   // src/lib/bugReport/types.ts
-  var BUG_REPORT_PROJECTS, BUG_REPORT_CATEGORIES, BUG_REPORT_FREQUENCIES, BUG_REPORT_WITHOUT_MOD, LOG_LEVELS;
+  function isFollowToken(value) {
+    return typeof value === "string" && FOLLOW_TOKEN_RE.test(value);
+  }
+  var BUG_REPORT_PROJECTS, BUG_REPORT_CATEGORIES, BUG_REPORT_FREQUENCIES, BUG_REPORT_WITHOUT_MOD, LOG_LEVELS, FOLLOW_TOKEN_RE;
   var init_types = __esm({
     "src/lib/bugReport/types.ts"() {
       "use strict";
@@ -47625,6 +47628,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       BUG_REPORT_FREQUENCIES = ["always", "often", "sometimes", "once", "unknown"];
       BUG_REPORT_WITHOUT_MOD = ["yes", "no", "unknown"];
       LOG_LEVELS = ["error", "warn", "info", "log"];
+      FOLLOW_TOKEN_RE = /^[0-9a-f]{64}$/;
     }
   });
 
@@ -47665,6 +47669,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       attachmentsExpected: Math.min(BUG_REPORT_LIMITS.attachments, Math.max(0, attachments)),
       context: prepareContext(input.context)
     };
+    if (isFollowToken(input.followToken)) payload.followToken = input.followToken;
     return { ok: true, payload };
   }
   function prepareContext(raw, maxChars = BUG_REPORT_LIMITS.contextChars) {
@@ -47730,6 +47735,20 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
   });
 
   // src/lib/bugReport/client.ts
+  function createFollowToken() {
+    try {
+      if (typeof crypto === "undefined" || typeof crypto.getRandomValues !== "function") return null;
+      const bytes = crypto.getRandomValues(new Uint8Array(32));
+      let hex = "";
+      for (let i = 0; i < bytes.length; i++) hex += (bytes[i] < 16 ? "0" : "") + bytes[i].toString(16);
+      return hex;
+    } catch {
+      return null;
+    }
+  }
+  function pendingBugReport(savedToken) {
+    return { followToken: isFollowToken(savedToken) ? savedToken : createFollowToken() };
+  }
   function withDeadline(promise, ms) {
     return new Promise((resolve, reject2) => {
       const timer2 = setTimeout(() => reject2(new DeadlineError("deadline")), ms);
@@ -47755,13 +47774,14 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       return null;
     }
   }
-  function errorFromResponse(status2, data) {
-    const reason = stringOrNull2(data?.error);
+  function errorFromResponse(status2, body) {
+    const data = fieldsOf(body);
+    const reason = stringOrNull2(data.error);
     if (status2 === 0) return { kind: "offline" };
-    if (status2 === 429) return { kind: "rate_limited", retryAfterSec: numberOrNull(data?.retryAfter) };
-    if (status2 === 409 && reason === "duplicate") return { kind: "duplicate", id: numberOrNull(data?.id), ref: stringOrNull2(data?.ref) };
+    if (status2 === 429) return { kind: "rate_limited", retryAfterSec: numberOrNull(data.retryAfter) };
+    if (status2 === 409 && reason === "duplicate") return { kind: "duplicate", id: numberOrNull(data.id), ref: stringOrNull2(data.ref) };
     if (status2 === 409 && reason === "closed") return { kind: "closed" };
-    if (status2 === 400) return { kind: "invalid", field: stringOrNull2(data?.field) };
+    if (status2 === 400) return { kind: "invalid", field: stringOrNull2(data.field) };
     if (status2 === 404) return { kind: "not_found" };
     if (status2 === 413) return { kind: "too_large" };
     if (status2 >= 500) return { kind: "server", status: status2 };
@@ -47789,11 +47809,18 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     if (response.status >= 200 && response.status < 300) return { ok: true, status: response.status, data };
     return { ok: false, error: errorFromResponse(response.status, data) };
   }
-  function readCreated(data) {
-    const id = numberOrNull(data?.id);
-    const followToken = stringOrNull2(data?.followToken);
+  function readCreated(body, sentToken) {
+    const data = fieldsOf(body);
+    const id = numberOrNull(data.id);
+    const followToken = stringOrNull2(data.followToken) ?? sentToken;
     if (!id || !followToken) return null;
-    return { id, ref: stringOrNull2(data?.ref) ?? `BR-${id}`, followToken, status: stringOrNull2(data?.status) ?? "new" };
+    return {
+      id,
+      ref: stringOrNull2(data.ref) ?? `BR-${id}`,
+      followToken,
+      status: stringOrNull2(data.status) ?? "new",
+      attachmentsReceived: Math.max(0, Math.trunc(numberOrNull(data.attachmentsReceived) ?? 0))
+    };
   }
   async function uploadAttachment(client, report3, image) {
     if (image.bytes > BUG_REPORT_LIMITS.attachmentBytes) return { ok: false, error: { kind: "too_large" } };
@@ -47807,15 +47834,15 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     };
     const timeoutMs = client.uploadTimeoutMs ?? UPLOAD_TIMEOUT_MS;
     let result = await postJson(client, `bug-reports/${report3.id}/attachments`, body, timeoutMs);
-    if (!result.ok && isTransient(result.error)) {
+    if (result.ok === false && isTransient(result.error)) {
       result = await postJson(client, `bug-reports/${report3.id}/attachments`, body, timeoutMs);
     }
-    return result.ok ? { ok: true } : result;
+    return result.ok === true ? { ok: true } : result;
   }
-  async function submitBugReport(client, payload, attachments = [], onProgress) {
+  async function submitBugReport(client, payload, attachments = [], onProgress, pending3 = pendingBugReport(payload.followToken)) {
     const images = attachments.slice(0, BUG_REPORT_LIMITS.attachments);
-    const prepared = prepareBugReport({ ...payload, attachmentsExpected: images.length });
-    if (!prepared.ok) return { ok: false, error: { kind: "invalid", field: prepared.field } };
+    const prepared = prepareBugReport({ ...payload, followToken: pending3.followToken, attachmentsExpected: images.length });
+    if (prepared.ok === false) return { ok: false, error: { kind: "invalid", field: prepared.field } };
     const progress = (value) => {
       try {
         onProgress?.(value);
@@ -47824,27 +47851,36 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     };
     progress({ stage: "report" });
     const sent = await postJson(client, "bug-reports", prepared.payload, client.reportTimeoutMs ?? REPORT_TIMEOUT_MS);
-    if (!sent.ok) return sent;
-    const report3 = readCreated(sent.data);
+    if (sent.ok === false) return sent;
+    const report3 = readCreated(sent.data, prepared.payload.followToken ?? null);
     if (!report3) return { ok: false, error: { kind: "bad_response" } };
+    const already = Math.min(images.length, report3.attachmentsReceived);
     const attachmentFailures = [];
-    for (let index = 0; index < images.length; index++) {
+    for (let index = already; index < images.length; index++) {
       progress({ stage: "attachment", index, total: images.length });
       const uploaded = await uploadAttachment(client, report3, images[index]);
-      if (!uploaded.ok) attachmentFailures.push({ index, error: uploaded.error });
+      if (uploaded.ok === false) attachmentFailures.push({ index, error: uploaded.error });
     }
-    return { ok: true, report: report3, attachmentsSent: images.length - attachmentFailures.length, attachmentFailures };
+    return {
+      ok: true,
+      report: report3,
+      resumed: sent.status === 200,
+      attachmentsSent: images.length - attachmentFailures.length,
+      attachmentFailures
+    };
   }
-  function readComment(raw) {
-    if (!raw || typeof raw.message !== "string") return null;
+  function readComment(value) {
+    const raw = fieldsOf(value);
+    if (typeof raw.message !== "string") return null;
     return {
       author: raw.author === "admin" ? "admin" : "reporter",
       message: raw.message,
       createdAt: stringOrNull2(raw.createdAt) ?? ""
     };
   }
-  function readMyReport(raw) {
-    const id = numberOrNull(raw?.id);
+  function readMyReport(value) {
+    const raw = fieldsOf(value);
+    const id = numberOrNull(raw.id);
     if (!id) return null;
     const comments = Array.isArray(raw.comments) ? raw.comments.map(readComment).filter(Boolean) : [];
     return {
@@ -47869,9 +47905,9 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       reports: reports.slice(0, BUG_REPORT_LIMITS.mineReports).map(({ id, followToken }) => ({ id, followToken }))
     };
     const result = await postJson(client, "bug-reports/mine", body, client.reportTimeoutMs ?? REPORT_TIMEOUT_MS);
-    if (!result.ok) return result;
-    const list = Array.isArray(result.data?.reports) ? result.data.reports : null;
-    if (!list) return { ok: false, error: { kind: "bad_response" } };
+    if (result.ok === false) return result;
+    const list = fieldsOf(result.data).reports;
+    if (!Array.isArray(list)) return { ok: false, error: { kind: "bad_response" } };
     return { ok: true, reports: list.map(readMyReport).filter(Boolean) };
   }
   async function addReportComment(client, report3, message2) {
@@ -47883,7 +47919,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       { followToken: report3.followToken, message: text2 },
       client.reportTimeoutMs ?? REPORT_TIMEOUT_MS
     );
-    return result.ok ? { ok: true } : result;
+    return result.ok === true ? { ok: true } : result;
   }
   function formatWait(seconds2) {
     if (seconds2 == null || !Number.isFinite(seconds2) || seconds2 <= 60) return "a minute";
@@ -47899,6 +47935,9 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       case "timeout":
         return "The server took too long to answer. Please try again in a moment.";
       case "rate_limited":
+        if (error.retryAfterSec != null && error.retryAfterSec <= 10) {
+          return "The server is still receiving your previous try. Please send again in a few seconds.";
+        }
         return `You have sent several reports in a short time. Please try again in ${formatWait(error.retryAfterSec)}.`;
       case "duplicate":
         return error.ref ? `You already sent this report a few minutes ago, as ${error.ref}. No need to send it twice.` : "You already sent this report a few minutes ago. No need to send it twice.";
@@ -47918,17 +47957,19 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
         return "The server gave an answer the mod did not understand.";
     }
   }
-  var REPORT_TIMEOUT_MS, UPLOAD_TIMEOUT_MS, DEADLINE_GRACE_MS, DeadlineError, numberOrNull, stringOrNull2, isTransient, FIELD_HINTS;
+  var REPORT_TIMEOUT_MS, UPLOAD_TIMEOUT_MS, DEADLINE_GRACE_MS, DeadlineError, fieldsOf, numberOrNull, stringOrNull2, isTransient, FIELD_HINTS;
   var init_client = __esm({
     "src/lib/bugReport/client.ts"() {
       "use strict";
       init_limits();
       init_prepare();
+      init_types();
       REPORT_TIMEOUT_MS = 3e4;
       UPLOAD_TIMEOUT_MS = 6e4;
       DEADLINE_GRACE_MS = 5e3;
       DeadlineError = class extends Error {
       };
+      fieldsOf = (value) => value && typeof value === "object" ? value : {};
       numberOrNull = (value) => typeof value === "number" && Number.isFinite(value) ? value : null;
       stringOrNull2 = (value) => typeof value === "string" ? value : null;
       isTransient = (error) => error.kind === "offline" || error.kind === "timeout" || error.kind === "server";
@@ -48380,14 +48421,15 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     };
     const listen2 = (target, undo) => {
       const onError = (event) => guarded(() => {
-        if (event?.error) {
-          record2("error", ["Uncaught", event.error]);
+        const e = eventFields(event);
+        if (e.error) {
+          record2("error", ["Uncaught", e.error]);
           return;
         }
-        const where = event?.filename ? ` (${event.filename}:${event.lineno ?? 0}:${event.colno ?? 0})` : "";
-        record2("error", [`Uncaught ${event?.message ?? "error"}${where}`]);
+        const where = e.filename ? ` (${String(e.filename)}:${String(e.lineno ?? 0)}:${String(e.colno ?? 0)})` : "";
+        record2("error", [`Uncaught ${String(e.message ?? "error")}${where}`]);
       });
-      const onRejection = (event) => guarded(() => record2("error", ["Unhandled rejection:", event?.reason]));
+      const onRejection = (event) => guarded(() => record2("error", ["Unhandled rejection:", eventFields(event).reason]));
       target.addEventListener("error", onError);
       target.addEventListener("unhandledrejection", onRejection);
       undo.push(() => {
@@ -48436,7 +48478,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       }
     };
   }
-  var RingBuffer, MAX_DEPTH2, MAX_KEYS, MAX_ITEMS, STACK_FRAMES, WRAPPED_LEVELS;
+  var RingBuffer, MAX_DEPTH2, MAX_KEYS, MAX_ITEMS, STACK_FRAMES, eventFields, WRAPPED_LEVELS;
   var init_logCapture = __esm({
     "src/lib/bugReport/logCapture.ts"() {
       "use strict";
@@ -48468,6 +48510,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       MAX_KEYS = 15;
       MAX_ITEMS = 10;
       STACK_FRAMES = 4;
+      eventFields = (event) => event && typeof event === "object" ? event : {};
       WRAPPED_LEVELS = ["error", "warn"];
     }
   });
@@ -49148,23 +49191,37 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     return !!(draft.title?.trim() || draft.description?.trim() || draft.steps?.trim() || draft.expected?.trim() || draft.actual?.trim());
   }
   function writeDraft(draft) {
-    writeAriesPath(DRAFT_PATH, draftHasText(draft) ? draft : void 0);
+    const hasText = draftHasText(draft);
+    writeAriesPath(DRAFT_PATH, hasText ? draft : void 0);
+    if (!hasText) forgetPendingReport();
   }
   function clearDraft() {
     saveDraftSoon.cancel();
     writeAriesPath(DRAFT_PATH, void 0);
+    forgetPendingReport();
+  }
+  function pendingReport() {
+    const saved = readAriesPath(PENDING_TOKEN_PATH);
+    const pending3 = pendingBugReport(saved);
+    if (pending3.followToken !== saved) writeAriesPath(PENDING_TOKEN_PATH, pending3.followToken ?? void 0);
+    return pending3;
+  }
+  function forgetPendingReport() {
+    if (readAriesPath(PENDING_TOKEN_PATH) !== void 0) writeAriesPath(PENDING_TOKEN_PATH, void 0);
   }
   function rememberContact(contact) {
     writeAriesPath(CONTACT_PATH, contact?.trim() || void 0);
   }
-  var DRAFT_PATH, CONTACT_PATH, SAVE_DELAY_MS, DRAFT_FIELDS, saveDraftSoon;
+  var DRAFT_PATH, CONTACT_PATH, PENDING_TOKEN_PATH, SAVE_DELAY_MS, DRAFT_FIELDS, saveDraftSoon;
   var init_draft = __esm({
     "src/features/bugReport/draft.ts"() {
       "use strict";
       init_async2();
+      init_client();
       init_storage();
       DRAFT_PATH = "bugReport.draft";
       CONTACT_PATH = "bugReport.contact";
+      PENDING_TOKEN_PATH = "bugReport.pendingToken";
       SAVE_DELAY_MS = 600;
       DRAFT_FIELDS = [
         "category",
@@ -49883,6 +49940,9 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     const { report: report3, attachmentFailures } = result;
     const root4 = h("div", "qws-bug-success");
     root4.appendChild(h("div", "qws-bug-success__title", "Thanks, your report was sent."));
+    if (result.resumed) {
+      root4.appendChild(h("p", "qws-bug-note", "Your earlier try had already arrived, so the report keeps the text you sent then."));
+    }
     const ref2 = h("div", "qws-bug-success__ref");
     const setCopyLabel = (text2) => {
       const label2 = copy3.querySelector(".label");
@@ -50058,11 +50118,18 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
         const attachments = shots.attachments();
         const payload = toPayload(values, await collectAutoFields(attached.read()), attachments.length);
         lastAttempt = { payload, attachments };
-        const result = await submitBugReport(bugReportClient, payload, attachments, (step) => {
-          progress.textContent = progressText(step);
-        });
+        const pending3 = pendingReport();
+        const result = await submitBugReport(
+          bugReportClient,
+          payload,
+          attachments,
+          (step) => {
+            progress.textContent = progressText(step);
+          },
+          pending3
+        );
         progress.textContent = "";
-        if (!result.ok) {
+        if (result.ok === false) {
           errors.show(describeBugReportError(result.error));
           saveButton.hidden = !SAVE_WORTHY.has(result.error.kind);
           return;

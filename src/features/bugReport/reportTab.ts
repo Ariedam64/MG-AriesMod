@@ -16,7 +16,7 @@ import type { Menu } from "../../ui/kit/menu";
 import { openLink } from "../tools/openLink";
 import { buildAttachedData, showPreviewModal } from "./attachedData";
 import { collectAutoFields, latestVersion, type AutoFields } from "./context";
-import { clearDraft, draftHasText, readDraft, rememberContact, saveDraftSoon, type Draft } from "./draft";
+import { clearDraft, draftHasText, pendingReport, readDraft, rememberContact, saveDraftSoon, type Draft } from "./draft";
 import { buildReportFields, type FormValues } from "./formFields";
 import { MY_REPORTS_TAB } from "./myReportsTab";
 import { BUG_REPORT_PROJECT } from "./project";
@@ -167,11 +167,19 @@ export function renderReportTab(view: HTMLElement, menu: Menu): void {
       const attachments = shots.attachments();
       const payload = toPayload(values, await collectAutoFields(attached.read()), attachments.length);
       lastAttempt = { payload, attachments };
-      const result = await submitBugReport(bugReportClient, payload, attachments, (step) => {
-        progress.textContent = progressText(step);
-      });
+      // The same token on every try of this report, until one goes through.
+      const pending = pendingReport();
+      const result = await submitBugReport(
+        bugReportClient,
+        payload,
+        attachments,
+        (step) => {
+          progress.textContent = progressText(step);
+        },
+        pending,
+      );
       progress.textContent = "";
-      if (!result.ok) {
+      if (result.ok === false) {
         errors.show(describeBugReportError(result.error));
         saveButton.hidden = !SAVE_WORTHY.has(result.error.kind);
         return;

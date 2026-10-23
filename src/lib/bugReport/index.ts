@@ -18,7 +18,8 @@
 //   logCapture.ts    console errors, uncaught errors and breadcrumbs, in memory
 //   image.ts         any screenshot shrunk to WebP or JPEG under 600 KB
 //   screenCapture.ts one frame of the tab, through the screen capture API
-//   client.ts        submit, list my reports, comment, errors in plain words
+//   client.ts        submit (retried safely through its follow token), list my
+//                    reports, comment, errors in plain words
 //   sentReports.ts   the list of reports sent from this browser
 //   version.ts       version comparison, for "fixed in vX"
 

@@ -96,6 +96,8 @@ export type AriesStorage = {
     draft?: Record<string, string>;
     /** The contact the player gave last time, offered again on the next report. */
     contact?: string;
+    /** Follow token of the report being sent, kept until a try goes through so a retry gets the same report. */
+    pendingToken?: string;
     /** Reports sent from this browser, newest first, with the follow token that reads them back. */
     sent?: SentReport[];
     /** Whether "More details" was left open. */

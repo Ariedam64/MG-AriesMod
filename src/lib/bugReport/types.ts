@@ -42,6 +42,13 @@ export type LogEntry = {
 
 export type Breadcrumb = { t: number; msg: string; repeat?: number };
 
+/** A follow token as the backend makes and accepts it: 32 bytes as 64 lowercase hex characters. */
+export const FOLLOW_TOKEN_RE = /^[0-9a-f]{64}$/;
+
+export function isFollowToken(value: unknown): value is string {
+  return typeof value === "string" && FOLLOW_TOKEN_RE.test(value);
+}
+
 export interface BugReportEnvironment {
   surface?: string;
   host?: string;
@@ -90,14 +97,26 @@ export interface BugReportPayload {
   /** 0 to 3: the triage waits for this many screenshots. */
   attachmentsExpected: number;
   context: BugReportContext;
+  /**
+   * Made by the client, and the idempotency key: the same token sent again
+   * gets the report it already created. `submitBugReport` sets it from the
+   * pending report, so a form leaves it out (and a saved copy never holds it).
+   */
+  followToken?: string | null;
 }
 
-/** `201` answer to `POST /bug-reports`. The follow token is only ever sent this once. */
+/**
+ * The answer to `POST /bug-reports`: `201` when the report was created, `200`
+ * when an earlier try with the same follow token already had. The follow
+ * token is never sent again after that.
+ */
 export interface CreatedBugReport {
   id: number;
   ref: string;
   followToken: string;
   status: BugReportStatus | string;
+  /** Screenshots the server already holds, the first ones sent: only the next ones are still to send. */
+  attachmentsReceived: number;
 }
 
 /** `POST /bug-reports/:id/attachments`. */

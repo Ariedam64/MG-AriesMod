@@ -12,17 +12,28 @@
 // the report first, which answers with its id and follow token, then each
 // screenshot on its own. A screenshot that fails never loses the report: the
 // result lists what did not go through.
+//
+// The follow token is made here, before the first try, and is also the
+// backend's idempotency key: a retry of the same report after a lost answer
+// (timeout, dropped connection) sends the same token and gets back the report
+// the first try created, with the count of screenshots it already holds,
+// instead of a duplicate refusal that would lose the follow-up.
+//
+// Results are tested with `result.ok === false` (or `=== true`), never
+// `!result.ok`: Community Hub builds without strict mode, where only an
+// equality narrows these unions.
 
 import { BUG_REPORT_LIMITS } from "./limits";
 import type { NormalizedImage } from "./image";
 import { prepareBugReport } from "./prepare";
-import type {
-  AttachmentKind,
-  BugReportAttachmentPayload,
-  BugReportComment,
-  BugReportPayload,
-  CreatedBugReport,
-  MyBugReport,
+import {
+  isFollowToken,
+  type AttachmentKind,
+  type BugReportAttachmentPayload,
+  type BugReportComment,
+  type BugReportPayload,
+  type CreatedBugReport,
+  type MyBugReport,
 } from "./types";
 
 export type BugReportHttpRequest = {
@@ -69,10 +80,44 @@ export type SubmitResult =
   | {
       ok: true;
       report: CreatedBugReport;
+      /** The report was already there: an earlier try created it and only its answer was lost. */
+      resumed: boolean;
+      /** Screenshots now on the server, those an earlier try already sent included. */
       attachmentsSent: number;
       attachmentFailures: Array<{ index: number; error: BugReportError }>;
     }
   | { ok: false; error: BugReportError };
+
+/**
+ * One report on its way, from its first try until one goes through. Its
+ * follow token goes with every try, so start one per new report and keep it
+ * (the mod keeps a copy in its storage, next to the draft) across the retries
+ * of the same report. `followToken` is null only where the engine has no
+ * `crypto.getRandomValues`: the backend then makes the token, and a retry is
+ * not recognised.
+ */
+export type PendingBugReport = { readonly followToken: string | null };
+
+/** A new follow token from `crypto.getRandomValues`, or null where there is none (never a weaker random). */
+export function createFollowToken(): string | null {
+  try {
+    if (typeof crypto === "undefined" || typeof crypto.getRandomValues !== "function") return null;
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    let hex = "";
+    for (let i = 0; i < bytes.length; i++) hex += (bytes[i] < 16 ? "0" : "") + bytes[i].toString(16);
+    return hex;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The pending report for a send: the one a mod kept from an earlier try when
+ * its token is still well formed, otherwise a new report with a new token.
+ */
+export function pendingBugReport(savedToken?: unknown): PendingBugReport {
+  return { followToken: isFollowToken(savedToken) ? savedToken : createFollowToken() };
+}
 
 const REPORT_TIMEOUT_MS = 30_000;
 const UPLOAD_TIMEOUT_MS = 60_000;
@@ -101,7 +146,7 @@ export function joinUrl(base: string, path: string): string {
   return `${base.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
 }
 
-function parseJson(text: string): any {
+function parseJson(text: string): unknown {
   try {
     return text ? JSON.parse(text) : null;
   } catch {
@@ -109,31 +154,37 @@ function parseJson(text: string): any {
   }
 }
 
+/** The fields of an answer's object, or none when it is not an object. */
+const fieldsOf = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 const numberOrNull = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : null);
 const stringOrNull = (value: unknown) => (typeof value === "string" ? value : null);
 
 /** A failed answer as an error the form can explain. */
-export function errorFromResponse(status: number, data: any): BugReportError {
-  const reason = stringOrNull(data?.error);
+export function errorFromResponse(status: number, body: unknown): BugReportError {
+  const data = fieldsOf(body);
+  const reason = stringOrNull(data.error);
   if (status === 0) return { kind: "offline" };
-  if (status === 429) return { kind: "rate_limited", retryAfterSec: numberOrNull(data?.retryAfter) };
-  if (status === 409 && reason === "duplicate") return { kind: "duplicate", id: numberOrNull(data?.id), ref: stringOrNull(data?.ref) };
+  if (status === 429) return { kind: "rate_limited", retryAfterSec: numberOrNull(data.retryAfter) };
+  if (status === 409 && reason === "duplicate") return { kind: "duplicate", id: numberOrNull(data.id), ref: stringOrNull(data.ref) };
   if (status === 409 && reason === "closed") return { kind: "closed" };
-  if (status === 400) return { kind: "invalid", field: stringOrNull(data?.field) };
+  if (status === 400) return { kind: "invalid", field: stringOrNull(data.field) };
   if (status === 404) return { kind: "not_found" };
   if (status === 413) return { kind: "too_large" };
   if (status >= 500) return { kind: "server", status };
   return { kind: "rejected", status, reason };
 }
 
-type CallResult = { ok: true; status: number; data: any } | { ok: false; error: BugReportError };
+type CallResult = { ok: true; status: number; data: unknown } | { ok: false; error: BugReportError };
 
 async function postJson(client: BugReportClient, path: string, body: unknown, timeoutMs: number): Promise<CallResult> {
   const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json" };
   let apiKey: string | null | undefined = null;
   try {
     apiKey = client.getApiKey?.();
-  } catch {}
+  } catch {
+    // No key to read: the report goes out unverified.
+  }
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
 
   let response: BugReportHttpResponse;
@@ -151,11 +202,19 @@ async function postJson(client: BugReportClient, path: string, body: unknown, ti
   return { ok: false, error: errorFromResponse(response.status, data) };
 }
 
-function readCreated(data: any): CreatedBugReport | null {
-  const id = numberOrNull(data?.id);
-  const followToken = stringOrNull(data?.followToken);
+/** The answer to `POST /bug-reports`. A token missing from it is the one that was sent. */
+function readCreated(body: unknown, sentToken: string | null): CreatedBugReport | null {
+  const data = fieldsOf(body);
+  const id = numberOrNull(data.id);
+  const followToken = stringOrNull(data.followToken) ?? sentToken;
   if (!id || !followToken) return null;
-  return { id, ref: stringOrNull(data?.ref) ?? `BR-${id}`, followToken, status: stringOrNull(data?.status) ?? "new" };
+  return {
+    id,
+    ref: stringOrNull(data.ref) ?? `BR-${id}`,
+    followToken,
+    status: stringOrNull(data.status) ?? "new",
+    attachmentsReceived: Math.max(0, Math.trunc(numberOrNull(data.attachmentsReceived) ?? 0)),
+  };
 }
 
 /** Network trouble is worth one more try; a refusal from the server is not. */
@@ -177,10 +236,10 @@ async function uploadAttachment(
   };
   const timeoutMs = client.uploadTimeoutMs ?? UPLOAD_TIMEOUT_MS;
   let result = await postJson(client, `bug-reports/${report.id}/attachments`, body, timeoutMs);
-  if (!result.ok && isTransient(result.error)) {
+  if (result.ok === false && isTransient(result.error)) {
     result = await postJson(client, `bug-reports/${report.id}/attachments`, body, timeoutMs);
   }
-  return result.ok ? { ok: true } : result;
+  return result.ok === true ? { ok: true } : result;
 }
 
 /**
@@ -188,39 +247,56 @@ async function uploadAttachment(
  * `prepareBugReport` first, so a field the backend would refuse fails here
  * with `invalid` and nothing is sent. `attachmentsExpected` is set from the
  * screenshots given.
+ *
+ * `pending` carries the follow token: pass the same one to retry a report
+ * whose try failed, so a report the first try did create comes back
+ * (`resumed`) and only the screenshots the server does not hold yet are sent.
+ * Without it, this call is a new report with a token of its own.
  */
 export async function submitBugReport(
   client: BugReportClient,
   payload: BugReportPayload,
   attachments: readonly BugReportAttachment[] = [],
   onProgress?: (progress: SubmitProgress) => void,
+  pending: PendingBugReport = pendingBugReport(payload.followToken),
 ): Promise<SubmitResult> {
   const images = attachments.slice(0, BUG_REPORT_LIMITS.attachments);
-  const prepared = prepareBugReport({ ...payload, attachmentsExpected: images.length });
-  if (!prepared.ok) return { ok: false, error: { kind: "invalid", field: prepared.field } };
+  const prepared = prepareBugReport({ ...payload, followToken: pending.followToken, attachmentsExpected: images.length });
+  if (prepared.ok === false) return { ok: false, error: { kind: "invalid", field: prepared.field } };
 
   const progress = (value: SubmitProgress) => {
     try {
       onProgress?.(value);
-    } catch {}
+    } catch {
+      // The form's progress line is not worth failing a report for.
+    }
   };
   progress({ stage: "report" });
   const sent = await postJson(client, "bug-reports", prepared.payload, client.reportTimeoutMs ?? REPORT_TIMEOUT_MS);
-  if (!sent.ok) return sent;
-  const report = readCreated(sent.data);
+  if (sent.ok === false) return sent;
+  const report = readCreated(sent.data, prepared.payload.followToken ?? null);
   if (!report) return { ok: false, error: { kind: "bad_response" } };
 
+  // Screenshots go up in order, so the server's count says which are there.
+  const already = Math.min(images.length, report.attachmentsReceived);
   const attachmentFailures: Array<{ index: number; error: BugReportError }> = [];
-  for (let index = 0; index < images.length; index++) {
+  for (let index = already; index < images.length; index++) {
     progress({ stage: "attachment", index, total: images.length });
     const uploaded = await uploadAttachment(client, report, images[index]);
-    if (!uploaded.ok) attachmentFailures.push({ index, error: uploaded.error });
+    if (uploaded.ok === false) attachmentFailures.push({ index, error: uploaded.error });
   }
-  return { ok: true, report, attachmentsSent: images.length - attachmentFailures.length, attachmentFailures };
+  return {
+    ok: true,
+    report,
+    resumed: sent.status === 200,
+    attachmentsSent: images.length - attachmentFailures.length,
+    attachmentFailures,
+  };
 }
 
-function readComment(raw: any): BugReportComment | null {
-  if (!raw || typeof raw.message !== "string") return null;
+function readComment(value: unknown): BugReportComment | null {
+  const raw = fieldsOf(value);
+  if (typeof raw.message !== "string") return null;
   return {
     author: raw.author === "admin" ? "admin" : "reporter",
     message: raw.message,
@@ -228,10 +304,11 @@ function readComment(raw: any): BugReportComment | null {
   };
 }
 
-function readMyReport(raw: any): MyBugReport | null {
-  const id = numberOrNull(raw?.id);
+function readMyReport(value: unknown): MyBugReport | null {
+  const raw = fieldsOf(value);
+  const id = numberOrNull(raw.id);
   if (!id) return null;
-  const comments = Array.isArray(raw.comments) ? raw.comments.map(readComment).filter(Boolean) as BugReportComment[] : [];
+  const comments = Array.isArray(raw.comments) ? (raw.comments.map(readComment).filter(Boolean) as BugReportComment[]) : [];
   return {
     id,
     ref: stringOrNull(raw.ref) ?? `BR-${id}`,
@@ -265,9 +342,9 @@ export async function listMyReports(
     reports: reports.slice(0, BUG_REPORT_LIMITS.mineReports).map(({ id, followToken }) => ({ id, followToken })),
   };
   const result = await postJson(client, "bug-reports/mine", body, client.reportTimeoutMs ?? REPORT_TIMEOUT_MS);
-  if (!result.ok) return result;
-  const list = Array.isArray(result.data?.reports) ? result.data.reports : null;
-  if (!list) return { ok: false, error: { kind: "bad_response" } };
+  if (result.ok === false) return result;
+  const list: unknown = fieldsOf(result.data).reports;
+  if (!Array.isArray(list)) return { ok: false, error: { kind: "bad_response" } };
   return { ok: true, reports: list.map(readMyReport).filter(Boolean) as MyBugReport[] };
 }
 
@@ -285,7 +362,7 @@ export async function addReportComment(
     { followToken: report.followToken, message: text },
     client.reportTimeoutMs ?? REPORT_TIMEOUT_MS,
   );
-  return result.ok ? { ok: true } : result;
+  return result.ok === true ? { ok: true } : result;
 }
 
 /** "a minute", "12 minutes", "about 2 hours". */
@@ -311,6 +388,10 @@ export function describeBugReportError(error: BugReportError): string {
     case "timeout":
       return "The server took too long to answer. Please try again in a moment.";
     case "rate_limited":
+      // A few seconds: an earlier try of this report is still being received.
+      if (error.retryAfterSec != null && error.retryAfterSec <= 10) {
+        return "The server is still receiving your previous try. Please send again in a few seconds.";
+      }
       return `You have sent several reports in a short time. Please try again in ${formatWait(error.retryAfterSec)}.`;
     case "duplicate":
       return error.ref

@@ -16,6 +16,10 @@ export function showSentView(
   const { report, attachmentFailures } = result;
   const root = h("div", "qws-bug-success");
   root.appendChild(h("div", "qws-bug-success__title", "Thanks, your report was sent."));
+  if (result.resumed) {
+    // The answer to an earlier try was lost, but that try had arrived: the server kept its text.
+    root.appendChild(h("p", "qws-bug-note", "Your earlier try had already arrived, so the report keeps the text you sent then."));
+  }
 
   const ref = h("div", "qws-bug-success__ref");
   const setCopyLabel = (text: string) => {

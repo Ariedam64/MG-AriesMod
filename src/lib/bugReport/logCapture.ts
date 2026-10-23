@@ -161,14 +161,19 @@ export type LogCaptureOptions = {
   now?: () => number;
 };
 
-type ConsoleLike = { error?: (...args: any[]) => void; warn?: (...args: any[]) => void };
+type ConsoleLike = { error?: (...args: unknown[]) => void; warn?: (...args: unknown[]) => void };
 
 /** A window, or anything shaped like one: its console and its error events. */
 export type LogCaptureTarget = {
   console?: ConsoleLike;
-  addEventListener?: (type: string, listener: (event: any) => void) => void;
-  removeEventListener?: (type: string, listener: (event: any) => void) => void;
+  addEventListener?: (type: string, listener: (event: unknown) => void) => void;
+  removeEventListener?: (type: string, listener: (event: unknown) => void) => void;
 };
+
+/** What an `error` or `unhandledrejection` event may carry, read without trusting it. */
+type ErrorEventLike = { error?: unknown; message?: unknown; filename?: unknown; lineno?: unknown; colno?: unknown; reason?: unknown };
+
+const eventFields = (event: unknown): ErrorEventLike => (event && typeof event === "object" ? (event as ErrorEventLike) : {});
 
 export interface LogCapture {
   /** Adds a log line, as a wrapped console call does. */
@@ -212,7 +217,9 @@ export function createLogCapture(options: LogCaptureOptions = {}): LogCapture {
     try {
       const msg = formatLogArgs(args, maxMessage);
       pushFolded(logs, { t: now(), level, msg }, (last) => last.level === level && last.msg === msg);
-    } catch {}
+    } catch {
+      // A line that cannot be read is dropped, never thrown at the caller.
+    }
   };
 
   const guarded = (fn: () => void) => {
@@ -258,16 +265,17 @@ export function createLogCapture(options: LogCaptureOptions = {}): LogCapture {
   };
 
   const listen = (target: LogCaptureTarget, undo: Array<() => void>) => {
-    const onError = (event: any) =>
+    const onError = (event: unknown) =>
       guarded(() => {
-        if (event?.error) {
-          record("error", ["Uncaught", event.error]);
+        const e = eventFields(event);
+        if (e.error) {
+          record("error", ["Uncaught", e.error]);
           return;
         }
-        const where = event?.filename ? ` (${event.filename}:${event.lineno ?? 0}:${event.colno ?? 0})` : "";
-        record("error", [`Uncaught ${event?.message ?? "error"}${where}`]);
+        const where = e.filename ? ` (${String(e.filename)}:${String(e.lineno ?? 0)}:${String(e.colno ?? 0)})` : "";
+        record("error", [`Uncaught ${String(e.message ?? "error")}${where}`]);
       });
-    const onRejection = (event: any) => guarded(() => record("error", ["Unhandled rejection:", event?.reason]));
+    const onRejection = (event: unknown) => guarded(() => record("error", ["Unhandled rejection:", eventFields(event).reason]));
     target.addEventListener!("error", onError);
     target.addEventListener!("unhandledrejection", onRejection);
     undo.push(() => {
@@ -304,12 +312,16 @@ export function createLogCapture(options: LogCaptureOptions = {}): LogCapture {
           listen(target, undo);
           undo.push(() => targets.delete(target));
         }
-      } catch {}
+      } catch {
+        // A console or target that refuses to be wrapped is left as it is.
+      }
       return () => {
         for (const step of undo.splice(0).reverse()) {
           try {
             step();
-          } catch {}
+          } catch {
+            // One step that fails does not stop the others.
+          }
         }
       };
     },

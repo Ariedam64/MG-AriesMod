@@ -84,6 +84,8 @@ export async function captureScreenFrame(hooks: ScreenCaptureHooks = {}): Promis
     video.srcObject = null;
     try {
       hooks.afterFrame?.();
-    } catch {}
+    } catch {
+      // The capture's result stands, whatever the hook does.
+    }
   }
 }

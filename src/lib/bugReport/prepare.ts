@@ -16,6 +16,7 @@ import {
   BUG_REPORT_PROJECTS,
   BUG_REPORT_WITHOUT_MOD,
   LOG_LEVELS,
+  isFollowToken,
   type Breadcrumb,
   type BugReportContext,
   type BugReportPayload,
@@ -41,6 +42,11 @@ export function descriptionProblem(description: unknown): "description" | null {
   return length < L.description.min || length > L.description.max ? "description" : null;
 }
 
+/**
+ * A form's data as the exact body to send, or the first field the backend
+ * would refuse. A well-formed follow token is kept; any other is left out, and
+ * the backend then makes one.
+ */
 export function prepareBugReport(input: BugReportPayload): PreparedReport {
   if (!(BUG_REPORT_PROJECTS as readonly string[]).includes(input.project)) return { ok: false, field: "project" };
   const titleField = titleProblem(input.title);
@@ -70,6 +76,7 @@ export function prepareBugReport(input: BugReportPayload): PreparedReport {
     attachmentsExpected: Math.min(L.attachments, Math.max(0, attachments)),
     context: prepareContext(input.context),
   };
+  if (isFollowToken(input.followToken)) payload.followToken = input.followToken;
   return { ok: true, payload };
 }
 
