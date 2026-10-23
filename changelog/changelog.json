@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "version": "4.0.6",
+      "date": "2026-10-23",
+      "title": "Report a bug from the mod",
+      "notes": "**Bug reports**\n\n- New **Report a bug** button in the dock, also in the Tampermonkey menu for when the mod's menus won't open\n- Write your report in English or in your own language\n- A screenshot of the game is added for you, and you can add your own. Recent errors from the console can go with it too, and you choose what is sent\n- Follow each report in **My reports**: its status, my questions and replies, and the version that fixes it. You can answer right there\n- If sending fails, your report is kept for later, or you can save it to a file and share it on the Discord"
+    },
+    {
       "version": "3.2.221",
       "date": "2026-09-28",
       "title": "Companion comes alive",
