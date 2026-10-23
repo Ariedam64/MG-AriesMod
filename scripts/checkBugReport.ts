@@ -1,5 +1,6 @@
-// The bug report core (src/lib/bugReport/) and the two places the mod plugs
-// into it: the settings whitelist and the list of sent reports.
+// The bug report core (src/lib/bugReport/) and the places the mod plugs into
+// it: the settings whitelist, the draft and its pending token, the list of
+// sent reports, the rows of My reports, and the settings export.
 //
 // The core ships to ~900 players and is copied into the other mods, so this
 // pins what must never regress: secrets never leave the browser, a report is
@@ -7,14 +8,17 @@
 // cannot loop or throw into the code that logged, a failed screenshot never
 // loses its report, a retry after a lost answer gets the same report back
 // (follow token as idempotency key), and the API key is never part of the
-// attached settings. It also holds the core to what the other mods' builds
-// need: Community Hub's non-strict TypeScript, Gemini's lint rules.
+// attached settings. Follow tokens never leave in a settings file or backup,
+// and a file imported never brings someone else's. It also holds the core to
+// what the other mods' builds need: Community Hub's non-strict TypeScript,
+// Gemini's lint rules.
 //
 // Run with: npm run check:bugreport
 
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { check, checkEqual, run } from "./_check";
+import { sleep } from "../src/lib/async";
 import {
   addReportComment,
   createFollowToken,
@@ -33,12 +37,14 @@ import { fitContext, prepareBugReport, prepareContext } from "../src/lib/bugRepo
 import { REDACTED, isSecretKey, redactString, redactValue } from "../src/lib/bugReport/redact";
 import { addSentReport, parseSentReports, sentReportFrom, type SentReport } from "../src/lib/bugReport/sentReports";
 import { STATUS_LABELS, acceptsComments, statusLabel } from "../src/lib/bugReport/status";
-import { FOLLOW_TOKEN_RE, isFollowToken, type BugReportPayload } from "../src/lib/bugReport/types";
+import { FOLLOW_TOKEN_RE, isFollowToken, type BugReportPayload, type MyBugReport } from "../src/lib/bugReport/types";
 import { compareVersions, isVersionBelow } from "../src/lib/bugReport/version";
-import { clearDraft, pendingReport, saveDraftSoon } from "../src/features/bugReport/draft";
+import { clearDraft, openDraft, pendingReport, saveDraftSoon, type Draft } from "../src/features/bugReport/draft";
+import { replyTarget, reportRows } from "../src/features/bugReport/reportRows";
 import { REPORTED_SETTINGS, readReportedSettings } from "../src/features/bugReport/settingsWhitelist";
 import { readSentReports, rememberSentReport } from "../src/features/bugReport/sentStore";
-import { readAriesPath } from "../src/platform/storage";
+import { exportAllSettings, importSettings, listBackups, loadBackup, saveBackup } from "../src/features/settings/backup";
+import { readAriesPath, writeAriesPath } from "../src/platform/storage";
 
 // A browser with storage, for the settings and the sent list. GM storage holds
 // the API key, as it does in the mod.
@@ -88,6 +94,15 @@ local.set(
   }),
 );
 const TOKEN = "ab".repeat(32);
+/** What the form holds when Send is pressed. */
+const DRAFT: Draft = { title: "Pet team hotkeys do nothing", description: "Since this morning pressing 1 does not swap my team." };
+const sentEntry = (id: number, followToken = TOKEN, title = `report ${id}`): SentReport => ({
+  id,
+  ref: `BR-${id}`,
+  followToken,
+  title,
+  createdAt: "2026-10-23T12:00:00.000Z",
+});
 const JWT = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.c2lnbmF0dXJlLWhlcmU";
 
 function basePayload(overrides: Partial<BugReportPayload> = {}): BugReportPayload {
@@ -381,6 +396,34 @@ run(async () => {
     listeners.get("unhandledrejection")?.({ reason: "nope" });
     checkEqual("a rejected promise is recorded", capture.logs().at(-1)?.msg, "Unhandled rejection: nope");
 
+    // An Error's name, message and stack are not enumerable: walked as a plain
+    // object it read as {}. The mod logs { frameKey, error } like this.
+    fakeConsole.warn("[MG Skins] texture revert failed", { frameKey: "sprite/x", error: new Error("boom inside") });
+    const nested = capture.logs().at(-1)?.msg ?? "";
+    check("an Error inside a logged object reads as its name and message", nested.includes('"error":"Error: boom inside'), nested);
+    fakeConsole.warn("Unhandled rejection:", [new TypeError("in a list")]);
+    const listed = capture.logs().at(-1)?.msg ?? "";
+    check("and inside an array", listed.includes('["TypeError: in a list'), listed);
+
+    // A logged object is text by the time redaction runs, so its
+    // secret-named keys are hidden as the line is written.
+    let getterRan = false;
+    fakeConsole.error("login failed", {
+      apiKey: TOKEN,
+      request: { headers: { "X-API-KEY": TOKEN } },
+      get password() {
+        getterRan = true;
+        return "hunter2";
+      },
+      status: 401,
+    });
+    const logged = capture.logs().at(-1)?.msg ?? "";
+    check("a secret-named key in a logged object is hidden", !logged.includes(TOKEN) && logged.includes(`"apiKey":"${REDACTED}"`), logged);
+    check("at any depth it is walked", logged.includes(`"X-API-KEY":"${REDACTED}"`), logged);
+    check("without reading its value", !getterRan && !logged.includes("hunter2"), logged);
+    check("the rest of the object is kept", logged.includes('"status":401'), logged);
+    check("and nothing of it reaches the report", !JSON.stringify(prepareContext({ logs: capture.logs() })).includes(TOKEN));
+
     capture.breadcrumb("opened Pets");
     capture.breadcrumb("opened Pets");
     checkEqual("breadcrumbs fold repeats too", capture.breadcrumbs(), [{ t: capture.breadcrumbs()[0].t, msg: "opened Pets", repeat: 2 }]);
@@ -388,6 +431,26 @@ run(async () => {
     undo();
     check("uninstalling puts the original console back", fakeConsole.error === brokenError);
     check("and stops listening to errors", !listeners.has("error"));
+  }
+  {
+    // A manager's sandbox window and the page's: two objects whose listeners
+    // land on one DOM window, which hands both the same event.
+    const dom = new Map<string, Array<(event: unknown) => void>>();
+    const listen = (type: string, fn: (event: unknown) => void) => {
+      dom.set(type, [...(dom.get(type) ?? []), fn]);
+    };
+    const fire = (type: string, event: unknown) => dom.get(type)?.forEach((fn) => fn(event));
+    const capture = createLogCapture();
+    capture.install({ addEventListener: listen });
+    capture.install({ addEventListener: listen });
+    checkEqual("the page and the sandbox window both listen", dom.get("error")?.length, 2);
+    fire("error", { error: new Error("once") });
+    const heard = capture.logs().map((entry) => [entry.msg.split(" @")[0], entry.repeat ?? 1]);
+    checkEqual("an uncaught error heard through both is recorded once", heard, [["Uncaught Error: once", 1]]);
+    fire("unhandledrejection", { reason: "nope" });
+    checkEqual("a rejected promise too", capture.logs().at(-1)?.repeat ?? 1, 1);
+    fire("unhandledrejection", { reason: "nope" });
+    checkEqual("the same rejection again, as a new event, still counts", capture.logs().at(-1)?.repeat, 2);
   }
 
   // ---------- Two-step submit ----------
@@ -532,7 +595,7 @@ run(async () => {
       },
     });
     const shots = [image("game"), image("upload")];
-    const first = pendingReport();
+    const first = pendingReport(DRAFT);
     check("the new report's token is 64 hex characters", isFollowToken(first.followToken), String(first.followToken));
     const firstTry = await submitBugReport(backend.client, basePayload(), shots, undefined, first);
     checkEqual("the first try times out", firstTry.ok === false ? firstTry.error.kind : null, "timeout");
@@ -541,7 +604,7 @@ run(async () => {
     checkEqual("no screenshot follows a failed try", backend.calls.length, 1);
     check("and the sent list does not have it yet", !readSentReports().some((entry) => entry.id === 900));
 
-    const reopened = pendingReport();
+    const reopened = pendingReport(DRAFT);
     checkEqual("reopening the panel finds the same token", reopened.followToken, first.followToken);
     const retry = await submitBugReport(backend.client, basePayload(), shots, undefined, reopened);
     check("the retry gets back the report the first try created", retry.ok === true && retry.resumed && retry.report.id === 900, JSON.stringify(retry));
@@ -558,18 +621,40 @@ run(async () => {
     checkEqual("the sent list holds the report once", readSentReports().filter((entry) => entry.id === 900).length, 1);
     checkEqual("with its follow token", readSentReports().find((entry) => entry.id === 900)?.followToken, first.followToken);
     checkEqual("success forgets the pending token", readAriesPath("bugReport.pendingToken"), undefined);
-    const next = pendingReport();
+    const next = pendingReport(DRAFT);
     check("the next report gets a new token", isFollowToken(next.followToken) && next.followToken !== first.followToken);
 
     clearDraft();
-    check("discarding the draft starts a new token too", pendingReport().followToken !== next.followToken);
-    const typed = pendingReport().followToken;
-    saveDraftSoon({ title: "Still the same report" });
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    checkEqual("editing the draft keeps the token", pendingReport().followToken, typed);
+    check("discarding the draft starts a new token too", pendingReport(DRAFT).followToken !== next.followToken);
+    const typed = pendingReport(DRAFT).followToken;
+    const edited: Draft = { ...DRAFT, title: "Still the same report" };
+    saveDraftSoon(edited);
+    await sleep(700);
+    checkEqual("editing the draft keeps the token", pendingReport(edited).followToken, typed);
     saveDraftSoon({ category: "bug" });
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    check("a form emptied by hand drops it", pendingReport().followToken !== typed);
+    await sleep(700);
+    check("a form emptied by hand drops it", pendingReport(DRAFT).followToken !== typed);
+    clearDraft();
+  }
+  {
+    // Send pressed less than 600 ms after the last key, then the page goes
+    // away while the try is in flight. The draft must be saved with its token,
+    // or the next visit opens an empty form holding a token that already
+    // names a report, and the next, different report comes back as that one.
+    clearDraft();
+    saveDraftSoon({ title: "Typed fast" });
+    const sentNow: Draft = { title: "Typed fast and sent", description: "Pressed Send right after typing this." };
+    const token = pendingReport(sentNow).followToken;
+    checkEqual("taking the token saves the draft at once", readAriesPath<Draft>("bugReport.draft")?.title, sentNow.title);
+    await sleep(700);
+    checkEqual("and the slower save still waiting cannot overwrite it", readAriesPath<Draft>("bugReport.draft")?.title, sentNow.title);
+    checkEqual("the next visit finds the draft", openDraft().title, sentNow.title);
+    checkEqual("with its token", readAriesPath("bugReport.pendingToken"), token);
+    // Its draft replaced by a restored backup: the token alone means nothing.
+    writeAriesPath("bugReport.draft", undefined);
+    checkEqual("a form opening with no draft", openDraft().title, undefined);
+    checkEqual("drops a token found alone", readAriesPath("bugReport.pendingToken"), undefined);
+    check("so the report written next gets its own", pendingReport(DRAFT).followToken !== token);
     clearDraft();
   }
   {
@@ -627,7 +712,7 @@ run(async () => {
 
   // ---------- Sent reports ----------
   {
-    const entry = (id: number, title = `report ${id}`): SentReport => ({ id, ref: `BR-${id}`, followToken: TOKEN, title, createdAt: "2026-10-23T12:00:00.000Z" });
+    const entry = (id: number, title = `report ${id}`): SentReport => sentEntry(id, TOKEN, title);
     let list: SentReport[] = [];
     for (let id = 1; id <= 60; id++) list = addSentReport(list, entry(id));
     checkEqual("the sent list keeps 50", list.length, 50);
@@ -643,8 +728,59 @@ run(async () => {
 
     for (let id = 1; id <= 55; id++) rememberSentReport(entry(id));
     const stored = readSentReports();
-    checkEqual("bugReport.sent is capped at 50 in storage", stored.length, 50);
+    checkEqual("the sent list is capped at 50 in storage", stored.length, 50);
     checkEqual("with the latest first", stored[0].id, 55);
+  }
+
+  // ---------- My reports rows ----------
+  {
+    const remoteReport = (id: number, project: string): MyBugReport => ({
+      id,
+      ref: `BR-${id}`,
+      project,
+      title: `remote ${id}`,
+      status: "needs_info",
+      statusLabel: "Need more info",
+      modVersion: null,
+      fixedInVersion: "1.0.9",
+      publicReply: null,
+      publicReplyAt: null,
+      createdAt: "",
+      updatedAt: "",
+      comments: [],
+      canComment: true,
+    });
+    // The API key is the player's, shared by every mod they log in to, so
+    // /mine also answers with their Community Hub and MG-mod reports.
+    const remote = new Map(
+      [remoteReport(10, "aries-mod"), remoteReport(11, "aries-mod"), remoteReport(50, "community-hub"), remoteReport(51, "mg-mod")].map(
+        (report): [number, MyBugReport] => [report.id, report],
+      ),
+    );
+    const rows = reportRows([sentEntry(10)], remote, "aries-mod");
+    checkEqual(
+      "My reports lists the reports sent from here, then this mod's verified ones",
+      rows.map((row) => [row.id, row.local !== null]),
+      [
+        [10, true],
+        [11, false],
+      ],
+    );
+    check("a verified report sent from another mod is left out", !rows.some((row) => row.id === 50 || row.id === 51));
+    checkEqual("a reply on a report sent from here goes with its token", replyTarget(rows[0], false), { id: 10, followToken: TOKEN });
+    // Reinstalled, or another device: the token is gone, the key still names the author.
+    const keyOnly = replyTarget(rows[1], true);
+    checkEqual("a verified report with no token here is answered with the key alone", keyOnly, { id: 11, followToken: "" });
+    checkEqual("with no key either, there is nothing to answer it with", replyTarget(rows[1], false), null);
+    if (keyOnly) {
+      const backend = fakeBackend(() => ({ status: 201, body: { ok: true } }));
+      const answered = await addReportComment(backend.client, keyOnly, "Here is what you asked for");
+      check("that reply goes out", answered.ok === true);
+      checkEqual("to the report, signed with the key", [backend.calls[0].url, backend.calls[0].headers.Authorization], [
+        "https://api.test/bug-reports/11/comments",
+        `Bearer ${API_KEY}`,
+      ]);
+    }
   }
 
   // ---------- Settings whitelist ----------
@@ -672,5 +808,75 @@ run(async () => {
     check("4.0.5 is below a fix in 4.0.6", isVersionBelow("4.0.5", "4.0.6"));
     check("4.0.6 already has it", !isVersionBelow("4.0.6", "v4.0.6"));
     check("an unknown local version claims nothing", !isVersionBelow(undefined, "4.0.6"));
+  }
+
+  // ---------- Follow tokens stay in this browser ----------
+  {
+    // A token reads a report's replies and posts in the player's name, and
+    // players share their settings file by hand.
+    const MINE = "ef".repeat(32);
+    const THEIRS = "12".repeat(32);
+    gm.delete("aries_bug_reports_sent");
+    rememberSentReport(sentEntry(77, MINE));
+    checkEqual("the sent list is kept out of the settings blob", readAriesPath("bugReport.sent"), undefined);
+    check("under its own key", String(gm.get("aries_bug_reports_sent") ?? "").includes(MINE));
+
+    // A list an earlier build of the form left in the blob.
+    const OLD = "ee".repeat(32);
+    writeAriesPath("bugReport.sent", [sentEntry(78, OLD)]);
+    check("an export made before it is moved carries none of its tokens", !exportAllSettings().includes(OLD));
+    const moved = readSentReports();
+    checkEqual("it is moved to its own key, after the newer ones, nothing lost", moved.map((e) => [e.id, e.followToken]), [
+      [77, MINE],
+      [78, OLD],
+    ]);
+    checkEqual("and leaves the blob", readAriesPath("bugReport.sent"), undefined);
+
+    clearDraft();
+    const pending = pendingReport(DRAFT).followToken ?? "";
+    const exported = exportAllSettings();
+    check("a settings export carries no follow token", !exported.includes(MINE) && !exported.includes(pending) && !exported.includes("pendingToken"));
+    check("but still the settings and the draft", exported.includes("ghostMode") && exported.includes(DRAFT.title ?? "?"));
+    checkEqual("and the browser keeps its pending token", readAriesPath("bugReport.pendingToken"), pending);
+    saveBackup("with a report on its way");
+    // As stored, not as listed: the listing strips them again.
+    const backup = String(gm.get("aries_backups") ?? "");
+    check("a backup carries none either", !backup.includes(pending) && !backup.includes(MINE) && backup.includes("with a report on its way"), backup.slice(0, 200));
+
+    // Someone else's file, or one exported by an earlier build, tokens and all.
+    const file = {
+      version: 1,
+      misc: { ghostMode: false },
+      bugReport: { sent: [sentEntry(501, THEIRS)], pendingToken: "34".repeat(32), draft: { title: "Their draft" } },
+    };
+    check("their file imports", importSettings(JSON.stringify(file)).success);
+    check("without bringing their reports", !readSentReports().some((e) => e.id === 501));
+    check("ours are still listed", readSentReports().some((e) => e.id === 77));
+    checkEqual("their pending token is not taken, ours stays", readAriesPath("bugReport.pendingToken"), pending);
+    check("nor is their sent list left in the blob", !JSON.stringify(readAriesPath("bugReport")).includes(THEIRS));
+    checkEqual("the rest of the file is applied", readAriesPath("misc.ghostMode"), false);
+
+    // A backup saved by an earlier build, tokens and all.
+    const saved: unknown[] = JSON.parse(String(gm.get("aries_backups") ?? "[]"));
+    const old = { id: "old", name: "old", timestamp: 1, data: { version: 1, bugReport: { sent: [sentEntry(502, THEIRS)], pendingToken: "56".repeat(32) } } };
+    gm.set("aries_backups", JSON.stringify([...saved, old]));
+    const listed = JSON.stringify(listBackups());
+    check("an old backup's tokens are not shown or exported", !listed.includes(THEIRS) && !listed.includes("56".repeat(32)));
+    check("it still loads", loadBackup("old").success);
+    check("without bringing its reports", !readSentReports().some((e) => e.id === 502) && readSentReports().some((e) => e.id === 77));
+    checkEqual("or its pending token", readAriesPath("bugReport.pendingToken"), pending);
+    clearDraft();
+  }
+
+  // ---------- The tabs use the rules above ----------
+  {
+    // Both tabs build DOM, which this suite has none of: their source is read instead.
+    const source = (name: string) => readFileSync(join("src", "features", "bugReport", name), "utf8");
+    const reportTab = source("reportTab.ts");
+    check("the New report tab opens its draft with openDraft", /\bopenDraft\(\)/.test(reportTab) && !/\breadDraft\(/.test(reportTab));
+    check("and takes the token with the text it sends", /pendingReport\(toDraft\(values\)\)/.test(reportTab));
+    const myReports = source("myReportsTab.ts");
+    check("My reports builds its rows for this mod only", /reportRows\([^)]*BUG_REPORT_PROJECT\.id\)/.test(myReports));
+    check("and answers each one through replyTarget", /replyTarget\(row,\s*hasApiKey\(\)\)/.test(myReports));
   }
 });

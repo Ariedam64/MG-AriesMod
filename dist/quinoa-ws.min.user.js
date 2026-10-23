@@ -2767,10 +2767,29 @@
   }
   function writeLocalValue(key2, value) {
     try {
-      if (typeof GM_setValue === "function") GM_setValue(key2, value);
-      else getHostStorage()?.setItem(key2, value);
+      if (typeof GM_setValue === "function") {
+        GM_setValue(key2, value);
+        return true;
+      }
+      const host = getHostStorage();
+      if (!host) return false;
+      host.setItem(key2, value);
+      return true;
     } catch {
+      return false;
     }
+  }
+  function readLocalJson(key2) {
+    const raw = readLocalString(key2);
+    if (raw === null) return void 0;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return void 0;
+    }
+  }
+  function writeLocalJson(key2, value) {
+    return writeLocalValue(key2, JSON.stringify(value));
   }
   function setApiKey(apiKey) {
     writeLocalValue(API_KEY_STORAGE_KEY, apiKey);
@@ -36643,6 +36662,26 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   }
+  function bugReportSection(snapshot3) {
+    const section = snapshot3.bugReport;
+    return section && typeof section === "object" && !Array.isArray(section) ? section : null;
+  }
+  function withoutLocalOnly(snapshot3) {
+    const section = bugReportSection(snapshot3);
+    if (!section || !LOCAL_ONLY_BUG_REPORT_KEYS.some((key2) => key2 in section)) return snapshot3;
+    const kept = { ...section };
+    for (const key2 of LOCAL_ONLY_BUG_REPORT_KEYS) delete kept[key2];
+    return { ...snapshot3, bugReport: kept };
+  }
+  function keepLocalOnly(incoming) {
+    const next = withoutLocalOnly(incoming);
+    const current3 = bugReportSection(getAriesStorage());
+    const own = LOCAL_ONLY_BUG_REPORT_KEYS.filter((key2) => current3?.[key2] !== void 0);
+    if (!current3 || !own.length) return next;
+    const section = { ...bugReportSection(next) ?? {} };
+    for (const key2 of own) section[key2] = current3[key2];
+    return { ...next, bugReport: section };
+  }
   function ensureVersion(snapshot3) {
     const next = { ...snapshot3 };
     if (!Number.isFinite(next.version)) {
@@ -36678,7 +36717,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     const raw = readRawStorage();
     try {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) {
+        return parsed.map((entry) => entry && typeof entry === "object" && entry.data ? { ...entry, data: withoutLocalOnly(entry.data) } : entry);
+      }
     } catch {
     }
     return [];
@@ -36692,7 +36733,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function saveBackup(name) {
     const normalizedName = name.trim() || `Backup ${(/* @__PURE__ */ new Date()).toLocaleString()}`;
-    const current3 = ensureVersion(getAriesStorage());
+    const current3 = withoutLocalOnly(ensureVersion(getAriesStorage()));
     const entry = {
       id: generateId(),
       name: normalizedName,
@@ -36709,7 +36750,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return { success: false, message: "Backup not found." };
     }
     try {
-      saveAriesStorage(entry.data);
+      saveAriesStorage(keepLocalOnly(entry.data));
       return { success: true, message: "Backup loaded. Reload the game to apply the changes." };
     } catch (error) {
       return {
@@ -36728,7 +36769,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { success: true, message: "Backup deleted." };
   }
   function exportAllSettings() {
-    const current3 = ensureVersion(getAriesStorage());
+    const current3 = withoutLocalOnly(ensureVersion(getAriesStorage()));
     return JSON.stringify(current3, null, 2);
   }
   function tryDecodePercentEncodedJson(text2) {
@@ -36768,7 +36809,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return { success: false, message: "JSON payload must be an object." };
     }
     try {
-      const normalized = ensureVersion(parsed);
+      const normalized = keepLocalOnly(ensureVersion(parsed));
       saveAriesStorage(normalized);
       return { success: true, message: "Settings applied. Reload the game to apply the changes." };
     } catch (error) {
@@ -36778,7 +36819,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       };
     }
   }
-  var STORAGE_KEY, MAX_BACKUPS, DEFAULT_VERSION;
+  var STORAGE_KEY, MAX_BACKUPS, DEFAULT_VERSION, LOCAL_ONLY_BUG_REPORT_KEYS;
   var init_backup = __esm({
     "src/features/settings/backup.ts"() {
       "use strict";
@@ -36786,6 +36827,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       STORAGE_KEY = "aries_backups";
       MAX_BACKUPS = 25;
       DEFAULT_VERSION = 1;
+      LOCAL_ONLY_BUG_REPORT_KEYS = ["pendingToken", "sent"];
     }
   });
 
@@ -48301,6 +48343,10 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       if (typeof value === "string") return write2(JSON.stringify(value.length > budget ? value.slice(0, budget) : value));
       if (typeof value === "function") return write2('"[function]"');
       if (value === null || typeof value !== "object") return write2(String(value));
+      if (isErrorLike(value)) {
+        const text2 = describeError(value);
+        return write2(JSON.stringify(text2.length > budget ? text2.slice(0, budget) : text2));
+      }
       if (ancestors.has(value)) return write2('"[circular]"');
       if (depth >= MAX_DEPTH2) return write2(Array.isArray(value) ? "[...]" : "{...}");
       ancestors.add(value);
@@ -48320,6 +48366,10 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
         const count = Math.min(keys.length, MAX_KEYS);
         for (let i = 0; i < count; i++) {
           if (!write2(`${i ? "," : ""}${JSON.stringify(keys[i])}:`)) return false;
+          if (isSecretKey(keys[i])) {
+            if (!write2(JSON.stringify(REDACTED))) return false;
+            continue;
+          }
           let item;
           try {
             item = value[keys[i]];
@@ -48367,6 +48417,16 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     const crumbs = new RingBuffer(options2.maxBreadcrumbs ?? 100);
     const consoles = /* @__PURE__ */ new WeakSet();
     const targets = /* @__PURE__ */ new WeakSet();
+    const seenEvents = /* @__PURE__ */ new WeakSet();
+    const firstSight = (event) => {
+      if (!event || typeof event !== "object") return true;
+      try {
+        if (seenEvents.has(event)) return false;
+        seenEvents.add(event);
+      } catch {
+      }
+      return true;
+    };
     let busy = false;
     const pushFolded = (buffer, entry, same) => {
       const last = buffer.last();
@@ -48420,16 +48480,22 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       }
     };
     const listen2 = (target, undo) => {
-      const onError = (event) => guarded(() => {
-        const e = eventFields(event);
-        if (e.error) {
-          record2("error", ["Uncaught", e.error]);
-          return;
-        }
-        const where = e.filename ? ` (${String(e.filename)}:${String(e.lineno ?? 0)}:${String(e.colno ?? 0)})` : "";
-        record2("error", [`Uncaught ${String(e.message ?? "error")}${where}`]);
-      });
-      const onRejection = (event) => guarded(() => record2("error", ["Unhandled rejection:", eventFields(event).reason]));
+      const onError = (event) => {
+        if (!firstSight(event)) return;
+        guarded(() => {
+          const e = eventFields(event);
+          if (e.error) {
+            record2("error", ["Uncaught", e.error]);
+            return;
+          }
+          const where = e.filename ? ` (${String(e.filename)}:${String(e.lineno ?? 0)}:${String(e.colno ?? 0)})` : "";
+          record2("error", [`Uncaught ${String(e.message ?? "error")}${where}`]);
+        });
+      };
+      const onRejection = (event) => {
+        if (!firstSight(event)) return;
+        guarded(() => record2("error", ["Unhandled rejection:", eventFields(event).reason]));
+      };
       target.addEventListener("error", onError);
       target.addEventListener("unhandledrejection", onRejection);
       undo.push(() => {
@@ -48483,6 +48549,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     "src/lib/bugReport/logCapture.ts"() {
       "use strict";
       init_limits();
+      init_redact();
       RingBuffer = class {
         constructor(max) {
           this.max = max;
@@ -48694,6 +48761,23 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     }
   });
 
+  // src/features/bugReport/reportRows.ts
+  function reportRows(local, remote, project) {
+    const rows = local.map((entry) => ({ id: entry.id, local: entry, remote: remote.get(entry.id) ?? null }));
+    const extra = [...remote.values()].filter((report3) => report3.project === project && !local.some((entry) => entry.id === report3.id));
+    for (const report3 of extra.sort((a, b) => b.id - a.id)) rows.push({ id: report3.id, local: null, remote: report3 });
+    return rows;
+  }
+  function replyTarget(row2, hasApiKey2) {
+    if (row2.local) return { id: row2.local.id, followToken: row2.local.followToken };
+    return hasApiKey2 ? { id: row2.id, followToken: "" } : null;
+  }
+  var init_reportRows = __esm({
+    "src/features/bugReport/reportRows.ts"() {
+      "use strict";
+    }
+  });
+
   // src/lib/bugReport/sentReports.ts
   function readEntry(raw) {
     if (!raw || typeof raw !== "object") return null;
@@ -48744,24 +48828,32 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
   });
 
   // src/features/bugReport/sentStore.ts
+  function moveLegacyList() {
+    const legacy = readAriesPath(LEGACY_SENT_PATH);
+    if (legacy === void 0) return;
+    const merged = parseSentReports([...parseSentReports(readLocalJson(SENT_KEY)), ...parseSentReports(legacy)]);
+    if (writeLocalJson(SENT_KEY, merged)) writeAriesPath(LEGACY_SENT_PATH, void 0);
+  }
   function readSentReports() {
-    return parseSentReports(readAriesPath(SENT_PATH));
+    moveLegacyList();
+    return parseSentReports(readLocalJson(SENT_KEY));
   }
   function rememberSentReport(entry) {
-    writeAriesPath(SENT_PATH, addSentReport(readSentReports(), entry));
+    writeLocalJson(SENT_KEY, addSentReport(readSentReports(), entry));
     changed7.emit();
   }
   function onSentReportsChange(cb) {
     return changed7.on(cb);
   }
-  var SENT_PATH, changed7;
+  var SENT_KEY, LEGACY_SENT_PATH, changed7;
   var init_sentStore = __esm({
     "src/features/bugReport/sentStore.ts"() {
       "use strict";
       init_emitter();
       init_sentReports();
       init_storage();
-      SENT_PATH = "bugReport.sent";
+      SENT_KEY = "aries_bug_reports_sent";
+      LEGACY_SENT_PATH = "bugReport.sent";
       changed7 = new Emitter();
     }
   });
@@ -48964,9 +49056,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       return inFlight;
     }
     function render(local) {
-      const rows = local.map((entry) => ({ id: entry.id, local: entry, remote: remote.get(entry.id) ?? null }));
-      const extra = [...remote.values()].filter((report3) => !local.some((entry) => entry.id === report3.id));
-      for (const report3 of extra.sort((a, b) => b.id - a.id)) rows.push({ id: report3.id, local: null, remote: report3 });
+      const rows = reportRows(local, remote, BUG_REPORT_PROJECT.id);
       if (!rows.length) {
         list.replaceChildren(emptyState3());
         return;
@@ -49004,8 +49094,8 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       for (const comment of report3.comments) thread.appendChild(commentBubble(comment.author, comment.message, comment.createdAt));
       if (thread.childElementCount) root4.appendChild(thread);
       if (report3.canComment && acceptsComments(report3.status)) {
-        if (local) root4.appendChild(replyBox({ id: local.id, followToken: local.followToken }));
-        else root4.appendChild(h("p", "qws-bug-hint", "Reply from the browser you sent this report from."));
+        const target = replyTarget(row2, hasApiKey());
+        root4.appendChild(target ? replyBox(target) : h("p", "qws-bug-hint", "Reply from the browser you sent this report from."));
       }
       return root4;
     }
@@ -49092,6 +49182,8 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       init_dom2();
       init_openLink();
       init_context2();
+      init_project();
+      init_reportRows();
       init_sentStore();
       init_styles16();
       MY_REPORTS_TAB = "bug-mine";
@@ -49119,7 +49211,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       settingRow("Mod settings", "Which features are switched on, like ghost mode or auto store. Never your saved data or keys.", settings).row,
       settingRow(
         "Account state",
-        `Lets Romann see the garden and inventory ${BUG_REPORT_PROJECT.name} already syncs, as they are when you send this.`,
+        `A copy of your garden, inventory, journal, stats and recent activity, as ${BUG_REPORT_PROJECT.name} already syncs them to its server, taken when you send this. Switch it off to leave it out.`,
         accountState
       ).row,
       settingRow(
@@ -49200,7 +49292,14 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     writeAriesPath(DRAFT_PATH, void 0);
     forgetPendingReport();
   }
-  function pendingReport() {
+  function openDraft() {
+    const draft = readDraft();
+    if (!draftHasText(draft)) forgetPendingReport();
+    return draft;
+  }
+  function pendingReport(draft) {
+    saveDraftSoon.cancel();
+    writeDraft(draft);
     const saved = readAriesPath(PENDING_TOKEN_PATH);
     const pending3 = pendingBugReport(saved);
     if (pending3.followToken !== saved) writeAriesPath(PENDING_TOKEN_PATH, pending3.followToken ?? void 0);
@@ -50067,7 +50166,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
         ...update ? [update] : []
       );
     });
-    const draft = readDraft();
+    const draft = openDraft();
     fields.fill(draft);
     if (draftHasText(draft)) {
       const discard = button("Discard", {
@@ -50118,7 +50217,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
         const attachments = shots.attachments();
         const payload = toPayload(values, await collectAutoFields(attached.read()), attachments.length);
         lastAttempt = { payload, attachments };
-        const pending3 = pendingReport();
+        const pending3 = pendingReport(toDraft(values));
         const result = await submitBugReport(
           bugReportClient,
           payload,

@@ -9,8 +9,13 @@
 //
 // Everything here runs inside other code's console calls, so it must never
 // throw and never call itself: a capture that logs while capturing would loop.
+//
+// A logged object becomes text here, as the line is written. Its secret-named
+// keys are hidden at that moment: by the time a report is prepared the line is
+// a plain string, and redaction can no longer tell a key from its value.
 
 import { clipLine } from "./limits";
+import { REDACTED, isSecretKey } from "./redact";
 import type { Breadcrumb, LogEntry, LogLevel } from "./types";
 
 /** A list that keeps only its newest `max` items. */
@@ -86,6 +91,12 @@ function boundedJson(root: unknown, budget: number): string {
     if (typeof value === "string") return write(JSON.stringify(value.length > budget ? value.slice(0, budget) : value));
     if (typeof value === "function") return write('"[function]"');
     if (value === null || typeof value !== "object") return write(String(value));
+    // An Error's name, message and stack are not enumerable: walked like any
+    // object it would read as {}, losing the one thing worth reading.
+    if (isErrorLike(value)) {
+      const text = describeError(value);
+      return write(JSON.stringify(text.length > budget ? text.slice(0, budget) : text));
+    }
     if (ancestors.has(value)) return write('"[circular]"');
     if (depth >= MAX_DEPTH) return write(Array.isArray(value) ? "[...]" : "{...}");
 
@@ -106,6 +117,12 @@ function boundedJson(root: unknown, budget: number): string {
       const count = Math.min(keys.length, MAX_KEYS);
       for (let i = 0; i < count; i++) {
         if (!write(`${i ? "," : ""}${JSON.stringify(keys[i])}:`)) return false;
+        // A secret-named key keeps its name and loses its value, which is not
+        // even read: a getter behind it does not run.
+        if (isSecretKey(keys[i])) {
+          if (!write(JSON.stringify(REDACTED))) return false;
+          continue;
+        }
         let item: unknown;
         try {
           item = (value as Record<string, unknown>)[keys[i]];
@@ -201,6 +218,21 @@ export function createLogCapture(options: LogCaptureOptions = {}): LogCapture {
   const crumbs = new RingBuffer<Breadcrumb>(options.maxBreadcrumbs ?? 100);
   const consoles = new WeakSet<object>();
   const targets = new WeakSet<object>();
+  // A manager's sandbox window and the page's are two objects over one DOM
+  // window, so listening on both hears every error twice, as the same event
+  // object. The second hearing is skipped; an error that really fires twice
+  // is two events and still counts twice.
+  const seenEvents = new WeakSet<object>();
+  const firstSight = (event: unknown): boolean => {
+    if (!event || typeof event !== "object") return true;
+    try {
+      if (seenEvents.has(event)) return false;
+      seenEvents.add(event);
+    } catch {
+      // Nothing here should throw; if it did, the event is recorded rather than lost.
+    }
+    return true;
+  };
   // Set while this capture is working: a console call made from inside it
   // (a getter on a logged object, a broken console) is passed through but not
   // recorded again.
@@ -265,7 +297,8 @@ export function createLogCapture(options: LogCaptureOptions = {}): LogCapture {
   };
 
   const listen = (target: LogCaptureTarget, undo: Array<() => void>) => {
-    const onError = (event: unknown) =>
+    const onError = (event: unknown) => {
+      if (!firstSight(event)) return;
       guarded(() => {
         const e = eventFields(event);
         if (e.error) {
@@ -275,7 +308,11 @@ export function createLogCapture(options: LogCaptureOptions = {}): LogCapture {
         const where = e.filename ? ` (${String(e.filename)}:${String(e.lineno ?? 0)}:${String(e.colno ?? 0)})` : "";
         record("error", [`Uncaught ${String(e.message ?? "error")}${where}`]);
       });
-    const onRejection = (event: unknown) => guarded(() => record("error", ["Unhandled rejection:", eventFields(event).reason]));
+    };
+    const onRejection = (event: unknown) => {
+      if (!firstSight(event)) return;
+      guarded(() => record("error", ["Unhandled rejection:", eventFields(event).reason]));
+    };
     target.addEventListener!("error", onError);
     target.addEventListener!("unhandledrejection", onRejection);
     undo.push(() => {

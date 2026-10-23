@@ -10,8 +10,10 @@ export type { AriesStorage } from "./storageShape";
 /**
  * The mod's settings live in one localStorage entry, `aries_mod`, organised in
  * sections (`pets`, `locker`, `misc`, ...) and addressed by dotted paths such
- * as `misc.ghostMode`. A few values (the API key, notices already seen) live
- * in GM storage instead, which the website and the Discord activity share.
+ * as `misc.ghostMode`. A few values (the API key, notices already seen, the
+ * bug reports sent and their follow tokens) live in GM storage instead, which
+ * the website and the Discord activity share, and which no settings export or
+ * backup carries.
  *
  * The blob is also mirrored into GM storage. A browser set to clear site data
  * on close, or a cleaner extension, empties localStorage on every restart and
@@ -211,11 +213,20 @@ function readLocalValue(key: string): unknown {
   }
 }
 
-function writeLocalValue(key: string, value: string): void {
+/** False when no storage took it. */
+function writeLocalValue(key: string, value: string): boolean {
   try {
-    if (typeof GM_setValue === "function") GM_setValue(key, value);
-    else getHostStorage()?.setItem(key, value);
-  } catch {}
+    if (typeof GM_setValue === "function") {
+      GM_setValue(key, value);
+      return true;
+    }
+    const host = getHostStorage();
+    if (!host) return false;
+    host.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 const readLocalString = (key: string): string | null => {
@@ -227,6 +238,25 @@ const readLocalFlag = (key: string): boolean => {
   const raw = readLocalValue(key);
   return raw === true || String(raw ?? "").trim() === "1";
 };
+
+/**
+ * A JSON value outside the blob, under its own key, for what must not travel
+ * with the settings: Settings > Data exports and backs up the blob, never these.
+ */
+export function readLocalJson<T = unknown>(key: string): T | undefined {
+  const raw = readLocalString(key);
+  if (raw === null) return undefined;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return undefined;
+  }
+}
+
+/** False when the storage refused it. */
+export function writeLocalJson(key: string, value: unknown): boolean {
+  return writeLocalValue(key, JSON.stringify(value));
+}
 
 export function setApiKey(apiKey: string): void {
   writeLocalValue(API_KEY_STORAGE_KEY, apiKey);

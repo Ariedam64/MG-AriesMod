@@ -16,7 +16,7 @@ import type { Menu } from "../../ui/kit/menu";
 import { openLink } from "../tools/openLink";
 import { buildAttachedData, showPreviewModal } from "./attachedData";
 import { collectAutoFields, latestVersion, type AutoFields } from "./context";
-import { clearDraft, draftHasText, pendingReport, readDraft, rememberContact, saveDraftSoon, type Draft } from "./draft";
+import { clearDraft, draftHasText, openDraft, pendingReport, rememberContact, saveDraftSoon, type Draft } from "./draft";
 import { buildReportFields, type FormValues } from "./formFields";
 import { MY_REPORTS_TAB } from "./myReportsTab";
 import { BUG_REPORT_PROJECT } from "./project";
@@ -113,7 +113,7 @@ export function renderReportTab(view: HTMLElement, menu: Menu): void {
     );
   });
 
-  const draft = readDraft();
+  const draft = openDraft();
   fields.fill(draft);
   if (draftHasText(draft)) {
     const discard = button("Discard", {
@@ -167,8 +167,9 @@ export function renderReportTab(view: HTMLElement, menu: Menu): void {
       const attachments = shots.attachments();
       const payload = toPayload(values, await collectAutoFields(attached.read()), attachments.length);
       lastAttempt = { payload, attachments };
-      // The same token on every try of this report, until one goes through.
-      const pending = pendingReport();
+      // The same token on every try of this report, until one goes through,
+      // saved together with the text it sends.
+      const pending = pendingReport(toDraft(values));
       const result = await submitBugReport(
         bugReportClient,
         payload,

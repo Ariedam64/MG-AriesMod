@@ -6,6 +6,12 @@
 // blob, each backup would carry every earlier backup with it, and the blob is
 // parsed and rewritten on every setting change. The key and its format stay
 // as they are so backups saved by earlier builds still load.
+//
+// A bug report's follow token reads its replies and answers in the player's
+// name, so none ever leaves in a file or a backup: the pending one stays out
+// of every copy, and an import or a restore keeps this browser's own instead
+// of taking the file's. The sent list lives outside the blob; earlier builds
+// of the bug report form kept it in there, so it is treated the same way.
 
 import { type AriesStorage, getAriesStorage, saveAriesStorage } from "../../platform/storage";
 
@@ -39,6 +45,34 @@ function generateId(): string {
     return crypto.randomUUID();
   }
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
+/** Keys of the blob's `bugReport` section that stay in this browser. */
+const LOCAL_ONLY_BUG_REPORT_KEYS = ["pendingToken", "sent"];
+
+function bugReportSection(snapshot: AriesStorage): Record<string, unknown> | null {
+  const section: unknown = snapshot.bugReport;
+  return section && typeof section === "object" && !Array.isArray(section) ? (section as Record<string, unknown>) : null;
+}
+
+/** A copy of `snapshot` without the follow tokens, for a file or a backup. `snapshot` is not changed. */
+function withoutLocalOnly(snapshot: AriesStorage): AriesStorage {
+  const section = bugReportSection(snapshot);
+  if (!section || !LOCAL_ONLY_BUG_REPORT_KEYS.some((key) => key in section)) return snapshot;
+  const kept = { ...section };
+  for (const key of LOCAL_ONLY_BUG_REPORT_KEYS) delete kept[key];
+  return { ...snapshot, bugReport: kept as AriesStorage["bugReport"] };
+}
+
+/** `incoming` with this browser's follow tokens in place of any the file brought. */
+function keepLocalOnly(incoming: AriesStorage): AriesStorage {
+  const next = withoutLocalOnly(incoming);
+  const current = bugReportSection(getAriesStorage());
+  const own = LOCAL_ONLY_BUG_REPORT_KEYS.filter((key) => current?.[key] !== undefined);
+  if (!current || !own.length) return next;
+  const section = { ...(bugReportSection(next) ?? {}) };
+  for (const key of own) section[key] = current[key];
+  return { ...next, bugReport: section as AriesStorage["bugReport"] };
 }
 
 function ensureVersion(snapshot: AriesStorage): AriesStorage {
@@ -77,7 +111,10 @@ function readBackups(): AriesBackup[] {
   const raw = readRawStorage();
   try {
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed;
+    // A backup saved by an earlier build may still hold follow tokens.
+    if (Array.isArray(parsed)) {
+      return parsed.map((entry) => (entry && typeof entry === "object" && entry.data ? { ...entry, data: withoutLocalOnly(entry.data) } : entry));
+    }
   } catch {}
   return [];
 }
@@ -93,7 +130,7 @@ export function listBackups(): AriesBackup[] {
 
 export function saveBackup(name: string): BackupResult {
   const normalizedName = name.trim() || `Backup ${new Date().toLocaleString()}`;
-  const current = ensureVersion(getAriesStorage());
+  const current = withoutLocalOnly(ensureVersion(getAriesStorage()));
   const entry: AriesBackup = {
     id: generateId(),
     name: normalizedName,
@@ -111,7 +148,7 @@ export function loadBackup(id: string): SettingsImportResult {
     return { success: false, message: "Backup not found." };
   }
   try {
-    saveAriesStorage(entry.data);
+    saveAriesStorage(keepLocalOnly(entry.data));
     return { success: true, message: "Backup loaded. Reload the game to apply the changes." };
   } catch (error) {
     return {
@@ -132,7 +169,7 @@ export function deleteBackup(id: string): SettingsImportResult {
 }
 
 export function exportAllSettings(): string {
-  const current = ensureVersion(getAriesStorage());
+  const current = withoutLocalOnly(ensureVersion(getAriesStorage()));
   return JSON.stringify(current, null, 2);
 }
 
@@ -179,7 +216,7 @@ export function importSettings(payload: string): SettingsImportResult {
   }
 
   try {
-    const normalized = ensureVersion(parsed as AriesStorage);
+    const normalized = keepLocalOnly(ensureVersion(parsed as AriesStorage));
     saveAriesStorage(normalized);
     return { success: true, message: "Settings applied. Reload the game to apply the changes." };
   } catch (error) {

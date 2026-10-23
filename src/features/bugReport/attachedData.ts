@@ -36,7 +36,7 @@ export function buildAttachedData(onPreview: () => Promise<void>): AttachedDataS
     settingRow("Mod settings", "Which features are switched on, like ghost mode or auto store. Never your saved data or keys.", settings).row,
     settingRow(
       "Account state",
-      `Lets Romann see the garden and inventory ${BUG_REPORT_PROJECT.name} already syncs, as they are when you send this.`,
+      `A copy of your garden, inventory, journal, stats and recent activity, as ${BUG_REPORT_PROJECT.name} already syncs them to its server, taken when you send this. Switch it off to leave it out.`,
       accountState,
     ).row,
     settingRow(

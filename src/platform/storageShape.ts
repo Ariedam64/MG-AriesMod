@@ -3,8 +3,6 @@
  * read back, including the flat keys left by builds that predate sections.
  */
 
-import type { SentReport } from "../lib/bugReport/sentReports";
-
 export const ARIES_STORAGE_VERSION = 1;
 
 type FriendSettings = {
@@ -90,16 +88,21 @@ export type AriesStorage = {
    */
   friends?: { settings?: FriendSettings };
   notifications?: { soundEnabled?: boolean; mutedGroupIds?: number[] };
-  /** The bug report form. Its draft's shape lives with the feature. */
+  /**
+   * The bug report form. Its draft's shape lives with the feature. The reports
+   * already sent, with their follow tokens, are kept outside the blob.
+   */
   bugReport?: {
     /** The text of a report not sent yet, field name to value. */
     draft?: Record<string, string>;
     /** The contact the player gave last time, offered again on the next report. */
     contact?: string;
-    /** Follow token of the report being sent, kept until a try goes through so a retry gets the same report. */
+    /**
+     * Follow token of the report being sent, kept until a try goes through so
+     * a retry gets the same report. Beside its draft, which it belongs to, but
+     * never exported, backed up or taken from an imported file.
+     */
     pendingToken?: string;
-    /** Reports sent from this browser, newest first, with the follow token that reads them back. */
-    sent?: SentReport[];
     /** Whether "More details" was left open. */
     detailsOpen?: boolean;
   };
