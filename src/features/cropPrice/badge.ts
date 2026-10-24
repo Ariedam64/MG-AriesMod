@@ -72,7 +72,13 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
   let running = true;
   let currentCard: any = null;
   let geometry: GardenInfoCardGeometry | null = null;
-  let hitAreaBaseHeight = 0;
+  // While the badge shows, the card's hitArea is swapped for one that also
+  // covers the badge. The game's own Rectangle is kept untouched to be put
+  // back: stretching it would cover the ability chips between card and badge.
+  let hitAreaCard: any = null;
+  let baseHitArea: any = null;
+  let badgeHitArea: any = null;
+  const badgeRect = { x: 0, y: 0, width: 0, height: 0 };
   let valueText: any = null;
   let valueIcon: any = null;
   let valueBadge: any = null;
@@ -92,6 +98,33 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
 
   const priceWatcher = startCropPriceWatcherViaGardenObject();
 
+  const restoreHitArea = () => {
+    if (hitAreaCard && hitAreaCard.hitArea === badgeHitArea) hitAreaCard.hitArea = baseHitArea;
+    hitAreaCard = null;
+    baseHitArea = null;
+    badgeHitArea = null;
+  };
+
+  // Pixi only asks a hitArea for `contains`; computeGeometry reads its size.
+  const installHitArea = () => {
+    if (currentCard.hitArea === badgeHitArea) return;
+    restoreHitArea();
+    const base = currentCard.hitArea;
+    if (!base || typeof base.contains !== "function") return;
+    hitAreaCard = currentCard;
+    baseHitArea = base;
+    badgeHitArea = {
+      get x() { return base.x; },
+      get y() { return base.y; },
+      get width() { return base.width; },
+      get height() { return base.height; },
+      contains: (x: number, y: number): boolean =>
+        base.contains(x, y) ||
+        (x >= badgeRect.x && x < badgeRect.x + badgeRect.width && y >= badgeRect.y && y < badgeRect.y + badgeRect.height),
+    };
+    currentCard.hitArea = badgeHitArea;
+  };
+
   const detachValueText = () => {
     if (valueBadge) {
       try { valueBadge.destroy(); } catch {}
@@ -105,10 +138,7 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
       try { valueText.destroy(); } catch {}
       valueText = null;
     }
-    if (currentCard?.hitArea) {
-      currentCard.hitArea.y = 0;
-      currentCard.hitArea.height = hitAreaBaseHeight;
-    }
+    restoreHitArea();
   };
 
   // Runs inside the game's own Pixi update (its `addChild` emits
@@ -181,17 +211,18 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
       valueText.position.set(startX, rowTop + (rowHeight - valueText.height) / 2);
     }
 
+    const badgeWidth = rowWidth + BADGE_PADDING_X * 2;
     if (valueBadge) {
-      const badgeWidth = rowWidth + BADGE_PADDING_X * 2;
       valueBadge.clear();
       valueBadge.roundRect(0, 0, badgeWidth, badgeHeight, BADGE_RADIUS).fill({ color: BADGE_COLOR, alpha: BADGE_ALPHA });
       valueBadge.position.set(startX - BADGE_PADDING_X, badgeTop);
     }
 
-    if (currentCard.hitArea) {
-      currentCard.hitArea.y = badgeTop;
-      currentCard.hitArea.height = hitAreaBaseHeight - badgeTop;
-    }
+    badgeRect.x = startX - BADGE_PADDING_X;
+    badgeRect.y = badgeTop;
+    badgeRect.width = badgeWidth;
+    badgeRect.height = badgeHeight;
+    installHitArea();
   };
 
   const syncValueNode = () => {
@@ -213,7 +244,6 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
     watchGardenInfoCard((card, geom) => {
       currentCard = card;
       geometry = geom;
-      hitAreaBaseHeight = card?.hitArea?.height ?? 0;
       detachValueText();
       debugState.attached = !!card;
       if (card) syncValueNode();
