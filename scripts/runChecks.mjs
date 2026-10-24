@@ -60,6 +60,7 @@ const SUITES = {
   dialogue: ["checkCompanionDialogue"],
   storage: ["checkCompanionStorage"],
   croppricetoggle: ["checkCropPriceSetting"],
+  croppricehitarea: ["checkCropPriceHitArea", "dom-stub"],
   teamsync: ["checkPetTeamSync"],
   shoppurchases: ["checkShopPurchases"],
   shopmessage: ["checkShopPurchaseMessage"],

@@ -34,6 +34,7 @@
     "check:dialogue": "node scripts/runChecks.mjs dialogue",
     "check:storage": "node scripts/runChecks.mjs storage",
     "check:croppricetoggle": "node scripts/runChecks.mjs croppricetoggle",
+    "check:croppricehitarea": "node scripts/runChecks.mjs croppricehitarea",
     "check:teamsync": "node scripts/runChecks.mjs teamsync",
     "check:shoppurchases": "node scripts/runChecks.mjs shoppurchases",
     "check:shopmessage": "node scripts/runChecks.mjs shopmessage",
