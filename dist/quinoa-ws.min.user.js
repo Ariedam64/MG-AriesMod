@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      4.0.6
+// @version      4.0.7
 // @include      /^https:\/\/1227719606223765687\.discordsays\.com\/.*[?&]mc_shell_frame=1(&|#|$)/
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -15003,7 +15003,7 @@ label.qws-ed-opt { cursor: pointer; }
   // src/platform/modVersion.ts
   function getLocalVersion() {
     if (true) {
-      return "4.0.6";
+      return "4.0.7";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -17395,7 +17395,10 @@ label.qws-ed-opt { cursor: pointer; }
     let running = true;
     let currentCard2 = null;
     let geometry = null;
-    let hitAreaBaseHeight = 0;
+    let hitAreaCard = null;
+    let baseHitArea = null;
+    let badgeHitArea = null;
+    const badgeRect = { x: 0, y: 0, width: 0, height: 0 };
     let valueText = null;
     let valueIcon = null;
     let valueBadge = null;
@@ -17412,6 +17415,36 @@ label.qws-ed-opt { cursor: pointer; }
     };
     shareGlobal("__MG_CROP_VALUE_PIXI_DEBUG__", debugState3);
     const priceWatcher = startCropPriceWatcherViaGardenObject();
+    const restoreHitArea = () => {
+      if (hitAreaCard && hitAreaCard.hitArea === badgeHitArea) hitAreaCard.hitArea = baseHitArea;
+      hitAreaCard = null;
+      baseHitArea = null;
+      badgeHitArea = null;
+    };
+    const installHitArea = () => {
+      if (currentCard2.hitArea === badgeHitArea) return;
+      restoreHitArea();
+      const base = currentCard2.hitArea;
+      if (!base || typeof base.contains !== "function") return;
+      hitAreaCard = currentCard2;
+      baseHitArea = base;
+      badgeHitArea = {
+        get x() {
+          return base.x;
+        },
+        get y() {
+          return base.y;
+        },
+        get width() {
+          return base.width;
+        },
+        get height() {
+          return base.height;
+        },
+        contains: (x, y) => base.contains(x, y) || x >= badgeRect.x && x < badgeRect.x + badgeRect.width && y >= badgeRect.y && y < badgeRect.y + badgeRect.height
+      };
+      currentCard2.hitArea = badgeHitArea;
+    };
     const detachValueText = () => {
       if (valueBadge) {
         try {
@@ -17434,10 +17467,7 @@ label.qws-ed-opt { cursor: pointer; }
         }
         valueText = null;
       }
-      if (currentCard2?.hitArea) {
-        currentCard2.hitArea.y = 0;
-        currentCard2.hitArea.height = hitAreaBaseHeight;
-      }
+      restoreHitArea();
     };
     const syncValueNodeUnsafe = () => {
       debugState3.objectType = currentGardenObject2?.objectType ?? null;
@@ -17492,16 +17522,17 @@ label.qws-ed-opt { cursor: pointer; }
       } else {
         valueText.position.set(startX, rowTop + (rowHeight - valueText.height) / 2);
       }
+      const badgeWidth = rowWidth + BADGE_PADDING_X * 2;
       if (valueBadge) {
-        const badgeWidth = rowWidth + BADGE_PADDING_X * 2;
         valueBadge.clear();
         valueBadge.roundRect(0, 0, badgeWidth, badgeHeight, BADGE_RADIUS).fill({ color: BADGE_COLOR, alpha: BADGE_ALPHA });
         valueBadge.position.set(startX - BADGE_PADDING_X, badgeTop);
       }
-      if (currentCard2.hitArea) {
-        currentCard2.hitArea.y = badgeTop;
-        currentCard2.hitArea.height = hitAreaBaseHeight - badgeTop;
-      }
+      badgeRect.x = startX - BADGE_PADDING_X;
+      badgeRect.y = badgeTop;
+      badgeRect.width = badgeWidth;
+      badgeRect.height = badgeHeight;
+      installHitArea();
     };
     const syncValueNode = () => {
       try {
@@ -17524,7 +17555,6 @@ label.qws-ed-opt { cursor: pointer; }
       watchGardenInfoCard((card3, geom) => {
         currentCard2 = card3;
         geometry = geom;
-        hitAreaBaseHeight = card3?.hitArea?.height ?? 0;
         detachValueText();
         debugState3.attached = !!card3;
         if (card3) syncValueNode();
@@ -19681,6 +19711,16 @@ label.qws-ed-opt { cursor: pointer; }
           this.endSession(s);
           this.sessions.delete(key2);
         }
+        /** Stops the loop until the trigger is pressed again; the session stays registered. */
+        suspendRapidFire(trigger) {
+          const s = this.sessions.get(normalizeCombo(trigger));
+          if (!s || !s.tickTimer) return;
+          this.win.clearInterval(s.tickTimer);
+          s.tickTimer = null;
+          if (s.mode === "hold" && s.lastTarget) {
+            this.dispatchKey(this.doc, s.lastTarget, "keyup", s.emit, false);
+          }
+        }
         stopAllRapidFires() {
           for (const s of this.sessions.values()) this.endSession(s);
           this.sessions.clear();
@@ -19914,6 +19954,7 @@ label.qws-ed-opt { cursor: pointer; }
       }
       rapidFireCombos.delete(id);
     }
+    if (id === "game.action") actionPickupWatch.dispose();
     const hk = getKeybind(id);
     const combo = hk ? hotkeyToString(hk) : "";
     if (!combo) return;
@@ -19929,6 +19970,11 @@ label.qws-ed-opt { cursor: pointer; }
         rapidFireCombos.set(id, combo);
       } catch {
       }
+      if (id === "game.action") {
+        for (const type of PICKUP_MESSAGES) {
+          actionPickupWatch.add(observeOutgoing(type, () => inGameHotkeys.suspendRapidFire(combo)));
+        }
+      }
     }
   }
   function installGameKeybindsOnce() {
@@ -19940,11 +19986,13 @@ label.qws-ed-opt { cursor: pointer; }
       onKeybindHoldDetectionChange(id, () => syncGameKeybind(id));
     }
   }
-  var GAME_KEYS, rapidFireCombos, installed3;
+  var GAME_KEYS, PICKUP_MESSAGES, rapidFireCombos, actionPickupWatch, installed3;
   var init_gameRemap = __esm({
     "src/features/keybinds/gameRemap.ts"() {
       "use strict";
       init_ingameHotkeys();
+      init_outgoing();
+      init_emitter();
       init_hotkey();
       init_keybinds();
       GAME_KEYS = {
@@ -19955,7 +20003,9 @@ label.qws-ed-opt { cursor: pointer; }
         "game.move-left": "KeyA",
         "game.move-right": "KeyD"
       };
+      PICKUP_MESSAGES = ["PotPlant", "PickupDecor", "PickupEdgeDecor", "PickupPet", "PickupCrystal"];
       rapidFireCombos = /* @__PURE__ */ new Map();
+      actionPickupWatch = new Subscriptions();
       installed3 = false;
     }
   });
@@ -34367,18 +34417,30 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return null;
   }
-  var SEED_DELETE_DELAY_MS, DECOR_DELETE_DELAY_MS, DIRT_TILE_COUNT, BOARDWALK_TILE_COUNT, toast2, withdraw, seedDeleter, decorDeleter;
+  function isEdgeDecor(decorId) {
+    const entry = decorCatalog2[decorId];
+    return entry?.edgePlacement != null;
+  }
+  async function decorInventoryQuantity(decorId) {
+    const items = await Atoms.inventory.myDecorInventory.get().catch(() => null);
+    return tallyById(items, "decorId").get(decorId) ?? 0;
+  }
+  var SEED_DELETE_DELAY_MS, DECOR_DELETE_DELAY_MS, PLACE_CONFIRM_TIMEOUT_MS, DIRT_TILE_COUNT, BOARDWALK_TILE_COUNT, toast2, withdraw, seedDeleter, decorDeleter;
   var init_deleters = __esm({
     "src/features/deleters/deleters.ts"() {
       "use strict";
       init_async2();
+      init_data();
+      init_names();
       init_player();
+      init_atoms();
       init_toast();
       init_inventoryReserve();
       init_run();
       init_sources();
       SEED_DELETE_DELAY_MS = 35;
       DECOR_DELETE_DELAY_MS = 35;
+      PLACE_CONFIRM_TIMEOUT_MS = 1500;
       DIRT_TILE_COUNT = 200;
       BOARDWALK_TILE_COUNT = 76;
       toast2 = (title, message2, kind) => {
@@ -34407,11 +34469,20 @@ Restore figures are averages; unlucky streaks do worse.`;
         isGuardEnabled: readInventorySlotReserveEnabled,
         toast: toast2,
         async deleteOne(decorId, delayMs) {
+          if (isEdgeDecor(decorId)) {
+            throw new Error(`${decorLabel(decorId)} hangs on a tile edge and can't be deleted this way.`);
+          }
           const slot = await findFirstEmptySlot();
           if (!slot) throw new Error("No empty garden tile to delete decor on.");
+          const before = await decorInventoryQuantity(decorId);
           await PlayerService.placeDecor(slot.tileType, slot.index, decorId, 0);
+          const placed = await waitUntil(
+            async () => await decorInventoryQuantity(decorId) < before,
+            { timeoutMs: PLACE_CONFIRM_TIMEOUT_MS, intervalMs: 25 }
+          );
           if (delayMs > 0) await sleep2(delayMs);
           await PlayerService.removeGardenObject(slot.index, slot.tileType);
+          if (!placed) throw new Error(`${decorLabel(decorId)} can't be deleted this way.`);
         },
         withdraw
       });

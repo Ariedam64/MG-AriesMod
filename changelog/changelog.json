@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "version": "4.0.7",
+      "date": "2026-10-27",
+      "title": "Fixes for abilities, decor, hotkeys",
+      "notes": "**Fixes**\n\n- You can hover and click ability chips above a crop's card again\n- The decor deleter now stops with an error on edge decor like Colored String Lights and Paper Lantern, instead of showing a full bar and a success message while nothing was deleted\n- Rapid fire on Action no longer puts a potted plant straight back after you pick it up"
+    },
+    {
       "version": "4.0.6",
       "date": "2026-10-23",
       "title": "Report a bug from the mod",
@@ -29,14 +35,19 @@
       "date": "2026-08-06",
       "title": "Keybinds redesign and fixes",
       "notes": "**Keybinds**\n\n- Full menu redesign, with the actual game sprites in place of the emojis\n- New shortcut to open the Weather Station\n- Fixed every shortcut that opens a game panel, shops, decor shed, seed silo, feeding trough, pet hutch and journal stopped working after a game update and open again\n\n**Misc**\n\n- Fixed auto-store, seeds and decor are picked up as soon as they land in your inventory instead of only when you toggle the option off and on",
-      "images": ["https://i.imgur.com/Nj2pL8P.png"]
+      "images": [
+        "https://i.imgur.com/Nj2pL8P.png"
+      ]
     },
     {
       "version": "3.2.193",
       "date": "2026-08-05",
       "title": "Skin changer",
       "notes": "New **Skins** menu, replace any game sprite with your own image\n\n- Browse the sprite grid, pick an object, drop in a PNG\n- Works on plants, decor and items, including mutated ones\n- Each slot shows its ideal image size, match it for a pixel-perfect result\n- Skins are stored locally and reapplied automatically on every load",
-      "images": ["https://i.imgur.com/lHEjy46.png", "https://i.imgur.com/7foJtGk.png"]
+      "images": [
+        "https://i.imgur.com/lHEjy46.png",
+        "https://i.imgur.com/7foJtGk.png"
+      ]
     },
     {
       "version": "3.2.192",
@@ -55,7 +66,9 @@
       "date": "2026-08-02",
       "title": "Pet team sync is now optional",
       "notes": "- **Pets**: a new toggle in the Manager tab lets you unsync the mod's pet teams from the in-game ones. It stays on by default, so nothing changes unless you turn it off",
-      "images": ["https://i.imgur.com/W1WibXd.png"]
+      "images": [
+        "https://i.imgur.com/W1WibXd.png"
+      ]
     },
     {
       "version": "3.2.188",
