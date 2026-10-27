@@ -118,6 +118,7 @@ const SUITES = {
   kitpolish: ["checkKitPolish", "dom-stub"],
   rarityicons: ["checkRarityIcons", "dom-stub"],
   bugreport: ["checkBugReport"],
+  hatchperegg: ["checkHatchPerEgg"],
 };
 
 /** Problems with how suites are registered: a file with no entry, or package.json out of step. */
