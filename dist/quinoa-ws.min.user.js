@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      4.0.7
+// @version      4.0.8
 // @include      /^https:\/\/1227719606223765687\.discordsays\.com\/.*[?&]mc_shell_frame=1(&|#|$)/
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -15003,7 +15003,7 @@ label.qws-ed-opt { cursor: pointer; }
   // src/platform/modVersion.ts
   function getLocalVersion() {
     if (true) {
-      return "4.0.7";
+      return "4.0.8";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -17770,6 +17770,20 @@ label.qws-ed-opt { cursor: pointer; }
     }
     return out;
   }
+  function normalizeHatchedMap(raw) {
+    const out = {};
+    if (!isRecord4(raw)) return out;
+    for (const [eggId, bySpecies2] of Object.entries(raw)) {
+      if (!isRecord4(bySpecies2)) continue;
+      const egg = {};
+      for (const [species, value] of Object.entries(bySpecies2)) {
+        if (!isRecord4(value)) continue;
+        egg[species] = { normal: toCount(value.normal), gold: toCount(value.gold), rainbow: toCount(value.rainbow) };
+      }
+      out[eggId] = egg;
+    }
+    return out;
+  }
   function loadState() {
     if (cachedState) return cachedState;
     let raw = null;
@@ -17786,6 +17800,7 @@ label.qws-ed-opt { cursor: pointer; }
     cachedState = {
       seenPetIds,
       counters: normalizeCounterMap(isRecord4(raw) ? raw.counters : null),
+      hatched: normalizeHatchedMap(isRecord4(raw) ? raw.hatched : null),
       offsets: normalizeCounterMap(isRecord4(raw) ? raw.offsets : null),
       lastHatchAt: isRecord4(raw) ? toCount(raw.lastHatchAt) : 0,
       trackingStartedAt: isRecord4(raw) ? toCount(raw.trackingStartedAt) : 0,
@@ -17867,7 +17882,7 @@ label.qws-ed-opt { cursor: pointer; }
     counters.rainbow = event.hasRainbow ? 0 : counters.rainbow + 1;
   }
   function ingest(entries, countStats) {
-    var _a, _b;
+    var _a, _b, _c, _d, _e;
     const events = extractHatchEvents(entries);
     if (!events.length) return false;
     const state5 = loadState();
@@ -17885,8 +17900,12 @@ label.qws-ed-opt { cursor: pointer; }
         }
       }
       if (event.timestamp > state5.lastHatchAt) state5.lastHatchAt = event.timestamp;
-      if (!event.isPull || !event.eggId) continue;
-      const counters = (_a = state5.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
+      if (!event.eggId) continue;
+      const bySpecies2 = (_a = state5.hatched)[_b = event.eggId] ?? (_a[_b] = {});
+      const hatched = bySpecies2[_c = event.species.toLowerCase()] ?? (bySpecies2[_c] = { normal: 0, gold: 0, rainbow: 0 });
+      hatched[rarityOf(event)] += 1;
+      if (!event.isPull) continue;
+      const counters = (_d = state5.counters)[_e = event.eggId] ?? (_d[_e] = emptyCounters());
       applyPull(counters, event, protectedSpecies(event.eggId));
     }
     if (changed8) saveState(state5);
@@ -17955,6 +17974,10 @@ label.qws-ed-opt { cursor: pointer; }
         /** Observed misses for one egg, before the manual offset. */
         getCounters(eggId) {
           return loadState().counters[eggId] ?? emptyCounters();
+        },
+        /** Pets seen hatching from one egg, by lowercased species. */
+        getHatched(eggId) {
+          return loadState().hatched[eggId] ?? {};
         },
         getOffsets(eggId) {
           return loadState().offsets[eggId] ?? emptyCounters();
@@ -31274,7 +31297,7 @@ Click to download`;
     }
     return cell;
   }
-  function speciesCountsGrid(rows, stats) {
+  function speciesCountsGrid(rows, countsOf2) {
     ensureHatchStyles();
     const wrap = document.createElement("div");
     wrap.className = "ht-counts";
@@ -31291,7 +31314,7 @@ Click to download`;
     let totalGold = 0;
     let totalRainbow = 0;
     for (const row2 of rows) {
-      const counts2 = countsFor(stats, row2.species);
+      const counts2 = countsOf2(row2.species);
       totalNormal += counts2.normal ?? 0;
       totalGold += counts2.gold ?? 0;
       totalRainbow += counts2.rainbow ?? 0;
@@ -31414,7 +31437,7 @@ Click to download`;
   }
   function createEggCard(options2) {
     ensureHatchStyles();
-    const { egg, stats, showOffsets } = options2;
+    const { egg, showOffsets } = options2;
     const counters = HatchTracker.getCounters(egg.eggId);
     const card3 = collapsibleCard({
       header: eggHeader(egg, counters.pulls),
@@ -31429,10 +31452,11 @@ Click to download`;
     }
     card3.body.appendChild(pity);
     if (egg.fauna.length) {
+      const hatched = HatchTracker.getHatched(egg.eggId);
       card3.body.appendChild(
         speciesCountsGrid(
           egg.fauna.map((entry) => ({ species: entry.species, share: entry.share })),
-          stats
+          (species) => hatched[species.toLowerCase()] ?? { normal: 0, gold: 0, rainbow: 0 }
         )
       );
     }
@@ -31617,7 +31641,7 @@ Click to download`;
           onToggle: (collapsed) => setCollapsed(OTHER_SECTION_ID, collapsed)
         });
         card3.root.classList.add("ht-egg");
-        card3.body.appendChild(speciesCountsGrid(others.map((species) => ({ species })), stats));
+        card3.body.appendChild(speciesCountsGrid(others.map((species) => ({ species })), (species) => countsFor(stats, species)));
         body.appendChild(card3.root);
       }
       if (!body.childElementCount) {
