@@ -70,6 +70,7 @@ const SUITES = {
   modalkeybinds: ["checkModalKeybinds", "dom-stub"],
   autostorekeys: ["checkAutoStoreKeys", "dom-stub"],
   inputkeytrap: ["checkInputKeyTrap", "dom-stub"],
+  rapidfirepickup: ["checkRapidFirePickup"],
   petpicker: ["checkPetPickerModal", "dom-stub"],
   activitylogmodal: ["checkActivityLogModal"],
   discordframes: ["checkDiscordFrames"],

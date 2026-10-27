@@ -90,6 +90,7 @@
     "check:modalkeybinds": "node scripts/runChecks.mjs modalkeybinds",
     "check:autostorekeys": "node scripts/runChecks.mjs autostorekeys",
     "check:inputkeytrap": "node scripts/runChecks.mjs inputkeytrap",
+    "check:rapidfirepickup": "node scripts/runChecks.mjs rapidfirepickup",
     "check:petpicker": "node scripts/runChecks.mjs petpicker",
     "check:bugreport": "node scripts/runChecks.mjs bugreport"
   },
