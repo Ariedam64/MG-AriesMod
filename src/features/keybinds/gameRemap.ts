@@ -3,6 +3,8 @@
 // its default key; `inGameHotkeys.replace` makes the chosen key emit it.
 
 import { inGameHotkeys } from "../../game/ingameHotkeys";
+import { observeOutgoing } from "../../game/ws/outgoing";
+import { Subscriptions } from "../../lib/emitter";
 import { hotkeyToString } from "../../lib/hotkey";
 import { getKeybind, getKeybindHoldDetection, onKeybindChange, onKeybindHoldDetectionChange } from "./keybinds";
 
@@ -24,8 +26,17 @@ const GAME_KEYS: Record<GameKeybindId, string> = {
   "game.move-right": "KeyD",
 };
 
+/**
+ * Pickups that put the item in hand, so the next Action tap would place it
+ * straight back (a potted plant gets planted again). Rapid fire on Action
+ * waits for the next physical press after one of them. HarvestCrop is left
+ * out on purpose: harvesting is what rapid fire is for.
+ */
+const PICKUP_MESSAGES = ["PotPlant", "PickupDecor", "PickupEdgeDecor", "PickupPet", "PickupCrystal"];
+
 /** Rapid fire currently running, per action, keyed by the physical combo it listens to. */
 const rapidFireCombos = new Map<GameKeybindId, string>();
+const actionPickupWatch = new Subscriptions();
 let installed = false;
 
 /** Removes every block and remap that ends on the game's key, whoever set it. */
@@ -50,6 +61,7 @@ function syncGameKeybind(id: GameKeybindId): void {
     try { inGameHotkeys.stopRapidFire(previousRapidFire); } catch {}
     rapidFireCombos.delete(id);
   }
+  if (id === "game.action") actionPickupWatch.dispose();
 
   const hk = getKeybind(id);
   const combo = hk ? hotkeyToString(hk) : "";
@@ -66,6 +78,11 @@ function syncGameKeybind(id: GameKeybindId): void {
       inGameHotkeys.startRapidFire({ trigger: combo, emit: combo, mode: "tap", rateHz: 10 });
       rapidFireCombos.set(id, combo);
     } catch {}
+    if (id === "game.action") {
+      for (const type of PICKUP_MESSAGES) {
+        actionPickupWatch.add(observeOutgoing(type, () => inGameHotkeys.suspendRapidFire(combo)));
+      }
+    }
   }
 }
 

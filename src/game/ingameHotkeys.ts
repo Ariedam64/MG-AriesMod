@@ -73,6 +73,7 @@ export interface InGameHotkeysAPI {
   // rapid-fire
   startRapidFire(opts: RapidFireOptions): void;
   stopRapidFire(trigger?: Combo): void;
+  suspendRapidFire(trigger: Combo): void;
   stopAllRapidFires(): void;
   isRapidFireActive(trigger: Combo): boolean;
   setRapidFireRate(trigger: Combo, hz: number): void;
@@ -232,6 +233,18 @@ class InGameHotkeys implements InGameHotkeysAPI {
     if (!s) return;
     this.endSession(s);
     this.sessions.delete(key);
+  }
+
+  /** Stops the loop until the trigger is pressed again; the session stays registered. */
+  suspendRapidFire(trigger: Combo): void {
+    const s = this.sessions.get(normalizeCombo(trigger));
+    if (!s || !s.tickTimer) return;
+    // The keyup of a tap already sent still goes out, so the game never sees the key stuck down.
+    this.win.clearInterval(s.tickTimer);
+    s.tickTimer = null;
+    if (s.mode === "hold" && s.lastTarget) {
+      this.dispatchKey(this.doc, s.lastTarget, "keyup", s.emit, false);
+    }
   }
 
   stopAllRapidFires(): void {
