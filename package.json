@@ -23,6 +23,7 @@
     "check:growslot": "node scripts/runChecks.mjs growslot",
     "check:tilecapture": "node scripts/runChecks.mjs tilecapture",
     "check:deleters": "node scripts/runChecks.mjs deleters",
+    "check:edgedecor": "node scripts/runChecks.mjs edgedecor",
     "check:chat": "node scripts/runChecks.mjs chat",
     "check:companion": "node scripts/runChecks.mjs companion",
     "check:reactions": "node scripts/runChecks.mjs reactions",

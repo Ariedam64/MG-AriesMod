@@ -49,6 +49,7 @@ const SUITES = {
   growslot: ["checkGrowSlot"],
   tilecapture: ["checkTileCapture", "window"],
   deleters: ["checkDeleterSources", "window"],
+  edgedecor: ["checkEdgeDecorDeleter", "dom-stub"],
   chat: ["checkCompanionChat", "dom-stub"],
   companion: ["checkCompanionMovement"],
   reactions: ["checkCompanionReactions"],
