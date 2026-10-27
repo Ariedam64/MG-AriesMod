@@ -229,7 +229,7 @@ export function renderHatchTab(view: HTMLElement): void {
         onToggle: collapsed => setCollapsed(OTHER_SECTION_ID, collapsed),
       });
       card.root.classList.add("ht-egg");
-      card.body.appendChild(speciesCountsGrid(others.map(species => ({ species })), stats));
+      card.body.appendChild(speciesCountsGrid(others.map(species => ({ species })), species => countsFor(stats, species)));
       body.appendChild(card.root);
     }
 

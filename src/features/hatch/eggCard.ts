@@ -150,7 +150,7 @@ export interface EggCardOptions {
 
 export function createEggCard(options: EggCardOptions): HTMLElement {
   ensureHatchStyles();
-  const { egg, stats, showOffsets } = options;
+  const { egg, showOffsets } = options;
   const counters = HatchTracker.getCounters(egg.eggId);
 
   const card = collapsibleCard({
@@ -169,11 +169,14 @@ export function createEggCard(options: EggCardOptions): HTMLElement {
   }
   card.body.appendChild(pity);
 
+  // This egg's hatches only: the Stats table is per species, so a species two
+  // eggs share would show the same total on both cards.
   if (egg.fauna.length) {
+    const hatched = HatchTracker.getHatched(egg.eggId);
     card.body.appendChild(
       speciesCountsGrid(
         egg.fauna.map(entry => ({ species: entry.species, share: entry.share })),
-        stats,
+        species => hatched[species.toLowerCase()] ?? { normal: 0, gold: 0, rainbow: 0 },
       ),
     );
   }

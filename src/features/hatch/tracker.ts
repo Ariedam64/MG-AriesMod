@@ -37,11 +37,22 @@ export interface EggCounters {
   pulls: number;
 }
 
+export interface HatchedCount {
+  normal: number;
+  gold: number;
+  rainbow: number;
+}
+
 export interface HatchTrackerState {
   /** Pet ids already accounted for, so a log re-push never double-counts. */
   seenPetIds: string[];
   /** Observed misses, per egg. */
   counters: Record<string, EggCounters>;
+  /**
+   * Pets seen hatching, per egg then per lowercased species. The Stats table
+   * is per species only, so a species two eggs share would count on both.
+   */
+  hatched: Record<string, Record<string, HatchedCount>>;
   /**
    * Manual head start per counter. The server's real counters are not exposed
    * and pre-update accounts began at half the threshold, so the displayed
@@ -113,6 +124,21 @@ function normalizeCounterMap(raw: unknown): Record<string, EggCounters> {
   return out;
 }
 
+function normalizeHatchedMap(raw: unknown): Record<string, Record<string, HatchedCount>> {
+  const out: Record<string, Record<string, HatchedCount>> = {};
+  if (!isRecord(raw)) return out;
+  for (const [eggId, bySpecies] of Object.entries(raw)) {
+    if (!isRecord(bySpecies)) continue;
+    const egg: Record<string, HatchedCount> = {};
+    for (const [species, value] of Object.entries(bySpecies)) {
+      if (!isRecord(value)) continue;
+      egg[species] = { normal: toCount(value.normal), gold: toCount(value.gold), rainbow: toCount(value.rainbow) };
+    }
+    out[eggId] = egg;
+  }
+  return out;
+}
+
 function loadState(): HatchTrackerState {
   if (cachedState) return cachedState;
   let raw: unknown = null;
@@ -130,6 +156,7 @@ function loadState(): HatchTrackerState {
   cachedState = {
     seenPetIds,
     counters: normalizeCounterMap(isRecord(raw) ? raw.counters : null),
+    hatched: normalizeHatchedMap(isRecord(raw) ? raw.hatched : null),
     offsets: normalizeCounterMap(isRecord(raw) ? raw.offsets : null),
     lastHatchAt: isRecord(raw) ? toCount(raw.lastHatchAt) : 0,
     trackingStartedAt: isRecord(raw) ? toCount(raw.trackingStartedAt) : 0,
@@ -261,7 +288,15 @@ function ingest(entries: ActivityLogEntry[], countStats: boolean): boolean {
 
     if (event.timestamp > state.lastHatchAt) state.lastHatchAt = event.timestamp;
 
-    if (!event.isPull || !event.eggId) continue;
+    if (!event.eggId) continue;
+
+    // Unlike the Stats table, the per-egg one never held these pets, so the
+    // history pass counts here too. A Double Hatch bonus is hatched, not pulled.
+    const bySpecies = (state.hatched[event.eggId] ??= {});
+    const hatched = (bySpecies[event.species.toLowerCase()] ??= { normal: 0, gold: 0, rainbow: 0 });
+    hatched[rarityOf(event)] += 1;
+
+    if (!event.isPull) continue;
     const counters = (state.counters[event.eggId] ??= emptyCounters());
     applyPull(counters, event, protectedSpecies(event.eggId));
   }
@@ -280,6 +315,11 @@ export const HatchTracker = {
   /** Observed misses for one egg, before the manual offset. */
   getCounters(eggId: string): EggCounters {
     return loadState().counters[eggId] ?? emptyCounters();
+  },
+
+  /** Pets seen hatching from one egg, by lowercased species. */
+  getHatched(eggId: string): Record<string, HatchedCount> {
+    return loadState().hatched[eggId] ?? {};
   },
 
   getOffsets(eggId: string): EggCounters {

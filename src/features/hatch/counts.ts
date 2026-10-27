@@ -84,9 +84,10 @@ function speciesCell(row: SpeciesRow): HTMLElement {
  * Unframed on purpose: callers drop it inside a card that already draws the
  * border, so the egg card holds its pity rows and these counts in one box.
  * The totals line is only worth a row when there is more than one species to
- * add up.
+ * add up. `countsOf` says where each row's numbers come from: the egg card
+ * counts that egg's hatches only, the other pets read the Stats table.
  */
-export function speciesCountsGrid(rows: SpeciesRow[], stats: StatsSnapshot): HTMLElement {
+export function speciesCountsGrid(rows: SpeciesRow[], countsOf: (species: string) => HatchedCounts): HTMLElement {
   ensureHatchStyles();
   const wrap = document.createElement("div");
   wrap.className = "ht-counts";
@@ -106,7 +107,7 @@ export function speciesCountsGrid(rows: SpeciesRow[], stats: StatsSnapshot): HTM
   let totalRainbow = 0;
 
   for (const row of rows) {
-    const counts = countsFor(stats, row.species);
+    const counts = countsOf(row.species);
     totalNormal += counts.normal ?? 0;
     totalGold += counts.gold ?? 0;
     totalRainbow += counts.rainbow ?? 0;
