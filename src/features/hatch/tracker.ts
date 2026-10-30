@@ -15,7 +15,7 @@
 import { getActivityLogHistory, type ActivityLogEntry } from "../activityLog/history";
 import { myActivityLog } from "../../game/store/atoms";
 import { StatsService } from "../stats/stats";
-import { GOLD_MUTATION, RAINBOW_MUTATION, protectedSpecies } from "./pity";
+import { GOLD_MUTATION, RAINBOW_MUTATION, eggsBySpecies, protectedSpecies } from "./pity";
 import { Emitter } from "../../lib/emitter";
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
 
@@ -69,6 +69,8 @@ export interface HatchTrackerState {
   trackingStartedAt: number;
   /** Set once the first log snapshot has been absorbed as history. */
   bootstrapped: boolean;
+  /** Set once `hatched` has been filled from the Stats table, see `migrateHatched`. */
+  hatchedMigrated: boolean;
 }
 
 interface HatchEvent {
@@ -161,6 +163,7 @@ function loadState(): HatchTrackerState {
     lastHatchAt: isRecord(raw) ? toCount(raw.lastHatchAt) : 0,
     trackingStartedAt: isRecord(raw) ? toCount(raw.trackingStartedAt) : 0,
     bootstrapped: isRecord(raw) ? raw.bootstrapped === true : false,
+    hatchedMigrated: isRecord(raw) ? raw.hatchedMigrated === true : false,
   };
   return cachedState;
 }
@@ -305,6 +308,30 @@ function ingest(entries: ActivityLogEntry[], countStats: boolean): boolean {
   return changed;
 }
 
+/**
+ * Fills `hatched` once on an install that was counting before it existed.
+ *
+ * Until 4.0.8 the egg cards read the Stats table, and every pet behind it is
+ * already in `seenPetIds`, so `ingest` never puts them in `hatched`. A species
+ * only one egg hatches takes its Stats count, which already includes anything
+ * hatched since 4.0.8, so it replaces rather than adds. A species two eggs
+ * share cannot be split from Stats and keeps what this table counted itself.
+ */
+function migrateHatched(): void {
+  const state = loadState();
+  const byType = StatsService.getSnapshot().pets.hatchedByType;
+  for (const [species, eggIds] of eggsBySpecies()) {
+    if (eggIds.length !== 1) continue;
+    const counts = byType[species];
+    if (!counts) continue;
+    const next = { normal: toCount(counts.normal), gold: toCount(counts.gold), rainbow: toCount(counts.rainbow) };
+    if (next.normal + next.gold + next.rainbow <= 0) continue;
+    (state.hatched[eggIds[0]] ??= {})[species] = next;
+  }
+  state.hatchedMigrated = true;
+  saveState(state);
+}
+
 /* ------------------------------- public API ------------------------------- */
 
 export const HatchTracker = {
@@ -362,6 +389,14 @@ export const HatchTracker = {
  */
 export async function startHatchTracker(): Promise<() => void> {
   const firstRun = !loadState().bootstrapped;
+
+  // A fresh install counts every egg's hatches itself from the start.
+  if (!loadState().hatchedMigrated) {
+    if (firstRun) loadState().hatchedMigrated = true;
+    else {
+      try { migrateHatched(); } catch {}
+    }
+  }
 
   const consume = (logs: unknown, countStats: boolean) => {
     if (!Array.isArray(logs)) return;

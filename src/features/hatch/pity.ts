@@ -201,6 +201,22 @@ function getEggPity(eggId: string): EggPity | null {
   return isRecord(entry) ? buildEggPity(eggId, entry) : null;
 }
 
+/** Every egg that can hatch each species, keyed by lowercased species. */
+export function eggsBySpecies(): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const eggId of Object.keys(eggCatalog)) {
+    const entry = (eggCatalog as Record<string, unknown>)[eggId];
+    if (!isRecord(entry) || !isRecord(entry.faunaSpawnWeights)) continue;
+    for (const species of Object.keys(entry.faunaSpawnWeights)) {
+      const key = species.toLowerCase();
+      const eggs = out.get(key) ?? [];
+      if (!eggs.includes(eggId)) eggs.push(eggId);
+      out.set(key, eggs);
+    }
+  }
+  return out;
+}
+
 /** Rare species of an egg, i.e. the ones its counters track. */
 export function protectedSpecies(eggId: string): string[] {
   const pity = getEggPity(eggId);
