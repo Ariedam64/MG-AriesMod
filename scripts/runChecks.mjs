@@ -120,6 +120,7 @@ const SUITES = {
   bugreport: ["checkBugReport"],
   hatchperegg: ["checkHatchPerEgg"],
   hatchupgrade: ["checkHatchUpgrade"],
+  pixictors: ["checkPixiCtors", "window"],
 };
 
 /** Problems with how suites are registered: a file with no entry, or package.json out of step. */

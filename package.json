@@ -94,7 +94,8 @@
     "check:petpicker": "node scripts/runChecks.mjs petpicker",
     "check:bugreport": "node scripts/runChecks.mjs bugreport",
     "check:hatchperegg": "node scripts/runChecks.mjs hatchperegg",
-    "check:hatchupgrade": "node scripts/runChecks.mjs hatchupgrade"
+    "check:hatchupgrade": "node scripts/runChecks.mjs hatchupgrade",
+    "check:pixictors": "node scripts/runChecks.mjs pixictors"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",
