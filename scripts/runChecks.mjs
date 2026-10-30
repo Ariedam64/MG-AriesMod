@@ -121,6 +121,7 @@ const SUITES = {
   hatchperegg: ["checkHatchPerEgg"],
   hatchupgrade: ["checkHatchUpgrade"],
   pixictors: ["checkPixiCtors", "window"],
+  railbellart: ["checkRailBellArt", "dom-stub"],
 };
 
 /** Problems with how suites are registered: a file with no entry, or package.json out of step. */
