@@ -93,7 +93,8 @@
     "check:rapidfirepickup": "node scripts/runChecks.mjs rapidfirepickup",
     "check:petpicker": "node scripts/runChecks.mjs petpicker",
     "check:bugreport": "node scripts/runChecks.mjs bugreport",
-    "check:hatchperegg": "node scripts/runChecks.mjs hatchperegg"
+    "check:hatchperegg": "node scripts/runChecks.mjs hatchperegg",
+    "check:hatchupgrade": "node scripts/runChecks.mjs hatchupgrade"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",

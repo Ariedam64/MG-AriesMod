@@ -119,6 +119,7 @@ const SUITES = {
   rarityicons: ["checkRarityIcons", "dom-stub"],
   bugreport: ["checkBugReport"],
   hatchperegg: ["checkHatchPerEgg"],
+  hatchupgrade: ["checkHatchUpgrade"],
 };
 
 /** Problems with how suites are registered: a file with no entry, or package.json out of step. */
