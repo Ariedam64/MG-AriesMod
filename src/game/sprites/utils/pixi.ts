@@ -55,9 +55,21 @@ function findAnyPerBranch(root: any, pred: (node: any) => boolean, limPerBranch 
  * retry happens once a stage walk "succeeds"). Returning null here instead
  * makes the caller's retry loop keep trying until a text node exists too.
  */
+/**
+ * The game's RiveSprite extends Pixi's Sprite, so it has a texture with a
+ * frame like any sprite, but its constructor is `(texture, options)` and
+ * destructures `options`: captured as ctors.Sprite, `new Sprite(texture)`
+ * throws. Its `artboard`/`stateMachine` fields stay null until it hydrates,
+ * so test for the keys, not their values.
+ */
+function isRiveLikeNode(x: any): boolean {
+  if (!x || typeof x !== 'object') return false;
+  return 'artboard' in x || 'stateMachine' in x || 'riveFileSrc' in x || 'rive' in x;
+}
+
 function ctorsFromStage(stage: any): PixiCtors | null {
   if (!stage) return null;
-  const anySpr = findAnyPerBranch(stage, (x: any) => x?.texture?.frame && x?.constructor && x?.texture?.constructor && x?.texture?.frame?.constructor);
+  const anySpr = findAnyPerBranch(stage, (x: any) => x?.texture?.frame && x?.constructor && x?.texture?.constructor && x?.texture?.frame?.constructor && !isRiveLikeNode(x));
   if (!anySpr) return null;
   // The game's Rive-based display objects can also expose `.text`/`.style`,
   // so a bare "has text and style" match can capture a RiveSprite constructor,
@@ -66,7 +78,6 @@ function ctorsFromStage(stage: any): PixiCtors | null {
   // (renderPipeId 'text'); keep the loose match as a fallback for other Pixi
   // versions, but never accept Rive artboard nodes.
   const hasTextAndStyle = (x: any) => (typeof x?.text === 'string' || typeof x?.text === 'number') && x?.style;
-  const isRiveLikeNode = (x: any) => !!(x?.artboard || x?.stateMachine || x?.rive);
   const anyTxt =
     findAnyPerBranch(stage, (x: any) => hasTextAndStyle(x) && x?.renderPipeId === 'text')
     ?? findAnyPerBranch(stage, (x: any) => hasTextAndStyle(x) && !isRiveLikeNode(x));
