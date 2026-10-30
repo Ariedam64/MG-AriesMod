@@ -84,6 +84,7 @@ export function createRailBellView(state: any, rail: any, count: number): RailBe
 
   let icon: any = null;
   let iconIsArt = false;
+  let artFailureLogged = false;
   let size = 0;
   let hovered = false;
   let faceScale = 1;
@@ -136,14 +137,27 @@ export function createRailBellView(state: any, rail: any, count: number): RailBe
       const art = current.tex?.get?.(BELL_FRAME_KEY);
       const canUseArt = !!art && typeof current.ctors?.Sprite === "function";
       if (icon && (iconIsArt || !canUseArt)) return;
-      const next = canUseArt
-        ? new current.ctors.Sprite(art)
-        : new current.ctors.Text({ text: BELL_GLYPH, style: { fontSize: DEFAULT_ICON_SIZE } });
+      let next: any = null;
+      if (canUseArt) {
+        // A Sprite constructor that throws (the game's RiveWorldVisual captured
+        // as ctors.Sprite) leaves the bell on its emoji instead of removing it.
+        try {
+          next = new current.ctors.Sprite(art);
+        } catch (error) {
+          if (!artFailureLogged) console.warn("[PixiBell] the game's bell art could not be built, keeping the emoji", error);
+          artFailureLogged = true;
+        }
+      }
+      const nextIsArt = !!next;
+      if (!next) {
+        if (icon) return;
+        next = new current.ctors.Text({ text: BELL_GLYPH, style: { fontSize: DEFAULT_ICON_SIZE } });
+      }
       if (icon) {
         try { icon.destroy(); } catch {}
       }
       icon = next;
-      iconIsArt = canUseArt;
+      iconIsArt = nextIsArt;
       icon.eventMode = "none";
       face.addChild(icon);
       layoutIcon();
