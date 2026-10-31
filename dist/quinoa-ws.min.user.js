@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      4.0.8
+// @version      4.0.9
 // @include      /^https:\/\/1227719606223765687\.discordsays\.com\/.*[?&]mc_shell_frame=1(&|#|$)/
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -290,12 +290,15 @@
     }
     return null;
   }
+  function isRiveLikeNode(x) {
+    if (!x || typeof x !== "object") return false;
+    return "artboard" in x || "stateMachine" in x || "riveFileSrc" in x || "rive" in x;
+  }
   function ctorsFromStage(stage) {
     if (!stage) return null;
-    const anySpr = findAnyPerBranch(stage, (x) => x?.texture?.frame && x?.constructor && x?.texture?.constructor && x?.texture?.frame?.constructor);
+    const anySpr = findAnyPerBranch(stage, (x) => x?.texture?.frame && x?.constructor && x?.texture?.constructor && x?.texture?.frame?.constructor && !isRiveLikeNode(x));
     if (!anySpr) return null;
     const hasTextAndStyle = (x) => (typeof x?.text === "string" || typeof x?.text === "number") && x?.style;
-    const isRiveLikeNode = (x) => !!(x?.artboard || x?.stateMachine || x?.rive);
     const anyTxt = findAnyPerBranch(stage, (x) => hasTextAndStyle(x) && x?.renderPipeId === "text") ?? findAnyPerBranch(stage, (x) => hasTextAndStyle(x) && !isRiveLikeNode(x));
     if (!anyTxt) return null;
     return {
@@ -15003,7 +15006,7 @@ label.qws-ed-opt { cursor: pointer; }
   // src/platform/modVersion.ts
   function getLocalVersion() {
     if (true) {
-      return "4.0.8";
+      return "4.0.9";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -17720,6 +17723,20 @@ label.qws-ed-opt { cursor: pointer; }
     const entry = eggCatalog2[eggId];
     return isRecord3(entry) ? buildEggPity(eggId, entry) : null;
   }
+  function eggsBySpecies() {
+    const out = /* @__PURE__ */ new Map();
+    for (const eggId of Object.keys(eggCatalog2)) {
+      const entry = eggCatalog2[eggId];
+      if (!isRecord3(entry) || !isRecord3(entry.faunaSpawnWeights)) continue;
+      for (const species of Object.keys(entry.faunaSpawnWeights)) {
+        const key2 = species.toLowerCase();
+        const eggs = out.get(key2) ?? [];
+        if (!eggs.includes(eggId)) eggs.push(eggId);
+        out.set(key2, eggs);
+      }
+    }
+    return out;
+  }
   function protectedSpecies(eggId) {
     const pity = getEggPity(eggId);
     if (!pity) return [];
@@ -17804,7 +17821,8 @@ label.qws-ed-opt { cursor: pointer; }
       offsets: normalizeCounterMap(isRecord4(raw) ? raw.offsets : null),
       lastHatchAt: isRecord4(raw) ? toCount(raw.lastHatchAt) : 0,
       trackingStartedAt: isRecord4(raw) ? toCount(raw.trackingStartedAt) : 0,
-      bootstrapped: isRecord4(raw) ? raw.bootstrapped === true : false
+      bootstrapped: isRecord4(raw) ? raw.bootstrapped === true : false,
+      hatchedMigrated: isRecord4(raw) ? raw.hatchedMigrated === true : false
     };
     return cachedState;
   }
@@ -17911,8 +17929,32 @@ label.qws-ed-opt { cursor: pointer; }
     if (changed8) saveState(state5);
     return changed8;
   }
+  function migrateHatched() {
+    var _a, _b;
+    const state5 = loadState();
+    const byType = StatsService.getSnapshot().pets.hatchedByType;
+    for (const [species, eggIds] of eggsBySpecies()) {
+      if (eggIds.length !== 1) continue;
+      const counts2 = byType[species];
+      if (!counts2) continue;
+      const next = { normal: toCount(counts2.normal), gold: toCount(counts2.gold), rainbow: toCount(counts2.rainbow) };
+      if (next.normal + next.gold + next.rainbow <= 0) continue;
+      ((_a = state5.hatched)[_b = eggIds[0]] ?? (_a[_b] = {}))[species] = next;
+    }
+    state5.hatchedMigrated = true;
+    saveState(state5);
+  }
   async function startHatchTracker() {
     const firstRun = !loadState().bootstrapped;
+    if (!loadState().hatchedMigrated) {
+      if (firstRun) loadState().hatchedMigrated = true;
+      else {
+        try {
+          migrateHatched();
+        } catch {
+        }
+      }
+    }
     const consume = (logs2, countStats) => {
       if (!Array.isArray(logs2)) return;
       try {
@@ -20990,6 +21032,7 @@ label.qws-ed-opt { cursor: pointer; }
     if (badge2) content2.addChild(badge2);
     let icon2 = null;
     let iconIsArt = false;
+    let artFailureLogged = false;
     let size = 0;
     let hovered = false;
     let faceScale = 1;
@@ -21035,7 +21078,20 @@ label.qws-ed-opt { cursor: pointer; }
         const art = current3.tex?.get?.(BELL_FRAME_KEY);
         const canUseArt = !!art && typeof current3.ctors?.Sprite === "function";
         if (icon2 && (iconIsArt || !canUseArt)) return;
-        const next = canUseArt ? new current3.ctors.Sprite(art) : new current3.ctors.Text({ text: BELL_GLYPH, style: { fontSize: DEFAULT_ICON_SIZE } });
+        let next = null;
+        if (canUseArt) {
+          try {
+            next = new current3.ctors.Sprite(art);
+          } catch (error) {
+            if (!artFailureLogged) console.warn("[PixiBell] the game's bell art could not be built, keeping the emoji", error);
+            artFailureLogged = true;
+          }
+        }
+        const nextIsArt = !!next;
+        if (!next) {
+          if (icon2) return;
+          next = new current3.ctors.Text({ text: BELL_GLYPH, style: { fontSize: DEFAULT_ICON_SIZE } });
+        }
         if (icon2) {
           try {
             icon2.destroy();
@@ -21043,7 +21099,7 @@ label.qws-ed-opt { cursor: pointer; }
           }
         }
         icon2 = next;
-        iconIsArt = canUseArt;
+        iconIsArt = nextIsArt;
         icon2.eventMode = "none";
         face.addChild(icon2);
         layoutIcon();
