@@ -122,6 +122,7 @@ const SUITES = {
   hatchupgrade: ["checkHatchUpgrade"],
   pixictors: ["checkPixiCtors", "window"],
   railbellart: ["checkRailBellArt", "dom-stub"],
+  autostorepartial: ["checkAutoStorePartialWithdraw", "dom-stub"],
 };
 
 /** Problems with how suites are registered: a file with no entry, or package.json out of step. */
