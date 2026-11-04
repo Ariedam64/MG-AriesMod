@@ -69,9 +69,6 @@ const buildQtyMap = (raw: unknown, getKey: (item: any) => string): Map<string, n
   return map;
 };
 
-const buildKeySet = (raw: unknown, getKey: (item: any) => string): Set<string> =>
-  new Set(buildQtyMap(raw, getKey).keys());
-
 const diffIncreases = (prev: Map<string, number>, next: Map<string, number>): string[] => {
   const out: string[] = [];
   for (const [key, qty] of next) {
@@ -81,12 +78,14 @@ const diffIncreases = (prev: Map<string, number>, next: Map<string, number>): st
   return out;
 };
 
-const diffSet = (prev: Set<string>, next: Set<string>) => {
-  const added: string[] = [];
-  const removed: string[] = [];
-  for (const key of next) if (!prev.has(key)) added.push(key);
-  for (const key of prev) if (!next.has(key)) removed.push(key);
-  return { added, removed };
+/** Keys whose quantity went down, whether the stack was emptied or only part of it was taken. */
+const diffDecreases = (prev: Map<string, number>, next: Map<string, number>): string[] => {
+  const out: string[] = [];
+  for (const [key, qty] of prev) {
+    const after = next.get(key) ?? 0;
+    if (after < qty) out.push(key);
+  }
+  return out;
 };
 
 const pruneRecentMap = (map: Map<string, number>, now: number, maxAgeMs = RECENT_REMOVE_MS * 4) => {
@@ -132,7 +131,10 @@ export function createAutoStore(config: AutoStoreConfig): AutoStoreController {
 
   let enabled = readStoredFlag(storagePath);
 
-  let storedKeys = new Set<string>();
+  // Quantities, not just keys: a partial withdrawal leaves the key in storage
+  // and is only visible as a drop in quantity.
+  let storedQty = new Map<string, number>();
+  const isStored = (key: string) => (storedQty.get(key) ?? 0) > 0;
   let inventoryQty = new Map<string, number>();
   const queue = new Set<string>();
   let busy = false;
@@ -153,8 +155,8 @@ export function createAutoStore(config: AutoStoreConfig): AutoStoreController {
 
   /**
    * Waits for the inventory to settle, then queues what grew. A key whose
-   * storage stack has just been emptied is skipped: the player is most likely
-   * taking that item out on purpose.
+   * storage stack has just shrunk (emptied or only partly taken) is skipped:
+   * the player is most likely taking that item out on purpose.
    */
   function queueStoreDebounced(keys: string[]) {
     for (const key of keys) if (key) pendingKeys.add(key);
@@ -191,8 +193,8 @@ export function createAutoStore(config: AutoStoreConfig): AutoStoreController {
         log(`${logName} flush start`, { batchSize: batch.length, batch });
         for (const key of batch) {
           if (!enabled) return;
-          if (!storedKeys.has(key)) {
-            log(`${logName} skip (not in storage)`, { key, storageSize: storedKeys.size });
+          if (!isStored(key)) {
+            log(`${logName} skip (not in storage)`, { key, storageSize: storedQty.size });
             continue;
           }
           try {
@@ -222,22 +224,24 @@ export function createAutoStore(config: AutoStoreConfig): AutoStoreController {
     }
     if (inventoryUnsub || storageUnsub) return;
 
-    try { storedKeys = buildKeySet(await storageAtom.get(), keyFromItem); } catch {}
+    try { storedQty = buildQtyMap(await storageAtom.get(), keyFromItem); } catch {}
     try { inventoryQty = buildQtyMap(await inventoryAtom.get(), keyFromItem); } catch {}
-    log(`${logName} auto-store start`, { storageSize: storedKeys.size, inventoryKeys: inventoryQty.size });
+    log(`${logName} auto-store start`, { storageSize: storedQty.size, inventoryKeys: inventoryQty.size });
 
     try {
       storageUnsub = await storageAtom.onChange((next) => {
-        const prev = storedKeys;
-        const nextSet = buildKeySet(next, keyFromItem);
-        storedKeys = nextSet;
-        const diff = diffSet(prev, nextSet);
-        if (diff.added.length || diff.removed.length) {
-          if (diff.removed.length) {
-            const now = Date.now();
-            for (const key of diff.removed) removedAtByKey.set(key, now);
-          }
-          log(`${logName} storage items updated`, { size: nextSet.size, added: diff.added, removed: diff.removed });
+        const prev = storedQty;
+        const nextMap = buildQtyMap(next, keyFromItem);
+        storedQty = nextMap;
+        const added = Array.from(nextMap.keys()).filter((key) => !prev.has(key));
+        const removed = Array.from(prev.keys()).filter((key) => !nextMap.has(key));
+        const decreased = diffDecreases(prev, nextMap);
+        if (decreased.length) {
+          const now = Date.now();
+          for (const key of decreased) removedAtByKey.set(key, now);
+        }
+        if (added.length || removed.length || decreased.length) {
+          log(`${logName} storage items updated`, { size: nextMap.size, added, removed, decreased });
         }
       });
     } catch {
@@ -254,7 +258,7 @@ export function createAutoStore(config: AutoStoreConfig): AutoStoreController {
         if (increased.length) {
           log(`${logName} inventory increased`, {
             changes: summarizeQtyDelta(prevMap, nextMap, increased),
-            storageSize: storedKeys.size,
+            storageSize: storedQty.size,
           });
           queueStoreDebounced(increased);
         }
@@ -265,7 +269,7 @@ export function createAutoStore(config: AutoStoreConfig): AutoStoreController {
 
     // What is already in the inventory at start will not grow again, so the
     // subscription would never see it: queue it now.
-    const initialKeys = Array.from(inventoryQty.keys()).filter((key) => storedKeys.has(key));
+    const initialKeys = Array.from(inventoryQty.keys()).filter(isStored);
     if (initialKeys.length) {
       log(`${logName} auto-store initial queue`, { keys: initialKeys });
       queueStore(initialKeys);
@@ -280,7 +284,7 @@ export function createAutoStore(config: AutoStoreConfig): AutoStoreController {
     storageUnsub = null;
     queue.clear();
     busy = false;
-    storedKeys.clear();
+    storedQty.clear();
     inventoryQty.clear();
     pendingKeys.clear();
     if (pendingTimer != null) {
