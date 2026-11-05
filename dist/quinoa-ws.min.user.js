@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      4.0.9
+// @version      4.0.10
 // @include      /^https:\/\/1227719606223765687\.discordsays\.com\/.*[?&]mc_shell_frame=1(&|#|$)/
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -4013,7 +4013,8 @@
   function createAutoStore(config) {
     const { logName, storagePath, storageId, storageAtom, inventoryAtom, keyFromItem } = config;
     let enabled2 = readStoredFlag(storagePath);
-    let storedKeys = /* @__PURE__ */ new Set();
+    let storedQty = /* @__PURE__ */ new Map();
+    const isStored = (key2) => (storedQty.get(key2) ?? 0) > 0;
     let inventoryQty = /* @__PURE__ */ new Map();
     const queue = /* @__PURE__ */ new Set();
     let busy = false;
@@ -4064,8 +4065,8 @@
           log(`${logName} flush start`, { batchSize: batch.length, batch });
           for (const key2 of batch) {
             if (!enabled2) return;
-            if (!storedKeys.has(key2)) {
-              log(`${logName} skip (not in storage)`, { key: key2, storageSize: storedKeys.size });
+            if (!isStored(key2)) {
+              log(`${logName} skip (not in storage)`, { key: key2, storageSize: storedQty.size });
               continue;
             }
             try {
@@ -4092,26 +4093,28 @@
       }
       if (inventoryUnsub || storageUnsub) return;
       try {
-        storedKeys = buildKeySet(await storageAtom.get(), keyFromItem);
+        storedQty = buildQtyMap(await storageAtom.get(), keyFromItem);
       } catch {
       }
       try {
         inventoryQty = buildQtyMap(await inventoryAtom.get(), keyFromItem);
       } catch {
       }
-      log(`${logName} auto-store start`, { storageSize: storedKeys.size, inventoryKeys: inventoryQty.size });
+      log(`${logName} auto-store start`, { storageSize: storedQty.size, inventoryKeys: inventoryQty.size });
       try {
         storageUnsub = await storageAtom.onChange((next) => {
-          const prev = storedKeys;
-          const nextSet = buildKeySet(next, keyFromItem);
-          storedKeys = nextSet;
-          const diff = diffSet(prev, nextSet);
-          if (diff.added.length || diff.removed.length) {
-            if (diff.removed.length) {
-              const now = Date.now();
-              for (const key2 of diff.removed) removedAtByKey.set(key2, now);
-            }
-            log(`${logName} storage items updated`, { size: nextSet.size, added: diff.added, removed: diff.removed });
+          const prev = storedQty;
+          const nextMap = buildQtyMap(next, keyFromItem);
+          storedQty = nextMap;
+          const added = Array.from(nextMap.keys()).filter((key2) => !prev.has(key2));
+          const removed = Array.from(prev.keys()).filter((key2) => !nextMap.has(key2));
+          const decreased = diffDecreases(prev, nextMap);
+          if (decreased.length) {
+            const now = Date.now();
+            for (const key2 of decreased) removedAtByKey.set(key2, now);
+          }
+          if (added.length || removed.length || decreased.length) {
+            log(`${logName} storage items updated`, { size: nextMap.size, added, removed, decreased });
           }
         });
       } catch {
@@ -4127,7 +4130,7 @@
           if (increased.length) {
             log(`${logName} inventory increased`, {
               changes: summarizeQtyDelta(prevMap, nextMap, increased),
-              storageSize: storedKeys.size
+              storageSize: storedQty.size
             });
             queueStoreDebounced(increased);
           }
@@ -4135,7 +4138,7 @@
       } catch {
         inventoryUnsub = null;
       }
-      const initialKeys = Array.from(inventoryQty.keys()).filter((key2) => storedKeys.has(key2));
+      const initialKeys = Array.from(inventoryQty.keys()).filter(isStored);
       if (initialKeys.length) {
         log(`${logName} auto-store initial queue`, { keys: initialKeys });
         queueStore(initialKeys);
@@ -4155,7 +4158,7 @@
       storageUnsub = null;
       queue.clear();
       busy = false;
-      storedKeys.clear();
+      storedQty.clear();
       inventoryQty.clear();
       pendingKeys.clear();
       if (pendingTimer != null) {
@@ -4186,7 +4189,7 @@
       }
     };
   }
-  var LOG_PREFIX, log, DEBOUNCE_MS, RECENT_REMOVE_MS, INVENTORY_POLL_MS, READY_TIMEOUT_MS, normalizeKey, normalizeQty, buildQtyMap, buildKeySet, diffIncreases, diffSet, pruneRecentMap, summarizeQtyDelta, storageKeyFromSpecies, storageKeyFromDecorId, storageKeyFromToolId;
+  var LOG_PREFIX, log, DEBOUNCE_MS, RECENT_REMOVE_MS, INVENTORY_POLL_MS, READY_TIMEOUT_MS, normalizeKey, normalizeQty, buildQtyMap, diffIncreases, diffDecreases, pruneRecentMap, summarizeQtyDelta, storageKeyFromSpecies, storageKeyFromDecorId, storageKeyFromToolId;
   var init_autoStore = __esm({
     "src/features/autoStore/autoStore.ts"() {
       "use strict";
@@ -4223,7 +4226,6 @@
         }
         return map2;
       };
-      buildKeySet = (raw, getKey) => new Set(buildQtyMap(raw, getKey).keys());
       diffIncreases = (prev, next) => {
         const out = [];
         for (const [key2, qty] of next) {
@@ -4232,12 +4234,13 @@
         }
         return out;
       };
-      diffSet = (prev, next) => {
-        const added = [];
-        const removed = [];
-        for (const key2 of next) if (!prev.has(key2)) added.push(key2);
-        for (const key2 of prev) if (!next.has(key2)) removed.push(key2);
-        return { added, removed };
+      diffDecreases = (prev, next) => {
+        const out = [];
+        for (const [key2, qty] of prev) {
+          const after = next.get(key2) ?? 0;
+          if (after < qty) out.push(key2);
+        }
+        return out;
       };
       pruneRecentMap = (map2, now, maxAgeMs = RECENT_REMOVE_MS * 4) => {
         for (const [key2, ts] of map2) {
@@ -15006,7 +15009,7 @@ label.qws-ed-opt { cursor: pointer; }
   // src/platform/modVersion.ts
   function getLocalVersion() {
     if (true) {
-      return "4.0.9";
+      return "4.0.10";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
