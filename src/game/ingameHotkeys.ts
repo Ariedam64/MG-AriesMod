@@ -419,7 +419,10 @@ class InGameHotkeys implements InGameHotkeysAPI {
     const tick = () => {
       if (!s.pressed) return;
       // Synthetic keydown, flagged with RAPID_SYN_FLAG so it never re-triggers rapid fire.
-      this.dispatchKey(doc, s.lastTarget || doc, "keydown", s.emit, true);
+      // A tap is a fresh press, so it is not marked as a repeat: since build 1897
+      // the game ignores a keydown with `repeat` set. Hold mode imitates the OS
+      // auto-repeat and keeps the flag.
+      this.dispatchKey(doc, s.lastTarget || doc, "keydown", s.emit, s.mode !== "tap");
       if (s.mode === "tap") {
         if (s.upTimer) this.win.clearTimeout(s.upTimer);
         s.upTimer = this.win.setTimeout(() => {
