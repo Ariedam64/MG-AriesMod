@@ -71,6 +71,7 @@ const SUITES = {
   autostorekeys: ["checkAutoStoreKeys", "dom-stub"],
   inputkeytrap: ["checkInputKeyTrap", "dom-stub"],
   rapidfirepickup: ["checkRapidFirePickup"],
+  rapidfirerepeat: ["checkRapidFireRepeat"],
   petpicker: ["checkPetPickerModal", "dom-stub"],
   activitylogmodal: ["checkActivityLogModal"],
   discordframes: ["checkDiscordFrames"],

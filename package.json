@@ -91,6 +91,7 @@
     "check:autostorekeys": "node scripts/runChecks.mjs autostorekeys",
     "check:inputkeytrap": "node scripts/runChecks.mjs inputkeytrap",
     "check:rapidfirepickup": "node scripts/runChecks.mjs rapidfirepickup",
+    "check:rapidfirerepeat": "node scripts/runChecks.mjs rapidfirerepeat",
     "check:petpicker": "node scripts/runChecks.mjs petpicker",
     "check:bugreport": "node scripts/runChecks.mjs bugreport",
     "check:hatchperegg": "node scripts/runChecks.mjs hatchperegg",
