@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      4.0.10
+// @version      4.0.11
 // @include      /^https:\/\/1227719606223765687\.discordsays\.com\/.*[?&]mc_shell_frame=1(&|#|$)/
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -15009,7 +15009,7 @@ label.qws-ed-opt { cursor: pointer; }
   // src/platform/modVersion.ts
   function getLocalVersion() {
     if (true) {
-      return "4.0.10";
+      return "4.0.11";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -19923,7 +19923,7 @@ label.qws-ed-opt { cursor: pointer; }
           this.stopLoop(doc, s);
           const tick = () => {
             if (!s.pressed) return;
-            this.dispatchKey(doc, s.lastTarget || doc, "keydown", s.emit, true);
+            this.dispatchKey(doc, s.lastTarget || doc, "keydown", s.emit, s.mode !== "tap");
             if (s.mode === "tap") {
               if (s.upTimer) this.win.clearTimeout(s.upTimer);
               s.upTimer = this.win.setTimeout(() => {
