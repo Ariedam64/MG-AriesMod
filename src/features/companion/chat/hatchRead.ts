@@ -8,6 +8,7 @@
 import { Atoms } from "../../../game/store/atoms";
 import { eggCatalog, petAbilities, petCatalog } from "../../../data";
 import { getPetInfo } from "../../../data/rules/petValue";
+import { usedInventorySlots } from "../../../data/rules/inventory";
 import { PetsService } from "../../pets/pets";
 import { rolledMutations } from "../catalogs";
 import type { PetRow } from "./hatch";
@@ -178,7 +179,7 @@ async function readPets(): Promise<{ pets: PetRow[]; inventoryCount: number }> {
     });
   }
 
-  return { pets, inventoryCount: items.length };
+  return { pets, inventoryCount: usedInventorySlots(inventory) };
 }
 
 /**
@@ -195,10 +196,10 @@ export async function readPetRows(): Promise<PetRow[]> {
   }
 }
 
-/** How many items fill the bag, without reading anything else. */
+/** How many slots the bag's items take (tool ring excluded), without reading anything else. */
 export async function readInventoryCount(): Promise<number> {
   try {
-    return inventoryItems(await Atoms.inventory.myInventory.get()).length;
+    return usedInventorySlots(await Atoms.inventory.myInventory.get());
   } catch {
     return 0;
   }

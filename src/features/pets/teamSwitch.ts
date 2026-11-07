@@ -272,7 +272,7 @@ async function equipPetIds(rawIds: string[], markTeamId: string | null, markUsed
       let inventoryFull = false;
       try {
         const inventory: any = await Atoms.inventory.myInventory.get();
-        inventoryFull = isInventoryFullForUnstackable(inventory?.items);
+        inventoryFull = isInventoryFullForUnstackable(inventory);
       } catch {}
       if (inventoryFull) {
         const freed = freeHutch > 0 && (await moveSparePetToHutch(targetSet, activeSlots, inHutch));

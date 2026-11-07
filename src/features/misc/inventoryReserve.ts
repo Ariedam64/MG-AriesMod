@@ -2,9 +2,10 @@ import { interceptOutgoing } from "../../game/ws/outgoing";
 import { Atoms } from "../../game/store/atoms";
 import { readAndFollow } from "../../game/store/hub";
 import { readStoredFlag, writeStoredFlag } from "./storedFlag";
+import { countInventorySlots } from "../../data/rules/inventory";
 
 /**
- * "Keep one inventory slot free": once the inventory holds 99 entries, every
+ * "Keep one inventory slot free": once the inventory takes 99 slots, every
  * action that would add a new entry is refused, so the last slot stays open.
  * Buying more of something already in the inventory still works, since it
  * only grows a stack.
@@ -39,7 +40,9 @@ function inventoryItems(raw: any): any[] {
 
 function refreshInventory(raw: any) {
   const items = inventoryItems(raw);
-  inventoryCount = items.length;
+  // Entries pinned in the tool ring take no slot for the game.
+  const toolRing = Array.isArray(raw) ? undefined : raw?.toolRing ?? raw?.inventory?.toolRing;
+  inventoryCount = countInventorySlots(items, toolRing);
   for (const set of Object.values(owned)) set.clear();
   for (const entry of items) {
     if (!entry || typeof entry !== "object") continue;
