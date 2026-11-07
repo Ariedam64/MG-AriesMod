@@ -98,7 +98,8 @@
     "check:hatchupgrade": "node scripts/runChecks.mjs hatchupgrade",
     "check:pixictors": "node scripts/runChecks.mjs pixictors",
     "check:railbellart": "node scripts/runChecks.mjs railbellart",
-    "check:autostorepartial": "node scripts/runChecks.mjs autostorepartial"
+    "check:autostorepartial": "node scripts/runChecks.mjs autostorepartial",
+    "check:inventoryslots": "node scripts/runChecks.mjs inventoryslots"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",
