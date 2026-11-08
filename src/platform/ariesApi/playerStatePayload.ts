@@ -6,6 +6,7 @@ import type { GardenState } from "../../game/store/atoms";
 import { shareGlobal } from "../pageContext";
 import { readAriesPath } from "../storage";
 import { getLocalVersion } from "../modVersion";
+import { countRoomPlayers } from "../../game/roomPlayerCount";
 import {
   readAccountId,
   readSlotId,
@@ -239,14 +240,11 @@ export async function buildPlayerStatePayload(
       (state?.roomId as string) ??
       null;
 
-    let playersCount =
-      normalizedPlayers.length > 0 ? normalizedPlayers.length : slots.length;
-    try {
-      const atomValue = await Atoms.server.numPlayers.get();
-      playersCount = clampPlayers(atomValue);
-    } catch {
-      // Keep the count derived from the players list.
-    }
+    // Counted from the room state as the game does: `numPlayersAtom` is gone
+    // since build 1973, and reading it sent every room as one player.
+    const playersCount = clampPlayers(
+      countRoomPlayers(state) ?? (normalizedPlayers.length || slots.length),
+    );
 
     const persistedActivityLog = readAriesPath<any[]>("activityLog.history");
     const activityLog = Array.isArray(persistedActivityLog)

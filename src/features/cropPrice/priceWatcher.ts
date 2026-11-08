@@ -57,10 +57,10 @@ export function startCropPriceWatcherViaGardenObject(): CropPriceWatcher {
 
   void (async () => {
     try { gardenObject = await myCurrentGardenObject.get(); } catch {}
-    try { players = await numPlayers.get(); } catch {}
+    try { players = (await numPlayers.get()) ?? undefined; } catch {}
     try { selectedSlotId = await myCurrentGrowSlotIndex.get(); } catch {}
 
-    subs.add(numPlayers.onChange((n) => { players = n; }));
+    subs.add(numPlayers.onChange((n) => { players = n ?? undefined; }));
     subs.add(myCurrentGardenObject.onChange((next) => { gardenObject = next; scheduleRecompute(); }));
     subs.add(
       myCurrentGrowSlotIndex.onChange((id) => {

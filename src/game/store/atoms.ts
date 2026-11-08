@@ -1,5 +1,6 @@
 import { makeAtom, makeAliasedAtom, makeView, type View } from "./hub";
 import { modalNameOf, nextModalState } from "../modalState";
+import { countRoomPlayers } from "../roomPlayerCount";
 
 /**
  * The game's jotai atoms the mod reads and writes, by the label the game gives
@@ -94,7 +95,28 @@ export const myPetHutchCapacitySlots = makeAtom<number>("myPetHutchCapacitySlots
 /** The local player's userSlot: `data` plus `customRestockInventories`, their personal restocks. */
 const myUserSlot = makeAtom<any>("myUserSlotAtom");
 
-export const numPlayers = makeAtom<number>("numPlayersAtom");
+// The game no longer has a player count atom (gone in build 1973): the count
+// is derived from the room state's userSlots, as the game itself does. Read-only,
+// and listeners only hear it when the count changes, not on every state tick.
+const followPlayerCount =
+  (subscribe: View<any>["onChange"]): View<number | null>["onChange"] =>
+  (cb) => {
+    let prev: number | null | undefined;
+    return subscribe((next) => {
+      const count = countRoomPlayers(next);
+      if (count === prev) return;
+      const before = prev;
+      prev = count;
+      cb(count, before);
+    });
+  };
+export const numPlayers: View<number | null> = {
+  label: "stateAtom:playerCount",
+  get: async () => countRoomPlayers(await state.get()),
+  set: async () => {},
+  onChange: (cb) => followPlayerCount((listener) => state.onChange(listener))(cb),
+  onChangeNow: (cb) => followPlayerCount((listener) => state.onChangeNow(listener))(cb),
+};
 const totalCropSellPrice = makeAtom<number>("totalCropSellPriceAtom");
 const friendBonusMultiplier = makeAtom<any>("friendBonusMultiplierAtom");
 
