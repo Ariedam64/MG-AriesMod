@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      4.0.12
+// @version      4.0.13
 // @include      /^https:\/\/1227719606223765687\.discordsays\.com\/.*[?&]mc_shell_frame=1(&|#|$)/
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -3533,13 +3533,38 @@
     }
   });
 
+  // src/game/roomPlayerCount.ts
+  function userSlotsOf(state5) {
+    const raw = state5?.child?.data?.userSlots ?? state5?.fullState?.child?.data?.userSlots ?? state5?.data?.userSlots;
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === "object") return Object.values(raw);
+    return null;
+  }
+  function countRoomPlayers(state5) {
+    const slots = userSlotsOf(state5);
+    let count = slots ? slots.filter((slot) => slot != null).length : 0;
+    if (count === 0) {
+      const players = state5?.fullState?.data?.players ?? state5?.data?.players ?? state5?.players;
+      count = Array.isArray(players) ? players.length : 0;
+    }
+    return count > 0 ? Math.min(MAX_PLAYERS, count) : null;
+  }
+  var MAX_PLAYERS;
+  var init_roomPlayerCount = __esm({
+    "src/game/roomPlayerCount.ts"() {
+      "use strict";
+      MAX_PLAYERS = 6;
+    }
+  });
+
   // src/game/store/atoms.ts
-  var position, state, map, player, action, myData, myInventory, myCropInventory, mySeedInventory, myToolInventory, myEggInventory, myDecorInventory, mySeedSiloItems, myDecorShedItems, myToolShackItems, myPrimitivePetSlots, myCropItemsToSell, myPetHutchPetItems, myPetHutchItems, myPetHutchCapacitySlots, myUserSlot, numPlayers, totalCropSellPrice, friendBonusMultiplier, myValidatedSelectedItemIndex, mySelectedItemId, mySelectedItemRotation, myCurrentGardenObject, selectedSubjectActions, myCurrentGrowSlotIndex, weather, activeModalRaw, sameModal, activeModal, inventoryModalIsActive, activityLogTab, avatarTriggerAnimationAtom, garden, gardenTileObjects, favoriteIds, playerId, stateUserSlots, myActivityLog, shops, eggShop, Atoms;
+  var position, state, map, player, action, myData, myInventory, myCropInventory, mySeedInventory, myToolInventory, myEggInventory, myDecorInventory, mySeedSiloItems, myDecorShedItems, myToolShackItems, myPrimitivePetSlots, myCropItemsToSell, myPetHutchPetItems, myPetHutchItems, myPetHutchCapacitySlots, myUserSlot, followPlayerCount, numPlayers, totalCropSellPrice, friendBonusMultiplier, myValidatedSelectedItemIndex, mySelectedItemId, mySelectedItemRotation, myCurrentGardenObject, selectedSubjectActions, myCurrentGrowSlotIndex, weather, activeModalRaw, sameModal, activeModal, inventoryModalIsActive, activityLogTab, avatarTriggerAnimationAtom, garden, gardenTileObjects, favoriteIds, playerId, stateUserSlots, myActivityLog, shops, eggShop, Atoms;
   var init_atoms = __esm({
     "src/game/store/atoms.ts"() {
       "use strict";
       init_hub();
       init_modalState();
+      init_roomPlayerCount();
       position = makeAtom("positionAtom");
       state = makeAtom("stateAtom");
       map = makeAtom("mapAtom");
@@ -3564,7 +3589,24 @@
       myPetHutchItems = makeAtom("myPetHutchItemsAtom");
       myPetHutchCapacitySlots = makeAtom("myPetHutchCapacitySlotsAtom");
       myUserSlot = makeAtom("myUserSlotAtom");
-      numPlayers = makeAtom("numPlayersAtom");
+      followPlayerCount = (subscribe) => (cb) => {
+        let prev;
+        return subscribe((next) => {
+          const count = countRoomPlayers(next);
+          if (count === prev) return;
+          const before = prev;
+          prev = count;
+          cb(count, before);
+        });
+      };
+      numPlayers = {
+        label: "stateAtom:playerCount",
+        get: async () => countRoomPlayers(await state.get()),
+        set: async () => {
+        },
+        onChange: (cb) => followPlayerCount((listener) => state.onChange(listener))(cb),
+        onChangeNow: (cb) => followPlayerCount((listener) => state.onChangeNow(listener))(cb)
+      };
       totalCropSellPrice = makeAtom("totalCropSellPriceAtom");
       friendBonusMultiplier = makeAtom("friendBonusMultiplierAtom");
       myValidatedSelectedItemIndex = makeAliasedAtom([
@@ -13568,7 +13610,7 @@ label.qws-ed-opt { cursor: pointer; }
     return Number.isFinite(n) ? percentFromPlayerCount(toPlayerCount(n)) : null;
   }
   function percentToRequiredFriendCount(percent) {
-    return clamp(Math.round(toBonusStep(percent) / 10) + 1, 1, MAX_PLAYERS);
+    return clamp(Math.round(toBonusStep(percent) / 10) + 1, 1, MAX_PLAYERS2);
   }
   function sanitizeEggLocks(raw) {
     const out = {};
@@ -13597,7 +13639,7 @@ label.qws-ed-opt { cursor: pointer; }
     if (!obj || typeof obj !== "object" || obj.objectType !== "egg") return null;
     return typeof obj.eggId === "string" && obj.eggId ? obj.eggId : null;
   }
-  var STORAGE_PATH, FRIEND_BONUS_STEP, FRIEND_BONUS_MAX, MAX_PLAYERS, PET_RARITIES, DEFAULT_SELL_ALL_PETS_RULES, defaultState2, toBonusStep, toPlayerCount, percentFromPlayerCount, requiredPercentFromPlayers, sameRules, LockerRestrictionsService, lockerRestrictionsService;
+  var STORAGE_PATH, FRIEND_BONUS_STEP, FRIEND_BONUS_MAX, MAX_PLAYERS2, PET_RARITIES, DEFAULT_SELL_ALL_PETS_RULES, defaultState2, toBonusStep, toPlayerCount, percentFromPlayerCount, requiredPercentFromPlayers, sameRules, LockerRestrictionsService, lockerRestrictionsService;
   var init_restrictions = __esm({
     "src/features/locker/restrictions.ts"() {
       "use strict";
@@ -13607,7 +13649,7 @@ label.qws-ed-opt { cursor: pointer; }
       STORAGE_PATH = "locker.restrictions";
       FRIEND_BONUS_STEP = 10;
       FRIEND_BONUS_MAX = 50;
-      MAX_PLAYERS = 6;
+      MAX_PLAYERS2 = 6;
       PET_RARITIES = ["Common", "Uncommon", "Rare", "Legendary", "Mythical", "Divine", "Celestial"];
       DEFAULT_SELL_ALL_PETS_RULES = {
         enabled: true,
@@ -13624,7 +13666,7 @@ label.qws-ed-opt { cursor: pointer; }
         sellAllPets: { ...DEFAULT_SELL_ALL_PETS_RULES }
       });
       toBonusStep = (value) => clamp(Math.round(clamp(Math.round(value), 0, FRIEND_BONUS_MAX) / FRIEND_BONUS_STEP) * FRIEND_BONUS_STEP, 0, FRIEND_BONUS_MAX);
-      toPlayerCount = (value) => Number.isFinite(value) ? clamp(Math.round(value), 1, MAX_PLAYERS) : 1;
+      toPlayerCount = (value) => Number.isFinite(value) ? clamp(Math.round(value), 1, MAX_PLAYERS2) : 1;
       percentFromPlayerCount = (players) => clamp((players - 1) * 10, 0, FRIEND_BONUS_MAX);
       requiredPercentFromPlayers = (players) => toBonusStep((toPlayerCount(players) - 1) * 10);
       sameRules = (a, b) => a.enabled === b.enabled && a.protectGold === b.protectGold && a.protectRainbow === b.protectRainbow && a.protectMaxStr === b.protectMaxStr && a.maxStrThreshold === b.maxStrThreshold && JSON.stringify(a.protectedRarities.slice().sort()) === JSON.stringify(b.protectedRarities.slice().sort());
@@ -15054,7 +15096,7 @@ label.qws-ed-opt { cursor: pointer; }
   // src/platform/modVersion.ts
   function getLocalVersion() {
     if (true) {
-      return "4.0.12";
+      return "4.0.13";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -17229,7 +17271,7 @@ label.qws-ed-opt { cursor: pointer; }
       } catch {
       }
       try {
-        players = await numPlayers.get();
+        players = await numPlayers.get() ?? void 0;
       } catch {
       }
       try {
@@ -17237,7 +17279,7 @@ label.qws-ed-opt { cursor: pointer; }
       } catch {
       }
       subs2.add(numPlayers.onChange((n) => {
-        players = n;
+        players = n ?? void 0;
       }));
       subs2.add(myCurrentGardenObject.onChange((next) => {
         gardenObject = next;
@@ -48470,12 +48512,9 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       const coinValue = Number(coinCandidate);
       const coinsRaw = Number.isFinite(coinValue) ? coinValue : null;
       const roomId = state5?.data?.roomId ?? state5?.fullState?.data?.roomId ?? state5?.roomId ?? null;
-      let playersCount = normalizedPlayers.length > 0 ? normalizedPlayers.length : slots.length;
-      try {
-        const atomValue = await Atoms.server.numPlayers.get();
-        playersCount = clampPlayers(atomValue);
-      } catch {
-      }
+      const playersCount = clampPlayers(
+        countRoomPlayers(state5) ?? (normalizedPlayers.length || slots.length)
+      );
       const persistedActivityLog = readAriesPath("activityLog.history");
       const activityLog = Array.isArray(persistedActivityLog) ? persistedActivityLog : normalizeActivityLog(slotData);
       const journalEntry = slotData?.journal ?? slotData?.data?.journal ?? slot?.journal ?? slot?.data?.journal ?? null;
@@ -48513,6 +48552,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       init_pageContext();
       init_storage();
       init_modVersion();
+      init_roomPlayerCount();
       init_playerIdentity();
       shareGlobal("buildPlayerStatePayload", buildPlayerStatePayload);
       shareGlobal("logPlayerStatePayload", buildPlayerStatePayload);
