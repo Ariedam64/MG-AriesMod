@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      4.0.11
+// @version      4.0.12
 // @include      /^https:\/\/1227719606223765687\.discordsays\.com\/.*[?&]mc_shell_frame=1(&|#|$)/
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -12727,6 +12727,65 @@ label.qws-ed-opt { cursor: pointer; }
     }
   });
 
+  // src/data/rules/inventory.ts
+  function inventoryEntryId(item) {
+    switch (item.itemType) {
+      case "Tool":
+        return item.toolId;
+      case "Seed":
+        return item.species;
+      case "Decor":
+        return item.decorId;
+      case "Egg":
+        return item.eggId;
+      default:
+        return item.id;
+    }
+  }
+  function countInventorySlots(items, toolRing) {
+    if (!Array.isArray(items)) return 0;
+    const pinned = /* @__PURE__ */ new Set();
+    if (Array.isArray(toolRing)) {
+      for (const entry of toolRing) {
+        if (!entry || typeof entry !== "object") continue;
+        const { itemType, id } = entry;
+        if (itemType != null && id != null) pinned.add(slotKey(itemType, id));
+      }
+    }
+    if (pinned.size === 0) return items.length;
+    let used = 0;
+    for (const item of items) {
+      if (item && typeof item === "object") {
+        const entry = item;
+        const id = inventoryEntryId(entry);
+        if (id != null && pinned.has(slotKey(entry.itemType, id))) continue;
+      }
+      used++;
+    }
+    return used;
+  }
+  function usedInventorySlots(inventory) {
+    if (Array.isArray(inventory)) return inventory.length;
+    if (!inventory || typeof inventory !== "object") return 0;
+    const { items, toolRing } = inventory;
+    return countInventorySlots(items, toolRing);
+  }
+  function isInventoryFullForUnstackable(inventory) {
+    return usedInventorySlots(inventory) >= INVENTORY_MAX_ITEMS;
+  }
+  function findInventoryItem(items, id) {
+    if (!Array.isArray(items) || typeof id !== "string" || !id) return null;
+    return items.find((item) => item && typeof item === "object" && item.id === id) ?? null;
+  }
+  var INVENTORY_MAX_ITEMS, slotKey;
+  var init_inventory = __esm({
+    "src/data/rules/inventory.ts"() {
+      "use strict";
+      INVENTORY_MAX_ITEMS = 100;
+      slotKey = (itemType, id) => `${String(itemType)}:${String(id)}`;
+    }
+  });
+
   // src/features/misc/inventoryReserve.ts
   function inventoryItems(raw) {
     if (!raw) return [];
@@ -12738,7 +12797,8 @@ label.qws-ed-opt { cursor: pointer; }
   }
   function refreshInventory(raw) {
     const items = inventoryItems(raw);
-    inventoryCount = items.length;
+    const toolRing = Array.isArray(raw) ? void 0 : raw?.toolRing ?? raw?.inventory?.toolRing;
+    inventoryCount = countInventorySlots(items, toolRing);
     for (const set2 of Object.values(owned)) set2.clear();
     for (const entry of items) {
       if (!entry || typeof entry !== "object") continue;
@@ -12798,6 +12858,7 @@ label.qws-ed-opt { cursor: pointer; }
       init_atoms();
       init_hub();
       init_storedFlag();
+      init_inventory();
       BLOCK_AT = 99;
       PATH_KEEP_INVENTORY_SLOT_FREE = "misc.keepInventorySlotFree";
       readInventorySlotReserveEnabled = () => readStoredFlag(PATH_KEEP_INVENTORY_SLOT_FREE);
@@ -13808,22 +13869,6 @@ label.qws-ed-opt { cursor: pointer; }
       garden2 = null;
       currentGardenObject = null;
       EGG_TOAST_TITLE = "Egg hatch locker";
-    }
-  });
-
-  // src/data/rules/inventory.ts
-  function isInventoryFullForUnstackable(items) {
-    return Array.isArray(items) && items.length >= INVENTORY_MAX_ITEMS;
-  }
-  function findInventoryItem(items, id) {
-    if (!Array.isArray(items) || typeof id !== "string" || !id) return null;
-    return items.find((item) => item && typeof item === "object" && item.id === id) ?? null;
-  }
-  var INVENTORY_MAX_ITEMS;
-  var init_inventory = __esm({
-    "src/data/rules/inventory.ts"() {
-      "use strict";
-      INVENTORY_MAX_ITEMS = 100;
     }
   });
 
@@ -15009,7 +15054,7 @@ label.qws-ed-opt { cursor: pointer; }
   // src/platform/modVersion.ts
   function getLocalVersion() {
     if (true) {
-      return "4.0.11";
+      return "4.0.12";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -25595,7 +25640,7 @@ label.qws-ed-opt { cursor: pointer; }
         let inventoryFull2 = false;
         try {
           const inventory = await Atoms.inventory.myInventory.get();
-          inventoryFull2 = isInventoryFullForUnstackable(inventory?.items);
+          inventoryFull2 = isInventoryFullForUnstackable(inventory);
         } catch {
         }
         if (inventoryFull2) {
@@ -45482,7 +45527,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
         item
       });
     }
-    return { pets, inventoryCount: items.length };
+    return { pets, inventoryCount: usedInventorySlots(inventory) };
   }
   async function readPetRows() {
     try {
@@ -45493,7 +45538,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
   }
   async function readInventoryCount() {
     try {
-      return inventoryItems3(await Atoms.inventory.myInventory.get()).length;
+      return usedInventorySlots(await Atoms.inventory.myInventory.get());
     } catch {
       return 0;
     }
@@ -45522,6 +45567,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       init_atoms();
       init_data();
       init_petValue();
+      init_inventory();
       init_pets();
       init_catalogs();
       INVENTORY_CAPACITY = 98;
