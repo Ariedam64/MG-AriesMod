@@ -125,6 +125,7 @@ const SUITES = {
   railbellart: ["checkRailBellArt", "dom-stub"],
   autostorepartial: ["checkAutoStorePartialWithdraw", "dom-stub"],
   inventoryslots: ["checkInventorySlots", "dom-stub"],
+  roomplayers: ["checkRoomPlayerCount", "dom-stub"],
 };
 
 /** Problems with how suites are registered: a file with no entry, or package.json out of step. */
