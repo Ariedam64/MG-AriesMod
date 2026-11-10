@@ -169,6 +169,8 @@ Get it from [github.com/Ariedam64/MG-CommunityHub](https://github.com/Ariedam64/
 
 ## Support
 
-Bugs, suggestions, or just want to chat with other players? Join the [Discord server](https://discord.gg/qFpQ436HZc).
+Found a bug? Use the bug report button inside the mod: it sends the logs along with your report, and you can follow the answer from there.
+
+Suggestions, or just want to chat with other players? Join the [Discord server](https://discord.gg/qFpQ436HZc).
 
 If you'd like to support the project, there's a Ko-fi link in the Settings menu. Never required, always appreciated.
