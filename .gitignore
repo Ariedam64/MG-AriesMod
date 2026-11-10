@@ -2,3 +2,6 @@
 # this repo on purpose, so only the cache directory is excluded.
 node_modules/.cache/
 .superpowers/
+
+# Réglages locaux de Claude Code (propres à chaque machine)
+.claude/settings.local.json
