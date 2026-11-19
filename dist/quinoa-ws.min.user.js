@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      4.0.13
+// @version      4.0.14
 // @include      /^https:\/\/1227719606223765687\.discordsays\.com\/.*[?&]mc_shell_frame=1(&|#|$)/
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -99,6 +99,7 @@
       loaded: false,
       version: null,
       base: null,
+      manifest: null,
       ctors: null,
       app: null,
       renderer: null,
@@ -640,7 +641,7 @@
       if (hasGm()) {
         try {
           const res = await gmRequest(req, kind);
-          if (res.ok) return res;
+          if (res.status > 0) return res;
         } catch {
         }
       }
@@ -656,21 +657,77 @@
   }
   async function getOk(url, kind, options2) {
     const res = await request({ ...options2, url }, kind);
-    if (!res.ok || res.body == null) throw new Error(`HTTP ${res.status} for ${url}`);
+    if (!res.ok || res.body == null) throw new HttpError(res.status, url);
     return res.body;
   }
   async function getJSON(url, options2) {
     return JSON.parse(await getText(url, options2));
   }
-  var HARD_DEADLINE_GRACE_MS, isOk, getText, getBlob;
+  var HARD_DEADLINE_GRACE_MS, isOk, HttpError, getText, getBlob;
   var init_http = __esm({
     "src/platform/http.ts"() {
       "use strict";
       init_environment();
       HARD_DEADLINE_GRACE_MS = 2e3;
       isOk = (status2) => status2 >= 200 && status2 < 300;
+      HttpError = class extends Error {
+        constructor(status2, url) {
+          super(`HTTP ${status2} for ${url}`);
+          this.name = "HttpError";
+          this.status = status2;
+        }
+      };
       getText = (url, options2) => getOk(url, "text", options2);
       getBlob = (url, options2) => getOk(url, "blob", options2);
+    }
+  });
+
+  // src/game/sprites/data/manifest.ts
+  function isManifestPath(path) {
+    return MANIFEST_PATH_RE.test(path);
+  }
+  function manifestCandidates(resourceUrls) {
+    const names = [];
+    for (const url of resourceUrls) {
+      const match = typeof url === "string" ? LOADED_MANIFEST_RE.exec(url) : null;
+      if (match) {
+        names.push(match[1]);
+        break;
+      }
+    }
+    for (const name of [DEFAULT_MANIFEST, LEGACY_MANIFEST]) {
+      if (!names.includes(name)) names.push(name);
+    }
+    return names;
+  }
+  async function loadManifest(base, getJSON3, resourceUrls) {
+    for (const name of manifestCandidates(resourceUrls)) {
+      try {
+        return { name, manifest: await getJSON3(joinPath(base, name)) };
+      } catch (error) {
+        if (error instanceof HttpError && error.status === 404) continue;
+        throw error;
+      }
+    }
+    throw new ManifestMissingError(base);
+  }
+  var MANIFEST_FORMATS, DEFAULT_MANIFEST, LEGACY_MANIFEST, LOADED_MANIFEST_RE, MANIFEST_PATH_RE, ManifestMissingError;
+  var init_manifest = __esm({
+    "src/game/sprites/data/manifest.ts"() {
+      "use strict";
+      init_http();
+      init_path();
+      MANIFEST_FORMATS = ["bc7", "astc", "etc2", "bc3", "rgba8"];
+      DEFAULT_MANIFEST = "manifest.rgba8.json";
+      LEGACY_MANIFEST = "manifest.json";
+      LOADED_MANIFEST_RE = new RegExp(`/assets/(manifest\\.(?:${MANIFEST_FORMATS.join("|")})\\.json)(?:[?#]|$)`);
+      MANIFEST_PATH_RE = /(^|\/)manifest(\.[^/.]+)?\.json$/;
+      ManifestMissingError = class extends Error {
+        constructor(base) {
+          super(`No asset manifest found under ${base}`);
+          this.name = "ManifestMissingError";
+        }
+      };
     }
   });
 
@@ -766,7 +823,7 @@
     return Number.isFinite(value) && value > 0 ? value : 1;
   }
   function isAtlasJsonPath(path) {
-    return path.endsWith(".json") && path !== "manifest.json" && !path.startsWith("audio/");
+    return path.endsWith(".json") && !isManifestPath(path) && !path.startsWith("audio/");
   }
   function extractAtlasJsons(manifest) {
     const jsons = /* @__PURE__ */ new Set();
@@ -811,6 +868,7 @@
       init_path();
       init_http();
       init_pageContext();
+      init_manifest();
       ASSET_REQUEST = { preferGm: true, timeoutMs: 5e3 };
       getJSON2 = (url) => getJSON(url, ASSET_REQUEST);
       getBlob2 = (url) => getBlob(url, ASSET_REQUEST);
@@ -897,6 +955,41 @@
     }
   });
 
+  // src/game/sprites/retry.ts
+  function retryDelayMs(attempt) {
+    return Math.min(FIRST_DELAY_MS * 2 ** attempt, MAX_DELAY_MS);
+  }
+  async function runWithBackoff(task, options2) {
+    const maxAttempts = options2.maxAttempts ?? 6;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await task();
+        return;
+      } catch (error) {
+        options2.onError?.(error);
+        if (options2.isFatal?.(error)) {
+          console.warn("[MG SpriteCatalog] giving up, this error will not go away by retrying", error);
+          return;
+        }
+        if (attempt + 1 >= maxAttempts) {
+          console.warn(`[MG SpriteCatalog] giving up after ${maxAttempts} failed attempts`, error);
+          return;
+        }
+        const delay = retryDelayMs(attempt);
+        console.error(`[MG SpriteCatalog] failed, retrying in ${delay} ms`, error);
+        await options2.sleep(delay);
+      }
+    }
+  }
+  var FIRST_DELAY_MS, MAX_DELAY_MS;
+  var init_retry = __esm({
+    "src/game/sprites/retry.ts"() {
+      "use strict";
+      FIRST_DELAY_MS = 2e3;
+      MAX_DELAY_MS = 6e4;
+    }
+  });
+
   // src/game/gameVersion.ts
   function fromUrls(urls) {
     for (const url of urls) {
@@ -952,9 +1045,33 @@
       await sleep(120);
     }
   }
+  function loadedResourceUrls() {
+    try {
+      return pageWindow.performance.getEntriesByType("resource").map((entry) => entry.name);
+    } catch {
+      return [];
+    }
+  }
+  function fetchManifest(base) {
+    const cached2 = manifestPromises.get(base);
+    if (cached2) return cached2;
+    const pending3 = loadManifest(base, (url) => getJSON2(url), loadedResourceUrls()).then(
+      ({ name, manifest }) => {
+        ctx.state.manifest = name;
+        return manifest;
+      }
+    );
+    manifestPromises.set(base, pending3);
+    pending3.catch((error) => {
+      if (!(error instanceof ManifestMissingError) && manifestPromises.get(base) === pending3) {
+        manifestPromises.delete(base);
+      }
+    });
+    return pending3;
+  }
   async function prefetchAtlas(base) {
     try {
-      const manifest = await getJSON2(joinPath(base, "manifest.json"));
+      const manifest = await fetchManifest(base);
       const atlasJsons = await loadAtlasJsons(base, manifest);
       const blobs = /* @__PURE__ */ new Map();
       for (const [path, data] of Object.entries(atlasJsons)) {
@@ -973,7 +1090,7 @@
   }
   async function loadTextures(base, prefetched) {
     const usePrefetched = prefetched && prefetched.base === base ? prefetched : null;
-    const atlasJsons = usePrefetched?.atlasJsons ?? await loadAtlasJsons(base, await getJSON2(joinPath(base, "manifest.json")));
+    const atlasJsons = usePrefetched?.atlasJsons ?? await loadAtlasJsons(base, await fetchManifest(base));
     atlasBundle = usePrefetched ?? { base, atlasJsons, blobs: /* @__PURE__ */ new Map() };
     atlasBundleResolve?.(atlasBundle);
     atlasBundleResolve = null;
@@ -1038,19 +1155,15 @@
     });
   }
   async function startWithRetry() {
-    const RETRY_DELAY_MS = 2e3;
-    for (; ; ) {
-      try {
-        await start();
-        return;
-      } catch (err) {
-        console.error("[MG SpriteCatalog] failed, retrying", err);
+    await runWithBackoff(start, {
+      isFatal: (error) => error instanceof ManifestMissingError,
+      sleep,
+      onError: () => {
         ctx.state.started = false;
-        await sleep(RETRY_DELAY_MS);
       }
-    }
+    });
   }
-  var ctx, hooks, prefetchPromise, atlasBundle, atlasBundleResolve, atlasBundleReady, SKIPPED_ATLAS_PATTERNS;
+  var ctx, hooks, prefetchPromise, atlasBundle, atlasBundleResolve, atlasBundleReady, manifestPromises, SKIPPED_ATLAS_PATTERNS;
   var init_sprites = __esm({
     "src/game/sprites/index.ts"() {
       "use strict";
@@ -1061,7 +1174,9 @@
       init_rendererHealth();
       init_async();
       init_assetFetcher();
+      init_manifest();
       init_atlasToTextures();
+      init_retry();
       init_path();
       init_gameVersion();
       ctx = spriteContext;
@@ -1073,6 +1188,7 @@
       atlasBundleReady = new Promise((resolve) => {
         atlasBundleResolve = resolve;
       });
+      manifestPromises = /* @__PURE__ */ new Map();
       SKIPPED_ATLAS_PATTERNS = [/(^|\/)weather(-\d+x)?\.json$/i];
       void startWithRetry();
     }
@@ -2892,7 +3008,7 @@
     } catch {
     }
   }
-  var AUTO_RECO_TEMPORARILY_DISABLED, PATH_ENABLED, PATH_DELAY, MAX_DELAY_MS, DEFAULT_DELAY_MS, readAutoRecoEnabled, writeAutoRecoEnabled, normalizeDelay;
+  var AUTO_RECO_TEMPORARILY_DISABLED, PATH_ENABLED, PATH_DELAY, MAX_DELAY_MS2, DEFAULT_DELAY_MS, readAutoRecoEnabled, writeAutoRecoEnabled, normalizeDelay;
   var init_settings2 = __esm({
     "src/features/autoReco/settings.ts"() {
       "use strict";
@@ -2902,11 +3018,11 @@
       AUTO_RECO_TEMPORARILY_DISABLED = true;
       PATH_ENABLED = "misc.autoRecoEnabled";
       PATH_DELAY = "misc.autoRecoDelayMs";
-      MAX_DELAY_MS = 5 * 6e4;
+      MAX_DELAY_MS2 = 5 * 6e4;
       DEFAULT_DELAY_MS = 6e4;
       readAutoRecoEnabled = () => readStoredFlag(PATH_ENABLED);
       writeAutoRecoEnabled = (on) => writeStoredFlag(PATH_ENABLED, on);
-      normalizeDelay = (ms) => clamp(Number.isFinite(ms) ? Math.floor(ms) : DEFAULT_DELAY_MS, 0, MAX_DELAY_MS);
+      normalizeDelay = (ms) => clamp(Number.isFinite(ms) ? Math.floor(ms) : DEFAULT_DELAY_MS, 0, MAX_DELAY_MS2);
     }
   });
 
@@ -15096,7 +15212,7 @@ label.qws-ed-opt { cursor: pointer; }
   // src/platform/modVersion.ts
   function getLocalVersion() {
     if (true) {
-      return "4.0.13";
+      return "4.0.14";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
