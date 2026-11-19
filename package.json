@@ -100,7 +100,8 @@
     "check:railbellart": "node scripts/runChecks.mjs railbellart",
     "check:autostorepartial": "node scripts/runChecks.mjs autostorepartial",
     "check:inventoryslots": "node scripts/runChecks.mjs inventoryslots",
-    "check:roomplayers": "node scripts/runChecks.mjs roomplayers"
+    "check:roomplayers": "node scripts/runChecks.mjs roomplayers",
+    "check:spritemanifest": "node scripts/runChecks.mjs spritemanifest"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",
