@@ -5,8 +5,11 @@ import { resolvePixiFast, waitForCtors } from './pixi/resolvePixi';
 import { watchRendererHealth } from './pixi/rendererHealth';
 import { sleep } from './utils/async';
 import { getJSON, getBlob, blobToImage, loadAtlasJsons, isKtx2Path, loadKtx2AsTexture } from './data/assetFetcher';
+import { loadManifest, ManifestMissingError } from './data/manifest';
 import { buildAtlasTextures, isAtlas } from './pixi/atlasToTextures';
+import { runWithBackoff } from './retry';
 import { joinPath, relPath } from './utils/path';
+import type { ManifestBundle } from './types';
 import { detectGameVersion } from '../gameVersion';
 
 /**
@@ -66,6 +69,38 @@ async function waitForGameVersion(timeoutMs = 12_000): Promise<string> {
   }
 }
 
+/** URLs the page has already requested, to find the manifest the game itself picked. */
+function loadedResourceUrls(): string[] {
+  try {
+    return pageWindow.performance.getEntriesByType('resource').map(entry => entry.name);
+  } catch {
+    return [];
+  }
+}
+
+// One manifest lookup per asset base, shared by the prefetch and
+// `loadTextures`, so a manifest missing under every name is asked for only
+// once. Any other failure is forgotten, so the next attempt asks again.
+const manifestPromises = new Map<string, Promise<ManifestBundle>>();
+
+function fetchManifest(base: string): Promise<ManifestBundle> {
+  const cached = manifestPromises.get(base);
+  if (cached) return cached;
+  const pending = loadManifest<ManifestBundle>(base, url => getJSON<ManifestBundle>(url), loadedResourceUrls()).then(
+    ({ name, manifest }) => {
+      ctx.state.manifest = name;
+      return manifest;
+    },
+  );
+  manifestPromises.set(base, pending);
+  pending.catch(error => {
+    if (!(error instanceof ManifestMissingError) && manifestPromises.get(base) === pending) {
+      manifestPromises.delete(base);
+    }
+  });
+  return pending;
+}
+
 /**
  * Downloads the manifest, the atlas JSONs and the image blobs early, while
  * the game is still starting: the network is the heavy part. KTX2 atlases are
@@ -73,7 +108,7 @@ async function waitForGameVersion(timeoutMs = 12_000): Promise<string> {
  */
 async function prefetchAtlas(base: string): Promise<PrefetchedAtlas | null> {
   try {
-    const manifest = await getJSON<any>(joinPath(base, 'manifest.json'));
+    const manifest = await fetchManifest(base);
     const atlasJsons = await loadAtlasJsons(base, manifest);
     const blobs = new Map<string, Blob>();
     for (const [path, data] of Object.entries<any>(atlasJsons)) {
@@ -102,7 +137,7 @@ const SKIPPED_ATLAS_PATTERNS = [/(^|\/)weather(-\d+x)?\.json$/i];
 async function loadTextures(base: string, prefetched?: PrefetchedAtlas | null) {
   const usePrefetched = prefetched && prefetched.base === base ? prefetched : null;
   const atlasJsons =
-    usePrefetched?.atlasJsons ?? (await loadAtlasJsons(base, await getJSON<any>(joinPath(base, 'manifest.json'))));
+    usePrefetched?.atlasJsons ?? (await loadAtlasJsons(base, await fetchManifest(base)));
 
   // Publish the bundle even when the prefetch failed and the JSONs were loaded
   // again here: the skin system must not depend on which path won. Blobs stay
@@ -195,19 +230,19 @@ async function start() {
 // clears it, so a transient failure (version detection or ctors resolution
 // timing out) used to leave `__MG_SPRITE_STATE__` unset for the whole session,
 // silently killing every Pixi feature (crop price, locker indicator, sell all
-// pets, notification bell) behind one console.error. It retries forever
-// instead, resetting the guard so the next attempt can run.
+// pets, notification bell) behind one console.error. It retries instead,
+// resetting the guard so the next attempt can run, with a growing delay and a
+// bounded number of attempts: retrying every 2 s forever sent millions of
+// requests a day once the manifest started answering 404. A manifest missing
+// under every known name is not retried at all; the game reloads the page on
+// each new version, which starts the catalog again.
 async function startWithRetry(): Promise<void> {
-  const RETRY_DELAY_MS = 2000;
-  for (;;) {
-    try {
-      await start();
-      return;
-    } catch (err) {
-      console.error('[MG SpriteCatalog] failed, retrying', err);
+  await runWithBackoff(start, {
+    isFatal: error => error instanceof ManifestMissingError,
+    sleep,
+    onError: () => {
       ctx.state.started = false;
-      await sleep(RETRY_DELAY_MS);
-    }
-  }
+    },
+  });
 }
 void startWithRetry();

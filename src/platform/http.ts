@@ -30,9 +30,12 @@ export interface HttpRequest {
    */
   timeoutMs?: number;
   /**
-   * Try GM first and fall back to fetch when GM is missing, fails, or answers
-   * outside 2xx. For game assets and catalogs, which have always gone through
-   * the extension.
+   * Try GM first and fall back to fetch only when GM is missing, fails (network
+   * error, timeout) or reports status 0 (Tampermonkey's answer when `@connect`
+   * blocks the host). A real HTTP status received by GM, 404 or 500 included,
+   * is returned as is: asking again over fetch would only send the same request
+   * twice. For game assets and catalogs, which have always gone through the
+   * extension.
    */
   preferGm?: boolean;
 }
@@ -113,7 +116,7 @@ export async function request<K extends BodyKind>(req: HttpRequest, kind: K): Pr
     if (hasGm()) {
       try {
         const res = await gmRequest(req, kind);
-        if (res.ok) return res;
+        if (res.status > 0) return res;
       } catch {}
     }
     return fetchRequest(req, kind);
@@ -129,11 +132,22 @@ export async function request<K extends BodyKind>(req: HttpRequest, kind: K): Pr
   }
 }
 
+/** A request that got an answer, but not a usable one: a status outside 2xx, or no body. */
+export class HttpError extends Error {
+  readonly status: number;
+
+  constructor(status: number, url: string) {
+    super(`HTTP ${status} for ${url}`);
+    this.name = "HttpError";
+    this.status = status;
+  }
+}
+
 type GetOptions = Omit<HttpRequest, "url" | "method" | "body">;
 
 async function getOk<K extends BodyKind>(url: string, kind: K, options?: GetOptions): Promise<BodyOf<K>> {
   const res = await request({ ...options, url }, kind);
-  if (!res.ok || res.body == null) throw new Error(`HTTP ${res.status} for ${url}`);
+  if (!res.ok || res.body == null) throw new HttpError(res.status, url);
   return res.body;
 }
 

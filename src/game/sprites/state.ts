@@ -7,6 +7,7 @@ function createInitialState(): SpriteState {
     loaded: false,
     version: null,
     base: null,
+    manifest: null,
     ctors: null,
     app: null,
     renderer: null,

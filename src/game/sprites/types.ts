@@ -20,6 +20,8 @@ export interface SpriteState {
   loaded: boolean;
   version: string | null;
   base: string | null;
+  /** The manifest file the catalog was built from (`manifest.rgba8.json`, ...), for diagnosis. */
+  manifest: string | null;
   ctors: any | null;
   app: any | null;
   renderer: any | null;

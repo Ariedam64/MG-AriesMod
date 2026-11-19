@@ -2,11 +2,13 @@ import { joinPath, relPath } from '../utils/path';
 import type { ManifestBundle, ManifestSrc } from '../types';
 import { getBlob as httpGetBlob, getJSON as httpGetJSON } from '../../../platform/http';
 import { pageWindow } from '../../../platform/pageContext';
+import { isManifestPath } from './manifest';
 
 // Assets go through GM_xmlhttpRequest first, which crosses into the
 // extension's content-script bridge. That bridge can be slow to attach at
-// document-start, so the GM call is bounded and falls back to fetch: the
-// sprite catalog boot must never hang on it.
+// document-start, so the GM call is bounded and falls back to fetch when GM
+// fails: the sprite catalog boot must never hang on it. A real HTTP answer
+// from GM (a 404 included) is final and is not asked again over fetch.
 const ASSET_REQUEST = { preferGm: true, timeoutMs: 5_000 };
 
 export const getJSON = <T = any>(url: string): Promise<T> => httpGetJSON<T>(url, ASSET_REQUEST);
@@ -139,8 +141,9 @@ function srcResolution(entry: ManifestSrc): number {
   return Number.isFinite(value) && value > 0 ? value : 1;
 }
 
-function isAtlasJsonPath(path: string): boolean {
-  return path.endsWith('.json') && path !== 'manifest.json' && !path.startsWith('audio/');
+/** True for an atlas JSON listed by the manifest; never for a manifest itself (`manifest.json`, `manifest.<format>.json`). */
+export function isAtlasJsonPath(path: string): boolean {
+  return path.endsWith('.json') && !isManifestPath(path) && !path.startsWith('audio/');
 }
 
 /**
