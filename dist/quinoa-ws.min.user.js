@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      4.0.14
+// @version      4.0.15
 // @include      /^https:\/\/1227719606223765687\.discordsays\.com\/.*[?&]mc_shell_frame=1(&|#|$)/
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -15212,7 +15212,7 @@ label.qws-ed-opt { cursor: pointer; }
   // src/platform/modVersion.ts
   function getLocalVersion() {
     if (true) {
-      return "4.0.14";
+      return "4.0.15";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -25604,6 +25604,84 @@ label.qws-ed-opt { cursor: pointer; }
     }
   });
 
+  // src/features/pets/trough.ts
+  function hasTroughDecor(garden3) {
+    for (const key2 of ["tileObjects", "boardwalkTileObjects"]) {
+      const objects = garden3[key2];
+      if (!isRecord5(objects)) continue;
+      for (const obj of Object.values(objects)) {
+        if (isRecord5(obj) && obj.objectType === "decor" && obj.decorId === TROUGH_DECOR_ID) return true;
+      }
+    }
+    return false;
+  }
+  function troughFedPetIds(myData2, dietOf) {
+    if (!isRecord5(myData2)) return null;
+    const garden3 = myData2.garden;
+    const inventory = myData2.inventory;
+    if (!isRecord5(garden3) || !isRecord5(inventory)) return null;
+    const fed = /* @__PURE__ */ new Set();
+    if (!hasTroughDecor(garden3)) return fed;
+    const favourites = new Set(
+      (Array.isArray(inventory.favoritedItemIds) ? inventory.favoritedItemIds : []).map((id) => String(id))
+    );
+    const storages = Array.isArray(inventory.storages) ? inventory.storages : [];
+    const edible = /* @__PURE__ */ new Set();
+    for (const storage of storages) {
+      if (!isRecord5(storage) || storage.decorId !== TROUGH_DECOR_ID || !Array.isArray(storage.items)) continue;
+      for (const item of storage.items) {
+        if (!isRecord5(item) || item.itemType !== PRODUCE) continue;
+        if (favourites.has(String(item.id))) continue;
+        if (typeof item.species === "string") edible.add(item.species);
+      }
+    }
+    if (edible.size === 0) return fed;
+    const riddenPetId = myData2.riddenPetId ?? null;
+    const slots = Array.isArray(myData2.petSlots) ? myData2.petSlots : [];
+    for (const slot of slots) {
+      if (!isRecord5(slot) || slot.id == null) continue;
+      const id = String(slot.id);
+      if (riddenPetId != null && id === String(riddenPetId)) continue;
+      const diet = dietOf(String(slot.petSpecies ?? ""));
+      if (diet.some((crop) => edible.has(crop))) fed.add(id);
+    }
+    return fed;
+  }
+  async function readTroughFedPetIds() {
+    try {
+      return troughFedPetIds(await Atoms.data.myData.get(), getCompatibleCropsForSpecies);
+    } catch {
+      return null;
+    }
+  }
+  async function onTroughFedChange(cb) {
+    let last;
+    return Atoms.data.myData.onChangeNow((myData2) => {
+      let ids;
+      try {
+        ids = troughFedPetIds(myData2, getCompatibleCropsForSpecies);
+      } catch {
+        ids = null;
+      }
+      const sig = signatureOf(ids);
+      if (sig === last) return;
+      last = sig;
+      cb(ids);
+    });
+  }
+  var TROUGH_DECOR_ID, PRODUCE, isRecord5, signatureOf;
+  var init_trough = __esm({
+    "src/features/pets/trough.ts"() {
+      "use strict";
+      init_atoms();
+      init_feeding();
+      TROUGH_DECOR_ID = "FeedingTrough";
+      PRODUCE = "Produce";
+      isRecord5 = (v) => typeof v === "object" && v !== null;
+      signatureOf = (ids) => ids ? [...ids].sort().join(",") : "null";
+    }
+  });
+
   // src/features/pets/teamSwitch.ts
   function getLastUsedTeamId() {
     return lastUsedTeamId;
@@ -25895,6 +25973,7 @@ label.qws-ed-opt { cursor: pointer; }
       init_inventoryPets();
       init_petPicker();
       init_teams();
+      init_trough();
       init_teamStore();
       init_teamSwitch();
       init_teamSync();
@@ -25917,6 +25996,9 @@ label.qws-ed-opt { cursor: pointer; }
         getInstantFeedAllowedCrops,
         isInstantFeedCropAllowed,
         setInstantFeedCropAllowed,
+        /** The pets the Feeding Trough will feed, or null when unreadable. */
+        readTroughFedPetIds,
+        onTroughFedChange,
         getTeams,
         getTeamById,
         /** Calls back at once with the current teams, then on every change. */
@@ -25977,6 +26059,10 @@ label.qws-ed-opt { cursor: pointer; }
     const entry = prefs2.pets[petId] ?? {};
     return { enabled: entry.enabled ?? false, thresholdPct: clampPct(entry.thresholdPct ?? baseThreshold) };
   }
+  function hungerAlertDue(petId, enabled2, hungerPct, thresholdPct, troughFedIds) {
+    if (!enabled2 || !Number.isFinite(hungerPct) || hungerPct >= thresholdPct) return false;
+    return !troughFedIds?.has(petId);
+  }
   function evaluatePet(pet) {
     const petId = String(pet?.slot?.id || "");
     if (!petId || !prefs2.globalEnabled) {
@@ -25984,8 +26070,7 @@ label.qws-ed-opt { cursor: pointer; }
       return;
     }
     const { enabled: enabled2, thresholdPct } = prefFor(petId);
-    const hungerPct = PetsService.getHungerPctFor(pet);
-    const below = enabled2 && Number.isFinite(hungerPct) && hungerPct < thresholdPct;
+    const below = hungerAlertDue(petId, enabled2, PetsService.getHungerPctFor(pet), thresholdPct, troughFed);
     const loopKey = prefs2.generalEnabled ? "pets:general" : `pet:${petId}`;
     if (!below) {
       audio.stopLoop(loopKey);
@@ -26003,7 +26088,7 @@ label.qws-ed-opt { cursor: pointer; }
       }
     }
   }
-  var PREFS_PATH2, ACTIVE_PET_SLOTS, clampPct, prefs2, started2, lastPets, wasBelow, PetAlertService;
+  var PREFS_PATH2, ACTIVE_PET_SLOTS, clampPct, prefs2, started2, lastPets, wasBelow, troughFed, PetAlertService;
   var init_petAlerts = __esm({
     "src/features/notifier/petAlerts.ts"() {
       "use strict";
@@ -26023,6 +26108,7 @@ label.qws-ed-opt { cursor: pointer; }
       started2 = false;
       lastPets = [];
       wasBelow = /* @__PURE__ */ new Map();
+      troughFed = null;
       PetAlertService = {
         async start() {
           if (started2) return;
@@ -26030,6 +26116,13 @@ label.qws-ed-opt { cursor: pointer; }
           try {
             await PetsService.onPetsChangeNow((pets) => {
               lastPets = Array.isArray(pets) ? pets.slice(0, ACTIVE_PET_SLOTS) : [];
+              evaluateAll();
+            });
+          } catch {
+          }
+          try {
+            await PetsService.onTroughFedChange((ids) => {
+              troughFed = ids;
               evaluateAll();
             });
           } catch {
@@ -31757,12 +31850,12 @@ Click to download`;
       else map2[sectionId] = true;
     });
   }
-  function isRecord5(value) {
+  function isRecord6(value) {
     return typeof value === "object" && value !== null;
   }
   function inventoryItems2(raw) {
     if (Array.isArray(raw)) return raw;
-    if (isRecord5(raw) && Array.isArray(raw.items)) return raw.items;
+    if (isRecord6(raw) && Array.isArray(raw.items)) return raw.items;
     return [];
   }
   function mutationTypeOf(mutations) {
@@ -31805,13 +31898,13 @@ Click to download`;
     }
     const counts2 = /* @__PURE__ */ new Map();
     for (const item of inventoryItems2(inventory)) {
-      if (!isRecord5(item)) continue;
+      if (!isRecord6(item)) continue;
       const itemType = typeof item.itemType === "string" ? item.itemType.toLowerCase() : "";
       if (itemType !== "pet") continue;
       addSpecies(counts2, item.petSpecies, item.mutations);
     }
     for (const entry of Array.isArray(activePets2) ? activePets2 : []) {
-      if (!isRecord5(entry) || !isRecord5(entry.slot)) continue;
+      if (!isRecord6(entry) || !isRecord6(entry.slot)) continue;
       addSpecies(counts2, entry.slot.petSpecies, entry.slot.mutations);
     }
     if (!counts2.size) return;
@@ -45035,7 +45128,11 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     } catch {
       return empty;
     }
-    const hungry = pets.filter((pet) => petIdOf(pet) && PetsService.getHungerPctFor(pet) <= thresholdPct);
+    const troughFed2 = await PetsService.readTroughFedPetIds().catch(() => null);
+    const hungry = pets.filter((pet) => {
+      const id = petIdOf(pet);
+      return id && !troughFed2?.has(id) && PetsService.getHungerPctFor(pet) <= thresholdPct;
+    });
     if (hungry.length === 0) return empty;
     let inventory = [];
     let favourites = /* @__PURE__ */ new Set();
@@ -48073,8 +48170,8 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     return { ok: true, payload };
   }
   function prepareContext(raw, maxChars = BUG_REPORT_LIMITS.contextChars) {
-    const redacted = redactValue(isRecord6(raw) ? raw : {});
-    const context = isRecord6(redacted) ? redacted : {};
+    const redacted = redactValue(isRecord7(raw) ? raw : {});
+    const context = isRecord7(redacted) ? redacted : {};
     if (context.logs !== void 0) context.logs = normalizeLogs(context.logs);
     if (context.breadcrumbs !== void 0) context.breadcrumbs = normalizeBreadcrumbs(context.breadcrumbs);
     return fitContext(context, maxChars);
@@ -48083,7 +48180,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     if (!Array.isArray(list)) return [];
     const out = [];
     for (const entry of list.slice(-max)) {
-      if (!isRecord6(entry)) continue;
+      if (!isRecord7(entry)) continue;
       const item = {
         t: typeof entry.t === "number" && Number.isFinite(entry.t) ? entry.t : 0,
         level: oneOf(LOG_LEVELS, entry.level, "log"),
@@ -48098,7 +48195,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     if (!Array.isArray(list)) return [];
     const out = [];
     for (const entry of list.slice(-max)) {
-      if (!isRecord6(entry)) continue;
+      if (!isRecord7(entry)) continue;
       const item = {
         t: typeof entry.t === "number" && Number.isFinite(entry.t) ? entry.t : 0,
         msg: clipLine(clipText(entry.msg, Number.MAX_SAFE_INTEGER), BUG_REPORT_LIMITS.breadcrumbMessage)
@@ -48121,7 +48218,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
     }
     return out;
   }
-  var oneOf, isRecord6, sizeOf;
+  var oneOf, isRecord7, sizeOf;
   var init_prepare = __esm({
     "src/lib/bugReport/prepare.ts"() {
       "use strict";
@@ -48129,7 +48226,7 @@ button.qws-skins-thumb.is-busy { opacity: .6; pointer-events: none; }
       init_redact();
       init_types();
       oneOf = (list, value, fallback) => typeof value === "string" && list.includes(value) ? value : fallback;
-      isRecord6 = (value) => !!value && typeof value === "object" && !Array.isArray(value);
+      isRecord7 = (value) => !!value && typeof value === "object" && !Array.isArray(value);
       sizeOf = (value) => JSON.stringify(value).length;
     }
   });
