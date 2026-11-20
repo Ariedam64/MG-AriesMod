@@ -127,6 +127,7 @@ const SUITES = {
   inventoryslots: ["checkInventorySlots", "dom-stub"],
   roomplayers: ["checkRoomPlayerCount", "dom-stub"],
   spritemanifest: ["checkSpriteManifestRetry", "window"],
+  troughfeeding: ["checkTroughFeeding", "dom-stub"],
 };
 
 /** Problems with how suites are registered: a file with no entry, or package.json out of step. */
