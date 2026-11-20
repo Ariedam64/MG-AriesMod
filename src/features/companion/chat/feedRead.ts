@@ -91,7 +91,13 @@ export async function reviewFeeding(search?: Partial<FeedSearch>): Promise<FeedR
     return empty;
   }
 
-  const hungry = pets.filter((pet) => petIdOf(pet) && PetsService.getHungerPctFor(pet) <= thresholdPct);
+  // The game feeds these pets from the Feeding Trough by itself: asking would
+  // be noise. When the trough cannot be read (null), nobody is left out.
+  const troughFed = await PetsService.readTroughFedPetIds().catch(() => null);
+  const hungry = pets.filter((pet) => {
+    const id = petIdOf(pet);
+    return id && !troughFed?.has(id) && PetsService.getHungerPctFor(pet) <= thresholdPct;
+  });
   if (hungry.length === 0) return empty;
 
   let inventory: CropItem[] = [];

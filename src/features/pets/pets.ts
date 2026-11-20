@@ -25,6 +25,7 @@ import {
 import { getInventoryPets, getPetLookup } from "./inventoryPets";
 import { chooseSlotPet } from "./petPicker";
 import { createTeam, deleteTeam, saveTeam, setTeamsOrder } from "./teams";
+import { onTroughFedChange, readTroughFedPetIds } from "./trough";
 import { getTeamById, getTeams, onTeamsChange } from "./teamStore";
 import { getActivePetIds, getActiveTeamId, getLastUsedTeamId, usePetIds, useTeam, waitForTeamEquipped } from "./teamSwitch";
 import { isTeamSyncEnabled, setTeamSyncEnabled, startPetTeamSync } from "./teamSync";
@@ -47,6 +48,10 @@ export const PetsService = {
   getInstantFeedAllowedCrops,
   isInstantFeedCropAllowed,
   setInstantFeedCropAllowed,
+
+  /** The pets the Feeding Trough will feed, or null when unreadable. */
+  readTroughFedPetIds,
+  onTroughFedChange,
 
   getTeams,
   getTeamById,
