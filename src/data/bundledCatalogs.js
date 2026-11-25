@@ -189,15 +189,22 @@ export const tileRefsItems = {
   Touchpad: 42,
 
   // V.Item
+  AmberboundPotion: "sprite/item/AmberboundPotion",
   AmberlitPotion: "sprite/item/AmberlitPotion",
   ChilledPotion: "sprite/item/ChilledPotion",
   CropCleanser: "sprite/item/CropCleanser",
+  DawnboundPotion: "sprite/item/DawnboundPotion",
   DawnlitPotion: "sprite/item/DawnlitPotion",
   FrozenPotion: "sprite/item/FrozenPotion",
   GoldPotion: "sprite/item/GoldPotion",
+  HydroCleanser: "sprite/item/HydroCleanser",
+  LunarCleanser: "sprite/item/LunarCleanser",
   PlanterPot: "sprite/item/PlanterPot",
   RainbowPotion: "sprite/item/RainbowPotion",
+  RainWardShard: "sprite/item/RainWardShard",
   Shovel: "sprite/item/Shovel",
+  ThunderchargedPotion: "sprite/item/ThunderchargedPotion",
+  ThunderstruckPotion: "sprite/item/ThunderstruckPotion",
   WateringCan: "sprite/item/WateringCan",
   WetPotion: "sprite/item/WetPotion",
 };
@@ -2608,7 +2615,8 @@ export const toolCatalog = {
     description: "Speeds up growth of plant by 5 minutes. SINGLE USE.",
     isOneTimePurchase: false,
     baseTileScale: 0.6,
-    maxInventoryQuantity: 99
+    maxInventoryQuantity: 99,
+    eligibleShops: ["Tool"]
   },
   PlanterPot: {
     tileRef: tileRefsItems.PlanterPot,
@@ -2618,7 +2626,8 @@ export const toolCatalog = {
     rarity: rarity.Common,
     description: "Extract a plant to your inventory (can be replanted). SINGLE USE.",
     isOneTimePurchase: false,
-    baseTileScale: 0.8
+    baseTileScale: 0.8,
+    eligibleShops: ["Tool"]
   },
   Shovel: {
     tileRef: tileRefsItems.Shovel,
@@ -2628,7 +2637,8 @@ export const toolCatalog = {
     rarity: rarity.Uncommon,
     description: "Remove plants from your garden. UNLIMITED USES.",
     isOneTimePurchase: true,
-    baseTileScale: 0.7
+    baseTileScale: 0.7,
+    eligibleShops: ["Tool"]
   },
   RainbowPotion: {
     tileRef: tileRefsItems.RainbowPotion,
@@ -2638,18 +2648,97 @@ export const toolCatalog = {
     rarity: rarity.Celestial,
     description: "Adds the Rainbow mutation to a crop in your garden. SINGLE USE.",
     isOneTimePurchase: true,
-    baseTileScale: 1
+    baseTileScale: 1,
+    eligibleShops: []
   },
   CropCleanser: {
-        tileRef: tileRefsItems.CropCleanser,
-        name: "Crop Cleanser",
-        coinPrice: 8e4,
-        creditPrice: 7,
-        rarity: rarity.Common,
-        isOneTimePurchase: !1,
-        baseTileScale: 1,
-        maxInventoryQuantity: 99
-    },
+    tileRef: tileRefsItems.CropCleanser,
+    name: "Crop Cleanser",
+    coinPrice: 8e4,
+    creditPrice: 7,
+    rarity: rarity.Common,
+    isOneTimePurchase: false,
+    baseTileScale: 1,
+    maxInventoryQuantity: 99,
+    eligibleShops: ["Tool"]
+  },
+  HydroCleanser: {
+    tileRef: tileRefsItems.HydroCleanser,
+    name: "Hydro Cleanser",
+    coinPrice: 3e6,
+    creditPrice: 39,
+    rarity: rarity.Rare,
+    isOneTimePurchase: false,
+    maxInventoryQuantity: 99,
+    eligibleShops: ["Tool"],
+    clearsMutationGroups: ["Hydro"]
+  },
+  LunarCleanser: {
+    tileRef: tileRefsItems.LunarCleanser,
+    name: "Lunar Cleanser",
+    isOneTimePurchase: false,
+    maxInventoryQuantity: 99,
+    eligibleShops: ["Tool"]
+  },
+  // Mutation potions. Weather shops sell them; prices are left to MG API.
+  GoldPotion: {
+    tileRef: tileRefsItems.GoldPotion,
+    name: "Gold Potion",
+    grantedMutation: "Gold"
+  },
+  ChilledPotion: {
+    tileRef: tileRefsItems.ChilledPotion,
+    name: "Chilled Potion",
+    grantedMutation: "Chilled",
+    eligibleShops: ["Snow"]
+  },
+  FrozenPotion: {
+    tileRef: tileRefsItems.FrozenPotion,
+    name: "Frozen Potion",
+    grantedMutation: "Frozen",
+    eligibleShops: ["Snow"]
+  },
+  DawnlitPotion: {
+    tileRef: tileRefsItems.DawnlitPotion,
+    name: "Dawnlit Potion",
+    grantedMutation: "Dawnlit",
+    eligibleShops: ["Dawn"]
+  },
+  DawnboundPotion: {
+    tileRef: tileRefsItems.DawnboundPotion,
+    name: "Dawnbound Potion",
+    grantedMutation: "Dawncharged",
+    eligibleShops: ["Dawn"]
+  },
+  AmberlitPotion: {
+    tileRef: tileRefsItems.AmberlitPotion,
+    name: "Amberlit Potion",
+    grantedMutation: "Amberlit",
+    eligibleShops: ["Amber"]
+  },
+  AmberboundPotion: {
+    tileRef: tileRefsItems.AmberboundPotion,
+    name: "Amberbound Potion",
+    grantedMutation: "Ambercharged",
+    eligibleShops: ["Amber"]
+  },
+  ThunderstruckPotion: {
+    tileRef: tileRefsItems.ThunderstruckPotion,
+    name: "Thunderstruck Potion",
+    grantedMutation: "Thunderstruck",
+    eligibleShops: ["Thunder"]
+  },
+  ThunderchargedPotion: {
+    tileRef: tileRefsItems.ThunderchargedPotion,
+    name: "Thundercharged Potion",
+    grantedMutation: "Thundercharged",
+    eligibleShops: ["Thunder"]
+  },
+  RainWardShard: {
+    tileRef: tileRefsItems.RainWardShard,
+    name: "Rain Ward Shard",
+    eligibleShops: ["Rain"]
+  },
 };
 
 export const decorCatalog = {

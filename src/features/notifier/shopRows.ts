@@ -79,16 +79,27 @@ const DISPLAY_RARITY: Record<string, string> = {
   [rarityMap.Celestial]: "Celestial",
 };
 
-const BASE_SHOPS = new Set<string>(["Seed", "Egg", "Tool", "Decor"]);
+// The game's shop enum is lower case ("tool", "snow") while older API answers
+// used capitals ("Tool", "Dawn"), so shop names are compared without case.
+const BASE_SHOPS = new Map<string, SectionType>([
+  ["seed", "Seed"],
+  ["egg", "Egg"],
+  ["tool", "Tool"],
+  ["decor", "Decor"],
+]);
 
-/** Splits `eligibleShops` into the base shop (if any) and the weather shops. */
-function splitEligibleShops(shops: unknown): { base: SectionType | null; weathers: string[] } {
+/**
+ * Splits `eligibleShops` into the base shop (if any) and the weather shops,
+ * whatever the case. Weather shops come back with a capital ("snow" gives "Snow").
+ */
+export function splitEligibleShops(shops: unknown): { base: SectionType | null; weathers: string[] } {
   const names = Array.isArray(shops) ? shops.map((s) => String(s ?? "").trim()).filter(Boolean) : [];
   let base: SectionType | null = null;
   const weathers: string[] = [];
   for (const name of names) {
-    if (BASE_SHOPS.has(name)) base = name as SectionType;
-    else weathers.push(name);
+    const baseShop = BASE_SHOPS.get(name.toLowerCase());
+    if (baseShop) base = baseShop;
+    else weathers.push(name.charAt(0).toUpperCase() + name.slice(1));
   }
   return { base, weathers };
 }
