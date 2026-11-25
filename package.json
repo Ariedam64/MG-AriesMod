@@ -59,6 +59,7 @@
     "check:editor": "node scripts/runChecks.mjs editor",
     "check:editorpanels": "node scripts/runChecks.mjs editorpanels",
     "check:shopalerts": "node scripts/runChecks.mjs shopalerts",
+    "check:shoprows": "node scripts/runChecks.mjs shoprows",
     "check:alertsounds": "node scripts/runChecks.mjs alertsounds",
     "check:kithidden": "node scripts/runChecks.mjs kithidden",
     "check:toastcalls": "node scripts/runChecks.mjs toastcalls",

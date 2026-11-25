@@ -90,6 +90,7 @@ const SUITES = {
   editor: ["checkEditorModel", "dom-stub"],
   editorpanels: ["checkEditorPanels", "dom-stub"],
   shopalerts: ["checkShopAlerts", "dom-stub"],
+  shoprows: ["checkShopRows", "dom-stub"],
   alertsounds: ["checkAlertSounds"],
   kithidden: ["checkKitHidden"],
   toastcalls: ["checkToastCalls"],
