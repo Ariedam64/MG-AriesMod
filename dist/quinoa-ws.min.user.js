@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      4.0.16
+// @version      4.0.17
 // @include      /^https:\/\/1227719606223765687\.discordsays\.com\/.*[?&]mc_shell_frame=1(&|#|$)/
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -9881,17 +9881,23 @@
         FireHorse: 90,
         Goat: 60,
         Horse: 75,
+        Moth: 30,
         Ostrich: 45,
         Peacock: 60,
+        Phoenix: 90,
         Pig: 60,
         Platypus: 60,
         Pony: 60,
+        RedFox: 45,
+        Rooster: 60,
         Sheep: 60,
         Snail: 60,
+        Snake: 90,
         SnowFox: 45,
         Squirrel: 30,
         Stoat: 60,
         ThunderWolf: 60,
+        Toad: 60,
         Turkey: 60,
         Turtle: 90,
         WhiteCaribou: 75,
@@ -15301,7 +15307,7 @@ label.qws-ed-opt { cursor: pointer; }
   // src/platform/modVersion.ts
   function getLocalVersion() {
     if (true) {
-      return "4.0.16";
+      return "4.0.17";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
